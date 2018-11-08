@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace xla {
@@ -68,6 +69,16 @@ class ComputationClient {
       const Data& data) = 0;
 
   virtual string GetDefaultDevice() const = 0;
+
+ protected:
+  // Metrics common to all client intrfaces.
+  static metrics::Metric* ExecuteMetric();
+  static metrics::Metric* ExecuteTrfMetric();
+  static metrics::Metric* TransferMetric();
+  static metrics::Metric* ExecuteReplMetric();
+  static metrics::Metric* DeconstructTupleMetric();
+  static metrics::Metric* InboundDataMetric();
+  static metrics::Metric* OutboundDataMetric();
 };
 
 }  // namespace xla

@@ -47,6 +47,7 @@ std::shared_ptr<ComputationClient::Data>
 XlaComputationClient::ExecuteComputation(
     const XlaComputation& computation,
     tensorflow::gtl::ArraySlice<Data*> arguments, const Shape* output_shape) {
+  metrics::TimedSection timed(ExecuteMetric());
   FlushReleasedHandles();
 
   ExecutionOptions eo;
@@ -74,6 +75,7 @@ XlaComputationClient::ExecuteComputation(
 std::unique_ptr<Literal> XlaComputationClient::ExecuteComputationAndTransfer(
     const XlaComputation& computation,
     tensorflow::gtl::ArraySlice<Data*> arguments, const Shape* output_shape) {
+  metrics::TimedSection timed(ExecuteTrfMetric());
   FlushReleasedHandles();
 
   ExecutionOptions eo;
@@ -86,8 +88,10 @@ std::unique_ptr<Literal> XlaComputationClient::ExecuteComputationAndTransfer(
   StatusOr<Literal> result_or_status =
       client_->ExecuteAndTransfer(computation, arguments_data, &eo);
   xrt_util::CheckComputationStatus(result_or_status.status(), computation);
-  return std::unique_ptr<Literal>(
+  std::unique_ptr<Literal> result(
       new Literal(std::move(result_or_status.ValueOrDie())));
+  InboundDataMetric()->AddSample(result->size_bytes());
+  return result;
 }
 
 std::vector<std::shared_ptr<ComputationClient::Data>>
@@ -95,12 +99,15 @@ XlaComputationClient::ExecuteReplicated(
     const XlaComputation& computation,
     const std::vector<std::vector<Data*>>& arguments,
     const Shape* output_shape) {
+  metrics::TimedSection timed(ExecuteReplMetric());
   LOG(FATAL) << "ExecuteReplicated() API not yet implemented!";
 }
 
 std::shared_ptr<ComputationClient::Data>
 XlaComputationClient::TransferParameterToServer(const Literal& literal,
                                                 const string& device) {
+  metrics::TimedSection timed(TransferMetric());
+  OutboundDataMetric()->AddSample(literal.size_bytes());
   FlushReleasedHandles();
 
   std::unique_ptr<GlobalData> handle =
@@ -112,6 +119,7 @@ XlaComputationClient::TransferParameterToServer(const Literal& literal,
 
 StatusOr<std::vector<std::shared_ptr<ComputationClient::Data>>>
 XlaComputationClient::DeconstructTuple(const Data& data) {
+  metrics::TimedSection timed(DeconstructTupleMetric());
   const XlaData& xla_data = dynamic_cast<const XlaData&>(data);
   TF_ASSIGN_OR_RETURN(auto exploded_tuple,
                       client_->DeconstructTuple(*xla_data.handle));

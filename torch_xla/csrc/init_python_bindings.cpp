@@ -1,8 +1,10 @@
 #include "init_python_bindings.h"
+
 #include "module.h"
 #include "passes/eval_static_size.h"
 #include "passes/replace_untraced_operators.h"
 #include "passes/threshold_backward_peephole.h"
+#include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch_util.h"
 
 namespace torch {
@@ -45,6 +47,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<std::shared_ptr<XLATensor>>& dest_tuple) {
           XLATensor::ZeroMulti(dest_tuple);
         });
+  m.def("_metrics_report", []() { return xla::metrics::CreateMetricReport(); });
 }
 
 void InitXlaPassesBindings(py::module m) {
