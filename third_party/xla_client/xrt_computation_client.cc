@@ -35,6 +35,7 @@ std::shared_ptr<ComputationClient::Data>
 XrtComputationClient::ExecuteComputation(
     const XlaComputation& computation,
     tensorflow::gtl::ArraySlice<Data*> arguments, const Shape* output_shape) {
+  metrics::TimedSection timed(ExecuteMetric());
   ApiCallInitialize();
 
   std::vector<string> devices;
@@ -60,6 +61,7 @@ XrtComputationClient::ExecuteComputation(
 std::unique_ptr<Literal> XrtComputationClient::ExecuteComputationAndTransfer(
     const XlaComputation& computation,
     tensorflow::gtl::ArraySlice<Data*> arguments, const Shape* output_shape) {
+  metrics::TimedSection timed(ExecuteTrfMetric());
   ApiCallInitialize();
 
   ProgramShape program_shape;
@@ -96,13 +98,17 @@ std::unique_ptr<Literal> XrtComputationClient::ExecuteComputationAndTransfer(
 
   LiteralProto response;
   CHECK(response.ParseFromString(outputs[0].scalar<string>()()));
-  return std::unique_ptr<Literal>(
+  std::unique_ptr<Literal> result(
       new Literal(Literal::CreateFromProto(response).ValueOrDie()));
+  InboundDataMetric()->AddSample(result->size_bytes());
+  return result;
 }
 
 std::shared_ptr<ComputationClient::Data>
 XrtComputationClient::TransferParameterToServer(const Literal& literal,
                                                 const string& device) {
+  metrics::TimedSection timed(TransferMetric());
+  OutboundDataMetric()->AddSample(literal.size_bytes());
   ApiCallInitialize();
 
   string effective_device = GetEffectiveDevice(device);
@@ -133,6 +139,7 @@ XrtComputationClient::ExecuteReplicated(
     const XlaComputation& computation,
     const std::vector<std::vector<Data*>>& arguments,
     const Shape* output_shape) {
+  metrics::TimedSection timed(ExecuteReplMetric());
   ApiCallInitialize();
 
   std::vector<string> devices;
@@ -184,6 +191,7 @@ XrtComputationClient::ExecuteReplicated(
 
 StatusOr<std::vector<std::shared_ptr<ComputationClient::Data>>>
 XrtComputationClient::DeconstructTuple(const Data& data) {
+  metrics::TimedSection timed(DeconstructTupleMetric());
   ApiCallInitialize();
 
   const XrtData& xrt_data = dynamic_cast<const XrtData&>(data);

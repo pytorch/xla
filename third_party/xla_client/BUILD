@@ -48,12 +48,14 @@ cc_library(
     name = "computation_client_impl",
     srcs = [
         "computation_client.cc",
+        "metrics.cc",
         "xla_computation_client.cc",
         "xla_util.cc",
         "xrt_computation_client.cc",
     ],
     hdrs = [
         "computation_client.h",
+        "metrics.h",
         "unique.h",
         "xla_computation_client.h",
         "xla_util.h",

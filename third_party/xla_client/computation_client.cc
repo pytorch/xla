@@ -164,4 +164,46 @@ StatusOr<std::unique_ptr<ComputationClient>> ComputationClient::Create() {
   return std::move(client);
 }
 
+metrics::Metric* ComputationClient::ExecuteMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("ClientExecuteTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::ExecuteTrfMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("ClientExecuteTransferTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::TransferMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("LiteralTransferTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::ExecuteReplMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("ClientExecuteReplicatedTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::DeconstructTupleMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("ClientDeconstructTupleTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::InboundDataMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("InboundData", metrics::MetricFnBytes);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::OutboundDataMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("OutboundData", metrics::MetricFnBytes);
+  return metric;
+}
+
 }  // namespace xla
