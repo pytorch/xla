@@ -14,7 +14,7 @@ class MetricsArena {
  public:
   static MetricsArena* Get();
 
-  // Register a new metric in the global arena.
+  // Registers a new metric in the global arena.
   void RegisterMetric(const string& name, MetricReprFn repr_fn,
                       size_t max_samples, std::shared_ptr<MetricData>* data);
 
