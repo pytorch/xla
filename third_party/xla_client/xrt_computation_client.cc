@@ -380,10 +380,10 @@ void XrtComputationClient::ReleaseHandles(
     tensorflow::ClientSession::FeedType feed_inputs;
     std::vector<tensorflow::Operation> releases;
   };
-  std::map<SessionData*, SessionReleases> session_releases;
+  std::map<SessionData*, SessionReleases> session_releases_map;
   for (auto& handle : handles) {
     SessionData* session = GetSessionForDevice(handle.device);
-    SessionReleases* release = &session_releases[session];
+    SessionReleases* release = &session_releases_map[session];
     tensorflow::Scope device_scope =
         session->root.WithDevice(TorchDeviceToXrtDevice(handle.device));
     const CachedNode& cached_node =
@@ -391,7 +391,7 @@ void XrtComputationClient::ReleaseHandles(
     release->feed_inputs.insert({cached_node.holders[0], handle.handle});
     release->releases.push_back(*cached_node.operation);
   }
-  for (const auto& session_releases : session_releases) {
+  for (const auto& session_releases : session_releases_map) {
     std::vector<tensorflow::Tensor> outputs;
     TF_CHECK_OK(session_releases.first->root.status());
     TF_CHECK_OK(session_releases.first->session.Run(
