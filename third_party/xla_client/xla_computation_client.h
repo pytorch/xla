@@ -67,6 +67,11 @@ class XlaComputationClient : public ComputationClient {
       const std::vector<std::vector<Data*>>& arguments,
       const Shape* output_shape) override;
 
+  std::vector<std::shared_ptr<Data>> ExecuteParallel(
+      tensorflow::gtl::ArraySlice<const XlaComputation> computations,
+      const std::vector<std::vector<Data*>>& arguments,
+      tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) override;
+
   StatusOr<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
       const Data& data) override;
 
@@ -75,6 +80,9 @@ class XlaComputationClient : public ComputationClient {
  private:
   std::vector<GlobalData*> GetArgumentsData(
       tensorflow::gtl::ArraySlice<Data*> arguments, string* device) const;
+
+  // Retrieves the XLA client device handle given the PyTorch device.
+  const DeviceHandle& GetDeviceHandle(const string& device) const;
 
   // Returns the device argument if not empty, or the value returned by the
   // GetDefaultDevice() API.
@@ -91,6 +99,7 @@ class XlaComputationClient : public ComputationClient {
   std::unique_ptr<Client> client_ptr_;
   std::unique_ptr<grpc::XlaService::Stub> xla_service_;
   std::unique_ptr<GRPCStub> stub_;
+  std::vector<DeviceHandle> device_handles_;
   std::vector<std::unique_ptr<GlobalData>> released_handles_;
 };
 

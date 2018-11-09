@@ -164,13 +164,19 @@ StatusOr<std::unique_ptr<ComputationClient>> ComputationClient::Create() {
   return std::move(client);
 }
 
+int64 ComputationClient::GetDeviceOrdinal(const string& device) {
+  auto pos = device.rfind(':');
+  CHECK_NE(pos, string::npos) << device;
+  return std::stoi(device.substr(pos + 1));
+}
+
 metrics::Metric* ComputationClient::ExecuteMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("ClientExecuteTime", metrics::MetricFnTime);
   return metric;
 }
 
-metrics::Metric* ComputationClient::ExecuteTrfMetric() {
+metrics::Metric* ComputationClient::ExecuteTransferMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("ClientExecuteTransferTime", metrics::MetricFnTime);
   return metric;
@@ -182,9 +188,15 @@ metrics::Metric* ComputationClient::TransferMetric() {
   return metric;
 }
 
-metrics::Metric* ComputationClient::ExecuteReplMetric() {
+metrics::Metric* ComputationClient::ExecuteReplicatedMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("ClientExecuteReplicatedTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::ExecuteParallelMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("ClientExecuteParallelTime", metrics::MetricFnTime);
   return metric;
 }
 
