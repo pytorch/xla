@@ -23,22 +23,24 @@ struct Sample {
 
 using MetricReprFn = std::function<string(double)>;
 
-// This class can host two different kind of sampling. A counter based one, in
-// which the caller posts "counts" (number of requests, amount of data in bytes,
-// etc...), and for which the internal counter always increases.
-// It also supports a time-sample posting, where up to max_samples samples are
-// held in a circular buffer. The latter can be used to extract percentile
-// metrics.
+// Class used to collect time-stamped numeric samples. The samples are stored in
+// a circular buffer whose size can be configured at constructor time.
 class MetricData {
  public:
+  // Creates a new MetricData object with the internal circular buffer storing
+  // max_samples samples. The repr_fn argument allow to specify a function which
+  // pretty-prints a sample value.
   MetricData(MetricReprFn repr_fn, size_t max_samples);
 
+  // Returns the total values of all the samples being posted to this metric.
   double Counter() const;
 
   size_t TotalSamples() const;
 
   void AddSample(int64 timestamp_ns, double value);
 
+  // Returns a vector with all the current samples, from the oldest to the
+  // newer.
   std::vector<Sample> Samples() const;
 
   string Repr(double value) const { return repr_fn_(value); }
@@ -104,20 +106,16 @@ string CreateMetricReport();
 // C++ scope.
 class TimedSection {
  public:
-  explicit TimedSection(Metric* metric, Metric* counter_metric = nullptr)
-      : metric_(metric), counter_metric_(counter_metric), start_(NowNs()) {}
+  explicit TimedSection(Metric* metric)
+      : metric_(metric), start_(NowNs()) {}
 
   ~TimedSection() {
     int64 now = NowNs();
     metric_->AddSample(now, now - start_);
-    if (counter_metric_ != nullptr) {
-      counter_metric_->AddSample(1, now);
-    }
   }
 
  private:
   Metric* metric_;
-  Metric* counter_metric_;
   int64 start_;
 };
 
