@@ -65,17 +65,33 @@ class ComputationClient {
       const std::vector<std::vector<Data*>>& arguments,
       const Shape* output_shape) = 0;
 
+  // Executes the computations in parallel. Each computation must target a
+  // different device. The computations[i] computation is fed with arguments[i]
+  // arguments. The output_shapes[i], if not nullptr, is used to control the
+  // output shape (and layout) of computations[i].
+  // Returns a vector of device side Data object, with result[i] being the
+  // return value of computations[i].
+  virtual std::vector<std::shared_ptr<Data>> ExecuteParallel(
+      tensorflow::gtl::ArraySlice<const XlaComputation> computations,
+      const std::vector<std::vector<Data*>>& arguments,
+      tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) = 0;
+
   virtual StatusOr<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
       const Data& data) = 0;
 
   virtual string GetDefaultDevice() const = 0;
 
+  // Retrieves the ordinal number out of a device string. This is the number
+  // after the last ':' character of the device string.
+  static int64 GetDeviceOrdinal(const string& device);
+
  protected:
   // Metrics common to all client intrfaces.
   static metrics::Metric* ExecuteMetric();
-  static metrics::Metric* ExecuteTrfMetric();
+  static metrics::Metric* ExecuteTransferMetric();
   static metrics::Metric* TransferMetric();
-  static metrics::Metric* ExecuteReplMetric();
+  static metrics::Metric* ExecuteReplicatedMetric();
+  static metrics::Metric* ExecuteParallelMetric();
   static metrics::Metric* DeconstructTupleMetric();
   static metrics::Metric* InboundDataMetric();
   static metrics::Metric* OutboundDataMetric();

@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/service/hlo.pb.h"
 #include "tensorflow/compiler/xla/service/hlo_module.h"
 #include "tensorflow/compiler/xla/status_macros.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace xla {
 namespace xrt_util {
@@ -20,9 +21,10 @@ StatusOr<std::unique_ptr<HloModule>> CreateModuleFromProto(
 StatusOr<string> GetComputationHloText(const XlaComputation& computation);
 
 // Checks whether an action on the given computation generated an error, and if
-// that was the case, emit error and computation HLO text.
-void CheckComputationStatus(const Status& status,
-                            const XlaComputation& computation);
+// that was the case, emit error and computations HLO text.
+void CheckComputationStatus(
+    const Status& status,
+    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations);
 
 }  // namespace xrt_util
 }  // namespace xla

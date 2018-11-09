@@ -23,11 +23,15 @@ StatusOr<string> GetComputationHloText(const XlaComputation& computation) {
   return hlo_module->ToString();
 }
 
-void CheckComputationStatus(const Status& status,
-                            const XlaComputation& computation) {
+void CheckComputationStatus(
+    const Status& status,
+    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations) {
   if (!status.ok()) {
-    string hlo_text = GetComputationHloText(computation).ValueOrDie();
-    XLA_LOG_LINES(ERROR, hlo_text);
+    for (size_t i = 0; i < computations.size(); ++i) {
+      string hlo_text = GetComputationHloText(*computations[i]).ValueOrDie();
+      LOG(ERROR) << ">>> Dumping Computation " << i;
+      XLA_LOG_LINES(ERROR, hlo_text);
+    }
     LOG(FATAL) << status;
   }
 }

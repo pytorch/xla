@@ -98,6 +98,11 @@ class XrtComputationClient : public ComputationClient {
       const std::vector<std::vector<Data*>>& arguments,
       const Shape* output_shape) override;
 
+  std::vector<std::shared_ptr<Data>> ExecuteParallel(
+      tensorflow::gtl::ArraySlice<const XlaComputation> computations,
+      const std::vector<std::vector<Data*>>& arguments,
+      tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) override;
+
   StatusOr<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
       const Data& data) override;
 
@@ -207,10 +212,23 @@ class XrtComputationClient : public ComputationClient {
       tensorflow::ClientSession::FeedType* feed_inputs);
 
   std::vector<ExecuteContext> CreateExecuteOps(
+      tensorflow::gtl::ArraySlice<const XlaComputation> computations,
+      const std::vector<std::vector<Data*>>& arguments,
+      tensorflow::gtl::ArraySlice<const Shape* const> output_shapes,
+      std::vector<string>* devices,
+      tensorflow::ClientSession::FeedType* feed_inputs);
+
+  std::vector<ExecuteContext> CreateExecuteOps(
       const XlaComputation& computation,
       const std::vector<std::vector<Data*>>& arguments,
       const Shape* output_shape, std::vector<string>* devices,
       tensorflow::ClientSession::FeedType* feed_inputs);
+
+  std::vector<std::shared_ptr<Data>> RunComputations(
+      const std::vector<ExecuteContext>& exec_ops,
+      tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
+      const std::vector<string>& devices,
+      const tensorflow::ClientSession::FeedType& feed_inputs);
 
   // Retrieves the worker,worker_host pair for a given XRT device (ie,
   // /job:tpu_worker/replica:0/task:0/device:TPU:0).
@@ -313,10 +331,6 @@ class XrtComputationClient : public ComputationClient {
   // replica argument vector. Essentially turns a [N] into a [1][N].
   static std::vector<std::vector<Data*>> BuildParallelArguments(
       tensorflow::gtl::ArraySlice<Data*> arguments);
-
-  // Retrieves the ordinal number out of a device string. This is the number
-  // after the last ':' character of the device string.
-  static int64 GetDeviceOrdinal(const string& device);
 
   Options options_;
   std::map<string, std::vector<int>> device_mesh_coords_;
