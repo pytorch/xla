@@ -524,6 +524,12 @@ XLATensor::Device XLATensor::DeviceFromString(const std::string& device_spec) {
     CHECK(!default_device_spec.empty());
     return DeviceFromString(default_device_spec);
   }
+  if (device_spec[0] == ':') {
+    const std::string default_device_spec = XlaGetClient()->GetDefaultDevice();
+    auto pos = default_device_spec.find(':');
+    CHECK_NE(pos, std::string::npos) << default_device_spec;
+    return DeviceFromString(default_device_spec.substr(0, pos) + device_spec);
+  }
   std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec, ':');
   std::string invalid_device_error =
       "Invalid device specification: " + device_spec;

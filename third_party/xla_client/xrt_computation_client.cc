@@ -6,6 +6,7 @@
 #include "absl/types/optional.h"
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/util/device_name_utils.h"
@@ -22,7 +23,7 @@ XrtComputationClient::XrtComputationClient(
     : options_(std::move(options)) {
   auto default_device_target =
       options_.device_map.find(options_.default_device);
-  CHECK(default_device_target != options_.device_map.end());
+  XLA_CHECK(default_device_target != options_.device_map.end());
   for (const auto& dev_target : options_.device_map) {
     LOG(INFO) << "XRT device " << dev_target.first << " -> "
               << dev_target.second;
@@ -50,7 +51,7 @@ XrtComputationClient::ExecuteComputation(
       session->session.Run(feed_inputs, {exec_ops.front().execute_output},
                            &outputs),
       {&computation});
-  CHECK_EQ(outputs.size(), 1);
+  XLA_CHECK_EQ(outputs.size(), 1);
 
   return std::make_shared<XrtData>(
       devices.front(), outputs[0].scalar<int64>()(),
@@ -94,10 +95,10 @@ std::unique_ptr<Literal> XrtComputationClient::ExecuteComputationAndTransfer(
   xrt_util::CheckComputationStatus(
       session->session.Run(feed_inputs, {*cached_node.output}, &outputs),
       {&computation});
-  CHECK_EQ(outputs.size(), 1);
+  XLA_CHECK_EQ(outputs.size(), 1);
 
   LiteralProto response;
-  CHECK(response.ParseFromString(outputs[0].scalar<string>()()));
+  XLA_CHECK(response.ParseFromString(outputs[0].scalar<string>()()));
   std::unique_ptr<Literal> result(
       new Literal(Literal::CreateFromProto(response).ValueOrDie()));
   InboundDataMetric()->AddSample(result->size_bytes());
@@ -128,7 +129,7 @@ XrtComputationClient::TransferParameterToServer(const Literal& literal,
   TF_CHECK_OK(session->root.status());
   TF_CHECK_OK(
       session->session.Run(feed_inputs, {*cached_node.output}, &outputs));
-  CHECK_EQ(outputs.size(), 1);
+  XLA_CHECK_EQ(outputs.size(), 1);
   return std::make_shared<XrtData>(
       effective_device, outputs[0].scalar<int64>()(), literal.shape(),
       [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); });
@@ -185,7 +186,7 @@ XrtComputationClient::RunComputations(
     xrt_util::CheckComputationStatus(
         sess_replica.first->session.Run(feed_inputs, exec_nodes, &outputs),
         computations);
-    CHECK_EQ(outputs.size(), exec_nodes.size());
+    XLA_CHECK_EQ(outputs.size(), exec_nodes.size());
 
     for (size_t i = 0; i < outputs.size(); ++i) {
       auto replica = sess_replica.second[i];
@@ -243,7 +244,7 @@ XrtComputationClient::DeconstructTuple(const Data& data) {
   std::vector<tensorflow::Tensor> outputs;
   TF_CHECK_OK(session->root.status());
   TF_CHECK_OK(session->session.Run(feed_inputs, sub_outputs, &outputs));
-  CHECK_EQ(outputs.size(), count);
+  XLA_CHECK_EQ(outputs.size(), count);
 
   std::vector<std::shared_ptr<Data>> components;
   for (int64 i = 0; i < count; ++i) {
@@ -279,15 +280,24 @@ XrtComputationClient::SessionData* XrtComputationClient::GetSessionForDevice(
   return GetSessionForXrtDevice(TorchDeviceToXrtDevice(device));
 }
 
-const string& XrtComputationClient::GetEffectiveDevice(
-    const string& device) const {
-  return !device.empty() ? device : options_.default_device;
+string XrtComputationClient::GetEffectiveDevice(const string& device) const {
+  if (device.empty()) {
+    return options_.default_device;
+  }
+  if (device[0] == ':') {
+    // Allow devices with ordinal only specification, to expand from the default
+    // device type.
+    auto pos = options_.default_device.find(':');
+    XLA_CHECK_NE(pos, string::npos) << options_.default_device;
+    return options_.default_device.substr(0, pos) + device;
+  }
+  return device;
 }
 
 const string& XrtComputationClient::TorchDeviceToXrtDevice(
     const string& device) const {
   auto device_target = options_.device_map.find(GetEffectiveDevice(device));
-  CHECK(device_target != options_.device_map.end())
+  XLA_CHECK(device_target != options_.device_map.end())
       << "Unable to find device: " << device;
   return device_target->second;
 }
@@ -295,7 +305,7 @@ const string& XrtComputationClient::TorchDeviceToXrtDevice(
 std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
     const XlaComputation& computation, int64 num_replicas,
     const std::vector<string>& devices, const Shape* output_shape) const {
-  CHECK_EQ(num_replicas, devices.size());
+  XLA_CHECK_EQ(num_replicas, devices.size());
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
   auto config = xrt_computation->mutable_config();
@@ -340,7 +350,7 @@ std::vector<string> XrtComputationClient::GetReplicasDevices(
   std::set<string> unique_devices;
   for (size_t i = 0; i < arguments.size(); ++i) {
     devices.push_back(GetArgumentsDevice(arguments[i]));
-    CHECK(unique_devices.insert(devices.back()).second)
+    XLA_CHECK(unique_devices.insert(devices.back()).second)
         << "Cannot have two different replicas using the same device: "
         << devices.back();
   }
@@ -354,7 +364,7 @@ tensorflow::Tensor XrtComputationClient::GetArgumentsInputs(
                                    tensorflow::TensorShape({arguments.size()}));
   for (size_t i = 0; i < arguments.size(); ++i) {
     XrtData* xrt_data = dynamic_cast<XrtData*>(arguments[i]);
-    CHECK_EQ(device, xrt_data->device());
+    XLA_CHECK_EQ(device, xrt_data->device());
     inputs_tensor.flat<tensorflow::int64>()(i) = xrt_data->handle;
   }
   return inputs_tensor;
@@ -378,7 +388,7 @@ XrtComputationClient::CreateExecuteOps(
       output_shape = &program_shape.result();
     }
     auto xrt_computation = CreateXrtComputation(computation, /*num_replicas=*/1,
-                                                {devices[i]}, output_shape);
+                                                {devices->at(i)}, output_shape);
 
     auto inputs = GetArgumentsInputs(arguments[i], devices->at(i), feed_inputs);
     const string& xrt_device = TorchDeviceToXrtDevice(devices->at(i));
@@ -486,14 +496,14 @@ void XrtComputationClient::ReleaseXrtData(XrtData* xrt_data) {
 std::pair<XrtComputationClient::Worker, string>
 XrtComputationClient::GetWorkerForXrtDevice(const string& xrt_device) const {
   tensorflow::DeviceNameUtils::ParsedName parsed_device;
-  CHECK(
+  XLA_CHECK(
       tensorflow::DeviceNameUtils::ParseFullName(xrt_device, &parsed_device) &&
       parsed_device.has_job && parsed_device.has_task)
       << xrt_device;
 
   auto worker_hostport =
       options_.workers_map.find(Worker(parsed_device.job, parsed_device.task));
-  CHECK(worker_hostport != options_.workers_map.end()) << xrt_device;
+  XLA_CHECK(worker_hostport != options_.workers_map.end()) << xrt_device;
   return std::pair<Worker, string>(worker_hostport->first,
                                    worker_hostport->second);
 }
@@ -537,10 +547,10 @@ tensorflow::tpu::TopologyProto XrtComputationClient::InitializeAndFetchTopology(
   std::vector<tensorflow::Tensor> outputs;
   TF_CHECK_OK(session->root.status());
   TF_CHECK_OK(session->session.Run({tensorflow::Output(result, 0)}, &outputs));
-  CHECK_EQ(outputs.size(), 1);
+  XLA_CHECK_EQ(outputs.size(), 1);
 
   tensorflow::tpu::TopologyProto topology_proto;
-  CHECK(topology_proto.ParseFromString(outputs[0].scalar<string>()()));
+  XLA_CHECK(topology_proto.ParseFromString(outputs[0].scalar<string>()()));
   return topology_proto;
 }
 
@@ -552,22 +562,22 @@ void XrtComputationClient::InitializeDevices() {
     LOG(INFO) << "TPU topology: " << topology_proto.DebugString();
 
     tensorflow::DeviceNameUtils::ParsedName parsed_device;
-    CHECK(tensorflow::DeviceNameUtils::ParseFullName(it->second,
-                                                     &parsed_device) &&
-          parsed_device.has_job)
+    XLA_CHECK(tensorflow::DeviceNameUtils::ParseFullName(it->second,
+                                                         &parsed_device) &&
+              parsed_device.has_job)
         << it->second;
     string tpu_job_name = parsed_device.job;
     for (const auto& dev_target : options_.device_map) {
-      CHECK(tensorflow::DeviceNameUtils::ParseFullName(dev_target.second,
-                                                       &parsed_device) &&
-            parsed_device.has_job && parsed_device.has_task &&
-            parsed_device.has_id)
+      XLA_CHECK(tensorflow::DeviceNameUtils::ParseFullName(dev_target.second,
+                                                           &parsed_device) &&
+                parsed_device.has_job && parsed_device.has_task &&
+                parsed_device.has_id)
           << dev_target.second;
       if (parsed_device.job != tpu_job_name) {
         continue;
       }
-      CHECK_LE(parsed_device.task, topology_proto.num_tasks());
-      CHECK_LE(parsed_device.id, topology_proto.num_tpu_devices_per_task());
+      XLA_CHECK_LE(parsed_device.task, topology_proto.num_tasks());
+      XLA_CHECK_LE(parsed_device.id, topology_proto.num_tpu_devices_per_task());
       // The topology proto 'device_coordinates' is a linear list of
       // [num_tasks][devices_per_task][mesh_shape_size] coordinates, where the
       // mesh coordinates are usually [x, y, c] ('x' and 'y' being the spatial

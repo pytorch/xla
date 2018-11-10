@@ -47,7 +47,11 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<std::shared_ptr<XLATensor>>& dest_tuple) {
           XLATensor::ZeroMulti(dest_tuple);
         });
-  m.def("_metrics_report", []() { return xla::metrics::CreateMetricReport(); });
+  m.def("_xla_sync_multi",
+        [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
+          XLATensor::ApplyPendingGraph(tensors);
+        });
+  m.def("_xla_metrics_report", []() { return xla::metrics::CreateMetricReport(); });
 }
 
 void InitXlaPassesBindings(py::module m) {
@@ -65,6 +69,7 @@ void InitXlaTensorBindings(py::module m) {
            py::arg("tensor"), py::arg("device") = "")
       .def("to_tensor", [](XLATensor& s) { return s.toTensor(); })
       .def("size", [](const XLATensor& s) { return s.Size(); })
+      .def("device", [](const XLATensor& s) { return s.GetDevice().ToString(); })
       .def("__add__", [](std::shared_ptr<XLATensor> self,
                          XLATensor& other) { return self->add(other, 1.0); })
       .def("add", [](std::shared_ptr<XLATensor> self, double alpha,

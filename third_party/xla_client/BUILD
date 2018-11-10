@@ -55,6 +55,7 @@ cc_library(
     ],
     hdrs = [
         "computation_client.h",
+        "debug_macros.h",
         "metrics.h",
         "unique.h",
         "xla_computation_client.h",
