@@ -1,4 +1,7 @@
 #include "tensor.h"
+
+#include <list>
+
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "c10/util/Exception.h"
@@ -97,14 +100,16 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
   switch (literal_type) {
     case xla::PrimitiveType::F32: {
       const auto result_slice = literal_with_torch_layout.data<float>();
-      at::Tensor result_tensor = at::empty(dimensions, at::TensorOptions(at::kFloat));
+      at::Tensor result_tensor =
+          at::empty(dimensions, at::TensorOptions(at::kFloat));
       std::copy(result_slice.begin(), result_slice.end(),
                 result_tensor.data<float>());
       return result_tensor;
     }
     case xla::PrimitiveType::S64: {
       const auto result_slice = literal_with_torch_layout.data<xla::int64>();
-      at::Tensor result_tensor = at::empty(dimensions, at::TensorOptions(at::kLong));
+      at::Tensor result_tensor =
+          at::empty(dimensions, at::TensorOptions(at::kLong));
       std::copy(result_slice.begin(), result_slice.end(),
                 result_tensor.data<int64_t>());
       return result_tensor;
@@ -468,20 +473,48 @@ void XLATensor::ComputeAndDistribute(
 
 void XLATensor::ApplyPendingGraph(
     const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-  XlaGraphContext xla_graph_ctx;
-  std::vector<xla::int64> index_mapping;
+  struct DeviceContext {
+    XlaGraphContext xla_graph_ctx;
+    std::vector<xla::int64> index_mapping;
+  };
+  std::map<Device, DeviceContext> contexts_map;
   for (size_t i = 0; i < tensors.size(); ++i) {
     auto& xla_graph_node = tensors[i]->current_xla_graph_node();
     if (xla_graph_node != nullptr) {
-      auto root = xla_graph_node->Generate(&xla_graph_ctx).ValueOrDie();
-      xla_graph_ctx.AddResult(root);
-      index_mapping.push_back(i);
+      DeviceContext* device_context = &contexts_map[tensors[i]->GetDevice()];
+      auto root =
+          xla_graph_node->Generate(&device_context->xla_graph_ctx).ValueOrDie();
+      device_context->xla_graph_ctx.AddResult(root);
+      device_context->index_mapping.push_back(i);
     }
   }
-  if (!index_mapping.empty()) {
-    // The SetXlaData() call done within SetMulti(), called by the following
-    // function, will provide to reset the cached XLA graph node.
-    ComputeAndDistribute(&xla_graph_ctx, index_mapping, tensors);
+  if (!contexts_map.empty()) {
+    std::vector<xla::XlaComputation> computations;
+    std::vector<std::vector<xla::ComputationClient::Data*>> parameters;
+    std::list<xla::Shape> shapes;
+    std::vector<const xla::Shape*> output_shapes;
+    for (auto& device_context : contexts_map) {
+      computations.push_back(
+          device_context.second.xla_graph_ctx.Build().ValueOrDie());
+      auto program_shape = computations.back().GetProgramShape().ValueOrDie();
+      shapes.push_back(MakeShapeWithDeviceLayout(program_shape.result(),
+                                                 device_context.first.hw_type));
+      output_shapes.push_back(&shapes.back());
+      parameters.push_back(
+          device_context.second.xla_graph_ctx.GetParametersData());
+    }
+    auto client = XlaGetClient();
+    auto result_tuples =
+        client->ExecuteParallel(computations, parameters, output_shapes);
+    auto context_iterator = contexts_map.begin();
+    for (size_t i = 0; i < computations.size(); ++i, ++context_iterator) {
+      auto new_dest_elements =
+          client->DeconstructTuple(*result_tuples[i]).ValueOrDie();
+      // Replace destination's underlying data with the result of the
+      // computation.
+      SetMulti(tensors, new_dest_elements,
+               context_iterator->second.index_mapping);
+    }
   }
 }
 
