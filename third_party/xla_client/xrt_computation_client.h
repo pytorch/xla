@@ -189,7 +189,7 @@ class XrtComputationClient : public ComputationClient {
   SessionData* GetSessionForXrtDevice(const string& xrt_device);
   SessionData* GetSessionForDevice(const string& device);
 
-  const string& GetEffectiveDevice(const string& device) const;
+  string GetEffectiveDevice(const string& device) const;
 
   const string& TorchDeviceToXrtDevice(const string& device) const;
 

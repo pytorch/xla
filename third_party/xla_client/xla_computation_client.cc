@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/legacy_flags/debug_options_flags.h"
 #include "tensorflow/compiler/xla/rpc/grpc_stub.h"
 #include "tensorflow/compiler/xla/service/platform_util.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 
@@ -142,7 +143,7 @@ XlaComputationClient::ExecuteParallel(
                                    computations_pointers);
   std::vector<std::unique_ptr<GlobalData>> exec_results(
       std::move(results_or_status.ValueOrDie()));
-  CHECK_EQ(exec_results.size(), computations.size());
+  XLA_CHECK_EQ(exec_results.size(), computations.size());
   std::vector<std::shared_ptr<Data>> results;
   for (size_t i = 0; i < computations.size(); ++i) {
     ProgramShape program_shape;
@@ -210,12 +211,20 @@ std::vector<GlobalData*> XlaComputationClient::GetArgumentsData(
 const DeviceHandle& XlaComputationClient::GetDeviceHandle(
     const string& device) const {
   int64 ordinal = GetDeviceOrdinal(device);
-  CHECK_LT(ordinal, device_handles_.size()) << device;
+  XLA_CHECK_LT(ordinal, device_handles_.size()) << device;
   return device_handles_[ordinal];
 }
 
 string XlaComputationClient::GetEffectiveDevice(const string& device) const {
-  return device.empty() ? GetDefaultDevice() : device;
+  if (device.empty()) {
+    return GetDefaultDevice();
+  }
+  if (device[0] == ':') {
+    // Allow devices with ordinal only specification, to expand from the default
+    // device type.
+    return options_.platform + device;
+  }
+  return device;
 }
 
 void XlaComputationClient::FlushReleasedHandles() {

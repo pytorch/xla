@@ -167,7 +167,7 @@ def _xla_run(model, input, device='TPU'):
             traced_model, use_full_conv_precision=True)
         input_xla = torch_xla._C.XLATensor(input)
         output_xla = xla_model(tuple([input_xla]))
-        return output_xla[0].to_tensor()
+        return output_xla[0][0].to_tensor()
 
 
 def _forward_passes(graph):
@@ -234,7 +234,7 @@ class TestMulAdd(XlaTestCase):
         inputs_xla = [torch_xla._C.XLATensor(x), torch_xla._C.XLATensor(y)]
         output_xla = xla_model((tuple(inputs_xla)))
         expected = model(x, y)
-        self.assertEqualDbg(output_xla[0].to_tensor().data, expected.data)
+        self.assertEqualDbg(output_xla[0][0].to_tensor().data, expected.data)
 
 
 class TestRelu(XlaTestCase):
@@ -318,7 +318,8 @@ class TestStack(XlaTestCase):
             inputs_xla = [torch_xla._C.XLATensor(x), torch_xla._C.XLATensor(y)]
             output_xla = xla_model((tuple(inputs_xla)))
             expected = model(x, y)
-            self.assertEqualDbg(output_xla[0].to_tensor().data, expected.data)
+            self.assertEqualDbg(output_xla[0][0].to_tensor().data,
+                                expected.data)
 
 
 class TestExpand(XlaTestCase):
@@ -548,7 +549,7 @@ class TestNllLoss(TestCase):
         xla_inputs = [torch_xla._C.XLATensor(input), torch_xla._C.XLATensor(target)]
         output_xla = xla_model((tuple(xla_inputs)))
         expected = model(input, target)
-        self.assertEqual(output_xla[0].to_tensor().data, expected.data)
+        self.assertEqual(output_xla[0][0].to_tensor().data, expected.data)
 
 
 class TestLongGraphChain(XlaTestCase):
