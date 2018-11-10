@@ -566,11 +566,14 @@ XlaTranslator::BuildOptions XlaModule::GetBackwardBuildOptions(
 
 void XlaModule::FlushTensorsOperations(
     std::initializer_list<const TensorBatchVector*> batch_tensors) {
+  std::vector<std::shared_ptr<XLATensor>> tensors;
   for (auto batch_tensor : batch_tensors) {
-    for (const auto& tensors : *batch_tensor) {
-      XLATensor::ApplyPendingGraph(tensors);
+    for (const auto& replica_tensors : *batch_tensor) {
+      tensors.insert(tensors.end(), replica_tensors.begin(),
+                     replica_tensors.end());
     }
   }
+  XLATensor::ApplyPendingGraph(tensors);
 }
 
 XlaModule::DataBatchVector XlaModule::GetDataBatchVector(
