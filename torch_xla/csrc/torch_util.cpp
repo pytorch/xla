@@ -1,0 +1,40 @@
+#include "torch_util.h"
+
+namespace torch {
+namespace jit {
+
+XlaModule::TensorBatchVector XlaCreateTensorList(const py::tuple& tuple) {
+  XlaModule::TensorBatchVector result;
+  result.reserve(tuple.size());
+  for (auto& replica_tuple : tuple) {
+    XlaModule::TensorBatchVector::value_type replica_result;
+    for (auto& e : replica_tuple) {
+      auto variable = py::cast<std::shared_ptr<XLATensor>>(e);
+      replica_result.push_back(variable);
+    }
+    result.push_back(std::move(replica_result));
+  }
+  return result;
+}
+
+py::object XlaPackTensorList(const XlaModule::TensorBatchVector& outputs) {
+  py::tuple tuple(outputs.size());
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    const auto& replica_outputs = outputs[i];
+    if (replica_outputs.empty()) {
+      tuple[i] = py::none();
+    } else if (replica_outputs.size() == 1) {
+      tuple[i] = py::cast(replica_outputs[0]);
+    } else {
+      py::tuple replica_tuple(replica_outputs.size());
+      for (size_t j = 0; j < replica_outputs.size(); j++) {
+        replica_tuple[j] = py::cast(replica_outputs[j]);
+      }
+      tuple[i] = replica_tuple;
+    }
+  }
+  return tuple;
+}
+
+}  // namespace jit
+}  // namespace torch
