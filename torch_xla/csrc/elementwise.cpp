@@ -1,17 +1,34 @@
 #include "elementwise.h"
+#include "data_ops.h"
 #include "helpers.h"
 
 namespace torch {
 namespace jit {
 
+namespace {
+
+xla::XlaOp DoBinaryOpWithImplicitExpand(
+    const xla::XlaOp& lhs, const xla::XlaOp& rhs,
+    std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)> op_fun) {
+  return op_fun(BuildImplicitExpand(lhs, rhs), BuildImplicitExpand(rhs, lhs));
+}
+
+}  // namespace
+
 xla::XlaOp BuildArithmeticOp(const Node* node, const xla::XlaOp& lhs,
                              const xla::XlaOp& rhs) {
   switch (node->kind()) {
     case aten::add: {
-      return lhs + rhs;
+      return DoBinaryOpWithImplicitExpand(
+          lhs, rhs, [](const xla::XlaOp& lhs, const xla::XlaOp& rhs) {
+            return lhs + rhs;
+          });
     }
     case aten::mul: {
-      return lhs * rhs;
+      return DoBinaryOpWithImplicitExpand(
+          lhs, rhs, [](const xla::XlaOp& lhs, const xla::XlaOp& rhs) {
+            return lhs * rhs;
+          });
     }
     default:
       LOG(FATAL) << "Invalid binary operator kind: " << node->kind();

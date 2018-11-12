@@ -68,5 +68,9 @@ std::vector<xla::int64> XlaHelpers::ShapeSizes(const xla::Shape& shape) {
   return shape_sizes;
 }
 
+xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
+  return op.builder()->GetShape(op).ValueOrDie();
+}
+
 }  // namespace jit
 }  // namespace torch

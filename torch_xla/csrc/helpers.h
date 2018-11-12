@@ -22,6 +22,9 @@ class XlaHelpers {
   // Returns the list of dimension sizes for the given shape.
   static std::vector<xla::int64> ShapeSizes(const xla::Shape& shape);
 
+  // Returns the shape of the given XLA operation.
+  static xla::Shape ShapeOfXlaOp(const xla::XlaOp& op);
+
   // Creates a scalar broadcasted to a given shape.
   template <class T>
   static xla::XlaOp ScalarBroadcast(T scalar_value, const xla::Shape& shape,

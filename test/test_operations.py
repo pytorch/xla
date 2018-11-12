@@ -336,7 +336,6 @@ class TestExpand(XlaTestCase):
         self.assertEqualDbg(out.data, expected.data)
 
 
-@unittest.skip('Automatic shape inference not supported: f32[5] and f32[4,5]')
 class TestLinear(XlaTestCase):
     def test(self):
 
