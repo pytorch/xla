@@ -1,5 +1,6 @@
 #include "data_ops.h"
 #include "helpers.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch {
 namespace jit {
@@ -13,51 +14,16 @@ bool IsCompleteShape(const std::vector<int64_t>& dim_sizes) {
                      [](const int64_t dim_size) { return dim_size >= 0; });
 }
 
-}  // namespace
-
-xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
-  const auto node_inputs = node->inputs();
-  CHECK_EQ(node_inputs.size(), 2);
-  const auto input_sizes = XlaHelpers::TensorDimensionSizes(node_inputs[0]);
-  const auto node_outputs = node->outputs();
-  CHECK_EQ(node_outputs.size(), 1);
-  // Try to use the second argument of the operator as the target shape.
-  std::vector<int64_t> output_sizes;
-  switch (node->kind()) {
-    case aten::view:
-      output_sizes = node->get<std::vector<int64_t>>(attr::size).value();
-      break;
-    case aten::reshape:
-      output_sizes = node->get<std::vector<int64_t>>(attr::shape).value();
-      break;
-    default:
-      LOG(FATAL) << "Unexpected node kind, must be view or reshape";
-  }
-  // If the second argument doesn't fully specify the target shape, use the size
-  // of the output.
-  if (!IsCompleteShape(output_sizes)) {
-    CHECK(node_outputs[0]->type()->cast<CompleteTensorType>());
-    output_sizes = XlaHelpers::TensorDimensionSizes(node_outputs[0]);
-  }
-  JIT_ASSERTM(IsCompleteShape(output_sizes),
-              "Cannot infer target size for aten::view");
-  return xla::Reshape(input, XlaHelpers::I64List(output_sizes));
-}
-
-xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input) {
-  const auto node_inputs = node->inputs();
-  CHECK_GE(node_inputs.size(), 1);
-  auto input_sizes = XlaHelpers::TensorDimensionSizes(node_inputs[0]);
-  const auto node_outputs = node->outputs();
-  CHECK_EQ(node_outputs.size(), 1);
-  const auto output_sizes = XlaHelpers::TensorDimensionSizes(node_outputs[0]);
+// Expand the input to the given output sizes.
+xla::XlaOp BuildExpandToOutputSizes(
+    const xla::XlaOp& input, const std::vector<xla::int64>& output_sizes) {
+  auto input_sizes = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
   // Adjust the rank of the input to match the rank of the output.
-  CHECK_LE(input_sizes.size(), output_sizes.size());
+  XLA_CHECK_LE(input_sizes.size(), output_sizes.size());
   for (size_t i = 0; i < output_sizes.size() - input_sizes.size(); ++i) {
     input_sizes.insert(input_sizes.begin(), 1);
   }
-  const auto implicit_reshape =
-      xla::Reshape(input, XlaHelpers::I64List(input_sizes));
+  const auto implicit_reshape = xla::Reshape(input, input_sizes);
   // Squeeze the trivial (of size 1) dimensions.
   std::vector<xla::int64> non_singleton_dimensions;
   std::copy_if(input_sizes.begin(), input_sizes.end(),
@@ -85,8 +51,58 @@ xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input) {
       reshape_permutation.push_back(i);
     }
   }
-  return xla::Reshape(broadcast, reshape_permutation,
-                      XlaHelpers::I64List(output_sizes));
+  return xla::Reshape(broadcast, reshape_permutation, output_sizes);
+}
+
+}  // namespace
+
+xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
+  const auto node_inputs = node->inputs();
+  XLA_CHECK_EQ(node_inputs.size(), 2);
+  const auto input_sizes = XlaHelpers::TensorDimensionSizes(node_inputs[0]);
+  const auto node_outputs = node->outputs();
+  XLA_CHECK_EQ(node_outputs.size(), 1);
+  // Try to use the second argument of the operator as the target shape.
+  std::vector<int64_t> output_sizes;
+  switch (node->kind()) {
+    case aten::view:
+      output_sizes = node->get<std::vector<int64_t>>(attr::size).value();
+      break;
+    case aten::reshape:
+      output_sizes = node->get<std::vector<int64_t>>(attr::shape).value();
+      break;
+    default:
+      LOG(FATAL) << "Unexpected node kind, must be view or reshape";
+  }
+  // If the second argument doesn't fully specify the target shape, use the size
+  // of the output.
+  if (!IsCompleteShape(output_sizes)) {
+    XLA_CHECK(node_outputs[0]->type()->cast<CompleteTensorType>());
+    output_sizes = XlaHelpers::TensorDimensionSizes(node_outputs[0]);
+  }
+  JIT_ASSERTM(IsCompleteShape(output_sizes),
+              "Cannot infer target size for aten::view");
+  return xla::Reshape(input, XlaHelpers::I64List(output_sizes));
+}
+
+xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input) {
+  auto input_sizes = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
+  const auto node_outputs = node->outputs();
+  XLA_CHECK_EQ(node_outputs.size(), 1);
+  const auto output_sizes = XlaHelpers::TensorDimensionSizes(node_outputs[0]);
+  return BuildExpandToOutputSizes(input, XlaHelpers::I64List(output_sizes));
+}
+
+xla::XlaOp BuildImplicitExpand(const xla::XlaOp& input,
+                               const xla::XlaOp& output) {
+  const auto output_sizes =
+      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(output));
+  const auto input_sizes =
+      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
+  if (input_sizes.size() >= output_sizes.size() || input_sizes.empty()) {
+    return input;
+  }
+  return BuildExpandToOutputSizes(input, output_sizes);
 }
 
 // Finds a prim::ListConstruct operation by id in the graph of "parent".
@@ -98,7 +114,7 @@ std::vector<const Value*> InputListAttr(const Node* parent, const size_t id) {
       continue;
     }
     const auto node_outputs = node->outputs();
-    CHECK_EQ(node_outputs.size(), size_t(1));
+    XLA_CHECK_EQ(node_outputs.size(), size_t(1));
     const auto output = node_outputs[0];
     if (output->unique() != id) {
       continue;
@@ -109,14 +125,14 @@ std::vector<const Value*> InputListAttr(const Node* parent, const size_t id) {
     }
     return result;
   }
-  CHECK(false) << "Constant with id " << id << " not found.";
+  XLA_CHECK(false) << "Constant with id " << id << " not found.";
 }
 
 xla::XlaOp BuildStack(const Node* node,
                       const std::function<xla::XlaOp(const Value*)>& node_op,
                       xla::XlaBuilder* b) {
   const auto node_inputs = node->inputs();
-  CHECK_EQ(node_inputs.size(), size_t(2));
+  XLA_CHECK_EQ(node_inputs.size(), size_t(2));
   const auto stack_inputs = InputListAttr(node, node_inputs[0]->unique());
   const auto dim = node->get<int64_t>(attr::dim).value();
   std::vector<xla::XlaOp> reshaped_inputs;
@@ -136,7 +152,7 @@ xla::XlaOp BuildCat(const Node* node,
                     const std::function<xla::XlaOp(const Value*)>& node_op,
                     xla::XlaBuilder* b) {
   const auto node_inputs = node->inputs();
-  CHECK_EQ(node_inputs.size(), size_t(2));
+  XLA_CHECK_EQ(node_inputs.size(), size_t(2));
   const auto stack_inputs = InputListAttr(node, node_inputs[0]->unique());
   const auto dim = node->get<int64_t>(attr::dim).value();
   std::vector<xla::XlaOp> cat_inputs;
