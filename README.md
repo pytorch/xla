@@ -18,6 +18,6 @@ To run the tests, follow __one__ of the options below:
 
 * Run on TPU using the XRT client:
 
-  `export XLA_USE_XRT=1 XRT_DEVICE_MAP="TPU:0;/job:tpu_worker/replica:0/task:0/device:TPU:0" XRT_WORKERS="tpu_worker:0;grpc://localhost:51000"`
+  `export XLA_USE_XRT=1 XRT_DEVICE_MAP="TPU:0;/job:tpu_worker/replica:0/task:0/device:TPU:0" XRT_WORKERS="tpu_worker:0;grpc://localhost:51000"`. Create a `$HOME/.pytorch_tpu.conf` file with the following content: `worker: tpu_worker <ip of the tpu node>:8470`.
 
 Then run `python test/test_operations.py`. Some of the tests are currently skipped.
