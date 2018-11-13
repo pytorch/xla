@@ -13,7 +13,7 @@ namespace {
 xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
                           const xla::XlaOp indices, const xla::XlaOp on_value,
                           const xla::XlaOp off_value) {
-  const auto indices_shape = builder->GetShape(indices).ValueOrDie();
+  const auto indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
   const int indices_dims = indices_shape.dimensions_size();
   const int output_dims = indices_dims + 1;
 
@@ -52,7 +52,7 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
 xla::XlaOp BuildNllLoss(const Node* node, const xla::XlaOp& logits,
                         const xla::XlaOp& labels) {
   xla::XlaBuilder* builder = logits.builder();
-  xla::Shape logits_shape = builder->GetShape(logits).ValueOrDie();
+  xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
   xla::XlaOp zero = XlaHelpers::ScalarValue<float>(0, builder);
   xla::XlaOp one_hot_labels = LabelsToOneHot(
       /*builder=*/builder,
@@ -77,7 +77,7 @@ xla::XlaOp BuildNllLossBackward(const Node* node, const xla::XlaOp& logits,
   auto builder = logits.builder();
   const auto zero = XlaHelpers::ScalarValue<float>(0, builder);
   const auto one = XlaHelpers::ScalarValue<float>(1, builder);
-  const auto logits_shape = builder->GetShape(logits).ValueOrDie();
+  const auto logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
   xla::XlaOp one_hot_labels = LabelsToOneHot(
       /*builder=*/builder,
       /*depth=*/logits_shape.dimensions(1),

@@ -1,4 +1,5 @@
 #include "module.h"
+#include "helpers.h"
 
 #include <set>
 #include "c10/util/Exception.h"
@@ -412,16 +413,16 @@ void XlaModule::BuildFusedTrainComputation(
   std::vector<xla::XlaOp> backward_operands;
   for (auto p : grad_outputs) {
     backward_shapes.push_back(XlaTranslator::ParameterShape(
-        b.GetShape(p).ValueOrDie(), /*zero_input=*/false));
+        XlaHelpers::ShapeOfXlaOp(p), /*zero_input=*/false));
     backward_operands.push_back(p);
   }
   for (auto p : captured_outputs) {
     backward_shapes.push_back(XlaTranslator::ParameterShape(
-        b.GetShape(p).ValueOrDie(), /*zero_input=*/true));
+        XlaHelpers::ShapeOfXlaOp(p), /*zero_input=*/true));
   }
   for (auto p : captured_inputs_outputs) {
     backward_shapes.push_back(XlaTranslator::ParameterShape(
-        b.GetShape(p).ValueOrDie(), /*zero_input=*/false));
+        XlaHelpers::ShapeOfXlaOp(p), /*zero_input=*/false));
     backward_operands.push_back(p);
   }
   // The arguments are set up correctly, call into the backward computation.
