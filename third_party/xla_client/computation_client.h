@@ -17,18 +17,18 @@ class ComputationClient {
  public:
   class Data {
    public:
-    Data(string device, Shape device_shape)
-        : device_(std::move(device)), device_shape_(std::move(device_shape)) {}
+    Data(string device, Shape shape)
+        : device_(std::move(device)), shape_(std::move(shape)) {}
 
     virtual ~Data() {}
 
     const string& device() const { return device_; }
 
-    const Shape& shape() const { return device_shape_; }
+    const Shape& shape() const { return shape_; }
 
    private:
     string device_;
-    Shape device_shape_;
+    Shape shape_;
   };
 
   struct LiteralDevice {
@@ -104,6 +104,7 @@ class ComputationClient {
   static metrics::Metric* ExecuteParallelMetric();
   static metrics::Metric* DeconstructTupleMetric();
   static metrics::Metric* ReleaseHandlesMetric();
+  static metrics::Metric* ReleaseHandlesTimeMetric();
   static metrics::Metric* InboundDataMetric();
   static metrics::Metric* OutboundDataMetric();
 };
