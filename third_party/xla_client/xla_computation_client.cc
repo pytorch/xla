@@ -238,6 +238,7 @@ string XlaComputationClient::GetEffectiveDevice(const string& device) const {
 void XlaComputationClient::FlushReleasedHandles() {
   size_t num_handles = released_handles_.size();
   if (num_handles > 0) {
+    metrics::TimedSection timed(ReleaseHandlesTimeMetric());
     std::vector<std::unique_ptr<GlobalData>> released_handles;
     released_handles.swap(released_handles_);
     GlobalData::Release(std::move(released_handles));

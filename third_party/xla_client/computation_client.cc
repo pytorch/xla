@@ -211,6 +211,12 @@ metrics::Metric* ComputationClient::ReleaseHandlesMetric() {
   return metric;
 }
 
+metrics::Metric* ComputationClient::ReleaseHandlesTimeMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("ClientReleaseHandlesTime", metrics::MetricFnTime);
+  return metric;
+}
+
 metrics::Metric* ComputationClient::InboundDataMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("InboundData", metrics::MetricFnBytes);

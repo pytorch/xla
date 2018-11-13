@@ -485,6 +485,8 @@ XrtComputationClient::CreateExecuteOps(
 
 void XrtComputationClient::ReleaseHandles(
     tensorflow::gtl::ArraySlice<const DeviceHandle> handles) {
+  metrics::TimedSection timed(ReleaseHandlesTimeMetric());
+
   struct SessionReleases {
     tensorflow::ClientSession::FeedType feed_inputs;
     std::vector<tensorflow::Operation> releases;
