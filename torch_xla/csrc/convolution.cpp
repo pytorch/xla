@@ -28,7 +28,7 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
   const auto filter = xla::Transpose(weight, {2, 3, 1, 0});
   auto builder = grad.builder();
   const auto filter_size =
-      XlaHelpers::ShapeSizes(builder->GetShape(filter).ValueOrDie());
+      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(filter));
   tensorflow::TensorShape filter_shape(filter_size);
   tensorflow::TensorShape out_backprop_shape(
       XlaHelpers::I64List(XlaHelpers::TensorDimensionSizes(node_inputs[0])));

@@ -9,7 +9,7 @@ xla::XlaOp BuildCrossReplicaSum(const xla::XlaOp& operand, int num_replicas) {
   xla::XlaOp crs = xla::CrossReplicaSum(operand);
   auto scaling_value =
       XlaHelpers::ScalarValue<float>(1.0 / num_replicas, operand.builder());
-  auto shape = operand.builder()->GetShape(crs).ValueOrDie();
+  auto shape = XlaHelpers::ShapeOfXlaOp(operand);
   return crs * xla::Broadcast(scaling_value, XlaHelpers::ShapeSizes(shape));
 }
 
