@@ -50,6 +50,47 @@ XlaComputationClient::XlaComputationClient(
   device_handles_ = client_->GetDeviceHandles(device_count).ValueOrDie();
 }
 
+std::vector<std::shared_ptr<ComputationClient::Data>>
+XlaComputationClient::TransferToServer(
+    tensorflow::gtl::ArraySlice<const LiteralDevice> literals) {
+  metrics::TimedSection timed(TransferToServerMetric());
+  FlushReleasedHandles();
+
+  int64 total_size = 0;
+  std::vector<std::shared_ptr<Data>> results;
+  for (auto& literal_device : literals) {
+    string device = GetEffectiveDevice(literal_device.device);
+    std::unique_ptr<GlobalData> handle =
+        client_
+            ->TransferToServer(literal_device.literal, &GetDeviceHandle(device))
+            .ValueOrDie();
+    results.push_back(std::make_shared<XlaData>(
+        std::move(handle), device, literal_device.literal.shape(),
+        [this](XlaData* xla_data) { ReleaseXlaData(xla_data); }));
+    total_size += literal_device.literal.size_bytes();
+  }
+  OutboundDataMetric()->AddSample(total_size);
+  return results;
+}
+
+std::vector<Literal> XlaComputationClient::TransferFromServer(
+    tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) {
+  metrics::TimedSection timed(TransferFromServerMetric());
+  FlushReleasedHandles();
+
+  int64 total_size = 0;
+  std::vector<Literal> results;
+  for (auto& handle : handles) {
+    const XlaData& xla_data = dynamic_cast<const XlaData&>(*handle);
+    results.push_back(
+        client_->Transfer(*xla_data.handle, /*shape_with_layout=*/nullptr)
+            .ValueOrDie());
+    total_size += results.back().size_bytes();
+  }
+  InboundDataMetric()->AddSample(total_size);
+  return results;
+}
+
 std::shared_ptr<ComputationClient::Data>
 XlaComputationClient::ExecuteComputation(
     const XlaComputation& computation,
@@ -78,30 +119,6 @@ XlaComputationClient::ExecuteComputation(
   return std::make_shared<XlaData>(
       std::move(result_or_status.ValueOrDie()), device, *output_shape,
       [this](XlaData* xla_data) { ReleaseXlaData(xla_data); });
-}
-
-std::unique_ptr<Literal> XlaComputationClient::ExecuteComputationAndTransfer(
-    const XlaComputation& computation,
-    tensorflow::gtl::ArraySlice<Data*> arguments, const Shape* output_shape) {
-  metrics::TimedSection timed(ExecuteTransferMetric());
-  FlushReleasedHandles();
-
-  string device;
-  std::vector<GlobalData*> arguments_data =
-      GetArgumentsData(arguments, &device);
-  ExecutionOptions eo;
-  *eo.mutable_debug_options() = legacy_flags::GetDebugOptionsFromFlags();
-  *eo.add_device_handles() = GetDeviceHandle(device);
-  if (output_shape != nullptr) {
-    *eo.mutable_shape_with_output_layout() = *output_shape;
-  }
-  StatusOr<Literal> result_or_status =
-      client_->ExecuteAndTransfer(computation, arguments_data, &eo);
-  xrt_util::CheckComputationStatus(result_or_status.status(), {&computation});
-  std::unique_ptr<Literal> result(
-      new Literal(std::move(result_or_status.ValueOrDie())));
-  InboundDataMetric()->AddSample(result->size_bytes());
-  return result;
 }
 
 std::vector<std::shared_ptr<ComputationClient::Data>>
@@ -159,34 +176,25 @@ XlaComputationClient::ExecuteParallel(
   return results;
 }
 
-std::shared_ptr<ComputationClient::Data>
-XlaComputationClient::TransferParameterToServer(const Literal& literal,
-                                                const string& device) {
-  metrics::TimedSection timed(TransferMetric());
-  OutboundDataMetric()->AddSample(literal.size_bytes());
-  FlushReleasedHandles();
-
-  std::unique_ptr<GlobalData> handle =
-      client_->TransferToServer(literal).ValueOrDie();
-  return std::make_shared<XlaData>(
-      std::move(handle), GetEffectiveDevice(device), literal.shape(),
-      [this](XlaData* xla_data) { ReleaseXlaData(xla_data); });
-}
-
-StatusOr<std::vector<std::shared_ptr<ComputationClient::Data>>>
-XlaComputationClient::DeconstructTuple(const Data& data) {
+std::vector<std::vector<std::shared_ptr<ComputationClient::Data>>>
+XlaComputationClient::DeconstructTuple(
+    tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) {
   metrics::TimedSection timed(DeconstructTupleMetric());
-  const XlaData& xla_data = dynamic_cast<const XlaData&>(data);
-  TF_ASSIGN_OR_RETURN(auto exploded_tuple,
-                      client_->DeconstructTuple(*xla_data.handle));
-  std::vector<std::shared_ptr<Data>> tuple;
-  for (int64 i = 0; i < exploded_tuple.size(); ++i) {
-    tuple.push_back(std::make_shared<XlaData>(
-        std::move(exploded_tuple[i]), xla_data.device(),
-        ShapeUtil::GetTupleElementShape(xla_data.shape(), i),
-        [this](XlaData* xla_data) { ReleaseXlaData(xla_data); }));
+  std::vector<std::vector<std::shared_ptr<Data>>> results;
+  for (auto& tuple : tuples) {
+    const XlaData& xla_data = dynamic_cast<const XlaData&>(*tuple);
+    auto exploded_tuple =
+        client_->DeconstructTuple(*xla_data.handle).ValueOrDie();
+    std::vector<std::shared_ptr<Data>> tuple_results;
+    for (int64 i = 0; i < exploded_tuple.size(); ++i) {
+      tuple_results.push_back(std::make_shared<XlaData>(
+          std::move(exploded_tuple[i]), xla_data.device(),
+          ShapeUtil::GetTupleElementShape(xla_data.shape(), i),
+          [this](XlaData* xla_data) { ReleaseXlaData(xla_data); }));
+    }
+    results.push_back(std::move(tuple_results));
   }
-  return std::move(tuple);
+  return results;
 }
 
 std::vector<GlobalData*> XlaComputationClient::GetArgumentsData(
@@ -228,9 +236,13 @@ string XlaComputationClient::GetEffectiveDevice(const string& device) const {
 }
 
 void XlaComputationClient::FlushReleasedHandles() {
-  std::vector<std::unique_ptr<GlobalData>> released_handles;
-  released_handles.swap(released_handles_);
-  GlobalData::Release(std::move(released_handles));
+  size_t num_handles = released_handles_.size();
+  if (num_handles > 0) {
+    std::vector<std::unique_ptr<GlobalData>> released_handles;
+    released_handles.swap(released_handles_);
+    GlobalData::Release(std::move(released_handles));
+    ReleaseHandlesMetric()->AddSample(num_handles);
+  }
 }
 
 void XlaComputationClient::ReleaseXlaData(XlaData* xla_data) {

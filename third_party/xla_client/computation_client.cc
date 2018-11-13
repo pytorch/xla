@@ -59,8 +59,8 @@ void AddXrtHostDevices(const string& worker_name, int task_no,
     const char* name;
     int count;
   } const devices[] = {
-    {"TPU", GetEnvInt("TPU_NUM_DEVICES", 8)},
-    {"CPU", GetEnvInt("CPU_NUM_DEVICES", 1)},
+      {"TPU", GetEnvInt("TPU_NUM_DEVICES", 8)},
+      {"CPU", GetEnvInt("CPU_NUM_DEVICES", 1)},
   };
   string host_port = server.compare(0, 7, "grpc://") == 0
                          ? server
@@ -170,21 +170,21 @@ int64 ComputationClient::GetDeviceOrdinal(const string& device) {
   return std::stoi(device.substr(pos + 1));
 }
 
+metrics::Metric* ComputationClient::TransferToServerMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("ClientTransferToServerTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::TransferFromServerMetric() {
+  static metrics::Metric* metric = new metrics::Metric(
+      "ClientTransferFromServerTime", metrics::MetricFnTime);
+  return metric;
+}
+
 metrics::Metric* ComputationClient::ExecuteMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("ClientExecuteTime", metrics::MetricFnTime);
-  return metric;
-}
-
-metrics::Metric* ComputationClient::ExecuteTransferMetric() {
-  static metrics::Metric* metric =
-      new metrics::Metric("ClientExecuteTransferTime", metrics::MetricFnTime);
-  return metric;
-}
-
-metrics::Metric* ComputationClient::TransferMetric() {
-  static metrics::Metric* metric =
-      new metrics::Metric("LiteralTransferTime", metrics::MetricFnTime);
   return metric;
 }
 
@@ -203,6 +203,11 @@ metrics::Metric* ComputationClient::ExecuteParallelMetric() {
 metrics::Metric* ComputationClient::DeconstructTupleMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("ClientDeconstructTupleTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::ReleaseHandlesMetric() {
+  static metrics::Metric* metric = new metrics::Metric("ClientReleaseHandles");
   return metric;
 }
 

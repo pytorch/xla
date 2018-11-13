@@ -4,10 +4,9 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "c10/util/Exception.h"
-#include "helpers.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "torch/csrc/autograd/variable.h"
+#include "helpers.h"
 #include "translator.h"
 
 namespace torch {
@@ -55,9 +54,8 @@ std::vector<xla::int64> LinearizeTensor<xla::int64>(
 }
 
 template <class NativeT>
-std::shared_ptr<xla::ComputationClient::Data> TensorToXlaImpl(
-    const at::Tensor& param_tensor, const xla::Shape& param_shape,
-    const XLATensor::Device& device, xla::ComputationClient* client) {
+xla::Literal TensorToLiteral(
+    const at::Tensor& param_tensor, const xla::Shape& param_shape) {
   size_t total_elements = 1;
   std::vector<xla::int64> dimension_sizes;
   for (const auto dimension_size : param_tensor.sizes()) {
@@ -69,22 +67,30 @@ std::shared_ptr<xla::ComputationClient::Data> TensorToXlaImpl(
       LinearizeTensor<NativeT>(param_tensor, total_elements));
   xla::Literal literal(param_shape);
   literal.PopulateFromArray(parameter_xla_array);
-  return client->TransferParameterToServer(literal,
-                                           /*device=*/device.ToString());
+  return literal;
+}
+
+xla::Literal GetTensorLiteral(
+    const at::Tensor& param_tensor, const xla::Shape& param_shape) {
+  switch (param_tensor.type().scalarType()) {
+    case at::ScalarType::Float:
+      return TensorToLiteral<float>(param_tensor, param_shape);
+    case at::ScalarType::Long:
+      return TensorToLiteral<xla::int64>(param_tensor, param_shape);
+    default:
+      LOG(FATAL) << "Tensor type not supported";
+  }
 }
 
 std::shared_ptr<xla::ComputationClient::Data> TensorToXla(
     const at::Tensor& param_tensor, const xla::Shape& param_shape,
     const XLATensor::Device& device, xla::ComputationClient* client) {
-  switch (param_tensor.type().scalarType()) {
-    case at::ScalarType::Float:
-      return TensorToXlaImpl<float>(param_tensor, param_shape, device, client);
-    case at::ScalarType::Long:
-      return TensorToXlaImpl<xla::int64>(param_tensor, param_shape, device,
-                                         client);
-    default:
-      LOG(FATAL) << "Tensor type not supported";
-  }
+  xla::Literal literal = GetTensorLiteral(param_tensor, param_shape);
+  std::vector<xla::ComputationClient::LiteralDevice> literal_device;
+  literal_device.emplace_back(std::move(literal), device.ToString());
+  auto handles = client->TransferToServer(literal_device);
+  CHECK_EQ(handles.size(), 1);
+  return std::move(handles.front());
 }
 
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
@@ -162,9 +168,10 @@ XLATensor::XLATensor(const autograd::Variable& tensor, const Device& device)
       requires_grad_(tensor.requires_grad()) {}
 
 XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
-                     uint64_t module_id)
+                     uint64_t module_id, bool requires_grad)
     : data_(std::make_shared<Data>(
-          xla_data, DeviceFromString(xla_data->device()), module_id)) {}
+          xla_data, DeviceFromString(xla_data->device()), module_id)),
+      requires_grad_(requires_grad) {}
 
 XLATensor::XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node,
                      const Device& device, uint64_t module_id)
@@ -281,18 +288,54 @@ uint64_t XLATensor::ForwardModuleId() const { return data_->module_id; }
 
 at::Tensor XLATensor::toTensor() {
   ApplyPendingGraph();
-  // Because there's no transferToClient, we'll define an `identity` graph, and
-  // execute it.
-  xla::XlaBuilder b("identity");
-  xla::GetTupleElement(xla::Tuple(&b, {xla::Parameter(&b, 0, shape(), "x")}),
-                       0);
-  xla::XlaComputation identity = b.Build().ValueOrDie();
 
-  auto client = XlaGetClient();
-  auto result_literal = client->ExecuteComputationAndTransfer(
-      identity, {data_->xla_data.get()}, nullptr);
-  auto return_tensor = MakeTensorFromXlaLiteral(*result_literal);
-  return autograd::make_variable(return_tensor, requires_grad_);
+  std::vector<xla::Literal> literals =
+      XlaGetClient()->TransferFromServer({GetXlaData()});
+  return autograd::make_variable(MakeTensorFromXlaLiteral(literals.front()),
+                                 RequiresGrad());
+}
+
+std::vector<at::Tensor> XLATensor::GetTensors(
+    const std::vector<std::shared_ptr<XLATensor>>& tensors) {
+  // TODO(dlibenzi): We do apply/compute and then fetch. Changing the API to
+  // support getting handles and data might save a few pennies here.
+  ApplyPendingGraph(tensors);
+
+  std::vector<std::shared_ptr<xla::ComputationClient::Data>> tensors_data;
+  for (auto& tensor : tensors) {
+    tensors_data.push_back(tensor->GetXlaData());
+  }
+  std::vector<xla::Literal> literals =
+      XlaGetClient()->TransferFromServer(tensors_data);
+  std::vector<at::Tensor> results;
+  for (size_t i = 0; i < literals.size(); ++i) {
+    results.push_back(autograd::make_variable(
+        MakeTensorFromXlaLiteral(literals[i]), tensors[i]->RequiresGrad()));
+  }
+  return results;
+}
+
+std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
+      const std::vector<autograd::Variable>& tensors,
+      const std::vector<std::string>& devices) {
+  CHECK_EQ(tensors.size(), devices.size());
+  std::vector<xla::ComputationClient::LiteralDevice> literal_device;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    Device device = DeviceFromString(devices[i]);
+    xla::Shape shape = MakeArrayShapeFromDimensions(
+        tensors[i].sizes(),
+        XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType()),
+        device.hw_type);
+    xla::Literal literal = GetTensorLiteral(tensors[i], shape);
+    literal_device.emplace_back(std::move(literal), devices[i]);
+  }
+  auto handles = XlaGetClient()->TransferToServer(literal_device);
+  std::vector<std::shared_ptr<XLATensor>> xla_tensors;
+  for (size_t i = 0; i < handles.size(); ++i) {
+    xla_tensors.push_back(std::make_shared<XLATensor>(
+        std::move(handles[i]), /*module_id=*/0, tensors[i].requires_grad()));
+  }
+  return xla_tensors;
 }
 
 std::shared_ptr<XlaGraphNode> XLATensor::CreateTensorNode(
@@ -370,8 +413,8 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateAddNode(
 
 std::shared_ptr<XLATensor> XLATensor::add(XLATensor& other,
                                           const at::Scalar& alpha) {
-  return std::make_shared<XLATensor>(CreateAddNode(other, alpha), data_->device,
-                                     0);
+  return std::make_shared<XLATensor>(CreateAddNode(other, alpha),
+                                     data_->device, /*module_id=*/0);
 }
 
 void XLATensor::add_(XLATensor& other, const at::Scalar& alpha) {
@@ -379,11 +422,13 @@ void XLATensor::add_(XLATensor& other, const at::Scalar& alpha) {
 }
 
 std::shared_ptr<XLATensor> XLATensor::mul(XLATensor& other) {
-  return std::make_shared<XLATensor>(CreateMulNode(other), data_->device, 0);
+  return std::make_shared<XLATensor>(CreateMulNode(other), data_->device,
+                                     /*module_id=*/0);
 }
 
 std::shared_ptr<XLATensor> XLATensor::mul(const at::Scalar& other) {
-  return std::make_shared<XLATensor>(CreateMulNode(other), data_->device, 0);
+  return std::make_shared<XLATensor>(CreateMulNode(other), data_->device,
+                                     /*module_id=*/0);
 }
 
 void XLATensor::mul_(XLATensor& other) {
@@ -395,11 +440,13 @@ void XLATensor::mul_(const at::Scalar& other) {
 }
 
 std::shared_ptr<XLATensor> XLATensor::div(XLATensor& other) {
-  return std::make_shared<XLATensor>(CreateDivNode(other), data_->device, 0);
+  return std::make_shared<XLATensor>(CreateDivNode(other), data_->device,
+                                     /*module_id=*/0);
 }
 
 std::shared_ptr<XLATensor> XLATensor::div(const at::Scalar& other) {
-  return std::make_shared<XLATensor>(CreateDivNode(other), data_->device, 0);
+  return std::make_shared<XLATensor>(CreateDivNode(other), data_->device,
+                                     /*module_id=*/0);
 }
 
 void XLATensor::div_(XLATensor& other) {
@@ -440,7 +487,8 @@ std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
   };
   auto crs_node =
       XlaGraphNode::New(std::move(generator), shape(), {GetXlaGraphNode()});
-  return std::make_shared<XLATensor>(std::move(crs_node), data_->device, 0);
+  return std::make_shared<XLATensor>(std::move(crs_node), data_->device,
+                                     /*module_id=*/0);
 }
 
 void XLATensor::ApplyPendingGraph() {
@@ -466,9 +514,9 @@ void XLATensor::ComputeAndDistribute(
   auto client = XlaGetClient();
   auto result_tuple = client->ExecuteComputation(
       computation, xla_graph_ctx->GetParametersData(), &multi_shape);
-  auto new_dest_elements = client->DeconstructTuple(*result_tuple).ValueOrDie();
+  auto new_dest_elements = client->DeconstructTuple({result_tuple});
   // Replace destination's underlying data with the result of the computation.
-  SetMulti(tensors, new_dest_elements, index_mapping);
+  SetMulti(tensors, new_dest_elements.front(), index_mapping);
 }
 
 void XLATensor::ApplyPendingGraph(
@@ -506,14 +554,14 @@ void XLATensor::ApplyPendingGraph(
     auto client = XlaGetClient();
     auto result_tuples =
         client->ExecuteParallel(computations, parameters, output_shapes);
+    auto result_tuple_elements = client->DeconstructTuple(result_tuples);
     auto context_iterator = contexts_map.begin();
-    for (size_t i = 0; i < computations.size(); ++i, ++context_iterator) {
-      auto new_dest_elements =
-          client->DeconstructTuple(*result_tuples[i]).ValueOrDie();
+    for (auto& computation_tuple_elements : result_tuple_elements) {
       // Replace destination's underlying data with the result of the
       // computation.
-      SetMulti(tensors, new_dest_elements,
+      SetMulti(tensors, computation_tuple_elements,
                context_iterator->second.index_mapping);
+      ++context_iterator;
     }
   }
 }
