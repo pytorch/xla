@@ -80,15 +80,14 @@ class XrtComputationClient : public ComputationClient {
 
   XrtComputationClient(Options options);
 
-  std::shared_ptr<Data> TransferParameterToServer(
-      const xla::Literal& literal, const string& device) override;
+  std::vector<std::shared_ptr<Data>> TransferToServer(
+      tensorflow::gtl::ArraySlice<const LiteralDevice> literals) override;
+
+  std::vector<Literal> TransferFromServer(
+      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles)
+      override;
 
   std::shared_ptr<Data> ExecuteComputation(
-      const XlaComputation& computation,
-      tensorflow::gtl::ArraySlice<Data*> arguments,
-      const Shape* output_shape) override;
-
-  std::unique_ptr<Literal> ExecuteComputationAndTransfer(
       const XlaComputation& computation,
       tensorflow::gtl::ArraySlice<Data*> arguments,
       const Shape* output_shape) override;
@@ -103,8 +102,8 @@ class XrtComputationClient : public ComputationClient {
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) override;
 
-  StatusOr<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
-      const Data& data) override;
+  std::vector<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
+      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) override;
 
   string GetDefaultDevice() const override;
 
@@ -157,7 +156,7 @@ class XrtComputationClient : public ComputationClient {
   // entry here.
   enum class NodeTypes {
     kCompileExecute,
-    kCompileExecuteRead,
+    kRead,
     kAllocate,
     kSubTuple,
     kReleaseAllocationHandle,
@@ -174,6 +173,13 @@ class XrtComputationClient : public ComputationClient {
 
     string device;
     NodeTypes type;
+  };
+
+  // When we split a batch operation into per-session batches, we use this data
+  // structure to collect the per-session work.
+  struct SessionWork {
+    std::vector<tensorflow::Output> outputs_handles;
+    std::vector<size_t> index_mapping;
   };
 
   struct ExecuteContext {
@@ -274,23 +280,16 @@ class XrtComputationClient : public ComputationClient {
   const CachedNode& GetCompileExecuteNode(const tensorflow::Scope& scope,
                                           const string& device);
 
-  // Creates an XRT graph with an XRTCompile, feeding into an XRTExecute,
-  // feeding into an XRTReadLiteralAndRelease operation:
+  // Creates an XRT graph with an XRTReadLiteral operation:
   //
-  //  XRTReadLiteralAndRelease(
-  //    XRTExecute(
-  //      XRTCompile(holders[0]),
-  //      holders[1],
-  //      holders[2]
-  //    )
+  //  XRTReadLiteral(
+  //    holders[0]
   //  )
   //
   // With:
-  //  holders[0] = XLA Computation place-holder (DT_STRING)
-  //  holders[1] = xrt::XRTExecutionConfig place-holder (DT_STRING)
-  //  holders[2] = Inputs for the XRTExecute (DT_INT64[])
-  const CachedNode& GetCompileExecuteReadNode(const tensorflow::Scope& scope,
-                                              const string& device);
+  //  holders[0] = The handle place-holder to be read (DT_INT64)
+  const CachedNode& GetReadNode(const tensorflow::Scope& scope,
+                                const string& device);
 
   // Creates an XRTAllocate node:
   //

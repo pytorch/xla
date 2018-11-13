@@ -51,6 +51,15 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
           XLATensor::ApplyPendingGraph(tensors);
         });
+  m.def("_xla_to_tensors",
+        [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
+          return XLATensor::GetTensors(tensors);
+        });
+  m.def("_xla_create_tensors",
+        [](const std::vector<autograd::Variable>& tensors,
+           const std::vector<std::string>& devices) {
+          return XLATensor::CreateTensors(tensors, devices);
+        });
   m.def("_xla_metrics_report", []() { return xla::metrics::CreateMetricReport(); });
 }
 

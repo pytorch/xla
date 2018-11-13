@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/platform/logging.h"
+#include "tensorflow/core/platform/stacktrace.h"
 
 namespace xla {
 namespace xrt_util {
@@ -32,7 +33,8 @@ void CheckComputationStatus(
       LOG(ERROR) << ">>> Dumping Computation " << i;
       XLA_LOG_LINES(ERROR, hlo_text);
     }
-    LOG(FATAL) << status;
+    LOG(ERROR) << "StackTrace:\n" << tensorflow::CurrentStackTrace();
+    LOG(FATAL) << "Status Error: " << status;
   }
 }
 

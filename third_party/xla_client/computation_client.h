@@ -31,22 +31,32 @@ class ComputationClient {
     Shape device_shape_;
   };
 
+  struct LiteralDevice {
+    LiteralDevice(xla::Literal literal, string device)
+        : literal(std::move(literal)), device(std::move(device)) {}
+
+    xla::Literal literal;
+    string device;
+  };
+
   static StatusOr<std::unique_ptr<ComputationClient>> Create();
 
   virtual ~ComputationClient() {}
 
-  virtual std::shared_ptr<Data> TransferParameterToServer(
-      const xla::Literal& literal, const string& device) = 0;
+  // Transfers local tensor literal values to the TPU servers and fetches the
+  // handles.
+  virtual std::vector<std::shared_ptr<Data>> TransferToServer(
+      tensorflow::gtl::ArraySlice<const LiteralDevice> literals) = 0;
+
+  // Reads the tensor literal values stored at TPU server sites, behind the
+  // supplied handles.
+  virtual std::vector<Literal> TransferFromServer(
+      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) = 0;
 
   // Executes "computation" with "arguments" and returns the result. If
   // "output_shape" isn't null, use it as a hint for the computation output
   // layout.
   virtual std::shared_ptr<Data> ExecuteComputation(
-      const XlaComputation& computation,
-      tensorflow::gtl::ArraySlice<Data*> arguments,
-      const Shape* output_shape) = 0;
-
-  virtual std::unique_ptr<Literal> ExecuteComputationAndTransfer(
       const XlaComputation& computation,
       tensorflow::gtl::ArraySlice<Data*> arguments,
       const Shape* output_shape) = 0;
@@ -76,8 +86,8 @@ class ComputationClient {
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) = 0;
 
-  virtual StatusOr<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
-      const Data& data) = 0;
+  virtual std::vector<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
+      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) = 0;
 
   virtual string GetDefaultDevice() const = 0;
 
@@ -87,12 +97,13 @@ class ComputationClient {
 
  protected:
   // Metrics common to all client intrfaces.
+  static metrics::Metric* TransferToServerMetric();
+  static metrics::Metric* TransferFromServerMetric();
   static metrics::Metric* ExecuteMetric();
-  static metrics::Metric* ExecuteTransferMetric();
-  static metrics::Metric* TransferMetric();
   static metrics::Metric* ExecuteReplicatedMetric();
   static metrics::Metric* ExecuteParallelMetric();
   static metrics::Metric* DeconstructTupleMetric();
+  static metrics::Metric* ReleaseHandlesMetric();
   static metrics::Metric* InboundDataMetric();
   static metrics::Metric* OutboundDataMetric();
 };

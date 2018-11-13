@@ -29,41 +29,28 @@ void GatherParameters(std::vector<at::Tensor*>* values,
   }
 }
 
-// If "result_dh" is a tuple, decompose it and return a list of tensors created
-// from its components, otherwise return a singleton list containing a single
-// tensor created from it.
-XlaModule::TensorBatchVector::value_type DecomposeComputationResult(
-    std::shared_ptr<xla::ComputationClient::Data> result_dh,
-    const xla::Shape& result_shape, uint64_t module_id) {
-  std::vector<std::shared_ptr<XLATensor>> decomposed_result;
-  std::vector<xla::Shape> forward_ret_shape = GetComponentShapes(result_shape);
-  auto client = XlaGetClient();
-  if (forward_ret_shape.size() > 1) {
-    // The result is a tuple. Decompose it into a list of tensors.
-    auto result_components = client->DeconstructTuple(*result_dh).ValueOrDie();
-    CHECK_EQ(forward_ret_shape.size(), result_components.size());
-    for (size_t i = 0; i < result_components.size(); ++i) {
-      auto& tuple_element = result_components[i];
-      auto result_component =
-          std::make_shared<XLATensor>(std::move(tuple_element), module_id);
-      decomposed_result.push_back(result_component);
-    }
-  } else {
-    CHECK_EQ(forward_ret_shape.size(), 1);
-    auto result_component =
-        std::make_shared<XLATensor>(std::move(result_dh), module_id);
-    decomposed_result.push_back(result_component);
-  }
-  return decomposed_result;
-}
-
 XlaModule::TensorBatchVector DecomposeComputationResult(
     const std::vector<std::shared_ptr<xla::ComputationClient::Data>>& results,
     const xla::Shape& result_shape, uint64_t module_id) {
+  std::vector<xla::Shape> shapes = GetComponentShapes(result_shape);
   XlaModule::TensorBatchVector batch_tensors;
-  for (auto& result : results) {
-    batch_tensors.push_back(
-        DecomposeComputationResult(result, result_shape, module_id));
+  if (shapes.size() > 1) {
+    auto result_components = XlaGetClient()->DeconstructTuple(results);
+    for (auto& replica_result_components : result_components) {
+      XlaModule::TensorBatchVector::value_type replica_tensors;
+      for (auto& replica_data : replica_result_components) {
+        replica_tensors.push_back(std::make_shared<XLATensor>(
+            std::move(replica_data), module_id, /*requires_grad=*/false));
+      }
+      batch_tensors.push_back(std::move(replica_tensors));
+    }
+  } else {
+    for (auto& replica_data : results) {
+      XlaModule::TensorBatchVector::value_type replica_tensors;
+      replica_tensors.push_back(std::make_shared<XLATensor>(
+          replica_data, module_id, /*requires_grad=*/false));
+      batch_tensors.push_back(std::move(replica_tensors));
+    }
   }
   return batch_tensors;
 }
@@ -537,18 +524,15 @@ XlaModule::TensorBatchVector XlaModule::Execute(
     const xla::Shape& result_shape, const xla::Shape* output_shape,
     uint64_t module_id) {
   auto client = XlaGetClient();
-  TensorBatchVector result;
+  std::vector<std::shared_ptr<xla::ComputationClient::Data>> exec_results;
   if (inputs.size() == 1) {
-    auto results =
-        client->ExecuteComputation(computation, inputs.front(), output_shape);
-    result.push_back(DecomposeComputationResult(std::move(results),
-                                                result_shape, module_id));
+    exec_results.push_back(
+        client->ExecuteComputation(computation, inputs.front(), output_shape));
   } else {
-    auto results = client->ExecuteReplicated(computation, inputs, output_shape);
-    result =
-        DecomposeComputationResult(std::move(results), result_shape, module_id);
+    exec_results = client->ExecuteReplicated(computation, inputs, output_shape);
   }
-  return result;
+  return DecomposeComputationResult(std::move(exec_results), result_shape,
+                                    module_id);
 }
 
 XlaTranslator::BuildOptions XlaModule::GetBackwardBuildOptions(

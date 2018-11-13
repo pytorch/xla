@@ -45,7 +45,7 @@ class XLATensor {
 
   XLATensor(const autograd::Variable& tensor, const Device& device);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
-            uint64_t module_id);
+            uint64_t module_id, bool requires_grad);
   XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device,
             uint64_t module_id);
   XLATensor(std::shared_ptr<Data> data) : data_(std::move(data)) {}
@@ -127,6 +127,16 @@ class XLATensor {
   // Applies the queue of operations for a list of tensors.
   static void ApplyPendingGraph(
       const std::vector<std::shared_ptr<XLATensor>>& tensors);
+
+  // Retrieves the PyTorch tensors behind the XLA tensors.
+  static std::vector<at::Tensor> GetTensors(
+      const std::vector<std::shared_ptr<XLATensor>>& tensors);
+
+  // Operation which creates XLA tensors out of autograd variable by batching
+  // the requests to the computation servers.
+  static std::vector<std::shared_ptr<XLATensor>> CreateTensors(
+      const std::vector<autograd::Variable>& tensors,
+      const std::vector<std::string>& devices);
 
  private:
   struct Data {

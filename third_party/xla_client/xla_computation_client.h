@@ -49,15 +49,14 @@ class XlaComputationClient : public ComputationClient {
 
   XlaComputationClient(Options options);
 
-  std::shared_ptr<Data> TransferParameterToServer(
-      const Literal& literal, const string& device) override;
+  std::vector<std::shared_ptr<Data>> TransferToServer(
+      tensorflow::gtl::ArraySlice<const LiteralDevice> literals) override;
+
+  std::vector<Literal> TransferFromServer(
+      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles)
+      override;
 
   std::shared_ptr<Data> ExecuteComputation(
-      const XlaComputation& computation,
-      tensorflow::gtl::ArraySlice<Data*> arguments,
-      const Shape* output_shape) override;
-
-  std::unique_ptr<Literal> ExecuteComputationAndTransfer(
       const XlaComputation& computation,
       tensorflow::gtl::ArraySlice<Data*> arguments,
       const Shape* output_shape) override;
@@ -72,8 +71,8 @@ class XlaComputationClient : public ComputationClient {
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) override;
 
-  StatusOr<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
-      const Data& data) override;
+  std::vector<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
+      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) override;
 
   string GetDefaultDevice() const override;
 
