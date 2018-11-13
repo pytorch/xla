@@ -793,7 +793,7 @@ class TestGradients(XlaTestCase):
         xla_model = torch_xla._C.XlaModule(traced_model)
         xla_inputs = [torch_xla._C.XLATensor(input), torch_xla._C.XLATensor(target)]
         output_xla = xla_model((tuple(xla_inputs)))
-        xla_model.backward(output_xla)
+        xla_model.backward(*output_xla)
         output = model(input, target)
         output.backward()
         self.assertEqual(input.grad.data, xla_inputs[0].grad.data.to_tensor())
