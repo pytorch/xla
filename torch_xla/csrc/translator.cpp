@@ -47,7 +47,7 @@ class ComputationContext {
 
   void AddNodeOpById(size_t id, xla::XlaOp op) {
     const auto it_ok = node_xla_ops_.emplace(id, std::move(op));
-    CHECK(it_ok.second) << "Duplicated IR node ID: " << id;
+    XLA_CHECK(it_ok.second) << "Duplicated IR node ID: " << id;
   }
 
   void AddNodeOp(const Node* node, xla::XlaOp op) {
@@ -64,7 +64,8 @@ class ComputationContext {
 
   const xla::XlaOp& GetOpForValue(const Value* value) const {
     auto it = node_xla_ops_.find(value->unique());
-    CHECK(it != node_xla_ops_.end()) << value->uniqueName();
+    XLA_CHECK(it != node_xla_ops_.end()) << value->uniqueName() <<
+        "\nGraph:\n" << value->owningGraph()->toString();
     return it->second;
   }
 
@@ -90,7 +91,8 @@ class ComputationContext {
       const auto node_inputs = node->inputs();
       const auto input = node_inputs.at(input_index);
       LOG(FATAL) << "Missing op for input: unique_name=" << input->uniqueName()
-                 << " kind=" << node->kind().toDisplayString() << "\n"
+                 << " kind=" << node->kind().toDisplayString() << "\nGraph:\n"
+                 << node->owningGraph()->toString() << "\n"
                  << tensorflow::CurrentStackTrace();
     }
     return *op;
