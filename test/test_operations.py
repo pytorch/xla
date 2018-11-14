@@ -22,6 +22,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
 import unittest
+import xla_model_running_utils as xmru
 
 
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
@@ -31,8 +32,30 @@ class Holder(object):
     pass
 
 
-def _as_list(t):
-    return t if isinstance(t, (tuple, list)) else [t]
+class FnDataGenerator(object):
+    def __init__(self, func, batch_size, dim=1, count=1):
+        self._func = func
+        self._batch_size = batch_size
+        self._dim = dim
+        self._count = count
+        self._emitted = 0
+
+    def __len__(self):
+        return self._count
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
+
+    def next(self):
+        if self._emitted >= self._count:
+            raise StopIteration
+        data = torch.randn(self._batch_size, self._dim)
+        target = self._func(data)
+        self._emitted += 1
+        return data, target
 
 
 def _get_device_support(devname):
@@ -126,8 +149,11 @@ def _dump_differences(target, result, rtol=1e-5, atol=1e-3):
     if isinstance(target, torch.Tensor):
         assert isinstance(result, torch.Tensor)
         assert target.size() == result.size()
-        for i in iter_indices(target):
-            check_values(target[i], result[i], i)
+        if target.dim() > 0:
+            for i in iter_indices(target):
+                check_values(target[i], result[i], i)
+        else:
+            check_values(target.item(), result.item(), 0)
     elif isinstance(target, (list, tuple)):
         assert isinstance(result, (list, tuple))
         assert len(target) == len(result)
@@ -143,49 +169,21 @@ def _dump_differences(target, result, rtol=1e-5, atol=1e-3):
 
 def _xla_run(model, input, device='TPU'):
     if isinstance(input, (tuple, list)):
-        traced_model = torch.jit.trace(model, *input[0])
-        xla_model = torch_xla._C.XlaModule(
-            traced_model, use_full_conv_precision=True)
-        input_xla = []
-        for n, replica_input in enumerate(input):
-            xla_replica_input = []
-            for i in replica_input:
-                xla_replica_input.append(
-                    torch_xla._C.XLATensor(i, '{}:{}'.format(device, n)))
-            input_xla.append(tuple(xla_replica_input))
-        output_xla = xla_model(*input_xla)
+        devices = ['{}:{}'.format(device, n) for n in range(0, len(input))]
+        xla_model = xmru.XlaModel(model, input[0], num_cores=len(input),
+                                  devices=devices, full_conv_precision=True)
+        output_xla = xla_model(*input)
         output = []
         for xla_replica_outputs in output_xla:
             replica_outputs = []
-            for o in _as_list(xla_replica_outputs):
+            for o in xmru.as_list(xla_replica_outputs):
                 replica_outputs.append(o.to_tensor())
             output.append(tuple(replica_outputs))
         return tuple(output)
     else:
-        traced_model = torch.jit.trace(model, input)
-        xla_model = torch_xla._C.XlaModule(
-            traced_model, use_full_conv_precision=True)
-        input_xla = torch_xla._C.XLATensor(input)
-        output_xla = xla_model(tuple([input_xla]))
-        return output_xla[0][0].to_tensor()
-
-
-def _forward_passes(graph):
-    torch._C._jit_pass_canonicalize_ops(graph)
-    torch_xla._C._jit_pass_set_mat_mul_output_shape(graph)
-    torch_xla._C._jit_pass_insert_explicit_expand(graph)
-    torch_xla._C._jit_pass_eval_static_size(graph)
-    torch._C._jit_pass_constant_propagation(graph)
-    torch_xla._C._jit_pass_replace_untraced_operators(graph)
-    torch._C._jit_pass_dce(graph)
-
-
-def _backward_passes(graph):
-    torch._C._jit_pass_specialize_undef(graph)
-    torch_xla._C._jit_pass_eval_static_size(graph)
-    torch._C._jit_pass_constant_propagation(graph)
-    torch_xla._C._jit_pass_threshold_backward_peephole(graph)
-    torch._C._jit_pass_dce(graph)
+        xla_model = xmru.XlaModel(model, [input], full_conv_precision=True)
+        output_xla = xla_model(input)
+        return output_xla[0]
 
 
 class XlaTestCase(TestCase):
@@ -214,8 +212,8 @@ class XlaTestCase(TestCase):
     def compareReplicated(self, model, inputs, xla_outputs):
         self.assertEqual(len(inputs), len(xla_outputs))
         for i, input in enumerate(inputs):
-            expected = _as_list(model(*input))
-            xla_output = _as_list(xla_outputs[i])
+            expected = xmru.as_list(model(*input))
+            xla_output = xmru.as_list(xla_outputs[i])
             self.assertEqual(len(expected), len(xla_output))
             for j, expected_tensor in enumerate(expected):
                 self.assertEqualDbg(xla_output[j], expected_tensor)
@@ -531,6 +529,104 @@ class TestMNIST(XlaTestCase):
         self.assertEqualDbg(out.data, expected.data)
 
 
+class AxPlusB(nn.Module):
+    def __init__(self):
+        super(AxPlusB, self).__init__()
+        self.a = nn.Parameter(torch.randn(1, 1))
+        self.b = nn.Parameter(torch.randn(1, 1))
+
+    def forward(self, x):
+        ones = torch.ones_like(x)
+        return x.mm(self.a) + ones.mm(self.b)
+
+
+class SquareLoss(nn.Module):
+    def __init__(self):
+        super(SquareLoss, self).__init__()
+
+    def forward(self, x, y):
+        x.requires_grad = True
+        y.requires_grad = True
+        diff = x - y
+        loss = diff.t().mm(diff)[0][0]
+        return loss / x.size()[0]
+
+
+@unittest.skip('RuntimeError: Unsupported operator: aten::ones_like')
+class TestAxPlusB(XlaTestCase):
+    def test(self):
+        A = 3.11
+        B = 4.09
+        model = AxPlusB()
+        xla_model = xmru.XlaModel(model, [torch.randn(1, 1)])
+        optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
+        square_loss = SquareLoss()
+        loss = None
+        for _ in range(0, 100):
+            optimizer.zero_grad()
+            x = torch.randn(1, 1)
+            target = x * A + B
+            y = xla_model(x)
+            loss = square_loss(y[0], target)
+            loss.backward()
+            xla_model.backward(y)
+            optimizer.step()
+        self.assertEqualRel(loss.sum(), torch.tensor(0.0))
+
+
+@unittest.skip('RuntimeError: Unsupported operator: aten::ones_like')
+class TestAxPlusBGen(XlaTestCase):
+    def test(self):
+        A = 3.11
+        B = 4.09
+        batch_size = 128
+        gen = FnDataGenerator(lambda x: x * A + B, batch_size, count=100)
+        model = AxPlusB()
+        xla_model = xmru.XlaModel(model, [torch.randn(batch_size, 1)])
+        optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
+        square_loss = SquareLoss()
+        loss = None
+        for x, target in gen:
+            optimizer.zero_grad()
+            y = xla_model(x)
+            loss = square_loss(y[0], target)
+            loss.backward()
+            xla_model.backward(y)
+            optimizer.step()
+        self.assertEqualRel(loss.sum(), torch.tensor(0.0))
+
+
+@unittest.skip('RuntimeError: bool value of Tensor with more than one value is ambiguous')
+class TestAxPlusBGenXla(XlaTestCase):
+    def test(self):
+        def loss_fn(x, y):
+            diff = x - y
+            sloss = diff.t().mm(diff)
+            size = float(x.size()[0])
+            return sloss.mm(torch.Tensor([[1.0 / size]]))
+
+        A = 3.11
+        B = 4.09
+        batch_size = 128
+        gen = FnDataGenerator(lambda x: x * A + B, batch_size, count=100)
+        model = AxPlusB()
+        xla_model = xmru.XlaModel(model, [torch.randn(batch_size, 1)],
+                                  target=torch.randn(batch_size, 1),
+                                  loss_fn=loss_fn, num_cores=1, devices=[':0'])
+        optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
+        xla_model.train(gen, optimizer, batch_size, log_fn=None)
+
+        def eval_fn(output, target):
+            mloss = (output - target) * (output - target)
+            error = torch.ones_like(mloss) * 1e-5
+            count = torch.le(mloss, error).sum()
+            return mloss.mean().item(), count.item()
+
+        gen = FnDataGenerator(lambda x: x * A + B, batch_size)
+        accuracy = xla_model.test(gen, eval_fn, batch_size, log_fn=None)
+        self.assertEqual(accuracy, 100.0)
+
+
 class TestSum(XlaTestCase):
     def test(self):
 
@@ -592,14 +688,14 @@ class TestGradients(XlaTestCase):
         # Trace and symbolically differentiate
         traced_model = torch.jit.trace(model, *inputs)
         fwd = traced_model._get_method('forward')
-        _forward_passes(fwd.graph)
+        xmru.forward_passes(fwd.graph)
 
         inputs_params = inputs + list(model.parameters())
         inputs_params_buffers = inputs + list(fwd.params())
 
         gradient = torch._C._jit_differentiate(fwd.graph)
-        _forward_passes(gradient.f)
-        _backward_passes(gradient.df)
+        xmru.forward_passes(gradient.f)
+        xmru.backward_passes(gradient.df)
 
         ##############################################################
         # Run forward and backwarg graphs via jit interpreter
@@ -608,7 +704,7 @@ class TestGradients(XlaTestCase):
 
         # forward function
         raw_outputs = exec_f(*inputs_params_buffers)
-        raw_outputs = _as_list(raw_outputs)
+        raw_outputs = xmru.as_list(raw_outputs)
         intermediate_outputs = [raw_output for raw_output in raw_outputs[gradient.f_real_outputs:]
                                 if raw_output.dtype == torch.float32]
         outputs = raw_outputs[:gradient.f_real_outputs]
@@ -624,7 +720,7 @@ class TestGradients(XlaTestCase):
                              for i in gradient.df_input_captured_outputs]
 
         grad_inputs = exec_df(*raw_grad_outputs)
-        grad_inputs = _as_list(grad_inputs)
+        grad_inputs = xmru.as_list(grad_inputs)
 
         ##############################################################
         # backward with XLA
@@ -642,7 +738,7 @@ class TestGradients(XlaTestCase):
         ##############################################################
         # forward + backward with regular autograd / torch
         outputs_gt = model(*inputs)
-        outputs_gt = _as_list(outputs_gt)
+        outputs_gt = xmru.as_list(outputs_gt)
         grad_inputs_gt = torch.autograd.grad(outputs_gt,
                                              inputs_params,
                                              grad_outputs,
