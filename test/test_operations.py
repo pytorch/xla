@@ -297,7 +297,6 @@ class TestView(XlaTestCase):
         self.assertEqualDbg(out.data, expected.data)
 
 
-@unittest.skip('RuntimeError: differentiation of prim::ListConstruct is not supported, or it is missing necessary type information')
 class TestStack(XlaTestCase):
     def test(self):
 
@@ -314,7 +313,7 @@ class TestStack(XlaTestCase):
         for dim in [0, 1]:
             model = XlaStack(dim)
             traced_model = torch.jit.trace(model, (x, y))
-            xla_model = torch_xla._C.XlaModule(traced_model)
+            xla_model = torch_xla._C.XlaModule(traced_model, differentiate=False)
             inputs_xla = [torch_xla._C.XLATensor(x), torch_xla._C.XLATensor(y)]
             output_xla = xla_model((tuple(inputs_xla)))
             expected = model(x, y)
@@ -588,11 +587,12 @@ class TestGradients(XlaTestCase):
         # forward function
         raw_outputs = exec_f(*inputs_params_buffers)
         raw_outputs = _as_list(raw_outputs)
+        intermediate_outputs = [raw_output for raw_output in raw_outputs[gradient.f_real_outputs:]
+                                if raw_output.dtype == torch.float32]
         outputs = raw_outputs[:gradient.f_real_outputs]
 
         if grad_outputs == 'random':
-            grad_outputs = (_random_like(outputs) +
-                            _zeros_like(raw_outputs[gradient.f_real_outputs:]))
+            grad_outputs = _random_like(outputs) + _zeros_like(intermediate_outputs)
 
         raw_grad_outputs = []
         raw_grad_outputs += grad_outputs
@@ -671,7 +671,6 @@ class TestGradients(XlaTestCase):
         inputs = [torch.randn(4, 2, requires_grad=True)]
         self.checkGrad(model, inputs, xla=True)
 
-    @unittest.skip('RuntimeError: expected 3 inputs, but got 4')
     def test_maxpool(self):
         class MaxPoolGrad(nn.Module):
             def forward(self, x):

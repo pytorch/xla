@@ -62,9 +62,10 @@ std::atomic<uint64_t> XlaModule::s_module_id_(1);
 constexpr uint64_t XlaModule::kInvalidModuleId;
 
 XlaModule::XlaModule(const std::shared_ptr<script::Module> module,
-                     bool use_full_conv_precision)
+                     bool use_full_conv_precision, bool differentiate)
     : use_full_conv_precision_(use_full_conv_precision),
-      enable_trace_fusion_(true),
+      enable_trace_fusion_(differentiate),
+      differentiate_(differentiate),
       module_id_(s_module_id_++),
       script_module_(module) {}
 
@@ -104,6 +105,11 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
     }
     all_params_.push_back(std::move(replica_params));
     optimizable_params_.push_back(std::move(optimizable_replica_params));
+  }
+  if (!differentiate_) {
+    f_ = forward_graph;
+    f_real_outputs_ = f_->outputs().size();
+    return;
   }
   // Collect the requires-gradient property making sure all the replica inputs
   // agree on it.
@@ -181,6 +187,8 @@ XlaModule::TensorBatchVector XlaModule::forward(
 }
 
 void XlaModule::backward(const TensorBatchVector& grad_outputs) {
+  JIT_ASSERTM(differentiate_,
+              "Calling backward() on a module with differentiate not set");
   CheckInitialized();
   // Tensors could have pending in-place operations, apply them first to reset
   // their parent module and thus invalidate the gradients we set aside from the
