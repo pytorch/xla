@@ -54,8 +54,8 @@ std::vector<xla::int64> LinearizeTensor<xla::int64>(
 }
 
 template <class NativeT>
-xla::Literal TensorToLiteral(
-    const at::Tensor& param_tensor, const xla::Shape& param_shape) {
+xla::Literal TensorToLiteral(const at::Tensor& param_tensor,
+                             const xla::Shape& param_shape) {
   size_t total_elements = 1;
   std::vector<xla::int64> dimension_sizes;
   for (const auto dimension_size : param_tensor.sizes()) {
@@ -70,8 +70,8 @@ xla::Literal TensorToLiteral(
   return literal;
 }
 
-xla::Literal GetTensorLiteral(
-    const at::Tensor& param_tensor, const xla::Shape& param_shape) {
+xla::Literal GetTensorLiteral(const at::Tensor& param_tensor,
+                              const xla::Shape& param_shape) {
   switch (param_tensor.type().scalarType()) {
     case at::ScalarType::Float:
       return TensorToLiteral<float>(param_tensor, param_shape);
@@ -316,8 +316,8 @@ std::vector<at::Tensor> XLATensor::GetTensors(
 }
 
 std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
-      const std::vector<autograd::Variable>& tensors,
-      const std::vector<std::string>& devices) {
+    const std::vector<autograd::Variable>& tensors,
+    const std::vector<std::string>& devices) {
   CHECK_EQ(tensors.size(), devices.size());
   std::vector<xla::ComputationClient::LiteralDevice> literal_device;
   for (size_t i = 0; i < tensors.size(); ++i) {
@@ -413,8 +413,8 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateAddNode(
 
 std::shared_ptr<XLATensor> XLATensor::add(XLATensor& other,
                                           const at::Scalar& alpha) {
-  return std::make_shared<XLATensor>(CreateAddNode(other, alpha),
-                                     data_->device, /*module_id=*/0);
+  return std::make_shared<XLATensor>(CreateAddNode(other, alpha), data_->device,
+                                     /*module_id=*/0);
 }
 
 void XLATensor::add_(XLATensor& other, const at::Scalar& alpha) {
