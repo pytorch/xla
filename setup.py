@@ -95,7 +95,7 @@ setup(
     description='XLA bridge for PyTorch',
     url='https://github.com/pytorch/xla',
     author='Alex Suhan, Davide Libenzi',
-    author_email='asuhan@google.com, dlibenzi@google.com'
+    author_email='asuhan@google.com, dlibenzi@google.com',
     # Exclude the build files.
     packages=find_packages(exclude=['build']),
     ext_modules=[
