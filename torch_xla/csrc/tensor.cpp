@@ -14,6 +14,17 @@ namespace jit {
 
 namespace {
 
+xla::PrimitiveType TensorToXlaType(at::ScalarType dtype) {
+  switch (dtype) {
+    case at::ScalarType::Float:
+      return xla::PrimitiveType::F32;
+    case at::ScalarType::Long:
+      return xla::PrimitiveType::S64;
+    default:
+      LOG(FATAL) << "Tensor type not supported: " << dtype;
+  }
+}
+
 // Creates a minor-to-major layout from given dimensions.
 xla::Shape MakeTorchTensorLayout(const std::vector<xla::int64>& dimensions,
                                  const xla::PrimitiveType type) {
@@ -70,22 +81,10 @@ xla::Literal TensorToLiteral(const at::Tensor& param_tensor,
   return literal;
 }
 
-xla::Literal GetTensorLiteral(const at::Tensor& param_tensor,
-                              const xla::Shape& param_shape) {
-  switch (param_tensor.type().scalarType()) {
-    case at::ScalarType::Float:
-      return TensorToLiteral<float>(param_tensor, param_shape);
-    case at::ScalarType::Long:
-      return TensorToLiteral<xla::int64>(param_tensor, param_shape);
-    default:
-      LOG(FATAL) << "Tensor type not supported";
-  }
-}
-
 std::shared_ptr<xla::ComputationClient::Data> TensorToXla(
     const at::Tensor& param_tensor, const xla::Shape& param_shape,
     const XLATensor::Device& device, xla::ComputationClient* client) {
-  xla::Literal literal = GetTensorLiteral(param_tensor, param_shape);
+  xla::Literal literal = GetTensorLiteral(param_tensor, &param_shape);
   std::vector<xla::ComputationClient::LiteralDevice> literal_device;
   literal_device.emplace_back(std::move(literal), device.ToString());
   auto handles = client->TransferToServer(literal_device);
@@ -338,7 +337,7 @@ std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
         tensors[i].sizes(),
         XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType()),
         device.hw_type);
-    xla::Literal literal = GetTensorLiteral(tensors[i], shape);
+    xla::Literal literal = GetTensorLiteral(tensors[i], &shape);
     literal_device.emplace_back(std::move(literal), devices[i]);
   }
   auto handles = XlaGetClient()->TransferToServer(literal_device);
@@ -629,8 +628,7 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor,
   if (shape == nullptr) {
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
     computed_shape = MakeTorchTensorLayout(
-        dimensions,
-        XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()));
+        dimensions, TensorToXlaType(tensor.type().scalarType()));
     shape = &computed_shape;
   }
   switch (tensor.type().scalarType()) {
