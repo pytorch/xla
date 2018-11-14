@@ -25,7 +25,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // "use_full_conv_precision" controls whether to use maximum precision
   // available in hardware for convolutions.
   XlaModule(const std::shared_ptr<script::Module> module,
-            bool use_full_conv_precision);
+            bool use_full_conv_precision, bool differentiate);
 
   TensorBatchVector forward(const TensorBatchVector& inputs);
   // For the given gradient outputs, compute the gradient of input and
@@ -129,6 +129,8 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // to false on failure. Mitigates doing redundant work (compute gradients we
   // can't use) after the first training step, if the fusion fails.
   bool enable_trace_fusion_;
+  // Whether to differentiate the graph or not.
+  bool differentiate_;
   // Unique identifier for the module, used to keep track of tensors originating
   // from its forward method.
   uint64_t module_id_;

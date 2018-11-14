@@ -15,11 +15,12 @@ namespace {
 void InitXlaModuleBindings(py::module m) {
   py::class_<XlaModule, std::shared_ptr<XlaModule>>(m, "XlaModule")
       .def(py::init([](const std::shared_ptr<script::Module> module,
-                       bool use_full_conv_precision) {
-             return std::make_shared<XlaModule>(module,
-                                                use_full_conv_precision);
+                       bool use_full_conv_precision, bool differentiate) {
+             return std::make_shared<XlaModule>(module, use_full_conv_precision,
+                                                differentiate);
            }),
-           py::arg("module"), py::arg("use_full_conv_precision") = false)
+           py::arg("module"), py::arg("use_full_conv_precision") = false,
+           py::arg("differentiate") = true)
       .def("__call__",
            [](XlaModule& xla_module, py::args args) -> py::object {
              auto inputs = XlaCreateTensorList(args);
@@ -60,7 +61,8 @@ void InitXlaModuleBindings(py::module m) {
            const std::vector<std::string>& devices) {
           return XLATensor::CreateTensors(tensors, devices);
         });
-  m.def("_xla_metrics_report", []() { return xla::metrics::CreateMetricReport(); });
+  m.def("_xla_metrics_report",
+        []() { return xla::metrics::CreateMetricReport(); });
 }
 
 void InitXlaPassesBindings(py::module m) {
@@ -78,7 +80,8 @@ void InitXlaTensorBindings(py::module m) {
            py::arg("tensor"), py::arg("device") = "")
       .def("to_tensor", [](XLATensor& s) { return s.toTensor(); })
       .def("size", [](const XLATensor& s) { return s.Size(); })
-      .def("device", [](const XLATensor& s) { return s.GetDevice().ToString(); })
+      .def("device",
+           [](const XLATensor& s) { return s.GetDevice().ToString(); })
       .def("__add__", [](std::shared_ptr<XLATensor> self,
                          XLATensor& other) { return self->add(other, 1.0); })
       .def("add", [](std::shared_ptr<XLATensor> self, double alpha,
