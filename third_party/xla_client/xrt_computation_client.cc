@@ -231,7 +231,6 @@ XrtComputationClient::ExecuteParallel(
   return RunComputations(exec_ops, computations_pointers, devices, feed_inputs);
 }
 
-
 std::vector<std::vector<std::shared_ptr<ComputationClient::Data>>>
 XrtComputationClient::DeconstructTuple(
     tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) {
