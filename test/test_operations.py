@@ -371,6 +371,30 @@ class TestNonContiguousTensor(XlaTestCase):
         self.assertEqualDbg(out_t.data, out.t().data)
 
 
+class TestConstantTensor(XlaTestCase):
+    def test(self):
+        x = torch.rand(2, 2)
+        y = torch.rand(2, 2)
+
+        class XplusY(nn.Module):
+            def forward(self, a):
+                return a + y
+
+        class XmulY(nn.Module):
+            def forward(self, a):
+                return a * y
+
+        model = XplusY()
+        out = _xla_run(model, x)
+        expected = model(x)
+        self.assertEqualDbg(out.data, expected.data)
+
+        model = XmulY()
+        out = _xla_run(model, x)
+        expected = model(x)
+        self.assertEqualDbg(out.data, expected.data)
+
+
 @unittest.skip('Pending autodiff support')
 class TestConv(XlaTestCase):
     def test(self):

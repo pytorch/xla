@@ -1,6 +1,7 @@
 #include "translator.h"
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
 #include "batch_norm.h"
@@ -35,13 +36,39 @@ void ActivateReturnNode(const xla::XlaOp& ret, xla::XlaBuilder* b) {
   xla::GetTupleElement(xla::Tuple(b, {ret}), 0);
 }
 
+xla::XlaOp GetConstantOp(xla::XlaBuilder* builder, Node* node) {
+  auto value = toIValue(node->output()).value();
+  if (value.isTensor()) {
+    auto literal = GetTensorLiteral(value.toTensor(), /*shape=*/nullptr);
+    return xla::ConstantLiteral(builder, literal);
+  } else if (value.isDouble()) {
+    return xla::ConstantR0<float>(builder, value.toDouble());
+  } else if (value.isInt()) {
+    return xla::ConstantR0<xla::int64>(builder, value.toInt());
+  } else if (value.isIntList()) {
+    auto value_list = value.toIntList();
+    std::vector<xla::int64> elements(value_list->elements().begin(),
+                                     value_list->elements().end());
+    return xla::ConstantR1<xla::int64>(builder, elements);
+  } else if (value.isDoubleList()) {
+    auto value_list = value.toDoubleList();
+    std::vector<float> elements(value_list->elements().begin(),
+                                value_list->elements().end());
+    return xla::ConstantR1<float>(builder, elements);
+  } else {
+    std::stringstream ss;
+    ss << value;
+    AT_ERROR("Unsupported constant: ", ss.str());
+  }
+}
+
 // Context class to hold together all the necessary state for the XLA
 // computation building process out of a PyTorch graph.
 class ComputationContext {
  public:
   static size_t OutputId(const Node* node) {
     const auto node_outputs = node->outputs();
-    XLA_CHECK_GE(node_outputs.size(), 1)
+    XLA_CHECK_EQ(node_outputs.size(), 1)
         << node->kind().toDisplayString() << "\nGraph:\n"
         << node->owningGraph()->toString();
     return node_outputs[0]->unique();
@@ -476,7 +503,10 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         cctx.AddNodeOp(node, xla_output);
         break;
       }
-      case prim::Constant:
+      case prim::Constant: {
+        cctx.AddNodeOp(node, GetConstantOp(b, node));
+        break;
+      }
       case prim::ListConstruct: {
         break;
       }

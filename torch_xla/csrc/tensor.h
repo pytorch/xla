@@ -189,6 +189,12 @@ class XLATensor {
   bool requires_grad_ = false;
 };
 
+// Creates an XLA literal out of an ATEN tensor. If shape is specified, that
+// shape+layout will be used, otherwise one will be generated out of the ATEN
+// tensor shape.
+xla::Literal GetTensorLiteral(const at::Tensor& tensor,
+                              const xla::Shape* shape);
+
 // If "shape" is a tuple, return the element shapes, otherwise return a
 // singleton list containing the original shape.
 std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape);
