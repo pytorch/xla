@@ -15,6 +15,7 @@
 #include "tensor.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/jit/passes/dead_code_elimination.h"
 
 namespace torch {
@@ -67,8 +68,8 @@ class ComputationContext {
     return it->second;
   }
 
-  c10::optional<xla::XlaOp> OpForInput(const Node* node,
-                                       size_t input_index) const {
+  c10::optional<xla::XlaOp> GetOpForInput(const Node* node,
+                                          size_t input_index) const {
     const auto node_inputs = node->inputs();
     const auto input = node_inputs.at(input_index);
     // Check if is prim::Undefined.
@@ -81,6 +82,18 @@ class ComputationContext {
       return at::nullopt;
     }
     return it->second;
+  }
+
+  xla::XlaOp OpForInput(const Node* node, size_t input_index) const {
+    auto op = GetOpForInput(node, input_index);
+    if (!op) {
+      const auto node_inputs = node->inputs();
+      const auto input = node_inputs.at(input_index);
+      LOG(FATAL) << "Missing op for input: unique_name=" << input->uniqueName()
+                 << " kind=" << node->kind().toDisplayString() << "\n"
+                 << tensorflow::CurrentStackTrace();
+    }
+    return *op;
   }
 
   std::vector<xla::XlaOp> ReleaseInputs() { return std::move(input_ops_); }
@@ -177,15 +190,15 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
                    node->kind().toQualString());
         }
         xla::XlaOp xla_output;
-        auto input_op_1 = cctx.OpForInput(node, 1);
+        auto input_op_1 = cctx.GetOpForInput(node, 1);
         if (!input_op_1) {
           const auto other = XlaHelpers::ScalarValue(
               node->get<at::Scalar>(attr::other).value().to<float>(), b);
           xla_output =
-              BuildArithmeticOp(node, *cctx.OpForInput(node, 0), other);
+              BuildArithmeticOp(node, cctx.OpForInput(node, 0), other);
         } else {
           xla_output =
-              BuildArithmeticOp(node, *cctx.OpForInput(node, 0), *input_op_1);
+              BuildArithmeticOp(node, cctx.OpForInput(node, 0), *input_op_1);
         }
         cctx.AddNodeOp(node, xla_output);
         break;
@@ -195,13 +208,13 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
           AT_ERROR("Unsupported arity for aten::gt");
         }
         xla::XlaOp xla_output =
-            BuildComparisonOp(node, *cctx.OpForInput(node, 0));
+            BuildComparisonOp(node, cctx.OpForInput(node, 0));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::type_as: {
         CHECK_EQ(node->inputs().size(), 2);
-        xla::XlaOp xla_output = BuildTypeAs(node, *cctx.OpForInput(node, 0));
+        xla::XlaOp xla_output = BuildTypeAs(node, cctx.OpForInput(node, 0));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
@@ -213,15 +226,15 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         }
 
         xla::XlaOp xla_output;
-        auto opt_op = cctx.OpForInput(node, 3);
+        auto opt_op = cctx.GetOpForInput(node, 3);
         if (opt_op) {  // bias exists
-          xla_output = BuildConvolutionBias(node, *cctx.OpForInput(node, 0),
-                                            *cctx.OpForInput(node, 1), *opt_op,
+          xla_output = BuildConvolutionBias(node, cctx.OpForInput(node, 0),
+                                            cctx.OpForInput(node, 1), *opt_op,
                                             conv_precision_);
         } else {
           xla_output =
-              BuildConvolution(node, *cctx.OpForInput(node, 0),
-                               *cctx.OpForInput(node, 1), conv_precision_);
+              BuildConvolution(node, cctx.OpForInput(node, 0),
+                               cctx.OpForInput(node, 1), conv_precision_);
         }
         cctx.AddNodeOp(node, xla_output);
         break;
@@ -229,8 +242,8 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::thnn_conv2d_backward: {
         CHECK_EQ(node->inputs().size(), 9);
         const auto conv2d_grads = BuildConv2dBackward(
-            node, *cctx.OpForInput(node, 0), *cctx.OpForInput(node, 1),
-            *cctx.OpForInput(node, 2), conv_precision_);
+            node, cctx.OpForInput(node, 0), cctx.OpForInput(node, 1),
+            cctx.OpForInput(node, 2), conv_precision_);
         const auto node_outputs = node->outputs();
         cctx.AddValueOp(node_outputs[0], conv2d_grads.grad_input);
         cctx.AddValueOp(node_outputs[1], conv2d_grads.grad_weight);
@@ -240,7 +253,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::t: {
         CHECK_EQ(node->inputs().size(), 1);
         xla::XlaOp xla_output =
-            xla::Transpose(*cctx.OpForInput(node, 0), {1, 0});
+            xla::Transpose(cctx.OpForInput(node, 0), {1, 0});
         cctx.AddNodeOp(node, xla_output);
         break;
       }
@@ -252,9 +265,9 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         xla::PrecisionConfig precision_config =
             XlaHelpers::BuildPrecisionConfig(conv_precision_);
         xla::XlaOp xla_output =
-            xla::Dot(*cctx.OpForInput(node, 1), *cctx.OpForInput(node, 2),
+            xla::Dot(cctx.OpForInput(node, 1), cctx.OpForInput(node, 2),
                      &precision_config) +
-            *cctx.OpForInput(node, 0);
+            cctx.OpForInput(node, 0);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
@@ -263,7 +276,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         xla::PrecisionConfig precision_config =
             XlaHelpers::BuildPrecisionConfig(conv_precision_);
         xla::XlaOp xla_output =
-            xla::Dot(*cctx.OpForInput(node, 0), *cctx.OpForInput(node, 1),
+            xla::Dot(cctx.OpForInput(node, 0), cctx.OpForInput(node, 1),
                      &precision_config);
         cctx.AddNodeOp(node, xla_output);
         break;
@@ -271,7 +284,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::max_pool2d_with_indices: {
         CHECK_GE(node->inputs().size(), 1);
         CHECK_GE(node->outputs().size(), 1);
-        xla::XlaOp xla_output = BuildMaxPool2d(node, *cctx.OpForInput(node, 0));
+        xla::XlaOp xla_output = BuildMaxPool2d(node, cctx.OpForInput(node, 0));
         const auto node_outputs = node->outputs();
         CHECK_GE(node_outputs.size(), 1);
         cctx.AddValueOp(node_outputs[0], xla_output);
@@ -280,40 +293,40 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::max_pool2d_with_indices_backward: {
         CHECK_EQ(node->inputs().size(), 8);
         xla::XlaOp xla_output = BuildMaxPool2dBackward(
-            node, *cctx.OpForInput(node, 0), *cctx.OpForInput(node, 1));
+            node, cctx.OpForInput(node, 0), cctx.OpForInput(node, 1));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::avg_pool2d: {
         CHECK_GE(node->inputs().size(), 1);
-        xla::XlaOp xla_output = BuildAvgPool2d(node, *cctx.OpForInput(node, 0));
+        xla::XlaOp xla_output = BuildAvgPool2d(node, cctx.OpForInput(node, 0));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::avg_pool2d_backward: {
         CHECK_GE(node->inputs().size(), 2);
         xla::XlaOp xla_output = BuildAvgPool2dBackward(
-            node, *cctx.OpForInput(node, 0), *cctx.OpForInput(node, 1));
+            node, cctx.OpForInput(node, 0), cctx.OpForInput(node, 1));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::neg: {
         CHECK_EQ(node->inputs().size(), 1);
-        const auto xla_input = *cctx.OpForInput(node, 0);
+        const auto xla_input = cctx.OpForInput(node, 0);
         xla::XlaOp xla_output = Neg(xla_input);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::tanh: {
         CHECK_EQ(node->inputs().size(), 1);
-        const auto xla_input = *cctx.OpForInput(node, 0);
+        const auto xla_input = cctx.OpForInput(node, 0);
         xla::XlaOp xla_output = Tanh(xla_input);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::sigmoid: {
         CHECK_EQ(node->inputs().size(), 1);
-        const auto xla_input = *cctx.OpForInput(node, 0);
+        const auto xla_input = cctx.OpForInput(node, 0);
         const auto half = XlaHelpers::ScalarValue<float>(0.5, b);
         xla::XlaOp xla_output = half + half * Tanh(half * xla_input);
         cctx.AddNodeOp(node, xla_output);
@@ -321,7 +334,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       }
       case aten::relu: {
         CHECK_EQ(node->inputs().size(), 1);
-        xla::XlaOp xla_output = xla::Max(*cctx.OpForInput(node, 0),
+        xla::XlaOp xla_output = xla::Max(cctx.OpForInput(node, 0),
                                          XlaHelpers::ScalarValue<float>(0, b));
         cctx.AddNodeOp(node, xla_output);
         break;
@@ -329,7 +342,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::threshold: {
         CHECK_EQ(node->inputs().size(), 3);
         xla::XlaOp xla_output = BuildThreshold(
-            node, *cctx.OpForInput(node, 0), *cctx.OpForInput(node, 0),
+            node, cctx.OpForInput(node, 0), cctx.OpForInput(node, 0),
             node->get<at::Scalar>(attr::threshold).value().to<float>(),
             node->get<at::Scalar>(attr::value).value().to<float>(), b);
         cctx.AddNodeOp(node, xla_output);
@@ -338,7 +351,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::threshold_backward: {
         CHECK_EQ(node->inputs().size(), 3);
         xla::XlaOp xla_output = BuildThreshold(
-            node, *cctx.OpForInput(node, 1), *cctx.OpForInput(node, 0),
+            node, cctx.OpForInput(node, 1), cctx.OpForInput(node, 0),
             node->get<at::Scalar>(attr::threshold).value().to<float>(), 0, b);
         cctx.AddNodeOp(node, xla_output);
         break;
@@ -346,27 +359,27 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::log_softmax: {
         CHECK_EQ(node->inputs().size(), size_t(2));
         xla::XlaOp xla_output =
-            BuildLogSoftmax(node, *cctx.OpForInput(node, 0));
+            BuildLogSoftmax(node, cctx.OpForInput(node, 0));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::_log_softmax_backward_data: {
         CHECK_EQ(node->inputs().size(), 4);
         xla::XlaOp xla_output = BuildLogSoftmaxGrad(
-            node, *cctx.OpForInput(node, 0), *cctx.OpForInput(node, 1));
+            node, cctx.OpForInput(node, 0), cctx.OpForInput(node, 1));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::reshape:
       case aten::view: {
         CHECK_EQ(node->inputs().size(), 2);
-        xla::XlaOp xla_output = BuildView(node, *cctx.OpForInput(node, 0));
+        xla::XlaOp xla_output = BuildView(node, cctx.OpForInput(node, 0));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::expand: {
         CHECK_GE(node->inputs().size(), 1);
-        xla::XlaOp xla_output = BuildExpand(node, *cctx.OpForInput(node, 0));
+        xla::XlaOp xla_output = BuildExpand(node, cctx.OpForInput(node, 0));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
@@ -394,7 +407,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       }
       case aten::chunk: {
         std::vector<xla::XlaOp> xla_outputs =
-            BuildChunk(node, *cctx.OpForInput(node, 0));
+            BuildChunk(node, cctx.OpForInput(node, 0));
         const auto node_outputs = node->outputs();
         for (size_t i = 0; i < node_outputs.size(); ++i) {
           cctx.AddValueOp(node_outputs[i], xla_outputs[i]);
@@ -404,9 +417,9 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::native_batch_norm:
       case aten::batch_norm: {
         CHECK_EQ(node->inputs().size(), 8);
-        const auto outputs = BuildBatchNorm(node, *cctx.OpForInput(node, 0),
-                                            *cctx.OpForInput(node, 1),
-                                            *cctx.OpForInput(node, 2));
+        const auto outputs = BuildBatchNorm(node, cctx.OpForInput(node, 0),
+                                            cctx.OpForInput(node, 1),
+                                            cctx.OpForInput(node, 2));
         const auto node_outputs = node->outputs();
         cctx.AddValueOp(node_outputs[0], outputs.output);
         if (node->kind() == aten::batch_norm) {
@@ -423,11 +436,11 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::native_batch_norm_backward: {
         CHECK_EQ(node->inputs().size(), 10);
         auto grads = BuildBatchNormBackward(
-            node, *cctx.OpForInput(node, 0),  // grad_output
-            *cctx.OpForInput(node, 1),        // input
-            *cctx.OpForInput(node, 2),        // weight
-            *cctx.OpForInput(node, 7),        // save_mean
-            *cctx.OpForInput(node, 8));       // save_std
+            node, cctx.OpForInput(node, 0),  // grad_output
+            cctx.OpForInput(node, 1),        // input
+            cctx.OpForInput(node, 2),        // weight
+            cctx.OpForInput(node, 7),        // save_mean
+            cctx.OpForInput(node, 8));       // save_std
         const auto node_outputs = node->outputs();
         cctx.AddValueOp(node_outputs[0], grads.grad_input);
         cctx.AddValueOp(node_outputs[1], grads.grad_weight);
@@ -436,21 +449,21 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       }
       case aten::sum: {
         CHECK_GE(node->inputs().size(), 1);
-        xla::XlaOp xla_output = BuildSum(node, *cctx.OpForInput(node, 0));
+        xla::XlaOp xla_output = BuildSum(node, cctx.OpForInput(node, 0));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::nll_loss: {
         CHECK_EQ(node->inputs().size(), 5);
-        xla::XlaOp xla_output = BuildNllLoss(node, *cctx.OpForInput(node, 0),
-                                             *cctx.OpForInput(node, 1));
+        xla::XlaOp xla_output = BuildNllLoss(node, cctx.OpForInput(node, 0),
+                                             cctx.OpForInput(node, 1));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::nll_loss_backward: {
         CHECK_EQ(node->inputs().size(), 7);
         xla::XlaOp xla_output = BuildNllLossBackward(
-            node, *cctx.OpForInput(node, 1), *cctx.OpForInput(node, 2));
+            node, cctx.OpForInput(node, 1), cctx.OpForInput(node, 2));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
