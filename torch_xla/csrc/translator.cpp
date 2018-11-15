@@ -41,7 +41,9 @@ class ComputationContext {
  public:
   static size_t OutputId(const Node* node) {
     const auto node_outputs = node->outputs();
-    CHECK_EQ(node_outputs.size(), 1);
+    XLA_CHECK_GE(node_outputs.size(), 1)
+        << node->kind().toDisplayString() << "\nGraph:\n"
+        << node->owningGraph()->toString();
     return node_outputs[0]->unique();
   }
 
@@ -64,8 +66,8 @@ class ComputationContext {
 
   const xla::XlaOp& GetOpForValue(const Value* value) const {
     auto it = node_xla_ops_.find(value->unique());
-    XLA_CHECK(it != node_xla_ops_.end()) << value->uniqueName() <<
-        "\nGraph:\n" << value->owningGraph()->toString();
+    XLA_CHECK(it != node_xla_ops_.end()) << value->uniqueName() << "\nGraph:\n"
+                                         << value->owningGraph()->toString();
     return it->second;
   }
 
@@ -134,7 +136,9 @@ xla::XlaComputation XlaTranslator::BuildComputation(
   xla::XlaBuilder b("XlaComputation");
   const auto returned_tuple = BuildComputationProgram(parameter_shapes, &b);
   std::vector<xla::XlaOp> returned_tuple_outputs;
-  CHECK_GE(returned_tuple.inputs.size(), options.param_to_return_count);
+  XLA_CHECK_GE(returned_tuple.inputs.size(), options.param_to_return_count)
+      << "Graph:\n"
+      << graph_->toString();
   // The forward computation in a fused forward and backward computation needs
   // to make its inputs available to the backward computation.
   for (size_t i = 0; i < options.param_to_return_count; ++i) {
@@ -163,6 +167,9 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
     xla::XlaBuilder* b) const {
   ComputationContext cctx;
   const auto graph_inputs = graph_->inputs();
+  XLA_CHECK_EQ(graph_inputs.size(), parameter_shapes.size())
+      << "Graph:\n"
+      << graph_->toString();
   for (size_t parameter_number = 0; parameter_number < graph_inputs.size();
        ++parameter_number) {
     Value* graph_input = graph_inputs[parameter_number];
@@ -191,17 +198,18 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
           AT_ERROR("Unsupported arity for binary operator ",
                    node->kind().toQualString());
         }
-        xla::XlaOp xla_output;
-        auto input_op_1 = cctx.GetOpForInput(node, 1);
-        if (!input_op_1) {
-          const auto other = XlaHelpers::ScalarValue(
+        auto input_op_1_optional = cctx.GetOpForInput(node, 1);
+        xla::XlaOp input_op_1;
+        if (!input_op_1_optional) {
+          input_op_1 = XlaHelpers::ScalarValue(
               node->get<at::Scalar>(attr::other).value().to<float>(), b);
-          xla_output =
-              BuildArithmeticOp(node, cctx.OpForInput(node, 0), other);
         } else {
-          xla_output =
-              BuildArithmeticOp(node, cctx.OpForInput(node, 0), *input_op_1);
+          input_op_1 = *input_op_1_optional;
         }
+        auto inputs =
+            XlaHelpers::PromoteValues(cctx.OpForInput(node, 0), input_op_1);
+        xla::XlaOp xla_output =
+            BuildArithmeticOp(node, inputs.first, inputs.second);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
@@ -360,8 +368,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       }
       case aten::log_softmax: {
         CHECK_EQ(node->inputs().size(), size_t(2));
-        xla::XlaOp xla_output =
-            BuildLogSoftmax(node, cctx.OpForInput(node, 0));
+        xla::XlaOp xla_output = BuildLogSoftmax(node, cctx.OpForInput(node, 0));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
@@ -419,9 +426,9 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::native_batch_norm:
       case aten::batch_norm: {
         CHECK_EQ(node->inputs().size(), 8);
-        const auto outputs = BuildBatchNorm(node, cctx.OpForInput(node, 0),
-                                            cctx.OpForInput(node, 1),
-                                            cctx.OpForInput(node, 2));
+        const auto outputs =
+            BuildBatchNorm(node, cctx.OpForInput(node, 0),
+                           cctx.OpForInput(node, 1), cctx.OpForInput(node, 2));
         const auto node_outputs = node->outputs();
         cctx.AddValueOp(node_outputs[0], outputs.output);
         if (node->kind() == aten::batch_norm) {

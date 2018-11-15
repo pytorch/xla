@@ -5,6 +5,7 @@
 #include "passes/replace_untraced_operators.h"
 #include "passes/threshold_backward_peephole.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
+#include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch_util.h"
 
 namespace torch {
@@ -160,6 +161,12 @@ void InitXlaTensorBindings(py::module m) {
           "data",
           [](std::shared_ptr<XLATensor> self) {
             return py::cast<std::shared_ptr<XLATensor>>(self->Clone());
+          })
+      .def_property_readonly(
+          "dtype",
+          [](std::shared_ptr<XLATensor> self) {
+            return py::cast<py::object>(
+                torch::autograd::utils::wrap(torch::getDtype(self->dtype())));
           })
       .def_property_readonly("is_leaf", [](const XLATensor&) { return true; })
       .def_property_readonly(

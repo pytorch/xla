@@ -65,6 +65,7 @@ class XLATensor {
   std::shared_ptr<XLATensor> grad() const;
   void setGrad(std::shared_ptr<XLATensor> grad);
 
+  at::ScalarType dtype() const;
   const xla::Shape& shape() const;
   const Device& GetDevice() const;
   const std::shared_ptr<xla::ComputationClient::Data>& GetXlaData();

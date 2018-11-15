@@ -1,6 +1,7 @@
 #include "module.h"
 #include "helpers.h"
 
+#include <algorithm>
 #include <set>
 #include "c10/util/Exception.h"
 #include "cross_replica_reduces.h"
@@ -8,6 +9,7 @@
 #include "passes/remove_unused_forward_outputs.h"
 #include "passes/replace_untraced_operators.h"
 #include "passes/threshold_backward_peephole.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/jit/passes/canonicalize_ops.h"
 #include "torch/csrc/jit/passes/common_subexpression_elimination.h"
 #include "torch/csrc/jit/passes/constant_propagation.h"
@@ -219,12 +221,16 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   if (input_gradients_valid) {
     // We already have the gradients from the fused computation, just set the
     // gradients for input and parameters.
+    size_t inputs_require_grad_count = std::count(
+        inputs_require_grad_.begin(), inputs_require_grad_.end(), true);
     for (size_t i = 0; i < inputs_.size(); ++i) {
       auto& replica_inputs = inputs_[i];
       auto& replica_grad_inputs = grad_inputs_[i];
       auto& replica_optimizable_params = optimizable_params_[i];
-      JIT_ASSERT(inputs_require_grad_.size() >=
-                 replica_inputs.size() + replica_optimizable_params.size());
+      XLA_CHECK_GE(replica_grad_inputs.size(), inputs_require_grad_count)
+          << "Forward Graph:\n"
+          << f_->toString() << "\nBackward Graph:\n"
+          << df_->toString();
       size_t grad_index = 0;
       for (size_t j = 0; j < replica_inputs.size(); j++) {
         if (inputs_require_grad_[j]) {
@@ -299,19 +305,25 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
       Execute(*backward_computation_, raw_grad_outputs_data, result_shape,
               &result_shape_with_layout, kInvalidModuleId);
 
+  size_t inputs_require_grad_count = std::count(
+      inputs_require_grad_.begin(), inputs_require_grad_.end(), true);
   for (size_t i = 0; i < inputs_.size(); ++i) {
     auto& replica_grad_inputs = grad_inputs[i];
     auto& replica_inputs = inputs_[i];
     auto& replica_optimizable_params = optimizable_params_[i];
-    JIT_ASSERT((replica_inputs.size() + replica_optimizable_params.size()) ==
-               replica_grad_inputs.size());
-    // Set .grad attributes of the input and parameter tensors.
+    XLA_CHECK_GE(replica_grad_inputs.size(), inputs_require_grad_count)
+        << "Graph:\n"
+        << df_->toString();
+    size_t grad_index = 0;
     for (size_t j = 0; j < replica_inputs.size(); j++) {
-      replica_inputs[j]->setGrad(replica_grad_inputs[j]);
+      if (inputs_require_grad_[j]) {
+        replica_inputs[j]->setGrad(replica_grad_inputs[grad_index]);
+        ++grad_index;
+      }
     }
     for (size_t j = 0; j < replica_optimizable_params.size(); j++) {
-      auto t = replica_grad_inputs[j + replica_inputs.size()];
-      replica_optimizable_params[j]->setGrad(t);
+      replica_optimizable_params[j]->setGrad(replica_grad_inputs[grad_index]);
+      ++grad_index;
     }
   }
   // Release handles to saved / captured inputs and outputs.
@@ -340,7 +352,7 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
       forward_computation_->GetProgramShape().ValueOrDie();
   const auto result_shape = program_shape.result();
   // The result is always a tuple of outputs and gradients.
-  CHECK(xla::ShapeUtil::IsTuple(result_shape))
+  XLA_CHECK(xla::ShapeUtil::IsTuple(result_shape))
       << xla::ShapeUtil::HumanString(result_shape);
   const auto device = XLATensor::CommonDeviceForTensors(inputs.front());
   auto result_shape_with_layout =
@@ -351,7 +363,7 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
               &result_shape_with_layout, module_id_);
 
   // First f_real_outputs_ are the forward outputs returned to user code.
-  CHECK_LE(f_real_outputs_, result_components.front().size());
+  XLA_CHECK_LE(f_real_outputs_, result_components.front().size());
   grad_inputs_.clear();
   TensorBatchVector forward_result;
   for (auto& replica_result_components : result_components) {
