@@ -17,12 +17,6 @@ xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input);
 // specified by the "size" attribute of the given node.
 xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input);
 
-// Same semantics as BuildExpand, but the output size is specified by the given
-// output instead. No-op if the input is a scalar or of higher rank than the
-// output.
-xla::XlaOp BuildImplicitExpand(const xla::XlaOp& input,
-                               const xla::XlaOp& output);
-
 // Concatenates a list of tensors along a new dimension specified by the "dim"
 // attribute of the given node.
 xla::XlaOp BuildStack(const Node* node,
