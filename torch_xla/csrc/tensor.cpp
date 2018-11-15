@@ -4,9 +4,9 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "helpers.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "torch/csrc/autograd/variable.h"
-#include "helpers.h"
 #include "translator.h"
 
 namespace torch {
@@ -234,6 +234,18 @@ std::shared_ptr<XLATensor> XLATensor::grad() const { return data_->grad; }
 
 void XLATensor::setGrad(std::shared_ptr<XLATensor> grad) {
   data_->grad = std::move(grad);
+}
+
+at::ScalarType XLATensor::dtype() const {
+  xla::PrimitiveType xla_type = shape().element_type();
+  switch (xla_type) {
+    case xla::PrimitiveType::F32:
+      return at::ScalarType::Float;
+    case xla::PrimitiveType::S64:
+      return at::ScalarType::Long;
+    default:
+      LOG(FATAL) << "XLA type not supported: " << xla_type;
+  }
 }
 
 const xla::Shape& XLATensor::shape() const {
@@ -609,6 +621,26 @@ XLATensor::Device XLATensor::CommonDeviceForTensors(
     }
   }
   return device;
+}
+
+xla::Literal GetTensorLiteral(const at::Tensor& tensor,
+                              const xla::Shape* shape) {
+  xla::Shape computed_shape;
+  if (shape == nullptr) {
+    auto dimensions = XlaHelpers::I64List(tensor.sizes());
+    computed_shape = MakeTorchTensorLayout(
+        dimensions,
+        XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()));
+    shape = &computed_shape;
+  }
+  switch (tensor.type().scalarType()) {
+    case at::ScalarType::Float:
+      return TensorToLiteral<float>(tensor, *shape);
+    case at::ScalarType::Long:
+      return TensorToLiteral<xla::int64>(tensor, *shape);
+    default:
+      LOG(FATAL) << "Tensor type not supported";
+  }
 }
 
 std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape) {

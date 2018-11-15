@@ -72,5 +72,24 @@ xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
   return op.builder()->GetShape(op).ValueOrDie();
 }
 
+xla::PrimitiveType XlaHelpers::TypeOfXlaOp(const xla::XlaOp& op) {
+  return ShapeOfXlaOp(op).element_type();
+}
+
+std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
+    const xla::XlaOp& op1, const xla::XlaOp& op2) {
+  xla::PrimitiveType type1 = TypeOfXlaOp(op1);
+  xla::PrimitiveType type2 = TypeOfXlaOp(op2);
+  if (type1 == type2) {
+    return std::pair<xla::XlaOp, xla::XlaOp>(op1, op2);
+  }
+  if (type1 == xla::PrimitiveType::F32) {
+    return std::pair<xla::XlaOp, xla::XlaOp>(
+        op1, xla::ConvertElementType(op2, type1));
+  }
+  return std::pair<xla::XlaOp, xla::XlaOp>(xla::ConvertElementType(op1, type2),
+                                           op2);
+}
+
 }  // namespace jit
 }  // namespace torch

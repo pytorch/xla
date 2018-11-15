@@ -25,6 +25,9 @@ class XlaHelpers {
   // Returns the shape of the given XLA operation.
   static xla::Shape ShapeOfXlaOp(const xla::XlaOp& op);
 
+  // Returns the value type of given XLA operation.
+  static xla::PrimitiveType TypeOfXlaOp(const xla::XlaOp& op);
+
   // Creates a scalar broadcasted to a given shape.
   template <class T>
   static xla::XlaOp ScalarBroadcast(T scalar_value, const xla::Shape& shape,
@@ -53,6 +56,10 @@ class XlaHelpers {
   // Converts the given scalar type to an XLA primitive type.
   static xla::PrimitiveType MakeXlaPrimitiveType(
       const at::ScalarType scalar_type);
+
+  // Performs type promotion to make sure both operations return the same type.
+  static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
+                                                         const xla::XlaOp& op2);
 };
 
 }  // namespace jit
