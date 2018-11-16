@@ -290,20 +290,18 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
     XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
     backward_computation_ = xla_bwd_impl.BuildComputation(
         backward_shapes, GetBackwardBuildOptions(0, inputs_.size()));
+    backward_shape_.reset();
   }
   // Collect the computation client data vector.
   DataBatchVector raw_grad_outputs_data =
       GetDataBatchVector(raw_grad_outputs, &zero_input);
-  auto devices = CommonDevicesForReplicas(grad_outputs);
-  const auto program_shape =
-      backward_computation_->GetProgramShape().ValueOrDie();
-  const auto result_shape = program_shape.result();
-  auto result_shape_with_layout =
-      MakeShapeWithDeviceLayout(result_shape, devices.front().hw_type);
+  if (!backward_shape_) {
+    backward_shape_ = GetResultShape(*backward_computation_, grad_outputs);
+  }
 
   TensorBatchVector grad_inputs =
-      Execute(*backward_computation_, raw_grad_outputs_data, result_shape,
-              &result_shape_with_layout, kInvalidModuleId);
+      Execute(*backward_computation_, raw_grad_outputs_data, *backward_shape_,
+              kInvalidModuleId);
 
   size_t inputs_require_grad_count = std::count(
       inputs_require_grad_.begin(), inputs_require_grad_.end(), true);
@@ -348,19 +346,13 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
   }
   DataBatchVector inputs_params_buffers_data =
       GetDataBatchVector(inputs_params_buffers, /*zero_input=*/nullptr);
-  const auto program_shape =
-      forward_computation_->GetProgramShape().ValueOrDie();
-  const auto result_shape = program_shape.result();
-  // The result is always a tuple of outputs and gradients.
-  XLA_CHECK(xla::ShapeUtil::IsTuple(result_shape))
-      << xla::ShapeUtil::HumanString(result_shape);
-  const auto device = XLATensor::CommonDeviceForTensors(inputs.front());
-  auto result_shape_with_layout =
-      MakeShapeWithDeviceLayout(result_shape, device.hw_type);
+  if (!forward_shape_) {
+    forward_shape_ = GetResultShape(*forward_computation_, inputs);
+  }
 
   TensorBatchVector result_components =
-      Execute(*forward_computation_, inputs_params_buffers_data, result_shape,
-              &result_shape_with_layout, module_id_);
+      Execute(*forward_computation_, inputs_params_buffers_data,
+              *forward_shape_, module_id_);
 
   // First f_real_outputs_ are the forward outputs returned to user code.
   XLA_CHECK_LE(f_real_outputs_, result_components.front().size());
@@ -452,6 +444,7 @@ void XlaModule::BuildFusedTrainComputation(
       GetBackwardBuildOptions(f_real_outputs_, inputs_.size()));
   xla::Call(&b, backward_computation, backward_operands);
   forward_computation_ = b.Build().ValueOrDie();
+  forward_shape_.reset();
 }
 
 XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
@@ -470,19 +463,17 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
 
     XlaTranslator xla_fwd_impl(f_, GetPrecisionConfig());
     forward_computation_ = xla_fwd_impl.BuildComputation(forward_shapes);
+    forward_shape_.reset();
   }
   DataBatchVector inputs_params_buffers_data =
       GetDataBatchVector(inputs_params_buffers, /*zero_input=*/nullptr);
-  const auto program_shape =
-      forward_computation_->GetProgramShape().ValueOrDie();
-  const auto result_shape = program_shape.result();
-  const auto device = XLATensor::CommonDeviceForTensors(inputs.front());
-  auto result_shape_with_layout =
-      MakeShapeWithDeviceLayout(result_shape, device.hw_type);
+  if (!forward_shape_) {
+    forward_shape_ = GetResultShape(*forward_computation_, inputs);
+  }
 
   TensorBatchVector raw_outputs =
-      Execute(*forward_computation_, inputs_params_buffers_data, result_shape,
-              &result_shape_with_layout, kInvalidModuleId);
+      Execute(*forward_computation_, inputs_params_buffers_data,
+              *forward_shape_, kInvalidModuleId);
 
   TensorBatchVector outputs;
   for (size_t i = 0; i < raw_outputs.size(); ++i) {
@@ -542,15 +533,15 @@ XlaModule::TensorBatchVector XlaModule::PrepareForwardInput(
 
 XlaModule::TensorBatchVector XlaModule::Execute(
     const xla::XlaComputation& computation, const DataBatchVector& inputs,
-    const xla::Shape& result_shape, const xla::Shape* output_shape,
-    uint64_t module_id) {
+    const xla::Shape& result_shape, uint64_t module_id) {
   auto client = XlaGetClient();
   std::vector<std::shared_ptr<xla::ComputationClient::Data>> exec_results;
   if (inputs.size() == 1) {
     exec_results.push_back(
-        client->ExecuteComputation(computation, inputs.front(), output_shape));
+        client->ExecuteComputation(computation, inputs.front(), &result_shape));
   } else {
-    exec_results = client->ExecuteReplicated(computation, inputs, output_shape);
+    exec_results =
+        client->ExecuteReplicated(computation, inputs, &result_shape);
   }
   return DecomposeComputationResult(std::move(exec_results), result_shape,
                                     module_id);
@@ -607,6 +598,14 @@ std::vector<XLATensor::Device> XlaModule::CommonDevicesForReplicas(
         << devices.back().ToString();
   }
   return devices;
+}
+
+xla::Shape XlaModule::GetResultShape(const xla::XlaComputation& computation,
+                                     const TensorBatchVector& input_tensors) {
+  auto devices = CommonDevicesForReplicas(input_tensors);
+  const auto program_shape = computation.GetProgramShape().ValueOrDie();
+  const auto result_shape = program_shape.result();
+  return MakeShapeWithDeviceLayout(result_shape, devices.front().hw_type);
 }
 
 }  // namespace jit

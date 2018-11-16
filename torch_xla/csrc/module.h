@@ -67,14 +67,12 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
 
   // Executes the provided XLA computation. The execution will be replicated in
   // as many replicas as the size of the inputs first dimension.
-  // The result_shape is the shape returned by the XLA computation, while
-  // output_shape (if not nullptr) is the shape+layout requested to the XLA
-  // compiler. The module_id is used to track changes in the tensors taking
-  // place of the fused computation, and will be assigned to the output tensors.
+  // The result_shape is the shape+layout which we want the computation to
+  // return. The module_id is used to track changes in the tensors taking place
+  // of the fused computation, and will be assigned to the output tensors.
   TensorBatchVector Execute(const xla::XlaComputation& computation,
                             const DataBatchVector& inputs,
-                            const xla::Shape& result_shape,
-                            const xla::Shape* output_shape, uint64_t module_id);
+                            const xla::Shape& result_shape, uint64_t module_id);
 
   // Creates the build options to be used to create a backward pass computation.
   XlaTranslator::BuildOptions GetBackwardBuildOptions(
@@ -96,12 +94,18 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   static std::vector<XLATensor::Device> CommonDevicesForReplicas(
       const TensorBatchVector& inputs);
 
+  // Computes the optimal result shape for a given computation and inputs.
+  static xla::Shape GetResultShape(const xla::XlaComputation& computation,
+                                   const TensorBatchVector& input_tensors);
+
   // The module parameters which are marked for being subject to optimization.
   TensorBatchVector optimizable_params_;
   // All the module parameters (which include the optimizable_params_ ones).
   TensorBatchVector all_params_;
   c10::optional<xla::XlaComputation> forward_computation_;
+  c10::optional<xla::Shape> forward_shape_;
   c10::optional<xla::XlaComputation> backward_computation_;
+  c10::optional<xla::Shape> backward_shape_;
 
   std::shared_ptr<Graph> f_;
   std::shared_ptr<Graph> df_;
