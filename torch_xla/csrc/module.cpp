@@ -175,6 +175,14 @@ void XlaModule::CheckInitialized() const {
   }
 }
 
+void XlaModule::AddSyncTensor(std::shared_ptr<XLATensor> tensor) {
+  sync_tensors_map_.insert({tensor.get(), tensor});
+}
+
+void XlaModule::RemoveSyncTensor(std::shared_ptr<XLATensor> tensor) {
+  sync_tensors_map_.erase(tensor.get());
+}
+
 XlaModule::TensorBatchVector XlaModule::forward(
     const TensorBatchVector& inputs) {
   Initialize(inputs);
@@ -195,7 +203,8 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   // Tensors could have pending in-place operations, apply them first to reset
   // their parent module and thus invalidate the gradients we set aside from the
   // fused computation.
-  FlushTensorsOperations({&grad_outputs, &optimizable_params_});
+  FlushTensorsOperations({&grad_outputs, &optimizable_params_},
+                         sync_tensors_map_);
 
   // If we're in trace fusion mode, we start with the assumption that the input
   // gradients are still valid and invalidate it if we don't receive the output
@@ -496,7 +505,7 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
 
 XlaModule::TensorBatchVector XlaModule::PrepareForwardInput(
     const TensorBatchVector& inputs) {
-  FlushTensorsOperations({&inputs, &optimizable_params_});
+  FlushTensorsOperations({&inputs, &optimizable_params_}, sync_tensors_map_);
   // Clear the previous forward's captured vectors.
   // This is needed in case backward is not yet run, but two forward calls were
   // made.
@@ -550,13 +559,22 @@ XlaTranslator::BuildOptions XlaModule::GetBackwardBuildOptions(
 }
 
 void XlaModule::FlushTensorsOperations(
-    std::initializer_list<const TensorBatchVector*> batch_tensors) {
+    std::initializer_list<const TensorBatchVector*> batch_tensors,
+    const std::map<XLATensor*, std::shared_ptr<XLATensor>>& sync_tensors_map) {
   std::vector<std::shared_ptr<XLATensor>> tensors;
   for (auto batch_tensor : batch_tensors) {
+    tensors.reserve(batch_tensor->size() * batch_tensor->front().size());
     for (const auto& replica_tensors : *batch_tensor) {
-      tensors.insert(tensors.end(), replica_tensors.begin(),
-                     replica_tensors.end());
+      for (const auto& tensor : replica_tensors) {
+        if (sync_tensors_map.count(tensor.get()) == 0) {
+          tensors.push_back(tensor);
+        }
+      }
     }
+  }
+  tensors.reserve(sync_tensors_map.size());
+  for (auto& ptr_tensor : sync_tensors_map) {
+    tensors.push_back(ptr_tensor.second);
   }
   XLATensor::ApplyPendingGraph(tensors);
 }

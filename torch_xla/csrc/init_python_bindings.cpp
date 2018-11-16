@@ -35,9 +35,23 @@ void InitXlaModuleBindings(py::module m) {
            })
       .def("parameters",
            [](XlaModule& xla_module) { return xla_module.parameters(); })
-      .def("parameters_buffers", [](XlaModule& xla_module) {
-        return xla_module.parameters_buffers();
-      });
+      .def(
+          "parameters_buffers",
+          [](XlaModule& xla_module) { return xla_module.parameters_buffers(); })
+      .def("add_sync_tensors",
+           [](XlaModule& xla_module,
+              const std::vector<std::shared_ptr<XLATensor>>& tensors) {
+             for (auto& tensor : tensors) {
+               xla_module.AddSyncTensor(tensor);
+             }
+           })
+      .def("remove_sync_tensors",
+           [](XlaModule& xla_module,
+              const std::vector<std::shared_ptr<XLATensor>>& tensors) {
+             for (auto& tensor : tensors) {
+               xla_module.RemoveSyncTensor(tensor);
+             }
+           });
   m.def("_xla_mul_add_multi",
         [](const double scale_dest,
            const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,

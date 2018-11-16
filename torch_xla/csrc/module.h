@@ -8,6 +8,7 @@
 #include "translator.h"
 
 #include <atomic>
+#include <map>
 #include <memory>
 
 namespace torch {
@@ -34,6 +35,11 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
 
   const TensorBatchVector& parameters();
   const TensorBatchVector& parameters_buffers();
+
+  // Adds and removes the given tensor to the list of the ones whose accumulated
+  // operations will be sync during the pre-step phase.
+  void AddSyncTensor(std::shared_ptr<XLATensor> tensor);
+  void RemoveSyncTensor(std::shared_ptr<XLATensor> tensor);
 
   static constexpr uint64_t kInvalidModuleId = 0;
 
@@ -88,7 +94,8 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
                              const Graph& df);
 
   static void FlushTensorsOperations(
-      std::initializer_list<const TensorBatchVector*> batch_tensors);
+      std::initializer_list<const TensorBatchVector*> batch_tensors,
+      const std::map<XLATensor*, std::shared_ptr<XLATensor>>& sync_tensors_map);
 
   // Extracts the XLA computation data from the inputs, and returns a matching
   // batch vector where data[i][j] holds the data beind the XLA tensor
@@ -151,6 +158,10 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // Keep the script module alive for lazy initialization of this XlaModule.
   // Once this XlaModule is initialized, script_module_ will be set to null.
   std::shared_ptr<script::Module> script_module_;
+
+  // The map of tensors whose accumulated operations need to be sync during the
+  // pre-step phase (when we call the FlushTensorsOperations() API).
+  std::map<XLATensor*, std::shared_ptr<XLATensor>> sync_tensors_map_;
 
   static std::atomic<uint64_t> s_module_id_;
 };
