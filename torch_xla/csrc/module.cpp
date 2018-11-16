@@ -221,28 +221,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   if (input_gradients_valid) {
     // We already have the gradients from the fused computation, just set the
     // gradients for input and parameters.
-    size_t inputs_require_grad_count = std::count(
-        inputs_require_grad_.begin(), inputs_require_grad_.end(), true);
-    for (size_t i = 0; i < inputs_.size(); ++i) {
-      auto& replica_inputs = inputs_[i];
-      auto& replica_grad_inputs = grad_inputs_[i];
-      auto& replica_optimizable_params = optimizable_params_[i];
-      XLA_CHECK_GE(replica_grad_inputs.size(), inputs_require_grad_count)
-          << "Forward Graph:\n"
-          << f_->toString() << "\nBackward Graph:\n"
-          << df_->toString();
-      size_t grad_index = 0;
-      for (size_t j = 0; j < replica_inputs.size(); j++) {
-        if (inputs_require_grad_[j]) {
-          replica_inputs[j]->setGrad(replica_grad_inputs[grad_index]);
-          ++grad_index;
-        }
-      }
-      for (size_t j = 0; j < replica_optimizable_params.size(); j++) {
-        replica_optimizable_params[j]->setGrad(replica_grad_inputs[grad_index]);
-        ++grad_index;
-      }
-    }
+    ApplyGradients(grad_inputs_);
     return;
   }
   // NOTE: The order of the input parameters passed to the BuildComputation()
@@ -303,6 +282,14 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
       Execute(*backward_computation_, raw_grad_outputs_data, *backward_shape_,
               kInvalidModuleId);
 
+  ApplyGradients(grad_inputs);
+  // Release handles to saved / captured inputs and outputs.
+  inputs_.clear();
+  captured_outputs_.clear();
+  captured_inputs_outputs_.clear();
+}
+
+void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs) {
   size_t inputs_require_grad_count = std::count(
       inputs_require_grad_.begin(), inputs_require_grad_.end(), true);
   for (size_t i = 0; i < inputs_.size(); ++i) {
@@ -324,10 +311,6 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
       ++grad_index;
     }
   }
-  // Release handles to saved / captured inputs and outputs.
-  inputs_.clear();
-  captured_outputs_.clear();
-  captured_inputs_outputs_.clear();
 }
 
 XlaModule::TensorBatchVector XlaModule::RunFusedTrain(

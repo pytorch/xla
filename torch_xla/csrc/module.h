@@ -74,6 +74,10 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
                             const DataBatchVector& inputs,
                             const xla::Shape& result_shape, uint64_t module_id);
 
+  // Sets the gradients of the optimizeable inputs and parameters, according to
+  // the grad_inputs values.
+  void ApplyGradients(const TensorBatchVector& grad_inputs);
+
   // Creates the build options to be used to create a backward pass computation.
   XlaTranslator::BuildOptions GetBackwardBuildOptions(
       size_t param_to_return_count, size_t num_replicas);
