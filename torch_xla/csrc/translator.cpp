@@ -55,6 +55,8 @@ xla::XlaOp GetConstantOp(xla::XlaBuilder* builder, Node* node) {
     std::vector<float> elements(value_list->elements().begin(),
                                 value_list->elements().end());
     return xla::ConstantR1<float>(builder, elements);
+  } else if (value.isBool()) {
+    return xla::ConstantR0<bool>(builder, value.toBool());
   } else {
     std::stringstream ss;
     ss << value;
