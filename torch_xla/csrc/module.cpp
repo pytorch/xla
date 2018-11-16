@@ -221,7 +221,8 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   if (input_gradients_valid) {
     // We already have the gradients from the fused computation, just set the
     // gradients for input and parameters.
-    ApplyGradients(grad_inputs_);
+    ApplyGradients(grad_inputs_, inputs_, optimizable_params_,
+                   inputs_require_grad_, *df_);
     return;
   }
   // NOTE: The order of the input parameters passed to the BuildComputation()
@@ -282,26 +283,31 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
       Execute(*backward_computation_, raw_grad_outputs_data, *backward_shape_,
               kInvalidModuleId);
 
-  ApplyGradients(grad_inputs);
+  ApplyGradients(grad_inputs, inputs_, optimizable_params_,
+                 inputs_require_grad_, *df_);
   // Release handles to saved / captured inputs and outputs.
   inputs_.clear();
   captured_outputs_.clear();
   captured_inputs_outputs_.clear();
 }
 
-void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs) {
+void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs,
+                               const TensorBatchVector& inputs,
+                               const TensorBatchVector& optimizable_params,
+                               const std::vector<bool>& inputs_require_grad,
+                               const Graph& df) {
   size_t inputs_require_grad_count = std::count(
-      inputs_require_grad_.begin(), inputs_require_grad_.end(), true);
-  for (size_t i = 0; i < inputs_.size(); ++i) {
+      inputs_require_grad.begin(), inputs_require_grad.end(), true);
+  for (size_t i = 0; i < inputs.size(); ++i) {
     auto& replica_grad_inputs = grad_inputs[i];
-    auto& replica_inputs = inputs_[i];
-    auto& replica_optimizable_params = optimizable_params_[i];
+    auto& replica_inputs = inputs[i];
+    auto& replica_optimizable_params = optimizable_params[i];
     XLA_CHECK_GE(replica_grad_inputs.size(), inputs_require_grad_count)
         << "Graph:\n"
-        << df_->toString();
+        << df.toString();
     size_t grad_index = 0;
     for (size_t j = 0; j < replica_inputs.size(); j++) {
-      if (inputs_require_grad_[j]) {
+      if (inputs_require_grad[j]) {
         replica_inputs[j]->setGrad(replica_grad_inputs[grad_index]);
         ++grad_index;
       }
