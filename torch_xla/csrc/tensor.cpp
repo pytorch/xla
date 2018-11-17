@@ -191,8 +191,8 @@ void XLATensor::MulAddMulti(
   for (size_t i = 0; i < dest_tuple.size(); ++i) {
     auto dest_node = dest_tuple[i]->GetXlaGraphNode();
     auto source_node = source_tuple[i]->GetXlaGraphNode();
-    auto dest_node_op = dest_node->Generate(&xla_graph_ctx).ValueOrDie();
-    auto source_node_op = source_node->Generate(&xla_graph_ctx).ValueOrDie();
+    auto dest_node_op = dest_node->Generate(&xla_graph_ctx);
+    auto source_node_op = source_node->Generate(&xla_graph_ctx);
     if (alpha != 1) {
       const auto alpha_source = XlaHelpers::ScalarBroadcast<float>(
           alpha, source_tuple[i]->shape(), xla_graph_ctx.builder());
@@ -362,7 +362,7 @@ std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
 std::shared_ptr<XlaGraphNode> XLATensor::CreateTensorNode(
     std::shared_ptr<xla::ComputationClient::Data> data) {
   auto generator = [data](XlaGraphContext* ctx,
-                          const XlaGraphNode&) -> xla::StatusOr<xla::XlaOp> {
+                          const XlaGraphNode&) -> xla::XlaOp {
     return ctx->GetParameter(data);
   };
   return XlaGraphNode::New(std::move(generator), data->shape(), {});
@@ -370,9 +370,9 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateTensorNode(
 
 std::shared_ptr<XlaGraphNode> XLATensor::CreateMulNode(XLATensor& other) {
   auto generator = [](XlaGraphContext* ctx,
-                      const XlaGraphNode& node) -> xla::StatusOr<xla::XlaOp> {
-    TF_ASSIGN_OR_RETURN(auto node_op, node.input(0)->Generate(ctx));
-    TF_ASSIGN_OR_RETURN(auto other_node_op, node.input(1)->Generate(ctx));
+                      const XlaGraphNode& node) -> xla::XlaOp {
+    auto node_op = node.input(0)->Generate(ctx);
+    auto other_node_op = node.input(1)->Generate(ctx);
     return node_op * other_node_op;
   };
   return XlaGraphNode::New(std::move(generator), shape(),
@@ -381,10 +381,9 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateMulNode(XLATensor& other) {
 
 std::shared_ptr<XlaGraphNode> XLATensor::CreateMulNode(
     const at::Scalar& other) {
-  auto generator = [other](
-                       XlaGraphContext* ctx,
-                       const XlaGraphNode& node) -> xla::StatusOr<xla::XlaOp> {
-    TF_ASSIGN_OR_RETURN(auto node_op, node.input(0)->Generate(ctx));
+  auto generator = [other](XlaGraphContext* ctx,
+                           const XlaGraphNode& node) -> xla::XlaOp {
+    auto node_op = node.input(0)->Generate(ctx);
     return node_op * XlaHelpers::ScalarBroadcast<float>(other.toDouble(),
                                                         node.input(0)->shape(),
                                                         ctx->builder());
@@ -394,9 +393,9 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateMulNode(
 
 std::shared_ptr<XlaGraphNode> XLATensor::CreateDivNode(XLATensor& other) {
   auto generator = [](XlaGraphContext* ctx,
-                      const XlaGraphNode& node) -> xla::StatusOr<xla::XlaOp> {
-    TF_ASSIGN_OR_RETURN(auto node_op, node.input(0)->Generate(ctx));
-    TF_ASSIGN_OR_RETURN(auto other_node_op, node.input(1)->Generate(ctx));
+                      const XlaGraphNode& node) -> xla::XlaOp {
+    auto node_op = node.input(0)->Generate(ctx);
+    auto other_node_op = node.input(1)->Generate(ctx);
     return node_op / other_node_op;
   };
   return XlaGraphNode::New(std::move(generator), shape(),
@@ -405,10 +404,9 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateDivNode(XLATensor& other) {
 
 std::shared_ptr<XlaGraphNode> XLATensor::CreateDivNode(
     const at::Scalar& other) {
-  auto generator = [other](
-                       XlaGraphContext* ctx,
-                       const XlaGraphNode& node) -> xla::StatusOr<xla::XlaOp> {
-    TF_ASSIGN_OR_RETURN(auto node_op, node.input(0)->Generate(ctx));
+  auto generator = [other](XlaGraphContext* ctx,
+                           const XlaGraphNode& node) -> xla::XlaOp {
+    auto node_op = node.input(0)->Generate(ctx);
     return node_op / XlaHelpers::ScalarBroadcast<float>(other.toDouble(),
                                                         node.input(0)->shape(),
                                                         ctx->builder());
@@ -418,11 +416,10 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateDivNode(
 
 std::shared_ptr<XlaGraphNode> XLATensor::CreateAddNode(
     XLATensor& other, const at::Scalar& alpha) {
-  auto generator = [alpha](
-                       XlaGraphContext* ctx,
-                       const XlaGraphNode& node) -> xla::StatusOr<xla::XlaOp> {
-    TF_ASSIGN_OR_RETURN(auto node_op, node.input(0)->Generate(ctx));
-    TF_ASSIGN_OR_RETURN(auto other_node_op, node.input(1)->Generate(ctx));
+  auto generator = [alpha](XlaGraphContext* ctx,
+                           const XlaGraphNode& node) -> xla::XlaOp {
+    auto node_op = node.input(0)->Generate(ctx);
+    auto other_node_op = node.input(1)->Generate(ctx);
     return node_op + other_node_op * XlaHelpers::ScalarBroadcast<float>(
                                          alpha.toDouble(),
                                          node.input(0)->shape(),
@@ -480,9 +477,8 @@ void XLATensor::div_(const at::Scalar& other) {
 
 void XLATensor::zero_() {
   xla::Shape tensor_shape = shape();
-  auto generator = [tensor_shape](
-                       XlaGraphContext* ctx,
-                       const XlaGraphNode&) -> xla::StatusOr<xla::XlaOp> {
+  auto generator = [tensor_shape](XlaGraphContext* ctx,
+                                  const XlaGraphNode&) -> xla::XlaOp {
     auto zero_literal = xla::LiteralUtil::Zero(tensor_shape.element_type());
     auto const_zero = xla::ConstantLiteral(ctx->builder(), zero_literal);
     return xla::Broadcast(const_zero, XlaHelpers::ShapeSizes(tensor_shape));
@@ -492,9 +488,8 @@ void XLATensor::zero_() {
 
 std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
     const std::vector<std::vector<xla::int64>>& groups) {
-  auto generator = [groups](
-                       XlaGraphContext* ctx,
-                       const XlaGraphNode& node) -> xla::StatusOr<xla::XlaOp> {
+  auto generator = [groups](XlaGraphContext* ctx,
+                            const XlaGraphNode& node) -> xla::XlaOp {
     std::vector<xla::ReplicaGroup> crs_groups;
     for (auto& group : groups) {
       xla::ReplicaGroup rgroup;
@@ -503,7 +498,7 @@ std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
       }
       crs_groups.push_back(std::move(rgroup));
     }
-    TF_ASSIGN_OR_RETURN(auto node_op, node.input(0)->Generate(ctx));
+    auto node_op = node.input(0)->Generate(ctx);
     return xla::CrossReplicaSum(node_op, crs_groups);
   };
   auto crs_node =
@@ -516,8 +511,8 @@ void XLATensor::ApplyPendingGraph() {
   auto& xla_graph_node = current_xla_graph_node();
   if (xla_graph_node != nullptr) {
     XlaGraphContext xla_graph_ctx;
-    auto root = xla_graph_node->Generate(&xla_graph_ctx).ValueOrDie();
-    auto computation = xla_graph_ctx.Build(root).ValueOrDie();
+    auto root = xla_graph_node->Generate(&xla_graph_ctx);
+    auto computation = xla_graph_ctx.Build(root).ConsumeValueOrDie();
     SetXlaData(XlaGetClient()->ExecuteComputation(
         computation, xla_graph_ctx.GetParametersData(), nullptr));
   }
@@ -551,8 +546,7 @@ void XLATensor::ApplyPendingGraph(
     auto& xla_graph_node = tensors[i]->current_xla_graph_node();
     if (xla_graph_node != nullptr) {
       DeviceContext* device_context = &contexts_map[tensors[i]->GetDevice()];
-      auto root =
-          xla_graph_node->Generate(&device_context->xla_graph_ctx).ValueOrDie();
+      auto root = xla_graph_node->Generate(&device_context->xla_graph_ctx);
       device_context->xla_graph_ctx.AddResult(root);
       device_context->index_mapping.push_back(i);
     }

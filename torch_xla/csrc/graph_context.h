@@ -53,8 +53,8 @@ class XlaGraphContext {
 class XlaGraphNode {
  public:
   // The generation function used by the XLA tensors to create xla::XlaOp nodes.
-  using Generator = std::function<xla::StatusOr<xla::XlaOp>(
-      XlaGraphContext*, const XlaGraphNode&)>;
+  using Generator =
+      std::function<xla::XlaOp(XlaGraphContext*, const XlaGraphNode&)>;
 
   static std::shared_ptr<XlaGraphNode> New(
       Generator generator, xla::Shape shape,
@@ -69,7 +69,7 @@ class XlaGraphNode {
 
   // Runs the generator function using the ctx argument, and returns the XLA
   // operation which is the end result of the generation.
-  xla::StatusOr<xla::XlaOp> Generate(XlaGraphContext* ctx) const {
+  xla::XlaOp Generate(XlaGraphContext* ctx) const {
     return generator_(ctx, *this);
   }
 
