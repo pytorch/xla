@@ -49,6 +49,8 @@ cc_library(
     srcs = [
         "computation_client.cc",
         "metrics.cc",
+        "multi_wait.cc",
+        "thread_pool.cc",
         "xla_computation_client.cc",
         "xla_util.cc",
         "xrt_computation_client.cc",
@@ -57,6 +59,8 @@ cc_library(
         "computation_client.h",
         "debug_macros.h",
         "metrics.h",
+        "multi_wait.h",
+        "thread_pool.h",
         "unique.h",
         "xla_computation_client.h",
         "xla_util.h",

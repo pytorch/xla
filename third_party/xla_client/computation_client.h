@@ -32,6 +32,7 @@ class ComputationClient {
   };
 
   struct LiteralDevice {
+    LiteralDevice() = default;
     LiteralDevice(xla::Literal literal, string device)
         : literal(std::move(literal)), device(std::move(device)) {}
 
