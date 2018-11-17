@@ -6,6 +6,8 @@
 #include "absl/strings/str_split.h"
 #include "helpers.h"
 #include "tensorflow/compiler/xla/literal_util.h"
+#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
+#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "torch/csrc/autograd/variable.h"
 #include "translator.h"
 
@@ -330,16 +332,24 @@ std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
     const std::vector<autograd::Variable>& tensors,
     const std::vector<std::string>& devices) {
   CHECK_EQ(tensors.size(), devices.size());
-  std::vector<xla::ComputationClient::LiteralDevice> literal_device;
+  xla::xla_util::MultiWait mwait;
+  std::vector<xla::ComputationClient::LiteralDevice> literal_device(
+      tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
-    Device device = DeviceFromString(devices[i]);
-    xla::Shape shape = MakeArrayShapeFromDimensions(
-        tensors[i].sizes(),
-        XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType()),
-        device.hw_type);
-    xla::Literal literal = GetTensorLiteral(tensors[i], &shape);
-    literal_device.emplace_back(std::move(literal), devices[i]);
+    auto converter = [i, &tensors, &devices, &literal_device, &mwait]() {
+      Device device = DeviceFromString(devices[i]);
+      xla::Shape shape = MakeArrayShapeFromDimensions(
+          tensors[i].sizes(),
+          XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType()),
+          device.hw_type);
+      xla::Literal literal = GetTensorLiteral(tensors[i], &shape);
+      literal_device[i] =
+          xla::ComputationClient::LiteralDevice(std::move(literal), devices[i]);
+      mwait.Done();
+    };
+    xla::xla_env::ScheduleClosure(std::move(converter));
   }
+  mwait.Wait(tensors.size());
   auto handles = XlaGetClient()->TransferToServer(literal_device);
   std::vector<std::shared_ptr<XLATensor>> xla_tensors;
   for (size_t i = 0; i < handles.size(); ++i) {
