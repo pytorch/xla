@@ -1,6 +1,9 @@
 #include "tensor.h"
 
+#include <algorithm>
+#include <functional>
 #include <list>
+#include <numeric>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -46,40 +49,105 @@ xla::Shape MakeArrayShapeFromDimensions(
   return MakeTorchTensorLayout(dimensions, type);
 }
 
-template <class NativeT>
-std::vector<NativeT> LinearizeTensor(const at::Tensor& t,
-                                     const size_t total_elements);
+// Mapper class from XLA native type to PyTorch tensor data type.
+template <typename NativeT>
+struct ContiguousType {
+  using type = NativeT;
+};
 
 template <>
-std::vector<float> LinearizeTensor<float>(const at::Tensor& t,
-                                          const size_t total_elements) {
-  const at::Tensor& cont_t = t.contiguous();
-  return std::vector<float>(cont_t.data<float>(),
-                            cont_t.data<float>() + total_elements);
-}
+struct ContiguousType<xla::int64> {
+  using type = int64_t;
+};
 
-template <>
-std::vector<xla::int64> LinearizeTensor<xla::int64>(
-    const at::Tensor& t, const size_t total_elements) {
-  const at::Tensor& cont_t = t.contiguous();
-  return std::vector<xla::int64>(cont_t.data<int64_t>(),
-                                 cont_t.data<int64_t>() + total_elements);
-}
-
-template <class NativeT>
-xla::Literal TensorToLiteral(const at::Tensor& param_tensor,
-                             const xla::Shape& param_shape) {
-  size_t total_elements = 1;
-  std::vector<xla::int64> dimension_sizes;
-  for (const auto dimension_size : param_tensor.sizes()) {
-    dimension_sizes.push_back(dimension_size);
-    total_elements *= dimension_size;
+// Copies n bytes from source to dest, with different stride values for source
+// and destination.
+template <typename S, typename D>
+void StridedCopy(D* dest, xla::int64 dest_stride, const S* source,
+                 xla::int64 source_stride, xla::int64 n) {
+  for (; n > 0; --n, dest += dest_stride, source += source_stride) {
+    *dest = *source;
   }
-  xla::Array<NativeT> parameter_xla_array(dimension_sizes);
-  parameter_xla_array.SetValues(
-      LinearizeTensor<NativeT>(param_tensor, total_elements));
-  xla::Literal literal(param_shape);
-  literal.PopulateFromArray(parameter_xla_array);
+}
+
+// Computes the offset of the value at a given index, assuming a contiguous/flat
+// tensor data representation.
+template <typename S>
+xla::int64 GetFlatTensorOffset(const S& strides,
+                               const std::vector<xla::int64>& indices) {
+  xla::int64 base = 0;
+  for (size_t i = 0; i < indices.size(); ++i) {
+    base += indices[i] * strides[i];
+  }
+  return base;
+}
+
+std::vector<xla::int64> GetXlaStrides(const xla::Shape& shape) {
+  std::vector<xla::int64> strides(xla::ShapeUtil::Rank(shape));
+  xla::int64 stride = 1;
+  for (auto dim : shape.layout().minor_to_major()) {
+    strides[dim] = stride;
+    stride *= shape.dimensions(dim);
+  }
+  return strides;
+}
+
+std::vector<xla::int64> GetIterationDimanesions(const xla::Shape& shape) {
+  // Return the most minor dimension order, to iterate the literal memory in a
+  // cache friendly way.
+  // Another strategy could be to return the higher value dimension first, to
+  // reduce the number of outer loops in TensorToLiteral(), but that leads to
+  // StridedCopy() calls in which both source and destination are jumping off
+  // memory locations.
+  return std::vector<xla::int64>(shape.layout().minor_to_major().begin(),
+                                 shape.layout().minor_to_major().end());
+}
+
+template <typename NativeT>
+xla::Literal TensorToLiteral(const at::Tensor& tensor,
+                             const xla::Shape& shape) {
+  using contiguous_type = typename ContiguousType<NativeT>::type;
+  const at::Tensor& contiguous_tensor = tensor.contiguous();
+  auto contiguous_ptr = contiguous_tensor.data<contiguous_type>();
+  const auto& tensor_sizes = contiguous_tensor.sizes();
+  CHECK_EQ(tensor_sizes.size(), xla::ShapeUtil::Rank(shape));
+  xla::int64 total_elements =
+      std::accumulate(tensor_sizes.begin(), tensor_sizes.end(), 1,
+                      std::multiplies<xla::int64>());
+  xla::Literal literal(shape);
+  auto literal_data = literal.data<NativeT>();
+  CHECK_EQ(literal_data.size(), total_elements);
+  if (total_elements == 1 ||
+      xla::LayoutUtil::IsMonotonicWithDim0Major(shape.layout())) {
+    // The Torch tensor is array layout, and so is the literal. We can issue a
+    // fast copy of the elements.
+    std::copy(contiguous_ptr, contiguous_ptr + literal_data.size(),
+              literal_data.data());
+  } else {
+    const auto& tensor_strides = contiguous_tensor.strides();
+    const auto& xla_tensor_strides = GetXlaStrides(shape);
+    std::vector<xla::int64> indices(tensor_sizes.size());
+    std::vector<xla::int64> iter_dims = GetIterationDimanesions(shape);
+    xla::int64 n = 0;
+    while (n < tensor_sizes.size()) {
+      StridedCopy(literal_data.data() +
+                      GetFlatTensorOffset(xla_tensor_strides, indices),
+                  xla_tensor_strides[iter_dims.front()],
+                  contiguous_ptr + GetFlatTensorOffset(tensor_strides, indices),
+                  tensor_strides[iter_dims.front()],
+                  shape.dimensions(iter_dims.front()));
+      // Compute the next index. Skip the lower iteration dimension, as we loop
+      // over it using the StridedCopy() call above.
+      for (n = 1; n < iter_dims.size(); ++n) {
+        xla::int64 dim = iter_dims[n];
+        indices[dim] += 1;
+        if (indices[dim] < shape.dimensions(dim)) {
+          break;
+        }
+        indices[dim] = 0;
+      }
+    }
+  }
   return literal;
 }
 
@@ -100,13 +168,17 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
   for (const auto result_dimension : result_shape.dimensions()) {
     dimensions.push_back(result_dimension);
   }
-  auto literal_type = result_shape.element_type();
-  const auto torch_layout =
-      MakeTorchTensorLayout(XlaHelpers::I64List(dimensions), literal_type);
-  const auto literal_with_torch_layout = literal.Relayout(torch_layout);
-  switch (literal_type) {
+  xla::Shape torch_shape = MakeTorchTensorLayout(
+      XlaHelpers::I64List(dimensions), result_shape.element_type());
+  const xla::Literal* literal_ptr = &literal;
+  xla::Literal literal_with_torch_layout;
+  if (!xla::ShapeUtil::Equal(literal.shape(), torch_shape)) {
+    literal_with_torch_layout = literal.Relayout(torch_shape);
+    literal_ptr = &literal_with_torch_layout;
+  }
+  switch (result_shape.element_type()) {
     case xla::PrimitiveType::F32: {
-      const auto result_slice = literal_with_torch_layout.data<float>();
+      const auto result_slice = literal_ptr->data<float>();
       at::Tensor result_tensor =
           at::empty(dimensions, at::TensorOptions(at::kFloat));
       std::copy(result_slice.begin(), result_slice.end(),
@@ -114,7 +186,7 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
       return result_tensor;
     }
     case xla::PrimitiveType::S64: {
-      const auto result_slice = literal_with_torch_layout.data<xla::int64>();
+      const auto result_slice = literal_ptr->data<xla::int64>();
       at::Tensor result_tensor =
           at::empty(dimensions, at::TensorOptions(at::kLong));
       std::copy(result_slice.begin(), result_slice.end(),
