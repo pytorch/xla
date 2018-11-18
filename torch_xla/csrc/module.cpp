@@ -42,7 +42,7 @@ XlaModule::TensorBatchVector DecomposeComputationResult(
     for (auto& replica_result_components : result_components) {
       XlaModule::TensorBatchVector::value_type replica_tensors;
       for (auto& replica_data : replica_result_components) {
-        replica_tensors.push_back(std::make_shared<XLATensor>(
+        replica_tensors.push_back(XLATensor::Create(
             std::move(replica_data), module_id, /*requires_grad=*/false));
       }
       batch_tensors.push_back(std::move(replica_tensors));
@@ -50,8 +50,8 @@ XlaModule::TensorBatchVector DecomposeComputationResult(
   } else {
     for (auto& replica_data : results) {
       XlaModule::TensorBatchVector::value_type replica_tensors;
-      replica_tensors.push_back(std::make_shared<XLATensor>(
-          replica_data, module_id, /*requires_grad=*/false));
+      replica_tensors.push_back(
+          XLATensor::Create(replica_data, module_id, /*requires_grad=*/false));
       batch_tensors.push_back(std::move(replica_tensors));
     }
   }
@@ -94,12 +94,12 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
                    *script_module_);
   // The loop below is going to send individual parameters to the different
   // cores. We might need to do something smarter here.
-  auto devices = CommonDevicesForReplicas(inputs);
-  for (const auto& device : devices) {
+  devices_ = CommonDevicesForReplicas(inputs);
+  for (const auto& device : devices_) {
     TensorBatchVector::value_type replica_params;
     TensorBatchVector::value_type optimizable_replica_params;
     for (size_t j = 0; j < params_buffers_regather.size(); ++j) {
-      replica_params.push_back(std::make_shared<XLATensor>(
+      replica_params.push_back(XLATensor::Create(
           autograd::as_variable_ref(*params_buffers_regather[j]), device));
       if (param_requires_grad[j]) {
         optimizable_replica_params.push_back(replica_params.back());
@@ -175,14 +175,6 @@ void XlaModule::CheckInitialized() const {
   }
 }
 
-void XlaModule::AddSyncTensor(std::shared_ptr<XLATensor> tensor) {
-  sync_tensors_map_.insert({tensor.get(), tensor});
-}
-
-void XlaModule::RemoveSyncTensor(std::shared_ptr<XLATensor> tensor) {
-  sync_tensors_map_.erase(tensor.get());
-}
-
 XlaModule::TensorBatchVector XlaModule::forward(
     const TensorBatchVector& inputs) {
   Initialize(inputs);
@@ -203,8 +195,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   // Tensors could have pending in-place operations, apply them first to reset
   // their parent module and thus invalidate the gradients we set aside from the
   // fused computation.
-  FlushTensorsOperations({&grad_outputs, &optimizable_params_},
-                         sync_tensors_map_);
+  FlushTensorsOperations();
 
   // If we're in trace fusion mode, we start with the assumption that the input
   // gradients are still valid and invalidate it if we don't receive the output
@@ -289,8 +280,8 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   }
 
   TensorBatchVector grad_inputs =
-      Execute(*backward_computation_, raw_grad_outputs_data, *backward_shape_,
-              kInvalidModuleId);
+      Execute(*backward_computation_, raw_grad_outputs_data, devices_,
+              *backward_shape_, kInvalidModuleId);
 
   ApplyGradients(grad_inputs, inputs_, optimizable_params_,
                  inputs_require_grad_, *df_);
@@ -305,8 +296,8 @@ void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs,
                                const TensorBatchVector& optimizable_params,
                                const std::vector<bool>& inputs_require_grad,
                                const Graph& df) {
-  size_t inputs_require_grad_count = std::count(
-      inputs_require_grad.begin(), inputs_require_grad.end(), true);
+  size_t inputs_require_grad_count =
+      std::count(inputs_require_grad.begin(), inputs_require_grad.end(), true);
   for (size_t i = 0; i < inputs.size(); ++i) {
     auto& replica_grad_inputs = grad_inputs[i];
     auto& replica_inputs = inputs[i];
@@ -349,7 +340,7 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
   }
 
   TensorBatchVector result_components =
-      Execute(*forward_computation_, inputs_params_buffers_data,
+      Execute(*forward_computation_, inputs_params_buffers_data, devices_,
               *forward_shape_, module_id_);
 
   // First f_real_outputs_ are the forward outputs returned to user code.
@@ -470,7 +461,7 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
   }
 
   TensorBatchVector raw_outputs =
-      Execute(*forward_computation_, inputs_params_buffers_data,
+      Execute(*forward_computation_, inputs_params_buffers_data, devices_,
               *forward_shape_, kInvalidModuleId);
 
   TensorBatchVector outputs;
@@ -505,7 +496,7 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
 
 XlaModule::TensorBatchVector XlaModule::PrepareForwardInput(
     const TensorBatchVector& inputs) {
-  FlushTensorsOperations({&inputs, &optimizable_params_}, sync_tensors_map_);
+  FlushTensorsOperations();
   // Clear the previous forward's captured vectors.
   // This is needed in case backward is not yet run, but two forward calls were
   // made.
@@ -531,15 +522,20 @@ XlaModule::TensorBatchVector XlaModule::PrepareForwardInput(
 
 XlaModule::TensorBatchVector XlaModule::Execute(
     const xla::XlaComputation& computation, const DataBatchVector& inputs,
+    const std::vector<XLATensor::Device>& devices,
     const xla::Shape& result_shape, uint64_t module_id) {
+  std::vector<std::string> device_strings(devices.size());
+  for (size_t i = 0; i < devices.size(); ++i) {
+    device_strings[i] = devices[i].ToString();
+  }
   auto client = XlaGetClient();
   std::vector<std::shared_ptr<xla::ComputationClient::Data>> exec_results;
   if (inputs.size() == 1) {
-    exec_results.push_back(
-        client->ExecuteComputation(computation, inputs.front(), &result_shape));
+    exec_results.push_back(client->ExecuteComputation(
+        computation, inputs.front(), device_strings[0], &result_shape));
   } else {
-    exec_results =
-        client->ExecuteReplicated(computation, inputs, &result_shape);
+    exec_results = client->ExecuteReplicated(computation, inputs,
+                                             device_strings, &result_shape);
   }
   return DecomposeComputationResult(std::move(exec_results), result_shape,
                                     module_id);
@@ -558,24 +554,12 @@ XlaTranslator::BuildOptions XlaModule::GetBackwardBuildOptions(
   return options;
 }
 
-void XlaModule::FlushTensorsOperations(
-    std::initializer_list<const TensorBatchVector*> batch_tensors,
-    const std::map<XLATensor*, std::shared_ptr<XLATensor>>& sync_tensors_map) {
-  std::vector<std::shared_ptr<XLATensor>> tensors;
-  for (auto batch_tensor : batch_tensors) {
-    tensors.reserve(batch_tensor->size() * batch_tensor->front().size());
-    for (const auto& replica_tensors : *batch_tensor) {
-      for (const auto& tensor : replica_tensors) {
-        if (sync_tensors_map.count(tensor.get()) == 0) {
-          tensors.push_back(tensor);
-        }
-      }
-    }
-  }
-  tensors.reserve(sync_tensors_map.size());
-  for (auto& ptr_tensor : sync_tensors_map) {
-    tensors.push_back(ptr_tensor.second);
-  }
+void XlaModule::FlushTensorsOperations() {
+  // We might have to do something smarter here, as we are syncing even tensors
+  // which are not part of the traning loop. Nothing happens, but if we want to
+  // fuse the sync operation with the forward+backward+optimizer, we need to
+  // have a path leading to the same XLA computation.
+  std::vector<std::shared_ptr<XLATensor>> tensors = XLATensor::GetLiveTensors();
   XLATensor::ApplyPendingGraph(tensors);
 }
 

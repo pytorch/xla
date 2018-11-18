@@ -89,17 +89,19 @@ class XrtComputationClient : public ComputationClient {
 
   std::shared_ptr<Data> ExecuteComputation(
       const XlaComputation& computation,
-      tensorflow::gtl::ArraySlice<Data*> arguments,
+      tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
       const Shape* output_shape) override;
 
   std::vector<std::shared_ptr<Data>> ExecuteReplicated(
       const XlaComputation& computation,
       const std::vector<std::vector<Data*>>& arguments,
+      tensorflow::gtl::ArraySlice<const string> devices,
       const Shape* output_shape) override;
 
   std::vector<std::shared_ptr<Data>> ExecuteParallel(
       tensorflow::gtl::ArraySlice<const XlaComputation> computations,
       const std::vector<std::vector<Data*>>& arguments,
+      tensorflow::gtl::ArraySlice<const string> devices,
       tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) override;
 
   std::vector<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
@@ -201,17 +203,21 @@ class XrtComputationClient : public ComputationClient {
 
   std::unique_ptr<xrt::XLAComputation> CreateXrtComputation(
       const XlaComputation& computation, int64 num_replicas,
-      const std::vector<string>& devices, const Shape* output_shape) const;
+      tensorflow::gtl::ArraySlice<const string> devices,
+      const Shape* output_shape) const;
 
   // Retrieves the unique, common, device for all the inputs. Issue a CHECK if
   // the inputs are not on a common device, as we cannot create an XLA
   // computation spanning multiple devices ATM.
-  string GetArgumentsDevice(tensorflow::gtl::ArraySlice<Data*> arguments) const;
+  absl::optional<string> GetArgumentsDevice(
+      tensorflow::gtl::ArraySlice<Data*> arguments) const;
 
-  // Retrieves the common device for each replica inputs (arguments[i]). The
-  // common device for each replica inputs must be unique across the replicas.
-  std::vector<string> GetReplicasDevices(
-      const std::vector<std::vector<Data*>>& arguments) const;
+  // Verifies that the common device for each replica inputs (arguments[i])
+  // matches the devices[i] argumen. The common device for each replica inputs
+  // must be unique across the replicas.
+  void VerifyReplicasDevices(
+      const std::vector<std::vector<Data*>>& arguments,
+      tensorflow::gtl::ArraySlice<const string> devices) const;
 
   tensorflow::Tensor GetArgumentsInputs(
       tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
@@ -221,19 +227,20 @@ class XrtComputationClient : public ComputationClient {
       tensorflow::gtl::ArraySlice<const XlaComputation> computations,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const Shape* const> output_shapes,
-      std::vector<string>* devices,
+      tensorflow::gtl::ArraySlice<const string> devices,
       tensorflow::ClientSession::FeedType* feed_inputs);
 
   std::vector<ExecuteContext> CreateExecuteOps(
       const XlaComputation& computation,
       const std::vector<std::vector<Data*>>& arguments,
-      const Shape* output_shape, std::vector<string>* devices,
+      const Shape* output_shape,
+      tensorflow::gtl::ArraySlice<const string> devices,
       tensorflow::ClientSession::FeedType* feed_inputs);
 
   std::vector<std::shared_ptr<Data>> RunComputations(
       const std::vector<ExecuteContext>& exec_ops,
       tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
-      const std::vector<string>& devices,
+      tensorflow::gtl::ArraySlice<const string> devices,
       const tensorflow::ClientSession::FeedType& feed_inputs);
 
   // Retrieves the worker,worker_host pair for a given XRT device (ie,

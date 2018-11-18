@@ -43,6 +43,21 @@ class XLATensor {
     int ordinal = 0;
   };
 
+  static std::shared_ptr<XLATensor> Create(const autograd::Variable& tensor,
+                                           const Device& device);
+  static std::shared_ptr<XLATensor> Create(
+      std::shared_ptr<xla::ComputationClient::Data> xla_data,
+      uint64_t module_id, bool requires_grad);
+  static std::shared_ptr<XLATensor> Create(
+      std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device,
+      uint64_t module_id);
+  static std::shared_ptr<XLATensor> Create(std::shared_ptr<Data> data);
+
+  // NOTE: These direct constructors should not be used, and the Create() APIs
+  // above should be used instead. These are not private because the hacks
+  // necessary in order to use std::make_shared<> are worse than having those
+  // public. And it is good to save the double allocation required by a normal
+  // naked pointer std::shared_ptr<> creation.
   XLATensor(const autograd::Variable& tensor, const Device& device);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
             uint64_t module_id, bool requires_grad);
@@ -50,11 +65,11 @@ class XLATensor {
             uint64_t module_id);
   XLATensor(std::shared_ptr<Data> data) : data_(std::move(data)) {}
 
+  ~XLATensor();
+
   // Creates a new XLA tensor sharing the core tensor data structure, with
   // require-gradients disabled.
-  std::shared_ptr<XLATensor> Clone() const {
-    return std::make_shared<XLATensor>(data_);
-  }
+  std::shared_ptr<XLATensor> Clone() const { return Create(data_); }
 
   bool RequiresGrad() const { return requires_grad_; }
 
@@ -125,6 +140,9 @@ class XLATensor {
   static void ZeroMulti(
       const std::vector<std::shared_ptr<XLATensor>>& dest_tuple);
 
+  // Retrieves the set of XLA tensors which are currently live in the system.
+  static std::vector<std::shared_ptr<XLATensor>> GetLiveTensors();
+
   // Applies the queue of operations for a list of tensors.
   static void ApplyPendingGraph(
       const std::vector<std::shared_ptr<XLATensor>>& tensors);
@@ -176,6 +194,14 @@ class XLATensor {
   std::shared_ptr<XlaGraphNode> CreateMulNode(const at::Scalar& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(XLATensor& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(const at::Scalar& other);
+
+  // Given the tensors whose operations need to be sync on device memory,
+  // returns a stable order of them, given the computations they accumulated.
+  // The returned vector contains the indices in the tensors vector. Some
+  // indices might be missing, if the tensor at that index does not have any
+  // accumulated operation (no need to sync).
+  static std::vector<size_t> GetTensorsOrder(
+      const std::vector<std::shared_ptr<XLATensor>>& tensors);
 
   static void ComputeAndDistribute(
       XlaGraphContext* xla_graph_ctx,

@@ -15,7 +15,7 @@ namespace jit {
 // Tracks an evolving XLA computation.
 class XlaGraphContext {
  public:
-  XlaGraphContext() : builder_("XlaGraphContext") {}
+  XlaGraphContext(bool collate_parameters);
 
   xla::XlaBuilder* builder() { return &builder_; }
 
@@ -43,6 +43,7 @@ class XlaGraphContext {
   xla::StatusOr<xla::XlaComputation> Build(const xla::XlaOp& root);
 
  private:
+  bool collate_parameters_;
   xla::XlaBuilder builder_;
   std::vector<std::shared_ptr<xla::ComputationClient::Data>> parameters_;
   std::map<xla::ComputationClient::Data*, xla::XlaOp> parameters_map_;
