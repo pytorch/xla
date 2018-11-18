@@ -9,7 +9,6 @@
 #include "tensorflow/compiler/xla/rpc/grpc_stub.h"
 #include "tensorflow/compiler/xla/service/platform_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 
 namespace xla {
@@ -94,16 +93,17 @@ std::vector<Literal> XlaComputationClient::TransferFromServer(
 std::shared_ptr<ComputationClient::Data>
 XlaComputationClient::ExecuteComputation(
     const XlaComputation& computation,
-    tensorflow::gtl::ArraySlice<Data*> arguments, const Shape* output_shape) {
+    tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
+    const Shape* output_shape) {
   metrics::TimedSection timed(ExecuteMetric());
   FlushReleasedHandles();
 
-  string device;
+  std::string effective_device = GetEffectiveDevice(device);
   std::vector<GlobalData*> arguments_data =
-      GetArgumentsData(arguments, &device);
+      GetArgumentsData(arguments, effective_device);
   ExecutionOptions eo;
   *eo.mutable_debug_options() = legacy_flags::GetDebugOptionsFromFlags();
-  *eo.add_device_handles() = GetDeviceHandle(device);
+  *eo.add_device_handles() = GetDeviceHandle(effective_device);
   if (output_shape != nullptr) {
     *eo.mutable_shape_with_output_layout() = *output_shape;
   }
@@ -117,7 +117,7 @@ XlaComputationClient::ExecuteComputation(
     output_shape = &program_shape.result();
   }
   return std::make_shared<XlaData>(
-      std::move(result_or_status.ValueOrDie()), device, *output_shape,
+      std::move(result_or_status.ValueOrDie()), effective_device, *output_shape,
       [this](XlaData* xla_data) { ReleaseXlaData(xla_data); });
 }
 
@@ -125,6 +125,7 @@ std::vector<std::shared_ptr<ComputationClient::Data>>
 XlaComputationClient::ExecuteReplicated(
     const XlaComputation& computation,
     const std::vector<std::vector<Data*>>& arguments,
+    tensorflow::gtl::ArraySlice<const string> devices,
     const Shape* output_shape) {
   metrics::TimedSection timed(ExecuteReplicatedMetric());
   LOG(FATAL) << "ExecuteReplicated() API not yet implemented!";
@@ -134,18 +135,19 @@ std::vector<std::shared_ptr<ComputationClient::Data>>
 XlaComputationClient::ExecuteParallel(
     tensorflow::gtl::ArraySlice<const XlaComputation> computations,
     const std::vector<std::vector<Data*>>& arguments,
+    tensorflow::gtl::ArraySlice<const string> devices,
     tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) {
   metrics::TimedSection timed(ExecuteParallelMetric());
 
   std::vector<const XlaComputation*> computations_pointers;
-  std::vector<string> devices(computations.size());
   std::vector<Client::XlaComputationInstance> instances;
   for (size_t i = 0; i < computations.size(); ++i) {
+    std::string effective_device = GetEffectiveDevice(devices[i]);
     std::vector<GlobalData*> arguments_data =
-        GetArgumentsData(arguments[i], &devices[i]);
+        GetArgumentsData(arguments[i], effective_device);
     ExecutionOptions eo;
     *eo.mutable_debug_options() = legacy_flags::GetDebugOptionsFromFlags();
-    *eo.add_device_handles() = GetDeviceHandle(devices[i]);
+    *eo.add_device_handles() = GetDeviceHandle(effective_device);
     if (output_shapes[i] != nullptr) {
       *eo.mutable_shape_with_output_layout() = *output_shapes[i];
     }
@@ -170,7 +172,8 @@ XlaComputationClient::ExecuteParallel(
       output_shape = &program_shape.result();
     }
     results.push_back(std::make_shared<XlaData>(
-        std::move(exec_results[i]), devices[i], *output_shape,
+        std::move(exec_results[i]), GetEffectiveDevice(devices[i]),
+        *output_shape,
         [this](XlaData* xla_data) { ReleaseXlaData(xla_data); }));
   }
   return results;
@@ -198,20 +201,12 @@ XlaComputationClient::DeconstructTuple(
 }
 
 std::vector<GlobalData*> XlaComputationClient::GetArgumentsData(
-    tensorflow::gtl::ArraySlice<Data*> arguments, string* device) const {
-  xla_util::Unique<string> unique_device;
+    tensorflow::gtl::ArraySlice<Data*> arguments, const string& device) const {
   std::vector<GlobalData*> arguments_data;
   for (auto data : arguments) {
     XlaData* xla_data = dynamic_cast<XlaData*>(data);
-    unique_device.set(xla_data->device());
+    XLA_CHECK_EQ(xla_data->device(), device);
     arguments_data.push_back(xla_data->handle.get());
-  }
-  if (device != nullptr) {
-    if (unique_device) {
-      *device = *unique_device;
-    } else {
-      *device = GetDefaultDevice();
-    }
   }
   return arguments_data;
 }

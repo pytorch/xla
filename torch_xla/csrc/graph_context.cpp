@@ -4,17 +4,27 @@
 namespace torch {
 namespace jit {
 
+XlaGraphContext::XlaGraphContext(bool collate_parameters)
+    : collate_parameters_(collate_parameters), builder_("XlaGraphContext") {}
+
 xla::XlaOp XlaGraphContext::GetParameter(
     const std::shared_ptr<xla::ComputationClient::Data>& data) {
-  auto it = parameters_map_.find(data.get());
-  if (it == parameters_map_.end()) {
-    xla::XlaOp param =
-        xla::Parameter(builder(), parameters_.size(), data->shape(),
-                       absl::StrCat("param_", parameters_.size()));
-    parameters_.push_back(data);
-    it = parameters_map_.emplace(data.get(), param).first;
+  if (collate_parameters_) {
+    auto it = parameters_map_.find(data.get());
+    if (it == parameters_map_.end()) {
+      xla::XlaOp param =
+          xla::Parameter(builder(), parameters_.size(), data->shape(),
+                         absl::StrCat("param_", parameters_.size()));
+      parameters_.push_back(data);
+      it = parameters_map_.emplace(data.get(), param).first;
+    }
+    return it->second;
   }
-  return it->second;
+  xla::XlaOp param =
+      xla::Parameter(builder(), parameters_.size(), data->shape(),
+                     absl::StrCat("param_", parameters_.size()));
+  parameters_.push_back(data);
+  return param;
 }
 
 std::vector<xla::ComputationClient::Data*> XlaGraphContext::GetParametersData()

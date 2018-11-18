@@ -36,11 +36,6 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   const TensorBatchVector& parameters();
   const TensorBatchVector& parameters_buffers();
 
-  // Adds and removes the given tensor to the list of the ones whose accumulated
-  // operations will be sync during the pre-step phase.
-  void AddSyncTensor(std::shared_ptr<XLATensor> tensor);
-  void RemoveSyncTensor(std::shared_ptr<XLATensor> tensor);
-
   static constexpr uint64_t kInvalidModuleId = 0;
 
  private:
@@ -78,11 +73,16 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // of the fused computation, and will be assigned to the output tensors.
   TensorBatchVector Execute(const xla::XlaComputation& computation,
                             const DataBatchVector& inputs,
+                            const std::vector<XLATensor::Device>& devices,
                             const xla::Shape& result_shape, uint64_t module_id);
 
   // Creates the build options to be used to create a backward pass computation.
   XlaTranslator::BuildOptions GetBackwardBuildOptions(
       size_t param_to_return_count, size_t num_replicas);
+
+  // Makes sure the XLA tensors partecipating to the forward/backward
+  // computation have their accumulated operations sync to device memory.
+  void FlushTensorsOperations();
 
   // Sets the gradients of the optimizeable inputs and the optimizable
   // parameters, according to the grad_inputs values. The inputs_require_grad
@@ -92,10 +92,6 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
                              const TensorBatchVector& optimizable_params,
                              const std::vector<bool>& inputs_require_grad,
                              const Graph& df);
-
-  static void FlushTensorsOperations(
-      std::initializer_list<const TensorBatchVector*> batch_tensors,
-      const std::map<XLATensor*, std::shared_ptr<XLATensor>>& sync_tensors_map);
 
   // Extracts the XLA computation data from the inputs, and returns a matching
   // batch vector where data[i][j] holds the data beind the XLA tensor
@@ -114,6 +110,9 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   static xla::Shape GetResultShape(const xla::XlaComputation& computation,
                                    const TensorBatchVector& input_tensors);
 
+  // The devices where the replicas should be running. Replica 'i' on
+  // devices_[i].
+  std::vector<XLATensor::Device> devices_;
   // The module parameters which are marked for being subject to optimization.
   TensorBatchVector optimizable_params_;
   // All the module parameters (which include the optimizable_params_ ones).
@@ -158,10 +157,6 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // Keep the script module alive for lazy initialization of this XlaModule.
   // Once this XlaModule is initialized, script_module_ will be set to null.
   std::shared_ptr<script::Module> script_module_;
-
-  // The map of tensors whose accumulated operations need to be sync during the
-  // pre-step phase (when we call the FlushTensorsOperations() API).
-  std::map<XLATensor*, std::shared_ptr<XLATensor>> sync_tensors_map_;
 
   static std::atomic<uint64_t> s_module_id_;
 };

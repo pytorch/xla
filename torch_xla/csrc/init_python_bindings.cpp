@@ -35,23 +35,9 @@ void InitXlaModuleBindings(py::module m) {
            })
       .def("parameters",
            [](XlaModule& xla_module) { return xla_module.parameters(); })
-      .def(
-          "parameters_buffers",
-          [](XlaModule& xla_module) { return xla_module.parameters_buffers(); })
-      .def("add_sync_tensors",
-           [](XlaModule& xla_module,
-              const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-             for (auto& tensor : tensors) {
-               xla_module.AddSyncTensor(tensor);
-             }
-           })
-      .def("remove_sync_tensors",
-           [](XlaModule& xla_module,
-              const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-             for (auto& tensor : tensors) {
-               xla_module.RemoveSyncTensor(tensor);
-             }
-           });
+      .def("parameters_buffers", [](XlaModule& xla_module) {
+        return xla_module.parameters_buffers();
+      });
   m.def("_xla_mul_add_multi",
         [](const double scale_dest,
            const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
@@ -89,8 +75,8 @@ void InitXlaPassesBindings(py::module m) {
 void InitXlaTensorBindings(py::module m) {
   py::class_<XLATensor, std::shared_ptr<XLATensor>>(m, "XLATensor")
       .def(py::init([](autograd::Variable tensor, const std::string& device) {
-             return std::make_shared<XLATensor>(
-                 tensor, XLATensor::DeviceFromString(device));
+             return XLATensor::Create(tensor,
+                                      XLATensor::DeviceFromString(device));
            }),
            py::arg("tensor"), py::arg("device") = "")
       .def("to_tensor", [](XLATensor& s) { return s.toTensor(); })

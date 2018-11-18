@@ -124,16 +124,17 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
 std::shared_ptr<ComputationClient::Data>
 XrtComputationClient::ExecuteComputation(
     const XlaComputation& computation,
-    tensorflow::gtl::ArraySlice<Data*> arguments, const Shape* output_shape) {
+    tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
+    const Shape* output_shape) {
   metrics::TimedSection timed(ExecuteMetric());
   ApiCallInitialize();
 
-  std::vector<string> devices;
+  std::string effective_device = GetEffectiveDevice(device);
   tensorflow::ClientSession::FeedType feed_inputs;
   std::vector<ExecuteContext> exec_ops =
       CreateExecuteOps(computation, BuildParallelArguments(arguments),
-                       output_shape, &devices, &feed_inputs);
-  SessionData* session = GetSessionForDevice(devices.front());
+                       output_shape, {effective_device}, &feed_inputs);
+  SessionData* session = GetSessionForDevice(effective_device);
   std::vector<tensorflow::Tensor> outputs;
   TF_CHECK_OK(session->root.status());
   xrt_util::CheckComputationStatus(
@@ -143,7 +144,7 @@ XrtComputationClient::ExecuteComputation(
   XLA_CHECK_EQ(outputs.size(), 1);
 
   return std::make_shared<XrtData>(
-      devices.front(), outputs[0].scalar<int64>()(),
+      effective_device, outputs[0].scalar<int64>()(),
       exec_ops.front().result_shape,
       [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); });
 }
@@ -152,14 +153,14 @@ std::vector<std::shared_ptr<ComputationClient::Data>>
 XrtComputationClient::ExecuteReplicated(
     const XlaComputation& computation,
     const std::vector<std::vector<Data*>>& arguments,
+    tensorflow::gtl::ArraySlice<const string> devices,
     const Shape* output_shape) {
   metrics::TimedSection timed(ExecuteReplicatedMetric());
   ApiCallInitialize();
 
-  std::vector<string> devices;
   tensorflow::ClientSession::FeedType feed_inputs;
   std::vector<ExecuteContext> exec_ops = CreateExecuteOps(
-      computation, arguments, output_shape, &devices, &feed_inputs);
+      computation, arguments, output_shape, devices, &feed_inputs);
   return RunComputations(exec_ops, {&computation}, devices, feed_inputs);
 }
 
@@ -167,7 +168,7 @@ std::vector<std::shared_ptr<ComputationClient::Data>>
 XrtComputationClient::RunComputations(
     const std::vector<ExecuteContext>& exec_ops,
     tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
-    const std::vector<string>& devices,
+    tensorflow::gtl::ArraySlice<const string> devices,
     const tensorflow::ClientSession::FeedType& feed_inputs) {
   // In the PyTorch/XRT interface we keep a map (options_.workers_map) from a
   // worker+taskno, to the GRPC server which is the entry point for that worker.
@@ -184,7 +185,7 @@ XrtComputationClient::RunComputations(
   // within the session_replicas map, which we will be executing independently.
   std::map<SessionData*, std::vector<size_t>> session_replicas;
   for (size_t i = 0; i < devices.size(); ++i) {
-    SessionData* session = GetSessionForDevice(devices[i]);
+    SessionData* session = GetSessionForDevice(GetEffectiveDevice(devices[i]));
     session_replicas[session].push_back(i);
   }
   // TODO(dlibenzi): These could be run in parallel.
@@ -204,7 +205,7 @@ XrtComputationClient::RunComputations(
     for (size_t i = 0; i < outputs.size(); ++i) {
       auto replica = sess_replica.second[i];
       results[replica] = std::make_shared<XrtData>(
-          devices[replica], outputs[i].scalar<int64>()(),
+          GetEffectiveDevice(devices[replica]), outputs[i].scalar<int64>()(),
           exec_ops[replica].result_shape,
           [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); });
     }
@@ -216,14 +217,14 @@ std::vector<std::shared_ptr<ComputationClient::Data>>
 XrtComputationClient::ExecuteParallel(
     tensorflow::gtl::ArraySlice<const XlaComputation> computations,
     const std::vector<std::vector<Data*>>& arguments,
+    tensorflow::gtl::ArraySlice<const string> devices,
     tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) {
   metrics::TimedSection timed(ExecuteParallelMetric());
   ApiCallInitialize();
 
-  std::vector<string> devices;
   tensorflow::ClientSession::FeedType feed_inputs;
   std::vector<ExecuteContext> exec_ops = CreateExecuteOps(
-      computations, arguments, output_shapes, &devices, &feed_inputs);
+      computations, arguments, output_shapes, devices, &feed_inputs);
   std::vector<const XlaComputation*> computations_pointers;
   for (auto& computation : computations) {
     computations_pointers.push_back(&computation);
@@ -334,7 +335,8 @@ const string& XrtComputationClient::TorchDeviceToXrtDevice(
 
 std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
     const XlaComputation& computation, int64 num_replicas,
-    const std::vector<string>& devices, const Shape* output_shape) const {
+    tensorflow::gtl::ArraySlice<const string> devices,
+    const Shape* output_shape) const {
   XLA_CHECK_EQ(num_replicas, devices.size());
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
@@ -362,29 +364,34 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
   return xrt_computation;
 }
 
-string XrtComputationClient::GetArgumentsDevice(
+absl::optional<string> XrtComputationClient::GetArgumentsDevice(
     tensorflow::gtl::ArraySlice<Data*> arguments) const {
   xla_util::Unique<string> unique_device;
   for (size_t i = 0; i < arguments.size(); ++i) {
     XrtData* xrt_data = dynamic_cast<XrtData*>(arguments[i]);
     unique_device.set(xrt_data->device());
   }
-  // If the computation has no arguments, use the default device.
-  // Maybe the execute-computation APIs needs to be more explicit about it.
-  return unique_device ? *unique_device : options_.default_device;
+  if (!unique_device) {
+    return absl::nullopt;
+  }
+  return *unique_device;
 }
 
-std::vector<string> XrtComputationClient::GetReplicasDevices(
-    const std::vector<std::vector<Data*>>& arguments) const {
-  std::vector<string> devices;
+void XrtComputationClient::VerifyReplicasDevices(
+    const std::vector<std::vector<Data*>>& arguments,
+    tensorflow::gtl::ArraySlice<const string> devices) const {
   std::set<string> unique_devices;
   for (size_t i = 0; i < arguments.size(); ++i) {
-    devices.push_back(GetArgumentsDevice(arguments[i]));
-    XLA_CHECK(unique_devices.insert(devices.back()).second)
+    auto opt_device = GetArgumentsDevice(arguments[i]);
+    if (opt_device) {
+      XLA_CHECK_EQ(*opt_device, devices[i]);
+    } else {
+      opt_device = devices[i];
+    }
+    XLA_CHECK(unique_devices.insert(*opt_device).second)
         << "Cannot have two different replicas using the same device: "
-        << devices.back();
+        << *opt_device;
   }
-  return devices;
 }
 
 tensorflow::Tensor XrtComputationClient::GetArgumentsInputs(
@@ -405,10 +412,10 @@ XrtComputationClient::CreateExecuteOps(
     tensorflow::gtl::ArraySlice<const XlaComputation> computations,
     const std::vector<std::vector<Data*>>& arguments,
     tensorflow::gtl::ArraySlice<const Shape* const> output_shapes,
-    std::vector<string>* devices,
+    tensorflow::gtl::ArraySlice<const string> devices,
     tensorflow::ClientSession::FeedType* feed_inputs) {
   std::vector<ExecuteContext> exec_ops;
-  *devices = GetReplicasDevices(arguments);
+  VerifyReplicasDevices(arguments, devices);
   for (size_t i = 0; i < computations.size(); ++i) {
     const XlaComputation& computation = computations[i];
     const Shape* output_shape = output_shapes[i];
@@ -418,14 +425,14 @@ XrtComputationClient::CreateExecuteOps(
       output_shape = &program_shape.result();
     }
     auto xrt_computation = CreateXrtComputation(computation, /*num_replicas=*/1,
-                                                {devices->at(i)}, output_shape);
+                                                {devices[i]}, output_shape);
 
-    auto inputs = GetArgumentsInputs(arguments[i], devices->at(i), feed_inputs);
-    const string& xrt_device = TorchDeviceToXrtDevice(devices->at(i));
+    auto inputs = GetArgumentsInputs(arguments[i], devices[i], feed_inputs);
+    const string& xrt_device = TorchDeviceToXrtDevice(devices[i]);
     SessionData* session = GetSessionForXrtDevice(xrt_device);
     tensorflow::Scope device_scope = session->root.WithDevice(xrt_device);
     const CachedNode& cached_node =
-        GetCompileExecuteNode(device_scope, devices->at(i));
+        GetCompileExecuteNode(device_scope, devices[i]);
     feed_inputs->insert(
         {cached_node.holders[0], xrt_computation->SerializeAsString()});
 
@@ -446,26 +453,26 @@ std::vector<XrtComputationClient::ExecuteContext>
 XrtComputationClient::CreateExecuteOps(
     const XlaComputation& computation,
     const std::vector<std::vector<Data*>>& arguments, const Shape* output_shape,
-    std::vector<string>* devices,
+    tensorflow::gtl::ArraySlice<const string> devices,
     tensorflow::ClientSession::FeedType* feed_inputs) {
   ProgramShape program_shape;
   if (output_shape == nullptr) {
     program_shape = computation.GetProgramShape().ValueOrDie();
     output_shape = &program_shape.result();
   }
-  *devices = GetReplicasDevices(arguments);
+  VerifyReplicasDevices(arguments, devices);
   auto xrt_computation = CreateXrtComputation(computation, arguments.size(),
-                                              *devices, output_shape);
+                                              devices, output_shape);
 
   absl::optional<tensorflow::ops::Placeholder> computation_holder;
   std::vector<ExecuteContext> exec_ops;
   for (size_t i = 0; i < arguments.size(); ++i) {
-    auto inputs = GetArgumentsInputs(arguments[i], devices->at(i), feed_inputs);
-    const string& xrt_device = TorchDeviceToXrtDevice(devices->at(i));
+    auto inputs = GetArgumentsInputs(arguments[i], devices[i], feed_inputs);
+    const string& xrt_device = TorchDeviceToXrtDevice(devices[i]);
     SessionData* session = GetSessionForXrtDevice(xrt_device);
     tensorflow::Scope device_scope = session->root.WithDevice(xrt_device);
     const CachedNode& cached_node =
-        GetCompileExecuteNode(device_scope, devices->at(i));
+        GetCompileExecuteNode(device_scope, devices[i]);
     feed_inputs->insert(
         {cached_node.holders[0], xrt_computation->SerializeAsString()});
 
