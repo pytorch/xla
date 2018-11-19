@@ -2,6 +2,7 @@
 #define TENSORFLOW_COMPILER_XLA_RPC_XLA_COMPUTATION_CLIENT_H_
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -96,6 +97,7 @@ class XlaComputationClient : public ComputationClient {
   void ReleaseXlaData(XlaData* xla_data);
 
   Options options_;
+  std::mutex lock_;
   Client* client_ = nullptr;
   std::unique_ptr<Client> client_ptr_;
   std::unique_ptr<grpc::XlaService::Stub> xla_service_;
