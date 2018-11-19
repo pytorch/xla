@@ -289,6 +289,7 @@ XrtComputationClient::DeconstructTuple(
 
 XrtComputationClient::SessionData* XrtComputationClient::GetSessionForTarget(
     const string& target) {
+  std::lock_guard<std::mutex> lock(lock_);
   auto target_session = session_map_.find(target);
   if (target_session == session_map_.end()) {
     target_session =
@@ -519,9 +520,13 @@ void XrtComputationClient::ReleaseHandles(
 }
 
 void XrtComputationClient::FlushReleasedHandles() {
-  if (!released_handles_.empty()) {
-    ReleaseHandles(released_handles_);
-    released_handles_.clear();
+  std::vector<DeviceHandle> released_handles;
+  {
+    std::lock_guard<std::mutex> lock(lock_);
+    released_handles.swap(released_handles_);
+  }
+  if (!released_handles.empty()) {
+    ReleaseHandles(released_handles);
   }
 }
 
@@ -531,6 +536,7 @@ void XrtComputationClient::ApiCallInitialize() {
 }
 
 void XrtComputationClient::ReleaseXrtData(XrtData* xrt_data) {
+  std::lock_guard<std::mutex> lock(lock_);
   xrt_data->Release();
   released_handles_.emplace_back(xrt_data->device(), xrt_data->handle);
 }
@@ -644,6 +650,7 @@ string XrtComputationClient::GetDefaultDevice() const {
 }
 
 void XrtComputationClient::RewindCaches() {
+  std::lock_guard<std::mutex> lock(lock_);
   for (auto& key_cache : node_cache_) {
     key_cache.second.rewind();
   }
@@ -652,6 +659,7 @@ void XrtComputationClient::RewindCaches() {
 const XrtComputationClient::CachedNode&
 XrtComputationClient::GetCompileExecuteNode(const tensorflow::Scope& scope,
                                             const string& device) {
+  std::lock_guard<std::mutex> lock(lock_);
   NodeCache* cache =
       &node_cache_[NodeCacheKey(device, NodeTypes::kCompileExecute)];
   if (cache->empty()) {
@@ -674,6 +682,7 @@ XrtComputationClient::GetCompileExecuteNode(const tensorflow::Scope& scope,
 
 const XrtComputationClient::CachedNode& XrtComputationClient::GetReadNode(
     const tensorflow::Scope& scope, const string& device) {
+  std::lock_guard<std::mutex> lock(lock_);
   NodeCache* cache = &node_cache_[NodeCacheKey(device, NodeTypes::kRead)];
   if (cache->empty()) {
     std::vector<tensorflow::ops::Placeholder> holders(
@@ -688,6 +697,7 @@ const XrtComputationClient::CachedNode& XrtComputationClient::GetReadNode(
 
 const XrtComputationClient::CachedNode& XrtComputationClient::GetAllocateNode(
     const tensorflow::Scope& scope, const string& device) {
+  std::lock_guard<std::mutex> lock(lock_);
   NodeCache* cache = &node_cache_[NodeCacheKey(device, NodeTypes::kAllocate)];
   if (cache->empty()) {
     std::vector<tensorflow::ops::Placeholder> holders(
@@ -702,6 +712,7 @@ const XrtComputationClient::CachedNode& XrtComputationClient::GetAllocateNode(
 const XrtComputationClient::CachedNode&
 XrtComputationClient::GetReleaseAllocationHandleNode(
     const tensorflow::Scope& scope, const string& device) {
+  std::lock_guard<std::mutex> lock(lock_);
   NodeCache* cache =
       &node_cache_[NodeCacheKey(device, NodeTypes::kReleaseAllocationHandle)];
   if (cache->empty()) {
@@ -717,6 +728,7 @@ XrtComputationClient::GetReleaseAllocationHandleNode(
 
 const XrtComputationClient::CachedNode& XrtComputationClient::GetSubTupleNode(
     const tensorflow::Scope& scope, const string& device) {
+  std::lock_guard<std::mutex> lock(lock_);
   NodeCache* cache = &node_cache_[NodeCacheKey(device, NodeTypes::kSubTuple)];
   if (cache->empty()) {
     std::vector<tensorflow::ops::Placeholder> holders(

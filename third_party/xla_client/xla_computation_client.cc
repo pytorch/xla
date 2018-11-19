@@ -231,6 +231,7 @@ string XlaComputationClient::GetEffectiveDevice(const string& device) const {
 }
 
 void XlaComputationClient::FlushReleasedHandles() {
+  std::lock_guard<std::mutex> lock(lock_);
   size_t num_handles = released_handles_.size();
   if (num_handles > 0) {
     metrics::TimedSection timed(ReleaseHandlesTimeMetric());
@@ -242,6 +243,7 @@ void XlaComputationClient::FlushReleasedHandles() {
 }
 
 void XlaComputationClient::ReleaseXlaData(XlaData* xla_data) {
+  std::lock_guard<std::mutex> lock(lock_);
   released_handles_.push_back(xla_data->Release());
 }
 

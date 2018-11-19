@@ -4,6 +4,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -339,6 +340,7 @@ class XrtComputationClient : public ComputationClient {
       tensorflow::gtl::ArraySlice<Data*> arguments);
 
   Options options_;
+  std::mutex lock_;
   std::map<string, std::vector<int>> device_mesh_coords_;
   std::map<string, std::unique_ptr<SessionData>> session_map_;
   std::vector<DeviceHandle> released_handles_;
