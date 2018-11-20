@@ -24,14 +24,19 @@ void InitXlaModuleBindings(py::module m) {
            py::arg("differentiate") = true)
       .def("__call__",
            [](XlaModule& xla_module, py::args args) -> py::object {
+             XlaModule::TensorBatchVector outputs;
+             Py_BEGIN_ALLOW_THREADS;
              auto inputs = XlaCreateTensorList(args);
-             auto outputs = xla_module.forward(inputs);
+             outputs = xla_module.forward(inputs);
+             Py_END_ALLOW_THREADS;
              return XlaPackTensorList(outputs);
            })
       .def("backward",
            [](XlaModule& xla_module, py::args args) {
+             Py_BEGIN_ALLOW_THREADS;
              auto inputs = XlaCreateTensorList(args);
              xla_module.backward(inputs);
+             Py_END_ALLOW_THREADS;
            })
       .def("parameters",
            [](XlaModule& xla_module) { return xla_module.parameters(); })
@@ -51,16 +56,26 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_sync_multi",
         [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
+          Py_BEGIN_ALLOW_THREADS;
           XLATensor::ApplyPendingGraph(tensors);
+          Py_END_ALLOW_THREADS;
         });
   m.def("_xla_to_tensors",
         [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-          return XLATensor::GetTensors(tensors);
+          std::vector<at::Tensor> result;
+          Py_BEGIN_ALLOW_THREADS;
+          result = XLATensor::GetTensors(tensors);
+          Py_END_ALLOW_THREADS;
+          return result;
         });
   m.def("_xla_create_tensors",
         [](const std::vector<autograd::Variable>& tensors,
            const std::vector<std::string>& devices) {
-          return XLATensor::CreateTensors(tensors, devices);
+          std::vector<std::shared_ptr<XLATensor>> result;
+          Py_BEGIN_ALLOW_THREADS;
+          result = XLATensor::CreateTensors(tensors, devices);
+          Py_END_ALLOW_THREADS;
+          return result;
         });
   m.def("_xla_metrics_report",
         []() { return xla::metrics::CreateMetricReport(); });
