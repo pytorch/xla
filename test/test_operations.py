@@ -860,20 +860,15 @@ class TestOptimizer(XlaTestCase):
         self.assertEqualDbg(x / 3.11, (xla_x / 3.11).to_tensor())
         self.assertEqualDbg(y / x, (xla_y / xla_x).to_tensor())
 
-    def checkSgd(self, lr, momentum, weight_decay, nsteps, do_zero_grad,
-                 manually_batched):
+    def checkSgd(self, lr, momentum, weight_decay, nsteps, do_zero_grad):
         input = torch.randn(4, 4, requires_grad=True)
         model = nn.Linear(4, 20)
         traced_model = torch.jit.trace(model, input)
         xla_model = torch_xla._C.XlaModule(traced_model, use_full_conv_precision=True)
         input_xla = [torch_xla._C.XLATensor(input)]
         xla_model((tuple(input_xla)))
-        if manually_batched:
-            xla_optimizer = optim.XlaSGD(xla_model.parameters()[0], lr=lr,
-                                         momentum=momentum, weight_decay=weight_decay)
-        else:
-            xla_optimizer = optim.SGD(xla_model.parameters()[0], lr=lr,
-                                      momentum=momentum, weight_decay=weight_decay)
+        xla_optimizer = optim.SGD(xla_model.parameters()[0], lr=lr,
+                                  momentum=momentum, weight_decay=weight_decay)
         optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum,
                               weight_decay=weight_decay)
         output = model(input)
@@ -892,19 +887,16 @@ class TestOptimizer(XlaTestCase):
             for i in range(0, len(updated_params)):
                 self.assertEqualRel(xla_updated_params[i], updated_params[i])
 
-    @unittest.skip('Pending optimizer changes')
     def test_sgd(self):
         for weight_decay in [0, 5e-4]:
-            for manually_batched in [False, True]:
-                self.checkSgd(lr=0.1, momentum=0, weight_decay=weight_decay,
-                              nsteps=1, do_zero_grad=True,
-                              manually_batched=manually_batched)
-                self.checkSgd(lr=0.1, momentum=0, weight_decay=weight_decay, nsteps=2,
-                              do_zero_grad=False, manually_batched=manually_batched)
-                self.checkSgd(lr=0.1, momentum=0.5, weight_decay=weight_decay, nsteps=1,
-                              do_zero_grad=True, manually_batched=manually_batched)
-                self.checkSgd(lr=0.1, momentum=0.5, weight_decay=weight_decay, nsteps=2,
-                              do_zero_grad=False, manually_batched=manually_batched)
+            self.checkSgd(lr=0.1, momentum=0, weight_decay=weight_decay,
+                          nsteps=1, do_zero_grad=True)
+            self.checkSgd(lr=0.1, momentum=0, weight_decay=weight_decay, nsteps=2,
+                          do_zero_grad=False)
+            self.checkSgd(lr=0.1, momentum=0.5, weight_decay=weight_decay, nsteps=1,
+                          do_zero_grad=True)
+            self.checkSgd(lr=0.1, momentum=0.5, weight_decay=weight_decay, nsteps=2,
+                          do_zero_grad=False)
 
 
 # Disabled always for now.
