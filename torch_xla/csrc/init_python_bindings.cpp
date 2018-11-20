@@ -24,17 +24,17 @@ void InitXlaModuleBindings(py::module m) {
            py::arg("differentiate") = true)
       .def("__call__",
            [](XlaModule& xla_module, py::args args) -> py::object {
+             auto inputs = XlaCreateTensorList(args);
              XlaModule::TensorBatchVector outputs;
              Py_BEGIN_ALLOW_THREADS;
-             auto inputs = XlaCreateTensorList(args);
              outputs = xla_module.forward(inputs);
              Py_END_ALLOW_THREADS;
              return XlaPackTensorList(outputs);
            })
       .def("backward",
            [](XlaModule& xla_module, py::args args) {
-             Py_BEGIN_ALLOW_THREADS;
              auto inputs = XlaCreateTensorList(args);
+             Py_BEGIN_ALLOW_THREADS;
              xla_module.backward(inputs);
              Py_END_ALLOW_THREADS;
            })
