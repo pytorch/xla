@@ -6,8 +6,10 @@
 #include "c10/util/Exception.h"
 #include "cross_replica_reduces.h"
 #include "passes/eval_static_size.h"
+#include "passes/insert_explicit_expand.h"
 #include "passes/remove_unused_forward_outputs.h"
 #include "passes/replace_untraced_operators.h"
+#include "passes/set_mat_mul_output_shape.h"
 #include "passes/threshold_backward_peephole.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/jit/passes/canonicalize_ops.h"
@@ -82,6 +84,8 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   std::shared_ptr<Graph> forward_graph = forward->graph()->copy();
   // Run forward passes.
   CanonicalizeOps(forward_graph);
+  SetMatMulOutputShape(forward_graph);
+  InsertExplicitExpand(forward_graph);
   EvalStaticSize(forward_graph);
   ConstantPropagation(forward_graph);
   ReplaceUntracedOperators(forward_graph);
@@ -140,6 +144,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
 
   // Run the forward passes.
   CanonicalizeOps(gradient.f);
+  InsertExplicitExpand(gradient.f);
   EvalStaticSize(gradient.f);
   ConstantPropagation(gradient.f);
   ReplaceUntracedOperators(gradient.f);

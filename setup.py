@@ -29,8 +29,10 @@ torch_xla_sources = [
     'torch_xla/csrc/torch_util.cpp',
     'torch_xla/csrc/translator.cpp',
     'torch_xla/csrc/passes/eval_static_size.cpp',
+    'torch_xla/csrc/passes/insert_explicit_expand.cpp',
     'torch_xla/csrc/passes/remove_unused_forward_outputs.cpp',
     'torch_xla/csrc/passes/replace_untraced_operators.cpp',
+    'torch_xla/csrc/passes/set_mat_mul_output_shape.cpp',
     'torch_xla/csrc/passes/threshold_backward_peephole.cpp',
 ]
 
