@@ -232,9 +232,9 @@ class XrtComputationClient : public ComputationClient {
     Shape result_shape;
   };
 
-  SessionData* GetSessionForTarget(const string& target);
-  SessionData* GetSessionForXrtDevice(const string& xrt_device);
-  SessionData* GetSessionForDevice(const string& device);
+  SessionData* GetSessionForTarget(const string& target) const;
+  SessionData* GetSessionForXrtDevice(const string& xrt_device) const;
+  SessionData* GetSessionForDevice(const string& device) const;
 
   string GetEffectiveDevice(const string& device) const;
 
@@ -305,6 +305,9 @@ class XrtComputationClient : public ComputationClient {
 
   tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
       const string& xrt_device);
+
+  // Creates all the session required to communicate with the known workers.
+  void CreateWorkerSessions();
 
   void InitializeDevices();
 
@@ -386,6 +389,7 @@ class XrtComputationClient : public ComputationClient {
   Options options_;
   std::mutex lock_;
   std::map<string, std::vector<int>> device_mesh_coords_;
+  std::map<string, std::unique_ptr<SessionData>> session_map_;
   // Access to the following members must be done while holding lock_.
   // XRT thread safety semantics.
   // XRT uses a tensorflow::ClientSession in order to execute computations, and
@@ -398,7 +402,6 @@ class XrtComputationClient : public ComputationClient {
   // safe.
   // Hence we hold the lock_ during the prep-operations, and we release it
   // before issuing a tensorflow::ClientSession::Run().
-  std::map<string, std::unique_ptr<SessionData>> session_map_;
   std::vector<DeviceHandle> released_handles_;
   std::map<NodeCacheKey, NodeCache> node_cache_;
 };
