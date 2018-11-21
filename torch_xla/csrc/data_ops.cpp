@@ -14,46 +14,6 @@ bool IsCompleteShape(const std::vector<int64_t>& dim_sizes) {
                      [](const int64_t dim_size) { return dim_size >= 0; });
 }
 
-// Expand the input to the given output sizes.
-xla::XlaOp BuildExpandToOutputSizes(
-    const xla::XlaOp& input, const std::vector<xla::int64>& output_sizes) {
-  auto input_sizes = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
-  // Adjust the rank of the input to match the rank of the output.
-  XLA_CHECK_LE(input_sizes.size(), output_sizes.size());
-  for (size_t i = 0; i < output_sizes.size() - input_sizes.size(); ++i) {
-    input_sizes.insert(input_sizes.begin(), 1);
-  }
-  const auto implicit_reshape = xla::Reshape(input, input_sizes);
-  // Squeeze the trivial (of size 1) dimensions.
-  std::vector<xla::int64> non_singleton_dimensions;
-  std::copy_if(input_sizes.begin(), input_sizes.end(),
-               std::back_inserter(non_singleton_dimensions),
-               [](const size_t dim_size) { return dim_size != 1; });
-  const auto squeezed_input =
-      xla::Reshape(implicit_reshape, non_singleton_dimensions);
-  // Broadcast the squeezed tensor, the additional dimensions are to the left.
-  std::vector<xla::int64> broadcast_sizes;
-  for (size_t i = 0; i < input_sizes.size(); ++i) {
-    if (input_sizes[i] == 1) {
-      broadcast_sizes.push_back(output_sizes[i]);
-    }
-  }
-  const auto broadcast = xla::Broadcast(squeezed_input, broadcast_sizes);
-  // Bring the dimensions added by broadcast where the trivial dimensions were.
-  std::vector<xla::int64> reshape_permutation;
-  for (size_t i = 0; i < input_sizes.size(); ++i) {
-    if (input_sizes[i] == 1) {
-      reshape_permutation.push_back(i);
-    }
-  }
-  for (size_t i = 0; i < input_sizes.size(); ++i) {
-    if (input_sizes[i] != 1) {
-      reshape_permutation.push_back(i);
-    }
-  }
-  return xla::Reshape(broadcast, reshape_permutation, output_sizes);
-}
-
 }  // namespace
 
 xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
@@ -86,23 +46,48 @@ xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
 }
 
 xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input) {
-  auto input_sizes = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
+  const auto node_inputs = node->inputs();
+  XLA_CHECK_GE(node_inputs.size(), 1);
+  auto input_sizes = XlaHelpers::TensorDimensionSizes(node_inputs[0]);
   const auto node_outputs = node->outputs();
   XLA_CHECK_EQ(node_outputs.size(), 1);
-  const auto output_sizes = XlaHelpers::TensorDimensionSizes(node_outputs[0]);
-  return BuildExpandToOutputSizes(input, XlaHelpers::I64List(output_sizes));
-}
-
-xla::XlaOp BuildImplicitExpand(const xla::XlaOp& input,
-                               const xla::XlaOp& output) {
-  const auto output_sizes =
-      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(output));
-  const auto input_sizes =
-      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
-  if (input_sizes.size() >= output_sizes.size() || input_sizes.empty()) {
-    return input;
+  const auto output_sizes = node->get<std::vector<int64_t>>(attr::size).value();
+  // Adjust the rank of the input to match the rank of the output.
+  XLA_CHECK_LE(input_sizes.size(), output_sizes.size());
+  for (size_t i = 0; i < output_sizes.size() - input_sizes.size(); ++i) {
+    input_sizes.insert(input_sizes.begin(), 1);
   }
-  return BuildExpandToOutputSizes(input, output_sizes);
+  const auto implicit_reshape =
+      xla::Reshape(input, XlaHelpers::I64List(input_sizes));
+  // Squeeze the trivial (of size 1) dimensions.
+  std::vector<xla::int64> non_singleton_dimensions;
+  std::copy_if(input_sizes.begin(), input_sizes.end(),
+               std::back_inserter(non_singleton_dimensions),
+               [](const size_t dim_size) { return dim_size != 1; });
+  const auto squeezed_input =
+      xla::Reshape(implicit_reshape, non_singleton_dimensions);
+  // Broadcast the squeezed tensor, the additional dimensions are to the left.
+  std::vector<xla::int64> broadcast_sizes;
+  for (size_t i = 0; i < input_sizes.size(); ++i) {
+    if (input_sizes[i] == 1) {
+      broadcast_sizes.push_back(output_sizes[i]);
+    }
+  }
+  const auto broadcast = xla::Broadcast(squeezed_input, broadcast_sizes);
+  // Bring the dimensions added by broadcast where the trivial dimensions were.
+  std::vector<xla::int64> reshape_permutation;
+  for (size_t i = 0; i < input_sizes.size(); ++i) {
+    if (input_sizes[i] == 1) {
+      reshape_permutation.push_back(i);
+    }
+  }
+  for (size_t i = 0; i < input_sizes.size(); ++i) {
+    if (input_sizes[i] != 1) {
+      reshape_permutation.push_back(i);
+    }
+  }
+  return xla::Reshape(broadcast, reshape_permutation,
+                      XlaHelpers::I64List(output_sizes));
 }
 
 // Finds a prim::ListConstruct operation by id in the graph of "parent".
