@@ -29,6 +29,7 @@ XrtComputationClient::XrtComputationClient(
               << dev_target.second;
   }
   LOG(INFO) << "XRT default device: " << default_device_target->first;
+  CreateWorkerSessions();
   InitializeDevices();
 }
 
@@ -139,15 +140,14 @@ XrtComputationClient::ExecuteComputation(
   std::string effective_device = GetEffectiveDevice(device);
   tensorflow::ClientSession::FeedType feed_inputs;
   std::vector<ExecuteContext> exec_ops;
-  SessionData* session = nullptr;
   {
     std::lock_guard<std::mutex> lock(lock_);
     exec_ops =
         CreateExecuteOps(&arena, computation, BuildParallelArguments(arguments),
                          output_shape, {effective_device}, &feed_inputs);
-    session = GetSessionForDevice(effective_device);
   }
 
+  SessionData* session = GetSessionForDevice(effective_device);
   std::vector<tensorflow::Tensor> outputs;
   xrt_util::CheckComputationStatus(
       session->session.Run(feed_inputs, {exec_ops.front().execute_output},
@@ -201,15 +201,9 @@ XrtComputationClient::RunComputations(
   // Chosing the 1:1 approach (one session per worker), we will have N sessions
   // within the session_replicas map, which we will be executing independently.
   std::map<SessionData*, std::vector<size_t>> session_replicas;
-  {
-    // This API must be called without holding the lock_ (because we will be
-    // calling ClientSession::Run()), but GetSessionForDevice() requires it.
-    std::lock_guard<std::mutex> lock(lock_);
-    for (size_t i = 0; i < devices.size(); ++i) {
-      SessionData* session =
-          GetSessionForDevice(GetEffectiveDevice(devices[i]));
-      session_replicas[session].push_back(i);
-    }
+  for (size_t i = 0; i < devices.size(); ++i) {
+    SessionData* session = GetSessionForDevice(GetEffectiveDevice(devices[i]));
+    session_replicas[session].push_back(i);
   }
   // TODO(dlibenzi): These could be run in parallel.
   std::vector<std::shared_ptr<Data>> results(devices.size());
@@ -318,26 +312,21 @@ XrtComputationClient::DeconstructTuple(
 }
 
 XrtComputationClient::SessionData* XrtComputationClient::GetSessionForTarget(
-    const string& target) {
+    const string& target) const {
   auto target_session = session_map_.find(target);
-  if (target_session == session_map_.end()) {
-    target_session =
-        session_map_
-            .emplace(target,
-                     std::unique_ptr<SessionData>(new SessionData(target)))
-            .first;
-  }
+  XLA_CHECK(target_session != session_map_.end())
+      << "Unable to find session for target: " << target;
   return target_session->second.get();
 }
 
 XrtComputationClient::SessionData* XrtComputationClient::GetSessionForXrtDevice(
-    const string& xrt_device) {
+    const string& xrt_device) const {
   auto worker_hostport = GetWorkerForXrtDevice(xrt_device);
   return GetSessionForTarget(worker_hostport.second);
 }
 
 XrtComputationClient::SessionData* XrtComputationClient::GetSessionForDevice(
-    const string& device) {
+    const string& device) const {
   return GetSessionForXrtDevice(TorchDeviceToXrtDevice(device));
 }
 
@@ -630,6 +619,14 @@ tensorflow::tpu::TopologyProto XrtComputationClient::InitializeAndFetchTopology(
   tensorflow::tpu::TopologyProto topology_proto;
   XLA_CHECK(topology_proto.ParseFromString(outputs[0].scalar<string>()()));
   return topology_proto;
+}
+
+void XrtComputationClient::CreateWorkerSessions() {
+  for (auto& worker_target : options_.workers_map) {
+    session_map_.emplace(
+        worker_target.second,
+        std::unique_ptr<SessionData>(new SessionData(worker_target.second)));
+  }
 }
 
 void XrtComputationClient::InitializeDevices() {
