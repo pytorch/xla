@@ -13,6 +13,12 @@ namespace jit {
 
 namespace {
 
+struct NoGilSection {
+  NoGilSection() : state(PyEval_SaveThread()) {}
+  ~NoGilSection() { PyEval_RestoreThread(state); }
+  PyThreadState* state = nullptr;
+};
+
 void InitXlaModuleBindings(py::module m) {
   py::class_<XlaModule, std::shared_ptr<XlaModule>>(m, "XlaModule")
       .def(py::init([](const std::shared_ptr<script::Module> module,
@@ -26,17 +32,17 @@ void InitXlaModuleBindings(py::module m) {
            [](XlaModule& xla_module, py::args args) -> py::object {
              auto inputs = XlaCreateTensorList(args);
              XlaModule::TensorBatchVector outputs;
-             Py_BEGIN_ALLOW_THREADS;
-             outputs = xla_module.forward(inputs);
-             Py_END_ALLOW_THREADS;
+             {
+               NoGilSection nogil;
+               outputs = xla_module.forward(inputs);
+             }
              return XlaPackTensorList(outputs);
            })
       .def("backward",
            [](XlaModule& xla_module, py::args args) {
              auto inputs = XlaCreateTensorList(args);
-             Py_BEGIN_ALLOW_THREADS;
+             NoGilSection nogil;
              xla_module.backward(inputs);
-             Py_END_ALLOW_THREADS;
            })
       .def("parameters",
            [](XlaModule& xla_module) { return xla_module.parameters(); })
@@ -56,25 +62,26 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_sync_multi",
         [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-          Py_BEGIN_ALLOW_THREADS;
+          NoGilSection nogil;
           XLATensor::ApplyPendingGraph(tensors);
-          Py_END_ALLOW_THREADS;
         });
   m.def("_xla_to_tensors",
         [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
           std::vector<at::Tensor> result;
-          Py_BEGIN_ALLOW_THREADS;
-          result = XLATensor::GetTensors(tensors);
-          Py_END_ALLOW_THREADS;
+          {
+            NoGilSection nogil;
+            result = XLATensor::GetTensors(tensors);
+          }
           return result;
         });
   m.def("_xla_create_tensors",
         [](const std::vector<autograd::Variable>& tensors,
            const std::vector<std::string>& devices) {
           std::vector<std::shared_ptr<XLATensor>> result;
-          Py_BEGIN_ALLOW_THREADS;
-          result = XLATensor::CreateTensors(tensors, devices);
-          Py_END_ALLOW_THREADS;
+          {
+            NoGilSection nogil;
+            result = XLATensor::CreateTensors(tensors, devices);
+          }
           return result;
         });
   m.def("_xla_metrics_report",
