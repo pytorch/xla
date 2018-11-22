@@ -307,7 +307,7 @@ void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs,
     auto& replica_grad_inputs = grad_inputs[i];
     auto& replica_inputs = inputs[i];
     auto& replica_optimizable_params = optimizable_params[i];
-    XLA_CHECK_GE(replica_grad_inputs.size(), inputs_require_grad_count)
+    XLA_CHECK_EQ(replica_grad_inputs.size(), inputs_require_grad_count)
         << "Graph:\n"
         << df.toString();
     size_t grad_index = 0;
