@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "graph_context.h"
 #include "tensorflow/cc/framework/ops.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
@@ -110,6 +112,10 @@ class XLATensor {
 
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
+
+  // Dumps the XLA HLO text of the computation accumulated in the graph node
+  // which is attached to this tensor.
+  std::string DumpGraphNodeComputation() const;
 
   // Converts the given "device_spec" string to a device. The format is
   // <hw_type>:<ordinal>, where hw_type is one of TPU, CPU or GPU and ordinal is
