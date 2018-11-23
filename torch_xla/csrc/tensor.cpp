@@ -10,8 +10,10 @@
 #include "absl/strings/str_split.h"
 #include "helpers.h"
 #include "tensorflow/compiler/xla/literal_util.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
+#include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/lib/strings/proto_serialization.h"
 #include "torch/csrc/autograd/variable.h"
 #include "translator.h"
@@ -151,13 +153,13 @@ xla::Literal TensorToLiteral(const at::Tensor& tensor,
   const at::Tensor& contiguous_tensor = tensor.contiguous();
   auto contiguous_ptr = contiguous_tensor.data<contiguous_type>();
   const auto& tensor_sizes = contiguous_tensor.sizes();
-  CHECK_EQ(tensor_sizes.size(), xla::ShapeUtil::Rank(shape));
+  XLA_CHECK_EQ(tensor_sizes.size(), xla::ShapeUtil::Rank(shape));
   xla::int64 total_elements =
       std::accumulate(tensor_sizes.begin(), tensor_sizes.end(), 1,
                       std::multiplies<xla::int64>());
   xla::Literal literal(shape);
   auto literal_data = literal.data<NativeT>();
-  CHECK_EQ(literal_data.size(), total_elements);
+  XLA_CHECK_EQ(literal_data.size(), total_elements);
   if (total_elements == 1 ||
       xla::LayoutUtil::IsMonotonicWithDim0Major(shape.layout())) {
     // The Torch tensor is array layout, and so is the literal. We can issue a
@@ -199,7 +201,7 @@ std::shared_ptr<xla::ComputationClient::Data> TensorToXla(
   std::vector<xla::ComputationClient::LiteralDevice> literal_device;
   literal_device.emplace_back(std::move(literal), device.ToString());
   auto handles = client->TransferToServer(literal_device);
-  CHECK_EQ(handles.size(), 1);
+  XLA_CHECK_EQ(handles.size(), 1);
   return std::move(handles.front());
 }
 
@@ -254,7 +256,7 @@ void SetMulti(const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
               std::vector<std::shared_ptr<xla::ComputationClient::Data>>&
                   new_dest_elements,
               const std::vector<xla::int64>& index_mapping) {
-  CHECK_EQ(index_mapping.size(), new_dest_elements.size());
+  XLA_CHECK_EQ(index_mapping.size(), new_dest_elements.size());
   // Replace the underlying data for the destination tensors with the data in
   // "new_dest_elements".
   for (size_t i = 0; i < new_dest_elements.size(); ++i) {
@@ -326,7 +328,7 @@ void XLATensor::MulAddMulti(
     const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
     const double alpha,
     const std::vector<std::shared_ptr<XLATensor>>& source_tuple) {
-  CHECK_EQ(dest_tuple.size(), source_tuple.size());
+  XLA_CHECK_EQ(dest_tuple.size(), source_tuple.size());
   XlaGraphContext xla_graph_ctx(/*collate_parameters=*/true);
   for (size_t i = 0; i < dest_tuple.size(); ++i) {
     auto dest_node = dest_tuple[i]->GetXlaGraphNode();
@@ -401,8 +403,25 @@ const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::GetXlaData() {
   return data_->xla_data;
 }
 
+std::string XLATensor::DumpGraphNodeComputation() const {
+  std::string hlo_text;
+  auto& xla_graph_node = current_xla_graph_node();
+  if (xla_graph_node != nullptr) {
+    XlaGraphContext xla_graph_ctx(/*collate_parameters=*/true);
+    auto root = xla_graph_node->Generate(&xla_graph_ctx);
+    auto computation = xla_graph_ctx.Build(root).ConsumeValueOrDie();
+    hlo_text =
+        xla::xrt_util::GetComputationHloText(computation).ConsumeValueOrDie();
+  }
+  return hlo_text;
+}
+
 void XLATensor::SetXlaData(
     std::shared_ptr<xla::ComputationClient::Data> xla_data) {
+  XLA_CHECK(xla::ShapeUtil::Equal(shape(), xla_data->shape()))
+      << xla::ShapeUtil::HumanStringWithLayout(shape()) << " vs "
+      << xla::ShapeUtil::HumanStringWithLayout(xla_data->shape()) << "\n"
+      << DumpGraphNodeComputation();
   data_->xla_data = std::move(xla_data);
   data_->xla_graph_node = nullptr;
   // A modified tensor doesn't come directly from a module forward call.
@@ -475,7 +494,7 @@ std::vector<at::Tensor> XLATensor::GetTensors(
 std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
     const std::vector<autograd::Variable>& tensors,
     const std::vector<std::string>& devices) {
-  CHECK_EQ(tensors.size(), devices.size());
+  XLA_CHECK_EQ(tensors.size(), devices.size());
   xla::xla_util::MultiWait mwait;
   std::vector<xla::ComputationClient::LiteralDevice> literal_device(
       tensors.size());
@@ -707,8 +726,8 @@ std::vector<size_t> XLATensor::GetTensorsOrder(
       auto root = xla_graph_node->Generate(&xla_graph_ctx);
       auto computation = xla_graph_ctx.Build(root).ConsumeValueOrDie();
       std::string data;
-      CHECK(tensorflow::SerializeToStringDeterministic(computation.proto(),
-                                                       &data));
+      XLA_CHECK(tensorflow::SerializeToStringDeterministic(computation.proto(),
+                                                           &data));
       tensor_meta.emplace_back(std::move(data), i);
     }
   }
@@ -780,13 +799,13 @@ void XLATensor::ApplyPendingGraph(
 XLATensor::Device XLATensor::DeviceFromString(const std::string& device_spec) {
   if (device_spec.empty()) {
     const std::string default_device_spec = XlaGetClient()->GetDefaultDevice();
-    CHECK(!default_device_spec.empty());
+    XLA_CHECK(!default_device_spec.empty());
     return DeviceFromString(default_device_spec);
   }
   if (device_spec[0] == ':') {
     const std::string default_device_spec = XlaGetClient()->GetDefaultDevice();
     auto pos = default_device_spec.find(':');
-    CHECK_NE(pos, std::string::npos) << default_device_spec;
+    XLA_CHECK_NE(pos, std::string::npos) << default_device_spec;
     return DeviceFromString(default_device_spec.substr(0, pos) + device_spec);
   }
   std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec, ':');
@@ -811,7 +830,7 @@ XLATensor::Device XLATensor::DeviceFromString(const std::string& device_spec) {
 
 XLATensor::Device XLATensor::CommonDeviceForTensors(
     const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-  CHECK(!tensors.empty());
+  XLA_CHECK(!tensors.empty());
   const XLATensor::Device& device = tensors.front()->GetDevice();
   for (const auto& tensor : tensors) {
     const XLATensor::Device& tensor_device = tensor->GetDevice();
@@ -845,7 +864,7 @@ std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape) {
   std::vector<xla::Shape> component_shapes;
   if (xla::ShapeUtil::IsTuple(shape)) {
     for (const xla::Shape& component_shape : shape.tuple_shapes()) {
-      CHECK(!xla::ShapeUtil::IsTuple(component_shape));
+      XLA_CHECK(!xla::ShapeUtil::IsTuple(component_shape));
       component_shapes.push_back(component_shape);
     }
   } else {
@@ -858,7 +877,7 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
                                      const XLATensor::DeviceType device_type) {
   std::vector<xla::Shape> shape_components = GetComponentShapes(shape);
   std::vector<xla::Shape> shape_components_with_layout;
-  CHECK(!shape_components.empty());
+  XLA_CHECK(!shape_components.empty());
   for (const auto& shape_component : shape_components) {
     std::vector<int64_t> shape_component_dimensions(
         shape_component.dimensions().begin(),
