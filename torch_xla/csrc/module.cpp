@@ -127,7 +127,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
       }
     } else {
       for (size_t j = 0; j < replica_inputs.size(); ++j) {
-        CHECK(inputs_require_grad_[j] == replica_inputs[j]->RequiresGrad())
+        XLA_CHECK(inputs_require_grad_[j] == replica_inputs[j]->RequiresGrad())
             << "Input " << j << " of replica " << i
             << " does not match the requires-grad property";
       }
@@ -169,6 +169,8 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   // reference to the script module to mark initialization as done.
   f_ = gradient.f;
   df_ = gradient.df;
+  VLOG(4) << "Gradient F:\n" << f_->toString();
+  VLOG(4) << "Gradient DF:\n" << df_->toString();
   // Mark the module as initialized.
   script_module_ = nullptr;
 }
@@ -393,7 +395,7 @@ void XlaModule::BuildFusedTrainComputation(
       xla_fwd_impl.BuildComputationProgram(forward_shapes, &b);
   // Take the XLA outputs from the forward pass and set them for the backward
   // call in the same order the standalone, unfused version takes its arguments.
-  CHECK(!computation_in_outs.outputs.empty());
+  XLA_CHECK(!computation_in_outs.outputs.empty());
   std::vector<xla::XlaOp> grad_outputs;
   for (size_t i = 0; i < f_real_outputs_; i++) {
     grad_outputs.push_back(computation_in_outs.outputs[i]);
@@ -511,7 +513,7 @@ XlaModule::TensorBatchVector XlaModule::PrepareForwardInput(
   inputs_ = inputs;
 
   TensorBatchVector inputs_params_buffers;
-  CHECK_EQ(inputs_.size(), all_params_.size());
+  XLA_CHECK_EQ(inputs_.size(), all_params_.size());
   for (size_t i = 0; i < inputs_.size(); ++i) {
     TensorBatchVector::value_type replica_inputs_params_buffers;
     for (auto p : inputs_[i]) {
@@ -589,7 +591,7 @@ std::vector<XLATensor::Device> XlaModule::CommonDevicesForReplicas(
   std::set<XLATensor::Device> unique_devices;
   for (auto& replica_inputs : inputs) {
     devices.push_back(XLATensor::CommonDeviceForTensors(replica_inputs));
-    CHECK(unique_devices.insert(devices.back()).second)
+    XLA_CHECK(unique_devices.insert(devices.back()).second)
         << "Duplicated device in different replicas: "
         << devices.back().ToString();
   }
