@@ -221,6 +221,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
   for (auto node : nodes) {
     switch (node->kind()) {
       case aten::add:
+      case aten::sub:
       case aten::mul: {
         const auto node_inputs = node->inputs();
         if (node_inputs.size() < 2) {

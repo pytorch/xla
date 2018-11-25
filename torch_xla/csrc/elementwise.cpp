@@ -13,6 +13,9 @@ xla::XlaOp BuildArithmeticOp(const Node* node, const xla::XlaOp& lhs,
     case aten::mul: {
       return lhs * rhs;
     }
+    case aten::sub: {
+      return lhs - rhs;
+    }
     default:
       LOG(FATAL) << "Invalid binary operator kind: " << node->kind();
   }
