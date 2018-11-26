@@ -481,7 +481,6 @@ class TestLogSoftmax(XlaTestCase):
             self.assertEqualRel(out.data, expected.data, rel_err=1e-4, abs_err=1)
 
 
-@unittest.skip('Pending autodiff support')
 class TestBatchNorm(XlaTestCase):
     def test(self):
 
@@ -783,7 +782,6 @@ class TestGradients(XlaTestCase):
             inputs = [torch.randn(4, ichans, 28, 28, requires_grad=True)]
             self.checkGrad(model, inputs, xla=True, abs_err=1e-3)
 
-    @unittest.skip('Pending autodiff support')
     def test_batchnorm2d(self):
         for chans in [1, 15, 32]:
             for eps in [1e-5, 1e-3, 1e-2]:
