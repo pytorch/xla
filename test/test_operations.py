@@ -172,6 +172,8 @@ def _xla_run(model, input, device='TPU'):
 
 def _forward_passes(graph):
     torch._C._jit_pass_canonicalize_ops(graph)
+    torch_xla._C._jit_pass_set_mat_mul_output_shape(graph)
+    torch_xla._C._jit_pass_insert_explicit_expand(graph)
     torch_xla._C._jit_pass_eval_static_size(graph)
     torch._C._jit_pass_constant_propagation(graph)
     torch_xla._C._jit_pass_replace_untraced_operators(graph)
@@ -813,7 +815,6 @@ class TestGradients(XlaTestCase):
         output.backward()
         self.assertEqual(input.grad.data, xla_inputs[0].grad.data.to_tensor())
 
-    @unittest.skip('Pending autodiff support')
     def test_mnist(self):
         model = XlaMNIST()
         inputs = [torch.randn(4, 1, 28, 28, requires_grad=True)]
