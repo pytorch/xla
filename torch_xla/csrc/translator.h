@@ -16,15 +16,20 @@ struct XlaComputationInOut {
 
 class XlaTranslator {
  public:
+  enum class ParameterKind {
+    kGraphInput,
+    kZeroInput,
+  };
+
   struct ParameterShape {
     // A shape created with zero_input == true, when passed to the
     // BuildComputation*() APIs, will generate an artificial zero input (of
     // proper shape) value for the XLA computation.
-    ParameterShape(xla::Shape shape, bool zero_input)
-        : shape(std::move(shape)), zero_input(zero_input) {}
+    ParameterShape(xla::Shape shape, ParameterKind kind)
+        : shape(std::move(shape)), kind(kind) {}
 
     xla::Shape shape;
-    bool zero_input;
+    ParameterKind kind;
   };
 
   struct BuildOptions {

@@ -24,6 +24,17 @@ std::vector<xla::int64> XlaHelpers::I64List(const at::IntList& input) {
   return output;
 }
 
+xla::XlaOp XlaHelpers::CreateReturnValue(
+    xla::XlaBuilder* builder, const std::vector<xla::XlaOp>& outputs) {
+  if (outputs.size() > 1) {
+    return xla::Tuple(builder, outputs);
+  } else if (!outputs.empty()) {
+    return xla::GetTupleElement(xla::Tuple(builder, {outputs[0]}), 0);
+  } else {
+    return xla::Tuple(builder, {});
+  }
+}
+
 xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfig(
     const std::vector<int64_t>& padding) {
   xla::PaddingConfig padding_config;

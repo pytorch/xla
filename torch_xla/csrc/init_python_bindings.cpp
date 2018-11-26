@@ -46,6 +46,14 @@ void InitXlaModuleBindings(py::module m) {
              NoGilSection nogil;
              xla_module.backward(inputs);
            })
+      .def("set_inputs_gardients",
+           [](XlaModule& xla_module, const py::list& gradient_list) {
+             std::vector<at::Tensor> gradients;
+             for (auto& gradient : gradient_list) {
+               gradients.push_back(gradient.cast<at::Tensor>());
+             }
+             xla_module.SetInputGradientsForFusion(std::move(gradients));
+           })
       .def("parameters",
            [](XlaModule& xla_module) { return xla_module.parameters(); })
       .def("parameters_buffers", [](XlaModule& xla_module) {

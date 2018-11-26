@@ -12,6 +12,7 @@
 #include "passes/set_mat_mul_output_shape.h"
 #include "passes/threshold_backward_peephole.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch/csrc/jit/passes/canonicalize_ops.h"
 #include "torch/csrc/jit/passes/common_subexpression_elimination.h"
 #include "torch/csrc/jit/passes/constant_propagation.h"
@@ -37,7 +38,7 @@ void GatherParameters(std::vector<at::Tensor*>* values,
 
 XlaModule::TensorBatchVector DecomposeComputationResult(
     const std::vector<std::shared_ptr<xla::ComputationClient::Data>>& results,
-    const xla::Shape& result_shape, uint64_t module_id) {
+    const xla::Shape& result_shape) {
   std::vector<xla::Shape> shapes = GetComponentShapes(result_shape);
   XlaModule::TensorBatchVector batch_tensors;
   if (shapes.size() > 1) {
@@ -45,8 +46,8 @@ XlaModule::TensorBatchVector DecomposeComputationResult(
     for (auto& replica_result_components : result_components) {
       XlaModule::TensorBatchVector::value_type replica_tensors;
       for (auto& replica_data : replica_result_components) {
-        replica_tensors.push_back(XLATensor::Create(
-            std::move(replica_data), module_id, /*requires_grad=*/false));
+        replica_tensors.push_back(XLATensor::Create(std::move(replica_data),
+                                                    /*requires_grad=*/false));
       }
       batch_tensors.push_back(std::move(replica_tensors));
     }
@@ -54,7 +55,7 @@ XlaModule::TensorBatchVector DecomposeComputationResult(
     for (auto& replica_data : results) {
       XlaModule::TensorBatchVector::value_type replica_tensors;
       replica_tensors.push_back(
-          XLATensor::Create(replica_data, module_id, /*requires_grad=*/false));
+          XLATensor::Create(replica_data, /*requires_grad=*/false));
       batch_tensors.push_back(std::move(replica_tensors));
     }
   }
@@ -63,15 +64,10 @@ XlaModule::TensorBatchVector DecomposeComputationResult(
 
 }  // namespace
 
-std::atomic<uint64_t> XlaModule::s_module_id_(1);
-constexpr uint64_t XlaModule::kInvalidModuleId;
-
 XlaModule::XlaModule(const std::shared_ptr<script::Module> module,
                      bool use_full_conv_precision, bool differentiate)
     : use_full_conv_precision_(use_full_conv_precision),
-      enable_trace_fusion_(differentiate),
       differentiate_(differentiate),
-      module_id_(s_module_id_++),
       script_module_(module) {}
 
 void XlaModule::Initialize(const TensorBatchVector& inputs) {
@@ -187,7 +183,7 @@ void XlaModule::CheckInitialized() const {
 XlaModule::TensorBatchVector XlaModule::forward(
     const TensorBatchVector& inputs) {
   Initialize(inputs);
-  if (enable_trace_fusion_) {
+  if (!backward_input_gradients_.empty()) {
     const auto return_node = df_->return_node();
     const auto node_inputs = return_node->inputs();
     if (!node_inputs.empty()) {
@@ -195,6 +191,10 @@ XlaModule::TensorBatchVector XlaModule::forward(
     }
   }
   return RunUnfusedForward(inputs);
+}
+
+void XlaModule::SetInputGradientsForFusion(std::vector<at::Tensor> gradients) {
+  backward_input_gradients_ = std::move(gradients);
 }
 
 void XlaModule::backward(const TensorBatchVector& grad_outputs) {
@@ -206,28 +206,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   // fused computation.
   FlushTensorsOperations();
 
-  // If we're in trace fusion mode, we start with the assumption that the input
-  // gradients are still valid and invalidate it if we don't receive the output
-  // from the forward trace to compute the gradient on. If not, we have no
-  // gradients by definition, since only forward pass has executed.
-  bool input_gradients_valid = enable_trace_fusion_;
-  for (size_t i = 0; forward_computation_ && i < grad_outputs.size(); ++i) {
-    for (const auto& grad_output : grad_outputs[i]) {
-      if (grad_output->ForwardModuleId() != module_id_ &&
-          enable_trace_fusion_) {
-        // This is not a direct output of the forward pass. Redo the forward
-        // computation to capture the intermediate outputs correctly and set
-        // enable_trace_fusion_ to false to avoid doing fusion for the next
-        // training batches.
-        forward_computation_ = at::nullopt;
-        RunUnfusedForward(inputs_);
-        input_gradients_valid = false;
-        enable_trace_fusion_ = false;
-        break;
-      }
-    }
-  }
-  if (input_gradients_valid) {
+  if (!backward_input_gradients_.empty()) {
     // We already have the gradients from the fused computation, just set the
     // gradients for input and parameters.
     ApplyGradients(grad_inputs_, inputs_, optimizable_params_,
@@ -272,8 +251,11 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
     const auto& replica_raw_grad_outputs = raw_grad_outputs.front();
     std::vector<XlaTranslator::ParameterShape> backward_shapes;
     for (size_t j = 0; j < replica_raw_grad_outputs.size(); ++j) {
+      XlaTranslator::ParameterKind kind =
+          zero_input[j] ? XlaTranslator::ParameterKind::kZeroInput
+                        : XlaTranslator::ParameterKind::kGraphInput;
       backward_shapes.push_back(XlaTranslator::ParameterShape(
-          replica_raw_grad_outputs[j]->shape(), zero_input[j]));
+          replica_raw_grad_outputs[j]->shape(), kind));
     }
 
     XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
@@ -291,7 +273,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
 
   TensorBatchVector grad_inputs =
       Execute(*backward_computation_, raw_grad_outputs_data, devices_,
-              *backward_shape_, kInvalidModuleId);
+              *backward_shape_);
 
   ApplyGradients(grad_inputs, inputs_, optimizable_params_,
                  inputs_require_grad_, *df_);
@@ -332,14 +314,18 @@ void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs,
 XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
     const TensorBatchVector& inputs) {
   Initialize(inputs);
+
   TensorBatchVector inputs_params_buffers = PrepareForwardInput(inputs);
   if (!forward_computation_) {
     // Shapes are going to be the same for all replicas, so use the ones of the
     // first replica here.
+    const TensorBatchVector::value_type& replica_inputs =
+        inputs_params_buffers.front();
     std::vector<XlaTranslator::ParameterShape> forward_shapes;
-    for (auto p : inputs_params_buffers.front()) {
-      forward_shapes.push_back(
-          XlaTranslator::ParameterShape(p->shape(), /*zero_input=*/false));
+    for (size_t i = 0; i < replica_inputs.size(); ++i) {
+      forward_shapes.push_back(XlaTranslator::ParameterShape(
+          replica_inputs[i]->shape(),
+          XlaTranslator::ParameterKind::kGraphInput));
     }
     BuildFusedTrainComputation(forward_shapes);
   }
@@ -351,7 +337,7 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
 
   TensorBatchVector result_components =
       Execute(*forward_computation_, inputs_params_buffers_data, devices_,
-              *forward_shape_, module_id_);
+              *forward_shape_);
 
   // First f_real_outputs_ are the forward outputs returned to user code.
   XLA_CHECK_LE(f_real_outputs_, result_components.front().size());
@@ -399,10 +385,7 @@ void XlaModule::BuildFusedTrainComputation(
   // Take the XLA outputs from the forward pass and set them for the backward
   // call in the same order the standalone, unfused version takes its arguments.
   XLA_CHECK(!computation_in_outs.outputs.empty());
-  std::vector<xla::XlaOp> grad_outputs;
-  for (size_t i = 0; i < f_real_outputs_; i++) {
-    grad_outputs.push_back(computation_in_outs.outputs[i]);
-  }
+  XLA_CHECK_EQ(f_real_outputs_, backward_input_gradients_.size());
   std::vector<xla::XlaOp> captured_outputs;
   for (size_t i = f_real_outputs_; i < computation_in_outs.outputs.size();
        i++) {
@@ -417,33 +400,60 @@ void XlaModule::BuildFusedTrainComputation(
   }
   // NOTE: The order of the input parameters passed to the BuildComputation()
   // call to build the backward computation is critical, as they have to match
-  // the sequence of the graph->inputs() vector. Before the gradients returned
-  // by the forward pass, then then zeroed virtual inputs, and then the captured
+  // the sequence of the graph->inputs() vector. Before the gradients passed in
+  // by the user, then then zeroed virtual inputs, and then the captured
   // inputs/outputs.
   std::vector<XlaTranslator::ParameterShape> backward_shapes;
   std::vector<xla::XlaOp> backward_operands;
-  for (auto p : grad_outputs) {
+  for (size_t i = 0; i < backward_input_gradients_.size(); ++i) {
+    xla::Literal literal =
+        GetTensorLiteral(backward_input_gradients_[i], /*shape=*/nullptr);
+    xla::XlaOp gradient_op = xla::ConstantLiteral(&b, literal);
     backward_shapes.push_back(XlaTranslator::ParameterShape(
-        XlaHelpers::ShapeOfXlaOp(p), /*zero_input=*/false));
-    backward_operands.push_back(p);
+        XlaHelpers::ShapeOfXlaOp(gradient_op),
+        XlaTranslator::ParameterKind::kGraphInput));
+    backward_operands.push_back(gradient_op);
   }
   for (auto p : captured_outputs) {
     backward_shapes.push_back(XlaTranslator::ParameterShape(
-        XlaHelpers::ShapeOfXlaOp(p), /*zero_input=*/true));
+        XlaHelpers::ShapeOfXlaOp(p), XlaTranslator::ParameterKind::kZeroInput));
   }
   for (auto p : captured_inputs_outputs) {
     backward_shapes.push_back(XlaTranslator::ParameterShape(
-        XlaHelpers::ShapeOfXlaOp(p), /*zero_input=*/false));
+        XlaHelpers::ShapeOfXlaOp(p),
+        XlaTranslator::ParameterKind::kGraphInput));
     backward_operands.push_back(p);
   }
   // The arguments are set up correctly, call into the backward computation.
   XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
-  auto backward_computation = xla_bwd_impl.BuildComputation(
-      "XlaBackward", backward_shapes,
-      GetBackwardBuildOptions(f_real_outputs_, inputs_.size()));
-  xla::Call(&b, backward_computation, backward_operands);
+  auto backward_computation =
+      xla_bwd_impl.BuildComputation("XlaBackward", backward_shapes,
+                                    GetBackwardBuildOptions(0, inputs_.size()));
+  xla::XlaOp backward_op =
+      xla::Call(&b, backward_computation, backward_operands);
+
+  // Return the real outputs of the forward, followed by the outputs of the
+  // backward.
+  std::vector<xla::XlaOp> returned_outputs;
+  for (size_t i = 0; i < f_real_outputs_; ++i) {
+    returned_outputs.push_back(computation_in_outs.outputs[i]);
+  }
+  xla::Shape backward_shape = XlaHelpers::ShapeOfXlaOp(backward_op);
+  if (xla::ShapeUtil::IsTuple(backward_shape)) {
+    for (xla::int64 i = 0;
+         i < xla::ShapeUtil::TupleElementCount(backward_shape); ++i) {
+      returned_outputs.push_back(xla::GetTupleElement(backward_op, i));
+    }
+  } else if (!xla::ShapeUtil::IsEmptyTuple(backward_shape)) {
+    returned_outputs.push_back(backward_op);
+  }
+  XlaHelpers::CreateReturnValue(&b, returned_outputs);
+
   forward_computation_ = b.Build().ValueOrDie();
   forward_shape_.reset();
+  VLOG(5) << "Fused computation:\n"
+          << xla::xrt_util::GetComputationHloText(*forward_computation_)
+                 .ValueOrDie();
 }
 
 XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
@@ -456,8 +466,8 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
     // first replica here.
     std::vector<XlaTranslator::ParameterShape> forward_shapes;
     for (auto p : inputs_params_buffers.front()) {
-      forward_shapes.push_back(
-          XlaTranslator::ParameterShape(p->shape(), /*zero_input=*/false));
+      forward_shapes.push_back(XlaTranslator::ParameterShape(
+          p->shape(), XlaTranslator::ParameterKind::kGraphInput));
     }
 
     XlaTranslator xla_fwd_impl(f_, GetPrecisionConfig());
@@ -473,7 +483,7 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
 
   TensorBatchVector raw_outputs =
       Execute(*forward_computation_, inputs_params_buffers_data, devices_,
-              *forward_shape_, kInvalidModuleId);
+              *forward_shape_);
 
   TensorBatchVector outputs;
   for (size_t i = 0; i < raw_outputs.size(); ++i) {
@@ -520,10 +530,10 @@ XlaModule::TensorBatchVector XlaModule::PrepareForwardInput(
   XLA_CHECK_EQ(inputs_.size(), all_params_.size());
   for (size_t i = 0; i < inputs_.size(); ++i) {
     TensorBatchVector::value_type replica_inputs_params_buffers;
-    for (auto p : inputs_[i]) {
+    for (auto& p : inputs_[i]) {
       replica_inputs_params_buffers.push_back(p);
     }
-    for (auto p : all_params_[i]) {
+    for (auto& p : all_params_[i]) {
       replica_inputs_params_buffers.push_back(p);
     }
     inputs_params_buffers.push_back(std::move(replica_inputs_params_buffers));
@@ -534,7 +544,7 @@ XlaModule::TensorBatchVector XlaModule::PrepareForwardInput(
 XlaModule::TensorBatchVector XlaModule::Execute(
     const xla::XlaComputation& computation, const DataBatchVector& inputs,
     const std::vector<XLATensor::Device>& devices,
-    const xla::Shape& result_shape, uint64_t module_id) {
+    const xla::Shape& result_shape) {
   std::vector<std::string> device_strings(devices.size());
   for (size_t i = 0; i < devices.size(); ++i) {
     device_strings[i] = devices[i].ToString();
@@ -548,8 +558,7 @@ XlaModule::TensorBatchVector XlaModule::Execute(
     exec_results = client->ExecuteReplicated(computation, inputs,
                                              device_strings, &result_shape);
   }
-  return DecomposeComputationResult(std::move(exec_results), result_shape,
-                                    module_id);
+  return DecomposeComputationResult(std::move(exec_results), result_shape);
 }
 
 XlaTranslator::BuildOptions XlaModule::GetBackwardBuildOptions(

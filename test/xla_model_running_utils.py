@@ -119,7 +119,7 @@ def convert_to_tensors(inputs):
 
 
 def create_xla_model(model, inputs, num_cores=1, devices=None,
-                     full_conv_precision=False):
+                     input_gradients=None, full_conv_precision=False):
     assert isinstance(inputs, (tuple, list))
     assert num_cores == 1 or num_cores == len(devices)
     replica_inputs = []
@@ -129,6 +129,8 @@ def create_xla_model(model, inputs, num_cores=1, devices=None,
     xla_model = torch_xla._C.XlaModule(
         traced_model, use_full_conv_precision=full_conv_precision)
     inputs_xla = convert_to_xla_tensors(replica_inputs, devices=devices)
+    if input_gradients is not None:
+        xla_model.set_inputs_gardients(input_gradients)
     xla_model(*inputs_xla)
     return xla_model, traced_model
 
@@ -360,6 +362,20 @@ def _wrap_module(module, loss_fn):
     return module
 
 
+def _create_wrapped_model_backward_grads(model_fn, inputs, target):
+    outputs = model_fn(tuple(inputs), target)
+    # Loss and Output.
+    assert len(outputs) == 2
+    loss = outputs[0]
+    output = outputs[1]
+    # The wrapped model function has a (loss, wrapped_model_ouput) output.
+    # The gradient of the los WRT itself is one, and we are not interested
+    # in the wrapped_model_ouput componenent.
+    ones = torch.ones_like(loss)
+    zeros = torch.zeros_like(output)
+    return [ones, zeros]
+
+
 class XlaModel(object):
     def __init__(self, model, inputs, target=None, loss_fn=None, num_cores=1,
                  devices=None, full_conv_precision=False):
@@ -370,12 +386,14 @@ class XlaModel(object):
         self._devices = list(devices) if devices else None
         self._loader_prefetch = 8
         self._epoch = 0
-        self._loss_output_grads = None
         if loss_fn:
             assert target is not None
+            loss_output_grads = _create_wrapped_model_backward_grads(
+                self._model_fn, inputs, target)
             self._xla_model, self._traced_model = create_xla_model(
                 self._model_fn, [tuple(inputs), target], num_cores=self._num_cores,
-                devices=devices, full_conv_precision=full_conv_precision)
+                devices=devices, input_gradients=loss_output_grads,
+                full_conv_precision=full_conv_precision)
         else:
             self._xla_model, self._traced_model = create_xla_model(
                 self._model_fn, inputs, num_cores=self._num_cores,
@@ -389,23 +407,7 @@ class XlaModel(object):
             # If this is the legacy API, the user has run loss.backward() and
           # the output passed here will have their gradient set.
             return extract_gradients([outputs], fill_fn=zeros_like)
-        if self._loss_output_grads is None:
-            assert len(outputs) == self._num_cores
-            # Loss and Output.
-            assert len(outputs[0]) == 2
-            loss = outputs[0][0]
-            output = outputs[0][1]
-            # The wrapped model function has a (loss, wrapped_model_ouput) output.
-            # The gradient of the los WRT itself is one, and we are not interested
-            # in the wrapped_model_ouput componenent.
-            ones = torch.ones(loss.size(), dtype=loss.dtype)
-            zeros = torch.zeros(output.size(), dtype=output.dtype)
-            loss_output_grads = []
-            for _ in range(0, self._num_cores):
-                loss_output_grads.append(tuple([ones, zeros]))
-            self._loss_output_grads = convert_to_xla_tensors(
-                tuple(loss_output_grads), devices=self._devices)
-        return self._loss_output_grads
+        return []
 
     def __call__(self, *args):
         if self._loss_fn is None:
