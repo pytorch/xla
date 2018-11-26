@@ -261,7 +261,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
     XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
     backward_computation_ = xla_bwd_impl.BuildComputation(
         "XlaBackward", backward_shapes,
-        GetBackwardBuildOptions(0, inputs_.size()));
+        GetBackwardBuildOptions(inputs_.size()));
     backward_shape_.reset();
   }
   // Collect the computation client data vector.
@@ -428,7 +428,7 @@ void XlaModule::BuildFusedTrainComputation(
   XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
   auto backward_computation =
       xla_bwd_impl.BuildComputation("XlaBackward", backward_shapes,
-                                    GetBackwardBuildOptions(0, inputs_.size()));
+                                    GetBackwardBuildOptions(inputs_.size()));
   xla::XlaOp backward_op =
       xla::Call(&b, backward_computation, backward_operands);
 
@@ -562,9 +562,8 @@ XlaModule::TensorBatchVector XlaModule::Execute(
 }
 
 XlaTranslator::BuildOptions XlaModule::GetBackwardBuildOptions(
-    size_t param_to_return_count, size_t num_replicas) {
+    size_t num_replicas) {
   XlaTranslator::BuildOptions options;
-  options.param_to_return_count = param_to_return_count;
   if (num_replicas > 1) {
     options.output_transform = [this, num_replicas](const xla::XlaOp& op,
                                                     size_t) {

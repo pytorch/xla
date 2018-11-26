@@ -35,8 +35,6 @@ class XlaTranslator {
   struct BuildOptions {
     BuildOptions() {}
 
-    // The number of parameters to return, before the real computation outputs.
-    size_t param_to_return_count = 0;
     // Optional transfor function which is called to apply transformation to the
     // computation outputs before they get merged into the output tuple.
     std::function<xla::XlaOp(const xla::XlaOp&, size_t)> output_transform;
