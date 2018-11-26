@@ -477,8 +477,8 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
             node, cctx.OpForInput(node, 0),  // grad_output
             cctx.OpForInput(node, 1),        // input
             cctx.OpForInput(node, 2),        // weight
-            cctx.OpForInput(node, 7),        // save_mean
-            cctx.OpForInput(node, 8));       // save_std
+            cctx.OpForInput(node, 5),        // save_mean
+            cctx.OpForInput(node, 6));       // save_std
         const auto node_outputs = node->outputs();
         cctx.AddValueOp(node_outputs[0], grads.grad_input);
         cctx.AddValueOp(node_outputs[1], grads.grad_weight);
