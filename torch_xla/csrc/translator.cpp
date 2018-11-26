@@ -31,11 +31,6 @@ void CreateClient(std::unique_ptr<xla::ComputationClient>* client) {
   *client = std::move(xla::ComputationClient::Create().ValueOrDie());
 }
 
-// Create an identity operation of `ret` to make it the root of the computation.
-void ActivateReturnNode(const xla::XlaOp& ret, xla::XlaBuilder* b) {
-  xla::GetTupleElement(xla::Tuple(b, {ret}), 0);
-}
-
 xla::XlaOp GetConstantOp(xla::XlaBuilder* builder, Node* node) {
   auto value = toIValue(node->output()).value();
   if (value.isTensor()) {
@@ -183,12 +178,7 @@ xla::XlaComputation XlaTranslator::BuildComputation(
           options.output_transform(returned_tuple_outputs[i], i);
     }
   }
-  if (returned_tuple_outputs.size() > 1) {
-    xla::Tuple(&b, returned_tuple_outputs);
-  } else {
-    // Ensure that the returned value is the root of the computation.
-    ActivateReturnNode(returned_tuple_outputs[0], &b);
-  }
+  XlaHelpers::CreateReturnValue(&b, returned_tuple_outputs);
   return b.Build().ValueOrDie();
 }
 
@@ -203,14 +193,15 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
   for (size_t parameter_number = 0; parameter_number < graph_inputs.size();
        ++parameter_number) {
     Value* graph_input = graph_inputs[parameter_number];
-    if (!parameter_shapes[parameter_number].zero_input) {
+    if (parameter_shapes[parameter_number].kind == ParameterKind::kGraphInput) {
       auto param_no = cctx.GetInputsSize();
       const auto parameter_op =
           xla::Parameter(b, param_no, parameter_shapes[parameter_number].shape,
-                         "parameter_" + std::to_string(param_no));
+                         "param_" + std::to_string(param_no));
       cctx.AddValueOp(graph_input, parameter_op);
       cctx.AddInputOp(parameter_op);
-    } else {
+    } else if (parameter_shapes[parameter_number].kind ==
+               ParameterKind::kZeroInput) {
       // The backward method of the model creates all-zeros grad outputs we
       // represent as XLATensor with no data and empty shape.
       cctx.AddValueOp(graph_input,

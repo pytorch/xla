@@ -3,6 +3,7 @@
 #include <initializer_list>
 
 #include "tensor.h"
+#include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/script/module.h"
 #include "torch/csrc/utils/disallow_copy.h"
 #include "translator.h"
@@ -36,7 +37,19 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   const TensorBatchVector& parameters();
   const TensorBatchVector& parameters_buffers();
 
-  static constexpr uint64_t kInvalidModuleId = 0;
+  // When we want to enable forward+backward fusion, we need to feed the
+  // backward with the gradient of the output.
+  // For example, say that we have:
+  //
+  //   def wrapped_model(model, loss_fn, input, target):
+  //     output = model(input)
+  //     return loss_fn(output, target)
+  //
+  // The output of the forward is the loss, but the input of the backward must
+  // be the derivative of the loss WRT itself (which is 1s).
+  // The following API allows to set the gradients which are the input of the
+  // backward, when we first create the fused computation.
+  void SetInputGradientsForFusion(std::vector<at::Tensor> gradients);
 
  private:
   // The i-th entry in this vector, is a vector of XLA computation data which
@@ -69,12 +82,11 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // Executes the provided XLA computation. The execution will be replicated in
   // as many replicas as the size of the inputs first dimension.
   // The result_shape is the shape+layout which we want the computation to
-  // return. The module_id is used to track changes in the tensors taking place
-  // of the fused computation, and will be assigned to the output tensors.
+  // return.
   TensorBatchVector Execute(const xla::XlaComputation& computation,
                             const DataBatchVector& inputs,
                             const std::vector<XLATensor::Device>& devices,
-                            const xla::Shape& result_shape, uint64_t module_id);
+                            const xla::Shape& result_shape);
 
   // Creates the build options to be used to create a backward pass computation.
   XlaTranslator::BuildOptions GetBackwardBuildOptions(
@@ -137,28 +149,22 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   TensorBatchVector captured_outputs_;
   TensorBatchVector captured_inputs_outputs_;
 
+  // The optional input gradients for a fused backward, set by the
+  // SetInputGradientsForFusion() API.
+  std::vector<at::Tensor> backward_input_gradients_;
+
   // Specifies whether to use the highest precision available for convolutions.
   // Currently it only makes a difference for TPUs.
   const bool use_full_conv_precision_;
   // Gradients set aside by the fused train computation, to be consumed by the
   // backward call if we receive an unmodified tensor from the forward pass.
   TensorBatchVector grad_inputs_;
-  // Keeps track whether an attempt to fuse the forward and backward
-  // computations failed. Starts on true (we attempt to fuse), permanently goes
-  // to false on failure. Mitigates doing redundant work (compute gradients we
-  // can't use) after the first training step, if the fusion fails.
-  bool enable_trace_fusion_;
   // Whether to differentiate the graph or not.
   bool differentiate_;
-  // Unique identifier for the module, used to keep track of tensors originating
-  // from its forward method.
-  uint64_t module_id_;
 
   // Keep the script module alive for lazy initialization of this XlaModule.
   // Once this XlaModule is initialized, script_module_ will be set to null.
   std::shared_ptr<script::Module> script_module_;
-
-  static std::atomic<uint64_t> s_module_id_;
 };
 
 }  // namespace jit

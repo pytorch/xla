@@ -49,10 +49,9 @@ class XLATensor {
                                            const Device& device);
   static std::shared_ptr<XLATensor> Create(
       std::shared_ptr<xla::ComputationClient::Data> xla_data,
-      uint64_t module_id, bool requires_grad);
+      bool requires_grad);
   static std::shared_ptr<XLATensor> Create(
-      std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device,
-      uint64_t module_id);
+      std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device);
   static std::shared_ptr<XLATensor> Create(std::shared_ptr<Data> data);
 
   // NOTE: These direct constructors should not be used, and the Create() APIs
@@ -62,9 +61,8 @@ class XLATensor {
   // naked pointer std::shared_ptr<> creation.
   XLATensor(const autograd::Variable& tensor, const Device& device);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
-            uint64_t module_id, bool requires_grad);
-  XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device,
-            uint64_t module_id);
+            bool requires_grad);
+  XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device);
   XLATensor(std::shared_ptr<Data> data) : data_(std::move(data)) {}
 
   ~XLATensor();
@@ -89,7 +87,6 @@ class XLATensor {
   void SetXlaData(std::shared_ptr<xla::ComputationClient::Data> xla_data);
   std::shared_ptr<XlaGraphNode> GetXlaGraphNode() const;
   std::vector<int64_t> Size() const;
-  uint64_t ForwardModuleId() const;
 
   // Basic tensor operations used by the optimizers.
   std::shared_ptr<XLATensor> add(XLATensor& other, const at::Scalar& alpha);
@@ -166,19 +163,15 @@ class XLATensor {
  private:
   struct Data {
     Data(std::shared_ptr<xla::ComputationClient::Data> xla_data,
-         const Device& device, uint64_t module_id)
-        : xla_data(std::move(xla_data)), device(device), module_id(module_id) {}
-    Data(std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device,
-         uint64_t module_id)
-        : xla_graph_node(std::move(xla_graph_node)),
-          device(device),
-          module_id(module_id) {}
+         const Device& device)
+        : xla_data(std::move(xla_data)), device(device) {}
+    Data(std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device)
+        : xla_graph_node(std::move(xla_graph_node)), device(device) {}
 
     std::shared_ptr<xla::ComputationClient::Data> xla_data;
     std::shared_ptr<XLATensor> grad;
     std::shared_ptr<XlaGraphNode> xla_graph_node;
     Device device;
-    uint64_t module_id = 0;
   };
 
   void SetXlaGraphNode(std::shared_ptr<XlaGraphNode> xla_graph_node);

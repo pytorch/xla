@@ -278,17 +278,16 @@ std::shared_ptr<XLATensor> XLATensor::Create(const autograd::Variable& tensor,
 }
 
 std::shared_ptr<XLATensor> XLATensor::Create(
-    std::shared_ptr<xla::ComputationClient::Data> xla_data, uint64_t module_id,
+    std::shared_ptr<xla::ComputationClient::Data> xla_data,
     bool requires_grad) {
   return TensorsArena::Get()->RegisterTensor(std::make_shared<XLATensor>(
-      std::move(xla_data), module_id, requires_grad));
+      std::move(xla_data), requires_grad));
 }
 
 std::shared_ptr<XLATensor> XLATensor::Create(
-    std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device,
-    uint64_t module_id) {
+    std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device) {
   return TensorsArena::Get()->RegisterTensor(std::make_shared<XLATensor>(
-      std::move(xla_graph_node), device, module_id));
+      std::move(xla_graph_node), device));
 }
 
 std::shared_ptr<XLATensor> XLATensor::Create(std::shared_ptr<Data> data) {
@@ -307,19 +306,18 @@ XLATensor::XLATensor(const autograd::Variable& tensor, const Device& device)
                   XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()),
                   device.hw_type),
               device, XlaGetClient()),
-          device, 0)),
+          device)),
       requires_grad_(tensor.requires_grad()) {}
 
 XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
-                     uint64_t module_id, bool requires_grad)
+                     bool requires_grad)
     : data_(std::make_shared<Data>(
-          xla_data, DeviceFromString(xla_data->device()), module_id)),
+          xla_data, DeviceFromString(xla_data->device()))),
       requires_grad_(requires_grad) {}
 
 XLATensor::XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node,
-                     const Device& device, uint64_t module_id)
-    : data_(std::make_shared<Data>(std::move(xla_graph_node), device,
-                                   module_id)) {
+                     const Device& device)
+    : data_(std::make_shared<Data>(std::move(xla_graph_node), device)) {
   TryLimitGraphSize();
 }
 
@@ -424,14 +422,10 @@ void XLATensor::SetXlaData(
       << DumpGraphNodeComputation();
   data_->xla_data = std::move(xla_data);
   data_->xla_graph_node = nullptr;
-  // A modified tensor doesn't come directly from a module forward call.
-  data_->module_id = 0;
 }
 
 void XLATensor::SetXlaGraphNode(std::shared_ptr<XlaGraphNode> xla_graph_node) {
   data_->xla_graph_node = std::move(xla_graph_node);
-  // A modified tensor doesn't come directly from a module forward call.
-  data_->module_id = 0;
   TryLimitGraphSize();
 }
 
@@ -455,8 +449,6 @@ std::vector<int64_t> XLATensor::Size() const {
   return std::vector<int64_t>(tensor_shape.dimensions().begin(),
                               tensor_shape.dimensions().end());
 }
-
-uint64_t XLATensor::ForwardModuleId() const { return data_->module_id; }
 
 at::Tensor XLATensor::toTensor() {
   ApplyPendingGraph();
@@ -516,7 +508,7 @@ std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
   auto handles = XlaGetClient()->TransferToServer(literal_device);
   std::vector<std::shared_ptr<XLATensor>> xla_tensors;
   for (size_t i = 0; i < handles.size(); ++i) {
-    xla_tensors.push_back(Create(std::move(handles[i]), /*module_id=*/0,
+    xla_tensors.push_back(Create(std::move(handles[i]),
                                  tensors[i].requires_grad()));
   }
   return xla_tensors;
@@ -594,8 +586,7 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateAddNode(
 
 std::shared_ptr<XLATensor> XLATensor::add(XLATensor& other,
                                           const at::Scalar& alpha) {
-  return Create(CreateAddNode(other, alpha), data_->device,
-                /*module_id=*/0);
+  return Create(CreateAddNode(other, alpha), data_->device);
 }
 
 void XLATensor::add_(XLATensor& other, const at::Scalar& alpha) {
@@ -603,13 +594,11 @@ void XLATensor::add_(XLATensor& other, const at::Scalar& alpha) {
 }
 
 std::shared_ptr<XLATensor> XLATensor::mul(XLATensor& other) {
-  return Create(CreateMulNode(other), data_->device,
-                /*module_id=*/0);
+  return Create(CreateMulNode(other), data_->device);
 }
 
 std::shared_ptr<XLATensor> XLATensor::mul(const at::Scalar& other) {
-  return Create(CreateMulNode(other), data_->device,
-                /*module_id=*/0);
+  return Create(CreateMulNode(other), data_->device);
 }
 
 void XLATensor::mul_(XLATensor& other) {
@@ -621,13 +610,11 @@ void XLATensor::mul_(const at::Scalar& other) {
 }
 
 std::shared_ptr<XLATensor> XLATensor::div(XLATensor& other) {
-  return Create(CreateDivNode(other), data_->device,
-                /*module_id=*/0);
+  return Create(CreateDivNode(other), data_->device);
 }
 
 std::shared_ptr<XLATensor> XLATensor::div(const at::Scalar& other) {
-  return Create(CreateDivNode(other), data_->device,
-                /*module_id=*/0);
+  return Create(CreateDivNode(other), data_->device);
 }
 
 void XLATensor::div_(XLATensor& other) {
@@ -666,8 +653,7 @@ std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
   };
   auto crs_node =
       XlaGraphNode::New(std::move(generator), shape(), {GetXlaGraphNode()});
-  return Create(std::move(crs_node), data_->device,
-                /*module_id=*/0);
+  return Create(std::move(crs_node), data_->device);
 }
 
 void XLATensor::ApplyPendingGraph() {

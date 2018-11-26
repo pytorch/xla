@@ -28,6 +28,9 @@ class XlaHelpers {
   // Returns the value type of given XLA operation.
   static xla::PrimitiveType TypeOfXlaOp(const xla::XlaOp& op);
 
+  static xla::XlaOp CreateReturnValue(xla::XlaBuilder* builder,
+                                      const std::vector<xla::XlaOp>& outputs);
+
   // Creates a scalar broadcasted to a given shape.
   template <class T>
   static xla::XlaOp ScalarBroadcast(T scalar_value, const xla::Shape& shape,
