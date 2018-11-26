@@ -89,8 +89,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
                             const xla::Shape& result_shape);
 
   // Creates the build options to be used to create a backward pass computation.
-  XlaTranslator::BuildOptions GetBackwardBuildOptions(
-      size_t param_to_return_count, size_t num_replicas);
+  XlaTranslator::BuildOptions GetBackwardBuildOptions(size_t num_replicas);
 
   // Makes sure the XLA tensors partecipating to the forward/backward
   // computation have their accumulated operations sync to device memory.

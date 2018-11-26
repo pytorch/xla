@@ -159,26 +159,14 @@ xla::XlaComputation XlaTranslator::BuildComputation(
     const std::vector<ParameterShape>& parameter_shapes,
     const BuildOptions& options) const {
   xla::XlaBuilder b(name);
-  const auto returned_tuple = BuildComputationProgram(parameter_shapes, &b);
-  std::vector<xla::XlaOp> returned_tuple_outputs;
-  XLA_CHECK_GE(returned_tuple.inputs.size(), options.param_to_return_count)
-      << "Graph:\n"
-      << graph_->toString();
-  // The forward computation in a fused forward and backward computation needs
-  // to make its inputs available to the backward computation.
-  for (size_t i = 0; i < options.param_to_return_count; ++i) {
-    returned_tuple_outputs.push_back(returned_tuple.inputs[i]);
-  }
-  returned_tuple_outputs.insert(returned_tuple_outputs.end(),
-                                returned_tuple.outputs.begin(),
-                                returned_tuple.outputs.end());
+  auto returned_tuple = BuildComputationProgram(parameter_shapes, &b);
   if (options.output_transform) {
-    for (size_t i = 0; i < returned_tuple_outputs.size(); ++i) {
-      returned_tuple_outputs[i] =
-          options.output_transform(returned_tuple_outputs[i], i);
+    for (size_t i = 0; i < returned_tuple.outputs.size(); ++i) {
+      returned_tuple.outputs[i] =
+          options.output_transform(returned_tuple.outputs[i], i);
     }
   }
-  XlaHelpers::CreateReturnValue(&b, returned_tuple_outputs);
+  XlaHelpers::CreateReturnValue(&b, returned_tuple.outputs);
   return b.Build().ValueOrDie();
 }
 
