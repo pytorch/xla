@@ -395,7 +395,6 @@ class TestConstantTensor(XlaTestCase):
         self.assertEqualDbg(out.data, expected.data)
 
 
-@unittest.skip('Pending autodiff support')
 class TestConv(XlaTestCase):
     def test(self):
 
@@ -758,7 +757,6 @@ class TestGradients(XlaTestCase):
                   torch.randn(4, 2, requires_grad=True)]
         self.checkGrad(model, inputs, xla=True)
 
-    @unittest.skip('Pending autodiff support')
     def test_conv2d(self):
         if FLAGS.long_test:
             config = [

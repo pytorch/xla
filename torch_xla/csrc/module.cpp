@@ -16,6 +16,7 @@
 #include "torch/csrc/jit/passes/common_subexpression_elimination.h"
 #include "torch/csrc/jit/passes/constant_propagation.h"
 #include "torch/csrc/jit/passes/dead_code_elimination.h"
+#include "torch/csrc/jit/passes/lower_tuples.h"
 #include "torch/csrc/jit/passes/specialize_undef.h"
 
 namespace torch {
@@ -155,6 +156,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   ConstantPropagation(gradient.df);
   ThresholdBackwardPeephole(gradient.df);
   EliminateDeadCode(gradient.df);
+  LowerAllTuples(gradient.df);
   // Run pass on forward and backward graphs that drops outputs that XLA doesn't
   // need.
   RemoveUnusedForwardOutputs(gradient);
