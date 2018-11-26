@@ -171,7 +171,7 @@ def _xla_run(model, input, device='TPU'):
 
 
 def _forward_passes(graph):
-    torch._C._jit_pass_canonicalize(graph)
+    torch._C._jit_pass_canonicalize_ops(graph)
     torch_xla._C._jit_pass_eval_static_size(graph)
     torch._C._jit_pass_constant_propagation(graph)
     torch_xla._C._jit_pass_replace_untraced_operators(graph)
