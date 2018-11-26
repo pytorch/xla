@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "torch/csrc/jit/ir.h"
@@ -40,6 +42,7 @@ class XlaTranslator {
 
   // Builds and compiles the XLA computation for graph_.
   xla::XlaComputation BuildComputation(
+      const std::string& name,
       const std::vector<ParameterShape>& parameter_shapes,
       const BuildOptions& options = BuildOptions()) const;
 
