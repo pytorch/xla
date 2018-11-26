@@ -26,7 +26,7 @@ xla::XlaOp BuildLogSoftmax(const Node* node, const xla::XlaOp& logits) {
   CHECK_EQ(node_inputs.size(), size_t(2));
   xla::int64 dim = node->get<int64_t>(attr::dim).value();
 
-  auto input_size = XlaHelpers::TensorDimensionSizes(node_inputs[0]);
+  auto input_size = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(logits));
 
   std::vector<xla::int64> broadcast_dimensions;
   for (size_t broadcast_dim = 0; broadcast_dim < input_size.size();

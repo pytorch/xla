@@ -519,7 +519,6 @@ class XlaMNIST(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-@unittest.skip('Pending autodiff support')
 class TestMNIST(XlaTestCase):
     def test(self):
         batch_size = 32
