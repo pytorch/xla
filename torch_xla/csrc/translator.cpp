@@ -160,9 +160,10 @@ XlaTranslator::XlaTranslator(
     : graph_(graph), conv_precision_(conv_precision) {}
 
 xla::XlaComputation XlaTranslator::BuildComputation(
+    const std::string& name,
     const std::vector<ParameterShape>& parameter_shapes,
     const BuildOptions& options) const {
-  xla::XlaBuilder b("XlaComputation");
+  xla::XlaBuilder b(name);
   const auto returned_tuple = BuildComputationProgram(parameter_shapes, &b);
   std::vector<xla::XlaOp> returned_tuple_outputs;
   XLA_CHECK_GE(returned_tuple.inputs.size(), options.param_to_return_count)

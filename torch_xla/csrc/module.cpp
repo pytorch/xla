@@ -278,7 +278,8 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
 
     XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
     backward_computation_ = xla_bwd_impl.BuildComputation(
-        backward_shapes, GetBackwardBuildOptions(0, inputs_.size()));
+        "XlaBackward", backward_shapes,
+        GetBackwardBuildOptions(0, inputs_.size()));
     backward_shape_.reset();
   }
   // Collect the computation client data vector.
@@ -438,7 +439,7 @@ void XlaModule::BuildFusedTrainComputation(
   // The arguments are set up correctly, call into the backward computation.
   XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
   auto backward_computation = xla_bwd_impl.BuildComputation(
-      backward_shapes,
+      "XlaBackward", backward_shapes,
       GetBackwardBuildOptions(f_real_outputs_, inputs_.size()));
   xla::Call(&b, backward_computation, backward_operands);
   forward_computation_ = b.Build().ValueOrDie();
@@ -460,7 +461,8 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
     }
 
     XlaTranslator xla_fwd_impl(f_, GetPrecisionConfig());
-    forward_computation_ = xla_fwd_impl.BuildComputation(forward_shapes);
+    forward_computation_ =
+        xla_fwd_impl.BuildComputation("XlaForward", forward_shapes);
     forward_shape_.reset();
   }
   DataBatchVector inputs_params_buffers_data =
