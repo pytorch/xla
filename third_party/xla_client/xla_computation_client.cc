@@ -5,7 +5,7 @@
 #include "tensorflow/compiler/xla/client/client.h"
 #include "tensorflow/compiler/xla/client/client_library.h"
 #include "tensorflow/compiler/xla/client/local_client.h"
-#include "tensorflow/compiler/xla/legacy_flags/debug_options_flags.h"
+#include "tensorflow/compiler/xla/debug_options_flags.h"
 #include "tensorflow/compiler/xla/rpc/grpc_stub.h"
 #include "tensorflow/compiler/xla/service/platform_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -102,7 +102,7 @@ XlaComputationClient::ExecuteComputation(
   std::vector<GlobalData*> arguments_data =
       GetArgumentsData(arguments, effective_device);
   ExecutionOptions eo;
-  *eo.mutable_debug_options() = legacy_flags::GetDebugOptionsFromFlags();
+  *eo.mutable_debug_options() = GetDebugOptionsFromFlags();
   *eo.add_device_handles() = GetDeviceHandle(effective_device);
   if (output_shape != nullptr) {
     *eo.mutable_shape_with_output_layout() = *output_shape;
@@ -146,7 +146,7 @@ XlaComputationClient::ExecuteParallel(
     std::vector<GlobalData*> arguments_data =
         GetArgumentsData(arguments[i], effective_device);
     ExecutionOptions eo;
-    *eo.mutable_debug_options() = legacy_flags::GetDebugOptionsFromFlags();
+    *eo.mutable_debug_options() = GetDebugOptionsFromFlags();
     *eo.add_device_handles() = GetDeviceHandle(effective_device);
     if (output_shapes[i] != nullptr) {
       *eo.mutable_shape_with_output_layout() = *output_shapes[i];

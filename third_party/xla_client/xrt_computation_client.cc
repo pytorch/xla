@@ -1,5 +1,6 @@
 #include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 
+#include <cstdlib>
 #include <functional>
 
 #include "absl/strings/str_cat.h"
@@ -7,6 +8,7 @@
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/util/device_name_utils.h"
@@ -374,7 +376,8 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
       }
     }
   }
-  *config->mutable_program_shape() = computation.GetProgramShape().ValueOrDie();
+  *config->mutable_program_shape() =
+      computation.GetProgramShape().ValueOrDie().ToProto();
   if (output_shape != nullptr) {
     *config->mutable_program_shape()->mutable_result() = *output_shape;
   }
@@ -622,10 +625,22 @@ tensorflow::tpu::TopologyProto XrtComputationClient::InitializeAndFetchTopology(
 }
 
 void XrtComputationClient::CreateWorkerSessions() {
+  tensorflow::SessionOptions session_options;
+  session_options.env = tensorflow::Env::Default();
+
+  string compression = xrt_util::GetEnvString("XRT_GRPC_COMPRESSION", "");
+  if (!compression.empty()) {
+    tensorflow::RPCOptions* rpc_options =
+        session_options.config.mutable_rpc_options();
+    rpc_options->set_compression_algorithm(compression);
+    rpc_options->set_compression_level(
+        xrt_util::GetEnvInt("XRT_GRPC_COMPRESSION_LEVEL", 3));
+  }
   for (auto& worker_target : options_.workers_map) {
+    session_options.target = worker_target.second;
     session_map_.emplace(
         worker_target.second,
-        std::unique_ptr<SessionData>(new SessionData(worker_target.second)));
+        std::unique_ptr<SessionData>(new SessionData(session_options)));
   }
 }
 
