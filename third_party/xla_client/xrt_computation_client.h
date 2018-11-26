@@ -113,8 +113,9 @@ class XrtComputationClient : public ComputationClient {
 
  private:
   struct SessionData {
-    SessionData(const string& target)
-        : root(tensorflow::Scope::NewRootScope()), session(root, target) {}
+    SessionData(const tensorflow::SessionOptions& session_options)
+        : root(tensorflow::Scope::NewRootScope()),
+          session(root, session_options) {}
 
     tensorflow::Scope root;
     tensorflow::ClientSession session;

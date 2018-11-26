@@ -1,0 +1,18 @@
+#ifndef TENSORFLOW_COMPILER_XLA_RPC_SYS_UTIL_H_
+#define TENSORFLOW_COMPILER_XLA_RPC_SYS_UTIL_H_
+
+#include <string>
+
+#include "tensorflow/compiler/xla/types.h"
+
+namespace xla {
+namespace xrt_util {
+
+string GetEnvString(const char* name, const string& defval);
+
+int64 GetEnvInt(const char* name, int64 defval);
+
+}  // namespace xrt_util
+}  // namespace xla
+
+#endif  // TENSORFLOW_COMPILER_XLA_RPC_SYS_UTIL_H_
