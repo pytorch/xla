@@ -560,7 +560,6 @@ class XlaNllLoss(nn.Module):
         return self.nll_loss(x, labels)
 
 
-@unittest.skip('Pending autodiff support')
 class TestNllLoss(TestCase):
     def test(self):
         input = torch.randn(3, 5, requires_grad=True)
@@ -806,7 +805,6 @@ class TestGradients(XlaTestCase):
                 inputs = [torch.randn(batch, 9, requires_grad=True)]
                 self.checkGrad(model, inputs, xla=True)
 
-    @unittest.skip('Pending autodiff support')
     def test_nll_loss(self):
         input = torch.randn(3, 5, requires_grad=True)
         target = torch.empty(3, dtype=torch.long).random_(5)
