@@ -3,7 +3,7 @@
 #include <cstdlib>
 
 namespace xla {
-namespace xrt_util {
+namespace sys_util {
 
 string GetEnvString(const char* name, const string& defval) {
   const char* env = std::getenv(name);
@@ -15,5 +15,5 @@ int64 GetEnvInt(const char* name, int64 defval) {
   return env != nullptr ? std::atol(env) : defval;
 }
 
-}  // namespace xrt_util
+}  // namespace sys_util
 }  // namespace xla

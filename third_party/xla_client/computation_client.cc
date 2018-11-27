@@ -18,7 +18,7 @@ namespace xla {
 namespace {
 
 string GetTpuClusterConfigPath() {
-  string home_folder = xrt_util::GetEnvString("HOME", ".");
+  string home_folder = sys_util::GetEnvString("HOME", ".");
   return absl::StrCat(home_folder, "/", ".pytorch_tpu.conf");
 }
 
@@ -30,7 +30,7 @@ bool ShouldUseXrtClient(string* config_path) {
     return true;
   }
   config_path->clear();
-  return xrt_util::GetEnvInt("XLA_USE_XRT", -1) > 0;
+  return sys_util::GetEnvInt("XLA_USE_XRT", -1) > 0;
 }
 
 XrtComputationClient::Worker ParseWorker(const string& worker) {
@@ -49,8 +49,8 @@ void AddXrtHostDevices(const string& worker_name, int task_no,
     const char* name;
     int count;
   } const devices[] = {
-      {"TPU", xrt_util::GetEnvInt("TPU_NUM_DEVICES", 8)},
-      {"CPU", xrt_util::GetEnvInt("CPU_NUM_DEVICES", 1)},
+      {"TPU", sys_util::GetEnvInt("TPU_NUM_DEVICES", 8)},
+      {"CPU", sys_util::GetEnvInt("CPU_NUM_DEVICES", 1)},
   };
   string host_port = server.compare(0, 7, "grpc://") == 0
                          ? server
@@ -71,7 +71,7 @@ void AddXrtHostDevices(const string& worker_name, int task_no,
 
 StatusOr<bool> ParseEnvBasedTpuClusterConfig(
     XrtComputationClient::Options* options) {
-  string tpu_config = xrt_util::GetEnvString("XRT_TPU_CONFIG", "");
+  string tpu_config = sys_util::GetEnvString("XRT_TPU_CONFIG", "");
   if (tpu_config.empty()) {
     return false;
   }
@@ -123,7 +123,7 @@ StatusOr<std::unique_ptr<ComputationClient>> ComputationClient::Create() {
       TF_ASSIGN_OR_RETURN(bool configured,
                           ParseEnvBasedTpuClusterConfig(&options));
       if (!configured) {
-        string device_spec = xrt_util::GetEnvString(
+        string device_spec = sys_util::GetEnvString(
             "XRT_DEVICE_MAP",
             "TPU:0;/job:tpu_worker/replica:0/task:0/device:TPU:0");
         for (const auto& device_target : absl::StrSplit(device_spec, '|')) {
@@ -134,7 +134,7 @@ StatusOr<std::unique_ptr<ComputationClient>> ComputationClient::Create() {
           }
           options.device_map.emplace(parts[0], parts[1]);
         }
-        string workers_spec = xrt_util::GetEnvString(
+        string workers_spec = sys_util::GetEnvString(
             "XRT_WORKERS", "tpu_worker:0;grpc://localhost:51000");
         for (const auto& name_target : absl::StrSplit(workers_spec, '|')) {
           std::vector<string> parts = absl::StrSplit(name_target, ';');
@@ -146,9 +146,9 @@ StatusOr<std::unique_ptr<ComputationClient>> ComputationClient::Create() {
     client.reset(new XrtComputationClient(options));
   } else {
     XlaComputationClient::Options options;
-    options.host_name = xrt_util::GetEnvString("XLA_GRPC_HOST", "localhost");
-    options.port = xrt_util::GetEnvInt("XLA_GRPC_PORT", 51000);
-    options.platform = xrt_util::GetEnvString("XLA_PLATFORM", "TPU");
+    options.host_name = sys_util::GetEnvString("XLA_GRPC_HOST", "localhost");
+    options.port = sys_util::GetEnvInt("XLA_GRPC_PORT", 51000);
+    options.platform = sys_util::GetEnvString("XLA_PLATFORM", "TPU");
     client.reset(new XlaComputationClient(options));
   }
   return std::move(client);

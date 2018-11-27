@@ -628,13 +628,13 @@ void XrtComputationClient::CreateWorkerSessions() {
   tensorflow::SessionOptions session_options;
   session_options.env = tensorflow::Env::Default();
 
-  string compression = xrt_util::GetEnvString("XRT_GRPC_COMPRESSION", "");
+  string compression = sys_util::GetEnvString("XRT_GRPC_COMPRESSION", "");
   if (!compression.empty()) {
     tensorflow::RPCOptions* rpc_options =
         session_options.config.mutable_rpc_options();
     rpc_options->set_compression_algorithm(compression);
     rpc_options->set_compression_level(
-        xrt_util::GetEnvInt("XRT_GRPC_COMPRESSION_LEVEL", 3));
+        sys_util::GetEnvInt("XRT_GRPC_COMPRESSION_LEVEL", 3));
   }
   for (auto& worker_target : options_.workers_map) {
     session_options.target = worker_target.second;
