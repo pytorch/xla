@@ -1,0 +1,127 @@
+diff --git a/test/test_jit.py b/test/test_jit.py
+index 34c9ee141..7c88073a1 100644
+--- a/test/test_jit.py
++++ b/test/test_jit.py
+@@ -9315,6 +9315,7 @@ DISABLE_AUTODIFF_SUBGRAPH_INLINING = {
+     'test_nn_avg_pool2d',
+     'test_nn_log_softmax',
+     'test_nn_threshold',
++    'test_nn_nll_loss',
+ }
+ 
+ 
+diff --git a/torch/csrc/jit/autodiff.cpp b/torch/csrc/jit/autodiff.cpp
+index 4c598b82e..5c34c9b70 100644
+--- a/torch/csrc/jit/autodiff.cpp
++++ b/torch/csrc/jit/autodiff.cpp
+@@ -89,6 +89,7 @@ bool isDifferentiable(Node * n) {
+   // "aten::min(Tensor self) -> Tensor"
+ 
+   if (n->kind() == prim::Constant ||
++      n->kind() == prim::Undefined ||
+       n->kind() == prim::AutogradAdd ||
+       n->kind() == prim::ConstantChunk ||
+       n->kind() == prim::None)
+@@ -104,6 +105,10 @@ bool isDifferentiable(Node * n) {
+     return n->get<std::vector<int64_t>>(attr::size) &&
+       n->namedInput(attr::self)->type()->cast<CompleteTensorType>();
+   }
++  if (n->matches("aten::nll_loss(Tensor self, Tensor target, Tensor? weight, int reduction, int ignore_index) -> Tensor")) {
++    // TODO(asuhan): support weight
++    return n->namedInput(attr::weight)->node()->kind() == prim::Undefined;
++  }
+ 
+   // linear blocks may appear as inputs to graph executors, but they are removed
+   // before differentiation occurs
+@@ -442,6 +447,21 @@ static std::vector<Value*> gradientForNode(Node* node, ArrayRef<Value*> grad_val
+       JIT_ASSERT(tuple_outputs.size() == size_t(3));
+       return {tuple_outputs[0], tuple_outputs[1], tuple_outputs[2], nullptr, nullptr, nullptr, nullptr, nullptr};
+ 
++    } else if (node->matches("aten::nll_loss(Tensor self, Tensor target, Tensor? weight, int reduction, int ignore_index) -> Tensor")) {
++      auto graph = node->owningGraph();
++      auto total_weight = graph->insertNode(graph->createUndefined());
++      auto weight = graph->insertNode(graph->createUndefined());
++      auto backward_value = graph->insert(aten::nll_loss_backward, {
++        grads.at(0).value(),
++        inputs.at(0).value(),
++        inputs.at(1).value(),
++        weight->output(),
++        inputs.at(3).value(),
++        inputs.at(4).value(),
++        total_weight->output()
++      });
++      return {backward_value->node()->output(0), nullptr, nullptr, nullptr, nullptr};
++
+     } else if (node->matches("aten::log_softmax(Tensor self, int dim) -> Tensor")) {
+       JIT_ASSERT(grads.size() == 1);
+       auto graph = node->owningGraph();
+@@ -453,7 +473,7 @@ static std::vector<Value*> gradientForNode(Node* node, ArrayRef<Value*> grad_val
+       });
+       return {backward_value->node()->output(0), nullptr};
+ 
+-    } else if (node->kind() == prim::Constant || node->kind() == prim::None) {
++    } else if (node->kind() == prim::Constant || node->kind() == prim::Undefined || node->kind() == prim::None) {
+       return {};
+     }
+     throw std::runtime_error(std::string("failed to differentiate `") + node->kind().toDisplayString() + "`");
+diff --git a/torch/optim/optimizer.py b/torch/optim/optimizer.py
+index 13770d73f..ff06fd3c4 100644
+--- a/torch/optim/optimizer.py
++++ b/torch/optim/optimizer.py
+@@ -14,6 +14,11 @@ class _RequiredParameter(object):
+ required = _RequiredParameter()
+ 
+ 
++def _is_tensor(t):
++    import torch_xla
++    return isinstance(t, torch.Tensor) or isinstance(t, torch_xla._C.XLATensor)
++
++
+ class Optimizer(object):
+     r"""Base class for all optimizers.
+ 
+@@ -32,7 +37,7 @@ class Optimizer(object):
+     def __init__(self, params, defaults):
+         self.defaults = defaults
+ 
+-        if isinstance(params, torch.Tensor):
++        if _is_tensor(params):
+             raise TypeError("params argument given to the optimizer should be "
+                             "an iterable of Tensors or dicts, but got " +
+                             torch.typename(params))
+@@ -85,7 +90,7 @@ class Optimizer(object):
+             return packed
+         param_groups = [pack_group(g) for g in self.param_groups]
+         # Remap state to use ids as keys
+-        packed_state = {(id(k) if isinstance(k, torch.Tensor) else k): v
++        packed_state = {(id(k) if _is_tensor(k) else k): v
+                         for k, v in self.state.items()}
+         return {
+             'state': packed_state,
+@@ -121,7 +126,7 @@ class Optimizer(object):
+ 
+         def cast(param, value):
+             r"""Make a deep copy of value, casting all tensors to device of param."""
+-            if isinstance(value, torch.Tensor):
++            if _is_tensor(value):
+                 # Floating-point types are a bit special here. They are the only ones
+                 # that are assumed to always match the type of params.
+                 if param.is_floating_point():
+@@ -184,7 +189,7 @@ class Optimizer(object):
+         assert isinstance(param_group, dict), "param group must be a dict"
+ 
+         params = param_group['params']
+-        if isinstance(params, torch.Tensor):
++        if _is_tensor(params):
+             param_group['params'] = [params]
+         elif isinstance(params, set):
+             raise TypeError('optimizer parameters need to be organized in ordered collections, but '
+@@ -193,7 +198,7 @@ class Optimizer(object):
+             param_group['params'] = list(params)
+ 
+         for param in param_group['params']:
+-            if not isinstance(param, torch.Tensor):
++            if not _is_tensor(param):
+                 raise TypeError("optimizer can only optimize Tensors, "
+                                 "but one of the params is " + torch.typename(param))
+             if not param.is_leaf:
