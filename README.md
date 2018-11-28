@@ -2,7 +2,7 @@
 
 To build:
 
-* Build PyTorch from source __with `pytorch.patch` applied__, following the regular [instructions](https://github.com/pytorch/pytorch#from-source).
+* Build PyTorch from source at commit `1ca0ec7299b9352123a07525320a04e39d657781` __with `pytorch.patch` applied__, following the regular [instructions](https://github.com/pytorch/pytorch#from-source).
 * Clone this repository in the root folder of the PyTorch sources used for the previous step.
   Run `git submodule update --init` to get the third-party dependencies and `python setup.py install` to build and install the extension.
 
