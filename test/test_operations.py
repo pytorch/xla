@@ -594,7 +594,6 @@ class TestAxPlusBGen(XlaTestCase):
         self.assertEqualRel(loss.sum(), torch.tensor(0.0))
 
 
-@unittest.skip('RuntimeError: bool value of Tensor with more than one value is ambiguous')
 class TestAxPlusBGenXla(XlaTestCase):
     def test(self):
         def loss_fn(x, y):
@@ -914,7 +913,7 @@ class TestGradients(XlaTestCase):
         inputs = [torch.randn(4, 1, 28, 28, requires_grad=True)]
         self.checkGrad(model, inputs, xla=True)
 
-    @unittest.skip('Pending autodiff support')
+    @unittest.skip('Disable until we figure out the precision issue')
     def test_resnet(self):
         import torchvision
         model = torchvision.models.resnet50()
