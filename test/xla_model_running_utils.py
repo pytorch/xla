@@ -1,8 +1,6 @@
 # TODO(dlibenzi): Make this an interface module to the core XLA one, outside of
 # the test scope.
 
-from __future__ import print_function
-
 import collections
 import threading
 import time
@@ -125,7 +123,7 @@ def create_xla_model(model, inputs, num_cores=1, devices=None,
     replica_inputs = []
     for n in range(0, num_cores):
         replica_inputs.append(inputs)
-    traced_model = torch.jit.trace(model, *inputs)
+    traced_model = torch.jit.trace(model, inputs)
     xla_model = torch_xla._C.XlaModule(
         traced_model, use_full_conv_precision=full_conv_precision)
     inputs_xla = convert_to_xla_tensors(replica_inputs, devices=devices)
@@ -241,7 +239,7 @@ def xla_loss(loss_fn, output_xla_tensors, labels):
             flat_tensors[flat_index].requires_grad = True
             replica_outputs.append(flat_tensors[flat_index])
             flat_index += 1
-        losses.append(loss_fn(tuple(replica_outputs), labels[i]))
+        losses.append(loss_fn(*replica_outputs, labels[i]))
         outputs.append(tuple(replica_outputs))
     return losses, tuple(outputs)
 
@@ -363,7 +361,7 @@ def _wrap_module(module, loss_fn):
 
 
 def _create_wrapped_model_backward_grads(model_fn, inputs, target):
-    outputs = model_fn(tuple(inputs), target)
+    outputs = model_fn(*inputs, target)
     # Loss and Output.
     assert len(outputs) == 2
     loss = outputs[0]
@@ -391,7 +389,7 @@ class XlaModel(object):
             loss_output_grads = _create_wrapped_model_backward_grads(
                 self._model_fn, inputs, target)
             self._xla_model, self._traced_model = create_xla_model(
-                self._model_fn, [tuple(inputs), target], num_cores=self._num_cores,
+                self._model_fn, (*inputs, target), num_cores=self._num_cores,
                 devices=devices, input_gradients=loss_output_grads,
                 full_conv_precision=full_conv_precision)
         else:
