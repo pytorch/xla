@@ -530,14 +530,14 @@ class TestMNIST(XlaTestCase):
 
 
 class AxPlusB(nn.Module):
-    def __init__(self):
+    def __init__(self, dims=None):
         super(AxPlusB, self).__init__()
+        self.ones = torch.ones(*dims)
         self.a = nn.Parameter(torch.randn(1, 1))
         self.b = nn.Parameter(torch.randn(1, 1))
 
     def forward(self, x):
-        ones = torch.ones_like(x)
-        return x.mm(self.a) + ones.mm(self.b)
+        return x.mm(self.a) + self.ones.mm(self.b)
 
 
 class SquareLoss(nn.Module):
@@ -552,12 +552,11 @@ class SquareLoss(nn.Module):
         return loss / x.size()[0]
 
 
-@unittest.skip('RuntimeError: Unsupported operator: aten::ones_like')
 class TestAxPlusB(XlaTestCase):
     def test(self):
         A = 3.11
         B = 4.09
-        model = AxPlusB()
+        model = AxPlusB(dims=(1, 1))
         xla_model = xmru.XlaModel(model, [torch.randn(1, 1)])
         optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
         square_loss = SquareLoss()
@@ -574,14 +573,13 @@ class TestAxPlusB(XlaTestCase):
         self.assertEqualRel(loss.sum(), torch.tensor(0.0))
 
 
-@unittest.skip('RuntimeError: Unsupported operator: aten::ones_like')
 class TestAxPlusBGen(XlaTestCase):
     def test(self):
         A = 3.11
         B = 4.09
         batch_size = 128
         gen = FnDataGenerator(lambda x: x * A + B, batch_size, count=100)
-        model = AxPlusB()
+        model = AxPlusB(dims=(batch_size, 1))
         xla_model = xmru.XlaModel(model, [torch.randn(batch_size, 1)])
         optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
         square_loss = SquareLoss()
@@ -609,7 +607,7 @@ class TestAxPlusBGenXla(XlaTestCase):
         B = 4.09
         batch_size = 128
         gen = FnDataGenerator(lambda x: x * A + B, batch_size, count=100)
-        model = AxPlusB()
+        model = AxPlusB(dims=(batch_size, 1))
         xla_model = xmru.XlaModel(model, [torch.randn(batch_size, 1)],
                                   target=torch.randn(batch_size, 1),
                                   loss_fn=loss_fn, num_cores=1, devices=[':0'])
