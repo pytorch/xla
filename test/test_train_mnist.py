@@ -21,6 +21,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
+import torch_xla
 import unittest
 import xla_model_running_utils as xmru
 
