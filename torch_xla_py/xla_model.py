@@ -11,6 +11,13 @@ import torch_xla
 MultiBatch = collections.namedtuple('MultiBatch',
                                     ['batch_number', 'inputs', 'targets'])
 
+class Cleaner(object):
+    def __init__(self, func):
+        self.func = func
+
+    def __del__(self):
+        self.func()
+
 
 class LinearIndex(object):
     def __init__(self, index):
@@ -299,6 +306,19 @@ class LoaderWrapper(object):
             raise StopIteration
         return item
 
+    def close(self):
+        self._done = True
+        # Flush the queue so that the write thread eventually stuck waiting for
+        # space, will be able to queue its item and discover the _done flag at
+        # the next iteration.
+        while True:
+            try:
+                item = self._queue.get(block=False)
+                if item is None:
+                    break
+            except queue.Empty:
+                break
+
     def _worker(self):
         inputs = []
         targets = []
@@ -437,6 +457,7 @@ class XlaModel(object):
         wloader = LoaderWrapper(samples_loader, self._loader_prefetch,
                                 batch_size, num_cores=self._num_cores,
                                 devices=self._devices, fused_mode=True)
+        wloader_cleaner = Cleaner(wloader.close)
         processed_samples = 0
         loss = None
         start_time = time.time()
@@ -465,6 +486,7 @@ class XlaModel(object):
         wloader = LoaderWrapper(samples_loader, self._loader_prefetch, batch_size,
                                 num_cores=self._num_cores, devices=self._devices,
                                 fused_mode=True)
+        wloader_cleaner = Cleaner(wloader.close)
         test_loss = 0
         count = 0
         correct = 0
