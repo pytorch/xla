@@ -13,7 +13,7 @@ sys.argv = [sys.argv[0]] + leftovers
 # Setup import folders.
 _XLA_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(os.path.join(os.path.dirname(_XLA_FOLDER), 'test'))
-sys.path.append(_XLA_FOLDER)
+sys.path.insert(0, _XLA_FOLDER)
 
 # Normal imports section starts here.
 import collections
