@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 import collections
 import threading
@@ -222,6 +223,12 @@ def get_flat_tensors(xla_tensors):
     return torch_xla._C._xla_to_tensors(flat_xla_tensors)
 
 
+def _append_label_to_tensor_list(tensors, label):
+    tensors_and_label = list(tensors)
+    tensors_and_label.append(label)
+    return tensors_and_label
+
+
 # Compute the given loss function for the given XLA output tensors and the
 # labels.
 # Returns a tuple with the losses and the outputs converted to a Torch tensor.
@@ -237,7 +244,8 @@ def xla_loss(loss_fn, output_xla_tensors, labels):
             flat_tensors[flat_index].requires_grad = True
             replica_outputs.append(flat_tensors[flat_index])
             flat_index += 1
-        losses.append(loss_fn(*replica_outputs, labels[i]))
+        replica_outputs_and_label = _append_label_to_tensor_list(replica_outputs, labels[i])
+        losses.append(loss_fn(*replica_outputs_and_label))
         outputs.append(tuple(replica_outputs))
     return losses, tuple(outputs)
 
@@ -359,7 +367,8 @@ def _wrap_module(module, loss_fn):
 
 
 def _create_wrapped_model_backward_grads(model_fn, inputs, target):
-    outputs = model_fn(*inputs, target)
+    inputs_and_target = _append_label_to_tensor_list(inputs, target)
+    outputs = model_fn(*inputs_and_target)
     # Loss and Output.
     assert len(outputs) == 2
     loss = outputs[0]
@@ -386,8 +395,9 @@ class XlaModel(object):
             assert target is not None
             loss_output_grads = _create_wrapped_model_backward_grads(
                 self._model_fn, inputs, target)
+            inputs_and_target = _append_label_to_tensor_list(inputs, target)
             self._xla_model, self._traced_model = create_xla_model(
-                self._model_fn, (*inputs, target), num_cores=self._num_cores,
+                self._model_fn, tuple(inputs_and_target), num_cores=self._num_cores,
                 devices=devices, input_gradients=loss_output_grads,
                 full_conv_precision=full_conv_precision)
         else:
