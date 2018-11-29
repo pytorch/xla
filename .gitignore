@@ -1,6 +1,6 @@
 third_party/tensorflow/*
 build/*
 dist/*
-test/__pycache__/*
 torch_xla.egg-info/*
 torch_xla/lib/*
+*/**/__pycache__
