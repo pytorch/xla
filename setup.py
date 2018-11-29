@@ -85,7 +85,8 @@ include_dirs = [
 include_dirs += [
     pytorch_source_path,
     os.path.join(pytorch_source_path, 'torch', 'csrc'),
-    os.path.join(pytorch_source_path, 'torch', 'lib', 'tmp_install', 'include'),
+    os.path.join(pytorch_source_path, 'torch',
+                 'lib', 'tmp_install', 'include'),
 ]
 
 library_dirs = []
@@ -120,7 +121,8 @@ extra_link_args += ['-lxla_computation_client']
 
 version = '0.1'
 try:
-    sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=cwd).decode('ascii').strip()
+    sha = subprocess.check_output(
+        ['git', 'rev-parse', 'HEAD'], cwd=cwd).decode('ascii').strip()
     version += '+' + sha[:7]
 except Exception:
     pass
@@ -141,7 +143,8 @@ setup(
             include_dirs=include_dirs,
             extra_compile_args=extra_compile_args,
             library_dirs=library_dirs,
-            extra_link_args=extra_link_args + [make_relative_rpath('torch_xla/lib')],
+            extra_link_args=extra_link_args + \
+                [make_relative_rpath('torch_xla/lib')],
         ),
     ],
     package_data={

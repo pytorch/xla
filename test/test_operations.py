@@ -196,7 +196,8 @@ class XlaTestCase(TestCase):
             max_rel_err = torch.max(out.abs(), expected.abs()) * rel_err
             # Allow higher relative differences as long as we're still below the
             # absolute error.
-            max_abs_err = torch.max(max_rel_err, torch.ones_like(out) * abs_err)
+            max_abs_err = torch.max(
+                max_rel_err, torch.ones_like(out) * abs_err)
             super(XlaTestCase, self).assertEqual(diff_tensor.size(),
                                                  max_abs_err.size())
             if torch.le(diff_tensor, max_abs_err).min().item() == 0:
@@ -316,7 +317,8 @@ class TestStack(XlaTestCase):
         for dim in [0, 1]:
             model = XlaStack(dim)
             traced_model = torch.jit.trace(model, (x, y))
-            xla_model = torch_xla._C.XlaModule(traced_model, differentiate=False)
+            xla_model = torch_xla._C.XlaModule(
+                traced_model, differentiate=False)
             inputs_xla = [torch_xla._C.XLATensor(x), torch_xla._C.XLATensor(y)]
             output_xla = xla_model((tuple(inputs_xla)))
             expected = model(x, y)
@@ -481,7 +483,8 @@ class TestLogSoftmax(XlaTestCase):
             model = XlaLogSoftmax(dim)
             out = _xla_run(model, x)
             expected = model(x)
-            self.assertEqualRel(out.data, expected.data, rel_err=1e-4, abs_err=1)
+            self.assertEqualRel(out.data, expected.data,
+                                rel_err=1e-4, abs_err=1)
 
 
 class TestBatchNorm(XlaTestCase):
@@ -561,7 +564,8 @@ class TestAxPlusB(XlaTestCase):
         B = 4.09
         model = AxPlusB(dims=(1, 1))
         xla_model = xm.XlaModel(model, [torch.randn(1, 1)])
-        optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
+        optimizer = optim.SGD(xla_model.parameters_list(),
+                              lr=0.1, momentum=0.5)
         square_loss = SquareLoss()
         loss = None
         for _ in range(0, 100):
@@ -584,7 +588,8 @@ class TestAxPlusBGen(XlaTestCase):
         gen = FnDataGenerator(lambda x: x * A + B, batch_size, count=100)
         model = AxPlusB(dims=(batch_size, 1))
         xla_model = xm.XlaModel(model, [torch.randn(batch_size, 1)])
-        optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
+        optimizer = optim.SGD(xla_model.parameters_list(),
+                              lr=0.1, momentum=0.5)
         square_loss = SquareLoss()
         loss = None
         for x, target in gen:
@@ -614,7 +619,8 @@ class TestAxPlusBGenXla(XlaTestCase):
         xla_model = xm.XlaModel(model, [torch.randn(batch_size, 1)],
                                 target=torch.randn(batch_size, 1),
                                 loss_fn=loss_fn, num_cores=1, devices=[':0'])
-        optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
+        optimizer = optim.SGD(xla_model.parameters_list(),
+                              lr=0.1, momentum=0.5)
         xla_model.train(gen, optimizer, batch_size, log_fn=None)
 
         def eval_fn(output, target):
@@ -663,7 +669,8 @@ class TestNllLoss(TestCase):
         model = XlaNllLoss()
         traced_model = torch.jit.trace(model, (input, target))
         xla_model = torch_xla._C.XlaModule(traced_model)
-        xla_inputs = [torch_xla._C.XLATensor(input), torch_xla._C.XLATensor(target)]
+        xla_inputs = [torch_xla._C.XLATensor(
+            input), torch_xla._C.XLATensor(target)]
         output_xla = xla_model((tuple(xla_inputs)))
         expected = model(input, target)
         self.assertEqual(output_xla[0][0].to_tensor().data, expected.data)
@@ -711,7 +718,8 @@ class TestGradients(XlaTestCase):
         outputs = raw_outputs[:gradient.f_real_outputs]
 
         if grad_outputs == 'random':
-            grad_outputs = _random_like(outputs) + _zeros_like(intermediate_outputs)
+            grad_outputs = _random_like(
+                outputs) + _zeros_like(intermediate_outputs)
 
         raw_grad_outputs = []
         raw_grad_outputs += grad_outputs
@@ -726,7 +734,8 @@ class TestGradients(XlaTestCase):
         ##############################################################
         # backward with XLA
         if xla:
-            xla_model = torch_xla._C.XlaModule(traced_model, use_full_conv_precision=True)
+            xla_model = torch_xla._C.XlaModule(
+                traced_model, use_full_conv_precision=True)
             inputs_xla = [torch_xla._C.XLATensor(input) for input in inputs]
             xla_model((tuple(inputs_xla)))
             grads_output_xla = [torch_xla._C.XLATensor(grad_output)
@@ -756,7 +765,8 @@ class TestGradients(XlaTestCase):
         if xla:
             for i, (grad_input_jit, grad_input_xla) in enumerate(zip(grad_inputs,
                                                                      grad_inputs_xla)):
-                self.assertEqualRel(grad_input_jit, grad_input_xla, rel_err, abs_err)
+                self.assertEqualRel(
+                    grad_input_jit, grad_input_xla, rel_err, abs_err)
 
     def test_avgpool(self):
         class AvgPoolGrad(nn.Module):
@@ -905,7 +915,8 @@ class TestGradients(XlaTestCase):
         model = XlaNllLoss()
         traced_model = torch.jit.trace(model, (input, target))
         xla_model = torch_xla._C.XlaModule(traced_model)
-        xla_inputs = [torch_xla._C.XLATensor(input), torch_xla._C.XLATensor(target)]
+        xla_inputs = [torch_xla._C.XLATensor(
+            input), torch_xla._C.XLATensor(target)]
         output_xla = xla_model((tuple(xla_inputs)))
         xla_model.backward(*output_xla)
         output = model(input, target)
@@ -961,7 +972,8 @@ class TestOptimizer(XlaTestCase):
         input = torch.randn(4, 4, requires_grad=True)
         model = nn.Linear(4, 20)
         traced_model = torch.jit.trace(model, input)
-        xla_model = torch_xla._C.XlaModule(traced_model, use_full_conv_precision=True)
+        xla_model = torch_xla._C.XlaModule(
+            traced_model, use_full_conv_precision=True)
         input_xla = [torch_xla._C.XLATensor(input)]
         xla_model((tuple(input_xla)))
         xla_optimizer = optim.SGD(xla_model.parameters()[0], lr=lr,
@@ -979,7 +991,8 @@ class TestOptimizer(XlaTestCase):
         for _ in range(0, nsteps):
             xla_optimizer.step()
             optimizer.step()
-            xla_updated_params = [p.to_tensor().data for p in xla_model.parameters()[0]]
+            xla_updated_params = [
+                p.to_tensor().data for p in xla_model.parameters()[0]]
             updated_params = [p.data for p in model.parameters()]
             for i in range(0, len(updated_params)):
                 self.assertEqualRel(xla_updated_params[i], updated_params[i])
@@ -1008,7 +1021,8 @@ class TestReplicatedSum(XlaTestCase):
 
         model = XlaSum()
         for num_replicas in [2, 3, 4, 5, 6, 7, 8]:
-            inputs = _random_inputs(((3, 3), (3, 3)), num_replicas=num_replicas)
+            inputs = _random_inputs(
+                ((3, 3), (3, 3)), num_replicas=num_replicas)
             out = _xla_run(model, inputs)
             self.compareReplicated(model, inputs, out)
 
