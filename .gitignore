@@ -1,6 +1,11 @@
-third_party/tensorflow/*
-build/*
-dist/*
-torch_xla.egg-info/*
-torch_xla/lib/*
+build/
+dist/
+torch_xla.egg-info/
+torch_xla/lib/
 */**/__pycache__
+
+# BEGIN NOT-CLEAN-FILES (setup.py handles this marker. Do not change.)
+#
+# Below files are not deleted by "setup.py clean".
+
+third_party/tensorflow/

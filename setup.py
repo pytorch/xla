@@ -1,11 +1,38 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, distutils
 from torch.utils.cpp_extension import BuildExtension, CppExtension
+import distutils.command.clean
 import os
 import platform
+import shutil
 import subprocess
 import sys
+
+
+class Clean(distutils.command.clean.clean):
+    def run(self):
+        import glob
+        import re
+        with open('.gitignore', 'r') as f:
+            ignores = f.read()
+            pat = re.compile(r'^#( BEGIN NOT-CLEAN-FILES )?')
+            for wildcard in filter(None, ignores.split('\n')):
+                match = pat.match(wildcard)
+                if match:
+                    if match.group(1):
+                        # Marker is found and stop reading .gitignore.
+                        break
+                    # Ignore lines which begin with '#'.
+                else:
+                    for filename in glob.glob(wildcard):
+                        try:
+                            os.remove(filename)
+                        except OSError:
+                            shutil.rmtree(filename, ignore_errors=True)
+
+        # It's an old-style class in Python 2.7...
+        distutils.command.clean.clean.run(self)
 
 
 def _check_env_flag(name, default=''):
@@ -115,4 +142,7 @@ setup(
             'lib/*.so*',
         ]
     },
-    cmdclass={'build_ext': BuildExtension})
+    cmdclass={
+        'build_ext': BuildExtension,
+        'clean': Clean,
+    })
