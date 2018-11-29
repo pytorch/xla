@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
@@ -33,10 +34,21 @@ class ComputationClient {
 
   struct LiteralDevice {
     LiteralDevice() = default;
-    LiteralDevice(xla::Literal literal, string device)
+    LiteralDevice(Literal literal, string device)
         : literal(std::move(literal)), device(std::move(device)) {}
+    LiteralDevice(std::function<Literal()> literal_fn, string device)
+        : literal_fn(std::move(literal_fn)), device(std::move(device)) {}
 
-    xla::Literal literal;
+    const Literal& GetLiteral(Literal* tmp) const {
+      if (literal) {
+        return *literal;
+      }
+      *tmp = literal_fn();
+      return *tmp;
+    }
+
+    absl::optional<Literal> literal;
+    std::function<Literal()> literal_fn;
     string device;
   };
 
@@ -60,8 +72,7 @@ class ComputationClient {
   // Data.
   virtual std::shared_ptr<Data> ExecuteComputation(
       const XlaComputation& computation,
-      tensorflow::gtl::ArraySlice<Data*> arguments,
-      const string& device,
+      tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
       const Shape* output_shape) = 0;
 
   // Executes the computation in replicated mode.
