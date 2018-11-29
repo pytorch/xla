@@ -4,16 +4,20 @@ namespace xla {
 namespace xla_util {
 
 void MultiWait::Done() {
+  bool notify = false;
   {
     std::lock_guard<std::mutex> lock(mutex_);
     completed_count_ += 1;
+    notify = completed_count_ >= count_;
   }
-  cv_.notify_all();
+  if (notify) {
+    cv_.notify_all();
+  }
 }
 
-void MultiWait::Wait(size_t count) {
+void MultiWait::Wait() {
   std::unique_lock<std::mutex> lock(mutex_);
-  cv_.wait(lock, [this, count] { return completed_count_ >= count; });
+  cv_.wait(lock, [this] { return completed_count_ >= count_; });
 }
 
 }  // namespace xla_util

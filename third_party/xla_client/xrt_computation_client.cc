@@ -45,7 +45,7 @@ XrtComputationClient::TransferToServer(
 
   NodesArena arena(this);
   int64 total_size = 0;
-  xla_util::MultiWait mwait;
+  xla_util::MultiWait mwait(literals.size());
   std::map<SessionData*, SessionWork> session_work_map;
   tensorflow::ClientSession::FeedType feed_inputs;
   std::vector<Literal> literals_storage(literals.size());
@@ -79,7 +79,7 @@ XrtComputationClient::TransferToServer(
     };
     xla_env::ScheduleClosure(std::move(converter));
   }
-  mwait.Wait(literals.size());
+  mwait.Wait();
 
   OutboundDataMetric()->AddSample(total_size);
 

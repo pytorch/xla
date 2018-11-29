@@ -10,15 +10,19 @@ namespace xla_util {
 // Support waiting for a number of tasks to complete.
 class MultiWait {
  public:
+  explicit MultiWait(size_t count) : count_(count) {}
+
   // Signal the completion of a single task.
   void Done();
 
-  // Waits until at leas count tasks completed.
-  void Wait(size_t count);
+  // Waits until at least count (passed as constructor value) completions
+  // happened.
+  void Wait();
 
  private:
   std::mutex mutex_;
   std::condition_variable cv_;
+  size_t count_ = 0;
   size_t completed_count_ = 0;
 };
 
