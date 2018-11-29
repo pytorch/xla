@@ -599,15 +599,16 @@ class TestAxPlusBGen(XlaTestCase):
 
 class TestAxPlusBGenXla(XlaTestCase):
     def test(self):
+        batch_size = 128
+        scaler = torch.Tensor([[1.0 / batch_size]])
+
         def loss_fn(x, y):
             diff = x - y
             sloss = diff.t().mm(diff)
-            size = float(x.size()[0])
-            return sloss.mm(torch.Tensor([[1.0 / size]]))
+            return sloss.mm(scaler)
 
         A = 3.11
         B = 4.09
-        batch_size = 128
         gen = FnDataGenerator(lambda x: x * A + B, batch_size, count=100)
         model = AxPlusB(dims=(batch_size, 1))
         xla_model = xm.XlaModel(model, [torch.randn(batch_size, 1)],
