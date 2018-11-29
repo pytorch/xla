@@ -55,18 +55,20 @@ XlaComputationClient::TransferToServer(
   metrics::TimedSection timed(TransferToServerMetric());
   FlushReleasedHandles();
 
+  // This can be made parallel, WRT literal creation.
   int64 total_size = 0;
   std::vector<std::shared_ptr<Data>> results;
   for (auto& literal_device : literals) {
     string device = GetEffectiveDevice(literal_device.device);
+    Literal literal_storage;
+    const Literal& literal = literal_device.GetLiteral(&literal_storage);
     std::unique_ptr<GlobalData> handle =
-        client_
-            ->TransferToServer(literal_device.literal, &GetDeviceHandle(device))
+        client_->TransferToServer(literal, &GetDeviceHandle(device))
             .ValueOrDie();
     results.push_back(std::make_shared<XlaData>(
-        std::move(handle), device, literal_device.literal.shape(),
+        std::move(handle), device, literal.shape(),
         [this](XlaData* xla_data) { ReleaseXlaData(xla_data); }));
-    total_size += literal_device.literal.size_bytes();
+    total_size += literal.size_bytes();
   }
   OutboundDataMetric()->AddSample(total_size);
   return results;
