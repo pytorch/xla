@@ -118,9 +118,16 @@ if DEBUG:
 
 extra_link_args += ['-lxla_computation_client']
 
+version = '0.1'
+try:
+    sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=cwd).decode('ascii').strip()
+    version += '+' + sha[:7]
+except Exception:
+    pass
+
 setup(
     name='torch_xla',
-    version='0.1',
+    version=version,
     description='XLA bridge for PyTorch',
     url='https://github.com/pytorch/xla',
     author='Alex Suhan, Davide Libenzi',
