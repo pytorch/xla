@@ -1,5 +1,3 @@
-# TODO(dlibenzi): Make this an interface module to the core XLA one, outside of
-# the test scope.
 
 import collections
 import threading
