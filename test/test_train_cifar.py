@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 
 parser = argparse.ArgumentParser(add_help=False)
@@ -12,7 +13,10 @@ parser.add_argument('--tidy', action='store_true')
 parser.add_argument('--metrics_debug', action='store_true')
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
-sys.path.append('../test')
+# Setup import folders.
+_XLA_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(os.path.join(os.path.dirname(_XLA_FOLDER), 'test'))
+sys.path.append(_XLA_FOLDER)
 
 from common_utils import TestCase, run_tests
 import shutil
@@ -21,10 +25,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
+import torch_xla_py.xla_model as xm
 import torchvision
 import torchvision.transforms as transforms
 import unittest
-import xla_model_running_utils as xmru
 
 
 class BasicBlock(nn.Module):
@@ -132,9 +136,9 @@ def train_cifar():
     devices = [':{}'.format(n) for n in range(0, FLAGS.num_cores)]
     inputs = torch.zeros(FLAGS.batch_size, 3, 32, 32)
     target = torch.zeros(FLAGS.batch_size, dtype=torch.int64)
-    xla_model = xmru.XlaModel(model, [inputs], loss_fn=F.nll_loss,
-                              target=target, num_cores=FLAGS.num_cores,
-                              devices=devices)
+    xla_model = xm.XlaModel(model, [inputs], loss_fn=F.nll_loss,
+                            target=target, num_cores=FLAGS.num_cores,
+                            devices=devices)
     optimizer = optim.SGD(xla_model.parameters_list(), lr=lr,
                           momentum=momentum, weight_decay=5e-4)
 
@@ -144,9 +148,9 @@ def train_cifar():
         if FLAGS.metrics_debug:
             print(torch_xla._C._xla_metrics_report())
         accuracy = xla_model.test(test_loader,
-                                  xmru.category_eval_fn(F.nll_loss),
+                                  xm.category_eval_fn(F.nll_loss),
                                   FLAGS.batch_size)
-        xmru.update_optimizer_state(optimizer, 'lr', lambda x: x / 1.025)
+        xm.update_optimizer_state(optimizer, 'lr', lambda x: x / 1.025)
     return accuracy
 
 

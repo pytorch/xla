@@ -2,6 +2,7 @@
 # We need to do that before import "common", as otherwise we get an error for
 # unrecognized arguments.
 import argparse
+import os
 import sys
 
 parser = argparse.ArgumentParser(add_help=False)
@@ -9,20 +10,22 @@ parser.add_argument('--replicated', action='store_true')
 parser.add_argument('--long_test', action='store_true')
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
-sys.path.append('../test')
+# Setup import folders.
+_XLA_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(os.path.join(os.path.dirname(_XLA_FOLDER), 'test'))
+sys.path.append(_XLA_FOLDER)
 
 # Normal imports section starts here.
 import collections
 from common_utils import TestCase, run_tests, iter_indices
 import itertools
-import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
+import torch_xla_py.xla_model as xm
 import unittest
-import xla_model_running_utils as xmru
 
 
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
@@ -170,18 +173,18 @@ def _dump_differences(target, result, rtol=1e-5, atol=1e-3):
 def _xla_run(model, input, device='TPU'):
     if isinstance(input, (tuple, list)):
         devices = ['{}:{}'.format(device, n) for n in range(0, len(input))]
-        xla_model = xmru.XlaModel(model, input[0], num_cores=len(input),
-                                  devices=devices, full_conv_precision=True)
+        xla_model = xm.XlaModel(model, input[0], num_cores=len(input),
+                                devices=devices, full_conv_precision=True)
         output_xla = xla_model(*input)
         output = []
         for xla_replica_outputs in output_xla:
             replica_outputs = []
-            for o in xmru.as_list(xla_replica_outputs):
+            for o in xm.as_list(xla_replica_outputs):
                 replica_outputs.append(o.to_tensor())
             output.append(tuple(replica_outputs))
         return tuple(output)
     else:
-        xla_model = xmru.XlaModel(model, [input], full_conv_precision=True)
+        xla_model = xm.XlaModel(model, [input], full_conv_precision=True)
         output_xla = xla_model(input)
         return output_xla[0]
 
@@ -212,8 +215,8 @@ class XlaTestCase(TestCase):
     def compareReplicated(self, model, inputs, xla_outputs):
         self.assertEqual(len(inputs), len(xla_outputs))
         for i, input in enumerate(inputs):
-            expected = xmru.as_list(model(*input))
-            xla_output = xmru.as_list(xla_outputs[i])
+            expected = xm.as_list(model(*input))
+            xla_output = xm.as_list(xla_outputs[i])
             self.assertEqual(len(expected), len(xla_output))
             for j, expected_tensor in enumerate(expected):
                 self.assertEqualDbg(xla_output[j], expected_tensor)
@@ -557,7 +560,7 @@ class TestAxPlusB(XlaTestCase):
         A = 3.11
         B = 4.09
         model = AxPlusB(dims=(1, 1))
-        xla_model = xmru.XlaModel(model, [torch.randn(1, 1)])
+        xla_model = xm.XlaModel(model, [torch.randn(1, 1)])
         optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
         square_loss = SquareLoss()
         loss = None
@@ -580,7 +583,7 @@ class TestAxPlusBGen(XlaTestCase):
         batch_size = 128
         gen = FnDataGenerator(lambda x: x * A + B, batch_size, count=100)
         model = AxPlusB(dims=(batch_size, 1))
-        xla_model = xmru.XlaModel(model, [torch.randn(batch_size, 1)])
+        xla_model = xm.XlaModel(model, [torch.randn(batch_size, 1)])
         optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
         square_loss = SquareLoss()
         loss = None
@@ -607,9 +610,9 @@ class TestAxPlusBGenXla(XlaTestCase):
         batch_size = 128
         gen = FnDataGenerator(lambda x: x * A + B, batch_size, count=100)
         model = AxPlusB(dims=(batch_size, 1))
-        xla_model = xmru.XlaModel(model, [torch.randn(batch_size, 1)],
-                                  target=torch.randn(batch_size, 1),
-                                  loss_fn=loss_fn, num_cores=1, devices=[':0'])
+        xla_model = xm.XlaModel(model, [torch.randn(batch_size, 1)],
+                                target=torch.randn(batch_size, 1),
+                                loss_fn=loss_fn, num_cores=1, devices=[':0'])
         optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
         xla_model.train(gen, optimizer, batch_size, log_fn=None)
 
@@ -685,14 +688,14 @@ class TestGradients(XlaTestCase):
         # Trace and symbolically differentiate
         traced_model = torch.jit.trace(model, *inputs)
         fwd = traced_model._get_method('forward')
-        xmru.forward_passes(fwd.graph)
+        xm.forward_passes(fwd.graph)
 
         inputs_params = inputs + list(model.parameters())
         inputs_params_buffers = inputs + list(fwd.params())
 
         gradient = torch._C._jit_differentiate(fwd.graph)
-        xmru.forward_passes(gradient.f)
-        xmru.backward_passes(gradient.df)
+        xm.forward_passes(gradient.f)
+        xm.backward_passes(gradient.df)
 
         ##############################################################
         # Run forward and backwarg graphs via jit interpreter
@@ -701,7 +704,7 @@ class TestGradients(XlaTestCase):
 
         # forward function
         raw_outputs = exec_f(*inputs_params_buffers)
-        raw_outputs = xmru.as_list(raw_outputs)
+        raw_outputs = xm.as_list(raw_outputs)
         intermediate_outputs = [raw_output for raw_output in raw_outputs[gradient.f_real_outputs:]
                                 if raw_output.dtype == torch.float32]
         outputs = raw_outputs[:gradient.f_real_outputs]
@@ -717,7 +720,7 @@ class TestGradients(XlaTestCase):
                              for i in gradient.df_input_captured_outputs]
 
         grad_inputs = exec_df(*raw_grad_outputs)
-        grad_inputs = xmru.as_list(grad_inputs)
+        grad_inputs = xm.as_list(grad_inputs)
 
         ##############################################################
         # backward with XLA
@@ -735,7 +738,7 @@ class TestGradients(XlaTestCase):
         ##############################################################
         # forward + backward with regular autograd / torch
         outputs_gt = model(*inputs)
-        outputs_gt = xmru.as_list(outputs_gt)
+        outputs_gt = xm.as_list(outputs_gt)
         grad_inputs_gt = torch.autograd.grad(outputs_gt,
                                              inputs_params,
                                              grad_outputs,
