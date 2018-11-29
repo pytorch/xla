@@ -1,5 +1,6 @@
 
 import collections
+import queue
 import threading
 import time
 import torch
@@ -269,16 +270,11 @@ class LoaderWrapper(object):
         self._num_cores = num_cores
         self._devices = list(devices) if devices else None
         self._fused_mode = fused_mode
-        self._queue = collections.deque()
-        self._ready_cv = threading.Condition()
-        self._space_available_cv = threading.Condition()
         self._done = False
+        self._queue = queue.Queue(maxsize=self._prefetch_size)
         self._thread = threading.Thread(target=self._worker)
         self._thread.daemon = True
         self._thread.start()
-
-    def __del__(self):
-        self._be_done()
 
     def __iter__(self):
         return self
@@ -286,35 +282,11 @@ class LoaderWrapper(object):
     def __next__(self):
         return self.next()
 
-    def _notify(self, cv):
-        cv.acquire()
-        cv.notify()
-        cv.release()
-
     def next(self):
-        self._ready_cv.acquire()
-        while len(self._queue) == 0:
-            if self._done:
-                self._ready_cv.release()
-                raise StopIteration
-            self._ready_cv.wait()
-        item = self._queue.popleft()
-        self._ready_cv.release()
-        self._notify(self._space_available_cv)
+        item = self._queue.get()
+        if item is None:
+            raise StopIteration
         return item
-
-    def _append(self, item):
-        self._space_available_cv.acquire()
-        while len(self._queue) >= self._prefetch_size:
-            self._space_available_cv.wait()
-        self._queue.append(item)
-        self._space_available_cv.release()
-        self._notify(self._ready_cv)
-
-    def _be_done(self):
-        self._done = True
-        self._notify(self._ready_cv)
-        self._notify(self._space_available_cv)
 
     def _worker(self):
         inputs = []
@@ -338,10 +310,11 @@ class LoaderWrapper(object):
                         targets, devices=self._devices)
                 else:
                     targets_xla = []
-                self._append((batch_number, (inputs_xla, targets_xla)))
+                self._queue.put((batch_number, (inputs_xla, targets_xla)))
                 inputs = []
                 targets = []
-        self._be_done()
+        # Enqueue the end-of-life None so that eventual readers will quit.
+        self._queue.put(None)
 
 
 def _wrap_module(module, loss_fn):
