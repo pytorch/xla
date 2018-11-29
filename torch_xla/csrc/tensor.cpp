@@ -11,8 +11,6 @@
 #include "helpers.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/lib/strings/proto_serialization.h"
 #include "torch/csrc/autograd/variable.h"
@@ -280,14 +278,14 @@ std::shared_ptr<XLATensor> XLATensor::Create(const autograd::Variable& tensor,
 std::shared_ptr<XLATensor> XLATensor::Create(
     std::shared_ptr<xla::ComputationClient::Data> xla_data,
     bool requires_grad) {
-  return TensorsArena::Get()->RegisterTensor(std::make_shared<XLATensor>(
-      std::move(xla_data), requires_grad));
+  return TensorsArena::Get()->RegisterTensor(
+      std::make_shared<XLATensor>(std::move(xla_data), requires_grad));
 }
 
 std::shared_ptr<XLATensor> XLATensor::Create(
     std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device) {
-  return TensorsArena::Get()->RegisterTensor(std::make_shared<XLATensor>(
-      std::move(xla_graph_node), device));
+  return TensorsArena::Get()->RegisterTensor(
+      std::make_shared<XLATensor>(std::move(xla_graph_node), device));
 }
 
 std::shared_ptr<XLATensor> XLATensor::Create(std::shared_ptr<Data> data) {
@@ -311,8 +309,8 @@ XLATensor::XLATensor(const autograd::Variable& tensor, const Device& device)
 
 XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
                      bool requires_grad)
-    : data_(std::make_shared<Data>(
-          xla_data, DeviceFromString(xla_data->device()))),
+    : data_(std::make_shared<Data>(xla_data,
+                                   DeviceFromString(xla_data->device()))),
       requires_grad_(requires_grad) {}
 
 XLATensor::XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node,
@@ -487,29 +485,23 @@ std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
     const std::vector<autograd::Variable>& tensors,
     const std::vector<std::string>& devices) {
   XLA_CHECK_EQ(tensors.size(), devices.size());
-  xla::xla_util::MultiWait mwait;
-  std::vector<xla::ComputationClient::LiteralDevice> literal_device(
-      tensors.size());
+  std::vector<xla::ComputationClient::LiteralDevice> literal_device;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    auto converter = [i, &tensors, &devices, &literal_device, &mwait]() {
+    auto converter = [&, i]() -> xla::Literal {
       Device device = DeviceFromString(devices[i]);
       xla::Shape shape = MakeArrayShapeFromDimensions(
           tensors[i].sizes(),
           XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType()),
           device.hw_type);
-      xla::Literal literal = GetTensorLiteral(tensors[i], &shape);
-      literal_device[i] =
-          xla::ComputationClient::LiteralDevice(std::move(literal), devices[i]);
-      mwait.Done();
+      return GetTensorLiteral(tensors[i], &shape);
     };
-    xla::xla_env::ScheduleClosure(std::move(converter));
+    literal_device.emplace_back(std::move(converter), devices[i]);
   }
-  mwait.Wait(tensors.size());
   auto handles = XlaGetClient()->TransferToServer(literal_device);
   std::vector<std::shared_ptr<XLATensor>> xla_tensors;
   for (size_t i = 0; i < handles.size(); ++i) {
-    xla_tensors.push_back(Create(std::move(handles[i]),
-                                 tensors[i].requires_grad()));
+    xla_tensors.push_back(
+        Create(std::move(handles[i]), tensors[i].requires_grad()));
   }
   return xla_tensors;
 }

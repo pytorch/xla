@@ -8,7 +8,9 @@
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/util/device_name_utils.h"
@@ -43,29 +45,42 @@ XrtComputationClient::TransferToServer(
 
   NodesArena arena(this);
   int64 total_size = 0;
+  xla_util::MultiWait mwait;
   std::map<SessionData*, SessionWork> session_work_map;
   tensorflow::ClientSession::FeedType feed_inputs;
-  {
-    std::lock_guard<std::mutex> lock(lock_);
-    for (size_t i = 0; i < literals.size(); ++i) {
+  std::vector<Literal> literals_storage(literals.size());
+  std::vector<const Literal*> literals_ptrs(literals.size());
+  for (size_t i = 0; i < literals.size(); ++i) {
+    auto converter = [&, i]() {
+      const Literal& literal = literals[i].GetLiteral(&literals_storage[i]);
+      literals_ptrs[i] = &literal;
+
       string device = GetEffectiveDevice(literals[i].device);
       const string& xrt_device = TorchDeviceToXrtDevice(device);
-      SessionData* session = GetSessionForXrtDevice(xrt_device);
       xrt::XLAAllocation alloc;
       alloc.set_device_ordinal(GetDeviceOrdinal(xrt_device));
-      *alloc.mutable_value() = literals[i].literal.ToProto();
+      *alloc.mutable_value() = literal.ToProto();
+      tensorflow::Input::Initializer feed_value(alloc.SerializeAsString());
 
-      tensorflow::Scope device_scope = session->root.WithDevice(xrt_device);
-      const CachedNode& cached_node =
-          GetAllocateNode(&arena, device_scope, device);
-      feed_inputs.insert({cached_node.holders[0], alloc.SerializeAsString()});
-      SessionWork* session_work = &session_work_map[session];
-      session_work->outputs_handles.push_back(*cached_node.output);
-      session_work->index_mapping.push_back(i);
+      std::lock_guard<std::mutex> lock(lock_);
+      {
+        SessionData* session = GetSessionForXrtDevice(xrt_device);
+        tensorflow::Scope device_scope = session->root.WithDevice(xrt_device);
+        const CachedNode& cached_node =
+            GetAllocateNode(&arena, device_scope, device);
+        feed_inputs.insert({cached_node.holders[0], std::move(feed_value)});
+        SessionWork* session_work = &session_work_map[session];
+        session_work->outputs_handles.push_back(*cached_node.output);
+        session_work->index_mapping.push_back(i);
 
-      total_size += literals[i].literal.size_bytes();
-    }
+        total_size += literal.size_bytes();
+      }
+      mwait.Done();
+    };
+    xla_env::ScheduleClosure(std::move(converter));
   }
+  mwait.Wait(literals.size());
+
   OutboundDataMetric()->AddSample(total_size);
 
   std::vector<std::shared_ptr<Data>> results(literals.size());
@@ -79,7 +94,7 @@ XrtComputationClient::TransferToServer(
       size_t li = session_work.second.index_mapping[i];
       results[li] = std::make_shared<XrtData>(
           GetEffectiveDevice(literals[li].device), outputs[i].scalar<int64>()(),
-          literals[li].literal.shape(),
+          literals_ptrs[li]->shape(),
           [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); });
     }
   }
