@@ -40,7 +40,8 @@ class ToXlaTensorArena(object):
                 self._tensors, self._devices)
         elif type(self._tensors[0]) == torch_xla._C.XLATensor:
             assert not self._devices
-            self._converted_tensors = torch_xla._C._xla_to_tensors(self._tensors)
+            self._converted_tensors = torch_xla._C._xla_to_tensors(
+                self._tensors)
         else:
             self._converted_tensors = self._tensors
 
@@ -111,7 +112,8 @@ def convert_to_xla_tensors(inputs, devices=None):
 
 def convert_to_tensors(inputs):
     arena = ToXlaTensorArena()
-    tensors = _collect_tensors(arena, torch_xla._C.XLATensor, inputs, device=None)
+    tensors = _collect_tensors(
+        arena, torch_xla._C.XLATensor, inputs, device=None)
     arena.convert()
     return _replace_tensors(arena, tensors)
 
@@ -245,7 +247,8 @@ def xla_loss(loss_fn, output_xla_tensors, labels):
             flat_tensors[flat_index].requires_grad = True
             replica_outputs.append(flat_tensors[flat_index])
             flat_index += 1
-        replica_outputs_and_label = _append_label_to_tensor_list(replica_outputs, labels[i])
+        replica_outputs_and_label = _append_label_to_tensor_list(
+            replica_outputs, labels[i])
         losses.append(loss_fn(*replica_outputs_and_label))
         outputs.append(tuple(replica_outputs))
     return losses, tuple(outputs)
