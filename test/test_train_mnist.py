@@ -80,7 +80,8 @@ def train_mnist():
     target = torch.zeros(FLAGS.batch_size, dtype=torch.int64)
     xla_model = xm.XlaModel(model, [inputs], loss_fn=F.nll_loss, target=target,
                             num_cores=FLAGS.num_cores, devices=devices)
-    optimizer = optim.SGD(xla_model.parameters_list(), lr=lr, momentum=momentum)
+    optimizer = optim.SGD(xla_model.parameters_list(),
+                          lr=lr, momentum=momentum)
 
     for epoch in range(1, FLAGS.num_epochs + 1):
         xla_model.train(train_loader, optimizer, FLAGS.batch_size,
