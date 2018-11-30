@@ -3,7 +3,8 @@ import os
 import sys
 
 parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument('--datadir', type=str, default='/tmp/ILSVRC2012_img_train')
+parser.add_argument('--train_dir', type=str, default='/tmp/ILSVRC2012_img_train')
+parser.add_argument('--test_dir', type=str, default='/tmp/ILSVRC2012_img_test')
 parser.add_argument('--num_cores', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--num_epochs', type=int, default=15)
@@ -34,9 +35,8 @@ def train_imagenet():
     print('==> Preparing data..')
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
-    traindir = FLAGS.datadir
     train_dataset = torchvision.datasets.ImageFolder(
-        traindir,
+        FLAGS.train_dir,
         transforms.Compose([
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
@@ -45,6 +45,17 @@ def train_imagenet():
         ]))
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=FLAGS.batch_size, shuffle=True,
+        num_workers=FLAGS.num_workers, pin_memory=True, sampler=None)
+    test_dataset = torchvision.datasets.ImageFolder(
+        FLAGS.test_dir,
+        transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ]))
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=FLAGS.batch_size, shuffle=True,
         num_workers=FLAGS.num_workers, pin_memory=True, sampler=None)
 
     torch.manual_seed(42)
@@ -72,11 +83,9 @@ def train_imagenet():
                         log_interval=log_interval)
         if FLAGS.metrics_debug:
             print(torch_xla._C._xla_metrics_report())
-        '''
         accuracy = xla_model.test(test_loader,
                                   xm.category_eval_fn(cross_entropy_loss),
                                   FLAGS.batch_size)
-        '''
         xm.update_optimizer_state(optimizer, 'lr', lambda x: x / 1.025)
     return accuracy
 
@@ -86,7 +95,8 @@ class TrainImageNet(TestCase):
     def tearDown(self):
         super(TrainImageNet, self).tearDown()
         if FLAGS.tidy:
-            shutil.rmtree(FLAGS.datadir)
+            shutil.rmtree(FLAGS.train_dir)
+            shutil.rmtree(FLAGS.test_dir)
 
     def test_accurracy(self):
         self.assertGreaterEqual(train_imagenet(), 80.0)
