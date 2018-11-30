@@ -43,11 +43,11 @@ class ToXlaTensorArena(object):
             return
         if type(self._tensors[0]) == torch.Tensor:
             assert self._devices
-            self._converted_tensors = torch_xla._C._xla_create_tensors(
+            self._converted_tensors = torch_xla._XLAC._xla_create_tensors(
                 self._tensors, self._devices)
-        elif type(self._tensors[0]) == torch_xla._C.XLATensor:
+        elif type(self._tensors[0]) == torch_xla._XLAC.XLATensor:
             assert not self._devices
-            self._converted_tensors = torch_xla._C._xla_to_tensors(
+            self._converted_tensors = torch_xla._XLAC._xla_to_tensors(
                 self._tensors)
         else:
             self._converted_tensors = self._tensors
@@ -90,19 +90,19 @@ def _replace_tensors(arena, tensors):
 
 def forward_passes(graph):
     torch._C._jit_pass_canonicalize_ops(graph)
-    torch_xla._C._jit_pass_set_mat_mul_output_shape(graph)
-    torch_xla._C._jit_pass_insert_explicit_expand(graph)
-    torch_xla._C._jit_pass_eval_static_size(graph)
+    torch_xla._XLAC._jit_pass_set_mat_mul_output_shape(graph)
+    torch_xla._XLAC._jit_pass_insert_explicit_expand(graph)
+    torch_xla._XLAC._jit_pass_eval_static_size(graph)
     torch._C._jit_pass_constant_propagation(graph)
-    torch_xla._C._jit_pass_replace_untraced_operators(graph)
+    torch_xla._XLAC._jit_pass_replace_untraced_operators(graph)
     torch._C._jit_pass_dce(graph)
 
 
 def backward_passes(graph):
     torch._C._jit_pass_specialize_undef(graph)
-    torch_xla._C._jit_pass_eval_static_size(graph)
+    torch_xla._XLAC._jit_pass_eval_static_size(graph)
     torch._C._jit_pass_constant_propagation(graph)
-    torch_xla._C._jit_pass_threshold_backward_peephole(graph)
+    torch_xla._XLAC._jit_pass_threshold_backward_peephole(graph)
     torch._C._jit_pass_dce(graph)
 
 
@@ -120,7 +120,7 @@ def convert_to_xla_tensors(inputs, devices=None):
 def convert_to_tensors(inputs):
     arena = ToXlaTensorArena()
     tensors = _collect_tensors(
-        arena, torch_xla._C.XLATensor, inputs, device=None)
+        arena, torch_xla._XLAC.XLATensor, inputs, device=None)
     arena.convert()
     return _replace_tensors(arena, tensors)
 
@@ -133,7 +133,7 @@ def create_xla_model(model, inputs, num_cores=1, devices=None,
     for n in range(0, num_cores):
         replica_inputs.append(inputs)
     traced_model = torch.jit.trace(model, inputs)
-    xla_model = torch_xla._C.XlaModule(
+    xla_model = torch_xla._XLAC.XlaModule(
         traced_model, use_full_conv_precision=full_conv_precision)
     inputs_xla = convert_to_xla_tensors(replica_inputs, devices=devices)
     if input_gradients is not None:
@@ -200,13 +200,13 @@ def flatten_nested_tuple(inputs):
 
 
 def zeros_like(p):
-    if isinstance(p, torch_xla._C.XLATensor):
+    if isinstance(p, torch_xla._XLAC.XLATensor):
         return torch.zeros(p.size(), dtype=p.dtype)
     return torch.zeros_like(p.data)
 
 
 def extract_gradients(inputs, fill_fn=None):
-    if isinstance(inputs, (torch.Tensor, torch_xla._C.XLATensor)):
+    if isinstance(inputs, (torch.Tensor, torch_xla._XLAC.XLATensor)):
         grad = inputs.grad
         if grad is not None or fill_fn is None:
             return grad
@@ -228,9 +228,9 @@ def get_flat_tensors(xla_tensors):
     flat_xla_tensors = []
     for replica_xla_tensors in xla_tensors:
         for out in replica_xla_tensors:
-            if isinstance(out, torch_xla._C.XLATensor):
+            if isinstance(out, torch_xla._XLAC.XLATensor):
                 flat_xla_tensors.append(out)
-    return torch_xla._C._xla_to_tensors(flat_xla_tensors)
+    return torch_xla._XLAC._xla_to_tensors(flat_xla_tensors)
 
 
 def _append_label_to_tensor_list(tensors, label):
@@ -446,7 +446,7 @@ class XlaModel(object):
             # output is ordinal 1).
             xla_losses.append(replica_xla_outputs[0])
 
-        losses = torch_xla._C._xla_to_tensors(xla_losses)
+        losses = torch_xla._XLAC._xla_to_tensors(xla_losses)
         loss = 0.0
         for closs in losses:
             loss += closs.sum().item()

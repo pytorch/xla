@@ -230,4 +230,4 @@ void InitXlaBindings(py::module m) {
 }  // namespace jit
 }  // namespace torch
 
-PYBIND11_MODULE(_C, m) { torch::jit::InitXlaBindings(m); }
+PYBIND11_MODULE(_XLAC, m) { torch::jit::InitXlaBindings(m); }

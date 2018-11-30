@@ -74,7 +74,7 @@ index 13770d73f..ff06fd3c4 100644
  
 +def _is_tensor(t):
 +    import torch_xla
-+    return isinstance(t, torch.Tensor) or isinstance(t, torch_xla._C.XLATensor)
++    return isinstance(t, torch.Tensor) or isinstance(t, torch_xla._XLAC.XLATensor)
 +
 +
  class Optimizer(object):
