@@ -77,7 +77,6 @@ def train_imagenet():
     optimizer = optim.SGD(xla_model.parameters_list(), lr=lr,
                           momentum=momentum, weight_decay=5e-4)
 
-    accuracy = 0
     for epoch in range(1, FLAGS.num_epochs + 1):
         xla_model.train(train_loader, optimizer, FLAGS.batch_size,
                         log_interval=log_interval)
