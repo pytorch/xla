@@ -1,23 +1,11 @@
-import argparse
-import os
-import sys
+import test_utils
 
-parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument('--train_dir', type=str, default='/tmp/imagenet/train')
-parser.add_argument('--test_dir', type=str, default='/tmp/imagenet/val')
-parser.add_argument('--num_cores', type=int, default=1)
-parser.add_argument('--batch_size', type=int, default=128)
-parser.add_argument('--num_epochs', type=int, default=15)
-parser.add_argument('--num_workers', type=int, default=4)
-parser.add_argument('--metrics_debug', action='store_true')
-FLAGS, leftovers = parser.parse_known_args()
-sys.argv = [sys.argv[0]] + leftovers
-# Setup import folders.
-_XLA_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
-sys.path.append(os.path.join(os.path.dirname(_XLA_FOLDER), 'test'))
-sys.path.insert(0, _XLA_FOLDER)
+FLAGS = test_utils.parse_common_options(
+    datadir='/tmp/imagenet', batch_size=128, num_epochs=15,
+    target_accuracy=0.0)
 
 from common_utils import TestCase, run_tests
+import os
 import shutil
 import torch
 import torch.nn as nn
@@ -35,7 +23,7 @@ def train_imagenet():
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
     train_dataset = torchvision.datasets.ImageFolder(
-        FLAGS.train_dir,
+        os.path.join(FLAGS.datadir, 'train'),
         transforms.Compose([
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
@@ -46,7 +34,7 @@ def train_imagenet():
         train_dataset, batch_size=FLAGS.batch_size, shuffle=True,
         num_workers=FLAGS.num_workers)
     test_dataset = torchvision.datasets.ImageFolder(
-        FLAGS.test_dir,
+        os.path.join(FLAGS.datadir, 'val'),
         transforms.Compose([
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
@@ -94,8 +82,7 @@ class TrainImageNet(TestCase):
         super(TrainImageNet, self).tearDown()
 
     def test_accurracy(self):
-        # TODO: figure out accuracy target, make it trivially true for now.
-        self.assertGreaterEqual(train_imagenet(), 0)
+        self.assertGreaterEqual(train_imagenet(), FLAGS.target_accuracy)
 
 
 # Run the tests.
