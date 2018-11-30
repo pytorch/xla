@@ -45,7 +45,7 @@ def train_imagenet():
         ]))
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=FLAGS.batch_size, shuffle=True,
-        num_workers=FLAGS.num_workers, pin_memory=True, sampler=None)
+        num_workers=FLAGS.num_workers)
     test_dataset = torchvision.datasets.ImageFolder(
         FLAGS.test_dir,
         transforms.Compose([
@@ -56,7 +56,7 @@ def train_imagenet():
         ]))
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=FLAGS.batch_size, shuffle=True,
-        num_workers=FLAGS.num_workers, pin_memory=True, sampler=None)
+        num_workers=FLAGS.num_workers)
 
     torch.manual_seed(42)
 
