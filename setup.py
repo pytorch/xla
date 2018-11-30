@@ -138,7 +138,7 @@ setup(
     packages=find_packages(exclude=['build']),
     ext_modules=[
         CppExtension(
-            '_C',
+            '_XLAC',
             torch_xla_sources,
             include_dirs=include_dirs,
             extra_compile_args=extra_compile_args,

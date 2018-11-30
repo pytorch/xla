@@ -234,8 +234,8 @@ class TestMulAdd(XlaTestCase):
         y = torch.rand(3, 5)
         model = XlaMulAdd()
         traced_model = torch.jit.trace(model, (x, y))
-        xla_model = torch_xla._C.XlaModule(traced_model)
-        inputs_xla = [torch_xla._C.XLATensor(x), torch_xla._C.XLATensor(y)]
+        xla_model = torch_xla._XLAC.XlaModule(traced_model)
+        inputs_xla = [torch_xla._XLAC.XLATensor(x), torch_xla._XLAC.XLATensor(y)]
         output_xla = xla_model((tuple(inputs_xla)))
         expected = model(x, y)
         self.assertEqualDbg(output_xla[0][0].to_tensor().data, expected.data)
@@ -317,9 +317,9 @@ class TestStack(XlaTestCase):
         for dim in [0, 1]:
             model = XlaStack(dim)
             traced_model = torch.jit.trace(model, (x, y))
-            xla_model = torch_xla._C.XlaModule(
+            xla_model = torch_xla._XLAC.XlaModule(
                 traced_model, differentiate=False)
-            inputs_xla = [torch_xla._C.XLATensor(x), torch_xla._C.XLATensor(y)]
+            inputs_xla = [torch_xla._XLAC.XLATensor(x), torch_xla._XLAC.XLATensor(y)]
             output_xla = xla_model((tuple(inputs_xla)))
             expected = model(x, y)
             self.assertEqualDbg(output_xla[0][0].to_tensor().data,
@@ -668,9 +668,9 @@ class TestNllLoss(TestCase):
         target = torch.empty(3, dtype=torch.long).random_(5)
         model = XlaNllLoss()
         traced_model = torch.jit.trace(model, (input, target))
-        xla_model = torch_xla._C.XlaModule(traced_model)
-        xla_inputs = [torch_xla._C.XLATensor(
-            input), torch_xla._C.XLATensor(target)]
+        xla_model = torch_xla._XLAC.XlaModule(traced_model)
+        xla_inputs = [torch_xla._XLAC.XLATensor(
+            input), torch_xla._XLAC.XLATensor(target)]
         output_xla = xla_model((tuple(xla_inputs)))
         expected = model(input, target)
         self.assertEqual(output_xla[0][0].to_tensor().data, expected.data)
@@ -682,8 +682,8 @@ class TestLongGraphChain(XlaTestCase):
         orig_y = torch.Tensor([[0.1, 0.2], [0.3, 0.4]])
         x = orig_x
         y = orig_y
-        xla_x = torch_xla._C.XLATensor(orig_x)
-        xla_y = torch_xla._C.XLATensor(orig_y)
+        xla_x = torch_xla._XLAC.XLATensor(orig_x)
+        xla_y = torch_xla._XLAC.XLATensor(orig_y)
         for i in range(0, 10000):
             x = x + 2 * y
             xla_x = xla_x.add(2, xla_y)
@@ -734,11 +734,11 @@ class TestGradients(XlaTestCase):
         ##############################################################
         # backward with XLA
         if xla:
-            xla_model = torch_xla._C.XlaModule(
+            xla_model = torch_xla._XLAC.XlaModule(
                 traced_model, use_full_conv_precision=True)
-            inputs_xla = [torch_xla._C.XLATensor(input) for input in inputs]
+            inputs_xla = [torch_xla._XLAC.XLATensor(input) for input in inputs]
             xla_model((tuple(inputs_xla)))
-            grads_output_xla = [torch_xla._C.XLATensor(grad_output)
+            grads_output_xla = [torch_xla._XLAC.XLATensor(grad_output)
                                 for grad_output in grad_outputs[:gradient.f_real_outputs]]
             xla_model.backward((tuple(grads_output_xla)))
             grad_inputs_xla = [input_xla.grad.to_tensor()
@@ -914,9 +914,9 @@ class TestGradients(XlaTestCase):
         target = torch.empty(3, dtype=torch.long).random_(5)
         model = XlaNllLoss()
         traced_model = torch.jit.trace(model, (input, target))
-        xla_model = torch_xla._C.XlaModule(traced_model)
-        xla_inputs = [torch_xla._C.XLATensor(
-            input), torch_xla._C.XLATensor(target)]
+        xla_model = torch_xla._XLAC.XlaModule(traced_model)
+        xla_inputs = [torch_xla._XLAC.XLATensor(
+            input), torch_xla._XLAC.XLATensor(target)]
         output_xla = xla_model((tuple(xla_inputs)))
         xla_model.backward(*output_xla)
         output = model(input, target)
@@ -942,8 +942,8 @@ class TestOptimizer(XlaTestCase):
         orig_y = torch.Tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
         x = orig_x
         y = orig_y
-        xla_x = torch_xla._C.XLATensor(orig_x)
-        xla_y = torch_xla._C.XLATensor(orig_y)
+        xla_x = torch_xla._XLAC.XLATensor(orig_x)
+        xla_y = torch_xla._XLAC.XLATensor(orig_y)
         self.assertEqualDbg(x.add_(2, y).mul_(y),
                             xla_x.add_(2, xla_y).mul_(xla_y).to_tensor())
         self.assertEqualDbg(x.add_(y).mul_(y),
@@ -954,9 +954,9 @@ class TestOptimizer(XlaTestCase):
         orig_y = torch.Tensor([[0.1, 0.2], [0.3, 0.4]])
         x = orig_x
         y = orig_y
-        xla_x = torch_xla._C.XLATensor(orig_x)
-        xla_y = torch_xla._C.XLATensor(orig_y)
-        xla_ones = torch_xla._C.XLATensor(torch.ones_like(x))
+        xla_x = torch_xla._XLAC.XLATensor(orig_x)
+        xla_y = torch_xla._XLAC.XLATensor(orig_y)
+        xla_ones = torch_xla._XLAC.XLATensor(torch.ones_like(x))
         self.assertEqualDbg(x + 3 * y, xla_x.add(3, xla_y).to_tensor())
         self.assertEqualDbg(x * y, xla_x.mul(xla_y).to_tensor())
         z = (x + 9) * (y + 3)
@@ -972,9 +972,9 @@ class TestOptimizer(XlaTestCase):
         input = torch.randn(4, 4, requires_grad=True)
         model = nn.Linear(4, 20)
         traced_model = torch.jit.trace(model, input)
-        xla_model = torch_xla._C.XlaModule(
+        xla_model = torch_xla._XLAC.XlaModule(
             traced_model, use_full_conv_precision=True)
-        input_xla = [torch_xla._C.XLATensor(input)]
+        input_xla = [torch_xla._XLAC.XLATensor(input)]
         xla_model((tuple(input_xla)))
         xla_optimizer = optim.SGD(xla_model.parameters()[0], lr=lr,
                                   momentum=momentum, weight_decay=weight_decay)
@@ -982,7 +982,7 @@ class TestOptimizer(XlaTestCase):
                               weight_decay=weight_decay)
         output = model(input)
         grad_output = torch.randn(*output.shape)  # random gradients
-        grad_output_xla = [torch_xla._C.XLATensor(grad_output)]
+        grad_output_xla = [torch_xla._XLAC.XLATensor(grad_output)]
         output.backward(grad_output)
         xla_model.backward((tuple(grad_output_xla)))
         if do_zero_grad:
