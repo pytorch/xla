@@ -1,6 +1,6 @@
 build/
 dist/
-torch_xla.egg-info/
+*.egg-info/
 torch_xla/lib/
 */**/__pycache__
 
