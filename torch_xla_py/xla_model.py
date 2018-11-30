@@ -379,13 +379,13 @@ def _create_wrapped_model_backward_grads(model_fn, inputs, target):
 
 class XlaModel(object):
     def __init__(self, model, inputs, target=None, loss_fn=None, num_cores=1,
-                 devices=None, full_conv_precision=False):
+                 devices=None, loader_prefetch=8, full_conv_precision=False):
         self._model = model
         self._model_fn = _wrap_module(model, loss_fn) if loss_fn else model
         self._loss_fn = loss_fn
         self._num_cores = num_cores
         self._devices = list(devices) if devices else None
-        self._loader_prefetch = 8
+        self._loader_prefetch = loader_prefetch
         self._epoch = 0
         if loss_fn:
             assert target is not None

@@ -1,22 +1,7 @@
-import argparse
-import os
-import sys
+import test_utils
 
-parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument('--datadir', type=str, default='/tmp/mnist-data')
-parser.add_argument('--num_cores', type=int, default=1)
-parser.add_argument('--batch_size', type=int, default=256)
-parser.add_argument('--num_epochs', type=int, default=10)
-parser.add_argument('--num_workers', type=int, default=4)
-parser.add_argument('--target_accuracy', type=float, default=98.0)
-parser.add_argument('--tidy', action='store_true')
-parser.add_argument('--metrics_debug', action='store_true')
-FLAGS, leftovers = parser.parse_known_args()
-sys.argv = [sys.argv[0]] + leftovers
-# Setup import folders.
-_XLA_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
-sys.path.append(os.path.join(os.path.dirname(_XLA_FOLDER), 'test'))
-sys.path.insert(0, _XLA_FOLDER)
+FLAGS = test_utils.parse_common_options(
+    datadir='/tmp/mnist-data', batch_size=256, target_accuracy=98.0)
 
 from common_utils import TestCase, run_tests
 import shutil
