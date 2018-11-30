@@ -3,8 +3,8 @@ import os
 import sys
 
 parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument('--train_dir', type=str, default='/tmp/ILSVRC2012_img_train')
-parser.add_argument('--test_dir', type=str, default='/tmp/ILSVRC2012_img_test')
+parser.add_argument('--train_dir', type=str, default='/tmp/imagenet/train')
+parser.add_argument('--test_dir', type=str, default='/tmp/imagenet/val')
 parser.add_argument('--num_cores', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--num_epochs', type=int, default=15)
