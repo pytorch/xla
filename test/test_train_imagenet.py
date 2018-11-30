@@ -9,7 +9,6 @@ parser.add_argument('--num_cores', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--num_epochs', type=int, default=15)
 parser.add_argument('--num_workers', type=int, default=4)
-parser.add_argument('--tidy', action='store_true')
 parser.add_argument('--metrics_debug', action='store_true')
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
@@ -93,9 +92,6 @@ class TrainImageNet(TestCase):
 
     def tearDown(self):
         super(TrainImageNet, self).tearDown()
-        if FLAGS.tidy:
-            shutil.rmtree(FLAGS.train_dir)
-            shutil.rmtree(FLAGS.test_dir)
 
     def test_accurracy(self):
         # TODO: figure out accuracy target, make it trivially true for now.
