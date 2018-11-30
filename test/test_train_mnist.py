@@ -87,7 +87,7 @@ def train_mnist():
         xla_model.train(train_loader, optimizer, FLAGS.batch_size,
                         log_interval=log_interval)
         if FLAGS.metrics_debug:
-            print(torch_xla._C._xla_metrics_report())
+            print(torch_xla._XLAC._xla_metrics_report())
         accuracy = xla_model.test(test_loader,
                                   xm.category_eval_fn(F.nll_loss),
                                   FLAGS.batch_size)
