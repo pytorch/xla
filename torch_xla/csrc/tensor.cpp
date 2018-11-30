@@ -133,7 +133,7 @@ std::vector<xla::int64> GetXlaStrides(const xla::Shape& shape) {
   return strides;
 }
 
-std::vector<xla::int64> GetIterationDimanesions(const xla::Shape& shape) {
+std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
   // Return the most minor dimension order, to iterate the literal memory in a
   // cache friendly way.
   // Another strategy could be to return the higher value dimension first, to
@@ -168,7 +168,7 @@ xla::Literal TensorToLiteral(const at::Tensor& tensor,
     const auto& tensor_strides = contiguous_tensor.strides();
     const auto& xla_tensor_strides = GetXlaStrides(shape);
     std::vector<xla::int64> indices(tensor_sizes.size());
-    std::vector<xla::int64> iter_dims = GetIterationDimanesions(shape);
+    std::vector<xla::int64> iter_dims = GetIterationDimensions(shape);
     xla::int64 n = 0;
     while (n < tensor_sizes.size()) {
       StridedCopy(literal_data.data() +
