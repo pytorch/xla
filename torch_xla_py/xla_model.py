@@ -7,16 +7,11 @@ import time
 import torch
 import torch.nn as nn
 import torch_xla
+import torch_xla_py.utils as xu
+import torch_xla_py.keyd_queue as kq
 
 MultiBatch = collections.namedtuple('MultiBatch',
                                     ['batch_number', 'inputs', 'targets'])
-
-class Cleaner(object):
-    def __init__(self, func):
-        self.func = func
-
-    def __del__(self):
-        self.func()
 
 
 class LinearIndex(object):
@@ -106,10 +101,6 @@ def backward_passes(graph):
     torch._C._jit_pass_dce(graph)
 
 
-def as_list(t):
-    return t if isinstance(t, (tuple, list)) else [t]
-
-
 def convert_to_xla_tensors(inputs, devices=None):
     arena = ToXlaTensorArena()
     tensors = _collect_tensors(arena, torch.Tensor, inputs, devices=devices)
@@ -140,20 +131,6 @@ def create_xla_model(model, inputs, num_cores=1, devices=None,
         xla_model.set_inputs_gardients(input_gradients)
     xla_model(*inputs_xla)
     return xla_model, traced_model
-
-
-def shape(inputs):
-    cshape = []
-    if isinstance(inputs, (list, tuple)):
-        lshape = None
-        for input in inputs:
-            ishape = shape(input)
-            if lshape is None:
-                lshape = ishape
-            else:
-                assert lshape == ishape
-        cshape.extend([len(inputs)] + (lshape or []))
-    return cshape
 
 
 def update_optimizer_state(optimizer, name, value):
@@ -187,16 +164,6 @@ def read_multi_batch(train_loader_enumerator, batch_size, splits=1,
         if splitno == splits:
             return MultiBatch(batch_number=batch_number, inputs=inputs,
                               targets=targets)
-
-
-def flatten_nested_tuple(inputs):
-    flat = []
-    if isinstance(inputs, (list, tuple)):
-        for input in inputs:
-            flat.extend(flatten_nested_tuple(input))
-    else:
-        flat.append(inputs)
-    return tuple(flat)
 
 
 def zeros_like(p):
@@ -233,12 +200,6 @@ def get_flat_tensors(xla_tensors):
     return torch_xla._XLAC._xla_to_tensors(flat_xla_tensors)
 
 
-def _append_label_to_tensor_list(tensors, label):
-    tensors_and_label = list(tensors)
-    tensors_and_label.append(label)
-    return tensors_and_label
-
-
 # Compute the given loss function for the given XLA output tensors and the
 # labels.
 # Returns a tuple with the losses and the outputs converted to a Torch tensor.
@@ -254,9 +215,8 @@ def xla_loss(loss_fn, output_xla_tensors, labels):
             flat_tensors[flat_index].requires_grad = True
             replica_outputs.append(flat_tensors[flat_index])
             flat_index += 1
-        replica_outputs_and_label = _append_label_to_tensor_list(
-            replica_outputs, labels[i])
-        losses.append(loss_fn(*replica_outputs_and_label))
+        replica_outputs.append(labels[i])
+        losses.append(loss_fn(*replica_outputs))
         outputs.append(tuple(replica_outputs))
     return losses, tuple(outputs)
 
@@ -288,11 +248,17 @@ class LoaderWrapper(object):
         self._num_cores = num_cores
         self._devices = list(devices) if devices else None
         self._fused_mode = fused_mode
+        self._batch_number = 0
         self._done = False
-        self._queue = queue.Queue(maxsize=self._prefetch_size)
-        self._thread = threading.Thread(target=self._worker)
-        self._thread.daemon = True
-        self._thread.start()
+        self._loader_queue = kq.Queue(maxsize=self._prefetch_size)
+        self._queue = kq.KeydQueue(maxsize=self._prefetch_size)
+        thread = threading.Thread(target=self._loader_worker)
+        thread.daemon = True
+        thread.start()
+        for _ in range(0, prefetch_size):
+            thread = threading.Thread(target=self._worker)
+            thread.daemon = True
+            thread.start()
 
     def __iter__(self):
         return self
@@ -301,25 +267,18 @@ class LoaderWrapper(object):
         return self.next()
 
     def next(self):
-        item = self._queue.get()
+        item = self._queue.get(self._batch_number)
         if item is None:
             raise StopIteration
-        return item
+        self._batch_number += 1
+        return self._batch_number - 1, item
 
     def close(self):
         self._done = True
-        # Flush the queue so that the write thread eventually stuck waiting for
-        # space, will be able to queue its item and discover the _done flag at
-        # the next iteration.
-        while True:
-            try:
-                item = self._queue.get(block=False)
-                if item is None:
-                    break
-            except queue.Empty:
-                break
+        self._queue.close()
+        self._loader_queue.close()
 
-    def _worker(self):
+    def _loader_worker(self):
         inputs = []
         targets = []
         batch_number = 0
@@ -334,18 +293,26 @@ class LoaderWrapper(object):
                 inputs.append([data])
                 targets.append(target)
             if len(inputs) == self._num_cores:
-                inputs_xla = convert_to_xla_tensors(
-                    inputs, devices=self._devices)
-                if targets:
-                    targets_xla = convert_to_xla_tensors(
-                        targets, devices=self._devices)
-                else:
-                    targets_xla = []
-                self._queue.put((batch_number, (inputs_xla, targets_xla)))
+                self._loader_queue.put((batch_number, (inputs, targets)))
                 inputs = []
                 targets = []
-        # Enqueue the end-of-life None so that eventual readers will quit.
-        self._queue.put(None)
+        self._loader_queue.close_write()
+
+    def _worker(self):
+        while True:
+            item = self._loader_queue.get()
+            if item is None:
+                break
+            batch_number, (inputs, targets) = item
+            inputs_xla = convert_to_xla_tensors(
+                inputs, devices=self._devices)
+            if targets:
+                targets_xla = convert_to_xla_tensors(
+                    targets, devices=self._devices)
+            else:
+                targets_xla = []
+            self._queue.put(batch_number, (inputs_xla, targets_xla))
+        self._queue.close_write()
 
 
 def _wrap_module(module, loss_fn):
@@ -363,7 +330,7 @@ def _wrap_module(module, loss_fn):
 
 
 def _create_wrapped_model_backward_grads(model_fn, inputs, target):
-    inputs_and_target = _append_label_to_tensor_list(inputs, target)
+    inputs_and_target = xu.list_copy_append(inputs, target)
     outputs = model_fn(*inputs_and_target)
     # Loss and Output.
     assert len(outputs) == 2
@@ -379,7 +346,7 @@ def _create_wrapped_model_backward_grads(model_fn, inputs, target):
 
 class XlaModel(object):
     def __init__(self, model, inputs, target=None, loss_fn=None, num_cores=1,
-                 devices=None, loader_prefetch=8, full_conv_precision=False):
+                 devices=None, loader_prefetch=4, full_conv_precision=False):
         self._model = model
         self._model_fn = _wrap_module(model, loss_fn) if loss_fn else model
         self._loss_fn = loss_fn
@@ -391,9 +358,9 @@ class XlaModel(object):
             assert target is not None
             loss_output_grads = _create_wrapped_model_backward_grads(
                 self._model_fn, inputs, target)
-            inputs_and_target = _append_label_to_tensor_list(inputs, target)
+            inputs_and_target = xu.list_copy_append(inputs, target)
             self._xla_model, self._traced_model = create_xla_model(
-                self._model_fn, tuple(inputs_and_target), num_cores=self._num_cores,
+                self._model_fn, inputs_and_target, num_cores=self._num_cores,
                 devices=devices, input_gradients=loss_output_grads,
                 full_conv_precision=full_conv_precision)
         else:
@@ -431,13 +398,13 @@ class XlaModel(object):
         return self._xla_model.parameters()
 
     def parameters_list(self):
-        return flatten_nested_tuple(self.parameters())
+        return xu.flatten_nested_tuple(self.parameters())
 
     def parameters_buffers(self):
         return self._xla_model.parameters_buffers()
 
     def parameters_buffers_list(self):
-        return flatten_nested_tuple(self.parameters_buffers())
+        return xu.flatten_nested_tuple(self.parameters_buffers())
 
     def _compute_loss(self, xla_outputs):
         xla_losses = []
@@ -457,7 +424,7 @@ class XlaModel(object):
         wloader = LoaderWrapper(samples_loader, self._loader_prefetch,
                                 batch_size, num_cores=self._num_cores,
                                 devices=self._devices, fused_mode=True)
-        wloader_cleaner = Cleaner(wloader.close)
+        wloader_cleaner = xu.Cleaner(wloader.close)
         processed_samples = 0
         loss = None
         start_time = time.time()
@@ -486,7 +453,7 @@ class XlaModel(object):
         wloader = LoaderWrapper(samples_loader, self._loader_prefetch, batch_size,
                                 num_cores=self._num_cores, devices=self._devices,
                                 fused_mode=True)
-        wloader_cleaner = Cleaner(wloader.close)
+        wloader_cleaner = xu.Cleaner(wloader.close)
         test_loss = 0
         count = 0
         correct = 0
