@@ -412,7 +412,7 @@ class XlaModel(object):
         return []
 
     def __call__(self, *args):
-        if self._loss_fn is None:
+        if self._loss_fn is None and self._num_cores == 1:
             # Internally the interface to the XLA module is always in replicated
             # mode, where num_replicas=1 is just a case of replication.
             outputs = run_xla_model(self._xla_model, [args],
