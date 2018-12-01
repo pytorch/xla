@@ -49,14 +49,12 @@ xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfig(
   return padding_config;
 }
 
-xla::XlaComputation XlaHelpers::CreateAddComputation() {
+xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
   xla::XlaBuilder reduction_builder("xla_add_computation");
-  const auto x = xla::Parameter(
-      &reduction_builder, 0,
-      xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {}), "x");
-  const auto y = xla::Parameter(
-      &reduction_builder, 1,
-      xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {}), "y");
+  const auto x = xla::Parameter(&reduction_builder, 0,
+                                xla::ShapeUtil::MakeShape(type, {}), "x");
+  const auto y = xla::Parameter(&reduction_builder, 1,
+                                xla::ShapeUtil::MakeShape(type, {}), "y");
   Add(x, y);
   return reduction_builder.Build().ConsumeValueOrDie();
 }
