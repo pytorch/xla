@@ -24,6 +24,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
+import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
 import unittest
 
@@ -179,7 +180,7 @@ def _xla_run(model, input, device='TPU'):
         output = []
         for xla_replica_outputs in output_xla:
             replica_outputs = []
-            for o in xm.as_list(xla_replica_outputs):
+            for o in xu.as_list(xla_replica_outputs):
                 replica_outputs.append(o.to_tensor())
             output.append(tuple(replica_outputs))
         return tuple(output)
@@ -216,8 +217,8 @@ class XlaTestCase(TestCase):
     def compareReplicated(self, model, inputs, xla_outputs):
         self.assertEqual(len(inputs), len(xla_outputs))
         for i, input in enumerate(inputs):
-            expected = xm.as_list(model(*input))
-            xla_output = xm.as_list(xla_outputs[i])
+            expected = xu.as_list(model(*input))
+            xla_output = xu.as_list(xla_outputs[i])
             self.assertEqual(len(expected), len(xla_output))
             for j, expected_tensor in enumerate(expected):
                 self.assertEqualDbg(xla_output[j], expected_tensor)
@@ -712,7 +713,7 @@ class TestGradients(XlaTestCase):
 
         # forward function
         raw_outputs = exec_f(*inputs_params_buffers)
-        raw_outputs = xm.as_list(raw_outputs)
+        raw_outputs = xu.as_list(raw_outputs)
         intermediate_outputs = [raw_output for raw_output in raw_outputs[gradient.f_real_outputs:]
                                 if raw_output.dtype == torch.float32]
         outputs = raw_outputs[:gradient.f_real_outputs]
@@ -729,7 +730,7 @@ class TestGradients(XlaTestCase):
                              for i in gradient.df_input_captured_outputs]
 
         grad_inputs = exec_df(*raw_grad_outputs)
-        grad_inputs = xm.as_list(grad_inputs)
+        grad_inputs = xu.as_list(grad_inputs)
 
         ##############################################################
         # backward with XLA
@@ -748,7 +749,7 @@ class TestGradients(XlaTestCase):
         ##############################################################
         # forward + backward with regular autograd / torch
         outputs_gt = model(*inputs)
-        outputs_gt = xm.as_list(outputs_gt)
+        outputs_gt = xu.as_list(outputs_gt)
         grad_inputs_gt = torch.autograd.grad(outputs_gt,
                                              inputs_params,
                                              grad_outputs,
