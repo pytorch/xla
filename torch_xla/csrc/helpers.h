@@ -54,7 +54,7 @@ class XlaHelpers {
       const std::vector<int64_t>& padding);
 
   // Creates a binary add computation.
-  static xla::XlaComputation CreateAddComputation();
+  static xla::XlaComputation CreateAddComputation(xla::PrimitiveType type);
 
   // Converts the given scalar type to an XLA primitive type.
   static xla::PrimitiveType MakeXlaPrimitiveType(
