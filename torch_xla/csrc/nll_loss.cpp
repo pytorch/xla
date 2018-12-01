@@ -63,7 +63,8 @@ xla::XlaOp BuildNllLoss(const Node* node, const xla::XlaOp& logits,
       /*off_value=*/zero);
   // Compute sum(-one_hot_labels * logits) / batch.
   xla::XlaOp mul = xla::Mul(xla::Neg(one_hot_labels), logits);
-  xla::XlaComputation add_func = XlaHelpers::CreateAddComputation();
+  xla::XlaComputation add_func =
+      XlaHelpers::CreateAddComputation(logits_shape.element_type());
   xla::XlaOp batch =
       XlaHelpers::ScalarValue<float>(logits_shape.dimensions(0), builder);
   return xla::ReduceAll(mul, zero, add_func) / batch;

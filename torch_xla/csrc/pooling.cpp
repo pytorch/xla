@@ -21,14 +21,12 @@ struct PoolingOpAttributes {
   std::vector<std::pair<xla::int64, xla::int64>> padding;
 };
 
-xla::XlaComputation CreateGeComputation() {
+xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
   xla::XlaBuilder reduction_builder("xla_ge_computation");
-  const auto x = xla::Parameter(
-      &reduction_builder, 0,
-      xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {}), "x");
-  const auto y = xla::Parameter(
-      &reduction_builder, 1,
-      xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {}), "y");
+  const auto x = xla::Parameter(&reduction_builder, 0,
+                                xla::ShapeUtil::MakeShape(type, {}), "x");
+  const auto y = xla::Parameter(&reduction_builder, 1,
+                                xla::ShapeUtil::MakeShape(type, {}), "y");
   xla::Ge(x, y);
   return reduction_builder.Build().ConsumeValueOrDie();
 }
@@ -76,7 +74,9 @@ void CheckAvgPool2DIsSupported(const Node* node) {
 xla::XlaOp BuildMaxPool2d(const Node* node, const xla::XlaOp& input) {
   const auto pooling_op_attributes = Pooling2DOpAttributes(node);
   auto builder = input.builder();
-  const auto init_value = xla::LiteralUtil::MinValue(xla::PrimitiveType::F32);
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const auto init_value =
+      xla::LiteralUtil::MinValue(input_shape.element_type());
   const auto xla_init_value = xla::ConstantLiteral(builder, init_value);
   const auto padding_config = XlaHelpers::MakeXlaPaddingConfig(
       node->get<std::vector<int64_t>>(attr::padding).value());
@@ -93,9 +93,11 @@ xla::XlaOp BuildMaxPool2dBackward(const Node* node,
                                   const xla::XlaOp& out_backprop,
                                   const xla::XlaOp& input) {
   auto builder = out_backprop.builder();
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto init_value = XlaHelpers::ScalarValue<float>(0, builder);
-  const auto select = CreateGeComputation();
-  const auto scatter = XlaHelpers::CreateAddComputation();
+  const auto select = CreateGeComputation(input_shape.element_type());
+  const auto scatter =
+      XlaHelpers::CreateAddComputation(input_shape.element_type());
   const auto pooling_op_attributes = Pooling2DOpAttributes(node);
   std::vector<std::pair<xla::int64, xla::int64>> window_padding;
   window_padding.resize(2);

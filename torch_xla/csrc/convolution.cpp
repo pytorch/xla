@@ -292,9 +292,10 @@ Conv2DGrads BuildConv2dBackward(
   const auto grad_weight =
       BuildThnnConv2dBackwardWeight(node, grad, input, conv_precision);
   auto builder = grad.builder();
-  const auto grad_bias =
-      xla::Reduce(grad, XlaHelpers::ScalarValue<float>(0, builder),
-                  XlaHelpers::CreateAddComputation(), {0, 2, 3});
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const auto grad_bias = xla::Reduce(
+      grad, XlaHelpers::ScalarValue<float>(0, builder),
+      XlaHelpers::CreateAddComputation(input_shape.element_type()), {0, 2, 3});
   return {grad_input, grad_weight, grad_bias};
 }
 

@@ -21,17 +21,6 @@ namespace jit {
 
 namespace {
 
-xla::PrimitiveType TensorToXlaType(at::ScalarType dtype) {
-  switch (dtype) {
-    case at::ScalarType::Float:
-      return xla::PrimitiveType::F32;
-    case at::ScalarType::Long:
-      return xla::PrimitiveType::S64;
-    default:
-      LOG(FATAL) << "Tensor type not supported: " << dtype;
-  }
-}
-
 // The tensors arena tracks all the XLA tensors which are currently live. This
 // is used to create XLA computation "barriers" in order to flush pending
 // operations and ensure the same XLA computations are created during the
@@ -825,7 +814,8 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor,
   if (shape == nullptr) {
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
     computed_shape = MakeTorchTensorLayout(
-        dimensions, TensorToXlaType(tensor.type().scalarType()));
+        dimensions,
+        XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()));
     shape = &computed_shape;
   }
   switch (tensor.type().scalarType()) {
