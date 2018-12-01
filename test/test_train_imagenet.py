@@ -18,6 +18,17 @@ import torch_xla_py.xla_model as xm
 import unittest
 
 
+def _cross_entropy_loss_eval_fn(cross_entropy_loss):
+    def eval_fn(output, target):
+        loss = cross_entropy_loss(output, target).item()
+        # Get the index of the max log-probability.
+        pred = output.max(1, keepdim=True)[1]
+        correct = pred.eq(target.view_as(pred)).sum().item()
+        return loss, correct
+
+    return eval_fn
+
+
 def train_imagenet():
     print('==> Preparing data..')
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -70,7 +81,7 @@ def train_imagenet():
         if FLAGS.metrics_debug:
             print(torch_xla._C._xla_metrics_report())
         accuracy = xla_model.test(test_loader,
-                                  xm.category_eval_fn(cross_entropy_loss),
+                                  _cross_entropy_loss_eval_fn(cross_entropy_loss),
                                   FLAGS.batch_size)
         xm.update_optimizer_state(optimizer, 'lr', lambda x: x / 1.025)
     return accuracy
