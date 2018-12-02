@@ -1,5 +1,7 @@
 #include "helpers.h"
 
+#include "tensorflow/compiler/xla/primitive_util.h"
+
 namespace torch {
 namespace jit {
 
@@ -78,7 +80,7 @@ std::vector<xla::int64> XlaHelpers::ShapeSizes(const xla::Shape& shape) {
 }
 
 xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
-  return op.builder()->GetShape(op).ValueOrDie();
+  return op.builder()->GetShape(op).ConsumeValueOrDie();
 }
 
 xla::PrimitiveType XlaHelpers::TypeOfXlaOp(const xla::XlaOp& op) {
@@ -92,12 +94,22 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
   if (type1 == type2) {
     return std::pair<xla::XlaOp, xla::XlaOp>(op1, op2);
   }
-  if (type1 == xla::PrimitiveType::F32) {
+  xla::int64 size1 = xla::ShapeUtil::ByteSizeOfPrimitiveType(type1);
+  xla::int64 size2 = xla::ShapeUtil::ByteSizeOfPrimitiveType(type2);
+  if (xla::primitive_util::IsFloatingPointType(type1)) {
+    if (!xla::primitive_util::IsFloatingPointType(type2) || size1 >= size2) {
+      return std::pair<xla::XlaOp, xla::XlaOp>(
+          op1, xla::ConvertElementType(op2, type1));
+    }
     return std::pair<xla::XlaOp, xla::XlaOp>(
-        op1, xla::ConvertElementType(op2, type1));
+        xla::ConvertElementType(op1, type2), op2);
   }
-  return std::pair<xla::XlaOp, xla::XlaOp>(xla::ConvertElementType(op1, type2),
-                                           op2);
+  if (xla::primitive_util::IsFloatingPointType(type2) || size2 >= size1) {
+    return std::pair<xla::XlaOp, xla::XlaOp>(
+        xla::ConvertElementType(op1, type2), op2);
+  }
+  return std::pair<xla::XlaOp, xla::XlaOp>(op1,
+                                           xla::ConvertElementType(op2, type1));
 }
 
 }  // namespace jit
