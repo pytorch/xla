@@ -8,10 +8,14 @@ BatchNormOutput BuildBatchNorm(const Node* node, const xla::XlaOp& input,
                                const xla::XlaOp& weight,
                                const xla::XlaOp& bias) {
   auto builder = input.builder();
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const float eps_value = node->get<at::Scalar>(attr::eps).value().to<float>();
-  const auto eps = XlaHelpers::ScalarValue(eps_value, builder);
-  const auto one = XlaHelpers::ScalarValue<float>(1, builder);
-  const auto half = XlaHelpers::ScalarValue<float>(0.5f, builder);
+  const auto eps =
+      XlaHelpers::ScalarValue(eps_value, input_shape.element_type(), builder);
+  const auto one =
+      XlaHelpers::ScalarValue<float>(1, input_shape.element_type(), builder);
+  const auto half =
+      XlaHelpers::ScalarValue<float>(0.5f, input_shape.element_type(), builder);
 
   auto outputs = xla::BatchNormTraining(input, weight, bias, eps_value, 1);
   auto output = xla::GetTupleElement(outputs, 0);
@@ -27,10 +31,14 @@ BatchNormGrads BuildBatchNormBackward(const Node* node, const xla::XlaOp& grad,
                                       const xla::XlaOp& save_mean,
                                       const xla::XlaOp& save_invstd_eps) {
   auto builder = grad.builder();
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const float eps_value = node->get<at::Scalar>(attr::eps).value().to<float>();
-  const auto eps = XlaHelpers::ScalarValue(eps_value, builder);
-  const auto one = XlaHelpers::ScalarValue<float>(1, builder);
-  const auto two = XlaHelpers::ScalarValue<float>(2, builder);
+  const auto eps =
+      XlaHelpers::ScalarValue(eps_value, input_shape.element_type(), builder);
+  const auto one =
+      XlaHelpers::ScalarValue<float>(1, input_shape.element_type(), builder);
+  const auto two =
+      XlaHelpers::ScalarValue<float>(2, input_shape.element_type(), builder);
   const auto save_var = xla::Pow(one / save_invstd_eps, two) - eps;
   const auto grads = xla::BatchNormGrad(input, weight, save_mean, save_var,
                                         grad, eps_value, 1);

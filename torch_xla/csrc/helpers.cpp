@@ -1,6 +1,7 @@
 #include "helpers.h"
 
 #include "tensorflow/compiler/xla/primitive_util.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 
 namespace torch {
 namespace jit {
@@ -63,9 +64,11 @@ xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
 
 xla::PrimitiveType XlaHelpers::MakeXlaPrimitiveType(
     const at::ScalarType scalar_type) {
+  // When PyTorch will support native BF16 type, the global configuration can be
+  // replaced (or augmented) with the proper mapping.
   switch (scalar_type) {
     case at::ScalarType::Float:
-      return xla::PrimitiveType::F32;
+      return UseBF16() ? xla::PrimitiveType::BF16 : xla::PrimitiveType::F32;
     case at::ScalarType::Long:
       return xla::PrimitiveType::S64;
     default:
@@ -110,6 +113,11 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
   }
   return std::pair<xla::XlaOp, xla::XlaOp>(op1,
                                            xla::ConvertElementType(op2, type1));
+}
+
+bool XlaHelpers::UseBF16() {
+  static int use_fp16 = xla::sys_util::GetEnvInt("XLA_USE_BF16", 0);
+  return use_fp16 != 0;
 }
 
 }  // namespace jit

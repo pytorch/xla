@@ -45,7 +45,8 @@ xla::XlaOp BuildLogSoftmax(const Node* node, const xla::XlaOp& logits) {
   const auto shifted_logits =
       xla::Sub(logits, logits_max, broadcast_dimensions);
   const auto exp_shifted = xla::Exp(shifted_logits);
-  const auto init_value = XlaHelpers::ScalarValue<float>(0, builder);
+  const auto init_value =
+      XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder);
   const auto reduce = xla::Reduce(
       exp_shifted, init_value,
       XlaHelpers::CreateAddComputation(logits_shape.element_type()), {dim});
@@ -70,7 +71,8 @@ xla::XlaOp BuildLogSoftmaxGrad(const Node* node, const xla::XlaOp& grad_output,
 
   auto builder = grad_output.builder();
   xla::Shape output_shape = XlaHelpers::ShapeOfXlaOp(output);
-  const auto init_value = XlaHelpers::ScalarValue<float>(0, builder);
+  const auto init_value =
+      XlaHelpers::ScalarValue<float>(0, output_shape.element_type(), builder);
   const auto sum = xla::Reduce(
       grad_output, init_value,
       XlaHelpers::CreateAddComputation(output_shape.element_type()), {dim});
