@@ -12,6 +12,7 @@
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
+#include "tensorflow/compiler/xla/xla_client/xrt_local_service.h"
 #include "tensorflow/core/util/device_name_utils.h"
 
 namespace xla {
@@ -32,6 +33,7 @@ XrtComputationClient::XrtComputationClient(
               << dev_target.second;
   }
   LOG(INFO) << "XRT default device: " << default_device_target->first;
+  MaybeCreateLocalService(options_);
   InitializeDevices();
 }
 
@@ -151,7 +153,7 @@ XrtComputationClient::ExecuteComputation(
   ApiCallInitialize();
 
   XrtSessionCache::SessionMap session_map;
-  std::string effective_device = GetEffectiveDevice(device);
+  string effective_device = GetEffectiveDevice(device);
   tensorflow::ClientSession::FeedType feed_inputs;
   std::vector<ExecuteContext> exec_ops = CreateExecuteOps(
       &session_map, computation, BuildParallelArguments(arguments),
@@ -769,6 +771,26 @@ XrtComputationClient::BuildParallelArguments(
   para_arguments[0].insert(para_arguments[0].end(), arguments.begin(),
                            arguments.end());
   return para_arguments;
+}
+
+void XrtComputationClient::MaybeCreateLocalService(
+    const XrtComputationClient::Options& options) {
+  int task_index = -1;
+  string job_name;
+  string cluster_spec;
+  for (auto& worker_target : options.workers_map) {
+    if (worker_target.second.compare(0, 17, "grpc://localhost:") == 0) {
+      job_name = worker_target.first.name;
+      task_index = worker_target.first.task_no;
+      cluster_spec = absl::StrCat(worker_target.first.name, "|",
+                                  worker_target.second.substr(7));
+    }
+  }
+  if (!cluster_spec.empty()) {
+    XrtLocalService* service =
+        new XrtLocalService(cluster_spec, job_name, task_index);
+    service->Start();
+  }
 }
 
 }  // namespace xla

@@ -13,8 +13,12 @@
 
 namespace xla {
 
+// Caches XrtSession objects. The XrtSession objects handed out by this class
+// will be at exclusive use of the caller.
 class XrtSessionCache {
  public:
+  // A reference to an existing XrtSession. Its destructor will return it to the
+  // cache.
   class Ref {
    public:
     Ref(XrtSessionCache* cache, std::shared_ptr<XrtSession> session)
@@ -24,7 +28,7 @@ class XrtSessionCache {
 
     Ref(const Ref&) = delete;
 
-    ~Ref() { Detach(); }
+    ~Ref() { ReturnToCache(); }
 
     Ref& operator=(Ref&& rhs) {
       if (&rhs != this) {
@@ -41,13 +45,13 @@ class XrtSessionCache {
 
    private:
     void MoveFrom(Ref&& rhs) {
-      Detach();
+      ReturnToCache();
       cache_ = rhs.cache_;
       rhs.cache_ = nullptr;
       session_ = std::move(rhs.session_);
     }
 
-    void Detach() {
+    void ReturnToCache() {
       if (cache_ != nullptr) {
         cache_->AddSession(std::move(session_));
         cache_ = nullptr;
@@ -58,10 +62,17 @@ class XrtSessionCache {
     std::shared_ptr<XrtSession> session_;
   };
 
+  // Map from session target to XrtSession reference.
   using SessionMap = std::map<string, Ref>;
 
+  // Retrieves a new session reference, for which the caller will have exclusive
+  // access. Once the reference object is destroyed, the session will be
+  // returned to the cache.
   Ref GetSession(const string& target);
 
+  // Retrieves an XRT session by first checking the references already stored in
+  // the session_map, and, if missing, one will be fetched from the cache and
+  // added to the session_map.
   XrtSession* GetSession(const string& target, SessionMap* session_map);
 
   void AddSession(std::shared_ptr<XrtSession> session);

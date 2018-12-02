@@ -287,6 +287,10 @@ class XrtComputationClient : public ComputationClient {
   static std::vector<std::vector<Data*>> BuildParallelArguments(
       tensorflow::gtl::ArraySlice<Data*> arguments);
 
+  // Checks whether a local GRPC service is required, and starts it if need it.
+  static void MaybeCreateLocalService(
+      const XrtComputationClient::Options& options);
+
   Options options_;
   std::mutex lock_;
   std::map<string, std::vector<int>> device_mesh_coords_;

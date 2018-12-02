@@ -17,7 +17,7 @@
 namespace xla {
 
 // Encapsulates an XRT session and its associated node cache. XrtSession are not
-// thread safe, but are always once byt one thread at a time. The
+// thread safe, but are always accessed by one thread at a time. The
 // XrtSessionCache will keep creating new sessions if not enough are available
 // to satisfy the threads requests.
 class XrtSession {

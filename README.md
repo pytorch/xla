@@ -50,17 +50,20 @@ To build:
 
 To run the tests, follow __one__ of the options below:
 
-* Run on CPU using the local client:
+* Run on CPU using the XLA local client:
 
   ```
   export XLA_USE_XRT=0 export XLA_GRPC_HOST="" XLA_PLATFORM="CPU"
   ```
 
-* Run on CPU using the XRT client:
+* Run on local CPU using the XRT client:
 
   ```
-  export XLA_USE_XRT=1 XRT_DEVICE_MAP="CPU:0;/job:localhost/replica:0/task:0/device:XLA_CPU:0" XRT_WORKERS="localhost:0;"
+  export XLA_USE_XRT=1 XRT_DEVICE_MAP="CPU:0;/job:localhost/replica:0/task:0/device:XLA_CPU:0"
+  export XRT_WORKERS="localhost:0;grpc://localhost:40934"
   ```
+  
+  Select any free TCP port you prefer instead of 40934 (totally arbitrary).
 
 * Run on Cloud TPU using the XRT client, use one of the following:
 
