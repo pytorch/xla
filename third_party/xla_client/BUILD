@@ -55,6 +55,8 @@ cc_library(
         "xla_computation_client.cc",
         "xla_util.cc",
         "xrt_computation_client.cc",
+        "xrt_session.cc",
+        "xrt_session_cache.cc",
     ],
     hdrs = [
         "computation_client.h",
@@ -67,6 +69,8 @@ cc_library(
         "xla_computation_client.h",
         "xla_util.h",
         "xrt_computation_client.h",
+        "xrt_session.h",
+        "xrt_session_cache.h",
     ],
     deps = [
         "//tensorflow/cc:cc_ops",

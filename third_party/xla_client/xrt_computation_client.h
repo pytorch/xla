@@ -15,6 +15,8 @@
 #include "tensorflow/cc/framework/scope.h"
 #include "tensorflow/cc/ops/standard_ops.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/xrt_session.h"
+#include "tensorflow/compiler/xla/xla_client/xrt_session_cache.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
 #include "tensorflow/compiler/xrt/cc/ops/xrt_compile_ops.h"
 #include "tensorflow/compiler/xrt/cc/ops/xrt_execute_op.h"
@@ -112,111 +114,6 @@ class XrtComputationClient : public ComputationClient {
   string GetDefaultDevice() const override;
 
  private:
-  struct SessionData {
-    SessionData(const tensorflow::SessionOptions& session_options)
-        : root(tensorflow::Scope::NewRootScope()),
-          session(root, session_options) {}
-
-    tensorflow::Scope root;
-    tensorflow::ClientSession session;
-  };
-
-  // A cached node captures that single node, or the mini-graph root node,
-  // together with the place-holders necessary to feed the node/sub-graph.
-  // The end-point node can be either a tensorflow Operation or an Output.
-  struct CachedNode {
-    CachedNode(tensorflow::Output output,
-               std::vector<tensorflow::ops::Placeholder> holders)
-        : output(std::move(output)), holders(std::move(holders)) {}
-    CachedNode(tensorflow::Operation operation,
-               std::vector<tensorflow::ops::Placeholder> holders)
-        : operation(std::move(operation)), holders(std::move(holders)) {}
-
-    absl::optional<tensorflow::Output> output;
-    absl::optional<tensorflow::Operation> operation;
-    std::vector<tensorflow::ops::Placeholder> holders;
-  };
-
-  // The node cache holds a set of CachedNode of the same kind (by the means of
-  // the NodeTypes entries).
-  // The NodeCache access is not thread safe, but its access is protected by the
-  // XrtComputationClient lock.
-  class NodeCache {
-   public:
-    // If a CachedNode object is avaialble, it will be dequeued and returned,
-    // otherwise nullptr is returned.
-    std::shared_ptr<CachedNode> Get() {
-      if (nodes_.empty()) {
-        return nullptr;
-      }
-      std::shared_ptr<CachedNode> node(std::move(nodes_.back()));
-      nodes_.pop_back();
-      return node;
-    }
-
-    void Add(std::shared_ptr<CachedNode> node) {
-      nodes_.push_back(std::move(node));
-    }
-
-   private:
-    std::deque<std::shared_ptr<CachedNode>> nodes_;
-  };
-
-  // This class is used to gather all the CachedNode objects used by a given
-  // computation client operation, and to release them all once it goes out of
-  // scope.
-  class NodesArena {
-    struct Entry {
-      Entry(NodeCache* cache, std::shared_ptr<CachedNode> node)
-          : cache(cache), node(std::move(node)) {}
-
-      NodeCache* cache;
-      std::shared_ptr<CachedNode> node;
-    };
-
-   public:
-    explicit NodesArena(XrtComputationClient* client) : client_(client) {}
-
-    ~NodesArena() {
-      std::lock_guard<std::mutex> lock(client_->lock_);
-      for (auto& entry : entries_) {
-        entry.cache->Add(std::move(entry.node));
-      }
-    }
-
-    const CachedNode& Add(NodeCache* cache, std::shared_ptr<CachedNode> node) {
-      entries_.emplace_back(cache, std::move(node));
-      return *entries_.back().node;
-    }
-
-   private:
-    XrtComputationClient* client_;
-    std::vector<Entry> entries_;
-  };
-
-  // Every "kind" of cached node (or group of nodes - mini graph), have an ID
-  // entry here.
-  enum class NodeTypes {
-    kCompileExecute,
-    kRead,
-    kAllocate,
-    kSubTuple,
-    kReleaseAllocationHandle,
-  };
-
-  struct NodeCacheKey {
-    NodeCacheKey(string device, NodeTypes type)
-        : device(std::move(device)), type(type) {}
-
-    bool operator<(const NodeCacheKey& rhs) const {
-      return type != rhs.type ? (type < rhs.type)
-                              : (device.compare(rhs.device) < 0);
-    }
-
-    string device;
-    NodeTypes type;
-  };
-
   // When we split a batch operation into per-session batches, we use this data
   // structure to collect the per-session work.
   struct SessionWork {
@@ -233,9 +130,12 @@ class XrtComputationClient : public ComputationClient {
     Shape result_shape;
   };
 
-  SessionData* GetSessionForTarget(const string& target) const;
-  SessionData* GetSessionForXrtDevice(const string& xrt_device) const;
-  SessionData* GetSessionForDevice(const string& device) const;
+  XrtSession* GetSessionForTarget(const string& target,
+                                  XrtSessionCache::SessionMap* session_map);
+  XrtSession* GetSessionForXrtDevice(const string& xrt_device,
+                                     XrtSessionCache::SessionMap* session_map);
+  XrtSession* GetSessionForDevice(const string& device,
+                                  XrtSessionCache::SessionMap* session_map);
 
   string GetEffectiveDevice(const string& device) const;
 
@@ -264,7 +164,7 @@ class XrtComputationClient : public ComputationClient {
       tensorflow::ClientSession::FeedType* feed_inputs);
 
   std::vector<ExecuteContext> CreateExecuteOps(
-      NodesArena* arena,
+      XrtSessionCache::SessionMap* session_map,
       tensorflow::gtl::ArraySlice<const XlaComputation> computations,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const Shape* const> output_shapes,
@@ -272,17 +172,23 @@ class XrtComputationClient : public ComputationClient {
       tensorflow::ClientSession::FeedType* feed_inputs);
 
   std::vector<ExecuteContext> CreateExecuteOps(
-      NodesArena* arena, const XlaComputation& computation,
+      XrtSessionCache::SessionMap* session_map,
+      const XlaComputation& computation,
       const std::vector<std::vector<Data*>>& arguments,
       const Shape* output_shape,
       tensorflow::gtl::ArraySlice<const string> devices,
       tensorflow::ClientSession::FeedType* feed_inputs);
 
   std::vector<std::shared_ptr<Data>> RunComputations(
+      const XrtSessionCache::SessionMap& session_map,
       const std::vector<ExecuteContext>& exec_ops,
       tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
       tensorflow::gtl::ArraySlice<const string> devices,
       const tensorflow::ClientSession::FeedType& feed_inputs);
+
+  // Retrieves the worker,worker_host pair for a given PyTorch device (ie,
+  // TPU:0).
+  std::pair<Worker, string> GetWorkerForDevice(const string& xrt_device) const;
 
   // Retrieves the worker,worker_host pair for a given XRT device (ie,
   // /job:tpu_worker/replica:0/task:0/device:TPU:0).
@@ -307,14 +213,7 @@ class XrtComputationClient : public ComputationClient {
   tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
       const string& xrt_device);
 
-  // Creates all the session required to communicate with the known workers.
-  void CreateWorkerSessions();
-
   void InitializeDevices();
-
-  // Retrieves the CachedNode cache for a given operation type on a given
-  // device.
-  NodeCache* GetCacheForOperation(NodeTypes op_type, string device);
 
   // Creates an XRT graph with an XRTCompile, feeding into an XRTExecute
   // operation:
@@ -329,9 +228,9 @@ class XrtComputationClient : public ComputationClient {
   //  holders[0] = XLA Computation place-holder (DT_STRING)
   //  holders[1] = xrt::XRTExecutionConfig place-holder (DT_STRING)
   //  holders[2] = Inputs for the XRTExecute (DT_INT64[])
-  const CachedNode& GetCompileExecuteNode(NodesArena* arena,
-                                          const tensorflow::Scope& scope,
-                                          const string& device);
+  const XrtSession::CachedNode& GetCompileExecuteNode(
+      XrtSession* session, const tensorflow::Scope& scope,
+      const string& device);
 
   // Creates an XRT graph with an XRTReadLiteral operation:
   //
@@ -341,9 +240,9 @@ class XrtComputationClient : public ComputationClient {
   //
   // With:
   //  holders[0] = The handle place-holder to be read (DT_INT64)
-  const CachedNode& GetReadNode(NodesArena* arena,
-                                const tensorflow::Scope& scope,
-                                const string& device);
+  const XrtSession::CachedNode& GetReadNode(XrtSession* session,
+                                            const tensorflow::Scope& scope,
+                                            const string& device);
 
   // Creates an XRTAllocate node:
   //
@@ -353,9 +252,9 @@ class XrtComputationClient : public ComputationClient {
   //
   // With:
   //  holders[0] = xrt::XLAAllocation place-holder (DT_STRING)
-  const CachedNode& GetAllocateNode(NodesArena* arena,
-                                    const tensorflow::Scope& scope,
-                                    const string& device);
+  const XrtSession::CachedNode& GetAllocateNode(XrtSession* session,
+                                                const tensorflow::Scope& scope,
+                                                const string& device);
 
   // Creates an XRTReleaseAllocationHandle node:
   //
@@ -365,8 +264,9 @@ class XrtComputationClient : public ComputationClient {
   //
   // With:
   //  holders[0] = To be released handle place-holder (DT_INT64)
-  const CachedNode& GetReleaseAllocationHandleNode(
-      NodesArena* arena, const tensorflow::Scope& scope, const string& device);
+  const XrtSession::CachedNode& GetReleaseAllocationHandleNode(
+      XrtSession* session, const tensorflow::Scope& scope,
+      const string& device);
 
   // Creates an XRTSubTuple node:
   //
@@ -378,9 +278,9 @@ class XrtComputationClient : public ComputationClient {
   // With:
   //  holders[0] = Tuple handle place-holder (DT_INT64)
   //  holders[1] = Tuple index place-holder (DT_INT32[])
-  const CachedNode& GetSubTupleNode(NodesArena* arena,
-                                    const tensorflow::Scope& scope,
-                                    const string& device);
+  const XrtSession::CachedNode& GetSubTupleNode(XrtSession* session,
+                                                const tensorflow::Scope& scope,
+                                                const string& device);
 
   // Builds an argument vector usable in a replicated context, out of a single
   // replica argument vector. Essentially turns a [N] into a [1][N].
@@ -390,21 +290,10 @@ class XrtComputationClient : public ComputationClient {
   Options options_;
   std::mutex lock_;
   std::map<string, std::vector<int>> device_mesh_coords_;
-  std::map<string, std::unique_ptr<SessionData>> session_map_;
+  XrtSessionCache session_cache_;
   // Access to the following members must be done while holding lock_.
   // XRT thread safety semantics.
-  // XRT uses a tensorflow::ClientSession in order to execute computations, and
-  // the client session object holds a reference to the tensorflow::Graph used
-  // to transmit such computations to the backend service.
-  // The tensorflow::Graph held by the session lives as long as the session
-  // lives, which, for us, is forever.
-  // While the tensorflow::ClientSession::Run() API is thread safe, all the new
-  // XRT operations will change the underline graph, whose access is not thread
-  // safe.
-  // Hence we hold the lock_ during the prep-operations, and we release it
-  // before issuing a tensorflow::ClientSession::Run().
   std::vector<DeviceHandle> released_handles_;
-  std::map<NodeCacheKey, NodeCache> node_cache_;
 };
 
 }  // namespace xla
