@@ -4,6 +4,7 @@
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "torch/csrc/jit/ir.h"
 
 namespace torch {
@@ -16,6 +17,27 @@ class XlaHelpers {
   template <class T>
   static xla::XlaOp ScalarValue(T scalar_value, xla::XlaBuilder* builder) {
     const auto scalar_literal = xla::LiteralUtil::CreateR0<T>(scalar_value);
+    return xla::ConstantLiteral(builder, scalar_literal);
+  }
+
+  template <class T>
+  static xla::XlaOp ScalarValue(T scalar_value, xla::PrimitiveType type,
+                                xla::XlaBuilder* builder) {
+    xla::Literal scalar_literal;
+    switch (type) {
+      case xla::PrimitiveType::F32:
+        scalar_literal = xla::LiteralUtil::CreateR0<float>(scalar_value);
+        break;
+      case xla::PrimitiveType::BF16:
+        scalar_literal = xla::LiteralUtil::CreateR0<tensorflow::bfloat16>(
+            static_cast<tensorflow::bfloat16>(scalar_value));
+        break;
+      case xla::PrimitiveType::S64:
+        scalar_literal = xla::LiteralUtil::CreateR0<xla::int64>(scalar_value);
+        break;
+      default:
+        scalar_literal = xla::LiteralUtil::CreateR0<T>(scalar_value);
+    }
     return xla::ConstantLiteral(builder, scalar_literal);
   }
 
@@ -35,7 +57,8 @@ class XlaHelpers {
   template <class T>
   static xla::XlaOp ScalarBroadcast(T scalar_value, const xla::Shape& shape,
                                     xla::XlaBuilder* builder) {
-    auto scalar_op = ScalarValue<T>(scalar_value, builder);
+    auto scalar_op =
+        ScalarValue<T>(scalar_value, shape.element_type(), builder);
     return xla::Broadcast(scalar_op, ShapeSizes(shape));
   }
 
@@ -63,6 +86,10 @@ class XlaHelpers {
   // Performs type promotion to make sure both operations return the same type.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
                                                          const xla::XlaOp& op2);
+
+  // Checks whether BF16 should be used as default floating point type for XLA
+  // computations.
+  static bool UseBF16();
 };
 
 }  // namespace jit

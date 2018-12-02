@@ -101,12 +101,14 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
   //   = gradients (with padding and dilation) <conv> mirrored_weights
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(conv_precision);
+  xla::Shape weight_shape = XlaHelpers::ShapeOfXlaOp(weight);
   return xla::Pad(
       xla::ConvGeneralDilated(grad, mirrored_weights,
                               /*window_strides=*/ones, padding, lhs_dilation,
                               rhs_dilation, dnums,
                               /*feature_group_count=*/1, &precision_config),
-      XlaHelpers::ScalarValue<float>(0, builder), padding_config);
+      XlaHelpers::ScalarValue<float>(0, weight_shape.element_type(), builder),
+      padding_config);
 }
 
 // Computes the weight gradient for a convolution.
@@ -224,8 +226,11 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
   const auto padding_config = XlaHelpers::MakeXlaPaddingConfig(padding_attr);
 
   auto builder = grad.builder();
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto padded_input = xla::Pad(
-      input, XlaHelpers::ScalarValue<float>(0, builder), padding_config);
+      input,
+      XlaHelpers::ScalarValue<float>(0, input_shape.element_type(), builder),
+      padding_config);
 
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(conv_precision);
@@ -294,7 +299,8 @@ Conv2DGrads BuildConv2dBackward(
   auto builder = grad.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto grad_bias = xla::Reduce(
-      grad, XlaHelpers::ScalarValue<float>(0, builder),
+      grad,
+      XlaHelpers::ScalarValue<float>(0, input_shape.element_type(), builder),
       XlaHelpers::CreateAddComputation(input_shape.element_type()), {0, 2, 3});
   return {grad_input, grad_weight, grad_bias};
 }

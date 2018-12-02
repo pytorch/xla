@@ -208,16 +208,16 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
           AT_ERROR("Unsupported arity for binary operator ",
                    node->kind().toQualString());
         }
+        xla::XlaOp input_op_0 = cctx.OpForInput(node, 0);
         auto input_op_1_optional = cctx.GetOpForInput(node, 1);
-        xla::XlaOp input_op_1;
         if (!input_op_1_optional) {
-          input_op_1 = XlaHelpers::ScalarValue(
-              node->get<at::Scalar>(attr::other).value().to<float>(), b);
-        } else {
-          input_op_1 = *input_op_1_optional;
+          xla::Shape input_op_0_shape = XlaHelpers::ShapeOfXlaOp(input_op_0);
+          input_op_1_optional = XlaHelpers::ScalarValue(
+              node->get<at::Scalar>(attr::other).value().to<float>(),
+              input_op_0_shape.element_type(), b);
         }
         auto inputs =
-            XlaHelpers::PromoteValues(cctx.OpForInput(node, 0), input_op_1);
+            XlaHelpers::PromoteValues(input_op_0, *input_op_1_optional);
         xla::XlaOp xla_output =
             BuildArithmeticOp(node, inputs.first, inputs.second);
         cctx.AddNodeOp(node, xla_output);
@@ -347,15 +347,20 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case aten::sigmoid: {
         CHECK_EQ(node->inputs().size(), 1);
         const auto xla_input = cctx.OpForInput(node, 0);
-        const auto half = XlaHelpers::ScalarValue<float>(0.5, b);
+        xla::Shape xla_input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+        const auto half = XlaHelpers::ScalarValue<float>(
+            0.5, xla_input_shape.element_type(), b);
         xla::XlaOp xla_output = half + half * Tanh(half * xla_input);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::relu: {
         CHECK_EQ(node->inputs().size(), 1);
-        xla::XlaOp xla_output = xla::Max(cctx.OpForInput(node, 0),
-                                         XlaHelpers::ScalarValue<float>(0, b));
+        const auto xla_input = cctx.OpForInput(node, 0);
+        xla::Shape xla_input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+        xla::XlaOp xla_output =
+            xla::Max(xla_input, XlaHelpers::ScalarValue<float>(
+                                    0, xla_input_shape.element_type(), b));
         cctx.AddNodeOp(node, xla_output);
         break;
       }
@@ -404,23 +409,23 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       }
       case aten::stack: {
         CHECK_EQ(node->inputs().size(), 2);
-        xla::XlaOp xla_output =
-            BuildStack(node,
-                       [&cctx](const Value* node) -> xla::XlaOp {
-                         return cctx.GetOpForValue(node);
-                       },
-                       b);
+        xla::XlaOp xla_output = BuildStack(
+            node,
+            [&cctx](const Value* node) -> xla::XlaOp {
+              return cctx.GetOpForValue(node);
+            },
+            b);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::cat: {
         CHECK_EQ(node->inputs().size(), 2);
-        xla::XlaOp xla_output =
-            BuildCat(node,
-                     [&cctx](const Value* node) -> xla::XlaOp {
-                       return cctx.GetOpForValue(node);
-                     },
-                     b);
+        xla::XlaOp xla_output = BuildCat(
+            node,
+            [&cctx](const Value* node) -> xla::XlaOp {
+              return cctx.GetOpForValue(node);
+            },
+            b);
         cctx.AddNodeOp(node, xla_output);
         break;
       }

@@ -59,8 +59,8 @@ To run the tests, follow __one__ of the options below:
 * Run on local CPU using the XRT client:
 
   ```
-  export XLA_USE_XRT=1 XRT_DEVICE_MAP="CPU:0;/job:localhost/replica:0/task:0/device:XLA_CPU:0"
-  export XRT_WORKERS="localhost:0;grpc://localhost:40934"
+  export XLA_USE_XRT=1 XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
+  export XRT_WORKERS="localservice:0;grpc://localhost:40934"
   ```
   
   Select any free TCP port you prefer instead of 40934 (totally arbitrary).

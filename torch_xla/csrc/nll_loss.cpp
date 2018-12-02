@@ -53,20 +53,22 @@ xla::XlaOp BuildNllLoss(const Node* node, const xla::XlaOp& logits,
                         const xla::XlaOp& labels) {
   xla::XlaBuilder* builder = logits.builder();
   xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
-  xla::XlaOp zero = XlaHelpers::ScalarValue<float>(0, builder);
+  xla::XlaOp zero =
+      XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder);
   xla::XlaOp one_hot_labels = LabelsToOneHot(
       /*builder=*/builder,
       /*depth=*/logits_shape.dimensions(1),
       /*axis=*/1,
       /*indices=*/labels,
-      /*on_value=*/XlaHelpers::ScalarValue<float>(1, builder),
+      /*on_value=*/
+      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder),
       /*off_value=*/zero);
   // Compute sum(-one_hot_labels * logits) / batch.
   xla::XlaOp mul = xla::Mul(xla::Neg(one_hot_labels), logits);
   xla::XlaComputation add_func =
       XlaHelpers::CreateAddComputation(logits_shape.element_type());
-  xla::XlaOp batch =
-      XlaHelpers::ScalarValue<float>(logits_shape.dimensions(0), builder);
+  xla::XlaOp batch = XlaHelpers::ScalarValue<float>(
+      logits_shape.dimensions(0), logits_shape.element_type(), builder);
   return xla::ReduceAll(mul, zero, add_func) / batch;
 }
 
@@ -76,18 +78,22 @@ xla::XlaOp BuildNllLossBackward(const Node* node, const xla::XlaOp& logits,
                                 const xla::XlaOp& labels) {
   const int kBatchDim = 0;
   auto builder = logits.builder();
-  const auto zero = XlaHelpers::ScalarValue<float>(0, builder);
-  const auto one = XlaHelpers::ScalarValue<float>(1, builder);
   const auto logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
+  const auto zero =
+      XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder);
+  const auto one =
+      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder);
   xla::XlaOp one_hot_labels = LabelsToOneHot(
       /*builder=*/builder,
       /*depth=*/logits_shape.dimensions(1),
       /*axis=*/1,
       /*indices=*/labels,
-      /*on_value=*/XlaHelpers::ScalarValue<float>(1, builder),
-      /*off_value=*/XlaHelpers::ScalarValue<float>(0, builder));
+      /*on_value=*/
+      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder),
+      /*off_value=*/
+      XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder));
   const auto batch = XlaHelpers::ScalarValue<float>(
-      logits_shape.dimensions(kBatchDim), builder);
+      logits_shape.dimensions(kBatchDim), logits_shape.element_type(), builder);
   // Compute -one_hot_labels / batch.
   return xla::Neg(one_hot_labels) / batch;
 }
