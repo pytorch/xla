@@ -250,8 +250,10 @@ class LoaderWrapper(object):
         self._fused_mode = fused_mode
         self._batch_number = 0
         self._done = False
+        self._lock = threading.Lock()
         self._loader_queue = kq.Queue(maxsize=self._prefetch_size)
         self._queue = kq.KeydQueue(maxsize=self._prefetch_size)
+        self._worker_count = 0
         thread = threading.Thread(target=self._loader_worker)
         thread.daemon = True
         thread.start()
@@ -278,6 +280,11 @@ class LoaderWrapper(object):
         self._queue.close()
         self._loader_queue.close()
 
+    def _up_workers(self, count):
+        with self._lock:
+            self._worker_count += count
+            return self._worker_count
+
     def _loader_worker(self):
         inputs = []
         targets = []
@@ -299,6 +306,7 @@ class LoaderWrapper(object):
         self._loader_queue.close_write()
 
     def _worker(self):
+        self._up_workers(1)
         while True:
             item = self._loader_queue.get()
             if item is None:
@@ -312,7 +320,8 @@ class LoaderWrapper(object):
             else:
                 targets_xla = []
             self._queue.put(batch_number, (inputs_xla, targets_xla))
-        self._queue.close_write()
+        if self._up_workers(-1) == 0:
+            self._queue.close_write()
 
 
 def _wrap_module(module, loss_fn):
