@@ -775,15 +775,18 @@ XrtComputationClient::BuildParallelArguments(
 
 void XrtComputationClient::MaybeCreateLocalService(
     const XrtComputationClient::Options& options) {
+  static const string grpc_root("grpc://localhost:");
   int task_index = -1;
   string job_name;
   string cluster_spec;
   for (auto& worker_target : options.workers_map) {
-    if (worker_target.second.compare(0, 17, "grpc://localhost:") == 0) {
+    if (worker_target.second.compare(0, grpc_root.size(), grpc_root) == 0 &&
+        worker_target.first.name == "localservice") {
       job_name = worker_target.first.name;
       task_index = worker_target.first.task_no;
-      cluster_spec = absl::StrCat(worker_target.first.name, "|",
-                                  worker_target.second.substr(7));
+      cluster_spec = absl::StrCat(
+          worker_target.first.name,
+          "|localhost:", worker_target.second.substr(grpc_root.size()));
     }
   }
   if (!cluster_spec.empty()) {

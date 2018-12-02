@@ -94,7 +94,8 @@ xla::XlaOp BuildMaxPool2dBackward(const Node* node,
                                   const xla::XlaOp& input) {
   auto builder = out_backprop.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const auto init_value = XlaHelpers::ScalarValue<float>(0, builder);
+  const auto init_value =
+      XlaHelpers::ScalarValue<float>(0, input_shape.element_type(), builder);
   const auto select = CreateGeComputation(input_shape.element_type());
   const auto scatter =
       XlaHelpers::CreateAddComputation(input_shape.element_type());
