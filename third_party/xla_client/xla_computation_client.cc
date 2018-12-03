@@ -247,7 +247,7 @@ void XlaComputationClient::StartHandleReleaser() {
 
 void XlaComputationClient::HandleReleaser() {
   auto period = std::chrono::milliseconds(500);
-  for (;;) {
+  while (true) {
     std::vector<std::unique_ptr<GlobalData>> released_handles;
     {
       std::lock_guard<std::mutex> lock(lock_);

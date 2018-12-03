@@ -547,7 +547,7 @@ void XrtComputationClient::StartHandleReleaser() {
 
 void XrtComputationClient::HandleReleaser() {
   auto period = std::chrono::milliseconds(500);
-  for (;;) {
+  while (true) {
     std::vector<DeviceHandle> released_handles;
     {
       std::lock_guard<std::mutex> lock(lock_);
