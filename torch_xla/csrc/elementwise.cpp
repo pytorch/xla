@@ -1,5 +1,7 @@
 #include "elementwise.h"
+
 #include "helpers.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch {
 namespace jit {
@@ -17,7 +19,7 @@ xla::XlaOp BuildArithmeticOp(const Node* node, const xla::XlaOp& lhs,
       return lhs - rhs;
     }
     default:
-      LOG(FATAL) << "Invalid binary operator kind: " << node->kind();
+      TF_LOG(FATAL) << "Invalid binary operator kind: " << node->kind();
   }
 }
 
@@ -34,7 +36,7 @@ xla::XlaOp BuildComparisonOp(const Node* node, const xla::XlaOp& operand) {
       break;
     }
     default:
-      LOG(FATAL) << "Invalid binary operator kind: " << node->kind();
+      TF_LOG(FATAL) << "Invalid binary operator kind: " << node->kind();
   }
   return xla::ConvertElementType(pred, xla::PrimitiveType::S8);
 }

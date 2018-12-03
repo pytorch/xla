@@ -167,8 +167,8 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   // reference to the script module to mark initialization as done.
   f_ = gradient.f;
   df_ = gradient.df;
-  VLOG(4) << "Gradient F:\n" << f_->toString();
-  VLOG(4) << "Gradient DF:\n" << df_->toString();
+  TF_VLOG(4) << "Gradient F:\n" << f_->toString();
+  TF_VLOG(4) << "Gradient DF:\n" << df_->toString();
   // Mark the module as initialized.
   script_module_ = nullptr;
 }
@@ -259,9 +259,9 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
     }
 
     XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
-    backward_computation_ = xla_bwd_impl.BuildComputation(
-        "XlaBackward", backward_shapes,
-        GetBackwardBuildOptions(inputs_.size()));
+    backward_computation_ =
+        xla_bwd_impl.BuildComputation("XlaBackward", backward_shapes,
+                                      GetBackwardBuildOptions(inputs_.size()));
     backward_shape_.reset();
   }
   // Collect the computation client data vector.
@@ -426,9 +426,8 @@ void XlaModule::BuildFusedTrainComputation(
   }
   // The arguments are set up correctly, call into the backward computation.
   XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
-  auto backward_computation =
-      xla_bwd_impl.BuildComputation("XlaBackward", backward_shapes,
-                                    GetBackwardBuildOptions(inputs_.size()));
+  auto backward_computation = xla_bwd_impl.BuildComputation(
+      "XlaBackward", backward_shapes, GetBackwardBuildOptions(inputs_.size()));
   xla::XlaOp backward_op =
       xla::Call(&b, backward_computation, backward_operands);
 
@@ -451,9 +450,9 @@ void XlaModule::BuildFusedTrainComputation(
 
   forward_computation_ = b.Build().ValueOrDie();
   forward_shape_.reset();
-  VLOG(5) << "Fused computation:\n"
-          << xla::xrt_util::GetComputationHloText(*forward_computation_)
-                 .ValueOrDie();
+  TF_VLOG(5) << "Fused computation:\n"
+             << xla::xrt_util::GetComputationHloText(*forward_computation_)
+                    .ValueOrDie();
 }
 
 XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(

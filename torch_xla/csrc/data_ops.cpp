@@ -32,7 +32,7 @@ xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
       output_sizes = node->get<std::vector<int64_t>>(attr::shape).value();
       break;
     default:
-      LOG(FATAL) << "Unexpected node kind, must be view or reshape";
+      TF_LOG(FATAL) << "Unexpected node kind, must be view or reshape";
   }
   // If the second argument doesn't fully specify the target shape, use the size
   // of the output.
