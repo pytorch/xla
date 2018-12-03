@@ -65,6 +65,7 @@ cc_library(
         "metrics.h",
         "multi_wait.h",
         "sys_util.h",
+        "tf_logging.h",
         "thread_pool.h",
         "unique.h",
         "xla_computation_client.h",

@@ -2,9 +2,21 @@
 
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 
 namespace torch {
 namespace jit {
+namespace {
+
+bool ShouldUseBF16() {
+  int use_fp16 = xla::sys_util::GetEnvInt("XLA_USE_BF16", 0);
+  if (use_fp16 != 0) {
+    TF_LOG(INFO) << "Using BF16 data type for floating point values";
+  }
+  return use_fp16 != 0;
+}
+
+}  // namespace
 
 xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
     const xla::PrecisionConfig::Precision conv_precision) {
@@ -116,8 +128,8 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
 }
 
 bool XlaHelpers::UseBF16() {
-  static int use_fp16 = xla::sys_util::GetEnvInt("XLA_USE_BF16", 0);
-  return use_fp16 != 0;
+  static bool use_fp16 = ShouldUseBF16();
+  return use_fp16;
 }
 
 }  // namespace jit
