@@ -52,8 +52,8 @@ XlaComputationClient::XlaComputationClient(
 std::vector<std::shared_ptr<ComputationClient::Data>>
 XlaComputationClient::TransferToServer(
     tensorflow::gtl::ArraySlice<const LiteralDevice> literals) {
-  metrics::TimedSection timed(TransferToServerMetric());
   FlushReleasedHandles();
+  metrics::TimedSection timed(TransferToServerMetric());
 
   // This can be made parallel, WRT literal creation.
   int64 total_size = 0;
@@ -76,8 +76,8 @@ XlaComputationClient::TransferToServer(
 
 std::vector<Literal> XlaComputationClient::TransferFromServer(
     tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) {
-  metrics::TimedSection timed(TransferFromServerMetric());
   FlushReleasedHandles();
+  metrics::TimedSection timed(TransferFromServerMetric());
 
   int64 total_size = 0;
   std::vector<Literal> results;
@@ -97,8 +97,8 @@ XlaComputationClient::ExecuteComputation(
     const XlaComputation& computation,
     tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
     const Shape* output_shape) {
-  metrics::TimedSection timed(ExecuteMetric());
   FlushReleasedHandles();
+  metrics::TimedSection timed(ExecuteMetric());
 
   std::string effective_device = GetEffectiveDevice(device);
   std::vector<GlobalData*> arguments_data =
