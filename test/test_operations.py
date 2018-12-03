@@ -8,6 +8,7 @@ import sys
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--replicated', action='store_true')
 parser.add_argument('--long_test', action='store_true')
+parser.add_argument('--max_diff_count', type=int, default=25)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
 # Setup import folders.
@@ -134,17 +135,19 @@ def _zeros_like(tensor_list):
     return zeros_tensors
 
 
-def _dump_differences(target, result, rtol=1e-5, atol=1e-3):
+def _dump_differences(target, result, rtol=1e-5, atol=1e-3, max_diff_count=0):
     env = Holder()
     env.max_diff = 0.0
     env.max_rel = None
     env.max_index = None
+    env.diff_count = 0
 
     def check_values(a, b, index):
         r = max(abs(a), abs(b)) * rtol
         diff = abs(a - b)
         if diff > min(r, atol):
             print('a={}\tb={}\tdiff={}\tindex={}'.format(a, b, diff, index))
+            env.diff_count += 1
             if diff > env.max_diff:
                 env.max_diff = diff
                 env.max_rel = diff / max(abs(a), abs(b))
@@ -156,6 +159,8 @@ def _dump_differences(target, result, rtol=1e-5, atol=1e-3):
         if target.dim() > 0:
             for i in iter_indices(target):
                 check_values(target[i], result[i], i)
+                if max_diff_count > 0 and env.diff_count >= max_diff_count:
+                    break
         else:
             check_values(target.item(), result.item(), 0)
     elif isinstance(target, (list, tuple)):
@@ -163,6 +168,8 @@ def _dump_differences(target, result, rtol=1e-5, atol=1e-3):
         assert len(target) == len(result)
         for i, v in enumerate(target):
             check_values(v, result[i], [i])
+            if max_diff_count > 0 and env.diff_count >= max_diff_count:
+                break
     elif isinstance(target, float):
         assert isinstance(result, float)
         check_values(target, result, [])
@@ -204,14 +211,16 @@ class XlaTestCase(TestCase):
             if torch.le(diff_tensor, max_abs_err).min().item() == 0:
                 self.fail('Relative error higher than the maximum tolerance')
         except:
-            _dump_differences(out, expected, rtol=rel_err, atol=abs_err)
+            _dump_differences(out, expected, rtol=rel_err, atol=abs_err,
+                              max_diff_count=FLAGS.max_diff_count)
             raise
 
     def assertEqualDbg(self, out, expected):
         try:
             super(XlaTestCase, self).assertEqual(out, expected)
         except:
-            _dump_differences(out, expected, rtol=1e-8, atol=1e-8)
+            _dump_differences(out, expected, rtol=1e-8, atol=1e-8,
+                              max_diff_count=FLAGS.max_diff_count)
             raise
 
     def compareReplicated(self, model, inputs, xla_outputs):
