@@ -1,5 +1,8 @@
 #include "tensorflow/compiler/xla/xla_client/xla_computation_client.h"
 
+#include <chrono>
+#include <thread>
+
 #include "grpc++/create_channel.h"
 #include "grpc++/support/channel_arguments.h"
 #include "tensorflow/compiler/xla/client/client.h"
@@ -25,8 +28,8 @@ XlaComputationClient::XlaComputationClient(
         ::grpc::InsecureChannelCredentials(), ch_args);
     channel->WaitForConnected(gpr_time_add(
         gpr_now(GPR_CLOCK_REALTIME), gpr_time_from_seconds(10, GPR_TIMESPAN)));
-    LOG(INFO) << "Channel to '" << options_.host_name
-              << "' is connected on port " << options_.port;
+    TF_LOG(INFO) << "Channel to '" << options_.host_name
+                 << "' is connected on port " << options_.port;
 
     xla_service_ = grpc::XlaService::NewStub(channel);
     stub_.reset(new GRPCStub(xla_service_.get()));
@@ -38,21 +41,21 @@ XlaComputationClient::XlaComputationClient(
     if (!options_.platform.empty()) {
       platform = PlatformUtil::GetPlatform(options_.platform).ValueOrDie();
     }
-    LOG(INFO) << "Creating XLA computation client for '"
-              << (options_.platform.empty() ? "default" : options_.platform)
-              << "' platform";
+    TF_LOG(INFO) << "Creating XLA computation client for '"
+                 << (options_.platform.empty() ? "default" : options_.platform)
+                 << "' platform";
     LocalClient* local_client =
         ClientLibrary::GetOrCreateLocalClient(platform).ValueOrDie();
     device_count = local_client->device_count();
     client_ = local_client;
   }
   device_handles_ = client_->GetDeviceHandles(device_count).ValueOrDie();
+  StartHandleReleaser();
 }
 
 std::vector<std::shared_ptr<ComputationClient::Data>>
 XlaComputationClient::TransferToServer(
     tensorflow::gtl::ArraySlice<const LiteralDevice> literals) {
-  FlushReleasedHandles();
   metrics::TimedSection timed(TransferToServerMetric());
 
   // This can be made parallel, WRT literal creation.
@@ -76,7 +79,6 @@ XlaComputationClient::TransferToServer(
 
 std::vector<Literal> XlaComputationClient::TransferFromServer(
     tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) {
-  FlushReleasedHandles();
   metrics::TimedSection timed(TransferFromServerMetric());
 
   int64 total_size = 0;
@@ -97,7 +99,6 @@ XlaComputationClient::ExecuteComputation(
     const XlaComputation& computation,
     tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
     const Shape* output_shape) {
-  FlushReleasedHandles();
   metrics::TimedSection timed(ExecuteMetric());
 
   std::string effective_device = GetEffectiveDevice(device);
@@ -130,7 +131,9 @@ XlaComputationClient::ExecuteReplicated(
     tensorflow::gtl::ArraySlice<const string> devices,
     const Shape* output_shape) {
   metrics::TimedSection timed(ExecuteReplicatedMetric());
-  LOG(FATAL) << "ExecuteReplicated() API not yet implemented!";
+  TF_LOG(FATAL) << "ExecuteReplicated() API not yet implemented!";
+  std::vector<std::shared_ptr<ComputationClient::Data>> result;
+  return result;
 }
 
 std::vector<std::shared_ptr<ComputationClient::Data>>
@@ -232,21 +235,33 @@ string XlaComputationClient::GetEffectiveDevice(const string& device) const {
   return device;
 }
 
-void XlaComputationClient::FlushReleasedHandles() {
-  std::lock_guard<std::mutex> lock(lock_);
-  size_t num_handles = released_handles_.size();
-  if (num_handles > 0) {
-    metrics::TimedSection timed(ReleaseHandlesTimeMetric());
-    std::vector<std::unique_ptr<GlobalData>> released_handles;
-    released_handles.swap(released_handles_);
-    GlobalData::Release(std::move(released_handles));
-    ReleaseHandlesMetric()->AddSample(num_handles);
-  }
-}
-
 void XlaComputationClient::ReleaseXlaData(XlaData* xla_data) {
   std::lock_guard<std::mutex> lock(lock_);
   released_handles_.push_back(xla_data->Release());
+}
+
+void XlaComputationClient::StartHandleReleaser() {
+  std::thread releaser([this]() { HandleReleaser(); });
+  releaser.detach();
+}
+
+void XlaComputationClient::HandleReleaser() {
+  auto period = std::chrono::milliseconds(500);
+  for (;;) {
+    std::vector<std::unique_ptr<GlobalData>> released_handles;
+    {
+      std::lock_guard<std::mutex> lock(lock_);
+      released_handles.swap(released_handles_);
+    }
+    if (!released_handles.empty()) {
+      size_t num_handles = released_handles.size();
+      metrics::TimedSection timed(ReleaseHandlesTimeMetric());
+      GlobalData::Release(std::move(released_handles));
+      ReleaseHandlesMetric()->AddSample(num_handles);
+    } else {
+      std::this_thread::sleep_for(period);
+    }
+  }
 }
 
 string XlaComputationClient::GetDefaultDevice() const {

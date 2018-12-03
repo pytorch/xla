@@ -10,6 +10,9 @@ string GetEnvString(const char* name, const string& defval);
 
 int64 GetEnvInt(const char* name, int64 defval);
 
+// Retrieves the current EPOCH time in nanoseconds.
+int64 NowNs();
+
 }  // namespace sys_util
 }  // namespace xla
 

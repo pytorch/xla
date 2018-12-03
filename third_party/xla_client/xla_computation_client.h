@@ -90,11 +90,15 @@ class XlaComputationClient : public ComputationClient {
   // GetDefaultDevice() API.
   string GetEffectiveDevice(const string& device) const;
 
-  // Flushes all the outstanding released handles in one RPC swipe.
-  void FlushReleasedHandles();
-
   // Batches an XLA handle for release.
   void ReleaseXlaData(XlaData* xla_data);
+
+  // Starts the handle releaser thread (which runs the HandleReleaser() API).
+  void StartHandleReleaser();
+
+  // The handler releaser function. Runs in the releaser thread and never
+  // returns.
+  void HandleReleaser();
 
   Options options_;
   std::mutex lock_;

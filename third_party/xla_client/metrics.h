@@ -1,13 +1,13 @@
 #ifndef TENSORFLOW_COMPILER_XLA_RPC_METRICS_H_
 #define TENSORFLOW_COMPILER_XLA_RPC_METRICS_H_
 
-#include <chrono>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
 #include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 
 namespace xla {
 namespace metrics {
@@ -96,9 +96,6 @@ class Metric {
   mutable std::shared_ptr<MetricData> data_;
 };
 
-// Retrieves the current EPOCH time in nanoseconds.
-int64 NowNs();
-
 // Creates a report with the current metrics statistics.
 string CreateMetricReport();
 
@@ -107,10 +104,10 @@ string CreateMetricReport();
 class TimedSection {
  public:
   explicit TimedSection(Metric* metric)
-      : metric_(metric), start_(NowNs()) {}
+      : metric_(metric), start_(sys_util::NowNs()) {}
 
   ~TimedSection() {
-    int64 now = NowNs();
+    int64 now = sys_util::NowNs();
     metric_->AddSample(now, now - start_);
   }
 

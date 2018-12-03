@@ -1,7 +1,9 @@
 #include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 
 #include <cstdlib>
+#include <chrono>
 #include <functional>
+#include <thread>
 
 #include "absl/strings/str_cat.h"
 #include "absl/types/optional.h"
@@ -35,12 +37,12 @@ XrtComputationClient::XrtComputationClient(
   LOG(INFO) << "XRT default device: " << default_device_target->first;
   MaybeCreateLocalService(options_);
   InitializeDevices();
+  StartHandleReleaser();
 }
 
 std::vector<std::shared_ptr<ComputationClient::Data>>
 XrtComputationClient::TransferToServer(
     tensorflow::gtl::ArraySlice<const LiteralDevice> literals) {
-  ApiCallInitialize();
   metrics::TimedSection timed(TransferToServerMetric());
 
   std::mutex lock;
@@ -105,7 +107,6 @@ XrtComputationClient::TransferToServer(
 
 std::vector<Literal> XrtComputationClient::TransferFromServer(
     tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) {
-  ApiCallInitialize();
   metrics::TimedSection timed(TransferFromServerMetric());
 
   XrtSessionCache::SessionMap session_map;
@@ -149,7 +150,6 @@ XrtComputationClient::ExecuteComputation(
     const XlaComputation& computation,
     tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
     const Shape* output_shape) {
-  ApiCallInitialize();
   metrics::TimedSection timed(ExecuteMetric());
 
   XrtSessionCache::SessionMap session_map;
@@ -179,7 +179,6 @@ XrtComputationClient::ExecuteReplicated(
     const std::vector<std::vector<Data*>>& arguments,
     tensorflow::gtl::ArraySlice<const string> devices,
     const Shape* output_shape) {
-  ApiCallInitialize();
   metrics::TimedSection timed(ExecuteReplicatedMetric());
 
   XrtSessionCache::SessionMap session_map;
@@ -247,7 +246,6 @@ XrtComputationClient::ExecuteParallel(
     const std::vector<std::vector<Data*>>& arguments,
     tensorflow::gtl::ArraySlice<const string> devices,
     tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) {
-  ApiCallInitialize();
   metrics::TimedSection timed(ExecuteParallelMetric());
 
   XrtSessionCache::SessionMap session_map;
@@ -266,7 +264,6 @@ XrtComputationClient::ExecuteParallel(
 std::vector<std::vector<std::shared_ptr<ComputationClient::Data>>>
 XrtComputationClient::DeconstructTuple(
     tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) {
-  ApiCallInitialize();
   metrics::TimedSection timed(DeconstructTupleMetric());
 
   XrtSessionCache::SessionMap session_map;
@@ -543,18 +540,26 @@ void XrtComputationClient::ReleaseHandles(
   ReleaseHandlesMetric()->AddSample(handles.size());
 }
 
-void XrtComputationClient::FlushReleasedHandles() {
-  std::vector<DeviceHandle> released_handles;
-  {
-    std::lock_guard<std::mutex> lock(lock_);
-    released_handles.swap(released_handles_);
-  }
-  if (!released_handles.empty()) {
-    ReleaseHandles(released_handles);
-  }
+void XrtComputationClient::StartHandleReleaser() {
+  std::thread releaser([this]() { HandleReleaser(); });
+  releaser.detach();
 }
 
-void XrtComputationClient::ApiCallInitialize() { FlushReleasedHandles(); }
+void XrtComputationClient::HandleReleaser() {
+  auto period = std::chrono::milliseconds(500);
+  for (;;) {
+    std::vector<DeviceHandle> released_handles;
+    {
+      std::lock_guard<std::mutex> lock(lock_);
+      released_handles.swap(released_handles_);
+    }
+    if (!released_handles.empty()) {
+      ReleaseHandles(released_handles);
+    } else {
+      std::this_thread::sleep_for(period);
+    }
+  }
+}
 
 void XrtComputationClient::ReleaseXrtData(XrtData* xrt_data) {
   std::lock_guard<std::mutex> lock(lock_);
