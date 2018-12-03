@@ -145,7 +145,7 @@ void Metric::AddSample(int64 timestamp_ns, double value) {
 }
 
 void Metric::AddSample(double value) {
-  GetData()->AddSample(NowNs(), value);
+  GetData()->AddSample(sys_util::NowNs(), value);
 }
 
 std::vector<Sample> Metric::Samples() const {
@@ -215,12 +215,6 @@ string MetricFnTime(double value) {
     }
   }
   return ss.str();
-}
-
-int64 NowNs() {
-  auto now = std::chrono::high_resolution_clock::now();
-  return std::chrono::duration_cast<std::chrono::nanoseconds>(
-      now.time_since_epoch()).count();
 }
 
 string CreateMetricReport() {
