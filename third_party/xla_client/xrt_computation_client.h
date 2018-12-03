@@ -197,15 +197,14 @@ class XrtComputationClient : public ComputationClient {
 
   void ReleaseHandles(tensorflow::gtl::ArraySlice<const DeviceHandle> handles);
 
-  // Flushes all the outstanding released handles in one RPC swipe.
-  void FlushReleasedHandles();
-
-  // Function which is called at every entry into the XRT computation client
-  // APIs. Performs tasks to intialize the per-call context, like flushing all
-  // the accumulated handle releases, and rewinding the XRT node caches.
-  void ApiCallInitialize();
-
   void ReleaseXrtData(XrtData* xrt_data);
+
+  // Starts the handle releaser thread (which runs the HandleReleaser() API).
+  void StartHandleReleaser();
+
+  // The handler releaser function. Runs in the releaser thread and never
+  // returns.
+  void HandleReleaser();
 
   // Retrieves the mesh coordinates of a given XRT device.
   const std::vector<int>& GetDeviceMeshCoords(const string& xrt_device) const;
