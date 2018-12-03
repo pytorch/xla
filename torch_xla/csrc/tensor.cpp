@@ -382,7 +382,7 @@ at::ScalarType XLATensor::dtype() const {
     case xla::PrimitiveType::S64:
       return at::ScalarType::Long;
     default:
-      LOG(FATAL) << "XLA type not supported: " << xla_type;
+      TF_LOG(FATAL) << "XLA type not supported: " << xla_type;
   }
 }
 
@@ -837,7 +837,7 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor,
     case at::ScalarType::Long:
       return TensorToLiteral<int64_t, xla::int64>(tensor, *shape);
     default:
-      LOG(FATAL) << "Tensor type not supported";
+      TF_LOG(FATAL) << "Tensor type not supported";
   }
 }
 

@@ -116,10 +116,12 @@ class ComputationContext {
     if (!op) {
       const auto node_inputs = node->inputs();
       const auto input = node_inputs.at(input_index);
-      LOG(FATAL) << "Missing op for input: unique_name=" << input->uniqueName()
-                 << " kind=" << node->kind().toDisplayString() << "\nGraph:\n"
-                 << node->owningGraph()->toString() << "\n"
-                 << tensorflow::CurrentStackTrace();
+      TF_LOG(FATAL) << "Missing op for input: unique_name="
+                    << input->uniqueName()
+                    << " kind=" << node->kind().toDisplayString()
+                    << "\nGraph:\n"
+                    << node->owningGraph()->toString() << "\n"
+                    << tensorflow::CurrentStackTrace();
     }
     return *op;
   }
