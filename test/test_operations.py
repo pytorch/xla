@@ -35,8 +35,8 @@ import unittest
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 
 
-def _gen_tensor(*args, dtype=torch.float32, requires_grad=False):
-    return torch.randn(*args, dtype=dtype, requires_grad=requires_grad)
+def _gen_tensor(*args, **kwargs):
+    return torch.randn(*args, **kwargs)
 
 
 class Holder(object):
