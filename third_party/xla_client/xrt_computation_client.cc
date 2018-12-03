@@ -40,8 +40,8 @@ XrtComputationClient::XrtComputationClient(
 std::vector<std::shared_ptr<ComputationClient::Data>>
 XrtComputationClient::TransferToServer(
     tensorflow::gtl::ArraySlice<const LiteralDevice> literals) {
-  metrics::TimedSection timed(TransferToServerMetric());
   ApiCallInitialize();
+  metrics::TimedSection timed(TransferToServerMetric());
 
   std::mutex lock;
   XrtSessionCache::SessionMap session_map;
@@ -105,8 +105,8 @@ XrtComputationClient::TransferToServer(
 
 std::vector<Literal> XrtComputationClient::TransferFromServer(
     tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) {
-  metrics::TimedSection timed(TransferFromServerMetric());
   ApiCallInitialize();
+  metrics::TimedSection timed(TransferFromServerMetric());
 
   XrtSessionCache::SessionMap session_map;
   std::map<XrtSession*, SessionWork> session_work_map;
@@ -149,8 +149,8 @@ XrtComputationClient::ExecuteComputation(
     const XlaComputation& computation,
     tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
     const Shape* output_shape) {
-  metrics::TimedSection timed(ExecuteMetric());
   ApiCallInitialize();
+  metrics::TimedSection timed(ExecuteMetric());
 
   XrtSessionCache::SessionMap session_map;
   string effective_device = GetEffectiveDevice(device);
@@ -179,8 +179,8 @@ XrtComputationClient::ExecuteReplicated(
     const std::vector<std::vector<Data*>>& arguments,
     tensorflow::gtl::ArraySlice<const string> devices,
     const Shape* output_shape) {
-  metrics::TimedSection timed(ExecuteReplicatedMetric());
   ApiCallInitialize();
+  metrics::TimedSection timed(ExecuteReplicatedMetric());
 
   XrtSessionCache::SessionMap session_map;
   tensorflow::ClientSession::FeedType feed_inputs;
@@ -247,8 +247,8 @@ XrtComputationClient::ExecuteParallel(
     const std::vector<std::vector<Data*>>& arguments,
     tensorflow::gtl::ArraySlice<const string> devices,
     tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) {
-  metrics::TimedSection timed(ExecuteParallelMetric());
   ApiCallInitialize();
+  metrics::TimedSection timed(ExecuteParallelMetric());
 
   XrtSessionCache::SessionMap session_map;
   tensorflow::ClientSession::FeedType feed_inputs;
@@ -266,8 +266,8 @@ XrtComputationClient::ExecuteParallel(
 std::vector<std::vector<std::shared_ptr<ComputationClient::Data>>>
 XrtComputationClient::DeconstructTuple(
     tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) {
-  metrics::TimedSection timed(DeconstructTupleMetric());
   ApiCallInitialize();
+  metrics::TimedSection timed(DeconstructTupleMetric());
 
   XrtSessionCache::SessionMap session_map;
   std::map<XrtSession*, SessionWork> session_work_map;
