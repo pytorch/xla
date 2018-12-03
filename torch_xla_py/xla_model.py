@@ -383,7 +383,7 @@ class XlaModel(object):
     def _get_backward_grads(self, outputs):
         if self._loss_fn is None:
             # If this is the legacy API, the user has run loss.backward() and
-          # the output passed here will have their gradient set.
+            # the output passed here will have their gradient set.
             return extract_gradients([outputs], fill_fn=zeros_like)
         return []
 

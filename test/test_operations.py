@@ -232,18 +232,20 @@ class XlaTestCase(TestCase):
             for j, expected_tensor in enumerate(expected):
                 self.assertEqualDbg(xla_output[j], expected_tensor)
 
-    def compareModel(self, model, input, rel_err=1e-2, abs_err=1e-5):
+    def compareModel(self, model, input, rel_err=0.05, abs_err=1e-4):
         xla_model = xm.XlaModel(model, [input], full_conv_precision=True)
         output_xla = xla_model(input)
         output = model(input)
         self.assertEqualRel(output, xm.convert_to_tensors(output_xla)[0],
                             rel_err=rel_err, abs_err=abs_err)
         grad_output = _gen_tensor(*output.shape)  # random gradients
+        grad_output.grad = grad_output.data
         output.backward(grad_output)
         xla_model.backward([grad_output])
         xla_updated_params = [
-            p.to_tensor().data for p in xla_model.parameters()[0]]
-        updated_params = [p.data for p in model.parameters()]
+            p.grad.to_tensor() for p in xla_model.parameters()[0]]
+        updated_params = [p.grad for p in model.parameters()]
+        self.assertEqual(len(xla_updated_params), len(updated_params))
         for i in range(0, len(updated_params)):
             self.assertEqualRel(xla_updated_params[i], updated_params[i],
                                 rel_err=rel_err, abs_err=abs_err)
@@ -481,7 +483,8 @@ class TestAvgPool(XlaTestCase):
                 self.count_include_pad = count_include_pad
 
             def forward(self, x):
-                return F.avg_pool2d(x, 2, self.stride, self.padding, False, self.count_include_pad)
+                return F.avg_pool2d(x, 2, self.stride, self.padding, False,
+                                    self.count_include_pad)
 
         x = torch.rand(1, 1, 3, 3)
         for stride in [1, 2, None]:
@@ -556,14 +559,6 @@ class TestMNIST(XlaTestCase):
         batch_size = 32
         x = _gen_tensor(batch_size, 1, 28, 28)
         model = XlaMNIST()
-        self.compareModel(model, x)
-
-
-class TestResnet18(XlaTestCase):
-    def test(self):
-        batch_size = 4
-        x = _gen_tensor(batch_size, 3, 224, 224)
-        model = torchvision.models.resnet18()
         self.compareModel(model, x)
 
 
@@ -664,6 +659,14 @@ class TestAxPlusBGenXla(XlaTestCase):
         gen = FnDataGenerator(lambda x: x * A + B, batch_size)
         accuracy = xla_model.test(gen, eval_fn, batch_size, log_fn=None)
         self.assertEqual(accuracy, 100.0)
+
+
+class TestCompareAxPlusB(XlaTestCase):
+    def test(self):
+        batch_size = 128
+        model = AxPlusB(dims=(batch_size, 1))
+        x = _gen_tensor(batch_size, 1)
+        self.compareModel(model, x)
 
 
 class TestSum(XlaTestCase):
