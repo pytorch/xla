@@ -1,8 +1,5 @@
 #include "tensorflow/compiler/xla/xla_client/xla_computation_client.h"
 
-#include <chrono>
-#include <thread>
-
 #include "grpc++/create_channel.h"
 #include "grpc++/support/channel_arguments.h"
 #include "tensorflow/compiler/xla/client/client.h"
@@ -236,31 +233,29 @@ string XlaComputationClient::GetEffectiveDevice(const string& device) const {
 }
 
 void XlaComputationClient::ReleaseXlaData(XlaData* xla_data) {
-  std::lock_guard<std::mutex> lock(lock_);
-  released_handles_.push_back(xla_data->Release());
+  {
+    std::lock_guard<std::mutex> lock(lock_);
+    released_handles_.push_back(xla_data->Release());
+  }
+  triggered_task_->Activate();
 }
 
 void XlaComputationClient::StartHandleReleaser() {
-  std::thread releaser([this]() { HandleReleaser(); });
-  releaser.detach();
+  triggered_task_.reset(
+      new xla_util::TriggeredTask([this]() { HandleReleaser(); }));
 }
 
 void XlaComputationClient::HandleReleaser() {
-  auto period = std::chrono::milliseconds(500);
-  while (true) {
-    std::vector<std::unique_ptr<GlobalData>> released_handles;
-    {
-      std::lock_guard<std::mutex> lock(lock_);
-      released_handles.swap(released_handles_);
-    }
-    if (!released_handles.empty()) {
-      size_t num_handles = released_handles.size();
-      metrics::TimedSection timed(ReleaseHandlesTimeMetric());
-      GlobalData::Release(std::move(released_handles));
-      ReleaseHandlesMetric()->AddSample(num_handles);
-    } else {
-      std::this_thread::sleep_for(period);
-    }
+  std::vector<std::unique_ptr<GlobalData>> released_handles;
+  {
+    std::lock_guard<std::mutex> lock(lock_);
+    released_handles.swap(released_handles_);
+  }
+  if (!released_handles.empty()) {
+    size_t num_handles = released_handles.size();
+    metrics::TimedSection timed(ReleaseHandlesTimeMetric());
+    GlobalData::Release(std::move(released_handles));
+    ReleaseHandlesMetric()->AddSample(num_handles);
   }
 }
 

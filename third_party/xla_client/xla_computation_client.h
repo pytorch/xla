@@ -10,6 +10,7 @@
 #include "tensorflow/compiler/xla/client/global_data.h"
 #include "tensorflow/compiler/xla/rpc/grpc_stub.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/triggered_task.h"
 
 namespace xla {
 
@@ -108,6 +109,7 @@ class XlaComputationClient : public ComputationClient {
   std::unique_ptr<GRPCStub> stub_;
   std::vector<DeviceHandle> device_handles_;
   std::vector<std::unique_ptr<GlobalData>> released_handles_;
+  std::unique_ptr<xla_util::TriggeredTask> triggered_task_;
 };
 
 }  // namespace xla

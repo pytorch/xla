@@ -1,9 +1,7 @@
 #include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 
 #include <cstdlib>
-#include <chrono>
 #include <functional>
-#include <thread>
 
 #include "absl/strings/str_cat.h"
 #include "absl/types/optional.h"
@@ -541,30 +539,28 @@ void XrtComputationClient::ReleaseHandles(
 }
 
 void XrtComputationClient::StartHandleReleaser() {
-  std::thread releaser([this]() { HandleReleaser(); });
-  releaser.detach();
+  triggered_task_.reset(
+      new xla_util::TriggeredTask([this]() { HandleReleaser(); }));
 }
 
 void XrtComputationClient::HandleReleaser() {
-  auto period = std::chrono::milliseconds(500);
-  while (true) {
-    std::vector<DeviceHandle> released_handles;
-    {
-      std::lock_guard<std::mutex> lock(lock_);
-      released_handles.swap(released_handles_);
-    }
-    if (!released_handles.empty()) {
-      ReleaseHandles(released_handles);
-    } else {
-      std::this_thread::sleep_for(period);
-    }
+  std::vector<DeviceHandle> released_handles;
+  {
+    std::lock_guard<std::mutex> lock(lock_);
+    released_handles.swap(released_handles_);
+  }
+  if (!released_handles.empty()) {
+    ReleaseHandles(released_handles);
   }
 }
 
 void XrtComputationClient::ReleaseXrtData(XrtData* xrt_data) {
-  std::lock_guard<std::mutex> lock(lock_);
-  xrt_data->Release();
-  released_handles_.emplace_back(xrt_data->device(), xrt_data->handle);
+  {
+    std::lock_guard<std::mutex> lock(lock_);
+    xrt_data->Release();
+    released_handles_.emplace_back(xrt_data->device(), xrt_data->handle);
+  }
+  triggered_task_->Activate();
 }
 
 std::pair<XrtComputationClient::Worker, string>
