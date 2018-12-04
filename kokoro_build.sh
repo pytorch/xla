@@ -51,7 +51,6 @@ conda create --name pytorch python=3.5 anaconda
 source activate pytorch
 export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 conda install -y numpy pyyaml mkl mkl-include setuptools cmake cffi typing bazel
-conda install -y -c mingfeima mkldnn
 
 # Install torch within conda env
 # TODO(jysohn): once pytorch/pytorch JIT bug is fixed install nightly wheel instead
