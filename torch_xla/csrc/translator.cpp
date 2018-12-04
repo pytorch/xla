@@ -407,23 +407,23 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       }
       case aten::stack: {
         CHECK_EQ(node->inputs().size(), 2);
-        xla::XlaOp xla_output = BuildStack(
-            node,
-            [&cctx](const Value* node) -> xla::XlaOp {
-              return cctx.GetOpForValue(node);
-            },
-            b);
+        xla::XlaOp xla_output =
+            BuildStack(node,
+                       [&cctx](const Value* node) -> xla::XlaOp {
+                         return cctx.GetOpForValue(node);
+                       },
+                       b);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::cat: {
         CHECK_EQ(node->inputs().size(), 2);
-        xla::XlaOp xla_output = BuildCat(
-            node,
-            [&cctx](const Value* node) -> xla::XlaOp {
-              return cctx.GetOpForValue(node);
-            },
-            b);
+        xla::XlaOp xla_output =
+            BuildCat(node,
+                     [&cctx](const Value* node) -> xla::XlaOp {
+                       return cctx.GetOpForValue(node);
+                     },
+                     b);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
