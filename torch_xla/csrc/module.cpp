@@ -9,7 +9,6 @@
 #include "passes/insert_explicit_expand.h"
 #include "passes/remove_unused_forward_outputs.h"
 #include "passes/replace_untraced_operators.h"
-#include "passes/set_mat_mul_output_shape.h"
 #include "passes/threshold_backward_peephole.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
@@ -18,6 +17,7 @@
 #include "torch/csrc/jit/passes/constant_propagation.h"
 #include "torch/csrc/jit/passes/dead_code_elimination.h"
 #include "torch/csrc/jit/passes/lower_tuples.h"
+#include "torch/csrc/jit/passes/shape_analysis.h"
 #include "torch/csrc/jit/passes/specialize_undef.h"
 
 namespace torch {
@@ -70,7 +70,6 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   std::shared_ptr<Graph> forward_graph = forward->graph()->copy();
   // Run forward passes.
   CanonicalizeOps(forward_graph);
-  SetMatMulOutputShape(forward_graph);
   InsertExplicitExpand(forward_graph);
   EvalStaticSize(forward_graph);
   ConstantPropagation(forward_graph);
@@ -131,13 +130,11 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   // Run the forward passes.
   CanonicalizeOps(gradient.f);
   InsertExplicitExpand(gradient.f);
-  EvalStaticSize(gradient.f);
   ConstantPropagation(gradient.f);
   ReplaceUntracedOperators(gradient.f);
   EliminateDeadCode(gradient.f);
   // Run the backward passes.
   specializeUndef(*(gradient.df.get()));
-  EvalStaticSize(gradient.df);
   ConstantPropagation(gradient.df);
   ThresholdBackwardPeephole(gradient.df);
   EliminateDeadCode(gradient.df);
@@ -151,6 +148,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   f_real_outputs_ = gradient.f_real_outputs;
   df_input_captured_inputs_ = gradient.df_input_captured_inputs;
   df_input_captured_outputs_ = gradient.df_input_captured_outputs;
+  df_input_vjps_ = gradient.df_input_vjps;
 
   // Take ownership of the forward and differentiated graphs and release the
   // reference to the script module to mark initialization as done.
@@ -217,9 +215,17 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
         zero_input.push_back(false);
       }
     }
-    for (auto p : captured_outputs_[i]) {
-      // TODO(asuhan): Remove the all zero grad outputs from the forward trace
-      // output.
+    for (size_t input_vjp_idx = f_real_outputs_;
+         input_vjp_idx < df_input_vjps_.size(); ++input_vjp_idx) {
+      const auto& replica_captured_outputs = captured_outputs_[i];
+      const auto raw_output_index = df_input_vjps_[input_vjp_idx];
+      // The index in df_input_vjps_ points inside all outputs list, both real
+      // and captured. Skip the real output count to get the captured output
+      // index.
+      XLA_CHECK_GE(raw_output_index, f_real_outputs_);
+      XLA_CHECK_LT(raw_output_index - f_real_outputs_,
+                   replica_captured_outputs.size());
+      auto p = replica_captured_outputs[raw_output_index - f_real_outputs_];
       replica_raw_grad_outputs.push_back(p);
       if (i == 0) {
         zero_input.push_back(true);
@@ -375,11 +381,6 @@ void XlaModule::BuildFusedTrainComputation(
   // call in the same order the standalone, unfused version takes its arguments.
   XLA_CHECK(!computation_in_outs.outputs.empty());
   XLA_CHECK_EQ(f_real_outputs_, backward_input_gradients_.size());
-  std::vector<xla::XlaOp> captured_outputs;
-  for (size_t i = f_real_outputs_; i < computation_in_outs.outputs.size();
-       i++) {
-    captured_outputs.push_back(computation_in_outs.outputs[i]);
-  }
   std::vector<xla::XlaOp> captured_inputs_outputs;
   for (auto i : df_input_captured_inputs_) {
     captured_inputs_outputs.push_back(computation_in_outs.inputs[i]);
@@ -403,9 +404,13 @@ void XlaModule::BuildFusedTrainComputation(
         XlaTranslator::ParameterKind::kGraphInput));
     backward_operands.push_back(gradient_op);
   }
-  for (auto p : captured_outputs) {
+  for (size_t input_vjp_idx = backward_input_gradients_.size();
+       input_vjp_idx < df_input_vjps_.size(); ++input_vjp_idx) {
+    const auto raw_output_index = df_input_vjps_[input_vjp_idx];
+    XLA_CHECK_LT(raw_output_index, computation_in_outs.outputs.size());
     backward_shapes.push_back(XlaTranslator::ParameterShape(
-        XlaHelpers::ShapeOfXlaOp(p), XlaTranslator::ParameterKind::kZeroInput));
+        XlaHelpers::ShapeOfXlaOp(computation_in_outs.outputs[raw_output_index]),
+        XlaTranslator::ParameterKind::kZeroInput));
   }
   for (auto p : captured_inputs_outputs) {
     backward_shapes.push_back(XlaTranslator::ParameterShape(

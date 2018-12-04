@@ -814,7 +814,7 @@ class TestGradients(XlaTestCase):
     raw_outputs = xu.as_list(raw_outputs)
     intermediate_outputs = [
         raw_output for raw_output in raw_outputs[gradient.f_real_outputs:]
-        if raw_output.dtype == torch.float32
+        if isinstance(raw_output, torch.Tensor)
     ]
     outputs = raw_outputs[:gradient.f_real_outputs]
 

@@ -19,6 +19,7 @@ int64_t RunSizeQuery(Node* node) {
 // Returns true if the size can be evaluated during trace optimization.
 bool IsStaticSizeQuery(Node* node) {
   return node->kind() == aten::size &&
+         node->inputs().size() == 2 &&
          node->input(0)->type()->cast<CompleteTensorType>() &&
          node->get<int64_t>(attr::dim) &&
          node->get<int64_t>(attr::dim).value() >= 0;

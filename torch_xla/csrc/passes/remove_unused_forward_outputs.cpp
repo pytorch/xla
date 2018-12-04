@@ -9,12 +9,11 @@ namespace {
 
 // Remove an unused input from the backward graph from both the outputs and
 // captured outputs sections of its input.
-void RemoveInputFromBackwardGraph(Gradient& gradient,
-                                  const at::optional<size_t> output_idx_maybe,
+void RemoveInputFromBackwardGraph(Gradient& gradient, const size_t output_idx,
                                   const size_t captured_output_idx) {
   const auto backward_inputs = gradient.df->inputs();
-  const Value* grad_output =
-      output_idx_maybe ? backward_inputs[*output_idx_maybe] : nullptr;
+  CHECK_LT(output_idx, backward_inputs.size());
+  const Value* grad_output = backward_inputs[output_idx];
   const Value* captured_output = backward_inputs[captured_output_idx];
   // Remove grad_output and captured_output from the inputs of the backward
   // graph.
@@ -40,27 +39,10 @@ void RemoveInputFromBackwardGraph(Gradient& gradient,
   // points inside the outputs section. We thus have captured_output_idx >
   // output_idx because outputs come before captured outputs. Remove the
   // captured_output_idx first to avoid invalidation of indices.
-  JIT_ASSERT(!output_idx_maybe || captured_output_idx > *output_idx_maybe);
+  JIT_ASSERT(captured_output_idx > output_idx);
   gradient.df->eraseInput(captured_output_idx);
-  if (output_idx_maybe) {
-    gradient.df->eraseInput(*output_idx_maybe);
-  }
+  gradient.df->eraseInput(output_idx);
 }
-
-namespace {
-
-// Counts the number of additional outputs after the "real" outputs used by
-// differentiation the same way autodiff does.
-size_t IntermediateRequireGradOutputsCount(const Gradient& gradient) {
-  const auto forward_outputs = gradient.f->outputs();
-  return std::count_if(forward_outputs.begin() + gradient.f_real_outputs,
-                       forward_outputs.end(),
-                       [](const Value* intermediate_output) {
-                         return intermediate_output->requires_grad();
-                       });
-}
-
-}  // namespace
 
 // Remove the unused output specified by node_output_idx from the given node,
 // with subsequent removal from the backward graph input as well.
@@ -75,20 +57,16 @@ void RemoveNodeOutputFromGradient(Node* node, const size_t node_output_idx,
   if (output_it == forward_outputs.end()) {
     return;
   }
-  const size_t output_idx = output_it - forward_outputs.begin();
-  const auto output_idx_maybe = (*output_it)->requires_grad()
-                                    ? at::optional<size_t>(output_idx)
-                                    : at::nullopt;
+  const size_t forward_output_idx = output_it - forward_outputs.begin();
 
   // Find the captured_output_idx absolute index of the backward graph input to
   // remove. First, position it at the beginning of the captured outputs, right
   // after the outputs of the forward graph and the captureed inputs.
-  size_t captured_output_idx = gradient.f_real_outputs +
-                               IntermediateRequireGradOutputsCount(gradient) +
-                               gradient.df_input_captured_inputs.size();
+  size_t captured_output_idx =
+      gradient.df_input_vjps.size() + gradient.df_input_captured_inputs.size();
 
   // Remove the given output from the graph outputs.
-  gradient.f->eraseOutput(output_idx);
+  gradient.f->eraseOutput(forward_output_idx);
   // Remove the given output from the node outputs.
   node->eraseOutput(node_output_idx);
 
@@ -97,7 +75,7 @@ void RemoveNodeOutputFromGradient(Node* node, const size_t node_output_idx,
   // df_input_captured_outputs.
   int df_input_captured_outputs_idx = -1;
   for (size_t i = 0; i < gradient.df_input_captured_outputs.size(); i++) {
-    if (static_cast<size_t>(output_idx) ==
+    if (static_cast<size_t>(forward_output_idx) ==
         gradient.df_input_captured_outputs[i]) {
       captured_output_idx += i;
       df_input_captured_outputs_idx = i;
@@ -118,10 +96,25 @@ void RemoveNodeOutputFromGradient(Node* node, const size_t node_output_idx,
     }
   }
 
+  // df_input_vjps must be adjusted similarly to df_input_captured_outputs since
+  // it also contains output indices which can shift when outputs are removed.
+  const auto df_input_vjps_it =
+      std::find(gradient.df_input_vjps.begin(), gradient.df_input_vjps.end(),
+                forward_output_idx);
+  JIT_ASSERT(df_input_vjps_it != gradient.df_input_vjps.end());
+  const size_t output_idx = df_input_vjps_it - gradient.df_input_vjps.begin();
+  const auto df_input_vjps_val = *df_input_vjps_it;
+  gradient.df_input_vjps.erase(df_input_vjps_it);
+  for (auto& df_input_vjps_elem : gradient.df_input_vjps) {
+    if (df_input_vjps_elem > df_input_vjps_val) {
+      --df_input_vjps_elem;
+    }
+  }
+
   // Finally, remove the node from all inputs of the backward graph.
   RemoveInputFromBackwardGraph(
       /*gradient=*/gradient,
-      /*output_idx_maybe=*/output_idx_maybe,
+      /*output_idx=*/output_idx,
       /*captured_output_idx=*/captured_output_idx);
 }
 

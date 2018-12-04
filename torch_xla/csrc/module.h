@@ -140,6 +140,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   size_t f_real_outputs_;
   std::vector<size_t> df_input_captured_inputs_;
   std::vector<size_t> df_input_captured_outputs_;
+  std::vector<size_t> df_input_vjps_;
 
   // TODO: captured_outputs only needs shape, no need for holding onto full
   // Tensor
