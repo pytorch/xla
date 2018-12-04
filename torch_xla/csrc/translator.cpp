@@ -25,10 +25,10 @@ namespace jit {
 namespace {
 
 std::once_flag create_client_flag;
-std::unique_ptr<xla::ComputationClient> computation_client;
+xla::ComputationClient* computation_client;
 
-void CreateClient(std::unique_ptr<xla::ComputationClient>* client) {
-  *client = std::move(xla::ComputationClient::Create().ValueOrDie());
+void CreateClient(xla::ComputationClient** client) {
+  *client = xla::ComputationClient::Create().ConsumeValueOrDie().release();
 }
 
 xla::XlaOp GetConstantOp(xla::XlaBuilder* builder, Node* node) {
@@ -148,7 +148,7 @@ class ComputationContext {
 
 xla::ComputationClient* XlaGetClient() {
   std::call_once(create_client_flag, CreateClient, &computation_client);
-  return computation_client.get();
+  return computation_client;
 }
 
 XlaTranslator::XlaTranslator(
