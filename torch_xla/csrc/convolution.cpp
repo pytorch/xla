@@ -31,7 +31,7 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
       XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(filter));
   tensorflow::TensorShape filter_shape(filter_size);
   tensorflow::TensorShape out_backprop_shape(
-      XlaHelpers::I64List(XlaHelpers::TensorDimensionSizes(node_inputs[0])));
+      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(grad)));
   const auto stride_attr =
       node->get<std::vector<int64_t>>(attr::stride).value();
   std::vector<int> strides{1, 1};
@@ -134,7 +134,7 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
                                                filter_size[1], filter_size[0]};
   tensorflow::TensorShape filter_shape(filter_size_backward);
   tensorflow::TensorShape out_backprop_shape(
-      XlaHelpers::I64List(XlaHelpers::TensorDimensionSizes(node_inputs[0])));
+      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(grad)));
   const auto stride_attr =
       node->get<std::vector<int64_t>>(attr::stride).value();
   std::vector<int> strides{1, 1};
