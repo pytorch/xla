@@ -1,6 +1,5 @@
 #include "translator.h"
 #include <memory>
-#include <mutex>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
@@ -24,11 +23,8 @@ namespace jit {
 
 namespace {
 
-std::once_flag create_client_flag;
-xla::ComputationClient* computation_client;
-
-void CreateClient(xla::ComputationClient** client) {
-  *client = xla::ComputationClient::Create().ConsumeValueOrDie().release();
+xla::ComputationClient* CreateClient() {
+  return xla::ComputationClient::Create().ConsumeValueOrDie().release();
 }
 
 xla::XlaOp GetConstantOp(xla::XlaBuilder* builder, Node* node) {
@@ -147,7 +143,7 @@ class ComputationContext {
 }  // namespace
 
 xla::ComputationClient* XlaGetClient() {
-  std::call_once(create_client_flag, CreateClient, &computation_client);
+  static xla::ComputationClient* computation_client = CreateClient();
   return computation_client;
 }
 
