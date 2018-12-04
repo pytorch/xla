@@ -186,7 +186,6 @@ def get_log_fn(logdir=None, custom_log_fn=print):
 
 def forward_passes(graph):
   torch._C._jit_pass_canonicalize_ops(graph)
-  torch_xla._XLAC._jit_pass_set_mat_mul_output_shape(graph)
   torch_xla._XLAC._jit_pass_insert_explicit_expand(graph)
   torch_xla._XLAC._jit_pass_eval_static_size(graph)
   torch._C._jit_pass_constant_propagation(graph)
@@ -196,7 +195,6 @@ def forward_passes(graph):
 
 def backward_passes(graph):
   torch._C._jit_pass_specialize_undef(graph)
-  torch_xla._XLAC._jit_pass_eval_static_size(graph)
   torch._C._jit_pass_constant_propagation(graph)
   torch_xla._XLAC._jit_pass_threshold_backward_peephole(graph)
   torch._C._jit_pass_dce(graph)

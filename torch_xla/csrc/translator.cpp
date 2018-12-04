@@ -489,6 +489,13 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         cctx.AddNodeOp(node, xla_output);
         break;
       }
+      case aten::size: {
+        CHECK_EQ(node->inputs().size(), 1);
+        const auto shape_sizes = XlaHelpers::ShapeSizes(
+            XlaHelpers::ShapeOfXlaOp(cctx.OpForInput(node, 0)));
+        cctx.AddNodeOp(node, xla::ConstantR1<xla::int64>(b, shape_sizes));
+        break;
+      }
       case prim::Constant: {
         cctx.AddNodeOp(node, GetConstantOp(b, node));
         break;
@@ -498,6 +505,15 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       }
       case prim::Undefined: {
         cctx.AddUndefinedInput(ComputationContext::OutputId(node));
+        break;
+      }
+      case prim::SumToSize: {
+        // TODO(asuhan): check it's an identity.
+        cctx.AddNodeOp(node, cctx.OpForInput(node, 0));
+        break;
+      }
+      case aten::add_: {
+        // TODO(asuhan): check it's a no-op for training.
         break;
       }
       default:
