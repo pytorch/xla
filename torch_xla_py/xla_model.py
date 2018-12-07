@@ -128,7 +128,7 @@ def create_xla_model(model, inputs, num_cores=1, devices=None,
         traced_model, use_full_conv_precision=full_conv_precision)
     inputs_xla = convert_to_xla_tensors(replica_inputs, devices=devices)
     if input_gradients is not None:
-        xla_model.set_inputs_gardients(input_gradients)
+        xla_model.set_input_gradients(input_gradients)
     xla_model(*inputs_xla)
     return xla_model, traced_model
 
