@@ -85,6 +85,8 @@ class XrtComputationClient : public ComputationClient {
 
   XrtComputationClient(Options options);
 
+  void FlushLazyReleases() override;
+
   std::vector<std::shared_ptr<Data>> TransferToServer(
       tensorflow::gtl::ArraySlice<const LiteralDevice> literals) override;
 

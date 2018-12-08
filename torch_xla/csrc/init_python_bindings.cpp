@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch_util.h"
+#include "translator.h"
 
 namespace torch {
 namespace jit {
@@ -94,6 +95,8 @@ void InitXlaModuleBindings(py::module m) {
           }
           return result;
         });
+  m.def("_xla_flush_lazy_releases",
+        []() { XlaGetClient()->FlushLazyReleases(); });
   m.def("_xla_metrics_report",
         []() { return xla::metrics::CreateMetricReport(); });
 }
