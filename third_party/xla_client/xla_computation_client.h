@@ -31,7 +31,6 @@ class XlaComputationClient : public ComputationClient {
     }
 
     std::unique_ptr<GlobalData> Release() {
-      CHECK(releaser != nullptr);
       releaser = nullptr;
       return std::move(handle);
     }
@@ -52,6 +51,10 @@ class XlaComputationClient : public ComputationClient {
   XlaComputationClient(Options options);
 
   void FlushLazyReleases() override;
+
+  size_t ForceReleaseHandles(
+      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles)
+      override;
 
   std::vector<std::shared_ptr<Data>> TransferToServer(
       tensorflow::gtl::ArraySlice<const LiteralDevice> literals) override;
@@ -94,7 +97,7 @@ class XlaComputationClient : public ComputationClient {
   string GetEffectiveDevice(const string& device) const;
 
   // Batches an XLA handle for release.
-  void ReleaseXlaData(XlaData* xla_data);
+  bool ReleaseXlaData(XlaData* xla_data);
 
   // Starts the handle releaser thread (which runs the HandleReleaser() API).
   void StartHandleReleaser();

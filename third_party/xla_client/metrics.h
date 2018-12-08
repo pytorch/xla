@@ -1,6 +1,7 @@
 #ifndef TENSORFLOW_COMPILER_XLA_RPC_METRICS_H_
 #define TENSORFLOW_COMPILER_XLA_RPC_METRICS_H_
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -40,8 +41,9 @@ class MetricData {
   void AddSample(int64 timestamp_ns, double value);
 
   // Returns a vector with all the current samples, from the oldest to the
-  // newer.
-  std::vector<Sample> Samples() const;
+  // newer. If counter is not nullptr, it will receive the current value of the
+  // metrics' counter.
+  std::vector<Sample> Samples(double* counter) const;
 
   string Repr(double value) const { return repr_fn_(value); }
 
@@ -51,6 +53,20 @@ class MetricData {
   size_t count_ = 0;
   std::vector<Sample> samples_;
   double counter_ = 0.0;
+};
+
+// Counters are a very lightweight form of metrics which do not need to track
+// sample time.
+class CounterData {
+ public:
+  CounterData() : value_(0) {}
+
+  void AddValue(xla::int64 value) { value_ += value; }
+
+  xla::int64 Value() const { return value_; }
+
+ private:
+  std::atomic<xla::int64> value_;
 };
 
 // Emits the value in a to_string() conversion.
@@ -83,7 +99,7 @@ class Metric {
 
   void AddSample(double value);
 
-  std::vector<Sample> Samples() const;
+  std::vector<Sample> Samples(double* counter) const;
 
   string Repr(double value) const;
 
@@ -93,11 +109,42 @@ class Metric {
   string name_;
   MetricReprFn repr_fn_;
   size_t max_samples_;
-  mutable std::shared_ptr<MetricData> data_;
+  mutable std::shared_ptr<MetricData> data_ptr_;
+  mutable std::atomic<MetricData*> data_;
+};
+
+// A Counter is a lightweight form of metric which tracks an integer value which
+// can increase or decrease.
+// A typical use is as:
+//   static Counter* counter = new Counter("MyCounter");
+//   ...
+//   counter->AddValue(+1);
+class Counter {
+ public:
+  explicit Counter(string name);
+
+  void AddValue(xla::int64 value) { GetData()->AddValue(value); }
+
+  xla::int64 Value() const { return GetData()->Value(); }
+
+ private:
+  CounterData* GetData() const;
+
+  string name_;
+  mutable std::shared_ptr<CounterData> data_ptr_;
+  mutable std::atomic<CounterData*> data_;
 };
 
 // Creates a report with the current metrics statistics.
 string CreateMetricReport();
+
+// Retrieves the metric data of a given metric, or nullptr if such metric does
+// not exist.
+MetricData* GetMetric(const string& name);
+
+// Retrieves the counter data of a given counter, or nullptr if such counter
+// does not exist.
+CounterData* GetCounter(const string& name);
 
 // Scope based utility class to measure the time the code takes within a given
 // C++ scope.

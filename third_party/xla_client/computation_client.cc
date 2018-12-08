@@ -196,9 +196,25 @@ metrics::Metric* ComputationClient::DeconstructTupleMetric() {
   return metric;
 }
 
-metrics::Metric* ComputationClient::ReleaseHandlesMetric() {
-  static metrics::Metric* metric = new metrics::Metric("ClientReleaseHandles");
-  return metric;
+metrics::Counter* ComputationClient::CreateHandlesCounter() {
+  // Do not change the name of the counter as xla_model.py references it.
+  static metrics::Counter* counter =
+      new metrics::Counter("ClientCreateHandles");
+  return counter;
+}
+
+metrics::Counter* ComputationClient::ReleaseHandlesCounter() {
+  // Do not change the name of the counter as xla_model.py references it.
+  static metrics::Counter* counter =
+      new metrics::Counter("ClientReleaseHandles");
+  return counter;
+}
+
+metrics::Counter* ComputationClient::DestroyHandlesCounter() {
+  // Do not change the name of the counter as xla_model.py references it.
+  static metrics::Counter* counter =
+      new metrics::Counter("ClientDestroyHandles");
+  return counter;
 }
 
 metrics::Metric* ComputationClient::ReleaseHandlesTimeMetric() {

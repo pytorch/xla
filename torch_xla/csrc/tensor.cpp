@@ -398,6 +398,11 @@ const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::GetXlaData() {
   return data_->xla_data;
 }
 
+const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::XlaData()
+    const {
+  return data_->xla_data;
+}
+
 std::string XLATensor::DumpGraphNodeComputation() const {
   std::string hlo_text;
   auto& xla_graph_node = current_xla_graph_node();
@@ -458,6 +463,20 @@ at::Tensor XLATensor::toTensor() {
 
 std::vector<std::shared_ptr<XLATensor>> XLATensor::GetLiveTensors() {
   return TensorsArena::Get()->GetTensors();
+}
+
+size_t XLATensor::ReleaseAllTensorsData() {
+  std::vector<std::shared_ptr<XLATensor>> tensors = GetLiveTensors();
+  std::vector<std::shared_ptr<xla::ComputationClient::Data>> tensors_data;
+  for (auto& tensor : tensors) {
+    auto& data = tensor->XlaData();
+    if (data != nullptr) {
+      tensors_data.push_back(data);
+    }
+  }
+  TF_VLOG(1) << "Forcefully releasing " << tensors_data.size()
+             << " device memory handles";
+  return XlaGetClient()->ForceReleaseHandles(tensors_data);
 }
 
 std::vector<at::Tensor> XLATensor::GetTensors(

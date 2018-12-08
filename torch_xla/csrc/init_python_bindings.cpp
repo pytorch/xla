@@ -95,8 +95,14 @@ void InitXlaModuleBindings(py::module m) {
           }
           return result;
         });
+  m.def("_xla_counter_value", [](const std::string& name) -> py::object {
+    xla::metrics::CounterData* data = xla::metrics::GetCounter(name);
+    return data != nullptr ? py::cast<int64_t>(data->Value()) : py::none();
+  });
   m.def("_xla_flush_lazy_releases",
         []() { XlaGetClient()->FlushLazyReleases(); });
+  m.def("_xla_force_release_all_data",
+        []() { return XLATensor::ReleaseAllTensorsData(); });
   m.def("_xla_metrics_report",
         []() { return xla::metrics::CreateMetricReport(); });
 }
@@ -134,43 +140,48 @@ void InitXlaTensorBindings(py::module m) {
              self->add_(other, 1.);
              return self;
            })
-      .def("__mul__",
-           [](std::shared_ptr<XLATensor> self, XLATensor& other) {
-             return self->mul(other);
-           },
-           py::arg("other"))
+      .def(
+          "__mul__",
+          [](std::shared_ptr<XLATensor> self, XLATensor& other) {
+            return self->mul(other);
+          },
+          py::arg("other"))
       .def("__mul__", [](std::shared_ptr<XLATensor> self,
                          double other) { return self->mul(other); })
-      .def("mul",
-           [](std::shared_ptr<XLATensor> self, XLATensor& other) {
-             return self->mul(other);
-           },
-           py::arg("other"))
+      .def(
+          "mul",
+          [](std::shared_ptr<XLATensor> self, XLATensor& other) {
+            return self->mul(other);
+          },
+          py::arg("other"))
       .def("mul", [](std::shared_ptr<XLATensor> self,
                      double other) { return self->mul(other); })
-      .def("mul_",
-           [](std::shared_ptr<XLATensor> self, XLATensor& other) {
-             self->mul_(other);
-             return self;
-           },
-           py::arg("other"))
+      .def(
+          "mul_",
+          [](std::shared_ptr<XLATensor> self, XLATensor& other) {
+            self->mul_(other);
+            return self;
+          },
+          py::arg("other"))
       .def("mul_",
            [](std::shared_ptr<XLATensor> self, double other) {
              self->mul_(other);
              return self;
            })
-      .def("__div__",
-           [](std::shared_ptr<XLATensor> self, XLATensor& other) {
-             return self->div(other);
-           },
-           py::arg("other"))
+      .def(
+          "__div__",
+          [](std::shared_ptr<XLATensor> self, XLATensor& other) {
+            return self->div(other);
+          },
+          py::arg("other"))
       .def("__div__", [](std::shared_ptr<XLATensor> self,
                          double other) { return self->div(other); })
-      .def("__truediv__",
-           [](std::shared_ptr<XLATensor> self, XLATensor& other) {
-             return self->div(other);
-           },
-           py::arg("other"))
+      .def(
+          "__truediv__",
+          [](std::shared_ptr<XLATensor> self, XLATensor& other) {
+            return self->div(other);
+          },
+          py::arg("other"))
       .def("__truediv__", [](std::shared_ptr<XLATensor> self,
                              double other) { return self->div(other); })
       .def("cross_replica_sum",

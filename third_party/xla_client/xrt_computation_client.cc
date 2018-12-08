@@ -44,6 +44,18 @@ void XrtComputationClient::FlushLazyReleases() {
   triggered_task_->WaitForRun(run_id);
 }
 
+size_t XrtComputationClient::ForceReleaseHandles(
+    tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) {
+  size_t released = 0;
+  for (auto& handle : handles) {
+    XrtData* xrt_data = dynamic_cast<XrtData*>(handle.get());
+    if (ReleaseXrtData(xrt_data)) {
+      ++released;
+    }
+  }
+  return released;
+}
+
 std::vector<std::shared_ptr<ComputationClient::Data>>
 XrtComputationClient::TransferToServer(
     tensorflow::gtl::ArraySlice<const LiteralDevice> literals) {
@@ -105,6 +117,7 @@ XrtComputationClient::TransferToServer(
           literals_ptrs[li]->shape(),
           [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); });
     }
+    CreateHandlesCounter()->AddValue(outputs.size());
   }
   return results;
 }
@@ -171,6 +184,7 @@ XrtComputationClient::ExecuteComputation(
       {&computation});
   XLA_CHECK_EQ(outputs.size(), 1);
 
+  CreateHandlesCounter()->AddValue(1);
   return std::make_shared<XrtData>(
       effective_device, outputs[0].scalar<int64>()(),
       exec_ops.front().result_shape,
@@ -240,6 +254,7 @@ XrtComputationClient::RunComputations(
           exec_ops[replica].result_shape,
           [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); });
     }
+    CreateHandlesCounter()->AddValue(outputs.size());
   }
   return results;
 }
@@ -314,6 +329,7 @@ XrtComputationClient::DeconstructTuple(
             [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); }));
       }
       results[li] = std::move(tuple_results);
+      CreateHandlesCounter()->AddValue(tuple_elements_count[li]);
     }
   }
   return results;
@@ -541,7 +557,7 @@ void XrtComputationClient::ReleaseHandles(
         session_releases.second.feed_inputs, {},
         session_releases.second.releases, &outputs));
   }
-  ReleaseHandlesMetric()->AddSample(handles.size());
+  DestroyHandlesCounter()->AddValue(handles.size());
 }
 
 void XrtComputationClient::StartHandleReleaser() {
@@ -560,13 +576,21 @@ void XrtComputationClient::HandleReleaser() {
   }
 }
 
-void XrtComputationClient::ReleaseXrtData(XrtData* xrt_data) {
+bool XrtComputationClient::ReleaseXrtData(XrtData* xrt_data) {
+  bool released = false;
   {
     std::lock_guard<std::mutex> lock(lock_);
-    xrt_data->Release();
-    released_handles_.emplace_back(xrt_data->device(), xrt_data->handle);
+    absl::optional<int64> opt_handle = xrt_data->Release();
+    if (opt_handle) {
+      released_handles_.emplace_back(xrt_data->device(), *opt_handle);
+      released = true;
+    }
   }
-  triggered_task_->Activate();
+  if (released) {
+    triggered_task_->Activate();
+    ReleaseHandlesCounter()->AddValue(1);
+  }
+  return released;
 }
 
 std::pair<XrtComputationClient::Worker, string>
