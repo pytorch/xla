@@ -1,6 +1,8 @@
 from __future__ import print_function
 
+import atexit
 import collections
+import gc
 import queue
 import threading
 import time
@@ -488,3 +490,14 @@ class XlaModel(object):
                    'Samples/sec: {:.1f}\n'.format(test_loss, correct, count, accuracy,
                                                   count / (time.time() - start_time)))
         return accuracy
+
+
+def run_gc():
+    # Run GC so that eventual XLA resource objects wrapped by std::shared_ptr<>
+    # gets released.
+    while gc.collect() > 0:
+        pass
+    # Flush all the eventualy lazy releases we might do on XLA resources.
+    torch_xla._XLAC._xla_flush_lazy_releases()
+
+atexit.register(run_gc)

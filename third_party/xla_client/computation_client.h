@@ -56,6 +56,10 @@ class ComputationClient {
 
   virtual ~ComputationClient() {}
 
+  // Signals the ComputationClient object to flush all the lazy resource
+  // releases it has accumulated so far.
+  virtual void FlushLazyReleases() = 0;
+
   // Transfers local tensor literal values to the TPU servers and fetches the
   // handles.
   virtual std::vector<std::shared_ptr<Data>> TransferToServer(

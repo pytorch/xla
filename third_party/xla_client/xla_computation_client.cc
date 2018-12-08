@@ -50,6 +50,12 @@ XlaComputationClient::XlaComputationClient(
   StartHandleReleaser();
 }
 
+void XlaComputationClient::FlushLazyReleases() {
+  // Activate the lazy handle releaser and wait for it to complete our run.
+  size_t run_id = triggered_task_->Activate();
+  triggered_task_->WaitForRun(run_id);
+}
+
 std::vector<std::shared_ptr<ComputationClient::Data>>
 XlaComputationClient::TransferToServer(
     tensorflow::gtl::ArraySlice<const LiteralDevice> literals) {
