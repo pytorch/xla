@@ -60,6 +60,15 @@ class ComputationClient {
   // releases it has accumulated so far.
   virtual void FlushLazyReleases() = 0;
 
+  // Forcefully releases the device memory handles, and returns the number of
+  // handles which has been effectively released.
+  // This API should only be called once it is known that the other referrers of
+  // the handles will not be using them anymore (like in the really late exit
+  // path of the application). Using the handles after such API call can caused
+  // undefined behavior and/or crashes.
+  virtual size_t ForceReleaseHandles(
+      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) = 0;
+
   // Transfers local tensor literal values to the TPU servers and fetches the
   // handles.
   virtual std::vector<std::shared_ptr<Data>> TransferToServer(
@@ -127,7 +136,9 @@ class ComputationClient {
   static metrics::Metric* ExecuteReplicatedMetric();
   static metrics::Metric* ExecuteParallelMetric();
   static metrics::Metric* DeconstructTupleMetric();
-  static metrics::Metric* ReleaseHandlesMetric();
+  static metrics::Counter* CreateHandlesCounter();
+  static metrics::Counter* ReleaseHandlesCounter();
+  static metrics::Counter* DestroyHandlesCounter();
   static metrics::Metric* ReleaseHandlesTimeMetric();
   static metrics::Metric* InboundDataMetric();
   static metrics::Metric* OutboundDataMetric();

@@ -83,7 +83,15 @@ class XLATensor {
   at::ScalarType dtype() const;
   const xla::Shape& shape() const;
   const Device& GetDevice() const;
+
+  // Fetches the XLA data behind the tensor. If the tensor has a graph defining
+  // its current value, executes the graph and fetches the XLA data result.
   const std::shared_ptr<xla::ComputationClient::Data>& GetXlaData();
+
+  // Fetches the current value of the XLA data, which can be missing (nullptr)
+  // in case the tensor has a graph defining its current value,
+  const std::shared_ptr<xla::ComputationClient::Data>& XlaData() const;
+
   void SetXlaData(std::shared_ptr<xla::ComputationClient::Data> xla_data);
   std::shared_ptr<XlaGraphNode> GetXlaGraphNode() const;
   std::vector<int64_t> Size() const;
@@ -145,6 +153,14 @@ class XLATensor {
 
   // Retrieves the set of XLA tensors which are currently live in the system.
   static std::vector<std::shared_ptr<XLATensor>> GetLiveTensors();
+
+  // Forcefully releases the device memory behind all the know active tensors.
+  // This API should only be called once it is known that the other referrers of
+  // the tensors will not be using them anymore (like in the really late exit
+  // path of the application). Using the handles after such API call can caused
+  // undefined behavior and/or crashes.
+  // Returns the number of released device data tensors.
+  static size_t ReleaseAllTensorsData();
 
   // Applies the queue of operations for a list of tensors.
   static void ApplyPendingGraph(

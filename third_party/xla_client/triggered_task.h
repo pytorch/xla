@@ -19,13 +19,15 @@ class TriggeredTask {
   void Stop();
 
   // Triggers a function run. If the function is already running, it will run
-  // again immediately after it completes.
+  // again immediately after it completes. Returns tthe value of thte run-ID the
+  // caller should eventually wait with the WaitForRun() API, to be sure that a
+  // full function run happened after its Activate() call.
   size_t Activate();
 
-  // Wait until a run-ID returned by the Activate() API completed. Returns true
-  // if the run was successfully completed, or false if Stop() was called
-  // before.
-  bool WaitForRun(size_t run_id);
+  // Wait until a run-ID returned by the Activate() API completed. Returns the
+  // value of the current run-ID. If such value or less or equal to run_id, the
+  // wait did not complete successfully.
+  size_t WaitForRun(size_t run_id);
 
  private:
   // Function implementing the main thread loop running the user function.
@@ -38,6 +40,7 @@ class TriggeredTask {
   size_t run_id_ = 0;
   size_t run_waiters_ = 0;
   bool activated_ = false;
+  bool running_ = false;
   bool stopped_ = false;
   std::unique_ptr<std::thread> thread_;
 };

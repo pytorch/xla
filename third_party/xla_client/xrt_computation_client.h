@@ -50,7 +50,13 @@ class XrtComputationClient : public ComputationClient {
       }
     }
 
-    void Release() { releaser = nullptr; }
+    absl::optional<int64> Release() {
+      if (releaser == nullptr) {
+        return absl::nullopt;
+      }
+      releaser = nullptr;
+      return handle;
+    }
 
     int64 handle;
     Releaser releaser;
@@ -86,6 +92,10 @@ class XrtComputationClient : public ComputationClient {
   XrtComputationClient(Options options);
 
   void FlushLazyReleases() override;
+
+  size_t ForceReleaseHandles(
+      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles)
+      override;
 
   std::vector<std::shared_ptr<Data>> TransferToServer(
       tensorflow::gtl::ArraySlice<const LiteralDevice> literals) override;
@@ -200,7 +210,7 @@ class XrtComputationClient : public ComputationClient {
 
   void ReleaseHandles(tensorflow::gtl::ArraySlice<const DeviceHandle> handles);
 
-  void ReleaseXrtData(XrtData* xrt_data);
+  bool ReleaseXrtData(XrtData* xrt_data);
 
   // Starts the handle releaser thread (which runs the HandleReleaser() API).
   void StartHandleReleaser();
