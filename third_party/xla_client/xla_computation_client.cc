@@ -56,6 +56,18 @@ void XlaComputationClient::FlushLazyReleases() {
   triggered_task_->WaitForRun(run_id);
 }
 
+size_t XlaComputationClient::ForceReleaseHandles(
+    tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) {
+  size_t released = 0;
+  for (auto& handle : handles) {
+    XlaData* xla_data = dynamic_cast<XlaData*>(handle.get());
+    if (ReleaseXlaData(xla_data)) {
+      ++released;
+    }
+  }
+  return released;
+}
+
 std::vector<std::shared_ptr<ComputationClient::Data>>
 XlaComputationClient::TransferToServer(
     tensorflow::gtl::ArraySlice<const LiteralDevice> literals) {
@@ -76,6 +88,7 @@ XlaComputationClient::TransferToServer(
         [this](XlaData* xla_data) { ReleaseXlaData(xla_data); }));
     total_size += literal.size_bytes();
   }
+  CreateHandlesCounter()->AddValue(literals.size());
   OutboundDataMetric()->AddSample(total_size);
   return results;
 }
@@ -122,6 +135,7 @@ XlaComputationClient::ExecuteComputation(
     program_shape = computation.GetProgramShape().ValueOrDie();
     output_shape = &program_shape.result();
   }
+  CreateHandlesCounter()->AddValue(1);
   return std::make_shared<XlaData>(
       std::move(result_or_status.ValueOrDie()), effective_device, *output_shape,
       [this](XlaData* xla_data) { ReleaseXlaData(xla_data); });
@@ -184,6 +198,7 @@ XlaComputationClient::ExecuteParallel(
         *output_shape,
         [this](XlaData* xla_data) { ReleaseXlaData(xla_data); }));
   }
+  CreateHandlesCounter()->AddValue(computations.size());
   return results;
 }
 
@@ -204,6 +219,7 @@ XlaComputationClient::DeconstructTuple(
           [this](XlaData* xla_data) { ReleaseXlaData(xla_data); }));
     }
     results.push_back(std::move(tuple_results));
+    CreateHandlesCounter()->AddValue(exploded_tuple.size());
   }
   return results;
 }
@@ -238,12 +254,21 @@ string XlaComputationClient::GetEffectiveDevice(const string& device) const {
   return device;
 }
 
-void XlaComputationClient::ReleaseXlaData(XlaData* xla_data) {
+bool XlaComputationClient::ReleaseXlaData(XlaData* xla_data) {
+  bool released = false;
   {
     std::lock_guard<std::mutex> lock(lock_);
-    released_handles_.push_back(xla_data->Release());
+    std::unique_ptr<GlobalData> handle = xla_data->Release();
+    if (handle != nullptr) {
+      released_handles_.push_back(std::move(handle));
+      released = true;
+    }
   }
-  triggered_task_->Activate();
+  if (released) {
+    triggered_task_->Activate();
+    ReleaseHandlesCounter()->AddValue(1);
+  }
+  return released;
 }
 
 void XlaComputationClient::StartHandleReleaser() {
@@ -261,7 +286,7 @@ void XlaComputationClient::HandleReleaser() {
     size_t num_handles = released_handles.size();
     metrics::TimedSection timed(ReleaseHandlesTimeMetric());
     GlobalData::Release(std::move(released_handles));
-    ReleaseHandlesMetric()->AddSample(num_handles);
+    DestroyHandlesCounter()->AddValue(num_handles);
   }
 }
 

@@ -24,7 +24,7 @@ size_t TriggeredTask::Activate() {
     std::lock_guard<std::mutex> lock(mutex_);
     notify = !activated_;
     activated_ = true;
-    run_id = run_id_;
+    run_id = run_id_ + running_;
   }
   if (notify) {
     cv_.notify_one();
@@ -32,26 +32,28 @@ size_t TriggeredTask::Activate() {
   return run_id;
 }
 
-bool TriggeredTask::WaitForRun(size_t run_id) {
+size_t TriggeredTask::WaitForRun(size_t run_id) {
   std::unique_lock<std::mutex> lock(mutex_);
   ++run_waiters_;
   run_cv_.wait(lock, [this, run_id] { return run_id_ > run_id || stopped_; });
   --run_waiters_;
-  return run_id_ > run_id;
+  return run_id_;
 }
 
 void TriggeredTask::Runner() {
   while (true) {
     {
       std::unique_lock<std::mutex> lock(mutex_);
+      ++run_id_;
       if (run_waiters_ > 0) {
         run_cv_.notify_all();
       }
+      running_ = false;
       cv_.wait(lock, [this] { return activated_ || stopped_; });
+      running_ = true;
       if (stopped_) {
         break;
       }
-      ++run_id_;
       activated_ = false;
     }
     function_();

@@ -1,10 +1,11 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 
-#include "tensorflow/core/platform/default/logging.h"
-
-#include <map>
 #include <cmath>
+#include <map>
 #include <sstream>
+
+#include "tensorflow/core/platform/default/logging.h"
+#include "tensorflow/core/platform/macros.h"
 
 namespace xla {
 namespace metrics {
@@ -18,12 +19,30 @@ class MetricsArena {
   void RegisterMetric(const string& name, MetricReprFn repr_fn,
                       size_t max_samples, std::shared_ptr<MetricData>* data);
 
+  void RegisterCounter(const string& name, std::shared_ptr<CounterData>* data);
+
   void ForEachMetric(
       const std::function<void(const string&, MetricData*)>& metric_func);
+
+  void ForEachCounter(
+      const std::function<void(const string&, CounterData*)>& counter_func);
+
+  MetricData* GetMetric(const string& name) {
+    std::lock_guard<std::mutex> lock(lock_);
+    auto it = metrics_.find(name);
+    return it != metrics_.end() ? it->second.get() : nullptr;
+  }
+
+  CounterData* GetCounter(const string& name) {
+    std::lock_guard<std::mutex> lock(lock_);
+    auto it = counters_.find(name);
+    return it != counters_.end() ? it->second.get() : nullptr;
+  }
 
  private:
   std::mutex lock_;
   std::map<string, std::shared_ptr<MetricData>> metrics_;
+  std::map<string, std::shared_ptr<CounterData>> counters_;
 };
 
 MetricsArena* MetricsArena::Get() {
@@ -43,6 +62,16 @@ void MetricsArena::RegisterMetric(const string& name, MetricReprFn repr_fn,
   }
 }
 
+void MetricsArena::RegisterCounter(const string& name,
+                                   std::shared_ptr<CounterData>* data) {
+  std::lock_guard<std::mutex> lock(lock_);
+  if (*data == nullptr) {
+    std::shared_ptr<CounterData> new_data = std::make_shared<CounterData>();
+    auto it = counters_.emplace(name, new_data).first;
+    *data = it->second;
+  }
+}
+
 void MetricsArena::ForEachMetric(
     const std::function<void(const string&, MetricData*)>& metric_func) {
   std::lock_guard<std::mutex> lock(lock_);
@@ -51,10 +80,18 @@ void MetricsArena::ForEachMetric(
   }
 }
 
+void MetricsArena::ForEachCounter(
+    const std::function<void(const string&, CounterData*)>& counter_func) {
+  std::lock_guard<std::mutex> lock(lock_);
+  for (auto& name_data : counters_) {
+    counter_func(name_data.first, name_data.second.get());
+  }
+}
+
 void EmitMetricInfo(const string& name, MetricData* data,
                     std::stringstream* ss) {
-  double counter = data->Counter();
-  std::vector<Sample> samples = data->Samples();
+  double counter = 0.0;
+  std::vector<Sample> samples = data->Samples(&counter);
   (*ss) << "Metric: " << name << std::endl;
   (*ss) << "  TotalSamples: " << data->TotalSamples() << std::endl;
   (*ss) << "  Counter: " << data->Repr(counter) << std::endl;
@@ -93,6 +130,12 @@ void EmitMetricInfo(const string& name, MetricData* data,
   (*ss) << std::endl;
 }
 
+void EmitCounterInfo(const string& name, CounterData* data,
+                     std::stringstream* ss) {
+  (*ss) << "Counter: " << name << std::endl;
+  (*ss) << "  Value: " << data->Value() << std::endl;
+}
+
 }  // namespace
 
 MetricData::MetricData(MetricReprFn repr_fn, size_t max_samples)
@@ -116,7 +159,7 @@ size_t MetricData::TotalSamples() const {
   return count_;
 }
 
-std::vector<Sample> MetricData::Samples() const {
+std::vector<Sample> MetricData::Samples(double* counter) const {
   std::lock_guard<std::mutex> lock(lock_);
   std::vector<Sample> samples;
   if (count_ <= samples_.size()) {
@@ -127,18 +170,19 @@ std::vector<Sample> MetricData::Samples() const {
     samples.insert(samples.end(), samples_.begin(),
                    samples_.begin() + position);
   }
+  if (counter != nullptr) {
+    *counter = counter_;
+  }
   return samples;
 }
-
 
 Metric::Metric(string name, MetricReprFn repr_fn, size_t max_samples)
     : name_(std::move(name)),
       repr_fn_(std::move(repr_fn)),
-      max_samples_(max_samples) {}
+      max_samples_(max_samples),
+      data_(nullptr) {}
 
-double Metric::Counter() const {
-  return GetData()->Counter();
-}
+double Metric::Counter() const { return GetData()->Counter(); }
 
 void Metric::AddSample(int64 timestamp_ns, double value) {
   GetData()->AddSample(timestamp_ns, value);
@@ -148,22 +192,43 @@ void Metric::AddSample(double value) {
   GetData()->AddSample(sys_util::NowNs(), value);
 }
 
-std::vector<Sample> Metric::Samples() const {
-  return GetData()->Samples();
+std::vector<Sample> Metric::Samples(double* counter) const {
+  return GetData()->Samples(counter);
 }
 
-string Metric::Repr(double value) const {
-  return GetData()->Repr(value);
-}
+string Metric::Repr(double value) const { return GetData()->Repr(value); }
 
 MetricData* Metric::GetData() const {
-  if (data_ == nullptr) {
+  MetricData* data = data_.load();
+  if (TF_PREDICT_FALSE(data == nullptr)) {
+    // The RegisterMetric() API is a synchronization point, and even if multiple
+    // threads enters it, the data will be created only once.
     MetricsArena* arena = MetricsArena::Get();
-    arena->RegisterMetric(name_, repr_fn_, max_samples_, &data_);
+    arena->RegisterMetric(name_, repr_fn_, max_samples_, &data_ptr_);
+    // Even if multiple threads will enter this IF statement, they will all
+    // fetch the same value, and hence store the same value below.
+    data = data_ptr_.get();
+    data_.store(data);
   }
-  return data_.get();
+  return data;
 }
 
+Counter::Counter(string name) : name_(std::move(name)), data_(nullptr) {}
+
+CounterData* Counter::GetData() const {
+  CounterData* data = data_.load();
+  if (TF_PREDICT_FALSE(data == nullptr)) {
+    // The RegisterCounter() API is a synchronization point, and even if
+    // multiple threads enters it, the data will be created only once.
+    MetricsArena* arena = MetricsArena::Get();
+    arena->RegisterCounter(name_, &data_ptr_);
+    // Even if multiple threads will enter this IF statement, they will all
+    // fetch the same value, and hence store the same value below.
+    data = data_ptr_.get();
+    data_.store(data);
+  }
+  return data;
+}
 
 string MetricFnValue(double value) {
   std::stringstream ss;
@@ -194,12 +259,9 @@ string MetricFnTime(double value) {
     int precision;
     char fill;
   } const time_parts[] = {
-      {"d", 86400.0 * 1e9, 2, 0, '0'},
-      {"h", 1440.0 * 1e9, 2, 0, '0'},
-      {"m", 60.0 * 1e9, 2, 0, '0'},
-      {"s", 1e9, 2, 0, '0'},
-      {"ms", 1e6, 3, 0, '0'},
-      {"us", 1e3, 3, 3, '0'},
+      {"d", 86400.0 * 1e9, 2, 0, '0'}, {"h", 1440.0 * 1e9, 2, 0, '0'},
+      {"m", 60.0 * 1e9, 2, 0, '0'},    {"s", 1e9, 2, 0, '0'},
+      {"ms", 1e6, 3, 0, '0'},          {"us", 1e3, 3, 3, '0'},
   };
   int count = 0;
   std::stringstream ss;
@@ -223,7 +285,18 @@ string CreateMetricReport() {
   arena->ForEachMetric([&ss](const string& name, MetricData* data) {
     EmitMetricInfo(name, data, &ss);
   });
+  arena->ForEachCounter([&ss](const string& name, CounterData* data) {
+    EmitCounterInfo(name, data, &ss);
+  });
   return ss.str();
+}
+
+MetricData* GetMetric(const string& name) {
+  return MetricsArena::Get()->GetMetric(name);
+}
+
+CounterData* GetCounter(const string& name) {
+  return MetricsArena::Get()->GetCounter(name);
 }
 
 }  // namespace metrics

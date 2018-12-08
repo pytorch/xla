@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+import os
+import sys
+
 
 class Cleaner(object):
     def __init__(self, func):
@@ -11,6 +14,11 @@ class Cleaner(object):
 
 def as_list(t):
     return t if isinstance(t, (tuple, list)) else [t]
+
+
+def getenv_as(name, type, defval=None):
+    env = os.environ.get(name, None)
+    return defval if env is None else type(env)
 
 
 def shape(inputs):
@@ -41,3 +49,15 @@ def list_copy_append(ilist, item):
     ilist_copy = list(ilist)
     ilist_copy.append(item)
     return ilist_copy
+
+
+def null_print(*args, **kwargs):
+    return
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+
+def get_print_fn(debug):
+    return eprint if debug else null_print
