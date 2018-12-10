@@ -104,22 +104,22 @@ class XrtComputationClient : public ComputationClient {
       tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles)
       override;
 
-  std::shared_ptr<Data> ExecuteComputation(
+  std::vector<std::shared_ptr<Data>> ExecuteComputation(
       const XlaComputation& computation,
       tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
-      const Shape* output_shape) override;
+      const ExecuteComputationOptions& options) override;
 
-  std::vector<std::shared_ptr<Data>> ExecuteReplicated(
+  std::vector<std::vector<std::shared_ptr<Data>>> ExecuteReplicated(
       const XlaComputation& computation,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
-      const Shape* output_shape) override;
+      const ExecuteReplicatedOptions& options) override;
 
-  std::vector<std::shared_ptr<Data>> ExecuteParallel(
+  std::vector<std::vector<std::shared_ptr<Data>>> ExecuteParallel(
       tensorflow::gtl::ArraySlice<const XlaComputation> computations,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
-      tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) override;
+      const ExecuteParallelOptions& options) override;
 
   std::vector<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
       tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) override;
@@ -181,18 +181,18 @@ class XrtComputationClient : public ComputationClient {
       tensorflow::gtl::ArraySlice<const XlaComputation> computations,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const Shape* const> output_shapes,
-      tensorflow::gtl::ArraySlice<const string> devices,
+      bool explode_tuple, tensorflow::gtl::ArraySlice<const string> devices,
       tensorflow::ClientSession::FeedType* feed_inputs);
 
   std::vector<ExecuteContext> CreateExecuteOps(
       XrtSessionCache::SessionMap* session_map,
       const XlaComputation& computation,
       const std::vector<std::vector<Data*>>& arguments,
-      const Shape* output_shape,
+      const Shape* output_shape, bool explode_tuple,
       tensorflow::gtl::ArraySlice<const string> devices,
       tensorflow::ClientSession::FeedType* feed_inputs);
 
-  std::vector<std::shared_ptr<Data>> RunComputations(
+  std::vector<std::vector<std::shared_ptr<Data>>> RunComputations(
       const XrtSessionCache::SessionMap& session_map,
       const std::vector<ExecuteContext>& exec_ops,
       tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
@@ -226,6 +226,10 @@ class XrtComputationClient : public ComputationClient {
       const string& xrt_device);
 
   void InitializeDevices();
+
+  std::vector<std::shared_ptr<Data>> GetComputationResults(
+      const tensorflow::Tensor& xrt_result, const Shape& result_shape,
+      const string& device);
 
   // Creates an XRT graph with an XRTCompile, feeding into an XRTExecute
   // operation:
