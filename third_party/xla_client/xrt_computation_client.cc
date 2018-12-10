@@ -16,11 +16,6 @@
 #include "tensorflow/core/util/device_name_utils.h"
 
 namespace xla {
-namespace {
-
-static const char* const kCpuDevice = "/device:CPU:0";
-
-}  // namespace
 
 XrtComputationClient::XrtComputationClient(
     XrtComputationClient::Options options)
@@ -162,19 +157,20 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
   return results;
 }
 
-std::shared_ptr<ComputationClient::Data>
+std::vector<std::shared_ptr<ComputationClient::Data>>
 XrtComputationClient::ExecuteComputation(
     const XlaComputation& computation,
     tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
-    const Shape* output_shape) {
+    const ExecuteComputationOptions& options) {
   metrics::TimedSection timed(ExecuteMetric());
 
   XrtSessionCache::SessionMap session_map;
   string effective_device = GetEffectiveDevice(device);
   tensorflow::ClientSession::FeedType feed_inputs;
-  std::vector<ExecuteContext> exec_ops = CreateExecuteOps(
-      &session_map, computation, BuildParallelArguments(arguments),
-      output_shape, {effective_device}, &feed_inputs);
+  std::vector<ExecuteContext> exec_ops =
+      CreateExecuteOps(&session_map, computation,
+                       BuildParallelArguments(arguments), options.output_shape,
+                       options.explode_tuple, {effective_device}, &feed_inputs);
 
   XrtSession* session = GetSessionForDevice(effective_device, &session_map);
   std::vector<tensorflow::Tensor> outputs;
@@ -184,31 +180,28 @@ XrtComputationClient::ExecuteComputation(
       {&computation});
   XLA_CHECK_EQ(outputs.size(), 1);
 
-  CreateHandlesCounter()->AddValue(1);
-  return std::make_shared<XrtData>(
-      effective_device, outputs[0].scalar<int64>()(),
-      exec_ops.front().result_shape,
-      [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); });
+  return GetComputationResults(outputs[0], exec_ops.front().result_shape,
+                               effective_device);
 }
 
-std::vector<std::shared_ptr<ComputationClient::Data>>
+std::vector<std::vector<std::shared_ptr<ComputationClient::Data>>>
 XrtComputationClient::ExecuteReplicated(
     const XlaComputation& computation,
     const std::vector<std::vector<Data*>>& arguments,
     tensorflow::gtl::ArraySlice<const string> devices,
-    const Shape* output_shape) {
+    const ExecuteReplicatedOptions& options) {
   metrics::TimedSection timed(ExecuteReplicatedMetric());
 
   XrtSessionCache::SessionMap session_map;
   tensorflow::ClientSession::FeedType feed_inputs;
-  std::vector<ExecuteContext> exec_ops =
-      CreateExecuteOps(&session_map, computation, arguments, output_shape,
-                       devices, &feed_inputs);
+  std::vector<ExecuteContext> exec_ops = CreateExecuteOps(
+      &session_map, computation, arguments, options.output_shape,
+      options.explode_tuple, devices, &feed_inputs);
   return RunComputations(session_map, exec_ops, {&computation}, devices,
                          feed_inputs);
 }
 
-std::vector<std::shared_ptr<ComputationClient::Data>>
+std::vector<std::vector<std::shared_ptr<ComputationClient::Data>>>
 XrtComputationClient::RunComputations(
     const XrtSessionCache::SessionMap& session_map,
     const std::vector<ExecuteContext>& exec_ops,
@@ -235,7 +228,7 @@ XrtComputationClient::RunComputations(
     session_replicas[session].push_back(i);
   }
   // TODO(dlibenzi): These could be run in parallel.
-  std::vector<std::shared_ptr<Data>> results(devices.size());
+  std::vector<std::vector<std::shared_ptr<Data>>> results(devices.size());
   for (auto& sess_replica : session_replicas) {
     std::vector<tensorflow::Output> exec_nodes;
     for (auto replica : sess_replica.second) {
@@ -249,29 +242,27 @@ XrtComputationClient::RunComputations(
 
     for (size_t i = 0; i < outputs.size(); ++i) {
       auto replica = sess_replica.second[i];
-      results[replica] = std::make_shared<XrtData>(
-          GetEffectiveDevice(devices[replica]), outputs[i].scalar<int64>()(),
-          exec_ops[replica].result_shape,
-          [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); });
+      results[replica] =
+          GetComputationResults(outputs[i], exec_ops[replica].result_shape,
+                                GetEffectiveDevice(devices[replica]));
     }
-    CreateHandlesCounter()->AddValue(outputs.size());
   }
   return results;
 }
 
-std::vector<std::shared_ptr<ComputationClient::Data>>
+std::vector<std::vector<std::shared_ptr<ComputationClient::Data>>>
 XrtComputationClient::ExecuteParallel(
     tensorflow::gtl::ArraySlice<const XlaComputation> computations,
     const std::vector<std::vector<Data*>>& arguments,
     tensorflow::gtl::ArraySlice<const string> devices,
-    tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) {
+    const ExecuteParallelOptions& options) {
   metrics::TimedSection timed(ExecuteParallelMetric());
 
   XrtSessionCache::SessionMap session_map;
   tensorflow::ClientSession::FeedType feed_inputs;
-  std::vector<ExecuteContext> exec_ops =
-      CreateExecuteOps(&session_map, computations, arguments, output_shapes,
-                       devices, &feed_inputs);
+  std::vector<ExecuteContext> exec_ops = CreateExecuteOps(
+      &session_map, computations, arguments, options.output_shapes,
+      options.explode_tuple, devices, &feed_inputs);
   std::vector<const XlaComputation*> computations_pointers;
   for (auto& computation : computations) {
     computations_pointers.push_back(&computation);
@@ -398,7 +389,8 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
   *config->mutable_program_shape() =
       computation.GetProgramShape().ValueOrDie().ToProto();
   if (output_shape != nullptr) {
-    *config->mutable_program_shape()->mutable_result() = *output_shape;
+    *config->mutable_program_shape()->mutable_result() =
+        output_shape->ToProto();
   }
   *xrt_computation->mutable_hlo_snapshot() =
       *computation.Snapshot().ValueOrDie();
@@ -454,13 +446,14 @@ XrtComputationClient::CreateExecuteOps(
     tensorflow::gtl::ArraySlice<const XlaComputation> computations,
     const std::vector<std::vector<Data*>>& arguments,
     tensorflow::gtl::ArraySlice<const Shape* const> output_shapes,
-    tensorflow::gtl::ArraySlice<const string> devices,
+    bool explode_tuple, tensorflow::gtl::ArraySlice<const string> devices,
     tensorflow::ClientSession::FeedType* feed_inputs) {
   std::vector<ExecuteContext> exec_ops;
   VerifyReplicasDevices(arguments, devices);
   for (size_t i = 0; i < computations.size(); ++i) {
     const XlaComputation& computation = computations[i];
-    const Shape* output_shape = output_shapes[i];
+    const Shape* output_shape =
+        (i < output_shapes.size()) ? output_shapes[i] : nullptr;
     ProgramShape program_shape;
     if (output_shape == nullptr) {
       program_shape = computation.GetProgramShape().ValueOrDie();
@@ -482,6 +475,7 @@ XrtComputationClient::CreateExecuteOps(
     exec_config.set_core_index_in_replica(0);
     exec_config.set_release_input_handles(false);
     exec_config.set_release_compilation_handle(true);
+    exec_config.set_return_exploded_tuple(explode_tuple);
     feed_inputs->insert(
         {cached_node.holders[1], exec_config.SerializeAsString()});
     feed_inputs->insert({cached_node.holders[2], inputs});
@@ -495,7 +489,7 @@ std::vector<XrtComputationClient::ExecuteContext>
 XrtComputationClient::CreateExecuteOps(
     XrtSessionCache::SessionMap* session_map, const XlaComputation& computation,
     const std::vector<std::vector<Data*>>& arguments, const Shape* output_shape,
-    tensorflow::gtl::ArraySlice<const string> devices,
+    bool explode_tuple, tensorflow::gtl::ArraySlice<const string> devices,
     tensorflow::ClientSession::FeedType* feed_inputs) {
   ProgramShape program_shape;
   if (output_shape == nullptr) {
@@ -522,6 +516,7 @@ XrtComputationClient::CreateExecuteOps(
     exec_config.set_core_index_in_replica(0);
     exec_config.set_release_input_handles(false);
     exec_config.set_release_compilation_handle(true);
+    exec_config.set_return_exploded_tuple(explode_tuple);
     feed_inputs->insert(
         {cached_node.holders[1], exec_config.SerializeAsString()});
     feed_inputs->insert({cached_node.holders[2], inputs});
@@ -704,6 +699,28 @@ void XrtComputationClient::InitializeDevices() {
           {dev_target.second, std::move(device_mesh_coords)});
     }
   }
+}
+
+std::vector<std::shared_ptr<ComputationClient::Data>>
+XrtComputationClient::GetComputationResults(
+    const tensorflow::Tensor& xrt_result, const Shape& result_shape,
+    const string& device) {
+  std::vector<std::shared_ptr<Data>> results;
+  if (xrt_result.dims() == 1) {
+    auto handles_vec = xrt_result.vec<int64>();
+    for (int64 i = 0; i < handles_vec.size(); ++i) {
+      results.push_back(std::make_shared<XrtData>(
+          device, handles_vec(i),
+          ShapeUtil::GetTupleElementShape(result_shape, i),
+          [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); }));
+    }
+  } else {
+    results.push_back(std::make_shared<XrtData>(
+        device, xrt_result.scalar<int64>()(), result_shape,
+        [this](XrtData* xrt_data) { ReleaseXrtData(xrt_data); }));
+  }
+  CreateHandlesCounter()->AddValue(results.size());
+  return results;
 }
 
 string XrtComputationClient::GetDefaultDevice() const {

@@ -63,17 +63,20 @@ torch_xla_sources = [
     'torch_xla/csrc/passes/threshold_backward_peephole.cpp',
 ]
 
-build_libs_cmd = './build_torch_xla_libs.sh'
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
+build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
+if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
+    build_libs_cmd += [sys.argv[1]]
 
 if subprocess.call(build_libs_cmd) != 0:
     print("Failed to run '{}'".format(build_libs_cmd))
     sys.exit(1)
 
 # Constant known variables used throughout this file
-cwd = os.path.dirname(os.path.abspath(__file__))
-lib_path = os.path.join(cwd, 'torch_xla', 'lib')
+lib_path = os.path.join(base_dir, 'torch_xla', 'lib')
 pytorch_source_path = os.getenv('PYTORCH_SOURCE_PATH', '..')
-third_party_path = os.path.join(cwd, 'third_party')
+third_party_path = os.path.join(base_dir, 'third_party')
 
 include_dirs = [
     third_party_path + '/tensorflow/bazel-tensorflow',
@@ -122,7 +125,7 @@ extra_link_args += ['-lxla_computation_client']
 version = '0.1'
 try:
     sha = subprocess.check_output(
-        ['git', 'rev-parse', 'HEAD'], cwd=cwd).decode('ascii').strip()
+        ['git', 'rev-parse', 'HEAD'], cwd=base_dir).decode('ascii').strip()
     version += '+' + sha[:7]
 except Exception:
     pass

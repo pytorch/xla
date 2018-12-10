@@ -1,4 +1,6 @@
 *tensorflow*
+*absl*
+*protobuf*
 *perftools*gputools*
 *tf_*
 *TF_*

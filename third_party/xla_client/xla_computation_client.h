@@ -63,22 +63,22 @@ class XlaComputationClient : public ComputationClient {
       tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles)
       override;
 
-  std::shared_ptr<Data> ExecuteComputation(
+  std::vector<std::shared_ptr<Data>> ExecuteComputation(
       const XlaComputation& computation,
       tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
-      const Shape* output_shape) override;
+      const ExecuteComputationOptions& options) override;
 
-  std::vector<std::shared_ptr<Data>> ExecuteReplicated(
+  std::vector<std::vector<std::shared_ptr<Data>>> ExecuteReplicated(
       const XlaComputation& computation,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
-      const Shape* output_shape) override;
+      const ExecuteReplicatedOptions& options) override;
 
-  std::vector<std::shared_ptr<Data>> ExecuteParallel(
+  std::vector<std::vector<std::shared_ptr<Data>>> ExecuteParallel(
       tensorflow::gtl::ArraySlice<const XlaComputation> computations,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
-      tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) override;
+      const ExecuteParallelOptions& options) override;
 
   std::vector<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
       tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) override;

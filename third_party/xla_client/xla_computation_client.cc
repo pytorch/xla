@@ -110,11 +110,11 @@ std::vector<Literal> XlaComputationClient::TransferFromServer(
   return results;
 }
 
-std::shared_ptr<ComputationClient::Data>
+std::vector<std::shared_ptr<ComputationClient::Data>>
 XlaComputationClient::ExecuteComputation(
     const XlaComputation& computation,
     tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
-    const Shape* output_shape) {
+    const ExecuteComputationOptions& options) {
   metrics::TimedSection timed(ExecuteMetric());
 
   std::string effective_device = GetEffectiveDevice(device);
@@ -123,42 +123,52 @@ XlaComputationClient::ExecuteComputation(
   ExecutionOptions eo;
   *eo.mutable_debug_options() = GetDebugOptionsFromFlags();
   *eo.add_device_handles() = GetDeviceHandle(effective_device);
-  if (output_shape != nullptr) {
-    *eo.mutable_shape_with_output_layout() = *output_shape;
+  if (options.output_shape != nullptr) {
+    *eo.mutable_shape_with_output_layout() = options.output_shape->ToProto();
   }
   StatusOr<std::unique_ptr<GlobalData>> result_or_status =
       client_->Execute(computation, arguments_data, &eo);
   xrt_util::CheckComputationStatus(result_or_status.status(), {&computation});
 
+  const Shape* output_shape = options.output_shape;
   ProgramShape program_shape;
   if (output_shape == nullptr) {
     program_shape = computation.GetProgramShape().ValueOrDie();
     output_shape = &program_shape.result();
   }
-  CreateHandlesCounter()->AddValue(1);
-  return std::make_shared<XlaData>(
+
+  std::shared_ptr<Data> data = std::make_shared<XlaData>(
       std::move(result_or_status.ValueOrDie()), effective_device, *output_shape,
       [this](XlaData* xla_data) { ReleaseXlaData(xla_data); });
+  CreateHandlesCounter()->AddValue(1);
+  std::vector<std::shared_ptr<Data>> results;
+  if (ShapeUtil::IsTuple(*output_shape) && options.explode_tuple) {
+    auto tuple_results = DeconstructTuple({data});
+    results = std::move(tuple_results.front());
+  } else {
+    results.push_back(std::move(data));
+  }
+  return results;
 }
 
-std::vector<std::shared_ptr<ComputationClient::Data>>
+std::vector<std::vector<std::shared_ptr<ComputationClient::Data>>>
 XlaComputationClient::ExecuteReplicated(
     const XlaComputation& computation,
     const std::vector<std::vector<Data*>>& arguments,
     tensorflow::gtl::ArraySlice<const string> devices,
-    const Shape* output_shape) {
+    const ExecuteReplicatedOptions& options) {
   metrics::TimedSection timed(ExecuteReplicatedMetric());
   TF_LOG(FATAL) << "ExecuteReplicated() API not yet implemented!";
-  std::vector<std::shared_ptr<ComputationClient::Data>> result;
-  return result;
+  std::vector<std::vector<std::shared_ptr<Data>>> results;
+  return results;
 }
 
-std::vector<std::shared_ptr<ComputationClient::Data>>
+std::vector<std::vector<std::shared_ptr<ComputationClient::Data>>>
 XlaComputationClient::ExecuteParallel(
     tensorflow::gtl::ArraySlice<const XlaComputation> computations,
     const std::vector<std::vector<Data*>>& arguments,
     tensorflow::gtl::ArraySlice<const string> devices,
-    tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) {
+    const ExecuteParallelOptions& options) {
   metrics::TimedSection timed(ExecuteParallelMetric());
 
   std::vector<const XlaComputation*> computations_pointers;
@@ -170,8 +180,10 @@ XlaComputationClient::ExecuteParallel(
     ExecutionOptions eo;
     *eo.mutable_debug_options() = GetDebugOptionsFromFlags();
     *eo.add_device_handles() = GetDeviceHandle(effective_device);
-    if (output_shapes[i] != nullptr) {
-      *eo.mutable_shape_with_output_layout() = *output_shapes[i];
+    if (i < options.output_shapes.size() &&
+        options.output_shapes[i] != nullptr) {
+      *eo.mutable_shape_with_output_layout() =
+          options.output_shapes[i]->ToProto();
     }
     instances.emplace_back(computations[i], std::move(arguments_data),
                            std::move(eo), nullptr);
@@ -185,18 +197,26 @@ XlaComputationClient::ExecuteParallel(
   std::vector<std::unique_ptr<GlobalData>> exec_results(
       std::move(results_or_status.ValueOrDie()));
   XLA_CHECK_EQ(exec_results.size(), computations.size());
-  std::vector<std::shared_ptr<Data>> results;
+  std::vector<std::vector<std::shared_ptr<Data>>> results;
   for (size_t i = 0; i < computations.size(); ++i) {
     ProgramShape program_shape;
-    const Shape* output_shape = output_shapes[i];
+    const Shape* output_shape =
+        (i < options.output_shapes.size()) ? options.output_shapes[i] : nullptr;
     if (output_shape == nullptr) {
       program_shape = computations[i].GetProgramShape().ValueOrDie();
       output_shape = &program_shape.result();
     }
-    results.push_back(std::make_shared<XlaData>(
+    std::shared_ptr<Data> data = std::make_shared<XlaData>(
         std::move(exec_results[i]), GetEffectiveDevice(devices[i]),
-        *output_shape,
-        [this](XlaData* xla_data) { ReleaseXlaData(xla_data); }));
+        *output_shape, [this](XlaData* xla_data) { ReleaseXlaData(xla_data); });
+    std::vector<std::shared_ptr<Data>> computation_results;
+    if (ShapeUtil::IsTuple(*output_shape) && options.explode_tuple) {
+      auto tuple_results = DeconstructTuple({data});
+      computation_results = std::move(tuple_results.front());
+    } else {
+      computation_results.push_back(std::move(data));
+    }
+    results.push_back(std::move(computation_results));
   }
   CreateHandlesCounter()->AddValue(computations.size());
   return results;

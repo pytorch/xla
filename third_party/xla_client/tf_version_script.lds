@@ -1,6 +1,8 @@
 tensorflow {
   global:
     *tensorflow*;
+    *absl*;
+    *protobuf*;
     *perftools*gputools*;
     *TF_*;
     *TFE_*;
