@@ -239,6 +239,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
     }
     raw_grad_outputs.push_back(std::move(replica_raw_grad_outputs));
   }
+  CheckAssumedSizes(raw_grad_outputs.front());
   // If backward graph is not compiled, compile it.
   if (!backward_computation_) {
     // The shape for all the replicas are the same, so use replica[0] for
@@ -255,8 +256,11 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
 
     XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
     backward_computation_ =
-        xla_bwd_impl.BuildComputation("XlaBackward", backward_shapes,
-                                      GetBackwardBuildOptions(inputs_.size()));
+        xla_bwd_impl
+            .BuildComputation("XlaBackward", backward_shapes,
+                              backward_size_op_values_,
+                              GetBackwardBuildOptions(inputs_.size()))
+            .computation;
     backward_shape_.reset();
   }
   // Collect the computation client data vector.
@@ -375,8 +379,8 @@ void XlaModule::BuildFusedTrainComputation(
   xla::XlaBuilder b("XlaFusedComputation");
   // Build the forward pass program without compiling it, the backward pass
   // needs to be called before finalizing it.
-  auto computation_in_outs =
-      xla_fwd_impl.BuildComputationProgram(forward_shapes, &b);
+  auto computation_in_outs = xla_fwd_impl.BuildComputationProgram(
+      forward_shapes, backward_size_op_values_, &b);
   // Take the XLA outputs from the forward pass and set them for the backward
   // call in the same order the standalone, unfused version takes its arguments.
   XLA_CHECK(!computation_in_outs.outputs.empty());
@@ -388,6 +392,7 @@ void XlaModule::BuildFusedTrainComputation(
   for (auto i : df_input_captured_outputs_) {
     captured_inputs_outputs.push_back(computation_in_outs.outputs[i]);
   }
+  SetBackwardSizeOpValues(computation_in_outs.ret_size_op_values);
   // NOTE: The order of the input parameters passed to the BuildComputation()
   // call to build the backward computation is critical, as they have to match
   // the sequence of the graph->inputs() vector. Before the gradients passed in
@@ -420,8 +425,12 @@ void XlaModule::BuildFusedTrainComputation(
   }
   // The arguments are set up correctly, call into the backward computation.
   XlaTranslator xla_bwd_impl(df_, GetPrecisionConfig());
-  auto backward_computation = xla_bwd_impl.BuildComputation(
-      "XlaBackward", backward_shapes, GetBackwardBuildOptions(inputs_.size()));
+  auto backward_computation =
+      xla_bwd_impl
+          .BuildComputation("XlaBackward", backward_shapes,
+                            backward_size_op_values_,
+                            GetBackwardBuildOptions(inputs_.size()))
+          .computation;
   xla::XlaOp backward_op =
       xla::Call(&b, backward_computation, backward_operands);
 
@@ -464,8 +473,10 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
     }
 
     XlaTranslator xla_fwd_impl(f_, GetPrecisionConfig());
-    forward_computation_ =
-        xla_fwd_impl.BuildComputation("XlaForward", forward_shapes);
+    auto forward_translation_result = xla_fwd_impl.BuildComputation(
+        "XlaForward", forward_shapes, backward_size_op_values_);
+    forward_computation_ = std::move(forward_translation_result.computation);
+    SetBackwardSizeOpValues(forward_translation_result.ret_size_op_values);
     forward_shape_.reset();
   }
   DataBatchVector inputs_params_buffers_data =
@@ -577,6 +588,50 @@ void XlaModule::FlushTensorsOperations() {
   // have a path leading to the same XLA computation.
   std::vector<std::shared_ptr<XLATensor>> tensors = XLATensor::GetLiveTensors();
   XLATensor::ApplyPendingGraph(tensors);
+}
+
+void XlaModule::SetBackwardSizeOpValues(
+    const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
+        ret_size_op_values) {
+  size_t backward_input_idx = 0;
+  for (const auto out_idx : df_input_vjps_) {
+    const auto ret_size_op_value_it = ret_size_op_values.find(out_idx);
+    if (ret_size_op_value_it != ret_size_op_values.end()) {
+      const auto it_ok = backward_size_op_values_.insert(
+          std::make_pair(backward_input_idx, ret_size_op_value_it->second));
+      XLA_CHECK(it_ok.second);
+    }
+    ++backward_input_idx;
+  }
+  backward_input_idx += df_input_captured_inputs_.size();
+  for (const auto out_idx : df_input_captured_outputs_) {
+    const auto ret_size_op_value_it = ret_size_op_values.find(out_idx);
+    if (ret_size_op_value_it != ret_size_op_values.end()) {
+      const auto it_ok = backward_size_op_values_.insert(
+          std::make_pair(backward_input_idx, ret_size_op_value_it->second));
+      XLA_CHECK(it_ok.second);
+    }
+    ++backward_input_idx;
+  }
+}
+
+void XlaModule::CheckAssumedSizes(
+    const TensorBatchVector::value_type& replica_raw_grad_outputs) {
+  for (const auto& kv : backward_size_op_values_) {
+    const auto& assumed_size = kv.second;
+    XLA_CHECK_LT(kv.first, replica_raw_grad_outputs.size());
+    const auto& raw_grad_output = replica_raw_grad_outputs[kv.first];
+    const auto effective_size = raw_grad_output->toTensor();
+    const auto effective_size_dims = effective_size.sizes();
+    JIT_ASSERTM(effective_size.type().scalarType() == c10::ScalarType::Long,
+                "Invalid scalar type for effective size");
+    JIT_ASSERTM(effective_size_dims.size() == 1, "Invalid effective size rank");
+    JIT_ASSERTM(effective_size_dims[0], assumed_size.size());
+    for (size_t i = 0; i < assumed_size.size(); ++i) {
+      JIT_ASSERTM(effective_size[i].item().to<int64_t>() == assumed_size[i],
+                  "Effective size doesn't match assumed size");
+    }
+  }
 }
 
 XlaModule::DataBatchVector XlaModule::GetDataBatchVector(

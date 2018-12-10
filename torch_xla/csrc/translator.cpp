@@ -152,12 +152,15 @@ XlaTranslator::XlaTranslator(
     const xla::PrecisionConfig::Precision conv_precision)
     : graph_(graph), conv_precision_(conv_precision) {}
 
-xla::XlaComputation XlaTranslator::BuildComputation(
+XlaTranslationResult XlaTranslator::BuildComputation(
     const std::string& name,
     const std::vector<ParameterShape>& parameter_shapes,
+    const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
+        param_size_op_values,
     const BuildOptions& options) const {
   xla::XlaBuilder b(name);
-  auto returned_tuple = BuildComputationProgram(parameter_shapes, &b);
+  auto returned_tuple =
+      BuildComputationProgram(parameter_shapes, param_size_op_values, &b);
   if (options.output_transform) {
     for (size_t i = 0; i < returned_tuple.outputs.size(); ++i) {
       returned_tuple.outputs[i] =
@@ -165,17 +168,23 @@ xla::XlaComputation XlaTranslator::BuildComputation(
     }
   }
   XlaHelpers::CreateReturnValue(&b, returned_tuple.outputs);
-  return b.Build().ValueOrDie();
+  return {b.Build().ValueOrDie(), returned_tuple.ret_size_op_values};
 }
 
 XlaComputationInOut XlaTranslator::BuildComputationProgram(
     const std::vector<ParameterShape>& parameter_shapes,
+    const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
+        param_size_op_values,
     xla::XlaBuilder* b) const {
   ComputationContext cctx;
   const auto graph_inputs = graph_->inputs();
   XLA_CHECK_EQ(graph_inputs.size(), parameter_shapes.size())
       << "Graph:\n"
       << graph_->toString();
+  // Track the aten::size results while building the XLA computation.
+  // Initialized with the values in param_size_op_values.
+  std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
+      size_op_values_tracking;
   for (size_t parameter_number = 0; parameter_number < graph_inputs.size();
        ++parameter_number) {
     Value* graph_input = graph_inputs[parameter_number];
@@ -193,6 +202,11 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       cctx.AddValueOp(graph_input,
                       XlaHelpers::ScalarBroadcast<float>(
                           0, parameter_shapes[parameter_number].shape, b));
+    }
+    const auto size_op_value_it = param_size_op_values.find(parameter_number);
+    if (size_op_value_it != param_size_op_values.end()) {
+      size_op_values_tracking.insert(
+          std::make_pair(graph_input->unique(), size_op_value_it->second));
     }
   }
   auto nodes = graph_->block()->nodes();
@@ -493,6 +507,10 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         CHECK_EQ(node->inputs().size(), 1);
         const auto shape_sizes = XlaHelpers::ShapeSizes(
             XlaHelpers::ShapeOfXlaOp(cctx.OpForInput(node, 0)));
+        const auto it_ok = size_op_values_tracking.insert(
+            std::pair<size_t, XlaComputationInOut::ShapeSizes>{
+                node->output(0)->unique(), shape_sizes});
+        CHECK(it_ok.second);
         cctx.AddNodeOp(node, xla::ConstantR1<xla::int64>(b, shape_sizes));
         break;
       }
@@ -508,8 +526,17 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         break;
       }
       case prim::SumToSize: {
-        // TODO(asuhan): check it's an identity.
-        cctx.AddNodeOp(node, cctx.OpForInput(node, 0));
+        const auto size_op_value_it =
+            size_op_values_tracking.find(node->input(1)->unique());
+        JIT_ASSERTM(size_op_value_it != size_op_values_tracking.end(),
+                    "prim::SumToSize only allowed when second parameter is a "
+                    "constant size");
+        const auto input_op = cctx.OpForInput(node, 0);
+        const auto input_size =
+            XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input_op));
+        JIT_ASSERTM(input_size == size_op_value_it->second,
+                    "Only no-op prim::SumToSize supported for now");
+        cctx.AddNodeOp(node, input_op);
         break;
       }
       case aten::add_: {
@@ -527,10 +554,22 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
     AT_ERROR("Unexpected end of graph");
   }
   std::vector<xla::XlaOp> returned_tuple;
-  for (const auto return_input : node_inputs) {
+  std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
+      ret_size_op_values;
+  for (size_t return_input_idx = 0; return_input_idx < node_inputs.size();
+       ++return_input_idx) {
+    const auto return_input = node_inputs[return_input_idx];
+    const auto it = size_op_values_tracking.find(return_input->unique());
+    // Add evaluated aten::size values to the return tuple.
+    if (it != size_op_values_tracking.end()) {
+      const auto it_ok = ret_size_op_values.insert(
+          std::make_pair(return_input_idx, it->second));
+      CHECK(it_ok.second);
+    }
     returned_tuple.push_back(cctx.GetOpForValue(return_input));
   }
-  return XlaComputationInOut{cctx.ReleaseInputs(), returned_tuple};
+  return XlaComputationInOut{cctx.ReleaseInputs(), returned_tuple,
+                             ret_size_op_values};
 }
 
 }  // namespace jit
