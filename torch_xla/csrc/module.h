@@ -95,6 +95,19 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // computation have their accumulated operations sync to device memory.
   void FlushTensorsOperations();
 
+  // Propagate ret_size_op_values storing the aten::size values collected during
+  // forward pass translation to the backward pass. Uses the capture information
+  // from the gradient descriptor.
+  void SetBackwardSizeOpValues(
+      const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
+          ret_size_op_values);
+
+  // Checks whether the assumed values computed for aten::size in forward
+  // translation match the gradient outputs passed to the backward method.
+  // Throws on mismatch.
+  void CheckAssumedSizes(
+      const TensorBatchVector::value_type& replica_raw_grad_outputs);
+
   // Sets the gradients of the optimizeable inputs and the optimizable
   // parameters, according to the grad_inputs values. The inputs_require_grad
   // vector tell which inputs requires the gradient to be updated.
@@ -129,6 +142,9 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // All the module parameters (which include the optimizable_params_ ones).
   TensorBatchVector all_params_;
   c10::optional<xla::XlaComputation> forward_computation_;
+  // Stores the aten::size values from the forward pass.
+  std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
+      backward_size_op_values_;
   c10::optional<xla::Shape> forward_shape_;
   c10::optional<xla::XlaComputation> backward_computation_;
   c10::optional<xla::Shape> backward_shape_;
