@@ -52,6 +52,22 @@ class ComputationClient {
     string device;
   };
 
+  struct ExecuteOptions {
+    bool explode_tuple = true;
+  };
+
+  struct ExecuteComputationOptions : public ExecuteOptions {
+    const Shape* output_shape = nullptr;
+  };
+
+  struct ExecuteReplicatedOptions : public ExecuteOptions {
+    const Shape* output_shape = nullptr;
+  };
+
+  struct ExecuteParallelOptions : public ExecuteOptions {
+    std::vector<const Shape*> output_shapes;
+  };
+
   static StatusOr<std::unique_ptr<ComputationClient>> Create();
 
   virtual ~ComputationClient() {}
@@ -80,13 +96,15 @@ class ComputationClient {
       tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) = 0;
 
   // Executes "computation" with "arguments" and returns the result. If
-  // "output_shape" isn't null, use it as a hint for the computation output
-  // layout. The passed device must match the common device of the arguments
-  // Data.
-  virtual std::shared_ptr<Data> ExecuteComputation(
+  // options.output_shape isn't null, use it as a hint for the computation
+  // output layout. The passed device must match the common device of the
+  // arguments Data.
+  // If options.explode_tuple is true, the output tuple will be decomposed into
+  // its single elements.
+  virtual std::vector<std::shared_ptr<Data>> ExecuteComputation(
       const XlaComputation& computation,
       tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
-      const Shape* output_shape) = 0;
+      const ExecuteComputationOptions& options) = 0;
 
   // Executes the computation in replicated mode.
   // The size of the arguments vector is the number of replicas to execute.
@@ -95,29 +113,33 @@ class ComputationClient {
   // devices. The reason of the devices argument is due to the fact that the
   // caller will expect a given computation to happen in one device, but such
   // computation has no parameters. Within arguments[i], every Data object must
-  // be coming from the same device. The optional output_shape can be used to
-  // force the shape (and layout) or the computation result. Returns a vector
-  // (of the same size of the arguments vector) with the results of the parallel
-  // execution. The result[i] will be the result of the computation fed with
-  // arguments[i].
-  virtual std::vector<std::shared_ptr<Data>> ExecuteReplicated(
+  // be coming from the same device. The optional options.output_shape can be
+  // used to force the shape (and layout) or the computation result. Returns a
+  // vector (of the same size of the arguments vector) with the results of the
+  // parallel execution. The result[i] will be the result of the computation fed
+  // with arguments[i].
+  // If options.explode_tuple is true, the output tuples will be decomposed into
+  // their single elements.
+  virtual std::vector<std::vector<std::shared_ptr<Data>>> ExecuteReplicated(
       const XlaComputation& computation,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
-      const Shape* output_shape) = 0;
+      const ExecuteReplicatedOptions& options) = 0;
 
   // Executes the computations in parallel. Each computation must target a
   // different device, the the common device of arguments[i] must match
   // devices[i]. The computations[i] computation is fed with arguments[i]
-  // arguments. The output_shapes[i], if not nullptr, is used to control the
-  // output shape (and layout) of computations[i].
-  // Returns a vector of device side Data object, with result[i] being the
-  // return value of computations[i].
-  virtual std::vector<std::shared_ptr<Data>> ExecuteParallel(
+  // arguments. The options.output_shapes[i], if not nullptr, is used to control
+  // the output shape (and layout) of computations[i]. Returns a vector of
+  // device side Data object, with result[i] being the return value of
+  // computations[i].
+  // If options.explode_tuple is true, the output tuples will be decomposed into
+  // their single elements.
+  virtual std::vector<std::vector<std::shared_ptr<Data>>> ExecuteParallel(
       tensorflow::gtl::ArraySlice<const XlaComputation> computations,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
-      tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) = 0;
+      const ExecuteParallelOptions& options) = 0;
 
   virtual std::vector<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
       tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) = 0;

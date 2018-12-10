@@ -250,7 +250,7 @@ std::string DeviceTypeToString(const XLATensor::DeviceType hw_type) {
 }
 
 void SetMulti(const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
-              std::vector<std::shared_ptr<xla::ComputationClient::Data>>&
+              std::vector<std::shared_ptr<xla::ComputationClient::Data>>
                   new_dest_elements,
               const std::vector<xla::int64>& index_mapping) {
   XLA_CHECK_EQ(index_mapping.size(), new_dest_elements.size());
@@ -672,9 +672,13 @@ void XLATensor::ApplyPendingGraph() {
     XlaGraphContext xla_graph_ctx(/*collate_parameters=*/true);
     auto root = xla_graph_node->Generate(&xla_graph_ctx);
     auto computation = xla_graph_ctx.Build(root).ConsumeValueOrDie();
-    SetXlaData(XlaGetClient()->ExecuteComputation(
+    xla::ComputationClient::ExecuteComputationOptions options;
+    options.explode_tuple = false;
+    auto results = XlaGetClient()->ExecuteComputation(
         computation, xla_graph_ctx.GetParametersData(), GetDevice().ToString(),
-        nullptr));
+        options);
+    XLA_CHECK_EQ(results.size(), 1);
+    SetXlaData(results.front());
   }
 }
 
@@ -687,13 +691,13 @@ void XLATensor::ComputeAndDistribute(
   const auto device = CommonDeviceForTensors(tensors);
   const auto multi_shape =
       MakeShapeWithDeviceLayout(program_shape.result(), device.hw_type);
-  auto client = XlaGetClient();
-  auto result_tuple = client->ExecuteComputation(
+  xla::ComputationClient::ExecuteComputationOptions options;
+  options.output_shape = &multi_shape;
+  auto results = XlaGetClient()->ExecuteComputation(
       computation, xla_graph_ctx->GetParametersData(), device.ToString(),
-      &multi_shape);
-  auto new_dest_elements = client->DeconstructTuple({result_tuple});
+      options);
   // Replace destination's underlying data with the result of the computation.
-  SetMulti(tensors, new_dest_elements.front(), index_mapping);
+  SetMulti(tensors, std::move(results), index_mapping);
 }
 
 std::vector<size_t> XLATensor::GetTensorsOrder(
@@ -765,27 +769,26 @@ void XLATensor::ApplyPendingGraph(
     std::vector<std::vector<xla::ComputationClient::Data*>> parameters;
     std::list<xla::Shape> shapes;
     std::vector<std::string> devices;
-    std::vector<const xla::Shape*> output_shapes;
+    xla::ComputationClient::ExecuteParallelOptions options;
     for (auto& device_context : contexts_map) {
       computations.push_back(
           device_context.second.xla_graph_ctx.Build().ConsumeValueOrDie());
       auto program_shape = computations.back().GetProgramShape().ValueOrDie();
       shapes.push_back(MakeShapeWithDeviceLayout(program_shape.result(),
                                                  device_context.first.hw_type));
-      output_shapes.push_back(&shapes.back());
+      options.output_shapes.push_back(&shapes.back());
       devices.push_back(device_context.first.ToString());
       parameters.push_back(
           device_context.second.xla_graph_ctx.GetParametersData());
     }
-    auto client = XlaGetClient();
-    auto result_tuples = client->ExecuteParallel(computations, parameters,
-                                                 devices, output_shapes);
-    auto result_tuple_elements = client->DeconstructTuple(result_tuples);
+
+    auto results = XlaGetClient()->ExecuteParallel(computations, parameters,
+                                                   devices, options);
     auto context_iterator = contexts_map.begin();
-    for (auto& computation_tuple_elements : result_tuple_elements) {
+    for (auto& computation_tuple_elements : results) {
       // Replace destination's underlying data with the result of the
       // computation.
-      SetMulti(tensors, computation_tuple_elements,
+      SetMulti(tensors, std::move(computation_tuple_elements),
                context_iterator->second.index_mapping);
       ++context_iterator;
     }

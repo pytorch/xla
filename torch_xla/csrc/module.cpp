@@ -36,28 +36,17 @@ void GatherParameters(std::vector<at::Tensor*>* values,
   }
 }
 
-XlaModule::TensorBatchVector DecomposeComputationResult(
-    const std::vector<std::shared_ptr<xla::ComputationClient::Data>>& results,
-    const xla::Shape& result_shape) {
-  std::vector<xla::Shape> shapes = GetComponentShapes(result_shape);
+XlaModule::TensorBatchVector CreateResultBatchVector(
+    std::vector<std::vector<std::shared_ptr<xla::ComputationClient::Data>>>
+        results) {
   XlaModule::TensorBatchVector batch_tensors;
-  if (shapes.size() > 1) {
-    auto result_components = XlaGetClient()->DeconstructTuple(results);
-    for (auto& replica_result_components : result_components) {
-      XlaModule::TensorBatchVector::value_type replica_tensors;
-      for (auto& replica_data : replica_result_components) {
-        replica_tensors.push_back(XLATensor::Create(std::move(replica_data),
-                                                    /*requires_grad=*/false));
-      }
-      batch_tensors.push_back(std::move(replica_tensors));
+  for (auto& replica_result_components : results) {
+    XlaModule::TensorBatchVector::value_type replica_tensors;
+    for (auto& replica_data : replica_result_components) {
+      replica_tensors.push_back(XLATensor::Create(std::move(replica_data),
+                                                  /*requires_grad=*/false));
     }
-  } else {
-    for (auto& replica_data : results) {
-      XlaModule::TensorBatchVector::value_type replica_tensors;
-      replica_tensors.push_back(
-          XLATensor::Create(replica_data, /*requires_grad=*/false));
-      batch_tensors.push_back(std::move(replica_tensors));
-    }
+    batch_tensors.push_back(std::move(replica_tensors));
   }
   return batch_tensors;
 }
@@ -548,16 +537,20 @@ XlaModule::TensorBatchVector XlaModule::Execute(
   for (size_t i = 0; i < devices.size(); ++i) {
     device_strings[i] = devices[i].ToString();
   }
-  auto client = XlaGetClient();
-  std::vector<std::shared_ptr<xla::ComputationClient::Data>> exec_results;
+  std::vector<std::vector<std::shared_ptr<xla::ComputationClient::Data>>>
+      exec_results;
   if (inputs.size() == 1) {
-    exec_results.push_back(client->ExecuteComputation(
-        computation, inputs.front(), device_strings[0], &result_shape));
+    xla::ComputationClient::ExecuteComputationOptions options;
+    options.output_shape = &result_shape;
+    exec_results.push_back(XlaGetClient()->ExecuteComputation(
+        computation, inputs.front(), device_strings[0], options));
   } else {
-    exec_results = client->ExecuteReplicated(computation, inputs,
-                                             device_strings, &result_shape);
+    xla::ComputationClient::ExecuteReplicatedOptions options;
+    options.output_shape = &result_shape;
+    exec_results = XlaGetClient()->ExecuteReplicated(computation, inputs,
+                                                     device_strings, options);
   }
-  return DecomposeComputationResult(std::move(exec_results), result_shape);
+  return CreateResultBatchVector(std::move(exec_results));
 }
 
 XlaTranslator::BuildOptions XlaModule::GetBackwardBuildOptions(
