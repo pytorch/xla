@@ -98,6 +98,7 @@ def forward_passes(graph):
   torch_xla._XLAC._jit_pass_eval_static_size(graph)
   torch._C._jit_pass_constant_propagation(graph)
   torch_xla._XLAC._jit_pass_replace_untraced_operators(graph)
+  torch_xla._XLAC._jit_pass_replace_in_place_ops(graph)
   torch._C._jit_pass_dce(graph)
 
 
