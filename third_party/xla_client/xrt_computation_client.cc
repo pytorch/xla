@@ -101,7 +101,7 @@ XrtComputationClient::TransferToServer(
   std::vector<std::shared_ptr<Data>> results(literals.size());
   for (auto& session_work : session_work_map) {
     std::vector<tensorflow::Tensor> outputs;
-    TF_CHECK_OK(session_work.first->session()->Run(
+    XLA_CHECK_OK(session_work.first->session()->Run(
         feed_inputs, session_work.second.outputs_handles, &outputs));
     XLA_CHECK_EQ(outputs.size(), session_work.second.outputs_handles.size());
 
@@ -141,7 +141,7 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
   std::vector<Literal> results(handles.size());
   for (auto& session_work : session_work_map) {
     std::vector<tensorflow::Tensor> outputs;
-    TF_CHECK_OK(session_work.first->session()->Run(
+    XLA_CHECK_OK(session_work.first->session()->Run(
         feed_inputs, session_work.second.outputs_handles, &outputs));
     XLA_CHECK_EQ(outputs.size(), session_work.second.outputs_handles.size());
 
@@ -305,7 +305,7 @@ XrtComputationClient::DeconstructTuple(
   std::vector<std::vector<std::shared_ptr<Data>>> results(tuples.size());
   for (auto& session_work : session_work_map) {
     std::vector<tensorflow::Tensor> outputs;
-    TF_CHECK_OK(session_work.first->session()->Run(
+    XLA_CHECK_OK(session_work.first->session()->Run(
         feed_inputs, session_work.second.outputs_handles, &outputs));
     XLA_CHECK_EQ(outputs.size(), session_work.second.outputs_handles.size());
 
@@ -548,7 +548,7 @@ void XrtComputationClient::ReleaseHandles(
   }
   for (const auto& session_releases : session_releases_map) {
     std::vector<tensorflow::Tensor> outputs;
-    TF_CHECK_OK(session_releases.first->session()->Run(
+    XLA_CHECK_OK(session_releases.first->session()->Run(
         session_releases.second.feed_inputs, {},
         session_releases.second.releases, &outputs));
   }
@@ -644,12 +644,12 @@ tensorflow::tpu::TopologyProto XrtComputationClient::InitializeAndFetchTopology(
   tensorflow::Node* result;
   session->root()->UpdateStatus(
       builder.Finalize(tpu_system_scope.graph(), &result));
-  TF_CHECK_OK(tpu_system_scope.status());
+  XLA_CHECK_OK(tpu_system_scope.status());
   session->root()->UpdateStatus(tpu_system_scope.DoShapeInference(result));
 
   std::vector<tensorflow::Tensor> outputs;
-  TF_CHECK_OK(session->root()->status());
-  TF_CHECK_OK(
+  XLA_CHECK_OK(session->root()->status());
+  XLA_CHECK_OK(
       session->session()->Run({tensorflow::Output(result, 0)}, &outputs));
   XLA_CHECK_EQ(outputs.size(), 1);
 

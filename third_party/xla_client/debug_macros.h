@@ -5,6 +5,8 @@
 #include "tensorflow/core/platform/stacktrace.h"
 
 #define XLA_CHECK(c) TF_CHECK(c) << "\n" << tensorflow::CurrentStackTrace()
+#define XLA_CHECK_OK(c) \
+  TF_CHECK_OK(c) << "\n" << tensorflow::CurrentStackTrace()
 #define XLA_CHECK_EQ(a, b) \
   TF_CHECK_EQ(a, b) << "\n" << tensorflow::CurrentStackTrace()
 #define XLA_CHECK_NE(a, b) \
