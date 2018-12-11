@@ -9,6 +9,7 @@
 #include "passes/insert_explicit_expand.h"
 #include "passes/remove_in_place_out_param_ops.h"
 #include "passes/remove_unused_forward_outputs.h"
+#include "passes/replace_in_place_ops.h"
 #include "passes/replace_untraced_operators.h"
 #include "passes/threshold_backward_peephole.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -76,6 +77,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   ConstantPropagation(forward_graph);
   ReplaceUntracedOperators(forward_graph);
   RemoveInPlaceOutParamOps(forward_graph);
+  ReplaceInPlaceOps(forward_graph);
   EliminateDeadCode(forward_graph);
 
   // Convert model parameters to vector of XLATensors.
