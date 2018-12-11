@@ -83,6 +83,7 @@ class XLATensor {
   at::ScalarType dtype() const;
   const xla::Shape& shape() const;
   const Device& GetDevice() const;
+  xla::int64 GetUniqueId() const;
 
   // Fetches the XLA data behind the tensor. If the tensor has a graph defining
   // its current value, executes the graph and fetches the XLA data result.
@@ -180,14 +181,19 @@ class XLATensor {
   struct Data {
     Data(std::shared_ptr<xla::ComputationClient::Data> xla_data,
          const Device& device)
-        : xla_data(std::move(xla_data)), device(device) {}
+        : xla_data(std::move(xla_data)),
+          device(device),
+          unique_id(GetNextTensorId()) {}
     Data(std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device)
-        : xla_graph_node(std::move(xla_graph_node)), device(device) {}
+        : xla_graph_node(std::move(xla_graph_node)),
+          device(device),
+          unique_id(GetNextTensorId()) {}
 
     std::shared_ptr<xla::ComputationClient::Data> xla_data;
     std::shared_ptr<XLATensor> grad;
     std::shared_ptr<XlaGraphNode> xla_graph_node;
     Device device;
+    xla::int64 unique_id;
   };
 
   void SetXlaGraphNode(std::shared_ptr<XlaGraphNode> xla_graph_node);
@@ -210,14 +216,6 @@ class XLATensor {
   std::shared_ptr<XlaGraphNode> CreateDivNode(XLATensor& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(const at::Scalar& other);
 
-  // Given the tensors whose operations need to be sync on device memory,
-  // returns a stable order of them, given the computations they accumulated.
-  // The returned vector contains the indices in the tensors vector. Some
-  // indices might be missing, if the tensor at that index does not have any
-  // accumulated operation (no need to sync).
-  static std::vector<size_t> GetTensorsOrder(
-      const std::vector<std::shared_ptr<XLATensor>>& tensors);
-
   static void ComputeAndDistribute(
       XlaGraphContext* xla_graph_ctx,
       const std::vector<xla::int64>& index_mapping,
@@ -225,6 +223,8 @@ class XLATensor {
 
   static std::shared_ptr<XlaGraphNode> CreateTensorNode(
       std::shared_ptr<xla::ComputationClient::Data> data);
+
+  static xla::int64 GetNextTensorId();
 
   std::shared_ptr<Data> data_;
   bool requires_grad_ = false;
