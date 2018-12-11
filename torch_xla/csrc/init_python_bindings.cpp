@@ -3,6 +3,7 @@
 #include "module.h"
 #include "passes/eval_static_size.h"
 #include "passes/insert_explicit_expand.h"
+#include "passes/replace_in_place_ops.h"
 #include "passes/replace_untraced_operators.h"
 #include "passes/threshold_backward_peephole.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -111,6 +112,7 @@ void InitXlaPassesBindings(py::module m) {
   m.def("_jit_pass_replace_untraced_operators", ReplaceUntracedOperators);
   m.def("_jit_pass_threshold_backward_peephole", ThresholdBackwardPeephole);
   m.def("_jit_pass_insert_explicit_expand", InsertExplicitExpand);
+  m.def("_jit_pass_replace_in_place_ops", ReplaceInPlaceOps);
 }
 
 void InitXlaTensorBindings(py::module m) {

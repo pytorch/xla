@@ -61,6 +61,7 @@ torch_xla_sources = [
     'torch_xla/csrc/passes/insert_explicit_expand.cpp',
     'torch_xla/csrc/passes/remove_in_place_out_param_ops.cpp',
     'torch_xla/csrc/passes/remove_unused_forward_outputs.cpp',
+    'torch_xla/csrc/passes/replace_in_place_ops.cpp',
     'torch_xla/csrc/passes/replace_untraced_operators.cpp',
     'torch_xla/csrc/passes/threshold_backward_peephole.cpp',
 ]
