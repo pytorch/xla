@@ -7,6 +7,7 @@
 #include "cross_replica_reduces.h"
 #include "passes/eval_static_size.h"
 #include "passes/insert_explicit_expand.h"
+#include "passes/remove_in_place_out_param_ops.h"
 #include "passes/remove_unused_forward_outputs.h"
 #include "passes/replace_untraced_operators.h"
 #include "passes/threshold_backward_peephole.h"
@@ -74,6 +75,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   EvalStaticSize(forward_graph);
   ConstantPropagation(forward_graph);
   ReplaceUntracedOperators(forward_graph);
+  RemoveInPlaceOutParamOps(forward_graph);
   EliminateDeadCode(forward_graph);
 
   // Convert model parameters to vector of XLATensors.
