@@ -539,10 +539,6 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         cctx.AddNodeOp(node, input_op);
         break;
       }
-      case aten::add_: {
-        // TODO(asuhan): check it's a no-op for training.
-        break;
-      }
       default:
         AT_ERROR("Unsupported operator: ", node->kind().toQualString());
     }
