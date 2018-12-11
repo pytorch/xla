@@ -1,8 +1,8 @@
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 
+#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/core/lib/core/errors.h"
-#include "tensorflow/core/platform/logging.h"
 #include "tensorflow/core/platform/stacktrace.h"
 
 namespace xla {
@@ -30,11 +30,11 @@ void CheckComputationStatus(
   if (!status.ok()) {
     for (size_t i = 0; i < computations.size(); ++i) {
       string hlo_text = GetComputationHloText(*computations[i]).ValueOrDie();
-      LOG(ERROR) << ">>> Dumping Computation " << i;
+      TF_LOG(ERROR) << ">>> Dumping Computation " << i;
       XLA_LOG_LINES(ERROR, hlo_text);
     }
-    LOG(ERROR) << "StackTrace:\n" << tensorflow::CurrentStackTrace();
-    LOG(FATAL) << "Status Error: " << status;
+    TF_LOG(ERROR) << "StackTrace:\n" << tensorflow::CurrentStackTrace();
+    TF_LOG(FATAL) << "Status Error: " << status;
   }
 }
 
