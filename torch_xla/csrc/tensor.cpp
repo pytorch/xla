@@ -1,6 +1,7 @@
 #include "tensor.h"
 
 #include <algorithm>
+#include <atomic>
 #include <functional>
 #include <list>
 #include <mutex>
@@ -393,6 +394,8 @@ const xla::Shape& XLATensor::shape() const {
 
 const XLATensor::Device& XLATensor::GetDevice() const { return data_->device; }
 
+xla::int64 XLATensor::GetUniqueId() const { return data_->unique_id; }
+
 const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::GetXlaData() {
   ApplyPendingGraph();
   return data_->xla_data;
@@ -531,6 +534,11 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateTensorNode(
     return ctx->GetParameter(data);
   };
   return XlaGraphNode::New(std::move(generator), data->shape(), {});
+}
+
+xla::int64 XLATensor::GetNextTensorId() {
+  static std::atomic<xla::int64>* id_generator = new std::atomic<xla::int64>(1);
+  return id_generator->fetch_add(1);
 }
 
 std::shared_ptr<XlaGraphNode> XLATensor::CreateMulNode(XLATensor& other) {
@@ -700,61 +708,24 @@ void XLATensor::ComputeAndDistribute(
   SetMulti(tensors, std::move(results), index_mapping);
 }
 
-std::vector<size_t> XLATensor::GetTensorsOrder(
-    const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-  // The ApplyPendingGraph() API is getting a bunch of tensors, and needs to
-  // create a computation to sync the pending XLA operations on device memory.
-  // The tensors passed ApplyPendingGraph() tends to be logically the same, but
-  // different generations of them.
-  // In order to avoid creating different XLA computations every time, we need
-  // to find a stable order on the tensors. This works correctly if the tensors
-  // being passed are really logically the same but of different generations.
-  struct TensorMetadata {
-    TensorMetadata(std::string data, size_t index)
-        : hash(std::hash<std::string>()(data)),
-          index(index),
-          data(std::move(data)) {}
-    size_t hash;
-    size_t index;
-    std::string data;
-  };
-  std::vector<TensorMetadata> tensor_meta;
-  for (size_t i = 0; i < tensors.size(); ++i) {
-    auto& xla_graph_node = tensors[i]->current_xla_graph_node();
-    if (xla_graph_node != nullptr) {
-      XlaGraphContext xla_graph_ctx(/*collate_parameters=*/false);
-      auto root = xla_graph_node->Generate(&xla_graph_ctx);
-      auto computation = xla_graph_ctx.Build(root).ConsumeValueOrDie();
-      std::string data;
-      XLA_CHECK(tensorflow::SerializeToStringDeterministic(computation.proto(),
-                                                           &data));
-      tensor_meta.emplace_back(std::move(data), i);
-    }
-  }
-  std::sort(tensor_meta.begin(), tensor_meta.end(),
-            [](const TensorMetadata& tm1, const TensorMetadata& tm2) {
-              if (tm1.hash != tm2.hash) {
-                return tm1.hash < tm2.hash;
-              }
-              return tm1.data < tm2.data;
-            });
-  std::vector<size_t> order;
-  for (auto& meta : tensor_meta) {
-    order.push_back(meta.index);
-  }
-  return order;
-}
-
 void XLATensor::ApplyPendingGraph(
     const std::vector<std::shared_ptr<XLATensor>>& tensors) {
+  // Order the tensors based on their unique ID, so that we try to mazimize the
+  // chances of creating the same XLA computation, and hence hitting the
+  // compilation cache.
+  std::vector<size_t> order(tensors.size());
+  std::iota(order.begin(), order.end(), 0);
+  std::sort(order.begin(), order.end(), [&tensors](size_t i1, size_t i2) {
+    return tensors[i1]->GetUniqueId() < tensors[i2]->GetUniqueId();
+  });
+
   struct DeviceContext {
-    DeviceContext() : xla_graph_ctx(/*collate_parameters=*/false) {}
+    DeviceContext() : xla_graph_ctx(/*collate_parameters=*/true) {}
 
     XlaGraphContext xla_graph_ctx;
     std::vector<xla::int64> index_mapping;
   };
   std::map<Device, DeviceContext> contexts_map;
-  std::vector<size_t> order = GetTensorsOrder(tensors);
   for (auto i : order) {
     auto& xla_graph_node = tensors[i]->current_xla_graph_node();
     if (xla_graph_node != nullptr) {
