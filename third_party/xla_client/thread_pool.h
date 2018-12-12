@@ -9,6 +9,9 @@ namespace xla_env {
 // Schedules a closure to be run. The closure should not block.
 void ScheduleClosure(std::function<void()> closure);
 
+// Schedules a closure which might wait for IO or other events/conditions.
+void ScheduleIoClosure(std::function<void()> closure);
+
 }  // namespace xla_env
 }  // namespace xla
 
