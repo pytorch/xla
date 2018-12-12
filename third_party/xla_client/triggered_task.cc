@@ -3,9 +3,15 @@
 namespace xla {
 namespace xla_util {
 
-TriggeredTask::TriggeredTask(std::function<void()> function)
-    : function_(std::move(function)),
-      thread_(new std::thread([this]() { Runner(); })) {}
+TriggeredTask::TriggeredTask(std::function<void()> function, size_t num_threads)
+    : function_(std::move(function)), running_(num_threads) {
+  // We set running_ to num_threads because until the threads reach the
+  // condition wait point (the cv_.wait() call) in the Runner() function, they
+  // are effectively running.
+  for (size_t i = 0; i < num_threads; ++i) {
+    threads_.emplace_back(new std::thread([this]() { Runner(); }));
+  }
+}
 
 void TriggeredTask::Stop() {
   {
@@ -13,8 +19,10 @@ void TriggeredTask::Stop() {
     stopped_ = true;
   }
   run_cv_.notify_all();
-  cv_.notify_one();
-  thread_->join();
+  cv_.notify_all();
+  for (auto& thread : threads_) {
+    thread->join();
+  }
 }
 
 size_t TriggeredTask::Activate() {
@@ -24,7 +32,7 @@ size_t TriggeredTask::Activate() {
     std::lock_guard<std::mutex> lock(mutex_);
     notify = !activated_;
     activated_ = true;
-    run_id = run_id_ + running_;
+    run_id = run_id_ + (running_ > 0);
   }
   if (notify) {
     cv_.notify_one();
@@ -48,12 +56,12 @@ void TriggeredTask::Runner() {
       if (run_waiters_ > 0) {
         run_cv_.notify_all();
       }
-      running_ = false;
+      --running_;
       cv_.wait(lock, [this] { return activated_ || stopped_; });
-      running_ = true;
       if (stopped_) {
         break;
       }
+      ++running_;
       activated_ = false;
     }
     function_();
