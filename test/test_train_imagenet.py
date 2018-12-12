@@ -84,9 +84,11 @@ def train_imagenet():
 
   for epoch in range(1, FLAGS.num_epochs + 1):
     xla_model.train(
-        train_loader, optimizer, FLAGS.batch_size, log_interval=log_interval)
-    if FLAGS.metrics_debug:
-      print(torch_xla._XLAC._xla_metrics_report())
+        train_loader,
+        optimizer,
+        FLAGS.batch_size,
+        log_interval=log_interval,
+        metrics_debug=FLAGS.metrics_debug)
     accuracy = xla_model.test(test_loader,
                               _cross_entropy_loss_eval_fn(cross_entropy_loss),
                               FLAGS.batch_size)

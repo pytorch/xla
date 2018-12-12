@@ -468,7 +468,8 @@ class XlaModel(object):
             optimizer,
             batch_size,
             log_interval=1,
-            log_fn=print):
+            log_fn=print,
+            metrics_debug=False):
     wloader = LoaderWrapper(
         samples_loader,
         self._loader_prefetch,
@@ -493,6 +494,8 @@ class XlaModel(object):
       processed_samples += self._num_cores * batch_size
       if (log_fn is not None and log_interval is not None and
           batch_number % log_interval == 0):
+        if metrics_debug:
+          log_fn(torch_xla._XLAC._xla_metrics_report())
         loss = self._compute_loss(xla_outputs)
         log_fn('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
                'Loss: {:.6f}\tSamples/sec: {:.1f}'.format(
