@@ -2,16 +2,45 @@
 #include "helpers.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
+#include <functional>
+#include <numeric>
+
 namespace torch {
 namespace jit {
 
 namespace {
 
-// Graph nodes specify -1 for unknown dimensions. Return true iff all dimension
-// sizes are positive.
-bool IsCompleteShape(const std::vector<int64_t>& dim_sizes) {
-  return std::all_of(dim_sizes.begin(), dim_sizes.end(),
-                     [](const int64_t dim_size) { return dim_size >= 0; });
+// For input_sizes and a potentially incomplete output_sizes, return a complete
+// output shape. The complete output shape has same total number of elements as
+// input_sizes and matches output_sizes in all dimensions except for at most
+// one, which can be inferred and stored as -1 in output_sizes.
+std::vector<int64_t> GetCompleteShape(
+    const std::vector<int64_t>& output_sizes,
+    const std::vector<xla::int64>& input_sizes) {
+  c10::optional<size_t> incomplete_dim;
+  int64_t incomplete_element_count = 1;
+  for (size_t dim = 0; dim < output_sizes.size(); ++dim) {
+    const auto dim_size = output_sizes[dim];
+    if (dim_size < 0) {
+      XLA_CHECK(!incomplete_dim) << "More than one incomplete dimension found";
+      incomplete_dim = dim;
+    } else {
+      incomplete_element_count *= dim_size;
+    }
+  }
+  if (!incomplete_dim) {
+    return output_sizes;
+  }
+  const auto total_element_count =
+      std::accumulate(input_sizes.begin(), input_sizes.end(), int64_t(1),
+                      std::multiplies<int64_t>());
+  XLA_CHECK_EQ(total_element_count % incomplete_element_count, 0)
+      << "Cannot infer remaining dimension";
+  std::vector<int64_t> complete_output_sizes(output_sizes.begin(),
+                                             output_sizes.end());
+  complete_output_sizes[*incomplete_dim] =
+      total_element_count / incomplete_element_count;
+  return complete_output_sizes;
 }
 
 }  // namespace
@@ -19,7 +48,6 @@ bool IsCompleteShape(const std::vector<int64_t>& dim_sizes) {
 xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_EQ(node_inputs.size(), 2);
-  const auto input_sizes = XlaHelpers::TensorDimensionSizes(node_inputs[0]);
   const auto node_outputs = node->outputs();
   XLA_CHECK_EQ(node_outputs.size(), 1);
   // Try to use the second argument of the operator as the target shape.
@@ -34,21 +62,15 @@ xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
     default:
       TF_LOG(FATAL) << "Unexpected node kind, must be view or reshape";
   }
-  // If the second argument doesn't fully specify the target shape, use the size
-  // of the output.
-  if (!IsCompleteShape(output_sizes)) {
-    XLA_CHECK(node_outputs[0]->type()->cast<CompleteTensorType>());
-    output_sizes = XlaHelpers::TensorDimensionSizes(node_outputs[0]);
-  }
-  JIT_ASSERTM(IsCompleteShape(output_sizes),
-              "Cannot infer target size for aten::view");
+  output_sizes = GetCompleteShape(
+      output_sizes, XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input)));
   return xla::Reshape(input, XlaHelpers::I64List(output_sizes));
 }
 
 xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_GE(node_inputs.size(), 1);
-  auto input_sizes = XlaHelpers::TensorDimensionSizes(node_inputs[0]);
+  auto input_sizes = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
   const auto node_outputs = node->outputs();
   XLA_CHECK_EQ(node_outputs.size(), 1);
   const auto output_sizes = node->get<std::vector<int64_t>>(attr::size).value();
@@ -57,8 +79,7 @@ xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input) {
   for (size_t i = 0; i < output_sizes.size() - input_sizes.size(); ++i) {
     input_sizes.insert(input_sizes.begin(), 1);
   }
-  const auto implicit_reshape =
-      xla::Reshape(input, XlaHelpers::I64List(input_sizes));
+  const auto implicit_reshape = xla::Reshape(input, input_sizes);
   // Squeeze the trivial (of size 1) dimensions.
   std::vector<xla::int64> non_singleton_dimensions;
   std::copy_if(input_sizes.begin(), input_sizes.end(),
@@ -123,12 +144,13 @@ xla::XlaOp BuildStack(const Node* node,
   std::vector<xla::XlaOp> reshaped_inputs;
   // Reshape inputs along the dim axis.
   for (size_t i = 0; i < stack_inputs.size(); ++i) {
-    auto reshaped_input_size =
-        XlaHelpers::I64List(XlaHelpers::TensorDimensionSizes(stack_inputs[i]));
-    reshaped_input_size.insert(reshaped_input_size.begin() + dim, 1);
     const auto stack_input = stack_inputs[i];
+    const auto stack_input_op = node_op(stack_input);
+    auto reshaped_input_size =
+        XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(stack_input_op));
+    reshaped_input_size.insert(reshaped_input_size.begin() + dim, 1);
     reshaped_inputs.push_back(
-        xla::Reshape(node_op(stack_input), reshaped_input_size));
+        xla::Reshape(stack_input_op, reshaped_input_size));
   }
   return xla::ConcatInDim(b, reshaped_inputs, dim);
 }
@@ -153,7 +175,12 @@ std::vector<xla::XlaOp> BuildChunk(const Node* node, const xla::XlaOp& input) {
   const auto node_input = node->inputs()[0];
   int64_t chunks = node->get<int64_t>(attr::chunks).value();
   int64_t dim = node->get<int64_t>(attr::dim).value();
-  int64_t size_in_dim = XlaHelpers::TensorDimensionSizes(node_input)[dim];
+  XLA_CHECK_GE(dim, 0) << "Negative dimension specified for chunk operator.";
+  const auto input_sizes =
+      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
+  XLA_CHECK_LT(dim, input_sizes.size())
+      << "Invalid dimension specified for chunk operator.";
+  int64_t size_in_dim = input_sizes[dim];
   int64_t split_size = (size_in_dim + chunks - 1) / chunks;
   std::vector<int64_t> split_sizes(chunks, split_size);
   split_sizes[chunks - 1] = split_size - (split_size * chunks - size_in_dim);
