@@ -254,7 +254,7 @@ XrtComputationClient::RunComputations(
       }
       mwait.Done();
     };
-    xla_env::ScheduleClosure(std::move(session_runner));
+    xla_env::ScheduleIoClosure(std::move(session_runner));
   }
   mwait.Wait();
   return results;
