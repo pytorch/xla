@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/rpc/grpc_stub.h"
 #include "tensorflow/compiler/xla/service/platform_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 
 namespace xla {
@@ -292,8 +293,9 @@ bool XlaComputationClient::ReleaseXlaData(XlaData* xla_data) {
 }
 
 void XlaComputationClient::StartHandleReleaser() {
+  int64 num_threads = sys_util::GetEnvInt("XLA_HANDLE_RELEASE_THREADS", 4);
   triggered_task_.reset(
-      new xla_util::TriggeredTask([this]() { HandleReleaser(); }));
+      new xla_util::TriggeredTask([this]() { HandleReleaser(); }, num_threads));
 }
 
 void XlaComputationClient::HandleReleaser() {
