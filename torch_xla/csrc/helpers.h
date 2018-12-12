@@ -66,9 +66,6 @@ class XlaHelpers {
   static xla::PrecisionConfig BuildPrecisionConfig(
       const xla::PrecisionConfig::Precision conv_precision);
 
-  // Returns the dimension sizes for the given tensor.
-  static std::vector<int64_t> TensorDimensionSizes(const Value* tensor);
-
   // Converts int64_t's to XLA int64's.
   static std::vector<xla::int64> I64List(const at::IntList& input);
 

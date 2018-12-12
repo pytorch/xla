@@ -27,12 +27,6 @@ xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
   return precision_config;
 }
 
-std::vector<int64_t> XlaHelpers::TensorDimensionSizes(const Value* tensor) {
-  const auto tensor_type = tensor->type()->cast<CompleteTensorType>();
-  CHECK(tensor_type);
-  return tensor_type->sizes();
-}
-
 std::vector<xla::int64> XlaHelpers::I64List(const at::IntList& input) {
   std::vector<xla::int64> output(input.size());
   std::copy(input.begin(), input.end(), output.begin());

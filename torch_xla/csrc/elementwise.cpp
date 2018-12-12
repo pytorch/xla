@@ -44,11 +44,10 @@ xla::XlaOp BuildComparisonOp(const Node* node, const xla::XlaOp& operand) {
 xla::XlaOp BuildThreshold(const Node* node, const xla::XlaOp& input,
                           const xla::XlaOp& output, const float threshold,
                           const float value, xla::XlaBuilder* b) {
-  const auto node_inputs = node->inputs();
-  const auto input_sizes = XlaHelpers::TensorDimensionSizes(node_inputs[0]);
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const auto input_sizes = XlaHelpers::ShapeSizes(input_shape);
   std::vector<xla::int64> broadcast_sizes(input_sizes.begin(),
                                           input_sizes.end());
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape output_shape = XlaHelpers::ShapeOfXlaOp(output);
   const auto xla_threshold =
       XlaHelpers::ScalarValue<float>(threshold, input_shape.element_type(), b);
@@ -61,8 +60,7 @@ xla::XlaOp BuildThreshold(const Node* node, const xla::XlaOp& input,
 xla::XlaOp BuildTypeAs(const Node* node, const xla::XlaOp& operand) {
   const auto node_outputs = node->outputs();
   CHECK_EQ(node_outputs.size(), 1);
-  const auto output_tensor_type =
-      node_outputs[0]->type()->cast<CompleteTensorType>();
+  const auto output_tensor_type = node_outputs[0]->type()->cast<TensorType>();
   CHECK(output_tensor_type);
   const auto target_type =
       XlaHelpers::MakeXlaPrimitiveType(output_tensor_type->scalarType());
