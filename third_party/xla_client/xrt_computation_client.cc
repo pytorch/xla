@@ -228,26 +228,35 @@ XrtComputationClient::RunComputations(
     XrtSession* session = session_map.at(worker_hostport.second).get();
     session_replicas[session].push_back(i);
   }
-  // TODO(dlibenzi): These could be run in parallel.
+
+  xla_util::MultiWait mwait(session_replicas.size());
   std::vector<std::vector<std::shared_ptr<Data>>> results(devices.size());
   for (auto& sess_replica : session_replicas) {
-    std::vector<tensorflow::Output> exec_nodes;
-    for (auto replica : sess_replica.second) {
-      exec_nodes.push_back(exec_ops[replica].execute_output);
-    }
-    std::vector<tensorflow::Tensor> outputs;
-    xrt_util::CheckComputationStatus(
-        sess_replica.first->session()->Run(feed_inputs, exec_nodes, &outputs),
-        computations);
-    XLA_CHECK_EQ(outputs.size(), exec_nodes.size());
+    XrtSession* session = sess_replica.first;
+    const std::vector<size_t>& replicas = sess_replica.second;
 
-    for (size_t i = 0; i < outputs.size(); ++i) {
-      auto replica = sess_replica.second[i];
-      results[replica] =
-          GetComputationResults(outputs[i], exec_ops[replica].result_shape,
-                                GetEffectiveDevice(devices[replica]));
-    }
+    auto session_runner = [&, this, session]() {
+      std::vector<tensorflow::Output> exec_nodes;
+      for (auto replica : replicas) {
+        exec_nodes.push_back(exec_ops[replica].execute_output);
+      }
+      std::vector<tensorflow::Tensor> outputs;
+      xrt_util::CheckComputationStatus(
+          session->session()->Run(feed_inputs, exec_nodes, &outputs),
+          computations);
+      XLA_CHECK_EQ(outputs.size(), exec_nodes.size());
+
+      for (size_t i = 0; i < outputs.size(); ++i) {
+        auto replica = replicas[i];
+        results[replica] =
+            GetComputationResults(outputs[i], exec_ops[replica].result_shape,
+                                  GetEffectiveDevice(devices[replica]));
+      }
+      mwait.Done();
+    };
+    xla_env::ScheduleClosure(std::move(session_runner));
   }
+  mwait.Wait();
   return results;
 }
 
