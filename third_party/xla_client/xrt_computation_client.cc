@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
@@ -556,8 +557,9 @@ void XrtComputationClient::ReleaseHandles(
 }
 
 void XrtComputationClient::StartHandleReleaser() {
+  int64 num_threads = sys_util::GetEnvInt("XLA_HANDLE_RELEASE_THREADS", 4);
   triggered_task_.reset(
-      new xla_util::TriggeredTask([this]() { HandleReleaser(); }));
+      new xla_util::TriggeredTask([this]() { HandleReleaser(); }, num_threads));
 }
 
 void XrtComputationClient::HandleReleaser() {

@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 namespace xla {
 namespace xla_util {
@@ -13,7 +14,10 @@ namespace xla_util {
 // Wraps a function which should be run many times upon user activations.
 class TriggeredTask {
  public:
-  explicit TriggeredTask(std::function<void()> function);
+  // Note that if num_threads > 1, the function will be run concurrently from
+  // multiple threads, so it will have to be thread safe. This condition does
+  // not apply if num_threads is 1.
+  TriggeredTask(std::function<void()> function, size_t num_threads);
 
   // Stops the background thread and waits for it to complete.
   void Stop();
@@ -39,10 +43,10 @@ class TriggeredTask {
   std::condition_variable run_cv_;
   size_t run_id_ = 0;
   size_t run_waiters_ = 0;
+  size_t running_ = 0;
   bool activated_ = false;
-  bool running_ = false;
   bool stopped_ = false;
-  std::unique_ptr<std::thread> thread_;
+  std::vector<std::unique_ptr<std::thread>> threads_;
 };
 
 }  // namespace xla_util
