@@ -293,7 +293,8 @@ bool XlaComputationClient::ReleaseXlaData(XlaData* xla_data) {
 }
 
 void XlaComputationClient::StartHandleReleaser() {
-  int64 num_threads = sys_util::GetEnvInt("XLA_HANDLE_RELEASE_THREADS", 4);
+  int64 num_threads =
+      sys_util::GetEnvInt("XLA_HANDLE_RELEASE_THREADS", device_handles_.size());
   triggered_task_.reset(
       new xla_util::TriggeredTask([this]() { HandleReleaser(); }, num_threads));
 }
