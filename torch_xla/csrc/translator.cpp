@@ -159,16 +159,16 @@ XlaTranslationResult XlaTranslator::BuildComputation(
         param_size_op_values,
     const BuildOptions& options) const {
   xla::XlaBuilder b(name);
-  auto returned_tuple =
+  auto computation_program =
       BuildComputationProgram(parameter_shapes, param_size_op_values, &b);
   if (options.output_transform) {
-    for (size_t i = 0; i < returned_tuple.outputs.size(); ++i) {
-      returned_tuple.outputs[i] =
-          options.output_transform(returned_tuple.outputs[i], i);
+    for (size_t i = 0; i < computation_program.outputs.size(); ++i) {
+      computation_program.outputs[i] =
+          options.output_transform(computation_program.outputs[i], i);
     }
   }
-  XlaHelpers::CreateReturnValue(&b, returned_tuple.outputs);
-  return {b.Build().ValueOrDie(), returned_tuple.ret_size_op_values};
+  XlaHelpers::CreateReturnValue(&b, computation_program.outputs);
+  return {b.Build().ValueOrDie(), computation_program.ret_size_op_values};
 }
 
 XlaComputationInOut XlaTranslator::BuildComputationProgram(
@@ -205,7 +205,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
     }
     const auto size_op_value_it = param_size_op_values.find(parameter_number);
     if (size_op_value_it != param_size_op_values.end()) {
-      size_op_values_tracking.insert(
+      size_op_values_tracking.emplace(
           std::make_pair(graph_input->unique(), size_op_value_it->second));
     }
   }
@@ -507,7 +507,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         XLA_CHECK_EQ(node->inputs().size(), 1);
         const auto shape_sizes = XlaHelpers::ShapeSizes(
             XlaHelpers::ShapeOfXlaOp(cctx.OpForInput(node, 0)));
-        const auto it_ok = size_op_values_tracking.insert(
+        const auto it_ok = size_op_values_tracking.emplace(
             std::pair<size_t, XlaComputationInOut::ShapeSizes>{
                 node->output(0)->unique(), shape_sizes});
         XLA_CHECK(it_ok.second);
@@ -557,7 +557,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
     const auto it = size_op_values_tracking.find(return_input->unique());
     // Add evaluated aten::size values to the return tuple.
     if (it != size_op_values_tracking.end()) {
-      const auto it_ok = ret_size_op_values.insert(
+      const auto it_ok = ret_size_op_values.emplace(
           std::make_pair(return_input_idx, it->second));
       XLA_CHECK(it_ok.second);
     }
