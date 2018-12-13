@@ -6,13 +6,13 @@
 #include <memory>
 #include <utility>
 
-#include "absl/types/optional.h"
 #include "tensorflow/cc/client/client_session.h"
 #include "tensorflow/cc/framework/ops.h"
 #include "tensorflow/cc/framework/scope.h"
 #include "tensorflow/cc/ops/standard_ops.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace xla {
 
@@ -28,13 +28,23 @@ class XrtSession {
   struct CachedNode {
     CachedNode(tensorflow::Output output,
                std::vector<tensorflow::ops::Placeholder> holders)
-        : output(std::move(output)), holders(std::move(holders)) {}
+        : holders(std::move(holders)) {
+      outputs.push_back(std::move(output));
+    }
     CachedNode(tensorflow::Operation operation,
                std::vector<tensorflow::ops::Placeholder> holders)
-        : operation(std::move(operation)), holders(std::move(holders)) {}
+        : holders(std::move(holders)) {
+      operations.push_back(std::move(operation));
+    }
+    CachedNode(std::vector<tensorflow::Output> outputs,
+               std::vector<tensorflow::ops::Placeholder> holders)
+        : outputs(std::move(outputs)), holders(std::move(holders)) {}
+    CachedNode(std::vector<tensorflow::Operation> operations,
+               std::vector<tensorflow::ops::Placeholder> holders)
+        : operations(std::move(operations)), holders(std::move(holders)) {}
 
-    absl::optional<tensorflow::Output> output;
-    absl::optional<tensorflow::Operation> operation;
+    std::vector<tensorflow::Output> outputs;
+    std::vector<tensorflow::Operation> operations;
     std::vector<tensorflow::ops::Placeholder> holders;
   };
 

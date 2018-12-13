@@ -86,7 +86,7 @@ XrtComputationClient::TransferToServer(
             GetAllocateNode(session, device_scope, device);
         feed_inputs.insert({cached_node.holders[0], std::move(feed_value)});
         SessionWork* session_work = &session_work_map[session];
-        session_work->outputs_handles.push_back(*cached_node.output);
+        session_work->outputs_handles.push_back(cached_node.outputs[0]);
         session_work->index_mapping.push_back(i);
 
         total_size += literal.size_bytes();
@@ -134,7 +134,7 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
         GetReadNode(session, device_scope, xrt_data.device());
     feed_inputs.insert({cached_node.holders[0], xrt_data.handle});
     SessionWork* session_work = &session_work_map[session];
-    session_work->outputs_handles.push_back(*cached_node.output);
+    session_work->outputs_handles.push_back(cached_node.outputs[0]);
     session_work->index_mapping.push_back(i);
   }
 
@@ -308,7 +308,7 @@ XrtComputationClient::DeconstructTuple(
                                       tensorflow::TensorShape({1}));
       index_tensor.flat<tensorflow::int32>()(0) = j;
       feed_inputs.insert({cached_node.holders[1], index_tensor});
-      session_work->outputs_handles.push_back(*cached_node.output);
+      session_work->outputs_handles.push_back(cached_node.outputs[0]);
     }
   }
 
@@ -490,7 +490,7 @@ XrtComputationClient::CreateExecuteOps(
         {cached_node.holders[1], exec_config.SerializeAsString()});
     feed_inputs->insert({cached_node.holders[2], inputs});
 
-    exec_ops.emplace_back(*cached_node.output, *output_shape);
+    exec_ops.emplace_back(cached_node.outputs[0], *output_shape);
   }
   return exec_ops;
 }
@@ -531,7 +531,7 @@ XrtComputationClient::CreateExecuteOps(
         {cached_node.holders[1], exec_config.SerializeAsString()});
     feed_inputs->insert({cached_node.holders[2], inputs});
 
-    exec_ops.emplace_back(*cached_node.output, *output_shape);
+    exec_ops.emplace_back(cached_node.outputs[0], *output_shape);
   }
   return exec_ops;
 }
@@ -554,7 +554,7 @@ void XrtComputationClient::ReleaseHandles(
     const XrtSession::CachedNode& cached_node =
         GetReleaseAllocationHandleNode(session, device_scope, handle.device);
     release->feed_inputs.insert({cached_node.holders[0], handle.handle});
-    release->releases.push_back(*cached_node.operation);
+    release->releases.push_back(cached_node.operations[0]);
   }
   for (const auto& session_releases : session_releases_map) {
     std::vector<tensorflow::Tensor> outputs;
