@@ -21,18 +21,16 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
       node->get<std::vector<int64_t>>(attr::padding).value();
   CHECK_EQ(padding_attr.size(), 2);
   // Adjust input size to account for specified padding.
-  auto input_size = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
+  auto input_size = XlaHelpers::SizesOfXlaOp(input);
   for (int i = 0; i < 2; ++i) {
     input_size[2 + i] += 2 * padding_attr[i];
   }
   tensorflow::TensorShape input_shape(input_size);
   const auto filter = xla::Transpose(weight, {2, 3, 1, 0});
   auto builder = grad.builder();
-  const auto filter_size =
-      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(filter));
+  const auto filter_size = XlaHelpers::SizesOfXlaOp(filter);
   tensorflow::TensorShape filter_shape(filter_size);
-  tensorflow::TensorShape out_backprop_shape(
-      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(grad)));
+  tensorflow::TensorShape out_backprop_shape(XlaHelpers::SizesOfXlaOp(grad));
   const auto stride_attr =
       node->get<std::vector<int64_t>>(attr::stride).value();
   std::vector<int> strides{1, 1};
@@ -125,18 +123,16 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
       node->get<std::vector<int64_t>>(attr::padding).value();
   CHECK_EQ(padding_attr.size(), 2);
   // Adjust input size to account for specified padding.
-  auto input_size = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
+  auto input_size = XlaHelpers::SizesOfXlaOp(input);
   for (int i = 0; i < 2; ++i) {
     input_size[2 + i] += 2 * padding_attr[i];
   }
   tensorflow::TensorShape activations_shape(input_size);
-  const auto filter_size =
-      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(weight));
+  const auto filter_size = XlaHelpers::SizesOfXlaOp(weight);
   std::vector<xla::int64> filter_size_backward{filter_size[2], filter_size[3],
                                                filter_size[1], filter_size[0]};
   tensorflow::TensorShape filter_shape(filter_size_backward);
-  tensorflow::TensorShape out_backprop_shape(
-      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(grad)));
+  tensorflow::TensorShape out_backprop_shape(XlaHelpers::SizesOfXlaOp(grad));
   const auto stride_attr =
       node->get<std::vector<int64_t>>(attr::stride).value();
   std::vector<int> strides{1, 1};
@@ -277,7 +273,7 @@ xla::XlaOp BuildConvolutionBias(
       node->get<std::vector<int64_t>>(attr::stride).value());
   const auto node_outputs = node->outputs();
   const auto conv = BuildConvolution(node, input, kernel, conv_precision);
-  auto broadcast_sizes = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(conv));
+  auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
   CHECK_EQ(broadcast_sizes.size(), 4);
   // Remove the channels dimension.
   broadcast_sizes.erase(broadcast_sizes.begin() + 1);

@@ -62,15 +62,15 @@ xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
     default:
       TF_LOG(FATAL) << "Unexpected node kind, must be view or reshape";
   }
-  output_sizes = GetCompleteShape(
-      output_sizes, XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input)));
+  output_sizes =
+      GetCompleteShape(output_sizes, XlaHelpers::SizesOfXlaOp(input));
   return xla::Reshape(input, XlaHelpers::I64List(output_sizes));
 }
 
 xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_GE(node_inputs.size(), 1);
-  auto input_sizes = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
+  auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   const auto node_outputs = node->outputs();
   XLA_CHECK_EQ(node_outputs.size(), 1);
   const auto output_sizes = node->get<std::vector<int64_t>>(attr::size).value();
@@ -146,8 +146,7 @@ xla::XlaOp BuildStack(const Node* node,
   for (size_t i = 0; i < stack_inputs.size(); ++i) {
     const auto stack_input = stack_inputs[i];
     const auto stack_input_op = node_op(stack_input);
-    auto reshaped_input_size =
-        XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(stack_input_op));
+    auto reshaped_input_size = XlaHelpers::SizesOfXlaOp(stack_input_op);
     reshaped_input_size.insert(reshaped_input_size.begin() + dim, 1);
     reshaped_inputs.push_back(
         xla::Reshape(stack_input_op, reshaped_input_size));
@@ -176,8 +175,7 @@ std::vector<xla::XlaOp> BuildChunk(const Node* node, const xla::XlaOp& input) {
   int64_t chunks = node->get<int64_t>(attr::chunks).value();
   int64_t dim = node->get<int64_t>(attr::dim).value();
   XLA_CHECK_GE(dim, 0) << "Negative dimension specified for chunk operator.";
-  const auto input_sizes =
-      XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
+  const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   XLA_CHECK_LT(dim, input_sizes.size())
       << "Invalid dimension specified for chunk operator.";
   int64_t size_in_dim = input_sizes[dim];

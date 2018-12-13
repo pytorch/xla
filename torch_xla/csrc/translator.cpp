@@ -532,8 +532,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
                     "prim::SumToSize only allowed when second parameter is a "
                     "constant size");
         const auto input_op = cctx.OpForInput(node, 0);
-        const auto input_size =
-            XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input_op));
+        const auto input_size = XlaHelpers::SizesOfXlaOp(input_op);
         JIT_ASSERTM(input_size == size_op_value_it->second,
                     "Only no-op prim::SumToSize supported for now");
         cctx.AddNodeOp(node, input_op);
