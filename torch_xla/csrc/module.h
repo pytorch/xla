@@ -98,15 +98,19 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // Propagate ret_size_op_values storing the aten::size values collected during
   // forward pass translation to the backward pass. Uses the capture information
   // from the gradient descriptor.
-  void SetBackwardSizeOpValues(
+  static std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
+  SetBackwardSizeOpValues(
       const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
-          ret_size_op_values);
+          ret_size_op_values,
+      const Gradient& gradient);
 
   // Checks whether the assumed values computed for aten::size in forward
   // translation match the gradient outputs passed to the backward method.
   // Throws on mismatch.
-  void CheckAssumedSizes(
-      const TensorBatchVector::value_type& replica_raw_grad_outputs);
+  static void CheckAssumedSizes(
+      const TensorBatchVector::value_type& replica_raw_grad_outputs,
+      const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
+          backward_size_op_values);
 
   // Sets the gradients of the optimizeable inputs and the optimizable
   // parameters, according to the grad_inputs values. The inputs_require_grad
