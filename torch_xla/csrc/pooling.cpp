@@ -137,7 +137,7 @@ xla::XlaOp BuildAvgPool2dBackward(const Node* node,
   // Inspired from tf2xla.
   CheckAvgPool2DIsSupported(node);
   const auto pooling_op_attributes = Pooling2DOpAttributes(node);
-  auto gradients_size = XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(input));
+  auto gradients_size = XlaHelpers::SizesOfXlaOp(input);
   const auto count_include_pad =
       node->get<bool>(attr::count_include_pad).value();
 
