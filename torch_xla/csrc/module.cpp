@@ -233,7 +233,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
     }
     raw_grad_outputs.push_back(std::move(replica_raw_grad_outputs));
   }
-  CheckAssumedSizes(raw_grad_outputs.front());
+  CheckAssumedSizes(raw_grad_outputs.front(), backward_size_op_values_);
   // If backward graph is not compiled, compile it.
   if (!backward_computation_) {
     // The shape for all the replicas are the same, so use replica[0] for
@@ -387,7 +387,8 @@ void XlaModule::BuildFusedTrainComputation(
   for (auto i : gradient_.df_input_captured_outputs) {
     captured_inputs_outputs.push_back(computation_in_outs.outputs[i]);
   }
-  SetBackwardSizeOpValues(computation_in_outs.ret_size_op_values);
+  backward_size_op_values_ = SetBackwardSizeOpValues(
+      computation_in_outs.ret_size_op_values, gradient_);
   // NOTE: The order of the input parameters passed to the BuildComputation()
   // call to build the backward computation is critical, as they have to match
   // the sequence of the graph->inputs() vector. Before the gradients passed in
@@ -471,7 +472,8 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
     auto forward_translation_result = xla_fwd_impl.BuildComputation(
         "XlaForward", forward_shapes, backward_size_op_values_);
     forward_computation_ = std::move(forward_translation_result.computation);
-    SetBackwardSizeOpValues(forward_translation_result.ret_size_op_values);
+    backward_size_op_values_ = SetBackwardSizeOpValues(
+        forward_translation_result.ret_size_op_values, gradient_);
     forward_shape_.reset();
   }
   DataBatchVector inputs_params_buffers_data =
@@ -585,36 +587,43 @@ void XlaModule::FlushTensorsOperations() {
   XLATensor::ApplyPendingGraph(tensors);
 }
 
-void XlaModule::SetBackwardSizeOpValues(
+std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
+XlaModule::SetBackwardSizeOpValues(
     const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
-        ret_size_op_values) {
+        ret_size_op_values,
+    const Gradient& gradient) {
   size_t backward_input_idx = 0;
-  for (const auto out_idx : gradient_.df_input_vjps) {
+  std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
+      backward_size_op_values;
+  for (const auto out_idx : gradient.df_input_vjps) {
     const auto ret_size_op_value_it = ret_size_op_values.find(out_idx);
     if (ret_size_op_value_it != ret_size_op_values.end()) {
-      const auto it_ok = backward_size_op_values_.insert(
+      const auto it_ok = backward_size_op_values.insert(
           std::make_pair(backward_input_idx, ret_size_op_value_it->second));
       XLA_CHECK(it_ok.second)
           << "Duplicated backward_input_idx: " << backward_input_idx;
     }
     ++backward_input_idx;
   }
-  backward_input_idx += gradient_.df_input_captured_inputs.size();
-  for (const auto out_idx : gradient_.df_input_captured_outputs) {
+  backward_input_idx += gradient.df_input_captured_inputs.size();
+  for (const auto out_idx : gradient.df_input_captured_outputs) {
     const auto ret_size_op_value_it = ret_size_op_values.find(out_idx);
     if (ret_size_op_value_it != ret_size_op_values.end()) {
-      const auto it_ok = backward_size_op_values_.insert(
+      const auto it_ok = backward_size_op_values.insert(
           std::make_pair(backward_input_idx, ret_size_op_value_it->second));
       XLA_CHECK(it_ok.second)
           << "Duplicated backward_input_idx: " << backward_input_idx;
     }
     ++backward_input_idx;
   }
+  return backward_size_op_values;
 }
 
 void XlaModule::CheckAssumedSizes(
-    const TensorBatchVector::value_type& replica_raw_grad_outputs) {
-  for (const auto& kv : backward_size_op_values_) {
+    const TensorBatchVector::value_type& replica_raw_grad_outputs,
+    const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
+        backward_size_op_values) {
+  for (const auto& kv : backward_size_op_values) {
     const auto& assumed_size = kv.second;
     XLA_CHECK_LT(kv.first, replica_raw_grad_outputs.size());
     const auto& raw_grad_output = replica_raw_grad_outputs[kv.first];
