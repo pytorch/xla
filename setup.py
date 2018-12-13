@@ -54,6 +54,7 @@ torch_xla_sources = [
     'torch_xla/csrc/nll_loss.cpp',
     'torch_xla/csrc/pooling.cpp',
     'torch_xla/csrc/reduction.cpp',
+    'torch_xla/csrc/size_ops.cpp',
     'torch_xla/csrc/tensor.cpp',
     'torch_xla/csrc/torch_util.cpp',
     'torch_xla/csrc/translator.cpp',

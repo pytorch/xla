@@ -22,7 +22,9 @@ std::vector<int64_t> GetCompleteShape(
   for (size_t dim = 0; dim < output_sizes.size(); ++dim) {
     const auto dim_size = output_sizes[dim];
     if (dim_size < 0) {
-      XLA_CHECK(!incomplete_dim) << "More than one incomplete dimension found";
+      XLA_CHECK(!incomplete_dim)
+          << "More than one incomplete dimension found: " << *incomplete_dim
+          << " and " << dim;
       incomplete_dim = dim;
     } else {
       incomplete_element_count *= dim_size;
