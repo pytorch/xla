@@ -504,13 +504,13 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         break;
       }
       case aten::size: {
-        CHECK_EQ(node->inputs().size(), 1);
+        XLA_CHECK_EQ(node->inputs().size(), 1);
         const auto shape_sizes = XlaHelpers::ShapeSizes(
             XlaHelpers::ShapeOfXlaOp(cctx.OpForInput(node, 0)));
         const auto it_ok = size_op_values_tracking.insert(
             std::pair<size_t, XlaComputationInOut::ShapeSizes>{
                 node->output(0)->unique(), shape_sizes});
-        CHECK(it_ok.second);
+        XLA_CHECK(it_ok.second);
         cctx.AddNodeOp(node, xla::ConstantR1<xla::int64>(b, shape_sizes));
         break;
       }
@@ -528,13 +528,13 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case prim::SumToSize: {
         const auto size_op_value_it =
             size_op_values_tracking.find(node->input(1)->unique());
-        JIT_ASSERTM(size_op_value_it != size_op_values_tracking.end(),
-                    "prim::SumToSize only allowed when second parameter is a "
-                    "constant size");
+        XLA_CHECK(size_op_value_it != size_op_values_tracking.end())
+            << "prim::SumToSize only allowed when second parameter is a "
+               "constant size";
         const auto input_op = cctx.OpForInput(node, 0);
         const auto input_size = XlaHelpers::SizesOfXlaOp(input_op);
-        JIT_ASSERTM(input_size == size_op_value_it->second,
-                    "Only no-op prim::SumToSize supported for now");
+        XLA_CHECK_EQ(input_size, size_op_value_it->second)
+            << "Only no-op prim::SumToSize supported for now";
         cctx.AddNodeOp(node, input_op);
         break;
       }
@@ -559,7 +559,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
     if (it != size_op_values_tracking.end()) {
       const auto it_ok = ret_size_op_values.insert(
           std::make_pair(return_input_idx, it->second));
-      CHECK(it_ok.second);
+      XLA_CHECK(it_ok.second);
     }
     returned_tuple.push_back(cctx.GetOpForValue(return_input));
   }

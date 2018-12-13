@@ -174,10 +174,10 @@ std::vector<xla::XlaOp> BuildChunk(const Node* node, const xla::XlaOp& input) {
   const auto node_input = node->inputs()[0];
   int64_t chunks = node->get<int64_t>(attr::chunks).value();
   int64_t dim = node->get<int64_t>(attr::dim).value();
-  XLA_CHECK_GE(dim, 0) << "Negative dimension specified for chunk operator.";
+  XLA_CHECK_GE(dim, 0) << "Negative dimension specified for chunk operator";
   const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   XLA_CHECK_LT(dim, input_sizes.size())
-      << "Invalid dimension specified for chunk operator.";
+      << "Invalid dimension specified for chunk operator";
   int64_t size_in_dim = input_sizes[dim];
   int64_t split_size = (size_in_dim + chunks - 1) / chunks;
   std::vector<int64_t> split_sizes(chunks, split_size);
