@@ -219,9 +219,9 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
         zero_input.push_back(false);
       }
     }
+    const auto& replica_captured_outputs = captured_outputs_[i];
     for (size_t input_vjp_idx = f_real_outputs_;
          input_vjp_idx < df_input_vjps_.size(); ++input_vjp_idx) {
-      const auto& replica_captured_outputs = captured_outputs_[i];
       const auto raw_output_index = df_input_vjps_[input_vjp_idx];
       // The index in df_input_vjps_ points inside all outputs list, both real
       // and captured. Skip the real output count to get the captured output
