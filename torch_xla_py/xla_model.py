@@ -391,6 +391,7 @@ class XlaModel(object):
     self._devices = list(devices) if devices else None
     self._loader_prefetch = loader_prefetch
     self._epoch = 0
+    self._step = 0
     if loss_fn:
       assert target is not None
       loss_output_grads = _create_wrapped_model_backward_grads(
@@ -469,7 +470,8 @@ class XlaModel(object):
             batch_size,
             log_interval=1,
             log_fn=print,
-            metrics_debug=False):
+            metrics_debug=False,
+            writer=None):
     wloader = LoaderWrapper(
         samples_loader,
         self._loader_prefetch,
@@ -483,6 +485,7 @@ class XlaModel(object):
     start_time = time.time()
     self._epoch += 1
     for batch_number, (inputs, targets) in wloader:
+      self._step += 1
       optimizer.zero_grad()
       xla_outputs = run_xla_model(
           self._xla_model, inputs, devices=self._devices)
@@ -497,15 +500,22 @@ class XlaModel(object):
         if metrics_debug:
           log_fn(torch_xla._XLAC._xla_metrics_report())
         loss = self._compute_loss(xla_outputs)
+        total_time = time.time() - start_time
+        if writer:
+          writer.add_scalar('loss', loss, self._step)
+          writer.add_scalar('global_step/sec',
+                            (processed_samples / total_time) / batch_size,
+                            self._step)
         log_fn('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
                'Loss: {:.6f}\tSamples/sec: {:.1f}'.format(
                    self._epoch, processed_samples,
                    len(samples_loader) * batch_size,
                    100. * batch_number * self._num_cores / len(samples_loader),
-                   loss, processed_samples / (time.time() - start_time)))
+                   loss, processed_samples / total_time))
     return loss
 
-  def test(self, samples_loader, eval_fn, batch_size, log_fn=print):
+  def test(self, samples_loader, eval_fn, batch_size,
+           log_fn=print, writer=None):
     wloader = LoaderWrapper(
         samples_loader,
         self._loader_prefetch,
@@ -534,6 +544,8 @@ class XlaModel(object):
           count += batch_size
     test_loss /= count
     accuracy = 100.0 * correct / count
+    if writer:
+      writer.add_scalar('accuracy', accuracy, self._step)
     if log_fn is not None:
       log_fn('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%), '
              'Samples/sec: {:.1f}\n'.format(test_loss, correct, count, accuracy,

@@ -19,6 +19,12 @@ import torchvision.transforms as transforms
 import unittest
 
 
+writer = None
+if FLAGS.logdir:
+  from tensorboardX import SummaryWriter
+  writer = SummaryWriter(FLAGS.logdir)
+
+
 class BasicBlock(nn.Module):
   expansion = 1
 
@@ -145,9 +151,10 @@ def train_cifar():
         optimizer,
         FLAGS.batch_size,
         log_interval=log_interval,
-        metrics_debug=FLAGS.metrics_debug)
+        metrics_debug=FLAGS.metrics_debug,
+        writer=writer)
     accuracy = xla_model.test(test_loader, xm.category_eval_fn(F.nll_loss),
-                              FLAGS.batch_size)
+                              FLAGS.batch_size, writer=writer)
     xm.update_optimizer_state(optimizer, 'lr', lambda x: x / 1.025)
   return accuracy
 

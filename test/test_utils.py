@@ -3,11 +3,12 @@ import os
 import sys
 
 
-def parse_common_options(datadir=None, num_cores=1, batch_size=128,
-                         num_epochs=10, num_workers=4, target_accuracy=None,
-                         opts=None):
+def parse_common_options(datadir=None, logdir=None, num_cores=1,
+                         batch_size=128, num_epochs=10, num_workers=4,
+                         target_accuracy=None, opts=None):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--datadir', type=str, default=datadir)
+    parser.add_argument('--logdir', type=str, default=logdir)
     parser.add_argument('--num_cores', type=int, default=num_cores)
     parser.add_argument('--batch_size', type=int, default=batch_size)
     parser.add_argument('--num_epochs', type=int, default=num_epochs)
