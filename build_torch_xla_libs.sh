@@ -10,6 +10,11 @@ BASE_DIR="$PWD"
 echo $BASE_DIR
 THIRD_PARTY_DIR="$BASE_DIR/third_party"
 
+OPTS=()
+if [[ "$CC" =~ ^clang ]]; then
+  OPTS+=(--cxxopt="-Wno-c++11-narrowing")
+fi
+
 if [ "$CMD" == "clean" ]; then
   pushd $THIRD_PARTY_DIR/tensorflow
   bazel clean
@@ -20,7 +25,7 @@ else
   pushd $THIRD_PARTY_DIR/tensorflow
   git reset --hard
   git clean -f
-  bazel build --define framework_shared_object=false -c opt --cxxopt="-Wno-c++11-narrowing" \
+  bazel build --define framework_shared_object=false -c opt "${OPTS[@]}" \
     //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
 
   popd

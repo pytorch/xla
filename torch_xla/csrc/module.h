@@ -63,8 +63,12 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
 
   xla::PrecisionConfig::Precision GetPrecisionConfig() const;
 
+  // Retrieves the module devices as vector of strings representations, so that
+  // it can be passed to the computation client API.
+  std::vector<std::string> GetStringDevices() const;
+
   // Builds the fused forward and backward computation for RunFusedTrain.
-  void BuildFusedTrainComputation(
+  xla::XlaComputation BuildFusedTrainComputation(
       const std::vector<XlaTranslator::ParameterShape>& forward_shapes);
 
   // Runs the original, unfused forward computation on the given inputs.
@@ -83,10 +87,9 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // as many replicas as the size of the inputs first dimension.
   // The result_shape is the shape+layout which we want the computation to
   // return.
-  TensorBatchVector Execute(const xla::XlaComputation& computation,
-                            const DataBatchVector& inputs,
-                            const std::vector<XLATensor::Device>& devices,
-                            const xla::Shape& result_shape);
+  TensorBatchVector Execute(
+      const xla::ComputationClient::Computation& computation,
+      const DataBatchVector& inputs);
 
   // Creates the build options to be used to create a backward pass computation.
   XlaTranslator::BuildOptions GetBackwardBuildOptions(size_t num_replicas);
@@ -135,12 +138,10 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   TensorBatchVector optimizable_params_;
   // All the module parameters (which include the optimizable_params_ ones).
   TensorBatchVector all_params_;
-  c10::optional<xla::XlaComputation> forward_computation_;
-  // Stores the aten::size values from the forward pass.
+
+  std::shared_ptr<xla::ComputationClient::Computation> forward_computation_;
+  std::shared_ptr<xla::ComputationClient::Computation> backward_computation_;
   XlaComputationInOut::SizeOpValues backward_size_op_values_;
-  c10::optional<xla::Shape> forward_shape_;
-  c10::optional<xla::XlaComputation> backward_computation_;
-  c10::optional<xla::Shape> backward_shape_;
 
   // Information needed to connect the forward and backward graphs.
   Gradient gradient_;

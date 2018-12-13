@@ -32,6 +32,28 @@ class ComputationClient {
     Shape shape_;
   };
 
+  class Computation {
+   public:
+    Computation(XlaComputation computation, ProgramShape program_shape,
+                std::vector<string> devices)
+        : computation_(std::move(computation)),
+          program_shape_(std::move(program_shape)),
+          devices_(std::move(devices)) {}
+
+    virtual ~Computation() {}
+
+    const XlaComputation& computation() const { return computation_; }
+
+    const ProgramShape& program_shape() const { return program_shape_; }
+
+    const std::vector<string>& devices() const { return devices_; }
+
+   private:
+    XlaComputation computation_;
+    ProgramShape program_shape_;
+    std::vector<string> devices_;
+  };
+
   struct LiteralDevice {
     LiteralDevice() = default;
     LiteralDevice(Literal literal, string device)
@@ -52,21 +74,27 @@ class ComputationClient {
     string device;
   };
 
+  struct CompileInstance {
+    CompileInstance(XlaComputation computation, std::vector<string> devices,
+                    const Shape* output_shape)
+        : computation(std::move(computation)),
+          devices(std::move(devices)),
+          output_shape(output_shape) {}
+
+    XlaComputation computation;
+    std::vector<string> devices;
+    const Shape* output_shape = nullptr;
+  };
+
   struct ExecuteOptions {
     bool explode_tuple = true;
   };
 
-  struct ExecuteComputationOptions : public ExecuteOptions {
-    const Shape* output_shape = nullptr;
-  };
+  struct ExecuteComputationOptions : public ExecuteOptions {};
 
-  struct ExecuteReplicatedOptions : public ExecuteOptions {
-    const Shape* output_shape = nullptr;
-  };
+  struct ExecuteReplicatedOptions : public ExecuteOptions {};
 
-  struct ExecuteParallelOptions : public ExecuteOptions {
-    std::vector<const Shape*> output_shapes;
-  };
+  struct ExecuteParallelOptions : public ExecuteOptions {};
 
   static StatusOr<std::unique_ptr<ComputationClient>> Create();
 
@@ -95,48 +123,45 @@ class ComputationClient {
   virtual std::vector<Literal> TransferFromServer(
       tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) = 0;
 
-  // Executes "computation" with "arguments" and returns the result. If
-  // options.output_shape isn't null, use it as a hint for the computation
-  // output layout. The passed device must match the common device of the
-  // arguments Data.
+  // Compiles a set of computations.
+  virtual std::vector<std::shared_ptr<Computation>> Compile(
+      std::vector<CompileInstance> instances) = 0;
+
+  // Executes computation with arguments and returns the result.
+  // The passed device must match the common device of the arguments Data.
   // If options.explode_tuple is true, the output tuple will be decomposed into
   // its single elements.
   virtual std::vector<std::shared_ptr<Data>> ExecuteComputation(
-      const XlaComputation& computation,
+      const Computation& computation,
       tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
       const ExecuteComputationOptions& options) = 0;
 
   // Executes the computation in replicated mode.
-  // The size of the arguments vector is the number of replicas to execute.
-  // The destination devices for each replicated computation come from the
-  // devices the Data objects are stored into, which must match the passed in
-  // devices. The reason of the devices argument is due to the fact that the
-  // caller will expect a given computation to happen in one device, but such
-  // computation has no parameters. Within arguments[i], every Data object must
-  // be coming from the same device. The optional options.output_shape can be
-  // used to force the shape (and layout) or the computation result. Returns a
-  // vector (of the same size of the arguments vector) with the results of the
-  // parallel execution. The result[i] will be the result of the computation fed
-  // with arguments[i].
-  // If options.explode_tuple is true, the output tuples will be decomposed into
-  // their single elements.
+  // The size of the arguments vector is the number of replicas to execute,
+  // and it must match the size of the computation.devices() as well as the
+  // devices passed as argument. The destination devices for each replicated
+  // computation come from the devices the Data objects are stored into, which
+  // must match the devices argument. Within arguments[i], every Data
+  // object must be coming from the same device. Returns a vector (of the same
+  // size of the arguments vector) with the results of the parallel execution.
+  // The result[i], a vector itself, will be the result of the computation fed
+  // with arguments[i]. If options.explode_tuple is true, the output tuples will
+  // be decomposed into their single elements.
   virtual std::vector<std::vector<std::shared_ptr<Data>>> ExecuteReplicated(
-      const XlaComputation& computation,
+      const Computation& computation,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
       const ExecuteReplicatedOptions& options) = 0;
 
   // Executes the computations in parallel. Each computation must target a
-  // different device, the the common device of arguments[i] must match
+  // different device, and the the common device of arguments[i] must match
   // devices[i]. The computations[i] computation is fed with arguments[i]
-  // arguments. The options.output_shapes[i], if not nullptr, is used to control
-  // the output shape (and layout) of computations[i]. Returns a vector of
-  // device side Data object, with result[i] being the return value of
-  // computations[i].
-  // If options.explode_tuple is true, the output tuples will be decomposed into
-  // their single elements.
+  // arguments.
+  // Returns a vector of vectors of device side Data object, with result[i]
+  // being the return value of computations[i]. If options.explode_tuple is
+  // true, the output tuples will be decomposed into their single elements.
   virtual std::vector<std::vector<std::shared_ptr<Data>>> ExecuteParallel(
-      tensorflow::gtl::ArraySlice<const XlaComputation> computations,
+      tensorflow::gtl::ArraySlice<const Computation* const> computations,
       const std::vector<std::vector<Data*>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
       const ExecuteParallelOptions& options) = 0;
@@ -146,6 +171,12 @@ class ComputationClient {
 
   virtual string GetDefaultDevice() const = 0;
 
+  // Utility API around the vector based Compile() API to compile a single
+  // computation.
+  std::shared_ptr<Computation> Compile(XlaComputation computation,
+                                       std::vector<string> devices,
+                                       const Shape* output_shape);
+
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.
   static int64 GetDeviceOrdinal(const string& device);
@@ -154,14 +185,19 @@ class ComputationClient {
   // Metrics common to all client intrfaces.
   static metrics::Metric* TransferToServerMetric();
   static metrics::Metric* TransferFromServerMetric();
+  static metrics::Metric* CompileMetric();
   static metrics::Metric* ExecuteMetric();
   static metrics::Metric* ExecuteReplicatedMetric();
   static metrics::Metric* ExecuteParallelMetric();
   static metrics::Metric* DeconstructTupleMetric();
-  static metrics::Counter* CreateHandlesCounter();
-  static metrics::Counter* ReleaseHandlesCounter();
-  static metrics::Counter* DestroyHandlesCounter();
-  static metrics::Metric* ReleaseHandlesTimeMetric();
+  static metrics::Counter* CreateDataHandlesCounter();
+  static metrics::Counter* ReleaseDataHandlesCounter();
+  static metrics::Counter* DestroyDataHandlesCounter();
+  static metrics::Metric* ReleaseDataHandlesTimeMetric();
+  static metrics::Counter* CreateCompileHandlesCounter();
+  static metrics::Counter* ReleaseCompileHandlesCounter();
+  static metrics::Counter* DestroyCompileHandlesCounter();
+  static metrics::Metric* ReleaseCompileHandlesTimeMetric();
   static metrics::Metric* InboundDataMetric();
   static metrics::Metric* OutboundDataMetric();
 };

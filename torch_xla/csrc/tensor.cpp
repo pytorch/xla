@@ -12,6 +12,7 @@
 #include "helpers.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "tensorflow/core/lib/strings/proto_serialization.h"
@@ -679,12 +680,16 @@ void XLATensor::ApplyPendingGraph() {
   if (xla_graph_node != nullptr) {
     XlaGraphContext xla_graph_ctx(/*collate_parameters=*/true);
     auto root = xla_graph_node->Generate(&xla_graph_ctx);
-    auto computation = xla_graph_ctx.Build(root).ConsumeValueOrDie();
+    xla::XlaComputation computation =
+        xla_graph_ctx.Build(root).ConsumeValueOrDie();
+    auto compiled_computation = XlaGetClient()->Compile(
+        std::move(computation), {GetDevice().ToString()},
+        /*output_shape=*/nullptr);
     xla::ComputationClient::ExecuteComputationOptions options;
     options.explode_tuple = false;
     auto results = XlaGetClient()->ExecuteComputation(
-        computation, xla_graph_ctx.GetParametersData(), GetDevice().ToString(),
-        options);
+        *compiled_computation, xla_graph_ctx.GetParametersData(),
+        compiled_computation->devices()[0], options);
     XLA_CHECK_EQ(results.size(), 1);
     SetXlaData(results.front());
   }
@@ -694,16 +699,18 @@ void XLATensor::ComputeAndDistribute(
     XlaGraphContext* xla_graph_ctx,
     const std::vector<xla::int64>& index_mapping,
     const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-  auto computation = xla_graph_ctx->Build().ValueOrDie();
-  auto program_shape = computation.GetProgramShape().ValueOrDie();
+  xla::XlaComputation computation = xla_graph_ctx->Build().ValueOrDie();
+  xla::ProgramShape program_shape =
+      computation.GetProgramShape().ConsumeValueOrDie();
   const auto device = CommonDeviceForTensors(tensors);
-  const auto multi_shape =
+  xla::Shape multi_shape =
       MakeShapeWithDeviceLayout(program_shape.result(), device.hw_type);
+  auto compiled_computation = XlaGetClient()->Compile(
+      std::move(computation), {device.ToString()}, &multi_shape);
   xla::ComputationClient::ExecuteComputationOptions options;
-  options.output_shape = &multi_shape;
   auto results = XlaGetClient()->ExecuteComputation(
-      computation, xla_graph_ctx->GetParametersData(), device.ToString(),
-      options);
+      *compiled_computation, xla_graph_ctx->GetParametersData(),
+      compiled_computation->devices()[0], options);
   // Replace destination's underlying data with the result of the computation.
   SetMulti(tensors, std::move(results), index_mapping);
 }
@@ -736,25 +743,31 @@ void XLATensor::ApplyPendingGraph(
     }
   }
   if (!contexts_map.empty()) {
-    std::vector<xla::XlaComputation> computations;
     std::vector<std::vector<xla::ComputationClient::Data*>> parameters;
     std::list<xla::Shape> shapes;
     std::vector<std::string> devices;
-    xla::ComputationClient::ExecuteParallelOptions options;
+    std::vector<xla::ComputationClient::CompileInstance> instances;
     for (auto& device_context : contexts_map) {
-      computations.push_back(
-          device_context.second.xla_graph_ctx.Build().ConsumeValueOrDie());
-      auto program_shape = computations.back().GetProgramShape().ValueOrDie();
+      xla::XlaComputation computation =
+          device_context.second.xla_graph_ctx.Build().ConsumeValueOrDie();
+      xla::ProgramShape program_shape =
+          computation.GetProgramShape().ConsumeValueOrDie();
       shapes.push_back(MakeShapeWithDeviceLayout(program_shape.result(),
                                                  device_context.first.hw_type));
-      options.output_shapes.push_back(&shapes.back());
       devices.push_back(device_context.first.ToString());
+      instances.emplace_back(std::move(computation),
+                             std::vector<std::string>({devices.back()}),
+                             &shapes.back());
       parameters.push_back(
           device_context.second.xla_graph_ctx.GetParametersData());
     }
 
-    auto results = XlaGetClient()->ExecuteParallel(computations, parameters,
-                                                   devices, options);
+    auto computations = XlaGetClient()->Compile(std::move(instances));
+
+    xla::ComputationClient::ExecuteParallelOptions options;
+    auto results = XlaGetClient()->ExecuteParallel(
+        xla::util::GetConstSharedPointers(computations), parameters, devices,
+        options);
     auto context_iterator = contexts_map.begin();
     for (auto& computation_tuple_elements : results) {
       // Replace destination's underlying data with the result of the
