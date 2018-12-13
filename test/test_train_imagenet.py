@@ -13,6 +13,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
+import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
 import unittest
 

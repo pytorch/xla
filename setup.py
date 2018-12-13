@@ -3,6 +3,7 @@
 from setuptools import setup, find_packages, distutils
 from torch.utils.cpp_extension import BuildExtension, CppExtension
 import distutils.command.clean
+import glob
 import os
 import platform
 import shutil
@@ -40,32 +41,8 @@ def _check_env_flag(name, default=''):
   return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
 
 
-torch_xla_sources = [
-    'torch_xla/csrc/batch_norm.cpp',
-    'torch_xla/csrc/convolution.cpp',
-    'torch_xla/csrc/cross_replica_reduces.cpp',
-    'torch_xla/csrc/data_ops.cpp',
-    'torch_xla/csrc/elementwise.cpp',
-    'torch_xla/csrc/graph_context.cpp',
-    'torch_xla/csrc/helpers.cpp',
-    'torch_xla/csrc/init_python_bindings.cpp',
-    'torch_xla/csrc/log_softmax.cpp',
-    'torch_xla/csrc/module.cpp',
-    'torch_xla/csrc/nll_loss.cpp',
-    'torch_xla/csrc/pooling.cpp',
-    'torch_xla/csrc/reduction.cpp',
-    'torch_xla/csrc/size_ops.cpp',
-    'torch_xla/csrc/tensor.cpp',
-    'torch_xla/csrc/torch_util.cpp',
-    'torch_xla/csrc/translator.cpp',
-    'torch_xla/csrc/passes/eval_static_size.cpp',
-    'torch_xla/csrc/passes/insert_explicit_expand.cpp',
-    'torch_xla/csrc/passes/remove_in_place_out_param_ops.cpp',
-    'torch_xla/csrc/passes/remove_unused_forward_outputs.cpp',
-    'torch_xla/csrc/passes/replace_in_place_ops.cpp',
-    'torch_xla/csrc/passes/replace_untraced_operators.cpp',
-    'torch_xla/csrc/passes/threshold_backward_peephole.cpp',
-]
+torch_xla_sources = (glob.glob('torch_xla/csrc/*.cpp') +
+                     glob.glob('torch_xla/csrc/passes/*.cpp'))
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -79,7 +56,8 @@ if subprocess.call(build_libs_cmd) != 0:
 
 # Constant known variables used throughout this file
 lib_path = os.path.join(base_dir, 'torch_xla', 'lib')
-pytorch_source_path = os.getenv('PYTORCH_SOURCE_PATH', '..')
+pytorch_source_path = os.getenv('PYTORCH_SOURCE_PATH',
+                                os.path.dirname(base_dir))
 third_party_path = os.path.join(base_dir, 'third_party')
 
 include_dirs = [

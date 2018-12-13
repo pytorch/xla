@@ -250,7 +250,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
     raw_grad_outputs.push_back(std::move(replica_raw_grad_outputs));
   }
   // If backward graph is not compiled, compile it.
-  if (!backward_computation_) {
+  if (backward_computation_ == nullptr) {
     // The shape for all the replicas are the same, so use replica[0] for
     // building the shapes vector for the BuildComputation() call.
     const auto& replica_raw_grad_outputs = raw_grad_outputs.front();
@@ -264,24 +264,22 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
     }
 
     XlaTranslator xla_bwd_impl(gradient_.df, GetPrecisionConfig());
-    backward_computation_ =
+    xla::XlaComputation computation =
         xla_bwd_impl
             .BuildComputation("XlaBackward", backward_shapes,
                               backward_size_op_values_,
                               GetBackwardBuildOptions(inputs_.size()))
             .computation;
-    backward_shape_.reset();
+    xla::Shape result_shape = GetResultShape(computation, grad_outputs);
+    backward_computation_ = XlaGetClient()->Compile(
+        std::move(computation), GetStringDevices(), &result_shape);
   }
   // Collect the computation client data vector.
   DataBatchVector raw_grad_outputs_data =
       GetDataBatchVector(raw_grad_outputs, &zero_input);
-  if (!backward_shape_) {
-    backward_shape_ = GetResultShape(*backward_computation_, grad_outputs);
-  }
 
   TensorBatchVector grad_inputs =
-      Execute(*backward_computation_, raw_grad_outputs_data, devices_,
-              *backward_shape_);
+      Execute(*backward_computation_, raw_grad_outputs_data);
 
   ApplyGradients(grad_inputs, inputs_, optimizable_params_,
                  inputs_require_grad_, *gradient_.df);
@@ -324,7 +322,9 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
   Initialize(inputs);
 
   TensorBatchVector inputs_params_buffers = PrepareForwardInput(inputs);
-  if (!forward_computation_) {
+  DataBatchVector inputs_params_buffers_data =
+      GetDataBatchVector(inputs_params_buffers, /*zero_input=*/nullptr);
+  if (forward_computation_ == nullptr) {
     // Shapes are going to be the same for all replicas, so use the ones of the
     // first replica here.
     const TensorBatchVector::value_type& replica_inputs =
@@ -335,17 +335,15 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
           replica_inputs[i]->shape(),
           XlaTranslator::ParameterKind::kGraphInput));
     }
-    BuildFusedTrainComputation(forward_shapes);
-  }
-  DataBatchVector inputs_params_buffers_data =
-      GetDataBatchVector(inputs_params_buffers, /*zero_input=*/nullptr);
-  if (!forward_shape_) {
-    forward_shape_ = GetResultShape(*forward_computation_, inputs);
+    xla::XlaComputation computation =
+        BuildFusedTrainComputation(forward_shapes);
+    xla::Shape result_shape = GetResultShape(computation, inputs);
+    forward_computation_ = XlaGetClient()->Compile(
+        std::move(computation), GetStringDevices(), &result_shape);
   }
 
   TensorBatchVector result_components =
-      Execute(*forward_computation_, inputs_params_buffers_data, devices_,
-              *forward_shape_);
+      Execute(*forward_computation_, inputs_params_buffers_data);
 
   // First gradient_.f_real_outputs are the forward outputs returned to user
   // code.
@@ -383,7 +381,7 @@ xla::PrecisionConfig::Precision XlaModule::GetPrecisionConfig() const {
                                   : xla::PrecisionConfig::DEFAULT;
 }
 
-void XlaModule::BuildFusedTrainComputation(
+xla::XlaComputation XlaModule::BuildFusedTrainComputation(
     const std::vector<XlaTranslator::ParameterShape>& forward_shapes) {
   XlaTranslator xla_fwd_impl(gradient_.f, GetPrecisionConfig());
   xla::XlaBuilder b("XlaFusedComputation");
@@ -462,19 +460,21 @@ void XlaModule::BuildFusedTrainComputation(
   }
   XlaHelpers::CreateReturnValue(&b, returned_outputs);
 
-  forward_computation_ = b.Build().ValueOrDie();
-  forward_shape_.reset();
-  TF_VLOG(5) << "Fused computation:\n"
-             << xla::xrt_util::GetComputationHloText(*forward_computation_)
-                    .ValueOrDie();
+  xla::XlaComputation computation = b.Build().ValueOrDie();
+  TF_VLOG(5)
+      << "Fused computation:\n"
+      << xla::xrt_util::GetComputationHloText(computation).ConsumeValueOrDie();
+  return computation;
 }
 
 XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
     const TensorBatchVector& inputs) {
   TensorBatchVector inputs_params_buffers = PrepareForwardInput(inputs);
+  DataBatchVector inputs_params_buffers_data =
+      GetDataBatchVector(inputs_params_buffers, /*zero_input=*/nullptr);
 
   // Lazy-convert forward graph to XlaComputation.
-  if (!forward_computation_) {
+  if (forward_computation_ == nullptr) {
     // Shapes are going to be the same for all replicas, so use the ones of the
     // first replica here.
     std::vector<XlaTranslator::ParameterShape> forward_shapes;
@@ -486,20 +486,18 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
     XlaTranslator xla_fwd_impl(gradient_.f, GetPrecisionConfig());
     auto forward_translation_result = xla_fwd_impl.BuildComputation(
         "XlaForward", forward_shapes, backward_size_op_values_);
-    forward_computation_ = std::move(forward_translation_result.computation);
     backward_size_op_values_ = SetBackwardSizeOpValues(
         forward_translation_result.ret_size_op_values, gradient_);
-    forward_shape_.reset();
-  }
-  DataBatchVector inputs_params_buffers_data =
-      GetDataBatchVector(inputs_params_buffers, /*zero_input=*/nullptr);
-  if (!forward_shape_) {
-    forward_shape_ = GetResultShape(*forward_computation_, inputs);
+
+    xla::Shape result_shape =
+        GetResultShape(forward_translation_result.computation, inputs);
+    forward_computation_ = XlaGetClient()->Compile(
+        std::move(forward_translation_result.computation), GetStringDevices(),
+        &result_shape);
   }
 
   TensorBatchVector raw_outputs =
-      Execute(*forward_computation_, inputs_params_buffers_data, devices_,
-              *forward_shape_);
+      Execute(*forward_computation_, inputs_params_buffers_data);
 
   TensorBatchVector outputs;
   for (size_t i = 0; i < raw_outputs.size(); ++i) {
@@ -558,26 +556,27 @@ XlaModule::TensorBatchVector XlaModule::PrepareForwardInput(
   return inputs_params_buffers;
 }
 
-XlaModule::TensorBatchVector XlaModule::Execute(
-    const xla::XlaComputation& computation, const DataBatchVector& inputs,
-    const std::vector<XLATensor::Device>& devices,
-    const xla::Shape& result_shape) {
-  std::vector<std::string> device_strings(devices.size());
-  for (size_t i = 0; i < devices.size(); ++i) {
-    device_strings[i] = devices[i].ToString();
+std::vector<std::string> XlaModule::GetStringDevices() const {
+  std::vector<std::string> devices(devices_.size());
+  for (size_t i = 0; i < devices_.size(); ++i) {
+    devices[i] = devices_[i].ToString();
   }
+  return devices;
+}
+
+XlaModule::TensorBatchVector XlaModule::Execute(
+    const xla::ComputationClient::Computation& computation,
+    const DataBatchVector& inputs) {
   std::vector<std::vector<std::shared_ptr<xla::ComputationClient::Data>>>
       exec_results;
   if (inputs.size() == 1) {
     xla::ComputationClient::ExecuteComputationOptions options;
-    options.output_shape = &result_shape;
     exec_results.push_back(XlaGetClient()->ExecuteComputation(
-        computation, inputs.front(), device_strings[0], options));
+        computation, inputs.front(), computation.devices()[0], options));
   } else {
     xla::ComputationClient::ExecuteReplicatedOptions options;
-    options.output_shape = &result_shape;
-    exec_results = XlaGetClient()->ExecuteReplicated(computation, inputs,
-                                                     device_strings, options);
+    exec_results = XlaGetClient()->ExecuteReplicated(
+        computation, inputs, computation.devices(), options);
   }
   return CreateResultBatchVector(std::move(exec_results));
 }

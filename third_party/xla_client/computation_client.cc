@@ -10,8 +10,8 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/status_macros.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/xla_computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 
 namespace xla {
@@ -22,7 +22,7 @@ string GetTpuClusterConfigPath() {
   return absl::StrCat(home_folder, "/", ".pytorch_tpu.conf");
 }
 
-bool ShouldUseXrtClient(string* config_path) {
+bool HasXrtConfigFile(string* config_path) {
   *config_path = GetTpuClusterConfigPath();
   if (access(config_path->c_str(), F_OK) != -1) {
     // If we have a TPU cluster config file, we are in Cloud TPU world, so steer
@@ -30,12 +30,12 @@ bool ShouldUseXrtClient(string* config_path) {
     return true;
   }
   config_path->clear();
-  return sys_util::GetEnvInt("XLA_USE_XRT", -1) > 0;
+  return false;
 }
 
 XrtComputationClient::Worker ParseWorker(const string& worker) {
   std::vector<string> parts = absl::StrSplit(worker, ':');
-  CHECK(parts.size() == 1 || parts.size() == 2) << worker;
+  XLA_CHECK(parts.size() == 1 || parts.size() == 2) << worker;
   return parts.size() == 1
              ? XrtComputationClient::Worker(parts[0], 0)
              : XrtComputationClient::Worker(parts[0], std::stoi(parts[1]));
@@ -112,46 +112,47 @@ Status ParseTpuClusterConfig(const string& xrt_config_path,
 }  // namespace
 
 StatusOr<std::unique_ptr<ComputationClient>> ComputationClient::Create() {
-  std::unique_ptr<ComputationClient> client;
+  XrtComputationClient::Options options;
   string xrt_config_path;
-  if (ShouldUseXrtClient(&xrt_config_path)) {
-    XrtComputationClient::Options options;
-    if (!xrt_config_path.empty()) {
-      LOG(INFO) << "Loading XRT configuration from " << xrt_config_path;
-      TF_RETURN_IF_ERROR(ParseTpuClusterConfig(xrt_config_path, &options));
-    } else {
-      TF_ASSIGN_OR_RETURN(bool configured,
-                          ParseEnvBasedTpuClusterConfig(&options));
-      if (!configured) {
-        string device_spec = sys_util::GetEnvString(
-            "XRT_DEVICE_MAP",
-            "TPU:0;/job:tpu_worker/replica:0/task:0/device:TPU:0");
-        for (const auto& device_target : absl::StrSplit(device_spec, '|')) {
-          std::vector<string> parts = absl::StrSplit(device_target, ';');
-          TF_RET_CHECK(parts.size() == 2) << device_target;
-          if (options.default_device.empty()) {
-            options.default_device = parts[0];
-          }
-          options.device_map.emplace(parts[0], parts[1]);
+  if (HasXrtConfigFile(&xrt_config_path)) {
+    TF_LOG(INFO) << "Loading XRT configuration from " << xrt_config_path;
+    TF_RETURN_IF_ERROR(ParseTpuClusterConfig(xrt_config_path, &options));
+  } else {
+    TF_ASSIGN_OR_RETURN(bool configured,
+                        ParseEnvBasedTpuClusterConfig(&options));
+    if (!configured) {
+      string device_spec = sys_util::GetEnvString(
+          "XRT_DEVICE_MAP",
+          "TPU:0;/job:tpu_worker/replica:0/task:0/device:TPU:0");
+      for (const auto& device_target : absl::StrSplit(device_spec, '|')) {
+        std::vector<string> parts = absl::StrSplit(device_target, ';');
+        TF_RET_CHECK(parts.size() == 2) << device_target;
+        if (options.default_device.empty()) {
+          options.default_device = parts[0];
         }
-        string workers_spec = sys_util::GetEnvString(
-            "XRT_WORKERS", "tpu_worker:0;grpc://localhost:51000");
-        for (const auto& name_target : absl::StrSplit(workers_spec, '|')) {
-          std::vector<string> parts = absl::StrSplit(name_target, ';');
-          TF_RET_CHECK(parts.size() == 2);
-          options.workers_map.emplace(ParseWorker(parts[0]), parts[1]);
-        }
+        options.device_map.emplace(parts[0], parts[1]);
+      }
+      string workers_spec = sys_util::GetEnvString(
+          "XRT_WORKERS", "tpu_worker:0;grpc://localhost:51000");
+      for (const auto& name_target : absl::StrSplit(workers_spec, '|')) {
+        std::vector<string> parts = absl::StrSplit(name_target, ';');
+        TF_RET_CHECK(parts.size() == 2);
+        options.workers_map.emplace(ParseWorker(parts[0]), parts[1]);
       }
     }
-    client.reset(new XrtComputationClient(options));
-  } else {
-    XlaComputationClient::Options options;
-    options.host_name = sys_util::GetEnvString("XLA_GRPC_HOST", "localhost");
-    options.port = sys_util::GetEnvInt("XLA_GRPC_PORT", 51000);
-    options.platform = sys_util::GetEnvString("XLA_PLATFORM", "TPU");
-    client.reset(new XlaComputationClient(options));
   }
-  return std::move(client);
+  return std::unique_ptr<ComputationClient>(new XrtComputationClient(options));
+}
+
+std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
+    XlaComputation computation, std::vector<string> devices,
+    const Shape* output_shape) {
+  std::vector<CompileInstance> instances;
+  instances.emplace_back(std::move(computation), std::move(devices),
+                         output_shape);
+  std::vector<std::shared_ptr<Computation>> results =
+      Compile(std::move(instances));
+  return std::move(results[0]);
 }
 
 int64 ComputationClient::GetDeviceOrdinal(const string& device) {
@@ -162,64 +163,94 @@ int64 ComputationClient::GetDeviceOrdinal(const string& device) {
 
 metrics::Metric* ComputationClient::TransferToServerMetric() {
   static metrics::Metric* metric =
-      new metrics::Metric("ClientTransferToServerTime", metrics::MetricFnTime);
+      new metrics::Metric("TransferToServerTime", metrics::MetricFnTime);
   return metric;
 }
 
 metrics::Metric* ComputationClient::TransferFromServerMetric() {
-  static metrics::Metric* metric = new metrics::Metric(
-      "ClientTransferFromServerTime", metrics::MetricFnTime);
+  static metrics::Metric* metric =
+      new metrics::Metric("TransferFromServerTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::CompileMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("CompileTime", metrics::MetricFnTime);
   return metric;
 }
 
 metrics::Metric* ComputationClient::ExecuteMetric() {
   static metrics::Metric* metric =
-      new metrics::Metric("ClientExecuteTime", metrics::MetricFnTime);
+      new metrics::Metric("ExecuteTime", metrics::MetricFnTime);
   return metric;
 }
 
 metrics::Metric* ComputationClient::ExecuteReplicatedMetric() {
   static metrics::Metric* metric =
-      new metrics::Metric("ClientExecuteReplicatedTime", metrics::MetricFnTime);
+      new metrics::Metric("ExecuteReplicatedTime", metrics::MetricFnTime);
   return metric;
 }
 
 metrics::Metric* ComputationClient::ExecuteParallelMetric() {
   static metrics::Metric* metric =
-      new metrics::Metric("ClientExecuteParallelTime", metrics::MetricFnTime);
+      new metrics::Metric("ExecuteParallelTime", metrics::MetricFnTime);
   return metric;
 }
 
 metrics::Metric* ComputationClient::DeconstructTupleMetric() {
   static metrics::Metric* metric =
-      new metrics::Metric("ClientDeconstructTupleTime", metrics::MetricFnTime);
+      new metrics::Metric("DeconstructTupleTime", metrics::MetricFnTime);
   return metric;
 }
 
-metrics::Counter* ComputationClient::CreateHandlesCounter() {
+metrics::Counter* ComputationClient::CreateDataHandlesCounter() {
   // Do not change the name of the counter as xla_model.py references it.
-  static metrics::Counter* counter =
-      new metrics::Counter("ClientCreateHandles");
+  static metrics::Counter* counter = new metrics::Counter("CreateDataHandles");
   return counter;
 }
 
-metrics::Counter* ComputationClient::ReleaseHandlesCounter() {
+metrics::Counter* ComputationClient::ReleaseDataHandlesCounter() {
   // Do not change the name of the counter as xla_model.py references it.
-  static metrics::Counter* counter =
-      new metrics::Counter("ClientReleaseHandles");
+  static metrics::Counter* counter = new metrics::Counter("ReleaseDataHandles");
   return counter;
 }
 
-metrics::Counter* ComputationClient::DestroyHandlesCounter() {
+metrics::Counter* ComputationClient::DestroyDataHandlesCounter() {
   // Do not change the name of the counter as xla_model.py references it.
-  static metrics::Counter* counter =
-      new metrics::Counter("ClientDestroyHandles");
+  static metrics::Counter* counter = new metrics::Counter("DestroyDataHandles");
   return counter;
 }
 
-metrics::Metric* ComputationClient::ReleaseHandlesTimeMetric() {
+metrics::Metric* ComputationClient::ReleaseDataHandlesTimeMetric() {
   static metrics::Metric* metric =
-      new metrics::Metric("ClientReleaseHandlesTime", metrics::MetricFnTime);
+      new metrics::Metric("ReleaseDataHandlesTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Counter* ComputationClient::CreateCompileHandlesCounter() {
+  // Do not change the name of the counter as xla_model.py references it.
+  static metrics::Counter* counter =
+      new metrics::Counter("CreateCompileHandles");
+  return counter;
+}
+
+metrics::Counter* ComputationClient::ReleaseCompileHandlesCounter() {
+  // Do not change the name of the counter as xla_model.py references it.
+  static metrics::Counter* counter =
+      new metrics::Counter("ReleaseCompileHandles");
+  return counter;
+}
+
+metrics::Counter* ComputationClient::DestroyCompileHandlesCounter() {
+  // Do not change the name of the counter as xla_model.py references it.
+  static metrics::Counter* counter =
+      new metrics::Counter("DestroyCompileHandles");
+  return counter;
+}
+
+metrics::Metric* ComputationClient::ReleaseCompileHandlesTimeMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("ReleaseCompileHandlesTime", metrics::MetricFnTime);
   return metric;
 }
 

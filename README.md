@@ -49,12 +49,6 @@ To build:
 
 To run the tests, follow __one__ of the options below:
 
-* Run on CPU using the XLA local client:
-
-  ```
-  export XLA_USE_XRT=0 export XLA_GRPC_HOST="" XLA_PLATFORM="CPU"
-  ```
-
 * Run on local CPU using the XRT client:
 
   ```
