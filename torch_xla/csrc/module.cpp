@@ -587,14 +587,11 @@ void XlaModule::FlushTensorsOperations() {
   XLATensor::ApplyPendingGraph(tensors);
 }
 
-std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
-XlaModule::SetBackwardSizeOpValues(
-    const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
-        ret_size_op_values,
+XlaComputationInOut::SizeOpValues XlaModule::SetBackwardSizeOpValues(
+    const XlaComputationInOut::SizeOpValues& ret_size_op_values,
     const Gradient& gradient) {
   size_t backward_input_idx = 0;
-  std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
-      backward_size_op_values;
+  XlaComputationInOut::SizeOpValues backward_size_op_values;
   for (const auto out_idx : gradient.df_input_vjps) {
     const auto ret_size_op_value_it = ret_size_op_values.find(out_idx);
     if (ret_size_op_value_it != ret_size_op_values.end()) {
@@ -621,8 +618,7 @@ XlaModule::SetBackwardSizeOpValues(
 
 void XlaModule::CheckAssumedSizes(
     const TensorBatchVector::value_type& replica_raw_grad_outputs,
-    const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
-        backward_size_op_values) {
+    const XlaComputationInOut::SizeOpValues& backward_size_op_values) {
   for (const auto& kv : backward_size_op_values) {
     const auto& assumed_size = kv.second;
     XLA_CHECK_LT(kv.first, replica_raw_grad_outputs.size());

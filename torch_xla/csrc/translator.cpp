@@ -12,6 +12,7 @@
 #include "nll_loss.h"
 #include "pooling.h"
 #include "reduction.h"
+#include "size_ops.h"
 #include "tensor.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
@@ -155,8 +156,7 @@ XlaTranslator::XlaTranslator(
 XlaTranslationResult XlaTranslator::BuildComputation(
     const std::string& name,
     const std::vector<ParameterShape>& parameter_shapes,
-    const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
-        param_size_op_values,
+    const XlaComputationInOut::SizeOpValues& param_size_op_values,
     const BuildOptions& options) const {
   xla::XlaBuilder b(name);
   auto computation_program =
@@ -173,8 +173,7 @@ XlaTranslationResult XlaTranslator::BuildComputation(
 
 XlaComputationInOut XlaTranslator::BuildComputationProgram(
     const std::vector<ParameterShape>& parameter_shapes,
-    const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
-        param_size_op_values,
+    const XlaComputationInOut::SizeOpValues& param_size_op_values,
     xla::XlaBuilder* b) const {
   ComputationContext cctx;
   const auto graph_inputs = graph_->inputs();
@@ -183,8 +182,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       << graph_->toString();
   // Track the aten::size results while building the XLA computation.
   // Initialized with the values in param_size_op_values.
-  std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
-      size_op_values_tracking;
+  XlaComputationInOut::SizeOpValues size_op_values_tracking;
   for (size_t parameter_number = 0; parameter_number < graph_inputs.size();
        ++parameter_number) {
     Value* graph_input = graph_inputs[parameter_number];
@@ -505,13 +503,9 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       }
       case aten::size: {
         XLA_CHECK_EQ(node->inputs().size(), 1);
-        const auto shape_sizes = XlaHelpers::ShapeSizes(
-            XlaHelpers::ShapeOfXlaOp(cctx.OpForInput(node, 0)));
-        const auto it_ok = size_op_values_tracking.emplace(
-            std::pair<size_t, XlaComputationInOut::ShapeSizes>{
-                node->output(0)->unique(), shape_sizes});
-        XLA_CHECK(it_ok.second);
-        cctx.AddNodeOp(node, xla::ConstantR1<xla::int64>(b, shape_sizes));
+        xla::XlaOp xla_output =
+            BuildSize(node, cctx.OpForInput(node, 0), &size_op_values_tracking);
+        cctx.AddNodeOp(node, xla_output);
         break;
       }
       case prim::Constant: {
@@ -526,16 +520,10 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         break;
       }
       case prim::SumToSize: {
-        const auto size_op_value_it =
-            size_op_values_tracking.find(node->input(1)->unique());
-        XLA_CHECK(size_op_value_it != size_op_values_tracking.end())
-            << "prim::SumToSize only allowed when second parameter is a "
-               "constant size";
-        const auto input_op = cctx.OpForInput(node, 0);
-        const auto input_size = XlaHelpers::SizesOfXlaOp(input_op);
-        XLA_CHECK_EQ(input_size, size_op_value_it->second)
-            << "Only no-op prim::SumToSize supported for now";
-        cctx.AddNodeOp(node, input_op);
+        XLA_CHECK_EQ(node->inputs().size(), 2);
+        xla::XlaOp xla_output = BuildSumToSize(node, cctx.OpForInput(node, 0),
+                                               size_op_values_tracking);
+        cctx.AddNodeOp(node, xla_output);
         break;
       }
       default:
@@ -549,8 +537,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
     AT_ERROR("Unexpected end of graph");
   }
   std::vector<xla::XlaOp> returned_tuple;
-  std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
-      ret_size_op_values;
+  XlaComputationInOut::SizeOpValues ret_size_op_values;
   for (size_t return_input_idx = 0; return_input_idx < node_inputs.size();
        ++return_input_idx) {
     const auto return_input = node_inputs[return_input_idx];

@@ -10,20 +10,20 @@ namespace torch {
 namespace jit {
 
 struct XlaComputationInOut {
-  using ShapeSizes = std::vector<xla::int64>;
+  using SizeOpValues = std::unordered_map<size_t, std::vector<xla::int64>>;
   std::vector<xla::XlaOp> inputs;
   std::vector<xla::XlaOp> outputs;
   // Stores the values for return components which are the result of aten::size
   // evaluation. Keys are the component indices inside the return tuple.
-  std::unordered_map<size_t, ShapeSizes> ret_size_op_values;
+  SizeOpValues ret_size_op_values;
 };
 
 // The result of translation to XLA: the computation and the map of constant
-// aten::size values in the return tuple.
+// aten::size values in the return tuple. See XlaComputationInOut for the
+// description of ret_size_op_values.
 struct XlaTranslationResult {
   xla::XlaComputation computation;
-  std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>
-      ret_size_op_values;
+  XlaComputationInOut::SizeOpValues ret_size_op_values;
 };
 
 class XlaTranslator {
@@ -61,16 +61,14 @@ class XlaTranslator {
   XlaTranslationResult BuildComputation(
       const std::string& name,
       const std::vector<ParameterShape>& parameter_shapes,
-      const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
-          param_size_op_values,
+      const XlaComputationInOut::SizeOpValues& param_size_op_values,
       const BuildOptions& options = BuildOptions()) const;
 
   // Builds the XLA computation for graph_ without compiling it and returns the
   // XLA operations for inputs and outputs.
   XlaComputationInOut BuildComputationProgram(
       const std::vector<ParameterShape>& parameter_shapes,
-      const std::unordered_map<size_t, XlaComputationInOut::ShapeSizes>&
-          param_size_op_values,
+      const XlaComputationInOut::SizeOpValues& param_size_op_values,
       xla::XlaBuilder* b) const;
 
  private:
