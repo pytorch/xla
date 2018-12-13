@@ -603,7 +603,8 @@ void XlaModule::SetBackwardSizeOpValues(
     if (ret_size_op_value_it != ret_size_op_values.end()) {
       const auto it_ok = backward_size_op_values_.insert(
           std::make_pair(backward_input_idx, ret_size_op_value_it->second));
-      XLA_CHECK(it_ok.second);
+      XLA_CHECK(it_ok.second)
+          << "Duplicated backward_input_idx: " << backward_input_idx;
     }
     ++backward_input_idx;
   }
@@ -613,7 +614,8 @@ void XlaModule::SetBackwardSizeOpValues(
     if (ret_size_op_value_it != ret_size_op_values.end()) {
       const auto it_ok = backward_size_op_values_.insert(
           std::make_pair(backward_input_idx, ret_size_op_value_it->second));
-      XLA_CHECK(it_ok.second);
+      XLA_CHECK(it_ok.second)
+          << "Duplicated backward_input_idx: " << backward_input_idx;
     }
     ++backward_input_idx;
   }
@@ -627,13 +629,15 @@ void XlaModule::CheckAssumedSizes(
     const auto& raw_grad_output = replica_raw_grad_outputs[kv.first];
     const auto effective_size = raw_grad_output->toTensor();
     const auto effective_size_dims = effective_size.sizes();
-    JIT_ASSERTM(effective_size.type().scalarType() == c10::ScalarType::Long,
-                "Invalid scalar type for effective size");
-    JIT_ASSERTM(effective_size_dims.size() == 1, "Invalid effective size rank");
-    JIT_ASSERTM(effective_size_dims[0], assumed_size.size());
+    XLA_CHECK(effective_size.type().scalarType() == c10::ScalarType::Long)
+        << "Invalid scalar type for effective size";
+    XLA_CHECK_EQ(effective_size_dims.size(), 1)
+        << "Invalid effective size rank";
+    XLA_CHECK_EQ(effective_size_dims[0], assumed_size.size())
+        << "Effective size and assumed size don't match";
     for (size_t i = 0; i < assumed_size.size(); ++i) {
-      JIT_ASSERTM(effective_size[i].item().to<int64_t>() == assumed_size[i],
-                  "Effective size doesn't match assumed size");
+      XLA_CHECK_EQ(effective_size[i].item().to<int64_t>(), assumed_size[i])
+          << "Effective size doesn't match assumed size";
     }
   }
 }

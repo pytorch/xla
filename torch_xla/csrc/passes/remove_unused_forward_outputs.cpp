@@ -1,4 +1,5 @@
 #include "remove_unused_forward_outputs.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/jit/ir.h"
 #include "torch/csrc/jit/passes/dead_code_elimination.h"
 
@@ -12,7 +13,7 @@ namespace {
 void RemoveInputFromBackwardGraph(Gradient& gradient, const size_t output_idx,
                                   const size_t captured_output_idx) {
   const auto backward_inputs = gradient.df->inputs();
-  CHECK_LT(output_idx, backward_inputs.size());
+  XLA_CHECK_LT(output_idx, backward_inputs.size());
   const Value* grad_output = backward_inputs[output_idx];
   const Value* captured_output = backward_inputs[captured_output_idx];
   // Remove grad_output and captured_output from the inputs of the backward
