@@ -149,14 +149,8 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   c10::optional<xla::XlaComputation> backward_computation_;
   c10::optional<xla::Shape> backward_shape_;
 
-  std::shared_ptr<Graph> f_;
-  std::shared_ptr<Graph> df_;
-
-  // info for backwrd captures
-  size_t f_real_outputs_;
-  std::vector<size_t> df_input_captured_inputs_;
-  std::vector<size_t> df_input_captured_outputs_;
-  std::vector<size_t> df_input_vjps_;
+  // Information needed to connect the forward and backward graphs.
+  Gradient gradient_;
 
   // TODO: captured_outputs only needs shape, no need for holding onto full
   // Tensor
