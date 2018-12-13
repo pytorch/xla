@@ -145,7 +145,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   LowerAllTuples(gradient.df);
   // Run pass on forward and backward graphs that drops outputs that XLA doesn't
   // need.
-  RemoveUnusedForwardOutputs(gradient);
+  RemoveUnusedForwardOutputs(&gradient);
 
   // Record the number of outputs for the forward computation and the captured
   // input and output indices to be used by the backward computation.
