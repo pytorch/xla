@@ -92,6 +92,10 @@ xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
   return op.builder()->GetShape(op).ConsumeValueOrDie();
 }
 
+std::vector<xla::int64> XlaHelpers::SizesOfXlaOp(const xla::XlaOp& op) {
+  return ShapeSizes(ShapeOfXlaOp(op));
+}
+
 xla::PrimitiveType XlaHelpers::TypeOfXlaOp(const xla::XlaOp& op) {
   return ShapeOfXlaOp(op).element_type();
 }
