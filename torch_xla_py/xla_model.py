@@ -27,7 +27,7 @@ class TrainStepMetrics(object):
   LOG_FORMAT = ('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
                'Loss: {:.6f}\tSamples/sec: {:.1f}')
 
-  def __init__(self, epoch, num_cores, batch_number, num_batches, 
+  def __init__(self, epoch, num_cores, batch_number, num_batches,
                batch_size, loss, total_time, global_step):
     """Constructor for the metrics of a single train step.
 
@@ -42,7 +42,7 @@ class TrainStepMetrics(object):
       global_step: the global step number of current batch
     """
     self._epoch = epoch
-    self._processed_samples = num_cores * (batch_number + 1)
+    self._processed_samples = num_cores * (batch_number + 1) * batch_size
     self._dataset_size = num_batches * batch_size
     self._percent_epoch_done = 100. * batch_number * num_cores / num_batches
     self._loss = loss
@@ -612,7 +612,7 @@ class XlaModel(object):
     test_loss /= count
     accuracy = 100.0 * correct / count
     if log_fn is not None:
-      log_fn(TestStepMetrics(test_loss, correct, 
+      log_fn(TestStepMetrics(test_loss, correct,
           count, time.time() - start_time, self._step))
     return accuracy
 
