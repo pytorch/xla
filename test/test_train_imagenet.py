@@ -17,12 +17,6 @@ import torch_xla_py.xla_model as xm
 import unittest
 
 
-writer = None
-if FLAGS.logdir:
-  from tensorboardX import SummaryWriter
-  writer = SummaryWriter(FLAGS.logdir)
-
-
 def _cross_entropy_loss_eval_fn(cross_entropy_loss):
 
   def eval_fn(output, target):
@@ -88,6 +82,7 @@ def train_imagenet():
   optimizer = optim.SGD(
       xla_model.parameters_list(), lr=lr, momentum=momentum, weight_decay=5e-4)
 
+  log_fn = test_utils.get_log_fn(logdir=FLAGS.logdir)
   for epoch in range(1, FLAGS.num_epochs + 1):
     xla_model.train(
         train_loader,
@@ -95,10 +90,10 @@ def train_imagenet():
         FLAGS.batch_size,
         log_interval=log_interval,
         metrics_debug=FLAGS.metrics_debug,
-        writer=writer)
+        log_fn=log_fn)
     accuracy = xla_model.test(test_loader,
                               _cross_entropy_loss_eval_fn(cross_entropy_loss),
-                              FLAGS.batch_size, writer=writer)
+                              FLAGS.batch_size, log_fn=log_fn)
     xm.update_optimizer_state(optimizer, 'lr', lambda x: x / 1.025)
   return accuracy
 
