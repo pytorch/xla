@@ -15,12 +15,6 @@ import torch_xla_py.xla_model as xm
 import unittest
 
 
-writer = None
-if FLAGS.logdir:
-  from tensorboardX import SummaryWriter
-  writer = SummaryWriter(FLAGS.logdir)
-
-
 class MNIST(nn.Module):
 
   def __init__(self):
@@ -88,6 +82,7 @@ def train_mnist():
       devices=devices)
   optimizer = optim.SGD(xla_model.parameters_list(), lr=lr, momentum=momentum)
 
+  log_fn = test_utils.get_log_fn(logdir=FLAGS.logdir)
   for epoch in range(1, FLAGS.num_epochs + 1):
     xla_model.train(
         train_loader,
@@ -95,9 +90,9 @@ def train_mnist():
         FLAGS.batch_size,
         log_interval=log_interval,
         metrics_debug=FLAGS.metrics_debug,
-        writer=writer)
+        log_fn=log_fn)
     accuracy = xla_model.test(test_loader, xm.category_eval_fn(F.nll_loss),
-                              FLAGS.batch_size, writer=writer)
+                              FLAGS.batch_size, log_fn=log_fn)
   return accuracy
 
 
