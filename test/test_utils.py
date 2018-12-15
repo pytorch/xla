@@ -41,9 +41,11 @@ def get_log_fn(logdir=None, custom_log_fn=print):
   writer = _get_summary_writer(logdir)
 
   def log_fn(step_result):
-    assert (isinstance(step_result, xm.TrainStepMetrics) 
-        or isinstance(step_result, xm.TestStepMetrics))
-    step_result.write_summary(writer)
-    custom_log_fn(step_result.log_str())
+    if (isinstance(step_result, xm.TrainStepMetrics) 
+        or isinstance(step_result, xm.TestStepMetrics)):
+      step_result.write_summary(writer)
+      custom_log_fn(step_result.log_str())
+    else:
+      custom_log_fn(step_result)
 
   return log_fn
