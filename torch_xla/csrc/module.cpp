@@ -255,7 +255,6 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
     }
     raw_grad_outputs.push_back(std::move(replica_raw_grad_outputs));
   }
-  CheckAssumedSizes(raw_grad_outputs.front(), backward_size_op_values_);
   // If backward graph is not compiled, compile it.
   if (!backward_computation_) {
     // The shape for all the replicas are the same, so use replica[0] for
@@ -617,8 +616,8 @@ XlaComputationInOut::SizeOpValues XlaModule::SetBackwardSizeOpValues(
   for (const auto out_idx : gradient.df_input_vjps) {
     const auto ret_size_op_value_it = ret_size_op_values.find(out_idx);
     if (ret_size_op_value_it != ret_size_op_values.end()) {
-      const auto it_ok = backward_size_op_values.insert(
-          std::make_pair(backward_input_idx, ret_size_op_value_it->second));
+      const auto it_ok = backward_size_op_values.emplace(
+          backward_input_idx, ret_size_op_value_it->second);
       XLA_CHECK(it_ok.second)
           << "Duplicated backward_input_idx: " << backward_input_idx;
     }
@@ -628,36 +627,14 @@ XlaComputationInOut::SizeOpValues XlaModule::SetBackwardSizeOpValues(
   for (const auto out_idx : gradient.df_input_captured_outputs) {
     const auto ret_size_op_value_it = ret_size_op_values.find(out_idx);
     if (ret_size_op_value_it != ret_size_op_values.end()) {
-      const auto it_ok = backward_size_op_values.insert(
-          std::make_pair(backward_input_idx, ret_size_op_value_it->second));
+      const auto it_ok = backward_size_op_values.emplace(
+          backward_input_idx, ret_size_op_value_it->second);
       XLA_CHECK(it_ok.second)
           << "Duplicated backward_input_idx: " << backward_input_idx;
     }
     ++backward_input_idx;
   }
   return backward_size_op_values;
-}
-
-void XlaModule::CheckAssumedSizes(
-    const TensorBatchVector::value_type& replica_raw_grad_outputs,
-    const XlaComputationInOut::SizeOpValues& backward_size_op_values) {
-  for (const auto& kv : backward_size_op_values) {
-    const auto& assumed_size = kv.second;
-    XLA_CHECK_LT(kv.first, replica_raw_grad_outputs.size());
-    const auto& raw_grad_output = replica_raw_grad_outputs[kv.first];
-    const auto effective_size = raw_grad_output->toTensor();
-    const auto effective_size_dims = effective_size.sizes();
-    XLA_CHECK(effective_size.type().scalarType() == c10::ScalarType::Long)
-        << "Invalid scalar type for effective size";
-    XLA_CHECK_EQ(effective_size_dims.size(), 1)
-        << "Invalid effective size rank";
-    XLA_CHECK_EQ(effective_size_dims[0], assumed_size.size())
-        << "Effective size and assumed size don't match";
-    for (size_t i = 0; i < assumed_size.size(); ++i) {
-      XLA_CHECK_EQ(effective_size[i].item().to<int64_t>(), assumed_size[i])
-          << "Effective size doesn't match assumed size";
-    }
-  }
 }
 
 XlaModule::DataBatchVector XlaModule::GetDataBatchVector(
