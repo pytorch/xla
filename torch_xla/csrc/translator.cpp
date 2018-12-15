@@ -85,6 +85,12 @@ class ComputationContext {
 
   void AddUndefinedInput(size_t index) { undefined_inputs_.insert(index); }
 
+  void AddSizeOpResult(const Value* value,
+                       const std::vector<xla::int64>& size_op_result) {
+    const auto it_ok = size_op_values_.emplace(value->unique(), size_op_result);
+    XLA_CHECK(it_ok.second) << "Duplicated aten::size id: " << value->unique();
+  }
+
   const xla::XlaOp& GetOpForValue(const Value* value) const {
     auto it = node_xla_ops_.find(value->unique());
     XLA_CHECK(it != node_xla_ops_.end()) << value->uniqueName() << "\nGraph:\n"
@@ -127,6 +133,14 @@ class ComputationContext {
 
   size_t GetInputsSize() const { return input_ops_.size(); }
 
+  const XlaComputationInOut::SizeOpValues& GetSizeOpValues() const {
+    return size_op_values_;
+  }
+
+  XlaComputationInOut::SizeOpValues ReleaseSizeOpValues() {
+    return std::move(size_op_values_);
+  }
+
   const std::unordered_map<size_t, xla::XlaOp>& GetNodeOps() const {
     return node_xla_ops_;
   }
@@ -139,6 +153,7 @@ class ComputationContext {
   std::vector<xla::XlaOp> input_ops_;
   std::unordered_map<size_t, xla::XlaOp> node_xla_ops_;
   std::unordered_set<size_t> undefined_inputs_;
+  XlaComputationInOut::SizeOpValues size_op_values_;
 };
 
 }  // namespace
@@ -180,9 +195,6 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
   XLA_CHECK_EQ(graph_inputs.size(), parameter_shapes.size())
       << "Graph:\n"
       << graph_->toString();
-  // Track the aten::size results while building the XLA computation.
-  // Initialized with the values in param_size_op_values.
-  XlaComputationInOut::SizeOpValues size_op_values_tracking;
   for (size_t parameter_number = 0; parameter_number < graph_inputs.size();
        ++parameter_number) {
     Value* graph_input = graph_inputs[parameter_number];
@@ -201,10 +213,10 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
                       XlaHelpers::ScalarBroadcast<float>(
                           0, parameter_shapes[parameter_number].shape, b));
     }
+    // Seed aten::size tracking info with the values in param_size_op_values.
     const auto size_op_value_it = param_size_op_values.find(parameter_number);
     if (size_op_value_it != param_size_op_values.end()) {
-      size_op_values_tracking.emplace(
-          std::make_pair(graph_input->unique(), size_op_value_it->second));
+      cctx.AddSizeOpResult(graph_input, size_op_value_it->second);
     }
   }
   auto nodes = graph_->block()->nodes();
@@ -503,8 +515,10 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       }
       case aten::size: {
         XLA_CHECK_EQ(node->inputs().size(), 1);
+        std::vector<xla::int64> size_op_result;
         xla::XlaOp xla_output =
-            BuildSize(node, cctx.OpForInput(node, 0), &size_op_values_tracking);
+            BuildSize(node, cctx.OpForInput(node, 0), &size_op_result);
+        cctx.AddSizeOpResult(node->output(0), size_op_result);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
@@ -522,7 +536,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
       case prim::SumToSize: {
         XLA_CHECK_EQ(node->inputs().size(), 2);
         xla::XlaOp xla_output = BuildSumToSize(node, cctx.OpForInput(node, 0),
-                                               size_op_values_tracking);
+                                               cctx.GetSizeOpValues());
         cctx.AddNodeOp(node, xla_output);
         break;
       }
@@ -538,20 +552,22 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
   }
   std::vector<xla::XlaOp> returned_tuple;
   XlaComputationInOut::SizeOpValues ret_size_op_values;
+  const auto size_op_values_tracking = cctx.ReleaseSizeOpValues();
   for (size_t return_input_idx = 0; return_input_idx < node_inputs.size();
        ++return_input_idx) {
     const auto return_input = node_inputs[return_input_idx];
     const auto it = size_op_values_tracking.find(return_input->unique());
     // Add evaluated aten::size values to the return tuple.
     if (it != size_op_values_tracking.end()) {
-      const auto it_ok = ret_size_op_values.emplace(
-          std::make_pair(return_input_idx, it->second));
-      XLA_CHECK(it_ok.second);
+      const auto it_ok =
+          ret_size_op_values.emplace(return_input_idx, it->second);
+      XLA_CHECK(it_ok.second)
+          << "Duplicated return component index " << return_input_idx;
     }
     returned_tuple.push_back(cctx.GetOpForValue(return_input));
   }
-  return XlaComputationInOut{cctx.ReleaseInputs(), returned_tuple,
-                             ret_size_op_values};
+  return XlaComputationInOut{cctx.ReleaseInputs(), std::move(returned_tuple),
+                             std::move(ret_size_op_values)};
 }
 
 }  // namespace jit
