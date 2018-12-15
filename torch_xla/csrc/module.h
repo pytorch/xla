@@ -102,13 +102,6 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
       const XlaComputationInOut::SizeOpValues& ret_size_op_values,
       const Gradient& gradient);
 
-  // Checks whether the assumed values computed for aten::size in forward
-  // translation match the gradient outputs passed to the backward method.
-  // Throws on mismatch.
-  static void CheckAssumedSizes(
-      const TensorBatchVector::value_type& replica_raw_grad_outputs,
-      const XlaComputationInOut::SizeOpValues& backward_size_op_values);
-
   // Sets the gradients of the optimizeable inputs and the optimizable
   // parameters, according to the grad_inputs values. The inputs_require_grad
   // vector tell which inputs requires the gradient to be updated.
