@@ -1,7 +1,7 @@
+# This module cannot import any other PyTorch/XLA module. Only Python core modules.
 import argparse
 import os
 import sys
-import torch_xla_py.xla_model as xm
 
 
 def parse_common_options(datadir=None,
@@ -32,23 +32,3 @@ def parse_common_options(datadir=None,
   sys.path.append(os.path.join(os.path.dirname(xla_folder), 'test'))
   sys.path.insert(0, xla_folder)
   return args
-
-
-def _get_summary_writer(logdir=None):
-  if logdir:
-    from tensorboardX import SummaryWriter
-    return SummaryWriter(logdir)
-
-
-def get_log_fn(logdir=None, custom_log_fn=print):
-  writer = _get_summary_writer(logdir)
-
-  def log_fn(step_result):
-    if (isinstance(step_result, xm.TrainStepMetrics) or
-        isinstance(step_result, xm.TestStepMetrics)):
-      step_result.write_summary(writer)
-      custom_log_fn(step_result.log_str())
-    else:
-      custom_log_fn(step_result)
-
-  return log_fn
