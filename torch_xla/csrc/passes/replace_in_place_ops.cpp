@@ -6,22 +6,7 @@ namespace jit {
 
 namespace {
 
-bool IsInPlaceOp(const Node* node) {
-  switch (node->kind()) {
-    case aten::add_:
-    case aten::mul_: {
-      return true;
-    }
-    default:
-      break;
-  }
-  // TODO(asuhan): no interned string for aten::threshold_. Should patch PyTorch
-  // core instead.
-  return std::string(node->kind().toQualString()) == "aten::threshold_";
-}
-
-NodeKind ReplacementForInPlaceOp(const Node* node) {
-  XLA_CHECK(IsInPlaceOp(node));
+c10::optional<NodeKind> GetInPlaceOpReplacement(const Node* node) {
   switch (node->kind()) {
     case aten::add_: {
       return aten::add;
@@ -29,11 +14,15 @@ NodeKind ReplacementForInPlaceOp(const Node* node) {
     case aten::mul_: {
       return aten::mul;
     }
-    default: { break; }
+    default:
+      break;
   }
-  XLA_CHECK_EQ(std::string(node->kind().toQualString()), "aten::threshold_")
-      << "Invalid node kind: " << node->kind().toQualString();
-  return aten::threshold;
+  // TODO(asuhan): no interned string for aten::threshold_. Should patch PyTorch
+  // core instead.
+  if (std::string(node->kind().toQualString()) == "aten::threshold_") {
+    return aten::threshold;
+  }
+  return c10::nullopt;
 }
 
 }  // namespace
@@ -44,7 +33,8 @@ void ReplaceInPlaceOps(Block* block) {
     for (auto sub : it->blocks()) {
       ReplaceInPlaceOps(sub);
     }
-    if (IsInPlaceOp(*it)) {
+    const auto replacement_kind_maybe = GetInPlaceOpReplacement(*it);
+    if (replacement_kind_maybe) {
       WithInsertPoint guard(*it);
       auto graph = block->owningGraph();
       auto node = *it;
@@ -61,7 +51,7 @@ void ReplaceInPlaceOps(Block* block) {
       }
       const auto output_count = node->outputs().size();
       auto replacement_node =
-          graph->create(ReplacementForInPlaceOp(*it), output_count);
+          graph->create(*replacement_kind_maybe, output_count);
       graph->insertNode(replacement_node);
       for (const auto node_input : node_inputs) {
         replacement_node->addInput(node_input);
