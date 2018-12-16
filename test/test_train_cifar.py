@@ -139,7 +139,7 @@ def train_cifar():
   optimizer = optim.SGD(
       xla_model.parameters_list(), lr=lr, momentum=momentum, weight_decay=5e-4)
 
-  log_fn = test_utils.get_log_fn(logdir=FLAGS.logdir)
+  log_fn = xm.get_log_fn(logdir=FLAGS.logdir)
   for epoch in range(1, FLAGS.num_epochs + 1):
     xla_model.train(
         train_loader,
