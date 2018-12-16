@@ -4,9 +4,14 @@ import sys
 import torch_xla_py.xla_model as xm
 
 
-def parse_common_options(datadir=None, logdir=None, num_cores=1,
-                         batch_size=128, num_epochs=10, num_workers=4,
-                         target_accuracy=None, opts=None):
+def parse_common_options(datadir=None,
+                         logdir=None,
+                         num_cores=1,
+                         batch_size=128,
+                         num_epochs=10,
+                         num_workers=4,
+                         target_accuracy=None,
+                         opts=None):
   parser = argparse.ArgumentParser(add_help=False)
   parser.add_argument('--datadir', type=str, default=datadir)
   parser.add_argument('--logdir', type=str, default=logdir)
@@ -30,19 +35,17 @@ def parse_common_options(datadir=None, logdir=None, num_cores=1,
 
 
 def _get_summary_writer(logdir=None):
-  if not logdir:
-    return None
-  from tensorboardX import SummaryWriter
-  return SummaryWriter(logdir)
+  if logdir:
+    from tensorboardX import SummaryWriter
+    return SummaryWriter(logdir)
 
 
 def get_log_fn(logdir=None, custom_log_fn=print):
-
   writer = _get_summary_writer(logdir)
 
   def log_fn(step_result):
-    if (isinstance(step_result, xm.TrainStepMetrics) 
-        or isinstance(step_result, xm.TestStepMetrics)):
+    if (isinstance(step_result, xm.TrainStepMetrics) or
+        isinstance(step_result, xm.TestStepMetrics)):
       step_result.write_summary(writer)
       custom_log_fn(step_result.log_str())
     else:
