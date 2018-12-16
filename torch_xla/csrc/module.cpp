@@ -224,22 +224,16 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
     }
     const auto& replica_captured_outputs = captured_outputs_[i];
     const auto input_vjps_real_outputs = InputVjpsRealOutputCount(gradient_);
-    XLA_CHECK_EQ(input_vjps_real_outputs, replica_raw_grad_outputs.size())
-        << "Size of gradient outputs inconsistent with information in "
-           "df_input_vjps";
+    XLA_CHECK_EQ(input_vjps_real_outputs, replica_raw_grad_outputs.size());
     for (size_t input_vjp_idx = input_vjps_real_outputs;
          input_vjp_idx < gradient_.df_input_vjps.size(); ++input_vjp_idx) {
       const auto raw_output_index = gradient_.df_input_vjps[input_vjp_idx];
       // The index in gradient_.df_input_vjps points inside all outputs list,
       // both real and captured. Skip the real output count to get the captured
       // output index.
-      XLA_CHECK_GE(raw_output_index, input_vjps_real_outputs)
-          << "Offset at position " << input_vjp_idx
-          << " in df_input_vjps smaller than expected";
+      XLA_CHECK_GE(raw_output_index, input_vjps_real_outputs);
       XLA_CHECK_LT(raw_output_index - input_vjps_real_outputs,
-                   replica_captured_outputs.size())
-          << "Indexing out of captured outputs when building backward argument "
-             "list";
+                   replica_captured_outputs.size());
       auto p =
           replica_captured_outputs[raw_output_index - input_vjps_real_outputs];
       replica_raw_grad_outputs.push_back(p);

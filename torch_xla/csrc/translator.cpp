@@ -88,7 +88,8 @@ class ComputationContext {
   void AddSizeOpResult(const Value* value,
                        const std::vector<xla::int64>& size_op_result) {
     const auto it_ok = size_op_values_.emplace(value->unique(), size_op_result);
-    XLA_CHECK(it_ok.second) << "Duplicated aten::size id: " << value->unique();
+    XLA_CHECK(it_ok.second)
+        << "Duplicated aten::size id: " << value->uniqueName();
   }
 
   const xla::XlaOp& GetOpForValue(const Value* value) const {
@@ -137,8 +138,13 @@ class ComputationContext {
     return size_op_values_;
   }
 
-  XlaComputationInOut::SizeOpValues ReleaseSizeOpValues() {
-    return std::move(size_op_values_);
+  c10::optional<std::vector<xla::int64>> GetSizeOpValueForId(
+      const size_t id) const {
+    const auto it = size_op_values_.find(id);
+    if (it != size_op_values_.end()) {
+      return it->second;
+    }
+    return c10::nullopt;
   }
 
   const std::unordered_map<size_t, xla::XlaOp>& GetNodeOps() const {
@@ -552,15 +558,15 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
   }
   std::vector<xla::XlaOp> returned_tuple;
   XlaComputationInOut::SizeOpValues ret_size_op_values;
-  const auto size_op_values_tracking = cctx.ReleaseSizeOpValues();
   for (size_t return_input_idx = 0; return_input_idx < node_inputs.size();
        ++return_input_idx) {
     const auto return_input = node_inputs[return_input_idx];
-    const auto it = size_op_values_tracking.find(return_input->unique());
+    const auto size_op_value_maybe =
+        cctx.GetSizeOpValueForId(return_input->unique());
     // Add evaluated aten::size values to the return tuple.
-    if (it != size_op_values_tracking.end()) {
+    if (size_op_value_maybe) {
       const auto it_ok =
-          ret_size_op_values.emplace(return_input_idx, it->second);
+          ret_size_op_values.emplace(return_input_idx, *size_op_value_maybe);
       XLA_CHECK(it_ok.second)
           << "Duplicated return component index " << return_input_idx;
     }
