@@ -82,15 +82,17 @@ def train_mnist():
       devices=devices)
   optimizer = optim.SGD(xla_model.parameters_list(), lr=lr, momentum=momentum)
 
+  log_fn = test_utils.get_log_fn(logdir=FLAGS.logdir)
   for epoch in range(1, FLAGS.num_epochs + 1):
     xla_model.train(
         train_loader,
         optimizer,
         FLAGS.batch_size,
         log_interval=log_interval,
-        metrics_debug=FLAGS.metrics_debug)
+        metrics_debug=FLAGS.metrics_debug,
+        log_fn=log_fn)
     accuracy = xla_model.test(test_loader, xm.category_eval_fn(F.nll_loss),
-                              FLAGS.batch_size)
+                              FLAGS.batch_size, log_fn=log_fn)
   return accuracy
 
 

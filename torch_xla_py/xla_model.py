@@ -22,6 +22,78 @@ _HANDLES_DESTROYED_COUNTER = 'ClientDestroyHandles'
 _WAIT_HANDLES_SLEEP_STEP = 0.25
 
 
+class TrainStepMetrics(object):
+
+  LOG_FORMAT = ('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
+                'Loss: {:.6f}\tSamples/sec: {:.1f}')
+
+  def __init__(self, epoch, num_cores, batch_number, num_batches, batch_size,
+               loss, total_time, global_step):
+    """Constructor for the metrics of a single train step.
+
+    Args:
+      epoch: the current epoch number
+      num_cores: number of cores on which model is being trained
+      batch_number: the current batch number. Reset to 0 every epoch
+      num_batches: number of batches in a single epoch
+      batch_size: per core batch size
+      loss: training loss
+      total_time: time since starting the current epoch
+      global_step: the global step number of current batch
+    """
+    self._epoch = epoch
+    self._processed_samples = num_cores * (batch_number + 1) * batch_size
+    self._dataset_size = num_batches * batch_size
+    self._percent_epoch_done = 100. * batch_number * num_cores / num_batches
+    self._loss = loss
+    self._examples_per_sec = self._processed_samples / total_time
+    self._global_step = global_step
+    self._global_step_per_sec = (
+        self._processed_samples / total_time) / batch_size
+
+  def write_summary(self, writer):
+    if writer:
+      writer.add_scalar('loss', self._loss, self._global_step)
+      writer.add_scalar('global_step/sec', self._global_step_per_sec,
+                        self._global_step)
+
+  def log_str(self):
+    return self.LOG_FORMAT.format(self._epoch, self._processed_samples,
+                                  self._dataset_size, self._percent_epoch_done,
+                                  self._loss, self._examples_per_sec)
+
+
+class TestStepMetrics(object):
+
+  LOG_FORMAT = ('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%), '
+                'Samples/sec: {:.1f}\n')
+
+  def __init__(self, loss, correct, count, total_time, global_step):
+    """Constructor for the metrics of a single test step.
+
+    Args:
+      loss: test loss
+      correct: number of correct samples
+      count: total number of samples
+      total_time: time since starting the current epoch
+      global_step: the global step number of current batch
+    """
+    self._loss = loss
+    self._correct = correct
+    self._total = count
+    self._global_step = global_step
+    self._accuracy = 100.0 * correct / count
+    self._examples_per_sec = count / total_time
+
+  def write_summary(self, writer):
+    if writer:
+      writer.add_scalar('accuracy', self._accuracy, self._global_step)
+
+  def log_str(self):
+    return self.LOG_FORMAT.format(self._loss, self._correct, self._total,
+                                  self._accuracy, self._examples_per_sec)
+
+
 class LinearIndex(object):
 
   def __init__(self, index):
@@ -391,6 +463,7 @@ class XlaModel(object):
     self._devices = list(devices) if devices else None
     self._loader_prefetch = loader_prefetch
     self._epoch = 0
+    self._step = 0
     if loss_fn:
       assert target is not None
       loss_output_grads = _create_wrapped_model_backward_grads(
@@ -478,11 +551,11 @@ class XlaModel(object):
         devices=self._devices,
         fused_mode=True)
     wloader_cleaner = xu.Cleaner(wloader.close)
-    processed_samples = 0
     loss = None
     start_time = time.time()
     self._epoch += 1
     for batch_number, (inputs, targets) in wloader:
+      self._step += 1
       optimizer.zero_grad()
       xla_outputs = run_xla_model(
           self._xla_model, inputs, devices=self._devices)
@@ -491,18 +564,15 @@ class XlaModel(object):
           self._get_backward_grads(xla_outputs),
           devices=self._devices)
       optimizer.step()
-      processed_samples += self._num_cores * batch_size
       if (log_fn is not None and log_interval is not None and
           batch_number % log_interval == 0):
         if metrics_debug:
           log_fn(torch_xla._XLAC._xla_metrics_report())
         loss = self._compute_loss(xla_outputs)
-        log_fn('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
-               'Loss: {:.6f}\tSamples/sec: {:.1f}'.format(
-                   self._epoch, processed_samples,
-                   len(samples_loader) * batch_size,
-                   100. * batch_number * self._num_cores / len(samples_loader),
-                   loss, processed_samples / (time.time() - start_time)))
+        log_fn(
+            TrainStepMetrics(self._epoch, self._num_cores, batch_number,
+                             len(samples_loader), batch_size, loss,
+                             time.time() - start_time, self._step))
     return loss
 
   def test(self, samples_loader, eval_fn, batch_size, log_fn=print):
@@ -535,9 +605,9 @@ class XlaModel(object):
     test_loss /= count
     accuracy = 100.0 * correct / count
     if log_fn is not None:
-      log_fn('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%), '
-             'Samples/sec: {:.1f}\n'.format(test_loss, correct, count, accuracy,
-                                            count / (time.time() - start_time)))
+      log_fn(
+          TestStepMetrics(test_loss, correct, count,
+                          time.time() - start_time, self._step))
     return accuracy
 
 
