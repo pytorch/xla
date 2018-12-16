@@ -57,7 +57,7 @@ class TrainStepMetrics(object):
       writer.add_scalar('global_step/sec', self._global_step_per_sec,
                         self._global_step)
 
-  def log_str(self):
+  def __repr__(self):
     return self.LOG_FORMAT.format(self._epoch, self._processed_samples,
                                   self._dataset_size, self._percent_epoch_done,
                                   self._loss, self._examples_per_sec)
@@ -89,7 +89,7 @@ class TestStepMetrics(object):
     if writer:
       writer.add_scalar('accuracy', self._accuracy, self._global_step)
 
-  def log_str(self):
+  def __repr__(self):
     return self.LOG_FORMAT.format(self._loss, self._correct, self._total,
                                   self._accuracy, self._examples_per_sec)
 
@@ -162,6 +162,26 @@ def _replace_tensors(arena, tensors):
       new_tensors.append(_replace_tensors(arena, tensor))
     return tuple(new_tensors)
   return tensors
+
+
+def _get_summary_writer(logdir=None):
+  if logdir:
+    from tensorboardX import SummaryWriter
+    return SummaryWriter(logdir)
+
+
+def get_log_fn(logdir=None, custom_log_fn=print):
+  writer = _get_summary_writer(logdir)
+
+  def log_fn(step_result):
+    if (isinstance(step_result, TrainStepMetrics) or
+        isinstance(step_result, TestStepMetrics)):
+      step_result.write_summary(writer)
+      custom_log_fn(str(step_result))
+    else:
+      custom_log_fn(step_result)
+
+  return log_fn
 
 
 def forward_passes(graph):
