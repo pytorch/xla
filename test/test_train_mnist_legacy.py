@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 import torch_xla
+import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
 import unittest
 
@@ -46,29 +47,39 @@ def train_mnist():
   momentum = 0.5
   log_interval = 5
 
-  train_loader = torch.utils.data.DataLoader(
-      datasets.MNIST(
-          FLAGS.datadir,
-          train=True,
-          download=True,
-          transform=transforms.Compose([
-              transforms.ToTensor(),
-              transforms.Normalize((0.1307,), (0.3081,))
-          ])),
-      batch_size=FLAGS.batch_size,
-      shuffle=True,
-      num_workers=FLAGS.num_workers)
-  test_loader = torch.utils.data.DataLoader(
-      datasets.MNIST(
-          FLAGS.datadir,
-          train=False,
-          transform=transforms.Compose([
-              transforms.ToTensor(),
-              transforms.Normalize((0.1307,), (0.3081,))
-          ])),
-      batch_size=FLAGS.batch_size,
-      shuffle=True,
-      num_workers=FLAGS.num_workers)
+  if FLAGS.fake_data:
+    train_loader = xu.SampleGenerator(
+        data=torch.zeros(FLAGS.batch_size, 1, 28, 28),
+        target=torch.zeros(FLAGS.batch_size, dtype=torch.int64),
+        sample_count=60000 // FLAGS.batch_size)
+    test_loader = xu.SampleGenerator(
+        data=torch.zeros(FLAGS.batch_size, 1, 28, 28),
+        target=torch.zeros(FLAGS.batch_size, dtype=torch.int64),
+        sample_count=10000 // FLAGS.batch_size)
+  else:
+    train_loader = torch.utils.data.DataLoader(
+        datasets.MNIST(
+            FLAGS.datadir,
+            train=True,
+            download=True,
+            transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize((0.1307,), (0.3081,))
+            ])),
+        batch_size=FLAGS.batch_size,
+        shuffle=True,
+        num_workers=FLAGS.num_workers)
+    test_loader = torch.utils.data.DataLoader(
+        datasets.MNIST(
+            FLAGS.datadir,
+            train=False,
+            transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize((0.1307,), (0.3081,))
+            ])),
+        batch_size=FLAGS.batch_size,
+        shuffle=True,
+        num_workers=FLAGS.num_workers)
 
   model = MNIST()
 
@@ -131,7 +142,7 @@ class TrainMnist(TestCase):
 
   def tearDown(self):
     super(TrainMnist, self).tearDown()
-    if FLAGS.tidy:
+    if FLAGS.tidy and os.path.isdir(FLAGS.datadir):
       shutil.rmtree(FLAGS.datadir)
 
   def test_accurracy(self):
