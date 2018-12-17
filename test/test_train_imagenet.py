@@ -31,34 +31,44 @@ def _cross_entropy_loss_eval_fn(cross_entropy_loss):
 
 def train_imagenet():
   print('==> Preparing data..')
-  normalize = transforms.Normalize(
-      mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-  train_dataset = torchvision.datasets.ImageFolder(
-      os.path.join(FLAGS.datadir, 'train'),
-      transforms.Compose([
-          transforms.RandomResizedCrop(224),
-          transforms.RandomHorizontalFlip(),
-          transforms.ToTensor(),
-          normalize,
-      ]))
-  train_loader = torch.utils.data.DataLoader(
-      train_dataset,
-      batch_size=FLAGS.batch_size,
-      shuffle=True,
-      num_workers=FLAGS.num_workers)
-  test_dataset = torchvision.datasets.ImageFolder(
-      os.path.join(FLAGS.datadir, 'val'),
-      transforms.Compose([
-          transforms.RandomResizedCrop(224),
-          transforms.RandomHorizontalFlip(),
-          transforms.ToTensor(),
-          normalize,
-      ]))
-  test_loader = torch.utils.data.DataLoader(
-      test_dataset,
-      batch_size=FLAGS.batch_size,
-      shuffle=True,
-      num_workers=FLAGS.num_workers)
+  if FLAGS.fake_data:
+    train_loader = xu.SampleGenerator(
+        data=torch.zeros(FLAGS.batch_size, 3, 224, 224),
+        target=torch.zeros(FLAGS.batch_size, dtype=torch.int64),
+        sample_count=1200000 // FLAGS.batch_size)
+    test_loader = xu.SampleGenerator(
+        data=torch.zeros(FLAGS.batch_size, 3, 224, 224),
+        target=torch.zeros(FLAGS.batch_size, dtype=torch.int64),
+        sample_count=50000 // FLAGS.batch_size)
+  else:
+    normalize = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    train_dataset = torchvision.datasets.ImageFolder(
+        os.path.join(FLAGS.datadir, 'train'),
+        transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ]))
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=FLAGS.batch_size,
+        shuffle=True,
+        num_workers=FLAGS.num_workers)
+    test_dataset = torchvision.datasets.ImageFolder(
+        os.path.join(FLAGS.datadir, 'val'),
+        transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ]))
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=FLAGS.batch_size,
+        shuffle=True,
+        num_workers=FLAGS.num_workers)
 
   torch.manual_seed(42)
 
@@ -91,9 +101,11 @@ def train_imagenet():
         log_interval=log_interval,
         metrics_debug=FLAGS.metrics_debug,
         log_fn=log_fn)
-    accuracy = xla_model.test(test_loader,
-                              _cross_entropy_loss_eval_fn(cross_entropy_loss),
-                              FLAGS.batch_size, log_fn=log_fn)
+    accuracy = xla_model.test(
+        test_loader,
+        _cross_entropy_loss_eval_fn(cross_entropy_loss),
+        FLAGS.batch_size,
+        log_fn=log_fn)
     xm.update_optimizer_state(optimizer, 'lr', lambda x: x / 1.025)
   return accuracy
 

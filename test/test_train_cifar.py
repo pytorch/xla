@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
+import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
 import torchvision
 import torchvision.transforms as transforms
@@ -90,33 +91,44 @@ def ResNet18():
 
 def train_cifar():
   print('==> Preparing data..')
-  transform_train = transforms.Compose([
-      transforms.RandomCrop(32, padding=4),
-      transforms.RandomHorizontalFlip(),
-      transforms.ToTensor(),
-      transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-  ])
 
-  transform_test = transforms.Compose([
-      transforms.ToTensor(),
-      transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-  ])
+  if FLAGS.fake_data:
+    train_loader = xu.SampleGenerator(
+        data=torch.zeros(FLAGS.batch_size, 3, 32, 32),
+        target=torch.zeros(FLAGS.batch_size, dtype=torch.int64),
+        sample_count=50000 // FLAGS.batch_size)
+    test_loader = xu.SampleGenerator(
+        data=torch.zeros(FLAGS.batch_size, 3, 32, 32),
+        target=torch.zeros(FLAGS.batch_size, dtype=torch.int64),
+        sample_count=10000 // FLAGS.batch_size)
+  else:
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
 
-  trainset = torchvision.datasets.CIFAR10(
-      root=FLAGS.datadir, train=True, download=True, transform=transform_train)
-  train_loader = torch.utils.data.DataLoader(
-      trainset,
-      batch_size=FLAGS.batch_size,
-      shuffle=True,
-      num_workers=FLAGS.num_workers)
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
 
-  testset = torchvision.datasets.CIFAR10(
-      root=FLAGS.datadir, train=False, download=True, transform=transform_test)
-  test_loader = torch.utils.data.DataLoader(
-      testset,
-      batch_size=FLAGS.batch_size,
-      shuffle=False,
-      num_workers=FLAGS.num_workers)
+    trainset = torchvision.datasets.CIFAR10(
+        root=FLAGS.datadir, train=True, download=True, transform=transform_train)
+    train_loader = torch.utils.data.DataLoader(
+        trainset,
+        batch_size=FLAGS.batch_size,
+        shuffle=True,
+        num_workers=FLAGS.num_workers)
+
+    testset = torchvision.datasets.CIFAR10(
+        root=FLAGS.datadir, train=False, download=True, transform=transform_test)
+    test_loader = torch.utils.data.DataLoader(
+        testset,
+        batch_size=FLAGS.batch_size,
+        shuffle=False,
+        num_workers=FLAGS.num_workers)
 
   torch.manual_seed(42)
 
@@ -158,7 +170,7 @@ class TrainCIFAR10(TestCase):
 
   def tearDown(self):
     super(TrainCIFAR10, self).tearDown()
-    if FLAGS.tidy:
+    if FLAGS.tidy and os.path.isdir(FLAGS.datadir):
       shutil.rmtree(FLAGS.datadir)
 
   def test_accurracy(self):
