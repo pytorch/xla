@@ -1,4 +1,6 @@
 #include "replace_untraced_operators.h"
+#include "tensorflow/compiler/xla/util.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch {
 namespace jit {
@@ -62,6 +64,7 @@ void ReplaceUntracedOperators(Block* block) {
         replacement_node->addInput(padding);
 
         replacement_node->outputs()[0]->setType(it->outputs()[0]->type());
+        TF_VLOG(3) << "Replacing " << **it << " with traceable counterpart";
         it->output()->replaceAllUsesWith(replacement_node->outputs()[0]);
         it.destroyCurrent();
         break;
@@ -79,6 +82,7 @@ void ReplaceUntracedOperators(Block* block) {
           replacement_node->addInput(node_inputs[i]);
         }
         replacement_node->outputs()[0]->setType(it->outputs()[0]->type());
+        TF_VLOG(3) << "Replacing " << **it << " with traceable counterpart";
         it->output()->replaceAllUsesWith(replacement_node->outputs()[0]);
         it.destroyCurrent();
         break;
@@ -91,7 +95,9 @@ void ReplaceUntracedOperators(Block* block) {
 }  // namespace
 
 void ReplaceUntracedOperators(const std::shared_ptr<Graph>& graph) {
+  XLA_VLOG_LINES(4, "Before ReplaceUntracedOperators:\n" + graph->toString());
   ReplaceUntracedOperators(graph->block());
+  XLA_VLOG_LINES(4, "After ReplaceUntracedOperators:\n" + graph->toString());
 }
 
 }  // namespace jit

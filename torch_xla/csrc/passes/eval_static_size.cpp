@@ -1,4 +1,6 @@
 #include "eval_static_size.h"
+#include "tensorflow/compiler/xla/util.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch {
 namespace jit {
@@ -28,14 +30,17 @@ bool IsStaticSizeQuery(Node* node) {
 }  // namespace
 
 void EvalStaticSize(const std::shared_ptr<Graph>& graph) {
+  XLA_VLOG_LINES(4, "Before EvalStaticSize:\n" + graph->toString());
   auto nodes = graph->block()->nodes();
   for (auto node : nodes) {
     if (IsStaticSizeQuery(node)) {
       WithInsertPoint insert_point_guard(node);
+      TF_VLOG(3) << "Evaluated " << *node << " to a constant size";
       auto new_output = graph->insertConstant(RunSizeQuery(node));
       node->outputs()[0]->replaceAllUsesWith(new_output);
     }
   }
+  XLA_VLOG_LINES(4, "After EvalStaticSize:\n" + graph->toString());
 }
 
 }  // namespace jit

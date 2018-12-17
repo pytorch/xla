@@ -1,4 +1,5 @@
 #include "remove_unused_forward_outputs.h"
+#include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/jit/ir.h"
 #include "torch/csrc/jit/passes/dead_code_elimination.h"
@@ -33,6 +34,9 @@ void RemoveInputFromBackwardGraph(Gradient* gradient, size_t output_idx,
     if (captured_output_it != node_inputs.end()) {
       WithInsertPoint guard(*it);
       Node* undef = gradient->df->insertNode(gradient->df->createUndefined());
+      TF_VLOG(3) << "Replacing input at index "
+                 << captured_output_it - node_inputs.begin() << " of " << **it
+                 << " with undefined";
       it->replaceInput(captured_output_it - node_inputs.begin(),
                        undef->output());
     }
@@ -42,6 +46,8 @@ void RemoveInputFromBackwardGraph(Gradient* gradient, size_t output_idx,
   // output_idx because outputs come before captured outputs. Remove the
   // captured_output_idx first to avoid invalidation of indices.
   JIT_ASSERT(captured_output_idx > output_idx);
+  TF_VLOG(3) << "Removing inputs at indices " << captured_output_idx << " and "
+             << output_idx << " from the backward graph";
   gradient->df->eraseInput(captured_output_idx);
   gradient->df->eraseInput(output_idx);
 }
@@ -68,8 +74,12 @@ void RemoveNodeOutputFromGradient(Node* node, size_t node_output_idx,
                                gradient->df_input_captured_inputs.size();
 
   // Remove the given output from the graph outputs.
+  TF_VLOG(3) << "Removing output at index " << forward_output_idx
+             << " from the forward graph";
   gradient->f->eraseOutput(forward_output_idx);
   // Remove the given output from the node outputs.
+  TF_VLOG(3) << "Removing output at index " << node_output_idx << " from "
+             << *node;
   node->eraseOutput(node_output_idx);
 
   // Next, find the index and value in df_input_captured_outputs of the node to
@@ -124,6 +134,9 @@ void RemoveNodeOutputFromGradient(Node* node, size_t node_output_idx,
 }  // namespace
 
 void RemoveUnusedForwardOutputs(Gradient* gradient) {
+  XLA_VLOG_LINES(4, "Before RemoveUnusedForwardOutputs:\n");
+  XLA_VLOG_LINES(4, "Forward:\n" + gradient->f->toString() + "\n");
+  XLA_VLOG_LINES(4, "Backward:\n" + gradient->df->toString() + "\n");
   for (auto it = gradient->f->nodes().begin(), end = gradient->f->nodes().end();
        it != end; ++it) {
     JIT_ASSERT(it->blocks().size() == 0);
@@ -143,6 +156,9 @@ void RemoveUnusedForwardOutputs(Gradient* gradient) {
         break;
     }
   }
+  XLA_VLOG_LINES(4, "After RemoveUnusedForwardOutputs:\n");
+  XLA_VLOG_LINES(4, "Forward:\n" + gradient->f->toString() + "\n");
+  XLA_VLOG_LINES(4, "Backward:\n" + gradient->df->toString() + "\n");
 }
 
 }  // namespace jit
