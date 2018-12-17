@@ -12,7 +12,7 @@ To build:
 * Checkout the following commit ID:
 
   ```
-  git checkout e51092a2b89a98fdc4f89f53f2a300bfac718be3
+  git checkout d71fac20ebf6b393e464d312b8a38ae1c45c3386
   ```
 
 * Clone the _PyTorch/XLA_ repo:
