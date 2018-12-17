@@ -1,4 +1,5 @@
 #include "replace_in_place_ops.h"
+#include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch {
@@ -50,6 +51,7 @@ void ReplaceInPlaceOps(Block* block) {
         continue;
       }
       const auto output_count = node->outputs().size();
+      TF_VLOG(3) << "Replacing " << **it << " with non-inplace counterpart";
       auto replacement_node =
           graph->create(*replacement_kind_maybe, output_count);
       graph->insertNode(replacement_node);
@@ -66,7 +68,9 @@ void ReplaceInPlaceOps(Block* block) {
 }
 
 void ReplaceInPlaceOps(const std::shared_ptr<Graph>& graph) {
+  XLA_VLOG_LINES(4, "Before ReplaceInPlaceOps:\n" + graph->toString());
   ReplaceInPlaceOps(graph->block());
+  XLA_VLOG_LINES(4, "After ReplaceInPlaceOps:\n" + graph->toString());
 }
 
 }  // namespace jit

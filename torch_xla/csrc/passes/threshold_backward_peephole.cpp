@@ -1,4 +1,6 @@
 #include "threshold_backward_peephole.h"
+#include "tensorflow/compiler/xla/util.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch {
 namespace jit {
@@ -17,6 +19,8 @@ void ThresholdBackwardPeephole(Block* block) {
         const auto gt_cand = type_as_cand->input(0)->node();
         if (gt_cand->kind() == aten::gt) {
           WithInsertPoint guard(*it);
+          TF_VLOG(3) << "Replacing threshold backward sequence starting at "
+                     << **it << " with aten::threshold_backward";
           auto graph = block->owningGraph();
           auto replacement_node = graph->create(aten::threshold_backward);
           graph->insertNode(replacement_node);
@@ -34,7 +38,9 @@ void ThresholdBackwardPeephole(Block* block) {
 }  // namespace
 
 void ThresholdBackwardPeephole(const std::shared_ptr<Graph>& graph) {
+  XLA_VLOG_LINES(4, "Before ThresholdBackwardPeephole:\n" + graph->toString());
   ThresholdBackwardPeephole(graph->block());
+  XLA_VLOG_LINES(4, "After ThresholdBackwardPeephole:\n" + graph->toString());
 }
 
 }  // namespace jit
