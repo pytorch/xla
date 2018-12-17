@@ -42,33 +42,6 @@ class Holder(object):
   pass
 
 
-class FnDataGenerator(object):
-
-  def __init__(self, func, batch_size, dim=1, count=1):
-    self._func = func
-    self._batch_size = batch_size
-    self._dim = dim
-    self._count = count
-    self._emitted = 0
-
-  def __len__(self):
-    return self._count
-
-  def __iter__(self):
-    return self
-
-  def __next__(self):
-    return self.next()
-
-  def next(self):
-    if self._emitted >= self._count:
-      raise StopIteration
-    data = _gen_tensor(self._batch_size, self._dim)
-    target = self._func(data)
-    self._emitted += 1
-    return data, target
-
-
 def _get_device_support(devname):
   assert devname in ['TPU', 'CPU']
   # If the Cloud TPU config file is present, we support TPUs.
@@ -660,7 +633,8 @@ class TestAxPlusBGen(XlaTestCase):
     A = 3.11
     B = 4.09
     batch_size = 128
-    gen = FnDataGenerator(lambda x: x * A + B, batch_size, count=100)
+    gen = xu.FnDataGenerator(
+        lambda x: x * A + B, batch_size, _gen_tensor, count=100)
     model = AxPlusB(dims=(batch_size, 1))
     xla_model = xm.XlaModel(model, [_gen_tensor(batch_size, 1)])
     optimizer = optim.SGD(xla_model.parameters_list(), lr=0.1, momentum=0.5)
@@ -689,7 +663,8 @@ class TestAxPlusBGenXla(XlaTestCase):
 
     A = 3.11
     B = 4.09
-    gen = FnDataGenerator(lambda x: x * A + B, batch_size, count=100)
+    gen = xu.FnDataGenerator(
+        lambda x: x * A + B, batch_size, _gen_tensor, count=100)
     model = AxPlusB(dims=(batch_size, 1))
     xla_model = xm.XlaModel(
         model, [_gen_tensor(batch_size, 1)],
@@ -706,7 +681,7 @@ class TestAxPlusBGenXla(XlaTestCase):
       count = torch.le(mloss, error).sum()
       return mloss.mean().item(), count.item()
 
-    gen = FnDataGenerator(lambda x: x * A + B, batch_size)
+    gen = xu.FnDataGenerator(lambda x: x * A + B, batch_size, _gen_tensor)
     accuracy = xla_model.test(gen, eval_fn, batch_size, log_fn=None)
     self.assertEqual(accuracy, 100.0)
 
@@ -939,8 +914,7 @@ class TestGradients(XlaTestCase):
 
   @unittest.skip(
       'differentiation of prim::ListUnpack is not supported, or it is missing '
-      'necessary type information'
-  )
+      'necessary type information')
   def test_chunk(self):
 
     class ChunkGrad(nn.Module):
