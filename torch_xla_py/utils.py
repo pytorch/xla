@@ -52,7 +52,12 @@ class FnDataGenerator(object):
     return self._count
 
   def __iter__(self):
-    return self
+    return FnDataGenerator(
+        self._func,
+        self._batch_size,
+        self._gen_tensor,
+        dim=self._dim,
+        count=self._count)
 
   def __next__(self):
     return self.next()
