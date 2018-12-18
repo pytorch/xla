@@ -247,7 +247,10 @@ XrtComputationClient::ExecuteReplicated(
   std::vector<tensorflow::Output> exec_ops = CreateExecuteOps(
       &session_map, dynamic_cast<const XrtComputation&>(computation), arguments,
       options.explode_tuple, devices, &feed_inputs);
-  return RunComputations(session_map, exec_ops, {&computation}, devices,
+  std::vector<const Computation*> computations(devices.size());
+  std::fill(computations.begin(), computations.end(), &computation);
+
+  return RunComputations(session_map, exec_ops, computations, devices,
                          feed_inputs);
 }
 
@@ -277,6 +280,7 @@ XrtComputationClient::RunComputations(
     XrtSession* session = session_map.at(worker_hostport.second).get();
     session_replicas[session].push_back(i);
   }
+  XLA_CHECK_EQ(computations.size(), devices.size());
 
   xla_util::MultiWait mwait(session_replicas.size());
   std::vector<std::vector<std::shared_ptr<Data>>> results(devices.size());
