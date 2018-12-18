@@ -55,7 +55,7 @@ conda install -y numpy pyyaml mkl mkl-include setuptools cmake cffi typing bazel
 # Install torch within conda env
 # TODO(jysohn): once pytorch/pytorch JIT bug is fixed install nightly wheel instead
 sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
-pip install ../../../gfile/torch-1.0.0a0+$(head -c 8 .torch_commit_id)-cp35-cp35m-linux_x86_64.whl
+pip install ../../../gfile/torch-1.0.0a0+$(head -c 7 .torch_commit_id)-cp35-cp35m-linux_x86_64.whl
 
 # Build pytorch-wheel in conda environment
 export NO_CUDA=1
