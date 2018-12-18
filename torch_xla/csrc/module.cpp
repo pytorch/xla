@@ -93,6 +93,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   RemoveInPlaceOutParamOps(forward_graph);
   ReplaceInPlaceOps(forward_graph);
   EliminateDeadCode(forward_graph);
+  LowerAllTuples(forward_graph);
 
   // Convert model parameters to vector of XLATensors.
   std::vector<at::Tensor*> params_buffers_regather;
