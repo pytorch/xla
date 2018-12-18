@@ -192,6 +192,7 @@ def forward_passes(graph):
   torch_xla._XLAC._jit_pass_replace_untraced_operators(graph)
   torch_xla._XLAC._jit_pass_replace_in_place_ops(graph)
   torch._C._jit_pass_dce(graph)
+  torch._C._jit_pass_lower_all_tuples(graph)
 
 
 def backward_passes(graph):
