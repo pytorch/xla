@@ -9,10 +9,10 @@ To build:
   cd pytorch/
   ```
 
-* Checkout the following commit ID:
+* Checkout the following commit ID specified in xla/.torch_commit_id:
 
   ```
-  git checkout d71fac20ebf6b393e464d312b8a38ae1c45c3386
+  git checkout $(cat xla/.torch_commit_id)
   ```
 
 * Clone the _PyTorch/XLA_ repo:
