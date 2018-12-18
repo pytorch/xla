@@ -60,17 +60,6 @@ void InitXlaModuleBindings(py::module m) {
       .def("parameters_buffers", [](XlaModule& xla_module) {
         return xla_module.parameters_buffers();
       });
-  m.def("_xla_mul_add_multi",
-        [](const double scale_dest,
-           const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
-           const double alpha,
-           const std::vector<std::shared_ptr<XLATensor>>& source_tuple) {
-          XLATensor::MulAddMulti(scale_dest, dest_tuple, alpha, source_tuple);
-        });
-  m.def("_xla_zero_multi",
-        [](const std::vector<std::shared_ptr<XLATensor>>& dest_tuple) {
-          XLATensor::ZeroMulti(dest_tuple);
-        });
   m.def("_xla_sync_multi",
         [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
           NoGilSection nogil;
