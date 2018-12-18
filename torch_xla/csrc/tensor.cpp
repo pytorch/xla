@@ -320,56 +320,6 @@ XLATensor::XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node,
   TryLimitGraphSize();
 }
 
-void XLATensor::MulAddMulti(
-    const double scale_dest,
-    const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
-    const double alpha,
-    const std::vector<std::shared_ptr<XLATensor>>& source_tuple) {
-  XLA_CHECK_EQ(dest_tuple.size(), source_tuple.size());
-  XlaGraphContext xla_graph_ctx(/*collate_parameters=*/true);
-  for (size_t i = 0; i < dest_tuple.size(); ++i) {
-    auto dest_node = dest_tuple[i]->GetXlaGraphNode();
-    auto source_node = source_tuple[i]->GetXlaGraphNode();
-    auto dest_node_op = dest_node->Generate(&xla_graph_ctx);
-    auto source_node_op = source_node->Generate(&xla_graph_ctx);
-    if (alpha != 1) {
-      const auto alpha_source = XlaHelpers::ScalarBroadcast<float>(
-          alpha, source_tuple[i]->shape(), xla_graph_ctx.builder());
-      source_node_op = xla::Mul(source_node_op, alpha_source);
-    }
-    if (scale_dest != 1) {
-      const auto scale_dest_broadcast = XlaHelpers::ScalarBroadcast<float>(
-          scale_dest, dest_tuple[i]->shape(), xla_graph_ctx.builder());
-      dest_node_op = xla::Mul(dest_node_op, scale_dest_broadcast);
-    }
-    xla_graph_ctx.AddResult(xla::Add(dest_node_op, source_node_op));
-  }
-  std::vector<xla::int64> index_mapping(dest_tuple.size());
-  std::iota(index_mapping.begin(), index_mapping.end(), 0);
-  ComputeAndDistribute(&xla_graph_ctx, index_mapping, dest_tuple);
-}
-
-void XLATensor::ZeroMulti(
-    const std::vector<std::shared_ptr<XLATensor>>& dest_tuple) {
-  if (dest_tuple.empty()) {
-    return;
-  }
-  // Create a computation which returns zeroes shaped the same as tensors in
-  // "dest_tuple".
-  XlaGraphContext xla_graph_ctx(/*collate_parameters=*/true);
-  for (auto& dest : dest_tuple) {
-    const auto dest_shape = dest->shape();
-    const auto zero =
-        xla::ConstantLiteral(xla_graph_ctx.builder(),
-                             xla::LiteralUtil::Zero(dest_shape.element_type()));
-    xla_graph_ctx.AddResult(
-        Broadcast(zero, XlaHelpers::ShapeSizes(dest_shape)));
-  }
-  std::vector<xla::int64> index_mapping(dest_tuple.size());
-  std::iota(index_mapping.begin(), index_mapping.end(), 0);
-  ComputeAndDistribute(&xla_graph_ctx, index_mapping, dest_tuple);
-}
-
 std::shared_ptr<XLATensor> XLATensor::grad() const { return data_->grad; }
 
 void XLATensor::setGrad(std::shared_ptr<XLATensor> grad) {
@@ -693,26 +643,6 @@ void XLATensor::ApplyPendingGraph() {
     XLA_CHECK_EQ(results.size(), 1);
     SetXlaData(results.front());
   }
-}
-
-void XLATensor::ComputeAndDistribute(
-    XlaGraphContext* xla_graph_ctx,
-    const std::vector<xla::int64>& index_mapping,
-    const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-  xla::XlaComputation computation = xla_graph_ctx->Build().ValueOrDie();
-  xla::ProgramShape program_shape =
-      computation.GetProgramShape().ConsumeValueOrDie();
-  const auto device = CommonDeviceForTensors(tensors);
-  xla::Shape multi_shape =
-      MakeShapeWithDeviceLayout(program_shape.result(), device.hw_type);
-  auto compiled_computation = XlaGetClient()->Compile(
-      std::move(computation), {device.ToString()}, &multi_shape);
-  xla::ComputationClient::ExecuteComputationOptions options;
-  auto results = XlaGetClient()->ExecuteComputation(
-      *compiled_computation, xla_graph_ctx->GetParametersData(),
-      compiled_computation->devices()[0], options);
-  // Replace destination's underlying data with the result of the computation.
-  SetMulti(tensors, std::move(results), index_mapping);
 }
 
 void XLATensor::ApplyPendingGraph(

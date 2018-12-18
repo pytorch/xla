@@ -133,25 +133,6 @@ class XLATensor {
   static Device CommonDeviceForTensors(
       const std::vector<std::shared_ptr<XLATensor>>& tensors);
 
-  // In place scale and add for multiple tensors. The operation applies to all
-  // tensors "dest" in "dest_tuple" and is:
-  //   dest = scale_dest * dest + alpha * source
-  // where "source" is the corresponding tensor in "source_tuple".
-  // This is a (temporary) building block for manually batched SGD optimizer. We
-  // have ways to automatically batch the optimizer application to all weights
-  // in the model; for expediency, we'll instead do this to minimize the number
-  // of moving parts needed to achieve better usability.
-  static void MulAddMulti(
-      const double scale_dest,
-      const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
-      const double alpha,
-      const std::vector<std::shared_ptr<XLATensor>>& source_tuple);
-
-  // Zero all the tensors in "dest_tuple", it exists for the same reason as
-  // "MulAddMulti".
-  static void ZeroMulti(
-      const std::vector<std::shared_ptr<XLATensor>>& dest_tuple);
-
   // Retrieves the set of XLA tensors which are currently live in the system.
   static std::vector<std::shared_ptr<XLATensor>> GetLiveTensors();
 
@@ -215,11 +196,6 @@ class XLATensor {
   std::shared_ptr<XlaGraphNode> CreateMulNode(const at::Scalar& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(XLATensor& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(const at::Scalar& other);
-
-  static void ComputeAndDistribute(
-      XlaGraphContext* xla_graph_ctx,
-      const std::vector<xla::int64>& index_mapping,
-      const std::vector<std::shared_ptr<XLATensor>>& tensors);
 
   static std::shared_ptr<XlaGraphNode> CreateTensorNode(
       std::shared_ptr<xla::ComputationClient::Data> data);
