@@ -173,7 +173,6 @@ xla::XlaOp BuildCat(const Node* node,
 }
 
 std::vector<xla::XlaOp> BuildChunk(const Node* node, const xla::XlaOp& input) {
-  const auto node_input = node->inputs()[0];
   int64_t chunks = node->get<int64_t>(attr::chunks).value();
   int64_t dim = node->get<int64_t>(attr::dim).value();
   XLA_CHECK_GE(dim, 0) << "Negative dimension specified for chunk operator";

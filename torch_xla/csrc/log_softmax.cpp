@@ -58,7 +58,6 @@ xla::XlaOp BuildLogSoftmaxGrad(const Node* node, const xla::XlaOp& grad_output,
   // Inspired from tf2xla.
   xla::int64 dim = node->get<int64_t>(attr::dim).value();
 
-  const auto node_inputs = node->inputs();
   auto input_size = XlaHelpers::SizesOfXlaOp(grad_output);
   std::vector<xla::int64> broadcast_dimensions;
   for (size_t broadcast_dim = 0; broadcast_dim < input_size.size();

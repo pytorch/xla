@@ -79,6 +79,7 @@ xla::PrimitiveType XlaHelpers::MakeXlaPrimitiveType(
       return xla::PrimitiveType::S64;
     default:
       LOG(FATAL) << "Type not supported: " << scalar_type;
+      return xla::PrimitiveType::PRIMITIVE_TYPE_INVALID;
   }
 }
 
