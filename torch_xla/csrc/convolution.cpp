@@ -271,7 +271,6 @@ xla::XlaOp BuildConvolutionBias(
   CHECK_GE(node_inputs.size(), size_t(4));
   const auto window_strides = XlaHelpers::I64List(
       node->get<std::vector<int64_t>>(attr::stride).value());
-  const auto node_outputs = node->outputs();
   const auto conv = BuildConvolution(node, input, kernel, conv_precision);
   auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
   CHECK_EQ(broadcast_sizes.size(), 4);

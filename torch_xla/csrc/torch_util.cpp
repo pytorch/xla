@@ -27,7 +27,7 @@ py::object XlaPackTensorList(const XlaModule::TensorBatchVector& outputs) {
     }
     tuple[i] = replica_tuple;
   }
-  return tuple;
+  return std::move(tuple);
 }
 
 }  // namespace jit
