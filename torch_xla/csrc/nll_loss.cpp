@@ -79,10 +79,6 @@ xla::XlaOp BuildNllLossBackward(const Node* node, const xla::XlaOp& logits,
   const int kBatchDim = 0;
   auto builder = logits.builder();
   const auto logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
-  const auto zero =
-      XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder);
-  const auto one =
-      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder);
   xla::XlaOp one_hot_labels = LabelsToOneHot(
       /*builder=*/builder,
       /*depth=*/logits_shape.dimensions(1),
