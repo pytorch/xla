@@ -155,13 +155,10 @@ class XrtComputationClient : public ComputationClient {
   // When we split a batch operation into per-session batches, we use this data
   // structure to collect the per-session work.
   struct SessionWork {
-    std::vector<tensorflow::Output> outputs_handles;
-    std::vector<size_t> index_mapping;
-  };
-
-  struct SessionOperations {
     tensorflow::ClientSession::FeedType feed_inputs;
-    std::vector<tensorflow::Operation> releases;
+    std::vector<tensorflow::Output> outputs_handles;
+    std::vector<tensorflow::Operation> operations;
+    std::vector<size_t> index_mapping;
   };
 
   XrtSession* GetSessionForTarget(const string& target,
