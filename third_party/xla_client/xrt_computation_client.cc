@@ -62,7 +62,6 @@ XrtComputationClient::TransferToServer(
   int64 total_size = 0;
   xla_util::MultiWait mwait(literals.size());
   std::map<XrtSession*, SessionWork> session_work_map;
-  tensorflow::ClientSession::FeedType feed_inputs;
   std::vector<Literal> literals_storage(literals.size());
   std::vector<const Literal*> literals_ptrs(literals.size());
   for (size_t i = 0; i < literals.size(); ++i) {
@@ -80,12 +79,13 @@ XrtComputationClient::TransferToServer(
       {
         std::lock_guard<std::mutex> slock(lock);
         XrtSession* session = GetSessionForXrtDevice(xrt_device, &session_map);
+        SessionWork* session_work = &session_work_map[session];
         tensorflow::Scope device_scope =
             session->root()->WithDevice(xrt_device);
         const XrtSession::CachedNode& cached_node =
             GetAllocateNode(session, device_scope, device);
-        feed_inputs.insert({cached_node.holders[0], std::move(feed_value)});
-        SessionWork* session_work = &session_work_map[session];
+        session_work->feed_inputs.insert(
+            {cached_node.holders[0], std::move(feed_value)});
         session_work->outputs_handles.push_back(cached_node.outputs[0]);
         session_work->index_mapping.push_back(i);
 
@@ -103,7 +103,8 @@ XrtComputationClient::TransferToServer(
   for (auto& session_work : session_work_map) {
     std::vector<tensorflow::Tensor> outputs;
     XLA_CHECK_OK(session_work.first->session()->Run(
-        feed_inputs, session_work.second.outputs_handles, &outputs));
+        session_work.second.feed_inputs, session_work.second.outputs_handles,
+        &outputs));
     XLA_CHECK_EQ(outputs.size(), session_work.second.outputs_handles.size());
 
     for (size_t i = 0; i < outputs.size(); ++i) {
@@ -123,16 +124,15 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
 
   XrtSessionCache::SessionMap session_map;
   std::map<XrtSession*, SessionWork> session_work_map;
-  tensorflow::ClientSession::FeedType feed_inputs;
   for (size_t i = 0; i < handles.size(); ++i) {
     const XrtData& xrt_data = dynamic_cast<const XrtData&>(*handles[i]);
     XrtSession* session = GetSessionForDevice(xrt_data.device(), &session_map);
+    SessionWork* session_work = &session_work_map[session];
     tensorflow::Scope device_scope =
         session->root()->WithDevice(TorchDeviceToXrtDevice(xrt_data.device()));
     const XrtSession::CachedNode& cached_node =
         GetReadNode(session, device_scope, xrt_data.device());
-    feed_inputs.insert({cached_node.holders[0], xrt_data.handle});
-    SessionWork* session_work = &session_work_map[session];
+    session_work->feed_inputs.insert({cached_node.holders[0], xrt_data.handle});
     session_work->outputs_handles.push_back(cached_node.outputs[0]);
     session_work->index_mapping.push_back(i);
   }
@@ -142,7 +142,8 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
   for (auto& session_work : session_work_map) {
     std::vector<tensorflow::Tensor> outputs;
     XLA_CHECK_OK(session_work.first->session()->Run(
-        feed_inputs, session_work.second.outputs_handles, &outputs));
+        session_work.second.feed_inputs, session_work.second.outputs_handles,
+        &outputs));
     XLA_CHECK_EQ(outputs.size(), session_work.second.outputs_handles.size());
 
     for (size_t i = 0; i < outputs.size(); ++i) {
@@ -163,7 +164,6 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
 
   std::vector<std::unique_ptr<xrt::XLAComputation>> xrt_computations;
   XrtSessionCache::SessionMap session_map;
-  tensorflow::ClientSession::FeedType feed_inputs;
   std::map<XrtSession*, SessionWork> session_work_map;
   for (size_t i = 0; i < instances.size(); ++i) {
     const CompileInstance& instance = instances[i];
@@ -178,7 +178,7 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
     tensorflow::Scope device_scope = session->root()->WithDevice(xrt_device);
     const XrtSession::CachedNode& cached_node =
         GetCompileNode(session, device_scope, compilation_device);
-    feed_inputs.insert(
+    session_work->feed_inputs.insert(
         {cached_node.holders[0], xrt_computations.back()->SerializeAsString()});
     session_work->outputs_handles.push_back(cached_node.outputs[0]);
     session_work->index_mapping.push_back(i);
@@ -193,7 +193,7 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
     auto session_runner = [&, this, session]() {
       std::vector<tensorflow::Tensor> outputs;
       XLA_CHECK_OK(session->session()->Run(
-          feed_inputs, session_work.outputs_handles, &outputs));
+          session_work.feed_inputs, session_work.outputs_handles, &outputs));
       XLA_CHECK_EQ(outputs.size(), session_work.outputs_handles.size());
 
       size_t output_index = 0;
@@ -348,7 +348,6 @@ XrtComputationClient::DeconstructTuple(
   XrtSessionCache::SessionMap session_map;
   std::map<XrtSession*, SessionWork> session_work_map;
   std::vector<int64> tuple_elements_count(tuples.size());
-  tensorflow::ClientSession::FeedType feed_inputs;
   for (size_t i = 0; i < tuples.size(); ++i) {
     const XrtData& xrt_data = dynamic_cast<const XrtData&>(*tuples[i]);
     XrtSession* session = GetSessionForDevice(xrt_data.device(), &session_map);
@@ -362,11 +361,12 @@ XrtComputationClient::DeconstructTuple(
     for (int64 j = 0; j < count; ++j) {
       const XrtSession::CachedNode& cached_node =
           GetSubTupleNode(session, device_scope, xrt_data.device());
-      feed_inputs.insert({cached_node.holders[0], xrt_data.handle});
+      session_work->feed_inputs.insert(
+          {cached_node.holders[0], xrt_data.handle});
       tensorflow::Tensor index_tensor(tensorflow::DT_INT32,
                                       tensorflow::TensorShape({1}));
       index_tensor.flat<tensorflow::int32>()(0) = j;
-      feed_inputs.insert({cached_node.holders[1], index_tensor});
+      session_work->feed_inputs.insert({cached_node.holders[1], index_tensor});
       session_work->outputs_handles.push_back(cached_node.outputs[0]);
     }
   }
@@ -375,7 +375,8 @@ XrtComputationClient::DeconstructTuple(
   for (auto& session_work : session_work_map) {
     std::vector<tensorflow::Tensor> outputs;
     XLA_CHECK_OK(session_work.first->session()->Run(
-        feed_inputs, session_work.second.outputs_handles, &outputs));
+        session_work.second.feed_inputs, session_work.second.outputs_handles,
+        &outputs));
     XLA_CHECK_EQ(outputs.size(), session_work.second.outputs_handles.size());
 
     size_t output_index = 0;
@@ -591,22 +592,22 @@ void XrtComputationClient::ReleaseHandles(
     metrics::TimedSection timed(timed_metric);
 
     XrtSessionCache::SessionMap session_map;
-    std::map<XrtSession*, SessionOperations> session_releases_map;
+    std::map<XrtSession*, SessionWork> session_work_map;
     for (auto& handle : released_handles) {
       XrtSession* session = GetSessionForDevice(handle.device, &session_map);
-      SessionOperations* release = &session_releases_map[session];
+      SessionWork* session_work = &session_work_map[session];
       tensorflow::Scope device_scope =
           session->root()->WithDevice(TorchDeviceToXrtDevice(handle.device));
       const XrtSession::CachedNode& cached_node =
           op_generator(session, device_scope, handle.device);
-      release->feed_inputs.insert({cached_node.holders[0], handle.handle});
-      release->releases.push_back(cached_node.operations[0]);
+      session_work->feed_inputs.insert({cached_node.holders[0], handle.handle});
+      session_work->operations.push_back(cached_node.operations[0]);
     }
-    for (const auto& session_releases : session_releases_map) {
+    for (const auto& session_work : session_work_map) {
       std::vector<tensorflow::Tensor> outputs;
-      XLA_CHECK_OK(session_releases.first->session()->Run(
-          session_releases.second.feed_inputs, {},
-          session_releases.second.releases, &outputs));
+      XLA_CHECK_OK(session_work.first->session()->Run(
+          session_work.second.feed_inputs, {}, session_work.second.operations,
+          &outputs));
     }
     destroy_counter->AddValue(released_handles.size());
   }
