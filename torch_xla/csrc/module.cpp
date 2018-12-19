@@ -82,18 +82,9 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
 
   // Get forward graph.
   const auto forward = script_module_->find_method("forward");
-  JIT_ASSERT(forward);
+  JIT_ASSERT(forward != nullptr);
   std::shared_ptr<Graph> forward_graph = forward->graph()->copy();
-  // Run forward passes.
-  CanonicalizeOps(forward_graph);
-  InsertExplicitExpand(forward_graph);
-  EvalStaticSize(forward_graph);
-  ConstantPropagation(forward_graph);
-  ReplaceUntracedOperators(forward_graph);
-  RemoveInPlaceOutParamOps(forward_graph);
-  ReplaceInPlaceOps(forward_graph);
-  EliminateDeadCode(forward_graph);
-  LowerAllTuples(forward_graph);
+  RunForwardPasses(&forward_graph);
 
   // Convert model parameters to vector of XLATensors.
   std::vector<at::Tensor*> params_buffers_regather;
@@ -141,31 +132,48 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
                               param_requires_grad.begin(),
                               param_requires_grad.end());
 
-  // Automatically differentiate the forward graph to get the backward graph.
-  // Since differentiation is mutating the graph, do it on a copy.
-  auto forward_graph_copy = forward_graph->copy();
-  gradient_ = differentiate(forward_graph_copy);
-
-  // Run the forward passes.
-  CanonicalizeOps(gradient_.f);
-  InsertExplicitExpand(gradient_.f);
-  ConstantPropagation(gradient_.f);
-  ReplaceUntracedOperators(gradient_.f);
-  EliminateDeadCode(gradient_.f);
-  // Run the backward passes.
-  specializeUndef(*(gradient_.df.get()));
-  ConstantPropagation(gradient_.df);
-  ThresholdBackwardPeephole(gradient_.df);
-  EliminateDeadCode(gradient_.df);
-  LowerAllTuples(gradient_.df);
-  // Run pass on forward and backward graphs that drops outputs that XLA doesn't
-  // need.
-  RemoveUnusedForwardOutputs(&gradient_);
+  gradient_ = ComputeGradient(forward_graph);
 
   TF_VLOG(4) << "Gradient F:\n" << gradient_.f->toString();
   TF_VLOG(4) << "Gradient DF:\n" << gradient_.df->toString();
   // Release the reference to the script module to mark initialization as done.
   script_module_ = nullptr;
+}
+
+void XlaModule::RunForwardPasses(std::shared_ptr<Graph>* graph) {
+  // Run forward passes.
+  CanonicalizeOps(*graph);
+  InsertExplicitExpand(*graph);
+  EvalStaticSize(*graph);
+  ConstantPropagation(*graph);
+  ReplaceUntracedOperators(*graph);
+  RemoveInPlaceOutParamOps(*graph);
+  ReplaceInPlaceOps(*graph);
+  EliminateDeadCode(*graph);
+  LowerAllTuples(*graph);
+}
+
+Gradient XlaModule::ComputeGradient(const std::shared_ptr<Graph>& graph) {
+  // Automatically differentiate the forward graph to get the backward graph.
+  // Since differentiation is mutating the graph, do it on a copy.
+  std::shared_ptr<Graph> graph_copy = graph->copy();
+  Gradient gradient = differentiate(graph_copy);
+  // Run the forward passes.
+  CanonicalizeOps(gradient.f);
+  InsertExplicitExpand(gradient.f);
+  ConstantPropagation(gradient.f);
+  ReplaceUntracedOperators(gradient.f);
+  EliminateDeadCode(gradient.f);
+  // Run the backward passes.
+  specializeUndef(*(gradient.df.get()));
+  ConstantPropagation(gradient.df);
+  ThresholdBackwardPeephole(gradient.df);
+  EliminateDeadCode(gradient.df);
+  LowerAllTuples(gradient.df);
+  // Run pass on forward and backward graphs that drops outputs that XLA doesn't
+  // need.
+  RemoveUnusedForwardOutputs(&gradient);
+  return gradient;
 }
 
 void XlaModule::CheckInitialized() const {
