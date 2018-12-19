@@ -294,7 +294,7 @@ def extract_gradients(inputs, fill_fn=None):
 
 
 # Run an XLA model with the given tensors.
-def run_xla_model(xla_model, inputs, devices=None):
+def xla_run_model(xla_model, inputs, devices=None):
   return xla_model(*convert_to_xla_tensors(inputs, devices=devices))
 
 
@@ -518,12 +518,12 @@ class XlaModel(object):
     if self._loss_fn is None and self._num_cores == 1:
       # Internally the interface to the XLA module is always in replicated
       # mode, where num_replicas=1 is just a case of replication.
-      outputs = run_xla_model(self._xla_model, [args], devices=self._devices)
+      outputs = xla_run_model(self._xla_model, [args], devices=self._devices)
       # If in legacy-API mode, convert the XLA tensor directly to PyTorch
       # tensor.
       return convert_to_tensors(outputs[0])
     assert len(args) == self._num_cores
-    return run_xla_model(self._xla_model, args, devices=self._devices)
+    return xla_run_model(self._xla_model, args, devices=self._devices)
 
   def backward(self, outputs):
     xla_run_grad(
@@ -577,7 +577,7 @@ class XlaModel(object):
     for batch_number, (inputs, targets) in wloader:
       self._step += 1
       optimizer.zero_grad()
-      xla_outputs = run_xla_model(
+      xla_outputs = xla_run_model(
           self._xla_model, inputs, devices=self._devices)
       xla_run_grad(
           self._xla_model,
@@ -610,7 +610,7 @@ class XlaModel(object):
     start_time = time.time()
     with torch.no_grad():
       for batch_number, (inputs, targets) in wloader:
-        xla_outputs = run_xla_model(
+        xla_outputs = xla_run_model(
             self._xla_model, inputs, devices=self._devices)
         for i, replica_xla_outputs in enumerate(xla_outputs):
           # The original model output is ordinal 1 of the returned
