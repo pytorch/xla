@@ -98,6 +98,12 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // computation have their accumulated operations sync to device memory.
   void FlushTensorsOperations();
 
+  static void RunForwardPasses(std::shared_ptr<Graph>* graph);
+
+  // Computes the gradient structure of the given graph, and runs all the
+  // appropriate passes over the resulting forward and backward graphs.
+  static Gradient ComputeGradient(const std::shared_ptr<Graph>& graph);
+
   // Propagate ret_size_op_values storing the aten::size values collected during
   // forward pass translation to the backward pass. Uses the capture information
   // from the gradient descriptor.
