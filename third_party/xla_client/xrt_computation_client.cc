@@ -184,26 +184,34 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
     session_work->index_mapping.push_back(i);
   }
 
-  // TODO(dlibenzi): We could make this parallel if we know we have more than
-  // one host on the other side.
+  xla_util::MultiWait mwait(session_work_map.size());
   std::vector<std::shared_ptr<Computation>> results(instances.size());
-  for (auto& session_work : session_work_map) {
-    std::vector<tensorflow::Tensor> outputs;
-    XLA_CHECK_OK(session_work.first->session()->Run(
-        feed_inputs, session_work.second.outputs_handles, &outputs));
-    XLA_CHECK_EQ(outputs.size(), session_work.second.outputs_handles.size());
+  for (auto& session_and_work : session_work_map) {
+    XrtSession* session = session_and_work.first;
+    const SessionWork& session_work = session_and_work.second;
 
-    size_t output_index = 0;
-    for (auto li : session_work.second.index_mapping) {
-      CompileInstance* instance = &instances[li];
-      results[li] = std::make_shared<XrtComputation>(
-          this, std::move(instance->computation),
-          ProgramShape(xrt_computations[li]->config().program_shape()),
-          std::move(instance->devices), outputs[output_index].scalar<int64>()(),
-          GetCompilationDevice(instance->devices));
-      ++output_index;
-    }
+    auto session_runner = [&, this, session]() {
+      std::vector<tensorflow::Tensor> outputs;
+      XLA_CHECK_OK(session->session()->Run(
+          feed_inputs, session_work.outputs_handles, &outputs));
+      XLA_CHECK_EQ(outputs.size(), session_work.outputs_handles.size());
+
+      size_t output_index = 0;
+      for (auto li : session_work.index_mapping) {
+        CompileInstance* instance = &instances[li];
+        results[li] = std::make_shared<XrtComputation>(
+            this, std::move(instance->computation),
+            ProgramShape(xrt_computations[li]->config().program_shape()),
+            std::move(instance->devices),
+            outputs[output_index].scalar<int64>()(),
+            GetCompilationDevice(instance->devices));
+        ++output_index;
+      }
+      mwait.Done();
+    };
+    xla_env::ScheduleIoClosure(std::move(session_runner));
   }
+  mwait.Wait();
   CreateCompileHandlesCounter()->AddValue(instances.size());
   return results;
 }
