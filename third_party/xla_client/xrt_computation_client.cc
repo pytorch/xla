@@ -72,7 +72,6 @@ XrtComputationClient::TransferToServer(
       string device = GetEffectiveDevice(literals[i].device);
       const string& xrt_device = TorchDeviceToXrtDevice(device);
       xrt::XLAAllocation alloc;
-      alloc.set_device_ordinal(GetDeviceOrdinal(xrt_device));
       *alloc.mutable_value() = literal.ToProto();
       tensorflow::Input::Initializer feed_value(alloc.SerializeAsString());
 
