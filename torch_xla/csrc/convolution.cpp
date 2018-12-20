@@ -105,7 +105,8 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
       xla::ConvGeneralDilated(grad, mirrored_weights,
                               /*window_strides=*/ones, padding, lhs_dilation,
                               rhs_dilation, dnums,
-                              /*feature_group_count=*/1, &precision_config),
+                              /*feature_group_count=*/1,
+                              /*batch_group_count=*/1, &precision_config),
       XlaHelpers::ScalarValue<float>(0, weight_shape.element_type(), builder),
       padding_config);
 }
@@ -235,7 +236,8 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
   return xla::Transpose(
       xla::ConvGeneralDilated(padded_input, grad, window_strides, padding,
                               /*lhs_dilation=*/ones, rhs_dilation, dnums,
-                              /*feature_group_count=*/1, &precision_config),
+                              /*feature_group_count=*/1,
+                              /*batch_group_count=*/1, &precision_config),
       {3, 2, 0, 1});
 }
 
@@ -260,7 +262,7 @@ xla::XlaOp BuildConvolution(
       XlaHelpers::BuildPrecisionConfig(conv_precision);
   return xla::ConvWithGeneralPadding(
       input, kernel, window_strides, dims_padding,
-      /*feature_group_count*/ 1, &precision_config);
+      /*feature_group_count*/ 1, /*batch_group_count=*/1, &precision_config);
 }
 
 xla::XlaOp BuildConvolutionBias(
