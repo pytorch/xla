@@ -45,6 +45,29 @@ std::vector<int64_t> GetCompleteShape(
   return complete_output_sizes;
 }
 
+// Finds a prim::ListConstruct operation by id in the graph of "parent".
+std::vector<const Value*> InputListAttr(const Node* parent, const size_t id) {
+  const auto nodes = parent->owningGraph()->block()->nodes();
+  std::vector<const Value*> result;
+  for (const auto node : nodes) {
+    if (node->kind() != prim::ListConstruct) {
+      continue;
+    }
+    const auto node_outputs = node->outputs();
+    XLA_CHECK_EQ(node_outputs.size(), size_t(1));
+    const auto output = node_outputs[0];
+    if (output->unique() != id) {
+      continue;
+    }
+    const auto node_inputs = node->inputs();
+    for (const auto input : node_inputs) {
+      result.push_back(input);
+    }
+    return result;
+  }
+  XLA_CHECK(false) << "Constant with id " << id << " not found.";
+}
+
 }  // namespace
 
 xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
@@ -111,29 +134,6 @@ xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input) {
   }
   return xla::Reshape(broadcast, reshape_permutation,
                       XlaHelpers::I64List(output_sizes));
-}
-
-// Finds a prim::ListConstruct operation by id in the graph of "parent".
-std::vector<const Value*> InputListAttr(const Node* parent, const size_t id) {
-  const auto nodes = parent->owningGraph()->block()->nodes();
-  std::vector<const Value*> result;
-  for (const auto node : nodes) {
-    if (node->kind() != prim::ListConstruct) {
-      continue;
-    }
-    const auto node_outputs = node->outputs();
-    XLA_CHECK_EQ(node_outputs.size(), size_t(1));
-    const auto output = node_outputs[0];
-    if (output->unique() != id) {
-      continue;
-    }
-    const auto node_inputs = node->inputs();
-    for (const auto input : node_inputs) {
-      result.push_back(input);
-    }
-    return result;
-  }
-  XLA_CHECK(false) << "Constant with id " << id << " not found.";
 }
 
 xla::XlaOp BuildStack(const Node* node,
