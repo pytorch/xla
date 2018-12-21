@@ -14,9 +14,11 @@
 #include "tensorflow/cc/framework/ops.h"
 #include "tensorflow/cc/framework/scope.h"
 #include "tensorflow/cc/ops/standard_ops.h"
+#include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/triggered_task.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xrt_session.h"
 #include "tensorflow/compiler/xla/xla_client/xrt_session_cache.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
@@ -368,6 +370,9 @@ class XrtComputationClient : public ComputationClient {
   std::map<string, std::vector<int>> device_mesh_coords_;
   XrtSessionCache session_cache_;
   std::unique_ptr<xla_util::TriggeredTask> triggered_task_;
+  util::Cache<string, std::shared_ptr<Computation>,
+              util::PartialHasher<string, 4096>>
+      compilation_cache_;
   // Access to the following members must be done while holding lock_.
   // XRT thread safety semantics.
   std::vector<DeviceHandle> released_data_handles_;
