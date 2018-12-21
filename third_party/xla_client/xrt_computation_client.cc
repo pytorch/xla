@@ -161,29 +161,40 @@ std::vector<std::shared_ptr<ComputationClient::Computation>>
 XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
   metrics::TimedSection timed(CompileMetric());
 
-  std::vector<std::unique_ptr<xrt::XLAComputation>> xrt_computations;
+  std::mutex lock;
+  xla_util::MultiWait mwait(instances.size());
+  std::vector<std::unique_ptr<xrt::XLAComputation>> xrt_computations(
+      instances.size());
   XrtSessionCache::SessionMap session_map;
   std::map<XrtSession*, SessionWork> session_work_map;
   for (size_t i = 0; i < instances.size(); ++i) {
-    const CompileInstance& instance = instances[i];
-
-    xrt_computations.push_back(CreateXrtComputation(
-        instance.computation, instance.devices, instance.output_shape));
-
-    string compilation_device = GetCompilationDevice(instance.devices);
-    const string& xrt_device = TorchDeviceToXrtDevice(compilation_device);
-    XrtSession* session = GetSessionForXrtDevice(xrt_device, &session_map);
-    SessionWork* session_work = &session_work_map[session];
-    tensorflow::Scope device_scope = session->root()->WithDevice(xrt_device);
-    const XrtSession::CachedNode& cached_node =
-        GetCompileNode(session, device_scope, compilation_device);
-    session_work->feed_inputs.insert(
-        {cached_node.holders[0], xrt_computations.back()->SerializeAsString()});
-    session_work->outputs_handles.push_back(cached_node.outputs[0]);
-    session_work->index_mapping.push_back(i);
+    auto builder = [&, this, i]() {
+      const CompileInstance& instance = instances[i];
+      xrt_computations[i] = CreateXrtComputation(
+          instance.computation, instance.devices, instance.output_shape);
+      string serialized_computation = xrt_computations[i]->SerializeAsString();
+      string compilation_device = GetCompilationDevice(instance.devices);
+      const string& xrt_device = TorchDeviceToXrtDevice(compilation_device);
+      {
+        std::lock_guard<std::mutex> slock(lock);
+        XrtSession* session = GetSessionForXrtDevice(xrt_device, &session_map);
+        SessionWork* session_work = &session_work_map[session];
+        tensorflow::Scope device_scope =
+            session->root()->WithDevice(xrt_device);
+        const XrtSession::CachedNode& cached_node =
+            GetCompileNode(session, device_scope, compilation_device);
+        session_work->feed_inputs.insert(
+            {cached_node.holders[0], std::move(serialized_computation)});
+        session_work->outputs_handles.push_back(cached_node.outputs[0]);
+        session_work->index_mapping.push_back(i);
+      }
+      mwait.Done();
+    };
+    xla_env::ScheduleClosure(std::move(builder));
   }
+  mwait.Wait();
+  mwait.Reset(session_work_map.size());
 
-  xla_util::MultiWait mwait(session_work_map.size());
   std::vector<std::shared_ptr<Computation>> results(instances.size());
   for (auto& session_and_work : session_work_map) {
     XrtSession* session = session_and_work.first;
@@ -466,7 +477,7 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
         output_shape->ToProto();
   }
   *xrt_computation->mutable_hlo_snapshot() =
-      *computation.Snapshot().ConsumeValueOrDie();
+      std::move(*computation.Snapshot().ConsumeValueOrDie());
   return xrt_computation;
 }
 
