@@ -19,6 +19,10 @@ class MultiWait {
   // happened.
   void Wait();
 
+  // Resets the threshold counter for the MultiWait object. The completed count
+  // is also reset to zero.
+  void Reset(size_t count);
+
  private:
   std::mutex mutex_;
   std::condition_variable cv_;

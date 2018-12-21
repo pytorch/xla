@@ -20,5 +20,11 @@ void MultiWait::Wait() {
   cv_.wait(lock, [this] { return completed_count_ >= count_; });
 }
 
+void MultiWait::Reset(size_t count) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  count_ = count;
+  completed_count_ = 0;
+}
+
 }  // namespace xla_util
 }  // namespace xla
