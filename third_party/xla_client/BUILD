@@ -60,6 +60,7 @@ cc_library(
         "xrt_session_cache.cc",
     ],
     hdrs = [
+        "cache.h",
         "computation_client.h",
         "debug_macros.h",
         "metrics.h",

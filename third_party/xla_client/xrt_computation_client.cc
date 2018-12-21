@@ -20,7 +20,9 @@ namespace xla {
 
 XrtComputationClient::XrtComputationClient(
     XrtComputationClient::Options options)
-    : options_(std::move(options)) {
+    : options_(std::move(options)),
+      compilation_cache_(
+          sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 64)) {
   auto default_device_target =
       options_.device_map.find(options_.default_device);
   XLA_CHECK(default_device_target != options_.device_map.end());
@@ -165,6 +167,8 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
   xla_util::MultiWait mwait(instances.size());
   std::vector<std::unique_ptr<xrt::XLAComputation>> xrt_computations(
       instances.size());
+  std::vector<std::shared_ptr<Computation>> results(instances.size());
+  std::vector<string> serialized_computations(instances.size());
   XrtSessionCache::SessionMap session_map;
   std::map<XrtSession*, SessionWork> session_work_map;
   for (size_t i = 0; i < instances.size(); ++i) {
@@ -172,21 +176,28 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
       const CompileInstance& instance = instances[i];
       xrt_computations[i] = CreateXrtComputation(
           instance.computation, instance.devices, instance.output_shape);
-      string serialized_computation = xrt_computations[i]->SerializeAsString();
-      string compilation_device = GetCompilationDevice(instance.devices);
-      const string& xrt_device = TorchDeviceToXrtDevice(compilation_device);
-      {
-        std::lock_guard<std::mutex> slock(lock);
-        XrtSession* session = GetSessionForXrtDevice(xrt_device, &session_map);
-        SessionWork* session_work = &session_work_map[session];
-        tensorflow::Scope device_scope =
-            session->root()->WithDevice(xrt_device);
-        const XrtSession::CachedNode& cached_node =
-            GetCompileNode(session, device_scope, compilation_device);
-        session_work->feed_inputs.insert(
-            {cached_node.holders[0], std::move(serialized_computation)});
-        session_work->outputs_handles.push_back(cached_node.outputs[0]);
-        session_work->index_mapping.push_back(i);
+      serialized_computations[i] = xrt_computations[i]->SerializeAsString();
+
+      auto computation_ptr = compilation_cache_.Get(serialized_computations[i]);
+      if (computation_ptr == nullptr) {
+        string compilation_device = GetCompilationDevice(instance.devices);
+        const string& xrt_device = TorchDeviceToXrtDevice(compilation_device);
+        {
+          std::lock_guard<std::mutex> slock(lock);
+          XrtSession* session =
+              GetSessionForXrtDevice(xrt_device, &session_map);
+          SessionWork* session_work = &session_work_map[session];
+          tensorflow::Scope device_scope =
+              session->root()->WithDevice(xrt_device);
+          const XrtSession::CachedNode& cached_node =
+              GetCompileNode(session, device_scope, compilation_device);
+          session_work->feed_inputs.insert(
+              {cached_node.holders[0], serialized_computations[i]});
+          session_work->outputs_handles.push_back(cached_node.outputs[0]);
+          session_work->index_mapping.push_back(i);
+        }
+      } else {
+        results[i] = *computation_ptr;
       }
       mwait.Done();
     };
@@ -195,7 +206,6 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
   mwait.Wait();
   mwait.Reset(session_work_map.size());
 
-  std::vector<std::shared_ptr<Computation>> results(instances.size());
   for (auto& session_and_work : session_work_map) {
     XrtSession* session = session_and_work.first;
     const SessionWork& session_work = session_and_work.second;
@@ -216,13 +226,16 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
             outputs[output_index].scalar<int64>()(),
             GetCompilationDevice(instance->devices));
         ++output_index;
+
+        compilation_cache_.Add(std::move(serialized_computations[li]),
+                               results[li]);
+        CreateCompileHandlesCounter()->AddValue(1);
       }
       mwait.Done();
     };
     xla_env::ScheduleIoClosure(std::move(session_runner));
   }
   mwait.Wait();
-  CreateCompileHandlesCounter()->AddValue(instances.size());
   return results;
 }
 
