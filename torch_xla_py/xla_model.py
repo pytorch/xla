@@ -22,34 +22,61 @@ _HANDLES_DESTROYED_COUNTER = 'ClientDestroyHandles'
 _WAIT_HANDLES_SLEEP_STEP = 0.25
 
 
+class RateTracker(object):
+
+  def __init__(self, smooth_factor=0.6):
+    self._smooth_factor = smooth_factor
+    self._start_time = time.time()
+    self._partial_time = self._start_time
+    self._count = 0
+    self._rate = 0.0
+
+  def update(self, count):
+    now = time.time()
+    delta = now - self._partial_time
+    if delta > 0:
+      rate = (count - self._count) / delta
+      self._rate = (self._rate * self._smooth_factor +
+                    rate * (1.0 - self._smooth_factor))
+    self._partial_time = now
+    self._count = count
+    return self._rate
+
+  def rate(self):
+    return self._rate
+
+  def global_rate(self):
+    return self._count / (self._partial_time - self._start_time)
+
+
+
 class TrainStepMetrics(object):
 
   LOG_FORMAT = ('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
                 'Loss: {:.6f}\tSamples/sec: {:.1f}')
 
   def __init__(self, epoch, num_cores, batch_number, num_batches, batch_size,
-               loss, total_time, global_step):
+               loss, examples_per_sec, global_step):
     """Constructor for the metrics of a single train step.
 
     Args:
-      epoch: the current epoch number
-      num_cores: number of cores on which model is being trained
-      batch_number: the current batch number. Reset to 0 every epoch
-      num_batches: number of batches in a single epoch
-      batch_size: per core batch size
-      loss: training loss
-      total_time: time since starting the current epoch
-      global_step: the global step number of current batch
+      epoch: The current epoch number.
+      num_cores: The number of cores on which model is being trained.
+      batch_number: The current batch number. Reset to 0 every epoch.
+      num_batches: The number of batches in a single epoch.
+      batch_size: Per core batch size.
+      loss: Training loss.
+      examples_per_sec: The number of processed samples per second.
+      global_step: The global step number of current batch.
     """
     self._epoch = epoch
     self._processed_samples = num_cores * (batch_number + 1) * batch_size
     self._dataset_size = num_batches * batch_size
     self._percent_epoch_done = 100. * batch_number * num_cores / num_batches
     self._loss = loss
-    self._examples_per_sec = self._processed_samples / total_time
+    self._examples_per_sec = examples_per_sec
     self._global_step = global_step
-    self._global_step_per_sec = (
-        self._processed_samples / total_time) / batch_size
+    self._global_step_per_sec = examples_per_sec / batch_size
 
   def write_summary(self, writer):
     if writer:
@@ -68,22 +95,22 @@ class TestStepMetrics(object):
   LOG_FORMAT = ('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%), '
                 'Samples/sec: {:.1f}\n')
 
-  def __init__(self, loss, correct, count, total_time, global_step):
+  def __init__(self, loss, correct, count, examples_per_sec, global_step):
     """Constructor for the metrics of a single test step.
 
     Args:
-      loss: test loss
-      correct: number of correct samples
-      count: total number of samples
-      total_time: time since starting the current epoch
-      global_step: the global step number of current batch
+      loss: The test loss.
+      correct: The number of correct samples.
+      count: Total number of samples.
+      examples_per_sec: The number of processed samples per second.
+      global_step: The global step number of current batch.
     """
     self._loss = loss
     self._correct = correct
     self._total = count
     self._global_step = global_step
     self._accuracy = 100.0 * correct / count
-    self._examples_per_sec = count / total_time
+    self._examples_per_sec = examples_per_sec
 
   def write_summary(self, writer):
     if writer:
@@ -572,7 +599,7 @@ class XlaModel(object):
         fused_mode=True)
     wloader_cleaner = xu.Cleaner(wloader.close)
     loss = None
-    start_time = time.time()
+    rate_tracker = RateTracker()
     self._epoch += 1
     for batch_number, (inputs, targets) in wloader:
       self._step += 1
@@ -589,10 +616,11 @@ class XlaModel(object):
         if metrics_debug:
           log_fn(torch_xla._XLAC._xla_metrics_report())
         loss = self._compute_loss(xla_outputs)
+        rate_tracker.update(self._num_cores * batch_size * (batch_number + 1))
         log_fn(
             TrainStepMetrics(self._epoch, self._num_cores, batch_number,
                              len(samples_loader), batch_size, loss,
-                             time.time() - start_time, self._step))
+                             rate_tracker.rate(), self._step))
     return loss
 
   def test(self, samples_loader, eval_fn, batch_size, log_fn=print):
@@ -607,7 +635,7 @@ class XlaModel(object):
     test_loss = 0
     count = 0
     correct = 0
-    start_time = time.time()
+    rate_tracker = RateTracker()
     with torch.no_grad():
       for batch_number, (inputs, targets) in wloader:
         xla_outputs = xla_run_model(
@@ -627,7 +655,7 @@ class XlaModel(object):
     if log_fn is not None:
       log_fn(
           TestStepMetrics(test_loss, correct, count,
-                          time.time() - start_time, self._step))
+                          rate_tracker.update(count), self._step))
     return accuracy
 
 
