@@ -1,7 +1,12 @@
 #ifndef TENSORFLOW_COMPILER_XLA_RPC_TF_LOGGING_H_
 #define TENSORFLOW_COMPILER_XLA_RPC_TF_LOGGING_H_
 
+#include <sstream>
+
 #include "tensorflow/core/platform/logging.h"
+
+namespace xla {
+namespace internal {
 
 // It happens that Caffe defined the same exact Google macros, hiding the TF
 // ones, and making log messages disappear.
@@ -23,11 +28,39 @@
           ::tensorflow::internal::LogMessage(__FILE__, __LINE__, \
                                              tensorflow::INFO)
 
-#define TF_CHECK(condition)           \
-  if (TF_PREDICT_FALSE(!(condition))) \
-  TF_LOG(FATAL) << "Check failed: " #condition " "
+struct ErrorSink : public std::basic_ostringstream<char> {};
 
-#define TF_CHECK_OP(name, op, val1, val2) CHECK_OP_LOG(name, op, val1, val2)
+class ErrorGenerator {
+ public:
+  ErrorGenerator(const char* file, int line) : file_(file), line_(line) {}
+
+  // Use a dummy & operator as it has lower precedence WRT the streaming
+  // operator, and hence allows collecting user error messages before we finally
+  // throw.
+  void operator&(std::basic_ostream<char>& oss) const;
+
+ private:
+  const char* file_ = nullptr;
+  int line_ = 0;
+};
+
+#define TF_ERROR_STREAM                                 \
+  ::xla::internal::ErrorGenerator(__FILE__, __LINE__) & \
+      ::xla::internal::ErrorSink()
+
+#define TF_CHECK(condition)              \
+  while (TF_PREDICT_FALSE(!(condition))) \
+  TF_ERROR_STREAM << "Check failed: " #condition " "
+
+#define TF_CHECK_OP_LOG(name, op, val1, val2)                         \
+  while (::tensorflow::internal::CheckOpString _result =              \
+             ::tensorflow::internal::name##Impl(                      \
+                 ::tensorflow::internal::GetReferenceableValue(val1), \
+                 ::tensorflow::internal::GetReferenceableValue(val2), \
+                 #val1 " " #op " " #val2))                            \
+  TF_ERROR_STREAM << *(_result.str_)
+
+#define TF_CHECK_OP(name, op, val1, val2) TF_CHECK_OP_LOG(name, op, val1, val2)
 
 // TF_CHECK_EQ/NE/...
 #define TF_CHECK_EQ(val1, val2) TF_CHECK_OP(Check_EQ, ==, val1, val2)
@@ -36,8 +69,9 @@
 #define TF_CHECK_LT(val1, val2) TF_CHECK_OP(Check_LT, <, val1, val2)
 #define TF_CHECK_GE(val1, val2) TF_CHECK_OP(Check_GE, >=, val1, val2)
 #define TF_CHECK_GT(val1, val2) TF_CHECK_OP(Check_GT, >, val1, val2)
-#define TF_CHECK_NOTNULL(val)                              \
-  ::tensorflow::internal::CheckNotNull(__FILE__, __LINE__, \
-                                       "'" #val "' Must be non NULL", (val))
+#define TF_CHECK_NOTNULL(val) TF_CHECK(val != nullptr)
+
+}  // namespace internal
+}  // namespace xla
 
 #endif  // TENSORFLOW_COMPILER_XLA_RPC_TF_LOGGING_H_
