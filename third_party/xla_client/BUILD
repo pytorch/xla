@@ -51,6 +51,7 @@ cc_library(
         "metrics.cc",
         "multi_wait.cc",
         "sys_util.cc",
+        "tf_logging.cc",
         "thread_pool.cc",
         "triggered_task.cc",
         "xla_util.cc",
