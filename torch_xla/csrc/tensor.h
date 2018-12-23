@@ -136,14 +136,6 @@ class XLATensor {
   // Retrieves the set of XLA tensors which are currently live in the system.
   static std::vector<std::shared_ptr<XLATensor>> GetLiveTensors();
 
-  // Forcefully releases the device memory behind all the know active tensors.
-  // This API should only be called once it is known that the other referrers of
-  // the tensors will not be using them anymore (like in the really late exit
-  // path of the application). Using the handles after such API call can caused
-  // undefined behavior and/or crashes.
-  // Returns the number of released device data tensors.
-  static size_t ReleaseAllTensorsData();
-
   // Applies the queue of operations for a list of tensors.
   static void ApplyPendingGraph(
       const std::vector<std::shared_ptr<XLATensor>>& tensors);
