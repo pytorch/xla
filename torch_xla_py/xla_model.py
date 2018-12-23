@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import atexit
 import collections
 import gc
 import os
@@ -15,11 +14,6 @@ import torch_xla_py.keyd_queue as kq
 
 MultiBatch = collections.namedtuple('MultiBatch',
                                     ['batch_number', 'inputs', 'targets'])
-
-_HANDLES_CREATED_COUNTER = 'ClientCreateHandles'
-_HANDLES_RELEASED_COUNTER = 'ClientReleaseHandles'
-_HANDLES_DESTROYED_COUNTER = 'ClientDestroyHandles'
-_WAIT_HANDLES_SLEEP_STEP = 0.25
 
 
 class RateTracker(object):
@@ -41,6 +35,9 @@ class RateTracker(object):
     self._partial_time = now
     self._count = count
     return self._rate
+
+  def add(self, count):
+    return self.update(self._count + count)
 
   def rate(self):
     return self._rate
@@ -657,66 +654,3 @@ class XlaModel(object):
           TestStepMetrics(test_loss, correct, count,
                           rate_tracker.update(count), self._step))
     return accuracy
-
-
-def _force_release_tensors():
-  count = torch_xla._XLAC._xla_force_release_all_data()
-  xu.eprint('Forcefully released %d device handles' % count)
-  torch_xla._XLAC._xla_flush_lazy_releases()
-  return count
-
-
-def _wait_for_released_tensors(max_wait=None, print_fn=xu.null_print):
-  start = time.time()
-  while True:
-    # Give some time to the resources that the GC has collected, to be
-    # released by its background thread. This is the reason we place a sleep
-    # at the head of the loop.
-    time.sleep(_WAIT_HANDLES_SLEEP_STEP)
-    torch_xla._XLAC._xla_flush_lazy_releases()
-    created_count = torch_xla._XLAC._xla_counter_value(_HANDLES_CREATED_COUNTER)
-    if created_count is None:
-      return False
-    released_count = torch_xla._XLAC._xla_counter_value(
-        _HANDLES_RELEASED_COUNTER)
-    destroyed_count = torch_xla._XLAC._xla_counter_value(
-        _HANDLES_DESTROYED_COUNTER)
-    print_fn('XLA tensors: created=%s released=%s destroyed=%s' %
-             (created_count, released_count, destroyed_count))
-    if destroyed_count == created_count:
-      return True
-    if max_wait is not None and (time.time() - start) > max_wait:
-      return False
-
-
-def run_gc(debug_gc=None, gc_wait=0, is_final=False):
-  if debug_gc is None:
-    debug_gc = xu.getenv_as('XLA_DEBUG_GC', int, 0)
-  print_fn = xu.get_print_fn(debug_gc)
-  gc_flags = gc.get_debug()
-  if debug_gc > 1:
-    gc.set_debug(gc.DEBUG_STATS | gc.DEBUG_UNCOLLECTABLE)
-  # Run GC so that eventual XLA resource objects wrapped by std::shared_ptr<>
-  # gets released.
-  while True:
-    collected = gc.collect()
-    print_fn('GC collected %d objects' % collected)
-    if collected == 0:
-      break
-  print_fn('GC found %d uncollectable objects' % len(gc.garbage))
-  gc.set_debug(gc_flags)
-  # Unfortunately the Python GC does not immediately release the objects, but
-  # it instead delegates the task to a background thread (like we do for
-  # handles). To make things worse, there is no way to flush that work
-  # immediately. So we look at the handle counters and we wait, up to a max,
-  # until all the created handles have been destroyed.
-  if (not _wait_for_released_tensors(max_wait=gc_wait, print_fn=print_fn) and
-      is_final):
-    _force_release_tensors()
-  print_fn(torch_xla._XLAC._xla_metrics_report())
-
-
-# We need to release all the XLA resources we allocated, as otherwise we may
-# leak memory on the service side. This will be fixed soon, but for now we need
-# to make the best effort to explicitly release them on exit.
-atexit.register(lambda: run_gc(gc_wait=4.0, is_final=True))

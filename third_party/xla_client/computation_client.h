@@ -100,19 +100,6 @@ class ComputationClient {
 
   virtual ~ComputationClient() {}
 
-  // Signals the ComputationClient object to flush all the lazy resource
-  // releases it has accumulated so far.
-  virtual void FlushLazyReleases() = 0;
-
-  // Forcefully releases the device memory handles, and returns the number of
-  // handles which has been effectively released.
-  // This API should only be called once it is known that the other referrers of
-  // the handles will not be using them anymore (like in the really late exit
-  // path of the application). Using the handles after such API call can caused
-  // undefined behavior and/or crashes.
-  virtual size_t ForceReleaseHandles(
-      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) = 0;
-
   // Transfers local tensor literal values to the TPU servers and fetches the
   // handles.
   virtual std::vector<std::shared_ptr<Data>> TransferToServer(

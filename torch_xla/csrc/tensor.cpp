@@ -419,20 +419,6 @@ std::vector<std::shared_ptr<XLATensor>> XLATensor::GetLiveTensors() {
   return TensorsArena::Get()->GetTensors();
 }
 
-size_t XLATensor::ReleaseAllTensorsData() {
-  std::vector<std::shared_ptr<XLATensor>> tensors = GetLiveTensors();
-  std::vector<std::shared_ptr<xla::ComputationClient::Data>> tensors_data;
-  for (auto& tensor : tensors) {
-    auto& data = tensor->XlaData();
-    if (data != nullptr) {
-      tensors_data.push_back(data);
-    }
-  }
-  TF_VLOG(1) << "Forcefully releasing " << tensors_data.size()
-             << " device memory handles";
-  return XlaGetClient()->ForceReleaseHandles(tensors_data);
-}
-
 std::vector<at::Tensor> XLATensor::GetTensors(
     const std::vector<std::shared_ptr<XLATensor>>& tensors) {
   // TODO(dlibenzi): We do apply/compute and then fetch. Changing the API to
