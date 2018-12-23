@@ -88,10 +88,6 @@ void InitXlaModuleBindings(py::module m) {
     xla::metrics::CounterData* data = xla::metrics::GetCounter(name);
     return data != nullptr ? py::cast<int64_t>(data->Value()) : py::none();
   });
-  m.def("_xla_flush_lazy_releases",
-        []() { XlaGetClient()->FlushLazyReleases(); });
-  m.def("_xla_force_release_all_data",
-        []() { return XLATensor::ReleaseAllTensorsData(); });
   m.def("_xla_metrics_report",
         []() { return xla::metrics::CreateMetricReport(); });
 }
