@@ -147,8 +147,7 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
 
   std::mutex lock;
   xla_util::MultiWait mwait(instances.size());
-  std::vector<std::unique_ptr<xrt::XLAComputation>> xrt_computations(
-      instances.size());
+  std::vector<ProgramShape> program_shapes(instances.size());
   std::vector<std::shared_ptr<Computation>> results(instances.size());
   std::vector<string> serialized_computations(instances.size());
   XrtSessionCache::SessionMap session_map;
@@ -156,12 +155,17 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
   for (size_t i = 0; i < instances.size(); ++i) {
     auto builder = [&, this, i]() {
       const CompileInstance& instance = instances[i];
-      xrt_computations[i] = CreateXrtComputation(
-          instance.computation, instance.devices, instance.output_shape);
-      serialized_computations[i] = xrt_computations[i]->SerializeAsString();
+      std::unique_ptr<xrt::XLAComputation> xrt_computation =
+          CreateXrtComputation(instance.computation, instance.devices,
+                               instance.output_shape);
+      string serialized_computation = xrt_computation->SerializeAsString();
 
-      auto computation_ptr = compilation_cache_.Get(serialized_computations[i]);
+      auto computation_ptr = compilation_cache_.Get(serialized_computation);
       if (computation_ptr == nullptr) {
+        serialized_computations[i] = std::move(serialized_computation);
+        program_shapes[i] =
+            ProgramShape(xrt_computation->config().program_shape());
+
         string compilation_device = GetCompilationDevice(instance.devices);
         const string& xrt_device = TorchDeviceToXrtDevice(compilation_device);
         {
@@ -202,8 +206,7 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
       for (auto li : session_work.index_mapping) {
         CompileInstance* instance = &instances[li];
         results[li] = std::make_shared<XrtComputation>(
-            this, std::move(instance->computation),
-            ProgramShape(xrt_computations[li]->config().program_shape()),
+            this, std::move(instance->computation), program_shapes[li],
             std::move(instance->devices),
             outputs[output_index].scalar<int64>()(),
             GetCompilationDevice(instance->devices));
