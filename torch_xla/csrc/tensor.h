@@ -91,10 +91,13 @@ class XLATensor {
 
   // Fetches the current value of the XLA data, which can be missing (nullptr)
   // in case the tensor has a graph defining its current value,
-  const std::shared_ptr<xla::ComputationClient::Data>& XlaData() const;
+  const std::shared_ptr<xla::ComputationClient::Data>& CurrentXlaData() const;
 
   void SetXlaData(std::shared_ptr<xla::ComputationClient::Data> xla_data);
+
+  const std::shared_ptr<XlaGraphNode>& CurrentXlaGraphNode() const;
   std::shared_ptr<XlaGraphNode> GetXlaGraphNode() const;
+
   std::vector<int64_t> Size() const;
 
   // Basic tensor operations used by the optimizers.
@@ -170,10 +173,6 @@ class XLATensor {
   };
 
   void SetXlaGraphNode(std::shared_ptr<XlaGraphNode> xla_graph_node);
-
-  const std::shared_ptr<XlaGraphNode>& current_xla_graph_node() const {
-    return data_->xla_graph_node;
-  }
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.
