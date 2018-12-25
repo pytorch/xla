@@ -352,14 +352,14 @@ const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::GetXlaData() {
   return data_->xla_data;
 }
 
-const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::XlaData()
+const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::CurrentXlaData()
     const {
   return data_->xla_data;
 }
 
 std::string XLATensor::DumpGraphNodeComputation() const {
   std::string hlo_text;
-  auto& xla_graph_node = current_xla_graph_node();
+  auto& xla_graph_node = CurrentXlaGraphNode();
   if (xla_graph_node != nullptr) {
     XlaGraphContext xla_graph_ctx(/*collate_parameters=*/true);
     auto root = xla_graph_node->Generate(&xla_graph_ctx);
@@ -398,6 +398,10 @@ void XLATensor::TryLimitGraphSize() {
 std::shared_ptr<XlaGraphNode> XLATensor::GetXlaGraphNode() const {
   return data_->xla_graph_node ? data_->xla_graph_node
                                : CreateTensorNode(data_->xla_data);
+}
+
+const std::shared_ptr<XlaGraphNode>& XLATensor::CurrentXlaGraphNode() const {
+  return data_->xla_graph_node;
 }
 
 std::vector<int64_t> XLATensor::Size() const {
@@ -612,7 +616,7 @@ std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
 }
 
 void XLATensor::ApplyPendingGraph() {
-  auto& xla_graph_node = current_xla_graph_node();
+  auto& xla_graph_node = CurrentXlaGraphNode();
   if (xla_graph_node != nullptr) {
     XlaGraphContext xla_graph_ctx(/*collate_parameters=*/true);
     auto root = xla_graph_node->Generate(&xla_graph_ctx);
@@ -650,7 +654,7 @@ void XLATensor::ApplyPendingGraph(
   };
   std::map<Device, DeviceContext> contexts_map;
   for (auto i : order) {
-    auto& xla_graph_node = tensors[i]->current_xla_graph_node();
+    auto& xla_graph_node = tensors[i]->CurrentXlaGraphNode();
     if (xla_graph_node != nullptr) {
       DeviceContext* device_context = &contexts_map[tensors[i]->GetDevice()];
       auto root = xla_graph_node->Generate(&device_context->xla_graph_ctx);
