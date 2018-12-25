@@ -204,10 +204,6 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   JIT_ASSERTM(differentiate_,
               "Calling backward() on a module with differentiate not set");
   CheckInitialized();
-  // Tensors could have pending in-place operations, apply them first to reset
-  // their parent module and thus invalidate the gradients we set aside from the
-  // fused computation.
-  FlushTensorsOperations();
 
   if (!backward_input_gradients_.empty()) {
     // We already have the gradients from the fused computation, just set the
@@ -216,6 +212,11 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
                    inputs_require_grad_, *gradient_.df);
     return;
   }
+  // Tensors could have pending in-place operations, apply them first to reset
+  // their parent module and thus invalidate the gradients we set aside from the
+  // fused computation.
+  FlushTensorsOperations();
+
   // NOTE: The order of the input parameters passed to the BuildComputation()
   // call to build the backward computation is critical, as they have to match
   // the sequence of the graph->inputs() vector. Before the gradients passed in
