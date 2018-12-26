@@ -18,7 +18,7 @@ MultiBatch = collections.namedtuple('MultiBatch',
 
 class RateTracker(object):
 
-  def __init__(self, smooth_factor=0.6):
+  def __init__(self, smooth_factor=0.8):
     self._smooth_factor = smooth_factor
     self._start_time = time.time()
     self._partial_time = self._start_time
