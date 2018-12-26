@@ -26,17 +26,17 @@ class XLATensor {
     Device(DeviceType hw_type, int ordinal)
         : hw_type(hw_type), ordinal(ordinal) {}
 
-    bool operator==(const Device& other) const {
-      return hw_type == other.hw_type && ordinal == other.ordinal;
-    }
+    bool operator==(const Device& other) const { return compare(other) == 0; }
 
-    bool operator!=(const Device& other) const { return !(*this == other); }
+    bool operator!=(const Device& other) const { return compare(other) != 0; }
 
-    bool operator<(const Device& rhs) const {
+    bool operator<(const Device& rhs) const { return compare(rhs) < 0; }
+
+    int compare(const Device& rhs) const {
       if (hw_type != rhs.hw_type) {
-        return hw_type < rhs.hw_type;
+        return hw_type < rhs.hw_type ? -1 : +1;
       }
-      return ordinal < rhs.ordinal;
+      return ordinal < rhs.ordinal ? -1 : (ordinal > rhs.ordinal ? +1 : 0);
     }
 
     std::string ToString() const;
@@ -166,10 +166,10 @@ class XLATensor {
           unique_id(GetNextTensorId()) {}
 
     std::shared_ptr<xla::ComputationClient::Data> xla_data;
-    std::shared_ptr<XLATensor> grad;
     std::shared_ptr<XlaGraphNode> xla_graph_node;
     Device device;
     xla::int64 unique_id;
+    std::shared_ptr<XLATensor> grad;
   };
 
   void SetXlaGraphNode(std::shared_ptr<XlaGraphNode> xla_graph_node);
@@ -187,6 +187,13 @@ class XLATensor {
   std::shared_ptr<XlaGraphNode> CreateMulNode(const at::Scalar& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(XLATensor& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(const at::Scalar& other);
+
+  // Returns a permutation which represents an ordering by tensor device and
+  // unique ID, of all the tensors which needs sync (the ones which have a graph
+  // backing their value). The tensors which are already sync, will not be
+  // returned within the permutation.
+  static std::vector<size_t> GetApplyOrder(
+      const std::vector<std::shared_ptr<XLATensor>>& tensors);
 
   static std::shared_ptr<XlaGraphNode> CreateTensorNode(
       std::shared_ptr<xla::ComputationClient::Data> data);
