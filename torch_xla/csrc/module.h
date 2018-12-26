@@ -120,6 +120,10 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
                              const std::vector<bool>& inputs_require_grad,
                              const Graph& df);
 
+  // Makes the data references in dest point to the ones in source.
+  static void ReferenceNewTensorData(const TensorBatchVector& source,
+                                     TensorBatchVector* dest);
+
   // Extracts the XLA computation data from the inputs, and returns a matching
   // batch vector where data[i][j] holds the data beind the XLA tensor
   // inputs[i][j].

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 
 #include "graph_context.h"
@@ -41,6 +42,11 @@ class XLATensor {
 
     std::string ToString() const;
 
+    friend std::ostream& operator<<(std::ostream& os, const Device& device) {
+      os << device.ToString();
+      return os;
+    }
+
     DeviceType hw_type = DeviceType::CPU;
     int ordinal = 0;
   };
@@ -78,7 +84,7 @@ class XLATensor {
   at::Tensor toTensor();
 
   std::shared_ptr<XLATensor> grad() const;
-  void setGrad(std::shared_ptr<XLATensor> grad);
+  void SetGradient(std::shared_ptr<XLATensor> grad);
 
   at::ScalarType dtype() const;
   const xla::Shape& shape() const;
@@ -97,6 +103,10 @@ class XLATensor {
 
   const std::shared_ptr<XlaGraphNode>& CurrentXlaGraphNode() const;
   std::shared_ptr<XlaGraphNode> GetXlaGraphNode() const;
+
+  // Makes the data references from the current tensor, point to the ones from
+  // the source tensor.
+  void ReferenceDataFrom(const XLATensor& source);
 
   std::vector<int64_t> Size() const;
 

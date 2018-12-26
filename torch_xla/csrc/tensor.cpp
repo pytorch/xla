@@ -324,8 +324,12 @@ XLATensor::XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node,
 
 std::shared_ptr<XLATensor> XLATensor::grad() const { return data_->grad; }
 
-void XLATensor::setGrad(std::shared_ptr<XLATensor> grad) {
-  data_->grad = std::move(grad);
+void XLATensor::SetGradient(std::shared_ptr<XLATensor> grad) {
+  if (data_->grad == nullptr) {
+    data_->grad = std::move(grad);
+  } else {
+    data_->grad->ReferenceDataFrom(*grad);
+  }
 }
 
 at::ScalarType XLATensor::dtype() const {
@@ -375,8 +379,7 @@ std::string XLATensor::DumpGraphNodeComputation() const {
 void XLATensor::SetXlaData(
     std::shared_ptr<xla::ComputationClient::Data> xla_data) {
   XLA_CHECK(xla::ShapeUtil::Equal(shape(), xla_data->shape()))
-      << xla::ShapeUtil::HumanStringWithLayout(shape()) << " vs "
-      << xla::ShapeUtil::HumanStringWithLayout(xla_data->shape()) << "\n"
+      << shape() << " vs " << xla_data->shape() << "\n"
       << DumpGraphNodeComputation();
   data_->xla_data = std::move(xla_data);
   data_->xla_graph_node = nullptr;
@@ -404,6 +407,15 @@ std::shared_ptr<XlaGraphNode> XLATensor::GetXlaGraphNode() const {
 
 const std::shared_ptr<XlaGraphNode>& XLATensor::CurrentXlaGraphNode() const {
   return data_->xla_graph_node;
+}
+
+void XLATensor::ReferenceDataFrom(const XLATensor& source) {
+  XLA_CHECK_EQ(data_->device, source.data_->device);
+  XLA_CHECK(xla::ShapeUtil::Equal(shape(), source.shape()))
+      << shape() << " vs " << source.shape();
+
+  data_->xla_data = source.data_->xla_data;
+  data_->xla_graph_node = source.data_->xla_graph_node;
 }
 
 std::vector<int64_t> XLATensor::Size() const {
