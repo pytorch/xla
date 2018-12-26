@@ -673,11 +673,8 @@ void XLATensor::ApplyPendingGraph(
   std::vector<size_t> order = GetApplyOrder(tensors);
   std::map<Device, DeviceContext> contexts_map;
   for (auto i : order) {
-    auto& xla_graph_node = tensors[i]->CurrentXlaGraphNode();
-    if (xla_graph_node != nullptr) {
-      DeviceContext* device_context = &contexts_map[tensors[i]->GetDevice()];
-      device_context->index_mapping.push_back(i);
-    }
+    DeviceContext* device_context = &contexts_map[tensors[i]->GetDevice()];
+    device_context->index_mapping.push_back(i);
   }
 
   std::vector<std::vector<xla::ComputationClient::Data*>> parameters(
