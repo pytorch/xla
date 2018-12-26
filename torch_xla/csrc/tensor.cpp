@@ -12,6 +12,8 @@
 #include "helpers.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
+#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
@@ -254,12 +256,12 @@ std::string DeviceTypeToString(const XLATensor::DeviceType hw_type) {
 void SetMulti(const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
               std::vector<std::shared_ptr<xla::ComputationClient::Data>>
                   new_dest_elements,
-              const std::vector<xla::int64>& index_mapping) {
+              const std::vector<size_t>& index_mapping) {
   XLA_CHECK_EQ(index_mapping.size(), new_dest_elements.size());
   // Replace the underlying data for the destination tensors with the data in
   // "new_dest_elements".
   for (size_t i = 0; i < new_dest_elements.size(); ++i) {
-    xla::int64 dest_tuple_index = index_mapping[i];
+    size_t dest_tuple_index = index_mapping[i];
     dest_tuple[dest_tuple_index]->SetXlaData(std::move(new_dest_elements[i]));
   }
 }
@@ -635,53 +637,88 @@ void XLATensor::ApplyPendingGraph() {
   }
 }
 
-void XLATensor::ApplyPendingGraph(
+std::vector<size_t> XLATensor::GetApplyOrder(
     const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-  // Order the tensors based on their unique ID, so that we try to mazimize the
-  // chances of creating the same XLA computation, and hence hitting the
-  // compilation cache.
-  std::vector<size_t> order(tensors.size());
-  std::iota(order.begin(), order.end(), 0);
+  std::vector<size_t> order;
+  order.reserve(tensors.size());
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    if (tensors[i]->CurrentXlaGraphNode() != nullptr) {
+      // Add only tensors which need to be synced.
+      order.push_back(i);
+    }
+  }
+  // Order the tensors based on their device and unique ID, so that we try to
+  // mazimize the chances of creating the same XLA computation, and hence
+  // hitting the compilation cache.
   std::sort(order.begin(), order.end(), [&tensors](size_t i1, size_t i2) {
+    int device_compare =
+        tensors[i1]->GetDevice().compare(tensors[i2]->GetDevice());
+    if (device_compare != 0) {
+      return device_compare < 0;
+    }
     return tensors[i1]->GetUniqueId() < tensors[i2]->GetUniqueId();
   });
+  return order;
+}
 
+void XLATensor::ApplyPendingGraph(
+    const std::vector<std::shared_ptr<XLATensor>>& tensors) {
   struct DeviceContext {
     DeviceContext() : xla_graph_ctx(/*collate_parameters=*/true) {}
 
     XlaGraphContext xla_graph_ctx;
-    std::vector<xla::int64> index_mapping;
+    std::vector<size_t> index_mapping;
   };
+
+  std::vector<size_t> order = GetApplyOrder(tensors);
   std::map<Device, DeviceContext> contexts_map;
   for (auto i : order) {
     auto& xla_graph_node = tensors[i]->CurrentXlaGraphNode();
     if (xla_graph_node != nullptr) {
       DeviceContext* device_context = &contexts_map[tensors[i]->GetDevice()];
-      auto root = xla_graph_node->Generate(&device_context->xla_graph_ctx);
-      device_context->xla_graph_ctx.AddResult(root);
       device_context->index_mapping.push_back(i);
     }
   }
-  if (!contexts_map.empty()) {
-    std::vector<std::vector<xla::ComputationClient::Data*>> parameters;
-    std::list<xla::Shape> shapes;
-    std::vector<std::string> devices;
-    std::vector<xla::ComputationClient::CompileInstance> instances;
-    for (auto& device_context : contexts_map) {
+
+  std::vector<std::vector<xla::ComputationClient::Data*>> parameters(
+      contexts_map.size());
+  std::vector<std::string> devices(contexts_map.size());
+  std::vector<xla::Shape> shapes(contexts_map.size());
+  xla::xla_util::MultiWait mwait(contexts_map.size());
+  std::vector<xla::ComputationClient::CompileInstance> instances(
+      contexts_map.size());
+  size_t index = 0;
+  for (auto& device_and_context : contexts_map) {
+    const Device& device = device_and_context.first;
+    DeviceContext* device_context = &device_and_context.second;
+
+    auto generator = [&, device_context, index]() {
+      for (auto i : device_context->index_mapping) {
+        auto& xla_graph_node = tensors[i]->CurrentXlaGraphNode();
+        auto root = xla_graph_node->Generate(&device_context->xla_graph_ctx);
+        device_context->xla_graph_ctx.AddResult(root);
+      }
+
       xla::XlaComputation computation =
-          device_context.second.xla_graph_ctx.Build().ConsumeValueOrDie();
+          device_context->xla_graph_ctx.Build().ConsumeValueOrDie();
       xla::ProgramShape program_shape =
           computation.GetProgramShape().ConsumeValueOrDie();
-      shapes.push_back(MakeShapeWithDeviceLayout(program_shape.result(),
-                                                 device_context.first.hw_type));
-      devices.push_back(device_context.first.ToString());
-      instances.emplace_back(std::move(computation),
-                             std::vector<std::string>({devices.back()}),
-                             &shapes.back());
-      parameters.push_back(
-          device_context.second.xla_graph_ctx.GetParametersData());
-    }
+      shapes[index] =
+          MakeShapeWithDeviceLayout(program_shape.result(), device.hw_type);
+      devices[index] = device.ToString();
+      instances[index] = {std::move(computation),
+                          std::vector<std::string>({devices[index]}),
+                          &shapes[index]};
+      parameters[index] = device_context->xla_graph_ctx.GetParametersData();
 
+      mwait.Done();
+    };
+    xla::xla_env::ScheduleClosure(std::move(generator));
+    ++index;
+  }
+  mwait.Wait();
+
+  if (!instances.empty()) {
     auto computations = XlaGetClient()->Compile(std::move(instances));
 
     xla::ComputationClient::ExecuteParallelOptions options;

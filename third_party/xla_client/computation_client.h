@@ -75,6 +75,7 @@ class ComputationClient {
   };
 
   struct CompileInstance {
+    CompileInstance() = default;
     CompileInstance(XlaComputation computation, std::vector<string> devices,
                     const Shape* output_shape)
         : computation(std::move(computation)),
