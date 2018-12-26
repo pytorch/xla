@@ -595,12 +595,12 @@ class XlaModel(object):
         devices=self._devices,
         fused_mode=True)
     wloader_cleaner = xu.Cleaner(wloader.close)
+    optimizer.zero_grad()
     loss = None
     rate_tracker = RateTracker()
     self._epoch += 1
     for batch_number, (inputs, targets) in wloader:
       self._step += 1
-      optimizer.zero_grad()
       xla_outputs = xla_run_model(
           self._xla_model, inputs, devices=self._devices)
       xla_run_grad(
