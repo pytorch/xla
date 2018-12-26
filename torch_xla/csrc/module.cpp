@@ -294,7 +294,6 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   ApplyGradients(grad_inputs, inputs_, optimizable_params_,
                  inputs_require_grad_, *gradient_.df);
   // Release handles to saved / captured inputs and outputs.
-  inputs_.clear();
   captured_outputs_.clear();
   captured_inputs_outputs_.clear();
 }
@@ -316,12 +315,13 @@ void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs,
     size_t grad_index = 0;
     for (size_t j = 0; j < replica_inputs.size(); j++) {
       if (inputs_require_grad[j]) {
-        replica_inputs[j]->setGrad(replica_grad_inputs[grad_index]);
+        replica_inputs[j]->SetGradient(replica_grad_inputs[grad_index]);
         ++grad_index;
       }
     }
     for (size_t j = 0; j < replica_optimizable_params.size(); j++) {
-      replica_optimizable_params[j]->setGrad(replica_grad_inputs[grad_index]);
+      replica_optimizable_params[j]->SetGradient(
+          replica_grad_inputs[grad_index]);
       ++grad_index;
     }
   }
@@ -548,8 +548,12 @@ XlaModule::TensorBatchVector XlaModule::PrepareForwardInput(
   // made.
   captured_outputs_.clear();
   captured_inputs_outputs_.clear();
-  // Needed so that in backward, we can set .grad attributes correctly.
-  inputs_ = inputs;
+
+  if (inputs_.empty()) {
+    inputs_ = inputs;
+  } else {
+    ReferenceNewTensorData(inputs, &inputs_);
+  }
 
   TensorBatchVector inputs_params_buffers;
   XLA_CHECK_EQ(inputs_.size(), all_params_.size());
@@ -609,6 +613,19 @@ void XlaModule::FlushTensorsOperations() {
   // have a path leading to the same XLA computation.
   std::vector<std::shared_ptr<XLATensor>> tensors = XLATensor::GetLiveTensors();
   XLATensor::ApplyPendingGraph(tensors);
+}
+
+void XlaModule::ReferenceNewTensorData(const TensorBatchVector& source,
+                                       TensorBatchVector* dest) {
+  XLA_CHECK_EQ(source.size(), dest->size());
+  for (size_t i = 0; i < source.size(); ++i) {
+    const TensorBatchVector::value_type& replica_source = source[i];
+    TensorBatchVector::value_type* replica_dest = &(*dest)[i];
+    XLA_CHECK_EQ(replica_source.size(), replica_dest->size());
+    for (size_t j = 0; j < replica_source.size(); ++j) {
+      (*replica_dest)[j]->ReferenceDataFrom(*replica_source[j]);
+    }
+  }
 }
 
 XlaComputationInOut::SizeOpValues XlaModule::SetBackwardSizeOpValues(
