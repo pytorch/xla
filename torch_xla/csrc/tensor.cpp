@@ -836,13 +836,11 @@ void XLATensor::ApplyPendingGraph(
         input_mapping[index] = std::move(device_input_mapping);
       }
       parameters[index] = std::move(parameters_data);
-
-      mwait.Done();
     };
-    xla::xla_env::ScheduleClosure(std::move(generator));
+    xla::xla_env::ScheduleClosure(mwait.Completer(std::move(generator)));
     ++index;
   }
-  mwait.Wait();
+  TF_CHECK_OK(mwait.Wait());
 
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
       computations;

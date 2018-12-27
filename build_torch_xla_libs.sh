@@ -10,7 +10,7 @@ BASE_DIR="$PWD"
 echo $BASE_DIR
 THIRD_PARTY_DIR="$BASE_DIR/third_party"
 
-OPTS=()
+OPTS=(--cxxopt="-std=c++14")
 if [[ "$CC" =~ ^clang ]]; then
   OPTS+=(--cxxopt="-Wno-c++11-narrowing")
 fi
