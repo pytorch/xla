@@ -761,7 +761,14 @@ void XLATensor::ApplyPendingGraph(
     for (size_t i = 0; i < tensors.size(); ++i) {
       auto& xla_data = tensors[i]->CurrentXlaData();
       if (xla_data != nullptr) {
-        data_uid_map[xla_data.get()] = tensors[i]->GetUniqueId();
+        auto it_inserted =
+            data_uid_map.emplace(xla_data.get(), tensors[i]->GetUniqueId());
+        if (!it_inserted.second) {
+          // It can happen that two tensors references the same device data. In
+          // that case select the tensor with lower unique ID (older).
+          it_inserted.first->second = std::min<xla::int64>(
+              it_inserted.first->second, tensors[i]->GetUniqueId());
+        }
       }
     }
   }
