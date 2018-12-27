@@ -30,8 +30,8 @@ class RateTracker(object):
     delta = now - self._partial_time
     if delta > 0:
       rate = (count - self._count) / delta
-      self._rate = (self._rate * self._smooth_factor +
-                    rate * (1.0 - self._smooth_factor))
+      self._rate = (
+          self._rate * self._smooth_factor + rate * (1.0 - self._smooth_factor))
     self._partial_time = now
     self._count = count
     return self._rate
@@ -44,7 +44,6 @@ class RateTracker(object):
 
   def global_rate(self):
     return self._count / (self._partial_time - self._start_time)
-
 
 
 class TrainStepMetrics(object):
@@ -427,11 +426,9 @@ class LoaderWrapper(object):
     inputs = []
     targets = []
     batch_number = 0
-    for batch_idx, (data, target) in enumerate(self._loader):
+    for (data, target) in self._loader:
       if data.size()[0] != self._batch_size or self._done:
         break
-      if not inputs:
-        batch_number = int(batch_idx / self._num_cores)
       if self._fused_mode:
         inputs.append([data, target])
       else:
@@ -441,6 +438,7 @@ class LoaderWrapper(object):
         self._loader_queue.put((batch_number, (inputs, targets)))
         inputs = []
         targets = []
+        batch_number += 1
     self._loader_queue.close_write()
 
   def _worker(self):
@@ -651,6 +649,6 @@ class XlaModel(object):
     accuracy = 100.0 * correct / count
     if log_fn is not None:
       log_fn(
-          TestStepMetrics(test_loss, correct, count,
-                          rate_tracker.update(count), self._step))
+          TestStepMetrics(test_loss, correct, count, rate_tracker.update(count),
+                          self._step))
     return accuracy
