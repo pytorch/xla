@@ -3,6 +3,7 @@
 
 #include <sstream>
 
+#include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/core/platform/logging.h"
 
 namespace xla {
@@ -69,6 +70,9 @@ class ErrorGenerator {
 #define TF_CHECK_LT(val1, val2) TF_CHECK_OP(Check_LT, <, val1, val2)
 #define TF_CHECK_GE(val1, val2) TF_CHECK_OP(Check_GE, >=, val1, val2)
 #define TF_CHECK_GT(val1, val2) TF_CHECK_OP(Check_GT, >, val1, val2)
+
+#undef TF_CHECK_OK
+#define TF_CHECK_OK(val) TF_CHECK_EQ(val, ::tensorflow::Status::OK())
 #define TF_CHECK_NOTNULL(val) TF_CHECK(val != nullptr)
 
 }  // namespace internal
