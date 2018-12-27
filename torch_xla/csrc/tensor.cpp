@@ -747,12 +747,12 @@ void XLATensor::ApplyPendingGraph(
     uid_order.push_back(tensors[i]->GetUniqueId());
   }
   // Does it look like the cached context still applies to the new run?
-  if (apply_context != nullptr && apply_context->uid_order == uid_order &&
-      RunCachedApply(tensors, *apply_context)) {
-    static xla::metrics::Counter* counter =
-        new xla::metrics::Counter("CachedApplyGraph");
-    counter->AddValue(1);
-    return;
+  if (apply_context != nullptr && apply_context->uid_order == uid_order) {
+    if (RunCachedApply(tensors, *apply_context)) {
+      XLA_COUNTER("CachedApplyGraph", 1);
+      return;
+    }
+    XLA_COUNTER("UncachedApplyGraph", 1);
   }
 
   std::unordered_map<xla::ComputationClient::Data*, xla::int64> data_uid_map;
@@ -764,10 +764,15 @@ void XLATensor::ApplyPendingGraph(
         auto it_inserted =
             data_uid_map.emplace(xla_data.get(), tensors[i]->GetUniqueId());
         if (!it_inserted.second) {
-          // It can happen that two tensors references the same device data. In
-          // that case select the tensor with lower unique ID (older).
+          // It can happen that two tensors references the same device data.
+          // This is due to ReferenceDataFrom() API calls, which we use to
+          // update the tensors (inputs, gradients,...) with the new data. In
+          // that case select the tensor with lower unique ID (older), as the
+          // newer one is very likely the new data provider which will be going
+          // away soon (as soon as the last tensor reference will go away).
           it_inserted.first->second = std::min<xla::int64>(
               it_inserted.first->second, tensors[i]->GetUniqueId());
+          XLA_COUNTER("DuplicatedTensorData", 1);
         }
       }
     }
@@ -824,6 +829,7 @@ void XLATensor::ApplyPendingGraph(
           if (it != data_uid_map.end()) {
             device_input_mapping.push_back(it->second);
           } else {
+            XLA_COUNTER("UnknownTensorData", 1);
             unknown_params += 1;
           }
         }

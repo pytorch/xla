@@ -135,6 +135,13 @@ class Counter {
   mutable std::atomic<CounterData*> data_;
 };
 
+#define XLA_COUNTER(name, value)                \
+  do {                                          \
+    static ::xla::metrics::Counter* __counter = \
+        new ::xla::metrics::Counter(name);      \
+    __counter->AddValue(value);                 \
+  } while (0)
+
 // Creates a report with the current metrics statistics.
 string CreateMetricReport();
 

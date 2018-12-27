@@ -1,7 +1,9 @@
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
+#include <stdexcept>
+
 #include "tensorflow/compiler/xla/util.h"
+#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/platform/stacktrace.h"
 
@@ -34,7 +36,7 @@ void CheckComputationStatus(
       XLA_LOG_LINES(ERROR, hlo_text);
     }
     TF_LOG(ERROR) << "StackTrace:\n" << tensorflow::CurrentStackTrace();
-    TF_LOG(FATAL) << "Status Error: " << status;
+    throw std::runtime_error(status.ToString());
   }
 }
 
