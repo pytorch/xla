@@ -74,11 +74,10 @@ XrtComputationClient::TransferToServer(
 
         total_size += literal.size_bytes();
       }
-      mwait.Done();
     };
-    xla_env::ScheduleClosure(std::move(converter));
+    xla_env::ScheduleClosure(mwait.Completer(std::move(converter)));
   }
-  mwait.Wait();
+  TF_CHECK_OK(mwait.Wait());
 
   OutboundDataMetric()->AddSample(total_size);
 
@@ -185,11 +184,10 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
       } else {
         results[i] = *computation_ptr;
       }
-      mwait.Done();
     };
-    xla_env::ScheduleClosure(std::move(builder));
+    xla_env::ScheduleClosure(mwait.Completer(std::move(builder)));
   }
-  mwait.Wait();
+  TF_CHECK_OK(mwait.Wait());
   mwait.Reset(session_work_map.size());
 
   for (auto& session_and_work : session_work_map) {
@@ -216,11 +214,10 @@ XrtComputationClient::Compile(std::vector<CompileInstance> instances) {
                                results[li]);
         CreateCompileHandlesCounter()->AddValue(1);
       }
-      mwait.Done();
     };
-    xla_env::ScheduleIoClosure(std::move(session_runner));
+    xla_env::ScheduleIoClosure(mwait.Completer(std::move(session_runner)));
   }
-  mwait.Wait();
+  TF_CHECK_OK(mwait.Wait());
   return results;
 }
 
@@ -323,11 +320,10 @@ XrtComputationClient::RunComputations(
             outputs[i], computations[replica]->program_shape().result(),
             GetEffectiveDevice(devices[replica]));
       }
-      mwait.Done();
     };
-    xla_env::ScheduleIoClosure(std::move(session_runner));
+    xla_env::ScheduleIoClosure(mwait.Completer(std::move(session_runner)));
   }
-  mwait.Wait();
+  TF_CHECK_OK(mwait.Wait());
   return results;
 }
 
