@@ -631,20 +631,19 @@ class XlaModel(object):
     count = 0
     correct = 0
     rate_tracker = RateTracker()
-    with torch.no_grad():
-      for batch_number, (inputs, targets) in wloader:
-        xla_outputs = xla_run_model(
-            self._xla_model, inputs, devices=self._devices)
-        for i, replica_xla_outputs in enumerate(xla_outputs):
-          # The original model output is ordinal 1 of the returned
-          # tuple (loss is ordinal 0).
-          output = replica_xla_outputs[1].to_tensor()
-          # Inputs [1] is the model target, as inputs with
-          # fused_mode=True are [input, target].
-          closs, ccorrect = eval_fn(output, inputs[i][1].to_tensor())
-          test_loss += closs
-          correct += ccorrect
-          count += batch_size
+    for batch_number, (inputs, targets) in wloader:
+      xla_outputs = xla_run_model(
+          self._xla_model, inputs, devices=self._devices)
+      for i, replica_xla_outputs in enumerate(xla_outputs):
+        # The original model output is ordinal 1 of the returned
+        # tuple (loss is ordinal 0).
+        output = replica_xla_outputs[1].to_tensor()
+        # Inputs [1] is the model target, as inputs with
+        # fused_mode=True are [input, target].
+        closs, ccorrect = eval_fn(output, inputs[i][1].to_tensor())
+        test_loss += closs
+        correct += ccorrect
+        count += batch_size
     test_loss /= count
     accuracy = 100.0 * correct / count
     if log_fn is not None:
