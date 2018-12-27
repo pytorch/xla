@@ -51,6 +51,18 @@ class XLATensor {
     int ordinal = 0;
   };
 
+  // The context used by the ApplyPendingGraph() API, in order to allow it speed
+  // up operations in case the new tensors graph apply matches the one stored
+  // within the apply context.
+  struct ApplyContext {
+    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+        computations;
+    std::vector<xla::int64> uid_order;
+    std::vector<std::vector<xla::int64>> input_mapping;
+    std::vector<std::vector<xla::int64>> index_mapping;
+    std::vector<std::string> devices;
+  };
+
   static std::shared_ptr<XLATensor> Create(const autograd::Variable& tensor,
                                            const Device& device);
   static std::shared_ptr<XLATensor> Create(
@@ -149,9 +161,14 @@ class XLATensor {
   // Retrieves the set of XLA tensors which are currently live in the system.
   static std::vector<std::shared_ptr<XLATensor>> GetLiveTensors();
 
-  // Applies the queue of operations for a list of tensors.
+  // Applies the queue of operations for a list of tensors. The context of the
+  // apply operation will be saved within the apply_context pointer, if not
+  // nullptr. The ApplyPendingGraph() API will try to guess whether the current
+  // apply operation matches the previously cached one in apply_context, and
+  // eventually uses the cached XLA compiled computations to run the apply.
   static void ApplyPendingGraph(
-      const std::vector<std::shared_ptr<XLATensor>>& tensors);
+      const std::vector<std::shared_ptr<XLATensor>>& tensors,
+      ApplyContext* apply_context);
 
   // Retrieves the PyTorch tensors behind the XLA tensors.
   static std::vector<at::Tensor> GetTensors(
@@ -197,6 +214,13 @@ class XLATensor {
   std::shared_ptr<XlaGraphNode> CreateMulNode(const at::Scalar& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(XLATensor& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(const at::Scalar& other);
+
+  // Tries to run a cached ApplyPendingGraph() with the information in
+  // apply_context. Returns whether the cached run could be completed
+  // successfully.
+  static bool RunCachedApply(
+      const std::vector<std::shared_ptr<XLATensor>>& tensors,
+      const ApplyContext& apply_context);
 
   // Returns a permutation which represents an ordering by tensor device and
   // unique ID, of all the tensors which needs sync (the ones which have a graph

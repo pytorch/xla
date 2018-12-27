@@ -167,6 +167,8 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // SetInputGradientsForFusion() API.
   std::vector<at::Tensor> backward_input_gradients_;
 
+  XLATensor::ApplyContext apply_context_;
+
   // Specifies whether to use the highest precision available for convolutions.
   // Currently it only makes a difference for TPUs.
   const bool use_full_conv_precision_;

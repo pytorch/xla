@@ -63,7 +63,7 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_sync_multi",
         [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
           NoGilSection nogil;
-          XLATensor::ApplyPendingGraph(tensors);
+          XLATensor::ApplyPendingGraph(tensors, /*apply_context=*/nullptr);
         });
   m.def("_xla_to_tensors",
         [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
