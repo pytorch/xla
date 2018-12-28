@@ -729,11 +729,9 @@ bool XLATensor::RunCachedApply(
   return true;
 }
 
-std::unordered_map<xla::ComputationClient::Data*, xla::int64>
-XLATensor::CreateDataUidMap(
+XLATensor::DataUidMap XLATensor::CreateDataUidMap(
     const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-  std::unordered_map<xla::ComputationClient::Data*, xla::int64> data_uid_map(
-      tensors.size());
+  DataUidMap data_uid_map(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
     auto& xla_data = tensors[i]->CurrentXlaData();
     if (xla_data != nullptr) {
@@ -771,7 +769,7 @@ void XLATensor::ApplyPendingGraph(
   for (auto i : order) {
     uid_order.push_back(tensors[i]->GetUniqueId());
   }
-  std::unordered_map<xla::ComputationClient::Data*, xla::int64> data_uid_map;
+  DataUidMap data_uid_map;
   if (apply_context != nullptr) {
     // Does it look like the cached context still applies to the new run?
     if (apply_context->uid_order == uid_order &&

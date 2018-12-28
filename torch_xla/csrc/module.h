@@ -156,8 +156,6 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // Information needed to connect the forward and backward graphs.
   Gradient gradient_;
 
-  // TODO: captured_outputs only needs shape, no need for holding onto full
-  // Tensor
   TensorBatchVector inputs_;
   std::vector<bool> inputs_require_grad_;
   TensorBatchVector captured_outputs_;
@@ -167,6 +165,11 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // SetInputGradientsForFusion() API.
   std::vector<at::Tensor> backward_input_gradients_;
 
+  // The context used in FlushTensorsOperations() to be passed to the
+  // XLATensor::ApplyPendingGraph() API, to register the computation and tensor
+  // information of the last apply operation. The XLATensor::ApplyPendingGraph()
+  // API will use that to avoid re-building and re-compiling the XLA computation
+  // required for the apply.
   XLATensor::ApplyContext apply_context_;
 
   // Specifies whether to use the highest precision available for convolutions.
