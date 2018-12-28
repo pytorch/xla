@@ -182,6 +182,9 @@ class XLATensor {
       const std::vector<std::string>& devices);
 
  private:
+  using DataUidMap =
+      std::unordered_map<xla::ComputationClient::Data*, xla::int64>;
+
   struct Data {
     Data(std::shared_ptr<xla::ComputationClient::Data> xla_data,
          const Device& device)
@@ -218,8 +221,8 @@ class XLATensor {
 
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.
-  static std::unordered_map<xla::ComputationClient::Data*, xla::int64>
-  CreateDataUidMap(const std::vector<std::shared_ptr<XLATensor>>& tensors);
+  static DataUidMap CreateDataUidMap(
+      const std::vector<std::shared_ptr<XLATensor>>& tensors);
 
   // Tries to run a cached ApplyPendingGraph() with the information in
   // apply_context. Returns whether the cached run could be completed

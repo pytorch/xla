@@ -5,7 +5,7 @@
 namespace xla {
 namespace internal {
 
-void ErrorGenerator::operator&(std::basic_ostream<char>& oss) const {
+void ErrorGenerator::operator&(const std::basic_ostream<char>& oss) const {
   const ErrorSink& sink = dynamic_cast<const ErrorSink&>(oss);
   auto sink_str = sink.str();
   TF_LOG(ERROR) << sink_str;
