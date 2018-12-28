@@ -6,7 +6,6 @@
 #include <list>
 #include <mutex>
 #include <numeric>
-#include <unordered_map>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -730,6 +729,32 @@ bool XLATensor::RunCachedApply(
   return true;
 }
 
+std::unordered_map<xla::ComputationClient::Data*, xla::int64>
+XLATensor::CreateDataUidMap(
+    const std::vector<std::shared_ptr<XLATensor>>& tensors) {
+  std::unordered_map<xla::ComputationClient::Data*, xla::int64> data_uid_map(
+      tensors.size());
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    auto& xla_data = tensors[i]->CurrentXlaData();
+    if (xla_data != nullptr) {
+      auto it_inserted =
+          data_uid_map.emplace(xla_data.get(), tensors[i]->GetUniqueId());
+      if (!it_inserted.second) {
+        // It can happen that two tensors references the same device data.
+        // This is due to ReferenceDataFrom() API calls, which we use to
+        // update the tensors (inputs, gradients,...) with the new data. In
+        // that case select the tensor with lower unique ID (older), as the
+        // newer one is very likely the new data provider which will be going
+        // away soon (as soon as the last tensor reference will go away).
+        it_inserted.first->second = std::min<xla::int64>(
+            it_inserted.first->second, tensors[i]->GetUniqueId());
+        XLA_COUNTER("DuplicatedTensorData", 1);
+      }
+    }
+  }
+  return data_uid_map;
+}
+
 void XLATensor::ApplyPendingGraph(
     const std::vector<std::shared_ptr<XLATensor>>& tensors,
     ApplyContext* apply_context) {
@@ -746,36 +771,16 @@ void XLATensor::ApplyPendingGraph(
   for (auto i : order) {
     uid_order.push_back(tensors[i]->GetUniqueId());
   }
-  // Does it look like the cached context still applies to the new run?
-  if (apply_context != nullptr && apply_context->uid_order == uid_order) {
-    if (RunCachedApply(tensors, *apply_context)) {
+  std::unordered_map<xla::ComputationClient::Data*, xla::int64> data_uid_map;
+  if (apply_context != nullptr) {
+    // Does it look like the cached context still applies to the new run?
+    if (apply_context->uid_order == uid_order &&
+        RunCachedApply(tensors, *apply_context)) {
       XLA_COUNTER("CachedApplyGraph", 1);
       return;
     }
     XLA_COUNTER("UncachedApplyGraph", 1);
-  }
-
-  std::unordered_map<xla::ComputationClient::Data*, xla::int64> data_uid_map;
-  if (apply_context != nullptr) {
-    data_uid_map.reserve(tensors.size());
-    for (size_t i = 0; i < tensors.size(); ++i) {
-      auto& xla_data = tensors[i]->CurrentXlaData();
-      if (xla_data != nullptr) {
-        auto it_inserted =
-            data_uid_map.emplace(xla_data.get(), tensors[i]->GetUniqueId());
-        if (!it_inserted.second) {
-          // It can happen that two tensors references the same device data.
-          // This is due to ReferenceDataFrom() API calls, which we use to
-          // update the tensors (inputs, gradients,...) with the new data. In
-          // that case select the tensor with lower unique ID (older), as the
-          // newer one is very likely the new data provider which will be going
-          // away soon (as soon as the last tensor reference will go away).
-          it_inserted.first->second = std::min<xla::int64>(
-              it_inserted.first->second, tensors[i]->GetUniqueId());
-          XLA_COUNTER("DuplicatedTensorData", 1);
-        }
-      }
-    }
+    data_uid_map = CreateDataUidMap(tensors);
   }
 
   std::map<Device, DeviceContext> contexts_map;
