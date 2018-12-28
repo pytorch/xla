@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <unordered_map>
 
 #include "graph_context.h"
 #include "tensorflow/cc/framework/ops.h"
@@ -214,6 +215,11 @@ class XLATensor {
   std::shared_ptr<XlaGraphNode> CreateMulNode(const at::Scalar& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(XLATensor& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(const at::Scalar& other);
+
+  // Create the mapping from computation client Data pointers to the XLA tensors
+  // unique ID which are holding it.
+  static std::unordered_map<xla::ComputationClient::Data*, xla::int64>
+  CreateDataUidMap(const std::vector<std::shared_ptr<XLATensor>>& tensors);
 
   // Tries to run a cached ApplyPendingGraph() with the information in
   // apply_context. Returns whether the cached run could be completed
