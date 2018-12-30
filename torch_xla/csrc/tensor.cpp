@@ -693,8 +693,9 @@ bool XLATensor::RunCachedApply(
       if (it != uid_index_map.end()) {
         auto& xla_data = tensors[it->second]->CurrentXlaData();
         if (xla_data == nullptr) {
-          // If we do not find real device data (no cached graph) at the given
-          // tensor, it means the cached information does not apply anymore.
+          // If we do not find real device data (we have a cached graph instead)
+          // at the given tensor, it means the cached information does not apply
+          // anymore.
           return false;
         }
         device_parameters.push_back(xla_data.get());
@@ -707,6 +708,21 @@ bool XLATensor::RunCachedApply(
     }
     parameters.push_back(std::move(device_parameters));
   }
+  std::vector<std::vector<size_t>> index_mapping;
+  index_mapping.reserve(apply_context.devices.size());
+  for (auto& computation_index_mapping : apply_context.index_mapping) {
+    std::vector<size_t> current_index_mapping;
+    current_index_mapping.reserve(computation_index_mapping.size());
+    for (auto uid : computation_index_mapping) {
+      auto it = uid_index_map.find(uid);
+      if (it != uid_index_map.end()) {
+        current_index_mapping.push_back(it->second);
+      } else {
+        return false;
+      }
+    }
+    index_mapping.push_back(std::move(current_index_mapping));
+  }
 
   xla::ComputationClient::ExecuteParallelOptions options;
   auto results = XlaGetClient()->ExecuteParallel(
@@ -714,16 +730,8 @@ bool XLATensor::RunCachedApply(
       apply_context.devices, options);
   size_t device_index = 0;
   for (auto& computation_tuple_elements : results) {
-    std::vector<size_t> index_mapping;
-    for (auto uid : apply_context.index_mapping[device_index]) {
-      auto it = uid_index_map.find(uid);
-      if (it != uid_index_map.end()) {
-        index_mapping.push_back(it->second);
-      } else {
-        return false;
-      }
-    }
-    SetMulti(tensors, std::move(computation_tuple_elements), index_mapping);
+    SetMulti(tensors, std::move(computation_tuple_elements),
+             index_mapping[device_index]);
     ++device_index;
   }
   return true;
