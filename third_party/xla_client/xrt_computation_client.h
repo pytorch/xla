@@ -176,19 +176,6 @@ class XrtComputationClient : public ComputationClient {
       tensorflow::gtl::ArraySlice<const string> devices,
       const Shape* output_shape) const;
 
-  // Retrieves the unique, common, device for all the inputs. Issue a CHECK if
-  // the inputs are not on a common device, as we cannot create an XLA
-  // computation spanning multiple devices ATM.
-  absl::optional<string> GetArgumentsDevice(
-      tensorflow::gtl::ArraySlice<Data*> arguments) const;
-
-  // Verifies that the common device for each replica inputs (arguments[i])
-  // matches the devices[i] argumen. The common device for each replica inputs
-  // must be unique across the replicas.
-  void VerifyReplicasDevices(
-      const std::vector<std::vector<Data*>>& arguments,
-      tensorflow::gtl::ArraySlice<const string> devices) const;
-
   tensorflow::Tensor GetArgumentsInputs(
       tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
       tensorflow::ClientSession::FeedType* feed_inputs);
