@@ -45,13 +45,13 @@ class ErrorGenerator {
   int line_ = 0;
 };
 
-#define TF_ERROR_STREAM                                 \
+#define TF_ERROR_STREAM()                               \
   ::xla::internal::ErrorGenerator(__FILE__, __LINE__) & \
       ::xla::internal::ErrorSink()
 
 #define TF_CHECK(condition)              \
   while (TF_PREDICT_FALSE(!(condition))) \
-  TF_ERROR_STREAM << "Check failed: " #condition " "
+  TF_ERROR_STREAM() << "Check failed: " #condition " "
 
 #define TF_CHECK_OP_LOG(name, op, val1, val2)                         \
   while (::tensorflow::internal::CheckOpString _result =              \
@@ -59,7 +59,7 @@ class ErrorGenerator {
                  ::tensorflow::internal::GetReferenceableValue(val1), \
                  ::tensorflow::internal::GetReferenceableValue(val2), \
                  #val1 " " #op " " #val2))                            \
-  TF_ERROR_STREAM << *(_result.str_)
+  TF_ERROR_STREAM() << *(_result.str_)
 
 #define TF_CHECK_OP(name, op, val1, val2) TF_CHECK_OP_LOG(name, op, val1, val2)
 
