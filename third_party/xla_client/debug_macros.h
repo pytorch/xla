@@ -4,6 +4,7 @@
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/core/platform/stacktrace.h"
 
+#define XLA_ERROR() TF_ERROR_STREAM()
 #define XLA_CHECK(c) TF_CHECK(c) << "\n" << tensorflow::CurrentStackTrace()
 #define XLA_CHECK_OK(c) \
   TF_CHECK_OK(c) << "\n" << tensorflow::CurrentStackTrace()
