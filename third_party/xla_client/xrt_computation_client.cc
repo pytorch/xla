@@ -475,36 +475,6 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
   return xrt_computation;
 }
 
-absl::optional<string> XrtComputationClient::GetArgumentsDevice(
-    tensorflow::gtl::ArraySlice<Data*> arguments) const {
-  xla_util::Unique<string> unique_device;
-  for (size_t i = 0; i < arguments.size(); ++i) {
-    XrtData* xrt_data = dynamic_cast<XrtData*>(arguments[i]);
-    unique_device.set(xrt_data->device());
-  }
-  if (!unique_device) {
-    return absl::nullopt;
-  }
-  return *unique_device;
-}
-
-void XrtComputationClient::VerifyReplicasDevices(
-    const std::vector<std::vector<Data*>>& arguments,
-    tensorflow::gtl::ArraySlice<const string> devices) const {
-  std::set<string> unique_devices;
-  for (size_t i = 0; i < arguments.size(); ++i) {
-    auto opt_device = GetArgumentsDevice(arguments[i]);
-    if (opt_device) {
-      XLA_CHECK_EQ(*opt_device, devices[i]);
-    } else {
-      opt_device = devices[i];
-    }
-    XLA_CHECK(unique_devices.insert(*opt_device).second)
-        << "Cannot have two different replicas using the same device: "
-        << *opt_device;
-  }
-}
-
 tensorflow::Tensor XrtComputationClient::GetArgumentsInputs(
     tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
     tensorflow::ClientSession::FeedType* feed_inputs) {
@@ -525,7 +495,6 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     tensorflow::gtl::ArraySlice<const string> devices,
     tensorflow::ClientSession::FeedType* feed_inputs) {
   std::vector<tensorflow::Output> exec_ops;
-  VerifyReplicasDevices(arguments, devices);
   for (size_t i = 0; i < computations.size(); ++i) {
     const XrtComputation* xrt_computation =
         dynamic_cast<const XrtComputation*>(computations[i]);
@@ -556,8 +525,6 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     const std::vector<std::vector<Data*>>& arguments, bool explode_tuple,
     tensorflow::gtl::ArraySlice<const string> devices,
     tensorflow::ClientSession::FeedType* feed_inputs) {
-  VerifyReplicasDevices(arguments, devices);
-
   std::vector<tensorflow::Output> exec_ops;
   for (size_t i = 0; i < arguments.size(); ++i) {
     auto inputs = GetArgumentsInputs(arguments[i], devices[i], feed_inputs);
