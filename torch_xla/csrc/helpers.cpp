@@ -1,6 +1,7 @@
 #include "helpers.h"
 
 #include "tensorflow/compiler/xla/primitive_util.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 
@@ -78,7 +79,7 @@ xla::PrimitiveType XlaHelpers::MakeXlaPrimitiveType(
     case at::ScalarType::Long:
       return xla::PrimitiveType::S64;
     default:
-      LOG(FATAL) << "Type not supported: " << scalar_type;
+      XLA_ERROR() << "Type not supported: " << scalar_type;
       return xla::PrimitiveType::PRIMITIVE_TYPE_INVALID;
   }
 }
