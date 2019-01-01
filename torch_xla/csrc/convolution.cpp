@@ -1,6 +1,7 @@
 #include "convolution.h"
 #include "helpers.h"
 #include "tensor.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/kernels/conv_grad_ops.h"
 #include "translator.h"
@@ -16,10 +17,10 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
     const xla::XlaOp& weight,
     const xla::PrecisionConfig::Precision conv_precision) {
   const auto node_inputs = node->inputs();
-  CHECK_EQ(node_inputs.size(), 9);
+  XLA_CHECK_EQ(node_inputs.size(), 9);
   const auto padding_attr =
       node->get<std::vector<int64_t>>(attr::padding).value();
-  CHECK_EQ(padding_attr.size(), 2);
+  XLA_CHECK_EQ(padding_attr.size(), 2);
   // Adjust input size to account for specified padding.
   auto input_size = XlaHelpers::SizesOfXlaOp(input);
   for (int i = 0; i < 2; ++i) {
@@ -43,7 +44,7 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
       "thnn_conv2d_backward", num_spatial_dims, input_shape, filter_shape,
       out_backprop_shape, dilations, strides, tensorflow::Padding::VALID,
       tensorflow::TensorFormat::FORMAT_NCHW, &dims);
-  CHECK(status.ok()) << status.error_message();
+  XLA_CHECK_OK(status);
 
   constexpr int batch_dim = 0;
   constexpr int feature_dim = 1;
@@ -119,10 +120,10 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
   constexpr int n_dim = 0;
   constexpr int c_dim = 1;
   const auto node_inputs = node->inputs();
-  CHECK_EQ(node_inputs.size(), 9);
+  XLA_CHECK_EQ(node_inputs.size(), 9);
   const auto padding_attr =
       node->get<std::vector<int64_t>>(attr::padding).value();
-  CHECK_EQ(padding_attr.size(), 2);
+  XLA_CHECK_EQ(padding_attr.size(), 2);
   // Adjust input size to account for specified padding.
   auto input_size = XlaHelpers::SizesOfXlaOp(input);
   for (int i = 0; i < 2; ++i) {
@@ -146,7 +147,7 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
       "thnn_conv2d_backward", num_spatial_dims, activations_shape, filter_shape,
       out_backprop_shape, dilations, strides, tensorflow::Padding::VALID,
       tensorflow::TensorFormat::FORMAT_NCHW, &dims);
-  CHECK(status.ok()) << status.error_message();
+  XLA_CHECK(status.ok()) << status.error_message();
 
   // The filter gradients are computed by a convolution of the input
   // activations and the output gradients, with some appropriate padding.
@@ -270,12 +271,12 @@ xla::XlaOp BuildConvolutionBias(
     const xla::XlaOp& bias,
     const xla::PrecisionConfig::Precision conv_precision) {
   const auto node_inputs = node->inputs();
-  CHECK_GE(node_inputs.size(), size_t(4));
+  XLA_CHECK_GE(node_inputs.size(), size_t(4));
   const auto window_strides = XlaHelpers::I64List(
       node->get<std::vector<int64_t>>(attr::stride).value());
   const auto conv = BuildConvolution(node, input, kernel, conv_precision);
   auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
-  CHECK_EQ(broadcast_sizes.size(), 4);
+  XLA_CHECK_EQ(broadcast_sizes.size(), 4);
   // Remove the channels dimension.
   broadcast_sizes.erase(broadcast_sizes.begin() + 1);
   // Make the bias match the output dimensions.

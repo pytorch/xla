@@ -38,7 +38,8 @@ class ErrorGenerator {
   // Use a dummy & operator as it has lower precedence WRT the streaming
   // operator, and hence allows collecting user error messages before we finally
   // throw.
-  void operator&(const std::basic_ostream<char>& oss) const;
+  TF_ATTRIBUTE_NORETURN void operator&(
+      const std::basic_ostream<char>& oss) const;
 
  private:
   const char* file_ = nullptr;

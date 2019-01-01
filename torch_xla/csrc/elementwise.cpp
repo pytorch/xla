@@ -19,7 +19,7 @@ xla::XlaOp BuildArithmeticOp(const Node* node, const xla::XlaOp& lhs,
       return lhs - rhs;
     }
     default:
-      TF_LOG(FATAL) << "Invalid binary operator kind: " << node->kind();
+      XLA_ERROR() << "Invalid binary operator kind: " << node->kind();
   }
 }
 
@@ -36,7 +36,7 @@ xla::XlaOp BuildComparisonOp(const Node* node, const xla::XlaOp& operand) {
       break;
     }
     default:
-      TF_LOG(FATAL) << "Invalid binary operator kind: " << node->kind();
+      XLA_ERROR() << "Invalid binary operator kind: " << node->kind();
   }
   return xla::ConvertElementType(pred, xla::PrimitiveType::S8);
 }
