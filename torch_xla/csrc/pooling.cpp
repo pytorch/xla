@@ -1,6 +1,7 @@
 #include "pooling.h"
 #include "helpers.h"
 #include "tensorflow/compiler/xla/client/lib/pooling.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/jit/autodiff.h"
 
 namespace torch {
@@ -52,7 +53,7 @@ PoolingOpAttributes Pooling2DOpAttributes(const Node* pooling_2d) {
   }
   const auto padding_attr =
       pooling_2d->get<std::vector<int64_t>>(attr::padding).value();
-  CHECK_EQ(padding_attr.size(), 2);
+  XLA_CHECK_EQ(padding_attr.size(), 2);
   std::vector<std::pair<xla::int64, xla::int64>> padding;
   for (const xla::int64 dim_pad : padding_attr) {
     padding.push_back(std::make_pair(dim_pad, dim_pad));
@@ -62,10 +63,10 @@ PoolingOpAttributes Pooling2DOpAttributes(const Node* pooling_2d) {
 
 void CheckAvgPool2DIsSupported(const Node* node) {
   const auto node_inputs = node->inputs();
-  CHECK_GE(node_inputs.size(), size_t(6));
+  XLA_CHECK_GE(node_inputs.size(), size_t(6));
   const auto ceil_mode = node->get<bool>(attr::ceil_mode).value();
   if (ceil_mode) {
-    AT_ERROR("ceil_mode not supported for avg_pool2d yet");
+    XLA_ERROR() << "ceil_mode not supported for avg_pool2d yet";
   }
 }
 

@@ -1,5 +1,6 @@
 #include "log_softmax.h"
 #include "helpers.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch {
 namespace jit {
@@ -21,7 +22,7 @@ xla::XlaComputation CreateMaxComputation(xla::PrimitiveType type) {
 xla::XlaOp BuildLogSoftmax(const Node* node, const xla::XlaOp& logits) {
   // Inspired from tf2xla.
   const auto node_inputs = node->inputs();
-  CHECK_EQ(node_inputs.size(), size_t(2));
+  XLA_CHECK_EQ(node_inputs.size(), size_t(2));
   xla::int64 dim = node->get<int64_t>(attr::dim).value();
 
   xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);

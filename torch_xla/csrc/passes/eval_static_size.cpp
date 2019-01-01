@@ -10,18 +10,17 @@ namespace {
 // Evaluates aten::size on a statically known input.
 int64_t RunSizeQuery(Node* node) {
   const auto tensor_type = node->input(0)->type()->cast<CompleteTensorType>();
-  JIT_ASSERT(tensor_type);
+  XLA_CHECK(tensor_type != nullptr);
   const auto tensor_sizes = tensor_type->sizes();
   const auto dim = node->get<int64_t>(attr::dim).value();
-  JIT_ASSERT(dim >= 0);
-  JIT_ASSERT(static_cast<size_t>(dim) < tensor_sizes.size());
+  XLA_CHECK_GE(dim, 0);
+  XLA_CHECK_LT(static_cast<size_t>(dim), tensor_sizes.size());
   return tensor_sizes[dim];
 }
 
 // Returns true if the size can be evaluated during trace optimization.
 bool IsStaticSizeQuery(Node* node) {
-  return node->kind() == aten::size &&
-         node->inputs().size() == 2 &&
+  return node->kind() == aten::size && node->inputs().size() == 2 &&
          node->input(0)->type()->cast<CompleteTensorType>() &&
          node->get<int64_t>(attr::dim) &&
          node->get<int64_t>(attr::dim).value() >= 0;

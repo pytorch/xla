@@ -65,7 +65,7 @@ std::vector<const Value*> InputListAttr(const Node* parent, const size_t id) {
     }
     return result;
   }
-  XLA_CHECK(false) << "Constant with id " << id << " not found.";
+  XLA_ERROR() << "Constant with id " << id << " not found";
 }
 
 }  // namespace
@@ -85,7 +85,7 @@ xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
       output_sizes = node->get<std::vector<int64_t>>(attr::shape).value();
       break;
     default:
-      TF_LOG(FATAL) << "Unexpected node kind, must be view or reshape";
+      XLA_ERROR() << "Unexpected node kind, must be view or reshape";
   }
   output_sizes =
       GetCompleteShape(output_sizes, XlaHelpers::SizesOfXlaOp(input));

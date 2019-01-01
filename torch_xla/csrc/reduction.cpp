@@ -1,12 +1,13 @@
 #include "reduction.h"
 #include "helpers.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch {
 namespace jit {
 
 xla::XlaOp BuildSum(const Node* node, const xla::XlaOp& operand) {
   if (node->get<bool>(attr::keepdim).value()) {
-    AT_ERROR("Sum with keepdim set not supported yet");
+    XLA_ERROR() << "Sum with keepdim set not supported yet";
   }
   auto builder = operand.builder();
   xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operand);
