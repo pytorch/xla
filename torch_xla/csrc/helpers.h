@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <vector>
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
@@ -83,9 +84,6 @@ class XlaHelpers {
   static xla::PrimitiveType MakeXlaPrimitiveType(
       const at::ScalarType scalar_type);
 
-  static xla::Shape GetPromotedShape(const xla::Shape& shape1,
-                                     const xla::Shape& shape2);
-
   // Performs type promotion to make sure both operations return the same type.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
                                                          const xla::XlaOp& op2);
@@ -101,6 +99,58 @@ class XlaHelpers {
   // match in shape and types.
   static std::pair<xla::XlaOp, xla::XlaOp> Promote(const xla::XlaOp& op1,
                                                    const xla::XlaOp& op2);
+
+  // Calculates the protomoted shape to which the input shapes should be
+  // broadcasted for an elementwise operation. The size of the common dimensions
+  // (2,3,4 for shape1, and 0,1,2 for shape2) must either match, or either one
+  // of the two be 1.
+  // Example:
+  //   shape1       = [9, 7, 6, 1, 2]
+  //   shape2       =       [6, 5, 2]
+  //   result_shape = [9, 7, 6, 5, 2]
+  static xla::Shape GetPromotedShape(const xla::Shape& shape1,
+                                     const xla::Shape& shape2);
+
+  // Returns a new operations which broadcast the input operation into the
+  // shape. The op_shape is the shape of the op operation, while shape should be
+  // one that op is broadcast-able to (usually the result of a
+  // GetPromotedShape() call). If op_shape matches shape, the op itself is
+  // returned.
+  static xla::XlaOp ImplicitBroadcast(const xla::XlaOp& op,
+                                      const xla::Shape& op_shape,
+                                      const xla::Shape& shape);
+
+  // Performs the bin_op binary operation by promoting types and shapes of the
+  // two input operands.
+  static xla::XlaOp PromotedBinaryOp(
+      const xla::XlaOp& op1, const xla::XlaOp& op2,
+      const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
+          bin_op);
+
+  // Basic promoted binary operation implementation follow.
+  static xla::XlaOp PromotedAdd(const xla::XlaOp& op1, const xla::XlaOp& op2) {
+    return PromotedBinaryOp(
+        op1, op2,
+        [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 + op2; });
+  }
+
+  static xla::XlaOp PromotedSub(const xla::XlaOp& op1, const xla::XlaOp& op2) {
+    return PromotedBinaryOp(
+        op1, op2,
+        [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 - op2; });
+  }
+
+  static xla::XlaOp PromotedMul(const xla::XlaOp& op1, const xla::XlaOp& op2) {
+    return PromotedBinaryOp(
+        op1, op2,
+        [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 * op2; });
+  }
+
+  static xla::XlaOp PromotedDiv(const xla::XlaOp& op1, const xla::XlaOp& op2) {
+    return PromotedBinaryOp(
+        op1, op2,
+        [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 / op2; });
+  }
 
   // Checks whether BF16 should be used as default floating point type for XLA
   // computations.

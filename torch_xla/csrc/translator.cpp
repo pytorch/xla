@@ -240,9 +240,8 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
               node->get<at::Scalar>(attr::other).value().to<float>(),
               input_op_0_shape.element_type(), b);
         }
-        auto inputs = XlaHelpers::Promote(input_op_0, *input_op_1_optional);
         xla::XlaOp xla_output =
-            BuildArithmeticOp(node, inputs.first, inputs.second);
+            BuildArithmeticOp(node, input_op_0, *input_op_1_optional);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
