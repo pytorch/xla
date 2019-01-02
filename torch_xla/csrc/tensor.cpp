@@ -502,9 +502,10 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateMulNode(const XLATensor& other) {
                       const XlaGraphNode& node) -> xla::XlaOp {
     auto node_op = node.input(0)->Generate(ctx);
     auto other_node_op = node.input(1)->Generate(ctx);
-    return node_op * other_node_op;
+    return XlaHelpers::PromotedMul(node_op, other_node_op);
   };
-  return XlaGraphNode::New(std::move(generator), shape(),
+  return XlaGraphNode::New(std::move(generator),
+                           XlaHelpers::GetPromotedShape(shape(), other.shape()),
                            {GetXlaGraphNode(), other.GetXlaGraphNode()});
 }
 
@@ -513,9 +514,9 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateMulNode(
   auto generator = [other](XlaGraphContext* ctx,
                            const XlaGraphNode& node) -> xla::XlaOp {
     auto node_op = node.input(0)->Generate(ctx);
-    return node_op * XlaHelpers::ScalarBroadcast<float>(other.toDouble(),
-                                                        node.input(0)->shape(),
-                                                        ctx->builder());
+    return node_op * XlaHelpers::ScalarValue<float>(
+                         other.toDouble(), XlaHelpers::TypeOfXlaOp(node_op),
+                         ctx->builder());
   };
   return XlaGraphNode::New(std::move(generator), shape(), {GetXlaGraphNode()});
 }
@@ -525,9 +526,10 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateDivNode(const XLATensor& other) {
                       const XlaGraphNode& node) -> xla::XlaOp {
     auto node_op = node.input(0)->Generate(ctx);
     auto other_node_op = node.input(1)->Generate(ctx);
-    return node_op / other_node_op;
+    return XlaHelpers::PromotedDiv(node_op, other_node_op);
   };
-  return XlaGraphNode::New(std::move(generator), shape(),
+  return XlaGraphNode::New(std::move(generator),
+                           XlaHelpers::GetPromotedShape(shape(), other.shape()),
                            {GetXlaGraphNode(), other.GetXlaGraphNode()});
 }
 
@@ -536,9 +538,9 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateDivNode(
   auto generator = [other](XlaGraphContext* ctx,
                            const XlaGraphNode& node) -> xla::XlaOp {
     auto node_op = node.input(0)->Generate(ctx);
-    return node_op / XlaHelpers::ScalarBroadcast<float>(other.toDouble(),
-                                                        node.input(0)->shape(),
-                                                        ctx->builder());
+    return node_op / XlaHelpers::ScalarValue<float>(
+                         other.toDouble(), XlaHelpers::TypeOfXlaOp(node_op),
+                         ctx->builder());
   };
   return XlaGraphNode::New(std::move(generator), shape(), {GetXlaGraphNode()});
 }
@@ -549,12 +551,14 @@ std::shared_ptr<XlaGraphNode> XLATensor::CreateAddNode(
                            const XlaGraphNode& node) -> xla::XlaOp {
     auto node_op = node.input(0)->Generate(ctx);
     auto other_node_op = node.input(1)->Generate(ctx);
-    return node_op + other_node_op * XlaHelpers::ScalarBroadcast<float>(
-                                         alpha.toDouble(),
-                                         node.input(0)->shape(),
-                                         ctx->builder());
+    return XlaHelpers::PromotedAdd(
+        node_op, other_node_op * XlaHelpers::ScalarValue<float>(
+                                     alpha.toDouble(),
+                                     XlaHelpers::TypeOfXlaOp(other_node_op),
+                                     ctx->builder()));
   };
-  return XlaGraphNode::New(std::move(generator), shape(),
+  return XlaGraphNode::New(std::move(generator),
+                           XlaHelpers::GetPromotedShape(shape(), other.shape()),
                            {GetXlaGraphNode(), other.GetXlaGraphNode()});
 }
 
@@ -612,20 +616,20 @@ void XLATensor::zero_() {
 
 void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
                          const XLATensor& tensor2) {
-  xla::Shape div_shape =
-      XlaHelpers::GetPromotedShape(tensor1.shape(), tensor2.shape());
   auto generator = [value](XlaGraphContext* ctx,
                            const XlaGraphNode& node) -> xla::XlaOp {
     auto node_op = node.input(0)->Generate(ctx);
     auto tensor1_node_op = node.input(1)->Generate(ctx);
     auto tensor2_node_op = node.input(2)->Generate(ctx);
-    auto div_op = tensor1_node_op / tensor2_node_op;
+    auto div_op = XlaHelpers::PromotedDiv(tensor1_node_op, tensor2_node_op);
     auto scaled_op =
         div_op * XlaHelpers::ScalarValue<float>(value.toDouble(),
                                                 XlaHelpers::TypeOfXlaOp(div_op),
                                                 ctx->builder());
-    return node_op + scaled_op;
+    return XlaHelpers::PromotedAdd(node_op, scaled_op);
   };
+  xla::Shape div_shape =
+      XlaHelpers::GetPromotedShape(tensor1.shape(), tensor2.shape());
   SetXlaGraphNode(XlaGraphNode::New(
       std::move(generator), XlaHelpers::GetPromotedShape(shape(), div_shape),
       {GetXlaGraphNode(), tensor1.GetXlaGraphNode(),
@@ -634,20 +638,20 @@ void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
 
 void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
                          const XLATensor& tensor2) {
-  xla::Shape mul_shape =
-      XlaHelpers::GetPromotedShape(tensor1.shape(), tensor2.shape());
   auto generator = [value](XlaGraphContext* ctx,
                            const XlaGraphNode& node) -> xla::XlaOp {
     auto node_op = node.input(0)->Generate(ctx);
     auto tensor1_node_op = node.input(1)->Generate(ctx);
     auto tensor2_node_op = node.input(2)->Generate(ctx);
-    auto mul_op = tensor1_node_op * tensor2_node_op;
+    auto mul_op = XlaHelpers::PromotedMul(tensor1_node_op, tensor2_node_op);
     auto scaled_op =
         mul_op * XlaHelpers::ScalarValue<float>(value.toDouble(),
                                                 XlaHelpers::TypeOfXlaOp(mul_op),
                                                 ctx->builder());
-    return node_op + scaled_op;
+    return XlaHelpers::PromotedAdd(node_op, scaled_op);
   };
+  xla::Shape mul_shape =
+      XlaHelpers::GetPromotedShape(tensor1.shape(), tensor2.shape());
   SetXlaGraphNode(XlaGraphNode::New(
       std::move(generator), XlaHelpers::GetPromotedShape(shape(), mul_shape),
       {GetXlaGraphNode(), tensor1.GetXlaGraphNode(),
