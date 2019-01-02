@@ -18,6 +18,9 @@ xla::XlaOp BuildArithmeticOp(const Node* node, const xla::XlaOp& lhs,
     case aten::sub: {
       return lhs - rhs;
     }
+    case aten::div: {
+      return lhs / rhs;
+    }
     default:
       XLA_ERROR() << "Invalid binary operator kind: " << node->kind();
   }
@@ -59,9 +62,9 @@ xla::XlaOp BuildThreshold(const Node* node, const xla::XlaOp& input,
 
 xla::XlaOp BuildTypeAs(const Node* node, const xla::XlaOp& operand) {
   const auto node_outputs = node->outputs();
-  CHECK_EQ(node_outputs.size(), 1);
+  XLA_CHECK_EQ(node_outputs.size(), 1);
   const auto output_tensor_type = node_outputs[0]->type()->cast<TensorType>();
-  CHECK(output_tensor_type);
+  XLA_CHECK(output_tensor_type);
   const auto target_type =
       XlaHelpers::MakeXlaPrimitiveType(output_tensor_type->scalarType());
   return xla::ConvertElementType(operand, target_type);
