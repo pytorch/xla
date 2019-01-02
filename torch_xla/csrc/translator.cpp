@@ -13,6 +13,7 @@
 #include "reduction.h"
 #include "size_ops.h"
 #include "tensor.h"
+#include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -20,7 +21,6 @@
 
 namespace torch {
 namespace jit {
-
 namespace {
 
 xla::ComputationClient* CreateClient() {
@@ -224,6 +224,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
   for (auto node : nodes) {
     switch (node->kind()) {
       case aten::add:
+      case aten::div:
       case aten::sub:
       case aten::mul: {
         const auto node_inputs = node->inputs();
@@ -239,8 +240,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
               node->get<at::Scalar>(attr::other).value().to<float>(),
               input_op_0_shape.element_type(), b);
         }
-        auto inputs =
-            XlaHelpers::PromoteValues(input_op_0, *input_op_1_optional);
+        auto inputs = XlaHelpers::Promote(input_op_0, *input_op_1_optional);
         xla::XlaOp xla_output =
             BuildArithmeticOp(node, inputs.first, inputs.second);
         cctx.AddNodeOp(node, xla_output);
@@ -345,17 +345,31 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         cctx.AddNodeOp(node, xla_output);
         break;
       }
+      case aten::sqrt: {
+        XLA_CHECK_EQ(node->inputs().size(), 1);
+        const auto xla_input = cctx.OpForInput(node, 0);
+        xla::XlaOp xla_output = xla::Sqrt(xla_input);
+        cctx.AddNodeOp(node, xla_output);
+        break;
+      }
+      case aten::rsqrt: {
+        XLA_CHECK_EQ(node->inputs().size(), 1);
+        const auto xla_input = cctx.OpForInput(node, 0);
+        xla::XlaOp xla_output = xla::Rsqrt(xla_input);
+        cctx.AddNodeOp(node, xla_output);
+        break;
+      }
       case aten::neg: {
         XLA_CHECK_EQ(node->inputs().size(), 1);
         const auto xla_input = cctx.OpForInput(node, 0);
-        xla::XlaOp xla_output = Neg(xla_input);
+        xla::XlaOp xla_output = xla::Neg(xla_input);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
       case aten::tanh: {
         XLA_CHECK_EQ(node->inputs().size(), 1);
         const auto xla_input = cctx.OpForInput(node, 0);
-        xla::XlaOp xla_output = Tanh(xla_input);
+        xla::XlaOp xla_output = xla::Tanh(xla_input);
         cctx.AddNodeOp(node, xla_output);
         break;
       }
@@ -365,7 +379,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         xla::Shape xla_input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
         const auto half = XlaHelpers::ScalarValue<float>(
             0.5, xla_input_shape.element_type(), b);
-        xla::XlaOp xla_output = half + half * Tanh(half * xla_input);
+        xla::XlaOp xla_output = half + half * xla::Tanh(half * xla_input);
         cctx.AddNodeOp(node, xla_output);
         break;
       }

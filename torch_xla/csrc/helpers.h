@@ -87,6 +87,18 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
                                                          const xla::XlaOp& op2);
 
+  // Eventually performs a broadcast to make sure the shapes of the returned
+  // xla::XlaOp values have the same shape. The first returned xla::XlaOp is op1
+  // or a broadcast of it, and the second returned xla::XlaOp is either op2 or a
+  // broadcast ot it.
+  static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(const xla::XlaOp& op1,
+                                                         const xla::XlaOp& op2);
+
+  // Combines PromoteValues() and PromoteShapes() returning two operations which
+  // match in shape and types.
+  static std::pair<xla::XlaOp, xla::XlaOp> Promote(const xla::XlaOp& op1,
+                                                   const xla::XlaOp& op2);
+
   // Checks whether BF16 should be used as default floating point type for XLA
   // computations.
   static bool UseBF16();

@@ -10,8 +10,6 @@
 namespace xla {
 namespace xrt_util {
 
-using namespace tensorflow;
-
 StatusOr<std::unique_ptr<HloModule>> CreateModuleFromProto(
     const HloModuleProto& proto, const DebugOptions& debug_options) {
   TF_ASSIGN_OR_RETURN(
@@ -33,7 +31,7 @@ void CheckComputationStatus(
     for (size_t i = 0; i < computations.size(); ++i) {
       string hlo_text = GetComputationHloText(*computations[i]).ValueOrDie();
       TF_LOG(ERROR) << ">>> Dumping Computation " << i;
-      XLA_LOG_LINES(ERROR, hlo_text);
+      XLA_LOG_LINES(tensorflow::ERROR, hlo_text);
     }
     TF_LOG(ERROR) << "StackTrace:\n" << tensorflow::CurrentStackTrace();
     throw std::runtime_error(status.ToString());
