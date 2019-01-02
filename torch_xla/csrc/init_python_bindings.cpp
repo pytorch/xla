@@ -169,6 +169,18 @@ void InitXlaTensorBindings(py::module m) {
           py::arg("other"))
       .def("__truediv__", [](std::shared_ptr<XLATensor> self,
                              double other) { return self->div(other); })
+      .def("addcdiv_",
+           [](std::shared_ptr<XLATensor> self, double alpha, XLATensor& tensor1,
+              XLATensor& tensor2) {
+             self->addcdiv_(alpha, tensor1, tensor2);
+             return self;
+           })
+      .def("addcmul_",
+           [](std::shared_ptr<XLATensor> self, double alpha, XLATensor& tensor1,
+              XLATensor& tensor2) {
+             self->addcmul_(alpha, tensor1, tensor2);
+             return self;
+           })
       .def("cross_replica_sum",
            [](std::shared_ptr<XLATensor> self, const py::list& groups) {
              std::vector<std::vector<xla::int64>> crs_groups;
