@@ -124,20 +124,26 @@ class XLATensor {
   std::vector<int64_t> Size() const;
 
   // Basic tensor operations used by the optimizers.
-  std::shared_ptr<XLATensor> add(XLATensor& other, const at::Scalar& alpha);
-  void add_(XLATensor& other, const at::Scalar& alpha);
+  std::shared_ptr<XLATensor> add(const XLATensor& other,
+                                 const at::Scalar& alpha);
+  void add_(const XLATensor& other, const at::Scalar& alpha);
 
-  std::shared_ptr<XLATensor> mul(XLATensor& other);
+  std::shared_ptr<XLATensor> mul(const XLATensor& other);
   std::shared_ptr<XLATensor> mul(const at::Scalar& other);
-  void mul_(XLATensor& other);
+  void mul_(const XLATensor& other);
   void mul_(const at::Scalar& other);
 
-  std::shared_ptr<XLATensor> div(XLATensor& other);
+  std::shared_ptr<XLATensor> div(const XLATensor& other);
   std::shared_ptr<XLATensor> div(const at::Scalar& other);
-  void div_(XLATensor& other);
+  void div_(const XLATensor& other);
   void div_(const at::Scalar& other);
 
   void zero_();
+
+  void addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
+                const XLATensor& tensor2);
+  void addcmul_(const at::Scalar& value, const XLATensor& tensor1,
+                const XLATensor& tensor2);
 
   std::shared_ptr<XLATensor> cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups);
@@ -212,11 +218,11 @@ class XLATensor {
   //     a = a + b
   void TryLimitGraphSize();
 
-  std::shared_ptr<XlaGraphNode> CreateAddNode(XLATensor& other,
+  std::shared_ptr<XlaGraphNode> CreateAddNode(const XLATensor& other,
                                               const at::Scalar& alpha);
-  std::shared_ptr<XlaGraphNode> CreateMulNode(XLATensor& other);
+  std::shared_ptr<XlaGraphNode> CreateMulNode(const XLATensor& other);
   std::shared_ptr<XlaGraphNode> CreateMulNode(const at::Scalar& other);
-  std::shared_ptr<XlaGraphNode> CreateDivNode(XLATensor& other);
+  std::shared_ptr<XlaGraphNode> CreateDivNode(const XLATensor& other);
   std::shared_ptr<XlaGraphNode> CreateDivNode(const at::Scalar& other);
 
   // Create the mapping from computation client Data pointers to the XLA tensors
