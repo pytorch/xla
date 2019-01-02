@@ -18,6 +18,42 @@ bool ShouldUseBF16() {
   return use_fp16 != 0;
 }
 
+xla::XlaOp ImplicitBroadcast(const xla::XlaOp& op, const xla::Shape& op_shape,
+                             const xla::Shape& shape) {
+  const auto& op_shape_dims = op_shape.dimensions();
+  const auto& shape_dims = shape.dimensions();
+  XLA_CHECK_GE(shape_dims.size(), op_shape_dims.size())
+      << shape << " vs " << op_shape;
+  xla::int64 size_delta = shape_dims.size() - op_shape_dims.size();
+  xla::XlaOp new_op = op;
+  if (!std::equal(op_shape_dims.begin(), op_shape_dims.end(),
+                  shape_dims.begin() + size_delta)) {
+    // If the base N dimensions do not match, broadcast the original op.
+    // Example:
+    //   op_shape =       [3, 1, 5]
+    //   shape    = [6, 8, 3, 4, 5]
+    // After this operation we will have:
+    //   op_shape =       [3, 4, 5]
+    std::vector<xla::int64> common_shape_dims(shape_dims.begin() + size_delta,
+                                              shape_dims.end());
+    std::vector<xla::int64> broadcast_sizes(op_shape_dims.size());
+    std::iota(broadcast_sizes.begin(), broadcast_sizes.end(), 0);
+    new_op = xla::BroadcastInDim(new_op, common_shape_dims, broadcast_sizes);
+  }
+  if (size_delta > 0) {
+    // Add the major dimensions if necessary:
+    // Example:
+    //   op_shape =       [3, 4, 5]
+    //   shape    = [6, 8, 3, 4, 5]
+    // After this operation we will have (added [6, 8]):
+    //   op_shape = [6, 8, 3, 4, 5]
+    std::vector<xla::int64> broadcast_sizes(shape_dims.begin(),
+                                            shape_dims.begin() + size_delta);
+    new_op = xla::Broadcast(new_op, broadcast_sizes);
+  }
+  return new_op;
+}
+
 }  // namespace
 
 xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
@@ -128,6 +164,38 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
                                            xla::ConvertElementType(op2, type1));
 }
 
+xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
+                                        const xla::Shape& shape2) {
+  const auto& shape1_dims = shape1.dimensions();
+  const auto& shape2_dims = shape2.dimensions();
+  std::vector<xla::int64> dimensions;
+  // If the rank of a shape is bigger than then other, fill up the first
+  // dimensions with the ones of the bigger.
+  // Example:
+  //   shape1 = [9, 7, 6, 5, 2]
+  //   shape2 =       [6, 1, 2]
+  // Insert [9, 7] into the dimensions vector.
+  if (shape1_dims.size() > shape2_dims.size()) {
+    dimensions.insert(
+        dimensions.end(), shape1_dims.begin(),
+        shape1_dims.begin() + (shape1_dims.size() - shape2_dims.size()));
+  } else if (shape2_dims.size() > shape1_dims.size()) {
+    dimensions.insert(
+        dimensions.end(), shape2_dims.begin(),
+        shape2_dims.begin() + (shape2_dims.size() - shape1_dims.size()));
+  }
+  // For the common dimensions, they must match, or one of them be 1.
+  size_t min_size = std::min(shape1_dims.size(), shape2_dims.size());
+  for (xla::int64 i = 0; i < min_size; ++i) {
+    xla::int64 dim1 = shape1_dims[shape1_dims.size() - min_size + i];
+    xla::int64 dim2 = shape2_dims[shape2_dims.size() - min_size + i];
+    XLA_CHECK(dim1 == dim2 || dim1 == 1 || dim2 == 1)
+        << shape1 << " and " << shape2;
+    dimensions.push_back(std::max<xla::int64>(dim1, dim2));
+  }
+  return xla::ShapeUtil::MakeShape(shape1.element_type(), dimensions);
+}
+
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(
     const xla::XlaOp& op1, const xla::XlaOp& op2) {
   xla::Shape shape1 = ShapeOfXlaOp(op1);
@@ -138,55 +206,12 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(
   }
   XLA_CHECK(xla::ShapeUtil::SameElementTypeIgnoringFpPrecision(shape1, shape2))
       << shape1 << " and " << shape2;
-  xla::int64 rank1 = xla::ShapeUtil::Rank(shape1);
-  xla::int64 rank2 = xla::ShapeUtil::Rank(shape2);
-  if (rank1 == rank2) {
-    std::vector<xla::int64> dimensions;
-    for (xla::int64 i = 0; i < rank1; ++i) {
-      xla::int64 dim1 = xla::ShapeUtil::GetDimension(shape1, i);
-      xla::int64 dim2 = xla::ShapeUtil::GetDimension(shape2, i);
-      XLA_CHECK(dim1 == dim2 || dim1 == 1 || dim2 == 1)
-          << shape1 << " and " << shape2;
-      dimensions.push_back(std::max<xla::int64>(dim1, dim2));
-    }
-    xla::XlaOp new_op1 = op1;
-    xla::XlaOp new_op2 = op2;
-    xla::Shape new_shape1 =
-        xla::ShapeUtil::MakeShape(shape1.element_type(), dimensions);
-    xla::Shape new_shape2 =
-        xla::ShapeUtil::MakeShape(shape2.element_type(), dimensions);
-    std::vector<xla::int64> broadcast_sizes(rank1);
-    std::iota(broadcast_sizes.begin(), broadcast_sizes.end(), 0);
-    if (!xla::ShapeUtil::Compatible(shape1, new_shape1)) {
-      new_op1 = xla::Broadcast(op1, broadcast_sizes);
-    }
-    if (!xla::ShapeUtil::Compatible(shape2, new_shape2)) {
-      new_op2 = xla::Broadcast(op2, broadcast_sizes);
-    }
-    return std::pair<xla::XlaOp, xla::XlaOp>(new_op1, new_op2);
-  }
-  // The inner dimensions must match, as broadcast adds outer dimensions.
-  xla::int64 min_rank = std::min<xla::int64>(rank1, rank2);
-  for (xla::int64 i = 0; i < min_rank; ++i) {
-    xla::int64 dim1 = xla::ShapeUtil::GetDimension(shape1, rank1 - 1 - i);
-    xla::int64 dim2 = xla::ShapeUtil::GetDimension(shape2, rank2 - 1 - i);
-    XLA_CHECK(dim1 == dim2) << shape1 << " and " << shape2;
-  }
-  if (rank1 < rank2) {
-    std::vector<xla::int64> broadcast_sizes;
-    for (xla::int64 i = 0; i < rank2 - rank1; ++i) {
-      broadcast_sizes.push_back(xla::ShapeUtil::GetDimension(shape2, i));
-    }
-    return std::pair<xla::XlaOp, xla::XlaOp>(
-        xla::Broadcast(op1, broadcast_sizes), op2);
-  } else {
-    std::vector<xla::int64> broadcast_sizes;
-    for (xla::int64 i = 0; i < rank1 - rank2; ++i) {
-      broadcast_sizes.push_back(xla::ShapeUtil::GetDimension(shape1, i));
-    }
-    return std::pair<xla::XlaOp, xla::XlaOp>(
-        op1, xla::Broadcast(op2, broadcast_sizes));
-  }
+
+  xla::Shape shape = GetPromotedShape(shape1, shape2);
+
+  return std::pair<xla::XlaOp, xla::XlaOp>(
+      ImplicitBroadcast(op1, shape1, shape),
+      ImplicitBroadcast(op2, shape2, shape));
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::Promote(const xla::XlaOp& op1,

@@ -83,6 +83,9 @@ class XlaHelpers {
   static xla::PrimitiveType MakeXlaPrimitiveType(
       const at::ScalarType scalar_type);
 
+  static xla::Shape GetPromotedShape(const xla::Shape& shape1,
+                                     const xla::Shape& shape2);
+
   // Performs type promotion to make sure both operations return the same type.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
                                                          const xla::XlaOp& op2);
