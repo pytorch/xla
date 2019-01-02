@@ -10,7 +10,7 @@ namespace {
 // Evaluates aten::size on a statically known input.
 int64_t RunSizeQuery(Node* node) {
   const auto tensor_type = node->input(0)->type()->cast<CompleteTensorType>();
-  XLA_CHECK(tensor_type != nullptr);
+  XLA_CHECK(tensor_type);
   const auto tensor_sizes = tensor_type->sizes();
   const auto dim = node->get<int64_t>(attr::dim).value();
   XLA_CHECK_GE(dim, 0);
