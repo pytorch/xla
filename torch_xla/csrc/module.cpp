@@ -6,7 +6,6 @@
 #include "c10/util/Exception.h"
 #include "cross_replica_reduces.h"
 #include "passes/eval_static_size.h"
-#include "passes/insert_explicit_expand.h"
 #include "passes/remove_in_place_out_param_ops.h"
 #include "passes/remove_unused_forward_outputs.h"
 #include "passes/replace_in_place_ops.h"
@@ -143,7 +142,6 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
 void XlaModule::RunForwardPasses(std::shared_ptr<Graph>* graph) {
   // Run forward passes.
   CanonicalizeOps(*graph);
-  InsertExplicitExpand(*graph);
   EvalStaticSize(*graph);
   ConstantPropagation(*graph);
   ReplaceUntracedOperators(*graph);
@@ -160,7 +158,6 @@ Gradient XlaModule::ComputeGradient(const std::shared_ptr<Graph>& graph) {
   Gradient gradient = differentiate(graph_copy);
   // Run the forward passes.
   CanonicalizeOps(gradient.f);
-  InsertExplicitExpand(gradient.f);
   ConstantPropagation(gradient.f);
   ReplaceUntracedOperators(gradient.f);
   EliminateDeadCode(gradient.f);
