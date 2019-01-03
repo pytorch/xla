@@ -14,11 +14,9 @@ xla::XlaOp BuildArithmeticOp(const Node* node, const xla::XlaOp& lhs,
     }
     case aten::mul: {
       return XlaHelpers::PromotedMul(lhs, rhs);
-      return lhs * rhs;
     }
     case aten::sub: {
       return XlaHelpers::PromotedSub(lhs, rhs);
-      return lhs - rhs;
     }
     case aten::div: {
       return XlaHelpers::PromotedDiv(lhs, rhs);
