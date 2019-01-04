@@ -563,22 +563,32 @@ void XrtComputationClient::ReleaseHandles(
     metrics::TimedSection timed(timed_metric);
 
     XrtSessionCache::SessionMap session_map;
-    std::map<XrtSession*, SessionWork> session_work_map;
+    std::map<XrtSession*, std::vector<DeviceHandle>> session_handles_map;
     for (auto& handle : released_handles) {
       XrtSession* session = GetSessionForDevice(handle.device, &session_map);
-      SessionWork* session_work = &session_work_map[session];
-      tensorflow::Scope device_scope =
-          session->root()->WithDevice(TorchDeviceToXrtDevice(handle.device));
-      const XrtSession::CachedNode& cached_node =
-          op_generator(session, device_scope, handle.device);
-      session_work->feed_inputs.insert({cached_node.holders[0], handle.handle});
-      session_work->operations.push_back(cached_node.operations[0]);
+      session_handles_map[session].push_back(handle);
     }
-    for (const auto& session_work : session_work_map) {
+    for (const auto& session_and_handles : session_handles_map) {
+      XrtSession* session = session_and_handles.first;
+      const std::vector<DeviceHandle>& session_handles =
+          session_and_handles.second;
+      tensorflow::Tensor handles_tensor(
+          tensorflow::DT_INT64,
+          tensorflow::TensorShape({session_handles.size()}));
+      auto flat_handles_tensor = handles_tensor.flat<tensorflow::int64>();
+      for (size_t i = 0; i < session_handles.size(); ++i) {
+        flat_handles_tensor(i) = session_handles[i].handle;
+      }
+      tensorflow::Scope device_scope = session->root()->WithDevice(
+          TorchDeviceToXrtDevice(session_handles.front().device));
+      const XrtSession::CachedNode& cached_node =
+          op_generator(session, device_scope, session_handles.front().device);
+      tensorflow::ClientSession::FeedType feed_inputs;
+      feed_inputs.insert({cached_node.holders[0], handles_tensor});
+
       std::vector<tensorflow::Tensor> outputs;
-      XLA_CHECK_OK(session_work.first->session()->Run(
-          session_work.second.feed_inputs, {}, session_work.second.operations,
-          &outputs));
+      XLA_CHECK_OK(session->session()->Run(
+          feed_inputs, {}, {cached_node.operations[0]}, &outputs));
     }
     destroy_counter->AddValue(released_handles.size());
   }
