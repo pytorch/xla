@@ -41,6 +41,11 @@ xla::XlaOp GetConstantOp(xla::XlaBuilder* builder, Node* node) {
     std::vector<xla::int64> elements(value_list->elements().begin(),
                                      value_list->elements().end());
     return xla::ConstantR1<xla::int64>(builder, elements);
+  } else if (value.isBoolList()) {
+    auto value_list = value.toBoolList();
+    std::vector<xla::int64> elements(value_list->elements().begin(),
+                                     value_list->elements().end());
+    return xla::ConstantR1<xla::int64>(builder, elements);
   } else if (value.isDoubleList()) {
     auto value_list = value.toDoubleList();
     std::vector<float> elements(value_list->elements().begin(),
