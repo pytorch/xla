@@ -87,7 +87,9 @@ void ReplaceUntracedOperators(Block* block) {
         it.destroyCurrent();
         break;
       }
-      default: { break; }
+      default: {
+        break;
+      }
     }
   }
 }
