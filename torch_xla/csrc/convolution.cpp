@@ -291,7 +291,6 @@ Conv2DGrads BuildConv2dBackward(
     const xla::PrecisionConfig::Precision conv_precision) {
   const auto grad_input =
       BuildThnnConv2dBackwardInput(node, grad, input, weight, conv_precision);
-  // TODO: support weight and bias gradients
   const auto grad_weight =
       BuildThnnConv2dBackwardWeight(node, grad, input, weight, conv_precision);
   auto builder = grad.builder();
