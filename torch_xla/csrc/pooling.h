@@ -24,5 +24,14 @@ xla::XlaOp BuildAvgPool2dBackward(const Node* node,
                                   const xla::XlaOp& out_backprop,
                                   const xla::XlaOp& input);
 
+// Computes adaptive average pooling for the given input with the output size
+// specified in the given node.
+xla::XlaOp BuildAdaptiveAvgPool2d(const Node* node, const xla::XlaOp& input);
+
+// Computes the gradient for adaptive average pooling.
+xla::XlaOp BuildAdaptiveAvgPool2dBackward(const Node* node,
+                                          const xla::XlaOp& out_backprop,
+                                          const xla::XlaOp& input);
+
 }  // namespace jit
 }  // namespace torch

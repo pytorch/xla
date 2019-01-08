@@ -70,6 +70,23 @@ void CheckAvgPool2DIsSupported(const Node* node) {
   }
 }
 
+// Compute the average pool kernel size required for the specified output_size
+// from the given input_size, when the stride is the same as the kernel size.
+std::vector<xla::int64> AdaptiveAvgPoolKernelSize(
+    const std::vector<xla::int64>& input_size,
+    const std::vector<xla::int64>& output_size) {
+  // Create a NCHW kernel size with 1 for batch size and feature.
+  std::vector<xla::int64> kernel_size(2, 1);
+  for (int spatial_dim = 0; spatial_dim < 2; ++spatial_dim) {
+    XLA_CHECK_EQ(input_size[2 + spatial_dim] % output_size[spatial_dim], 0)
+        << "Target output size " << output_size[spatial_dim]
+        << " doesn't divide the input size " << input_size[2 + spatial_dim];
+    kernel_size.push_back(input_size[2 + spatial_dim] /
+                          output_size[spatial_dim]);
+  }
+  return kernel_size;
+}
+
 }  // namespace
 
 xla::XlaOp BuildMaxPool2d(const Node* node, const xla::XlaOp& input) {
@@ -150,6 +167,46 @@ xla::XlaOp BuildAvgPool2dBackward(const Node* node,
       /*spatial_padding=*/pooling_op_attributes.padding,
       /*data_format=*/MakeNCHWFormat(),
       /*counts_include_padding=*/count_include_pad);
+}
+
+xla::XlaOp BuildAdaptiveAvgPool2d(const Node* node, const xla::XlaOp& input) {
+  const auto output_size = XlaHelpers::I64List(
+      node->get<std::vector<int64_t>>(attr::output_size).value());
+  XLA_CHECK_EQ(output_size.size(), 2) << "Invalid output size rank";
+  const auto input_size = XlaHelpers::SizesOfXlaOp(input);
+  XLA_CHECK_EQ(input_size.size(), 4) << "Only 4D tensors supported";
+  const auto kernel_size = AdaptiveAvgPoolKernelSize(input_size, output_size);
+  std::vector<std::pair<xla::int64, xla::int64>> no_padding(2);
+  return xla::AvgPool(
+      /*operand=*/input,
+      /*kernel_size=*/kernel_size,
+      /*stride=*/kernel_size,
+      /*padding=*/no_padding,
+      /*data_format=*/MakeNCHWFormat(),
+      /*counts_include_padding=*/false);
+}
+
+xla::XlaOp BuildAdaptiveAvgPool2dBackward(const Node* node,
+                                          const xla::XlaOp& out_backprop,
+                                          const xla::XlaOp& input) {
+  const auto out_backprop_size = XlaHelpers::SizesOfXlaOp(out_backprop);
+  XLA_CHECK_EQ(out_backprop_size.size(), 4)
+      << "Invalid rank of gradient output";
+  std::vector<xla::int64> output_size{out_backprop_size[2],
+                                      out_backprop_size[3]};
+  const auto gradients_size = XlaHelpers::SizesOfXlaOp(input);
+  XLA_CHECK_EQ(gradients_size.size(), 4) << "Only 4D tensors supported";
+  const auto kernel_size =
+      AdaptiveAvgPoolKernelSize(gradients_size, output_size);
+  std::vector<std::pair<xla::int64, xla::int64>> no_padding(2);
+  return xla::AvgPoolGrad(
+      /*out_backprop=*/out_backprop,
+      /*gradients_size=*/gradients_size,
+      /*kernel_size=*/kernel_size,
+      /*stride=*/kernel_size,
+      /*spatial_padding=*/no_padding,
+      /*data_format=*/MakeNCHWFormat(),
+      /*counts_include_padding=*/false);
 }
 
 }  // namespace jit
