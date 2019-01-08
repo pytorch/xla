@@ -3,17 +3,16 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "torch/csrc/jit/ir.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 // Builds the NLLLoss for log-probabilities "logits" and class indices "labels".
-xla::XlaOp BuildNllLoss(const Node* node, const xla::XlaOp& logits,
+xla::XlaOp BuildNllLoss(const torch::jit::Node* node, const xla::XlaOp& logits,
                         const xla::XlaOp& labels);
 
 // Builds the NLLLoss gradient for log-probabilities "logits" and class indices
 // "labels".
-xla::XlaOp BuildNllLossBackward(const Node* node, const xla::XlaOp& logits,
+xla::XlaOp BuildNllLossBackward(const torch::jit::Node* node,
+                                const xla::XlaOp& logits,
                                 const xla::XlaOp& labels);
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

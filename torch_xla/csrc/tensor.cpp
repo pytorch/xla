@@ -22,8 +22,7 @@
 #include "torch/csrc/autograd/variable.h"
 #include "translator.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 namespace {
 
@@ -273,8 +272,8 @@ std::string XLATensor::Device::ToString() const {
   return absl::StrCat(DeviceTypeToString(hw_type), ":", ordinal);
 }
 
-std::shared_ptr<XLATensor> XLATensor::Create(const autograd::Variable& tensor,
-                                             const Device& device) {
+std::shared_ptr<XLATensor> XLATensor::Create(
+    const torch::autograd::Variable& tensor, const Device& device) {
   return TensorsArena::Get()->RegisterTensor(
       std::make_shared<XLATensor>(tensor, device));
 }
@@ -299,7 +298,8 @@ std::shared_ptr<XLATensor> XLATensor::Create(std::shared_ptr<Data> data) {
 
 XLATensor::~XLATensor() { TensorsArena::Get()->UnregisterTensor(this); }
 
-XLATensor::XLATensor(const autograd::Variable& tensor, const Device& device)
+XLATensor::XLATensor(const torch::autograd::Variable& tensor,
+                     const Device& device)
     : data_(std::make_shared<Data>(
           TensorToXla(
               tensor,
@@ -430,8 +430,8 @@ at::Tensor XLATensor::toTensor() {
 
   std::vector<xla::Literal> literals =
       XlaGetClient()->TransferFromServer({GetXlaData()});
-  return autograd::make_variable(MakeTensorFromXlaLiteral(literals.front()),
-                                 RequiresGrad());
+  return torch::autograd::make_variable(
+      MakeTensorFromXlaLiteral(literals.front()), RequiresGrad());
 }
 
 std::vector<std::shared_ptr<XLATensor>> XLATensor::GetLiveTensors() {
@@ -452,14 +452,14 @@ std::vector<at::Tensor> XLATensor::GetTensors(
       XlaGetClient()->TransferFromServer(tensors_data);
   std::vector<at::Tensor> results;
   for (size_t i = 0; i < literals.size(); ++i) {
-    results.push_back(autograd::make_variable(
+    results.push_back(torch::autograd::make_variable(
         MakeTensorFromXlaLiteral(literals[i]), tensors[i]->RequiresGrad()));
   }
   return results;
 }
 
 std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
-    const std::vector<autograd::Variable>& tensors,
+    const std::vector<torch::autograd::Variable>& tensors,
     const std::vector<std::string>& devices) {
   XLA_CHECK_EQ(tensors.size(), devices.size());
   std::vector<xla::ComputationClient::LiteralDevice> literal_device;
@@ -1029,5 +1029,4 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
              : shape_components_with_layout.front();
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

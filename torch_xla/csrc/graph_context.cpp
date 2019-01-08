@@ -1,8 +1,7 @@
 #include "graph_context.h"
 #include "absl/strings/str_cat.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 XlaGraphContext::XlaGraphContext(bool collate_parameters)
     : collate_parameters_(collate_parameters), builder_("XlaGraphContext") {}
@@ -66,5 +65,4 @@ XlaGraphNode::XlaGraphNode(
   }
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

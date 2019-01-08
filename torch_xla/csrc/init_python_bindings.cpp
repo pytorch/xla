@@ -10,9 +10,7 @@
 #include "torch_util.h"
 #include "translator.h"
 
-namespace torch {
-namespace jit {
-
+namespace torch_xla {
 namespace {
 
 struct NoGilSection {
@@ -23,7 +21,7 @@ struct NoGilSection {
 
 void InitXlaModuleBindings(py::module m) {
   py::class_<XlaModule, std::shared_ptr<XlaModule>>(m, "XlaModule")
-      .def(py::init([](const std::shared_ptr<script::Module> module,
+      .def(py::init([](const std::shared_ptr<torch::jit::script::Module> module,
                        bool use_full_conv_precision, bool differentiate) {
              return std::make_shared<XlaModule>(module, use_full_conv_precision,
                                                 differentiate);
@@ -74,7 +72,7 @@ void InitXlaModuleBindings(py::module m) {
           return result;
         });
   m.def("_xla_create_tensors",
-        [](const std::vector<autograd::Variable>& tensors,
+        [](const std::vector<torch::autograd::Variable>& tensors,
            const std::vector<std::string>& devices) {
           std::vector<std::shared_ptr<XLATensor>> result;
           {
@@ -100,10 +98,11 @@ void InitXlaPassesBindings(py::module m) {
 
 void InitXlaTensorBindings(py::module m) {
   py::class_<XLATensor, std::shared_ptr<XLATensor>>(m, "XLATensor")
-      .def(py::init([](autograd::Variable tensor, const std::string& device) {
-             return XLATensor::Create(tensor,
-                                      XLATensor::DeviceFromString(device));
-           }),
+      .def(py::init(
+               [](torch::autograd::Variable tensor, const std::string& device) {
+                 return XLATensor::Create(tensor,
+                                          XLATensor::DeviceFromString(device));
+               }),
            py::arg("tensor"), py::arg("device") = "")
       .def("to_tensor", [](XLATensor& s) { return s.toTensor(); })
       .def("size", [](const XLATensor& s) { return s.Size(); })
@@ -236,7 +235,6 @@ void InitXlaBindings(py::module m) {
   InitXlaTensorBindings(m);
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla
 
-PYBIND11_MODULE(_XLAC, m) { torch::jit::InitXlaBindings(m); }
+PYBIND11_MODULE(_XLAC, m) { torch_xla::InitXlaBindings(m); }

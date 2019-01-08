@@ -1,7 +1,6 @@
 #include "torch_util.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 XlaModule::TensorBatchVector XlaCreateTensorList(const py::tuple& tuple) {
   XlaModule::TensorBatchVector result;
@@ -30,5 +29,4 @@ py::object XlaPackTensorList(const XlaModule::TensorBatchVector& outputs) {
   return std::move(tuple);
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

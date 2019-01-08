@@ -6,8 +6,7 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "torch/csrc/jit/ir.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 struct XlaComputationInOut {
   using SizeOpValues = std::unordered_map<size_t, std::vector<xla::int64>>;
@@ -52,7 +51,7 @@ class XlaTranslator {
     std::function<xla::XlaOp(const xla::XlaOp&, size_t)> output_transform;
   };
 
-  XlaTranslator(const std::shared_ptr<Graph>& graph,
+  XlaTranslator(const std::shared_ptr<torch::jit::Graph>& graph,
                 const xla::PrecisionConfig::Precision conv_precision);
 
   // Builds and compiles the XLA computation for graph_. For the backward
@@ -72,11 +71,10 @@ class XlaTranslator {
       xla::XlaBuilder* b) const;
 
  private:
-  std::shared_ptr<Graph> graph_;
+  std::shared_ptr<torch::jit::Graph> graph_;
   xla::PrecisionConfig::Precision conv_precision_;
 };
 
 xla::ComputationClient* XlaGetClient();
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

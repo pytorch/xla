@@ -6,8 +6,7 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 namespace {
 
 bool ShouldUseBF16() {
@@ -234,5 +233,4 @@ bool XlaHelpers::UseBF16() {
   return use_fp16;
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

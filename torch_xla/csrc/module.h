@@ -12,8 +12,7 @@
 #include <map>
 #include <memory>
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   TH_DISALLOW_COPY_AND_ASSIGN(XlaModule);
@@ -26,7 +25,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // Creates a new XlaModule from a PyTorch script module "module".
   // "use_full_conv_precision" controls whether to use maximum precision
   // available in hardware for convolutions.
-  XlaModule(const std::shared_ptr<script::Module> module,
+  XlaModule(const std::shared_ptr<torch::jit::script::Module> module,
             bool use_full_conv_precision, bool differentiate);
 
   TensorBatchVector forward(const TensorBatchVector& inputs);
@@ -98,18 +97,19 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // computation have their accumulated operations sync to device memory.
   void FlushTensorsOperations();
 
-  static void RunForwardPasses(std::shared_ptr<Graph>* graph);
+  static void RunForwardPasses(std::shared_ptr<torch::jit::Graph>* graph);
 
   // Computes the gradient structure of the given graph, and runs all the
   // appropriate passes over the resulting forward and backward graphs.
-  static Gradient ComputeGradient(const std::shared_ptr<Graph>& graph);
+  static torch::jit::Gradient ComputeGradient(
+      const std::shared_ptr<torch::jit::Graph>& graph);
 
   // Propagate ret_size_op_values storing the aten::size values collected during
   // forward pass translation to the backward pass. Uses the capture information
   // from the gradient descriptor.
   static XlaComputationInOut::SizeOpValues SetBackwardSizeOpValues(
       const XlaComputationInOut::SizeOpValues& ret_size_op_values,
-      const Gradient& gradient);
+      const torch::jit::Gradient& gradient);
 
   // Sets the gradients of the optimizeable inputs and the optimizable
   // parameters, according to the grad_inputs values. The inputs_require_grad
@@ -118,7 +118,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
                              const TensorBatchVector& inputs,
                              const TensorBatchVector& optimizable_params,
                              const std::vector<bool>& inputs_require_grad,
-                             const Graph& df);
+                             const torch::jit::Graph& df);
 
   // Makes the data references in dest point to the ones in source.
   static void ReferenceNewTensorData(const TensorBatchVector& source,
@@ -154,7 +154,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   XlaComputationInOut::SizeOpValues backward_size_op_values_;
 
   // Information needed to connect the forward and backward graphs.
-  Gradient gradient_;
+  torch::jit::Gradient gradient_;
 
   TensorBatchVector inputs_;
   std::vector<bool> inputs_require_grad_;
@@ -183,8 +183,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
 
   // Keep the script module alive for lazy initialization of this XlaModule.
   // Once this XlaModule is initialized, script_module_ will be set to null.
-  std::shared_ptr<script::Module> script_module_;
+  std::shared_ptr<torch::jit::script::Module> script_module_;
 };
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

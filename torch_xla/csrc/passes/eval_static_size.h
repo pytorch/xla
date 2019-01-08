@@ -2,11 +2,9 @@
 
 #include "torch/csrc/jit/ir.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 // Evaluate aten::size operators for known shape inputs.
-void EvalStaticSize(const std::shared_ptr<Graph>& graph);
+void EvalStaticSize(const std::shared_ptr<torch::jit::Graph>& graph);
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

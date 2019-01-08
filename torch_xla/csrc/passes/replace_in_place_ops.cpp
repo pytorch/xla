@@ -2,33 +2,32 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
-namespace torch {
-namespace jit {
-
+namespace torch_xla {
 namespace {
 
-c10::optional<NodeKind> GetInPlaceOpReplacement(const Node* node) {
+c10::optional<torch::jit::NodeKind> GetInPlaceOpReplacement(
+    const torch::jit::Node* node) {
   switch (node->kind()) {
-    case aten::add_: {
-      return aten::add;
+    case at::aten::add_: {
+      return at::aten::add;
     }
-    case aten::mul_: {
-      return aten::mul;
+    case at::aten::mul_: {
+      return at::aten::mul;
     }
     default:
       break;
   }
-  // TODO(asuhan): no interned string for aten::threshold_. Should patch PyTorch
-  // core instead.
-  if (std::string(node->kind().toQualString()) == "aten::threshold_") {
-    return aten::threshold;
+  // TODO(asuhan): no interned string for at::aten::threshold_. Should patch
+  // PyTorch core instead.
+  if (std::string(node->kind().toQualString()) == "at::aten::threshold_") {
+    return at::aten::threshold;
   }
   return c10::nullopt;
 }
 
 }  // namespace
 
-void ReplaceInPlaceOps(Block* block) {
+void ReplaceInPlaceOps(torch::jit::Block* block) {
   for (auto it = block->nodes().begin(), end = block->nodes().end(); it != end;
        ++it) {
     for (auto sub : it->blocks()) {
@@ -36,7 +35,7 @@ void ReplaceInPlaceOps(Block* block) {
     }
     const auto replacement_kind_maybe = GetInPlaceOpReplacement(*it);
     if (replacement_kind_maybe) {
-      WithInsertPoint guard(*it);
+      torch::jit::WithInsertPoint guard(*it);
       auto graph = block->owningGraph();
       auto node = *it;
       const auto node_inputs = node->inputs();
@@ -67,11 +66,10 @@ void ReplaceInPlaceOps(Block* block) {
   }
 }
 
-void ReplaceInPlaceOps(const std::shared_ptr<Graph>& graph) {
+void ReplaceInPlaceOps(const std::shared_ptr<torch::jit::Graph>& graph) {
   XLA_VLOG_LINES(4, "Before ReplaceInPlaceOps:\n" + graph->toString());
   ReplaceInPlaceOps(graph->block());
   XLA_VLOG_LINES(4, "After ReplaceInPlaceOps:\n" + graph->toString());
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

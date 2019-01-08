@@ -1,15 +1,16 @@
 #include "batch_norm.h"
 #include "helpers.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
-BatchNormOutput BuildBatchNorm(const Node* node, const xla::XlaOp& input,
+BatchNormOutput BuildBatchNorm(const torch::jit::Node* node,
+                               const xla::XlaOp& input,
                                const xla::XlaOp& weight,
                                const xla::XlaOp& bias) {
   auto builder = input.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const float eps_value = node->get<at::Scalar>(attr::eps).value().to<float>();
+  const float eps_value =
+      node->get<at::Scalar>(at::attr::eps).value().to<float>();
   const auto eps =
       XlaHelpers::ScalarValue(eps_value, input_shape.element_type(), builder);
   const auto one =
@@ -25,14 +26,16 @@ BatchNormOutput BuildBatchNorm(const Node* node, const xla::XlaOp& input,
   return {output, save_mean, save_invstd_eps};
 }
 
-BatchNormGrads BuildBatchNormBackward(const Node* node, const xla::XlaOp& grad,
+BatchNormGrads BuildBatchNormBackward(const torch::jit::Node* node,
+                                      const xla::XlaOp& grad,
                                       const xla::XlaOp& input,
                                       const xla::XlaOp& weight,
                                       const xla::XlaOp& save_mean,
                                       const xla::XlaOp& save_invstd_eps) {
   auto builder = grad.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const float eps_value = node->get<at::Scalar>(attr::eps).value().to<float>();
+  const float eps_value =
+      node->get<at::Scalar>(at::attr::eps).value().to<float>();
   const auto eps =
       XlaHelpers::ScalarValue(eps_value, input_shape.element_type(), builder);
   const auto one =
@@ -48,5 +51,4 @@ BatchNormGrads BuildBatchNormBackward(const Node* node, const xla::XlaOp& grad,
   return {grad_input, grad_weight, grad_bias};
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla
