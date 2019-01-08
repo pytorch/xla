@@ -108,7 +108,7 @@ xla::int64 GetFlatTensorOffset(const S& strides,
 }
 
 std::vector<xla::int64> GetXlaStrides(const xla::Shape& shape) {
-  std::vector<xla::int64> strides(xla::ShapeUtil::Rank(shape));
+  std::vector<xla::int64> strides(shape.rank());
   xla::int64 stride = 1;
   for (auto dim : shape.layout().minor_to_major()) {
     strides[dim] = stride;
@@ -150,7 +150,7 @@ xla::Literal TensorToLiteral(const at::Tensor& tensor,
   const at::Tensor& contiguous_tensor = tensor.contiguous();
   auto contiguous_ptr = contiguous_tensor.data<AtenNative>();
   const auto& tensor_sizes = contiguous_tensor.sizes();
-  XLA_CHECK_EQ(tensor_sizes.size(), xla::ShapeUtil::Rank(shape));
+  XLA_CHECK_EQ(tensor_sizes.size(), shape.rank());
   xla::int64 total_elements =
       std::accumulate(tensor_sizes.begin(), tensor_sizes.end(), 1,
                       std::multiplies<xla::int64>());
@@ -1000,9 +1000,9 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor,
 
 std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape) {
   std::vector<xla::Shape> component_shapes;
-  if (xla::ShapeUtil::IsTuple(shape)) {
+  if (shape.IsTuple()) {
     for (const xla::Shape& component_shape : shape.tuple_shapes()) {
-      XLA_CHECK(!xla::ShapeUtil::IsTuple(component_shape));
+      XLA_CHECK(!component_shape.IsTuple());
       component_shapes.push_back(component_shape);
     }
   } else {
