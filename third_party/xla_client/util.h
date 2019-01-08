@@ -11,9 +11,7 @@ namespace xla {
 namespace util {
 
 struct MidPolicy {
-  size_t operator()(size_t size) const {
-    return size / 2;
-  }
+  size_t operator()(size_t size) const { return size / 2; }
 };
 
 // Hasher for string-like objects which hashes only a partial window of the data
