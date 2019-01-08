@@ -3,22 +3,21 @@
 #include "helpers.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
-xla::XlaOp BuildArithmeticOp(const Node* node, const xla::XlaOp& lhs,
-                             const xla::XlaOp& rhs) {
+xla::XlaOp BuildArithmeticOp(const torch::jit::Node* node,
+                             const xla::XlaOp& lhs, const xla::XlaOp& rhs) {
   switch (node->kind()) {
-    case aten::add: {
+    case at::aten::add: {
       return XlaHelpers::PromotedAdd(lhs, rhs);
     }
-    case aten::mul: {
+    case at::aten::mul: {
       return XlaHelpers::PromotedMul(lhs, rhs);
     }
-    case aten::sub: {
+    case at::aten::sub: {
       return XlaHelpers::PromotedSub(lhs, rhs);
     }
-    case aten::div: {
+    case at::aten::div: {
       return XlaHelpers::PromotedDiv(lhs, rhs);
     }
     default:
@@ -26,15 +25,16 @@ xla::XlaOp BuildArithmeticOp(const Node* node, const xla::XlaOp& lhs,
   }
 }
 
-xla::XlaOp BuildComparisonOp(const Node* node, const xla::XlaOp& operand) {
+xla::XlaOp BuildComparisonOp(const torch::jit::Node* node,
+                             const xla::XlaOp& operand) {
   auto builder = operand.builder();
   xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operand);
   const auto xla_other = XlaHelpers::ScalarValue(
-      node->get<at::Scalar>(attr::other).value().to<float>(),
+      node->get<at::Scalar>(at::attr::other).value().to<float>(),
       operand_shape.element_type(), builder);
   xla::XlaOp pred;
   switch (node->kind()) {
-    case aten::gt: {
+    case at::aten::gt: {
       pred = xla::Gt(operand, xla_other);
       break;
     }
@@ -44,7 +44,7 @@ xla::XlaOp BuildComparisonOp(const Node* node, const xla::XlaOp& operand) {
   return xla::ConvertElementType(pred, xla::PrimitiveType::S8);
 }
 
-xla::XlaOp BuildThreshold(const Node* node, const xla::XlaOp& input,
+xla::XlaOp BuildThreshold(const torch::jit::Node* node, const xla::XlaOp& input,
                           const xla::XlaOp& output, const float threshold,
                           const float value, xla::XlaBuilder* b) {
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
@@ -60,15 +60,16 @@ xla::XlaOp BuildThreshold(const Node* node, const xla::XlaOp& input,
                      xla::Broadcast(xla_value, broadcast_sizes));
 }
 
-xla::XlaOp BuildTypeAs(const Node* node, const xla::XlaOp& operand) {
+xla::XlaOp BuildTypeAs(const torch::jit::Node* node,
+                       const xla::XlaOp& operand) {
   const auto node_outputs = node->outputs();
   XLA_CHECK_EQ(node_outputs.size(), 1);
-  const auto output_tensor_type = node_outputs[0]->type()->cast<TensorType>();
+  const auto output_tensor_type =
+      node_outputs[0]->type()->cast<at::TensorType>();
   XLA_CHECK(output_tensor_type);
   const auto target_type =
       XlaHelpers::MakeXlaPrimitiveType(output_tensor_type->scalarType());
   return xla::ConvertElementType(operand, target_type);
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

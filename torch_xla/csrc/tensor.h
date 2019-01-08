@@ -12,8 +12,7 @@
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/ir.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 class XLATensor {
   struct Data;
@@ -64,8 +63,8 @@ class XLATensor {
     std::vector<std::string> devices;
   };
 
-  static std::shared_ptr<XLATensor> Create(const autograd::Variable& tensor,
-                                           const Device& device);
+  static std::shared_ptr<XLATensor> Create(
+      const torch::autograd::Variable& tensor, const Device& device);
   static std::shared_ptr<XLATensor> Create(
       std::shared_ptr<xla::ComputationClient::Data> xla_data,
       bool requires_grad);
@@ -78,7 +77,7 @@ class XLATensor {
   // necessary in order to use std::make_shared<> are worse than having those
   // public. And it is good to save the double allocation required by a normal
   // naked pointer std::shared_ptr<> creation.
-  XLATensor(const autograd::Variable& tensor, const Device& device);
+  XLATensor(const torch::autograd::Variable& tensor, const Device& device);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
             bool requires_grad);
   XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device);
@@ -184,7 +183,7 @@ class XLATensor {
   // Operation which creates XLA tensors out of autograd variable by batching
   // the requests to the computation servers.
   static std::vector<std::shared_ptr<XLATensor>> CreateTensors(
-      const std::vector<autograd::Variable>& tensors,
+      const std::vector<torch::autograd::Variable>& tensors,
       const std::vector<std::string>& devices);
 
  private:
@@ -267,5 +266,4 @@ std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape);
 xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
                                      const XLATensor::DeviceType device_type);
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

@@ -8,8 +8,7 @@
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "torch/csrc/jit/ir.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 // Miscellaneous helpers for XLA lowering.
 class XlaHelpers {
@@ -157,5 +156,4 @@ class XlaHelpers {
   static bool UseBF16();
 };
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

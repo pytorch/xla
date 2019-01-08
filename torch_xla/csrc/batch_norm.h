@@ -3,8 +3,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "torch/csrc/jit/ir.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 struct BatchNormOutput {
   xla::XlaOp output;
@@ -18,15 +17,16 @@ struct BatchNormGrads {
   xla::XlaOp grad_bias;
 };
 
-BatchNormOutput BuildBatchNorm(const Node* node, const xla::XlaOp& input,
+BatchNormOutput BuildBatchNorm(const torch::jit::Node* node,
+                               const xla::XlaOp& input,
                                const xla::XlaOp& weight,
                                const xla::XlaOp& bias);
 
-BatchNormGrads BuildBatchNormBackward(const Node* node, const xla::XlaOp& grad,
+BatchNormGrads BuildBatchNormBackward(const torch::jit::Node* node,
+                                      const xla::XlaOp& grad,
                                       const xla::XlaOp& input,
                                       const xla::XlaOp& weight,
                                       const xla::XlaOp& save_mean,
                                       const xla::XlaOp& save_invstd_eps);
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

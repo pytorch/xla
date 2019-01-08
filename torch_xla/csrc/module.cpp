@@ -21,13 +21,12 @@
 #include "torch/csrc/jit/passes/shape_analysis.h"
 #include "torch/csrc/jit/passes/specialize_undef.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 namespace {
 
 void GatherParameters(std::vector<at::Tensor*>* values,
                       std::vector<bool>* requires_grad,
-                      const script::Module& m) {
+                      const torch::jit::script::Module& m) {
   for (auto& param : m.get_parameters()) {
     values->push_back(param->slot());
     requires_grad->push_back(!param->is_buffer);
@@ -55,7 +54,7 @@ XlaModule::TensorBatchVector CreateResultBatchVector(
 // Returns the number of real outputs from the forward graph pointed to by
 // df_input_vjps. df_input_vjps contains an ordered subset of the full real
 // outputs set, followed by an ordered subset of the additional outputs.
-size_t InputVjpsRealOutputCount(const Gradient& gradient) {
+size_t InputVjpsRealOutputCount(const torch::jit::Gradient& gradient) {
   size_t real_output_count = 0;
   for (; real_output_count < gradient.df_input_vjps.size();
        ++real_output_count) {
@@ -68,7 +67,7 @@ size_t InputVjpsRealOutputCount(const Gradient& gradient) {
 
 }  // namespace
 
-XlaModule::XlaModule(const std::shared_ptr<script::Module> module,
+XlaModule::XlaModule(const std::shared_ptr<torch::jit::script::Module> module,
                      bool use_full_conv_precision, bool differentiate)
     : use_full_conv_precision_(use_full_conv_precision),
       differentiate_(differentiate),
@@ -82,7 +81,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   // Get forward graph.
   const auto forward = script_module_->find_method("forward");
   JIT_ASSERT(forward != nullptr);
-  std::shared_ptr<Graph> forward_graph = forward->graph()->copy();
+  std::shared_ptr<torch::jit::Graph> forward_graph = forward->graph()->copy();
   RunForwardPasses(&forward_graph);
 
   // Convert model parameters to vector of XLATensors.
@@ -98,7 +97,8 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
     TensorBatchVector::value_type optimizable_replica_params;
     for (size_t j = 0; j < params_buffers_regather.size(); ++j) {
       replica_params.push_back(XLATensor::Create(
-          autograd::as_variable_ref(*params_buffers_regather[j]), device));
+          torch::autograd::as_variable_ref(*params_buffers_regather[j]),
+          device));
       if (param_requires_grad[j]) {
         optimizable_replica_params.push_back(replica_params.back());
       }
@@ -139,7 +139,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   script_module_ = nullptr;
 }
 
-void XlaModule::RunForwardPasses(std::shared_ptr<Graph>* graph) {
+void XlaModule::RunForwardPasses(std::shared_ptr<torch::jit::Graph>* graph) {
   // Run forward passes.
   CanonicalizeOps(*graph);
   EvalStaticSize(*graph);
@@ -151,11 +151,12 @@ void XlaModule::RunForwardPasses(std::shared_ptr<Graph>* graph) {
   LowerAllTuples(*graph);
 }
 
-Gradient XlaModule::ComputeGradient(const std::shared_ptr<Graph>& graph) {
+torch::jit::Gradient XlaModule::ComputeGradient(
+    const std::shared_ptr<torch::jit::Graph>& graph) {
   // Automatically differentiate the forward graph to get the backward graph.
   // Since differentiation is mutating the graph, do it on a copy.
-  std::shared_ptr<Graph> graph_copy = graph->copy();
-  Gradient gradient = differentiate(graph_copy);
+  std::shared_ptr<torch::jit::Graph> graph_copy = graph->copy();
+  torch::jit::Gradient gradient = differentiate(graph_copy);
   // Run the forward passes.
   CanonicalizeOps(gradient.f);
   ConstantPropagation(gradient.f);
@@ -299,7 +300,7 @@ void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs,
                                const TensorBatchVector& inputs,
                                const TensorBatchVector& optimizable_params,
                                const std::vector<bool>& inputs_require_grad,
-                               const Graph& df) {
+                               const torch::jit::Graph& df) {
   size_t inputs_require_grad_count =
       std::count(inputs_require_grad.begin(), inputs_require_grad.end(), true);
   for (size_t i = 0; i < inputs.size(); ++i) {
@@ -627,7 +628,7 @@ void XlaModule::ReferenceNewTensorData(const TensorBatchVector& source,
 
 XlaComputationInOut::SizeOpValues XlaModule::SetBackwardSizeOpValues(
     const XlaComputationInOut::SizeOpValues& ret_size_op_values,
-    const Gradient& gradient) {
+    const torch::jit::Gradient& gradient) {
   size_t backward_input_idx = 0;
   XlaComputationInOut::SizeOpValues backward_size_op_values;
   for (const auto out_idx : gradient.df_input_vjps) {
@@ -690,5 +691,4 @@ xla::Shape XlaModule::GetResultShape(const xla::XlaComputation& computation,
   return MakeShapeWithDeviceLayout(result_shape, devices.front().hw_type);
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

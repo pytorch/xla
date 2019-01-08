@@ -3,10 +3,9 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
-xla::XlaOp BuildSize(const Node* node, const xla::XlaOp& input,
+xla::XlaOp BuildSize(const torch::jit::Node* node, const xla::XlaOp& input,
                      std::vector<xla::int64>* size_op_result) {
   const auto shape_sizes = XlaHelpers::SizesOfXlaOp(input);
   *size_op_result = shape_sizes;
@@ -15,7 +14,7 @@ xla::XlaOp BuildSize(const Node* node, const xla::XlaOp& input,
 }
 
 xla::XlaOp BuildSumToSize(
-    const Node* node, const xla::XlaOp& input,
+    const torch::jit::Node* node, const xla::XlaOp& input,
     const XlaComputationInOut::SizeOpValues& size_op_values_tracking) {
   const auto size_op_value_it =
       size_op_values_tracking.find(node->input(1)->unique());
@@ -53,5 +52,4 @@ xla::XlaOp BuildSumToSize(
       reduce_dimensions);
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

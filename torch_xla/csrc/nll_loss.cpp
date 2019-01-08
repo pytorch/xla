@@ -1,9 +1,7 @@
 #include "nll_loss.h"
 #include "helpers.h"
 
-namespace torch {
-namespace jit {
-
+namespace torch_xla {
 namespace {
 
 // Converts "indices" into a one-hot representation. "depth" is the size of the
@@ -49,7 +47,7 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
 }  // namespace
 
 // Builds the NLLLoss for log-probabilities "logits" and class indices "labels".
-xla::XlaOp BuildNllLoss(const Node* node, const xla::XlaOp& logits,
+xla::XlaOp BuildNllLoss(const torch::jit::Node* node, const xla::XlaOp& logits,
                         const xla::XlaOp& labels) {
   xla::XlaBuilder* builder = logits.builder();
   xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
@@ -74,7 +72,8 @@ xla::XlaOp BuildNllLoss(const Node* node, const xla::XlaOp& logits,
 
 // Builds the NLLLoss gradient for log-probabilities "logits" and class indices
 // "labels".
-xla::XlaOp BuildNllLossBackward(const Node* node, const xla::XlaOp& logits,
+xla::XlaOp BuildNllLossBackward(const torch::jit::Node* node,
+                                const xla::XlaOp& logits,
                                 const xla::XlaOp& labels) {
   const int kBatchDim = 0;
   auto builder = logits.builder();
@@ -94,5 +93,4 @@ xla::XlaOp BuildNllLossBackward(const Node* node, const xla::XlaOp& logits,
   return xla::Neg(one_hot_labels) / batch;
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

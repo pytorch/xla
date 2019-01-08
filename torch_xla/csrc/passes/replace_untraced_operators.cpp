@@ -2,64 +2,63 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
-namespace torch {
-namespace jit {
-
+namespace torch_xla {
 namespace {
 
 // Returns true if the node contains an attribute and has the expected value.
 template <class T>
-bool NodeHasExpectedAttribute(const Node* node, const Symbol attribute_name,
+bool NodeHasExpectedAttribute(const torch::jit::Node* node,
+                              const at::Symbol attribute_name,
                               const T& expected) {
   const auto maybe_attribute = node->get<T>(attribute_name);
   return maybe_attribute && *maybe_attribute == expected;
 }
 
-// Only allow certain aten::_convolution operators to be replaced.
-bool CanTraceConvolution(const Node* node) {
-  return NodeHasExpectedAttribute(node, attr::dilation,
+// Only allow certain at::aten::_convolution operators to be replaced.
+bool CanTraceConvolution(const torch::jit::Node* node) {
+  return NodeHasExpectedAttribute(node, at::attr::dilation,
                                   std::vector<int64_t>{1, 1}) &&
-         NodeHasExpectedAttribute(node, attr::output_padding,
+         NodeHasExpectedAttribute(node, at::attr::output_padding,
                                   std::vector<int64_t>{0, 0}) &&
-         NodeHasExpectedAttribute(node, attr::transposed, false) &&
-         NodeHasExpectedAttribute(node, attr::groups, int64_t(1)) &&
-         NodeHasExpectedAttribute(node, attr::benchmark, false) &&
-         NodeHasExpectedAttribute(node, attr::deterministic, false);
+         NodeHasExpectedAttribute(node, at::attr::transposed, false) &&
+         NodeHasExpectedAttribute(node, at::attr::groups, int64_t(1)) &&
+         NodeHasExpectedAttribute(node, at::attr::benchmark, false) &&
+         NodeHasExpectedAttribute(node, at::attr::deterministic, false);
 }
 
-// When possible, replace aten::{_convolution, batch_norm} operators with
+// When possible, replace at::aten::{_convolution, batch_norm} operators with
 // equivalent ones which are part of the operator schema and differentiable.
-void ReplaceUntracedOperators(Block* block) {
+void ReplaceUntracedOperators(torch::jit::Block* block) {
   for (auto it = block->nodes().begin(), end = block->nodes().end(); it != end;
        ++it) {
     for (auto sub : it->blocks()) {
       ReplaceUntracedOperators(sub);
     }
     switch (it->kind()) {
-      case aten::_convolution: {
-        WithInsertPoint guard(*it);
+      case at::aten::_convolution: {
+        torch::jit::WithInsertPoint guard(*it);
         auto graph = block->owningGraph();
         auto node = *it;
         if (!CanTraceConvolution(node)) {
           break;
         }
-        const auto weight = node->namedInput(attr::weight);
-        const auto weight_type = weight->type()->expect<CompleteTensorType>();
+        const auto weight = node->namedInput(at::attr::weight);
+        const auto weight_type = weight->type()->expect<at::CompleteTensorType>();
         const auto& weight_size = weight_type->sizes();
         const auto kernel_size = graph->insertConstant(
             std::vector<int64_t>{weight_size[2], weight_size[3]});
         const auto stride = graph->insertConstant(
-            node->get<std::vector<int64_t>>(attr::stride).value());
+            node->get<std::vector<int64_t>>(at::attr::stride).value());
         const auto padding = graph->insertConstant(
-            node->get<std::vector<int64_t>>(attr::padding).value());
+            node->get<std::vector<int64_t>>(at::attr::padding).value());
 
-        auto replacement_node = graph->create(aten::thnn_conv2d_forward, 3);
+        auto replacement_node = graph->create(at::aten::thnn_conv2d_forward, 3);
 
         graph->insertNode(replacement_node);
-        replacement_node->addInput(node->namedInput(attr::input));
+        replacement_node->addInput(node->namedInput(at::attr::input));
         replacement_node->addInput(weight);
         replacement_node->addInput(kernel_size);
-        replacement_node->addInput(node->namedInput(attr::bias));
+        replacement_node->addInput(node->namedInput(at::attr::bias));
         replacement_node->addInput(stride);
         replacement_node->addInput(padding);
 
@@ -69,11 +68,11 @@ void ReplaceUntracedOperators(Block* block) {
         it.destroyCurrent();
         break;
       }
-      case aten::batch_norm: {
-        WithInsertPoint guard(*it);
+      case at::aten::batch_norm: {
+        torch::jit::WithInsertPoint guard(*it);
         auto graph = block->owningGraph();
         auto node = *it;
-        auto replacement_node = graph->create(aten::native_batch_norm, 3);
+        auto replacement_node = graph->create(at::aten::native_batch_norm, 3);
 
         graph->insertNode(replacement_node);
         const auto node_inputs = node->inputs();
@@ -96,11 +95,10 @@ void ReplaceUntracedOperators(Block* block) {
 
 }  // namespace
 
-void ReplaceUntracedOperators(const std::shared_ptr<Graph>& graph) {
+void ReplaceUntracedOperators(const std::shared_ptr<torch::jit::Graph>& graph) {
   XLA_VLOG_LINES(4, "Before ReplaceUntracedOperators:\n" + graph->toString());
   ReplaceUntracedOperators(graph->block());
   XLA_VLOG_LINES(4, "After ReplaceUntracedOperators:\n" + graph->toString());
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla
