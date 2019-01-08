@@ -349,6 +349,20 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         cctx.AddNodeOp(node, xla_output);
         break;
       }
+      case aten::adaptive_avg_pool2d: {
+        XLA_CHECK_EQ(node->inputs().size(), 2);
+        xla::XlaOp xla_output =
+            BuildAdaptiveAvgPool2d(node, cctx.OpForInput(node, 0));
+        cctx.AddNodeOp(node, xla_output);
+        break;
+      }
+      case aten::adaptive_avg_pool2d_backward: {
+        XLA_CHECK_EQ(node->inputs().size(), 2);
+        xla::XlaOp xla_output = BuildAdaptiveAvgPool2dBackward(
+            node, cctx.OpForInput(node, 0), cctx.OpForInput(node, 1));
+        cctx.AddNodeOp(node, xla_output);
+        break;
+      }
       case aten::sqrt: {
         XLA_CHECK_EQ(node->inputs().size(), 1);
         const auto xla_input = cctx.OpForInput(node, 0);

@@ -864,6 +864,22 @@ class TestGradients(XlaTestCase):
           inputs = [_gen_tensor(4, 1, 28, 28, requires_grad=True)]
           self.checkGrad(model, inputs, xla=True)
 
+  def test_adaptive_avgpool(self):
+
+    class AdaptiveAvgPoolGrad(nn.Module):
+
+      def __init__(self, output_size):
+        super(AdaptiveAvgPoolGrad, self).__init__()
+        self.output_size = output_size
+
+      def forward(self, x):
+        return F.adaptive_avg_pool2d(x, self.output_size)
+
+    model = AdaptiveAvgPoolGrad((2, 3))
+    for scale in [1, 2]:
+      inputs = [_gen_tensor(10, 3, 2 * scale, 3 * scale, requires_grad=True)]
+      self.checkGrad(model, inputs, xla=True)
+
   def test_threshold(self):
 
     class ThresholdPoolGrad(nn.Module):
