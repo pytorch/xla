@@ -26,7 +26,7 @@ xla::XlaOp BuildSumToSize(
 
   const auto& sum_sizes = size_op_value_it->second;
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::int64 input_rank = xla::ShapeUtil::Rank(input_shape);
+  xla::int64 input_rank = input_shape.rank();
 
   XLA_CHECK_GE(input_rank, sum_sizes.size());
 

@@ -457,7 +457,7 @@ xla::XlaComputation XlaModule::BuildFusedTrainComputation(
     returned_outputs.push_back(computation_in_outs.outputs[i]);
   }
   xla::Shape backward_shape = XlaHelpers::ShapeOfXlaOp(backward_op);
-  if (xla::ShapeUtil::IsTuple(backward_shape)) {
+  if (backward_shape.IsTuple()) {
     for (xla::int64 i = 0;
          i < xla::ShapeUtil::TupleElementCount(backward_shape); ++i) {
       returned_outputs.push_back(xla::GetTupleElement(backward_op, i));
