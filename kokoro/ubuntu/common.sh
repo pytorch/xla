@@ -64,7 +64,7 @@ git apply xla/pytorch.patch
 # Build and install torch wheel and collect artifact
 export NO_CUDA=1
 python setup.py bdist_wheel
-pip install dist/torch-1.1.0a0+$(head -c 7 xla/.torch_commit_id)-cp35-cp35m-linux_x86_64.whl
+pip install dist/*.whl
 cd dist && rename "s/\+\w{7}/\+stable/" *.whl && cd ..
 mv dist/* ../../
 
