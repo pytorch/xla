@@ -2,8 +2,7 @@
 #include <vector>
 #include "helpers.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 xla::XlaOp BuildCrossReplicaSum(const xla::XlaOp& operand, int num_replicas) {
   xla::XlaOp crs = xla::CrossReplicaSum(operand);
@@ -13,5 +12,4 @@ xla::XlaOp BuildCrossReplicaSum(const xla::XlaOp& operand, int num_replicas) {
   return crs * xla::Broadcast(scaling_value, XlaHelpers::ShapeSizes(shape));
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

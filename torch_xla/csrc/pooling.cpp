@@ -4,9 +4,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/jit/autodiff.h"
 
-namespace torch {
-namespace jit {
-
+namespace torch_xla {
 namespace {
 
 xla::TensorFormat MakeNCHWFormat() {
@@ -33,11 +31,11 @@ xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
 }
 
 // Extract the pooling attributes for the given 2D pooling operator "node".
-PoolingOpAttributes Pooling2DOpAttributes(const Node* pooling_2d) {
+PoolingOpAttributes Pooling2DOpAttributes(const torch::jit::Node* pooling_2d) {
   const auto kernel_size_attr = XlaHelpers::I64List(
-      pooling_2d->get<std::vector<int64_t>>(attr::kernel_size).value());
+      pooling_2d->get<std::vector<int64_t>>(at::attr::kernel_size).value());
   const auto stride_attr =
-      pooling_2d->get<std::vector<int64_t>>(attr::stride).value();
+      pooling_2d->get<std::vector<int64_t>>(at::attr::stride).value();
   // Create a NCHW kernel size with 1 for batch size and feature.
   std::vector<xla::int64> kernel_size(2, 1);
   kernel_size.insert(kernel_size.end(), kernel_size_attr.begin(),
@@ -52,7 +50,7 @@ PoolingOpAttributes Pooling2DOpAttributes(const Node* pooling_2d) {
     stride.insert(stride.end(), stride_attr.begin(), stride_attr.end());
   }
   const auto padding_attr =
-      pooling_2d->get<std::vector<int64_t>>(attr::padding).value();
+      pooling_2d->get<std::vector<int64_t>>(at::attr::padding).value();
   XLA_CHECK_EQ(padding_attr.size(), 2);
   std::vector<std::pair<xla::int64, xla::int64>> padding;
   for (const xla::int64 dim_pad : padding_attr) {
@@ -61,10 +59,10 @@ PoolingOpAttributes Pooling2DOpAttributes(const Node* pooling_2d) {
   return {kernel_size, stride, padding};
 }
 
-void CheckAvgPool2DIsSupported(const Node* node) {
+void CheckAvgPool2DIsSupported(const torch::jit::Node* node) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_GE(node_inputs.size(), size_t(6));
-  const auto ceil_mode = node->get<bool>(attr::ceil_mode).value();
+  const auto ceil_mode = node->get<bool>(at::attr::ceil_mode).value();
   if (ceil_mode) {
     XLA_ERROR() << "ceil_mode not supported for avg_pool2d yet";
   }
@@ -89,7 +87,8 @@ std::vector<xla::int64> AdaptiveAvgPoolKernelSize(
 
 }  // namespace
 
-xla::XlaOp BuildMaxPool2d(const Node* node, const xla::XlaOp& input) {
+xla::XlaOp BuildMaxPool2d(const torch::jit::Node* node,
+                          const xla::XlaOp& input) {
   const auto pooling_op_attributes = Pooling2DOpAttributes(node);
   auto builder = input.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
@@ -97,7 +96,7 @@ xla::XlaOp BuildMaxPool2d(const Node* node, const xla::XlaOp& input) {
       xla::LiteralUtil::MinValue(input_shape.element_type());
   const auto xla_init_value = xla::ConstantLiteral(builder, init_value);
   const auto padding_config = XlaHelpers::MakeXlaPaddingConfig(
-      node->get<std::vector<int64_t>>(attr::padding).value());
+      node->get<std::vector<int64_t>>(at::attr::padding).value());
   const auto padded_input = xla::Pad(input, xla_init_value, padding_config);
   return xla::MaxPool(
       /*operand=*/padded_input,
@@ -107,7 +106,7 @@ xla::XlaOp BuildMaxPool2d(const Node* node, const xla::XlaOp& input) {
       /*data_format=*/MakeNCHWFormat());
 }
 
-xla::XlaOp BuildMaxPool2dBackward(const Node* node,
+xla::XlaOp BuildMaxPool2dBackward(const torch::jit::Node* node,
                                   const xla::XlaOp& out_backprop,
                                   const xla::XlaOp& input) {
   auto builder = out_backprop.builder();
@@ -134,12 +133,13 @@ xla::XlaOp BuildMaxPool2dBackward(const Node* node,
       /*scatter=*/scatter);
 }
 
-xla::XlaOp BuildAvgPool2d(const Node* node, const xla::XlaOp& input) {
+xla::XlaOp BuildAvgPool2d(const torch::jit::Node* node,
+                          const xla::XlaOp& input) {
   // Inspired from tf2xla.
   CheckAvgPool2DIsSupported(node);
   const auto pooling_op_attributes = Pooling2DOpAttributes(node);
   const auto count_include_pad =
-      node->get<bool>(attr::count_include_pad).value();
+      node->get<bool>(at::attr::count_include_pad).value();
   return xla::AvgPool(
       /*operand=*/input,
       /*kernel_size=*/pooling_op_attributes.kernel_size,
@@ -149,7 +149,7 @@ xla::XlaOp BuildAvgPool2d(const Node* node, const xla::XlaOp& input) {
       /*counts_include_padding=*/count_include_pad);
 }
 
-xla::XlaOp BuildAvgPool2dBackward(const Node* node,
+xla::XlaOp BuildAvgPool2dBackward(const torch::jit::Node* node,
                                   const xla::XlaOp& out_backprop,
                                   const xla::XlaOp& input) {
   // Inspired from tf2xla.
@@ -157,7 +157,7 @@ xla::XlaOp BuildAvgPool2dBackward(const Node* node,
   const auto pooling_op_attributes = Pooling2DOpAttributes(node);
   auto gradients_size = XlaHelpers::SizesOfXlaOp(input);
   const auto count_include_pad =
-      node->get<bool>(attr::count_include_pad).value();
+      node->get<bool>(at::attr::count_include_pad).value();
 
   return xla::AvgPoolGrad(
       /*out_backprop=*/out_backprop,
@@ -169,9 +169,10 @@ xla::XlaOp BuildAvgPool2dBackward(const Node* node,
       /*counts_include_padding=*/count_include_pad);
 }
 
-xla::XlaOp BuildAdaptiveAvgPool2d(const Node* node, const xla::XlaOp& input) {
+xla::XlaOp BuildAdaptiveAvgPool2d(const torch::jit::Node* node,
+                                  const xla::XlaOp& input) {
   const auto output_size = XlaHelpers::I64List(
-      node->get<std::vector<int64_t>>(attr::output_size).value());
+      node->get<std::vector<int64_t>>(at::attr::output_size).value());
   XLA_CHECK_EQ(output_size.size(), 2) << "Invalid output size rank";
   const auto input_size = XlaHelpers::SizesOfXlaOp(input);
   XLA_CHECK_EQ(input_size.size(), 4) << "Only 4D tensors supported";
@@ -186,7 +187,7 @@ xla::XlaOp BuildAdaptiveAvgPool2d(const Node* node, const xla::XlaOp& input) {
       /*counts_include_padding=*/false);
 }
 
-xla::XlaOp BuildAdaptiveAvgPool2dBackward(const Node* node,
+xla::XlaOp BuildAdaptiveAvgPool2dBackward(const torch::jit::Node* node,
                                           const xla::XlaOp& out_backprop,
                                           const xla::XlaOp& input) {
   const auto out_backprop_size = XlaHelpers::SizesOfXlaOp(out_backprop);
@@ -209,5 +210,4 @@ xla::XlaOp BuildAdaptiveAvgPool2dBackward(const Node* node,
       /*counts_include_padding=*/false);
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

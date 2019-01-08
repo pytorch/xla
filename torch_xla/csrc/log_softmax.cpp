@@ -2,9 +2,7 @@
 #include "helpers.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
-namespace torch {
-namespace jit {
-
+namespace torch_xla {
 namespace {
 
 xla::XlaComputation CreateMaxComputation(xla::PrimitiveType type) {
@@ -19,11 +17,12 @@ xla::XlaComputation CreateMaxComputation(xla::PrimitiveType type) {
 
 }  // namespace
 
-xla::XlaOp BuildLogSoftmax(const Node* node, const xla::XlaOp& logits) {
+xla::XlaOp BuildLogSoftmax(const torch::jit::Node* node,
+                           const xla::XlaOp& logits) {
   // Inspired from tf2xla.
   const auto node_inputs = node->inputs();
   XLA_CHECK_EQ(node_inputs.size(), size_t(2));
-  xla::int64 dim = node->get<int64_t>(attr::dim).value();
+  xla::int64 dim = node->get<int64_t>(at::attr::dim).value();
 
   xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
   auto input_size = XlaHelpers::ShapeSizes(logits_shape);
@@ -54,10 +53,11 @@ xla::XlaOp BuildLogSoftmax(const Node* node, const xla::XlaOp& logits) {
   return xla::Sub(shifted_logits, xla::Log(reduce), broadcast_dimensions);
 }
 
-xla::XlaOp BuildLogSoftmaxGrad(const Node* node, const xla::XlaOp& grad_output,
+xla::XlaOp BuildLogSoftmaxGrad(const torch::jit::Node* node,
+                               const xla::XlaOp& grad_output,
                                const xla::XlaOp& output) {
   // Inspired from tf2xla.
-  xla::int64 dim = node->get<int64_t>(attr::dim).value();
+  xla::int64 dim = node->get<int64_t>(at::attr::dim).value();
 
   auto input_size = XlaHelpers::SizesOfXlaOp(grad_output);
   std::vector<xla::int64> broadcast_dimensions;
@@ -81,5 +81,4 @@ xla::XlaOp BuildLogSoftmaxGrad(const Node* node, const xla::XlaOp& grad_output,
                   xla::Mul(xla::Exp(output), sum, broadcast_dimensions));
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

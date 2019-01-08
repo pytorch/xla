@@ -5,9 +5,7 @@
 #include <functional>
 #include <numeric>
 
-namespace torch {
-namespace jit {
-
+namespace torch_xla {
 namespace {
 
 // For input_sizes and a potentially incomplete output_sizes, return a complete
@@ -45,12 +43,13 @@ std::vector<int64_t> GetCompleteShape(
   return complete_output_sizes;
 }
 
-// Finds a prim::ListConstruct operation by id in the graph of "parent".
-std::vector<const Value*> InputListAttr(const Node* parent, const size_t id) {
+// Finds a at::prim::ListConstruct operation by id in the graph of "parent".
+std::vector<const torch::jit::Value*> InputListAttr(
+    const torch::jit::Node* parent, const size_t id) {
   const auto nodes = parent->owningGraph()->block()->nodes();
-  std::vector<const Value*> result;
+  std::vector<const torch::jit::Value*> result;
   for (const auto node : nodes) {
-    if (node->kind() != prim::ListConstruct) {
+    if (node->kind() != at::prim::ListConstruct) {
       continue;
     }
     const auto node_outputs = node->outputs();
@@ -70,7 +69,7 @@ std::vector<const Value*> InputListAttr(const Node* parent, const size_t id) {
 
 }  // namespace
 
-xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
+xla::XlaOp BuildView(const torch::jit::Node* node, const xla::XlaOp& input) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_EQ(node_inputs.size(), 2);
   const auto node_outputs = node->outputs();
@@ -78,11 +77,11 @@ xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
   // Try to use the second argument of the operator as the target shape.
   std::vector<int64_t> output_sizes;
   switch (node->kind()) {
-    case aten::view:
-      output_sizes = node->get<std::vector<int64_t>>(attr::size).value();
+    case at::aten::view:
+      output_sizes = node->get<std::vector<int64_t>>(at::attr::size).value();
       break;
-    case aten::reshape:
-      output_sizes = node->get<std::vector<int64_t>>(attr::shape).value();
+    case at::aten::reshape:
+      output_sizes = node->get<std::vector<int64_t>>(at::attr::shape).value();
       break;
     default:
       XLA_ERROR() << "Unexpected node kind, must be view or reshape";
@@ -92,13 +91,14 @@ xla::XlaOp BuildView(const Node* node, const xla::XlaOp& input) {
   return xla::Reshape(input, XlaHelpers::I64List(output_sizes));
 }
 
-xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input) {
+xla::XlaOp BuildExpand(const torch::jit::Node* node, const xla::XlaOp& input) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_GE(node_inputs.size(), 1);
   auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   const auto node_outputs = node->outputs();
   XLA_CHECK_EQ(node_outputs.size(), 1);
-  const auto output_sizes = node->get<std::vector<int64_t>>(attr::size).value();
+  const auto output_sizes =
+      node->get<std::vector<int64_t>>(at::attr::size).value();
   // Adjust the rank of the input to match the rank of the output.
   XLA_CHECK_LE(input_sizes.size(), output_sizes.size());
   for (size_t i = 0; i < output_sizes.size() - input_sizes.size(); ++i) {
@@ -136,13 +136,14 @@ xla::XlaOp BuildExpand(const Node* node, const xla::XlaOp& input) {
                       XlaHelpers::I64List(output_sizes));
 }
 
-xla::XlaOp BuildStack(const Node* node,
-                      const std::function<xla::XlaOp(const Value*)>& node_op,
-                      xla::XlaBuilder* b) {
+xla::XlaOp BuildStack(
+    const torch::jit::Node* node,
+    const std::function<xla::XlaOp(const torch::jit::Value*)>& node_op,
+    xla::XlaBuilder* b) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_EQ(node_inputs.size(), size_t(2));
   const auto stack_inputs = InputListAttr(node, node_inputs[0]->unique());
-  const auto dim = node->get<int64_t>(attr::dim).value();
+  const auto dim = node->get<int64_t>(at::attr::dim).value();
   std::vector<xla::XlaOp> reshaped_inputs;
   // Reshape inputs along the dim axis.
   for (size_t i = 0; i < stack_inputs.size(); ++i) {
@@ -156,13 +157,14 @@ xla::XlaOp BuildStack(const Node* node,
   return xla::ConcatInDim(b, reshaped_inputs, dim);
 }
 
-xla::XlaOp BuildCat(const Node* node,
-                    const std::function<xla::XlaOp(const Value*)>& node_op,
-                    xla::XlaBuilder* b) {
+xla::XlaOp BuildCat(
+    const torch::jit::Node* node,
+    const std::function<xla::XlaOp(const torch::jit::Value*)>& node_op,
+    xla::XlaBuilder* b) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_EQ(node_inputs.size(), size_t(2));
   const auto stack_inputs = InputListAttr(node, node_inputs[0]->unique());
-  const auto dim = node->get<int64_t>(attr::dim).value();
+  const auto dim = node->get<int64_t>(at::attr::dim).value();
   std::vector<xla::XlaOp> cat_inputs;
   // Reshape inputs along the dim axis.
   for (size_t i = 0; i < stack_inputs.size(); ++i) {
@@ -172,9 +174,10 @@ xla::XlaOp BuildCat(const Node* node,
   return xla::ConcatInDim(b, cat_inputs, dim);
 }
 
-std::vector<xla::XlaOp> BuildChunk(const Node* node, const xla::XlaOp& input) {
-  int64_t chunks = node->get<int64_t>(attr::chunks).value();
-  int64_t dim = node->get<int64_t>(attr::dim).value();
+std::vector<xla::XlaOp> BuildChunk(const torch::jit::Node* node,
+                                   const xla::XlaOp& input) {
+  int64_t chunks = node->get<int64_t>(at::attr::chunks).value();
+  int64_t dim = node->get<int64_t>(at::attr::dim).value();
   XLA_CHECK_GE(dim, 0) << "Negative dimension specified for chunk operator";
   const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   XLA_CHECK_LT(dim, input_sizes.size())
@@ -193,5 +196,4 @@ std::vector<xla::XlaOp> BuildChunk(const Node* node, const xla::XlaOp& input) {
   return splits;
 }
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla

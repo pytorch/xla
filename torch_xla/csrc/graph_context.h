@@ -9,8 +9,7 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 
-namespace torch {
-namespace jit {
+namespace torch_xla {
 
 // Tracks an evolving XLA computation.
 class XlaGraphContext {
@@ -89,5 +88,4 @@ class XlaGraphNode {
   xla::int64 graph_size_ = 1;
 };
 
-}  // namespace jit
-}  // namespace torch
+}  // namespace torch_xla
