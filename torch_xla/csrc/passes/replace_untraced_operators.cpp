@@ -43,7 +43,8 @@ void ReplaceUntracedOperators(torch::jit::Block* block) {
           break;
         }
         const auto weight = node->namedInput(at::attr::weight);
-        const auto weight_type = weight->type()->expect<at::CompleteTensorType>();
+        const auto weight_type =
+            weight->type()->expect<at::CompleteTensorType>();
         const auto& weight_size = weight_type->sizes();
         const auto kernel_size = graph->insertConstant(
             std::vector<int64_t>{weight_size[2], weight_size[3]});

@@ -19,7 +19,8 @@ int64 GetEnvInt(const char* name, int64 defval) {
 int64 NowNs() {
   auto now = std::chrono::high_resolution_clock::now();
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
-      now.time_since_epoch()).count();
+             now.time_since_epoch())
+      .count();
 }
 
 }  // namespace sys_util
