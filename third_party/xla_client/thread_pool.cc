@@ -14,9 +14,9 @@ tensorflow::thread::ThreadPool* CreateThreadPool(const char* name,
   int64 num_threads =
       sys_util::GetEnvInt(cfg_env, tensorflow::port::NumSchedulableCPUs());
   tensorflow::ThreadOptions thread_options;
-  return new tensorflow::thread::ThreadPool(
-      tensorflow::Env::Default(), thread_options, name, num_threads,
-      /*low_latency_hint=*/false);
+  return new tensorflow::thread::ThreadPool(tensorflow::Env::Default(),
+                                            thread_options, name, num_threads,
+                                            /*low_latency_hint=*/false);
 }
 
 tensorflow::thread::ThreadPool* GetThreadPool() {

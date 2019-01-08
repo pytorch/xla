@@ -16,7 +16,8 @@ class Unique {
  public:
   std::pair<bool, const T&> set(const T& value) {
     if (value_) {
-      XLA_CHECK(C()(*value_, value)) << "'" << *value_ << "' vs '" << value << "'";
+      XLA_CHECK(C()(*value_, value))
+          << "'" << *value_ << "' vs '" << value << "'";
       return std::pair<bool, const T&>(false, *value_);
     }
     value_ = value;
