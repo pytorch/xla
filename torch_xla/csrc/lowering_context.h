@@ -1,0 +1,60 @@
+#pragma once
+
+#include <memory>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "ir.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+
+namespace torch_xla {
+namespace ir {
+
+class LoweringContext {
+ public:
+  xla::XlaBuilder* builder() { return &builder_; }
+
+  // If a parameter associated with data has already been declared, it will be
+  // returned. Otherwise a new one will be created, associated with the tensor
+  // held in data.
+  xla::XlaOp GetParameter(
+      const std::shared_ptr<xla::ComputationClient::Data>& data);
+
+  // Retrieves the vector holding all the tensors associated with the parameter
+  // instructions which have been created.
+  std::vector<xla::ComputationClient::Data*> GetParametersData() const;
+
+  // Adds the output of a given operation to the result tuple.
+  xla::int64 AddResult(xla::XlaOp op);
+
+  // Assigns the given XLA operation to the specified output. As outputs are
+  // lowered in a post-order fashion, later nodes should always find their
+  // operands among the emitted outputs.
+  void AssignOutputOp(const Output& output, xla::XlaOp op);
+
+  // Retrieves the lowered operation for a output.
+  xla::XlaOp GetOutputOp(const Output& output) const;
+
+  // Build the XLA computation capturing all the operations created with the
+  // embedded XLA builder (returned by the builder() API).
+  xla::StatusOr<xla::XlaComputation> Build();
+
+  // Build the XLA computation capturing all the operations created with the
+  // embedded XLA builder (returned by the builder() API).
+  // Uses root as return value forthe computation. It is an error to use this
+  // API after having called the AddResult() API.
+  xla::StatusOr<xla::XlaComputation> Build(const xla::XlaOp& root);
+
+ private:
+  xla::XlaBuilder builder_;
+  std::vector<std::shared_ptr<xla::ComputationClient::Data>> parameters_;
+  std::unordered_map<xla::ComputationClient::Data*, xla::XlaOp> parameters_map_;
+  std::vector<xla::XlaOp> root_tuple_;
+  OutputMap<xla::XlaOp> emitted_outputs_;
+};
+
+}  // namespace ir
+}  // namespace torch_xla
