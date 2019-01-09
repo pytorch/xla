@@ -573,7 +573,6 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
   }
   const auto return_node = graph_->return_node();
   const auto node_inputs = return_node->inputs();
-  // TODO: tighten the id check for returned tuples.
   if (return_node->kind() != at::prim::Return || node_inputs.empty()) {
     XLA_ERROR() << "Unexpected end of graph";
   }
