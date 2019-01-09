@@ -19,7 +19,7 @@ c10::optional<torch::jit::NodeKind> GetInPlaceOpReplacement(
   }
   // TODO(asuhan): no interned string for at::aten::threshold_. Should patch
   // PyTorch core instead.
-  if (std::string(node->kind().toQualString()) == "at::aten::threshold_") {
+  if (std::string(node->kind().toQualString()) == "aten::threshold_") {
     return at::aten::threshold;
   }
   return c10::nullopt;
