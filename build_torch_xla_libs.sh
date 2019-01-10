@@ -20,11 +20,9 @@ if [ "$CMD" == "clean" ]; then
   bazel clean
   popd
 else
-  cp -r -f $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
+  cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
-  git reset --hard
-  git clean -f
   bazel build --define framework_shared_object=false -c opt "${OPTS[@]}" \
     //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
 
