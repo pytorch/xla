@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include <ATen/core/interned_strings.h>
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/lib/gtl/inlined_vector.h"
@@ -95,6 +96,31 @@ struct NodeOperand {
   size_t index = 0;
 };
 
+// The Kind of operation a Node can be associated to.
+struct OpKind {
+  explicit OpKind(c10::Symbol op) : op(std::move(op)) {}
+
+  bool operator==(const OpKind& rhs) const { return op == rhs.op; }
+  bool operator!=(const OpKind& rhs) const { return !operator==(rhs); }
+  bool operator<(const OpKind& rhs) const {
+    return c10::unique_t(op) < c10::unique_t(rhs.op);
+  }
+
+  std::string ToString() const { return op.toQualString(); }
+
+  // Retrieves an existing operation object, or creates a new one. Operations
+  // that are specific to the XLA side, should live within the 'xla::'
+  // namespace.
+  static OpKind Get(const std::string& name);
+
+  c10::Symbol op;
+};
+
+inline std::ostream& operator<<(std::ostream& stream, const OpKind& op) {
+  stream << op.ToString();
+  return stream;
+}
+
 // A node in the graph. Nodes for operations which requires extra data to be
 // stored for lowering, should inherit from this class and add operation
 // specific member there. For example, a constant might create a new
@@ -103,16 +129,15 @@ struct NodeOperand {
 // handle in it.
 class Node {
  public:
-  // Creates a new node with the given op name. The op name is a unique
-  // identifier for the operation, which in the PyTorch case will be the full
-  // operation signature which is currently used throughout the code base.
-  // The num_outputs tells how many outputs a given operation generates.
-  Node(std::string op, tensorflow::gtl::ArraySlice<const NodeOperand> operands,
+  // Creates a new node with the given op name. The op is a unique identifier
+  // for the operation. The num_outputs tells how many outputs a given operation
+  // generates.
+  Node(OpKind op, tensorflow::gtl::ArraySlice<const NodeOperand> operands,
        size_t num_outputs = 1);
 
   virtual ~Node();
 
-  const std::string& op() const { return op_; }
+  const OpKind& op() const { return op_; }
 
   size_t num_outputs() const { return num_outputs_; }
 
@@ -136,8 +161,8 @@ class Node {
 
   void RemoveUse(const Use& use) { uses_.erase(use); }
 
-  // The name/ID of the operation captured by this node.
-  const std::string op_;
+  // The ID of the operation captured by this node.
+  const OpKind op_;
   const size_t num_outputs_ = 1;
   // A node holds a real reference to its operands.
   std::vector<NodePtr> operands_;
