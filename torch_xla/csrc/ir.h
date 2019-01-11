@@ -61,7 +61,8 @@ struct Output {
   };
 
   Output() = default;
-  explicit Output(Node* node, size_t index = 0) : node(node), index(index) {}
+  explicit Output(const Node* node, size_t index = 0)
+      : node(node), index(index) {}
 
   bool operator==(const Output& rhs) const {
     return node == rhs.node && index == rhs.index;
@@ -71,7 +72,7 @@ struct Output {
   std::string ToString() const;
 
   // The node providing the output.
-  Node* node = nullptr;
+  const Node* node = nullptr;
   // The index in the node's output this output refers to.
   size_t index = 0;
 };
@@ -152,6 +153,9 @@ class Node {
   virtual std::string ToString() const;
 
   virtual XlaOpVector Lower(LoweringContext* loctx) const;
+
+ protected:
+  XlaOpVector ReturnOp(xla::XlaOp op, LoweringContext* loctx) const;
 
  private:
   // Adds node's index output number as operand.
