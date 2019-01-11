@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "lowering_context.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
@@ -43,8 +44,7 @@ Node::Node(OpKind op, tensorflow::gtl::ArraySlice<const NodeOperand> operands,
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
-    operands_as_outputs_[i].node->RemoveUse(
-        Use(this, i, operands_as_outputs_[i].index));
+    operands_[i]->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
   }
 }
 
@@ -58,7 +58,7 @@ void Node::AddOperand(NodePtr node, size_t index) {
 void Node::ReplaceOperand(size_t operand_no, NodePtr node, size_t index) {
   XLA_CHECK_LT(index, node->num_outputs());
   Output* output = &operands_as_outputs_.at(operand_no);
-  output->node->RemoveUse(Use(this, operand_no, output->index));
+  operands_[operand_no]->RemoveUse(Use(this, operand_no, output->index));
   node->AddUse(Use(this, operand_no, index));
   *output = Output(node.get(), index);
   operands_[operand_no] = std::move(node);
@@ -71,6 +71,11 @@ void Node::ReplaceAllUsesWith(NodePtr node, size_t index) {
   for (auto& use : current_uses) {
     use.node->ReplaceOperand(use.operand_index, node, index);
   }
+}
+
+XlaOpVector Node::ReturnOp(xla::XlaOp op, LoweringContext* loctx) const {
+  loctx->AssignOutputOp(Output(this), op);
+  return XlaOpVector({std::move(op)});
 }
 
 std::string Node::ToString() const {

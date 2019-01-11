@@ -42,6 +42,7 @@ def _check_env_flag(name, default=''):
 
 
 torch_xla_sources = (glob.glob('torch_xla/csrc/*.cpp') +
+                     glob.glob('torch_xla/csrc/ops/*.cpp') +
                      glob.glob('torch_xla/csrc/passes/*.cpp'))
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -61,6 +62,10 @@ pytorch_source_path = os.getenv('PYTORCH_SOURCE_PATH',
 third_party_path = os.path.join(base_dir, 'third_party')
 
 include_dirs = [
+    os.path.join(base_dir, 'torch_xla', 'csrc'),
+    os.path.join(base_dir, 'torch_xla', 'csrc', 'ops'),
+]
+include_dirs += [
     third_party_path + '/tensorflow/bazel-tensorflow',
     third_party_path + '/tensorflow/bazel-genfiles',
     third_party_path +
