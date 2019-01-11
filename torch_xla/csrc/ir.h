@@ -99,6 +99,7 @@ struct NodeOperand {
 
 // The Kind of operation a Node can be associated to.
 struct OpKind {
+  OpKind() = default;
   explicit OpKind(c10::Symbol op) : op(std::move(op)) {}
 
   bool operator==(const OpKind& rhs) const { return op == rhs.op; }
