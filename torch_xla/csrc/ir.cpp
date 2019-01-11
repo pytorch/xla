@@ -8,9 +8,8 @@ namespace torch_xla {
 namespace ir {
 
 bool Use::operator<(const Use& rhs) const {
-  int cmp = node->op().compare(rhs.node->op());
-  if (cmp != 0) {
-    return cmp < 0;
+  if (node->op() != rhs.node->op()) {
+    return node->op() < rhs.node->op();
   }
   if (operand_index != rhs.operand_index) {
     return operand_index < rhs.operand_index;
@@ -30,8 +29,11 @@ std::string Output::ToString() const {
   return ss.str();
 }
 
-Node::Node(std::string op,
-           tensorflow::gtl::ArraySlice<const NodeOperand> operands,
+OpKind OpKind::Get(const std::string& name) {
+  return OpKind(c10::Symbol::fromQualString(name));
+}
+
+Node::Node(OpKind op, tensorflow::gtl::ArraySlice<const NodeOperand> operands,
            size_t num_outputs)
     : op_(std::move(op)), num_outputs_(num_outputs) {
   for (auto& operand : operands) {
