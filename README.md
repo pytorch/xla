@@ -9,16 +9,16 @@ To build:
   cd pytorch/
   ```
 
-* Checkout the following commit ID specified in xla/.torch_commit_id:
-
-  ```
-  git checkout $(cat xla/.torch_commit_id)
-  ```
-
 * Clone the _PyTorch/XLA_ repo:
 
   ```
   git clone --recursive https://github.com/pytorch/xla.git
+  ```
+
+* Checkout the following commit ID specified in xla/.torch_commit_id:
+
+  ```
+  git checkout $(cat xla/.torch_commit_id)
   ```
 
 * Apply the `pytorch.patch` to the current `xla` code. From within the _pytorch_ source folder:
@@ -33,12 +33,14 @@ To build:
   sudo apt-get install clang-7 clang++-7
   export CC=clang-7 CXX=clang++-7
   ```
-  
+
 * Build _PyTorch_ from source following the regular [instructions](https://github.com/pytorch/pytorch#from-source).
 
   ```
   python setup.py install
   ```
+
+* Install Bazel following the [instructions](https://docs.bazel.build/versions/master/install.html)
 
 * Build the _PyTorch/XLA_ source:
 
@@ -55,13 +57,13 @@ To run the tests, follow __one__ of the options below:
   export XLA_USE_XRT=1 XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
   export XRT_WORKERS="localservice:0;grpc://localhost:40934"
   ```
-  
+
   Select any free TCP port you prefer instead of 40934 (totally arbitrary).
 
 * Run on Cloud TPU using the XRT client, use one of the following:
 
   - Set the XRT_TPU_CONFIG environment variable:
-  
+
     ```
     export XRT_TPU_CONFIG="tpu_worker;0;<IP of the TPU node>:8470"
     ```
