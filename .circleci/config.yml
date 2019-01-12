@@ -1,0 +1,54 @@
+version: 2
+
+update_submodule: &update_submodule
+  name: Update Submodule
+  command: |
+    git submodule sync
+    git submodule update --recursive --init
+
+linux_default: &linux_default
+  resource_class: large
+  machine:
+    image: default
+  steps:
+  - checkout
+  - run:
+      <<: *update_submodule
+  - run:
+      name: Launch Docker Container
+      no_output_timeout: "1h"
+      command: |
+        set -e
+        export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_ECR_READ_WRITE}
+        export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_FOR_ECR_READ_WRITE}
+        sudo pip install awscli==1.16.35 -qqq
+        eval $(aws ecr get-login --region us-east-1 --no-include-email)
+        docker pull ${DOCKER_IMAGE}
+        sudo pkill -SIGHUP dockerd
+        WORKDIR=/var/lib/jenkins/workspace
+        pid=$(docker run -t -d -w $WORKDIR ${DOCKER_IMAGE})
+        docker cp /home/circleci/project/. "$pid:$WORKDIR"
+        docker exec -u jenkins ${pid} sudo chown -R jenkins ${WORKDIR}
+        echo ${pid} > .docker_pid
+  - run:
+      name: Build
+      no_output_timeout: "1h"
+      command: |
+        docker exec -e CIRCLE_JOB=${CIRCLE_JOB} -e SCCACHE_BUCKET=${SCCACHE_BUCKET} -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_SCCACHE_S3_BUCKET} -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_FOR_SCCACHE_S3_BUCKET} -u jenkins $(cat .docker_pid) .circleci/build.sh
+  - run:
+      name: Test
+      no_output_timeout: "1h"
+      command: |
+        docker exec -e CIRCLE_JOB=${CIRCLE_JOB} -u jenkins $(cat .docker_pid) .circleci/test.sh
+
+jobs:
+  pytorch_xla_linux_trusty_py3_6_gcc5_4:
+    environment:
+      DOCKER_IMAGE: "308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/pytorch-linux-trusty-py3.6-gcc5.4:278"
+    <<: *linux_default
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - pytorch_xla_linux_trusty_py3_6_gcc5_4
