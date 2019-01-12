@@ -41,7 +41,7 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
   const auto status = ConvBackpropComputeDimensionsV2(
       "thnn_conv2d_backward", num_spatial_dims, input_shape, filter_shape,
       out_backprop_shape, dilations, strides, tensorflow::Padding::VALID,
-      tensorflow::TensorFormat::FORMAT_NCHW, &dims);
+      /*explicit_paddings=*/{}, tensorflow::TensorFormat::FORMAT_NCHW, &dims);
   XLA_CHECK_OK(status);
 
   constexpr int batch_dim = 0;
@@ -144,7 +144,7 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
   const auto status = ConvBackpropComputeDimensionsV2(
       "thnn_conv2d_backward", num_spatial_dims, activations_shape, filter_shape,
       out_backprop_shape, dilations, strides, tensorflow::Padding::VALID,
-      tensorflow::TensorFormat::FORMAT_NCHW, &dims);
+      /*explicit_paddings=*/{}, tensorflow::TensorFormat::FORMAT_NCHW, &dims);
   XLA_CHECK(status.ok()) << status.error_message();
 
   // The filter gradients are computed by a convolution of the input
