@@ -3,20 +3,8 @@
 namespace torch_xla {
 namespace ir {
 namespace ops {
-namespace {
 
-const XlaOpsArena* CreateOps() {
-  XlaOpsArena* xops = new XlaOpsArena();
-  xops->device_data = OpKind::Get("xla::device_data");
-  return xops;
-}
-
-}  // namespace
-
-const XlaOpsArena& XlaOps() {
-  static const XlaOpsArena* xops = CreateOps();
-  return *xops;
-}
+const OpKindWrapper xla_device_data("xla::device_data");
 
 }  // namespace ops
 }  // namespace ir
