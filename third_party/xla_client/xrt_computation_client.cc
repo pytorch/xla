@@ -58,9 +58,23 @@ XrtComputationClient::TransferToServer(
       const string& xrt_device = TorchDeviceToXrtDevice(device);
       tensorflow::Tensor tensor(
           XlaTypeToDataType(literal.shape().element_type()),
-          tensorflow::TensorShape(literal.shape().dimensions()));
+          MakeEquivalentTensorShape(literal.shape()));
       auto tdata = tensor.tensor_data();
       XLA_CHECK_EQ(tdata.size(), literal.size_bytes());
+      // This is an hack.
+      // The Tensor interface does not have an API to fetch the untyped data, so
+      // one would need to have a switch on dtype() by calling its flat<T>() API
+      // depending on type. Since we have built the tensor, and since
+      // XlaTypeToDataType() only maps types which are memcpy()-able, we use
+      // tensor_data() and const-cast its pointer. And the XLA_CHECK_EQ() above
+      // prevents any surprises.
+      // Ideally we would have the to-server API based on Tensor, but since they
+      // do not have layouts, we would need an extra layout parameter. Also, the
+      // from-server API need to return a proper layout as well, for which a
+      // Literal is perfect.
+      // In order to avoid API asymmetries, we create a Tensor from Literal
+      // here. Would be nice if Tensor supported a pointer-borrowing interface
+      // (like the Literal).
       std::memcpy(const_cast<char*>(tdata.data()), literal.untyped_data(),
                   literal.size_bytes());
 
@@ -863,12 +877,14 @@ const XrtSession::CachedNode& XrtComputationClient::GetAllocateNode(
       session->GetNodeCache(XrtSession::GetCacheKey(ss.str(), device));
   if (cache->Empty()) {
     tensorflow::TensorShape tensor_shape(shape.dimensions());
+    tensorflow::TensorShape equiv_tensor_shape =
+        MakeEquivalentTensorShape(shape);
     std::vector<int> layout =
         util::GetArrayAsVector<int>(shape.layout().minor_to_major());
     std::vector<tensorflow::ops::Placeholder> holders(
         {tensorflow::ops::Placeholder(
             scope, XlaTypeToDataType(shape.element_type()),
-            tensorflow::ops::Placeholder::Shape(tensor_shape))});
+            tensorflow::ops::Placeholder::Shape(equiv_tensor_shape))});
     tensorflow::ops::XRTAllocateFromTensor::Attrs alloc_attrs =
         tensorflow::ops::XRTAllocateFromTensor::Layouts(layout);
     cache->Add(std::make_shared<XrtSession::CachedNode>(
@@ -959,6 +975,13 @@ tensorflow::DataType XrtComputationClient::XlaTypeToDataType(
   }
   XLA_ERROR() << "Unable to convert XLA type " << dtype
               << " to tensorflow DataType";
+}
+
+tensorflow::TensorShape XrtComputationClient::MakeEquivalentTensorShape(
+    const Shape& shape) {
+  Shape eqiv_shape =
+      ShapeUtil::MakeShapeWithDescendingLayoutAndSamePhysicalLayout(shape);
+  return tensorflow::TensorShape(eqiv_shape.dimensions());
 }
 
 std::vector<std::vector<ComputationClient::Data*>>
