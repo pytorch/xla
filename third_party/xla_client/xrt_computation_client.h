@@ -338,6 +338,8 @@ class XrtComputationClient : public ComputationClient {
   // Converts an XLA data type to a tensorflow data type.
   static tensorflow::DataType XlaTypeToDataType(PrimitiveType dtype);
 
+  static tensorflow::TensorShape MakeEquivalentTensorShape(const Shape& shape);
+
   // Builds an argument vector usable in a replicated context, out of a single
   // replica argument vector. Essentially turns a [N] into a [1][N].
   static std::vector<std::vector<Data*>> BuildParallelArguments(
