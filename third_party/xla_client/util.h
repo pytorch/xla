@@ -58,6 +58,16 @@ std::vector<typename C::value_type::element_type*> GetSharedPointers(
   return pointers;
 }
 
+template <typename T, typename C>
+std::vector<T> GetArrayAsVector(const C& array) {
+  std::vector<T> elements;
+  elements.reserve(array.size());
+  for (auto& value : array) {
+    elements.push_back(static_cast<T>(value));
+  }
+  return elements;
+}
+
 }  // namespace util
 }  // namespace xla
 
