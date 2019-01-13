@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <functional>
+#include <sstream>
 
 #include "absl/strings/str_cat.h"
 #include "absl/types/optional.h"
@@ -55,9 +56,13 @@ XrtComputationClient::TransferToServer(
 
       string device = GetEffectiveDevice(literals[i].device);
       const string& xrt_device = TorchDeviceToXrtDevice(device);
-      xrt::XLAAllocation alloc;
-      *alloc.mutable_value() = literal.ToProto();
-      tensorflow::Input::Initializer feed_value(alloc.SerializeAsString());
+      tensorflow::Tensor tensor(
+          XlaTypeToDataType(literal.shape().element_type()),
+          tensorflow::TensorShape(literal.shape().dimensions()));
+      auto tdata = tensor.tensor_data();
+      XLA_CHECK_EQ(tdata.size(), literal.size_bytes());
+      std::memcpy(const_cast<char*>(tdata.data()), literal.untyped_data(),
+                  literal.size_bytes());
 
       {
         std::lock_guard<std::mutex> slock(lock);
@@ -66,9 +71,8 @@ XrtComputationClient::TransferToServer(
         tensorflow::Scope device_scope =
             session->root()->WithDevice(xrt_device);
         const XrtSession::CachedNode& cached_node =
-            GetAllocateNode(session, device_scope, device);
-        session_work->feed_inputs.insert(
-            {cached_node.holders[0], std::move(feed_value)});
+            GetAllocateNode(session, device_scope, device, literal.shape());
+        session_work->feed_inputs.insert({cached_node.holders[0], tensor});
         session_work->outputs_handles.push_back(cached_node.outputs[0]);
         session_work->index_mapping.push_back(i);
 
@@ -849,16 +853,28 @@ const XrtSession::CachedNode& XrtComputationClient::GetReadNode(
 }
 
 const XrtSession::CachedNode& XrtComputationClient::GetAllocateNode(
-    XrtSession* session, const tensorflow::Scope& scope,
-    const string& device) const {
-  static const string op_name("XrtAllocate");
+    XrtSession* session, const tensorflow::Scope& scope, const string& device,
+    const Shape& shape) const {
+  // Create the proper key for the allocation node. Since the node has shape and
+  // layouts attributes, these need to be included within the key.
+  std::stringstream ss;
+  ss << "XRTAllocateFromTensor(" << shape << ")";
   XrtSession::NodeCache* cache =
-      session->GetNodeCache(XrtSession::GetCacheKey(op_name, device));
+      session->GetNodeCache(XrtSession::GetCacheKey(ss.str(), device));
   if (cache->Empty()) {
+    tensorflow::TensorShape tensor_shape(shape.dimensions());
+    std::vector<int> layout =
+        util::GetArrayAsVector<int>(shape.layout().minor_to_major());
     std::vector<tensorflow::ops::Placeholder> holders(
-        {tensorflow::ops::Placeholder(scope, tensorflow::DT_STRING)});
+        {tensorflow::ops::Placeholder(
+            scope, XlaTypeToDataType(shape.element_type()),
+            tensorflow::ops::Placeholder::Shape(tensor_shape))});
+    tensorflow::ops::XRTAllocateFromTensor::Attrs alloc_attrs =
+        tensorflow::ops::XRTAllocateFromTensor::Layouts(layout);
     cache->Add(std::make_shared<XrtSession::CachedNode>(
-        tensorflow::ops::XRTAllocate(scope, holders[0]), std::move(holders)));
+        tensorflow::ops::XRTAllocateFromTensor(scope, {holders[0].output},
+                                               {tensor_shape}, alloc_attrs),
+        std::move(holders)));
   }
   return cache->Get();
 }
@@ -913,6 +929,36 @@ const XrtSession::CachedNode& XrtComputationClient::GetSubTupleNode(
         std::move(holders)));
   }
   return cache->Get();
+}
+
+tensorflow::DataType XrtComputationClient::XlaTypeToDataType(
+    PrimitiveType dtype) {
+  switch (dtype) {
+    case S8:
+      return tensorflow::DT_INT8;
+    case U8:
+      return tensorflow::DT_UINT8;
+    case S16:
+      return tensorflow::DT_INT16;
+    case U16:
+      return tensorflow::DT_UINT16;
+    case S32:
+      return tensorflow::DT_INT32;
+    case U32:
+      return tensorflow::DT_UINT32;
+    case S64:
+      return tensorflow::DT_INT64;
+    case U64:
+      return tensorflow::DT_UINT64;
+    case F32:
+      return tensorflow::DT_FLOAT;
+    case BF16:
+      return tensorflow::DT_BFLOAT16;
+    default:
+      break;
+  }
+  XLA_ERROR() << "Unable to convert XLA type " << dtype
+              << " to tensorflow DataType";
 }
 
 std::vector<std::vector<ComputationClient::Data*>>
