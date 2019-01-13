@@ -27,6 +27,7 @@
 #include "tensorflow/compiler/xrt/cc/ops/xrt_state_ops.h"
 #include "tensorflow/compiler/xrt/xrt.pb.h"
 #include "tensorflow/contrib/tpu/proto/topology.pb.h"
+#include "tensorflow/core/framework/tensor.h"
 
 namespace xla {
 
@@ -282,17 +283,19 @@ class XrtComputationClient : public ComputationClient {
                                             const tensorflow::Scope& scope,
                                             const string& device) const;
 
-  // Creates an XRTAllocate node:
+  // Creates an XRTAllocateFromTensor node for creating a device tensor with
+  // the given shape and layout:
   //
-  //  XRTAllocate(
+  //  XRTAllocateFromTensor(
   //    holders[0]
   //  )
   //
   // With:
-  //  holders[0] = xrt::XLAAllocation place-holder (DT_STRING)
+  //  holders[0] = Tensor place-holder (DT_* - depends on shape type)
   const XrtSession::CachedNode& GetAllocateNode(XrtSession* session,
                                                 const tensorflow::Scope& scope,
-                                                const string& device) const;
+                                                const string& device,
+                                                const Shape& shape) const;
 
   // Creates an XRTReleaseAllocationHandle node:
   //
@@ -331,6 +334,9 @@ class XrtComputationClient : public ComputationClient {
   const XrtSession::CachedNode& GetSubTupleNode(XrtSession* session,
                                                 const tensorflow::Scope& scope,
                                                 const string& device) const;
+
+  // Converts an XLA data type to a tensorflow data type.
+  static tensorflow::DataType XlaTypeToDataType(PrimitiveType dtype);
 
   // Builds an argument vector usable in a replicated context, out of a single
   // replica argument vector. Essentially turns a [N] into a [1][N].
