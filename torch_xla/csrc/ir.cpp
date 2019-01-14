@@ -35,8 +35,8 @@ OpKind OpKind::Get(const std::string& name) {
 }
 
 Node::Node(OpKind op, tensorflow::gtl::ArraySlice<const NodeOperand> operands,
-           size_t num_outputs)
-    : op_(std::move(op)), num_outputs_(num_outputs) {
+           xla::Shape shape, size_t num_outputs)
+    : op_(std::move(op)), num_outputs_(num_outputs), shape_(std::move(shape)) {
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
   }
