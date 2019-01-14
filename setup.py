@@ -99,7 +99,8 @@ def make_relative_rpath(path):
     return '-Wl,-rpath,$ORIGIN/' + path
 
 
-extra_compile_args = []
+extra_compile_args = ['-Wno-macro-redefined', '-Wno-sign-compare',
+                      '-Wno-return-std-move', '-Wno-deprecated-declarations', '-Wno-return-type']
 
 if DEBUG:
   if IS_WINDOWS:
