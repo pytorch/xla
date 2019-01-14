@@ -135,13 +135,15 @@ class Node {
   // for the operation. The num_outputs tells how many outputs a given operation
   // generates.
   Node(OpKind op, tensorflow::gtl::ArraySlice<const NodeOperand> operands,
-       size_t num_outputs = 1);
+       xla::Shape shape, size_t num_outputs = 1);
 
   virtual ~Node();
 
   const OpKind& op() const { return op_; }
 
   size_t num_outputs() const { return num_outputs_; }
+
+  const xla::Shape& shape() const { return shape_; }
 
   const std::vector<Output>& operands() const { return operands_as_outputs_; }
 
@@ -169,6 +171,7 @@ class Node {
   // The ID of the operation captured by this node.
   const OpKind op_;
   const size_t num_outputs_ = 1;
+  const xla::Shape shape_;
   // A node holds a real reference to its operands.
   std::vector<NodePtr> operands_;
   // Outputs do not hold references on the nodes, and neither do the uses, since
