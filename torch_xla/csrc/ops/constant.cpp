@@ -9,7 +9,8 @@ namespace ir {
 namespace ops {
 
 Constant::Constant(xla::Literal value)
-    : Node(OpKind(at::prim::Constant), {}), value_(std::move(value)) {}
+    : Node(OpKind(at::prim::Constant), {}, value.shape()),
+      value_(std::move(value)) {}
 
 std::string Constant::ToString() const {
   std::stringstream ss;
