@@ -879,8 +879,8 @@ const XrtSession::CachedNode& XrtComputationClient::GetAllocateNode(
     tensorflow::TensorShape tensor_shape(shape.dimensions());
     tensorflow::TensorShape equiv_tensor_shape =
         MakeEquivalentTensorShape(shape);
-    std::vector<int> layout =
-        util::GetArrayAsVector<int>(shape.layout().minor_to_major());
+    std::vector<int> layout(shape.layout().minor_to_major().begin(),
+                            shape.layout().minor_to_major().end());
     std::vector<tensorflow::ops::Placeholder> holders(
         {tensorflow::ops::Placeholder(
             scope, XlaTypeToDataType(shape.element_type()),
