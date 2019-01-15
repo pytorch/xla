@@ -21,7 +21,7 @@ Scalar::Scalar(double value, xla::PrimitiveType type)
 
 std::string Scalar::ToString() const {
   std::stringstream ss;
-  ss << value_;
+  ss << Node::ToString() << " = " << value_;
   return ss.str();
 }
 
