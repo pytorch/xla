@@ -14,7 +14,7 @@ DeviceData::DeviceData(std::shared_ptr<xla::ComputationClient::Data> data)
 
 std::string DeviceData::ToString() const {
   std::stringstream ss;
-  ss << "DeviceData(" << data_->device() << ", " << data_->shape() << ")";
+  ss << Node::ToString() << " device=" << data_->device();
   return ss.str();
 }
 

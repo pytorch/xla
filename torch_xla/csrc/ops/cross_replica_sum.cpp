@@ -12,6 +12,24 @@ CrossReplicaSum::CrossReplicaSum(const NodeOperand& operand,
     : Node(xla_cross_replica_sum, {operand}, operand.node->shape()),
       groups_(std::move(groups)) {}
 
+std::string CrossReplicaSum::ToString() const {
+  std::stringstream ss;
+  ss << Node::ToString() << " groups=(";
+  for (size_t i = 0; i < groups_.size(); ++i) {
+    const auto& group = groups_[i];
+    ss << (i == 0 ? "(" : ",(");
+    for (size_t j = 0; j < group.size(); ++j) {
+      if (j > 0) {
+        ss << ",";
+      }
+      ss << group[j];
+    }
+    ss << ")";
+  }
+  ss << ")";
+  return ss.str();
+}
+
 XlaOpVector CrossReplicaSum::Lower(LoweringContext* loctx) const {
   std::vector<xla::ReplicaGroup> crs_groups;
   for (auto& group : groups_) {
