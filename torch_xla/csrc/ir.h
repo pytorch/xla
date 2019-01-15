@@ -152,6 +152,8 @@ class Node {
 
   const std::set<Use>& uses() const { return uses_; }
 
+  size_t graph_size() const { return graph_size_; }
+
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
 
   void ReplaceAllUsesWith(NodePtr node, size_t index = 0);
@@ -181,6 +183,8 @@ class Node {
   std::vector<Output> operands_as_outputs_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
+  // An estimation of the number of nodes behind this node.
+  size_t graph_size_ = 1;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const Node& node) {
