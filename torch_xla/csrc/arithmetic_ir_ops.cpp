@@ -16,7 +16,7 @@ NodePtr operator+(const NodePtr& node1, const NodePtr& node2) {
     return node.ReturnOp(XlaHelpers::PromotedAdd(op0, op1), loctx);
   };
   return ops::GenericOp(
-      OpKind(at::aten::mul), OpList{NodeOperand(node1), NodeOperand(node2)},
+      OpKind(at::aten::add), OpList{NodeOperand(node1), NodeOperand(node2)},
       XlaHelpers::GetPromotedShape(node1->shape(), node2->shape()),
       std::move(lower_fn));
 }
