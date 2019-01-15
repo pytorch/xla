@@ -23,7 +23,7 @@ class Util {
   // Computes the post order from the given node, without using recursion. The
   // emission map can be used as saved state, for multiple separate calls to
   // this API. The returned post-order can be empty if the node has already been
-  // emitted inside the emission map. An error is generated if a cyclic loop is
+  // emitted inside the emission map. An error is generated if a loop is
   // detected.
   static std::vector<const Node*> ComputePostOrder(const Node* node,
                                                    EmissionMap* emap);
