@@ -29,6 +29,10 @@ class OpKindWrapper {
 };
 
 extern const OpKindWrapper xla_device_data;
+extern const OpKindWrapper xla_add;
+extern const OpKindWrapper xla_sub;
+extern const OpKindWrapper xla_mul;
+extern const OpKindWrapper xla_div;
 
 }  // namespace ops
 }  // namespace ir
