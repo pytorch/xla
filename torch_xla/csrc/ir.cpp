@@ -34,8 +34,7 @@ OpKind OpKind::Get(const std::string& name) {
   return OpKind(c10::Symbol::fromQualString(name));
 }
 
-Node::Node(OpKind op, tensorflow::gtl::ArraySlice<const NodeOperand> operands,
-           xla::Shape shape, size_t num_outputs)
+Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs)
     : op_(std::move(op)), num_outputs_(num_outputs), shape_(std::move(shape)) {
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
@@ -80,7 +79,7 @@ XlaOpVector Node::ReturnOp(xla::XlaOp op, LoweringContext* loctx) const {
 
 std::string Node::ToString() const {
   std::stringstream ss;
-  ss << op();
+  ss << shape() << " " << op();
   if (num_outputs() > 1) {
     ss << ";n=" << num_outputs();
   }

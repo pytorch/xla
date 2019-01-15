@@ -123,6 +123,8 @@ inline std::ostream& operator<<(std::ostream& stream, const OpKind& op) {
   return stream;
 }
 
+using OpList = tensorflow::gtl::ArraySlice<const NodeOperand>;
+
 // A node in the graph. Nodes for operations which requires extra data to be
 // stored for lowering, should inherit from this class and add operation
 // specific member there. For example, a constant might create a new
@@ -134,8 +136,7 @@ class Node {
   // Creates a new node with the given op name. The op is a unique identifier
   // for the operation. The num_outputs tells how many outputs a given operation
   // generates.
-  Node(OpKind op, tensorflow::gtl::ArraySlice<const NodeOperand> operands,
-       xla::Shape shape, size_t num_outputs = 1);
+  Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs = 1);
 
   virtual ~Node();
 
@@ -147,6 +148,8 @@ class Node {
 
   const std::vector<Output>& operands() const { return operands_as_outputs_; }
 
+  const Output& operand(size_t i) const { return operands_as_outputs_.at(i); }
+
   const std::set<Use>& uses() const { return uses_; }
 
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
@@ -157,7 +160,6 @@ class Node {
 
   virtual XlaOpVector Lower(LoweringContext* loctx) const;
 
- protected:
   XlaOpVector ReturnOp(xla::XlaOp op, LoweringContext* loctx) const;
 
  private:
