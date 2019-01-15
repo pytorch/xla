@@ -41,5 +41,10 @@ std::vector<const Node*> Util::ComputePostOrder(const Node* node,
   return post_order;
 }
 
+std::vector<const Node*> Util::ComputePostOrder(const Node* node) {
+  EmissionMap emap;
+  return ComputePostOrder(node, &emap);
+}
+
 }  // namespace ir
 }  // namespace torch_xla
