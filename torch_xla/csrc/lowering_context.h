@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -16,7 +17,7 @@ namespace ir {
 
 class LoweringContext {
  public:
-  LoweringContext() : builder_("LoweringContext") {}
+  LoweringContext(const std::string& name) : builder_(name) {}
 
   xla::XlaBuilder* builder() { return &builder_; }
 
