@@ -5,9 +5,10 @@
 namespace torch_xla {
 namespace ir {
 
-std::vector<Node*> Util::ComputePostOrder(Node* node, EmissionMap* emap) {
-  std::vector<Node*> post_order;
-  std::vector<Node*> queue;
+std::vector<const Node*> Util::ComputePostOrder(const Node* node,
+                                                EmissionMap* emap) {
+  std::vector<const Node*> post_order;
+  std::vector<const Node*> queue;
   queue.push_back(node);
   while (!queue.empty()) {
     node = queue.back();
@@ -29,7 +30,7 @@ std::vector<Node*> Util::ComputePostOrder(Node* node, EmissionMap* emap) {
         XLA_CHECK(oit != emap->end() && oit->second == kEmitted)
             << "Graph loop found at " << *output.node;
       }
-      emit_status_[node] = kEmitted;
+      (*emap)[node] = kEmitted;
       post_order.push_back(node);
       queue.pop_back();
     } else {

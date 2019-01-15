@@ -12,7 +12,7 @@ CrossReplicaSum::CrossReplicaSum(const NodeOperand& operand,
     : Node(xla_cross_replica_sum, {operand}, operand.node->shape()),
       groups_(std::move(groups)) {}
 
-XlaOpVector Generic::Lower(LoweringContext* loctx) const {
+XlaOpVector CrossReplicaSum::Lower(LoweringContext* loctx) const {
   std::vector<xla::ReplicaGroup> crs_groups;
   for (auto& group : groups_) {
     xla::ReplicaGroup rgroup;
