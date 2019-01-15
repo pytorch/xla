@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "ir.h"
+#include "ir_util.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
@@ -53,24 +54,12 @@ class LoweringContext {
   xla::StatusOr<xla::XlaComputation> Build(const xla::XlaOp& root);
 
  private:
-  // Tracks the emission status of the nodes during the post-order generation.
-  // It helps tracking loops within the computation graphs.
-  enum EmitStatus {
-    kNotEmitted,
-    kEmitting,
-    kEmitted,
-  };
-
-  // Calculates the post-order necessary to lower the given node. The returned
-  // post-order can be empty if the node has already been lowered.
-  std::vector<Node*> GetEmissionPostOrder(Node* node);
-
   xla::XlaBuilder builder_;
   std::vector<std::shared_ptr<xla::ComputationClient::Data>> parameters_;
   std::unordered_map<xla::ComputationClient::Data*, xla::XlaOp> parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
-  std::unordered_map<Node*, EmitStatus> emit_status_;
+  Util::EmissionMap emit_status_;
 };
 
 }  // namespace ir
