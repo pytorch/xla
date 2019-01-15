@@ -50,11 +50,54 @@ void LoweringContext::AssignOutputOp(const Output& output, xla::XlaOp op) {
   emitted_outputs_[output] = op;
 }
 
-xla::XlaOp LoweringContext::GetOutputOp(const Output& output) const {
+xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
   auto it = emitted_outputs_.find(output);
-  XLA_CHECK(it != emitted_outputs_.end())
-      << "No XLA operation amitted for output: " << output;
+  if (it == emitted_outputs_.end()) {
+    for (auto node : GetEmissionPostOrder(output.node)) {
+      node->Lower(this);
+    }
+    // At this point the outpout better be present, otherwise there is an issue
+    // with the lowering code.
+    it = emitted_outputs_.find(output);
+    XLA_CHECK(it != emitted_outputs_.end())
+        << "No XLA operation emitted for output: " << output;
+  }
   return it->second;
+}
+
+std::vector<Node*> LoweringContext::GetEmissionPostOrder(Node* node) {
+  std::vector<Node*> post_order;
+  std::vector<Node*> queue;
+  queue.push_back(node);
+  while (!queue.empty()) {
+    node = queue.back();
+    auto it = emit_status_.find(node);
+    if (it == emit_status_.end()) {
+      emit_status_[node] = kEmitting;
+
+      for (auto& output : node->operands()) {
+        auto oit = emit_status_.find(output.node);
+        if (oit == emit_status_.end()) {
+          queue.push_back(output.node);
+        } else if (oit->second == kEmitting) {
+          XLA_ERROR() << "Graph loop found at " << *output.node;
+        }
+      }
+    } else if (it->second == kEmitting) {
+      for (auto& output : node->operands()) {
+        auto oit = emit_status_.find(output.node);
+        XLA_CHECK(oit != emit_status_.end() && oit->second == kEmitted)
+            << "Graph loop found at " << *output.node;
+      }
+      emit_status_[node] = kEmitted;
+      post_order.push_back(node);
+      queue.pop_back();
+    } else {
+      XLA_CHECK_EQ(it->second, kEmitted);
+      queue.pop_back();
+    }
+  }
+  return post_order;
 }
 
 }  // namespace ir

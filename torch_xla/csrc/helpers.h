@@ -13,6 +13,21 @@ namespace torch_xla {
 // Miscellaneous helpers for XLA lowering.
 class XlaHelpers {
  public:
+  template <class T>
+  static xla::Literal ScalarLiteral(T scalar_value, xla::PrimitiveType type) {
+    switch (type) {
+      case xla::PrimitiveType::F32:
+        return xla::LiteralUtil::CreateR0<float>(scalar_value);
+      case xla::PrimitiveType::BF16:
+        return xla::LiteralUtil::CreateR0<tensorflow::bfloat16>(
+            static_cast<tensorflow::bfloat16>(scalar_value));
+      case xla::PrimitiveType::S64:
+        return xla::LiteralUtil::CreateR0<xla::int64>(scalar_value);
+      default:
+        return xla::LiteralUtil::CreateR0<T>(scalar_value);
+    }
+  }
+
   // Creates a XLA constant for the given scalar_value.
   template <class T>
   static xla::XlaOp ScalarValue(T scalar_value, xla::XlaBuilder* builder) {
@@ -23,22 +38,7 @@ class XlaHelpers {
   template <class T>
   static xla::XlaOp ScalarValue(T scalar_value, xla::PrimitiveType type,
                                 xla::XlaBuilder* builder) {
-    xla::Literal scalar_literal;
-    switch (type) {
-      case xla::PrimitiveType::F32:
-        scalar_literal = xla::LiteralUtil::CreateR0<float>(scalar_value);
-        break;
-      case xla::PrimitiveType::BF16:
-        scalar_literal = xla::LiteralUtil::CreateR0<tensorflow::bfloat16>(
-            static_cast<tensorflow::bfloat16>(scalar_value));
-        break;
-      case xla::PrimitiveType::S64:
-        scalar_literal = xla::LiteralUtil::CreateR0<xla::int64>(scalar_value);
-        break;
-      default:
-        scalar_literal = xla::LiteralUtil::CreateR0<T>(scalar_value);
-    }
-    return xla::ConstantLiteral(builder, scalar_literal);
+    return xla::ConstantLiteral(builder, ScalarLiteral(scalar_value, type));
   }
 
   // Returns the list of dimension sizes for the given shape.
@@ -87,6 +87,11 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
                                                          const xla::XlaOp& op2);
 
+  // Performs type promotion, by casting the second operation to the type of the
+  // first, if different.
+  static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecondValue(
+      const xla::XlaOp& op1, const xla::XlaOp& op2);
+
   // Eventually performs a broadcast to make sure the shapes of the returned
   // xla::XlaOp values have the same shape. The first returned xla::XlaOp is op1
   // or a broadcast of it, and the second returned xla::XlaOp is either op2 or a
@@ -98,6 +103,11 @@ class XlaHelpers {
   // match in shape and types.
   static std::pair<xla::XlaOp, xla::XlaOp> Promote(const xla::XlaOp& op1,
                                                    const xla::XlaOp& op2);
+
+  // Combines PromoteSecondValue() and PromoteShapes() returning two operations
+  // which match in shape and types.
+  static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecond(const xla::XlaOp& op1,
+                                                         const xla::XlaOp& op2);
 
   // Calculates the protomoted shape to which the input shapes should be
   // broadcasted for an elementwise operation. The size of the common dimensions

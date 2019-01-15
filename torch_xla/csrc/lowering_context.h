@@ -15,6 +15,8 @@ namespace ir {
 
 class LoweringContext {
  public:
+  LoweringContext() : builder_("LoweringContext") {}
+
   xla::XlaBuilder* builder() { return &builder_; }
 
   // If a parameter associated with data has already been declared, it will be
@@ -35,8 +37,10 @@ class LoweringContext {
   // operands among the emitted outputs.
   void AssignOutputOp(const Output& output, xla::XlaOp op);
 
-  // Retrieves the lowered operation for a output.
-  xla::XlaOp GetOutputOp(const Output& output) const;
+  // Retrieves the lowered operation for a output. If the requested output is
+  // not available yet, the graph behind the output's Node is lowered, and the
+  // corresponding XLA operation returned.
+  xla::XlaOp GetOutputOp(const Output& output);
 
   // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API).
@@ -49,11 +53,24 @@ class LoweringContext {
   xla::StatusOr<xla::XlaComputation> Build(const xla::XlaOp& root);
 
  private:
+  // Tracks the emission status of the nodes during the post-order generation.
+  // It helps tracking loops within the computation graphs.
+  enum EmitStatus {
+    kNotEmitted,
+    kEmitting,
+    kEmitted,
+  };
+
+  // Calculates the post-order necessary to lower the given node. The returned
+  // post-order can be empty if the node has already been lowered.
+  std::vector<Node*> GetEmissionPostOrder(Node* node);
+
   xla::XlaBuilder builder_;
   std::vector<std::shared_ptr<xla::ComputationClient::Data>> parameters_;
   std::unordered_map<xla::ComputationClient::Data*, xla::XlaOp> parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
+  std::unordered_map<Node*, EmitStatus> emit_status_;
 };
 
 }  // namespace ir

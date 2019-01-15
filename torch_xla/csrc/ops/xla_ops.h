@@ -29,6 +29,7 @@ class OpKindWrapper {
 };
 
 extern const OpKindWrapper xla_device_data;
+extern const OpKindWrapper xla_cross_replica_sum;
 
 }  // namespace ops
 }  // namespace ir
