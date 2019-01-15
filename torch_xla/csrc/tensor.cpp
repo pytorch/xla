@@ -371,7 +371,7 @@ std::string XLATensor::DumpGraphNodeComputation() const {
   std::string hlo_text;
   const ir::NodePtr& ir_node = CurrentIrNode();
   if (ir_node != nullptr) {
-    ir::LoweringContext lowering_ctx;
+    ir::LoweringContext lowering_ctx("DumpGraphNodeComputation");
     XLA_CHECK_EQ(ir_node->num_outputs(), 1);
     xla::XlaOp root = lowering_ctx.GetOutputOp(ir::Output(ir_node.get(), 0));
     auto computation = lowering_ctx.Build(root).ConsumeValueOrDie();
@@ -633,7 +633,7 @@ std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
 void XLATensor::ApplyPendingGraph() {
   const ir::NodePtr& ir_node = CurrentIrNode();
   if (ir_node != nullptr) {
-    ir::LoweringContext lowering_ctx;
+    ir::LoweringContext lowering_ctx("ApplyPendingGraph");
     XLA_CHECK_EQ(ir_node->num_outputs(), 1);
     xla::XlaOp root = lowering_ctx.GetOutputOp(ir::Output(ir_node.get(), 0));
     xla::XlaComputation computation =
@@ -766,6 +766,8 @@ void XLATensor::ApplyPendingGraph(
     const std::vector<std::shared_ptr<XLATensor>>& tensors,
     ApplyContext* apply_context) {
   struct DeviceContext {
+    DeviceContext() : lowering_ctx("ApplyPendingGraph") {}
+
     ir::LoweringContext lowering_ctx;
     std::vector<size_t> index_mapping;
   };
