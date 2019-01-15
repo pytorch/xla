@@ -10,6 +10,11 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "helpers.h"
+#include "lowering_context.h"
+#include "ops/cross_replica_sum.h"
+#include "ops/device_data.h"
+#include "ops/generic.h"
+#include "ops/scalar.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -285,10 +290,10 @@ std::shared_ptr<XLATensor> XLATensor::Create(
       std::make_shared<XLATensor>(std::move(xla_data), requires_grad));
 }
 
-std::shared_ptr<XLATensor> XLATensor::Create(
-    std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device) {
+std::shared_ptr<XLATensor> XLATensor::Create(ir::NodePtr ir_node,
+                                             const Device& device) {
   return TensorsArena::Get()->RegisterTensor(
-      std::make_shared<XLATensor>(std::move(xla_graph_node), device));
+      std::make_shared<XLATensor>(std::move(ir_node), device));
 }
 
 std::shared_ptr<XLATensor> XLATensor::Create(std::shared_ptr<Data> data) {
@@ -317,9 +322,8 @@ XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
                                    DeviceFromString(xla_data->device()))),
       requires_grad_(requires_grad) {}
 
-XLATensor::XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node,
-                     const Device& device)
-    : data_(std::make_shared<Data>(std::move(xla_graph_node), device)) {
+XLATensor::XLATensor(ir::NodePtr ir_node, const Device& device)
+    : data_(std::make_shared<Data>(std::move(ir_node), device)) {
   TryLimitGraphSize();
 }
 
@@ -346,8 +350,7 @@ at::ScalarType XLATensor::dtype() const {
 }
 
 const xla::Shape& XLATensor::shape() const {
-  return data_->xla_data ? data_->xla_data->shape()
-                         : data_->xla_graph_node->shape();
+  return data_->xla_data ? data_->xla_data->shape() : data_->ir_node->shape();
 }
 
 const XLATensor::Device& XLATensor::GetDevice() const { return data_->device; }
@@ -366,11 +369,12 @@ const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::CurrentXlaData()
 
 std::string XLATensor::DumpGraphNodeComputation() const {
   std::string hlo_text;
-  auto& xla_graph_node = CurrentXlaGraphNode();
-  if (xla_graph_node != nullptr) {
-    XlaGraphContext xla_graph_ctx(/*collate_parameters=*/true);
-    auto root = xla_graph_node->Generate(&xla_graph_ctx);
-    auto computation = xla_graph_ctx.Build(root).ConsumeValueOrDie();
+  const ir::NodePtr& ir_node = CurrentIrNode();
+  if (ir_node != nullptr) {
+    ir::LoweringContext lowering_ctx;
+    XLA_CHECK_EQ(ir_node->num_outputs(), 1);
+    xla::XlaOp root = lowering_ctx.GetOutputOp(ir::Output(ir_node.get(), 0));
+    auto computation = lowering_ctx.Build(root).ConsumeValueOrDie();
     hlo_text =
         xla::xrt_util::GetComputationHloText(computation).ConsumeValueOrDie();
   }
@@ -383,11 +387,11 @@ void XLATensor::SetXlaData(
       << shape() << " vs " << xla_data->shape() << "\n"
       << DumpGraphNodeComputation();
   data_->xla_data = std::move(xla_data);
-  data_->xla_graph_node = nullptr;
+  data_->ir_node = nullptr;
 }
 
-void XLATensor::SetXlaGraphNode(std::shared_ptr<XlaGraphNode> xla_graph_node) {
-  data_->xla_graph_node = std::move(xla_graph_node);
+void XLATensor::SetXlaGraphNode(ir::NodePtr ir_node) {
+  data_->ir_node = std::move(ir_node);
   TryLimitGraphSize();
 }
 
@@ -395,20 +399,17 @@ void XLATensor::TryLimitGraphSize() {
   // If we are accumulating too many nodes in the pending graph, render the XLA
   // by executing the pending graph.
   static const xla::int64 kMaxPendingGraphSize = 1000;
-  if (data_->xla_graph_node != nullptr &&
-      data_->xla_graph_node->graph_size() > kMaxPendingGraphSize) {
+  if (data_->ir_node != nullptr &&
+      data_->ir_node->graph_size() > kMaxPendingGraphSize) {
     ApplyPendingGraph();
   }
 }
 
-std::shared_ptr<XlaGraphNode> XLATensor::GetXlaGraphNode() const {
-  return data_->xla_graph_node ? data_->xla_graph_node
-                               : CreateTensorNode(data_->xla_data);
+ir::NodePtr XLATensor::GetIrNode() const {
+  return data_->ir_node ? data_->ir_node : CreateTensorNode(data_->xla_data);
 }
 
-const std::shared_ptr<XlaGraphNode>& XLATensor::CurrentXlaGraphNode() const {
-  return data_->xla_graph_node;
-}
+const ir::NodePtr& XLATensor::CurrentIrNode() const { return data_->ir_node; }
 
 void XLATensor::ReferenceDataFrom(const XLATensor& source) {
   XLA_CHECK_EQ(data_->device, source.data_->device);
@@ -416,7 +417,7 @@ void XLATensor::ReferenceDataFrom(const XLATensor& source) {
       << shape() << " vs " << source.shape();
 
   data_->xla_data = source.data_->xla_data;
-  data_->xla_graph_node = source.data_->xla_graph_node;
+  data_->ir_node = source.data_->ir_node;
 }
 
 std::vector<int64_t> XLATensor::Size() const {
@@ -483,13 +484,9 @@ std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
   return xla_tensors;
 }
 
-std::shared_ptr<XlaGraphNode> XLATensor::CreateTensorNode(
+ir::NodePtr XLATensor::CreateTensorNode(
     std::shared_ptr<xla::ComputationClient::Data> data) {
-  auto generator = [data](XlaGraphContext* ctx,
-                          const XlaGraphNode&) -> xla::XlaOp {
-    return ctx->GetParameter(data);
-  };
-  return XlaGraphNode::New(std::move(generator), data->shape(), {});
+  return std::make_shared<ir::ops::DeviceData>(std::move(data));
 }
 
 xla::int64 XLATensor::GetNextTensorId() {
@@ -497,69 +494,57 @@ xla::int64 XLATensor::GetNextTensorId() {
   return id_generator->fetch_add(1);
 }
 
-std::shared_ptr<XlaGraphNode> XLATensor::CreateMulNode(const XLATensor& other) {
-  auto generator = [](XlaGraphContext* ctx,
-                      const XlaGraphNode& node) -> xla::XlaOp {
-    auto node_op = node.input(0)->Generate(ctx);
-    auto other_node_op = node.input(1)->Generate(ctx);
-    return XlaHelpers::PromotedMul(node_op, other_node_op);
+ir::NodePtr XLATensor::CreateMulNode(const ir::NodePtr& node0,
+                                     const ir::NodePtr& node1) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(XlaHelpers::PromotedMul(op0, op1), loctx);
   };
-  return XlaGraphNode::New(std::move(generator),
-                           XlaHelpers::GetPromotedShape(shape(), other.shape()),
-                           {GetXlaGraphNode(), other.GetXlaGraphNode()});
+  return std::make_shared<ir::ops::Generic>(
+      ir::OpKind(at::aten::mul),
+      ir::OpList{ir::NodeOperand(node0), ir::NodeOperand(node1)},
+      XlaHelpers::GetPromotedShape(node0->shape(), node1->shape()),
+      std::move(lower_fn));
 }
 
-std::shared_ptr<XlaGraphNode> XLATensor::CreateMulNode(
-    const at::Scalar& other) {
-  auto generator = [other](XlaGraphContext* ctx,
-                           const XlaGraphNode& node) -> xla::XlaOp {
-    auto node_op = node.input(0)->Generate(ctx);
-    return node_op * XlaHelpers::ScalarValue<float>(
-                         other.toDouble(), XlaHelpers::TypeOfXlaOp(node_op),
-                         ctx->builder());
+ir::NodePtr XLATensor::CreateDivNode(const ir::NodePtr& node0,
+                                     const ir::NodePtr& node1) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(XlaHelpers::PromotedDiv(op0, op1), loctx);
   };
-  return XlaGraphNode::New(std::move(generator), shape(), {GetXlaGraphNode()});
+  return std::make_shared<ir::ops::Generic>(
+      ir::OpKind(at::aten::div),
+      ir::OpList{ir::NodeOperand(node0), ir::NodeOperand(node1)},
+      XlaHelpers::GetPromotedShape(node0->shape(), node1->shape()),
+      std::move(lower_fn));
 }
 
-std::shared_ptr<XlaGraphNode> XLATensor::CreateDivNode(const XLATensor& other) {
-  auto generator = [](XlaGraphContext* ctx,
-                      const XlaGraphNode& node) -> xla::XlaOp {
-    auto node_op = node.input(0)->Generate(ctx);
-    auto other_node_op = node.input(1)->Generate(ctx);
-    return XlaHelpers::PromotedDiv(node_op, other_node_op);
+ir::NodePtr XLATensor::CreateAddNode(const ir::NodePtr& node0,
+                                     const ir::NodePtr& node1) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(XlaHelpers::PromotedAdd(op0, op1), loctx);
   };
-  return XlaGraphNode::New(std::move(generator),
-                           XlaHelpers::GetPromotedShape(shape(), other.shape()),
-                           {GetXlaGraphNode(), other.GetXlaGraphNode()});
+  return std::make_shared<ir::ops::Generic>(
+      ir::OpKind(at::aten::add),
+      ir::OpList{ir::NodeOperand(node0), ir::NodeOperand(node1)},
+      XlaHelpers::GetPromotedShape(node0->shape(), node1->shape()),
+      std::move(lower_fn));
 }
 
-std::shared_ptr<XlaGraphNode> XLATensor::CreateDivNode(
-    const at::Scalar& other) {
-  auto generator = [other](XlaGraphContext* ctx,
-                           const XlaGraphNode& node) -> xla::XlaOp {
-    auto node_op = node.input(0)->Generate(ctx);
-    return node_op / XlaHelpers::ScalarValue<float>(
-                         other.toDouble(), XlaHelpers::TypeOfXlaOp(node_op),
-                         ctx->builder());
-  };
-  return XlaGraphNode::New(std::move(generator), shape(), {GetXlaGraphNode()});
-}
-
-std::shared_ptr<XlaGraphNode> XLATensor::CreateAddNode(
-    const XLATensor& other, const at::Scalar& alpha) {
-  auto generator = [alpha](XlaGraphContext* ctx,
-                           const XlaGraphNode& node) -> xla::XlaOp {
-    auto node_op = node.input(0)->Generate(ctx);
-    auto other_node_op = node.input(1)->Generate(ctx);
-    return XlaHelpers::PromotedAdd(
-        node_op, other_node_op * XlaHelpers::ScalarValue<float>(
-                                     alpha.toDouble(),
-                                     XlaHelpers::TypeOfXlaOp(other_node_op),
-                                     ctx->builder()));
-  };
-  return XlaGraphNode::New(std::move(generator),
-                           XlaHelpers::GetPromotedShape(shape(), other.shape()),
-                           {GetXlaGraphNode(), other.GetXlaGraphNode()});
+ir::NodePtr XLATensor::CreateAddNode(const XLATensor& other,
+                                     const at::Scalar& alpha) {
+  ir::NodePtr constant =
+      std::make_shared<ir::ops::Scalar>(alpha.toDouble(), other.shape());
+  ir::NodePtr mul = CreateMulNode(other.GetIrNode(), constant);
+  return CreateAddNode(GetIrNode(), mul);
 }
 
 std::shared_ptr<XLATensor> XLATensor::add(const XLATensor& other,
@@ -572,126 +557,89 @@ void XLATensor::add_(const XLATensor& other, const at::Scalar& alpha) {
 }
 
 std::shared_ptr<XLATensor> XLATensor::mul(const XLATensor& other) {
-  return Create(CreateMulNode(other), data_->device);
+  return Create(CreateMulNode(GetIrNode(), other.GetIrNode()), data_->device);
 }
 
 std::shared_ptr<XLATensor> XLATensor::mul(const at::Scalar& other) {
-  return Create(CreateMulNode(other), data_->device);
+  ir::NodePtr constant =
+      std::make_shared<ir::ops::Scalar>(other.toDouble(), shape());
+  return Create(CreateMulNode(GetIrNode(), constant), data_->device);
 }
 
 void XLATensor::mul_(const XLATensor& other) {
-  SetXlaGraphNode(CreateMulNode(other));
+  SetXlaGraphNode(CreateMulNode(GetIrNode(), other.GetIrNode()));
 }
 
 void XLATensor::mul_(const at::Scalar& other) {
-  SetXlaGraphNode(CreateMulNode(other));
+  ir::NodePtr constant =
+      std::make_shared<ir::ops::Scalar>(other.toDouble(), shape());
+  SetXlaGraphNode(CreateMulNode(GetIrNode(), constant));
 }
 
 std::shared_ptr<XLATensor> XLATensor::div(const XLATensor& other) {
-  return Create(CreateDivNode(other), data_->device);
+  return Create(CreateDivNode(GetIrNode(), other.GetIrNode()), data_->device);
 }
 
 std::shared_ptr<XLATensor> XLATensor::div(const at::Scalar& other) {
-  return Create(CreateDivNode(other), data_->device);
+  ir::NodePtr constant =
+      std::make_shared<ir::ops::Scalar>(other.toDouble(), shape());
+  return Create(CreateDivNode(GetIrNode(), constant), data_->device);
 }
 
 void XLATensor::div_(const XLATensor& other) {
-  SetXlaGraphNode(CreateDivNode(other));
+  SetXlaGraphNode(CreateDivNode(GetIrNode(), other.GetIrNode()));
 }
 
 void XLATensor::div_(const at::Scalar& other) {
-  SetXlaGraphNode(CreateDivNode(other));
+  ir::NodePtr constant =
+      std::make_shared<ir::ops::Scalar>(other.toDouble(), shape());
+  SetXlaGraphNode(CreateDivNode(GetIrNode(), constant));
 }
 
 void XLATensor::zero_() {
-  xla::Shape tensor_shape = shape();
-  auto generator = [tensor_shape](XlaGraphContext* ctx,
-                                  const XlaGraphNode&) -> xla::XlaOp {
-    auto zero_literal = xla::LiteralUtil::Zero(tensor_shape.element_type());
-    auto const_zero = xla::ConstantLiteral(ctx->builder(), zero_literal);
-    return xla::Broadcast(const_zero, XlaHelpers::ShapeSizes(tensor_shape));
-  };
-  SetXlaGraphNode(XlaGraphNode::New(std::move(generator), tensor_shape, {}));
+  SetXlaGraphNode(std::make_shared<ir::ops::Scalar>(0.0, shape()));
 }
 
 void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
                          const XLATensor& tensor2) {
-  auto generator = [value](XlaGraphContext* ctx,
-                           const XlaGraphNode& node) -> xla::XlaOp {
-    auto node_op = node.input(0)->Generate(ctx);
-    auto tensor1_node_op = node.input(1)->Generate(ctx);
-    auto tensor2_node_op = node.input(2)->Generate(ctx);
-    auto div_op = XlaHelpers::PromotedDiv(tensor1_node_op, tensor2_node_op);
-    auto scaled_op =
-        div_op * XlaHelpers::ScalarValue<float>(value.toDouble(),
-                                                XlaHelpers::TypeOfXlaOp(div_op),
-                                                ctx->builder());
-    return XlaHelpers::PromotedAdd(node_op, scaled_op);
-  };
-  xla::Shape div_shape =
-      XlaHelpers::GetPromotedShape(tensor1.shape(), tensor2.shape());
-  SetXlaGraphNode(XlaGraphNode::New(
-      std::move(generator), XlaHelpers::GetPromotedShape(shape(), div_shape),
-      {GetXlaGraphNode(), tensor1.GetXlaGraphNode(),
-       tensor2.GetXlaGraphNode()}));
+  ir::NodePtr constant = std::make_shared<ir::ops::Scalar>(
+      value.toDouble(), tensor1.shape().element_type());
+  ir::NodePtr div = CreateDivNode(tensor1.GetIrNode(), tensor2.GetIrNode());
+  ir::NodePtr scaled = CreateMulNode(div, constant);
+  SetXlaGraphNode(CreateAddNode(GetIrNode(), scaled));
 }
 
 void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
                          const XLATensor& tensor2) {
-  auto generator = [value](XlaGraphContext* ctx,
-                           const XlaGraphNode& node) -> xla::XlaOp {
-    auto node_op = node.input(0)->Generate(ctx);
-    auto tensor1_node_op = node.input(1)->Generate(ctx);
-    auto tensor2_node_op = node.input(2)->Generate(ctx);
-    auto mul_op = XlaHelpers::PromotedMul(tensor1_node_op, tensor2_node_op);
-    auto scaled_op =
-        mul_op * XlaHelpers::ScalarValue<float>(value.toDouble(),
-                                                XlaHelpers::TypeOfXlaOp(mul_op),
-                                                ctx->builder());
-    return XlaHelpers::PromotedAdd(node_op, scaled_op);
-  };
-  xla::Shape mul_shape =
-      XlaHelpers::GetPromotedShape(tensor1.shape(), tensor2.shape());
-  SetXlaGraphNode(XlaGraphNode::New(
-      std::move(generator), XlaHelpers::GetPromotedShape(shape(), mul_shape),
-      {GetXlaGraphNode(), tensor1.GetXlaGraphNode(),
-       tensor2.GetXlaGraphNode()}));
+  ir::NodePtr constant = std::make_shared<ir::ops::Scalar>(
+      value.toDouble(), tensor1.shape().element_type());
+  ir::NodePtr div = CreateMulNode(tensor1.GetIrNode(), tensor2.GetIrNode());
+  ir::NodePtr scaled = CreateMulNode(div, constant);
+  SetXlaGraphNode(CreateAddNode(GetIrNode(), scaled));
 }
 
 std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
     const std::vector<std::vector<xla::int64>>& groups) {
-  auto generator = [groups](XlaGraphContext* ctx,
-                            const XlaGraphNode& node) -> xla::XlaOp {
-    std::vector<xla::ReplicaGroup> crs_groups;
-    for (auto& group : groups) {
-      xla::ReplicaGroup rgroup;
-      for (auto replica_id : group) {
-        rgroup.add_replica_ids(replica_id);
-      }
-      crs_groups.push_back(std::move(rgroup));
-    }
-    auto node_op = node.input(0)->Generate(ctx);
-    return xla::CrossReplicaSum(node_op, crs_groups);
-  };
-  auto crs_node =
-      XlaGraphNode::New(std::move(generator), shape(), {GetXlaGraphNode()});
-  return Create(std::move(crs_node), data_->device);
+  ir::NodePtr crs = std::make_shared<ir::ops::CrossReplicaSum>(
+      ir::NodeOperand(GetIrNode()), groups);
+  return Create(std::move(crs), data_->device);
 }
 
 void XLATensor::ApplyPendingGraph() {
-  auto& xla_graph_node = CurrentXlaGraphNode();
-  if (xla_graph_node != nullptr) {
-    XlaGraphContext xla_graph_ctx(/*collate_parameters=*/true);
-    auto root = xla_graph_node->Generate(&xla_graph_ctx);
+  const ir::NodePtr& ir_node = CurrentIrNode();
+  if (ir_node != nullptr) {
+    ir::LoweringContext lowering_ctx;
+    XLA_CHECK_EQ(ir_node->num_outputs(), 1);
+    xla::XlaOp root = lowering_ctx.GetOutputOp(ir::Output(ir_node.get(), 0));
     xla::XlaComputation computation =
-        xla_graph_ctx.Build(root).ConsumeValueOrDie();
+        lowering_ctx.Build(root).ConsumeValueOrDie();
     auto compiled_computation = XlaGetClient()->Compile(
         std::move(computation), {GetDevice().ToString()},
         /*output_shape=*/nullptr);
     xla::ComputationClient::ExecuteComputationOptions options;
     options.explode_tuple = false;
     auto results = XlaGetClient()->ExecuteComputation(
-        *compiled_computation, xla_graph_ctx.GetParametersData(),
+        *compiled_computation, lowering_ctx.GetParametersData(),
         compiled_computation->devices()[0], options);
     XLA_CHECK_EQ(results.size(), 1);
     SetXlaData(results.front());
@@ -703,7 +651,7 @@ std::vector<size_t> XLATensor::GetApplyOrder(
   std::vector<size_t> order;
   order.reserve(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
-    if (tensors[i]->CurrentXlaGraphNode() != nullptr) {
+    if (tensors[i]->CurrentIrNode() != nullptr) {
       // Add only tensors which need to be synced.
       order.push_back(i);
     }
@@ -813,9 +761,7 @@ void XLATensor::ApplyPendingGraph(
     const std::vector<std::shared_ptr<XLATensor>>& tensors,
     ApplyContext* apply_context) {
   struct DeviceContext {
-    DeviceContext() : xla_graph_ctx(/*collate_parameters=*/true) {}
-
-    XlaGraphContext xla_graph_ctx;
+    ir::LoweringContext lowering_ctx;
     std::vector<size_t> index_mapping;
   };
 
@@ -861,15 +807,17 @@ void XLATensor::ApplyPendingGraph(
     auto generator = [&, device_context, index]() {
       std::vector<xla::int64> device_index_mapping;
       for (auto i : device_context->index_mapping) {
-        auto& xla_graph_node = tensors[i]->CurrentXlaGraphNode();
-        auto root = xla_graph_node->Generate(&device_context->xla_graph_ctx);
-        device_context->xla_graph_ctx.AddResult(root);
+        const ir::NodePtr& ir_node = tensors[i]->CurrentIrNode();
+        XLA_CHECK_EQ(ir_node->num_outputs(), 1);
+        xla::XlaOp root = device_context->lowering_ctx.GetOutputOp(
+            ir::Output(ir_node.get(), 0));
+        device_context->lowering_ctx.AddResult(root);
         device_index_mapping.push_back(tensors[i]->GetUniqueId());
       }
       index_mapping[index] = std::move(device_index_mapping);
 
       xla::XlaComputation computation =
-          device_context->xla_graph_ctx.Build().ConsumeValueOrDie();
+          device_context->lowering_ctx.Build().ConsumeValueOrDie();
       xla::ProgramShape program_shape =
           computation.GetProgramShape().ConsumeValueOrDie();
       shapes[index] =
@@ -880,7 +828,7 @@ void XLATensor::ApplyPendingGraph(
                           &shapes[index]};
 
       std::vector<xla::ComputationClient::Data*> parameters_data =
-          device_context->xla_graph_ctx.GetParametersData();
+          device_context->lowering_ctx.GetParametersData();
       if (apply_context != nullptr) {
         std::vector<xla::int64> device_input_mapping;
         for (auto data : parameters_data) {

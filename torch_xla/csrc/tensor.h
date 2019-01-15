@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "graph_context.h"
+#include "ir.h"
 #include "tensorflow/cc/framework/ops.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
@@ -68,8 +68,8 @@ class XLATensor {
   static std::shared_ptr<XLATensor> Create(
       std::shared_ptr<xla::ComputationClient::Data> xla_data,
       bool requires_grad);
-  static std::shared_ptr<XLATensor> Create(
-      std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device);
+  static std::shared_ptr<XLATensor> Create(ir::NodePtr ir_node,
+                                           const Device& device);
   static std::shared_ptr<XLATensor> Create(std::shared_ptr<Data> data);
 
   // NOTE: These direct constructors should not be used, and the Create() APIs
@@ -80,7 +80,7 @@ class XLATensor {
   XLATensor(const torch::autograd::Variable& tensor, const Device& device);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
             bool requires_grad);
-  XLATensor(std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device);
+  XLATensor(ir::NodePtr ir_node, const Device& device);
   XLATensor(std::shared_ptr<Data> data) : data_(std::move(data)) {}
 
   ~XLATensor();
@@ -113,8 +113,8 @@ class XLATensor {
 
   void SetXlaData(std::shared_ptr<xla::ComputationClient::Data> xla_data);
 
-  const std::shared_ptr<XlaGraphNode>& CurrentXlaGraphNode() const;
-  std::shared_ptr<XlaGraphNode> GetXlaGraphNode() const;
+  const ir::NodePtr& CurrentIrNode() const;
+  ir::NodePtr GetIrNode() const;
 
   // Makes the data references from the current tensor, point to the ones from
   // the source tensor.
@@ -196,19 +196,19 @@ class XLATensor {
         : xla_data(std::move(xla_data)),
           device(device),
           unique_id(GetNextTensorId()) {}
-    Data(std::shared_ptr<XlaGraphNode> xla_graph_node, const Device& device)
-        : xla_graph_node(std::move(xla_graph_node)),
+    Data(ir::NodePtr ir_node, const Device& device)
+        : ir_node(std::move(ir_node)),
           device(device),
           unique_id(GetNextTensorId()) {}
 
     std::shared_ptr<xla::ComputationClient::Data> xla_data;
-    std::shared_ptr<XlaGraphNode> xla_graph_node;
+    ir::NodePtr ir_node;
     Device device;
     xla::int64 unique_id;
     std::shared_ptr<XLATensor> grad;
   };
 
-  void SetXlaGraphNode(std::shared_ptr<XlaGraphNode> xla_graph_node);
+  void SetXlaGraphNode(ir::NodePtr ir_node);
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.
@@ -217,12 +217,14 @@ class XLATensor {
   //     a = a + b
   void TryLimitGraphSize();
 
-  std::shared_ptr<XlaGraphNode> CreateAddNode(const XLATensor& other,
-                                              const at::Scalar& alpha);
-  std::shared_ptr<XlaGraphNode> CreateMulNode(const XLATensor& other);
-  std::shared_ptr<XlaGraphNode> CreateMulNode(const at::Scalar& other);
-  std::shared_ptr<XlaGraphNode> CreateDivNode(const XLATensor& other);
-  std::shared_ptr<XlaGraphNode> CreateDivNode(const at::Scalar& other);
+  ir::NodePtr CreateAddNode(const XLATensor& other, const at::Scalar& alpha);
+
+  static ir::NodePtr CreateMulNode(const ir::NodePtr& node0,
+                                   const ir::NodePtr& node1);
+  static ir::NodePtr CreateDivNode(const ir::NodePtr& node0,
+                                   const ir::NodePtr& node1);
+  static ir::NodePtr CreateAddNode(const ir::NodePtr& node0,
+                                   const ir::NodePtr& node1);
 
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.
@@ -243,7 +245,7 @@ class XLATensor {
   static std::vector<size_t> GetApplyOrder(
       const std::vector<std::shared_ptr<XLATensor>>& tensors);
 
-  static std::shared_ptr<XlaGraphNode> CreateTensorNode(
+  static ir::NodePtr CreateTensorNode(
       std::shared_ptr<xla::ComputationClient::Data> data);
 
   static xla::int64 GetNextTensorId();
