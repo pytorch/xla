@@ -14,7 +14,7 @@ Constant::Constant(xla::Literal value)
 
 std::string Constant::ToString() const {
   std::stringstream ss;
-  ss << value_;
+  ss << Node::ToString() << " = " << value_;
   return ss.str();
 }
 

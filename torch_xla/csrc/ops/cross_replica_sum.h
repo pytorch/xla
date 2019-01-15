@@ -11,6 +11,8 @@ class CrossReplicaSum : public Node {
   CrossReplicaSum(const NodeOperand& operand,
                   std::vector<std::vector<xla::int64>> groups);
 
+  std::string ToString() const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
  private:
