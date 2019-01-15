@@ -390,7 +390,7 @@ void XLATensor::SetXlaData(
   data_->ir_node = nullptr;
 }
 
-void XLATensor::SetXlaGraphNode(ir::NodePtr ir_node) {
+void XLATensor::SetIrNode(ir::NodePtr ir_node) {
   data_->ir_node = std::move(ir_node);
   TryLimitGraphSize();
 }
@@ -553,7 +553,7 @@ std::shared_ptr<XLATensor> XLATensor::add(const XLATensor& other,
 }
 
 void XLATensor::add_(const XLATensor& other, const at::Scalar& alpha) {
-  SetXlaGraphNode(CreateAddNode(other, alpha));
+  SetIrNode(CreateAddNode(other, alpha));
 }
 
 std::shared_ptr<XLATensor> XLATensor::mul(const XLATensor& other) {
@@ -567,13 +567,13 @@ std::shared_ptr<XLATensor> XLATensor::mul(const at::Scalar& other) {
 }
 
 void XLATensor::mul_(const XLATensor& other) {
-  SetXlaGraphNode(CreateMulNode(GetIrNode(), other.GetIrNode()));
+  SetIrNode(CreateMulNode(GetIrNode(), other.GetIrNode()));
 }
 
 void XLATensor::mul_(const at::Scalar& other) {
   ir::NodePtr constant =
       std::make_shared<ir::ops::Scalar>(other.toDouble(), shape());
-  SetXlaGraphNode(CreateMulNode(GetIrNode(), constant));
+  SetIrNode(CreateMulNode(GetIrNode(), constant));
 }
 
 std::shared_ptr<XLATensor> XLATensor::div(const XLATensor& other) {
@@ -587,17 +587,17 @@ std::shared_ptr<XLATensor> XLATensor::div(const at::Scalar& other) {
 }
 
 void XLATensor::div_(const XLATensor& other) {
-  SetXlaGraphNode(CreateDivNode(GetIrNode(), other.GetIrNode()));
+  SetIrNode(CreateDivNode(GetIrNode(), other.GetIrNode()));
 }
 
 void XLATensor::div_(const at::Scalar& other) {
   ir::NodePtr constant =
       std::make_shared<ir::ops::Scalar>(other.toDouble(), shape());
-  SetXlaGraphNode(CreateDivNode(GetIrNode(), constant));
+  SetIrNode(CreateDivNode(GetIrNode(), constant));
 }
 
 void XLATensor::zero_() {
-  SetXlaGraphNode(std::make_shared<ir::ops::Scalar>(0.0, shape()));
+  SetIrNode(std::make_shared<ir::ops::Scalar>(0.0, shape()));
 }
 
 void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
@@ -606,7 +606,7 @@ void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
       value.toDouble(), tensor1.shape().element_type());
   ir::NodePtr div = CreateDivNode(tensor1.GetIrNode(), tensor2.GetIrNode());
   ir::NodePtr scaled = CreateMulNode(div, constant);
-  SetXlaGraphNode(CreateAddNode(GetIrNode(), scaled));
+  SetIrNode(CreateAddNode(GetIrNode(), scaled));
 }
 
 void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
@@ -615,7 +615,7 @@ void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
       value.toDouble(), tensor1.shape().element_type());
   ir::NodePtr div = CreateMulNode(tensor1.GetIrNode(), tensor2.GetIrNode());
   ir::NodePtr scaled = CreateMulNode(div, constant);
-  SetXlaGraphNode(CreateAddNode(GetIrNode(), scaled));
+  SetIrNode(CreateAddNode(GetIrNode(), scaled));
 }
 
 std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
