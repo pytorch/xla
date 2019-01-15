@@ -1,5 +1,8 @@
 #pragma once
 
+// This header can depend on ops/ and ir.h, as well as system/c++, tensorflow,
+// PT,... but not on other PT/XLA headers.
+
 #include <memory>
 
 #include "ir.h"

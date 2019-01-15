@@ -1,5 +1,8 @@
 #pragma once
 
+// This is a lower level header. Can depend only on system/c++ headers,
+// tensorflow, PT,... but not from other PT/XLA headers.
+
 #include <iostream>
 #include <memory>
 #include <set>
