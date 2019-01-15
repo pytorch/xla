@@ -219,13 +219,6 @@ class XLATensor {
 
   ir::NodePtr CreateAddNode(const XLATensor& other, const at::Scalar& alpha);
 
-  static ir::NodePtr CreateMulNode(const ir::NodePtr& node0,
-                                   const ir::NodePtr& node1);
-  static ir::NodePtr CreateDivNode(const ir::NodePtr& node0,
-                                   const ir::NodePtr& node1);
-  static ir::NodePtr CreateAddNode(const ir::NodePtr& node0,
-                                   const ir::NodePtr& node1);
-
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.
   static DataUidMap CreateDataUidMap(

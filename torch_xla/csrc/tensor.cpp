@@ -9,6 +9,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "arithmetic_ir_ops.h"
 #include "helpers.h"
 #include "lowering_context.h"
 #include "ops/cross_replica_sum.h"
@@ -495,101 +496,51 @@ xla::int64 XLATensor::GetNextTensorId() {
   return id_generator->fetch_add(1);
 }
 
-ir::NodePtr XLATensor::CreateMulNode(const ir::NodePtr& node0,
-                                     const ir::NodePtr& node1) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(XlaHelpers::PromotedMul(op0, op1), loctx);
-  };
-  return ir::ops::GenericOp(
-      ir::OpKind(at::aten::mul),
-      ir::OpList{ir::NodeOperand(node0), ir::NodeOperand(node1)},
-      XlaHelpers::GetPromotedShape(node0->shape(), node1->shape()),
-      std::move(lower_fn));
-}
-
-ir::NodePtr XLATensor::CreateDivNode(const ir::NodePtr& node0,
-                                     const ir::NodePtr& node1) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(XlaHelpers::PromotedDiv(op0, op1), loctx);
-  };
-  return ir::ops::GenericOp(
-      ir::OpKind(at::aten::div),
-      ir::OpList{ir::NodeOperand(node0), ir::NodeOperand(node1)},
-      XlaHelpers::GetPromotedShape(node0->shape(), node1->shape()),
-      std::move(lower_fn));
-}
-
-ir::NodePtr XLATensor::CreateAddNode(const ir::NodePtr& node0,
-                                     const ir::NodePtr& node1) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(XlaHelpers::PromotedAdd(op0, op1), loctx);
-  };
-  return ir::ops::GenericOp(
-      ir::OpKind(at::aten::add),
-      ir::OpList{ir::NodeOperand(node0), ir::NodeOperand(node1)},
-      XlaHelpers::GetPromotedShape(node0->shape(), node1->shape()),
-      std::move(lower_fn));
-}
-
-ir::NodePtr XLATensor::CreateAddNode(const XLATensor& other,
-                                     const at::Scalar& alpha) {
-  ir::NodePtr constant = ir::ops::ScalarOp(alpha.toDouble(), other.shape());
-  ir::NodePtr mul = CreateMulNode(other.GetIrNode(), constant);
-  return CreateAddNode(GetIrNode(), mul);
-}
-
 std::shared_ptr<XLATensor> XLATensor::add(const XLATensor& other,
                                           const at::Scalar& alpha) {
-  return Create(CreateAddNode(other, alpha), data_->device);
+  ir::NodePtr constant = ir::ops::ScalarOp(alpha.toDouble(), other.shape());
+  return Create(GetIrNode() + other.GetIrNode() * constant, data_->device);
 }
 
 void XLATensor::add_(const XLATensor& other, const at::Scalar& alpha) {
-  SetIrNode(CreateAddNode(other, alpha));
+  ir::NodePtr constant = ir::ops::ScalarOp(alpha.toDouble(), other.shape());
+  SetIrNode(GetIrNode() + other.GetIrNode() * constant);
 }
 
 std::shared_ptr<XLATensor> XLATensor::mul(const XLATensor& other) {
-  return Create(CreateMulNode(GetIrNode(), other.GetIrNode()), data_->device);
+  return Create(GetIrNode() * other.GetIrNode(), data_->device);
 }
 
 std::shared_ptr<XLATensor> XLATensor::mul(const at::Scalar& other) {
   ir::NodePtr constant = ir::ops::ScalarOp(other.toDouble(), shape());
-  return Create(CreateMulNode(GetIrNode(), constant), data_->device);
+  return Create(GetIrNode() * constant, data_->device);
 }
 
 void XLATensor::mul_(const XLATensor& other) {
-  SetIrNode(CreateMulNode(GetIrNode(), other.GetIrNode()));
+  SetIrNode(GetIrNode() * other.GetIrNode());
 }
 
 void XLATensor::mul_(const at::Scalar& other) {
   ir::NodePtr constant = ir::ops::ScalarOp(other.toDouble(), shape());
-  SetIrNode(CreateMulNode(GetIrNode(), constant));
+  SetIrNode(GetIrNode() * constant);
 }
 
 std::shared_ptr<XLATensor> XLATensor::div(const XLATensor& other) {
-  return Create(CreateDivNode(GetIrNode(), other.GetIrNode()), data_->device);
+  return Create(GetIrNode() / other.GetIrNode(), data_->device);
 }
 
 std::shared_ptr<XLATensor> XLATensor::div(const at::Scalar& other) {
   ir::NodePtr constant = ir::ops::ScalarOp(other.toDouble(), shape());
-  return Create(CreateDivNode(GetIrNode(), constant), data_->device);
+  return Create(GetIrNode() / constant, data_->device);
 }
 
 void XLATensor::div_(const XLATensor& other) {
-  SetIrNode(CreateDivNode(GetIrNode(), other.GetIrNode()));
+  SetIrNode(GetIrNode() / other.GetIrNode());
 }
 
 void XLATensor::div_(const at::Scalar& other) {
   ir::NodePtr constant = ir::ops::ScalarOp(other.toDouble(), shape());
-  SetIrNode(CreateDivNode(GetIrNode(), constant));
+  SetIrNode(GetIrNode() / constant);
 }
 
 void XLATensor::zero_() { SetIrNode(ir::ops::ScalarOp(0.0, shape())); }
@@ -598,18 +549,16 @@ void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
                          const XLATensor& tensor2) {
   ir::NodePtr constant =
       ir::ops::ScalarOp(value.toDouble(), tensor1.shape().element_type());
-  ir::NodePtr div = CreateDivNode(tensor1.GetIrNode(), tensor2.GetIrNode());
-  ir::NodePtr scaled = CreateMulNode(div, constant);
-  SetIrNode(CreateAddNode(GetIrNode(), scaled));
+  ir::NodePtr div = tensor1.GetIrNode() / tensor2.GetIrNode();
+  SetIrNode(GetIrNode() + div * constant);
 }
 
 void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
                          const XLATensor& tensor2) {
   ir::NodePtr constant =
       ir::ops::ScalarOp(value.toDouble(), tensor1.shape().element_type());
-  ir::NodePtr div = CreateMulNode(tensor1.GetIrNode(), tensor2.GetIrNode());
-  ir::NodePtr scaled = CreateMulNode(div, constant);
-  SetIrNode(CreateAddNode(GetIrNode(), scaled));
+  ir::NodePtr mul = tensor1.GetIrNode() * tensor2.GetIrNode();
+  SetIrNode(GetIrNode() + mul * constant);
 }
 
 std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
