@@ -27,11 +27,7 @@ class Util {
   // detected.
   static std::vector<const Node*> ComputePostOrder(const Node* node,
                                                    EmissionMap* emap);
-
-  static std::vector<const Node*> ComputePostOrder(const Node* node) {
-    EmissionMap emap;
-    return ComputePostOrder(node, &emap);
-  }
+  static std::vector<const Node*> ComputePostOrder(const Node* node);
 };
 
 }  // namespace ir
