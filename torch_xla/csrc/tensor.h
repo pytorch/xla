@@ -208,7 +208,7 @@ class XLATensor {
     std::shared_ptr<XLATensor> grad;
   };
 
-  void SetXlaGraphNode(ir::NodePtr ir_node);
+  void SetIrNode(ir::NodePtr ir_node);
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.
