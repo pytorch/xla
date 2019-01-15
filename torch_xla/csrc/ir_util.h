@@ -18,13 +18,14 @@ class Util {
     kEmitted,
   };
 
-  using EmissionMap = std::unordered_map<Node*, EmitStatus>;
+  using EmissionMap = std::unordered_map<const Node*, EmitStatus>;
 
   // Calculates the post-order necessary to lower the given node. The returned
   // post-order can be empty if the node has already been lowered.
-  static std::vector<Node*> ComputePostOrder(Node* node, EmissionMap* emap);
+  static std::vector<const Node*> ComputePostOrder(const Node* node,
+                                                   EmissionMap* emap);
 
-  static std::vector<Node*> ComputePostOrder(Node* node) {
+  static std::vector<const Node*> ComputePostOrder(const Node* node) {
     EmissionMap emap;
     return ComputePostOrder(node, &emap);
   }
