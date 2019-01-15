@@ -396,13 +396,18 @@ void XLATensor::SetXlaGraphNode(ir::NodePtr ir_node) {
 }
 
 void XLATensor::TryLimitGraphSize() {
-  // If we are accumulating too many nodes in the pending graph, render the XLA
-  // by executing the pending graph.
-  static const xla::int64 kMaxPendingGraphSize = 1000;
-  if (data_->ir_node != nullptr &&
-      data_->ir_node->graph_size() > kMaxPendingGraphSize) {
+  static long count = 0;
+  if (++count % 1000 == 0) {
     ApplyPendingGraph();
   }
+
+  // If we are accumulating too many nodes in the pending graph, render the XLA
+  // by executing the pending graph.
+  // static const xla::int64 kMaxPendingGraphSize = 1000;
+  // if (data_->ir_node != nullptr &&
+  //     data_->ir_node->graph_size() > kMaxPendingGraphSize) {
+  //   ApplyPendingGraph();
+  // }
 }
 
 ir::NodePtr XLATensor::GetIrNode() const {

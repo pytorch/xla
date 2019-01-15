@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "helpers.h"
 #include "lowering_context.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -27,7 +28,6 @@ std::string Scalar::ToString() const {
 XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
   xla::Literal literal(xla::ShapeUtil::MakeShape(shape().element_type(), {}));
   switch (shape().element_type()) {
-  switch (dtype) {
     case xla::S8:
       literal.Set<xla::int8>({}, static_cast<xla::int8>(value_));
       break;
