@@ -17,6 +17,10 @@
 namespace xla {
 namespace {
 
+ComputationClient* CreateClient() {
+  return ComputationClient::Create().ConsumeValueOrDie().release();
+}
+
 string GetTpuClusterConfigPath() {
   string home_folder = sys_util::GetEnvString("HOME", ".");
   return absl::StrCat(home_folder, "/", ".pytorch_tpu.conf");
@@ -159,6 +163,11 @@ int64 ComputationClient::GetDeviceOrdinal(const string& device) {
   auto pos = device.rfind(':');
   CHECK_NE(pos, string::npos) << device;
   return std::stoi(device.substr(pos + 1));
+}
+
+ComputationClient* ComputationClient::Get() {
+  static ComputationClient* computation_client = CreateClient();
+  return computation_client;
 }
 
 metrics::Metric* ComputationClient::TransferToServerMetric() {

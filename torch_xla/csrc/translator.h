@@ -3,7 +3,6 @@
 #include <string>
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "torch/csrc/jit/ir.h"
 
 namespace torch_xla {
@@ -74,7 +73,5 @@ class XlaTranslator {
   std::shared_ptr<torch::jit::Graph> graph_;
   xla::PrecisionConfig::Precision conv_precision_;
 };
-
-xla::ComputationClient* XlaGetClient();
 
 }  // namespace torch_xla
