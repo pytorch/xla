@@ -75,7 +75,7 @@ execute_process(COMMAND "ln" "-s" "-f"
   "${PTXLA_LIBDIR}/libptxla.so")
 
 find_library(PTXLA_LIB "libptxla.so"
-  HINTS "${PTXLA_DIR}/build/lib.linux-x86_64-3.6")
+  HINTS "${PTXLA_LIBDIR}")
 find_library(PT_LIB "libtorch.so"
   HINTS "${PT_DIR}/build/lib")
 find_library(PTPY_LIB "libtorch_python.so"
