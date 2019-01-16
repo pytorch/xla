@@ -4,8 +4,11 @@ set(GTEST_DIR "${CMAKE_BINARY_DIR}/gtest")
 
 get_filename_component(PTXLA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
 get_filename_component(PT_DIR "${PTXLA_DIR}/.." ABSOLUTE)
-set(PTXLA_LIBDIR "${PTXLA_DIR}/build/lib.linux-x86_64-3.6")
 set(TFDIR "${PTXLA_DIR}/third_party/tensorflow")
+
+file(GLOB PTXLA_LIBDIRS "${PTXLA_DIR}/build/lib.*")
+list(GET PTXLA_LIBDIRS 0 PTXLA_LIBDIR)
+message("Selected PT/XLA library folder ${PTXLA_LIBDIR}")
 
 project(ptxla_test)
 
