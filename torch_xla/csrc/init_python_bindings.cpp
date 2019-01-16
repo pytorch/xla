@@ -226,6 +226,17 @@ void InitXlaTensorBindings(py::module m) {
         return s.str();
       });
   m.def("relu", [](std::shared_ptr<XLATensor> self) { return self->relu(); });
+  m.def(
+      "conv2d",
+      [](std::shared_ptr<XLATensor> self, std::shared_ptr<XLATensor> weight,
+         std::shared_ptr<XLATensor> bias, int stride, int padding,
+         bool use_full_conv_precision) {
+        return self->conv2d(weight, bias, stride, padding,
+                            use_full_conv_precision);
+      },
+      py::arg("input"), py::arg("weight"), py::arg("bias") = nullptr,
+      py::arg("stride") = 1, py::arg("padding") = 0,
+      py::arg("use_full_conv_precision") = false);
 }
 
 }  // namespace

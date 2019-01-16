@@ -241,10 +241,8 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
 }
 
 std::vector<std::pair<xla::int64, xla::int64>> MakePadding(
-    const torch::jit::Node* node) {
+    tensorflow::gtl::ArraySlice<xla::int64> padding) {
   std::vector<std::pair<xla::int64, xla::int64>> dims_padding;
-  const auto padding =
-      node->get<std::vector<int64_t>>(at::attr::padding).value();
   for (const auto dim_padding : padding) {
     dims_padding.emplace_back(dim_padding, dim_padding);
   }
@@ -257,13 +255,25 @@ xla::XlaOp BuildConvolution(
     const torch::jit::Node* node, const xla::XlaOp& input,
     const xla::XlaOp& kernel,
     const xla::PrecisionConfig::Precision conv_precision) {
-  const auto window_strides = XlaHelpers::I64List(
-      node->get<std::vector<int64_t>>(at::attr::stride).value());
-  const auto dims_padding = MakePadding(node);
+  const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
+  const auto padding =
+      node->get<std::vector<int64_t>>(at::attr::padding).value();
+  xla::PrecisionConfig precision_config =
+      XlaHelpers::BuildPrecisionConfig(conv_precision);
+  return BuildConvolution(input, kernel, XlaHelpers::I64List(stride),
+                          XlaHelpers::I64List(padding), conv_precision);
+}
+
+xla::XlaOp BuildConvolution(
+    const xla::XlaOp& input, const xla::XlaOp& kernel,
+    tensorflow::gtl::ArraySlice<xla::int64> stride,
+    tensorflow::gtl::ArraySlice<xla::int64> padding,
+    const xla::PrecisionConfig::Precision conv_precision) {
+  const auto dims_padding = MakePadding(padding);
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(conv_precision);
   return xla::ConvWithGeneralPadding(
-      input, kernel, window_strides, dims_padding,
+      input, kernel, stride, dims_padding,
       /*feature_group_count*/ 1, /*batch_group_count=*/1, &precision_config);
 }
 
@@ -273,7 +283,20 @@ xla::XlaOp BuildConvolutionBias(
     const xla::PrecisionConfig::Precision conv_precision) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_GE(node_inputs.size(), size_t(4));
-  const auto conv = BuildConvolution(node, input, kernel, conv_precision);
+  const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
+  const auto padding =
+      node->get<std::vector<int64_t>>(at::attr::padding).value();
+  return BuildConvolutionBias(input, kernel, bias, XlaHelpers::I64List(stride),
+                              XlaHelpers::I64List(padding), conv_precision);
+}
+
+xla::XlaOp BuildConvolutionBias(
+    const xla::XlaOp& input, const xla::XlaOp& kernel, const xla::XlaOp& bias,
+    tensorflow::gtl::ArraySlice<xla::int64> stride,
+    tensorflow::gtl::ArraySlice<xla::int64> padding,
+    const xla::PrecisionConfig::Precision conv_precision) {
+  const auto conv =
+      BuildConvolution(input, kernel, stride, padding, conv_precision);
   auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
   XLA_CHECK_EQ(broadcast_sizes.size(), 4);
   // Remove the channels dimension.
