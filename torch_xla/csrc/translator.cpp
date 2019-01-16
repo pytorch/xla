@@ -22,10 +22,6 @@
 namespace torch_xla {
 namespace {
 
-xla::ComputationClient* CreateClient() {
-  return xla::ComputationClient::Create().ConsumeValueOrDie().release();
-}
-
 xla::XlaOp GetConstantOp(xla::XlaBuilder* builder,
                          const torch::jit::Node* node) {
   auto value = toIValue(node->output()).value();
@@ -638,11 +634,6 @@ GetTranslationHandlers() {
 }
 
 }  // namespace
-
-xla::ComputationClient* XlaGetClient() {
-  static xla::ComputationClient* computation_client = CreateClient();
-  return computation_client;
-}
 
 XlaTranslator::XlaTranslator(
     const std::shared_ptr<torch::jit::Graph>& graph,
