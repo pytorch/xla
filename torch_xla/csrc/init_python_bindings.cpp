@@ -104,7 +104,7 @@ void InitXlaTensorBindings(py::module m) {
                                           XLATensor::DeviceFromString(device));
                }),
            py::arg("tensor"), py::arg("device") = "")
-      .def("to_tensor", [](XLATensor& s) { return s.toTensor(); })
+      .def("to_tensor", [](XLATensor& s) { return s.ToTensor(); })
       .def("size", [](const XLATensor& s) { return s.Size(); })
       .def("device",
            [](const XLATensor& s) { return s.GetDevice().ToString(); })
@@ -222,7 +222,7 @@ void InitXlaTensorBindings(py::module m) {
           })
       .def("__repr__", [](XLATensor& m) {
         std::ostringstream s;
-        s << m.toTensor();
+        s << m.ToTensor();
         return s.str();
       });
   m.def("relu", [](std::shared_ptr<XLATensor> self) { return self->relu(); });

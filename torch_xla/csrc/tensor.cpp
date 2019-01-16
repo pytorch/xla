@@ -441,7 +441,7 @@ std::vector<int64_t> XLATensor::Size() const {
                               tensor_shape.dimensions().end());
 }
 
-const at::Tensor& XLATensor::toTensor() {
+const at::Tensor& XLATensor::ToTensor() {
   std::shared_ptr<at::Tensor> tensor_data = CurrentTensorData();
   if (tensor_data == nullptr) {
     ApplyPendingGraph();

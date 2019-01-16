@@ -93,7 +93,7 @@ class XLATensor {
 
   void detach_() { requires_grad_ = false; }
 
-  const at::Tensor& toTensor();
+  const at::Tensor& ToTensor();
 
   std::shared_ptr<XLATensor> grad() const;
   void SetGradient(std::shared_ptr<XLATensor> grad);
