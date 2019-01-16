@@ -4,6 +4,7 @@ set(GTEST_DIR "${CMAKE_BINARY_DIR}/gtest")
 
 get_filename_component(PTXLA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
 get_filename_component(PT_DIR "${PTXLA_DIR}/.." ABSOLUTE)
+set(PTXLA_LIBDIR "${PTXLA_DIR}/build/lib.linux-x86_64-3.6")
 set(TFDIR "${PTXLA_DIR}/third_party/tensorflow")
 
 project(ptxla_test)
@@ -61,7 +62,10 @@ endif()
 
 ExternalProject_Get_Property(googletest BINARY_DIR)
 
-# _XLAC.cpython-36m-x86_64-linux-gnu.so
+# The linker does not like the _XLAC.cpython-36m-x86_64-linux-gnu.so name.
+execute_process(COMMAND "ln" "-s" "-f"
+  "${PTXLA_LIBDIR}/_XLAC.cpython-36m-x86_64-linux-gnu.so"
+  "${PTXLA_LIBDIR}/libptxla.so")
 
 find_library(PTXLA_LIB "libptxla.so"
   HINTS "${PTXLA_DIR}/build/lib.linux-x86_64-3.6")
