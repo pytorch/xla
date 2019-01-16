@@ -16,6 +16,7 @@
 #include "ops/cross_replica_sum.h"
 #include "ops/device_data.h"
 #include "ops/generic.h"
+#include "ops/infer_output_shape.h"
 #include "ops/ops.h"
 #include "ops/scalar.h"
 #include "tensorflow/compiler/xla/literal_util.h"
@@ -607,9 +608,16 @@ std::shared_ptr<XLATensor> XLATensor::relu() {
     xla::XlaOp xla_output = BuildRelu(xla_input);
     return node.ReturnOp(xla_output, loctx);
   };
+  auto lower_for_shape_fn =
+      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
+    return BuildRelu(operands[0]);
+  };
+  xla::Shape output_shape =
+      ir::ops::InferOutputShape({shape()}, lower_for_shape_fn);
   return Create(ir::ops::GenericOp(ir::OpKind(at::aten::relu),
                                    ir::OpList{ir::NodeOperand(GetIrNode())},
-                                   shape(), std::move(lower_fn)),
+                                   output_shape, std::move(lower_fn)),
                 GetDevice());
 }
 
