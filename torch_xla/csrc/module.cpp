@@ -279,7 +279,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
                               GetBackwardBuildOptions(inputs_.size()))
             .computation;
     xla::Shape result_shape = GetResultShape(computation, grad_outputs);
-    backward_computation_ = XlaGetClient()->Compile(
+    backward_computation_ = xla::ComputationClient::Get()->Compile(
         std::move(computation), GetStringDevices(), &result_shape);
   }
   // Collect the computation client data vector.
@@ -346,7 +346,7 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
     xla::XlaComputation computation =
         BuildFusedTrainComputation(forward_shapes);
     xla::Shape result_shape = GetResultShape(computation, inputs);
-    forward_computation_ = XlaGetClient()->Compile(
+    forward_computation_ = xla::ComputationClient::Get()->Compile(
         std::move(computation), GetStringDevices(), &result_shape);
   }
 
@@ -499,7 +499,7 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
 
     xla::Shape result_shape =
         GetResultShape(forward_translation_result.computation, inputs);
-    forward_computation_ = XlaGetClient()->Compile(
+    forward_computation_ = xla::ComputationClient::Get()->Compile(
         std::move(forward_translation_result.computation), GetStringDevices(),
         &result_shape);
   }
@@ -583,11 +583,11 @@ XlaModule::TensorBatchVector XlaModule::Execute(
       exec_results;
   if (inputs.size() == 1) {
     xla::ComputationClient::ExecuteComputationOptions options;
-    exec_results.push_back(XlaGetClient()->ExecuteComputation(
+    exec_results.push_back(xla::ComputationClient::Get()->ExecuteComputation(
         computation, inputs.front(), computation.devices()[0], options));
   } else {
     xla::ComputationClient::ExecuteReplicatedOptions options;
-    exec_results = XlaGetClient()->ExecuteReplicated(
+    exec_results = xla::ComputationClient::Get()->ExecuteReplicated(
         computation, inputs, computation.devices(), options);
   }
   return CreateResultBatchVector(std::move(exec_results));

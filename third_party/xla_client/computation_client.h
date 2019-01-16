@@ -169,6 +169,9 @@ class ComputationClient {
   // after the last ':' character of the device string.
   static int64 GetDeviceOrdinal(const string& device);
 
+  // Returns the ComputationClient singleton.
+  static ComputationClient* Get();
+
  protected:
   // Metrics common to all client intrfaces.
   static metrics::Metric* TransferToServerMetric();

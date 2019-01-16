@@ -315,7 +315,7 @@ XLATensor::XLATensor(const torch::autograd::Variable& tensor,
                   tensor.sizes(),
                   XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()),
                   device.hw_type),
-              device, XlaGetClient()),
+              device, xla::ComputationClient::Get()),
           device)),
       requires_grad_(tensor.requires_grad()) {}
 
@@ -447,7 +447,7 @@ const at::Tensor& XLATensor::ToTensor() {
     ApplyPendingGraph();
 
     std::vector<xla::Literal> literals =
-        XlaGetClient()->TransferFromServer({GetXlaData()});
+        xla::ComputationClient::Get()->TransferFromServer({GetXlaData()});
     tensor_data = std::make_shared<at::Tensor>(torch::autograd::make_variable(
         MakeTensorFromXlaLiteral(literals.front()), RequiresGrad()));
     SetTensorData(tensor_data);
@@ -470,7 +470,7 @@ std::vector<at::Tensor> XLATensor::GetTensors(
     tensors_data.push_back(tensor->GetXlaData());
   }
   std::vector<xla::Literal> literals =
-      XlaGetClient()->TransferFromServer(tensors_data);
+      xla::ComputationClient::Get()->TransferFromServer(tensors_data);
   std::vector<at::Tensor> results;
   for (size_t i = 0; i < literals.size(); ++i) {
     results.push_back(torch::autograd::make_variable(
@@ -495,7 +495,8 @@ std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
     };
     literal_device.emplace_back(std::move(converter), devices[i]);
   }
-  auto handles = XlaGetClient()->TransferToServer(literal_device);
+  auto handles =
+      xla::ComputationClient::Get()->TransferToServer(literal_device);
   std::vector<std::shared_ptr<XLATensor>> xla_tensors;
   for (size_t i = 0; i < handles.size(); ++i) {
     xla_tensors.push_back(
@@ -607,12 +608,12 @@ void XLATensor::ApplyPendingGraph() {
     xla::XlaOp root = lowering_ctx.GetOutputOp(ir::Output(ir_node.get(), 0));
     xla::XlaComputation computation =
         lowering_ctx.Build(root).ConsumeValueOrDie();
-    auto compiled_computation = XlaGetClient()->Compile(
+    auto compiled_computation = xla::ComputationClient::Get()->Compile(
         std::move(computation), {GetDevice().ToString()},
         /*output_shape=*/nullptr);
     xla::ComputationClient::ExecuteComputationOptions options;
     options.explode_tuple = false;
-    auto results = XlaGetClient()->ExecuteComputation(
+    auto results = xla::ComputationClient::Get()->ExecuteComputation(
         *compiled_computation, lowering_ctx.GetParametersData(),
         compiled_computation->devices()[0], options);
     XLA_CHECK_EQ(results.size(), 1);
@@ -695,7 +696,7 @@ bool XLATensor::RunCachedApply(
   }
 
   xla::ComputationClient::ExecuteParallelOptions options;
-  auto results = XlaGetClient()->ExecuteParallel(
+  auto results = xla::ComputationClient::Get()->ExecuteParallel(
       xla::util::GetConstSharedPointers(apply_context.computations), parameters,
       apply_context.devices, options);
   size_t device_index = 0;
@@ -828,10 +829,10 @@ void XLATensor::ApplyPendingGraph(
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
       computations;
   if (!instances.empty()) {
-    computations = XlaGetClient()->Compile(std::move(instances));
+    computations = xla::ComputationClient::Get()->Compile(std::move(instances));
 
     xla::ComputationClient::ExecuteParallelOptions options;
-    auto results = XlaGetClient()->ExecuteParallel(
+    auto results = xla::ComputationClient::Get()->ExecuteParallel(
         xla::util::GetConstSharedPointers(computations), parameters, devices,
         options);
     auto context_iterator = contexts_map.begin();
@@ -856,12 +857,14 @@ void XLATensor::ApplyPendingGraph(
 
 XLATensor::Device XLATensor::DeviceFromString(const std::string& device_spec) {
   if (device_spec.empty()) {
-    const std::string default_device_spec = XlaGetClient()->GetDefaultDevice();
+    const std::string default_device_spec =
+        xla::ComputationClient::Get()->GetDefaultDevice();
     XLA_CHECK(!default_device_spec.empty());
     return DeviceFromString(default_device_spec);
   }
   if (device_spec[0] == ':') {
-    const std::string default_device_spec = XlaGetClient()->GetDefaultDevice();
+    const std::string default_device_spec =
+        xla::ComputationClient::Get()->GetDefaultDevice();
     auto pos = default_device_spec.find(':');
     XLA_CHECK_NE(pos, std::string::npos) << default_device_spec;
     return DeviceFromString(default_device_spec.substr(0, pos) + device_spec);
