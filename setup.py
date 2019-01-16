@@ -63,7 +63,6 @@ third_party_path = os.path.join(base_dir, 'third_party')
 
 include_dirs = [
     os.path.join(base_dir, 'torch_xla', 'csrc'),
-    os.path.join(base_dir, 'torch_xla', 'csrc', 'ops'),
 ]
 include_dirs += [
     third_party_path + '/tensorflow/bazel-tensorflow',
