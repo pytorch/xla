@@ -352,7 +352,8 @@ at::ScalarType XLATensor::dtype() const {
 }
 
 const xla::Shape& XLATensor::shape() const {
-  return data_->xla_data ? data_->xla_data->shape() : data_->ir_node->shape();
+  return data_->xla_data != nullptr ? data_->xla_data->shape()
+                                    : data_->ir_node->shape();
 }
 
 const XLATensor::Device& XLATensor::GetDevice() const { return data_->device; }
@@ -390,10 +391,12 @@ void XLATensor::SetXlaData(
       << DumpGraphNodeComputation();
   data_->xla_data = std::move(xla_data);
   data_->ir_node = nullptr;
+  data_->tensor_data = nullptr;
 }
 
 void XLATensor::SetIrNode(ir::NodePtr ir_node) {
   data_->ir_node = std::move(ir_node);
+  data_->tensor_data = nullptr;
   TryLimitGraphSize();
 }
 
@@ -413,6 +416,14 @@ ir::NodePtr XLATensor::GetIrNode() const {
 
 const ir::NodePtr& XLATensor::CurrentIrNode() const { return data_->ir_node; }
 
+void XLATensor::SetTensorData(std::shared_ptr<at::Tensor> tensor_data) {
+  data_->tensor_data = std::move(tensor_data);
+}
+
+const std::shared_ptr<at::Tensor>& XLATensor::CurrentTensorData() const {
+  return data_->tensor_data;
+}
+
 void XLATensor::ReferenceDataFrom(const XLATensor& source) {
   XLA_CHECK_EQ(data_->device, source.data_->device);
   XLA_CHECK(xla::ShapeUtil::Equal(shape(), source.shape()))
@@ -420,6 +431,7 @@ void XLATensor::ReferenceDataFrom(const XLATensor& source) {
 
   data_->xla_data = source.data_->xla_data;
   data_->ir_node = source.data_->ir_node;
+  data_->tensor_data = source.data_->tensor_data;
 }
 
 std::vector<int64_t> XLATensor::Size() const {
@@ -428,13 +440,18 @@ std::vector<int64_t> XLATensor::Size() const {
                               tensor_shape.dimensions().end());
 }
 
-at::Tensor XLATensor::toTensor() {
-  ApplyPendingGraph();
+const at::Tensor& XLATensor::toTensor() {
+  std::shared_ptr<at::Tensor> tensor_data = CurrentTensorData();
+  if (tensor_data == nullptr) {
+    ApplyPendingGraph();
 
-  std::vector<xla::Literal> literals =
-      XlaGetClient()->TransferFromServer({GetXlaData()});
-  return torch::autograd::make_variable(
-      MakeTensorFromXlaLiteral(literals.front()), RequiresGrad());
+    std::vector<xla::Literal> literals =
+        XlaGetClient()->TransferFromServer({GetXlaData()});
+    tensor_data = std::make_shared<at::Tensor>(torch::autograd::make_variable(
+        MakeTensorFromXlaLiteral(literals.front()), RequiresGrad()));
+    SetTensorData(tensor_data);
+  }
+  return *tensor_data;
 }
 
 std::vector<std::shared_ptr<XLATensor>> XLATensor::GetLiveTensors() {
