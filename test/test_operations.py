@@ -1163,6 +1163,16 @@ class TestReplicatedSum(XlaTestCase):
       self.compareReplicated(model, inputs, out)
 
 
+class TestXLATensor(XlaTestCase):
+
+    def test_relu(self):
+        x = _gen_tensor(2, 1, 4, 6)
+        xt_x = torch_xla._XLAC.XLATensor(x)
+        expected = F.relu(x)
+        out = torch_xla._XLAC.relu(xt_x).to_tensor()
+        self.assertEqualDbg(out.data, expected.data)
+
+
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
   run_tests()
