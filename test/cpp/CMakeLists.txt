@@ -80,11 +80,14 @@ find_library(PT_LIB "libtorch.so"
   HINTS "${PT_DIR}/build/lib")
 find_library(PTPY_LIB "libtorch_python.so"
   HINTS "${PT_DIR}/build/lib")
+find_library(C10_LIB "libc10.so"
+  HINTS "${PT_DIR}/build/lib")
 
 target_link_libraries(
   test_ptxla
   "${PTXLA_LIB}"
   "${PT_LIB}"
+  "${C10_LIB}"
   "${PTPY_LIB}"
   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest${SUFFIX}"
   "${PYTHON_LIBRARY}"
