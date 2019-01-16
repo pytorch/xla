@@ -62,9 +62,13 @@ endif()
 
 ExternalProject_Get_Property(googletest BINARY_DIR)
 
+file(GLOB XLAC_LIBS "${PTXLA_LIBDIR}/_XLAC.*.so")
+list(GET XLAC_LIBS 0 XLAC_LIBRARY)
+message("Selected XLAC library ${XLAC_LIBRARY}")
+
 # The linker does not like the _XLAC.cpython-36m-x86_64-linux-gnu.so name.
 execute_process(COMMAND "ln" "-s" "-f"
-  "${PTXLA_LIBDIR}/_XLAC.cpython-36m-x86_64-linux-gnu.so"
+  "${XLAC_LIBRARY}"
   "${PTXLA_LIBDIR}/libptxla.so")
 
 find_library(PTXLA_LIB "libptxla.so"
