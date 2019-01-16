@@ -37,11 +37,15 @@ include_directories(
   "${TFDIR}/bazel-tensorflow/external/protobuf_archive/src"
   "${TFDIR}/bazel-tensorflow/external/eigen_archive"
   "${TFDIR}/bazel-tensorflow/external/com_google_absl"
+  "${PT_DIR}"
+  "${PT_DIR}/torch/csrc"
+  "${PT_DIR}/torch/lib/tmp_install/include"
   "${PYTHON_INCLUDE_DIR}"
 )
 
 set(TORCH_XLA_TEST_SOURCES
   main.cpp
+  test_ir.cpp
 )
 
 add_executable(test_ptxla ${TORCH_XLA_TEST_SOURCES})
@@ -63,11 +67,14 @@ find_library(PTXLA_LIB "libptxla.so"
   HINTS "${PTXLA_DIR}/build/lib.linux-x86_64-3.6")
 find_library(PT_LIB "libtorch.so"
   HINTS "${PT_DIR}/build/lib")
+find_library(PTPY_LIB "libtorch_python.so"
+  HINTS "${PT_DIR}/build/lib")
 
 target_link_libraries(
   test_ptxla
   "${PTXLA_LIB}"
   "${PT_LIB}"
+  "${PTPY_LIB}"
   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest${SUFFIX}"
   "${PYTHON_LIBRARY}"
   ${PTHREAD})
