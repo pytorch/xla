@@ -60,6 +60,12 @@ xla::XlaOp BuildThreshold(const torch::jit::Node* node, const xla::XlaOp& input,
                      xla::Broadcast(xla_value, broadcast_sizes));
 }
 
+xla::XlaOp BuildRelu(const xla::XlaOp& input) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  return xla::Max(input, XlaHelpers::ScalarValue<float>(
+                             0, input_shape.element_type(), input.builder()));
+}
+
 xla::XlaOp BuildTypeAs(const torch::jit::Node* node,
                        const xla::XlaOp& operand) {
   const auto node_outputs = node->outputs();

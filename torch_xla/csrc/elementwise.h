@@ -22,4 +22,7 @@ xla::XlaOp BuildThreshold(const torch::jit::Node* node, const xla::XlaOp& input,
                           const xla::XlaOp& output, const float threshold,
                           const float value, xla::XlaBuilder* b);
 
+// Computes the rectified linear unit (replace negative elements with 0).
+xla::XlaOp BuildRelu(const xla::XlaOp& input);
+
 }  // namespace torch_xla

@@ -146,6 +146,9 @@ class XLATensor {
   void addcmul_(const at::Scalar& value, const XLATensor& tensor1,
                 const XLATensor& tensor2);
 
+  // Additional operations which are part of the PyTorch Tensor functionality.
+  std::shared_ptr<XLATensor> relu();
+
   std::shared_ptr<XLATensor> cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups);
 
