@@ -9,9 +9,9 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "arithmetic_ir_ops.h"
 #include "helpers.h"
 #include "lowering_context.h"
+#include "ops/arithmetic_ir_ops.h"
 #include "ops/cross_replica_sum.h"
 #include "ops/device_data.h"
 #include "ops/generic.h"
