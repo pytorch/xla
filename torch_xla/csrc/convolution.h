@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch/csrc/jit/ir.h"
 
 namespace torch_xla {
@@ -12,10 +13,24 @@ xla::XlaOp BuildConvolution(
     const xla::XlaOp& kernel,
     const xla::PrecisionConfig::Precision conv_precision);
 
+// Same as above, with stride and padding provided as parameters.
+xla::XlaOp BuildConvolution(
+    const xla::XlaOp& input, const xla::XlaOp& kernel,
+    tensorflow::gtl::ArraySlice<xla::int64> stride,
+    tensorflow::gtl::ArraySlice<xla::int64> padding,
+    const xla::PrecisionConfig::Precision conv_precision);
+
 // Same as above, then broadcasts the bias and adds it to the result.
 xla::XlaOp BuildConvolutionBias(
     const torch::jit::Node* node, const xla::XlaOp& input,
     const xla::XlaOp& kernel, const xla::XlaOp& bias,
+    const xla::PrecisionConfig::Precision conv_precision);
+
+// Same as above, with stride and padding provided as parameters.
+xla::XlaOp BuildConvolutionBias(
+    const xla::XlaOp& input, const xla::XlaOp& kernel, const xla::XlaOp& bias,
+    tensorflow::gtl::ArraySlice<xla::int64> stride,
+    tensorflow::gtl::ArraySlice<xla::int64> padding,
     const xla::PrecisionConfig::Precision conv_precision);
 
 struct Conv2DGrads {
