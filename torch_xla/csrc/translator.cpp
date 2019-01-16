@@ -378,10 +378,7 @@ void TranslateRelu(const torch::jit::Node* node, ComputationContext* cctx,
                    xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
   const auto xla_input = cctx->OpForInput(node, 0);
-  xla::Shape xla_input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
-  xla::XlaOp xla_output = xla::Max(
-      xla_input,
-      XlaHelpers::ScalarValue<float>(0, xla_input_shape.element_type(), b));
+  xla::XlaOp xla_output = BuildRelu(xla_input);
   cctx->AddNodeOp(node, xla_output);
 }
 

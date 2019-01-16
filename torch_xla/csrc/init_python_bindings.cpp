@@ -225,6 +225,7 @@ void InitXlaTensorBindings(py::module m) {
         s << m.toTensor();
         return s.str();
       });
+  m.def("relu", [](std::shared_ptr<XLATensor> self) { return self->relu(); });
 }
 
 }  // namespace

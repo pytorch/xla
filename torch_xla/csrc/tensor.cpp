@@ -9,6 +9,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "elementwise.h"
 #include "helpers.h"
 #include "lowering_context.h"
 #include "ops/arithmetic_ir_ops.h"
@@ -576,6 +577,19 @@ void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
       ir::ops::ScalarOp(value.toDouble(), tensor1.shape().element_type());
   ir::NodePtr mul = tensor1.GetIrNode() * tensor2.GetIrNode();
   SetIrNode(GetIrNode() + mul * constant);
+}
+
+std::shared_ptr<XLATensor> XLATensor::relu() {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_output = BuildRelu(xla_input);
+    return node.ReturnOp(xla_output, loctx);
+  };
+  return Create(ir::ops::GenericOp(ir::OpKind(at::aten::relu),
+                                   ir::OpList{ir::NodeOperand(GetIrNode())},
+                                   shape(), std::move(lower_fn)),
+                GetDevice());
 }
 
 std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
