@@ -13,6 +13,7 @@
 #include "helpers.h"
 #include "lowering_context.h"
 #include "ops/arithmetic_ir_ops.h"
+#include "ops/conv2d.h"
 #include "ops/cross_replica_sum.h"
 #include "ops/device_data.h"
 #include "ops/generic.h"
@@ -619,6 +620,24 @@ std::shared_ptr<XLATensor> XLATensor::relu() {
                                    ir::OpList{ir::NodeOperand(GetIrNode())},
                                    output_shape, std::move(lower_fn)),
                 GetDevice());
+}
+
+std::shared_ptr<XLATensor> XLATensor::conv2d(
+    const std::shared_ptr<XLATensor>& weight,
+    const std::shared_ptr<XLATensor>& bias, int stride, int padding,
+    bool use_full_conv_precision) {
+  std::shared_ptr<ir::ops::Conv2d> ir_node;
+  if (bias) {
+    ir_node = std::make_shared<ir::ops::Conv2d>(
+        ir::NodeOperand(GetIrNode()), ir::NodeOperand(weight->GetIrNode()),
+        ir::NodeOperand(bias->GetIrNode()), stride, padding,
+        use_full_conv_precision);
+  } else {
+    ir_node = std::make_shared<ir::ops::Conv2d>(
+        ir::NodeOperand(GetIrNode()), ir::NodeOperand(weight->GetIrNode()),
+        stride, padding, use_full_conv_precision);
+  }
+  return Create(ir_node, GetDevice());
 }
 
 std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
