@@ -21,6 +21,7 @@
 #include "ops/max_pool2d.h"
 #include "ops/ops.h"
 #include "ops/scalar.h"
+#include "ops/view.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -693,6 +694,13 @@ std::shared_ptr<XLATensor> XLATensor::t() {
   return Create(ir::ops::GenericOp(ir::OpKind(at::aten::t),
                                    ir::OpList{ir::NodeOperand(GetIrNode())},
                                    output_shape, std::move(lower_fn)),
+                GetDevice());
+}
+
+std::shared_ptr<XLATensor> XLATensor::view(
+    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
+  return Create(std::make_shared<ir::ops::View>(ir::NodeOperand(GetIrNode()),
+                                                output_size),
                 GetDevice());
 }
 

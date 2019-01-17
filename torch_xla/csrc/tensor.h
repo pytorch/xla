@@ -159,6 +159,9 @@ class XLATensor {
 
   std::shared_ptr<XLATensor> t();
 
+  std::shared_ptr<XLATensor> view(
+      tensorflow::gtl::ArraySlice<const xla::int64> output_size);
+
   std::shared_ptr<XLATensor> cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups);
 

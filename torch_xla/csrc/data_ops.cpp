@@ -1,6 +1,7 @@
 #include "data_ops.h"
 #include "helpers.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 
 #include <functional>
 #include <numeric>
@@ -12,9 +13,9 @@ namespace {
 // output shape. The complete output shape has same total number of elements as
 // input_sizes and matches output_sizes in all dimensions except for at most
 // one, which can be inferred and stored as -1 in output_sizes.
-std::vector<int64_t> GetCompleteShape(
-    const std::vector<int64_t>& output_sizes,
-    const std::vector<xla::int64>& input_sizes) {
+std::vector<xla::int64> GetCompleteShape(
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes,
+    tensorflow::gtl::ArraySlice<const xla::int64> input_sizes) {
   c10::optional<size_t> incomplete_dim;
   int64_t incomplete_element_count = 1;
   for (size_t dim = 0; dim < output_sizes.size(); ++dim) {
@@ -29,15 +30,15 @@ std::vector<int64_t> GetCompleteShape(
     }
   }
   if (!incomplete_dim) {
-    return output_sizes;
+    return std::vector<xla::int64>(output_sizes.begin(), output_sizes.end());
   }
   const auto total_element_count =
       std::accumulate(input_sizes.begin(), input_sizes.end(), int64_t(1),
                       std::multiplies<int64_t>());
   XLA_CHECK_EQ(total_element_count % incomplete_element_count, 0)
       << "Cannot infer remaining dimension";
-  std::vector<int64_t> complete_output_sizes(output_sizes.begin(),
-                                             output_sizes.end());
+  std::vector<xla::int64> complete_output_sizes(output_sizes.begin(),
+                                                output_sizes.end());
   complete_output_sizes[*incomplete_dim] =
       total_element_count / incomplete_element_count;
   return complete_output_sizes;
@@ -86,9 +87,15 @@ xla::XlaOp BuildView(const torch::jit::Node* node, const xla::XlaOp& input) {
     default:
       XLA_ERROR() << "Unexpected node kind, must be view or reshape";
   }
-  output_sizes =
+  return BuildView(input, XlaHelpers::I64List(output_sizes));
+}
+
+xla::XlaOp BuildView(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+  const auto complete_output_sizes =
       GetCompleteShape(output_sizes, XlaHelpers::SizesOfXlaOp(input));
-  return xla::Reshape(input, XlaHelpers::I64List(output_sizes));
+  return xla::Reshape(input, complete_output_sizes);
 }
 
 xla::XlaOp BuildExpand(const torch::jit::Node* node, const xla::XlaOp& input) {
