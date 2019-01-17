@@ -1166,31 +1166,31 @@ class TestReplicatedSum(XlaTestCase):
 class TestXLATensor(XlaTestCase):
 
     def test_relu(self):
-        x = _gen_tensor(2, 1, 4, 6)
-        xt_x = torch_xla._XLAC.XLATensor(x)
-        expected = F.relu(x)
-        out = torch_xla._XLAC.relu(xt_x).to_tensor()
-        self.assertEqualDbg(out.data, expected.data)
+      x = _gen_tensor(2, 1, 4, 6)
+      xt_x = torch_xla._XLAC.XLATensor(x)
+      expected = F.relu(x)
+      out = torch_xla._XLAC.relu(xt_x).to_tensor()
+      self.assertEqualDbg(out.data, expected.data)
 
     def test_conv2d(self):
-        in_channels = 3
-        out_channels = 7
-        kernel_size = 5
-        input = _gen_tensor(4, in_channels, 28, 28)
-        weight = torch.Tensor(out_channels, in_channels, kernel_size, kernel_size)
-        bias = torch.Tensor(out_channels)
-        xt_input = torch_xla._XLAC.XLATensor(input)
-        xt_weight = torch_xla._XLAC.XLATensor(weight)
-        xt_bias = torch_xla._XLAC.XLATensor(bias)
-        for stride in range(1, 4):
-          for padding in range(0, 3):
-            for with_bias in [True, False]:
-              conv_bias = bias if with_bias else None
-              conv_xt_bias = xt_bias if with_bias else None
-              expected = F.conv2d(input, weight, conv_bias, stride=stride, padding=padding)
-              out = torch_xla._XLAC.conv2d(xt_input, xt_weight, conv_xt_bias, stride=stride,
-                                           padding=padding, use_full_conv_precision=True).to_tensor()
-              self.assertEqualRel(out.data, expected.data)
+      in_channels = 3
+      out_channels = 7
+      kernel_size = 5
+      input = _gen_tensor(4, in_channels, 28, 28)
+      weight = torch.Tensor(out_channels, in_channels, kernel_size, kernel_size)
+      bias = torch.Tensor(out_channels)
+      xt_input = torch_xla._XLAC.XLATensor(input)
+      xt_weight = torch_xla._XLAC.XLATensor(weight)
+      xt_bias = torch_xla._XLAC.XLATensor(bias)
+      for stride in range(1, 4):
+        for padding in range(0, 3):
+          for with_bias in [True, False]:
+            conv_bias = bias if with_bias else None
+            conv_xt_bias = xt_bias if with_bias else None
+            expected = F.conv2d(input, weight, conv_bias, stride=stride, padding=padding)
+            out = torch_xla._XLAC.conv2d(xt_input, xt_weight, conv_xt_bias, stride=stride,
+                                          padding=padding, use_full_conv_precision=True).to_tensor()
+            self.assertEqualRel(out.data, expected.data)
 
 
 if __name__ == '__main__':
