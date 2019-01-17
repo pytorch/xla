@@ -178,6 +178,7 @@ void InitXlaTensorBindings(py::module m) {
              self->addcmul_(alpha, tensor1, tensor2);
              return self;
            })
+      .def("t", [](std::shared_ptr<XLATensor> self) { return self->t(); })
       .def("cross_replica_sum",
            [](std::shared_ptr<XLATensor> self, const py::list& groups) {
              std::vector<std::vector<xla::int64>> crs_groups;

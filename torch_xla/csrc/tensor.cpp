@@ -676,6 +676,26 @@ std::shared_ptr<XLATensor> XLATensor::max_pool2d(int kernel_size, int stride,
                 GetDevice());
 }
 
+std::shared_ptr<XLATensor> XLATensor::t() {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_output = xla::Transpose(xla_input, {1, 0});
+    return node.ReturnOp(xla_output, loctx);
+  };
+  auto lower_for_shape_fn =
+      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
+    return xla::Transpose(operands[0], {1, 0});
+  };
+  xla::Shape output_shape =
+      ir::ops::InferOutputShape({shape()}, lower_for_shape_fn);
+  return Create(ir::ops::GenericOp(ir::OpKind(at::aten::t),
+                                   ir::OpList{ir::NodeOperand(GetIrNode())},
+                                   output_shape, std::move(lower_fn)),
+                GetDevice());
+}
+
 std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
     const std::vector<std::vector<xla::int64>>& groups) {
   ir::NodePtr crs =
