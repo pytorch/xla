@@ -1192,6 +1192,15 @@ class TestXLATensor(XlaTestCase):
                                           padding=padding, use_full_conv_precision=True).to_tensor()
             self.assertEqualRel(out.data, expected.data)
 
+    def test_max_pool2d(self):
+      x = _gen_tensor(1, 64, 112, 112)
+      xt_x = torch_xla._XLAC.XLATensor(x)
+      for stride in [1, 2]:
+        for padding in [0, 1]:
+          expected = F.max_pool2d(x, 3, stride=stride, padding=padding)
+          out = torch_xla._XLAC.max_pool2d(xt_x, 3, stride=stride, padding=padding).to_tensor()
+          self.assertEqualRel(out.data, expected.data)
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')

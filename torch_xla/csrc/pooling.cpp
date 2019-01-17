@@ -30,12 +30,12 @@ xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
   return reduction_builder.Build().ConsumeValueOrDie();
 }
 
-// Extract the pooling attributes for the given 2D pooling operator "node".
-PoolingOpAttributes Pooling2DOpAttributes(const torch::jit::Node* pooling_2d) {
-  const auto kernel_size_attr = XlaHelpers::I64List(
-      pooling_2d->get<std::vector<int64_t>>(at::attr::kernel_size).value());
-  const auto stride_attr =
-      pooling_2d->get<std::vector<int64_t>>(at::attr::stride).value();
+// Construct the pooling attributes for the given kernel size, stride and
+// padding.
+PoolingOpAttributes Pooling2DOpAttributes(
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size_attr,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride_attr,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding_attr) {
   // Create a NCHW kernel size with 1 for batch size and feature.
   std::vector<xla::int64> kernel_size(2, 1);
   kernel_size.insert(kernel_size.end(), kernel_size_attr.begin(),
@@ -49,14 +49,25 @@ PoolingOpAttributes Pooling2DOpAttributes(const torch::jit::Node* pooling_2d) {
     stride.resize(2, 1);
     stride.insert(stride.end(), stride_attr.begin(), stride_attr.end());
   }
-  const auto padding_attr =
-      pooling_2d->get<std::vector<int64_t>>(at::attr::padding).value();
   XLA_CHECK_EQ(padding_attr.size(), 2);
   std::vector<std::pair<xla::int64, xla::int64>> padding;
   for (const xla::int64 dim_pad : padding_attr) {
     padding.push_back(std::make_pair(dim_pad, dim_pad));
   }
   return {kernel_size, stride, padding};
+}
+
+// Extract the pooling attributes for the given 2D pooling operator "node".
+PoolingOpAttributes Pooling2DOpAttributes(const torch::jit::Node* pooling_2d) {
+  const auto kernel_size_attr = XlaHelpers::I64List(
+      pooling_2d->get<std::vector<int64_t>>(at::attr::kernel_size).value());
+  const auto stride_attr = XlaHelpers::I64List(
+      pooling_2d->get<std::vector<int64_t>>(at::attr::stride).value());
+  const auto padding_attr = XlaHelpers::I64List(
+      pooling_2d->get<std::vector<int64_t>>(at::attr::padding).value());
+  return Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size_attr,
+                               /*stride_attr=*/stride_attr,
+                               /*padding_attr=*/padding_attr);
 }
 
 void CheckAvgPool2DIsSupported(const torch::jit::Node* node) {
@@ -89,15 +100,31 @@ std::vector<xla::int64> AdaptiveAvgPoolKernelSize(
 
 xla::XlaOp BuildMaxPool2d(const torch::jit::Node* node,
                           const xla::XlaOp& input) {
-  const auto pooling_op_attributes = Pooling2DOpAttributes(node);
+  const auto kernel_size =
+      node->get<std::vector<int64_t>>(at::attr::kernel_size).value();
+  const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
+  const auto padding =
+      node->get<std::vector<int64_t>>(at::attr::padding).value();
+  return BuildMaxPool2d(input, XlaHelpers::I64List(kernel_size),
+                        XlaHelpers::I64List(stride),
+                        XlaHelpers::I64List(padding));
+}
+
+xla::XlaOp BuildMaxPool2d(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   auto builder = input.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto init_value =
       xla::LiteralUtil::MinValue(input_shape.element_type());
   const auto xla_init_value = xla::ConstantLiteral(builder, init_value);
-  const auto padding_config = XlaHelpers::MakeXlaPaddingConfig(
-      node->get<std::vector<int64_t>>(at::attr::padding).value());
+  const auto padding_config = XlaHelpers::MakeXlaPaddingConfig(padding);
   const auto padded_input = xla::Pad(input, xla_init_value, padding_config);
+  const auto pooling_op_attributes =
+      Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size,
+                            /*stride_attr=*/stride, /*padding_attr=*/padding);
   return xla::MaxPool(
       /*operand=*/padded_input,
       /*kernel_size=*/pooling_op_attributes.kernel_size,

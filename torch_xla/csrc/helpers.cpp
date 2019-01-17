@@ -46,7 +46,8 @@ xla::XlaOp XlaHelpers::CreateReturnValue(
 }
 
 xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfig(
-    const std::vector<int64_t>& padding) {
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  XLA_CHECK_EQ(padding.size(), 2) << "Only 2D padding supported";
   xla::PaddingConfig padding_config;
   for (int i = 0; i < 2; ++i) {
     padding_config.add_dimensions();
