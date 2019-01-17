@@ -94,7 +94,7 @@ class XLATensor {
 
   void detach_() { requires_grad_ = false; }
 
-  const at::Tensor& ToTensor();
+  at::Tensor ToTensor();
 
   std::shared_ptr<XLATensor> grad() const;
   void SetGradient(std::shared_ptr<XLATensor> grad);
@@ -117,7 +117,7 @@ class XLATensor {
   const ir::NodePtr& CurrentIrNode() const;
   ir::NodePtr GetIrNode() const;
 
-  const std::shared_ptr<at::Tensor>& CurrentTensorData() const;
+  const c10::optional<at::Tensor>& CurrentTensorData() const;
 
   // Makes the data references from the current tensor, point to the ones from
   // the source tensor.
@@ -211,14 +211,14 @@ class XLATensor {
         : ir_node(std::move(ir_node)),
           device(device),
           unique_id(GetNextTensorId()) {}
-    Data(std::shared_ptr<at::Tensor> tensor_data, const Device& device)
+    Data(at::Tensor tensor_data, const Device& device)
         : tensor_data(std::move(tensor_data)),
           device(device),
           unique_id(GetNextTensorId()) {}
 
     std::shared_ptr<xla::ComputationClient::Data> xla_data;
     ir::NodePtr ir_node;
-    std::shared_ptr<at::Tensor> tensor_data;
+    c10::optional<at::Tensor> tensor_data;
     Device device;
     xla::int64 unique_id;
     std::shared_ptr<XLATensor> grad;
@@ -226,7 +226,7 @@ class XLATensor {
 
   void SetIrNode(ir::NodePtr ir_node);
 
-  void SetTensorData(std::shared_ptr<at::Tensor> tensor_data);
+  void SetTensorData(at::Tensor tensor_data);
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.
