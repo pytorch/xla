@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/ir.h"
 
@@ -99,7 +100,7 @@ class XLATensor {
   void SetGradient(std::shared_ptr<XLATensor> grad);
 
   at::ScalarType dtype() const;
-  const xla::Shape& shape() const;
+  xla::util::MaybeRef<xla::Shape> shape() const;
   const Device& GetDevice() const;
   xla::int64 GetUniqueId() const;
 

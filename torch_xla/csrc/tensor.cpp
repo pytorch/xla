@@ -85,9 +85,8 @@ xla::Shape MakeArrayShapeFromDimensions(
   const auto dimensions = XlaHelpers::I64List(tensor_dimensions);
   if (dimensions.size() == 4 && device_type == XLATensor::DeviceType::TPU) {
     // Use a TPU-compatible layout for 4D tensors -- batch and feature in minor
-    // dimensions.
-    std::vector<xla::int64> hwcn_layout{0, 1, 3, 2};
-    return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, hwcn_layout);
+    // dimensions (HWCN).
+    return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, {0, 1, 3, 2});
   }
   return MakeTorchTensorLayout(dimensions, type);
 }
@@ -198,15 +197,27 @@ xla::Literal TensorToLiteral(const at::Tensor& tensor,
   return literal;
 }
 
-std::shared_ptr<xla::ComputationClient::Data> TensorToXla(
-    const at::Tensor& param_tensor, const xla::Shape& param_shape,
-    const XLATensor::Device& device, xla::ComputationClient* client) {
-  xla::Literal literal = GetTensorLiteral(param_tensor, &param_shape);
+std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
+    const at::Tensor& tensor, const xla::Shape& shape,
+    const XLATensor::Device& device) {
+  xla::Literal literal = GetTensorLiteral(tensor, &shape);
   std::vector<xla::ComputationClient::LiteralDevice> literal_device;
   literal_device.emplace_back(std::move(literal), device.ToString());
-  auto handles = client->TransferToServer(literal_device);
+  auto handles =
+      xla::ComputationClient::Get()->TransferToServer(literal_device);
   XLA_CHECK_EQ(handles.size(), 1);
   return std::move(handles.front());
+}
+
+std::shared_ptr<xla::ComputationClient::Data> TensorToXla(
+    const at::Tensor& tensor, const XLATensor::Device& device) {
+  return TensorToXlaData(
+      tensor,
+      MakeArrayShapeFromDimensions(
+          tensor.sizes(),
+          XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()),
+          device.hw_type),
+      device);
 }
 
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
@@ -308,15 +319,7 @@ XLATensor::~XLATensor() { TensorsArena::Get()->UnregisterTensor(this); }
 
 XLATensor::XLATensor(const torch::autograd::Variable& tensor,
                      const Device& device)
-    : data_(std::make_shared<Data>(
-          TensorToXla(
-              tensor,
-              MakeArrayShapeFromDimensions(
-                  tensor.sizes(),
-                  XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()),
-                  device.hw_type),
-              device, xla::ComputationClient::Get()),
-          device)),
+    : data_(std::make_shared<Data>(TensorToXla(tensor, device), device)),
       requires_grad_(tensor.requires_grad()) {}
 
 XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
@@ -341,7 +344,7 @@ void XLATensor::SetGradient(std::shared_ptr<XLATensor> grad) {
 }
 
 at::ScalarType XLATensor::dtype() const {
-  xla::PrimitiveType xla_type = shape().element_type();
+  xla::PrimitiveType xla_type = shape().get().element_type();
   switch (xla_type) {
     case xla::PrimitiveType::F32:
       return at::ScalarType::Float;
@@ -352,9 +355,18 @@ at::ScalarType XLATensor::dtype() const {
   }
 }
 
-const xla::Shape& XLATensor::shape() const {
-  return data_->xla_data != nullptr ? data_->xla_data->shape()
-                                    : data_->ir_node->shape();
+xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
+  if (data_->xla_data != nullptr) {
+    return data_->xla_data->shape();
+  }
+  if (data_->ir_node != nullptr) {
+    return data_->ir_node->shape();
+  }
+  XLA_CHECK(data_->tensor_data != nullptr);
+  return MakeArrayShapeFromDimensions(
+      data_->tensor_data->sizes(),
+      XlaHelpers::MakeXlaPrimitiveType(data_->tensor_data->type().scalarType()),
+      GetDevice().hw_type);
 }
 
 const XLATensor::Device& XLATensor::GetDevice() const { return data_->device; }
@@ -362,7 +374,14 @@ const XLATensor::Device& XLATensor::GetDevice() const { return data_->device; }
 xla::int64 XLATensor::GetUniqueId() const { return data_->unique_id; }
 
 const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::GetXlaData() {
-  ApplyPendingGraph();
+  if (data_->xla_data == nullptr) {
+    if (data_->ir_node != nullptr) {
+      ApplyPendingGraph();
+    } else {
+      XLA_CHECK(data_->tensor_data != nullptr);
+      data_->xla_data = TensorToXla(*data_->tensor_data, GetDevice());
+    }
+  }
   return data_->xla_data;
 }
 
@@ -397,6 +416,7 @@ void XLATensor::SetXlaData(
 
 void XLATensor::SetIrNode(ir::NodePtr ir_node) {
   data_->ir_node = std::move(ir_node);
+  data_->xla_data = nullptr;
   data_->tensor_data = nullptr;
   TryLimitGraphSize();
 }
@@ -567,7 +587,7 @@ void XLATensor::zero_() { SetIrNode(ir::ops::ScalarOp(0.0, shape())); }
 void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
                          const XLATensor& tensor2) {
   ir::NodePtr constant =
-      ir::ops::ScalarOp(value.toDouble(), tensor1.shape().element_type());
+      ir::ops::ScalarOp(value.toDouble(), tensor1.shape().get().element_type());
   ir::NodePtr div = tensor1.GetIrNode() / tensor2.GetIrNode();
   SetIrNode(GetIrNode() + div * constant);
 }
@@ -575,7 +595,7 @@ void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
 void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
                          const XLATensor& tensor2) {
   ir::NodePtr constant =
-      ir::ops::ScalarOp(value.toDouble(), tensor1.shape().element_type());
+      ir::ops::ScalarOp(value.toDouble(), tensor1.shape().get().element_type());
   ir::NodePtr mul = tensor1.GetIrNode() * tensor2.GetIrNode();
   SetIrNode(GetIrNode() + mul * constant);
 }
