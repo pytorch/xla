@@ -50,6 +50,7 @@ include_directories(
 set(TORCH_XLA_TEST_SOURCES
   main.cpp
   test_ir.cpp
+  test_mayberef.cpp
 )
 
 add_executable(test_ptxla ${TORCH_XLA_TEST_SOURCES})
