@@ -221,7 +221,8 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
   }
 
   // Redo the initial input padding.
-  const auto padding_config = XlaHelpers::MakeXlaPaddingConfig(padding_attr);
+  const auto padding_config =
+      XlaHelpers::MakeXlaPaddingConfig(XlaHelpers::I64List(padding_attr));
 
   auto builder = grad.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
