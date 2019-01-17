@@ -237,6 +237,14 @@ void InitXlaTensorBindings(py::module m) {
       py::arg("input"), py::arg("weight"), py::arg("bias") = nullptr,
       py::arg("stride") = 1, py::arg("padding") = 0,
       py::arg("use_full_conv_precision") = false);
+  m.def(
+      "max_pool2d",
+      [](std::shared_ptr<XLATensor> self, int kernel_size, int stride,
+         int padding) {
+        return self->max_pool2d(kernel_size, stride, padding);
+      },
+      py::arg("input"), py::arg("kernel_size"), py::arg("stride") = 1,
+      py::arg("padding") = 0);
 }
 
 }  // namespace

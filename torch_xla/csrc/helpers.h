@@ -6,6 +6,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch/csrc/jit/ir.h"
 
 namespace torch_xla {
@@ -74,7 +75,7 @@ class XlaHelpers {
 
   // Creates an XLA padding configuration from a padding attribute value.
   static xla::PaddingConfig MakeXlaPaddingConfig(
-      const std::vector<int64_t>& padding);
+      tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
   // Creates a binary add computation.
   static xla::XlaComputation CreateAddComputation(xla::PrimitiveType type);

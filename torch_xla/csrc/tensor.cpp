@@ -18,6 +18,7 @@
 #include "ops/device_data.h"
 #include "ops/generic.h"
 #include "ops/infer_output_shape.h"
+#include "ops/max_pool2d.h"
 #include "ops/ops.h"
 #include "ops/scalar.h"
 #include "tensorflow/compiler/xla/literal_util.h"
@@ -666,6 +667,13 @@ std::shared_ptr<XLATensor> XLATensor::conv2d(
         stride, padding, use_full_conv_precision);
   }
   return Create(ir_node, GetDevice());
+}
+
+std::shared_ptr<XLATensor> XLATensor::max_pool2d(int kernel_size, int stride,
+                                                 int padding) {
+  return Create(std::make_shared<ir::ops::MaxPool2d>(
+                    ir::NodeOperand(GetIrNode()), kernel_size, stride, padding),
+                GetDevice());
 }
 
 std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
