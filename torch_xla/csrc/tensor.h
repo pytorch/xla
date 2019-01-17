@@ -115,7 +115,7 @@ class XLATensor {
   void SetXlaData(std::shared_ptr<xla::ComputationClient::Data> xla_data);
 
   const ir::NodePtr& CurrentIrNode() const;
-  ir::NodePtr GetIrNode() const;
+  ir::NodePtr GetIrNode();
 
   const c10::optional<at::Tensor>& CurrentTensorData() const;
 
@@ -126,26 +126,25 @@ class XLATensor {
   std::vector<int64_t> Size() const;
 
   // Basic tensor operations used by the optimizers.
-  std::shared_ptr<XLATensor> add(const XLATensor& other,
-                                 const at::Scalar& alpha);
-  void add_(const XLATensor& other, const at::Scalar& alpha);
+  std::shared_ptr<XLATensor> add(XLATensor& other, const at::Scalar& alpha);
+  void add_(XLATensor& other, const at::Scalar& alpha);
 
-  std::shared_ptr<XLATensor> mul(const XLATensor& other);
+  std::shared_ptr<XLATensor> mul(XLATensor& other);
   std::shared_ptr<XLATensor> mul(const at::Scalar& other);
-  void mul_(const XLATensor& other);
+  void mul_(XLATensor& other);
   void mul_(const at::Scalar& other);
 
-  std::shared_ptr<XLATensor> div(const XLATensor& other);
+  std::shared_ptr<XLATensor> div(XLATensor& other);
   std::shared_ptr<XLATensor> div(const at::Scalar& other);
-  void div_(const XLATensor& other);
+  void div_(XLATensor& other);
   void div_(const at::Scalar& other);
 
   void zero_();
 
-  void addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
-                const XLATensor& tensor2);
-  void addcmul_(const at::Scalar& value, const XLATensor& tensor1,
-                const XLATensor& tensor2);
+  void addcdiv_(const at::Scalar& value, XLATensor& tensor1,
+                XLATensor& tensor2);
+  void addcmul_(const at::Scalar& value, XLATensor& tensor1,
+                XLATensor& tensor2);
 
   // Additional operations which are part of the PyTorch Tensor functionality.
   std::shared_ptr<XLATensor> relu();
@@ -234,8 +233,6 @@ class XLATensor {
   //   for i in range(0, 100000):
   //     a = a + b
   void TryLimitGraphSize();
-
-  ir::NodePtr CreateAddNode(const XLATensor& other, const at::Scalar& alpha);
 
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.
