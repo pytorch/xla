@@ -157,6 +157,8 @@ class XLATensor {
   std::shared_ptr<XLATensor> max_pool2d(int kernel_size, int stride,
                                         int padding);
 
+  std::shared_ptr<XLATensor> t();
+
   std::shared_ptr<XLATensor> cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups);
 
