@@ -16,14 +16,13 @@ xla::Shape NodeOutputShape(const NodeOperand& input, const NodeOperand& weight,
   std::vector<xla::int64> stride_2d(2, stride);
   std::vector<xla::int64> padding_2d(2, padding);
   auto lower_for_shape_fn =
-      [stride_2d,
-       padding_2d](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      [&stride_2d,
+       &padding_2d](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
     XLA_CHECK(operands.size() == 2 || operands.size() == 3)
         << "Unexpected number of operands: " << operands.size();
     // The precision doesn't matter for shape inference.
-    return BuildConvolution(operands[0], operands[1], absl::MakeSpan(stride_2d),
-                            absl::MakeSpan(padding_2d),
+    return BuildConvolution(operands[0], operands[1], stride_2d, padding_2d,
                             xla::PrecisionConfig::DEFAULT);
   };
   return InferOutputShape({input.node->shape(), weight.node->shape()},
@@ -63,13 +62,11 @@ XlaOpVector Conv2d::Lower(LoweringContext* loctx) const {
   xla::XlaOp output;
   if (operands().size() == 3) {
     xla::XlaOp bias = loctx->GetOutputOp(operand(2));
-    output =
-        BuildConvolutionBias(input, kernel, bias, absl::MakeSpan(stride_2d),
-                             absl::MakeSpan(padding_2d), precision_);
+    output = BuildConvolutionBias(input, kernel, bias, stride_2d, padding_2d,
+                                  precision_);
   } else {
     XLA_CHECK_EQ(operands().size(), 2);
-    output = BuildConvolution(input, kernel, absl::MakeSpan(stride_2d),
-                              absl::MakeSpan(padding_2d), precision_);
+    output = BuildConvolution(input, kernel, stride_2d, padding_2d, precision_);
   }
   return ReturnOp(output, loctx);
 }
