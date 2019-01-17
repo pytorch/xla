@@ -179,6 +179,14 @@ void InitXlaTensorBindings(py::module m) {
              return self;
            })
       .def("t", [](std::shared_ptr<XLATensor> self) { return self->t(); })
+      .def("view",
+           [](std::shared_ptr<XLATensor> self, py::args args) {
+             std::vector<xla::int64> output_sizes;
+             for (const auto& output_dim_size : args) {
+               output_sizes.push_back(output_dim_size.cast<xla::int64>());
+             }
+             return self->view(output_sizes);
+           })
       .def("cross_replica_sum",
            [](std::shared_ptr<XLATensor> self, const py::list& groups) {
              std::vector<std::vector<xla::int64>> crs_groups;

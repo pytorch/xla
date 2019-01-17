@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch/csrc/jit/ir.h"
 
 // Collection of XLA lowerings for operations which only involve some form of
@@ -11,6 +12,11 @@ namespace torch_xla {
 // Creates a new tensor with the same data as the input tensor and the size
 // specified by the "size" attribute of the given node.
 xla::XlaOp BuildView(const torch::jit::Node* node, const xla::XlaOp& input);
+
+// Same as above, with output size provided as parameter.
+xla::XlaOp BuildView(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
 
 // Creates a new tensor with the singleton dimensions expanded to the sizes
 // specified by the "size" attribute of the given node.

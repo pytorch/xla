@@ -1208,6 +1208,13 @@ class TestXLATensor(XlaTestCase):
       out = xt_x.t().to_tensor()
       self.assertEqualDbg(out.data, expected.data)
 
+    def test_view(self):
+      x = _gen_tensor(32, 20, 4, 4)
+      xt_x = torch_xla._XLAC.XLATensor(x)
+      expected = x.view(-1, 320)
+      out = xt_x.view(-1, 320).to_tensor()
+      self.assertEqualDbg(out.data, expected.data)
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
