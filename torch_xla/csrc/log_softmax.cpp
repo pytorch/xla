@@ -23,7 +23,10 @@ xla::XlaOp BuildLogSoftmax(const torch::jit::Node* node,
   const auto node_inputs = node->inputs();
   XLA_CHECK_EQ(node_inputs.size(), size_t(2));
   xla::int64 dim = node->get<int64_t>(at::attr::dim).value();
+  return BuildLogSoftmax(logits, dim);
+}
 
+xla::XlaOp BuildLogSoftmax(const xla::XlaOp& logits, xla::int64 dim) {
   xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
   auto input_size = XlaHelpers::ShapeSizes(logits_shape);
 

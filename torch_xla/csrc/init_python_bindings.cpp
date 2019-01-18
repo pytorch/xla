@@ -187,6 +187,8 @@ void InitXlaTensorBindings(py::module m) {
              }
              return self->view(output_sizes);
            })
+      .def("log_softmax", [](std::shared_ptr<XLATensor> self,
+                             int dim) { return self->log_softmax(dim); })
       .def("cross_replica_sum",
            [](std::shared_ptr<XLATensor> self, const py::list& groups) {
              std::vector<std::vector<xla::int64>> crs_groups;
