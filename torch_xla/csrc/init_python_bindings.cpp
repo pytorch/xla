@@ -254,6 +254,14 @@ void InitXlaTensorBindings(py::module m) {
       py::arg("stride") = 1, py::arg("padding") = 0,
       py::arg("use_full_conv_precision") = false);
   m.def(
+      "addmm",
+      [](XLATensor& bias, XLATensor& input, XLATensor& weight,
+         bool use_full_conv_precision) {
+        return input.addmm(weight, bias, use_full_conv_precision);
+      },
+      py::arg("bias"), py::arg("input"), py::arg("weight"),
+      py::arg("use_full_conv_precision") = false);
+  m.def(
       "max_pool2d",
       [](std::shared_ptr<XLATensor> self, int kernel_size, int stride,
          int padding) {
