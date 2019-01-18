@@ -21,6 +21,7 @@
 #include "ops/max_pool2d.h"
 #include "ops/ops.h"
 #include "ops/scalar.h"
+#include "ops/softmax.h"
 #include "ops/view.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -738,6 +739,12 @@ std::shared_ptr<XLATensor> XLATensor::view(
   return Create(std::make_shared<ir::ops::View>(ir::NodeOperand(GetIrNode()),
                                                 output_size),
                 GetDevice());
+}
+
+std::shared_ptr<XLATensor> XLATensor::log_softmax(xla::int64 dim) {
+  return Create(
+      std::make_shared<ir::ops::LogSoftmax>(ir::NodeOperand(GetIrNode()), dim),
+      GetDevice());
 }
 
 std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
