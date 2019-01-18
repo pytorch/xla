@@ -17,6 +17,8 @@ class View : public Node {
 
   std::string ToString() const override;
 
+  const std::vector<xla::int64>& output_size() const { return output_size_; }
+
  private:
   // The possibly incomplete output size.
   std::vector<xla::int64> output_size_;
