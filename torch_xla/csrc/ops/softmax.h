@@ -15,6 +15,8 @@ class LogSoftmax : public Node {
 
   std::string ToString() const override;
 
+  xla::int64 dim() const { return dim_; }
+
  private:
   // The dimension along which the result is computed.
   xla::int64 dim_;

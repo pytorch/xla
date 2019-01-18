@@ -21,6 +21,12 @@ class Conv2d : public Node {
 
   std::string ToString() const override;
 
+  int stride() const { return stride_; }
+
+  int padding() const { return padding_; }
+
+  xla::PrecisionConfig::Precision precision() const { return precision_; }
+
  private:
   // The parameters of the convolution. Only support the same stride and padding
   // in both dimension for now.
