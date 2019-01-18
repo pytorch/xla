@@ -375,14 +375,16 @@ const XLATensor::Device& XLATensor::GetDevice() const { return data_->device; }
 
 xla::int64 XLATensor::GetUniqueId() const { return data_->unique_id; }
 
-const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::GetXlaData() {
-  if (data_->xla_data == nullptr) {
-    if (data_->ir_node != nullptr) {
-      ApplyPendingGraph();
-    } else {
-      XLA_CHECK(data_->tensor_data);
-      data_->xla_data = TensorToXla(*data_->tensor_data, GetDevice());
-    }
+std::shared_ptr<xla::ComputationClient::Data> XLATensor::GetXlaData() {
+  std::shared_ptr<xla::ComputationClient::Data> xla_data = CurrentXlaData();
+  if (xla_data != nullptr) {
+    return xla_data;
+  }
+  if (data_->ir_node != nullptr) {
+    ApplyPendingGraph();
+  } else {
+    XLA_CHECK(data_->tensor_data);
+    data_->xla_data = TensorToXla(*data_->tensor_data, GetDevice());
   }
   return data_->xla_data;
 }
