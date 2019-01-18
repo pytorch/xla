@@ -106,7 +106,7 @@ class XLATensor {
 
   // Fetches the XLA data behind the tensor. If the tensor has a graph defining
   // its current value, executes the graph and fetches the XLA data result.
-  const std::shared_ptr<xla::ComputationClient::Data>& GetXlaData();
+  std::shared_ptr<xla::ComputationClient::Data> GetXlaData();
 
   // Fetches the current value of the XLA data, which can be missing (nullptr)
   // in case the tensor has a graph defining its current value,
