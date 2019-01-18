@@ -28,6 +28,15 @@ xla::XlaOp BuildMaxPool2dBackward(const torch::jit::Node* node,
 xla::XlaOp BuildAvgPool2d(const torch::jit::Node* node,
                           const xla::XlaOp& input);
 
+// Same as above, with kernel size, stride, padding and whether to include pad
+// provided as parameters.
+xla::XlaOp BuildAvgPool2d(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    bool count_include_pad);
+
 // Computes the gradient for average pooling.
 xla::XlaOp BuildAvgPool2dBackward(const torch::jit::Node* node,
                                   const xla::XlaOp& out_backprop,

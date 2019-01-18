@@ -261,6 +261,14 @@ void InitXlaTensorBindings(py::module m) {
       },
       py::arg("input"), py::arg("kernel_size"), py::arg("stride") = 1,
       py::arg("padding") = 0);
+  m.def(
+      "avg_pool2d",
+      [](XLATensor& self, int kernel_size, int stride, int padding,
+         bool count_include_pad) {
+        return self.avg_pool2d(kernel_size, stride, padding, count_include_pad);
+      },
+      py::arg("input"), py::arg("kernel_size"), py::arg("stride") = 1,
+      py::arg("padding") = 0, py::arg("count_include_pad") = true);
 }
 
 }  // namespace
