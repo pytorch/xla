@@ -101,11 +101,17 @@ xla::XlaOp BuildView(
 xla::XlaOp BuildExpand(const torch::jit::Node* node, const xla::XlaOp& input) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_GE(node_inputs.size(), 1);
-  auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   const auto node_outputs = node->outputs();
   XLA_CHECK_EQ(node_outputs.size(), 1);
   const auto output_sizes =
       node->get<std::vector<int64_t>>(at::attr::size).value();
+  return BuildExpand(input, XlaHelpers::I64List(output_sizes));
+}
+
+xla::XlaOp BuildExpand(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+  auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   // Adjust the rank of the input to match the rank of the output.
   XLA_CHECK_LE(input_sizes.size(), output_sizes.size());
   for (size_t i = 0; i < output_sizes.size() - input_sizes.size(); ++i) {
@@ -139,8 +145,7 @@ xla::XlaOp BuildExpand(const torch::jit::Node* node, const xla::XlaOp& input) {
       reshape_permutation.push_back(i);
     }
   }
-  return xla::Reshape(broadcast, reshape_permutation,
-                      XlaHelpers::I64List(output_sizes));
+  return xla::Reshape(broadcast, reshape_permutation, output_sizes);
 }
 
 xla::XlaOp BuildStack(

@@ -22,6 +22,11 @@ xla::XlaOp BuildView(
 // specified by the "size" attribute of the given node.
 xla::XlaOp BuildExpand(const torch::jit::Node* node, const xla::XlaOp& input);
 
+// Same as above, with output size provided as parameter.
+xla::XlaOp BuildExpand(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
+
 // Concatenates a list of tensors along a new dimension specified by the "dim"
 // attribute of the given node.
 xla::XlaOp BuildStack(
