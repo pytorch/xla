@@ -14,6 +14,8 @@ class Constant : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
+  const xla::Literal& value() const { return value_; }
+
  private:
   xla::Literal value_;
 };
