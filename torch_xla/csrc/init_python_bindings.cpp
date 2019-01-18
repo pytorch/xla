@@ -237,6 +237,10 @@ void InitXlaTensorBindings(py::module m) {
         return s.str();
       });
   m.def("relu", [](std::shared_ptr<XLATensor> self) { return self->relu(); });
+  m.def("threshold",
+        [](std::shared_ptr<XLATensor> self, float threshold, float value) {
+          return self->threshold(threshold, value);
+        });
   m.def(
       "conv2d",
       [](std::shared_ptr<XLATensor> self, std::shared_ptr<XLATensor> weight,
