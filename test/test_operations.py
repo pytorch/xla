@@ -1205,7 +1205,7 @@ class TestXLATensor(XlaTestCase):
             conv_xt_bias = xt_bias if with_bias else None
             expected = F.conv2d(input, weight, conv_bias, stride=stride, padding=padding)
             out = torch_xla._XLAC.conv2d(xt_input, xt_weight, conv_xt_bias, stride=stride,
-                                          padding=padding, use_full_conv_precision=True).to_tensor()
+                                         padding=padding, use_full_conv_precision=True).to_tensor()
             self.assertEqualRel(out.data, expected.data)
 
     def test_max_pool2d(self):
@@ -1216,6 +1216,17 @@ class TestXLATensor(XlaTestCase):
           expected = F.max_pool2d(x, 3, stride=stride, padding=padding)
           out = torch_xla._XLAC.max_pool2d(xt_x, 3, stride=stride, padding=padding).to_tensor()
           self.assertEqualRel(out.data, expected.data)
+
+    def test_avg_pool2d(self):
+      x = _gen_tensor(4, 1, 28, 28)
+      xt_x = torch_xla._XLAC.XLATensor(x)
+      for stride in [1, 2]:
+        for padding in [0, 1]:
+          for count_include_pad in [False, True]:
+            expected = F.avg_pool2d(x, 2, stride=stride, padding=padding, count_include_pad=count_include_pad)
+            out = torch_xla._XLAC.avg_pool2d(xt_x, 2, stride=stride, padding=padding,
+                                             count_include_pad=count_include_pad).to_tensor()
+            self.assertEqualRel(out.data, expected.data)
 
     def test_transpose(self):
       x = _gen_tensor(2, 3)

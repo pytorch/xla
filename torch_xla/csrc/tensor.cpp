@@ -11,6 +11,7 @@
 #include "helpers.h"
 #include "lowering_context.h"
 #include "ops/arithmetic_ir_ops.h"
+#include "ops/avg_pool2d.h"
 #include "ops/conv2d.h"
 #include "ops/cross_replica_sum.h"
 #include "ops/device_data.h"
@@ -527,6 +528,15 @@ std::shared_ptr<XLATensor> XLATensor::max_pool2d(int kernel_size, int stride,
                                                  int padding) {
   return Create(std::make_shared<ir::ops::MaxPool2d>(
                     ir::NodeOperand(GetIrNode()), kernel_size, stride, padding),
+                GetDevice());
+}
+
+std::shared_ptr<XLATensor> XLATensor::avg_pool2d(int kernel_size, int stride,
+                                                 int padding,
+                                                 bool count_include_pad) {
+  return Create(std::make_shared<ir::ops::AvgPool2d>(
+                    ir::NodeOperand(GetIrNode()), kernel_size, stride, padding,
+                    count_include_pad),
                 GetDevice());
 }
 
