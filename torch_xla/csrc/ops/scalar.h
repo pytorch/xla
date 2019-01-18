@@ -19,6 +19,8 @@ class Scalar : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
+  double value() const { return value_; }
+
  private:
   double value_;
 };

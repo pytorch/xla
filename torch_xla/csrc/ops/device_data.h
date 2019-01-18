@@ -15,6 +15,10 @@ class DeviceData : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
+  const std::shared_ptr<xla::ComputationClient::Data>& data() const {
+    return data_;
+  }
+
  private:
   std::shared_ptr<xla::ComputationClient::Data> data_;
 };
