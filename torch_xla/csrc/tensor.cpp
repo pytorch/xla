@@ -813,6 +813,7 @@ bool XLATensor::RunCachedApply(
       if (it != uid_index_map.end()) {
         current_index_mapping.push_back(it->second);
       } else {
+        XLA_COUNTER("NoTensorUidForIndexMapping", 1);
         return false;
       }
     }
