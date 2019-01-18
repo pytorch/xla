@@ -7,6 +7,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "data_ops.h"
 #include "elementwise.h"
 #include "helpers.h"
 #include "lowering_context.h"
@@ -522,6 +523,47 @@ std::shared_ptr<XLATensor> XLATensor::conv2d(
         stride, padding, use_full_conv_precision);
   }
   return Create(ir_node, GetDevice());
+}
+
+std::shared_ptr<XLATensor> XLATensor::addmm(XLATensor& weight, XLATensor& bias,
+                                            bool use_full_conv_precision) {
+  const auto precision_level = use_full_conv_precision
+                                   ? xla::PrecisionConfig::HIGHEST
+                                   : xla::PrecisionConfig::DEFAULT;
+  auto lower_fn = [precision_level](
+                      const ir::Node& node,
+                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    XLA_CHECK_EQ(node.operands().size(), 3) << "Unexpected number of operands";
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand(2));
+    const auto bias_sizes =
+        XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(xla_bias));
+    xla::PrecisionConfig precision_config =
+        XlaHelpers::BuildPrecisionConfig(precision_level);
+    xla::XlaOp xla_dot = xla::Dot(xla_input, xla_weight, &precision_config);
+    const auto dot_sizes =
+        XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(xla_dot));
+    if (bias_sizes != dot_sizes) {
+      xla_bias = BuildExpand(xla_bias, dot_sizes);
+    }
+    xla::XlaOp xla_output = xla_dot + xla_bias;
+    return node.ReturnOp(xla_output, loctx);
+  };
+  auto lower_for_shape_fn =
+      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
+    return xla::Dot(operands[0], operands[1]);
+  };
+  xla::Shape output_shape =
+      ir::ops::InferOutputShape({shape(), weight.shape()}, lower_for_shape_fn);
+  return Create(
+      ir::ops::GenericOp(ir::OpKind(at::aten::addmm),
+                         ir::OpList{ir::NodeOperand(GetIrNode()),
+                                    ir::NodeOperand(weight.GetIrNode()),
+                                    ir::NodeOperand(bias.GetIrNode())},
+                         output_shape, std::move(lower_fn)),
+      GetDevice());
 }
 
 std::shared_ptr<XLATensor> XLATensor::max_pool2d(int kernel_size, int stride,

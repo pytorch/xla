@@ -1208,6 +1208,21 @@ class TestXLATensor(XlaTestCase):
                                          padding=padding, use_full_conv_precision=True).to_tensor()
             self.assertEqualRel(out.data, expected.data)
 
+    def test_addmm(self):
+      in_channels = 32
+      out_channels = 320
+      labels = 50
+      input = _gen_tensor(in_channels, out_channels)
+      weight = _gen_tensor(out_channels, labels)
+      bias = _gen_tensor(labels)
+      xt_input = torch_xla._XLAC.XLATensor(input)
+      xt_weight = torch_xla._XLAC.XLATensor(weight)
+      xt_bias = torch_xla._XLAC.XLATensor(bias)
+      out = torch.addmm(bias, input, weight)
+      expected = torch_xla._XLAC.addmm(xt_bias, xt_input, xt_weight,
+                                       use_full_conv_precision=True).to_tensor()
+      self.assertEqualRel(out.data, expected.data)
+
     def test_max_pool2d(self):
       x = _gen_tensor(1, 64, 112, 112)
       xt_x = torch_xla._XLAC.XLATensor(x)
