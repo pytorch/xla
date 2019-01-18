@@ -44,18 +44,18 @@ xla::XlaOp BuildComparisonOp(const torch::jit::Node* node,
   return xla::ConvertElementType(pred, xla::PrimitiveType::S8);
 }
 
-xla::XlaOp BuildThreshold(const torch::jit::Node* node, const xla::XlaOp& input,
-                          const xla::XlaOp& output, const float threshold,
-                          const float value, xla::XlaBuilder* b) {
+xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
+                          const float threshold, const float value) {
+  auto builder = input.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto input_sizes = XlaHelpers::ShapeSizes(input_shape);
   std::vector<xla::int64> broadcast_sizes(input_sizes.begin(),
                                           input_sizes.end());
   xla::Shape output_shape = XlaHelpers::ShapeOfXlaOp(output);
-  const auto xla_threshold =
-      XlaHelpers::ScalarValue<float>(threshold, input_shape.element_type(), b);
-  const auto xla_value =
-      XlaHelpers::ScalarValue<float>(value, output_shape.element_type(), b);
+  const auto xla_threshold = XlaHelpers::ScalarValue<float>(
+      threshold, input_shape.element_type(), builder);
+  const auto xla_value = XlaHelpers::ScalarValue<float>(
+      value, output_shape.element_type(), builder);
   return xla::Select(xla::Gt(input, xla_threshold), output,
                      xla::Broadcast(xla_value, broadcast_sizes));
 }

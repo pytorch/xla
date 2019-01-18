@@ -18,9 +18,8 @@ xla::XlaOp BuildTypeAs(const torch::jit::Node* node, const xla::XlaOp& operand);
 
 // Computes the elementwise threshold of the input: if the value is below the
 // threshold, replace it with the provided value, otherwise leave it unchanged.
-xla::XlaOp BuildThreshold(const torch::jit::Node* node, const xla::XlaOp& input,
-                          const xla::XlaOp& output, const float threshold,
-                          const float value, xla::XlaBuilder* b);
+xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
+                          const float threshold, const float value);
 
 // Computes the rectified linear unit (replace negative elements with 0).
 xla::XlaOp BuildRelu(const xla::XlaOp& input);

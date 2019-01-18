@@ -22,6 +22,7 @@
 #include "ops/ops.h"
 #include "ops/scalar.h"
 #include "ops/softmax.h"
+#include "ops/threshold.h"
 #include "ops/view.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -686,6 +687,12 @@ std::shared_ptr<XLATensor> XLATensor::relu() {
   return Create(ir::ops::GenericOp(ir::OpKind(at::aten::relu),
                                    ir::OpList{ir::NodeOperand(GetIrNode())},
                                    output_shape, std::move(lower_fn)),
+                GetDevice());
+}
+
+std::shared_ptr<XLATensor> XLATensor::threshold(float threshold, float value) {
+  return Create(std::make_shared<ir::ops::Threshold>(
+                    ir::NodeOperand(GetIrNode()), threshold, value),
                 GetDevice());
 }
 

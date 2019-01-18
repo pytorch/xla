@@ -149,6 +149,8 @@ class XLATensor {
   // Additional operations which are part of the PyTorch Tensor functionality.
   std::shared_ptr<XLATensor> relu();
 
+  std::shared_ptr<XLATensor> threshold(float threshold, float value);
+
   std::shared_ptr<XLATensor> conv2d(const std::shared_ptr<XLATensor>& weight,
                                     const std::shared_ptr<XLATensor>& bias,
                                     int stride, int padding,
