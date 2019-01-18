@@ -380,22 +380,23 @@ void TranslateRelu(const torch::jit::Node* node, ComputationContext* cctx,
 
 void TranslateThreshold(const torch::jit::Node* node, ComputationContext* cctx,
                         xla::PrecisionConfig::Precision /*conv_precision*/,
-                        xla::XlaBuilder* b) {
+                        xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 3);
   xla::XlaOp xla_output = BuildThreshold(
-      node, cctx->OpForInput(node, 0), cctx->OpForInput(node, 0),
+      cctx->OpForInput(node, 0), cctx->OpForInput(node, 0),
       node->get<at::Scalar>(at::attr::threshold).value().to<float>(),
-      node->get<at::Scalar>(at::attr::value).value().to<float>(), b);
+      node->get<at::Scalar>(at::attr::value).value().to<float>());
   cctx->AddNodeOp(node, xla_output);
 }
 
 void TranslateThresholdBackward(
     const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision /*conv_precision*/, xla::XlaBuilder* b) {
+    xla::PrecisionConfig::Precision /*conv_precision*/,
+    xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 3);
   xla::XlaOp xla_output = BuildThreshold(
-      node, cctx->OpForInput(node, 1), cctx->OpForInput(node, 0),
-      node->get<at::Scalar>(at::attr::threshold).value().to<float>(), 0, b);
+      cctx->OpForInput(node, 1), cctx->OpForInput(node, 0),
+      node->get<at::Scalar>(at::attr::threshold).value().to<float>(), 0);
   cctx->AddNodeOp(node, xla_output);
 }
 

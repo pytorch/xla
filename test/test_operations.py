@@ -1172,6 +1172,15 @@ class TestXLATensor(XlaTestCase):
       out = torch_xla._XLAC.relu(xt_x).to_tensor()
       self.assertEqualDbg(out.data, expected.data)
 
+    def test_threshold(self):
+      x = _gen_tensor(2, 1, 4, 6)
+      xt_x = torch_xla._XLAC.XLATensor(x)
+      threshold = 0.4
+      value = 20
+      expected = F.threshold(x, threshold, value)
+      out = torch_xla._XLAC.threshold(xt_x, threshold, value).to_tensor()
+      self.assertEqualDbg(out.data, expected.data)
+
     def test_conv2d(self):
       in_channels = 3
       out_channels = 7
