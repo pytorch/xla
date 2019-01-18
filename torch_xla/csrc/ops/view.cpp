@@ -7,7 +7,6 @@
 namespace torch_xla {
 namespace ir {
 namespace ops {
-
 namespace {
 
 xla::Shape NodeOutputShape(
