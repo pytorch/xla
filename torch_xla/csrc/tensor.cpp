@@ -466,6 +466,19 @@ void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
   SetIrNode(GetIrNode() + mul * constant);
 }
 
+xla::int64 XLATensor::size(int dim) const {
+  const xla::Shape& xla_shape = shape().get();
+  int rank = xla_shape.dimensions_size();
+  int min_shape_dim = -rank;
+  int max_shape_dim = rank - 1;
+  XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim) << absl::StrCat(
+      "Dimension out of range (expected to be in range of [", min_shape_dim,
+      ", ", max_shape_dim, "], but got ", dim, ")");
+  int dim_index = dim < 0 ? rank + dim : dim;
+  XLA_CHECK(0 <= dim_index && dim_index < rank) << "Invalid dim_index value";
+  return xla_shape.dimensions(dim_index);
+}
+
 std::shared_ptr<XLATensor> XLATensor::relu() {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {

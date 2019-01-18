@@ -209,6 +209,8 @@ void InitXlaTensorBindings(py::module m) {
              self->detach_();
              return self;
            })
+      .def("size", [](std::shared_ptr<XLATensor> self,
+                      int dim) { return self->size(dim); })
       .def_property_readonly(
           "data",
           [](std::shared_ptr<XLATensor> self) {
