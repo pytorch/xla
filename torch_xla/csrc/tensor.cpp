@@ -388,9 +388,28 @@ const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::GetXlaData() {
   return data_->xla_data;
 }
 
-const std::shared_ptr<xla::ComputationClient::Data>& XLATensor::CurrentXlaData()
+std::shared_ptr<xla::ComputationClient::Data> XLATensor::CurrentXlaData()
     const {
-  return data_->xla_data;
+  if (data_->xla_data != nullptr) {
+    // When we set a new Node for a tensor, we leave the XLA data pointer alive,
+    // as it is needed in order for the cached tensor apply operation to work.
+    // See comment in the SetIrNode() API.
+    // In order to verify that that data is still valid as far as current tensor
+    // data POV, we need to verify that the eventual IR Node is a DeviceData
+    // node, and that its ComputationClient data pointer matches.
+    const ir::NodePtr& ir_node = CurrentIrNode();
+    if (ir_node == nullptr) {
+      // If there is no IR node, then the XLA data is valid.
+      return data_->xla_data;
+    }
+    const ir::ops::DeviceData* device_data =
+        dynamic_cast<const ir::ops::DeviceData*>(ir_node.get());
+    if (device_data != nullptr &&
+        device_data->data().get() == data_->xla_data.get()) {
+      return data_->xla_data;
+    }
+  }
+  return nullptr;
 }
 
 std::string XLATensor::DumpGraphNodeComputation() const {
@@ -418,8 +437,16 @@ void XLATensor::SetXlaData(
 }
 
 void XLATensor::SetIrNode(ir::NodePtr ir_node) {
+  // We do not want to nullify that XLA data pointer here, as otherwise the
+  // tensor apply computation caching will not work correctly.
+  // If A is a tensor, a typical optimizer step computation will do:
+  //  A' = F(A)
+  // The cached apply computation will want to find the previous XLA data for
+  // A's unique ID (as that data will be input to F()), but if setting A's IR
+  // node nullify that, it will not be found.
+  // We do have logic in CurrentXlaData() to verify that the XLA data pointer is
+  // actually valid, as far as tensor value goes.
   data_->ir_node = std::move(ir_node);
-  data_->xla_data = nullptr;
   data_->tensor_data = c10::nullopt;
   TryLimitGraphSize();
 }
@@ -439,10 +466,16 @@ ir::NodePtr XLATensor::GetIrNode() {
   if (ir_node != nullptr) {
     return ir_node;
   }
-  const std::shared_ptr<xla::ComputationClient::Data>& xla_data =
-      CurrentXlaData();
+  std::shared_ptr<xla::ComputationClient::Data> xla_data = CurrentXlaData();
   if (xla_data != nullptr) {
-    return CreateTensorNode(xla_data);
+    // In case of tensor node, we do not clear the XLA data when we set the IR
+    // node. This because we want further calls to GetIrNode() to fetch the same
+    // IR node, and not create new ones (even though the lowering context will
+    // still collapse them all into a single XLA parameter op).
+    // So call which wants the XLA data will still find it, w/out having to
+    // fetch it via a computation client from-server call.
+    data_->ir_node = CreateTensorNode(xla_data);
+    return data_->ir_node;
   }
   const c10::optional<at::Tensor>& tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
@@ -450,7 +483,8 @@ ir::NodePtr XLATensor::GetIrNode() {
   // generate an IR Node Constant for it?
   // TODO: For now force device data, but considerations about tensor size could
   // drive different logic.
-  return CreateTensorNode(GetXlaData());
+  data_->ir_node = CreateTensorNode(GetXlaData());
+  return data_->ir_node;
 }
 
 const ir::NodePtr& XLATensor::CurrentIrNode() const { return data_->ir_node; }
@@ -684,8 +718,9 @@ std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
 }
 
 void XLATensor::ApplyPendingGraph() {
+  std::shared_ptr<xla::ComputationClient::Data> xla_data = CurrentXlaData();
   const ir::NodePtr& ir_node = CurrentIrNode();
-  if (ir_node != nullptr) {
+  if (xla_data == nullptr && ir_node != nullptr) {
     ir::LoweringContext lowering_ctx("ApplyPendingGraph");
     XLA_CHECK_EQ(ir_node->num_outputs(), 1);
     xla::XlaOp root = lowering_ctx.GetOutputOp(ir::Output(ir_node.get(), 0));
@@ -709,7 +744,8 @@ std::vector<size_t> XLATensor::GetApplyOrder(
   std::vector<size_t> order;
   order.reserve(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
-    if (tensors[i]->CurrentIrNode() != nullptr) {
+    if (tensors[i]->CurrentXlaData() == nullptr &&
+        tensors[i]->CurrentIrNode() != nullptr) {
       // Add only tensors which need to be synced.
       order.push_back(i);
     }
@@ -745,11 +781,13 @@ bool XLATensor::RunCachedApply(
     for (auto uid : device_input_mapping) {
       auto it = uid_index_map.find(uid);
       if (it != uid_index_map.end()) {
-        auto& xla_data = tensors[it->second]->CurrentXlaData();
+        const std::shared_ptr<xla::ComputationClient::Data>& xla_data =
+            tensors[it->second]->data_->xla_data;
         if (xla_data == nullptr) {
           // If we do not find real device data (we have a cached graph instead)
           // at the given tensor, it means the cached information does not apply
           // anymore.
+          XLA_COUNTER("NoTensorDataForUid", 1);
           return false;
         }
         device_parameters.push_back(xla_data.get());
@@ -757,6 +795,7 @@ bool XLATensor::RunCachedApply(
         // If we have not found the unique ID of the parameter which is supposed
         // to feed data to the computation, the pending graph context changed,
         // and the apply_context is no more valid.
+        XLA_COUNTER("NoTensorUid", 1);
         return false;
       }
     }
@@ -795,10 +834,11 @@ XLATensor::DataUidMap XLATensor::CreateDataUidMap(
     const std::vector<std::shared_ptr<XLATensor>>& tensors) {
   DataUidMap data_uid_map(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
-    auto& xla_data = tensors[i]->CurrentXlaData();
+    std::shared_ptr<xla::ComputationClient::Data> xla_data =
+        tensors[i]->data_->xla_data;
     if (xla_data != nullptr) {
-      auto it_inserted =
-          data_uid_map.emplace(xla_data.get(), tensors[i]->GetUniqueId());
+      auto it_inserted = data_uid_map.emplace(xla_data->unique_id(),
+                                              tensors[i]->GetUniqueId());
       if (!it_inserted.second) {
         // It can happen that two tensors references the same device data.
         // This is due to ReferenceDataFrom() API calls, which we use to
@@ -892,7 +932,7 @@ void XLATensor::ApplyPendingGraph(
       if (apply_context != nullptr) {
         std::vector<xla::int64> device_input_mapping;
         for (auto data : parameters_data) {
-          auto it = data_uid_map.find(data);
+          auto it = data_uid_map.find(data->unique_id());
           if (it != data_uid_map.end()) {
             device_input_mapping.push_back(it->second);
           } else {

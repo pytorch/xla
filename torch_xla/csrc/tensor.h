@@ -110,7 +110,7 @@ class XLATensor {
 
   // Fetches the current value of the XLA data, which can be missing (nullptr)
   // in case the tensor has a graph defining its current value,
-  const std::shared_ptr<xla::ComputationClient::Data>& CurrentXlaData() const;
+  std::shared_ptr<xla::ComputationClient::Data> CurrentXlaData() const;
 
   void SetXlaData(std::shared_ptr<xla::ComputationClient::Data> xla_data);
 
@@ -200,8 +200,8 @@ class XLATensor {
       const std::vector<std::string>& devices);
 
  private:
-  using DataUidMap =
-      std::unordered_map<xla::ComputationClient::Data*, xla::int64>;
+  // Maps from ComputationClient Data unique ID to XLA tensor unique ID.
+  using DataUidMap = std::unordered_map<xla::int64, xla::int64>;
 
   struct Data {
     Data(std::shared_ptr<xla::ComputationClient::Data> xla_data,
@@ -222,7 +222,7 @@ class XLATensor {
     ir::NodePtr ir_node;
     c10::optional<at::Tensor> tensor_data;
     Device device;
-    xla::int64 unique_id;
+    xla::int64 unique_id = 0;
     std::shared_ptr<XLATensor> grad;
   };
 
