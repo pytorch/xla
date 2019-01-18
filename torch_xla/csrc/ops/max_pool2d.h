@@ -15,6 +15,12 @@ class MaxPool2d : public Node {
 
   std::string ToString() const override;
 
+  int kernel_size() const { return kernel_size_; }
+
+  int stride() const { return stride_; }
+
+  int padding() const { return padding_; }
+
  private:
   // The parameters of the pooling. Only support the same kernel size, stride
   // and padding in both dimensions for now.
