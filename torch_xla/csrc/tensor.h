@@ -129,6 +129,8 @@ class XLATensor {
                 const XLATensor& tensor2);
 
   // Additional operations which are part of the PyTorch Tensor functionality.
+  xla::int64 size(int dim) const;
+
   std::shared_ptr<XLATensor> relu();
 
   std::shared_ptr<XLATensor> threshold(float threshold, float value);

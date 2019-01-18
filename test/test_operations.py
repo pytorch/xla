@@ -1165,6 +1165,13 @@ class TestReplicatedSum(XlaTestCase):
 
 class TestXLATensor(XlaTestCase):
 
+    def test_size(self):
+      x = _gen_tensor(2, 1, 4, 6)
+      xt_x = torch_xla._XLAC.XLATensor(x)
+      rank = x.dim()
+      for dim in range(-rank, rank):
+        self.assertEqual(x.size(dim), xt_x.size(dim))
+
     def test_relu(self):
       x = _gen_tensor(2, 1, 4, 6)
       xt_x = torch_xla._XLAC.XLATensor(x)
