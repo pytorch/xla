@@ -64,8 +64,8 @@ class XLATensor {
     std::vector<std::string> devices;
   };
 
-  static std::shared_ptr<XLATensor> Create(
-      const torch::autograd::Variable& tensor, const Device& device);
+  static std::shared_ptr<XLATensor> Create(const at::Tensor& tensor,
+                                           const Device& device);
   static std::shared_ptr<XLATensor> Create(
       std::shared_ptr<xla::ComputationClient::Data> xla_data,
       bool requires_grad);
@@ -78,7 +78,7 @@ class XLATensor {
   // necessary in order to use std::make_shared<> are worse than having those
   // public. And it is good to save the double allocation required by a normal
   // naked pointer std::shared_ptr<> creation.
-  XLATensor(const torch::autograd::Variable& tensor, const Device& device);
+  XLATensor(const at::Tensor& tensor, const Device& device);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
             bool requires_grad);
   XLATensor(ir::NodePtr ir_node, const Device& device);
@@ -95,6 +95,10 @@ class XLATensor {
   void detach_() { requires_grad_ = false; }
 
   at::Tensor ToTensor();
+
+  // This API should be called instead of ToTensor() when the tensor is passed
+  // to other ATEN APIs which will modify its value.
+  at::Tensor ToMutableTensor();
 
   std::shared_ptr<XLATensor> grad() const;
   void SetGradient(std::shared_ptr<XLATensor> grad);
@@ -205,7 +209,7 @@ class XLATensor {
   // Operation which creates XLA tensors out of autograd variable by batching
   // the requests to the computation servers.
   static std::vector<std::shared_ptr<XLATensor>> CreateTensors(
-      const std::vector<torch::autograd::Variable>& tensors,
+      const std::vector<at::Tensor>& tensors,
       const std::vector<std::string>& devices);
 
  private:
@@ -239,6 +243,10 @@ class XLATensor {
 
   void SetTensorData(at::Tensor tensor_data);
 
+  // Syncs the at::Tensor data onto the device memory. The XLATensor must have
+  // valid at::Tensor data otherwise an exception is thrown.
+  void SyncTensorDataToDevice();
+
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.
   // Think:
@@ -261,9 +269,17 @@ class XLATensor {
   // Returns a permutation which represents an ordering by tensor device and
   // unique ID, of all the tensors which needs sync (the ones which have a graph
   // backing their value). The tensors which are already sync, will not be
-  // returned within the permutation.
+  // returned within the permutation. If a tensor has at::Tensor data only, the
+  // at::Tensor data will be uploaded to the device and the tensor will receive
+  // new XLA data.
   static std::vector<size_t> GetApplyOrder(
       const std::vector<std::shared_ptr<XLATensor>>& tensors);
+
+  // Retrieves the device data handles by parallel uploading data onto the
+  // corresponding devices.
+  static std::vector<std::shared_ptr<xla::ComputationClient::Data>>
+  CreateTensorsData(const std::vector<at::Tensor>& tensors,
+                    const std::vector<std::string>& devices);
 
   static ir::NodePtr CreateTensorNode(
       std::shared_ptr<xla::ComputationClient::Data> data);
