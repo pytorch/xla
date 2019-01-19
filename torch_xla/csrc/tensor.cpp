@@ -386,7 +386,8 @@ std::shared_ptr<xla::ComputationClient::Data> XLATensor::GetXlaData() {
   if (data_->ir_node != nullptr) {
     ApplyPendingGraph();
   } else {
-    SyncTensorDataToDevice();
+    XLA_CHECK(data_->tensor_data);
+    data_->xla_data = TensorToXla(*data_->tensor_data, GetDevice());
   }
   return data_->xla_data;
 }
@@ -464,7 +465,7 @@ void XLATensor::TryLimitGraphSize() {
   }
 }
 
-ir::NodePtr XLATensor::GetIrNode() {
+ir::NodePtr XLATensor::GetIrNode() const {
   const ir::NodePtr& ir_node = CurrentIrNode();
   if (ir_node != nullptr) {
     return ir_node;
@@ -486,7 +487,8 @@ ir::NodePtr XLATensor::GetIrNode() {
   // generate an IR Node Constant for it?
   // TODO: For now force device data, but considerations about tensor size could
   // drive different logic.
-  data_->ir_node = CreateTensorNode(GetXlaData());
+  data_->xla_data = TensorToXla(*tensor_data, GetDevice());
+  data_->ir_node = CreateTensorNode(data_->xla_data);
   return data_->ir_node;
 }
 
@@ -498,11 +500,6 @@ void XLATensor::SetTensorData(at::Tensor tensor_data) {
 
 const c10::optional<at::Tensor>& XLATensor::CurrentTensorData() const {
   return data_->tensor_data;
-}
-
-void XLATensor::SyncTensorDataToDevice() {
-  XLA_CHECK(data_->tensor_data);
-  data_->xla_data = TensorToXla(*data_->tensor_data, GetDevice());
 }
 
 void XLATensor::ReferenceDataFrom(const XLATensor& source) {
@@ -626,18 +623,18 @@ xla::int64 XLATensor::GetNextTensorId() {
   return id_generator->fetch_add(1);
 }
 
-std::shared_ptr<XLATensor> XLATensor::add(XLATensor& other,
+std::shared_ptr<XLATensor> XLATensor::add(const XLATensor& other,
                                           const at::Scalar& alpha) {
   ir::NodePtr constant = ir::ops::ScalarOp(alpha.toDouble(), other.shape());
   return Create(GetIrNode() + other.GetIrNode() * constant, data_->device);
 }
 
-void XLATensor::add_(XLATensor& other, const at::Scalar& alpha) {
+void XLATensor::add_(const XLATensor& other, const at::Scalar& alpha) {
   ir::NodePtr constant = ir::ops::ScalarOp(alpha.toDouble(), other.shape());
   SetIrNode(GetIrNode() + other.GetIrNode() * constant);
 }
 
-std::shared_ptr<XLATensor> XLATensor::mul(XLATensor& other) {
+std::shared_ptr<XLATensor> XLATensor::mul(const XLATensor& other) {
   return Create(GetIrNode() * other.GetIrNode(), data_->device);
 }
 
@@ -646,7 +643,7 @@ std::shared_ptr<XLATensor> XLATensor::mul(const at::Scalar& other) {
   return Create(GetIrNode() * constant, data_->device);
 }
 
-void XLATensor::mul_(XLATensor& other) {
+void XLATensor::mul_(const XLATensor& other) {
   SetIrNode(GetIrNode() * other.GetIrNode());
 }
 
@@ -655,7 +652,7 @@ void XLATensor::mul_(const at::Scalar& other) {
   SetIrNode(GetIrNode() * constant);
 }
 
-std::shared_ptr<XLATensor> XLATensor::div(XLATensor& other) {
+std::shared_ptr<XLATensor> XLATensor::div(const XLATensor& other) {
   return Create(GetIrNode() / other.GetIrNode(), data_->device);
 }
 
@@ -664,7 +661,7 @@ std::shared_ptr<XLATensor> XLATensor::div(const at::Scalar& other) {
   return Create(GetIrNode() / constant, data_->device);
 }
 
-void XLATensor::div_(XLATensor& other) {
+void XLATensor::div_(const XLATensor& other) {
   SetIrNode(GetIrNode() / other.GetIrNode());
 }
 
@@ -675,16 +672,16 @@ void XLATensor::div_(const at::Scalar& other) {
 
 void XLATensor::zero_() { SetIrNode(ir::ops::ScalarOp(0.0, shape())); }
 
-void XLATensor::addcdiv_(const at::Scalar& value, XLATensor& tensor1,
-                         XLATensor& tensor2) {
+void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
+                         const XLATensor& tensor2) {
   ir::NodePtr constant =
       ir::ops::ScalarOp(value.toDouble(), tensor1.shape().get().element_type());
   ir::NodePtr div = tensor1.GetIrNode() / tensor2.GetIrNode();
   SetIrNode(GetIrNode() + div * constant);
 }
 
-void XLATensor::addcmul_(const at::Scalar& value, XLATensor& tensor1,
-                         XLATensor& tensor2) {
+void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
+                         const XLATensor& tensor2) {
   ir::NodePtr constant =
       ir::ops::ScalarOp(value.toDouble(), tensor1.shape().get().element_type());
   ir::NodePtr mul = tensor1.GetIrNode() * tensor2.GetIrNode();
@@ -806,7 +803,8 @@ void XLATensor::ApplyPendingGraph() {
     } else {
       // Otherwise it better be having at::Tensor data otherwise it will throw
       // an exception.
-      SyncTensorDataToDevice();
+      XLA_CHECK(data_->tensor_data);
+      data_->xla_data = TensorToXla(*data_->tensor_data, GetDevice());
     }
   }
 }
