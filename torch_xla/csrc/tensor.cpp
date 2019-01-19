@@ -297,8 +297,8 @@ std::string XLATensor::Device::ToString() const {
   return absl::StrCat(DeviceTypeToString(hw_type), ":", ordinal);
 }
 
-std::shared_ptr<XLATensor> XLATensor::Create(
-    const torch::autograd::Variable& tensor, const Device& device) {
+std::shared_ptr<XLATensor> XLATensor::Create(const at::Tensor& tensor,
+                                             const Device& device) {
   return TensorsArena::Get()->RegisterTensor(
       std::make_shared<XLATensor>(tensor, device));
 }
@@ -323,8 +323,7 @@ std::shared_ptr<XLATensor> XLATensor::Create(std::shared_ptr<Data> data) {
 
 XLATensor::~XLATensor() { TensorsArena::Get()->UnregisterTensor(this); }
 
-XLATensor::XLATensor(const torch::autograd::Variable& tensor,
-                     const Device& device)
+XLATensor::XLATensor(const at::Tensor& tensor, const Device& device)
     : data_(std::make_shared<Data>(TensorToXla(tensor, device), device)),
       requires_grad_(tensor.requires_grad()) {}
 
@@ -387,8 +386,7 @@ std::shared_ptr<xla::ComputationClient::Data> XLATensor::GetXlaData() {
   if (data_->ir_node != nullptr) {
     ApplyPendingGraph();
   } else {
-    XLA_CHECK(data_->tensor_data);
-    data_->xla_data = TensorToXla(*data_->tensor_data, GetDevice());
+    SyncTensorDataToDevice();
   }
   return data_->xla_data;
 }
@@ -502,6 +500,11 @@ const c10::optional<at::Tensor>& XLATensor::CurrentTensorData() const {
   return data_->tensor_data;
 }
 
+void XLATensor::SyncTensorDataToDevice() {
+  XLA_CHECK(data_->tensor_data);
+  data_->xla_data = TensorToXla(*data_->tensor_data, GetDevice());
+}
+
 void XLATensor::ReferenceDataFrom(const XLATensor& source) {
   XLA_CHECK_EQ(data_->device, source.data_->device);
   XLA_CHECK(xla::ShapeUtil::Equal(shape(), source.shape()))
@@ -521,8 +524,8 @@ std::vector<int64_t> XLATensor::Size() const {
 at::Tensor XLATensor::ToTensor() {
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
-    ApplyPendingGraph();
-
+    // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR Node
+    // is available on the tensor.
     std::vector<xla::Literal> literals =
         xla::ComputationClient::Get()->TransferFromServer({GetXlaData()});
     tensor_data = torch::autograd::make_variable(
@@ -530,6 +533,18 @@ at::Tensor XLATensor::ToTensor() {
     SetTensorData(*tensor_data);
   }
   return *tensor_data;
+}
+
+at::Tensor XLATensor::ToMutableTensor() {
+  at::Tensor tensor_data = ToTensor();
+  // In case of the ATEN Tensor data being possibly dirty, we do clear both the
+  // IR Node and the XLA data. This API will be called to feed the tensor data
+  // to ATEN APIs, and when we get to that point, we already lost the full XLA
+  // fusion deal (and hence we do not need to keep the XLA data around for
+  // caching computations).
+  data_->xla_data = nullptr;
+  data_->ir_node = nullptr;
+  return tensor_data;
 }
 
 std::vector<std::shared_ptr<XLATensor>> XLATensor::GetLiveTensors() {
@@ -569,9 +584,9 @@ std::vector<at::Tensor> XLATensor::GetTensors(
   return results;
 }
 
-std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
-    const std::vector<torch::autograd::Variable>& tensors,
-    const std::vector<std::string>& devices) {
+std::vector<std::shared_ptr<xla::ComputationClient::Data>>
+XLATensor::CreateTensorsData(const std::vector<at::Tensor>& tensors,
+                             const std::vector<std::string>& devices) {
   XLA_CHECK_EQ(tensors.size(), devices.size());
   std::vector<xla::ComputationClient::LiteralDevice> literal_device;
   for (size_t i = 0; i < tensors.size(); ++i) {
@@ -585,8 +600,14 @@ std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
     };
     literal_device.emplace_back(std::move(converter), devices[i]);
   }
-  auto handles =
-      xla::ComputationClient::Get()->TransferToServer(literal_device);
+  return xla::ComputationClient::Get()->TransferToServer(literal_device);
+}
+
+std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
+    const std::vector<at::Tensor>& tensors,
+    const std::vector<std::string>& devices) {
+  std::vector<std::shared_ptr<xla::ComputationClient::Data>> handles =
+      CreateTensorsData(tensors, devices);
   std::vector<std::shared_ptr<XLATensor>> xla_tensors;
   for (size_t i = 0; i < handles.size(); ++i) {
     xla_tensors.push_back(
@@ -762,38 +783,70 @@ std::shared_ptr<XLATensor> XLATensor::cross_replica_sum(
 }
 
 void XLATensor::ApplyPendingGraph() {
-  std::shared_ptr<xla::ComputationClient::Data> xla_data = CurrentXlaData();
-  const ir::NodePtr& ir_node = CurrentIrNode();
-  if (xla_data == nullptr && ir_node != nullptr) {
-    ir::LoweringContext lowering_ctx("ApplyPendingGraph");
-    XLA_CHECK_EQ(ir_node->num_outputs(), 1);
-    xla::XlaOp root = lowering_ctx.GetOutputOp(ir::Output(ir_node.get(), 0));
-    xla::XlaComputation computation =
-        lowering_ctx.Build(root).ConsumeValueOrDie();
-    auto compiled_computation = xla::ComputationClient::Get()->Compile(
-        std::move(computation), {GetDevice().ToString()},
-        /*output_shape=*/nullptr);
-    xla::ComputationClient::ExecuteComputationOptions options;
-    options.explode_tuple = false;
-    auto results = xla::ComputationClient::Get()->ExecuteComputation(
-        *compiled_computation, lowering_ctx.GetParametersData(),
-        compiled_computation->devices()[0], options);
-    XLA_CHECK_EQ(results.size(), 1);
-    SetXlaData(results.front());
+  // This method is called to ensure that the tensor data is available on
+  // device, so that a call to CurrentXlaData() returns a valid pointer.
+  if (CurrentXlaData() == nullptr) {
+    const ir::NodePtr& ir_node = CurrentIrNode();
+    if (ir_node != nullptr) {
+      ir::LoweringContext lowering_ctx("ApplyPendingGraph");
+      XLA_CHECK_EQ(ir_node->num_outputs(), 1);
+      xla::XlaOp root = lowering_ctx.GetOutputOp(ir::Output(ir_node.get(), 0));
+      xla::XlaComputation computation =
+          lowering_ctx.Build(root).ConsumeValueOrDie();
+      auto compiled_computation = xla::ComputationClient::Get()->Compile(
+          std::move(computation), {GetDevice().ToString()},
+          /*output_shape=*/nullptr);
+      xla::ComputationClient::ExecuteComputationOptions options;
+      options.explode_tuple = false;
+      auto results = xla::ComputationClient::Get()->ExecuteComputation(
+          *compiled_computation, lowering_ctx.GetParametersData(),
+          compiled_computation->devices()[0], options);
+      XLA_CHECK_EQ(results.size(), 1);
+      SetXlaData(results.front());
+    } else {
+      // Otherwise it better be having at::Tensor data otherwise it will throw
+      // an exception.
+      SyncTensorDataToDevice();
+    }
   }
 }
 
 std::vector<size_t> XLATensor::GetApplyOrder(
     const std::vector<std::shared_ptr<XLATensor>>& tensors) {
+  std::vector<at::Tensor> at_tensors;
+  std::vector<std::string> devices;
+  std::vector<size_t> at_tensor_index;
   std::vector<size_t> order;
   order.reserve(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
-    if (tensors[i]->CurrentXlaData() == nullptr &&
-        tensors[i]->CurrentIrNode() != nullptr) {
-      // Add only tensors which need to be synced.
-      order.push_back(i);
+    if (tensors[i]->CurrentXlaData() == nullptr) {
+      if (tensors[i]->CurrentIrNode() != nullptr) {
+        // Add only tensors which need to be synced.
+        order.push_back(i);
+      } else {
+        // The tensor only has at::Tensor data. We need to queue it for a device
+        // upload.
+        const c10::optional<at::Tensor>& tensor_data =
+            tensors[i]->CurrentTensorData();
+        XLA_CHECK(tensor_data);
+        at_tensors.push_back(*tensor_data);
+        devices.push_back(tensors[i]->GetDevice().ToString());
+        at_tensor_index.push_back(i);
+      }
     }
   }
+  if (!at_tensors.empty()) {
+    std::vector<std::shared_ptr<xla::ComputationClient::Data>> handles =
+        CreateTensorsData(at_tensors, devices);
+    for (size_t i = 0; i < handles.size(); ++i) {
+      // If we are here, it means that the IR Node for the tensor is nullptr.
+      // Also, we uploaded the at::Tensor data to the device, but such data is
+      // still valid so we leave it live on the XLA tensor (so that a following
+      // ToTensor() does not need to fetch it from device).
+      tensors[at_tensor_index[i]]->data_->xla_data = std::move(handles[i]);
+    }
+  }
+
   // Order the tensors based on their device and unique ID, so that we try to
   // mazimize the chances of creating the same XLA computation, and hence
   // hitting the compilation cache.
