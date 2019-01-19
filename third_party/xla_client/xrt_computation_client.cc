@@ -39,44 +39,24 @@ XrtComputationClient::XrtComputationClient(
 
 std::vector<std::shared_ptr<ComputationClient::Data>>
 XrtComputationClient::TransferToServer(
-    tensorflow::gtl::ArraySlice<const LiteralDevice> literals) {
+    tensorflow::gtl::ArraySlice<const TensorSource> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
 
   std::mutex lock;
   XrtSessionCache::SessionMap session_map;
   int64 total_size = 0;
-  xla_util::MultiWait mwait(literals.size());
+  xla_util::MultiWait mwait(tensors.size());
   std::map<XrtSession*, SessionWork> session_work_map;
-  std::vector<Literal> literals_storage(literals.size());
-  std::vector<const Literal*> literals_ptrs(literals.size());
-  for (size_t i = 0; i < literals.size(); ++i) {
+  for (size_t i = 0; i < tensors.size(); ++i) {
     auto converter = [&, i]() {
-      const Literal& literal = literals[i].GetLiteral(&literals_storage[i]);
-      literals_ptrs[i] = &literal;
-
-      string device = GetEffectiveDevice(literals[i].device);
+      string device = GetEffectiveDevice(tensors[i].device);
       const string& xrt_device = TorchDeviceToXrtDevice(device);
       tensorflow::Tensor tensor(
-          XlaTypeToDataType(literal.shape().element_type()),
-          MakeEquivalentTensorShape(literal.shape()));
+          XlaTypeToDataType(tensors[i].shape.element_type()),
+          MakeEquivalentTensorShape(tensors[i].shape));
       auto tdata = tensor.tensor_data();
-      XLA_CHECK_EQ(tdata.size(), literal.size_bytes());
-      // This is an hack.
-      // The Tensor interface does not have an API to fetch the untyped data, so
-      // one would need to have a switch on dtype() by calling its flat<T>() API
-      // depending on type. Since we have built the tensor, and since
-      // XlaTypeToDataType() only maps types which are memcpy()-able, we use
-      // tensor_data() and const-cast its pointer. And the XLA_CHECK_EQ() above
-      // prevents any surprises.
-      // Ideally we would have the to-server API based on Tensor, but since they
-      // do not have layouts, we would need an extra layout parameter. Also, the
-      // from-server API need to return a proper layout as well, for which a
-      // Literal is perfect.
-      // In order to avoid API asymmetries, we create a Tensor from Literal
-      // here. Would be nice if Tensor supported a pointer-borrowing interface
-      // (like the Literal).
-      std::memcpy(const_cast<char*>(tdata.data()), literal.untyped_data(),
-                  literal.size_bytes());
+      tensors[i].populate_fn(tensors[i], const_cast<char*>(tdata.data()),
+                             tdata.size());
 
       {
         std::lock_guard<std::mutex> slock(lock);
@@ -85,12 +65,12 @@ XrtComputationClient::TransferToServer(
         tensorflow::Scope device_scope =
             session->root()->WithDevice(xrt_device);
         const XrtSession::CachedNode& cached_node =
-            GetAllocateNode(session, device_scope, device, literal.shape());
+            GetAllocateNode(session, device_scope, device, tensors[i].shape);
         session_work->feed_inputs.insert({cached_node.holders[0], tensor});
         session_work->outputs_handles.push_back(cached_node.outputs[0]);
         session_work->index_mapping.push_back(i);
 
-        total_size += literal.size_bytes();
+        total_size += tdata.size();
       }
     };
     xla_env::ScheduleClosure(mwait.Completer(std::move(converter)));
@@ -99,7 +79,7 @@ XrtComputationClient::TransferToServer(
 
   OutboundDataMetric()->AddSample(total_size);
 
-  std::vector<std::shared_ptr<Data>> results(literals.size());
+  std::vector<std::shared_ptr<Data>> results(tensors.size());
   for (auto& session_work : session_work_map) {
     std::vector<tensorflow::Tensor> outputs;
     XLA_CHECK_OK(session_work.first->session()->Run(
@@ -110,8 +90,8 @@ XrtComputationClient::TransferToServer(
     for (size_t i = 0; i < outputs.size(); ++i) {
       size_t li = session_work.second.index_mapping[i];
       results[li] = std::make_shared<XrtData>(
-          this, GetEffectiveDevice(literals[li].device),
-          literals_ptrs[li]->shape(), outputs[i].scalar<int64>()());
+          this, GetEffectiveDevice(tensors[li].device), tensors[li].shape,
+          outputs[i].scalar<int64>()());
     }
     CreateDataHandlesCounter()->AddValue(outputs.size());
   }

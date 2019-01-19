@@ -117,7 +117,7 @@ class XrtComputationClient : public ComputationClient {
   XrtComputationClient(Options options);
 
   std::vector<std::shared_ptr<Data>> TransferToServer(
-      tensorflow::gtl::ArraySlice<const LiteralDevice> literals) override;
+      tensorflow::gtl::ArraySlice<const TensorSource> literals) override;
 
   std::vector<Literal> TransferFromServer(
       tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles)
