@@ -41,7 +41,7 @@ void ParseDevice(const std::string& device_spec, Device* device) {
 
   device->ordinal = std::stoi(device_spec_parts[1]);
   if (device_spec_parts[0] == "TPU") {
-    device->hw_type = DeviceType::CPU;
+    device->hw_type = DeviceType::TPU;
   } else if (device_spec_parts[0] == "CPU") {
     device->hw_type = DeviceType::CPU;
   } else if (device_spec_parts[0] == "GPU") {
