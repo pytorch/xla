@@ -71,16 +71,15 @@ void InitXlaModuleBindings(py::module m) {
           }
           return result;
         });
-  m.def("_xla_create_tensors",
-        [](const std::vector<torch::autograd::Variable>& tensors,
-           const std::vector<std::string>& devices) {
-          std::vector<std::shared_ptr<XLATensor>> result;
-          {
-            NoGilSection nogil;
-            result = XLATensor::CreateTensors(tensors, devices);
-          }
-          return result;
-        });
+  m.def("_xla_create_tensors", [](const std::vector<at::Tensor>& tensors,
+                                  const std::vector<std::string>& devices) {
+    std::vector<std::shared_ptr<XLATensor>> result;
+    {
+      NoGilSection nogil;
+      result = XLATensor::CreateTensors(tensors, devices);
+    }
+    return result;
+  });
   m.def("_xla_counter_value", [](const std::string& name) -> py::object {
     xla::metrics::CounterData* data = xla::metrics::GetCounter(name);
     return data != nullptr ? py::cast<int64_t>(data->Value()) : py::none();
@@ -98,11 +97,10 @@ void InitXlaPassesBindings(py::module m) {
 
 void InitXlaTensorBindings(py::module m) {
   py::class_<XLATensor, std::shared_ptr<XLATensor>>(m, "XLATensor")
-      .def(py::init(
-               [](torch::autograd::Variable tensor, const std::string& device) {
-                 return XLATensor::Create(tensor,
-                                          XLATensor::DeviceFromString(device));
-               }),
+      .def(py::init([](at::Tensor tensor, const std::string& device) {
+             return XLATensor::Create(tensor,
+                                      XLATensor::DeviceFromString(device));
+           }),
            py::arg("tensor"), py::arg("device") = "")
       .def("to_tensor", [](XLATensor& s) { return s.ToTensor(); })
       .def("size", [](const XLATensor& s) { return s.Size(); })
