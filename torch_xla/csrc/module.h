@@ -134,7 +134,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
 
   // Returns the common device for every replica copy of the inputs.
   // All common devices must be different in different replicas.
-  static std::vector<XLATensor::Device> CommonDevicesForReplicas(
+  static std::vector<Device> CommonDevicesForReplicas(
       const TensorBatchVector& inputs);
 
   // Computes the optimal result shape for a given computation and inputs.
@@ -143,7 +143,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
 
   // The devices where the replicas should be running. Replica 'i' on
   // devices_[i].
-  std::vector<XLATensor::Device> devices_;
+  std::vector<Device> devices_;
   // The module parameters which are marked for being subject to optimization.
   TensorBatchVector optimizable_params_;
   // All the module parameters (which include the optimizable_params_ ones).

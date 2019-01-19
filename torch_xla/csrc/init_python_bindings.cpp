@@ -98,8 +98,7 @@ void InitXlaPassesBindings(py::module m) {
 void InitXlaTensorBindings(py::module m) {
   py::class_<XLATensor, std::shared_ptr<XLATensor>>(m, "XLATensor")
       .def(py::init([](at::Tensor tensor, const std::string& device) {
-             return XLATensor::Create(tensor,
-                                      XLATensor::DeviceFromString(device));
+             return XLATensor::Create(tensor, Device(device));
            }),
            py::arg("tensor"), py::arg("device") = "")
       .def("to_tensor", [](XLATensor& s) { return s.ToTensor(); })
