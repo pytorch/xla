@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "device.h"
 #include "ir.h"
 #include "tensorflow/cc/framework/ops.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
@@ -20,37 +21,6 @@ class XLATensor {
 
  public:
   TH_DISALLOW_COPY_AND_ASSIGN(XLATensor);
-
-  enum class DeviceType { CPU, GPU, TPU };
-
-  struct Device {
-    Device() = default;
-    Device(DeviceType hw_type, int ordinal)
-        : hw_type(hw_type), ordinal(ordinal) {}
-
-    bool operator==(const Device& other) const { return compare(other) == 0; }
-
-    bool operator!=(const Device& other) const { return compare(other) != 0; }
-
-    bool operator<(const Device& rhs) const { return compare(rhs) < 0; }
-
-    int compare(const Device& rhs) const {
-      if (hw_type != rhs.hw_type) {
-        return hw_type < rhs.hw_type ? -1 : +1;
-      }
-      return ordinal < rhs.ordinal ? -1 : (ordinal > rhs.ordinal ? +1 : 0);
-    }
-
-    std::string ToString() const;
-
-    friend std::ostream& operator<<(std::ostream& os, const Device& device) {
-      os << device.ToString();
-      return os;
-    }
-
-    DeviceType hw_type = DeviceType::CPU;
-    int ordinal = 0;
-  };
 
   // The context used by the ApplyPendingGraph() API, in order to allow it speed
   // up operations in case the new tensors graph apply matches the one stored
@@ -187,11 +157,6 @@ class XLATensor {
   // which is attached to this tensor.
   std::string DumpGraphNodeComputation() const;
 
-  // Converts the given "device_spec" string to a device. The format is
-  // <hw_type>:<ordinal>, where hw_type is one of TPU, CPU or GPU and ordinal is
-  // an integer.
-  static Device DeviceFromString(const std::string& device_spec);
-
   // Returns the common device for "tensors". Throws if not all tensors have the
   // same device.
   static Device CommonDeviceForTensors(
@@ -278,12 +243,6 @@ class XLATensor {
   static std::vector<size_t> GetApplyOrder(
       const std::vector<std::shared_ptr<XLATensor>>& tensors);
 
-  // Retrieves the device data handles by parallel uploading data onto the
-  // corresponding devices.
-  static std::vector<std::shared_ptr<xla::ComputationClient::Data>>
-  CreateTensorsData(const std::vector<at::Tensor>& tensors,
-                    const std::vector<std::string>& devices);
-
   static ir::NodePtr CreateTensorNode(
       std::shared_ptr<xla::ComputationClient::Data> data);
 
@@ -292,19 +251,5 @@ class XLATensor {
   std::shared_ptr<Data> data_;
   bool requires_grad_ = false;
 };
-
-// Creates an XLA literal out of an ATEN tensor. If shape is specified, that
-// shape+layout will be used, otherwise one will be generated out of the ATEN
-// tensor shape.
-xla::Literal GetTensorLiteral(const at::Tensor& tensor,
-                              const xla::Shape* shape);
-
-// If "shape" is a tuple, return the element shapes, otherwise return a
-// singleton list containing the original shape.
-std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape);
-
-// Create a shape with "device_type" compatible layout from the given "shape".
-xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
-                                     const XLATensor::DeviceType device_type);
 
 }  // namespace torch_xla

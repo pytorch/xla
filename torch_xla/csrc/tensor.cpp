@@ -3,9 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <functional>
-#include <list>
 #include <mutex>
-#include <numeric>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -24,6 +22,7 @@
 #include "ops/softmax.h"
 #include "ops/threshold.h"
 #include "ops/view.h"
+#include "tensor_util.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -31,8 +30,6 @@
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
-#include "tensorflow/core/lib/bfloat16/bfloat16.h"
-#include "tensorflow/core/lib/strings/proto_serialization.h"
 #include "torch/csrc/autograd/variable.h"
 #include "translator.h"
 
@@ -79,205 +76,6 @@ class TensorsArena {
   std::map<XLATensor*, std::weak_ptr<XLATensor>> tensors_map_;
 };
 
-// Creates a minor-to-major layout from given dimensions.
-xla::Shape MakeTorchTensorLayout(const std::vector<xla::int64>& dimensions,
-                                 const xla::PrimitiveType type) {
-  return xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
-}
-
-xla::Shape MakeArrayShapeFromDimensions(
-    const at::IntList& tensor_dimensions, const xla::PrimitiveType type,
-    const XLATensor::DeviceType device_type) {
-  const auto dimensions = XlaHelpers::I64List(tensor_dimensions);
-  if (dimensions.size() == 4 && device_type == XLATensor::DeviceType::TPU) {
-    // Use a TPU-compatible layout for 4D tensors -- batch and feature in minor
-    // dimensions (HWCN).
-    return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, {0, 1, 3, 2});
-  }
-  return MakeTorchTensorLayout(dimensions, type);
-}
-
-// Copies n bytes from source to dest, with different stride values for source
-// and destination.
-template <typename S, typename D>
-void StridedCopy(D* dest, xla::int64 dest_stride, const S* source,
-                 xla::int64 source_stride, xla::int64 n) {
-  for (; n > 0; --n, dest += dest_stride, source += source_stride) {
-    *dest = static_cast<D>(*source);
-  }
-}
-
-// Computes the offset of the value at a given index, assuming a contiguous/flat
-// tensor data representation.
-template <typename S>
-xla::int64 GetFlatTensorOffset(const S& strides,
-                               const std::vector<xla::int64>& indices) {
-  xla::int64 base = 0;
-  for (size_t i = 0; i < indices.size(); ++i) {
-    base += indices[i] * strides[i];
-  }
-  return base;
-}
-
-std::vector<xla::int64> GetXlaStrides(const xla::Shape& shape) {
-  std::vector<xla::int64> strides(shape.rank());
-  xla::int64 stride = 1;
-  for (auto dim : shape.layout().minor_to_major()) {
-    strides[dim] = stride;
-    stride *= shape.dimensions(dim);
-  }
-  return strides;
-}
-
-template <typename D, typename S>
-void CopyData(D* dest, const S* source, xla::int64 n) {
-  StridedCopy(dest, 1, source, 1, n);
-}
-
-template <>
-void CopyData<float, float>(float* dest, const float* source, xla::int64 n) {
-  std::copy(source, source + n, dest);
-}
-
-template <>
-void CopyData<xla::int64, int64_t>(xla::int64* dest, const int64_t* source,
-                                   xla::int64 n) {
-  std::copy(source, source + n, dest);
-}
-
-std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
-  // Return the most minor dimension order, to iterate the literal memory in a
-  // cache friendly way.
-  // Another strategy could be to return the higher value dimension first, to
-  // reduce the number of outer loops in TensorToLiteral(), but that leads to
-  // StridedCopy() calls in which both source and destination are jumping off
-  // memory locations.
-  return std::vector<xla::int64>(shape.layout().minor_to_major().begin(),
-                                 shape.layout().minor_to_major().end());
-}
-
-template <typename AtenNative, typename XlaNative>
-xla::Literal TensorToLiteral(const at::Tensor& tensor,
-                             const xla::Shape& shape) {
-  const at::Tensor& contiguous_tensor = tensor.contiguous();
-  auto contiguous_ptr = contiguous_tensor.data<AtenNative>();
-  const auto& tensor_sizes = contiguous_tensor.sizes();
-  XLA_CHECK_EQ(tensor_sizes.size(), shape.rank());
-  xla::int64 total_elements =
-      std::accumulate(tensor_sizes.begin(), tensor_sizes.end(), 1,
-                      std::multiplies<xla::int64>());
-  xla::Literal literal(shape);
-  auto literal_data = literal.data<XlaNative>();
-  XLA_CHECK_EQ(literal_data.size(), total_elements);
-  if (total_elements == 1 ||
-      xla::LayoutUtil::IsMonotonicWithDim0Major(shape.layout())) {
-    // The Torch tensor is array layout, and so is the literal. We can issue a
-    // fast copy of the elements.
-    CopyData<XlaNative, AtenNative>(literal_data.data(), contiguous_ptr,
-                                    total_elements);
-  } else {
-    const auto& tensor_strides = contiguous_tensor.strides();
-    const auto& xla_tensor_strides = GetXlaStrides(shape);
-    std::vector<xla::int64> indices(tensor_sizes.size());
-    std::vector<xla::int64> iter_dims = GetIterationDimensions(shape);
-    xla::int64 n = 0;
-    while (n < tensor_sizes.size()) {
-      StridedCopy(literal_data.data() +
-                      GetFlatTensorOffset(xla_tensor_strides, indices),
-                  xla_tensor_strides[iter_dims.front()],
-                  contiguous_ptr + GetFlatTensorOffset(tensor_strides, indices),
-                  tensor_strides[iter_dims.front()],
-                  shape.dimensions(iter_dims.front()));
-      // Compute the next index. Skip the lower iteration dimension, as we loop
-      // over it using the StridedCopy() call above.
-      for (n = 1; n < iter_dims.size(); ++n) {
-        xla::int64 dim = iter_dims[n];
-        indices[dim] += 1;
-        if (indices[dim] < shape.dimensions(dim)) {
-          break;
-        }
-        indices[dim] = 0;
-      }
-    }
-  }
-  return literal;
-}
-
-std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
-    const at::Tensor& tensor, const xla::Shape& shape,
-    const XLATensor::Device& device) {
-  xla::Literal literal = GetTensorLiteral(tensor, &shape);
-  std::vector<xla::ComputationClient::LiteralDevice> literal_device;
-  literal_device.emplace_back(std::move(literal), device.ToString());
-  auto handles =
-      xla::ComputationClient::Get()->TransferToServer(literal_device);
-  XLA_CHECK_EQ(handles.size(), 1);
-  return std::move(handles.front());
-}
-
-std::shared_ptr<xla::ComputationClient::Data> TensorToXla(
-    const at::Tensor& tensor, const XLATensor::Device& device) {
-  return TensorToXlaData(
-      tensor,
-      MakeArrayShapeFromDimensions(
-          tensor.sizes(),
-          XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()),
-          device.hw_type),
-      device);
-}
-
-at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
-  const xla::Literal* literal_ptr = &literal;
-  xla::Literal f32_literal;
-  if (literal_ptr->shape().element_type() == xla::PrimitiveType::BF16) {
-    // If ever PyTorch will support BF16, remove this cast to F32.
-    f32_literal = xla::LiteralUtil::ConvertBF16ToF32(*literal_ptr);
-    literal_ptr = &f32_literal;
-  }
-  std::vector<int64_t> dimensions;
-  for (const auto result_dimension : literal_ptr->shape().dimensions()) {
-    dimensions.push_back(result_dimension);
-  }
-  xla::Shape torch_shape = MakeTorchTensorLayout(
-      XlaHelpers::I64List(dimensions), literal_ptr->shape().element_type());
-  xla::Literal literal_with_torch_layout;
-  if (!xla::ShapeUtil::Equal(literal_ptr->shape(), torch_shape)) {
-    literal_with_torch_layout = literal_ptr->Relayout(torch_shape);
-    literal_ptr = &literal_with_torch_layout;
-  }
-  switch (literal_ptr->shape().element_type()) {
-    case xla::PrimitiveType::F32: {
-      const auto result_slice = literal_ptr->data<float>();
-      at::Tensor result_tensor =
-          at::empty(dimensions, at::TensorOptions(at::kFloat));
-      std::copy(result_slice.begin(), result_slice.end(),
-                result_tensor.data<float>());
-      return result_tensor;
-    }
-    case xla::PrimitiveType::S64: {
-      const auto result_slice = literal_ptr->data<xla::int64>();
-      at::Tensor result_tensor =
-          at::empty(dimensions, at::TensorOptions(at::kLong));
-      std::copy(result_slice.begin(), result_slice.end(),
-                result_tensor.data<int64_t>());
-      return result_tensor;
-    }
-    default:
-      AT_ERROR("Unsupported literal type");
-  }
-}
-
-std::string DeviceTypeToString(const XLATensor::DeviceType hw_type) {
-  switch (hw_type) {
-    case XLATensor::DeviceType::CPU:
-      return "CPU";
-    case XLATensor::DeviceType::GPU:
-      return "GPU";
-    case XLATensor::DeviceType::TPU:
-      return "TPU";
-  }
-}
-
 void SetMulti(const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
               std::vector<std::shared_ptr<xla::ComputationClient::Data>>
                   new_dest_elements,
@@ -292,10 +90,6 @@ void SetMulti(const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
 }
 
 }  // namespace
-
-std::string XLATensor::Device::ToString() const {
-  return absl::StrCat(DeviceTypeToString(hw_type), ":", ordinal);
-}
 
 std::shared_ptr<XLATensor> XLATensor::Create(const at::Tensor& tensor,
                                              const Device& device) {
@@ -324,13 +118,12 @@ std::shared_ptr<XLATensor> XLATensor::Create(std::shared_ptr<Data> data) {
 XLATensor::~XLATensor() { TensorsArena::Get()->UnregisterTensor(this); }
 
 XLATensor::XLATensor(const at::Tensor& tensor, const Device& device)
-    : data_(std::make_shared<Data>(TensorToXla(tensor, device), device)),
+    : data_(std::make_shared<Data>(TensorToXlaData(tensor, device), device)),
       requires_grad_(tensor.requires_grad()) {}
 
 XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
                      bool requires_grad)
-    : data_(std::make_shared<Data>(xla_data,
-                                   DeviceFromString(xla_data->device()))),
+    : data_(std::make_shared<Data>(xla_data, Device(xla_data->device()))),
       requires_grad_(requires_grad) {}
 
 XLATensor::XLATensor(ir::NodePtr ir_node, const Device& device)
@@ -356,7 +149,7 @@ at::ScalarType XLATensor::dtype() const {
     case xla::PrimitiveType::S64:
       return at::ScalarType::Long;
     default:
-      TF_LOG(FATAL) << "XLA type not supported: " << xla_type;
+      XLA_ERROR() << "XLA type not supported: " << xla_type;
   }
 }
 
@@ -374,7 +167,7 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
       GetDevice().hw_type);
 }
 
-const XLATensor::Device& XLATensor::GetDevice() const { return data_->device; }
+const Device& XLATensor::GetDevice() const { return data_->device; }
 
 xla::int64 XLATensor::GetUniqueId() const { return data_->unique_id; }
 
@@ -387,7 +180,7 @@ std::shared_ptr<xla::ComputationClient::Data> XLATensor::GetXlaData() {
     ApplyPendingGraph();
   } else {
     XLA_CHECK(data_->tensor_data);
-    data_->xla_data = TensorToXla(*data_->tensor_data, GetDevice());
+    data_->xla_data = TensorToXlaData(*data_->tensor_data, GetDevice());
   }
   return data_->xla_data;
 }
@@ -487,7 +280,7 @@ ir::NodePtr XLATensor::GetIrNode() const {
   // generate an IR Node Constant for it?
   // TODO: For now force device data, but considerations about tensor size could
   // drive different logic.
-  data_->xla_data = TensorToXla(*tensor_data, GetDevice());
+  data_->xla_data = TensorToXlaData(*tensor_data, GetDevice());
   data_->ir_node = CreateTensorNode(data_->xla_data);
   return data_->ir_node;
 }
@@ -579,25 +372,6 @@ std::vector<at::Tensor> XLATensor::GetTensors(
     }
   }
   return results;
-}
-
-std::vector<std::shared_ptr<xla::ComputationClient::Data>>
-XLATensor::CreateTensorsData(const std::vector<at::Tensor>& tensors,
-                             const std::vector<std::string>& devices) {
-  XLA_CHECK_EQ(tensors.size(), devices.size());
-  std::vector<xla::ComputationClient::LiteralDevice> literal_device;
-  for (size_t i = 0; i < tensors.size(); ++i) {
-    auto converter = [&, i]() -> xla::Literal {
-      Device device = DeviceFromString(devices[i]);
-      xla::Shape shape = MakeArrayShapeFromDimensions(
-          tensors[i].sizes(),
-          XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType()),
-          device.hw_type);
-      return GetTensorLiteral(tensors[i], &shape);
-    };
-    literal_device.emplace_back(std::move(converter), devices[i]);
-  }
-  return xla::ComputationClient::Get()->TransferToServer(literal_device);
 }
 
 std::vector<std::shared_ptr<XLATensor>> XLATensor::CreateTensors(
@@ -804,7 +578,7 @@ void XLATensor::ApplyPendingGraph() {
       // Otherwise it better be having at::Tensor data otherwise it will throw
       // an exception.
       XLA_CHECK(data_->tensor_data);
-      data_->xla_data = TensorToXla(*data_->tensor_data, GetDevice());
+      data_->xla_data = TensorToXlaData(*data_->tensor_data, GetDevice());
     }
   }
 }
@@ -1074,105 +848,14 @@ void XLATensor::ApplyPendingGraph(
   }
 }
 
-XLATensor::Device XLATensor::DeviceFromString(const std::string& device_spec) {
-  if (device_spec.empty()) {
-    const std::string default_device_spec =
-        xla::ComputationClient::Get()->GetDefaultDevice();
-    XLA_CHECK(!default_device_spec.empty());
-    return DeviceFromString(default_device_spec);
-  }
-  if (device_spec[0] == ':') {
-    const std::string default_device_spec =
-        xla::ComputationClient::Get()->GetDefaultDevice();
-    auto pos = default_device_spec.find(':');
-    XLA_CHECK_NE(pos, std::string::npos) << default_device_spec;
-    return DeviceFromString(default_device_spec.substr(0, pos) + device_spec);
-  }
-  std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec, ':');
-  std::string invalid_device_error =
-      "Invalid device specification: " + device_spec;
-  if (device_spec_parts.size() != 2) {
-    AT_ERROR(invalid_device_error);
-  }
-  int device_ordinal = std::stoi(device_spec_parts[1]);
-  std::string device_hw_type = device_spec_parts[0];
-  if (device_hw_type == "CPU") {
-    return {XLATensor::DeviceType::CPU, device_ordinal};
-  }
-  if (device_hw_type == "GPU") {
-    return {XLATensor::DeviceType::GPU, device_ordinal};
-  }
-  if (device_hw_type == "TPU") {
-    return {XLATensor::DeviceType::TPU, device_ordinal};
-  }
-  AT_ERROR(invalid_device_error);
-}
-
-XLATensor::Device XLATensor::CommonDeviceForTensors(
+Device XLATensor::CommonDeviceForTensors(
     const std::vector<std::shared_ptr<XLATensor>>& tensors) {
   XLA_CHECK(!tensors.empty());
-  const XLATensor::Device& device = tensors.front()->GetDevice();
+  const Device& device = tensors.front()->GetDevice();
   for (const auto& tensor : tensors) {
-    const XLATensor::Device& tensor_device = tensor->GetDevice();
-    if (tensor_device != device) {
-      AT_ERROR("All input tensors should have the same device");
-    }
+    XLA_CHECK_EQ(device, tensor->GetDevice());
   }
   return device;
-}
-
-xla::Literal GetTensorLiteral(const at::Tensor& tensor,
-                              const xla::Shape* shape) {
-  xla::Shape computed_shape;
-  if (shape == nullptr) {
-    auto dimensions = XlaHelpers::I64List(tensor.sizes());
-    computed_shape = MakeTorchTensorLayout(
-        dimensions,
-        XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()));
-    shape = &computed_shape;
-  }
-  switch (tensor.type().scalarType()) {
-    case at::ScalarType::Float:
-      if (shape->element_type() == xla::PrimitiveType::BF16) {
-        return TensorToLiteral<float, tensorflow::bfloat16>(tensor, *shape);
-      }
-      return TensorToLiteral<float, float>(tensor, *shape);
-    case at::ScalarType::Long:
-      return TensorToLiteral<int64_t, xla::int64>(tensor, *shape);
-    default:
-      TF_LOG(FATAL) << "Tensor type not supported";
-  }
-}
-
-std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape) {
-  std::vector<xla::Shape> component_shapes;
-  if (shape.IsTuple()) {
-    for (const xla::Shape& component_shape : shape.tuple_shapes()) {
-      XLA_CHECK(!component_shape.IsTuple());
-      component_shapes.push_back(component_shape);
-    }
-  } else {
-    component_shapes.push_back(shape);
-  }
-  return component_shapes;
-}
-
-xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
-                                     const XLATensor::DeviceType device_type) {
-  std::vector<xla::Shape> shape_components = GetComponentShapes(shape);
-  std::vector<xla::Shape> shape_components_with_layout;
-  XLA_CHECK(!shape_components.empty());
-  for (const auto& shape_component : shape_components) {
-    std::vector<int64_t> shape_component_dimensions(
-        shape_component.dimensions().begin(),
-        shape_component.dimensions().end());
-    shape_components_with_layout.push_back(MakeArrayShapeFromDimensions(
-        shape_component_dimensions, shape_component.element_type(),
-        device_type));
-  }
-  return shape_components_with_layout.size() > 1
-             ? xla::ShapeUtil::MakeTupleShape(shape_components_with_layout)
-             : shape_components_with_layout.front();
 }
 
 }  // namespace torch_xla

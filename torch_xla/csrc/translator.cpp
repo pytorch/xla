@@ -13,6 +13,7 @@
 #include "reduction.h"
 #include "size_ops.h"
 #include "tensor.h"
+#include "tensor_util.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"

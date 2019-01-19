@@ -11,6 +11,7 @@
 #include "passes/replace_in_place_ops.h"
 #include "passes/replace_untraced_operators.h"
 #include "passes/threshold_backward_peephole.h"
+#include "tensor_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch/csrc/jit/passes/canonicalize_ops.h"
@@ -670,10 +671,10 @@ XlaModule::DataBatchVector XlaModule::GetDataBatchVector(
   return inputs_data;
 }
 
-std::vector<XLATensor::Device> XlaModule::CommonDevicesForReplicas(
+std::vector<Device> XlaModule::CommonDevicesForReplicas(
     const TensorBatchVector& inputs) {
-  std::vector<XLATensor::Device> devices;
-  std::set<XLATensor::Device> unique_devices;
+  std::vector<Device> devices;
+  std::set<Device> unique_devices;
   for (auto& replica_inputs : inputs) {
     devices.push_back(XLATensor::CommonDeviceForTensors(replica_inputs));
     XLA_CHECK(unique_devices.insert(devices.back()).second)
