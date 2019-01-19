@@ -59,24 +59,23 @@ class ComputationClient {
     std::vector<string> devices_;
   };
 
-  struct LiteralDevice {
-    LiteralDevice() = default;
-    LiteralDevice(Literal literal, string device)
-        : literal(std::move(literal)), device(std::move(device)) {}
-    LiteralDevice(std::function<Literal()> literal_fn, string device)
-        : literal_fn(std::move(literal_fn)), device(std::move(device)) {}
+  // The TensorSource provides a way for a client to populate a buffer allocated
+  // by the core computation client code.
+  struct TensorSource {
+    // The PopulateFn accepts a dense buffer is standard array layout
+    // (dim0-major) and deposits the source tensor data directly over the
+    // provided buffer.
+    using PopulateFn = std::function<void(const TensorSource&, void*, size_t)>;
 
-    const Literal& GetLiteral(Literal* tmp) const {
-      if (literal) {
-        return *literal;
-      }
-      *tmp = literal_fn();
-      return *tmp;
-    }
+    TensorSource() = default;
+    TensorSource(Shape shape, string device, PopulateFn populate_fn)
+        : shape(std::move(shape)),
+          device(std::move(device)),
+          populate_fn(std::move(populate_fn)) {}
 
-    absl::optional<Literal> literal;
-    std::function<Literal()> literal_fn;
+    Shape shape;
     string device;
+    PopulateFn populate_fn;
   };
 
   struct CompileInstance {
@@ -106,10 +105,9 @@ class ComputationClient {
 
   virtual ~ComputationClient() {}
 
-  // Transfers local tensor literal values to the TPU servers and fetches the
-  // handles.
+  // Transfers local tensor values to the TPU servers and fetches the handles.
   virtual std::vector<std::shared_ptr<Data>> TransferToServer(
-      tensorflow::gtl::ArraySlice<const LiteralDevice> literals) = 0;
+      tensorflow::gtl::ArraySlice<const TensorSource> tensors) = 0;
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.

@@ -72,7 +72,7 @@ std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
   // Return the most minor dimension order, to iterate the literal memory in a
   // cache friendly way.
   // Another strategy could be to return the higher value dimension first, to
-  // reduce the number of outer loops in TensorToLiteral(), but that leads to
+  // reduce the number of outer loops in TensorToBuffer(), but that leads to
   // StridedCopy() calls in which both source and destination are jumping off
   // memory locations.
   return std::vector<xla::int64>(shape.layout().minor_to_major().begin(),
@@ -80,8 +80,8 @@ std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
 }
 
 template <typename AtenNative, typename XlaNative>
-xla::Literal TensorToLiteral(const at::Tensor& tensor,
-                             const xla::Shape& shape) {
+void TensorToBuffer(const at::Tensor& tensor, const xla::Shape& shape,
+                    void* dest_buffer, size_t dest_buffer_size) {
   const at::Tensor& contiguous_tensor = tensor.contiguous();
   auto contiguous_ptr = contiguous_tensor.data<AtenNative>();
   const auto& tensor_sizes = contiguous_tensor.sizes();
@@ -89,14 +89,13 @@ xla::Literal TensorToLiteral(const at::Tensor& tensor,
   xla::int64 total_elements =
       std::accumulate(tensor_sizes.begin(), tensor_sizes.end(), 1,
                       std::multiplies<xla::int64>());
-  xla::Literal literal(shape);
-  auto literal_data = literal.data<XlaNative>();
-  XLA_CHECK_EQ(literal_data.size(), total_elements);
+  XLA_CHECK_EQ(dest_buffer_size, total_elements * sizeof(XlaNative));
+  XlaNative* literal_data = reinterpret_cast<XlaNative*>(dest_buffer);
   if (total_elements == 1 ||
       xla::LayoutUtil::IsMonotonicWithDim0Major(shape.layout())) {
-    // The Torch tensor is array layout, and so is the literal. We can issue a
+    // The Torch tensor is array layout, and so is the shape. We can issue a
     // fast copy of the elements.
-    CopyData<XlaNative, AtenNative>(literal_data.data(), contiguous_ptr,
+    CopyData<XlaNative, AtenNative>(literal_data, contiguous_ptr,
                                     total_elements);
   } else {
     const auto& tensor_strides = contiguous_tensor.strides();
@@ -105,12 +104,12 @@ xla::Literal TensorToLiteral(const at::Tensor& tensor,
     std::vector<xla::int64> iter_dims = GetIterationDimensions(shape);
     xla::int64 n = 0;
     while (n < tensor_sizes.size()) {
-      StridedCopy(literal_data.data() +
-                      GetFlatTensorOffset(xla_tensor_strides, indices),
-                  xla_tensor_strides[iter_dims.front()],
-                  contiguous_ptr + GetFlatTensorOffset(tensor_strides, indices),
-                  tensor_strides[iter_dims.front()],
-                  shape.dimensions(iter_dims.front()));
+      StridedCopy(
+          literal_data + GetFlatTensorOffset(xla_tensor_strides, indices),
+          xla_tensor_strides[iter_dims.front()],
+          contiguous_ptr + GetFlatTensorOffset(tensor_strides, indices),
+          tensor_strides[iter_dims.front()],
+          shape.dimensions(iter_dims.front()));
       // Compute the next index. Skip the lower iteration dimension, as we loop
       // over it using the StridedCopy() call above.
       for (n = 1; n < iter_dims.size(); ++n) {
@@ -123,16 +122,43 @@ xla::Literal TensorToLiteral(const at::Tensor& tensor,
       }
     }
   }
-  return literal;
+}
+
+void PopulateTensorBuffer(const at::Tensor& tensor, const xla::Shape& shape,
+                          void* dest_buffer, size_t dest_buffer_size) {
+  switch (tensor.type().scalarType()) {
+    case at::ScalarType::Float:
+      if (shape.element_type() == xla::PrimitiveType::BF16) {
+        TensorToBuffer<float, tensorflow::bfloat16>(tensor, shape, dest_buffer,
+                                                    dest_buffer_size);
+      } else {
+        TensorToBuffer<float, float>(tensor, shape, dest_buffer,
+                                     dest_buffer_size);
+      }
+      break;
+    case at::ScalarType::Long:
+      TensorToBuffer<int64_t, xla::int64>(tensor, shape, dest_buffer,
+                                          dest_buffer_size);
+      break;
+    default:
+      XLA_ERROR() << "Tensor type not supported: " << tensor.type();
+  }
 }
 
 std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape, const Device& device) {
-  xla::Literal literal = GetTensorLiteral(tensor, &shape);
-  std::vector<xla::ComputationClient::LiteralDevice> literal_device;
-  literal_device.emplace_back(std::move(literal), device.ToString());
+  auto populate_fn =
+      [&](const xla::ComputationClient::TensorSource& source_tensor,
+          void* dest_buffer, size_t dest_buffer_size) {
+        PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
+                             dest_buffer_size);
+      };
+
+  std::vector<xla::ComputationClient::TensorSource> source_tensors;
+  source_tensors.emplace_back(shape, device.ToString(), std::move(populate_fn));
+
   auto handles =
-      xla::ComputationClient::Get()->TransferToServer(literal_device);
+      xla::ComputationClient::Get()->TransferToServer(source_tensors);
   XLA_CHECK_EQ(handles.size(), 1);
   return std::move(handles.front());
 }
@@ -207,19 +233,23 @@ std::vector<std::shared_ptr<xla::ComputationClient::Data>> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices) {
   XLA_CHECK_EQ(tensors.size(), devices.size());
-  std::vector<xla::ComputationClient::LiteralDevice> literal_device;
+  std::vector<xla::ComputationClient::TensorSource> source_tensors;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    auto converter = [&, i]() -> xla::Literal {
-      Device device(devices[i]);
-      xla::Shape shape = MakeArrayShapeFromDimensions(
-          tensors[i].sizes(),
-          XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType()),
-          device.hw_type);
-      return GetTensorLiteral(tensors[i], &shape);
-    };
-    literal_device.emplace_back(std::move(converter), devices[i]);
+    Device device(devices[i]);
+    xla::Shape shape = MakeArrayShapeFromDimensions(
+        tensors[i].sizes(),
+        XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType()),
+        device.hw_type);
+    auto populate_fn =
+        [&, i](const xla::ComputationClient::TensorSource& source_tensor,
+               void* dest_buffer, size_t dest_buffer_size) {
+          PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
+                               dest_buffer_size);
+        };
+    source_tensors.emplace_back(std::move(shape), devices[i],
+                                std::move(populate_fn));
   }
-  return xla::ComputationClient::Get()->TransferToServer(literal_device);
+  return xla::ComputationClient::Get()->TransferToServer(source_tensors);
 }
 
 xla::Literal GetTensorLiteral(const at::Tensor& tensor,
@@ -232,17 +262,10 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor,
         XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()));
     shape = &computed_shape;
   }
-  switch (tensor.type().scalarType()) {
-    case at::ScalarType::Float:
-      if (shape->element_type() == xla::PrimitiveType::BF16) {
-        return TensorToLiteral<float, tensorflow::bfloat16>(tensor, *shape);
-      }
-      return TensorToLiteral<float, float>(tensor, *shape);
-    case at::ScalarType::Long:
-      return TensorToLiteral<int64_t, xla::int64>(tensor, *shape);
-    default:
-      XLA_ERROR() << "Tensor type not supported: " << tensor.type();
-  }
+  xla::Literal literal(*shape);
+  PopulateTensorBuffer(tensor, *shape, literal.untyped_data(),
+                       literal.size_bytes());
+  return literal;
 }
 
 std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape) {
