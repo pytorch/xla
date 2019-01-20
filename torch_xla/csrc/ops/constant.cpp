@@ -1,5 +1,6 @@
 #include "ops/constant.h"
 
+#include <algorithm>
 #include <sstream>
 
 #include "lowering_context.h"
@@ -13,8 +14,12 @@ Constant::Constant(xla::Literal value)
       value_(std::move(value)) {}
 
 std::string Constant::ToString() const {
+  // The Literal to string conversion produces \n separated content, which we do
+  // not want. It can also produce giant strings, but that's a different issue.
+  std::string value_as_string = value_.ToStringWithoutShape();
+  std::replace(value_as_string.begin(), value_as_string.end(), '\n', ';');
   std::stringstream ss;
-  ss << Node::ToString() << " = " << value_;
+  ss << Node::ToString() << ", value=" << value_as_string;
   return ss.str();
 }
 
