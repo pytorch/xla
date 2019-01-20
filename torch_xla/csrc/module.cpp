@@ -97,9 +97,10 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
     TensorBatchVector::value_type replica_params;
     TensorBatchVector::value_type optimizable_replica_params;
     for (size_t j = 0; j < params_buffers_regather.size(); ++j) {
-      replica_params.push_back(XLATensor::Create(
-          torch::autograd::as_variable_ref(*params_buffers_regather[j]),
-          device));
+      const auto& var_ref =
+          torch::autograd::as_variable_ref(*params_buffers_regather[j]);
+      replica_params.push_back(
+          XLATensor::Create(var_ref, device, var_ref.requires_grad()));
       if (param_requires_grad[j]) {
         optimizable_replica_params.push_back(replica_params.back());
       }
