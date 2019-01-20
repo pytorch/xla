@@ -20,13 +20,14 @@ bool Use::operator<(const Use& rhs) const {
 
 std::string Use::ToString() const {
   std::stringstream ss;
-  ss << node->ToString() << ";o=" << operand_index << ";i=" << index;
+  ss << node->ToString() << ", operand_index=" << operand_index
+     << ", index=" << index;
   return ss.str();
 }
 
 std::string Output::ToString() const {
   std::stringstream ss;
-  ss << node->ToString() << ";i=" << index;
+  ss << node->ToString() << ", index=" << index;
   return ss.str();
 }
 
@@ -82,7 +83,7 @@ std::string Node::ToString() const {
   std::stringstream ss;
   ss << shape() << " " << op();
   if (num_outputs() > 1) {
-    ss << ";n=" << num_outputs();
+    ss << ", num_outputs=" << num_outputs();
   }
   return ss.str();
 }
