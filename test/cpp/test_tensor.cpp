@@ -22,5 +22,23 @@ TEST(TensotTest, TestAdd) {
   });
 }
 
+TEST(TensotTest, TestIntegerAdd) {
+  at::ScalarType types[] = {at::kByte, at::kChar, at::kShort, at::kInt,
+                            at::kLong};
+  for (auto type : types) {
+    at::Tensor a = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
+    at::Tensor b = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
+    auto c = a.add(b, 1.0);
+
+    ForEachDevice([&](const Device& device) {
+      auto dev_a = XLATensor::Create(a, device, /*requires_grad=*/false);
+      auto dev_b = XLATensor::Create(b, device, /*requires_grad=*/false);
+      auto dev_c = dev_a->add(*dev_b, 1.0);
+
+      EXPECT_TRUE(c.equal(ToTensor(*dev_c)));
+    });
+  }
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla

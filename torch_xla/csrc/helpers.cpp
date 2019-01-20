@@ -71,17 +71,24 @@ xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
 }
 
 xla::PrimitiveType XlaHelpers::MakeXlaPrimitiveType(
-    const at::ScalarType scalar_type) {
+    at::ScalarType scalar_type) {
   // When PyTorch will support native BF16 type, the global configuration can be
   // replaced (or augmented) with the proper mapping.
   switch (scalar_type) {
     case at::ScalarType::Float:
       return UseBF16() ? xla::PrimitiveType::BF16 : xla::PrimitiveType::F32;
+    case at::ScalarType::Byte:
+      return xla::PrimitiveType::U8;
+    case at::ScalarType::Char:
+      return xla::PrimitiveType::S8;
+    case at::ScalarType::Short:
+      return xla::PrimitiveType::S16;
+    case at::ScalarType::Int:
+      return xla::PrimitiveType::S32;
     case at::ScalarType::Long:
       return xla::PrimitiveType::S64;
     default:
       XLA_ERROR() << "Type not supported: " << scalar_type;
-      return xla::PrimitiveType::PRIMITIVE_TYPE_INVALID;
   }
 }
 
