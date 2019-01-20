@@ -49,6 +49,7 @@ include_directories(
 
 set(TORCH_XLA_TEST_SOURCES
   main.cpp
+  cpp_test_util.cpp
   test_ir.cpp
   test_mayberef.cpp
   test_tensor.cpp
