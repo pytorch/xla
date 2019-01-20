@@ -51,9 +51,18 @@ set(TORCH_XLA_TEST_SOURCES
   main.cpp
   test_ir.cpp
   test_mayberef.cpp
+  test_tensor.cpp
 )
 
 add_executable(test_ptxla ${TORCH_XLA_TEST_SOURCES})
+
+target_compile_options(test_ptxla PRIVATE
+  -Wno-macro-redefined
+  -Wno-sign-compare
+  -Wno-return-std-move
+  -Wno-deprecated-declarations
+  -Wno-return-type
+)
 
 add_dependencies(test_ptxla googletest)
 
@@ -83,12 +92,16 @@ find_library(PTPY_LIB "libtorch_python.so"
   HINTS "${PT_DIR}/build/lib")
 find_library(C10_LIB "libc10.so"
   HINTS "${PT_DIR}/build/lib")
+find_library(CAFFE_LIB "libcaffe2.so"
+  HINTS "${PT_DIR}/build/lib")
 
 target_link_libraries(
   test_ptxla
   "${PTXLA_LIB}"
+  "${PTXLA_LIBDIR}/torch_xla/lib/libxla_computation_client.so"
   "${PT_LIB}"
   "${C10_LIB}"
+  "${CAFFE_LIB}"
   "${PTPY_LIB}"
   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest${SUFFIX}"
   "${PYTHON_LIBRARY}"
