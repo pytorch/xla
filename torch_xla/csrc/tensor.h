@@ -35,7 +35,8 @@ class XLATensor {
   };
 
   static std::shared_ptr<XLATensor> Create(const at::Tensor& tensor,
-                                           const Device& device);
+                                           const Device& device,
+                                           bool requires_grad);
   static std::shared_ptr<XLATensor> Create(
       std::shared_ptr<xla::ComputationClient::Data> xla_data,
       bool requires_grad);
@@ -48,7 +49,7 @@ class XLATensor {
   // necessary in order to use std::make_shared<> are worse than having those
   // public. And it is good to save the double allocation required by a normal
   // naked pointer std::shared_ptr<> creation.
-  XLATensor(const at::Tensor& tensor, const Device& device);
+  XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
             bool requires_grad);
   XLATensor(ir::NodePtr ir_node, const Device& device);

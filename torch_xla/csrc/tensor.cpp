@@ -92,9 +92,10 @@ void SetMulti(const std::vector<std::shared_ptr<XLATensor>>& dest_tuple,
 }  // namespace
 
 std::shared_ptr<XLATensor> XLATensor::Create(const at::Tensor& tensor,
-                                             const Device& device) {
+                                             const Device& device,
+                                             bool requires_grad) {
   return TensorsArena::Get()->RegisterTensor(
-      std::make_shared<XLATensor>(tensor, device));
+      std::make_shared<XLATensor>(tensor, device, requires_grad));
 }
 
 std::shared_ptr<XLATensor> XLATensor::Create(
@@ -117,9 +118,10 @@ std::shared_ptr<XLATensor> XLATensor::Create(std::shared_ptr<Data> data) {
 
 XLATensor::~XLATensor() { TensorsArena::Get()->UnregisterTensor(this); }
 
-XLATensor::XLATensor(const at::Tensor& tensor, const Device& device)
+XLATensor::XLATensor(const at::Tensor& tensor, const Device& device,
+                     bool requires_grad)
     : data_(std::make_shared<Data>(TensorToXlaData(tensor, device), device)),
-      requires_grad_(tensor.requires_grad()) {}
+      requires_grad_(requires_grad) {}
 
 XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
                      bool requires_grad)
