@@ -81,8 +81,7 @@ class XlaHelpers {
   static xla::XlaComputation CreateAddComputation(xla::PrimitiveType type);
 
   // Converts the given scalar type to an XLA primitive type.
-  static xla::PrimitiveType MakeXlaPrimitiveType(
-      const at::ScalarType scalar_type);
+  static xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type);
 
   // Performs type promotion to make sure both operations return the same type.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,

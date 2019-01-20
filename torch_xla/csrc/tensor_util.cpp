@@ -7,7 +7,6 @@
 
 #include "helpers.h"
 #include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
@@ -149,6 +148,22 @@ void PopulateTensorBuffer(const at::Tensor& tensor, const xla::Shape& shape,
                                      dest_buffer_size);
       }
       break;
+    case at::ScalarType::Byte:
+      TensorToBuffer<uint8_t, xla::uint8>(tensor, shape, dest_buffer,
+                                          dest_buffer_size);
+      break;
+    case at::ScalarType::Char:
+      TensorToBuffer<int8_t, xla::int8>(tensor, shape, dest_buffer,
+                                        dest_buffer_size);
+      break;
+    case at::ScalarType::Short:
+      TensorToBuffer<int16_t, xla::int16>(tensor, shape, dest_buffer,
+                                          dest_buffer_size);
+      break;
+    case at::ScalarType::Int:
+      TensorToBuffer<int32_t, xla::int32>(tensor, shape, dest_buffer,
+                                          dest_buffer_size);
+      break;
     case at::ScalarType::Long:
       TensorToBuffer<int64_t, xla::int64>(tensor, shape, dest_buffer,
                                           dest_buffer_size);
@@ -177,13 +192,23 @@ std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
 }
 
 at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType type) {
-  if (xla::primitive_util::IsFloatingPointType(type)) {
-    return at::ScalarType::Float;
+  switch (type) {
+    case xla::PrimitiveType::BF16:
+    case xla::PrimitiveType::F32:
+      return at::ScalarType::Float;
+    case xla::PrimitiveType::U8:
+      return at::ScalarType::Byte;
+    case xla::PrimitiveType::S8:
+      return at::ScalarType::Char;
+    case xla::PrimitiveType::S16:
+      return at::ScalarType::Short;
+    case xla::PrimitiveType::S32:
+      return at::ScalarType::Int;
+    case xla::PrimitiveType::S64:
+      return at::ScalarType::Long;
+    default:
+      XLA_ERROR() << "Unknown XLA primitive type: " << type;
   }
-  if (xla::primitive_util::IsIntegralType(type)) {
-    return at::ScalarType::Long;
-  }
-  XLA_ERROR() << "Unknown XLA primitive type: " << type;
 }
 
 template <typename SType, typename DType>
@@ -216,6 +241,18 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
     }
     case xla::PrimitiveType::F32: {
       return XlaLiteralToTensor<float, float>(literal);
+    }
+    case xla::PrimitiveType::U8: {
+      return XlaLiteralToTensor<xla::uint8, uint8_t>(literal);
+    }
+    case xla::PrimitiveType::S8: {
+      return XlaLiteralToTensor<xla::int8, int8_t>(literal);
+    }
+    case xla::PrimitiveType::S16: {
+      return XlaLiteralToTensor<xla::int16, int16_t>(literal);
+    }
+    case xla::PrimitiveType::S32: {
+      return XlaLiteralToTensor<xla::int32, int32_t>(literal);
     }
     case xla::PrimitiveType::S64: {
       return XlaLiteralToTensor<xla::int64, int64_t>(literal);
