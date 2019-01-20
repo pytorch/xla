@@ -6,6 +6,14 @@
 
 #include <ATen/ATen.h>
 #include "tensor.h"
+#include "torch/csrc/autograd/variable.h"
+
+void AllClose(at::Tensor tensor, torch_xla::XLATensor& xla_tensor,
+              double rtol = 1e-5, double atol = 1e-8) {
+  ASSERT_TRUE(tensor.allclose(
+      torch::autograd::as_variable_ref(xla_tensor.ToTensor()).data(), rtol,
+      atol));
+}
 
 TEST(TensotTest, TestAdd) {
   torch_xla::Device device("CPU:0");
@@ -16,7 +24,6 @@ TEST(TensotTest, TestAdd) {
   auto dev_a = torch_xla::XLATensor::Create(a, device, /*requires_grad=*/false);
   auto dev_b = torch_xla::XLATensor::Create(b, device, /*requires_grad=*/false);
   auto dev_c = dev_a->add(*dev_b, 1.0);
-  // Investigate why we get:
-  //   expected type CPUFloatType but got Variable[CPUFloatType]
-  // ASSERT_TRUE(c.allclose(dev_c->ToTensor(), 1e-5, 1e-8));
+
+  AllClose(c, *dev_c);
 }
