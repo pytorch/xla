@@ -7,6 +7,7 @@
 
 #include "helpers.h"
 #include "tensorflow/compiler/xla/literal_util.h"
+#include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
@@ -175,45 +176,49 @@ std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
   return std::move(handles.front());
 }
 
-}  // namespace
+at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType type) {
+  if (xla::primitive_util::IsFloatingPointType(type)) {
+    return at::ScalarType::Float;
+  }
+  if (xla::primitive_util::IsIntegralType(type)) {
+    return at::ScalarType::Long;
+  }
+  XLA_ERROR() << "Unknown XLA primitive type: " << type;
+}
 
-at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
+template <typename SType, typename DType>
+at::Tensor XlaLiteralToTensor(const xla::Literal& literal) {
   std::vector<int64_t> dimensions;
   for (auto result_dimension : literal.shape().dimensions()) {
     dimensions.push_back(result_dimension);
   }
   xla::Shape torch_shape =
-      MakeTorchTensorLayout(XlaHelpers::I64List(dimensions),
+      MakeTorchTensorLayout(literal.shape().dimensions(),
                             GetTorchDataType(literal.shape().element_type()));
   xla::int64 total_elements = xla::ShapeUtil::ElementsIn(torch_shape);
 
+  const auto literal_data = literal.data<SType>();
+  at::Tensor tensor = at::empty(
+      dimensions,
+      at::TensorOptions(TensorTypeFromXlaType(literal.shape().element_type())));
+  CopyTensors<SType, DType>(literal_data.data(), literal.shape(),
+                            tensor.data<DType>(),
+                            total_elements * sizeof(DType), torch_shape);
+  return tensor;
+}
+
+}  // namespace
+
+at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
   switch (literal.shape().element_type()) {
     case xla::PrimitiveType::BF16: {
-      const auto literal_data = literal.data<tensorflow::bfloat16>();
-      at::Tensor result_tensor =
-          at::empty(dimensions, at::TensorOptions(at::kFloat));
-      CopyTensors<tensorflow::bfloat16, float>(
-          literal_data.data(), literal.shape(), result_tensor.data<float>(),
-          total_elements * sizeof(float), torch_shape);
-      return result_tensor;
+      return XlaLiteralToTensor<tensorflow::bfloat16, float>(literal);
     }
     case xla::PrimitiveType::F32: {
-      const auto literal_data = literal.data<float>();
-      at::Tensor result_tensor =
-          at::empty(dimensions, at::TensorOptions(at::kFloat));
-      CopyTensors<float, float>(literal_data.data(), literal.shape(),
-                                result_tensor.data<float>(),
-                                total_elements * sizeof(float), torch_shape);
-      return result_tensor;
+      return XlaLiteralToTensor<float, float>(literal);
     }
     case xla::PrimitiveType::S64: {
-      const auto literal_data = literal.data<xla::int64>();
-      at::Tensor result_tensor =
-          at::empty(dimensions, at::TensorOptions(at::kLong));
-      CopyTensors<xla::int64, int64_t>(
-          literal_data.data(), literal.shape(), result_tensor.data<int64_t>(),
-          total_elements * sizeof(int64_t), torch_shape);
-      return result_tensor;
+      return XlaLiteralToTensor<xla::int64, int64_t>(literal);
     }
     default:
       XLA_ERROR() << "Unsupported literal type: " << literal.shape();
