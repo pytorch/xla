@@ -2,7 +2,11 @@
 
 #include <string>
 
+#include "cpp_test_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+
+namespace torch_xla {
+namespace cpp_test {
 
 TEST(MaybeRefTest, BasicTest) {
   using StringRef = xla::util::MaybeRef<std::string>;
@@ -15,3 +19,6 @@ TEST(MaybeRefTest, BasicTest) {
   EXPECT_TRUE(eff_storage.is_stored());
   EXPECT_EQ(*eff_storage, "Vanishing");
 }
+
+}  // namespace cpp_test
+}  // namespace torch_xla
