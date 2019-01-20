@@ -1,11 +1,11 @@
 #!/bin/sh
 
-export TF_CPP_MIN_LOG_LEVEL=1
+LOGFILE=/tmp/pytorch_cpp_test.log
 
 mkdir build
 pushd build
 cmake ..
 make
-./test_ptxla
+./test_ptxla 2>$LOGFILE
 popd
 rm -rf build
