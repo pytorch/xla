@@ -20,6 +20,10 @@ xla::Shape MakeTorchTensorLayout(const std::vector<xla::int64>& dimensions,
   return xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
 }
 
+xla::PrimitiveType GetTorchDataType(xla::PrimitiveType type) {
+  return type == xla::PrimitiveType::BF16 ? xla::PrimitiveType::F32 : type;
+}
+
 // Copies n bytes from source to dest, with different stride values for source
 // and destination.
 template <typename S, typename D>
@@ -42,7 +46,7 @@ xla::int64 GetFlatTensorOffset(const S& strides,
   return base;
 }
 
-std::vector<xla::int64> GetXlaStrides(const xla::Shape& shape) {
+std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
   std::vector<xla::int64> strides(shape.rank());
   xla::int64 stride = 1;
   for (auto dim : shape.layout().minor_to_major()) {
@@ -79,49 +83,57 @@ std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
                                  shape.layout().minor_to_major().end());
 }
 
-template <typename AtenNative, typename XlaNative>
-void TensorToBuffer(const at::Tensor& tensor, const xla::Shape& shape,
-                    void* dest_buffer, size_t dest_buffer_size) {
-  const at::Tensor& contiguous_tensor = tensor.contiguous();
-  auto contiguous_ptr = contiguous_tensor.data<AtenNative>();
-  const auto& tensor_sizes = contiguous_tensor.sizes();
-  XLA_CHECK_EQ(tensor_sizes.size(), shape.rank());
-  xla::int64 total_elements =
-      std::accumulate(tensor_sizes.begin(), tensor_sizes.end(), 1,
-                      std::multiplies<xla::int64>());
-  XLA_CHECK_EQ(dest_buffer_size, total_elements * sizeof(XlaNative));
-  XlaNative* literal_data = reinterpret_cast<XlaNative*>(dest_buffer);
-  if (total_elements == 1 ||
-      xla::LayoutUtil::IsMonotonicWithDim0Major(shape.layout())) {
-    // The Torch tensor is array layout, and so is the shape. We can issue a
-    // fast copy of the elements.
-    CopyData<XlaNative, AtenNative>(literal_data, contiguous_ptr,
-                                    total_elements);
+template <typename SType, typename DType>
+void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
+                 void* dest_buffer, size_t dest_buffer_size,
+                 const xla::Shape& dest_shape) {
+  XLA_CHECK(
+      xla::ShapeUtil::CompatibleIgnoringElementType(src_shape, dest_shape))
+      << src_shape << " vs. " << dest_shape;
+
+  xla::int64 total_elements = xla::ShapeUtil::ElementsIn(src_shape);
+  XLA_CHECK_EQ(dest_buffer_size, total_elements * sizeof(DType));
+
+  const SType* src_data = reinterpret_cast<const SType*>(src_buffer);
+  DType* dest_data = reinterpret_cast<DType*>(dest_buffer);
+  if (xla::ShapeUtil::EqualIgnoringFpPrecision(src_shape, dest_shape)) {
+    CopyData<DType, SType>(dest_data, src_data, total_elements);
   } else {
-    const auto& tensor_strides = contiguous_tensor.strides();
-    const auto& xla_tensor_strides = GetXlaStrides(shape);
-    std::vector<xla::int64> indices(tensor_sizes.size());
-    std::vector<xla::int64> iter_dims = GetIterationDimensions(shape);
+    std::vector<xla::int64> src_strides = ComputeShapeStrides(src_shape);
+    std::vector<xla::int64> dest_strides = ComputeShapeStrides(dest_shape);
+    std::vector<xla::int64> indices(src_strides.size());
+    std::vector<xla::int64> iter_dims = GetIterationDimensions(dest_shape);
+    xla::int64 inner_src_stride = src_strides[iter_dims.front()];
+    xla::int64 inner_dest_stride = dest_strides[iter_dims.front()];
     xla::int64 n = 0;
-    while (n < tensor_sizes.size()) {
-      StridedCopy(
-          literal_data + GetFlatTensorOffset(xla_tensor_strides, indices),
-          xla_tensor_strides[iter_dims.front()],
-          contiguous_ptr + GetFlatTensorOffset(tensor_strides, indices),
-          tensor_strides[iter_dims.front()],
-          shape.dimensions(iter_dims.front()));
+    while (n < iter_dims.size()) {
+      StridedCopy(dest_data + GetFlatTensorOffset(dest_strides, indices),
+                  inner_dest_stride,
+                  src_data + GetFlatTensorOffset(src_strides, indices),
+                  inner_src_stride, dest_shape.dimensions(iter_dims.front()));
       // Compute the next index. Skip the lower iteration dimension, as we loop
       // over it using the StridedCopy() call above.
       for (n = 1; n < iter_dims.size(); ++n) {
         xla::int64 dim = iter_dims[n];
         indices[dim] += 1;
-        if (indices[dim] < shape.dimensions(dim)) {
+        if (indices[dim] < dest_shape.dimensions(dim)) {
           break;
         }
         indices[dim] = 0;
       }
     }
   }
+}
+
+template <typename SType, typename DType>
+void TensorToBuffer(const at::Tensor& tensor, const xla::Shape& shape,
+                    void* dest_buffer, size_t dest_buffer_size) {
+  at::Tensor contiguous_tensor = tensor.contiguous();
+  xla::Shape src_shape = MakeTorchTensorLayout(
+      XlaHelpers::I64List(contiguous_tensor.sizes()),
+      XlaHelpers::MakeXlaPrimitiveType(contiguous_tensor.type().scalarType()));
+  CopyTensors<SType, DType>(contiguous_tensor.data<SType>(), src_shape,
+                            dest_buffer, dest_buffer_size, shape);
 }
 
 void PopulateTensorBuffer(const at::Tensor& tensor, const xla::Shape& shape,
@@ -166,43 +178,45 @@ std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
 }  // namespace
 
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
-  const xla::Literal* literal_ptr = &literal;
-  xla::Literal f32_literal;
-  if (literal_ptr->shape().element_type() == xla::PrimitiveType::BF16) {
-    // If ever PyTorch will support BF16, remove this cast to F32.
-    f32_literal = xla::LiteralUtil::ConvertBF16ToF32(*literal_ptr);
-    literal_ptr = &f32_literal;
-  }
   std::vector<int64_t> dimensions;
-  for (const auto result_dimension : literal_ptr->shape().dimensions()) {
+  for (auto result_dimension : literal.shape().dimensions()) {
     dimensions.push_back(result_dimension);
   }
-  xla::Shape torch_shape = MakeTorchTensorLayout(
-      XlaHelpers::I64List(dimensions), literal_ptr->shape().element_type());
-  xla::Literal literal_with_torch_layout;
-  if (!xla::ShapeUtil::Equal(literal_ptr->shape(), torch_shape)) {
-    literal_with_torch_layout = literal_ptr->Relayout(torch_shape);
-    literal_ptr = &literal_with_torch_layout;
-  }
-  switch (literal_ptr->shape().element_type()) {
-    case xla::PrimitiveType::F32: {
-      const auto result_slice = literal_ptr->data<float>();
+  xla::Shape torch_shape =
+      MakeTorchTensorLayout(XlaHelpers::I64List(dimensions),
+                            GetTorchDataType(literal.shape().element_type()));
+  xla::int64 total_elements = xla::ShapeUtil::ElementsIn(torch_shape);
+
+  switch (literal.shape().element_type()) {
+    case xla::PrimitiveType::BF16: {
+      const auto literal_data = literal.data<tensorflow::bfloat16>();
       at::Tensor result_tensor =
           at::empty(dimensions, at::TensorOptions(at::kFloat));
-      std::copy(result_slice.begin(), result_slice.end(),
-                result_tensor.data<float>());
+      CopyTensors<tensorflow::bfloat16, float>(
+          literal_data.data(), literal.shape(), result_tensor.data<float>(),
+          total_elements * sizeof(float), torch_shape);
+      return result_tensor;
+    }
+    case xla::PrimitiveType::F32: {
+      const auto literal_data = literal.data<float>();
+      at::Tensor result_tensor =
+          at::empty(dimensions, at::TensorOptions(at::kFloat));
+      CopyTensors<float, float>(literal_data.data(), literal.shape(),
+                                result_tensor.data<float>(),
+                                total_elements * sizeof(float), torch_shape);
       return result_tensor;
     }
     case xla::PrimitiveType::S64: {
-      const auto result_slice = literal_ptr->data<xla::int64>();
+      const auto literal_data = literal.data<xla::int64>();
       at::Tensor result_tensor =
           at::empty(dimensions, at::TensorOptions(at::kLong));
-      std::copy(result_slice.begin(), result_slice.end(),
-                result_tensor.data<int64_t>());
+      CopyTensors<xla::int64, int64_t>(
+          literal_data.data(), literal.shape(), result_tensor.data<int64_t>(),
+          total_elements * sizeof(int64_t), torch_shape);
       return result_tensor;
     }
     default:
-      XLA_ERROR() << "Unsupported literal type: " << literal_ptr->shape();
+      XLA_ERROR() << "Unsupported literal type: " << literal.shape();
   }
 }
 
@@ -272,7 +286,7 @@ std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape) {
   std::vector<xla::Shape> component_shapes;
   if (shape.IsTuple()) {
     for (const xla::Shape& component_shape : shape.tuple_shapes()) {
-      XLA_CHECK(!component_shape.IsTuple());
+      XLA_CHECK(!component_shape.IsTuple()) << shape;
       component_shapes.push_back(component_shape);
     }
   } else {
