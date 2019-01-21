@@ -14,14 +14,29 @@
 namespace torch_xla {
 namespace {
 
+xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type) {
+  switch (scalar_type) {
+    case at::ScalarType::Float:
+      return xla::PrimitiveType::F32;
+    case at::ScalarType::Byte:
+      return xla::PrimitiveType::U8;
+    case at::ScalarType::Char:
+      return xla::PrimitiveType::S8;
+    case at::ScalarType::Short:
+      return xla::PrimitiveType::S16;
+    case at::ScalarType::Int:
+      return xla::PrimitiveType::S32;
+    case at::ScalarType::Long:
+      return xla::PrimitiveType::S64;
+    default:
+      XLA_ERROR() << "Type not supported: " << scalar_type;
+  }
+}
+
 // Creates a minor-to-major layout from given dimensions.
 xla::Shape MakeTorchTensorLayout(const std::vector<xla::int64>& dimensions,
                                  xla::PrimitiveType type) {
   return xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
-}
-
-xla::PrimitiveType GetTorchDataType(xla::PrimitiveType type) {
-  return type == xla::PrimitiveType::BF16 ? xla::PrimitiveType::F32 : type;
 }
 
 // Copies n bytes from source to dest, with different stride values for source
@@ -29,7 +44,8 @@ xla::PrimitiveType GetTorchDataType(xla::PrimitiveType type) {
 template <typename S, typename D>
 void StridedCopy(D* dest, xla::int64 dest_stride, const S* source,
                  xla::int64 source_stride, xla::int64 n) {
-  for (; n > 0; --n, dest += dest_stride, source += source_stride) {
+  const S* source_top = source + n * source_stride;
+  for (; source < source_top; dest += dest_stride, source += source_stride) {
     *dest = static_cast<D>(*source);
   }
 }
@@ -56,20 +72,39 @@ std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
   return strides;
 }
 
+// The tensorflow::bfloat16 does not have implicit cast operations, so using
+// std::copy() for it, is not going to work.
+struct CopyDirect {};
+struct CopyStrided {};
+
+template <typename T>
+struct NeedStride {
+  enum { value = 0 };
+};
+template <>
+struct NeedStride<tensorflow::bfloat16> {
+  enum { value = 1 };
+};
+
+template <bool STRIDE>
+struct CopyType {
+  using type = CopyDirect;
+};
+template <>
+struct CopyType<true> {
+  using type = CopyStrided;
+};
+
 template <typename D, typename S>
-void CopyData(D* dest, const S* source, xla::int64 n) {
+void CopyData(D* dest, const S* source, xla::int64 n, const CopyDirect&) {
+  std::copy(source, source + n, dest);
+}
+
+template <typename D, typename S>
+void CopyData(D* dest, const S* source, xla::int64 n, const CopyStrided&) {
+  // Use strided copy with step 1 since it has the static_cast<> required to
+  // convert from/to bfloat16.
   StridedCopy(dest, 1, source, 1, n);
-}
-
-template <>
-void CopyData<float, float>(float* dest, const float* source, xla::int64 n) {
-  std::copy(source, source + n, dest);
-}
-
-template <>
-void CopyData<xla::int64, int64_t>(xla::int64* dest, const int64_t* source,
-                                   xla::int64 n) {
-  std::copy(source, source + n, dest);
 }
 
 std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
@@ -96,8 +131,11 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
 
   const SType* src_data = reinterpret_cast<const SType*>(src_buffer);
   DType* dest_data = reinterpret_cast<DType*>(dest_buffer);
-  if (xla::ShapeUtil::EqualIgnoringFpPrecision(src_shape, dest_shape)) {
-    CopyData<DType, SType>(dest_data, src_data, total_elements);
+  if (src_shape.layout().minor_to_major() ==
+      dest_shape.layout().minor_to_major()) {
+    CopyData<DType, SType>(dest_data, src_data, total_elements,
+                           typename CopyType < NeedStride<SType>::value ||
+                               NeedStride<DType>::value > ::type());
   } else {
     std::vector<xla::int64> src_strides = ComputeShapeStrides(src_shape);
     std::vector<xla::int64> dest_strides = ComputeShapeStrides(dest_shape);
@@ -126,47 +164,80 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
 }
 
 template <typename SType, typename DType>
-void TensorToBuffer(const at::Tensor& tensor, const xla::Shape& shape,
+void TensorToBuffer(const at::Tensor& tensor, const xla::Shape& dest_shape,
                     void* dest_buffer, size_t dest_buffer_size) {
   at::Tensor contiguous_tensor = tensor.contiguous();
   xla::Shape src_shape = MakeTorchTensorLayout(
       XlaHelpers::I64List(contiguous_tensor.sizes()),
-      XlaHelpers::MakeXlaPrimitiveType(contiguous_tensor.type().scalarType()));
+      XlaTypeFromTensorType(contiguous_tensor.type().scalarType()));
   CopyTensors<SType, DType>(contiguous_tensor.data<SType>(), src_shape,
-                            dest_buffer, dest_buffer_size, shape);
+                            dest_buffer, dest_buffer_size, dest_shape);
 }
 
-void PopulateTensorBuffer(const at::Tensor& tensor, const xla::Shape& shape,
-                          void* dest_buffer, size_t dest_buffer_size) {
-  switch (tensor.type().scalarType()) {
-    case at::ScalarType::Float:
-      if (shape.element_type() == xla::PrimitiveType::BF16) {
-        TensorToBuffer<float, tensorflow::bfloat16>(tensor, shape, dest_buffer,
-                                                    dest_buffer_size);
-      } else {
-        TensorToBuffer<float, float>(tensor, shape, dest_buffer,
-                                     dest_buffer_size);
-      }
+template <typename SType>
+void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
+                         void* dest_buffer, size_t dest_buffer_size) {
+  switch (dest_shape.element_type()) {
+    case xla::PrimitiveType::BF16:
+      TensorToBuffer<SType, tensorflow::bfloat16>(
+          tensor, dest_shape, dest_buffer, dest_buffer_size);
       break;
-    case at::ScalarType::Byte:
-      TensorToBuffer<uint8_t, xla::uint8>(tensor, shape, dest_buffer,
-                                          dest_buffer_size);
+    case xla::PrimitiveType::F32:
+      TensorToBuffer<SType, float>(tensor, dest_shape, dest_buffer,
+                                   dest_buffer_size);
       break;
-    case at::ScalarType::Char:
-      TensorToBuffer<int8_t, xla::int8>(tensor, shape, dest_buffer,
+    case xla::PrimitiveType::U8:
+      TensorToBuffer<SType, xla::uint8>(tensor, dest_shape, dest_buffer,
                                         dest_buffer_size);
       break;
+    case xla::PrimitiveType::S8:
+      TensorToBuffer<SType, xla::int8>(tensor, dest_shape, dest_buffer,
+                                       dest_buffer_size);
+      break;
+    case xla::PrimitiveType::S16:
+      TensorToBuffer<SType, xla::int16>(tensor, dest_shape, dest_buffer,
+                                        dest_buffer_size);
+      break;
+    case xla::PrimitiveType::S32:
+      TensorToBuffer<SType, xla::int32>(tensor, dest_shape, dest_buffer,
+                                        dest_buffer_size);
+      break;
+    case xla::PrimitiveType::S64:
+      TensorToBuffer<SType, xla::int64>(tensor, dest_shape, dest_buffer,
+                                        dest_buffer_size);
+      break;
+    default:
+      XLA_ERROR() << "Destination shape type not supported: " << dest_shape;
+  }
+}
+
+void PopulateTensorBuffer(const at::Tensor& tensor,
+                          const xla::Shape& dest_shape, void* dest_buffer,
+                          size_t dest_buffer_size) {
+  switch (tensor.type().scalarType()) {
+    case at::ScalarType::Float:
+      TensorToBufferSType<float>(tensor, dest_shape, dest_buffer,
+                                 dest_buffer_size);
+      break;
+    case at::ScalarType::Byte:
+      TensorToBufferSType<uint8_t>(tensor, dest_shape, dest_buffer,
+                                   dest_buffer_size);
+      break;
+    case at::ScalarType::Char:
+      TensorToBufferSType<int8_t>(tensor, dest_shape, dest_buffer,
+                                  dest_buffer_size);
+      break;
     case at::ScalarType::Short:
-      TensorToBuffer<int16_t, xla::int16>(tensor, shape, dest_buffer,
-                                          dest_buffer_size);
+      TensorToBufferSType<int16_t>(tensor, dest_shape, dest_buffer,
+                                   dest_buffer_size);
       break;
     case at::ScalarType::Int:
-      TensorToBuffer<int32_t, xla::int32>(tensor, shape, dest_buffer,
-                                          dest_buffer_size);
+      TensorToBufferSType<int32_t>(tensor, dest_shape, dest_buffer,
+                                   dest_buffer_size);
       break;
     case at::ScalarType::Long:
-      TensorToBuffer<int64_t, xla::int64>(tensor, shape, dest_buffer,
-                                          dest_buffer_size);
+      TensorToBufferSType<int64_t>(tensor, dest_shape, dest_buffer,
+                                   dest_buffer_size);
       break;
     default:
       XLA_ERROR() << "Tensor type not supported: " << tensor.type();
@@ -191,41 +262,19 @@ std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
   return std::move(handles.front());
 }
 
-at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType type) {
-  switch (type) {
-    case xla::PrimitiveType::BF16:
-    case xla::PrimitiveType::F32:
-      return at::ScalarType::Float;
-    case xla::PrimitiveType::U8:
-      return at::ScalarType::Byte;
-    case xla::PrimitiveType::S8:
-      return at::ScalarType::Char;
-    case xla::PrimitiveType::S16:
-      return at::ScalarType::Short;
-    case xla::PrimitiveType::S32:
-      return at::ScalarType::Int;
-    case xla::PrimitiveType::S64:
-      return at::ScalarType::Long;
-    default:
-      XLA_ERROR() << "Unknown XLA primitive type: " << type;
-  }
-}
-
 template <typename SType, typename DType>
-at::Tensor XlaLiteralToTensor(const xla::Literal& literal) {
+at::Tensor XlaLiteralToTensor(const xla::Literal& literal, at::ScalarType atype,
+                              xla::PrimitiveType xtype) {
   std::vector<int64_t> dimensions;
   for (auto result_dimension : literal.shape().dimensions()) {
     dimensions.push_back(result_dimension);
   }
   xla::Shape torch_shape =
-      MakeTorchTensorLayout(literal.shape().dimensions(),
-                            GetTorchDataType(literal.shape().element_type()));
+      MakeTorchTensorLayout(literal.shape().dimensions(), xtype);
   xla::int64 total_elements = xla::ShapeUtil::ElementsIn(torch_shape);
 
   const auto literal_data = literal.data<SType>();
-  at::Tensor tensor = at::empty(
-      dimensions,
-      at::TensorOptions(TensorTypeFromXlaType(literal.shape().element_type())));
+  at::Tensor tensor = at::empty(dimensions, at::TensorOptions(atype));
   CopyTensors<SType, DType>(literal_data.data(), literal.shape(),
                             tensor.data<DType>(),
                             total_elements * sizeof(DType), torch_shape);
@@ -237,25 +286,32 @@ at::Tensor XlaLiteralToTensor(const xla::Literal& literal) {
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
   switch (literal.shape().element_type()) {
     case xla::PrimitiveType::BF16: {
-      return XlaLiteralToTensor<tensorflow::bfloat16, float>(literal);
+      return XlaLiteralToTensor<tensorflow::bfloat16, float>(
+          literal, at::ScalarType::Float, xla::PrimitiveType::F32);
     }
     case xla::PrimitiveType::F32: {
-      return XlaLiteralToTensor<float, float>(literal);
+      return XlaLiteralToTensor<float, float>(literal, at::ScalarType::Float,
+                                              xla::PrimitiveType::F32);
     }
     case xla::PrimitiveType::U8: {
-      return XlaLiteralToTensor<xla::uint8, uint8_t>(literal);
+      return XlaLiteralToTensor<xla::uint8, uint8_t>(
+          literal, at::ScalarType::Byte, xla::PrimitiveType::U8);
     }
     case xla::PrimitiveType::S8: {
-      return XlaLiteralToTensor<xla::int8, int8_t>(literal);
+      return XlaLiteralToTensor<xla::int8, int8_t>(
+          literal, at::ScalarType::Char, xla::PrimitiveType::S8);
     }
     case xla::PrimitiveType::S16: {
-      return XlaLiteralToTensor<xla::int16, int16_t>(literal);
+      return XlaLiteralToTensor<xla::int16, int16_t>(
+          literal, at::ScalarType::Short, xla::PrimitiveType::S16);
     }
     case xla::PrimitiveType::S32: {
-      return XlaLiteralToTensor<xla::int32, int32_t>(literal);
+      return XlaLiteralToTensor<xla::int32, int32_t>(
+          literal, at::ScalarType::Int, xla::PrimitiveType::S32);
     }
     case xla::PrimitiveType::S64: {
-      return XlaLiteralToTensor<xla::int64, int64_t>(literal);
+      return XlaLiteralToTensor<xla::int64, int64_t>(
+          literal, at::ScalarType::Long, xla::PrimitiveType::S64);
     }
     default:
       XLA_ERROR() << "Unsupported literal type: " << literal.shape();
@@ -280,7 +336,7 @@ std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
       tensor,
       MakeArrayShapeFromDimensions(
           tensor.sizes(),
-          XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()),
+          XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType(), &device),
           device.hw_type),
       device);
 }
@@ -294,7 +350,8 @@ std::vector<std::shared_ptr<xla::ComputationClient::Data>> CreateTensorsData(
     Device device(devices[i]);
     xla::Shape shape = MakeArrayShapeFromDimensions(
         tensors[i].sizes(),
-        XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType()),
+        XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType(),
+                                         &device),
         device.hw_type);
     auto populate_fn =
         [&, i](const xla::ComputationClient::TensorSource& source_tensor,
@@ -314,8 +371,7 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor,
   if (shape == nullptr) {
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
     computed_shape = MakeTorchTensorLayout(
-        dimensions,
-        XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType()));
+        dimensions, XlaTypeFromTensorType(tensor.type().scalarType()));
     shape = &computed_shape;
   }
   xla::Literal literal(*shape);
@@ -353,6 +409,14 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
   return shape_components_with_layout.size() > 1
              ? xla::ShapeUtil::MakeTupleShape(shape_components_with_layout)
              : shape_components_with_layout.front();
+}
+
+xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
+                                            const Device* device) {
+  auto dimensions = XlaHelpers::I64List(tensor.sizes());
+  return MakeTorchTensorLayout(
+      dimensions,
+      XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType(), device));
 }
 
 }  // namespace torch_xla

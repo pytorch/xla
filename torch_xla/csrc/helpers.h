@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 
+#include "device.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
@@ -81,7 +82,8 @@ class XlaHelpers {
   static xla::XlaComputation CreateAddComputation(xla::PrimitiveType type);
 
   // Converts the given scalar type to an XLA primitive type.
-  static xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type);
+  static xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
+                                                 const Device* device);
 
   // Performs type promotion to make sure both operations return the same type.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
