@@ -22,13 +22,13 @@ std::string DeviceTypeToString(DeviceType hw_type) {
 
 void ParseDevice(const std::string& device_spec, Device* device) {
   if (device_spec.empty()) {
-    const std::string default_device_spec =
+    std::string default_device_spec =
         xla::ComputationClient::Get()->GetDefaultDevice();
     XLA_CHECK(!default_device_spec.empty());
     return ParseDevice(default_device_spec, device);
   }
   if (device_spec[0] == ':') {
-    const std::string default_device_spec =
+    std::string default_device_spec =
         xla::ComputationClient::Get()->GetDefaultDevice();
     auto pos = default_device_spec.find(':');
     XLA_CHECK_NE(pos, std::string::npos) << default_device_spec;

@@ -163,10 +163,12 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
     return data_->ir_node->shape();
   }
   XLA_CHECK(data_->tensor_data);
+  const Device& device = GetDevice();
   return MakeArrayShapeFromDimensions(
       data_->tensor_data->sizes(),
-      XlaHelpers::MakeXlaPrimitiveType(data_->tensor_data->type().scalarType()),
-      GetDevice().hw_type);
+      XlaHelpers::MakeXlaPrimitiveType(data_->tensor_data->type().scalarType(),
+                                       &device),
+      device.hw_type);
 }
 
 const Device& XLATensor::GetDevice() const { return data_->device; }

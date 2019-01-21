@@ -47,4 +47,9 @@ std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape);
 xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
                                      DeviceType device_type);
 
+// Create the XLA shape to be used within a lowered XLA computation, to
+// represent a given tensor data.
+xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
+                                            const Device* device);
+
 }  // namespace torch_xla

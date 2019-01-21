@@ -27,7 +27,10 @@ xla::XlaOp GetConstantOp(xla::XlaBuilder* builder,
                          const torch::jit::Node* node) {
   auto value = toIValue(node->output()).value();
   if (value.isTensor()) {
-    auto literal = GetTensorLiteral(value.toTensor(), /*shape=*/nullptr);
+    auto tensor = value.toTensor();
+    xla::Shape shape = CreateComputationShapeFromTensor(tensor,
+                                                        /*device=*/nullptr);
+    auto literal = GetTensorLiteral(tensor, &shape);
     return xla::ConstantLiteral(builder, literal);
   } else if (value.isDouble()) {
     return xla::ConstantR0<float>(builder, value.toDouble());
