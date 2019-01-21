@@ -73,8 +73,8 @@ xla::XlaOp BuildTypeAs(const torch::jit::Node* node,
   const auto output_tensor_type =
       node_outputs[0]->type()->cast<at::TensorType>();
   XLA_CHECK(output_tensor_type);
-  const auto target_type =
-      XlaHelpers::MakeXlaPrimitiveType(output_tensor_type->scalarType());
+  const auto target_type = XlaHelpers::MakeXlaPrimitiveType(
+      output_tensor_type->scalarType(), /*device=*/nullptr);
   return xla::ConvertElementType(operand, target_type);
 }
 

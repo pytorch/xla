@@ -70,21 +70,29 @@ xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
   return reduction_builder.Build().ConsumeValueOrDie();
 }
 
-xla::PrimitiveType XlaHelpers::MakeXlaPrimitiveType(
-    at::ScalarType scalar_type) {
-  // When PyTorch will support native BF16 type, the global configuration can be
-  // replaced (or augmented) with the proper mapping.
+xla::PrimitiveType XlaHelpers::MakeXlaPrimitiveType(at::ScalarType scalar_type,
+                                                    const Device* device) {
+  static const Device* default_device = new Device("");
+  if (device == nullptr) {
+    device = default_device;
+  }
   switch (scalar_type) {
     case at::ScalarType::Float:
+      // When PyTorch will support native BF16 type, the global configuration
+      // can be replaced (or augmented) with the proper mapping.
       return UseBF16() ? xla::PrimitiveType::BF16 : xla::PrimitiveType::F32;
     case at::ScalarType::Byte:
-      return xla::PrimitiveType::U8;
+      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::U8
+                                                : xla::PrimitiveType::S64;
     case at::ScalarType::Char:
-      return xla::PrimitiveType::S8;
+      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S8
+                                                : xla::PrimitiveType::S64;
     case at::ScalarType::Short:
-      return xla::PrimitiveType::S16;
+      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S16
+                                                : xla::PrimitiveType::S64;
     case at::ScalarType::Int:
-      return xla::PrimitiveType::S32;
+      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S32
+                                                : xla::PrimitiveType::S64;
     case at::ScalarType::Long:
       return xla::PrimitiveType::S64;
     default:

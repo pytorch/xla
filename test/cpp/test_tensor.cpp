@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <vector>
+
 #include <ATen/ATen.h>
 #include "cpp_test_util.h"
 #include "tensor.h"
@@ -23,21 +25,22 @@ TEST(TensotTest, TestAdd) {
 }
 
 TEST(TensotTest, TestIntegerAdd) {
-  at::ScalarType types[] = {at::kByte, at::kChar, at::kShort, at::kInt,
-                            at::kLong};
-  for (auto type : types) {
-    at::Tensor a = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
-    at::Tensor b = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
-    auto c = a.add(b, 1.0);
+  std::vector<at::ScalarType> types(
+      {at::kByte, at::kChar, at::kShort, at::kInt, at::kLong});
 
-    ForEachDevice([&](const Device& device) {
+  ForEachDevice([&](const Device& device) {
+    for (auto type : types) {
+      at::Tensor a = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
+      at::Tensor b = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
+      auto c = a.add(b, 1.0);
+
       auto dev_a = XLATensor::Create(a, device, /*requires_grad=*/false);
       auto dev_b = XLATensor::Create(b, device, /*requires_grad=*/false);
       auto dev_c = dev_a->add(*dev_b, 1.0);
 
-      EXPECT_TRUE(c.equal(ToTensor(*dev_c)));
-    });
-  }
+      EXPECT_TRUE(EqualValues(c, ToTensor(*dev_c)));
+    }
+  });
 }
 
 }  // namespace cpp_test

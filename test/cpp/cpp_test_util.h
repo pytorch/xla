@@ -8,18 +8,13 @@
 
 #include "device.h"
 #include "tensor.h"
-#include "torch/csrc/autograd/variable.h"
 
 namespace torch_xla {
 namespace cpp_test {
 
-static inline at::Tensor ToTensor(XLATensor& xla_tensor) {
-  at::Tensor xtensor = xla_tensor.ToTensor();
-  if (xtensor.is_variable()) {
-    xtensor = torch::autograd::as_variable_ref(xtensor).data();
-  }
-  return xtensor;
-}
+at::Tensor ToTensor(XLATensor& xla_tensor);
+
+bool EqualValues(at::Tensor a, at::Tensor b);
 
 static inline void AllClose(at::Tensor tensor, XLATensor& xla_tensor,
                             double rtol = 1e-5, double atol = 1e-8) {

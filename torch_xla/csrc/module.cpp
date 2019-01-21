@@ -420,8 +420,11 @@ xla::XlaComputation XlaModule::BuildFusedTrainComputation(
   std::vector<XlaTranslator::ParameterShape> backward_shapes;
   std::vector<xla::XlaOp> backward_operands;
   for (size_t i = 0; i < backward_input_gradients_.size(); ++i) {
+    xla::Shape shape =
+        CreateComputationShapeFromTensor(backward_input_gradients_[i],
+                                         /*device=*/nullptr);
     xla::Literal literal =
-        GetTensorLiteral(backward_input_gradients_[i], /*shape=*/nullptr);
+        GetTensorLiteral(backward_input_gradients_[i], &shape);
     xla::XlaOp gradient_op = xla::ConstantLiteral(&b, literal);
     backward_shapes.push_back(XlaTranslator::ParameterShape(
         XlaHelpers::ShapeOfXlaOp(gradient_op),
