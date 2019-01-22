@@ -45,7 +45,9 @@ class XlaHelpers {
   }
 
   // Returns the list of dimension sizes for the given shape.
-  static std::vector<xla::int64> ShapeSizes(const xla::Shape& shape);
+  static std::vector<xla::int64> ShapeSizes(const xla::Shape& shape) {
+    return xla::util::ToVector<xla::int64>(shape.dimensions());
+  }
 
   // Returns the shape of the given XLA operation.
   static xla::Shape ShapeOfXlaOp(const xla::XlaOp& op);
