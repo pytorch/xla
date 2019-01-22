@@ -421,4 +421,24 @@ xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
       device->hw_type);
 }
 
+at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
+  switch (xla_type) {
+    case xla::PrimitiveType::BF16:
+    case xla::PrimitiveType::F32:
+      return at::ScalarType::Float;
+    case xla::PrimitiveType::U8:
+      return at::ScalarType::Byte;
+    case xla::PrimitiveType::S8:
+      return at::ScalarType::Char;
+    case xla::PrimitiveType::S16:
+      return at::ScalarType::Short;
+    case xla::PrimitiveType::S32:
+      return at::ScalarType::Int;
+    case xla::PrimitiveType::S64:
+      return at::ScalarType::Long;
+    default:
+      XLA_ERROR() << "XLA type not supported: " << xla_type;
+  }
+}
+
 }  // namespace torch_xla
