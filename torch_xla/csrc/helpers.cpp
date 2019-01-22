@@ -93,12 +93,6 @@ xla::PrimitiveType XlaHelpers::MakeXlaPrimitiveType(at::ScalarType scalar_type,
   }
 }
 
-std::vector<xla::int64> XlaHelpers::ShapeSizes(const xla::Shape& shape) {
-  std::vector<xla::int64> shape_sizes(shape.dimensions().begin(),
-                                      shape.dimensions().end());
-  return shape_sizes;
-}
-
 xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
   return op.builder()->GetShape(op).ConsumeValueOrDie();
 }
