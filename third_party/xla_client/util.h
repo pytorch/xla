@@ -80,6 +80,11 @@ std::vector<typename C::value_type::element_type*> GetSharedPointers(
   return pointers;
 }
 
+template <typename T, typename S>
+std::vector<T> ToVector(const S& input) {
+  return std::vector<T>(input.begin(), input.end());
+}
+
 }  // namespace util
 }  // namespace xla
 

@@ -10,7 +10,7 @@
 namespace torch_xla {
 namespace cpp_test {
 
-TEST(TensotTest, TestAdd) {
+TEST(TensorTest, TestAdd) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   auto c = a.add(b, 1.0);
@@ -24,7 +24,7 @@ TEST(TensotTest, TestAdd) {
   });
 }
 
-TEST(TensotTest, TestIntegerAdd) {
+TEST(TensorTest, TestIntegerAdd) {
   std::vector<at::ScalarType> types(
       {at::kByte, at::kChar, at::kShort, at::kInt, at::kLong});
 
