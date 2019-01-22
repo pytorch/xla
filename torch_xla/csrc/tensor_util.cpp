@@ -114,15 +114,17 @@ std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
   // StridedCopy() iterations in CopyTensors().
   // So we select the most minor dimension, unless one of the other dimensions
   // is more than kMinorDimScale times the most minor one.
-  static const xla::int64 kMinorDimScale = 4;
+  static const xla::int64 kMinorDimScale = 8;
   std::vector<xla::int64> iter_dims(shape.layout().minor_to_major().begin(),
                                     shape.layout().minor_to_major().end());
   size_t index = 0;
-  xla::int64 scaled_dim_size = kMinorDimScale * shape.dimensions(index);
+  xla::int64 scaled_dim_size =
+      kMinorDimScale * shape.dimensions(iter_dims[index]);
   for (size_t i = 1; i < iter_dims.size(); ++i) {
-    if (shape.dimensions(i) > scaled_dim_size) {
+    xla::int64 dim = iter_dims[i];
+    if (shape.dimensions(dim) > scaled_dim_size) {
       index = i;
-      scaled_dim_size = shape.dimensions(i);
+      scaled_dim_size = shape.dimensions(dim);
     }
   }
   std::swap(iter_dims[0], iter_dims[index]);
