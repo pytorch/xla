@@ -140,7 +140,8 @@ class XLATensor {
                                     int stride, int padding,
                                     bool use_full_conv_precision);
 
-  std::shared_ptr<XLATensor> addmm(XLATensor& weight, XLATensor& bias,
+  std::shared_ptr<XLATensor> addmm(const XLATensor& weight,
+                                   const XLATensor& bias,
                                    bool use_full_conv_precision);
 
   std::shared_ptr<XLATensor> max_pool2d(int kernel_size, int stride,

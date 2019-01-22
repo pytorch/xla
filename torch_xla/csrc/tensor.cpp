@@ -507,7 +507,8 @@ std::shared_ptr<XLATensor> XLATensor::conv2d(
   return Create(ir_node, GetDevice());
 }
 
-std::shared_ptr<XLATensor> XLATensor::addmm(XLATensor& weight, XLATensor& bias,
+std::shared_ptr<XLATensor> XLATensor::addmm(const XLATensor& weight,
+                                            const XLATensor& bias,
                                             bool use_full_conv_precision) {
   return Create(ir::ops::AddMatMulOp(ir::NodeOperand(GetIrNode()),
                                      ir::NodeOperand(weight.GetIrNode()),
