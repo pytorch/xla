@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 
 namespace torch_xla {
@@ -277,10 +278,8 @@ std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
 template <typename SType, typename DType>
 at::Tensor XlaLiteralToTensor(const xla::Literal& literal, at::ScalarType atype,
                               xla::PrimitiveType xtype) {
-  std::vector<int64_t> dimensions;
-  for (auto result_dimension : literal.shape().dimensions()) {
-    dimensions.push_back(result_dimension);
-  }
+  std::vector<int64_t> dimensions =
+      xla::util::ToVector<int64_t>(literal.shape().dimensions());
   xla::Shape torch_shape =
       MakeTorchTensorLayout(literal.shape().dimensions(), xtype);
   xla::int64 total_elements = xla::ShapeUtil::ElementsIn(torch_shape);
@@ -345,12 +344,7 @@ xla::Shape MakeArrayShapeFromDimensions(const at::IntList& tensor_dimensions,
 std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
     const at::Tensor& tensor, const Device& device) {
   return TensorToXlaData(
-      tensor,
-      MakeArrayShapeFromDimensions(
-          tensor.sizes(),
-          XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType(), &device),
-          device.hw_type),
-      device);
+      tensor, CreateComputationShapeFromTensor(tensor, &device), device);
 }
 
 std::vector<std::shared_ptr<xla::ComputationClient::Data>> CreateTensorsData(
@@ -360,11 +354,7 @@ std::vector<std::shared_ptr<xla::ComputationClient::Data>> CreateTensorsData(
   std::vector<xla::ComputationClient::TensorSource> source_tensors;
   for (size_t i = 0; i < tensors.size(); ++i) {
     Device device(devices[i]);
-    xla::Shape shape = MakeArrayShapeFromDimensions(
-        tensors[i].sizes(),
-        XlaHelpers::MakeXlaPrimitiveType(tensors[i].type().scalarType(),
-                                         &device),
-        device.hw_type);
+    xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
     auto populate_fn =
         [&, i](const xla::ComputationClient::TensorSource& source_tensor,
                void* dest_buffer, size_t dest_buffer_size) {
@@ -411,12 +401,9 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
   std::vector<xla::Shape> shape_components_with_layout;
   XLA_CHECK(!shape_components.empty());
   for (const auto& shape_component : shape_components) {
-    std::vector<int64_t> shape_component_dimensions(
-        shape_component.dimensions().begin(),
-        shape_component.dimensions().end());
     shape_components_with_layout.push_back(MakeArrayShapeFromDimensions(
-        shape_component_dimensions, shape_component.element_type(),
-        device_type));
+        xla::util::ToVector<int64_t>(shape_component.dimensions()),
+        shape_component.element_type(), device_type));
   }
   return shape_components_with_layout.size() > 1
              ? xla::ShapeUtil::MakeTupleShape(shape_components_with_layout)
