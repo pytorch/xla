@@ -144,15 +144,7 @@ void XLATensor::SetGradient(std::shared_ptr<XLATensor> grad) {
 }
 
 at::ScalarType XLATensor::dtype() const {
-  xla::PrimitiveType xla_type = shape().get().element_type();
-  switch (xla_type) {
-    case xla::PrimitiveType::F32:
-      return at::ScalarType::Float;
-    case xla::PrimitiveType::S64:
-      return at::ScalarType::Long;
-    default:
-      XLA_ERROR() << "XLA type not supported: " << xla_type;
-  }
+  return TensorTypeFromXlaType(shape().get().element_type());
 }
 
 xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
