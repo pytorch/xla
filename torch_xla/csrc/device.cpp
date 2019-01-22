@@ -61,4 +61,9 @@ std::string Device::ToString() const {
   return absl::StrCat(DeviceTypeToString(hw_type), ":", ordinal);
 }
 
+const Device* GetDefaultDevice() {
+  static const Device* default_device = new Device("");
+  return default_device;
+}
+
 }  // namespace torch_xla
