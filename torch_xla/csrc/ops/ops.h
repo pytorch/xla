@@ -44,6 +44,13 @@ inline NodePtr CrossReplicaSumOp(const NodeOperand& operand,
   return std::make_shared<CrossReplicaSum>(operand, std::move(groups));
 }
 
+NodePtr ReluOp(const NodeOperand& input);
+
+NodePtr TransposeOp(const NodeOperand& input);
+
+NodePtr AddMatMulOp(const NodeOperand& input, const NodeOperand& weight,
+                    const NodeOperand& bias, bool use_full_conv_precision);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
