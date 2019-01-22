@@ -116,8 +116,8 @@ std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
   // So we select the most minor dimension, unless one of the other dimensions
   // is more than kMinorDimScale times the most minor one.
   static const xla::int64 kMinorDimScale = 8;
-  std::vector<xla::int64> iter_dims(shape.layout().minor_to_major().begin(),
-                                    shape.layout().minor_to_major().end());
+  std::vector<xla::int64> iter_dims =
+      xla::util::ToVector<xla::int64>(shape.layout().minor_to_major());
   size_t index = 0;
   xla::int64 scaled_dim_size =
       kMinorDimScale * shape.dimensions(iter_dims[index]);
