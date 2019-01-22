@@ -52,4 +52,6 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
 xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
                                             const Device* device);
 
+at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type);
+
 }  // namespace torch_xla
