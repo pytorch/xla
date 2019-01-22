@@ -75,24 +75,24 @@ std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
 // The tensorflow::bfloat16 does not have implicit cast operations, so using
 // std::copy() for it, is not going to work.
 struct CopyDirect {};
-struct CopyStrided {};
+struct CopyCasted {};
 
 template <typename T>
-struct NeedStride {
-  enum { value = 0 };
+struct NeedCast {
+  static constexpr bool value = false;
 };
 template <>
-struct NeedStride<tensorflow::bfloat16> {
-  enum { value = 1 };
+struct NeedCast<tensorflow::bfloat16> {
+  static constexpr bool value = true;
 };
 
-template <bool STRIDE>
+template <bool CAST>
 struct CopyType {
   using type = CopyDirect;
 };
 template <>
 struct CopyType<true> {
-  using type = CopyStrided;
+  using type = CopyCasted;
 };
 
 template <typename D, typename S>
@@ -101,29 +101,39 @@ void CopyData(D* dest, const S* source, xla::int64 n, const CopyDirect&) {
 }
 
 template <typename D, typename S>
-void CopyData(D* dest, const S* source, xla::int64 n, const CopyStrided&) {
+void CopyData(D* dest, const S* source, xla::int64 n, const CopyCasted&) {
   // Use strided copy with step 1 since it has the static_cast<> required to
   // convert from/to bfloat16.
   StridedCopy(dest, 1, source, 1, n);
 }
 
 std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
-  // Return the most minor dimension order, to iterate the literal memory in a
-  // cache friendly way.
-  // Another strategy could be to return the higher value dimension first, to
-  // reduce the number of outer loops in TensorToBuffer(), but that leads to
-  // StridedCopy() calls in which both source and destination are jumping off
-  // memory locations.
-  return std::vector<xla::int64>(shape.layout().minor_to_major().begin(),
-                                 shape.layout().minor_to_major().end());
+  // We want to favor the most minor dimension as core iteration dimension, as
+  // this walks one of the two tensors buffers in a cache friendly fashion.
+  // Though, if the most minor dimension is too small, we will end up doing more
+  // StridedCopy() iterations in CopyTensors().
+  // So we select the most minor dimension, unless one of the other dimensions
+  // is more than kMinorDimScale times the most minor one.
+  static const xla::int64 kMinorDimScale = 4;
+  std::vector<xla::int64> iter_dims(shape.layout().minor_to_major().begin(),
+                                    shape.layout().minor_to_major().end());
+  size_t index = 0;
+  xla::int64 scaled_dim_size = kMinorDimScale * shape.dimensions(index);
+  for (size_t i = 1; i < iter_dims.size(); ++i) {
+    if (shape.dimensions(i) > scaled_dim_size) {
+      index = i;
+      scaled_dim_size = shape.dimensions(i);
+    }
+  }
+  std::swap(iter_dims[0], iter_dims[index]);
+  return iter_dims;
 }
 
 template <typename SType, typename DType>
 void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
                  void* dest_buffer, size_t dest_buffer_size,
                  const xla::Shape& dest_shape) {
-  XLA_CHECK(
-      xla::ShapeUtil::CompatibleIgnoringElementType(src_shape, dest_shape))
+  XLA_CHECK(xla::ShapeUtil::SameDimensions(src_shape, dest_shape))
       << src_shape << " vs. " << dest_shape;
 
   xla::int64 total_elements = xla::ShapeUtil::ElementsIn(src_shape);
@@ -134,8 +144,8 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
   if (src_shape.layout().minor_to_major() ==
       dest_shape.layout().minor_to_major()) {
     CopyData<DType, SType>(dest_data, src_data, total_elements,
-                           typename CopyType < NeedStride<SType>::value ||
-                               NeedStride<DType>::value > ::type());
+                           typename CopyType < NeedCast<SType>::value ||
+                               NeedCast<DType>::value > ::type());
   } else {
     std::vector<xla::int64> src_strides = ComputeShapeStrides(src_shape);
     std::vector<xla::int64> dest_strides = ComputeShapeStrides(dest_shape);
@@ -413,10 +423,13 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
 
 xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
                                             const Device* device) {
-  auto dimensions = XlaHelpers::I64List(tensor.sizes());
-  return MakeTorchTensorLayout(
-      dimensions,
-      XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType(), device));
+  if (device == nullptr) {
+    device = GetDefaultDevice();
+  }
+  return MakeArrayShapeFromDimensions(
+      tensor.sizes(),
+      XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType(), device),
+      device->hw_type);
 }
 
 }  // namespace torch_xla

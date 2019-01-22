@@ -72,9 +72,8 @@ xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
 
 xla::PrimitiveType XlaHelpers::MakeXlaPrimitiveType(at::ScalarType scalar_type,
                                                     const Device* device) {
-  static const Device* default_device = new Device("");
   if (device == nullptr) {
-    device = default_device;
+    device = GetDefaultDevice();
   }
   switch (scalar_type) {
     case at::ScalarType::Float:
