@@ -6,6 +6,7 @@
 #include "device.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch/csrc/jit/ir.h"
@@ -71,8 +72,11 @@ class XlaHelpers {
   static xla::PrecisionConfig BuildPrecisionConfig(
       const xla::PrecisionConfig::Precision conv_precision);
 
-  // Converts int64_t's to XLA int64's.
-  static std::vector<xla::int64> I64List(const at::IntList& input);
+  // Converts an iterable container to a vector XLA int64's.
+  template <typename S>
+  static std::vector<xla::int64> I64List(const S& input) {
+    return xla::util::ToVector<xla::int64>(input);
+  }
 
   // Creates an XLA padding configuration from a padding attribute value.
   static xla::PaddingConfig MakeXlaPaddingConfig(

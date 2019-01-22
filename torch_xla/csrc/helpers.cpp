@@ -28,12 +28,6 @@ xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
   return precision_config;
 }
 
-std::vector<xla::int64> XlaHelpers::I64List(const at::IntList& input) {
-  std::vector<xla::int64> output(input.size());
-  std::copy(input.begin(), input.end(), output.begin());
-  return output;
-}
-
 xla::XlaOp XlaHelpers::CreateReturnValue(
     xla::XlaBuilder* builder, const std::vector<xla::XlaOp>& outputs) {
   if (outputs.size() > 1) {
