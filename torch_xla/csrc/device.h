@@ -37,4 +37,6 @@ struct Device {
   int ordinal = 0;
 };
 
+const Device* GetDefaultDevice();
+
 }  // namespace torch_xla
