@@ -459,7 +459,7 @@ void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
 }
 
 xla::int64 XLATensor::size(int dim) const {
-  const xla::Shape& xla_shape = shape().get();
+  const xla::Shape& xla_shape = shape();
   int rank = xla_shape.dimensions_size();
   int min_shape_dim = -rank;
   int max_shape_dim = rank - 1;
@@ -467,7 +467,8 @@ xla::int64 XLATensor::size(int dim) const {
       "Dimension out of range (expected to be in range of [", min_shape_dim,
       ", ", max_shape_dim, "], but got ", dim, ")");
   int dim_index = dim < 0 ? rank + dim : dim;
-  XLA_CHECK(0 <= dim_index && dim_index < rank) << "Invalid dim_index value";
+  XLA_CHECK_GE(dim_index, 0);
+  XLA_CHECK_LT(dim_index, rank);
   return xla_shape.dimensions(dim_index);
 }
 
