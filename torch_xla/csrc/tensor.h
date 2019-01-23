@@ -260,6 +260,7 @@ class XLATensor {
 
   std::shared_ptr<Data> data_;
   bool requires_grad_ = false;
+  bool has_aliases_ = false;
 };
 
 }  // namespace torch_xla

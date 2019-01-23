@@ -230,6 +230,7 @@ void XLATensor::SetXlaData(
 }
 
 void XLATensor::SetIrNode(ir::NodePtr ir_node) {
+  XLA_CHECK(!has_aliases_) << "In-place operation on aliased vector";
   // We do not want to nullify that XLA data pointer here, as otherwise the
   // tensor apply computation caching will not work correctly.
   // If A is a tensor, a typical optimizer step computation will do:
@@ -532,9 +533,12 @@ std::shared_ptr<XLATensor> XLATensor::t() {
 
 std::shared_ptr<XLATensor> XLATensor::view(
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
-  return Create(std::make_shared<ir::ops::View>(ir::NodeOperand(GetIrNode()),
-                                                output_size),
-                GetDevice());
+  auto view_tensor = Create(std::make_shared<ir::ops::View>(
+                                ir::NodeOperand(GetIrNode()), output_size),
+                            GetDevice());
+  // View introduces aliasing between the operand and the result.
+  view_tensor->has_aliases_ = has_aliases_ = true;
+  return view_tensor;
 }
 
 std::shared_ptr<XLATensor> XLATensor::log_softmax(xla::int64 dim) {
