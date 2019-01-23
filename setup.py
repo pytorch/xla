@@ -6,6 +6,7 @@ import distutils.command.clean
 import glob
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -41,9 +42,9 @@ def _check_env_flag(name, default=''):
   return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
 
 
-torch_xla_sources = (glob.glob('torch_xla/csrc/*.cpp') +
-                     glob.glob('torch_xla/csrc/ops/*.cpp') +
-                     glob.glob('torch_xla/csrc/passes/*.cpp'))
+torch_xla_sources = (
+    glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
+    glob.glob('torch_xla/csrc/passes/*.cpp'))
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -98,8 +99,17 @@ def make_relative_rpath(path):
     return '-Wl,-rpath,$ORIGIN/' + path
 
 
-extra_compile_args = ['-Wno-macro-redefined', '-Wno-sign-compare',
-                      '-Wno-return-std-move', '-Wno-deprecated-declarations', '-Wno-return-type']
+extra_compile_args = [
+    '-Wno-sign-compare',
+    '-Wno-deprecated-declarations',
+    '-Wno-return-type',
+]
+
+if re.match(r'clang', os.getenv('CC', '')):
+  extra_compile_args += [
+      '-Wno-macro-redefined',
+      '-Wno-return-std-move',
+  ]
 
 if DEBUG:
   if IS_WINDOWS:
