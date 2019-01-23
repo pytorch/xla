@@ -57,13 +57,17 @@ set(TORCH_XLA_TEST_SOURCES
 
 add_executable(test_ptxla ${TORCH_XLA_TEST_SOURCES})
 
-target_compile_options(test_ptxla PRIVATE
-  -Wno-macro-redefined
+set(TGT_OPTS
   -Wno-sign-compare
-  -Wno-return-std-move
   -Wno-deprecated-declarations
   -Wno-return-type
 )
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  list(APPEND TGT_OPTS -Wno-macro-redefined -Wno-return-std-move)
+endif()
+
+target_compile_options(test_ptxla PRIVATE ${TGT_OPTS})
 
 add_dependencies(test_ptxla googletest)
 
@@ -100,10 +104,10 @@ target_link_libraries(
   test_ptxla
   "${PTXLA_LIB}"
   "${PTXLA_LIBDIR}/torch_xla/lib/libxla_computation_client.so"
+  "${PTPY_LIB}"
   "${PT_LIB}"
   "${C10_LIB}"
   "${CAFFE_LIB}"
-  "${PTPY_LIB}"
   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest${SUFFIX}"
   "${PYTHON_LIBRARY}"
   ${PTHREAD})
