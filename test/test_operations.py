@@ -1193,8 +1193,8 @@ class TestXLATensor(XlaTestCase):
       out_channels = 7
       kernel_size = 5
       input = _gen_tensor(4, in_channels, 28, 28)
-      weight = torch.Tensor(out_channels, in_channels, kernel_size, kernel_size)
-      bias = torch.Tensor(out_channels)
+      weight = _gen_tensor(out_channels, in_channels, kernel_size, kernel_size)
+      bias = _gen_tensor(out_channels)
       xt_input = torch_xla._XLAC.XLATensor(input)
       xt_weight = torch_xla._XLAC.XLATensor(weight)
       xt_bias = torch_xla._XLAC.XLATensor(bias)
