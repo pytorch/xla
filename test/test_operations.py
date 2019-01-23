@@ -1208,6 +1208,28 @@ class TestXLATensor(XlaTestCase):
                                          padding=padding, use_full_conv_precision=True).to_tensor()
             self.assertEqualRel(out.data, expected.data)
 
+    def test_conv2d_non_square(self):
+      in_channels = 3
+      out_channels = 7
+      kernel_size = 5
+      input = _gen_tensor(4, in_channels, 28, 28)
+      weight = _gen_tensor(out_channels, in_channels, kernel_size, kernel_size)
+      bias = _gen_tensor(out_channels)
+      xt_input = torch_xla._XLAC.XLATensor(input)
+      xt_weight = torch_xla._XLAC.XLATensor(weight)
+      xt_bias = torch_xla._XLAC.XLATensor(bias)
+      for stride in range(1, 4):
+        for padding in range(0, 3):
+          for with_bias in [True, False]:
+            conv_bias = bias if with_bias else None
+            conv_xt_bias = xt_bias if with_bias else None
+            expected = F.conv2d(input, weight, conv_bias, stride=[stride, stride + 1],
+                                padding=[padding, padding + 1])
+            out = torch_xla._XLAC.conv2d(xt_input, xt_weight, conv_xt_bias, stride=[stride, stride + 1],
+                                         padding=[padding, padding + 1],
+                                         use_full_conv_precision=True).to_tensor()
+            self.assertEqualRel(out.data, expected.data)
+
     def test_addmm(self):
       in_channels = 32
       out_channels = 320

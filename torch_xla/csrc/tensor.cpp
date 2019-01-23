@@ -483,20 +483,25 @@ std::shared_ptr<XLATensor> XLATensor::threshold(float threshold, float value) {
 }
 
 std::shared_ptr<XLATensor> XLATensor::conv2d(
-    const std::shared_ptr<XLATensor>& weight,
-    const std::shared_ptr<XLATensor>& bias, int stride, int padding,
+    const XLATensor& weight, const XLATensor& bias,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool use_full_conv_precision) {
-  std::shared_ptr<ir::ops::Conv2d> ir_node;
-  if (bias) {
-    ir_node = std::make_shared<ir::ops::Conv2d>(
-        ir::NodeOperand(GetIrNode()), ir::NodeOperand(weight->GetIrNode()),
-        ir::NodeOperand(bias->GetIrNode()), stride, padding,
-        use_full_conv_precision);
-  } else {
-    ir_node = std::make_shared<ir::ops::Conv2d>(
-        ir::NodeOperand(GetIrNode()), ir::NodeOperand(weight->GetIrNode()),
-        stride, padding, use_full_conv_precision);
-  }
+  auto ir_node = std::make_shared<ir::ops::Conv2d>(
+      ir::NodeOperand(GetIrNode()), ir::NodeOperand(weight.GetIrNode()),
+      ir::NodeOperand(bias.GetIrNode()), stride, padding,
+      use_full_conv_precision);
+  return Create(ir_node, GetDevice());
+}
+
+std::shared_ptr<XLATensor> XLATensor::conv2d(
+    const XLATensor& weight,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    bool use_full_conv_precision) {
+  auto ir_node = std::make_shared<ir::ops::Conv2d>(
+      ir::NodeOperand(GetIrNode()), ir::NodeOperand(weight.GetIrNode()), stride,
+      padding, use_full_conv_precision);
   return Create(ir_node, GetDevice());
 }
 

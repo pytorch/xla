@@ -247,11 +247,35 @@ void InitXlaTensorBindings(py::module m) {
       [](std::shared_ptr<XLATensor> self, std::shared_ptr<XLATensor> weight,
          std::shared_ptr<XLATensor> bias, int stride, int padding,
          bool use_full_conv_precision) {
-        return self->conv2d(weight, bias, stride, padding,
-                            use_full_conv_precision);
+        std::vector<xla::int64> stride_2d(2, stride);
+        std::vector<xla::int64> padding_2d(2, padding);
+        if (bias) {
+          return self->conv2d(*weight, *bias, stride_2d, padding_2d,
+                              use_full_conv_precision);
+        } else {
+          return self->conv2d(*weight, stride_2d, padding_2d,
+                              use_full_conv_precision);
+        }
       },
       py::arg("input"), py::arg("weight"), py::arg("bias") = nullptr,
       py::arg("stride") = 1, py::arg("padding") = 0,
+      py::arg("use_full_conv_precision") = false);
+  m.def(
+      "conv2d",
+      [](std::shared_ptr<XLATensor> self, std::shared_ptr<XLATensor> weight,
+         std::shared_ptr<XLATensor> bias, const std::vector<xla::int64>& stride,
+         const std::vector<xla::int64>& padding, bool use_full_conv_precision) {
+        if (bias) {
+          return self->conv2d(*weight, *bias, stride, padding,
+                              use_full_conv_precision);
+        } else {
+          return self->conv2d(*weight, stride, padding,
+                              use_full_conv_precision);
+        }
+      },
+      py::arg("input"), py::arg("weight"), py::arg("bias") = nullptr,
+      py::arg("stride") = std::vector<xla::int64>{1, 1},
+      py::arg("padding") = std::vector<xla::int64>{0, 0},
       py::arg("use_full_conv_precision") = false);
   m.def(
       "addmm",
