@@ -2,6 +2,7 @@
 
 #include "ir.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace torch_xla {
 namespace ir {
@@ -11,27 +12,30 @@ namespace ops {
 class Conv2d : public Node {
  public:
   Conv2d(const NodeOperand& input, const NodeOperand& weight,
-         const NodeOperand& bias, int stride, int padding,
+         const NodeOperand& bias,
+         tensorflow::gtl::ArraySlice<const xla::int64> stride,
+         tensorflow::gtl::ArraySlice<const xla::int64> padding,
          bool use_full_conv_precision);
 
-  Conv2d(const NodeOperand& input, const NodeOperand& weight, int stride,
-         int padding, bool use_full_conv_precision);
+  Conv2d(const NodeOperand& input, const NodeOperand& weight,
+         tensorflow::gtl::ArraySlice<const xla::int64> stride,
+         tensorflow::gtl::ArraySlice<const xla::int64> padding,
+         bool use_full_conv_precision);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;
 
-  int stride() const { return stride_; }
+  const std::vector<xla::int64>& stride() const { return stride_; }
 
-  int padding() const { return padding_; }
+  const std::vector<xla::int64>& padding() const { return padding_; }
 
   xla::PrecisionConfig::Precision precision() const { return precision_; }
 
  private:
-  // The parameters of the convolution. Only support the same stride and padding
-  // in both dimension for now.
-  int stride_;
-  int padding_;
+  // The parameters of the convolution.
+  std::vector<xla::int64> stride_;
+  std::vector<xla::int64> padding_;
   // The numeric precision to use on TPU.
   xla::PrecisionConfig::Precision precision_;
 };
