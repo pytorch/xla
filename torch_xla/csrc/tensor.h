@@ -135,10 +135,17 @@ class XLATensor {
 
   std::shared_ptr<XLATensor> threshold(float threshold, float value);
 
-  std::shared_ptr<XLATensor> conv2d(const std::shared_ptr<XLATensor>& weight,
-                                    const std::shared_ptr<XLATensor>& bias,
-                                    int stride, int padding,
-                                    bool use_full_conv_precision);
+  std::shared_ptr<XLATensor> conv2d(
+      const XLATensor& weight, const XLATensor& bias,
+      tensorflow::gtl::ArraySlice<const xla::int64> stride,
+      tensorflow::gtl::ArraySlice<const xla::int64> padding,
+      bool use_full_conv_precision);
+
+  std::shared_ptr<XLATensor> conv2d(
+      const XLATensor& weight,
+      tensorflow::gtl::ArraySlice<const xla::int64> stride,
+      tensorflow::gtl::ArraySlice<const xla::int64> padding,
+      bool use_full_conv_precision);
 
   std::shared_ptr<XLATensor> addmm(const XLATensor& weight,
                                    const XLATensor& bias,

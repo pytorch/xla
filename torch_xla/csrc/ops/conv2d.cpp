@@ -11,17 +11,15 @@ namespace {
 
 // The bias doesn't matter for shape inference.
 xla::Shape NodeOutputShape(const NodeOperand& input, const NodeOperand& weight,
-                           int stride, int padding) {
-  std::vector<xla::int64> stride_2d(2, stride);
-  std::vector<xla::int64> padding_2d(2, padding);
+                           tensorflow::gtl::ArraySlice<xla::int64> stride,
+                           tensorflow::gtl::ArraySlice<xla::int64> padding) {
   auto lower_for_shape_fn =
-      [&stride_2d,
-       &padding_2d](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      [stride, padding](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
     XLA_CHECK(operands.size() == 2 || operands.size() == 3)
         << "Unexpected number of operands: " << operands.size();
     // The precision doesn't matter for shape inference.
-    return BuildConvolution(operands[0], operands[1], stride_2d, padding_2d,
+    return BuildConvolution(operands[0], operands[1], stride, padding,
                             xla::PrecisionConfig::DEFAULT);
   };
   return InferOutputShape({input.node->shape(), weight.node->shape()},
@@ -37,43 +35,46 @@ xla::PrecisionConfig::Precision MakePrecisionConfig(
 }  // namespace
 
 Conv2d::Conv2d(const NodeOperand& input, const NodeOperand& weight,
-               const NodeOperand& bias, int stride, int padding,
+               const NodeOperand& bias,
+               tensorflow::gtl::ArraySlice<const xla::int64> stride,
+               tensorflow::gtl::ArraySlice<const xla::int64> padding,
                bool use_full_conv_precision)
     : Node(ir::OpKind(at::aten::convolution), {input, weight, bias},
            NodeOutputShape(input, weight, stride, padding)),
-      stride_(stride),
-      padding_(padding),
+      stride_(stride.begin(), stride.end()),
+      padding_(padding.begin(), padding.end()),
       precision_(MakePrecisionConfig(use_full_conv_precision)) {}
 
-Conv2d::Conv2d(const NodeOperand& input, const NodeOperand& weight, int stride,
-               int padding, bool use_full_conv_precision)
+Conv2d::Conv2d(const NodeOperand& input, const NodeOperand& weight,
+               tensorflow::gtl::ArraySlice<const xla::int64> stride,
+               tensorflow::gtl::ArraySlice<const xla::int64> padding,
+               bool use_full_conv_precision)
     : Node(ir::OpKind(at::aten::convolution), {input, weight},
            NodeOutputShape(input, weight, stride, padding)),
-      stride_(stride),
-      padding_(padding),
+      stride_(stride.begin(), stride.end()),
+      padding_(padding.begin(), padding.end()),
       precision_(MakePrecisionConfig(use_full_conv_precision)) {}
 
 XlaOpVector Conv2d::Lower(LoweringContext* loctx) const {
-  std::vector<xla::int64> stride_2d(2, stride_);
-  std::vector<xla::int64> padding_2d(2, padding_);
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp kernel = loctx->GetOutputOp(operand(1));
   xla::XlaOp output;
   if (operands().size() == 3) {
     xla::XlaOp bias = loctx->GetOutputOp(operand(2));
-    output = BuildConvolutionBias(input, kernel, bias, stride_2d, padding_2d,
+    output = BuildConvolutionBias(input, kernel, bias, stride_, padding_,
                                   precision_);
   } else {
     XLA_CHECK_EQ(operands().size(), 2);
-    output = BuildConvolution(input, kernel, stride_2d, padding_2d, precision_);
+    output = BuildConvolution(input, kernel, stride_, padding_, precision_);
   }
   return ReturnOp(output, loctx);
 }
 
 std::string Conv2d::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", stride=" << stride_ << ", padding=" << padding_
-     << ", precision=" << xla::PrecisionConfig::Precision_Name(precision_);
+  ss << Node::ToString() << ", stride=[" << absl::StrJoin(stride_, ", ")
+     << "], padding=[" << absl::StrJoin(padding_, ", ")
+     << "], precision=" << xla::PrecisionConfig::Precision_Name(precision_);
   return ss.str();
 }
 
