@@ -1257,7 +1257,7 @@ class TestXLATensor(XlaTestCase):
       out = xt_x.view(-1, 320).to_tensor()
       self.assertEqualDbg(out.data, expected.data)
 
-    def log_softmax(self):
+    def test_log_softmax(self):
       x = _gen_tensor(5, 3, 4, 2)
       xt_x = torch_xla._XLAC.XLATensor(x)
       for dim in range(0, x.dim()):
