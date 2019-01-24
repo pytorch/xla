@@ -18,17 +18,17 @@ include(ExternalProject)
 set_directory_properties(PROPERTIES EP_PREFIX "${GTEST_DIR}")
 
 ExternalProject_Add(
-    googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG master
-    SOURCE_DIR "${GTEST_DIR}/src/googletest-src"
-    BINARY_DIR "${GTEST_DIR}/src/googletest-build"
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    # Disable install step
-    INSTALL_COMMAND ""
-    LOG_DOWNLOAD ON
-    LOG_CONFIGURE ON
-    LOG_BUILD ON)
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG master
+  SOURCE_DIR "${GTEST_DIR}/src/googletest-src"
+  BINARY_DIR "${GTEST_DIR}/src/googletest-build"
+  CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+  # Disable install step
+  INSTALL_COMMAND ""
+  LOG_DOWNLOAD ON
+  LOG_CONFIGURE ON
+  LOG_BUILD ON)
 
 ExternalProject_Get_Property(googletest SOURCE_DIR)
 
@@ -46,6 +46,10 @@ include_directories(
   "${PT_DIR}/torch/lib/tmp_install/include"
   "${PYTHON_INCLUDE_DIR}"
 )
+
+if (CMAKE_VERSION VERSION_GREATER 3.11.1)
+  include_directories("${GTEST_DIR}/src/googletest-src/googletest/include")
+endif()
 
 set(TORCH_XLA_TEST_SOURCES
   main.cpp
