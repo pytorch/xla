@@ -27,7 +27,8 @@ void RemoveInputFromBackwardGraph(Gradient* gradient, size_t output_idx,
       const auto grad_output_it =
           std::find(node_inputs.begin(), node_inputs.end(), grad_output);
       // Assert that grad_output doesn't have remaining uses.
-      JIT_ASSERT(grad_output_it == node_inputs.end());
+      XLA_CHECK(grad_output_it == node_inputs.end())
+          << "Gradient output has remaining uses";
     }
     const auto captured_output_it =
         std::find(node_inputs.begin(), node_inputs.end(), captured_output);
@@ -45,7 +46,8 @@ void RemoveInputFromBackwardGraph(Gradient* gradient, size_t output_idx,
   // points inside the outputs section. We thus have captured_output_idx >
   // output_idx because outputs come before captured outputs. Remove the
   // captured_output_idx first to avoid invalidation of indices.
-  JIT_ASSERT(captured_output_idx > output_idx);
+  XLA_CHECK_GT(captured_output_idx, output_idx)
+      << "Captured output must follow output on removal";
   TF_VLOG(3) << "Removing inputs at indices " << captured_output_idx << " and "
              << output_idx << " from the backward graph";
   gradient->df->eraseInput(captured_output_idx);
@@ -94,7 +96,8 @@ void RemoveNodeOutputFromGradient(Node* node, size_t node_output_idx,
       break;
     }
   }
-  JIT_ASSERT(df_input_captured_outputs_idx != -1);
+  XLA_CHECK_NE(df_input_captured_outputs_idx, -1)
+      << "Outputs to remove not found among backward graph inputs";
   const size_t df_input_captured_outputs_val =
       gradient->df_input_captured_outputs[df_input_captured_outputs_idx];
   // Remove the node from df_input_captured_outputs and adjust references to
@@ -114,7 +117,8 @@ void RemoveNodeOutputFromGradient(Node* node, size_t node_output_idx,
   const auto df_input_vjps_it =
       std::find(gradient->df_input_vjps.begin(), gradient->df_input_vjps.end(),
                 forward_output_idx);
-  JIT_ASSERT(df_input_vjps_it != gradient->df_input_vjps.end());
+  XLA_CHECK(df_input_vjps_it != gradient->df_input_vjps.end())
+      << "Forward output index not found in df_input_vjps";
   const size_t output_idx = df_input_vjps_it - gradient->df_input_vjps.begin();
   const auto df_input_vjps_val = *df_input_vjps_it;
   gradient->df_input_vjps.erase(df_input_vjps_it);
@@ -139,16 +143,18 @@ void RemoveUnusedForwardOutputs(Gradient* gradient) {
   XLA_VLOG_LINES(4, "Backward:\n" + gradient->df->toString() + "\n");
   for (auto it = gradient->f->nodes().begin(), end = gradient->f->nodes().end();
        it != end; ++it) {
-    JIT_ASSERT(it->blocks().size() == 0);
+    XLA_CHECK_EQ(it->blocks().size(), 0) << "Graph not flattened";
     switch (it->kind()) {
       case aten::thnn_conv2d_forward: {
-        JIT_ASSERT(it->outputs().size() == 3);
+        XLA_CHECK_EQ(it->outputs().size(), 3)
+            << "Invalid number of outputs for thnn_conv2d_forward";
         RemoveNodeOutputFromGradient(*it, 2, gradient);
         RemoveNodeOutputFromGradient(*it, 1, gradient);
         break;
       }
       case aten::max_pool2d_with_indices: {
-        JIT_ASSERT(it->outputs().size() == 2);
+        XLA_CHECK_EQ(it->outputs().size(), 2)
+            << "Invalid number of outputs for max_pool2d_with_indices";
         RemoveNodeOutputFromGradient(*it, 1, gradient);
         break;
       }

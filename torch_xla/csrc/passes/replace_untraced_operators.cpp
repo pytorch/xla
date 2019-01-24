@@ -77,7 +77,8 @@ void ReplaceUntracedOperators(torch::jit::Block* block) {
 
         graph->insertNode(replacement_node);
         const auto node_inputs = node->inputs();
-        JIT_ASSERT(node_inputs.size() == 9);
+        XLA_CHECK_EQ(node_inputs.size(), 9)
+            << "Invalid number of inputs for batch_norm";
         for (size_t i = 0; i < node_inputs.size() - 1; ++i) {
           replacement_node->addInput(node_inputs[i]);
         }
@@ -87,9 +88,7 @@ void ReplaceUntracedOperators(torch::jit::Block* block) {
         it.destroyCurrent();
         break;
       }
-      default: {
-        break;
-      }
+      default: { break; }
     }
   }
 }
