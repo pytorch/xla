@@ -10,7 +10,12 @@
 namespace torch_xla {
 namespace cpp_test {
 
-TEST(TensorTest, TestAdd) {
+class TensorTest : public ::testing::Test {
+ protected:
+  static void SetUpTestSuite() { at::manual_seed(42); }
+};
+
+TEST_F(TensorTest, TestAdd) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   auto c = a.add(b, 1.0);
@@ -24,7 +29,7 @@ TEST(TensorTest, TestAdd) {
   });
 }
 
-TEST(TensorTest, TestIntegerAdd) {
+TEST_F(TensorTest, TestIntegerAdd) {
   std::vector<at::ScalarType> types(
       {at::kByte, at::kChar, at::kShort, at::kInt, at::kLong});
 
@@ -43,7 +48,7 @@ TEST(TensorTest, TestIntegerAdd) {
   });
 }
 
-TEST(TensorTest, TestSize) {
+TEST_F(TensorTest, TestSize) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   int rank = input.dim();
   ForEachDevice([&](const Device& device) {
@@ -54,7 +59,7 @@ TEST(TensorTest, TestSize) {
   });
 }
 
-TEST(TensorTest, TestRelu) {
+TEST_F(TensorTest, TestRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   auto output = input.relu();
   ForEachDevice([&](const Device& device) {
@@ -64,7 +69,7 @@ TEST(TensorTest, TestRelu) {
   });
 }
 
-TEST(TensorTest, TestThreshold) {
+TEST_F(TensorTest, TestThreshold) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   float threshold = 0.4;
   float value = 20;
@@ -76,7 +81,7 @@ TEST(TensorTest, TestThreshold) {
   });
 }
 
-TEST(TensorTest, TestAddMatMul) {
+TEST_F(TensorTest, TestAddMatMul) {
   int in_channels = 32;
   int out_channels = 320;
   int labels = 50;
@@ -97,7 +102,7 @@ TEST(TensorTest, TestAddMatMul) {
   });
 }
 
-TEST(TensorTest, TestTranspose) {
+TEST_F(TensorTest, TestTranspose) {
   at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   auto output = input.t();
   ForEachDevice([&](const Device& device) {
@@ -107,7 +112,7 @@ TEST(TensorTest, TestTranspose) {
   });
 }
 
-TEST(TensorTest, TestView) {
+TEST_F(TensorTest, TestView) {
   at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   auto output = input.view({-1, 320});
   ForEachDevice([&](const Device& device) {
@@ -117,7 +122,7 @@ TEST(TensorTest, TestView) {
   });
 }
 
-TEST(TensorTest, TestLogSoftmax) {
+TEST_F(TensorTest, TestLogSoftmax) {
   at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
   ForEachDevice([&](const Device& device) {
     auto dev_input = XLATensor::Create(input, device, /*requires_grad=*/false);
@@ -129,7 +134,7 @@ TEST(TensorTest, TestLogSoftmax) {
   });
 }
 
-TEST(TensorTest, TestMaxPool2D) {
+TEST_F(TensorTest, TestMaxPool2D) {
   at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
   int kernel_size = 3;
   for (int stride = 1; stride <= 2; ++stride) {
@@ -152,7 +157,7 @@ TEST(TensorTest, TestMaxPool2D) {
   }
 }
 
-TEST(TensorTest, TestMaxPool2DNonSquare) {
+TEST_F(TensorTest, TestMaxPool2DNonSquare) {
   at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
   int kernel_size = 4;
   for (int stride = 1; stride <= 2; ++stride) {
@@ -175,7 +180,7 @@ TEST(TensorTest, TestMaxPool2DNonSquare) {
   }
 }
 
-TEST(TensorTest, TestAvgPool2D) {
+TEST_F(TensorTest, TestAvgPool2D) {
   at::Tensor input = at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat));
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
@@ -200,7 +205,7 @@ TEST(TensorTest, TestAvgPool2D) {
   }
 }
 
-TEST(TensorTest, TestAvgPool2DNonSquare) {
+TEST_F(TensorTest, TestAvgPool2DNonSquare) {
   at::Tensor input = at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat));
   int kernel_size = 4;
   for (int stride = 1; stride <= 2; ++stride) {
@@ -226,7 +231,7 @@ TEST(TensorTest, TestAvgPool2DNonSquare) {
   }
 }
 
-TEST(TensorTest, TestConv2D) {
+TEST_F(TensorTest, TestConv2D) {
   int in_channels = 3;
   int out_channels = 7;
   int kernel_size = 5;
@@ -270,7 +275,7 @@ TEST(TensorTest, TestConv2D) {
   }
 }
 
-TEST(TensorTest, TestConv2DNonSquare) {
+TEST_F(TensorTest, TestConv2DNonSquare) {
   int in_channels = 3;
   int out_channels = 7;
   int kernel_size = 5;
