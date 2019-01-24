@@ -1285,7 +1285,7 @@ class TestXLATensor(XlaTestCase):
       for dim in range(0, x.dim()):
         expected = x.log_softmax(dim)
         out = xt_x.log_softmax(dim).to_tensor()
-        self.assertEqualDbg(out.data, expected.data)
+        self.assertEqualRel(out.data, expected.data)
 
 
 if __name__ == '__main__':
