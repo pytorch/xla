@@ -11,6 +11,7 @@ namespace torch_xla {
 namespace cpp_test {
 
 TEST(TensorTest, TestAdd) {
+  at::manual_seed(42);
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   auto c = a.add(b, 1.0);
@@ -25,6 +26,7 @@ TEST(TensorTest, TestAdd) {
 }
 
 TEST(TensorTest, TestIntegerAdd) {
+  at::manual_seed(42);
   std::vector<at::ScalarType> types(
       {at::kByte, at::kChar, at::kShort, at::kInt, at::kLong});
 
@@ -44,6 +46,7 @@ TEST(TensorTest, TestIntegerAdd) {
 }
 
 TEST(TensorTest, TestConv2D) {
+  at::manual_seed(42);
   int in_channels = 3;
   int out_channels = 7;
   int kernel_size = 5;
@@ -88,6 +91,7 @@ TEST(TensorTest, TestConv2D) {
 }
 
 TEST(TensorTest, TestConv2DNonSquare) {
+  at::manual_seed(42);
   int in_channels = 3;
   int out_channels = 7;
   int kernel_size = 5;
