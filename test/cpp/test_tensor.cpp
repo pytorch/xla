@@ -43,6 +43,92 @@ TEST(TensorTest, TestIntegerAdd) {
   });
 }
 
+TEST(TensorTest, TestSize) {
+  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
+  int rank = input.dim();
+  ForEachDevice([&](const Device& device) {
+    auto dev_input = XLATensor::Create(input, device, /*requires_grad=*/false);
+    for (int dim = -rank; dim < rank; ++dim) {
+      EXPECT_EQ(input.size(dim), dev_input->size(dim));
+    }
+  });
+}
+
+TEST(TensorTest, TestRelu) {
+  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
+  auto output = input.relu();
+  ForEachDevice([&](const Device& device) {
+    auto dev_input = XLATensor::Create(input, device, /*requires_grad=*/false);
+    auto dev_output = dev_input->relu();
+    AllClose(output, *dev_output);
+  });
+}
+
+TEST(TensorTest, TestThreshold) {
+  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
+  float threshold = 0.4;
+  float value = 20;
+  auto output = at::threshold(input, threshold, value);
+  ForEachDevice([&](const Device& device) {
+    auto dev_input = XLATensor::Create(input, device, /*requires_grad=*/false);
+    auto dev_output = dev_input->threshold(threshold, value);
+    AllClose(output, *dev_output);
+  });
+}
+
+TEST(TensorTest, TestAddMatMul) {
+  int in_channels = 32;
+  int out_channels = 320;
+  int labels = 50;
+  at::Tensor input =
+      at::rand({in_channels, out_channels}, at::TensorOptions(at::kFloat));
+  at::Tensor weight =
+      at::rand({out_channels, labels}, at::TensorOptions(at::kFloat));
+  at::Tensor bias = at::rand({labels}, at::TensorOptions(at::kFloat));
+  auto output = at::addmm(bias, input, weight);
+  ForEachDevice([&](const Device& device) {
+    auto dev_input = XLATensor::Create(input, device, /*requires_grad=*/false);
+    auto dev_weight =
+        XLATensor::Create(weight, device, /*requires_grad=*/false);
+    auto dev_bias = XLATensor::Create(bias, device, /*requires_grad=*/false);
+    auto dev_output = dev_input->addmm(*dev_weight, *dev_bias,
+                                       /*use_full_conv_precision=*/true);
+    AllClose(output, *dev_output);
+  });
+}
+
+TEST(TensorTest, TestTranspose) {
+  at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
+  auto output = input.t();
+  ForEachDevice([&](const Device& device) {
+    auto dev_input = XLATensor::Create(input, device, /*requires_grad=*/false);
+    auto dev_output = dev_input->t();
+    AllClose(output, *dev_output);
+  });
+}
+
+TEST(TensorTest, TestView) {
+  at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
+  auto output = input.view({-1, 320});
+  ForEachDevice([&](const Device& device) {
+    auto dev_input = XLATensor::Create(input, device, /*requires_grad=*/false);
+    auto dev_output = dev_input->view({-1, 320});
+    AllClose(output, *dev_output);
+  });
+}
+
+TEST(TensorTest, TestLogSoftmax) {
+  at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    auto dev_input = XLATensor::Create(input, device, /*requires_grad=*/false);
+    for (int dim = 0; dim < input.dim(); ++dim) {
+      auto output = input.log_softmax(dim);
+      auto dev_output = dev_input->log_softmax(dim);
+      AllClose(output, *dev_output);
+    }
+  });
+}
+
 TEST(TensorTest, TestMaxPool2D) {
   at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
   int kernel_size = 3;
