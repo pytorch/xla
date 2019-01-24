@@ -154,8 +154,11 @@ class XLATensor {
   std::shared_ptr<XLATensor> max_pool2d(int kernel_size, int stride,
                                         int padding);
 
-  std::shared_ptr<XLATensor> avg_pool2d(int kernel_size, int stride,
-                                        int padding, bool count_include_pad);
+  std::shared_ptr<XLATensor> avg_pool2d(
+      tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+      tensorflow::gtl::ArraySlice<const xla::int64> stride,
+      tensorflow::gtl::ArraySlice<const xla::int64> padding,
+      bool count_include_pad) const;
 
   std::shared_ptr<XLATensor> t();
 

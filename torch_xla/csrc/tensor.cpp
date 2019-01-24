@@ -522,9 +522,11 @@ std::shared_ptr<XLATensor> XLATensor::max_pool2d(int kernel_size, int stride,
                 GetDevice());
 }
 
-std::shared_ptr<XLATensor> XLATensor::avg_pool2d(int kernel_size, int stride,
-                                                 int padding,
-                                                 bool count_include_pad) {
+std::shared_ptr<XLATensor> XLATensor::avg_pool2d(
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    bool count_include_pad) const {
   return Create(std::make_shared<ir::ops::AvgPool2d>(
                     ir::NodeOperand(GetIrNode()), kernel_size, stride, padding,
                     count_include_pad),

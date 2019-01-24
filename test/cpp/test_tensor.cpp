@@ -43,6 +43,57 @@ TEST(TensorTest, TestIntegerAdd) {
   });
 }
 
+TEST(TensorTest, TestAvgPool2D) {
+  at::Tensor input = at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat));
+  int kernel_size = 2;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      for (bool count_include_pad : {true, false}) {
+        auto output =
+            at::avg_pool2d(input, /*kernel_size=*/{kernel_size, kernel_size},
+                           /*stride=*/{stride, stride},
+                           /*padding=*/{padding, padding}, /*ceil_mode=*/false,
+                           count_include_pad);
+        ForEachDevice([&](const Device& device) {
+          auto dev_input =
+              XLATensor::Create(input, device, /*requires_grad=*/false);
+          auto dev_output = dev_input->avg_pool2d(
+              /*kernel_size=*/{kernel_size, kernel_size},
+              /*stride=*/{stride, stride},
+              /*padding=*/{padding, padding}, count_include_pad);
+          AllClose(output, *dev_output);
+        });
+      }
+    }
+  }
+}
+
+TEST(TensorTest, TestAvgPool2DNonSquare) {
+  at::Tensor input = at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat));
+  int kernel_size = 4;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      for (bool count_include_pad : {true, false}) {
+        auto output = at::avg_pool2d(
+            input, /*kernel_size=*/{kernel_size, kernel_size + 1},
+            /*stride=*/{stride, stride + 1},
+            /*padding=*/{padding, padding + 1}, /*ceil_mode=*/false,
+            /*count_include_pad=*/count_include_pad);
+        ForEachDevice([&](const Device& device) {
+          auto dev_input =
+              XLATensor::Create(input, device, /*requires_grad=*/false);
+          auto dev_output = dev_input->avg_pool2d(
+              /*kernel_size=*/{kernel_size, kernel_size + 1},
+              /*stride=*/{stride, stride + 1},
+              /*padding=*/{padding, padding + 1},
+              /*count_include_pad=*/count_include_pad);
+          AllClose(output, *dev_output);
+        });
+      }
+    }
+  }
+}
+
 TEST(TensorTest, TestConv2D) {
   int in_channels = 3;
   int out_channels = 7;
