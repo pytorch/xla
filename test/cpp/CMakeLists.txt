@@ -53,6 +53,7 @@ set(TORCH_XLA_TEST_SOURCES
   test_ir.cpp
   test_mayberef.cpp
   test_tensor.cpp
+  torch_xla_test.cpp
 )
 
 add_executable(test_ptxla ${TORCH_XLA_TEST_SOURCES})
