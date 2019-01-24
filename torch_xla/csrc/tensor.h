@@ -18,6 +18,7 @@ namespace torch_xla {
 
 class XLATensor {
   struct Data;
+  struct View;
 
  public:
   TH_DISALLOW_COPY_AND_ASSIGN(XLATensor);
@@ -43,6 +44,8 @@ class XLATensor {
   static std::shared_ptr<XLATensor> Create(ir::NodePtr ir_node,
                                            const Device& device);
   static std::shared_ptr<XLATensor> Create(std::shared_ptr<Data> data);
+  static std::shared_ptr<XLATensor> Create(std::shared_ptr<View> view,
+                                           const Device& device);
 
   // NOTE: These direct constructors should not be used, and the Create() APIs
   // above should be used instead. These are not private because the hacks
@@ -53,6 +56,7 @@ class XLATensor {
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
             bool requires_grad);
   XLATensor(ir::NodePtr ir_node, const Device& device);
+  XLATensor(std::shared_ptr<View> view, const Device& device);
   XLATensor(std::shared_ptr<Data> data) : data_(std::move(data)) {}
 
   ~XLATensor();
@@ -210,6 +214,29 @@ class XLATensor {
   // Maps from ComputationClient Data unique ID to XLA tensor unique ID.
   using DataUidMap = std::unordered_map<xla::int64, xla::int64>;
 
+  // When a "view" (capture by reference) is taken on a node, an Alias object is
+  // created on the captured node itself, with its current IR Node value.
+  // Inplace operations using the SetIrNode() API to update the current value,
+  // will notice the presence of the alias, and also update the Alias ir_node.
+  struct Alias {
+    explicit Alias(ir::NodePtr ir_node) : ir_node(std::move(ir_node)) {}
+
+    ir::NodePtr ir_node;
+  };
+
+  // A view represents a state of an XLA tensor in which its current value is a
+  // view/reference of another tensor (IR Node). A View is fed by an Alias,
+  // which captures the current value of the input tensor.
+  struct View {
+    View(xla::Shape shape, std::shared_ptr<Alias> alias)
+        : shape(std::move(shape)), alias(std::move(alias)) {}
+
+    xla::Shape shape;
+    std::shared_ptr<Alias> alias;
+    ir::NodePtr base_ir_node;
+    ir::NodePtr ir_node;
+  };
+
   struct Data {
     Data(std::shared_ptr<xla::ComputationClient::Data> xla_data,
          const Device& device)
@@ -220,6 +247,8 @@ class XLATensor {
         : ir_node(std::move(ir_node)),
           device(device),
           unique_id(GetNextTensorId()) {}
+    Data(std::shared_ptr<View> view, const Device& device)
+        : view(std::move(view)), device(device), unique_id(GetNextTensorId()) {}
     Data(at::Tensor tensor_data, const Device& device)
         : tensor_data(std::move(tensor_data)),
           device(device),
@@ -227,6 +256,7 @@ class XLATensor {
 
     std::shared_ptr<xla::ComputationClient::Data> xla_data;
     ir::NodePtr ir_node;
+    std::shared_ptr<View> view;
     c10::optional<at::Tensor> tensor_data;
     Device device;
     xla::int64 unique_id = 0;
@@ -243,6 +273,12 @@ class XLATensor {
   //   for i in range(0, 100000):
   //     a = a + b
   void TryLimitGraphSize();
+
+  // Extracts the current IR Node out of a view by returning an std::pair<>
+  // where the first element if the IR Node, and the second element is a boolean
+  // indicating whether a new IR Node has been created (or the cached one
+  // returned).
+  static std::pair<ir::NodePtr, bool> GetViewIrNode(View* view);
 
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.

@@ -7,6 +7,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "data_ops.h"
 #include "helpers.h"
 #include "lowering_context.h"
 #include "ops/arithmetic_ir_ops.h"
@@ -116,6 +117,12 @@ std::shared_ptr<XLATensor> XLATensor::Create(std::shared_ptr<Data> data) {
       std::make_shared<XLATensor>(std::move(data)));
 }
 
+std::shared_ptr<XLATensor> XLATensor::Create(std::shared_ptr<View> view,
+                                             const Device& device) {
+  return TensorsArena::Get()->RegisterTensor(
+      std::make_shared<XLATensor>(std::move(view), device));
+}
+
 XLATensor::~XLATensor() { TensorsArena::Get()->UnregisterTensor(this); }
 
 XLATensor::XLATensor(const at::Tensor& tensor, const Device& device,
@@ -133,6 +140,9 @@ XLATensor::XLATensor(ir::NodePtr ir_node, const Device& device)
   TryLimitGraphSize();
 }
 
+XLATensor::XLATensor(std::shared_ptr<View> view, const Device& device)
+    : data_(std::make_shared<Data>(std::move(view), device)) {}
+
 std::shared_ptr<XLATensor> XLATensor::grad() const { return data_->grad; }
 
 void XLATensor::SetGradient(std::shared_ptr<XLATensor> grad) {
@@ -148,6 +158,9 @@ at::ScalarType XLATensor::dtype() const {
 }
 
 xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
+  if (data_->view != nullptr) {
+    return data_->view->shape;
+  }
   if (data_->xla_data != nullptr) {
     return data_->xla_data->shape();
   }
@@ -168,9 +181,19 @@ const Device& XLATensor::GetDevice() const { return data_->device; }
 xla::int64 XLATensor::GetUniqueId() const { return data_->unique_id; }
 
 std::shared_ptr<xla::ComputationClient::Data> XLATensor::GetXlaData() {
-  std::shared_ptr<xla::ComputationClient::Data> xla_data = CurrentXlaData();
-  if (xla_data != nullptr) {
-    return xla_data;
+  bool up_to_date = true;
+  if (data_->view != nullptr) {
+    auto ir_node_updated = GetViewIrNode(data_->view.get());
+    if (ir_node_updated.second) {
+      up_to_date = false;
+      data_->ir_node = ir_node_updated.first;
+    }
+  }
+  if (up_to_date) {
+    std::shared_ptr<xla::ComputationClient::Data> xla_data = CurrentXlaData();
+    if (xla_data != nullptr) {
+      return xla_data;
+    }
   }
   if (data_->ir_node != nullptr) {
     ApplyPendingGraph();
@@ -230,6 +253,9 @@ void XLATensor::SetXlaData(
 }
 
 void XLATensor::SetIrNode(ir::NodePtr ir_node) {
+  if (data_->view != nullptr) {
+    data_->view->alias->ir_node = ir_node;
+  }
   // We do not want to nullify that XLA data pointer here, as otherwise the
   // tensor apply computation caching will not work correctly.
   // If A is a tensor, a typical optimizer step computation will do:
@@ -255,6 +281,10 @@ void XLATensor::TryLimitGraphSize() {
 }
 
 ir::NodePtr XLATensor::GetIrNode() const {
+  if (data_->view != nullptr) {
+    data_->ir_node = GetViewIrNode(data_->view.get()).first;
+    return data_->ir_node;
+  }
   const ir::NodePtr& ir_node = CurrentIrNode();
   if (ir_node != nullptr) {
     return ir_node;
@@ -391,6 +421,16 @@ ir::NodePtr XLATensor::CreateTensorNode(
 xla::int64 XLATensor::GetNextTensorId() {
   static std::atomic<xla::int64>* id_generator = new std::atomic<xla::int64>(1);
   return id_generator->fetch_add(1);
+}
+
+std::pair<ir::NodePtr, bool> XLATensor::GetViewIrNode(View* view) {
+  if (view->ir_node != nullptr && view->base_ir_node == view->alias->ir_node) {
+    return std::pair<ir::NodePtr, bool>(view->ir_node, false);
+  }
+  view->base_ir_node = view->alias->ir_node;
+  view->ir_node = std::make_shared<ir::ops::View>(
+      ir::NodeOperand(view->alias->ir_node), view->shape.dimensions());
+  return std::pair<ir::NodePtr, bool>(view->ir_node, true);
 }
 
 std::shared_ptr<XLATensor> XLATensor::add(const XLATensor& other,
@@ -543,9 +583,28 @@ std::shared_ptr<XLATensor> XLATensor::t() const {
 
 std::shared_ptr<XLATensor> XLATensor::view(
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) const {
-  return Create(std::make_shared<ir::ops::View>(ir::NodeOperand(GetIrNode()),
-                                                output_size),
-                GetDevice());
+  if (data_->view != nullptr) {
+    // Handle view of a view. This node is already a view, so use the view alias
+    // to create the new IR Node.
+    std::vector<xla::int64> complete_dimensions =
+        GetCompleteShape(output_size, data_->view->shape.dimensions());
+    xla::Shape shape = xla::ShapeUtil::MakeShape(
+        data_->view->shape.element_type(), complete_dimensions);
+    return Create(std::make_shared<View>(std::move(shape), data_->view->alias),
+                  GetDevice());
+  }
+  // This node is not a view, and creating a view forks the current node into
+  // becoming one itself. This means creating an alias with the current IR Node,
+  // and using the same alias for the created IR Node.
+  ir::NodePtr ir_node = GetIrNode();
+  std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_node);
+  data_->view = std::make_shared<View>(ir_node->shape(), alias);
+
+  std::vector<xla::int64> complete_dimensions =
+      GetCompleteShape(output_size, ir_node->shape().dimensions());
+  xla::Shape shape = xla::ShapeUtil::MakeShape(ir_node->shape().element_type(),
+                                               complete_dimensions);
+  return Create(std::make_shared<View>(std::move(shape), alias), GetDevice());
 }
 
 std::shared_ptr<XLATensor> XLATensor::log_softmax(xla::int64 dim) const {
