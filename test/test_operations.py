@@ -1265,6 +1265,18 @@ class TestXLATensor(XlaTestCase):
                                              count_include_pad=count_include_pad).to_tensor()
             self.assertEqualRel(out.data, expected.data)
 
+    def test_avg_pool2d_non_square(self):
+      x = _gen_tensor(4, 1, 28, 28)
+      xt_x = torch_xla._XLAC.XLATensor(x)
+      for stride in [1, 2]:
+        for padding in [0, 1]:
+          for count_include_pad in [False, True]:
+            expected = F.avg_pool2d(x, [4, 5], stride=[stride, stride + 1], padding=[padding, padding + 1],
+                                    count_include_pad=count_include_pad)
+            out = torch_xla._XLAC.avg_pool2d(xt_x, [4, 5], stride=[stride, stride + 1], padding=[padding, padding + 1],
+                                             count_include_pad=count_include_pad).to_tensor()
+            self.assertEqualRel(out.data, expected.data)
+
     def test_transpose(self):
       x = _gen_tensor(2, 3)
       xt_x = torch_xla._XLAC.XLATensor(x)
