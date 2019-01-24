@@ -10,9 +10,10 @@ namespace ops {
 namespace {
 
 // The bias doesn't matter for shape inference.
-xla::Shape NodeOutputShape(const NodeOperand& input, const NodeOperand& weight,
-                           tensorflow::gtl::ArraySlice<xla::int64> stride,
-                           tensorflow::gtl::ArraySlice<xla::int64> padding) {
+xla::Shape NodeOutputShape(
+    const NodeOperand& input, const NodeOperand& weight,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   auto lower_for_shape_fn =
       [stride, padding](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {

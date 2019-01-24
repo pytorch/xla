@@ -242,7 +242,7 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
 }
 
 std::vector<std::pair<xla::int64, xla::int64>> MakePadding(
-    tensorflow::gtl::ArraySlice<xla::int64> padding) {
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   std::vector<std::pair<xla::int64, xla::int64>> dims_padding;
   for (const auto dim_padding : padding) {
     dims_padding.emplace_back(dim_padding, dim_padding);
@@ -267,8 +267,8 @@ xla::XlaOp BuildConvolution(
 
 xla::XlaOp BuildConvolution(
     const xla::XlaOp& input, const xla::XlaOp& kernel,
-    tensorflow::gtl::ArraySlice<xla::int64> stride,
-    tensorflow::gtl::ArraySlice<xla::int64> padding,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
     const xla::PrecisionConfig::Precision conv_precision) {
   const auto dims_padding = MakePadding(padding);
   xla::PrecisionConfig precision_config =
@@ -293,8 +293,8 @@ xla::XlaOp BuildConvolutionBias(
 
 xla::XlaOp BuildConvolutionBias(
     const xla::XlaOp& input, const xla::XlaOp& kernel, const xla::XlaOp& bias,
-    tensorflow::gtl::ArraySlice<xla::int64> stride,
-    tensorflow::gtl::ArraySlice<xla::int64> padding,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
     const xla::PrecisionConfig::Precision conv_precision) {
   const auto conv =
       BuildConvolution(input, kernel, stride, padding, conv_precision);
