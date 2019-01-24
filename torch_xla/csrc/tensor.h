@@ -237,6 +237,11 @@ class XLATensor {
     ir::NodePtr ir_node;
   };
 
+  struct ViewIrNode {
+    ir::NodePtr ir_node;
+    bool updated;
+  };
+
   struct Data {
     Data(std::shared_ptr<xla::ComputationClient::Data> xla_data,
          const Device& device)
@@ -274,11 +279,10 @@ class XLATensor {
   //     a = a + b
   void TryLimitGraphSize();
 
-  // Extracts the current IR Node out of a view by returning an std::pair<>
-  // where the first element if the IR Node, and the second element is a boolean
-  // indicating whether a new IR Node has been created (or the cached one
-  // returned).
-  static std::pair<ir::NodePtr, bool> GetViewIrNode(View* view);
+  // Extracts the current IR Node out of a view, into a ViewIrNode structure
+  // where the updated fields tells whether a new IR Node has been created, or
+  // the cached one returned.
+  static ViewIrNode GetViewIrNode(View* view);
 
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.
