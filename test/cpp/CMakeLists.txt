@@ -33,7 +33,7 @@ ExternalProject_Add(
 ExternalProject_Get_Property(googletest SOURCE_DIR)
 
 include_directories(
-  "${SOURCE_DIR}/include"
+  "${SOURCE_DIR}/googletest/include"
   "${PTXLA_DIR}"
   "${PTXLA_DIR}/torch_xla/csrc"
   "${TFDIR}/bazel-tensorflow"
@@ -46,10 +46,6 @@ include_directories(
   "${PT_DIR}/torch/lib/tmp_install/include"
   "${PYTHON_INCLUDE_DIR}"
 )
-
-if (CMAKE_VERSION VERSION_GREATER 3.11.1)
-  include_directories("${GTEST_DIR}/src/googletest-src/googletest/include")
-endif()
 
 set(TORCH_XLA_TEST_SOURCES
   main.cpp
