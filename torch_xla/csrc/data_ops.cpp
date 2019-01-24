@@ -1,18 +1,41 @@
 #include "data_ops.h"
-#include "helpers.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 
 #include <functional>
 #include <numeric>
 
+#include "helpers.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
+
 namespace torch_xla {
 namespace {
 
-// For input_sizes and a potentially incomplete output_sizes, return a complete
-// output shape. The complete output shape has same total number of elements as
-// input_sizes and matches output_sizes in all dimensions except for at most
-// one, which can be inferred and stored as -1 in output_sizes.
+// Finds a at::prim::ListConstruct operation by id in the graph of "parent".
+std::vector<const torch::jit::Value*> InputListAttr(
+    const torch::jit::Node* parent, const size_t id) {
+  const auto nodes = parent->owningGraph()->block()->nodes();
+  std::vector<const torch::jit::Value*> result;
+  for (const auto node : nodes) {
+    if (node->kind() != at::prim::ListConstruct) {
+      continue;
+    }
+    const auto node_outputs = node->outputs();
+    XLA_CHECK_EQ(node_outputs.size(), size_t(1));
+    const auto output = node_outputs[0];
+    if (output->unique() != id) {
+      continue;
+    }
+    const auto node_inputs = node->inputs();
+    for (const auto input : node_inputs) {
+      result.push_back(input);
+    }
+    return result;
+  }
+  XLA_ERROR() << "Constant with id " << id << " not found";
+}
+
+}  // namespace
+
 std::vector<xla::int64> GetCompleteShape(
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes,
     tensorflow::gtl::ArraySlice<const xla::int64> input_sizes) {
@@ -43,32 +66,6 @@ std::vector<xla::int64> GetCompleteShape(
       total_element_count / incomplete_element_count;
   return complete_output_sizes;
 }
-
-// Finds a at::prim::ListConstruct operation by id in the graph of "parent".
-std::vector<const torch::jit::Value*> InputListAttr(
-    const torch::jit::Node* parent, const size_t id) {
-  const auto nodes = parent->owningGraph()->block()->nodes();
-  std::vector<const torch::jit::Value*> result;
-  for (const auto node : nodes) {
-    if (node->kind() != at::prim::ListConstruct) {
-      continue;
-    }
-    const auto node_outputs = node->outputs();
-    XLA_CHECK_EQ(node_outputs.size(), size_t(1));
-    const auto output = node_outputs[0];
-    if (output->unique() != id) {
-      continue;
-    }
-    const auto node_inputs = node->inputs();
-    for (const auto input : node_inputs) {
-      result.push_back(input);
-    }
-    return result;
-  }
-  XLA_ERROR() << "Constant with id " << id << " not found";
-}
-
-}  // namespace
 
 xla::XlaOp BuildView(const torch::jit::Node* node, const xla::XlaOp& input) {
   const auto node_inputs = node->inputs();
