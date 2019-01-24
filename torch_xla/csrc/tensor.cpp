@@ -184,9 +184,9 @@ std::shared_ptr<xla::ComputationClient::Data> XLATensor::GetXlaData() {
   bool up_to_date = true;
   if (data_->view != nullptr) {
     auto ir_node_updated = GetViewIrNode(data_->view.get());
-    if (ir_node_updated.second) {
+    if (ir_node_updated.updated) {
       up_to_date = false;
-      data_->ir_node = ir_node_updated.first;
+      data_->ir_node = ir_node_updated.ir_node;
     }
   }
   if (up_to_date) {
@@ -282,7 +282,7 @@ void XLATensor::TryLimitGraphSize() {
 
 ir::NodePtr XLATensor::GetIrNode() const {
   if (data_->view != nullptr) {
-    data_->ir_node = GetViewIrNode(data_->view.get()).first;
+    data_->ir_node = GetViewIrNode(data_->view.get()).ir_node;
     return data_->ir_node;
   }
   const ir::NodePtr& ir_node = CurrentIrNode();
@@ -423,14 +423,14 @@ xla::int64 XLATensor::GetNextTensorId() {
   return id_generator->fetch_add(1);
 }
 
-std::pair<ir::NodePtr, bool> XLATensor::GetViewIrNode(View* view) {
+XLATensor::ViewIrNode XLATensor::GetViewIrNode(View* view) {
   if (view->ir_node != nullptr && view->base_ir_node == view->alias->ir_node) {
-    return std::pair<ir::NodePtr, bool>(view->ir_node, false);
+    return {view->ir_node, false};
   }
   view->base_ir_node = view->alias->ir_node;
   view->ir_node = std::make_shared<ir::ops::View>(
       ir::NodeOperand(view->alias->ir_node), view->shape.dimensions());
-  return std::pair<ir::NodePtr, bool>(view->ir_node, true);
+  return {view->ir_node, true};
 }
 
 std::shared_ptr<XLATensor> XLATensor::add(const XLATensor& other,
