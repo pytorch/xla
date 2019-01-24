@@ -43,6 +43,52 @@ TEST(TensorTest, TestIntegerAdd) {
   });
 }
 
+TEST(TensorTest, TestMaxPool2D) {
+  at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
+  int kernel_size = 3;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      auto output =
+          at::max_pool2d(input, /*kernel_size=*/{kernel_size, kernel_size},
+                         /*stride=*/{stride, stride},
+                         /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
+                         /*ceil_mode=*/false);
+      ForEachDevice([&](const Device& device) {
+        auto dev_input =
+            XLATensor::Create(input, device, /*requires_grad=*/false);
+        auto dev_output = dev_input->max_pool2d(
+            /*kernel_size=*/{kernel_size, kernel_size},
+            /*stride=*/{stride, stride},
+            /*padding=*/{padding, padding});
+        AllClose(output, *dev_output);
+      });
+    }
+  }
+}
+
+TEST(TensorTest, TestMaxPool2DNonSquare) {
+  at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
+  int kernel_size = 4;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      auto output = at::max_pool2d(
+          input, /*kernel_size=*/{kernel_size, kernel_size + 1},
+          /*stride=*/{stride, stride + 1},
+          /*padding=*/{padding, padding + 1}, /*dilation=*/{1, 1},
+          /*ceil_mode=*/false);
+      ForEachDevice([&](const Device& device) {
+        auto dev_input =
+            XLATensor::Create(input, device, /*requires_grad=*/false);
+        auto dev_output = dev_input->max_pool2d(
+            /*kernel_size=*/{kernel_size, kernel_size + 1},
+            /*stride=*/{stride, stride + 1},
+            /*padding=*/{padding, padding + 1});
+        AllClose(output, *dev_output);
+      });
+    }
+  }
+}
+
 TEST(TensorTest, TestAvgPool2D) {
   at::Tensor input = at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat));
   int kernel_size = 2;
