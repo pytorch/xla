@@ -139,6 +139,48 @@ TEST_F(TensorTest, TestViewMod) {
   });
 }
 
+TEST_F(TensorTest, TestViewModComplex) {
+  at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
+  auto output1 = input.view({-1, 320});
+  output1.add_(one, 1.0);
+  auto output2 = input.view({-1, 160});
+  output2.add_(one, 1.0);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xinput =
+        at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
+    auto dev_input = XLATensor::Create(xinput, device, /*requires_grad=*/false);
+    auto dev_one = XLATensor::Create(one, device, /*requires_grad=*/false);
+    auto dev_output1 = dev_input->view({-1, 320});
+    dev_output1->add_(*dev_one, 1.0);
+    auto dev_output2 = dev_input->view({-1, 160});
+    dev_output2->add_(*dev_one, 1.0);
+    AllClose(output1, *dev_output1);
+    AllClose(output2, *dev_output2);
+  });
+}
+
+TEST_F(TensorTest, TestViewOfViewMod) {
+  at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
+  auto output1 = input.view({-1, 320});
+  output1.add_(one, 1.0);
+  auto output2 = output1.view({-1, 160});
+  output2.add_(one, 1.0);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xinput =
+        at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
+    auto dev_input = XLATensor::Create(xinput, device, /*requires_grad=*/false);
+    auto dev_one = XLATensor::Create(one, device, /*requires_grad=*/false);
+    auto dev_output1 = dev_input->view({-1, 320});
+    dev_output1->add_(*dev_one, 1.0);
+    auto dev_output2 = dev_output1->view({-1, 160});
+    dev_output2->add_(*dev_one, 1.0);
+    AllClose(output1, *dev_output1);
+    AllClose(output2, *dev_output2);
+  });
+}
+
 TEST_F(TensorTest, TestLogSoftmax) {
   at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
   ForEachDevice([&](const Device& device) {
