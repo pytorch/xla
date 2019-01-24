@@ -26,6 +26,12 @@ linux_default: &linux_default
         docker pull ${DOCKER_IMAGE}
         sudo pkill -SIGHUP dockerd
         WORKDIR=/var/lib/jenkins/workspace
+        echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" >> /home/circleci/project/env
+        echo "declare -x AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_SCCACHE_S3_BUCKET}" >> /home/circleci/project/env
+        echo "declare -x AWS_SECRET_ACCESS_KEY=${AWS_SECRET_KEY_FOR_SCCACHE_S3_BUCKET}" >> /home/circleci/project/env
+        echo "declare -x XLA_CACHE_S3_BUCKET_NAME=${XLA_CACHE_S3_BUCKET_NAME}" >> /home/circleci/project/env
+        echo "declare -x CIRCLE_JOB=${CIRCLE_JOB}" >> /home/circleci/project/env
+
         pid=$(docker run -t -d -w $WORKDIR ${DOCKER_IMAGE})
         docker cp /home/circleci/project/. "$pid:$WORKDIR"
         docker exec -u jenkins ${pid} sudo chown -R jenkins ${WORKDIR}
@@ -34,12 +40,12 @@ linux_default: &linux_default
       name: Build
       no_output_timeout: "1h"
       command: |
-        docker exec -e CIRCLE_JOB=${CIRCLE_JOB} -e SCCACHE_BUCKET=${SCCACHE_BUCKET} -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_SCCACHE_S3_BUCKET} -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_FOR_SCCACHE_S3_BUCKET} -u jenkins $(cat .docker_pid) .circleci/build.sh
+        docker exec -u jenkins $(cat .docker_pid) .circleci/build.sh
   - run:
       name: Test
       no_output_timeout: "1h"
       command: |
-        docker exec -e CIRCLE_JOB=${CIRCLE_JOB} -u jenkins $(cat .docker_pid) .circleci/test.sh
+        docker exec -u jenkins $(cat .docker_pid) .circleci/test.sh
 
 jobs:
   pytorch_xla_linux_trusty_py3_6_gcc5_4:
