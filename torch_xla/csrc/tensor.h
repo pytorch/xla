@@ -108,16 +108,16 @@ class XLATensor {
 
   // Basic tensor operations used by the optimizers.
   std::shared_ptr<XLATensor> add(const XLATensor& other,
-                                 const at::Scalar& alpha);
+                                 const at::Scalar& alpha) const;
   void add_(const XLATensor& other, const at::Scalar& alpha);
 
-  std::shared_ptr<XLATensor> mul(const XLATensor& other);
-  std::shared_ptr<XLATensor> mul(const at::Scalar& other);
+  std::shared_ptr<XLATensor> mul(const XLATensor& other) const;
+  std::shared_ptr<XLATensor> mul(const at::Scalar& other) const;
   void mul_(const XLATensor& other);
   void mul_(const at::Scalar& other);
 
-  std::shared_ptr<XLATensor> div(const XLATensor& other);
-  std::shared_ptr<XLATensor> div(const at::Scalar& other);
+  std::shared_ptr<XLATensor> div(const XLATensor& other) const;
+  std::shared_ptr<XLATensor> div(const at::Scalar& other) const;
   void div_(const XLATensor& other);
   void div_(const at::Scalar& other);
 
@@ -131,25 +131,25 @@ class XLATensor {
   // Additional operations which are part of the PyTorch Tensor functionality.
   xla::int64 size(int dim) const;
 
-  std::shared_ptr<XLATensor> relu();
+  std::shared_ptr<XLATensor> relu() const;
 
-  std::shared_ptr<XLATensor> threshold(float threshold, float value);
+  std::shared_ptr<XLATensor> threshold(float threshold, float value) const;
 
   std::shared_ptr<XLATensor> conv2d(
       const XLATensor& weight, const XLATensor& bias,
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
       tensorflow::gtl::ArraySlice<const xla::int64> padding,
-      bool use_full_conv_precision);
+      bool use_full_conv_precision) const;
 
   std::shared_ptr<XLATensor> conv2d(
       const XLATensor& weight,
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
       tensorflow::gtl::ArraySlice<const xla::int64> padding,
-      bool use_full_conv_precision);
+      bool use_full_conv_precision) const;
 
   std::shared_ptr<XLATensor> addmm(const XLATensor& weight,
                                    const XLATensor& bias,
-                                   bool use_full_conv_precision);
+                                   bool use_full_conv_precision) const;
 
   std::shared_ptr<XLATensor> max_pool2d(
       tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
@@ -162,15 +162,15 @@ class XLATensor {
       tensorflow::gtl::ArraySlice<const xla::int64> padding,
       bool count_include_pad) const;
 
-  std::shared_ptr<XLATensor> t();
+  std::shared_ptr<XLATensor> t() const;
 
   std::shared_ptr<XLATensor> view(
-      tensorflow::gtl::ArraySlice<const xla::int64> output_size);
+      tensorflow::gtl::ArraySlice<const xla::int64> output_size) const;
 
-  std::shared_ptr<XLATensor> log_softmax(xla::int64 dim);
+  std::shared_ptr<XLATensor> log_softmax(xla::int64 dim) const;
 
   std::shared_ptr<XLATensor> cross_replica_sum(
-      const std::vector<std::vector<xla::int64>>& groups);
+      const std::vector<std::vector<xla::int64>>& groups) const;
 
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
