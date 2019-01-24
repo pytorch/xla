@@ -6,14 +6,12 @@
 #include "cpp_test_util.h"
 #include "tensor.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {
 
-class TensorTest : public ::testing::Test {
- protected:
-  static void SetUpTestSuite() { at::manual_seed(42); }
-};
+using TensorTest = TorchXlaTest;
 
 TEST_F(TensorTest, TestAdd) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
