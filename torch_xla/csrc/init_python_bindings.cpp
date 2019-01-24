@@ -287,12 +287,22 @@ void InitXlaTensorBindings(py::module m) {
       py::arg("use_full_conv_precision") = false);
   m.def(
       "max_pool2d",
-      [](std::shared_ptr<XLATensor> self, int kernel_size, int stride,
-         int padding) {
-        return self->max_pool2d(kernel_size, stride, padding);
+      [](const XLATensor& self, int kernel_size, int stride, int padding) {
+        return self.max_pool2d({kernel_size, kernel_size}, {stride, stride},
+                               {padding, padding});
       },
       py::arg("input"), py::arg("kernel_size"), py::arg("stride") = 1,
       py::arg("padding") = 0);
+  m.def(
+      "max_pool2d",
+      [](const XLATensor& self, const std::vector<xla::int64>& kernel_size,
+         const std::vector<xla::int64>& stride,
+         const std::vector<xla::int64>& padding) {
+        return self.max_pool2d(kernel_size, stride, padding);
+      },
+      py::arg("input"), py::arg("kernel_size"),
+      py::arg("stride") = std::vector<xla::int64>{1, 1},
+      py::arg("padding") = std::vector<xla::int64>{0, 0});
   m.def(
       "avg_pool2d",
       [](const XLATensor& self, int kernel_size, int stride, int padding,

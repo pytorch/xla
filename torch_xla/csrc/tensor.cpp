@@ -515,8 +515,10 @@ std::shared_ptr<XLATensor> XLATensor::addmm(const XLATensor& weight,
                 GetDevice());
 }
 
-std::shared_ptr<XLATensor> XLATensor::max_pool2d(int kernel_size, int stride,
-                                                 int padding) {
+std::shared_ptr<XLATensor> XLATensor::max_pool2d(
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) const {
   return Create(std::make_shared<ir::ops::MaxPool2d>(
                     ir::NodeOperand(GetIrNode()), kernel_size, stride, padding),
                 GetDevice());
