@@ -81,7 +81,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
 
   // Get forward graph.
   const auto forward = script_module_->find_method("forward");
-  JIT_ASSERT(forward != nullptr);
+  XLA_CHECK(forward != nullptr) << "Forward method not found in the module";
   std::shared_ptr<torch::jit::Graph> forward_graph = forward->graph()->copy();
   RunForwardPasses(&forward_graph);
 
@@ -201,8 +201,8 @@ void XlaModule::SetInputGradientsForFusion(std::vector<at::Tensor> gradients) {
 }
 
 void XlaModule::backward(const TensorBatchVector& grad_outputs) {
-  JIT_ASSERTM(differentiate_,
-              "Calling backward() on a module with differentiate not set");
+  XLA_CHECK(differentiate_)
+      << "Calling backward() on a module with differentiate not set";
   CheckInitialized();
 
   if (!backward_input_gradients_.empty()) {
