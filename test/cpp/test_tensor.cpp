@@ -127,7 +127,7 @@ TEST_F(TensorTest, TestLogSoftmax) {
     for (int dim = 0; dim < input.dim(); ++dim) {
       auto output = input.log_softmax(dim);
       auto dev_output = dev_input->log_softmax(dim);
-      AllClose(output, *dev_output);
+      AllClose(output, *dev_output, /*rtol=*/1e-3);
     }
   });
 }
