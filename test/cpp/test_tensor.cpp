@@ -120,6 +120,25 @@ TEST_F(TensorTest, TestView) {
   });
 }
 
+TEST_F(TensorTest, TestViewMod) {
+  at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
+  auto output = input.view({-1, 320});
+  output.add_(one, 1.0);
+  input.add_(one, 1.0);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xinput =
+        at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
+    auto dev_input = XLATensor::Create(xinput, device, /*requires_grad=*/false);
+    auto dev_one = XLATensor::Create(one, device, /*requires_grad=*/false);
+    auto dev_output = dev_input->view({-1, 320});
+    dev_output->add_(*dev_one, 1.0);
+    dev_input->add_(*dev_one, 1.0);
+    AllClose(output, *dev_output);
+    AllClose(input, *dev_input);
+  });
+}
+
 TEST_F(TensorTest, TestLogSoftmax) {
   at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
   ForEachDevice([&](const Device& device) {
