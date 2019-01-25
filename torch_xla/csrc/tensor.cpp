@@ -102,7 +102,7 @@ XLATensor::Data::~Data() { TensorsArena::Get()->UnregisterTensor(this); }
 XLATensor XLATensor::Create(const at::Tensor& tensor, const Device& device,
                             bool requires_grad) {
   XLATensor xtensor(tensor, device, requires_grad);
-  TensorsArena::Get()->RegisterTensor(xtensor.data());
+  TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
 
@@ -110,25 +110,25 @@ XLATensor XLATensor::Create(
     std::shared_ptr<xla::ComputationClient::Data> xla_data,
     bool requires_grad) {
   XLATensor xtensor(std::move(xla_data), requires_grad);
-  TensorsArena::Get()->RegisterTensor(xtensor.data());
+  TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
 
 XLATensor XLATensor::Create(ir::NodePtr ir_node, const Device& device) {
   XLATensor xtensor(std::move(ir_node), device);
-  TensorsArena::Get()->RegisterTensor(xtensor.data());
+  TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
 
 XLATensor XLATensor::Create(std::shared_ptr<Data> data) {
   XLATensor xtensor(std::move(data));
-  TensorsArena::Get()->RegisterTensor(xtensor.data());
+  TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
 
 XLATensor XLATensor::Create(std::shared_ptr<View> view, const Device& device) {
   XLATensor xtensor(std::move(view), device);
-  TensorsArena::Get()->RegisterTensor(xtensor.data());
+  TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
 
@@ -154,7 +154,12 @@ XLATensor::XLATensor(std::shared_ptr<View> view, const Device& device)
 
 XLATensor::XLATensor(std::shared_ptr<Data> data) : data_(std::move(data)) {}
 
-XLATensor XLATensor::Clone() const { return Create(data()); }
+XLATensor::Data* XLATensor::data() const {
+  XLA_CHECK(data_ != nullptr) << "Trying to access a null cursor";
+  return data_.get();
+}
+
+XLATensor XLATensor::Clone() const { return Create(data_ptr()); }
 
 c10::optional<XLATensor> XLATensor::grad() const {
   if (data()->grad == nullptr) {
