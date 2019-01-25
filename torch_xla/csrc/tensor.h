@@ -17,12 +17,11 @@
 namespace torch_xla {
 
 class XLATensor {
+  class TensorsArena;
   struct Data;
   struct View;
 
  public:
-  TH_DISALLOW_COPY_AND_ASSIGN(XLATensor);
-
   // The context used by the ApplyPendingGraph() API, in order to allow it speed
   // up operations in case the new tensors graph apply matches the one stored
   // within the apply context.
@@ -35,39 +34,24 @@ class XLATensor {
     std::vector<std::string> devices;
   };
 
-  static std::shared_ptr<XLATensor> Create(const at::Tensor& tensor,
-                                           const Device& device,
-                                           bool requires_grad);
-  static std::shared_ptr<XLATensor> Create(
+  static XLATensor Create(const at::Tensor& tensor, const Device& device,
+                          bool requires_grad);
+  static XLATensor Create(
       std::shared_ptr<xla::ComputationClient::Data> xla_data,
       bool requires_grad);
-  static std::shared_ptr<XLATensor> Create(ir::NodePtr ir_node,
-                                           const Device& device);
-  static std::shared_ptr<XLATensor> Create(std::shared_ptr<Data> data);
-  static std::shared_ptr<XLATensor> Create(std::shared_ptr<View> view,
-                                           const Device& device);
 
-  // NOTE: These direct constructors should not be used, and the Create() APIs
-  // above should be used instead. These are not private because the hacks
-  // necessary in order to use std::make_shared<> are worse than having those
-  // public. And it is good to save the double allocation required by a normal
-  // naked pointer std::shared_ptr<> creation.
-  XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
-  XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
-            bool requires_grad);
-  XLATensor(ir::NodePtr ir_node, const Device& device);
-  XLATensor(std::shared_ptr<View> view, const Device& device);
-  XLATensor(std::shared_ptr<Data> data) : data_(std::move(data)) {}
-
-  ~XLATensor();
+  // Creates an empty/null tensor.
+  XLATensor() = default;
 
   // Creates a new XLA tensor sharing the core tensor data structure, with
   // require-gradients disabled.
-  std::shared_ptr<XLATensor> Clone() const { return Create(data_); }
+  XLATensor Clone() const;
 
-  bool RequiresGrad() const { return requires_grad_; }
+  bool RequiresGrad() const { return data()->requires_grad; }
 
-  void detach_() { requires_grad_ = false; }
+  void detach_() { data()->requires_grad = false; }
+
+  bool is_null() const { return data() == nullptr; }
 
   at::Tensor ToTensor();
 
@@ -75,8 +59,8 @@ class XLATensor {
   // to other ATEN APIs which will modify its value.
   at::Tensor ToMutableTensor();
 
-  std::shared_ptr<XLATensor> grad() const;
-  void SetGradient(std::shared_ptr<XLATensor> grad);
+  c10::optional<XLATensor> grad() const;
+  void SetGradient(const XLATensor& grad);
 
   at::ScalarType dtype() const;
   xla::util::MaybeRef<xla::Shape> shape() const;
@@ -111,17 +95,16 @@ class XLATensor {
   std::vector<int64_t> Size() const;
 
   // Basic tensor operations used by the optimizers.
-  std::shared_ptr<XLATensor> add(const XLATensor& other,
-                                 const at::Scalar& alpha) const;
+  XLATensor add(const XLATensor& other, const at::Scalar& alpha) const;
   void add_(const XLATensor& other, const at::Scalar& alpha);
 
-  std::shared_ptr<XLATensor> mul(const XLATensor& other) const;
-  std::shared_ptr<XLATensor> mul(const at::Scalar& other) const;
+  XLATensor mul(const XLATensor& other) const;
+  XLATensor mul(const at::Scalar& other) const;
   void mul_(const XLATensor& other);
   void mul_(const at::Scalar& other);
 
-  std::shared_ptr<XLATensor> div(const XLATensor& other) const;
-  std::shared_ptr<XLATensor> div(const at::Scalar& other) const;
+  XLATensor div(const XLATensor& other) const;
+  XLATensor div(const at::Scalar& other) const;
   void div_(const XLATensor& other);
   void div_(const at::Scalar& other);
 
@@ -135,45 +118,42 @@ class XLATensor {
   // Additional operations which are part of the PyTorch Tensor functionality.
   xla::int64 size(int dim) const;
 
-  std::shared_ptr<XLATensor> relu() const;
+  XLATensor relu() const;
 
-  std::shared_ptr<XLATensor> threshold(float threshold, float value) const;
+  XLATensor threshold(float threshold, float value) const;
 
-  std::shared_ptr<XLATensor> conv2d(
-      const XLATensor& weight, const XLATensor& bias,
-      tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding,
-      bool use_full_conv_precision) const;
+  XLATensor conv2d(const XLATensor& weight, const XLATensor& bias,
+                   tensorflow::gtl::ArraySlice<const xla::int64> stride,
+                   tensorflow::gtl::ArraySlice<const xla::int64> padding,
+                   bool use_full_conv_precision) const;
 
-  std::shared_ptr<XLATensor> conv2d(
-      const XLATensor& weight,
-      tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding,
-      bool use_full_conv_precision) const;
+  XLATensor conv2d(const XLATensor& weight,
+                   tensorflow::gtl::ArraySlice<const xla::int64> stride,
+                   tensorflow::gtl::ArraySlice<const xla::int64> padding,
+                   bool use_full_conv_precision) const;
 
-  std::shared_ptr<XLATensor> addmm(const XLATensor& weight,
-                                   const XLATensor& bias,
-                                   bool use_full_conv_precision) const;
+  XLATensor addmm(const XLATensor& weight, const XLATensor& bias,
+                  bool use_full_conv_precision) const;
 
-  std::shared_ptr<XLATensor> max_pool2d(
+  XLATensor max_pool2d(
       tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
       tensorflow::gtl::ArraySlice<const xla::int64> padding) const;
 
-  std::shared_ptr<XLATensor> avg_pool2d(
+  XLATensor avg_pool2d(
       tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
       tensorflow::gtl::ArraySlice<const xla::int64> padding,
       bool count_include_pad) const;
 
-  std::shared_ptr<XLATensor> t() const;
+  XLATensor t() const;
 
-  std::shared_ptr<XLATensor> view(
+  XLATensor view(
       tensorflow::gtl::ArraySlice<const xla::int64> output_size) const;
 
-  std::shared_ptr<XLATensor> log_softmax(xla::int64 dim) const;
+  XLATensor log_softmax(xla::int64 dim) const;
 
-  std::shared_ptr<XLATensor> cross_replica_sum(
+  XLATensor cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups) const;
 
   // Applies the queue of operations in preparation for using the data.
@@ -185,28 +165,25 @@ class XLATensor {
 
   // Returns the common device for "tensors". Throws if not all tensors have the
   // same device.
-  static Device CommonDeviceForTensors(
-      const std::vector<std::shared_ptr<XLATensor>>& tensors);
+  static Device CommonDeviceForTensors(const std::vector<XLATensor>& tensors);
 
   // Retrieves the set of XLA tensors which are currently live in the system.
-  static std::vector<std::shared_ptr<XLATensor>> GetLiveTensors();
+  static std::vector<XLATensor> GetLiveTensors();
 
   // Applies the queue of operations for a list of tensors. The context of the
   // apply operation will be saved within the apply_context pointer, if not
   // nullptr. The ApplyPendingGraph() API will try to guess whether the current
   // apply operation matches the previously cached one in apply_context, and
   // eventually uses the cached XLA compiled computations to run the apply.
-  static void ApplyPendingGraph(
-      const std::vector<std::shared_ptr<XLATensor>>& tensors,
-      ApplyContext* apply_context);
+  static void ApplyPendingGraph(std::vector<XLATensor>* tensors,
+                                ApplyContext* apply_context);
 
   // Retrieves the PyTorch tensors behind the XLA tensors.
-  static std::vector<at::Tensor> GetTensors(
-      const std::vector<std::shared_ptr<XLATensor>>& tensors);
+  static std::vector<at::Tensor> GetTensors(std::vector<XLATensor>* tensors);
 
   // Operation which creates XLA tensors out of autograd variable by batching
   // the requests to the computation servers.
-  static std::vector<std::shared_ptr<XLATensor>> CreateTensors(
+  static std::vector<XLATensor> CreateTensors(
       const std::vector<at::Tensor>& tensors,
       const std::vector<std::string>& devices);
 
@@ -242,6 +219,9 @@ class XLATensor {
     bool updated;
   };
 
+  // This is the core XLA tensor data structure where all the tensor data is
+  // held. The XLA tensor is nothing more than a shared pointer to a Data
+  // object.
   struct Data {
     Data(std::shared_ptr<xla::ComputationClient::Data> xla_data,
          const Device& device)
@@ -259,6 +239,8 @@ class XLATensor {
           device(device),
           unique_id(GetNextTensorId()) {}
 
+    ~Data();
+
     std::shared_ptr<xla::ComputationClient::Data> xla_data;
     ir::NodePtr ir_node;
     std::shared_ptr<View> view;
@@ -266,7 +248,21 @@ class XLATensor {
     Device device;
     xla::int64 unique_id = 0;
     std::shared_ptr<XLATensor> grad;
+    bool requires_grad = false;
   };
+
+  XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
+  XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
+            bool requires_grad);
+  XLATensor(ir::NodePtr ir_node, const Device& device);
+  XLATensor(std::shared_ptr<View> view, const Device& device);
+  XLATensor(std::shared_ptr<Data> data);
+
+  static XLATensor Create(ir::NodePtr ir_node, const Device& device);
+  static XLATensor Create(std::shared_ptr<Data> data);
+  static XLATensor Create(std::shared_ptr<View> view, const Device& device);
+
+  const std::shared_ptr<Data>& data() const { return data_; }
 
   void SetIrNode(ir::NodePtr ir_node);
 
@@ -286,15 +282,13 @@ class XLATensor {
 
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.
-  static DataUidMap CreateDataUidMap(
-      const std::vector<std::shared_ptr<XLATensor>>& tensors);
+  static DataUidMap CreateDataUidMap(const std::vector<XLATensor>& tensors);
 
   // Tries to run a cached ApplyPendingGraph() with the information in
   // apply_context. Returns whether the cached run could be completed
   // successfully.
-  static bool RunCachedApply(
-      const std::vector<std::shared_ptr<XLATensor>>& tensors,
-      const ApplyContext& apply_context);
+  static bool RunCachedApply(std::vector<XLATensor>* tensors,
+                             const ApplyContext& apply_context);
 
   // Returns a permutation which represents an ordering by tensor device and
   // unique ID, of all the tensors which needs sync (the ones which have a graph
@@ -303,7 +297,7 @@ class XLATensor {
   // at::Tensor data will be uploaded to the device and the tensor will receive
   // new XLA data.
   static std::vector<size_t> GetApplyOrder(
-      const std::vector<std::shared_ptr<XLATensor>>& tensors);
+      const std::vector<XLATensor>& tensors);
 
   static ir::NodePtr CreateTensorNode(
       std::shared_ptr<xla::ComputationClient::Data> data);
@@ -311,7 +305,6 @@ class XLATensor {
   static xla::int64 GetNextTensorId();
 
   std::shared_ptr<Data> data_;
-  bool requires_grad_ = false;
 };
 
 }  // namespace torch_xla

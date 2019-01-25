@@ -119,11 +119,11 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
     const auto& replica_inputs = inputs[i];
     if (i == 0) {
       for (const auto& p : replica_inputs) {
-        inputs_require_grad_.push_back(p->RequiresGrad());
+        inputs_require_grad_.push_back(p.RequiresGrad());
       }
     } else {
       for (size_t j = 0; j < replica_inputs.size(); ++j) {
-        XLA_CHECK(inputs_require_grad_[j] == replica_inputs[j]->RequiresGrad())
+        XLA_CHECK(inputs_require_grad_[j] == replica_inputs[j].RequiresGrad())
             << "Input " << j << " of replica " << i
             << " does not match the requires-grad property";
       }
@@ -208,7 +208,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   if (!backward_input_gradients_.empty()) {
     // We already have the gradients from the fused computation, just set the
     // gradients for input and parameters.
-    ApplyGradients(grad_inputs_, inputs_, optimizable_params_,
+    ApplyGradients(grad_inputs_, &inputs_, &optimizable_params_,
                    inputs_require_grad_, *gradient_.df);
     return;
   }
@@ -270,7 +270,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
           zero_input[j] ? XlaTranslator::ParameterKind::kZeroInput
                         : XlaTranslator::ParameterKind::kGraphInput;
       backward_shapes.push_back(XlaTranslator::ParameterShape(
-          replica_raw_grad_outputs[j]->shape(), kind));
+          replica_raw_grad_outputs[j].shape(), kind));
     }
 
     XlaTranslator xla_bwd_impl(gradient_.df, GetPrecisionConfig());
@@ -286,12 +286,12 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
   }
   // Collect the computation client data vector.
   DataBatchVector raw_grad_outputs_data =
-      GetDataBatchVector(raw_grad_outputs, &zero_input);
+      GetDataBatchVector(&raw_grad_outputs, &zero_input);
 
   TensorBatchVector grad_inputs =
       Execute(*backward_computation_, raw_grad_outputs_data);
 
-  ApplyGradients(grad_inputs, inputs_, optimizable_params_,
+  ApplyGradients(grad_inputs, &inputs_, &optimizable_params_,
                  inputs_require_grad_, *gradient_.df);
   // Release handles to saved / captured inputs and outputs.
   captured_outputs_.clear();
@@ -299,28 +299,28 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
 }
 
 void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs,
-                               const TensorBatchVector& inputs,
-                               const TensorBatchVector& optimizable_params,
+                               TensorBatchVector* inputs,
+                               TensorBatchVector* optimizable_params,
                                const std::vector<bool>& inputs_require_grad,
                                const torch::jit::Graph& df) {
   size_t inputs_require_grad_count =
       std::count(inputs_require_grad.begin(), inputs_require_grad.end(), true);
-  for (size_t i = 0; i < inputs.size(); ++i) {
+  for (size_t i = 0; i < inputs->size(); ++i) {
     auto& replica_grad_inputs = grad_inputs[i];
-    auto& replica_inputs = inputs[i];
-    auto& replica_optimizable_params = optimizable_params[i];
+    auto& replica_inputs = (*inputs)[i];
+    auto& replica_optimizable_params = (*optimizable_params)[i];
     XLA_CHECK_EQ(replica_grad_inputs.size(), inputs_require_grad_count)
         << "Graph:\n"
         << df.toString();
     size_t grad_index = 0;
     for (size_t j = 0; j < replica_inputs.size(); j++) {
       if (inputs_require_grad[j]) {
-        replica_inputs[j]->SetGradient(replica_grad_inputs[grad_index]);
+        replica_inputs[j].SetGradient(replica_grad_inputs[grad_index]);
         ++grad_index;
       }
     }
     for (size_t j = 0; j < replica_optimizable_params.size(); j++) {
-      replica_optimizable_params[j]->SetGradient(
+      replica_optimizable_params[j].SetGradient(
           replica_grad_inputs[grad_index]);
       ++grad_index;
     }
@@ -333,7 +333,7 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
 
   TensorBatchVector inputs_params_buffers = PrepareForwardInput(inputs);
   DataBatchVector inputs_params_buffers_data =
-      GetDataBatchVector(inputs_params_buffers, /*zero_input=*/nullptr);
+      GetDataBatchVector(&inputs_params_buffers, /*zero_input=*/nullptr);
   if (forward_computation_ == nullptr) {
     // Shapes are going to be the same for all replicas, so use the ones of the
     // first replica here.
@@ -342,7 +342,7 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
     std::vector<XlaTranslator::ParameterShape> forward_shapes;
     for (size_t i = 0; i < replica_inputs.size(); ++i) {
       forward_shapes.push_back(XlaTranslator::ParameterShape(
-          replica_inputs[i]->shape(),
+          replica_inputs[i].shape(),
           XlaTranslator::ParameterKind::kGraphInput));
     }
     xla::XlaComputation computation =
@@ -484,16 +484,16 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
     const TensorBatchVector& inputs) {
   TensorBatchVector inputs_params_buffers = PrepareForwardInput(inputs);
   DataBatchVector inputs_params_buffers_data =
-      GetDataBatchVector(inputs_params_buffers, /*zero_input=*/nullptr);
+      GetDataBatchVector(&inputs_params_buffers, /*zero_input=*/nullptr);
 
   // Lazy-convert forward graph to XlaComputation.
   if (forward_computation_ == nullptr) {
     // Shapes are going to be the same for all replicas, so use the ones of the
     // first replica here.
     std::vector<XlaTranslator::ParameterShape> forward_shapes;
-    for (auto p : inputs_params_buffers.front()) {
+    for (auto& p : inputs_params_buffers.front()) {
       forward_shapes.push_back(XlaTranslator::ParameterShape(
-          p->shape(), XlaTranslator::ParameterKind::kGraphInput));
+          p.shape(), XlaTranslator::ParameterKind::kGraphInput));
     }
 
     XlaTranslator xla_fwd_impl(gradient_.f, GetPrecisionConfig());
@@ -614,8 +614,8 @@ void XlaModule::FlushTensorsOperations() {
   // which are not part of the traning loop. Nothing happens, but if we want to
   // fuse the sync operation with the forward+backward+optimizer, we need to
   // have a path leading to the same XLA computation.
-  std::vector<std::shared_ptr<XLATensor>> tensors = XLATensor::GetLiveTensors();
-  XLATensor::ApplyPendingGraph(tensors, &apply_context_);
+  std::vector<XLATensor> tensors = XLATensor::GetLiveTensors();
+  XLATensor::ApplyPendingGraph(&tensors, &apply_context_);
 }
 
 void XlaModule::ReferenceNewTensorData(const TensorBatchVector& source,
@@ -626,7 +626,7 @@ void XlaModule::ReferenceNewTensorData(const TensorBatchVector& source,
     TensorBatchVector::value_type* replica_dest = &(*dest)[i];
     XLA_CHECK_EQ(replica_source.size(), replica_dest->size());
     for (size_t j = 0; j < replica_source.size(); ++j) {
-      (*replica_dest)[j]->ReferenceDataFrom(*replica_source[j]);
+      (*replica_dest)[j].ReferenceDataFrom(replica_source[j]);
     }
   }
 }
@@ -661,13 +661,13 @@ XlaComputationInOut::SizeOpValues XlaModule::SetBackwardSizeOpValues(
 }
 
 XlaModule::DataBatchVector XlaModule::GetDataBatchVector(
-    const TensorBatchVector& inputs, const std::vector<bool>* zero_input) {
+    TensorBatchVector* inputs, const std::vector<bool>* zero_input) {
   DataBatchVector inputs_data;
-  for (auto& replica_inputs : inputs) {
+  for (auto& replica_inputs : *inputs) {
     DataBatchVector::value_type replica_inputs_data;
     for (size_t j = 0; j < replica_inputs.size(); ++j) {
       if (zero_input == nullptr || !zero_input->at(j)) {
-        replica_inputs_data.push_back(replica_inputs[j]->GetXlaData().get());
+        replica_inputs_data.push_back(replica_inputs[j].GetXlaData().get());
       }
     }
     inputs_data.push_back(std::move(replica_inputs_data));
