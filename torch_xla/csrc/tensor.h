@@ -262,7 +262,9 @@ class XLATensor {
   static XLATensor Create(std::shared_ptr<Data> data);
   static XLATensor Create(std::shared_ptr<View> view, const Device& device);
 
-  const std::shared_ptr<Data>& data() const { return data_; }
+  Data* data() const;
+
+  std::shared_ptr<Data> data_ptr() const { return data_; }
 
   void SetIrNode(ir::NodePtr ir_node);
 
