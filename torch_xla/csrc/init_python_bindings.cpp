@@ -57,23 +57,21 @@ void InitXlaModuleBindings(py::module m) {
       .def("parameters_buffers", [](XlaModule& xla_module) {
         return xla_module.parameters_buffers();
       });
-  m.def("_xla_sync_multi",
-        [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-          NoGilSection nogil;
-          XLATensor::ApplyPendingGraph(tensors, /*apply_context=*/nullptr);
-        });
-  m.def("_xla_to_tensors",
-        [](const std::vector<std::shared_ptr<XLATensor>>& tensors) {
-          std::vector<at::Tensor> result;
-          {
-            NoGilSection nogil;
-            result = XLATensor::GetTensors(tensors);
-          }
-          return result;
-        });
+  m.def("_xla_sync_multi", [](std::vector<XLATensor>& tensors) {
+    NoGilSection nogil;
+    XLATensor::ApplyPendingGraph(&tensors, /*apply_context=*/nullptr);
+  });
+  m.def("_xla_to_tensors", [](std::vector<XLATensor>& tensors) {
+    std::vector<at::Tensor> result;
+    {
+      NoGilSection nogil;
+      result = XLATensor::GetTensors(&tensors);
+    }
+    return result;
+  });
   m.def("_xla_create_tensors", [](const std::vector<at::Tensor>& tensors,
                                   const std::vector<std::string>& devices) {
-    std::vector<std::shared_ptr<XLATensor>> result;
+    std::vector<XLATensor> result;
     {
       NoGilSection nogil;
       result = XLATensor::CreateTensors(tensors, devices);
@@ -96,7 +94,7 @@ void InitXlaPassesBindings(py::module m) {
 }
 
 void InitXlaTensorBindings(py::module m) {
-  py::class_<XLATensor, std::shared_ptr<XLATensor>>(m, "XLATensor")
+  py::class_<XLATensor>(m, "XLATensor")
       .def(py::init([](const torch::autograd::Variable& tensor,
                        const std::string& device) {
              return XLATensor::Create(tensor.data(), Device(device),
@@ -112,14 +110,13 @@ void InitXlaTensorBindings(py::module m) {
       .def("add", [](const XLATensor& self, double alpha,
                      const XLATensor& other) { return self.add(other, alpha); })
       .def("add_",
-           [](std::shared_ptr<XLATensor> self, double alpha,
-              const XLATensor& other) {
-             self->add_(other, alpha);
+           [](XLATensor self, double alpha, const XLATensor& other) {
+             self.add_(other, alpha);
              return self;
            })
       .def("add_",
-           [](std::shared_ptr<XLATensor> self, const XLATensor& other) {
-             self->add_(other, 1.);
+           [](XLATensor self, const XLATensor& other) {
+             self.add_(other, 1.);
              return self;
            })
       .def(
@@ -140,14 +137,14 @@ void InitXlaTensorBindings(py::module m) {
            [](const XLATensor& self, double other) { return self.mul(other); })
       .def(
           "mul_",
-          [](std::shared_ptr<XLATensor> self, const XLATensor& other) {
-            self->mul_(other);
+          [](XLATensor self, const XLATensor& other) {
+            self.mul_(other);
             return self;
           },
           py::arg("other"))
       .def("mul_",
-           [](std::shared_ptr<XLATensor> self, double other) {
-             self->mul_(other);
+           [](XLATensor self, double other) {
+             self.mul_(other);
              return self;
            })
       .def(
@@ -167,15 +164,15 @@ void InitXlaTensorBindings(py::module m) {
       .def("__truediv__",
            [](const XLATensor& self, double other) { return self.div(other); })
       .def("addcdiv_",
-           [](std::shared_ptr<XLATensor> self, double alpha,
-              const XLATensor& tensor1, XLATensor& tensor2) {
-             self->addcdiv_(alpha, tensor1, tensor2);
+           [](XLATensor self, double alpha, const XLATensor& tensor1,
+              XLATensor& tensor2) {
+             self.addcdiv_(alpha, tensor1, tensor2);
              return self;
            })
       .def("addcmul_",
-           [](std::shared_ptr<XLATensor> self, double alpha,
-              const XLATensor& tensor1, XLATensor& tensor2) {
-             self->addcmul_(alpha, tensor1, tensor2);
+           [](XLATensor self, double alpha, const XLATensor& tensor1,
+              XLATensor& tensor2) {
+             self.addcmul_(alpha, tensor1, tensor2);
              return self;
            })
       .def("t", [](const XLATensor& self) { return self.t(); })
@@ -201,22 +198,21 @@ void InitXlaTensorBindings(py::module m) {
              return self.cross_replica_sum(crs_groups);
            })
       .def("zero_",
-           [](std::shared_ptr<XLATensor> self) {
-             self->zero_();
+           [](XLATensor self) {
+             self.zero_();
              return self;
            })
       .def("detach_",
-           [](std::shared_ptr<XLATensor> self) {
-             self->detach_();
+           [](XLATensor self) {
+             self.detach_();
              return self;
            })
       .def("size",
            [](const XLATensor& self, int dim) { return self.size(dim); })
-      .def_property_readonly(
-          "data",
-          [](const XLATensor& self) {
-            return py::cast<std::shared_ptr<XLATensor>>(self.Clone());
-          })
+      .def_property_readonly("data",
+                             [](const XLATensor& self) {
+                               return py::cast<XLATensor>(self.Clone());
+                             })
       .def_property_readonly(
           "dtype",
           [](const XLATensor& self) {
@@ -224,15 +220,15 @@ void InitXlaTensorBindings(py::module m) {
                 torch::autograd::utils::wrap(torch::getDtype(self.dtype())));
           })
       .def_property_readonly("is_leaf", [](const XLATensor&) { return true; })
-      .def_property_readonly(
-          "grad",
-          [](XLATensor& m) -> py::object {
-            if (m.grad() == nullptr) {
-              return py::none();
-            } else {
-              return py::cast<std::shared_ptr<XLATensor>>(m.grad());
-            }
-          })
+      .def_property_readonly("grad",
+                             [](XLATensor& m) -> py::object {
+                               auto grad = m.grad();
+                               if (!grad) {
+                                 return py::none();
+                               } else {
+                                 return py::cast<XLATensor>(*grad);
+                               }
+                             })
       .def("__repr__", [](XLATensor& m) {
         std::ostringstream s;
         s << m.ToTensor();
@@ -244,35 +240,48 @@ void InitXlaTensorBindings(py::module m) {
   });
   m.def(
       "conv2d",
-      [](const XLATensor& self, const XLATensor& weight,
-         std::shared_ptr<XLATensor> bias, int stride, int padding,
-         bool use_full_conv_precision) {
+      [](const XLATensor& self, const XLATensor& weight, int stride,
+         int padding, bool use_full_conv_precision) {
         std::vector<xla::int64> stride_2d(2, stride);
         std::vector<xla::int64> padding_2d(2, padding);
-        if (bias) {
-          return self.conv2d(weight, *bias, stride_2d, padding_2d,
-                             use_full_conv_precision);
-        } else {
-          return self.conv2d(weight, stride_2d, padding_2d,
-                             use_full_conv_precision);
-        }
+        return self.conv2d(weight, stride_2d, padding_2d,
+                           use_full_conv_precision);
       },
-      py::arg("input"), py::arg("weight"), py::arg("bias") = nullptr,
+      py::arg("input"), py::arg("weight"), py::arg("stride") = 1,
+      py::arg("padding") = 0, py::arg("use_full_conv_precision") = false);
+  m.def(
+      "conv2d",
+      [](const XLATensor& self, const XLATensor& weight, const XLATensor& bias,
+         int stride, int padding, bool use_full_conv_precision) {
+        std::vector<xla::int64> stride_2d(2, stride);
+        std::vector<xla::int64> padding_2d(2, padding);
+        return self.conv2d(weight, bias, stride_2d, padding_2d,
+                           use_full_conv_precision);
+      },
+      py::arg("input"), py::arg("weight"), py::arg("bias"),
       py::arg("stride") = 1, py::arg("padding") = 0,
       py::arg("use_full_conv_precision") = false);
   m.def(
       "conv2d",
       [](const XLATensor& self, const XLATensor& weight,
-         std::shared_ptr<XLATensor> bias, const std::vector<xla::int64>& stride,
+         const std::vector<xla::int64>& stride,
          const std::vector<xla::int64>& padding, bool use_full_conv_precision) {
-        if (bias) {
-          return self.conv2d(weight, *bias, stride, padding,
-                             use_full_conv_precision);
-        } else {
-          return self.conv2d(weight, stride, padding, use_full_conv_precision);
-        }
+        return self.conv2d(weight, stride, padding, use_full_conv_precision);
       },
-      py::arg("input"), py::arg("weight"), py::arg("bias") = nullptr,
+      py::arg("input"), py::arg("weight"),
+      py::arg("stride") = std::vector<xla::int64>{1, 1},
+      py::arg("padding") = std::vector<xla::int64>{0, 0},
+      py::arg("use_full_conv_precision") = false);
+
+  m.def(
+      "conv2d",
+      [](const XLATensor& self, const XLATensor& weight, const XLATensor& bias,
+         const std::vector<xla::int64>& stride,
+         const std::vector<xla::int64>& padding, bool use_full_conv_precision) {
+        return self.conv2d(weight, bias, stride, padding,
+                           use_full_conv_precision);
+      },
+      py::arg("input"), py::arg("weight"), py::arg("bias"),
       py::arg("stride") = std::vector<xla::int64>{1, 1},
       py::arg("padding") = std::vector<xla::int64>{0, 0},
       py::arg("use_full_conv_precision") = false);

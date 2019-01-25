@@ -19,8 +19,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
 
   // The i-th entry in this vector, is a vector of XLA tensors which belong the
   // i-th replica.
-  using TensorBatchVector =
-      std::vector<std::vector<std::shared_ptr<XLATensor>>>;
+  using TensorBatchVector = std::vector<std::vector<XLATensor>>;
 
   // Creates a new XlaModule from a PyTorch script module "module".
   // "use_full_conv_precision" controls whether to use maximum precision
@@ -115,8 +114,8 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // parameters, according to the grad_inputs values. The inputs_require_grad
   // vector tell which inputs requires the gradient to be updated.
   static void ApplyGradients(const TensorBatchVector& grad_inputs,
-                             const TensorBatchVector& inputs,
-                             const TensorBatchVector& optimizable_params,
+                             TensorBatchVector* inputs,
+                             TensorBatchVector* optimizable_params,
                              const std::vector<bool>& inputs_require_grad,
                              const torch::jit::Graph& df);
 
@@ -130,7 +129,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // Elements in the return vector are populated only if zero_input is nullptr,
   // or if zero_input[j] is false.
   static DataBatchVector GetDataBatchVector(
-      const TensorBatchVector& inputs, const std::vector<bool>* zero_input);
+      TensorBatchVector* inputs, const std::vector<bool>* zero_input);
 
   // Returns the common device for every replica copy of the inputs.
   // All common devices must be different in different replicas.
