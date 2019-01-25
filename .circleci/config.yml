@@ -27,8 +27,8 @@ linux_default: &linux_default
         sudo pkill -SIGHUP dockerd
         WORKDIR=/var/lib/jenkins/workspace
         echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" >> /home/circleci/project/env
-        echo "declare -x AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_SCCACHE_S3_BUCKET}" >> /home/circleci/project/env
-        echo "declare -x AWS_SECRET_ACCESS_KEY=${AWS_SECRET_KEY_FOR_SCCACHE_S3_BUCKET}" >> /home/circleci/project/env
+        echo "declare -x AWS_ACCESS_KEY_ID=${CIRCLECI_AWS_ACCESS_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
+        echo "declare -x AWS_SECRET_ACCESS_KEY=${CIRCLECI_AWS_SECRET_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
         echo "declare -x XLA_CACHE_S3_BUCKET_NAME=${XLA_CACHE_S3_BUCKET_NAME}" >> /home/circleci/project/env
         echo "declare -x CIRCLE_JOB=${CIRCLE_JOB}" >> /home/circleci/project/env
 
