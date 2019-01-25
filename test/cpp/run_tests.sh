@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -ex
 VERB=
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
