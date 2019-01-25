@@ -120,5 +120,6 @@ pushd "$XLA_DIR"
 # Use cloud cache to build when available.
 sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' build_torch_xla_libs.sh
 
+export CC=clang-7 CXX=clang++-7
 python setup.py install
 popd
