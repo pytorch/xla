@@ -1,10 +1,8 @@
 #!/bin/bash
 
-set -ex
-
 source ./env
 
-export MAX_JOBS=8
+set -ex
 
 SCCACHE="$(which sccache)"
 if [ -z "${SCCACHE}" ]; then
@@ -34,7 +32,7 @@ pip install ninja
 
 # Install Pytorch
 patch -p1 < xla/pytorch.patch
-DEBUG=1 python setup.py build develop
+python setup.py build develop
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
 sudo add-apt-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main"
@@ -87,6 +85,6 @@ pushd "$XLA_DIR"
 # Use cloud cache to build when available.
 sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' build_torch_xla_libs.sh
 
-export CC=clang-7 CXX=clang++-7
+source ./xla_env
 python setup.py install
 popd

@@ -31,6 +31,11 @@ linux_default: &linux_default
         echo "declare -x AWS_SECRET_ACCESS_KEY=${CIRCLECI_AWS_SECRET_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
         echo "declare -x XLA_CACHE_S3_BUCKET_NAME=${XLA_CACHE_S3_BUCKET_NAME}" >> /home/circleci/project/env
         echo "declare -x CIRCLE_JOB=${CIRCLE_JOB}" >> /home/circleci/project/env
+        echo "declare -x MAX_JOBS=8" >> /home/circleci/project/env
+        echo "declare -x CC=clang-7 CXX=clang++-7" >> /home/circleci/project/xla_env
+        echo "declare -x XLA_USE_XRT=1" >> /home/circleci/project/xla_env
+        echo "declare -x XRT_DEVICE_MAP=\"CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0\"" >> /home/circleci/project/xla_env
+        echo "declare -x export XRT_WORKERS=\"localservice:0;grpc://localhost:40934\"" >> /home/circleci/project/xla_env
 
         pid=$(docker run -t -d -w $WORKDIR ${DOCKER_IMAGE})
         docker cp /home/circleci/project/. "$pid:$WORKDIR"
