@@ -8,7 +8,7 @@ XlaModule::TensorBatchVector XlaCreateTensorList(const py::tuple& tuple) {
   for (auto& replica_tuple : tuple) {
     XlaModule::TensorBatchVector::value_type replica_result;
     for (auto& e : replica_tuple) {
-      auto variable = py::cast<std::shared_ptr<XLATensor>>(e);
+      auto variable = py::cast<XLATensor>(e);
       replica_result.push_back(variable);
     }
     result.push_back(std::move(replica_result));

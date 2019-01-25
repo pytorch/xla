@@ -62,6 +62,7 @@ set(TGT_OPTS
   -Wno-sign-compare
   -Wno-deprecated-declarations
   -Wno-return-type
+  -Wno-unused-value
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

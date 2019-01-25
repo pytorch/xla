@@ -103,6 +103,7 @@ extra_compile_args = [
     '-Wno-sign-compare',
     '-Wno-deprecated-declarations',
     '-Wno-return-type',
+    '-Wno-unused-value',
 ]
 
 if re.match(r'clang', os.getenv('CC', '')):
