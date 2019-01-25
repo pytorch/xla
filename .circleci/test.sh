@@ -9,4 +9,8 @@ export XRT_WORKERS="localservice:0;grpc://localhost:40934"
 
 python test/test_operations.py
 python test/test_train_mnist.py --tidy
-./test/cpp/run_tests.sh
+
+pushd test/cpp
+export CC=clang-7 CXX=clang++-7
+./run_tests.sh
+popd

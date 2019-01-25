@@ -22,20 +22,6 @@ if which sccache > /dev/null; then
   sccache --zero-stats
 fi
 
-# setup sccache wrappers
-#if hash sccache 2>/dev/null; then
-#    SCCACHE_BIN_DIR="/tmp/sccache"
-#    mkdir -p "$SCCACHE_BIN_DIR"
-#    for compiler in cc c++ gcc g++ x86_64-linux-gnu-gcc; do
-#        (
-#            echo "#!/bin/sh"
-#            echo "exec $(which sccache) $(which $compiler) \"\$@\""
-#        ) > "$SCCACHE_BIN_DIR/$compiler"
-#        chmod +x "$SCCACHE_BIN_DIR/$compiler"
-#    done
-#    export PATH="$SCCACHE_BIN_DIR:$PATH"
-#fi
-
 PYTORCH_DIR=/tmp/pytorch
 XLA_DIR="$PYTORCH_DIR/xla"
 git clone --recursive --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
