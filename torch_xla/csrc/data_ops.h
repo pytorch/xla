@@ -1,13 +1,22 @@
 #pragma once
 
+#include <vector>
+
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch/csrc/jit/ir.h"
 
 // Collection of XLA lowerings for operations which only involve some form of
 // data movement and no computation.
-
 namespace torch_xla {
+
+// For input_sizes and a potentially incomplete output_sizes, return a complete
+// output shape. The complete output shape has same total number of elements as
+// input_sizes and matches output_sizes in all dimensions except for at most
+// one, which can be inferred and stored as -1 in output_sizes.
+std::vector<xla::int64> GetCompleteShape(
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes,
+    tensorflow::gtl::ArraySlice<const xla::int64> input_sizes);
 
 // Creates a new tensor with the same data as the input tensor and the size
 // specified by the "size" attribute of the given node.
