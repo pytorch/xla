@@ -128,7 +128,7 @@ XLATensor XLATensor::Create(std::shared_ptr<View> view, const Device& device) {
 
 XLATensor::XLATensor(const at::Tensor& tensor, const Device& device,
                      bool requires_grad)
-    : data_(std::make_shared<Data>(TensorToXlaData(tensor, device), device)) {
+    : data_(std::make_shared<Data>(tensor, device)) {
   data()->requires_grad = requires_grad;
 }
 
@@ -347,9 +347,8 @@ void XLATensor::ReferenceDataFrom(const XLATensor& source) {
 }
 
 std::vector<int64_t> XLATensor::Size() const {
-  const xla::Shape& tensor_shape = shape();
-  return std::vector<int64_t>(tensor_shape.dimensions().begin(),
-                              tensor_shape.dimensions().end());
+  auto tensor_shape = shape();
+  return xla::util::ToVector<int64_t>(tensor_shape.get().dimensions());
 }
 
 at::Tensor XLATensor::ToTensor() {
@@ -514,8 +513,8 @@ void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
 }
 
 xla::int64 XLATensor::size(int dim) const {
-  const xla::Shape& xla_shape = shape();
-  int rank = xla_shape.dimensions_size();
+  auto xla_shape = shape();
+  int rank = xla_shape.get().dimensions_size();
   int min_shape_dim = -rank;
   int max_shape_dim = rank - 1;
   XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim) << absl::StrCat(
@@ -524,7 +523,7 @@ xla::int64 XLATensor::size(int dim) const {
   int dim_index = dim < 0 ? rank + dim : dim;
   XLA_CHECK_GE(dim_index, 0);
   XLA_CHECK_LT(dim_index, rank);
-  return xla_shape.dimensions(dim_index);
+  return xla_shape.get().dimensions(dim_index);
 }
 
 XLATensor XLATensor::relu() const {
