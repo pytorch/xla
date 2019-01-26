@@ -211,7 +211,7 @@ void InitXlaTensorBindings(py::module m) {
            [](const XLATensor& self, int dim) { return self.size(dim); })
       .def_property_readonly("data",
                              [](const XLATensor& self) {
-                               return py::cast<XLATensor>(self.Clone());
+                               return py::cast<XLATensor>(self);
                              })
       .def_property_readonly(
           "dtype",
