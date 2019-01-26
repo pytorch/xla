@@ -47,6 +47,8 @@ class XLATensor {
 
   bool is_null() const { return data_ptr() == nullptr; }
 
+  XLATensor alias() const { return XLATensor(data_ptr()); }
+
   at::Tensor ToTensor();
 
   // This API should be called instead of ToTensor() when the tensor is passed
@@ -253,7 +255,6 @@ class XLATensor {
   XLATensor(std::shared_ptr<Data> data);
 
   static XLATensor Create(ir::NodePtr ir_node, const Device& device);
-  static XLATensor Create(std::shared_ptr<Data> data);
   static XLATensor Create(std::shared_ptr<View> view, const Device& device);
 
   Data* data() const;
