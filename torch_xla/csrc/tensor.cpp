@@ -87,7 +87,7 @@ class XLATensor::TensorsArena {
     }
     std::vector<XLATensor> tensors;
     for (auto& data : data_pointers) {
-      tensors.push_back(Create(std::move(data)));
+      tensors.push_back(XLATensor(std::move(data)));
     }
     return tensors;
   }
@@ -116,12 +116,6 @@ XLATensor XLATensor::Create(
 
 XLATensor XLATensor::Create(ir::NodePtr ir_node, const Device& device) {
   XLATensor xtensor(std::move(ir_node), device);
-  TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
-  return xtensor;
-}
-
-XLATensor XLATensor::Create(std::shared_ptr<Data> data) {
-  XLATensor xtensor(std::move(data));
   TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
