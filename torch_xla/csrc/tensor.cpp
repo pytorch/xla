@@ -159,8 +159,6 @@ XLATensor::Data* XLATensor::data() const {
   return data_.get();
 }
 
-XLATensor XLATensor::Clone() const { return Create(data_ptr()); }
-
 c10::optional<XLATensor> XLATensor::grad() const {
   if (data()->grad == nullptr) {
     return c10::nullopt;
