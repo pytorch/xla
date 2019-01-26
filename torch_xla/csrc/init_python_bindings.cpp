@@ -97,7 +97,7 @@ void InitXlaTensorBindings(py::module m) {
   py::class_<XLATensor>(m, "XLATensor")
       .def(py::init([](const torch::autograd::Variable& tensor,
                        const std::string& device) {
-             return XLATensor::Create(tensor.data(), Device(device),
+             return XLATensor::Create(tensor.data().clone(), Device(device),
                                       tensor.requires_grad());
            }),
            py::arg("tensor"), py::arg("device") = "")
@@ -209,10 +209,9 @@ void InitXlaTensorBindings(py::module m) {
            })
       .def("size",
            [](const XLATensor& self, int dim) { return self.size(dim); })
-      .def_property_readonly("data",
-                             [](const XLATensor& self) {
-                               return py::cast<XLATensor>(self);
-                             })
+      .def_property_readonly(
+          "data",
+          [](const XLATensor& self) { return py::cast<XLATensor>(self); })
       .def_property_readonly(
           "dtype",
           [](const XLATensor& self) {
