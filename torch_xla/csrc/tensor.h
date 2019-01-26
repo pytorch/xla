@@ -6,13 +6,11 @@
 
 #include "device.h"
 #include "ir.h"
-#include "tensorflow/cc/framework/ops.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
-#include "torch/csrc/jit/ir.h"
 
 namespace torch_xla {
 
@@ -43,15 +41,11 @@ class XLATensor {
   // Creates an empty/null tensor.
   XLATensor() = default;
 
-  // Creates a new XLA tensor sharing the core tensor data structure, with
-  // require-gradients disabled.
-  XLATensor Clone() const;
-
   bool RequiresGrad() const { return data()->requires_grad; }
 
   void detach_() { data()->requires_grad = false; }
 
-  bool is_null() const { return data() == nullptr; }
+  bool is_null() const { return data_ptr() == nullptr; }
 
   at::Tensor ToTensor();
 
