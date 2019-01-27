@@ -10,10 +10,9 @@ import re
 import sys
 
 FuncGen = collections.namedtuple(
-    'FuncGen', 'func, xfunc, code, sig, cppsig, funsig, mapsig')
+    'FuncGen', 'tree, xtree, func, xfunc, code, sig, cppsig, funsig, mapsig')
 
-_PARSER = lark.Lark(
-    r"""
+_GRAMMAR = r"""
     start: type fnname "(" params ")"
     type: CONST? core_type refspec?
     fnname: CNAME
@@ -30,14 +29,17 @@ _PARSER = lark.Lark(
     TNAME: /[a-zA-Z0-9_:]+/
     params: param
           | param "," params
-    param: type CNAME
+    param: type param_name
+    param_name: CNAME
 
     %import common.CNAME -> CNAME
     %import common.WS
     %ignore WS
-    """,
-    parser='lalr',
-    propagate_positions=True)
+    """
+
+_PARSER = lark.Lark(_GRAMMAR, parser='lalr', propagate_positions=True)
+_XPARSER = lark.Lark(
+    _GRAMMAR, parser='lalr', propagate_positions=True, keep_all_tokens=True)
 
 _FN_BLACKLIST = set([
     # ATEN functions
@@ -54,6 +56,121 @@ _FN_BLACKLIST = set([
     'unsafeTensorFromTH',
     # XLA/TPU functions
 ])
+
+
+def first_match(t):
+  if isinstance(t, lark.lexer.Token):
+    return t.column - 1
+  assert isinstance(t, lark.tree.Tree)
+  return first_match(t.children[0])
+
+
+def last_match(t):
+  if isinstance(t, lark.lexer.Token):
+    return t.end_column - 1
+  assert isinstance(t, lark.tree.Tree)
+  return last_match(t.children[-1])
+
+
+class StringEmit(object):
+
+  def __init__(self, sref):
+    self.sref = sref
+    self.sval = ''
+    self.pos = -1
+
+  def __repr__(self):
+    return self.sval
+
+  def advance(self, t):
+    start = first_match(t)
+    end = last_match(t)
+    pos = self.pos if self.pos >= 0 else start
+    self.sval += self.sref[pos:end]
+    self.pos = end
+
+  def skip(self, t):
+    self.pos = last_match(t) if self.pos >= 0 else -1
+
+  def append(self, s):
+    self.sval += s
+    self.pos = -1
+
+
+def list_get(l, n):
+  return l[n] if n < len(l) else None
+
+
+def for_every_token(t, fn):
+  if isinstance(t, lark.lexer.Token):
+    fn(t)
+  else:
+    assert isinstance(t, lark.tree.Tree)
+    for c in t.children:
+      for_every_token(c, fn)
+
+
+def emit_string(t, emit, emit_fn):
+  status = emit_fn(t)
+  if status > 0:
+
+    def do_emit(tok):
+      emit.advance(tok)
+
+    for_every_token(t, do_emit)
+  elif status == 0:
+    if isinstance(t, lark.lexer.Token):
+      emit.advance(t)
+    else:
+      assert isinstance(t, lark.tree.Tree)
+      for c in t.children:
+        emit_string(c, emit, emit_fn)
+  else:
+    emit.skip(t)
+
+
+def typed_child(t, n, ttype):
+  assert isinstance(t, lark.tree.Tree)
+  assert n < len(t.children)
+  c = t.children[n]
+  assert isinstance(c, lark.tree.Tree)
+  assert c.data == ttype, t.pretty()
+  return c
+
+
+def create_stdfunc_sig(tree, orig_sig):
+
+  def emit_fn(t):
+    if isinstance(t, lark.lexer.Token):
+      return 0
+    return -1 if t.data == 'param_name' else 0
+
+  emit = StringEmit(orig_sig)
+  # Emit full function return type.
+  emit_string(typed_child(tree, 0, 'type'), emit, emit_fn)
+  emit.append('(')
+  # Emit parameter list w/out parameter names.
+  emit_string(typed_child(tree, 3, 'params'), emit, emit_fn)
+  emit.append(')')
+  return str(emit)
+
+
+def create_map_sig(tree, orig_sig):
+
+  def emit_fn(t):
+    if isinstance(t, lark.lexer.Token):
+      return -1 if t.type in ['CONST', 'REF', 'PTR'] else 0
+    return -1 if t.data == 'param_name' else 0
+
+  emit = StringEmit(orig_sig)
+  # Emit full function return type.
+  emit_string(typed_child(tree, 1, 'fnname'), emit, emit_fn)
+  emit.append('(')
+  # Emit parameter list w/out parameter names.
+  emit_string(typed_child(tree, 3, 'params'), emit, emit_fn)
+  emit.append(') -> ')
+  emit_string(typed_child(tree, 0, 'type'), emit, emit_fn)
+  return str(emit)
 
 
 def type_core(t):
@@ -132,17 +249,23 @@ def get_parameters(t):
   return params
 
 
-def list_get(l, n):
-  return l[n] if n < len(l) else None
+def param_name(t):
+  assert isinstance(t, lark.tree.Tree)
+  c = t.children[1]
+  assert isinstance(c, lark.tree.Tree)
+  assert c.data == 'param_name'
+  token = c.children[0]
+  assert isinstance(token, lark.lexer.Token)
+  return token.value
 
 
 def get_return_value(rtype, rname, param, var, ref_param=None):
   if type_is_const(rtype) or type_is_refptr(rtype, '&'):
     assert param
-    return param.children[1].value
+    return param_name(param)
   else:
     return 'CreateXlaTensor({}, DeviceFromTensor({}))'.format(
-        rname, ref_param or param.children[1].value)
+        rname, ref_param or param_name(param))
 
 
 def get_tuple_return(rtype, rtype_str, rname, params, param_vars):
@@ -186,14 +309,16 @@ def generate_return_stmt(t, orig_sig, fname, rname, params, param_vars):
   return '  return {};\n'.format(retstr)
 
 
-def get_xla_wrapper(t, orig_sig):
-  params = get_parameters(t)
-  sig, fname = get_function_signature(t, orig_sig, lambda x: 'xla_' + x)
+def get_xla_wrapper(orig_sig):
+  tree = _PARSER.parse(orig_sig)
+  xtree = _XPARSER.parse(orig_sig)
+  params = get_parameters(tree)
+  sig, fname = get_function_signature(tree, orig_sig, lambda x: 'xla_' + x)
   code = 'static {} {{\n'.format(sig)
   param_vars = []
   for p in params:
     ptype = p.children[0]
-    pname = p.children[1].value
+    pname = param_name(p)
     if type_core(ptype) == 'TensorList':
       xname = '_l_{}'.format(pname)
       code += '  auto {} = XlaCreateTensorList({});\n'.format(xname, pname)
@@ -215,17 +340,19 @@ def get_xla_wrapper(t, orig_sig):
     code += v
   code += ');\n'
   code += '  (void) __result; // Avoid warnings in case not used\n'
-  code += generate_return_stmt(t, orig_sig, fname, '__result', params,
+  code += generate_return_stmt(tree, orig_sig, fname, '__result', params,
                                param_vars)
   code += '}'
   return FuncGen(
+      tree=tree,
+      xtree=xtree,
       func=fname,
       xfunc='xla_{}'.format(fname),
       code=code,
       sig=orig_sig,
       cppsig=sig,
-      funsig=None,
-      mapsig=None)
+      funsig=create_stdfunc_sig(xtree, orig_sig),
+      mapsig=create_map_sig(xtree, orig_sig))
 
 
 def extract_functions(path):
@@ -254,10 +381,19 @@ def generate(args, files):
     print(
         'Extracted {} functions from {}'.format(len(fndefs), fname),
         file=sys.stderr)
+    fgens = []
     for ts in fndefs:
-      tree = _PARSER.parse(ts)
-      fgen = get_xla_wrapper(tree, ts)
+      fgens.append(get_xla_wrapper(ts))
+
+    for fgen in fgens:
       print('{}\n'.format(fgen.code), file=ofile)
+    print('\nstatic void RegisterFunctions() {', file=ofile)
+    for fgen in fgens:
+      print(
+          '  register_extension_backend_op(\n    Backend::TPU,\n    "{}",\n    &{});'
+          .format(fgen.mapsig, fgen.xfunc),
+          file=ofile)
+    print('}\n', file=ofile)
 
 
 if __name__ == '__main__':
