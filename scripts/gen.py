@@ -1,10 +1,16 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+
 import argparse
+import collections
 import lark
 import os
 import re
 import sys
+
+FuncGen = collections.namedtuple(
+    'FuncGen', 'func, xfunc, code, sig, cppsig, funsig, mapsig')
 
 _PARSER = lark.Lark(
     r"""
@@ -34,6 +40,7 @@ _PARSER = lark.Lark(
     propagate_positions=True)
 
 _FN_BLACKLIST = set([
+    # ATEN functions
     'toBackend',
     'toScalarType',
     'copy',
@@ -45,6 +52,7 @@ _FN_BLACKLIST = set([
     'storageWithAllocator',
     'unsafeStorageFromTH',
     'unsafeTensorFromTH',
+    # XLA/TPU functions
 ])
 
 
@@ -103,14 +111,14 @@ def get_function_name(t):
   return fname.children[0].value
 
 
-def get_function_signature(t, orig_sig, prefix):
+def get_function_signature(t, orig_sig, namefn):
   assert isinstance(t, lark.tree.Tree)
   fname = t.children[1]
   assert isinstance(fname, lark.tree.Tree)
   assert fname.data == 'fnname'
   token = fname.children[0]
   assert isinstance(token, lark.lexer.Token)
-  return (orig_sig[0:token.column - 1] + prefix + token.value +
+  return (orig_sig[0:token.column - 1] + namefn(token.value) +
           orig_sig[token.end_column - 1:]), token.value
 
 
@@ -180,20 +188,24 @@ def generate_return_stmt(t, orig_sig, fname, rname, params, param_vars):
 
 def get_xla_wrapper(t, orig_sig):
   params = get_parameters(t)
-  sig, fname = get_function_signature(t, orig_sig, 'xla_')
+  sig, fname = get_function_signature(t, orig_sig, lambda x: 'xla_' + x)
   code = 'static {} {{\n'.format(sig)
   param_vars = []
   for p in params:
     ptype = p.children[0]
     pname = p.children[1].value
-    if type_core(ptype) != 'Tensor':
+    if type_core(ptype) == 'TensorList':
+      xname = '_l_{}'.format(pname)
+      code += '  auto {} = XlaCreateTensorList({});\n'.format(xname, pname)
+      param_vars.append(xname)
+    elif type_core(ptype) != 'Tensor':
       param_vars.append(pname)
     elif type_is_const(ptype):
-      xname = '__r{}'.format(pname)
+      xname = '_r_{}'.format(pname)
       code += '  auto {} = {}.alias().ToTensor();\n'.format(xname, pname)
       param_vars.append(xname)
     else:
-      xname = '__w{}'.format(pname)
+      xname = '_w_{}'.format(pname)
       code += '  auto {} = {}.alias().ToMutableTensor();\n'.format(xname, pname)
       param_vars.append(xname)
   code += '  auto&& __result = {}('.format(fname)
@@ -205,7 +217,15 @@ def get_xla_wrapper(t, orig_sig):
   code += '  (void) __result; // Avoid warnings in case not used\n'
   code += generate_return_stmt(t, orig_sig, fname, '__result', params,
                                param_vars)
-  return code + '}'
+  code += '}'
+  return FuncGen(
+      func=fname,
+      xfunc='xla_{}'.format(fname),
+      code=code,
+      sig=orig_sig,
+      cppsig=sig,
+      funsig=None,
+      mapsig=None)
 
 
 def extract_functions(path):
@@ -225,12 +245,23 @@ def extract_functions(path):
   return functions
 
 
+def generate(args, files):
+  ofile = sys.stdout
+  if args.output:
+    ofile = open(args.output, 'w')
+  for fname in files:
+    fndefs = extract_functions(fname)
+    print(
+        'Extracted {} functions from {}'.format(len(fndefs), fname),
+        file=sys.stderr)
+    for ts in fndefs:
+      tree = _PARSER.parse(ts)
+      fgen = get_xla_wrapper(tree, ts)
+      print('{}\n'.format(fgen.code), file=ofile)
+
+
 if __name__ == '__main__':
   arg_parser = argparse.ArgumentParser()
-  args, leftovers = arg_parser.parse_known_args()
-
-  for fname in leftovers:
-    for ts in extract_functions(fname):
-      tree = _PARSER.parse(ts)
-      code = get_xla_wrapper(tree, ts)
-      print('{}\n'.format(code))
+  arg_parser.add_argument('--output', type=str)
+  args, files = arg_parser.parse_known_args()
+  generate(args, files)
