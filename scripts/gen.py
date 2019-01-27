@@ -56,6 +56,9 @@ _FN_BLACKLIST = set([
     'unsafeTensorFromTH',
     # XLA/TPU functions
 ])
+_FN_BLACKLIST_REGEX = [
+    r'.*cudnn',
+]
 
 
 def first_match(t):
@@ -99,6 +102,15 @@ class StringEmit(object):
 
 def list_get(l, n):
   return l[n] if n < len(l) else None
+
+
+def is_blacklisted_fn(fname):
+  if fname in _FN_BLACKLIST:
+    return True
+  for frx in _FN_BLACKLIST_REGEX:
+    if re.match(frx, fname):
+      return True
+  return False
 
 
 def for_every_token(t, fn):
@@ -235,8 +247,9 @@ def get_function_signature(t, orig_sig, namefn):
   assert fname.data == 'fnname'
   token = fname.children[0]
   assert isinstance(token, lark.lexer.Token)
-  return (orig_sig[0:token.column - 1] + namefn(token.value) +
-          orig_sig[token.end_column - 1:]), token.value
+  xfname = namefn(token.value)
+  return (orig_sig[0:token.column - 1] + xfname +
+          orig_sig[token.end_column - 1:]), token.value, xfname
 
 
 def get_parameters(t):
@@ -302,6 +315,8 @@ def generate_return_stmt(t, orig_sig, fname, rname, params, param_vars):
   if ctype == 'std::tuple':
     rtype_str = get_return_type_str(t, orig_sig)
     retstr = get_tuple_return(rtype, rtype_str, rname, params, param_vars)
+  elif ctype == 'std::vector':
+    retstr = 'XlaFromTensorVector({})'.format(rname)
   elif ctype == 'Tensor':
     retstr = get_return_value(rtype, rname, params[0], param_vars[0])
   else:
@@ -309,11 +324,21 @@ def generate_return_stmt(t, orig_sig, fname, rname, params, param_vars):
   return '  return {};\n'.format(retstr)
 
 
-def get_xla_wrapper(orig_sig):
+def get_xla_wrapper(orig_sig, defdb):
   tree = _PARSER.parse(orig_sig)
   xtree = _XPARSER.parse(orig_sig)
   params = get_parameters(tree)
-  sig, fname = get_function_signature(tree, orig_sig, lambda x: 'xla_' + x)
+
+  def gen_fnname(x):
+    post = ''
+    if x in defdb:
+      post = '_{}'.format(defdb[x])
+      defdb[x] += 1
+    else:
+      defdb[x] = 1
+    return 'xla_' + x + post
+
+  sig, fname, xfname = get_function_signature(tree, orig_sig, gen_fnname)
   code = 'static {} {{\n'.format(sig)
   param_vars = []
   for p in params:
@@ -347,7 +372,7 @@ def get_xla_wrapper(orig_sig):
       tree=tree,
       xtree=xtree,
       func=fname,
-      xfunc='xla_{}'.format(fname),
+      xfunc=xfname,
       code=code,
       sig=orig_sig,
       cppsig=sig,
@@ -365,7 +390,7 @@ def extract_functions(path):
     try:
       tree = _PARSER.parse(fndef)
       fname = get_function_name(tree)
-      if fname not in _FN_BLACKLIST:
+      if not is_blacklisted_fn(fname):
         functions.append(fndef)
     except:
       pass
@@ -382,8 +407,9 @@ def generate(args, files):
         'Extracted {} functions from {}'.format(len(fndefs), fname),
         file=sys.stderr)
     fgens = []
+    defdb = {}
     for ts in fndefs:
-      fgens.append(get_xla_wrapper(ts))
+      fgens.append(get_xla_wrapper(ts, defdb))
 
     for fgen in fgens:
       print('{}\n'.format(fgen.code), file=ofile)
