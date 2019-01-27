@@ -368,7 +368,7 @@ def get_xla_wrapper(orig_sig, defdb):
       xname = '_w_{}'.format(pname)
       code += '  auto {} = {}.alias().ToMutableTensor();\n'.format(xname, pname)
       param_vars.append(xname)
-  code += '  auto&& __result = {}('.format(fname)
+  code += '  auto&& __result = at::{}('.format(fname)
   for i, v in enumerate(param_vars):
     if i > 0:
       code += ', '
