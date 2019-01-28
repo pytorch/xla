@@ -63,16 +63,6 @@ xla::int64 GetFlatTensorOffset(const S& strides,
   return base;
 }
 
-std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
-  std::vector<xla::int64> strides(shape.rank());
-  xla::int64 stride = 1;
-  for (auto dim : shape.layout().minor_to_major()) {
-    strides[dim] = stride;
-    stride *= shape.dimensions(dim);
-  }
-  return strides;
-}
-
 // The tensorflow::bfloat16 does not have implicit cast operations, so using
 // std::copy() for it, is not going to work.
 struct CopyDirect {};
@@ -293,6 +283,16 @@ at::Tensor XlaLiteralToTensor(const xla::Literal& literal, at::ScalarType atype,
 }
 
 }  // namespace
+
+std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
+  std::vector<xla::int64> strides(shape.rank());
+  xla::int64 stride = 1;
+  for (auto dim : shape.layout().minor_to_major()) {
+    strides[dim] = stride;
+    stride *= shape.dimensions(dim);
+  }
+  return strides;
+}
 
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
   switch (literal.shape().element_type()) {
