@@ -36,6 +36,12 @@ std::vector<at::Tensor> CreateXlaTensors(
 // not an XLA tensor.
 Device XlaTensorDevice(const at::Tensor& tensor);
 
+static inline Device XlaTensorDevice(const at::TensorList& tensors) {
+  return XlaTensorDevice(tensors[0]);
+}
+
+Device XlaTensorDevice(const at::TensorOptions& tensor_options);
+
 // Creates an XLA tensor holding the data in tensor, on the given device.
 at::Tensor CreateXlaTensor(const at::Tensor& tensor, const Device& device);
 
