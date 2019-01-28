@@ -289,9 +289,26 @@ def get_return_value(rtype, rname, param, var, ref_param=None):
         rname, ref_param or param_name(param))
 
 
+def get_reference_param(params):
+  # The refenrece parameter is the Tensor object which we use to extract the
+  # result Tensor device, if any.
+  ref_param = None
+  for p in params:
+    ptype = p.children[0]
+    cptype = type_core(ptype)
+    pname = param_name(p)
+    if cptype != 'Tensor':
+      continue
+    if pname == 'self':
+      return pname
+    if type_is_const(ptype):
+      ref_param = pname
+  return ref_param
+
+
 def get_tuple_return(rtype, rtype_str, rname, params, param_vars):
   types = tuple_type_list(rtype)
-  ref_param = 'self'
+  ref_param = get_reference_param(params)
   retstr = '{}('.format(rtype_str)
   for i, ttype in enumerate(types):
     if i > 0:
@@ -326,7 +343,12 @@ def generate_return_stmt(t, orig_sig, fname, rname, params, param_vars):
   elif ctype == 'std::vector':
     retstr = 'CreateXlaTensors({})'.format(rname)
   elif ctype == 'Tensor':
-    retstr = get_return_value(rtype, rname, params[0], param_vars[0])
+    retstr = get_return_value(
+        rtype,
+        rname,
+        params[0],
+        param_vars[0],
+        ref_param=get_reference_param(params))
   else:
     retstr = rname
   return '  return {};\n'.format(retstr)
@@ -353,12 +375,13 @@ def get_xla_wrapper(orig_sig, defdb):
   param_vars = []
   for p in params:
     ptype = p.children[0]
+    cptype = type_core(ptype)
     pname = param_name(p)
-    if type_core(ptype) == 'TensorList':
+    if cptype == 'TensorList':
       xname = '_l_{}'.format(pname)
       code += '  auto {} = XlaCreateTensorList({});\n'.format(xname, pname)
       param_vars.append(xname)
-    elif type_core(ptype) != 'Tensor':
+    elif cptype != 'Tensor':
       param_vars.append(pname)
     elif type_is_const(ptype):
       xname = '_r_{}'.format(pname)
