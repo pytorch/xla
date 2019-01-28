@@ -280,7 +280,7 @@ def param_name(t):
   return token.value
 
 
-def get_return_value(rtype, rname, param, var, ref_param=None):
+def get_return_value(rtype, rname, param, var, ref_param):
   if type_is_const(rtype) or type_is_refptr(rtype, '&'):
     # If the return type is a const or a reference, return the matching
     # parameter. In these cases we operated on XLA tensors data (the ATEN one),
@@ -291,7 +291,7 @@ def get_return_value(rtype, rname, param, var, ref_param=None):
     # If instead the return type is a value Tensor, we create a new one by
     # wrapping the proper local variable which has been created by calling
     # into the CPU tensor implementation.
-    return 'CreateXlaTensor({}, XlaTensorDevice({}))'.format(
+    return 'bridge::CreateXlaTensor({}, bridge::XlaTensorDevice({}))'.format(
         rname, ref_param or param_name(param))
 
 
@@ -312,20 +312,15 @@ def get_reference_param(params):
   return ref_param
 
 
-def get_tuple_return(rtype, rtype_str, rname, params, param_vars):
+def get_tuple_return(rtype, rtype_str, rname, params, param_vars, ref_param):
   types = tuple_type_list(rtype)
-  ref_param = get_reference_param(params)
   retstr = '{}('.format(rtype_str)
   for i, ttype in enumerate(types):
     if i > 0:
       retstr += ', '
     tuple_var = '{}.get<{}>()'.format(rname, i)
-    retstr += get_return_value(
-        ttype,
-        tuple_var,
-        list_get(params, i),
-        list_get(param_vars, i),
-        ref_param=ref_param)
+    retstr += get_return_value(ttype, tuple_var, list_get(params, i),
+                               list_get(param_vars, i), ref_param)
   return retstr + ')'
 
 
@@ -340,21 +335,19 @@ def get_return_type_str(t, orig_sig):
 
 
 def generate_return_stmt(t, orig_sig, fname, rname, params, param_vars):
+  ref_param = get_reference_param(params)
   assert isinstance(t, lark.tree.Tree)
   rtype = t.children[0]
   ctype = type_core(rtype)
   if ctype == 'std::tuple':
     rtype_str = get_return_type_str(t, orig_sig)
-    retstr = get_tuple_return(rtype, rtype_str, rname, params, param_vars)
+    retstr = get_tuple_return(rtype, rtype_str, rname, params, param_vars,
+                              ref_param)
   elif ctype == 'std::vector':
-    retstr = 'CreateXlaTensors({})'.format(rname)
+    retstr = 'bridge::CreateXlaTensors({}, bridge::XlaTensorDevice({}))'.format(
+        rname, ref_param)
   elif ctype == 'Tensor':
-    retstr = get_return_value(
-        rtype,
-        rname,
-        params[0],
-        param_vars[0],
-        ref_param=get_reference_param(params))
+    retstr = get_return_value(rtype, rname, params[0], param_vars[0], ref_param)
   elif ctype == 'void' and not type_is_refptr(rtype, '*'):
     return ''
   else:
@@ -396,17 +389,19 @@ def get_xla_wrapper(orig_sig, defdb):
     pname = param_name(p)
     if cptype == 'TensorList':
       xname = '_l_{}'.format(pname)
-      code += '  auto {} = XlaCreateTensorList({});\n'.format(xname, pname)
+      code += '  auto {} = bridge::XlaCreateTensorList({});\n'.format(
+          xname, pname)
       param_vars.append(xname)
     elif cptype != 'Tensor':
       param_vars.append(pname)
     elif type_is_const(ptype):
       xname = '_r_{}'.format(pname)
-      code += '  auto {} = XlaToAtenTensor({});\n'.format(xname, pname)
+      code += '  auto {} = bridge::XlaToAtenTensor({});\n'.format(xname, pname)
       param_vars.append(xname)
     else:
       xname = '_w_{}'.format(pname)
-      code += '  auto {} = XlaToAtenMutableTensor({});\n'.format(xname, pname)
+      code += '  auto {} = bridge::XlaToAtenMutableTensor({});\n'.format(
+          xname, pname)
       param_vars.append(xname)
   result_assign = generate_result_assignment(tree, '__result')
   code += '  {}at::{}('.format(result_assign, fname)
@@ -416,7 +411,8 @@ def get_xla_wrapper(orig_sig, defdb):
     code += v
   code += ');\n'
   if result_assign:
-    code += '  (void) __result; // Avoid warnings in case not used\n'
+    code += ('  static_cast<void>(__result); // Avoid warnings in case not '
+             'used\n')
   code += generate_return_stmt(tree, orig_sig, fname,
                                '__result' if result_assign else None, params,
                                param_vars)
@@ -467,10 +463,10 @@ def generate(args, files):
     print(_CPP_HEADER.format(os.path.basename(sys.argv[0])), file=ofile)
     for fgen in fgens:
       print('{}\n'.format(fgen.code), file=ofile)
-    print('\nstatic void RegisterFunctions() {', file=ofile)
+    print('\nvoid RegisterAtenTypeFunctions() {', file=ofile)
     for fgen in fgens:
       print(
-          '  register_extension_backend_op(\n    Backend::TPU,\n    "{}",\n    &{});'
+          '  register_extension_backend_op(\n    Backend::XLA,\n    "{}",\n    &{});'
           .format(fgen.mapsig, fgen.xfunc),
           file=ofile)
     print('}\n\n}  // namespace torch_xla', file=ofile)

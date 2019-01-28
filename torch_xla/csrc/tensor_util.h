@@ -12,6 +12,8 @@
 
 namespace torch_xla {
 
+std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape);
+
 // Create an XLA shape with the given dimensions and type, suitable to be used
 // in the specified device type. The type of device can affect the choice of the
 // XLA layout.
