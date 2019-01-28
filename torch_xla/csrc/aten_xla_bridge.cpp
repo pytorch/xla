@@ -42,7 +42,8 @@ Device XlaTensorDevice(const at::Tensor& tensor) {
 }
 
 Device XlaTensorDevice(const at::TensorOptions& tensor_options) {
-  return Device(DeviceType::CPU, 0);
+  // TODO: Read and properly map the device from tensor_options.
+  return Device(DeviceType::TPU, 0);
 }
 
 at::Tensor CreateXlaTensor(const at::Tensor& tensor, const Device& device) {
