@@ -41,6 +41,10 @@ Device XlaTensorDevice(const at::Tensor& tensor) {
   return GetXlaTensor(tensor).GetDevice();
 }
 
+Device XlaTensorDevice(const at::TensorOptions& tensor_options) {
+  return Device(DeviceType::CPU, 0);
+}
+
 at::Tensor CreateXlaTensor(const at::Tensor& tensor, const Device& device) {
   XLATensor xtensor =
       XLATensor::Create(tensor, device, /*requires_grad=*/false);
