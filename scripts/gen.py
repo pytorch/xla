@@ -349,9 +349,20 @@ def generate_return_stmt(t, orig_sig, fname, rname, params, param_vars):
         params[0],
         param_vars[0],
         ref_param=get_reference_param(params))
+  elif ctype == 'void' and not type_is_refptr(rtype, '*'):
+    return ''
   else:
     retstr = rname
   return '  return {};\n'.format(retstr)
+
+
+def generate_result_assignment(t, rname):
+  assert isinstance(t, lark.tree.Tree)
+  rtype = t.children[0]
+  ctype = type_core(rtype)
+  if ctype == 'void' and not type_is_refptr(rtype, '*'):
+    return ''
+  return 'auto&& {} = '.format(rname)
 
 
 def get_xla_wrapper(orig_sig, defdb):
@@ -391,14 +402,17 @@ def get_xla_wrapper(orig_sig, defdb):
       xname = '_w_{}'.format(pname)
       code += '  auto {} = {}.alias().ToMutableTensor();\n'.format(xname, pname)
       param_vars.append(xname)
-  code += '  auto&& __result = at::{}('.format(fname)
+  result_assign = generate_result_assignment(tree, '__result')
+  code += '  {}at::{}('.format(result_assign, fname)
   for i, v in enumerate(param_vars):
     if i > 0:
       code += ', '
     code += v
   code += ');\n'
-  code += '  (void) __result; // Avoid warnings in case not used\n'
-  code += generate_return_stmt(tree, orig_sig, fname, '__result', params,
+  if result_assign:
+    code += '  (void) __result; // Avoid warnings in case not used\n'
+  code += generate_return_stmt(tree, orig_sig, fname,
+                               '__result' if result_assign else None, params,
                                param_vars)
   code += '}'
   return FuncGen(
