@@ -88,7 +88,7 @@ class XLATensor {
   // the source tensor.
   void ReferenceDataFrom(const XLATensor& source);
 
-  std::vector<int64_t> Size() const;
+  std::vector<int64_t> DimensionSizes() const;
 
   // Basic tensor operations used by the optimizers.
   XLATensor add(const XLATensor& other, const at::Scalar& alpha) const;
