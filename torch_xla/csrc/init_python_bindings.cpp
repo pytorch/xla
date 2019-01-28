@@ -102,7 +102,7 @@ void InitXlaTensorBindings(py::module m) {
            }),
            py::arg("tensor"), py::arg("device") = "")
       .def("to_tensor", [](XLATensor& s) { return s.ToTensor(); })
-      .def("size", [](const XLATensor& s) { return s.Size(); })
+      .def("size", [](const XLATensor& s) { return s.DimensionSizes(); })
       .def("device",
            [](const XLATensor& s) { return s.GetDevice().ToString(); })
       .def("__add__", [](const XLATensor& self,

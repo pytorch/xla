@@ -346,7 +346,7 @@ void XLATensor::ReferenceDataFrom(const XLATensor& source) {
   data()->tensor_data = source.data()->tensor_data;
 }
 
-std::vector<int64_t> XLATensor::Size() const {
+std::vector<int64_t> XLATensor::DimensionSizes() const {
   auto tensor_shape = shape();
   return xla::util::ToVector<int64_t>(tensor_shape.get().dimensions());
 }
