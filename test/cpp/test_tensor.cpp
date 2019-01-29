@@ -9,9 +9,54 @@
 #include "torch_xla_test.h"
 
 namespace torch_xla {
+
+extern void HijackAtenTypes();
+
+struct HIPGuardImpl final : public c10::impl::DeviceGuardImplInterface {
+  HIPGuardImpl() {}
+  c10::DeviceType type() const override {
+    return at::DeviceType::HIP;
+  }
+  c10::Device exchangeDevice(c10::Device) const override {
+    // no-op
+    return c10::Device(c10::DeviceType::HIP, -1);
+  }
+  c10::Device getDevice() const override {
+    return c10::Device(c10::DeviceType::HIP, -1);
+  }
+  void setDevice(c10::Device) const override {
+    // no-op
+  }
+  void uncheckedSetDevice(c10::Device d) const noexcept override {
+    // no-op
+  }
+  at::Stream getStream(c10::Device d) const noexcept override {
+    // no-op
+    return at::Stream(at::Stream::DEFAULT, c10::Device(c10::DeviceType::HIP, -1));
+  }
+  // NB: These do NOT set the current device
+  at::Stream exchangeStream(at::Stream s) const noexcept override {
+    // no-op
+    return at::Stream(at::Stream::DEFAULT, c10::Device(c10::DeviceType::HIP, -1));
+  }
+  c10::DeviceIndex deviceCount() const override {
+    return 1;
+  }
+};
+
 namespace cpp_test {
 
 using TensorTest = TorchXlaTest;
+
+TEST_F(TensorTest, TestHack) {
+  // C10_REGISTER_GUARD_IMPL(HIP, HIPGuardImpl);
+  HijackAtenTypes();
+
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat).layout(at::kSparse));
+  at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat).layout(at::kSparse));
+  auto c = a + b;
+  std::cerr << c << "\n";
+}
 
 TEST_F(TensorTest, TestAdd) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
