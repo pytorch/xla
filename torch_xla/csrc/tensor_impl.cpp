@@ -6,7 +6,7 @@
 namespace torch_xla {
 
 // TODO: Replace UndefinedTensorId with proper type.
-TensorImpl::TensorImpl(XLATensor tensor)
+XLATensorImpl::XLATensorImpl(XLATensor tensor)
     : c10::TensorImpl(c10::UndefinedTensorId(), GetTypeMeta(tensor),
                       /*allocator=*/nullptr, /*is_variable=*/false),
       tensor_(std::move(tensor)) {
@@ -22,7 +22,7 @@ TensorImpl::TensorImpl(XLATensor tensor)
   }
 }
 
-caffe2::TypeMeta TensorImpl::GetTypeMeta(const XLATensor& tensor) {
+caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
   auto shape = tensor.shape();
   switch (shape.get().element_type()) {
     case xla::PrimitiveType::F32:
