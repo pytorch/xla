@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch/csrc/autograd/variable.h"
 
 namespace torch_xla {
@@ -17,7 +18,11 @@ std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape);
 // Create an XLA shape with the given dimensions and type, suitable to be used
 // in the specified device type. The type of device can affect the choice of the
 // XLA layout.
-xla::Shape MakeArrayShapeFromDimensions(const at::IntList& tensor_dimensions,
+xla::Shape MakeArrayShapeFromDimensions(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    xla::PrimitiveType type, DeviceType device_type);
+
+xla::Shape MakeArrayShapeFromDimensions(const at::IntList& dimensions,
                                         xla::PrimitiveType type,
                                         DeviceType device_type);
 
