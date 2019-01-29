@@ -35,8 +35,9 @@ xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type) {
 }
 
 // Creates a minor-to-major layout from given dimensions.
-xla::Shape MakeTorchTensorLayout(const std::vector<xla::int64>& dimensions,
-                                 xla::PrimitiveType type) {
+xla::Shape MakeTorchTensorLayout(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    xla::PrimitiveType type) {
   return xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
 }
 
@@ -329,16 +330,22 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal) {
   }
 }
 
-xla::Shape MakeArrayShapeFromDimensions(const at::IntList& tensor_dimensions,
-                                        xla::PrimitiveType type,
-                                        DeviceType device_type) {
-  const auto dimensions = XlaHelpers::I64List(tensor_dimensions);
+xla::Shape MakeArrayShapeFromDimensions(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    xla::PrimitiveType type, DeviceType device_type) {
   if (dimensions.size() == 4 && device_type == DeviceType::TPU) {
     // Use a TPU-compatible layout for 4D tensors -- batch and feature in minor
     // dimensions (HWCN).
     return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, {0, 1, 3, 2});
   }
   return MakeTorchTensorLayout(dimensions, type);
+}
+
+xla::Shape MakeArrayShapeFromDimensions(const at::IntList& dimensions,
+                                        xla::PrimitiveType type,
+                                        DeviceType device_type) {
+  return MakeArrayShapeFromDimensions(XlaHelpers::I64List(dimensions), type,
+                                      device_type);
 }
 
 std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(

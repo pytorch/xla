@@ -607,8 +607,9 @@ XLATensor XLATensor::view(
     // to create the new IR Node.
     std::vector<xla::int64> complete_dimensions =
         GetCompleteShape(output_size, data()->view->shape.dimensions());
-    xla::Shape shape = xla::ShapeUtil::MakeShape(
-        data()->view->shape.element_type(), complete_dimensions);
+    xla::Shape shape = MakeArrayShapeFromDimensions(
+        complete_dimensions, data()->view->shape.element_type(),
+        GetDevice().hw_type);
     return Create(std::make_shared<View>(std::move(shape), data()->view->alias),
                   GetDevice());
   }
@@ -621,8 +622,9 @@ XLATensor XLATensor::view(
 
   std::vector<xla::int64> complete_dimensions =
       GetCompleteShape(output_size, ir_node->shape().dimensions());
-  xla::Shape shape = xla::ShapeUtil::MakeShape(ir_node->shape().element_type(),
-                                               complete_dimensions);
+  xla::Shape shape = MakeArrayShapeFromDimensions(
+      complete_dimensions, ir_node->shape().element_type(),
+      GetDevice().hw_type);
   return Create(std::make_shared<View>(std::move(shape), alias), GetDevice());
 }
 
