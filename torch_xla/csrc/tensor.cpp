@@ -645,9 +645,10 @@ void XLATensor::ApplyPendingGraph() {
       xla::XlaOp root = lowering_ctx.GetOutputOp(ir::Output(ir_node.get(), 0));
       xla::XlaComputation computation =
           lowering_ctx.Build(root).ConsumeValueOrDie();
+      auto output_shape = shape();
       auto compiled_computation = xla::ComputationClient::Get()->Compile(
           std::move(computation), {GetDevice().ToString()},
-          /*output_shape=*/nullptr);
+          &output_shape.get());
       xla::ComputationClient::ExecuteComputationOptions options;
       options.explode_tuple = false;
       auto results = xla::ComputationClient::Get()->ExecuteComputation(
