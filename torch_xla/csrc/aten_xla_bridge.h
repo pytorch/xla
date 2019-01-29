@@ -37,7 +37,7 @@ std::vector<at::Tensor> CreateXlaTensors(
 Device XlaTensorDevice(const at::Tensor& tensor);
 
 static inline Device XlaTensorDevice(const at::TensorList& tensors) {
-  return XlaTensorDevice(tensors[0]);
+  return XlaTensorDevice(tensors.at(0));
 }
 
 Device XlaTensorDevice(const at::TensorOptions& tensor_options);

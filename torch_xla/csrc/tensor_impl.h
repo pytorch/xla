@@ -10,9 +10,9 @@ namespace torch_xla {
 
 // Tensor implementation class used to be fed to the at::Tensor.
 // Its scope is just to handle an XLATensor.
-class TensorImpl : public c10::TensorImpl {
+class XLATensorImpl : public c10::TensorImpl {
  public:
-  TensorImpl(XLATensor tensor);
+  XLATensorImpl(XLATensor tensor);
 
   XLATensor& tensor() { return tensor_; }
 

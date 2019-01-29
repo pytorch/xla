@@ -7,7 +7,8 @@ namespace torch_xla {
 namespace bridge {
 
 XLATensor& GetXlaTensor(const at::Tensor& tensor) {
-  TensorImpl* impl = dynamic_cast<TensorImpl*>(tensor.unsafeGetTensorImpl());
+  XLATensorImpl* impl =
+      dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
   XLA_CHECK(impl != nullptr);
   return impl->tensor();
 }
@@ -49,7 +50,8 @@ Device XlaTensorDevice(const at::TensorOptions& tensor_options) {
 at::Tensor CreateXlaTensor(const at::Tensor& tensor, const Device& device) {
   XLATensor xtensor =
       XLATensor::Create(tensor, device, /*requires_grad=*/false);
-  return at::Tensor(c10::intrusive_ptr<TensorImpl>::make(std::move(xtensor)));
+  return at::Tensor(
+      c10::intrusive_ptr<XLATensorImpl>::make(std::move(xtensor)));
 }
 
 }  // namespace bridge
