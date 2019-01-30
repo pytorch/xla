@@ -168,6 +168,10 @@ at::Type* Get{type_name}() {{
 }}
 """
 
+_XLA_FUNCTIONS = {
+    'empty': 'bridge::CreateEmptyTensor',
+}
+
 _RESULT_NAME = 'x_result'
 
 
@@ -457,6 +461,13 @@ def param_name(t):
   return token.value
 
 
+def param_type(t):
+  assert isinstance(t, lark.tree.Tree)
+  c = t.children[0]
+  assert isinstance(c, lark.tree.Tree)
+  return c
+
+
 def get_return_value(rtype, rname, param, var, ref_param):
   crtype = type_core(rtype)
   if type_is_const(rtype) or type_is_refptr(rtype, '&'):
@@ -472,7 +483,7 @@ def get_return_value(rtype, rname, param, var, ref_param):
     # wrapping the proper local variable which has been created by calling
     # into the CPU tensor implementation.
     return 'bridge::CreateXlaTensor({}, bridge::XlaTensorDevice({}))'.format(
-        rname, ref_param or param_name(param))
+        rname, param_name(ref_param))
 
 
 def get_reference_param(params):
@@ -481,17 +492,19 @@ def get_reference_param(params):
   ref_param = None
   other = None
   for p in params:
-    ptype = p.children[0]
+    ptype = param_type(p)
     cptype = type_core(ptype)
     pname = param_name(p)
     if cptype == 'TensorOptions' or cptype == 'TensorList':
-      other = pname
+      other = p
     if cptype != 'Tensor':
       continue
     if pname == 'self':
-      return pname
+      return p
     if type_is_const(ptype):
-      ref_param = pname
+      ref_param = p
+    else:
+      other = p
   return ref_param or other
 
 
@@ -527,7 +540,7 @@ def generate_return_stmt(t, rtype_str, fname, rname, params, param_vars,
                               ref_param)
   elif ctype == 'std::vector':
     retstr = 'bridge::CreateXlaTensors({}, bridge::XlaTensorDevice({}))'.format(
-        rname, ref_param)
+        rname, param_name(ref_param))
   elif ctype == 'Tensor':
     retstr = get_return_value(rtype, rname, params[0], param_vars[0], ref_param)
   elif ctype == 'void' and not type_is_refptr(rtype, '*'):
@@ -544,6 +557,11 @@ def generate_result_assignment(t, rname):
   if ctype == 'void' and not type_is_refptr(rtype, '*'):
     return ''
   return 'auto&& {} = '.format(rname)
+
+
+def get_handling_function(ctx, fname, xla_ref_param):
+  xla_function = _XLA_FUNCTIONS.get(fname, None)
+  return xla_function or ctx.get_function(fname, xla_ref_param)
 
 
 def get_xla_wrapper(orig_sig, ctx):
@@ -569,10 +587,10 @@ def get_xla_wrapper(orig_sig, ctx):
 
   sig, fname, xfname = get_function_signature(rwxtree, rwsig, gen_fnname)
   code = '{} {}{{\n'.format(sig, 'const ' if ctx.generate_class else '')
-  xla_ref_param = ref_param
+  xla_ref_param = param_name(ref_param) if ref_param else None
   param_vars = []
   for p in params:
-    ptype = p.children[0]
+    ptype = param_type(p)
     cptype = type_core(ptype)
     pname = param_name(p)
     if cptype == 'TensorList':
@@ -591,11 +609,11 @@ def get_xla_wrapper(orig_sig, ctx):
       code += '  auto {} = bridge::XlaToAtenMutableTensor({});\n'.format(
           xname, pname)
       param_vars.append(xname)
-    if pname == ref_param:
+    if p == ref_param:
       xla_ref_param = param_vars[-1]
   result_assign = generate_result_assignment(tree, _RESULT_NAME)
-  code += '  {}{}('.format(result_assign, ctx.get_function(
-      fname, xla_ref_param))
+  code += '  {}{}('.format(result_assign,
+                           get_handling_function(ctx, fname, xla_ref_param))
   for i, v in enumerate(param_vars):
     if i > 0:
       code += ', '
@@ -642,9 +660,8 @@ def extract_functions(path):
 def generate_registrations(fgens):
   code = 'void RegisterAtenTypeFunctions() {\n'
   for fgen in fgens:
-    code += (
-        '  at::register_extension_backend_op(\n    at::Backend::XLA,\n    "{}",\n'
-        '    &{});\n'.format(fgen.mapsig, fgen.xfunc))
+    code += ('  at::register_extension_backend_op(\n    at::Backend::XLA,\n    '
+             '"{}",\n    &{});\n'.format(fgen.mapsig, fgen.xfunc))
   return code + '}\n'
 
 

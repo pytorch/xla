@@ -12,6 +12,10 @@
 namespace torch_xla {
 namespace bridge {
 
+// Helper function which creates an empty CPU ATEN tensor.
+at::Tensor CreateEmptyTensor(at::IntList size,
+                             const at::TensorOptions& options);
+
 // Extracts the XLATensor out of our version of at::Tensor. Throws an exception
 // if tensor is not an XLA tensor.
 XLATensor& GetXlaTensor(const at::Tensor& tensor);
@@ -29,8 +33,8 @@ at::Tensor XlaToAtenMutableTensor(const at::Tensor& tensor);
 
 // Given a vector of at::Tensor creates a vector of XLA tensors on the given
 // device.
-std::vector<at::Tensor> CreateXlaTensors(
-    const std::vector<at::Tensor>& tensors, const Device& device);
+std::vector<at::Tensor> CreateXlaTensors(const std::vector<at::Tensor>& tensors,
+                                         const Device& device);
 
 // Extracts the device out of the XLA tensor. Throws an exception if tensor is
 // not an XLA tensor.
