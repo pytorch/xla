@@ -43,6 +43,7 @@ include_directories(
   "${TFDIR}/bazel-tensorflow/external/com_google_absl"
   "${PT_DIR}"
   "${PT_DIR}/torch/csrc"
+  "${PT_DIR}/torch/include"
   "${PT_DIR}/torch/lib/tmp_install/include"
   "${PYTHON_INCLUDE_DIR}"
 )
