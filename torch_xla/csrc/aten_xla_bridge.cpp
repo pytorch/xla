@@ -6,6 +6,11 @@
 namespace torch_xla {
 namespace bridge {
 
+at::Tensor CreateEmptyTensor(at::IntList size,
+                             const at::TensorOptions& options) {
+  return at::empty(size, options.device(at::kCPU));
+}
+
 XLATensor& GetXlaTensor(const at::Tensor& tensor) {
   XLATensorImpl* impl =
       dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
