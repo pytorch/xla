@@ -48,6 +48,12 @@ torch_xla_sources = (
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
+generate_code_cmd = [os.path.join(base_dir, 'scripts', 'generate_code.sh')]
+if subprocess.call(generate_code_cmd) != 0:
+  print("Failed to run '{}'".format(generate_code_cmd))
+  sys.exit(1)
+
+
 build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
 if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
   build_libs_cmd += [sys.argv[1]]
