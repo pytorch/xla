@@ -27,6 +27,12 @@ To build:
   patch -p1 < xla/pytorch.patch
   ```
 
+* Install the Lark parser used for automatic code generation:
+
+  ```
+  pip install lark-parser
+  ```
+
 * Currently _PyTorch_ does not build with GCC 6.x, 7.x, and 8.x (various kind of ICEs). CLANG 7.x is known to be working, so install that in your VM:
 
   ```
