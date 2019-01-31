@@ -198,7 +198,7 @@ xla::int64 XLATensor::GetUniqueId() const { return data()->unique_id; }
 std::shared_ptr<xla::ComputationClient::Data> XLATensor::GetXlaData() {
   bool up_to_date = true;
   if (data()->view != nullptr) {
-    auto ir_node_updated = GetViewIrNode(data()->view.get());
+    ViewIrNode ir_node_updated = GetViewIrNode(data()->view.get());
     if (ir_node_updated.updated) {
       up_to_date = false;
       data()->ir_node = ir_node_updated.ir_node;
@@ -228,7 +228,7 @@ std::shared_ptr<xla::ComputationClient::Data> XLATensor::CurrentXlaData()
     // In order to verify that that data is still valid as far as current tensor
     // data POV, we need to verify that the eventual IR Node is a DeviceData
     // node, and that its ComputationClient data pointer matches.
-    const ir::NodePtr& ir_node = CurrentIrNode();
+    ir::NodePtr ir_node = CurrentIrNode();
     if (ir_node == nullptr) {
       // If there is no IR node, then the XLA data is valid.
       return data()->xla_data;
@@ -245,7 +245,7 @@ std::shared_ptr<xla::ComputationClient::Data> XLATensor::CurrentXlaData()
 
 std::string XLATensor::DumpGraphNodeComputation() const {
   std::string hlo_text;
-  const ir::NodePtr& ir_node = CurrentIrNode();
+  ir::NodePtr ir_node = CurrentIrNode();
   if (ir_node != nullptr) {
     ir::LoweringContext lowering_ctx("DumpGraphNodeComputation");
     XLA_CHECK_EQ(ir_node->num_outputs(), 1);
@@ -269,6 +269,9 @@ void XLATensor::SetXlaData(
 
 void XLATensor::SetIrNode(ir::NodePtr ir_node) {
   if (data()->view != nullptr) {
+    // If we have an active view, and a SetIrNode() happens, it means we are
+    // within an in-place execution context, and we need to update the view's
+    // alias as well.
     data()->view->alias->ir_node = ir_node;
   }
   // We do not want to nullify that XLA data pointer here, as otherwise the
@@ -296,11 +299,7 @@ void XLATensor::TryLimitGraphSize() {
 }
 
 ir::NodePtr XLATensor::GetIrNode() const {
-  if (data()->view != nullptr) {
-    data()->ir_node = GetViewIrNode(data()->view.get()).ir_node;
-    return data()->ir_node;
-  }
-  const ir::NodePtr& ir_node = CurrentIrNode();
+  ir::NodePtr ir_node = CurrentIrNode();
   if (ir_node != nullptr) {
     return ir_node;
   }
@@ -326,7 +325,12 @@ ir::NodePtr XLATensor::GetIrNode() const {
   return data()->ir_node;
 }
 
-const ir::NodePtr& XLATensor::CurrentIrNode() const { return data()->ir_node; }
+ir::NodePtr XLATensor::CurrentIrNode() const {
+  if (data()->view != nullptr) {
+    return GetViewIrNode(data()->view.get()).ir_node;
+  }
+  return data()->ir_node;
+}
 
 void XLATensor::SetTensorData(at::Tensor tensor_data) {
   data()->tensor_data = std::move(tensor_data);
@@ -638,7 +642,7 @@ void XLATensor::ApplyPendingGraph() {
   // This method is called to ensure that the tensor data is available on
   // device, so that a call to CurrentXlaData() returns a valid pointer.
   if (CurrentXlaData() == nullptr) {
-    const ir::NodePtr& ir_node = CurrentIrNode();
+    ir::NodePtr ir_node = CurrentIrNode();
     if (ir_node != nullptr) {
       ir::LoweringContext lowering_ctx("ApplyPendingGraph");
       XLA_CHECK_EQ(ir_node->num_outputs(), 1);
@@ -857,7 +861,7 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
     auto generator = [&, device_context, index]() {
       std::vector<xla::int64> device_index_mapping;
       for (auto i : device_context->index_mapping) {
-        const ir::NodePtr& ir_node = (*tensors)[i].CurrentIrNode();
+        ir::NodePtr ir_node = (*tensors)[i].CurrentIrNode();
         XLA_CHECK_EQ(ir_node->num_outputs(), 1);
         xla::XlaOp root = device_context->lowering_ctx.GetOutputOp(
             ir::Output(ir_node.get(), 0));
