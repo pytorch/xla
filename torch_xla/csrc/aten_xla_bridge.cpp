@@ -1,6 +1,7 @@
 #include "aten_xla_bridge.h"
 
 #include "tensor_impl.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
@@ -49,8 +50,20 @@ Device XlaTensorDevice(const at::Tensor& tensor) {
 }
 
 Device XlaTensorDevice(const at::TensorOptions& tensor_options) {
-  // TODO: Read and properly map the device from tensor_options.
-  return Device(DeviceType::TPU, 0);
+  static Device* xla_device =
+      new Device(xla::ComputationClient::Get()->GetDefaultDevice());
+  at::DeviceType at_device_type = tensor_options.device().type();
+  switch (at_device_type) {
+    case at::kCPU:
+      return Device(DeviceType::CPU, 0);
+    case at::kCUDA:
+      return Device(DeviceType::GPU, 0);
+    case at::kXLA:
+      return *xla_device;
+    default:
+      XLA_ERROR() << "Device type " << DeviceTypeName(at_device_type, false)
+                  << " not supported";
+  }
 }
 
 at::Tensor CreateXlaTensor(const at::Tensor& tensor, const Device& device) {
