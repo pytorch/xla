@@ -76,6 +76,10 @@ void XLATensorImpl::SetupSizeProperties() {
   }
 }
 
+XLATensorImpl::XLATensorImpl()
+    : c10::TensorImpl(c10::UndefinedTensorId(), caffe2::TypeMeta(), nullptr,
+                      /*is variable=*/false) {}
+
 caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
   auto shape = tensor.shape();
   switch (shape.get().element_type()) {
@@ -101,5 +105,36 @@ c10::Storage XLATensorImpl::GetStorage(const XLATensor& tensor) {
   return c10::Storage(at::Device(c10::DeviceType::XLA, device.ordinal),
                       GetTypeMeta(tensor));
 }
+
+XLAUndefinedTensorImpl::XLAUndefinedTensorImpl() {}
+
+at::IntList XLAUndefinedTensorImpl::sizes() const {
+  AT_ERROR("sizes() called on undefined Tensor");
+}
+
+int64_t XLAUndefinedTensorImpl::size(int64_t d) const {
+  AT_ERROR("size(dim) called on an undefined Tensor");
+}
+
+int64_t XLAUndefinedTensorImpl::stride(int64_t d) const {
+  AT_ERROR("stride(dim) called on an undefined Tensor");
+}
+
+int64_t XLAUndefinedTensorImpl::dim() const {
+  AT_ERROR("dim() called on undefined Tensor");
+}
+
+const at::Storage& XLAUndefinedTensorImpl::storage() const {
+  AT_ERROR("storage() called on undefined Tensor");
+}
+
+int64_t XLAUndefinedTensorImpl::storage_offset() const {
+  AT_ERROR("storage_offset() called on an undefined Tensor");
+}
+
+at::IntList XLAUndefinedTensorImpl::strides() const {
+  AT_ERROR("strides() called on undefined Tensor");
+}
+XLAUndefinedTensorImpl XLAUndefinedTensorImpl::_singleton;
 
 }  // namespace torch_xla
