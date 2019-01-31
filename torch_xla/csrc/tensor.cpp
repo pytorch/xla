@@ -376,17 +376,6 @@ void XLATensor::DiscardXlaData() {
   data()->view = nullptr;
 }
 
-at::Tensor XLATensor::ToMutableTensor() {
-  at::Tensor tensor_data = ToTensor();
-  // In case of the ATEN Tensor data being possibly dirty, we do clear both the
-  // IR Node and the XLA data. This API will be called to feed the tensor data
-  // to ATEN APIs, and when we get to that point, we already lost the full XLA
-  // fusion deal (and hence we do not need to keep the XLA data around for
-  // caching computations).
-  DiscardXlaData();
-  return tensor_data;
-}
-
 std::vector<XLATensor> XLATensor::GetLiveTensors() {
   return TensorsArena::Get()->GetTensors();
 }
@@ -398,7 +387,13 @@ std::vector<at::Tensor> XLATensor::GetTensors(
   ApplyPendingGraph(tensors, /*apply_context=*/nullptr);
 
   std::vector<std::shared_ptr<xla::ComputationClient::Data>> tensors_data;
-  for (auto& tensor : *tensors) {
+  for (size_t i = 0; i < tensors->size(); ++i) {
+    XLATensor& tensor = (*tensors)[i];
+    if (tensor.is_null()) {
+      XLA_CHECK(writeable == nullptr || !(*writeable)[i])
+          << "Trying to get a mutable undefined tensor";
+      continue;
+    }
     if (!tensor.CurrentTensorData()) {
       tensors_data.push_back(tensor.GetXlaData());
     }
@@ -409,6 +404,10 @@ std::vector<at::Tensor> XLATensor::GetTensors(
   size_t literals_index = 0;
   results.reserve(tensors->size());
   for (size_t i = 0; i < tensors->size(); ++i) {
+    if ((*tensors)[i].is_null()) {
+      results.emplace_back();
+      continue;
+    }
     const c10::optional<at::Tensor>& tensor_data =
         (*tensors)[i].CurrentTensorData();
     if (tensor_data) {
@@ -693,6 +692,9 @@ std::vector<size_t> XLATensor::GetApplyOrder(
   std::vector<size_t> order;
   order.reserve(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
+    if (tensors[i].is_null()) {
+      continue;
+    }
     if (tensors[i].CurrentXlaData() == nullptr) {
       if (tensors[i].CurrentIrNode() != nullptr) {
         // Add only tensors which need to be synced.
