@@ -75,7 +75,7 @@ class XLATensor {
 
   // Retrieves the current IR Node, or nullptr in case no active IR Node is
   // available.
-  const ir::NodePtr& CurrentIrNode() const;
+  ir::NodePtr CurrentIrNode() const;
 
   // Retrieves the IR Node representing this XLATensor. One will be created if
   // missing. Note that although this is a const API, it actually changes the
