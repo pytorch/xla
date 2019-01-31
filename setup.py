@@ -42,17 +42,18 @@ def _check_env_flag(name, default=''):
   return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
 
 
-torch_xla_sources = (
-    glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
-    glob.glob('torch_xla/csrc/passes/*.cpp'))
-
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
+# Generate the code before globbing!
 generate_code_cmd = [os.path.join(base_dir, 'scripts', 'generate_code.sh')]
 if subprocess.call(generate_code_cmd) != 0:
   print("Failed to run '{}'".format(generate_code_cmd))
   sys.exit(1)
 
+# Fetch the sources to be built.
+torch_xla_sources = (
+    glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
+    glob.glob('torch_xla/csrc/passes/*.cpp'))
 
 build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
 if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
