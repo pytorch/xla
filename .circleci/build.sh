@@ -30,7 +30,7 @@ cd $PYTORCH_DIR
 # Install ninja to speedup the build
 pip install ninja
 
-# Install the Lark parser required by the XLA-?ATEN Type code generation.
+# Install the Lark parser required for the XLA->ATEN Type code generation.
 pip install lark-parser
 
 # Install Pytorch

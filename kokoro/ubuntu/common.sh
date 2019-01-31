@@ -39,6 +39,9 @@ sudo apt-get -y install python-pip git
 sudo pip install --upgrade google-api-python-client
 sudo pip install --upgrade oauth2client
 
+# Install the Lark parser required for the XLA->ATEN Type code generation.
+sudo pip install lark-parser
+
 ## Install conda environment
 curl -O https://repo.anaconda.com/archive/Anaconda3-5.2.0-Linux-x86_64.sh
 sh Anaconda3-5.2.0-Linux-x86_64.sh -b
