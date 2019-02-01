@@ -39,9 +39,6 @@ sudo apt-get -y install python-pip git
 sudo pip install --upgrade google-api-python-client
 sudo pip install --upgrade oauth2client
 
-# Install the Lark parser required for the XLA->ATEN Type code generation.
-sudo pip install lark-parser
-
 ## Install conda environment
 curl -O https://repo.anaconda.com/archive/Anaconda3-5.2.0-Linux-x86_64.sh
 sh Anaconda3-5.2.0-Linux-x86_64.sh -b
@@ -54,6 +51,8 @@ export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 conda install -y numpy pyyaml mkl mkl-include setuptools cmake cffi typing bazel
 sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
 
+# Install the Lark parser required for the XLA->ATEN Type code generation.
+pip install lark-parser
 
 # Place pytorch/xla under pytorch/pytorch
 cd github
