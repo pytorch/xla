@@ -18,12 +18,13 @@ XLATensor& GetXlaTensor(const at::Tensor& tensor) {
   return impl->tensor();
 }
 
-std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors) {
-  std::vector<at::Tensor> xtensors;
+std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors,
+                                            const std::vector<bool>* writeable) {
+  std::vector<XLATensor> xla_tensors;
   for (auto& tensor : tensors) {
-    xtensors.push_back(XlaToAtenTensor(tensor));
+    xla_tensors.push_back(GetXlaTensor(tensor));
   }
-  return xtensors;
+  return XLATensor::GetTensors(&xla_tensors, writeable);
 }
 
 at::Tensor XlaToAtenTensor(const at::Tensor& tensor) {

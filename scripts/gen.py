@@ -264,6 +264,39 @@ class StringEmit(object):
     self.pos = -1
 
 
+class TensorFetcher(object):
+
+  def __init__(self, var_name):
+    self.var_name = var_name
+    self.tensors = []
+    self.writeable = []
+
+  def add(self, name, writeable):
+    self.tensors.append(name)
+    self.writeable.append(writeable)
+    return '{}[{}]'.format(self.var_name, len(self.tensors) - 1)
+
+  def generate(self):
+    tvar_name = '{}_tensors'.format(self.var_name)
+    wvar_name = '{}_writeables'.format(self.var_name)
+    code = ''
+    code += '  std::vector<at::Tensor> {} = {{'.format(tvar_name)
+    for i, t in enumerate(self.tensors):
+      if i > 0:
+        code += ', '
+      code += t
+    code += '};\n'
+    code += '  std::vector<bool> {} = {{'.format(wvar_name)
+    for i, w in enumerate(self.writeable):
+      if i > 0:
+        code += ', '
+      code += 'true' if w else 'false'
+    code += '};\n'
+    code += ('  auto {} = bridge::XlaCreateTensorList({}, &{});\n').format(
+        self.var_name, tvar_name, wvar_name)
+    return code
+
+
 def list_get(l, n):
   return l[n] if n < len(l) else None
 
@@ -543,12 +576,9 @@ def get_reference_param(params):
       other = p
     if cptype != 'Tensor':
       continue
-    if pname == 'self':
+    if pname == 'self' or type_is_const(ptype):
       return p
-    if type_is_const(ptype):
-      ref_param = p
-    else:
-      other = p
+    ref_param = p
   return ref_param or other
 
 
@@ -632,6 +662,7 @@ def get_xla_wrapper(orig_sig, ctx):
   sig, fname, xfname = get_function_signature(rwxtree, rwsig, gen_fnname)
   code = '{} {}{{\n'.format(sig, 'const ' if ctx.gen_class_mode else '')
   xla_ref_param = param_name(ref_param) if ref_param else None
+  tfetcher = TensorFetcher('xlatens')
   param_vars = []
   for p in params:
     ptype = param_type(p)
@@ -639,22 +670,20 @@ def get_xla_wrapper(orig_sig, ctx):
     pname = param_name(p)
     if cptype == 'TensorList':
       xname = 'l_{}'.format(pname)
-      code += '  auto {} = bridge::XlaCreateTensorList({});\n'.format(
-          xname, pname)
+      code += ('  auto {} = bridge::XlaCreateTensorList({}, '
+               '/*writeable=*/nullptr);\n').format(xname, pname)
       param_vars.append(xname)
     elif cptype != 'Tensor':
       param_vars.append(pname)
     elif type_is_const(ptype):
-      xname = 'r_{}'.format(pname)
-      code += '  auto {} = bridge::XlaToAtenTensor({});\n'.format(xname, pname)
+      xname = tfetcher.add(pname, False)
       param_vars.append(xname)
     else:
-      xname = 'w_{}'.format(pname)
-      code += '  auto {} = bridge::XlaToAtenMutableTensor({});\n'.format(
-          xname, pname)
+      xname = tfetcher.add(pname, True)
       param_vars.append(xname)
     if p == ref_param:
       xla_ref_param = param_vars[-1]
+  code += tfetcher.generate()
   result_assign = generate_result_assignment(tree, _RESULT_NAME)
   code += '  {}{}('.format(result_assign,
                            get_handling_function(ctx, fname, xla_ref_param))

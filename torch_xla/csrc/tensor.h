@@ -174,8 +174,12 @@ class XLATensor {
   static void ApplyPendingGraph(std::vector<XLATensor>* tensors,
                                 ApplyContext* apply_context);
 
-  // Retrieves the PyTorch tensors behind the XLA tensors.
-  static std::vector<at::Tensor> GetTensors(std::vector<XLATensor>* tensors);
+  // Retrieves the PyTorch tensors behind the XLA tensors. If the writeable
+  // vector is not nullptr, it must be teh same size as tensors, and the
+  // corresponding bool tells whether the ATEN tensor to be retrieved should the
+  // a writeable copy.
+  static std::vector<at::Tensor> GetTensors(std::vector<XLATensor>* tensors,
+                                            const std::vector<bool>* writeable);
 
   // Operation which creates XLA tensors out of autograd variable by batching
   // the requests to the computation servers.
@@ -263,6 +267,11 @@ class XLATensor {
   void SetIrNode(ir::NodePtr ir_node);
 
   void SetTensorData(at::Tensor tensor_data);
+
+  // Discards all the XLA and IR data, by making the ATEN tensor one the only
+  // source for this XLA tensor. An error is generated if the XLA tensor does
+  // not have ATEN tensors data.
+  void DiscardXlaData();
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.
