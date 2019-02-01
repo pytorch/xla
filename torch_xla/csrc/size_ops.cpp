@@ -13,13 +13,13 @@ xla::XlaOp BuildSize(const torch::jit::Node* node, const xla::XlaOp& input,
   return xla::ConstantR1<xla::int64>(builder, shape_sizes);
 }
 
-xla::XlaOp BuildSumToSize(
+xla::XlaOp BuildGradSumToSize(
     const torch::jit::Node* node, const xla::XlaOp& input,
     const XlaComputationInOut::SizeOpValues& size_op_values_tracking) {
   const auto size_op_value_it =
       size_op_values_tracking.find(node->input(1)->unique());
   XLA_CHECK(size_op_value_it != size_op_values_tracking.end())
-      << "prim::SumToSize only allowed when second parameter is a "
+      << "at::aten::_grad_sum_to_size only allowed when second parameter is a "
          "constant size: "
       << *node;
 

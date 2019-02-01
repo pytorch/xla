@@ -14,7 +14,7 @@ xla::XlaOp BuildSize(const torch::jit::Node* node, const xla::XlaOp& input,
 
 // Sums the elements in a tensor to match the provided size. Currently it simply
 // checks it's a no-op and returns the input.
-xla::XlaOp BuildSumToSize(
+xla::XlaOp BuildGradSumToSize(
     const torch::jit::Node* node, const xla::XlaOp& input,
     const XlaComputationInOut::SizeOpValues& size_op_values_tracking);
 
