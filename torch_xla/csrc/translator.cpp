@@ -562,12 +562,13 @@ void TranslateUndefined(const torch::jit::Node* node, ComputationContext* cctx,
   cctx->AddUndefinedInput(ComputationContext::OutputId(node));
 }
 
-void TranslateSumToSize(const torch::jit::Node* node, ComputationContext* cctx,
-                        xla::PrecisionConfig::Precision /*conv_precision*/,
-                        xla::XlaBuilder* /*b*/) {
+void TranslateGradSumToSize(const torch::jit::Node* node,
+                            ComputationContext* cctx,
+                            xla::PrecisionConfig::Precision /*conv_precision*/,
+                            xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
-  xla::XlaOp xla_output =
-      BuildSumToSize(node, cctx->OpForInput(node, 0), cctx->GetSizeOpValues());
+  xla::XlaOp xla_output = BuildGradSumToSize(node, cctx->OpForInput(node, 0),
+                                             cctx->GetSizeOpValues());
   cctx->AddNodeOp(node, xla_output);
 }
 
@@ -627,7 +628,7 @@ CreateTranslationHandlers() {
   (*t)[at::aten::size] = TranslateSize;
   (*t)[at::prim::Constant] = TranslateConstant;
   (*t)[at::prim::Undefined] = TranslateUndefined;
-  (*t)[at::prim::SumToSize] = TranslateSumToSize;
+  (*t)[at::aten::_grad_sum_to_size] = TranslateGradSumToSize;
   (*t)[at::prim::ListConstruct] = TranslateNop;
   return t;
 }
