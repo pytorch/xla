@@ -369,6 +369,13 @@ at::Tensor XLATensor::ToTensor() {
   return *tensor_data;
 }
 
+void XLATensor::DiscardXlaData() {
+  XLA_CHECK(data()->tensor_data);
+  data()->xla_data = nullptr;
+  data()->ir_node = nullptr;
+  data()->view = nullptr;
+}
+
 at::Tensor XLATensor::ToMutableTensor() {
   at::Tensor tensor_data = ToTensor();
   // In case of the ATEN Tensor data being possibly dirty, we do clear both the
@@ -376,9 +383,7 @@ at::Tensor XLATensor::ToMutableTensor() {
   // to ATEN APIs, and when we get to that point, we already lost the full XLA
   // fusion deal (and hence we do not need to keep the XLA data around for
   // caching computations).
-  data()->xla_data = nullptr;
-  data()->ir_node = nullptr;
-  data()->view = nullptr;
+  DiscardXlaData();
   return tensor_data;
 }
 
@@ -386,7 +391,8 @@ std::vector<XLATensor> XLATensor::GetLiveTensors() {
   return TensorsArena::Get()->GetTensors();
 }
 
-std::vector<at::Tensor> XLATensor::GetTensors(std::vector<XLATensor>* tensors) {
+std::vector<at::Tensor> XLATensor::GetTensors(
+    std::vector<XLATensor>* tensors, const std::vector<bool>* writeable) {
   // TODO(dlibenzi): We do apply/compute and then fetch. Changing the API to
   // support getting handles and data might save a few pennies here.
   ApplyPendingGraph(tensors, /*apply_context=*/nullptr);
@@ -413,6 +419,14 @@ std::vector<at::Tensor> XLATensor::GetTensors(std::vector<XLATensor>* tensors) {
           MakeTensorFromXlaLiteral(literals[literals_index]),
           (*tensors)[i].RequiresGrad()));
       ++literals_index;
+    }
+  }
+  if (writeable != nullptr) {
+    XLA_CHECK_EQ(tensors->size(), writeable->size());
+    for (size_t i = 0; i < tensors->size(); ++i) {
+      if ((*writeable)[i]) {
+        (*tensors)[i].DiscardXlaData();
+      }
     }
   }
   return results;
