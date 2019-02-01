@@ -206,7 +206,6 @@ class XLATensor {
 
     xla::Shape shape;
     std::shared_ptr<Alias> alias;
-    ir::NodePtr base_ir_node;
     ir::NodePtr ir_node;
   };
 

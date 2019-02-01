@@ -442,10 +442,12 @@ xla::int64 XLATensor::GetNextTensorId() {
 }
 
 XLATensor::ViewIrNode XLATensor::GetViewIrNode(View* view) {
-  if (view->ir_node != nullptr && view->base_ir_node == view->alias->ir_node) {
+  if (view->ir_node != nullptr &&
+      view->ir_node->operand(0).node == view->alias->ir_node.get()) {
+    // If the existing ir_node (which is a ir::ops::View) operand(0) still
+    // matches the current aliased node, the current IR Node is still valid.
     return {view->ir_node, false};
   }
-  view->base_ir_node = view->alias->ir_node;
   view->ir_node = std::make_shared<ir::ops::View>(
       ir::NodeOperand(view->alias->ir_node), view->shape.dimensions());
   return {view->ir_node, true};
