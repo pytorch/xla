@@ -65,7 +65,7 @@ void InitXlaModuleBindings(py::module m) {
     std::vector<at::Tensor> result;
     {
       NoGilSection nogil;
-      result = XLATensor::GetTensors(&tensors);
+      result = XLATensor::GetTensors(&tensors, /*writeable=*/nullptr);
     }
     return result;
   });
