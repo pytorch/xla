@@ -625,9 +625,9 @@ CreateTranslationHandlers() {
   (*t)[at::aten::nll_loss] = TranslateNllLoss;
   (*t)[at::aten::nll_loss_backward] = TranslateNllLossBackward;
   (*t)[at::aten::size] = TranslateSize;
+  (*t)[at::aten::_grad_sum_to_size] = TranslateSumToSize;
   (*t)[at::prim::Constant] = TranslateConstant;
   (*t)[at::prim::Undefined] = TranslateUndefined;
-  (*t)[at::prim::SumToSize] = TranslateSumToSize;
   (*t)[at::prim::ListConstruct] = TranslateNop;
   return t;
 }
