@@ -21,7 +21,7 @@ at::Tensor CreateEmptyTensor(at::IntList size,
 XLATensor& GetXlaTensor(const at::Tensor& tensor);
 
 // Creates a vector of at::Tensor objects extracted from a list of XLA tensors.
-// If the writeable vector is not nullptr, it must be teh same size as tensors,
+// If the writeable vector is not nullptr, it must be the same size as tensors,
 // and the corresponding bool tells whether the ATEN tensor to be retrieved
 // should the a writeable copy.
 std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors,

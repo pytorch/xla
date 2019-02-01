@@ -273,25 +273,17 @@ class TensorFetcher(object):
 
   def add(self, name, writeable):
     self.tensors.append(name)
-    self.writeable.append(writeable)
+    self.writeable.append('true' if writeable else 'false')
     return '{}[{}]'.format(self.var_name, len(self.tensors) - 1)
 
   def generate(self):
     tvar_name = '{}_tensors'.format(self.var_name)
     wvar_name = '{}_writeables'.format(self.var_name)
     code = ''
-    code += '  std::vector<at::Tensor> {} = {{'.format(tvar_name)
-    for i, t in enumerate(self.tensors):
-      if i > 0:
-        code += ', '
-      code += t
-    code += '};\n'
-    code += '  std::vector<bool> {} = {{'.format(wvar_name)
-    for i, w in enumerate(self.writeable):
-      if i > 0:
-        code += ', '
-      code += 'true' if w else 'false'
-    code += '};\n'
+    code += '  std::vector<at::Tensor> {} = {{{}}};\n'.format(
+        tvar_name, ', '.join(self.tensors))
+    code += '  std::vector<bool> {} = {{{}}};\n'.format(
+        wvar_name, ', '.join(self.writeable))
     code += ('  auto {} = bridge::XlaCreateTensorList({}, &{});\n').format(
         self.var_name, tvar_name, wvar_name)
     return code

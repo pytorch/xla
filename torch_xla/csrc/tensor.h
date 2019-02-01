@@ -175,7 +175,7 @@ class XLATensor {
                                 ApplyContext* apply_context);
 
   // Retrieves the PyTorch tensors behind the XLA tensors. If the writeable
-  // vector is not nullptr, it must be teh same size as tensors, and the
+  // vector is not nullptr, it must be the same size as tensors, and the
   // corresponding bool tells whether the ATEN tensor to be retrieved should the
   // a writeable copy.
   static std::vector<at::Tensor> GetTensors(std::vector<XLATensor>* tensors,
