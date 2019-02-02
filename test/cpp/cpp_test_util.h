@@ -14,8 +14,11 @@ namespace cpp_test {
 
 // Converts an XLA ATen tensor to a CPU backend tensor. Extracts it first from
 // an autograd variable, if needed. Needed because EqualValues and AllClose
-// require CPU tensors on both sides.
+// require CPU tensors on both sides. If the input tensor is already a CPU
+// tensor, it will be returned.
 at::Tensor ToCpuTensor(const at::Tensor& t);
+
+at::Tensor ToTensor(const at::Tensor& tensor);
 
 at::Tensor ToTensor(XLATensor& xla_tensor);
 

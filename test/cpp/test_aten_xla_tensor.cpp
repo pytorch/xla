@@ -1,16 +1,20 @@
 #include <gtest/gtest.h>
 
+#include <iostream>
+
 #include <ATen/ATen.h>
 #include <ATen/NativeFunctions.h>
 
+#include <torch/csrc/autograd/function.h>
+#include <torch/csrc/autograd/variable.h>
 #include "aten_xla_bridge.h"
 #include "aten_xla_type_instances.h"
 #include "cpp_test_util.h"
 #include "tensor_impl.h"
+#include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch_xla_test.h"
 
 namespace torch_xla {
-
 namespace cpp_test {
 
 class AtenXlaTensorTest : public TorchXlaTest {
@@ -20,6 +24,32 @@ class AtenXlaTensorTest : public TorchXlaTest {
     AtenXlaType::SetFullConvPrecision();
   }
 };
+
+at::Tensor GetTestTesor(at::IntList sizes) {
+  return at::rand(sizes, at::TensorOptions(at::kFloat));
+}
+
+void TestBackward(
+    const std::vector<at::Tensor>& inputs, const Device& device,
+    const std::function<at::Tensor(const std::vector<at::Tensor>&)>& testfn) {
+  std::vector<at::Tensor> input_vars;
+  std::vector<at::Tensor> xinput_vars;
+  for (const auto& input : inputs) {
+    input_vars.push_back(torch::autograd::make_variable(input, true));
+
+    at::Tensor xinput = bridge::CreateXlaTensor(input, device);
+    xinput_vars.push_back(torch::autograd::make_variable(xinput, true));
+  }
+
+  at::Tensor output = testfn(input_vars);
+  at::Tensor xoutput = testfn(xinput_vars);
+  output.backward();
+  xoutput.backward();
+  for (size_t i = 0; i < input_vars.size(); ++i) {
+    ASSERT_TRUE(xinput_vars[i].grad().defined());
+    AllClose(input_vars[i].grad(), xinput_vars[i].grad());
+  }
+}
 
 TEST_F(AtenXlaTensorTest, TestAdd) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
@@ -447,6 +477,32 @@ TEST_F(AtenXlaTensorTest, TestConv2DNonSquare) {
                 /*padding=*/{padding, padding + 1},
                 /*dilation=*/{dilation, dilation});
             AllClose(output, xla_output);
+          });
+        }
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
+  int kernel_size = 2;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      for (bool count_include_pad : {true, false}) {
+        // Test ceil_mode=true through the CPU interop.
+        for (bool ceil_mode : {false, true}) {
+          auto testfn =
+              [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+            return at::avg_pool2d(inputs[0],
+                                  /*kernel_size=*/{kernel_size, kernel_size},
+                                  /*stride=*/{stride, stride},
+                                  /*padding=*/{padding, padding},
+                                  /*ceil_mode=*/ceil_mode,
+                                  /*count_include_pad=*/count_include_pad);
+          };
+
+          ForEachDevice([&](const Device& device) {
+            TestBackward({GetTestTesor({4, 1, 28, 28})}, device, testfn);
           });
         }
       }
