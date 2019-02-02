@@ -50,6 +50,9 @@ static inline Device XlaTensorDevice(const at::TensorList& tensors) {
 
 Device XlaTensorDevice(const at::TensorOptions& tensor_options);
 
+// Creates an ATen tensor with XLA type id from an XLATensor.
+at::Tensor AtenFromXlaTensor(XLATensor xla_tensor);
+
 // Creates an XLA tensor holding the data in tensor, on the given device.
 at::Tensor CreateXlaTensor(const at::Tensor& tensor, const Device& device);
 

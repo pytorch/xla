@@ -4,6 +4,7 @@
 #include <string>
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/autograd/variable.h"
 
 namespace torch_xla {
@@ -19,7 +20,7 @@ at::Tensor ToTensor(XLATensor& xla_tensor) {
 
 at::Tensor ToCpuTensor(const at::Tensor& t) {
   auto impl = dynamic_cast<XLATensorImpl*>(t.unsafeGetTensorImpl());
-  CHECK(impl);
+  XLA_CHECK_NE(impl, nullptr);
   return ToTensor(impl->tensor());
 }
 
@@ -38,9 +39,9 @@ void ForEachDevice(const std::function<void(const Device&)>& devfn) {
   devfn(Device(default_device));
 }
 
-void AllClose(at::Tensor tensor, at::Tensor xla_tensor, double rtol /* = 1e-5*/,
-              double atol /* = 1e-8*/) {
-  EXPECT_TRUE(ToCpuTensor(xla_tensor).allclose(tensor));
+void AllClose(at::Tensor tensor, at::Tensor xla_tensor, double rtol,
+              double atol) {
+  EXPECT_TRUE(ToCpuTensor(xla_tensor).allclose(tensor, rtol, atol));
 }
 
 }  // namespace cpp_test

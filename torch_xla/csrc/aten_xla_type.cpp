@@ -5,12 +5,8 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
-namespace {
-at::Tensor ATenWrap(XLATensor xla_tensor) {
-  return at::Tensor(
-      c10::make_intrusive<XLATensorImpl, XLAUndefinedTensorImpl>(xla_tensor));
-}
-}  // namespace
+
+bool AtenXlaType::s_use_full_conv_precision_ = false;
 
 AtenXlaType::AtenXlaType(at::TensorTypeId type_id, bool is_variable,
                          bool is_undefined)
@@ -18,7 +14,7 @@ AtenXlaType::AtenXlaType(at::TensorTypeId type_id, bool is_variable,
 
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) const {
-  return ATenWrap(
+  return bridge::AtenFromXlaTensor(
       bridge::GetXlaTensor(self).add(bridge::GetXlaTensor(other), alpha));
 }
 
@@ -30,7 +26,8 @@ at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Tensor& other,
 
 at::Tensor AtenXlaType::mul(const at::Tensor& self,
                             const at::Tensor& other) const {
-  return ATenWrap(bridge::GetXlaTensor(self).mul(bridge::GetXlaTensor(other)));
+  return bridge::AtenFromXlaTensor(
+      bridge::GetXlaTensor(self).mul(bridge::GetXlaTensor(other)));
 }
 
 at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) const {
@@ -40,7 +37,8 @@ at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) const {
 
 at::Tensor AtenXlaType::div(const at::Tensor& self,
                             const at::Tensor& other) const {
-  return ATenWrap(bridge::GetXlaTensor(self).div(bridge::GetXlaTensor(other)));
+  return bridge::AtenFromXlaTensor(
+      bridge::GetXlaTensor(self).div(bridge::GetXlaTensor(other)));
 }
 
 at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other) const {
@@ -53,13 +51,13 @@ int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
 }
 
 at::Tensor AtenXlaType::relu(const at::Tensor& self) const {
-  return ATenWrap(bridge::GetXlaTensor(self).relu());
+  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).relu());
 }
 
 at::Tensor AtenXlaType::threshold(const at::Tensor& self, at::Scalar threshold,
                                   at::Scalar value) const {
-  return ATenWrap(bridge::GetXlaTensor(self).threshold(threshold.to<double>(),
-                                                       value.to<double>()));
+  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).threshold(
+      threshold.to<double>(), value.to<double>()));
 }
 
 at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
@@ -75,15 +73,15 @@ at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
                                    dilation, groups);
   }
   if (bias.defined()) {
-    return ATenWrap(bridge::GetXlaTensor(input).conv2d(
+    return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(input).conv2d(
         bridge::GetXlaTensor(weight), bridge::GetXlaTensor(bias),
         XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
-        /*use_full_conv_precision=*/use_full_conv_precision_));
+        /*use_full_conv_precision=*/s_use_full_conv_precision_));
   } else {
-    return ATenWrap(bridge::GetXlaTensor(input).conv2d(
+    return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(input).conv2d(
         bridge::GetXlaTensor(weight), XlaHelpers::I64List(stride),
         XlaHelpers::I64List(padding),
-        /*use_full_conv_precision=*/use_full_conv_precision_));
+        /*use_full_conv_precision=*/s_use_full_conv_precision_));
   }
 }
 
@@ -93,22 +91,23 @@ at::Tensor AtenXlaType::addmm(const at::Tensor& self, const at::Tensor& mat1,
   if (beta.to<double>() != 1 || alpha.to<double>() != 1) {
     return AtenXlaTypeBase::addmm(self, mat1, mat2, beta, alpha);
   }
-  return ATenWrap(bridge::GetXlaTensor(mat1).addmm(
+  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(mat1).addmm(
       /*weight=*/bridge::GetXlaTensor(mat2),
       /*bias=*/bridge::GetXlaTensor(self),
-      /*use_full_conv_precision=*/use_full_conv_precision_));
+      /*use_full_conv_precision=*/s_use_full_conv_precision_));
 }
 
 at::Tensor AtenXlaType::t(const at::Tensor& self) const {
-  return ATenWrap(bridge::GetXlaTensor(self).t());
+  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).t());
 }
 
 at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntList size) const {
-  return ATenWrap(bridge::GetXlaTensor(self).view(XlaHelpers::I64List(size)));
+  return bridge::AtenFromXlaTensor(
+      bridge::GetXlaTensor(self).view(XlaHelpers::I64List(size)));
 }
 
 at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim) const {
-  return ATenWrap(bridge::GetXlaTensor(self).log_softmax(dim));
+  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).log_softmax(dim));
 }
 
 at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
@@ -120,7 +119,7 @@ at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
     return AtenXlaTypeBase::max_pool2d(self, kernel_size, stride, padding,
                                        dilation, ceil_mode);
   }
-  return ATenWrap(bridge::GetXlaTensor(self).max_pool2d(
+  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).max_pool2d(
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding)));
 }
@@ -134,16 +133,14 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
     return AtenXlaTypeBase::avg_pool2d(self, kernel_size, stride, padding,
                                        ceil_mode, count_include_pad);
   }
-  return ATenWrap(bridge::GetXlaTensor(self).avg_pool2d(
+  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).avg_pool2d(
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), count_include_pad));
 }
 
 void AtenXlaType::SetFullConvPrecision(
     bool use_full_conv_precision /*= true*/) {
-  use_full_conv_precision_ = use_full_conv_precision;
+  s_use_full_conv_precision_ = use_full_conv_precision;
 }
-
-bool AtenXlaType::use_full_conv_precision_ = false;
 
 }  // namespace torch_xla

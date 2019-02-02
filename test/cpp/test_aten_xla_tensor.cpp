@@ -3,6 +3,7 @@
 #include <ATen/ATen.h>
 #include <ATen/NativeFunctions.h>
 
+#include "aten_xla_bridge.h"
 #include "aten_xla_type_instances.h"
 #include "cpp_test_util.h"
 #include "tensor_impl.h"
@@ -20,24 +21,13 @@ class AtenXlaTensorTest : public TorchXlaTest {
   }
 };
 
-namespace {
-
-// Creates an XLA type tensor out of an existing one.
-at::Tensor MakeXlaTensor(const at::Tensor& tensor, const Device& device,
-                         bool requires_grad = false) {
-  return at::Tensor(c10::make_intrusive<XLATensorImpl, XLAUndefinedTensorImpl>(
-      XLATensor::Create(tensor, device, /*requires_grad=*/requires_grad)));
-}
-
-}  // namespace
-
 TEST_F(AtenXlaTensorTest, TestAdd) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor c = at::add(a, b);
   ForEachDevice([&](const Device& device) {
-    at::Tensor xla_a = MakeXlaTensor(a, device);
-    at::Tensor xla_b = MakeXlaTensor(b, device);
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
     at::Tensor xla_c = at::add(xla_a, xla_b);
     AllClose(c, xla_c);
   });
@@ -46,9 +36,9 @@ TEST_F(AtenXlaTensorTest, TestAdd) {
 TEST_F(AtenXlaTensorTest, TestAddInPlace) {
   ForEachDevice([&](const Device& device) {
     at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
-    at::Tensor xla_a = MakeXlaTensor(a.clone(), device);
+    at::Tensor xla_a = bridge::CreateXlaTensor(a.clone(), device);
     at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
-    at::Tensor xla_b = MakeXlaTensor(b, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
     at::Tensor c = a.add_(b);
     at::Tensor xla_c = xla_a.add_(xla_b);
     AllClose(a, xla_a);
@@ -61,8 +51,8 @@ TEST_F(AtenXlaTensorTest, TestMul) {
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor c = at::mul(a, b);
   ForEachDevice([&](const Device& device) {
-    at::Tensor xla_a = MakeXlaTensor(a, device);
-    at::Tensor xla_b = MakeXlaTensor(b, device);
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
     at::Tensor xla_c = at::mul(xla_a, xla_b);
     AllClose(c, xla_c);
   });
@@ -71,9 +61,9 @@ TEST_F(AtenXlaTensorTest, TestMul) {
 TEST_F(AtenXlaTensorTest, TestMulInPlace) {
   ForEachDevice([&](const Device& device) {
     at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
-    at::Tensor xla_a = MakeXlaTensor(a.clone(), device);
+    at::Tensor xla_a = bridge::CreateXlaTensor(a.clone(), device);
     at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
-    at::Tensor xla_b = MakeXlaTensor(b, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
     at::Tensor c = a.mul_(b);
     at::Tensor xla_c = xla_a.mul_(xla_b);
     AllClose(a, xla_a);
@@ -86,8 +76,8 @@ TEST_F(AtenXlaTensorTest, TestDiv) {
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor c = at::div(a, b);
   ForEachDevice([&](const Device& device) {
-    at::Tensor xla_a = MakeXlaTensor(a, device);
-    at::Tensor xla_b = MakeXlaTensor(b, device);
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
     at::Tensor xla_c = at::div(xla_a, xla_b);
     AllClose(c, xla_c);
   });
@@ -96,9 +86,9 @@ TEST_F(AtenXlaTensorTest, TestDiv) {
 TEST_F(AtenXlaTensorTest, TestDivInPlace) {
   ForEachDevice([&](const Device& device) {
     at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
-    at::Tensor xla_a = MakeXlaTensor(a.clone(), device);
+    at::Tensor xla_a = bridge::CreateXlaTensor(a.clone(), device);
     at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
-    at::Tensor xla_b = MakeXlaTensor(b, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
     at::Tensor c = a.div_(b);
     at::Tensor xla_c = xla_a.div_(xla_b);
     AllClose(a, xla_a);
@@ -116,8 +106,8 @@ TEST_F(AtenXlaTensorTest, TestIntegerAdd) {
       at::Tensor b = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
       at::Tensor c = at::add(b, 1.0);
 
-      at::Tensor xla_a = MakeXlaTensor(a, device);
-      at::Tensor xla_b = MakeXlaTensor(b, device);
+      at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+      at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
       at::Tensor xla_c = at::add(xla_b, 1.0);
 
       EXPECT_TRUE(EqualValues(c, ToCpuTensor(xla_c)));
@@ -129,7 +119,7 @@ TEST_F(AtenXlaTensorTest, TestSize) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   int rank = input.dim();
   ForEachDevice([&](const Device& device) {
-    at::Tensor xla_input = MakeXlaTensor(input, device);
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     for (int dim = -rank; dim < rank; ++dim) {
       EXPECT_EQ(at::size(input, dim), at::size(xla_input, dim));
     }
@@ -140,7 +130,7 @@ TEST_F(AtenXlaTensorTest, TestRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::relu(input);
   ForEachDevice([&](const Device& device) {
-    at::Tensor xla_input = MakeXlaTensor(input, device);
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     at::Tensor xla_output = at::relu(xla_input);
     AllClose(output, xla_output);
   });
@@ -152,7 +142,7 @@ TEST_F(AtenXlaTensorTest, TestThreshold) {
   float value = 20;
   at::Tensor output = at::threshold(input, threshold, value);
   ForEachDevice([&](const Device& device) {
-    at::Tensor xla_input = MakeXlaTensor(input, device);
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     at::Tensor xla_output = at::threshold(xla_input, threshold, value);
     AllClose(output, xla_output);
   });
@@ -171,9 +161,9 @@ TEST_F(AtenXlaTensorTest, TestAddMatMul) {
   for (double beta : {1., 2.}) {
     at::Tensor output = at::addmm(bias, input, weight, /*beta=*/beta);
     ForEachDevice([&](const Device& device) {
-      at::Tensor xla_input = MakeXlaTensor(input, device);
-      at::Tensor xla_weight = MakeXlaTensor(weight, device);
-      at::Tensor xla_bias = MakeXlaTensor(bias, device);
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
+      at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
       at::Tensor xla_output =
           at::addmm(xla_bias, xla_input, xla_weight, /*beta=*/beta);
       AllClose(output, xla_output);
@@ -185,7 +175,7 @@ TEST_F(AtenXlaTensorTest, TestTranspose) {
   at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::t(input);
   ForEachDevice([&](const Device& device) {
-    at::Tensor xla_input = MakeXlaTensor(input, device);
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     at::Tensor xla_output = at::t(xla_input);
     AllClose(output, xla_output);
   });
@@ -195,7 +185,7 @@ TEST_F(AtenXlaTensorTest, TestView) {
   at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor output = input.view({-1, 320});
   ForEachDevice([&](const Device& device) {
-    at::Tensor xla_input = MakeXlaTensor(input, device);
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     at::Tensor xla_output = xla_input.view({-1, 320});
     AllClose(output, xla_output);
   });
@@ -210,8 +200,8 @@ TEST_F(AtenXlaTensorTest, TestViewMod) {
   ForEachDevice([&](const Device& device) {
     at::Tensor xinput =
         at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
-    at::Tensor xla_input = MakeXlaTensor(xinput, device);
-    at::Tensor xla_one = MakeXlaTensor(one, device);
+    at::Tensor xla_input = bridge::CreateXlaTensor(xinput, device);
+    at::Tensor xla_one = bridge::CreateXlaTensor(one, device);
     at::Tensor xla_output = xla_input.view({-1, 320});
     xla_output.add_(xla_one, 1.0);
     xla_input.add_(xla_one, 1.0);
@@ -230,8 +220,8 @@ TEST_F(AtenXlaTensorTest, TestViewModComplex) {
   ForEachDevice([&](const Device& device) {
     at::Tensor xinput =
         at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
-    at::Tensor xla_input = MakeXlaTensor(xinput, device);
-    at::Tensor xla_one = MakeXlaTensor(one, device);
+    at::Tensor xla_input = bridge::CreateXlaTensor(xinput, device);
+    at::Tensor xla_one = bridge::CreateXlaTensor(one, device);
     at::Tensor xla_output1 = xla_input.view({-1, 320});
     xla_output1.add_(xla_one, 1.0);
     at::Tensor xla_output2 = xla_input.view({-1, 160});
@@ -251,8 +241,8 @@ TEST_F(AtenXlaTensorTest, TestViewOfViewMod) {
   ForEachDevice([&](const Device& device) {
     at::Tensor xinput =
         at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
-    at::Tensor xla_input = MakeXlaTensor(xinput, device);
-    at::Tensor xla_one = MakeXlaTensor(one, device);
+    at::Tensor xla_input = bridge::CreateXlaTensor(xinput, device);
+    at::Tensor xla_one = bridge::CreateXlaTensor(one, device);
     at::Tensor xla_output1 = xla_input.view({-1, 320});
     xla_output1.add_(xla_one, 1.0);
     at::Tensor xla_output2 = xla_output1.view({-1, 160});
@@ -265,7 +255,7 @@ TEST_F(AtenXlaTensorTest, TestViewOfViewMod) {
 TEST_F(AtenXlaTensorTest, TestLogSoftmax) {
   at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
   ForEachDevice([&](const Device& device) {
-    at::Tensor xla_input = MakeXlaTensor(input, device);
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     for (int dim = 0; dim < input.dim(); ++dim) {
       at::Tensor output = at::log_softmax(input, dim);
       at::Tensor xla_output = at::log_softmax(xla_input, dim);
@@ -287,7 +277,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2D) {
                            /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
                            /*ceil_mode=*/ceil_mode);
         ForEachDevice([&](const Device& device) {
-          at::Tensor xla_input = MakeXlaTensor(input, device);
+          at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
           at::Tensor xla_output = at::max_pool2d(
               xla_input,
               /*kernel_size=*/{kernel_size, kernel_size},
@@ -314,7 +304,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DNonSquare) {
             /*padding=*/{padding, padding + 1}, /*dilation=*/{1, 1},
             /*ceil_mode=*/ceil_mode);
         ForEachDevice([&](const Device& device) {
-          at::Tensor xla_input = MakeXlaTensor(input, device);
+          at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
           at::Tensor xla_output = at::max_pool2d(
               xla_input,
               /*kernel_size=*/{kernel_size, kernel_size + 1},
@@ -342,7 +332,7 @@ TEST_F(AtenXlaTensorTest, TestAvgPool2D) {
               /*padding=*/{padding, padding}, /*ceil_mode=*/ceil_mode,
               /*count_include_pad=*/count_include_pad);
           ForEachDevice([&](const Device& device) {
-            at::Tensor xla_input = MakeXlaTensor(input, device);
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
             at::Tensor xla_output =
                 at::avg_pool2d(xla_input,
                                /*kernel_size=*/{kernel_size, kernel_size},
@@ -372,7 +362,7 @@ TEST_F(AtenXlaTensorTest, TestAvgPool2DNonSquare) {
               /*padding=*/{padding, padding + 1}, /*ceil_mode=*/ceil_mode,
               /*count_include_pad=*/count_include_pad);
           ForEachDevice([&](const Device& device) {
-            at::Tensor xla_input = MakeXlaTensor(input, device);
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
             at::Tensor xla_output =
                 at::avg_pool2d(xla_input,
                                /*kernel_size=*/{kernel_size, kernel_size + 1},
@@ -410,9 +400,9 @@ TEST_F(AtenXlaTensorTest, TestConv2D) {
                          /*padding=*/{padding, padding},
                          /*dilation=*/{dilation, dilation});
           ForEachDevice([&](const Device& device) {
-            at::Tensor xla_input = MakeXlaTensor(input, device);
-            at::Tensor xla_weight = MakeXlaTensor(weight, device);
-            at::Tensor xla_bias = MakeXlaTensor(bias, device);
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+            at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
+            at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
             at::Tensor xla_output = at::conv2d(
                 xla_input, xla_weight, with_bias ? xla_bias : bias_undef,
                 /*stride=*/{stride, stride},
@@ -448,9 +438,9 @@ TEST_F(AtenXlaTensorTest, TestConv2DNonSquare) {
                          /*padding=*/{padding, padding + 1},
                          /*dilation=*/{dilation, dilation});
           ForEachDevice([&](const Device& device) {
-            at::Tensor xla_input = MakeXlaTensor(input, device);
-            at::Tensor xla_weight = MakeXlaTensor(weight, device);
-            at::Tensor xla_bias = MakeXlaTensor(bias, device);
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+            at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
+            at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
             at::Tensor xla_output = at::conv2d(
                 xla_input, xla_weight, with_bias ? xla_bias : bias_undef,
                 /*stride=*/{stride, stride + 1},
