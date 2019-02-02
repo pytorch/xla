@@ -5,9 +5,8 @@
 
 namespace torch_xla {
 
-// TODO: Replace UndefinedTensorId with proper type.
 XLATensorImpl::XLATensorImpl(XLATensor tensor)
-    : c10::TensorImpl(c10::UndefinedTensorId(), GetTypeMeta(tensor),
+    : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
                       /*allocator=*/nullptr, /*is_variable=*/false),
       tensor_(std::move(tensor)) {
   // Fill up the basic dimension data members which the base class

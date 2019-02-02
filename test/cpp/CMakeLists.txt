@@ -51,6 +51,7 @@ include_directories(
 set(TORCH_XLA_TEST_SOURCES
   main.cpp
   cpp_test_util.cpp
+  test_aten_xla_tensor.cpp
   test_ir.cpp
   test_mayberef.cpp
   test_tensor.cpp
@@ -112,4 +113,5 @@ target_link_libraries(
   "${CAFFE_LIB}"
   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest${SUFFIX}"
   "${PYTHON_LIBRARY}"
-  ${PTHREAD})
+  ${PTHREAD}
+  -ldl)

@@ -201,12 +201,12 @@ namespace torch_xla {{
 {instances}
 static inline void RegisterAtenXlaTypes() {{
   auto& context = at::globalContext();
-  context.registerType(at::Backend::HIP, at::ScalarType::Byte, GetXLATypeByte());
-  context.registerType(at::Backend::HIP, at::ScalarType::Char, GetXLATypeChar());
-  context.registerType(at::Backend::HIP, at::ScalarType::Float, GetXLATypeFloat());
-  context.registerType(at::Backend::HIP, at::ScalarType::Int, GetXLATypeInt());
-  context.registerType(at::Backend::HIP, at::ScalarType::Long, GetXLATypeLong());
-  context.registerType(at::Backend::HIP, at::ScalarType::Short, GetXLATypeShort());
+  context.registerType(at::Backend::XLA, at::ScalarType::Byte, GetXLATypeByte());
+  context.registerType(at::Backend::XLA, at::ScalarType::Char, GetXLATypeChar());
+  context.registerType(at::Backend::XLA, at::ScalarType::Float, GetXLATypeFloat());
+  context.registerType(at::Backend::XLA, at::ScalarType::Int, GetXLATypeInt());
+  context.registerType(at::Backend::XLA, at::ScalarType::Long, GetXLATypeLong());
+  context.registerType(at::Backend::XLA, at::ScalarType::Short, GetXLATypeShort());
 }}
 
 }}  // namespace torch_xla
@@ -308,32 +308,32 @@ def create_type_instances():
       type_name='XLATypeByte',
       scalar_type='at::ScalarType::Byte',
       sizeof=1,
-      tensorid='c10::HIPTensorId()')
+      tensorid='c10::XLATensorId()')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeChar',
       scalar_type='at::ScalarType::Char',
       sizeof=1,
-      tensorid='c10::HIPTensorId()')
+      tensorid='c10::XLATensorId()')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeShort',
       scalar_type='at::ScalarType::Short',
       sizeof=2,
-      tensorid='c10::HIPTensorId()')
+      tensorid='c10::XLATensorId()')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeInt',
       scalar_type='at::ScalarType::Int',
       sizeof=4,
-      tensorid='c10::HIPTensorId()')
+      tensorid='c10::XLATensorId()')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeLong',
       scalar_type='at::ScalarType::Long',
       sizeof=8,
-      tensorid='c10::HIPTensorId()')
+      tensorid='c10::XLATensorId()')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeFloat',
       scalar_type='at::ScalarType::Float',
       sizeof=4,
-      tensorid='c10::HIPTensorId()')
+      tensorid='c10::XLATensorId()')
   return code
 
 
@@ -783,9 +783,9 @@ def generate(args):
         _CPP_CLASS_HEADER.format(
             gen=os.path.basename(sys.argv[0]),
             funcs=functions,
-            backend='at::Backend::HIP',
-            device_type='at::DeviceType::HIP',
-            typeid='at::TypeID::Undefined'),
+            backend='at::Backend::XLA',
+            device_type='at::DeviceType::XLA',
+            typeid='at::TypeID::XLA'),
         file=gen_cpp_output_file(args))
     instances = create_type_instances()
     print(
