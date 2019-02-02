@@ -12,11 +12,16 @@ namespace torch_xla {
 // Its scope is just to handle an XLATensor.
 class XLATensorImpl : public c10::TensorImpl {
  public:
-  XLATensorImpl(XLATensor tensor);
+  explicit XLATensorImpl(XLATensor tensor);
+  XLATensorImpl(XLATensor tensor, bool is_variable);
 
   XLATensor& tensor() { return tensor_; }
 
+  c10::intrusive_ptr<c10::TensorImpl> shallow_copy_and_detach() const override;
+
  private:
+  void SetupSizeProperties();
+
   static caffe2::TypeMeta GetTypeMeta(const XLATensor& tensor);
 
   XLATensor tensor_;
