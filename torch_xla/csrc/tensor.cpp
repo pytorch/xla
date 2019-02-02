@@ -362,8 +362,7 @@ at::Tensor XLATensor::ToTensor() {
     // is available on the tensor.
     std::vector<xla::Literal> literals =
         xla::ComputationClient::Get()->TransferFromServer({GetXlaData()});
-    tensor_data = torch::autograd::make_variable(
-        MakeTensorFromXlaLiteral(literals.front()), RequiresGrad());
+    tensor_data = MakeTensorFromXlaLiteral(literals.front());
     SetTensorData(*tensor_data);
   }
   return *tensor_data;
@@ -415,9 +414,7 @@ std::vector<at::Tensor> XLATensor::GetTensors(
       results.push_back(*tensor_data);
     } else {
       XLA_CHECK_LT(literals_index, literals.size());
-      results.push_back(torch::autograd::make_variable(
-          MakeTensorFromXlaLiteral(literals[literals_index]),
-          (*tensors)[i].RequiresGrad()));
+      results.push_back(MakeTensorFromXlaLiteral(literals[literals_index]));
       ++literals_index;
     }
   }
