@@ -113,4 +113,5 @@ target_link_libraries(
   "${CAFFE_LIB}"
   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest${SUFFIX}"
   "${PYTHON_LIBRARY}"
-  ${PTHREAD})
+  ${PTHREAD}
+  -ldl)
