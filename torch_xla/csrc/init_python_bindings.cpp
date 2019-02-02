@@ -7,6 +7,7 @@
 #include "passes/threshold_backward_peephole.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
+#include "torch/csrc/autograd/variable.h"
 #include "torch_util.h"
 #include "translator.h"
 
@@ -65,7 +66,12 @@ void InitXlaModuleBindings(py::module m) {
     std::vector<at::Tensor> result;
     {
       NoGilSection nogil;
-      result = XLATensor::GetTensors(&tensors, /*writeable=*/nullptr);
+      std::vector<at::Tensor> raw_tensors =
+          XLATensor::GetTensors(&tensors, /*writeable=*/nullptr);
+      for (size_t i = 0; i < tensors.size(); ++i) {
+        result.push_back(torch::autograd::make_variable(
+            std::move(raw_tensors[i]), tensors[i].RequiresGrad()));
+      }
     }
     return result;
   });
@@ -101,7 +107,11 @@ void InitXlaTensorBindings(py::module m) {
                                       tensor.requires_grad());
            }),
            py::arg("tensor"), py::arg("device") = "")
-      .def("to_tensor", [](XLATensor& s) { return s.ToTensor(); })
+      .def("to_tensor",
+           [](XLATensor& s) {
+             return torch::autograd::make_variable(s.ToTensor(),
+                                                   s.RequiresGrad());
+           })
       .def("size", [](const XLATensor& s) { return s.DimensionSizes(); })
       .def("device",
            [](const XLATensor& s) { return s.GetDevice().ToString(); })
