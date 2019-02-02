@@ -412,7 +412,7 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
         xla::util::ToVector<int64_t>(shape_component.dimensions()),
         shape_component.element_type(), device_type));
   }
-  return shape_components_with_layout.size() > 1
+  return shape.IsTuple()
              ? xla::ShapeUtil::MakeTupleShape(shape_components_with_layout)
              : shape_components_with_layout.front();
 }
