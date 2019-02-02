@@ -10,6 +10,25 @@ XLATensorImpl::XLATensorImpl(XLATensor tensor)
     : c10::TensorImpl(c10::UndefinedTensorId(), GetTypeMeta(tensor),
                       /*allocator=*/nullptr, /*is_variable=*/false),
       tensor_(std::move(tensor)) {
+  SetupSizeProperties();
+}
+
+XLATensorImpl::XLATensorImpl(XLATensor tensor, bool is_variable)
+    : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
+                      /*allocator=*/nullptr, is_variable),
+      tensor_(std::move(tensor)) {
+  SetupSizeProperties();
+}
+
+c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach()
+    const {
+  auto impl = c10::make_intrusive<XLATensorImpl>(tensor_, is_variable());
+  impl->is_wrapped_number_ = is_wrapped_number_;
+  impl->reserved_ = reserved_;
+  return impl;
+}
+
+void XLATensorImpl::SetupSizeProperties() {
   // Fill up the basic dimension data members which the base class
   // implementation uses in its APIs.
   auto shape = tensor_.shape();
