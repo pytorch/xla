@@ -10,18 +10,20 @@
 namespace torch_xla {
 namespace cpp_test {
 
+at::Tensor ToTensor(const at::Tensor& tensor) {
+  return tensor.is_variable() ? torch::autograd::as_variable_ref(tensor).data()
+                              : tensor;
+}
+
 at::Tensor ToTensor(XLATensor& xla_tensor) {
-  at::Tensor xtensor = xla_tensor.ToTensor();
-  if (xtensor.is_variable()) {
-    xtensor = torch::autograd::as_variable_ref(xtensor).data();
-  }
-  return xtensor;
+  return ToTensor(xla_tensor.ToTensor());
 }
 
 at::Tensor ToCpuTensor(const at::Tensor& t) {
-  auto impl = dynamic_cast<XLATensorImpl*>(t.unsafeGetTensorImpl());
-  XLA_CHECK_NE(impl, nullptr);
-  return ToTensor(impl->tensor());
+  at::Tensor tensor = ToTensor(t);
+  XLATensorImpl* impl =
+      dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
+  return impl != nullptr ? ToTensor(impl->tensor()) : tensor;
 }
 
 bool EqualValues(at::Tensor a, at::Tensor b) {
@@ -41,7 +43,8 @@ void ForEachDevice(const std::function<void(const Device&)>& devfn) {
 
 void AllClose(at::Tensor tensor, at::Tensor xla_tensor, double rtol,
               double atol) {
-  EXPECT_TRUE(ToCpuTensor(xla_tensor).allclose(tensor, rtol, atol));
+  EXPECT_TRUE(
+      ToCpuTensor(xla_tensor).allclose(ToCpuTensor(tensor), rtol, atol));
 }
 
 }  // namespace cpp_test
