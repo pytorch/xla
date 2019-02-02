@@ -58,7 +58,7 @@ class AtenXlaType : public AtenXlaTypeBase {
   static void SetFullConvPrecision(bool use_full_conv_precision = true);
 
  private:
-  static bool use_full_conv_precision_;
+  static bool s_use_full_conv_precision_;
 };
 
 }  // namespace torch_xla

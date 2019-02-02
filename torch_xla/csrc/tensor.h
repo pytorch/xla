@@ -51,6 +51,10 @@ class XLATensor {
 
   at::Tensor ToTensor();
 
+  // This API should be called instead of ToTensor() when the tensor is passed
+  // to other ATEN APIs which will modify its value.
+  at::Tensor ToMutableTensor();
+
   c10::optional<XLATensor> grad() const;
   void SetGradient(const XLATensor& grad);
 
