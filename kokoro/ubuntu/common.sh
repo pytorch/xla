@@ -61,7 +61,6 @@ mv xla/ pytorch/
 cd pytorch
 
 # TODO(jysohn): remove following patching once pytorch JIT bug is fixed
-git checkout $(cat xla/.torch_commit_id)
 git apply xla/pytorch.patch
 # Build and install torch wheel and collect artifact
 export NO_CUDA=1
