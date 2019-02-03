@@ -12,6 +12,7 @@
 #include "cpp_test_util.h"
 #include "tensor_impl.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
+#include "torch_util.h"
 #include "torch_xla_test.h"
 
 namespace torch_xla {
@@ -35,10 +36,15 @@ void TestBackward(
   std::vector<at::Tensor> input_vars;
   std::vector<at::Tensor> xinput_vars;
   for (const auto& input : inputs) {
-    input_vars.push_back(torch::autograd::make_variable(input, true));
+    if (input.defined()) {
+      input_vars.push_back(torch::autograd::make_variable(input, true));
 
-    at::Tensor xinput = bridge::CreateXlaTensor(input, device);
-    xinput_vars.push_back(torch::autograd::make_variable(xinput, true));
+      at::Tensor xinput = bridge::CreateXlaTensor(CopyTensor(input), device);
+      xinput_vars.push_back(torch::autograd::make_variable(xinput, true));
+    } else {
+      input_vars.emplace_back();
+      xinput_vars.emplace_back();
+    }
   }
 
   at::Tensor output = testfn(input_vars);
@@ -46,8 +52,10 @@ void TestBackward(
   output.backward();
   xoutput.backward();
   for (size_t i = 0; i < input_vars.size(); ++i) {
-    ASSERT_TRUE(xinput_vars[i].grad().defined());
-    AllClose(input_vars[i].grad(), xinput_vars[i].grad());
+    if (inputs[i].defined()) {
+      ASSERT_TRUE(xinput_vars[i].grad().defined());
+      AllClose(input_vars[i].grad(), xinput_vars[i].grad());
+    }
   }
 }
 
@@ -506,6 +514,38 @@ TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
           });
         }
       }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
+  int in_channels = 3;
+  int out_channels = 7;
+  int kernel_size = 5;
+  for (int stride = 1; stride <= 3; ++stride) {
+    for (int padding = 0; padding <= 2; ++padding) {
+      for (bool with_bias : {true, false}) {
+        // Test dilation through the CPU interop.
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          auto testfn =
+              [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+            return at::conv2d(inputs[0], inputs[1], inputs[2],
+                              /*stride=*/{stride, stride},
+                              /*padding=*/{padding, padding},
+                              /*dilation=*/{dilation, dilation});
+          };
+
+          ForEachDevice([&](const Device& device) {
+            at::Tensor bias =
+                with_bias ? GetTestTesor({out_channels}) : at::Tensor();
+            TestBackward({GetTestTesor({4, in_channels, 32, 32}),
+                          GetTestTesor({out_channels, in_channels, kernel_size,
+                                        kernel_size}),
+                          bias},
+                         device, testfn);
+          });
+        }
+      };
     }
   }
 }
