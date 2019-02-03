@@ -1,5 +1,7 @@
 #pragma once
 
+#include <c10/core/Scalar.h>
+
 #include "ir.h"
 
 namespace torch_xla {
@@ -12,17 +14,17 @@ namespace ops {
 // graph.
 class Scalar : public Node {
  public:
-  Scalar(double value, xla::Shape shape);
-  Scalar(double value, xla::PrimitiveType type);
+  Scalar(at::Scalar value, xla::Shape shape);
+  Scalar(at::Scalar value, xla::PrimitiveType type);
 
   std::string ToString() const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  double value() const { return value_; }
+  const at::Scalar& value() const { return value_; }
 
  private:
-  double value_;
+  at::Scalar value_;
 };
 
 }  // namespace ops
