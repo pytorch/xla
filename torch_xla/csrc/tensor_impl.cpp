@@ -66,10 +66,13 @@ void XLATensorImpl::SetupSizeProperties() {
   // Fill up the basic dimension data members which the base class
   // implementation uses in its APIs.
   auto shape = tensor_.shape();
+  sizes_.clear();
+  numel_ = 1;
   for (auto dim : shape.get().dimensions()) {
     sizes_.push_back(dim);
     numel_ *= dim;
   }
+  strides_.clear();
   for (auto stride : ComputeShapeStrides(shape.get())) {
     strides_.push_back(stride);
   }
