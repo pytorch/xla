@@ -1,21 +1,56 @@
 #include "tensor_impl.h"
 
+#include <c10/core/impl/DeviceGuardImplInterface.h>
+#include <c10/macros/Macros.h>
+
 #include "tensor_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
+namespace {
+
+struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
+  at::DeviceType type() const override { return at::DeviceType::XLA; }
+
+  c10::Device exchangeDevice(c10::Device) const override {
+    return c10::Device(at::DeviceType::XLA, 0);
+  }
+
+  c10::Device getDevice() const override {
+    return c10::Device(at::DeviceType::XLA, 0);
+  }
+
+  void setDevice(c10::Device) const override {}
+
+  void uncheckedSetDevice(c10::Device d) const noexcept override {}
+
+  c10::Stream getStream(c10::Device d) const noexcept override {
+    return c10::Stream(c10::Stream::DEFAULT,
+                       c10::Device(at::DeviceType::XLA, 0));
+  }
+
+  c10::Stream exchangeStream(c10::Stream s) const noexcept override {
+    return c10::Stream(c10::Stream::DEFAULT,
+                       c10::Device(at::DeviceType::XLA, 0));
+  }
+
+  c10::DeviceIndex deviceCount() const override { return 1; }
+};
+
+}  // namespace
+
+C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
 
 // TODO: Replace UndefinedTensorId with proper type.
 XLATensorImpl::XLATensorImpl(XLATensor tensor)
-    : c10::TensorImpl(c10::UndefinedTensorId(), GetTypeMeta(tensor),
-                      /*allocator=*/nullptr, /*is_variable=*/false),
+    : c10::TensorImpl(GetStorage(tensor), c10::XLATensorId(),
+                      /*is_variable=*/false),
       tensor_(std::move(tensor)) {
   SetupSizeProperties();
 }
 
 XLATensorImpl::XLATensorImpl(XLATensor tensor, bool is_variable)
-    : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
-                      /*allocator=*/nullptr, is_variable),
+    : c10::TensorImpl(GetStorage(tensor), c10::XLATensorId(), is_variable),
       tensor_(std::move(tensor)) {
   SetupSizeProperties();
 }
@@ -59,6 +94,12 @@ caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
     default:
       XLA_ERROR() << "Type not supported: " << shape;
   }
+}
+
+c10::Storage XLATensorImpl::GetStorage(const XLATensor& tensor) {
+  Device device = tensor.GetDevice();
+  return c10::Storage(at::Device(c10::DeviceType::XLA, device.ordinal),
+                      GetTypeMeta(tensor));
 }
 
 }  // namespace torch_xla
