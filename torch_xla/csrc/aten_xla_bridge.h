@@ -54,7 +54,7 @@ Device XlaTensorDevice(const at::TensorOptions& tensor_options);
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor);
 
 // Creates an XLA tensor holding the data in tensor, on the given device.
-at::Tensor CreateXlaTensor(const at::Tensor& tensor, const Device& device);
+at::Tensor CreateXlaTensor(at::Tensor tensor, const Device& device);
 
 }  // namespace bridge
 }  // namespace torch_xla
