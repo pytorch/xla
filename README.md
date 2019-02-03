@@ -60,7 +60,7 @@ To run the tests, follow __one__ of the options below:
 * Run on local CPU using the XRT client:
 
   ```
-  export XLA_USE_XRT=1 XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
+  export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
   export XRT_WORKERS="localservice:0;grpc://localhost:40934"
   ```
 
