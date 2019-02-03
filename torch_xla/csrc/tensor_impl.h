@@ -2,6 +2,7 @@
 
 #include <ATen/Tensor.h>
 #include <ATen/Type.h>
+#include <c10/core/Storage.h>
 #include <c10/core/TensorImpl.h>
 
 #include "tensor.h"
@@ -23,6 +24,8 @@ class XLATensorImpl : public c10::TensorImpl {
   void SetupSizeProperties();
 
   static caffe2::TypeMeta GetTypeMeta(const XLATensor& tensor);
+
+  static c10::Storage GetStorage(const XLATensor& tensor);
 
   XLATensor tensor_;
 };
