@@ -51,23 +51,17 @@ def _get_device_support(devname):
       return DeviceSupport(
           num_devices=int(os.environ.get('TPU_NUM_DEVICES', 8)))
     return DeviceSupport(num_devices=int(os.environ.get('CPU_NUM_DEVICES', 1)))
-  xrt = os.environ.get('XLA_USE_XRT', None)
-  if xrt is None or int(xrt) == 0:
-    xla_platform = os.environ.get('XLA_PLATFORM', None)
-    if xla_platform == devname:
-      return DeviceSupport(num_devices=1)
-  else:
-    xrt_devmap = os.environ.get('XRT_DEVICE_MAP', None)
-    if xrt_devmap is None:
-      return None
-    num_devices = 0
-    for dev_spec in xrt_devmap.split('|'):
-      dev_parts = dev_spec.split(';')
-      if dev_parts[0].startswith(devname):
-        num_devices += 1
-    if num_devices > 0:
-      return DeviceSupport(num_devices=num_devices)
-  return None
+
+  xrt_devmap = os.environ.get('XRT_DEVICE_MAP', None)
+  if xrt_devmap is None:
+    return None
+  num_devices = 0
+  for dev_spec in xrt_devmap.split('|'):
+    dev_parts = dev_spec.split(';')
+    if dev_parts[0].startswith(devname):
+      num_devices += 1
+  if num_devices > 0:
+    return DeviceSupport(num_devices=num_devices)
 
 
 def _support_replicated(devname, num_devices):
