@@ -89,10 +89,13 @@ at::Tensor AtenFromXlaTensor(XLATensor xla_tensor) {
   return at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
 }
 
-at::Tensor CreateXlaTensor(const at::Tensor& tensor, const Device& device) {
-  XLATensor xla_tensor =
-      XLATensor::Create(tensor, device, /*requires_grad=*/false);
-  return AtenFromXlaTensor(xla_tensor);
+at::Tensor CreateXlaTensor(at::Tensor tensor, const Device& device) {
+  if (tensor.defined()) {
+    XLATensor xla_tensor =
+        XLATensor::Create(std::move(tensor), device, /*requires_grad=*/false);
+    tensor = AtenFromXlaTensor(xla_tensor);
+  }
+  return tensor;
 }
 
 }  // namespace bridge
