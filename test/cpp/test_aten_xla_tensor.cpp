@@ -550,5 +550,39 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
+  int kernel_size = 3;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      // Test ceil_mode=true through the CPU interop.
+      for (bool ceil_mode : {false, true}) {
+        auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+          return at::max_pool2d(
+              inputs[0], /*kernel_size=*/{kernel_size, kernel_size},
+              /*stride=*/{stride, stride},
+              /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
+              /*ceil_mode=*/ceil_mode);
+        };
+
+        ForEachDevice([&](const Device& device) {
+          TestBackward({GetTestTesor({1, 64, 112, 112})}, device, testfn);
+        });
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
+  for (int dim = 0; dim < 4; ++dim) {
+    auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+      return at::log_softmax(inputs[0], dim);
+    };
+
+    ForEachDevice([&](const Device& device) {
+      TestBackward({GetTestTesor({5, 3, 4, 2})}, device, testfn);
+    });
+  }
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
