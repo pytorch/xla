@@ -156,6 +156,13 @@ class XLATensor {
       tensorflow::gtl::ArraySlice<const xla::int64> padding,
       bool count_include_pad);
 
+  static std::tuple<XLATensor, XLATensor, XLATensor> conv2d_backward(
+      const XLATensor& out_backprop, const XLATensor& input,
+      const XLATensor& weight,
+      tensorflow::gtl::ArraySlice<const xla::int64> stride,
+      tensorflow::gtl::ArraySlice<const xla::int64> padding,
+      bool use_full_conv_precision);
+
   XLATensor cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups) const;
 
