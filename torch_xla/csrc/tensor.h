@@ -163,6 +163,10 @@ class XLATensor {
       tensorflow::gtl::ArraySlice<const xla::int64> padding,
       bool use_full_conv_precision);
 
+  static XLATensor log_softmax_backward(const XLATensor& grad_output,
+                                        const XLATensor& output,
+                                        xla::int64 dim);
+
   XLATensor cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups) const;
 
