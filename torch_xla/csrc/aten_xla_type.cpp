@@ -96,6 +96,31 @@ at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
   }
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor>
+AtenXlaType::thnn_conv2d_backward(const at::Tensor& grad_output,
+                                  const at::Tensor& self,
+                                  const at::Tensor& weight,
+                                  at::IntList kernel_size, at::IntList stride,
+                                  at::IntList padding, const at::Tensor& finput,
+                                  const at::Tensor& fgrad_input,
+                                  std::array<bool, 3> output_mask) const {
+  at::Tensor undefined;
+  auto gradients = XLATensor::conv2d_backward(
+      /*out_backprop=*/bridge::GetXlaTensor(grad_output),
+      /*input=*/bridge::GetXlaTensor(self),
+      /*weight=*/bridge::GetXlaTensor(weight),
+      /*stride=*/XlaHelpers::I64List(stride),
+      /*padding=*/XlaHelpers::I64List(padding),
+      /*use_full_conv_precision=*/s_use_full_conv_precision_);
+  return std::make_tuple(
+      output_mask[0] ? bridge::AtenFromXlaTensor(std::get<0>(gradients))
+                     : undefined,
+      output_mask[1] ? bridge::AtenFromXlaTensor(std::get<1>(gradients))
+                     : undefined,
+      output_mask[2] ? bridge::AtenFromXlaTensor(std::get<2>(gradients))
+                     : undefined);
+}
+
 at::Tensor AtenXlaType::addmm(const at::Tensor& self, const at::Tensor& mat1,
                               const at::Tensor& mat2, at::Scalar beta,
                               at::Scalar alpha) const {
