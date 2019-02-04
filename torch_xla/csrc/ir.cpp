@@ -79,6 +79,16 @@ XlaOpVector Node::ReturnOp(xla::XlaOp op, LoweringContext* loctx) const {
   return XlaOpVector({std::move(op)});
 }
 
+XlaOpVector Node::ReturnOps(tensorflow::gtl::ArraySlice<const xla::XlaOp> ops,
+                            LoweringContext* loctx) const {
+  XlaOpVector result;
+  for (size_t i = 0; i < ops.size(); ++i) {
+    loctx->AssignOutputOp(Output(this, i), ops[i]);
+    result.push_back(ops[i]);
+  }
+  return result;
+}
+
 std::string Node::ToString() const {
   std::stringstream ss;
   ss << shape() << " " << op();
