@@ -42,6 +42,15 @@ xla::XlaOp BuildAvgPool2dBackward(const torch::jit::Node* node,
                                   const xla::XlaOp& out_backprop,
                                   const xla::XlaOp& input);
 
+// Same as above, with kernel size, stride, padding and whether to include pad
+// provided as parameters.
+xla::XlaOp BuildAvgPool2dBackward(
+    const xla::XlaOp& out_backprop, const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    bool count_include_pad);
+
 // Computes adaptive average pooling for the given input with the output size
 // specified in the given node.
 xla::XlaOp BuildAdaptiveAvgPool2d(const torch::jit::Node* node,
