@@ -55,6 +55,12 @@ class AtenXlaType : public AtenXlaTypeBase {
                         at::IntList stride, at::IntList padding, bool ceil_mode,
                         bool count_include_pad) const override;
 
+  at::Tensor avg_pool2d_backward(const at::Tensor& grad_output,
+                                 const at::Tensor& self,
+                                 at::IntList kernel_size, at::IntList stride,
+                                 at::IntList padding, bool ceil_mode,
+                                 bool count_include_pad) const override;
+
   static void SetFullConvPrecision(bool use_full_conv_precision = true);
 
   // Registers the ATEN types for the XLA tensors.

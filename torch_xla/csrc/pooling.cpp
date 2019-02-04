@@ -202,11 +202,30 @@ xla::XlaOp BuildAvgPool2dBackward(const torch::jit::Node* node,
                                   const xla::XlaOp& input) {
   // Inspired from tf2xla.
   CheckAvgPool2DIsSupported(node);
-  const auto pooling_op_attributes = Pooling2DOpAttributes(node);
-  auto gradients_size = XlaHelpers::SizesOfXlaOp(input);
+  const auto kernel_size =
+      node->get<std::vector<int64_t>>(at::attr::kernel_size).value();
+  const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
+  const auto padding =
+      node->get<std::vector<int64_t>>(at::attr::padding).value();
   const auto count_include_pad =
       node->get<bool>(at::attr::count_include_pad).value();
 
+  return BuildAvgPool2dBackward(
+      out_backprop, input, XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
+      count_include_pad);
+}
+
+xla::XlaOp BuildAvgPool2dBackward(
+    const xla::XlaOp& out_backprop, const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    bool count_include_pad) {
+  const auto pooling_op_attributes =
+      Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size,
+                            /*stride_attr=*/stride, /*padding_attr=*/padding);
+  auto gradients_size = XlaHelpers::SizesOfXlaOp(input);
   return xla::AvgPoolGrad(
       /*out_backprop=*/out_backprop,
       /*gradients_size=*/gradients_size,
