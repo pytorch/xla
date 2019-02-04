@@ -14,6 +14,7 @@
 #include "ops/avg_pool2d.h"
 #include "ops/avg_pool2d_backward.h"
 #include "ops/conv2d.h"
+#include "ops/conv2d_backward.h"
 #include "ops/cross_replica_sum.h"
 #include "ops/device_data.h"
 #include "ops/generic.h"
@@ -615,6 +616,26 @@ XLATensor XLATensor::avg_pool2d_backward(
                     ir::NodeOperand(input.GetIrNode()), kernel_size, stride,
                     padding, count_include_pad)),
                 out_backprop.GetDevice());
+}
+
+std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::conv2d_backward(
+    const XLATensor& out_backprop, const XLATensor& input,
+    const XLATensor& weight,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    bool use_full_conv_precision) {
+  const auto node = std::make_shared<ir::ops::Conv2dBackward>(
+      ir::NodeOperand(out_backprop.GetIrNode()),
+      ir::NodeOperand(input.GetIrNode()), ir::NodeOperand(weight.GetIrNode()),
+      stride, padding, use_full_conv_precision);
+  XLATensor grad_input =
+      Create(ir::NodeOperand(node, 0), out_backprop.GetDevice());
+  XLATensor grad_weight =
+      Create(ir::NodeOperand(node, 1), out_backprop.GetDevice());
+  XLATensor grad_bias =
+      Create(ir::NodeOperand(node, 2), out_backprop.GetDevice());
+  return std::make_tuple(std::move(grad_input), std::move(grad_weight),
+                         std::move(grad_bias));
 }
 
 XLATensor XLATensor::t() const {

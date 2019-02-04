@@ -41,8 +41,16 @@ struct Conv2DGrads {
 
 // Computes the gradients for a convolution.
 Conv2DGrads BuildConv2dBackward(
-    const torch::jit::Node* node, const xla::XlaOp& grad,
+    const torch::jit::Node* node, const xla::XlaOp& grad_output,
     const xla::XlaOp& input, const xla::XlaOp& weight,
+    const xla::PrecisionConfig::Precision conv_precision);
+
+// Same as above, with stride and padding provided as parameters.
+Conv2DGrads BuildConv2dBackward(
+    const xla::XlaOp& grad_output, const xla::XlaOp& input,
+    const xla::XlaOp& weight,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
     const xla::PrecisionConfig::Precision conv_precision);
 
 }  // namespace torch_xla
