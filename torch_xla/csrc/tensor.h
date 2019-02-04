@@ -149,6 +149,13 @@ class XLATensor {
 
   XLATensor log_softmax(xla::int64 dim) const;
 
+  static XLATensor avg_pool2d_backward(
+      const XLATensor& out_backprop, const XLATensor& input,
+      tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+      tensorflow::gtl::ArraySlice<const xla::int64> stride,
+      tensorflow::gtl::ArraySlice<const xla::int64> padding,
+      bool count_include_pad);
+
   XLATensor cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups) const;
 

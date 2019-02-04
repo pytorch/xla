@@ -12,6 +12,7 @@
 #include "lowering_context.h"
 #include "ops/arithmetic_ir_ops.h"
 #include "ops/avg_pool2d.h"
+#include "ops/avg_pool2d_backward.h"
 #include "ops/conv2d.h"
 #include "ops/cross_replica_sum.h"
 #include "ops/device_data.h"
@@ -601,6 +602,19 @@ XLATensor XLATensor::avg_pool2d(
       ir::NodeOperand(std::make_shared<ir::ops::AvgPool2d>(
           GetIrNode(), kernel_size, stride, padding, count_include_pad)),
       GetDevice());
+}
+
+XLATensor XLATensor::avg_pool2d_backward(
+    const XLATensor& out_backprop, const XLATensor& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    bool count_include_pad) {
+  return Create(ir::NodeOperand(std::make_shared<ir::ops::AvgPool2dBackward>(
+                    ir::NodeOperand(out_backprop.GetIrNode()),
+                    ir::NodeOperand(input.GetIrNode()), kernel_size, stride,
+                    padding, count_include_pad)),
+                out_backprop.GetDevice());
 }
 
 XLATensor XLATensor::t() const {

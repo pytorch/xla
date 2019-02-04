@@ -149,6 +149,24 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
       XlaHelpers::I64List(padding), count_include_pad));
 }
 
+at::Tensor AtenXlaType::avg_pool2d_backward(const at::Tensor& grad_output,
+                                            const at::Tensor& self,
+                                            at::IntList kernel_size,
+                                            at::IntList stride,
+                                            at::IntList padding, bool ceil_mode,
+                                            bool count_include_pad) const {
+  // Lowering when ceil_mode is set not supported yet.
+  if (ceil_mode) {
+    return AtenXlaTypeBase::avg_pool2d_backward(grad_output, self, kernel_size,
+                                                stride, padding, ceil_mode,
+                                                count_include_pad);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::avg_pool2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding), count_include_pad));
+}
+
 void AtenXlaType::SetFullConvPrecision(
     bool use_full_conv_precision /*= true*/) {
   s_use_full_conv_precision_ = use_full_conv_precision;
