@@ -1,5 +1,9 @@
 #include "aten_xla_type.h"
+
+#include <mutex>
+
 #include "aten_xla_bridge.h"
+#include "aten_xla_type_instances.h"
 #include "helpers.h"
 #include "tensor_impl.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -141,6 +145,11 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
 void AtenXlaType::SetFullConvPrecision(
     bool use_full_conv_precision /*= true*/) {
   s_use_full_conv_precision_ = use_full_conv_precision;
+}
+
+void AtenXlaType::RegisterAtenTypes() {
+  static std::once_flag once;
+  std::call_once(once, []() { RegisterAtenXlaTypes(); });
 }
 
 }  // namespace torch_xla
