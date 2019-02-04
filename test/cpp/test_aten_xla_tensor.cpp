@@ -21,7 +21,7 @@ namespace cpp_test {
 class AtenXlaTensorTest : public TorchXlaTest {
  protected:
   static void SetUpTestCase() {
-    RegisterAtenXlaTypes();
+    AtenXlaType::RegisterAtenTypes();
     AtenXlaType::SetFullConvPrecision();
   }
 };
