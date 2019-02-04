@@ -68,6 +68,10 @@ class AtenXlaType : public AtenXlaTypeBase {
                                  at::IntList padding, bool ceil_mode,
                                  bool count_include_pad) const override;
 
+  at::Tensor _log_softmax_backward_data(const at::Tensor& grad_output,
+                                        const at::Tensor& output, int64_t dim,
+                                        const at::Tensor& self) const override;
+
   static void SetFullConvPrecision(bool use_full_conv_precision = true);
 
   // Registers the ATEN types for the XLA tensors.
