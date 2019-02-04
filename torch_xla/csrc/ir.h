@@ -167,6 +167,9 @@ class Node {
 
   XlaOpVector ReturnOp(xla::XlaOp op, LoweringContext* loctx) const;
 
+  XlaOpVector ReturnOps(tensorflow::gtl::ArraySlice<const xla::XlaOp> ops,
+                        LoweringContext* loctx) const;
+
  private:
   // Adds node's index output number as operand.
   void AddOperand(NodePtr node, size_t index = 0);
