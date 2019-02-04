@@ -57,6 +57,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   static void SetFullConvPrecision(bool use_full_conv_precision = true);
 
+  // Registers the ATEN types for the XLA tensors.
+  static void RegisterAtenTypes();
+
  private:
   static bool s_use_full_conv_precision_;
 };
