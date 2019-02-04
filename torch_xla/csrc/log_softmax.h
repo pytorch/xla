@@ -18,4 +18,8 @@ xla::XlaOp BuildLogSoftmaxGrad(const torch::jit::Node* node,
                                const xla::XlaOp& grad_output,
                                const xla::XlaOp& output);
 
+// Same as above, with the dimension provided as parameter.
+xla::XlaOp BuildLogSoftmaxGrad(const xla::XlaOp& grad_output,
+                               const xla::XlaOp& output, xla::int64 dim);
+
 }  // namespace torch_xla

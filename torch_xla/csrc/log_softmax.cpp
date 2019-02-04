@@ -59,9 +59,13 @@ xla::XlaOp BuildLogSoftmax(const xla::XlaOp& logits, xla::int64 dim) {
 xla::XlaOp BuildLogSoftmaxGrad(const torch::jit::Node* node,
                                const xla::XlaOp& grad_output,
                                const xla::XlaOp& output) {
-  // Inspired from tf2xla.
   xla::int64 dim = node->get<int64_t>(at::attr::dim).value();
+  return BuildLogSoftmaxGrad(grad_output, output, dim);
+}
 
+xla::XlaOp BuildLogSoftmaxGrad(const xla::XlaOp& grad_output,
+                               const xla::XlaOp& output, xla::int64 dim) {
+  // Inspired from tf2xla.
   auto input_size = XlaHelpers::SizesOfXlaOp(grad_output);
   std::vector<xla::int64> broadcast_dimensions;
   for (size_t broadcast_dim = 0; broadcast_dim < input_size.size();

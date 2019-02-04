@@ -185,6 +185,13 @@ at::Tensor AtenXlaType::avg_pool2d_backward(const at::Tensor& grad_output,
       XlaHelpers::I64List(padding), count_include_pad));
 }
 
+at::Tensor AtenXlaType::_log_softmax_backward_data(
+    const at::Tensor& grad_output, const at::Tensor& output, int64_t dim,
+    const at::Tensor& /* self*/) const {
+  return bridge::AtenFromXlaTensor(XLATensor::log_softmax_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
+}
+
 void AtenXlaType::SetFullConvPrecision(
     bool use_full_conv_precision /*= true*/) {
   s_use_full_conv_precision_ = use_full_conv_precision;

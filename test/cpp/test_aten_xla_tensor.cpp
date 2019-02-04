@@ -32,7 +32,8 @@ at::Tensor GetTestTesor(at::IntList sizes) {
 
 void TestBackward(
     const std::vector<at::Tensor>& inputs, const Device& device,
-    const std::function<at::Tensor(const std::vector<at::Tensor>&)>& testfn) {
+    const std::function<at::Tensor(const std::vector<at::Tensor>&)>& testfn,
+    double rtol = 1e-5, double atol = 1e-8) {
   std::vector<at::Tensor> input_vars;
   std::vector<at::Tensor> xinput_vars;
   for (const auto& input : inputs) {
@@ -54,7 +55,7 @@ void TestBackward(
   for (size_t i = 0; i < input_vars.size(); ++i) {
     if (inputs[i].defined()) {
       ASSERT_TRUE(xinput_vars[i].grad().defined());
-      AllClose(input_vars[i].grad(), xinput_vars[i].grad());
+      AllClose(input_vars[i].grad(), xinput_vars[i].grad(), rtol, atol);
     }
   }
 }
@@ -579,7 +580,7 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
     };
 
     ForEachDevice([&](const Device& device) {
-      TestBackward({GetTestTesor({5, 3, 4, 2})}, device, testfn);
+      TestBackward({GetTestTesor({5, 3, 4, 2})}, device, testfn, /*rtol=*/1e-3);
     });
   }
 }
