@@ -83,6 +83,33 @@ NodePtr AddMatMulOp(const NodeOperand& input, const NodeOperand& weight,
                             std::move(lower_fn));
 }
 
+NodePtr MatMulOp(const NodeOperand& input, const NodeOperand& weight,
+                 bool use_full_conv_precision) {
+  const auto precision_level = use_full_conv_precision
+                                   ? xla::PrecisionConfig::HIGHEST
+                                   : xla::PrecisionConfig::DEFAULT;
+  auto lower_fn = [precision_level](
+                      const ir::Node& node,
+                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    XLA_CHECK_EQ(node.operands().size(), 2) << "Unexpected number of operands";
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
+    xla::PrecisionConfig precision_config =
+        XlaHelpers::BuildPrecisionConfig(precision_level);
+    return node.ReturnOp(xla::Dot(xla_input, xla_weight, &precision_config),
+                         loctx);
+  };
+  auto lower_for_shape_fn =
+      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
+    return xla::Dot(operands[0], operands[1]);
+  };
+  xla::Shape output_shape = ir::ops::InferOutputShape(
+      {input.node->shape(), weight.node->shape()}, lower_for_shape_fn);
+  return ir::ops::GenericOp(ir::OpKind(at::aten::mm), ir::OpList{input, weight},
+                            output_shape, std::move(lower_fn));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
