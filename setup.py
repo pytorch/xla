@@ -1,15 +1,62 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 from setuptools import setup, find_packages, distutils
 from torch.utils.cpp_extension import BuildExtension, CppExtension
+import distutils.ccompiler
 import distutils.command.clean
 import glob
+import inspect
+import multiprocessing
+import multiprocessing.pool
 import os
 import platform
 import re
 import shutil
 import subprocess
 import sys
+
+
+def _check_env_flag(name, default=''):
+  return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
+
+
+def _compile_parallel(self,
+                      sources,
+                      output_dir=None,
+                      macros=None,
+                      include_dirs=None,
+                      debug=0,
+                      extra_preargs=None,
+                      extra_postargs=None,
+                      depends=None):
+  # those lines are copied from distutils.ccompiler.CCompiler directly
+  macros, objects, extra_postargs, pp_opts, build = self._setup_compile(
+      output_dir, macros, include_dirs, sources, depends, extra_postargs)
+  cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
+
+  def compile_one(obj):
+    try:
+      src, ext = build[obj]
+    except KeyError:
+      return
+    self._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
+
+  list(
+      multiprocessing.pool.ThreadPool(multiprocessing.cpu_count()).imap(
+          compile_one, objects))
+  return objects
+
+
+# Plant the parallel compile function.
+if _check_env_flag('COMPILE_PARALLEL'):
+  try:
+    if (inspect.signature(distutils.ccompiler.CCompiler.compile) ==
+        inspect.signature(_compile_parallel)):
+      distutils.ccompiler.CCompiler.compile = _compile_parallel
+  except:
+    pass
 
 
 class Clean(distutils.command.clean.clean):
@@ -38,30 +85,25 @@ class Clean(distutils.command.clean.clean):
     distutils.command.clean.clean.run(self)
 
 
-def _check_env_flag(name, default=''):
-  return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
-
-
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Generate the code before globbing!
 generate_code_cmd = [os.path.join(base_dir, 'scripts', 'generate_code.sh')]
 if subprocess.call(generate_code_cmd) != 0:
-  print("Failed to run '{}'".format(generate_code_cmd))
+  print("Failed to run '{}'".format(generate_code_cmd), file=sys.stderr)
+  sys.exit(1)
+
+build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
+if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
+  build_libs_cmd += [sys.argv[1]]
+if subprocess.call(build_libs_cmd) != 0:
+  print("Failed to run '{}'".format(build_libs_cmd), file=sys.stderr)
   sys.exit(1)
 
 # Fetch the sources to be built.
 torch_xla_sources = (
     glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
     glob.glob('torch_xla/csrc/passes/*.cpp'))
-
-build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
-if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
-  build_libs_cmd += [sys.argv[1]]
-
-if subprocess.call(build_libs_cmd) != 0:
-  print("Failed to run '{}'".format(build_libs_cmd))
-  sys.exit(1)
 
 # Constant known variables used throughout this file
 lib_path = os.path.join(base_dir, 'torch_xla', 'lib')
