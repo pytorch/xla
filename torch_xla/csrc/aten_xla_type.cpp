@@ -215,6 +215,18 @@ at::Tensor AtenXlaType::_log_softmax_backward_data(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
 }
 
+at::Tensor AtenXlaType::nll_loss(const at::Tensor& self,
+                                 const at::Tensor& target,
+                                 const at::Tensor& weight, int64_t reduction,
+                                 int64_t ignore_index) const {
+  if (reduction != Reduction::Mean || ignore_index >= 0 || weight.defined()) {
+    return AtenXlaTypeBase::nll_loss(self, target, weight, reduction,
+                                     ignore_index);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::nll_loss(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target)));
+}
+
 void AtenXlaType::SetFullConvPrecision(
     bool use_full_conv_precision /*= true*/) {
   s_use_full_conv_precision_ = use_full_conv_precision;

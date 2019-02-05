@@ -6,13 +6,11 @@
 namespace torch_xla {
 
 // Builds the NLLLoss for log-probabilities "logits" and class indices "labels".
-xla::XlaOp BuildNllLoss(const torch::jit::Node* node, const xla::XlaOp& logits,
-                        const xla::XlaOp& labels);
+xla::XlaOp BuildNllLoss(const xla::XlaOp& logits, const xla::XlaOp& labels);
 
 // Builds the NLLLoss gradient for log-probabilities "logits" and class indices
 // "labels".
-xla::XlaOp BuildNllLossBackward(const torch::jit::Node* node,
-                                const xla::XlaOp& logits,
+xla::XlaOp BuildNllLossBackward(const xla::XlaOp& logits,
                                 const xla::XlaOp& labels);
 
 }  // namespace torch_xla
