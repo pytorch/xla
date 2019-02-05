@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 
 Constant::Constant(xla::Literal value)
-    : Node(OpKind(at::prim::Constant), {}, value.shape()),
+    : Node(OpKind(at::prim::Constant), value.shape(), value.Hash()),
       value_(std::move(value)) {}
 
 std::string Constant::ToString() const {

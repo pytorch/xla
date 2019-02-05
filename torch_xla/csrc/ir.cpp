@@ -1,9 +1,11 @@
 #include "ir.h"
 
+#include <functional>
 #include <sstream>
 
 #include "lowering_context.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -38,12 +40,21 @@ OpKind OpKind::Get(const std::string& name) {
 }
 
 Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs)
-    : op_(std::move(op)), num_outputs_(num_outputs), shape_(std::move(shape)) {
+    : op_(std::move(op)),
+      num_outputs_(num_outputs),
+      shape_(std::move(shape)),
+      hash_(op_.hash()) {
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
     graph_size_ += operand.node->graph_size();
+    hash_ = xla::util::HashCombine(hash_, operand.node->hash());
   }
 }
+
+Node::Node(OpKind op, xla::Shape shape, size_t hash_seed)
+    : op_(std::move(op)),
+      shape_(std::move(shape)),
+      hash_(GetOpHash(op_, shape_, hash_seed)) {}
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
@@ -110,6 +121,12 @@ std::string Node::ToString() const {
 
 XlaOpVector Node::Lower(LoweringContext* loctx) const {
   XLA_ERROR() << "Lowering not implemented for node: " << *this;
+}
+
+size_t Node::GetOpHash(OpKind op, const xla::Shape& shape, size_t hash_seed) {
+  size_t h = xla::util::HashCombine(op.hash(),
+                                    std::hash<std::string>()(shape.ToString()));
+  return xla::util::HashCombine(h, hash_seed);
 }
 
 }  // namespace ir

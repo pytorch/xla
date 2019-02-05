@@ -1,5 +1,6 @@
 #include "ops/scalar.h"
 
+#include <functional>
 #include <sstream>
 
 #include "helpers.h"
@@ -16,13 +17,20 @@ std::ostream& operator<<(std::ostream& ostrm, const at::Scalar& s) {
   return ostrm << (s.isFloatingPoint() ? s.toDouble() : s.toLong());
 }
 
+size_t ScalarHash(const at::Scalar& s) {
+  return s.isFloatingPoint() ? std::hash<double>()(s.toDouble())
+                             : std::hash<long>()(s.toLong());
+}
+
 }  // namespace
 
 Scalar::Scalar(at::Scalar value, xla::Shape shape)
-    : Node(OpKind(at::prim::Constant), {}, shape), value_(std::move(value)) {}
+    : Node(OpKind(at::prim::Constant), shape, ScalarHash(value)),
+      value_(std::move(value)) {}
 
 Scalar::Scalar(at::Scalar value, xla::PrimitiveType type)
-    : Node(OpKind(at::prim::Constant), {}, xla::ShapeUtil::MakeShape(type, {})),
+    : Node(OpKind(at::prim::Constant), xla::ShapeUtil::MakeShape(type, {}),
+           ScalarHash(value)),
       value_(std::move(value)) {}
 
 std::string Scalar::ToString() const {

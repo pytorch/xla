@@ -10,7 +10,8 @@ namespace ir {
 namespace ops {
 
 DeviceData::DeviceData(std::shared_ptr<xla::ComputationClient::Data> data)
-    : Node(xla_device_data, {}, data->shape()), data_(std::move(data)) {}
+    : Node(xla_device_data, data->shape(), /*hash_seed=*/101),
+      data_(std::move(data)) {}
 
 std::string DeviceData::ToString() const {
   std::stringstream ss;
