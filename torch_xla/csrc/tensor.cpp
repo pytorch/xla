@@ -291,8 +291,7 @@ void XLATensor::TryLimitGraphSize() {
   // If we are accumulating too many nodes in the pending graph, render the XLA
   // by executing the pending graph.
   static const size_t kMaxPendingGraphSize = 1000;
-  if (data()->ir_node &&
-      data()->ir_node.node->graph_size() > kMaxPendingGraphSize) {
+  if (data()->ir_node && data()->ir_node->graph_size() > kMaxPendingGraphSize) {
     ApplyPendingGraph();
   }
 }
@@ -453,7 +452,7 @@ xla::int64 XLATensor::GetNextTensorId() {
 
 XLATensor::ViewIrNode XLATensor::GetViewIrNode(View* view) {
   if (view->ir_node &&
-      view->ir_node.node->operand(0).node == view->alias->ir_node.node.get()) {
+      view->ir_node->operand(0).node == view->alias->ir_node.node.get()) {
     // If the existing ir_node (which is a ir::ops::View) operand(0) still
     // matches the current aliased node, the current IR Node is still valid.
     return {view->ir_node, false};
