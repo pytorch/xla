@@ -248,9 +248,8 @@ std::string XLATensor::DumpGraphNodeComputation() const {
   ir::NodeOperand ir_node = CurrentIrNode();
   if (ir_node) {
     ir::LoweringContext lowering_ctx("DumpGraphNodeComputation");
-    XLA_CHECK_EQ(ir_node.node->num_outputs(), 1);
     xla::XlaOp root =
-        lowering_ctx.GetOutputOp(ir::Output(ir_node.node.get(), 0));
+        lowering_ctx.GetOutputOp(ir::Output(ir_node.node.get(), ir_node.index));
     auto computation = lowering_ctx.Build(root).ConsumeValueOrDie();
     hlo_text =
         xla::xrt_util::GetComputationHloText(computation).ConsumeValueOrDie();
@@ -655,9 +654,8 @@ void XLATensor::ApplyPendingGraph() {
     ir::NodeOperand ir_node = CurrentIrNode();
     if (ir_node) {
       ir::LoweringContext lowering_ctx("ApplyPendingGraph");
-      XLA_CHECK_EQ(ir_node.node->num_outputs(), 1);
-      xla::XlaOp root =
-          lowering_ctx.GetOutputOp(ir::Output(ir_node.node.get(), 0));
+      xla::XlaOp root = lowering_ctx.GetOutputOp(
+          ir::Output(ir_node.node.get(), ir_node.index));
       xla::XlaComputation computation =
           lowering_ctx.Build(root).ConsumeValueOrDie();
       auto output_shape = shape();
@@ -873,9 +871,8 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
       std::vector<xla::int64> device_index_mapping;
       for (auto i : device_context->index_mapping) {
         ir::NodeOperand ir_node = (*tensors)[i].CurrentIrNode();
-        XLA_CHECK_EQ(ir_node.node->num_outputs(), 1);
         xla::XlaOp root = device_context->lowering_ctx.GetOutputOp(
-            ir::Output(ir_node.node.get(), 0));
+            ir::Output(ir_node.node.get(), ir_node.index));
         device_context->lowering_ctx.AddResult(root);
         device_index_mapping.push_back((*tensors)[i].GetUniqueId());
       }
