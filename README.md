@@ -21,10 +21,10 @@ To build:
   git checkout $(cat xla/.torch_commit_id)
   ```
 
-* Apply the `pytorch.patch` to the current `xla` code. From within the _pytorch_ source folder:
+* Apply PyTorch patches:
 
   ```
-  patch -p1 < xla/pytorch.patch
+  xla/scripts/apply_patches.sh
   ```
 
 * Install the Lark parser used for automatic code generation:

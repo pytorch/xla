@@ -34,7 +34,7 @@ pip install ninja
 pip install lark-parser
 
 # Install Pytorch
-patch -p1 < xla/pytorch.patch
+xla/scripts/apply_patches.sh
 python setup.py build develop
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
