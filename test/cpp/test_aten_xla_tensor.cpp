@@ -38,10 +38,14 @@ void TestBackward(
   std::vector<at::Tensor> xinput_vars;
   for (const auto& input : inputs) {
     if (input.defined()) {
-      input_vars.push_back(torch::autograd::make_variable(input, true));
+      const bool requires_grad = (input.scalar_type() == at::kFloat ||
+                                  input.scalar_type() == at::kDouble);
+      input_vars.push_back(
+          torch::autograd::make_variable(input, requires_grad));
 
       at::Tensor xinput = bridge::CreateXlaTensor(CopyTensor(input), device);
-      xinput_vars.push_back(torch::autograd::make_variable(xinput, true));
+      xinput_vars.push_back(
+          torch::autograd::make_variable(xinput, requires_grad));
     } else {
       input_vars.emplace_back();
       xinput_vars.emplace_back();
@@ -53,7 +57,7 @@ void TestBackward(
   output.backward();
   xoutput.backward();
   for (size_t i = 0; i < input_vars.size(); ++i) {
-    if (inputs[i].defined()) {
+    if (inputs[i].defined() && input_vars[i].requires_grad()) {
       ASSERT_TRUE(xinput_vars[i].grad().defined());
       AllClose(input_vars[i].grad(), xinput_vars[i].grad(), rtol, atol);
     }
@@ -648,6 +652,25 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
           {GetTestTesor({labels}), GetTestTesor({in_channels, out_channels}),
            GetTestTesor({out_channels, labels})},
           device, testfn);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
+  int batch = 3;
+  int classes = 5;
+  at::Tensor input = GetTestTesor({batch, classes});
+  at::Tensor target =
+      at::empty({batch}, at::TensorOptions(at::kLong)).random_(0, classes);
+  at::Tensor undef_weight;
+  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+    auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+      return at::nll_loss(
+          /*self=*/inputs[0], /*target=*/inputs[1], /*weight=*/undef_weight,
+          /*reduction=*/reduction);
+    };
+    ForEachDevice([&](const Device& device) {
+      TestBackward({input, target}, device, testfn);
     });
   }
 }
