@@ -82,6 +82,12 @@ class AtenXlaType : public AtenXlaTypeBase {
                       const at::Tensor& weight, int64_t reduction,
                       int64_t ignore_index) const override;
 
+  at::Tensor nll_loss_backward(const at::Tensor& grad_output,
+                               const at::Tensor& self, const at::Tensor& target,
+                               const at::Tensor& weight, int64_t reduction,
+                               int64_t ignore_index,
+                               const at::Tensor& total_weight) const override;
+
   static void SetFullConvPrecision(bool use_full_conv_precision = true);
 
   // Registers the ATEN types for the XLA tensors.
