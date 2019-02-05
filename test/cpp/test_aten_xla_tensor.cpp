@@ -675,5 +675,14 @@ TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, DISABLED_TestViewBackward) {
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return inputs[0].view({-1, 320});
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({GetTestTesor({32, 20, 4, 4})}, device, testfn);
+  });
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
