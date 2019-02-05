@@ -607,6 +607,15 @@ XLATensor XLATensor::avg_pool2d(
       GetDevice());
 }
 
+XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,
+                        bool use_full_conv_precision) {
+  return Create(
+      ir::NodeOperand(ir::ops::MatMulOp(ir::NodeOperand(input.GetIrNode()),
+                                        ir::NodeOperand(weight.GetIrNode()),
+                                        use_full_conv_precision)),
+      input.GetDevice());
+}
+
 XLATensor XLATensor::avg_pool2d_backward(
     const XLATensor& out_backprop, const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,

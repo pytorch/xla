@@ -603,5 +603,23 @@ TEST_F(AtenXlaTensorTest, TestTransposeBackward) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
+  int in_channels = 32;
+  int out_channels = 320;
+  int labels = 50;
+  // Test beta != 1. through the CPU interop.
+  for (double beta : {1., 2.}) {
+    auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+      return at::addmm(inputs[0], inputs[1], inputs[2], /*beta=*/beta);
+    };
+    ForEachDevice([&](const Device& device) {
+      TestBackward(
+          {GetTestTesor({labels}), GetTestTesor({in_channels, out_channels}),
+           GetTestTesor({out_channels, labels})},
+          device, testfn);
+    });
+  }
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla

@@ -51,6 +51,9 @@ NodePtr TransposeOp(const NodeOperand& input);
 NodePtr AddMatMulOp(const NodeOperand& input, const NodeOperand& weight,
                     const NodeOperand& bias, bool use_full_conv_precision);
 
+NodePtr MatMulOp(const NodeOperand& input, const NodeOperand& weight,
+                 bool use_full_conv_precision);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

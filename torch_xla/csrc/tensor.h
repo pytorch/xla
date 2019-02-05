@@ -149,6 +149,9 @@ class XLATensor {
 
   XLATensor log_softmax(xla::int64 dim) const;
 
+  static XLATensor mm(const XLATensor& input, const XLATensor& weight,
+                      bool use_full_conv_precision);
+
   static XLATensor avg_pool2d_backward(
       const XLATensor& out_backprop, const XLATensor& input,
       tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,

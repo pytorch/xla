@@ -134,6 +134,14 @@ at::Tensor AtenXlaType::addmm(const at::Tensor& self, const at::Tensor& mat1,
       /*use_full_conv_precision=*/s_use_full_conv_precision_));
 }
 
+at::Tensor AtenXlaType::mm(const at::Tensor& self,
+                           const at::Tensor& mat2) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::mm(/*input=*/bridge::GetXlaTensor(self),
+                    /*weight=*/bridge::GetXlaTensor(mat2),
+                    /*use_full_conv_precision=*/s_use_full_conv_precision_));
+}
+
 at::Tensor AtenXlaType::t(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).t());
 }
