@@ -31,6 +31,8 @@ std::string Output::ToString() const {
   return ss.str();
 }
 
+const xla::Shape& NodeOperand::shape() const { return node->shape(index); }
+
 OpKind OpKind::Get(const std::string& name) {
   return OpKind(c10::Symbol::fromQualString(name));
 }
@@ -47,6 +49,14 @@ Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
     operands_[i]->RemoveUse(Use(this, i, operands_as_outputs_[i].index));
   }
+}
+
+const xla::Shape& Node::shape(size_t output_index) const {
+  if (shape_.IsTuple()) {
+    return shape_.tuple_shapes(output_index);
+  }
+  XLA_CHECK_EQ(output_index, 0);
+  return shape_;
 }
 
 void Node::AddOperand(NodePtr node, size_t index) {
