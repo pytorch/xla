@@ -100,6 +100,8 @@ struct NodeOperand {
 
   operator bool() const { return node != nullptr; }
 
+  operator Output() const { return Output(node.get(), index); }
+
   NodePtr node;
   size_t index = 0;
 };
