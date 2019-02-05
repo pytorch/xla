@@ -18,7 +18,7 @@ TEST(IrTest, TestScalarCreate) {
 TEST(IrTest, TestReplace) {
   ir::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
   ir::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::NodePtr add = scalar1 + scalar2;
+  ir::NodeOperand add = scalar1 + scalar2;
   EXPECT_EQ(scalar1->uses().size(), 1);
   EXPECT_EQ(scalar2->uses().size(), 1);
 

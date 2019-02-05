@@ -93,8 +93,12 @@ using OutputMap = std::unordered_map<Output, T, Output::Hasher>;
 // Represents an input/operand for a Node object.
 struct NodeOperand {
   NodeOperand() = default;
-  explicit NodeOperand(NodePtr node, size_t index = 0)
+  NodeOperand(NodePtr node, size_t index = 0)
       : node(std::move(node)), index(index) {}
+
+  const xla::Shape& shape() const;
+
+  operator bool() const { return node != nullptr; }
 
   NodePtr node;
   size_t index = 0;
@@ -148,6 +152,8 @@ class Node {
   size_t num_outputs() const { return num_outputs_; }
 
   const xla::Shape& shape() const { return shape_; }
+
+  const xla::Shape& shape(size_t output_index) const;
 
   const std::vector<Output>& operands() const { return operands_as_outputs_; }
 
