@@ -102,6 +102,8 @@ struct NodeOperand {
 
   operator Output() const { return Output(node.get(), index); }
 
+  Node* operator->() const { return node.get(); }
+
   NodePtr node;
   size_t index = 0;
 };
