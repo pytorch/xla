@@ -71,6 +71,7 @@ _TYPE_NSMAP = {
     'Scalar': 'at::Scalar',
     'Storage': 'at::Storage',
     'IntList': 'at::IntList',
+    'IntArrayRef': 'at::IntArrayRef',
     'Generator': 'at::Generator',
     'ScalarType': 'at::ScalarType',
     'TensorOptions': 'at::TensorOptions',
