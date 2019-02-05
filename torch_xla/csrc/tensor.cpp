@@ -25,6 +25,7 @@
 #include "ops/softmax.h"
 #include "ops/softmax_backward.h"
 #include "ops/threshold.h"
+#include "ops/threshold_backward.h"
 #include "ops/view.h"
 #include "tensor_util.h"
 #include "tensorflow/compiler/xla/literal_util.h"
@@ -645,6 +646,15 @@ XLATensor XLATensor::log_softmax_backward(const XLATensor& grad_output,
   return Create(ir::NodeOperand(std::make_shared<ir::ops::LogSoftmaxBackward>(
                     ir::NodeOperand(grad_output.GetIrNode()),
                     ir::NodeOperand(output.GetIrNode()), dim)),
+                grad_output.GetDevice());
+}
+
+XLATensor XLATensor::threshold_backward(const XLATensor& grad_output,
+                                        const XLATensor& input,
+                                        float threshold) {
+  return Create(ir::NodeOperand(std::make_shared<ir::ops::ThresholdBackward>(
+                    ir::NodeOperand(grad_output.GetIrNode()),
+                    ir::NodeOperand(input.GetIrNode()), threshold)),
                 grad_output.GetDevice());
 }
 
