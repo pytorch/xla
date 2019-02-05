@@ -32,6 +32,10 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
                        at::Scalar value) const override;
 
+  at::Tensor threshold_backward(const at::Tensor& grad_output,
+                                const at::Tensor& self,
+                                at::Scalar threshold) const override;
+
   at::Tensor conv2d(const at::Tensor& input, const at::Tensor& weight,
                     const at::Tensor& bias, at::IntList stride,
                     at::IntList padding, at::IntList dilation,
