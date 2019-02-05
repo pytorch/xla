@@ -85,6 +85,10 @@ std::vector<T> ToVector(const S& input) {
   return std::vector<T>(input.begin(), input.end());
 }
 
+static inline size_t HashCombine(size_t a, size_t b) {
+  return a ^ (b + 0x9e3779b97f4a7c15 + (a << 6) + (a >> 2));
+}
+
 }  // namespace util
 }  // namespace xla
 
