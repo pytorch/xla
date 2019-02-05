@@ -59,7 +59,7 @@ struct Output {
   struct Hasher {
     size_t operator()(const Output& output) const {
       size_t h = reinterpret_cast<std::ptrdiff_t>(output.node);
-      return h ^ (h >> 11) ^ output.index;
+      return h ^ (output.index + 0x9e3779b97f4a7c15 + (h << 6) + (h >> 2));
     }
   };
 
@@ -119,6 +119,8 @@ struct OpKind {
     return c10::unique_t(op) < c10::unique_t(rhs.op);
   }
 
+  size_t hash() const { return c10::unique_t(op); }
+
   std::string ToString() const { return op.toQualString(); }
 
   // Retrieves an existing operation object, or creates a new one. Operations
@@ -149,6 +151,9 @@ class Node {
   // generates.
   Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs = 1);
 
+  // Contructor used to create leaf nodes.
+  Node(OpKind op, xla::Shape shape, size_t hash_seed);
+
   virtual ~Node();
 
   const OpKind& op() const { return op_; }
@@ -164,6 +169,8 @@ class Node {
   const Output& operand(size_t i) const { return operands_as_outputs_.at(i); }
 
   const std::set<Use>& uses() const { return uses_; }
+
+  size_t hash() const { return hash_; }
 
   size_t graph_size() const { return graph_size_; }
 
@@ -188,10 +195,12 @@ class Node {
 
   void RemoveUse(const Use& use) { uses_.erase(use); }
 
+  static size_t GetOpHash(OpKind op, const xla::Shape& shape, size_t hash_seed);
+
   // The ID of the operation captured by this node.
-  const OpKind op_;
-  const size_t num_outputs_ = 1;
-  const xla::Shape shape_;
+  OpKind op_;
+  size_t num_outputs_ = 1;
+  xla::Shape shape_;
   // A node holds a real reference to its operands.
   std::vector<NodePtr> operands_;
   // Outputs do not hold references on the nodes, and neither do the uses, since
@@ -199,6 +208,8 @@ class Node {
   std::vector<Output> operands_as_outputs_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
+  // The hash value of the graph rooted at this node.
+  size_t hash_ = 0;
   // An estimation of the number of nodes behind this node.
   size_t graph_size_ = 1;
 };
