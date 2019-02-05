@@ -26,6 +26,9 @@ TEST(IrTest, TestReplace) {
   scalar1->ReplaceAllUsesWith(scalar3);
   EXPECT_EQ(scalar1->uses().size(), 0);
   EXPECT_EQ(scalar3->uses().size(), 1);
+
+  add->ReplaceOperand(0, scalar1);
+  EXPECT_EQ(scalar1->uses().size(), 1);
 }
 
 }  // namespace cpp_test
