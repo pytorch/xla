@@ -179,11 +179,13 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   if (data()->xla_data != nullptr) {
     return data()->xla_data->shape();
   }
+  const Device& device = GetDevice();
   if (data()->ir_node) {
-    return data()->ir_node.shape();
+    const xla::Shape& node_shape = data()->ir_node.shape();
+    return MakeArrayShapeFromDimensions(
+        node_shape.dimensions(), node_shape.element_type(), device.hw_type);
   }
   XLA_CHECK(data()->tensor_data);
-  const Device& device = GetDevice();
   return MakeArrayShapeFromDimensions(
       data()->tensor_data->sizes(),
       XlaHelpers::MakeXlaPrimitiveType(data()->tensor_data->type().scalarType(),
