@@ -1,0 +1,972 @@
+commit 017d896ac0a46180d6e61e640db8bb1f9fcc33ba
+Author: Davide Libenzi <dlibenzi@google.com>
+Date:   Sat Feb 2 07:43:16 2019 -0800
+
+    DO NOT SUBMIT: Patch in device PR.
+
+diff --git a/scripts/gen.py b/scripts/gen.py
+index 487519d..519d1b7 100755
+--- a/scripts/gen.py
++++ b/scripts/gen.py
+@@ -201,12 +201,12 @@ namespace torch_xla {{
+ {instances}
+ static inline void RegisterAtenXlaTypes() {{
+   auto& context = at::globalContext();
+-  context.registerType(at::Backend::HIP, at::ScalarType::Byte, GetXLATypeByte());
+-  context.registerType(at::Backend::HIP, at::ScalarType::Char, GetXLATypeChar());
+-  context.registerType(at::Backend::HIP, at::ScalarType::Float, GetXLATypeFloat());
+-  context.registerType(at::Backend::HIP, at::ScalarType::Int, GetXLATypeInt());
+-  context.registerType(at::Backend::HIP, at::ScalarType::Long, GetXLATypeLong());
+-  context.registerType(at::Backend::HIP, at::ScalarType::Short, GetXLATypeShort());
++  context.registerType(at::Backend::XLA, at::ScalarType::Byte, GetXLATypeByte());
++  context.registerType(at::Backend::XLA, at::ScalarType::Char, GetXLATypeChar());
++  context.registerType(at::Backend::XLA, at::ScalarType::Float, GetXLATypeFloat());
++  context.registerType(at::Backend::XLA, at::ScalarType::Int, GetXLATypeInt());
++  context.registerType(at::Backend::XLA, at::ScalarType::Long, GetXLATypeLong());
++  context.registerType(at::Backend::XLA, at::ScalarType::Short, GetXLATypeShort());
+ }}
+ 
+ }}  // namespace torch_xla
+@@ -308,32 +308,32 @@ def create_type_instances():
+       type_name='XLATypeByte',
+       scalar_type='at::ScalarType::Byte',
+       sizeof=1,
+-      tensorid='c10::HIPTensorId()')
++      tensorid='c10::XLATensorId()')
+   code += _CLASS_INST_HEADER.format(
+       type_name='XLATypeChar',
+       scalar_type='at::ScalarType::Char',
+       sizeof=1,
+-      tensorid='c10::HIPTensorId()')
++      tensorid='c10::XLATensorId()')
+   code += _CLASS_INST_HEADER.format(
+       type_name='XLATypeShort',
+       scalar_type='at::ScalarType::Short',
+       sizeof=2,
+-      tensorid='c10::HIPTensorId()')
++      tensorid='c10::XLATensorId()')
+   code += _CLASS_INST_HEADER.format(
+       type_name='XLATypeInt',
+       scalar_type='at::ScalarType::Int',
+       sizeof=4,
+-      tensorid='c10::HIPTensorId()')
++      tensorid='c10::XLATensorId()')
+   code += _CLASS_INST_HEADER.format(
+       type_name='XLATypeLong',
+       scalar_type='at::ScalarType::Long',
+       sizeof=8,
+-      tensorid='c10::HIPTensorId()')
++      tensorid='c10::XLATensorId()')
+   code += _CLASS_INST_HEADER.format(
+       type_name='XLATypeFloat',
+       scalar_type='at::ScalarType::Float',
+       sizeof=4,
+-      tensorid='c10::HIPTensorId()')
++      tensorid='c10::XLATensorId()')
+   return code
+ 
+ 
+@@ -783,9 +783,9 @@ def generate(args):
+         _CPP_CLASS_HEADER.format(
+             gen=os.path.basename(sys.argv[0]),
+             funcs=functions,
+-            backend='at::Backend::HIP',
+-            device_type='at::DeviceType::HIP',
+-            typeid='at::TypeID::Undefined'),
++            backend='at::Backend::XLA',
++            device_type='at::DeviceType::XLA',
++            typeid='at::TypeID::XLA'),
+         file=gen_cpp_output_file(args))
+     instances = create_type_instances()
+     print(
+diff --git a/test/cpp/CMakeLists.txt b/test/cpp/CMakeLists.txt
+index 6bbc0da..05bdb37 100644
+--- a/test/cpp/CMakeLists.txt
++++ b/test/cpp/CMakeLists.txt
+@@ -51,6 +51,7 @@ include_directories(
+ set(TORCH_XLA_TEST_SOURCES
+   main.cpp
+   cpp_test_util.cpp
++  test_aten_xla_tensor.cpp
+   test_ir.cpp
+   test_mayberef.cpp
+   test_tensor.cpp
+@@ -112,4 +113,5 @@ target_link_libraries(
+   "${CAFFE_LIB}"
+   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest${SUFFIX}"
+   "${PYTHON_LIBRARY}"
+-  ${PTHREAD})
++  ${PTHREAD}
++  -ldl)
+diff --git a/test/cpp/cpp_test_util.cpp b/test/cpp/cpp_test_util.cpp
+index 33008f5..5f7b5f8 100644
+--- a/test/cpp/cpp_test_util.cpp
++++ b/test/cpp/cpp_test_util.cpp
+@@ -1,8 +1,10 @@
+ #include "cpp_test_util.h"
++#include "tensor_impl.h"
+ 
+ #include <string>
+ 
+ #include "tensorflow/compiler/xla/xla_client/computation_client.h"
++#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+ #include "torch/csrc/autograd/variable.h"
+ 
+ namespace torch_xla {
+@@ -16,6 +18,12 @@ at::Tensor ToTensor(XLATensor& xla_tensor) {
+   return xtensor;
+ }
+ 
++at::Tensor ToCpuTensor(const at::Tensor& t) {
++  auto impl = dynamic_cast<XLATensorImpl*>(t.unsafeGetTensorImpl());
++  XLA_CHECK_NE(impl, nullptr);
++  return ToTensor(impl->tensor());
++}
++
+ bool EqualValues(at::Tensor a, at::Tensor b) {
+   at::ScalarType atype = a.scalar_type();
+   at::ScalarType btype = b.scalar_type();
+@@ -31,5 +39,10 @@ void ForEachDevice(const std::function<void(const Device&)>& devfn) {
+   devfn(Device(default_device));
+ }
+ 
++void AllClose(at::Tensor tensor, at::Tensor xla_tensor, double rtol,
++              double atol) {
++  EXPECT_TRUE(ToCpuTensor(xla_tensor).allclose(tensor, rtol, atol));
++}
++
+ }  // namespace cpp_test
+ }  // namespace torch_xla
+diff --git a/test/cpp/cpp_test_util.h b/test/cpp/cpp_test_util.h
+index 94fb860..fe02ed5 100644
+--- a/test/cpp/cpp_test_util.h
++++ b/test/cpp/cpp_test_util.h
+@@ -12,6 +12,11 @@
+ namespace torch_xla {
+ namespace cpp_test {
+ 
++// Converts an XLA ATen tensor to a CPU backend tensor. Extracts it first from
++// an autograd variable, if needed. Needed because EqualValues and AllClose
++// require CPU tensors on both sides.
++at::Tensor ToCpuTensor(const at::Tensor& t);
++
+ at::Tensor ToTensor(XLATensor& xla_tensor);
+ 
+ bool EqualValues(at::Tensor a, at::Tensor b);
+@@ -21,6 +26,9 @@ static inline void AllClose(at::Tensor tensor, XLATensor& xla_tensor,
+   EXPECT_TRUE(tensor.allclose(ToTensor(xla_tensor), rtol, atol));
+ }
+ 
++void AllClose(at::Tensor tensor, at::Tensor xla_tensor, double rtol = 1e-5,
++              double atol = 1e-8);
++
+ void ForEachDevice(const std::function<void(const Device&)>& devfn);
+ 
+ }  // namespace cpp_test
+diff --git a/test/cpp/test_aten_xla_tensor.cpp b/test/cpp/test_aten_xla_tensor.cpp
+new file mode 100644
+index 0000000..357a911
+--- /dev/null
++++ b/test/cpp/test_aten_xla_tensor.cpp
+@@ -0,0 +1,458 @@
++#include <gtest/gtest.h>
++
++#include <ATen/ATen.h>
++#include <ATen/NativeFunctions.h>
++
++#include "aten_xla_bridge.h"
++#include "aten_xla_type_instances.h"
++#include "cpp_test_util.h"
++#include "tensor_impl.h"
++#include "torch_xla_test.h"
++
++namespace torch_xla {
++
++namespace cpp_test {
++
++class AtenXlaTensorTest : public TorchXlaTest {
++ protected:
++  static void SetUpTestCase() {
++    RegisterAtenXlaTypes();
++    AtenXlaType::SetFullConvPrecision();
++  }
++};
++
++TEST_F(AtenXlaTensorTest, TestAdd) {
++  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++  at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++  at::Tensor c = at::add(a, b);
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
++    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
++    at::Tensor xla_c = at::add(xla_a, xla_b);
++    AllClose(c, xla_c);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestAddInPlace) {
++  ForEachDevice([&](const Device& device) {
++    at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++    at::Tensor xla_a = bridge::CreateXlaTensor(a.clone(), device);
++    at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
++    at::Tensor c = a.add_(b);
++    at::Tensor xla_c = xla_a.add_(xla_b);
++    AllClose(a, xla_a);
++    AllClose(c, xla_c);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestMul) {
++  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++  at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++  at::Tensor c = at::mul(a, b);
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
++    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
++    at::Tensor xla_c = at::mul(xla_a, xla_b);
++    AllClose(c, xla_c);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestMulInPlace) {
++  ForEachDevice([&](const Device& device) {
++    at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++    at::Tensor xla_a = bridge::CreateXlaTensor(a.clone(), device);
++    at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
++    at::Tensor c = a.mul_(b);
++    at::Tensor xla_c = xla_a.mul_(xla_b);
++    AllClose(a, xla_a);
++    AllClose(c, xla_c);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestDiv) {
++  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++  at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++  at::Tensor c = at::div(a, b);
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
++    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
++    at::Tensor xla_c = at::div(xla_a, xla_b);
++    AllClose(c, xla_c);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestDivInPlace) {
++  ForEachDevice([&](const Device& device) {
++    at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++    at::Tensor xla_a = bridge::CreateXlaTensor(a.clone(), device);
++    at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
++    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
++    at::Tensor c = a.div_(b);
++    at::Tensor xla_c = xla_a.div_(xla_b);
++    AllClose(a, xla_a);
++    AllClose(c, xla_c);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestIntegerAdd) {
++  std::vector<at::ScalarType> types(
++      {at::kByte, at::kChar, at::kShort, at::kInt, at::kLong});
++
++  ForEachDevice([&](const Device& device) {
++    for (auto type : types) {
++      at::Tensor a = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
++      at::Tensor b = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
++      at::Tensor c = at::add(b, 1.0);
++
++      at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
++      at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
++      at::Tensor xla_c = at::add(xla_b, 1.0);
++
++      EXPECT_TRUE(EqualValues(c, ToCpuTensor(xla_c)));
++    }
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestSize) {
++  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
++  int rank = input.dim();
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++    for (int dim = -rank; dim < rank; ++dim) {
++      EXPECT_EQ(at::size(input, dim), at::size(xla_input, dim));
++    }
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestRelu) {
++  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
++  at::Tensor output = at::relu(input);
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++    at::Tensor xla_output = at::relu(xla_input);
++    AllClose(output, xla_output);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestThreshold) {
++  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
++  float threshold = 0.4;
++  float value = 20;
++  at::Tensor output = at::threshold(input, threshold, value);
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++    at::Tensor xla_output = at::threshold(xla_input, threshold, value);
++    AllClose(output, xla_output);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestAddMatMul) {
++  int in_channels = 32;
++  int out_channels = 320;
++  int labels = 50;
++  at::Tensor input =
++      at::rand({in_channels, out_channels}, at::TensorOptions(at::kFloat));
++  at::Tensor weight =
++      at::rand({out_channels, labels}, at::TensorOptions(at::kFloat));
++  at::Tensor bias = at::rand({labels}, at::TensorOptions(at::kFloat));
++  // Test beta != 1. through the CPU interop.
++  for (double beta : {1., 2.}) {
++    at::Tensor output = at::addmm(bias, input, weight, /*beta=*/beta);
++    ForEachDevice([&](const Device& device) {
++      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++      at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
++      at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
++      at::Tensor xla_output =
++          at::addmm(xla_bias, xla_input, xla_weight, /*beta=*/beta);
++      AllClose(output, xla_output);
++    });
++  }
++}
++
++TEST_F(AtenXlaTensorTest, TestTranspose) {
++  at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
++  at::Tensor output = at::t(input);
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++    at::Tensor xla_output = at::t(xla_input);
++    AllClose(output, xla_output);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestView) {
++  at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
++  at::Tensor output = input.view({-1, 320});
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++    at::Tensor xla_output = xla_input.view({-1, 320});
++    AllClose(output, xla_output);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestViewMod) {
++  at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
++  at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
++  at::Tensor output = input.view({-1, 320});
++  output.add_(one, 1.0);
++  input.add_(one, 1.0);
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xinput =
++        at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
++    at::Tensor xla_input = bridge::CreateXlaTensor(xinput, device);
++    at::Tensor xla_one = bridge::CreateXlaTensor(one, device);
++    at::Tensor xla_output = xla_input.view({-1, 320});
++    xla_output.add_(xla_one, 1.0);
++    xla_input.add_(xla_one, 1.0);
++    AllClose(output, xla_output);
++    AllClose(input, xla_input);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestViewModComplex) {
++  at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
++  at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
++  at::Tensor output1 = input.view({-1, 320});
++  output1.add_(one, 1.0);
++  at::Tensor output2 = input.view({-1, 160});
++  output2.add_(one, 1.0);
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xinput =
++        at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
++    at::Tensor xla_input = bridge::CreateXlaTensor(xinput, device);
++    at::Tensor xla_one = bridge::CreateXlaTensor(one, device);
++    at::Tensor xla_output1 = xla_input.view({-1, 320});
++    xla_output1.add_(xla_one, 1.0);
++    at::Tensor xla_output2 = xla_input.view({-1, 160});
++    xla_output2.add_(xla_one, 1.0);
++    AllClose(output1, xla_output1);
++    AllClose(output2, xla_output2);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestViewOfViewMod) {
++  at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
++  at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
++  at::Tensor output1 = input.view({-1, 320});
++  output1.add_(one, 1.0);
++  at::Tensor output2 = output1.view({-1, 160});
++  output2.add_(one, 1.0);
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xinput =
++        at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
++    at::Tensor xla_input = bridge::CreateXlaTensor(xinput, device);
++    at::Tensor xla_one = bridge::CreateXlaTensor(one, device);
++    at::Tensor xla_output1 = xla_input.view({-1, 320});
++    xla_output1.add_(xla_one, 1.0);
++    at::Tensor xla_output2 = xla_output1.view({-1, 160});
++    xla_output2.add_(xla_one, 1.0);
++    AllClose(output1, xla_output1);
++    AllClose(output2, xla_output2);
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestLogSoftmax) {
++  at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
++  ForEachDevice([&](const Device& device) {
++    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++    for (int dim = 0; dim < input.dim(); ++dim) {
++      at::Tensor output = at::log_softmax(input, dim);
++      at::Tensor xla_output = at::log_softmax(xla_input, dim);
++      AllClose(output, xla_output, /*rtol=*/1e-3);
++    }
++  });
++}
++
++TEST_F(AtenXlaTensorTest, TestMaxPool2D) {
++  at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
++  int kernel_size = 3;
++  for (int stride = 1; stride <= 2; ++stride) {
++    for (int padding = 0; padding <= 1; ++padding) {
++      // Test ceil_mode=true through the CPU interop.
++      for (bool ceil_mode : {false, true}) {
++        at::Tensor output =
++            at::max_pool2d(input, /*kernel_size=*/{kernel_size, kernel_size},
++                           /*stride=*/{stride, stride},
++                           /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
++                           /*ceil_mode=*/ceil_mode);
++        ForEachDevice([&](const Device& device) {
++          at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++          at::Tensor xla_output = at::max_pool2d(
++              xla_input,
++              /*kernel_size=*/{kernel_size, kernel_size},
++              /*stride=*/{stride, stride},
++              /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
++              /*ceil_mode=*/ceil_mode);
++          AllClose(output, xla_output);
++        });
++      }
++    }
++  }
++}
++
++TEST_F(AtenXlaTensorTest, TestMaxPool2DNonSquare) {
++  at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
++  int kernel_size = 4;
++  for (int stride = 1; stride <= 2; ++stride) {
++    for (int padding = 0; padding <= 1; ++padding) {
++      // Test ceil_mode=true through the CPU interop.
++      for (bool ceil_mode : {false, true}) {
++        at::Tensor output = at::max_pool2d(
++            input, /*kernel_size=*/{kernel_size, kernel_size + 1},
++            /*stride=*/{stride, stride + 1},
++            /*padding=*/{padding, padding + 1}, /*dilation=*/{1, 1},
++            /*ceil_mode=*/ceil_mode);
++        ForEachDevice([&](const Device& device) {
++          at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++          at::Tensor xla_output = at::max_pool2d(
++              xla_input,
++              /*kernel_size=*/{kernel_size, kernel_size + 1},
++              /*stride=*/{stride, stride + 1},
++              /*padding=*/{padding, padding + 1}, /*dilation=*/{1, 1},
++              /*ceil_mode=*/ceil_mode);
++          AllClose(output, xla_output);
++        });
++      }
++    }
++  }
++}
++
++TEST_F(AtenXlaTensorTest, TestAvgPool2D) {
++  at::Tensor input = at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat));
++  int kernel_size = 2;
++  for (int stride = 1; stride <= 2; ++stride) {
++    for (int padding = 0; padding <= 1; ++padding) {
++      for (bool count_include_pad : {true, false}) {
++        // Test ceil_mode=true through the CPU interop.
++        for (bool ceil_mode : {false, true}) {
++          at::Tensor output = at::avg_pool2d(
++              input, /*kernel_size=*/{kernel_size, kernel_size},
++              /*stride=*/{stride, stride},
++              /*padding=*/{padding, padding}, /*ceil_mode=*/ceil_mode,
++              /*count_include_pad=*/count_include_pad);
++          ForEachDevice([&](const Device& device) {
++            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++            at::Tensor xla_output =
++                at::avg_pool2d(xla_input,
++                               /*kernel_size=*/{kernel_size, kernel_size},
++                               /*stride=*/{stride, stride},
++                               /*padding=*/{padding, padding},
++                               /*ceil_mode=*/ceil_mode,
++                               /*count_include_pad=*/count_include_pad);
++            AllClose(output, xla_output);
++          });
++        }
++      }
++    }
++  }
++}
++
++TEST_F(AtenXlaTensorTest, TestAvgPool2DNonSquare) {
++  at::Tensor input = at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat));
++  int kernel_size = 4;
++  for (int stride = 1; stride <= 2; ++stride) {
++    for (int padding = 0; padding <= 1; ++padding) {
++      for (bool count_include_pad : {true, false}) {
++        // Test ceil_mode=true through the CPU interop.
++        for (bool ceil_mode : {false, true}) {
++          at::Tensor output = at::avg_pool2d(
++              input, /*kernel_size=*/{kernel_size, kernel_size + 1},
++              /*stride=*/{stride, stride + 1},
++              /*padding=*/{padding, padding + 1}, /*ceil_mode=*/ceil_mode,
++              /*count_include_pad=*/count_include_pad);
++          ForEachDevice([&](const Device& device) {
++            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++            at::Tensor xla_output =
++                at::avg_pool2d(xla_input,
++                               /*kernel_size=*/{kernel_size, kernel_size + 1},
++                               /*stride=*/{stride, stride + 1},
++                               /*padding=*/{padding, padding + 1},
++                               /*ceil_mode=*/ceil_mode,
++                               /*count_include_pad=*/count_include_pad);
++            AllClose(output, xla_output);
++          });
++        }
++      }
++    }
++  }
++}
++
++TEST_F(AtenXlaTensorTest, TestConv2D) {
++  int in_channels = 3;
++  int out_channels = 7;
++  int kernel_size = 5;
++  at::Tensor input =
++      at::rand({4, in_channels, 28, 28}, at::TensorOptions(at::kFloat));
++  at::Tensor weight =
++      at::rand({out_channels, in_channels, kernel_size, kernel_size},
++               at::TensorOptions(at::kFloat));
++  at::Tensor bias = at::rand({out_channels}, at::TensorOptions(at::kFloat));
++  at::Tensor bias_undef;
++  for (int stride = 1; stride <= 3; ++stride) {
++    for (int padding = 0; padding <= 2; ++padding) {
++      for (bool with_bias : {true, false}) {
++        // Test dilation through the CPU interop.
++        for (int dilation = 1; dilation <= 2; ++dilation) {
++          at::Tensor output =
++              at::conv2d(input, weight, with_bias ? bias : bias_undef,
++                         /*stride=*/{stride, stride},
++                         /*padding=*/{padding, padding},
++                         /*dilation=*/{dilation, dilation});
++          ForEachDevice([&](const Device& device) {
++            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++            at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
++            at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
++            at::Tensor xla_output = at::conv2d(
++                xla_input, xla_weight, with_bias ? xla_bias : bias_undef,
++                /*stride=*/{stride, stride},
++                /*padding=*/{padding, padding},
++                /*dilation=*/{dilation, dilation});
++            AllClose(output, xla_output);
++          });
++        }
++      };
++    }
++  }
++}
++
++TEST_F(AtenXlaTensorTest, TestConv2DNonSquare) {
++  int in_channels = 3;
++  int out_channels = 7;
++  int kernel_size = 5;
++  at::Tensor input =
++      at::rand({4, in_channels, 28, 28}, at::TensorOptions(at::kFloat));
++  at::Tensor weight =
++      at::rand({out_channels, in_channels, kernel_size, kernel_size},
++               at::TensorOptions(at::kFloat));
++  at::Tensor bias = at::rand({out_channels}, at::TensorOptions(at::kFloat));
++  at::Tensor bias_undef;
++  for (int stride = 1; stride <= 3; ++stride) {
++    for (int padding = 0; padding <= 2; ++padding) {
++      for (bool with_bias : {true, false}) {
++        // Test dilation through the CPU interop.
++        for (int dilation = 1; dilation <= 2; ++dilation) {
++          at::Tensor output =
++              at::conv2d(input, weight, with_bias ? bias : bias_undef,
++                         /*stride=*/{stride, stride + 1},
++                         /*padding=*/{padding, padding + 1},
++                         /*dilation=*/{dilation, dilation});
++          ForEachDevice([&](const Device& device) {
++            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
++            at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
++            at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
++            at::Tensor xla_output = at::conv2d(
++                xla_input, xla_weight, with_bias ? xla_bias : bias_undef,
++                /*stride=*/{stride, stride + 1},
++                /*padding=*/{padding, padding + 1},
++                /*dilation=*/{dilation, dilation});
++            AllClose(output, xla_output);
++          });
++        }
++      }
++    }
++  }
++}
++
++}  // namespace cpp_test
++}  // namespace torch_xla
+diff --git a/torch_xla/csrc/aten_xla_bridge.cpp b/torch_xla/csrc/aten_xla_bridge.cpp
+index dfa22f9..00d669a 100644
+--- a/torch_xla/csrc/aten_xla_bridge.cpp
++++ b/torch_xla/csrc/aten_xla_bridge.cpp
+@@ -1,6 +1,7 @@
+ #include "aten_xla_bridge.h"
+ 
+ #include "tensor_impl.h"
++#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+ #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+ 
+ namespace torch_xla {
+@@ -18,21 +19,40 @@ XLATensor& GetXlaTensor(const at::Tensor& tensor) {
+   return impl->tensor();
+ }
+ 
+-std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors,
+-                                            const std::vector<bool>* writeable) {
++std::vector<at::Tensor> XlaCreateTensorList(
++    const at::TensorList& tensors, const std::vector<bool>* writeable) {
+   std::vector<XLATensor> xla_tensors;
+-  for (auto& tensor : tensors) {
++  // We need to separate out the defined tensors first, GetXlaTensor() doesn't
++  // work with undefined tensors.
++  std::vector<bool> defined_writeable;
++  std::vector<bool> tensor_is_defined(tensors.size());
++  for (size_t i = 0; i < tensors.size(); ++i) {
++    auto& tensor = tensors[i];
++    if (!tensor.defined()) {
++      XLA_CHECK(writeable == nullptr || !(*writeable)[i])
++          << "Trying to write to an undefined tensor";
++      continue;
++    }
++    tensor_is_defined[i] = true;
+     xla_tensors.push_back(GetXlaTensor(tensor));
++    if (writeable != nullptr) {
++      defined_writeable.push_back((*writeable)[i]);
++    }
+   }
+-  return XLATensor::GetTensors(&xla_tensors, writeable);
+-}
+-
+-at::Tensor XlaToAtenTensor(const at::Tensor& tensor) {
+-  return GetXlaTensor(tensor).ToTensor();
+-}
+-
+-at::Tensor XlaToAtenMutableTensor(const at::Tensor& tensor) {
+-  return GetXlaTensor(tensor).ToMutableTensor();
++  auto defined_aten_xla_tensors = XLATensor::GetTensors(
++      &xla_tensors, writeable ? &defined_writeable : nullptr);
++  // Insert undefined tensors into the result, back into the original undefined
++  // positions.
++  std::vector<at::Tensor> aten_xla_tensors;
++  for (size_t i = 0, defined_pos = 0; i < tensors.size(); ++i) {
++    if (tensor_is_defined[i]) {
++      aten_xla_tensors.push_back(
++          std::move(defined_aten_xla_tensors[defined_pos++]));
++    } else {
++      aten_xla_tensors.emplace_back();
++    }
++  }
++  return aten_xla_tensors;
+ }
+ 
+ std::vector<at::Tensor> CreateXlaTensors(const std::vector<at::Tensor>& tensors,
+@@ -49,15 +69,30 @@ Device XlaTensorDevice(const at::Tensor& tensor) {
+ }
+ 
+ Device XlaTensorDevice(const at::TensorOptions& tensor_options) {
+-  // TODO: Read and properly map the device from tensor_options.
+-  return Device(DeviceType::TPU, 0);
++  static Device* xla_device =
++      new Device(xla::ComputationClient::Get()->GetDefaultDevice());
++  at::DeviceType at_device_type = tensor_options.device().type();
++  switch (at_device_type) {
++    case at::kCPU:
++      return Device(DeviceType::CPU, 0);
++    case at::kCUDA:
++      return Device(DeviceType::GPU, 0);
++    case at::kXLA:
++      return *xla_device;
++    default:
++      XLA_ERROR() << "Device type " << DeviceTypeName(at_device_type, false)
++                  << " not supported";
++  }
++}
++
++at::Tensor AtenFromXlaTensor(XLATensor xla_tensor) {
++  return at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
+ }
+ 
+ at::Tensor CreateXlaTensor(const at::Tensor& tensor, const Device& device) {
+-  XLATensor xtensor =
++  XLATensor xla_tensor =
+       XLATensor::Create(tensor, device, /*requires_grad=*/false);
+-  return at::Tensor(
+-      c10::intrusive_ptr<XLATensorImpl>::make(std::move(xtensor)));
++  return AtenFromXlaTensor(xla_tensor);
+ }
+ 
+ }  // namespace bridge
+diff --git a/torch_xla/csrc/aten_xla_bridge.h b/torch_xla/csrc/aten_xla_bridge.h
+index 7ce7d5e..a139dfb 100644
+--- a/torch_xla/csrc/aten_xla_bridge.h
++++ b/torch_xla/csrc/aten_xla_bridge.h
+@@ -50,6 +50,9 @@ static inline Device XlaTensorDevice(const at::TensorList& tensors) {
+ 
+ Device XlaTensorDevice(const at::TensorOptions& tensor_options);
+ 
++// Creates an ATen tensor with XLA type id from an XLATensor.
++at::Tensor AtenFromXlaTensor(XLATensor xla_tensor);
++
+ // Creates an XLA tensor holding the data in tensor, on the given device.
+ at::Tensor CreateXlaTensor(const at::Tensor& tensor, const Device& device);
+ 
+diff --git a/torch_xla/csrc/aten_xla_type.cpp b/torch_xla/csrc/aten_xla_type.cpp
+index 29157fd..736ff6f 100644
+--- a/torch_xla/csrc/aten_xla_type.cpp
++++ b/torch_xla/csrc/aten_xla_type.cpp
+@@ -1,9 +1,146 @@
+ #include "aten_xla_type.h"
++#include "aten_xla_bridge.h"
++#include "helpers.h"
++#include "tensor_impl.h"
++#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+ 
+ namespace torch_xla {
+ 
++bool AtenXlaType::s_use_full_conv_precision_ = false;
++
+ AtenXlaType::AtenXlaType(at::TensorTypeId type_id, bool is_variable,
+                          bool is_undefined)
+     : AtenXlaTypeBase(type_id, is_variable, is_undefined) {}
+ 
++at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
++                            at::Scalar alpha) const {
++  return bridge::AtenFromXlaTensor(
++      bridge::GetXlaTensor(self).add(bridge::GetXlaTensor(other), alpha));
++}
++
++at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Tensor& other,
++                              at::Scalar alpha) const {
++  bridge::GetXlaTensor(self).add_(bridge::GetXlaTensor(other), alpha);
++  return self;
++}
++
++at::Tensor AtenXlaType::mul(const at::Tensor& self,
++                            const at::Tensor& other) const {
++  return bridge::AtenFromXlaTensor(
++      bridge::GetXlaTensor(self).mul(bridge::GetXlaTensor(other)));
++}
++
++at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) const {
++  bridge::GetXlaTensor(self).mul_(bridge::GetXlaTensor(other));
++  return self;
++}
++
++at::Tensor AtenXlaType::div(const at::Tensor& self,
++                            const at::Tensor& other) const {
++  return bridge::AtenFromXlaTensor(
++      bridge::GetXlaTensor(self).div(bridge::GetXlaTensor(other)));
++}
++
++at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other) const {
++  bridge::GetXlaTensor(self).div_(bridge::GetXlaTensor(other));
++  return self;
++}
++
++int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
++  return bridge::GetXlaTensor(self).size(dim);
++}
++
++at::Tensor AtenXlaType::relu(const at::Tensor& self) const {
++  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).relu());
++}
++
++at::Tensor AtenXlaType::threshold(const at::Tensor& self, at::Scalar threshold,
++                                  at::Scalar value) const {
++  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).threshold(
++      threshold.to<double>(), value.to<double>()));
++}
++
++at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
++                               const at::Tensor& weight, const at::Tensor& bias,
++                               at::IntList stride, at::IntList padding,
++                               at::IntList dilation, int64_t groups) const {
++  bool has_dilation =
++      std::any_of(dilation.begin(), dilation.end(),
++                  [](const int64_t dim_dilation) { return dim_dilation != 1; });
++  // Dilated or grouped convolutions aren't lowered to XLA yet.
++  if (has_dilation || groups != 1) {
++    return AtenXlaTypeBase::conv2d(input, weight, bias, stride, padding,
++                                   dilation, groups);
++  }
++  if (bias.defined()) {
++    return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(input).conv2d(
++        bridge::GetXlaTensor(weight), bridge::GetXlaTensor(bias),
++        XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
++        /*use_full_conv_precision=*/s_use_full_conv_precision_));
++  } else {
++    return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(input).conv2d(
++        bridge::GetXlaTensor(weight), XlaHelpers::I64List(stride),
++        XlaHelpers::I64List(padding),
++        /*use_full_conv_precision=*/s_use_full_conv_precision_));
++  }
++}
++
++at::Tensor AtenXlaType::addmm(const at::Tensor& self, const at::Tensor& mat1,
++                              const at::Tensor& mat2, at::Scalar beta,
++                              at::Scalar alpha) const {
++  if (beta.to<double>() != 1 || alpha.to<double>() != 1) {
++    return AtenXlaTypeBase::addmm(self, mat1, mat2, beta, alpha);
++  }
++  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(mat1).addmm(
++      /*weight=*/bridge::GetXlaTensor(mat2),
++      /*bias=*/bridge::GetXlaTensor(self),
++      /*use_full_conv_precision=*/s_use_full_conv_precision_));
++}
++
++at::Tensor AtenXlaType::t(const at::Tensor& self) const {
++  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).t());
++}
++
++at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntList size) const {
++  return bridge::AtenFromXlaTensor(
++      bridge::GetXlaTensor(self).view(XlaHelpers::I64List(size)));
++}
++
++at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim) const {
++  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).log_softmax(dim));
++}
++
++at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
++                                   at::IntList kernel_size, at::IntList stride,
++                                   at::IntList padding, at::IntList dilation,
++                                   bool ceil_mode) const {
++  // Lowering when ceil_mode is set not supported yet.
++  if (ceil_mode) {
++    return AtenXlaTypeBase::max_pool2d(self, kernel_size, stride, padding,
++                                       dilation, ceil_mode);
++  }
++  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).max_pool2d(
++      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
++      XlaHelpers::I64List(padding)));
++}
++
++at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
++                                   at::IntList kernel_size, at::IntList stride,
++                                   at::IntList padding, bool ceil_mode,
++                                   bool count_include_pad) const {
++  // Lowering when ceil_mode is set not supported yet.
++  if (ceil_mode) {
++    return AtenXlaTypeBase::avg_pool2d(self, kernel_size, stride, padding,
++                                       ceil_mode, count_include_pad);
++  }
++  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).avg_pool2d(
++      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
++      XlaHelpers::I64List(padding), count_include_pad));
++}
++
++void AtenXlaType::SetFullConvPrecision(
++    bool use_full_conv_precision /*= true*/) {
++  s_use_full_conv_precision_ = use_full_conv_precision;
++}
++
+ }  // namespace torch_xla
+diff --git a/torch_xla/csrc/aten_xla_type.h b/torch_xla/csrc/aten_xla_type.h
+index 466b361..053ab90 100644
+--- a/torch_xla/csrc/aten_xla_type.h
++++ b/torch_xla/csrc/aten_xla_type.h
+@@ -8,6 +8,57 @@ namespace torch_xla {
+ class AtenXlaType : public AtenXlaTypeBase {
+  public:
+   AtenXlaType(at::TensorTypeId type_id, bool is_variable, bool is_undefined);
++
++  at::Tensor add(const at::Tensor& self, const at::Tensor& other,
++                 at::Scalar alpha) const override;
++
++  at::Tensor& add_(at::Tensor& self, const at::Tensor& other,
++                   at::Scalar alpha) const override;
++
++  at::Tensor mul(const at::Tensor& self,
++                 const at::Tensor& other) const override;
++
++  at::Tensor& mul_(at::Tensor& self, const at::Tensor& other) const override;
++
++  at::Tensor div(const at::Tensor& self,
++                 const at::Tensor& other) const override;
++
++  at::Tensor& div_(at::Tensor& self, const at::Tensor& other) const override;
++
++  int64_t size(const at::Tensor& self, int64_t dim) const override;
++
++  at::Tensor relu(const at::Tensor& self) const override;
++
++  at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
++                       at::Scalar value) const override;
++
++  at::Tensor conv2d(const at::Tensor& input, const at::Tensor& weight,
++                    const at::Tensor& bias, at::IntList stride,
++                    at::IntList padding, at::IntList dilation,
++                    int64_t groups) const override;
++
++  at::Tensor addmm(const at::Tensor& self, const at::Tensor& mat1,
++                   const at::Tensor& mat2, at::Scalar beta,
++                   at::Scalar alpha) const override;
++
++  at::Tensor t(const at::Tensor& self) const override;
++
++  at::Tensor view(const at::Tensor& self, at::IntList size) const override;
++
++  at::Tensor log_softmax(const at::Tensor& self, int64_t dim) const override;
++
++  at::Tensor max_pool2d(const at::Tensor& self, at::IntList kernel_size,
++                        at::IntList stride, at::IntList padding,
++                        at::IntList dilation, bool ceil_mode) const override;
++
++  at::Tensor avg_pool2d(const at::Tensor& self, at::IntList kernel_size,
++                        at::IntList stride, at::IntList padding, bool ceil_mode,
++                        bool count_include_pad) const override;
++
++  static void SetFullConvPrecision(bool use_full_conv_precision = true);
++
++ private:
++  static bool s_use_full_conv_precision_;
+ };
+ 
+ }  // namespace torch_xla
+diff --git a/torch_xla/csrc/tensor_impl.cpp b/torch_xla/csrc/tensor_impl.cpp
+index c6a3ac4..5d20d02 100644
+--- a/torch_xla/csrc/tensor_impl.cpp
++++ b/torch_xla/csrc/tensor_impl.cpp
+@@ -5,9 +5,8 @@
+ 
+ namespace torch_xla {
+ 
+-// TODO: Replace UndefinedTensorId with proper type.
+ XLATensorImpl::XLATensorImpl(XLATensor tensor)
+-    : c10::TensorImpl(c10::UndefinedTensorId(), GetTypeMeta(tensor),
++    : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
+                       /*allocator=*/nullptr, /*is_variable=*/false),
+       tensor_(std::move(tensor)) {
+   // Fill up the basic dimension data members which the base class
