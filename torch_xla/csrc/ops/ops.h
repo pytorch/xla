@@ -56,6 +56,8 @@ NodePtr MatMulOp(const NodeOperand& input, const NodeOperand& weight,
 
 NodePtr NllLossOp(const NodeOperand& logits, const NodeOperand& labels);
 
+NodePtr NllLossBackwardOp(const NodeOperand& logits, const NodeOperand& labels);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

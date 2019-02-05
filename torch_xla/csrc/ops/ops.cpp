@@ -131,6 +131,27 @@ NodePtr NllLossOp(const NodeOperand& logits, const NodeOperand& labels) {
                             std::move(lower_fn));
 }
 
+NodePtr NllLossBackwardOp(const NodeOperand& logits,
+                          const NodeOperand& labels) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp logits = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp labels = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_output = BuildNllLossBackward(logits, labels);
+    return node.ReturnOp(xla_output, loctx);
+  };
+  auto lower_for_shape_fn =
+      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
+    return BuildNllLossBackward(/*logits=*/operands[0], /*labels=*/operands[1]);
+  };
+  xla::Shape output_shape = ir::ops::InferOutputShape(
+      {logits.node->shape(), labels.node->shape()}, lower_for_shape_fn);
+  return ir::ops::GenericOp(ir::OpKind(at::aten::nll_loss),
+                            ir::OpList{logits, labels}, output_shape,
+                            std::move(lower_fn));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

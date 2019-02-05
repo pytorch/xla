@@ -175,6 +175,9 @@ class XLATensor {
 
   static XLATensor nll_loss(const XLATensor& input, const XLATensor& target);
 
+  static XLATensor nll_loss_backward(const XLATensor& input,
+                                     const XLATensor& target);
+
   XLATensor cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups) const;
 
