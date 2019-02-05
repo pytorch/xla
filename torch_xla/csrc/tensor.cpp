@@ -705,6 +705,12 @@ XLATensor XLATensor::log_softmax(xla::int64 dim) const {
       GetDevice());
 }
 
+XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target) {
+  return Create(ir::NodeOperand(
+                    ir::ops::NllLossOp(input.GetIrNode(), target.GetIrNode())),
+                input.GetDevice());
+}
+
 XLATensor XLATensor::cross_replica_sum(
     const std::vector<std::vector<xla::int64>>& groups) const {
   ir::NodePtr crs = ir::ops::CrossReplicaSumOp(GetIrNode(), groups);

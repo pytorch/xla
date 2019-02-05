@@ -525,7 +525,7 @@ void TranslateNllLoss(const torch::jit::Node* node, ComputationContext* cctx,
                       xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 5);
   xla::XlaOp xla_output =
-      BuildNllLoss(node, cctx->OpForInput(node, 0), cctx->OpForInput(node, 1));
+      BuildNllLoss(cctx->OpForInput(node, 0), cctx->OpForInput(node, 1));
   cctx->AddNodeOp(node, xla_output);
 }
 
@@ -534,7 +534,7 @@ void TranslateNllLossBackward(
     xla::PrecisionConfig::Precision /*conv_precision*/,
     xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 7);
-  xla::XlaOp xla_output = BuildNllLossBackward(node, cctx->OpForInput(node, 1),
+  xla::XlaOp xla_output = BuildNllLossBackward(cctx->OpForInput(node, 1),
                                                cctx->OpForInput(node, 2));
   cctx->AddNodeOp(node, xla_output);
 }

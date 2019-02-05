@@ -173,6 +173,8 @@ class XLATensor {
   static XLATensor threshold_backward(const XLATensor& grad_output,
                                       const XLATensor& input, float threshold);
 
+  static XLATensor nll_loss(const XLATensor& input, const XLATensor& target);
+
   XLATensor cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups) const;
 

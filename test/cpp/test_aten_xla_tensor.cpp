@@ -502,6 +502,28 @@ TEST_F(AtenXlaTensorTest, TestConv2DNonSquare) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestNllLoss) {
+  int batch = 3;
+  int classes = 5;
+  at::Tensor input = GetTestTesor({batch, classes});
+  at::Tensor target =
+      at::empty({batch}, at::TensorOptions(at::kLong)).random_(0, classes);
+  at::Tensor undef_weight;
+  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+    at::Tensor output =
+        at::nll_loss(/*self=*/input, /*target=*/target, /*weight=*/undef_weight,
+                     /*reduction=*/reduction);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_target = bridge::CreateXlaTensor(target, device);
+      at::Tensor xla_output = at::nll_loss(
+          /*self=*/xla_input, /*target=*/xla_target, /*weight=*/undef_weight,
+          /*reduction=*/reduction);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {

@@ -54,6 +54,8 @@ NodePtr AddMatMulOp(const NodeOperand& input, const NodeOperand& weight,
 NodePtr MatMulOp(const NodeOperand& input, const NodeOperand& weight,
                  bool use_full_conv_precision);
 
+NodePtr NllLossOp(const NodeOperand& logits, const NodeOperand& labels);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
