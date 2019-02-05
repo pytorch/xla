@@ -603,5 +603,14 @@ TEST_F(AtenXlaTensorTest, TestReluBackward) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestTransposeBackward) {
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::t(inputs[0]);
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({GetTestTesor({2, 3})}, device, testfn);
+  });
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
