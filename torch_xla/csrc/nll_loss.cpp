@@ -47,8 +47,7 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
 }  // namespace
 
 // Builds the NLLLoss for log-probabilities "logits" and class indices "labels".
-xla::XlaOp BuildNllLoss(const torch::jit::Node* node, const xla::XlaOp& logits,
-                        const xla::XlaOp& labels) {
+xla::XlaOp BuildNllLoss(const xla::XlaOp& logits, const xla::XlaOp& labels) {
   xla::XlaBuilder* builder = logits.builder();
   xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
   xla::XlaOp zero =
@@ -72,8 +71,7 @@ xla::XlaOp BuildNllLoss(const torch::jit::Node* node, const xla::XlaOp& logits,
 
 // Builds the NLLLoss gradient for log-probabilities "logits" and class indices
 // "labels".
-xla::XlaOp BuildNllLossBackward(const torch::jit::Node* node,
-                                const xla::XlaOp& logits,
+xla::XlaOp BuildNllLossBackward(const xla::XlaOp& logits,
                                 const xla::XlaOp& labels) {
   const int kBatchDim = 0;
   auto builder = logits.builder();
