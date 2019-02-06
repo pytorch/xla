@@ -463,8 +463,8 @@ XLATensor::ViewIrNode XLATensor::GetViewIrNode(View* view) {
     // matches the current aliased node, the current IR Node is still valid.
     return {view->ir_node, false};
   }
-  view->ir_node = ir::Value(std::make_shared<ir::ops::View>(
-      view->alias->ir_node, view->shape.dimensions()));
+  view->ir_node = ir::MakeNode<ir::ops::View>(view->alias->ir_node,
+                                              view->shape.dimensions());
   return {view->ir_node, true};
 }
 
@@ -552,8 +552,7 @@ XLATensor XLATensor::relu() const {
 }
 
 XLATensor XLATensor::threshold(float threshold, float value) const {
-  return Create(ir::Value(std::make_shared<ir::ops::Threshold>(
-                    GetIrNode(), threshold, value)),
+  return Create(ir::MakeNode<ir::ops::Threshold>(GetIrNode(), threshold, value),
                 GetDevice());
 }
 
@@ -590,8 +589,8 @@ XLATensor XLATensor::max_pool2d(
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) const {
-  return Create(ir::Value(std::make_shared<ir::ops::MaxPool2d>(
-                    GetIrNode(), kernel_size, stride, padding)),
+  return Create(ir::MakeNode<ir::ops::MaxPool2d>(GetIrNode(), kernel_size,
+                                                 stride, padding),
                 GetDevice());
 }
 
@@ -601,8 +600,8 @@ XLATensor XLATensor::avg_pool2d(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool count_include_pad) const {
   return Create(
-      ir::Value(std::make_shared<ir::ops::AvgPool2d>(
-          GetIrNode(), kernel_size, stride, padding, count_include_pad)),
+      ir::MakeNode<ir::ops::AvgPool2d>(GetIrNode(), kernel_size, stride,
+                                       padding, count_include_pad),
       GetDevice());
 }
 
@@ -619,9 +618,9 @@ XLATensor XLATensor::avg_pool2d_backward(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool count_include_pad) {
-  return Create(ir::Value(std::make_shared<ir::ops::AvgPool2dBackward>(
+  return Create(ir::MakeNode<ir::ops::AvgPool2dBackward>(
                     out_backprop.GetIrNode(), input.GetIrNode(), kernel_size,
-                    stride, padding, count_include_pad)),
+                    stride, padding, count_include_pad),
                 out_backprop.GetDevice());
 }
 
@@ -644,16 +643,16 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::conv2d_backward(
 XLATensor XLATensor::log_softmax_backward(const XLATensor& grad_output,
                                           const XLATensor& output,
                                           xla::int64 dim) {
-  return Create(ir::Value(std::make_shared<ir::ops::LogSoftmaxBackward>(
-                    grad_output.GetIrNode(), output.GetIrNode(), dim)),
+  return Create(ir::MakeNode<ir::ops::LogSoftmaxBackward>(
+                    grad_output.GetIrNode(), output.GetIrNode(), dim),
                 grad_output.GetDevice());
 }
 
 XLATensor XLATensor::threshold_backward(const XLATensor& grad_output,
                                         const XLATensor& input,
                                         float threshold) {
-  return Create(ir::Value(std::make_shared<ir::ops::ThresholdBackward>(
-                    grad_output.GetIrNode(), input.GetIrNode(), threshold)),
+  return Create(ir::MakeNode<ir::ops::ThresholdBackward>(
+                    grad_output.GetIrNode(), input.GetIrNode(), threshold),
                 grad_output.GetDevice());
 }
 
@@ -689,9 +688,8 @@ XLATensor XLATensor::view(
 }
 
 XLATensor XLATensor::log_softmax(xla::int64 dim) const {
-  return Create(
-      ir::Value(std::make_shared<ir::ops::LogSoftmax>(GetIrNode(), dim)),
-      GetDevice());
+  return Create(ir::MakeNode<ir::ops::LogSoftmax>(GetIrNode(), dim),
+                GetDevice());
 }
 
 XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target) {
