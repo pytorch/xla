@@ -16,7 +16,7 @@ XlaModule::TensorBatchVector XlaCreateTensorList(const py::tuple& tuple);
 // Packs a vector of XLA tensors into a Python tuple, if they are more than one.
 py::object XlaPackTensorList(const XlaModule::TensorBatchVector& outputs);
 
-// Makes a depp copy of an ATEN tensor.
+// Makes a deep copy of an ATEN tensor.
 static inline at::Tensor CopyTensor(const at::Tensor& ref) {
   return ref.to(ref.options(), /*non_blocking=*/false, /*copy=*/true);
 }
