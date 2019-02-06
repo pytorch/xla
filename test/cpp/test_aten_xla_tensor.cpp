@@ -309,21 +309,25 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2D) {
     for (int padding = 0; padding <= 1; ++padding) {
       // Test ceil_mode=true through the CPU interop.
       for (bool ceil_mode : {false, true}) {
-        at::Tensor output =
-            at::max_pool2d(input, /*kernel_size=*/{kernel_size, kernel_size},
-                           /*stride=*/{stride, stride},
-                           /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
-                           /*ceil_mode=*/ceil_mode);
-        ForEachDevice([&](const Device& device) {
-          at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
-          at::Tensor xla_output = at::max_pool2d(
-              xla_input,
-              /*kernel_size=*/{kernel_size, kernel_size},
+        // Test dilation through the CPU interop.
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          at::Tensor output = at::max_pool2d(
+              input, /*kernel_size=*/{kernel_size, kernel_size},
               /*stride=*/{stride, stride},
-              /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
+              /*padding=*/{padding, padding}, /*dilation=*/{dilation, dilation},
               /*ceil_mode=*/ceil_mode);
-          AllClose(output, xla_output);
-        });
+          ForEachDevice([&](const Device& device) {
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+            at::Tensor xla_output =
+                at::max_pool2d(xla_input,
+                               /*kernel_size=*/{kernel_size, kernel_size},
+                               /*stride=*/{stride, stride},
+                               /*padding=*/{padding, padding},
+                               /*dilation=*/{dilation, dilation},
+                               /*ceil_mode=*/ceil_mode);
+            AllClose(output, xla_output);
+          });
+        }
       }
     }
   }
@@ -336,21 +340,26 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DNonSquare) {
     for (int padding = 0; padding <= 1; ++padding) {
       // Test ceil_mode=true through the CPU interop.
       for (bool ceil_mode : {false, true}) {
-        at::Tensor output = at::max_pool2d(
-            input, /*kernel_size=*/{kernel_size, kernel_size + 1},
-            /*stride=*/{stride, stride + 1},
-            /*padding=*/{padding, padding + 1}, /*dilation=*/{1, 1},
-            /*ceil_mode=*/ceil_mode);
-        ForEachDevice([&](const Device& device) {
-          at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
-          at::Tensor xla_output = at::max_pool2d(
-              xla_input,
-              /*kernel_size=*/{kernel_size, kernel_size + 1},
+        // Test dilation through the CPU interop.
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          at::Tensor output = at::max_pool2d(
+              input, /*kernel_size=*/{kernel_size, kernel_size + 1},
               /*stride=*/{stride, stride + 1},
-              /*padding=*/{padding, padding + 1}, /*dilation=*/{1, 1},
+              /*padding=*/{padding, padding + 1},
+              /*dilation=*/{dilation, dilation},
               /*ceil_mode=*/ceil_mode);
-          AllClose(output, xla_output);
-        });
+          ForEachDevice([&](const Device& device) {
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+            at::Tensor xla_output =
+                at::max_pool2d(xla_input,
+                               /*kernel_size=*/{kernel_size, kernel_size + 1},
+                               /*stride=*/{stride, stride + 1},
+                               /*padding=*/{padding, padding + 1},
+                               /*dilation=*/{dilation, dilation},
+                               /*ceil_mode=*/ceil_mode);
+            AllClose(output, xla_output);
+          });
+        }
       }
     }
   }
