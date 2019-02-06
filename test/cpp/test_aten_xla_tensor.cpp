@@ -574,7 +574,7 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
           ForEachDevice([&](const Device& device) {
             at::Tensor bias =
                 with_bias ? GetTestTesor({out_channels}) : at::Tensor();
-            TestBackward({GetTestTesor({4, in_channels, 32, 32}),
+            TestBackward({GetTestTesor({4, in_channels, 16, 16}),
                           GetTestTesor({out_channels, in_channels, kernel_size,
                                         kernel_size}),
                           bias},
@@ -615,7 +615,8 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
     };
 
     ForEachDevice([&](const Device& device) {
-      TestBackward({GetTestTesor({5, 3, 4, 2})}, device, testfn, /*rtol=*/1e-3);
+      TestBackward({GetTestTesor({5, 3, 4, 2})}, device, testfn, /*rtol=*/1e-3,
+                   /*atol=*/1e-5);
     });
   }
 }
