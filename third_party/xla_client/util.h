@@ -3,8 +3,8 @@
 
 #include <functional>
 #include <memory>
-#include <vector>
 #include <set>
+#include <vector>
 
 #include "absl/types/optional.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
