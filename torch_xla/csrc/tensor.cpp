@@ -581,9 +581,8 @@ XLATensor XLATensor::conv2d(
 
 XLATensor XLATensor::addmm(const XLATensor& weight, const XLATensor& bias,
                            bool use_full_conv_precision) const {
-  return Create(ir::NodeOperand(ir::ops::AddMatMulOp(
-                    GetIrNode(), weight.GetIrNode(), bias.GetIrNode(),
-                    use_full_conv_precision)),
+  return Create(ir::ops::AddMatMulOp(GetIrNode(), weight.GetIrNode(),
+                                     bias.GetIrNode(), use_full_conv_precision),
                 GetDevice());
 }
 
@@ -609,11 +608,9 @@ XLATensor XLATensor::avg_pool2d(
 
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,
                         bool use_full_conv_precision) {
-  return Create(
-      ir::NodeOperand(ir::ops::MatMulOp(ir::NodeOperand(input.GetIrNode()),
-                                        ir::NodeOperand(weight.GetIrNode()),
-                                        use_full_conv_precision)),
-      input.GetDevice());
+  return Create(ir::ops::MatMulOp(input.GetIrNode(), weight.GetIrNode(),
+                                  use_full_conv_precision),
+                input.GetDevice());
 }
 
 XLATensor XLATensor::avg_pool2d_backward(
@@ -623,9 +620,8 @@ XLATensor XLATensor::avg_pool2d_backward(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool count_include_pad) {
   return Create(ir::NodeOperand(std::make_shared<ir::ops::AvgPool2dBackward>(
-                    ir::NodeOperand(out_backprop.GetIrNode()),
-                    ir::NodeOperand(input.GetIrNode()), kernel_size, stride,
-                    padding, count_include_pad)),
+                    out_backprop.GetIrNode(), input.GetIrNode(), kernel_size,
+                    stride, padding, count_include_pad)),
                 out_backprop.GetDevice());
 }
 
@@ -636,9 +632,8 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::conv2d_backward(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool use_full_conv_precision) {
   const auto node = std::make_shared<ir::ops::Conv2dBackward>(
-      ir::NodeOperand(out_backprop.GetIrNode()),
-      ir::NodeOperand(input.GetIrNode()), ir::NodeOperand(weight.GetIrNode()),
-      stride, padding, use_full_conv_precision);
+      out_backprop.GetIrNode(), input.GetIrNode(), weight.GetIrNode(), stride,
+      padding, use_full_conv_precision);
   XLATensor grad_input =
       Create(ir::NodeOperand(node, 0), out_backprop.GetDevice());
   XLATensor grad_weight =
@@ -653,8 +648,7 @@ XLATensor XLATensor::log_softmax_backward(const XLATensor& grad_output,
                                           const XLATensor& output,
                                           xla::int64 dim) {
   return Create(ir::NodeOperand(std::make_shared<ir::ops::LogSoftmaxBackward>(
-                    ir::NodeOperand(grad_output.GetIrNode()),
-                    ir::NodeOperand(output.GetIrNode()), dim)),
+                    grad_output.GetIrNode(), output.GetIrNode(), dim)),
                 grad_output.GetDevice());
 }
 
@@ -662,14 +656,12 @@ XLATensor XLATensor::threshold_backward(const XLATensor& grad_output,
                                         const XLATensor& input,
                                         float threshold) {
   return Create(ir::NodeOperand(std::make_shared<ir::ops::ThresholdBackward>(
-                    ir::NodeOperand(grad_output.GetIrNode()),
-                    ir::NodeOperand(input.GetIrNode()), threshold)),
+                    grad_output.GetIrNode(), input.GetIrNode(), threshold)),
                 grad_output.GetDevice());
 }
 
 XLATensor XLATensor::t() const {
-  return Create(ir::NodeOperand(ir::ops::TransposeOp(GetIrNode())),
-                GetDevice());
+  return Create(ir::ops::TransposeOp(GetIrNode()), GetDevice());
 }
 
 XLATensor XLATensor::view(
@@ -706,16 +698,15 @@ XLATensor XLATensor::log_softmax(xla::int64 dim) const {
 }
 
 XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target) {
-  return Create(ir::NodeOperand(
-                    ir::ops::NllLossOp(input.GetIrNode(), target.GetIrNode())),
+  return Create(ir::ops::NllLossOp(input.GetIrNode(), target.GetIrNode()),
                 input.GetDevice());
 }
 
 XLATensor XLATensor::nll_loss_backward(const XLATensor& input,
                                        const XLATensor& target) {
-  return Create(ir::NodeOperand(ir::ops::NllLossBackwardOp(input.GetIrNode(),
-                                                           target.GetIrNode())),
-                input.GetDevice());
+  return Create(
+      ir::ops::NllLossBackwardOp(input.GetIrNode(), target.GetIrNode()),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::cross_replica_sum(
