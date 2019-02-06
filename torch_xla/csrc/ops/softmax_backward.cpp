@@ -10,8 +10,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const NodeOperand& grad_output,
-                           const NodeOperand& output, xla::int64 dim) {
+xla::Shape NodeOutputShape(const Value& grad_output, const Value& output,
+                           xla::int64 dim) {
   auto lower_for_shape_fn =
       [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
@@ -26,9 +26,8 @@ xla::Shape NodeOutputShape(const NodeOperand& grad_output,
 
 }  // namespace
 
-LogSoftmaxBackward::LogSoftmaxBackward(const NodeOperand& grad_output,
-                                       const NodeOperand& output,
-                                       xla::int64 dim)
+LogSoftmaxBackward::LogSoftmaxBackward(const Value& grad_output,
+                                       const Value& output, xla::int64 dim)
     : Node(ir::OpKind(at::aten::_log_softmax_backward_data),
            {grad_output, output}, NodeOutputShape(grad_output, output, dim),
            /*num_outputs=*/1, xla::util::MHash(dim)),

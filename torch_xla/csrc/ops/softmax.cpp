@@ -11,7 +11,7 @@ namespace ops {
 namespace {
 
 // Infers the output shape of the log softmax operation.
-xla::Shape NodeOutputShape(const NodeOperand& input, xla::int64 dim) {
+xla::Shape NodeOutputShape(const Value& input, xla::int64 dim) {
   auto lower_for_shape_fn =
       [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(const NodeOperand& input, xla::int64 dim) {
 
 }  // namespace
 
-LogSoftmax::LogSoftmax(const NodeOperand& input, xla::int64 dim)
+LogSoftmax::LogSoftmax(const Value& input, xla::int64 dim)
     : Node(ir::OpKind(at::aten::log_softmax), {input},
            NodeOutputShape(input, dim), /*num_outputs=*/1,
            xla::util::MHash(dim)),

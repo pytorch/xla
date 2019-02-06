@@ -12,7 +12,7 @@ namespace {
 
 // Infers the output shape of the max pooling operation.
 xla::Shape NodeOutputShape(
-    const NodeOperand& input,
+    const Value& input,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
@@ -31,7 +31,7 @@ xla::Shape NodeOutputShape(
 
 }  // namespace
 
-AvgPool2d::AvgPool2d(const NodeOperand& input,
+AvgPool2d::AvgPool2d(const Value& input,
                      tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
                      tensorflow::gtl::ArraySlice<const xla::int64> stride,
                      tensorflow::gtl::ArraySlice<const xla::int64> padding,

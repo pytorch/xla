@@ -118,7 +118,7 @@ XLATensor XLATensor::Create(
   return xtensor;
 }
 
-XLATensor XLATensor::Create(ir::NodeOperand ir_node, const Device& device) {
+XLATensor XLATensor::Create(ir::Value ir_node, const Device& device) {
   XLATensor xtensor(std::move(ir_node), device);
   TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
@@ -142,7 +142,7 @@ XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
   data()->requires_grad = requires_grad;
 }
 
-XLATensor::XLATensor(ir::NodeOperand ir_node, const Device& device)
+XLATensor::XLATensor(ir::Value ir_node, const Device& device)
     : data_(std::make_shared<Data>(std::move(ir_node), device)) {
   TryLimitGraphSize();
 }
@@ -234,7 +234,7 @@ std::shared_ptr<xla::ComputationClient::Data> XLATensor::CurrentXlaData()
     // In order to verify that that data is still valid as far as current tensor
     // data POV, we need to verify that the eventual IR Node is a DeviceData
     // node, and that its ComputationClient data pointer matches.
-    ir::NodeOperand ir_node = CurrentIrNode();
+    ir::Value ir_node = CurrentIrNode();
     if (!ir_node) {
       // If there is no IR node, then the XLA data is valid.
       return data()->xla_data;
@@ -251,7 +251,7 @@ std::shared_ptr<xla::ComputationClient::Data> XLATensor::CurrentXlaData()
 
 std::string XLATensor::DumpGraphNodeComputation() const {
   std::string hlo_text;
-  ir::NodeOperand ir_node = CurrentIrNode();
+  ir::Value ir_node = CurrentIrNode();
   if (ir_node) {
     ir::LoweringContext lowering_ctx("DumpGraphNodeComputation");
     xla::XlaOp root = lowering_ctx.GetOutputOp(ir_node);
@@ -268,11 +268,11 @@ void XLATensor::SetXlaData(
       << shape() << " vs " << xla_data->shape() << "\n"
       << DumpGraphNodeComputation();
   data()->xla_data = std::move(xla_data);
-  data()->ir_node = ir::NodeOperand();
+  data()->ir_node = ir::Value();
   data()->tensor_data = c10::nullopt;
 }
 
-void XLATensor::SetIrNode(ir::NodeOperand ir_node) {
+void XLATensor::SetIrNode(ir::Value ir_node) {
   if (data()->view != nullptr) {
     // If we have an active view, and a SetIrNode() happens, it means we are
     // within an in-place execution context, and we need to update the view's
@@ -302,8 +302,8 @@ void XLATensor::TryLimitGraphSize() {
   }
 }
 
-ir::NodeOperand XLATensor::GetIrNode() const {
-  ir::NodeOperand ir_node = CurrentIrNode();
+ir::Value XLATensor::GetIrNode() const {
+  ir::Value ir_node = CurrentIrNode();
   if (ir_node) {
     return ir_node;
   }
@@ -329,7 +329,7 @@ ir::NodeOperand XLATensor::GetIrNode() const {
   return data()->ir_node;
 }
 
-ir::NodeOperand XLATensor::CurrentIrNode() const {
+ir::Value XLATensor::CurrentIrNode() const {
   if (data()->view != nullptr) {
     return GetViewIrNode(data()->view.get()).ir_node;
   }
@@ -375,7 +375,7 @@ at::Tensor XLATensor::ToTensor() {
 void XLATensor::DiscardXlaData() {
   XLA_CHECK(data()->tensor_data);
   data()->xla_data = nullptr;
-  data()->ir_node = ir::NodeOperand();
+  data()->ir_node = ir::Value();
   data()->view = nullptr;
 }
 
@@ -446,7 +446,7 @@ std::vector<XLATensor> XLATensor::CreateTensors(
   return xla_tensors;
 }
 
-ir::NodeOperand XLATensor::CreateTensorNode(
+ir::Value XLATensor::CreateTensorNode(
     std::shared_ptr<xla::ComputationClient::Data> data) {
   return ir::ops::DeviceDataOp(std::move(data));
 }
@@ -463,7 +463,7 @@ XLATensor::ViewIrNode XLATensor::GetViewIrNode(View* view) {
     // matches the current aliased node, the current IR Node is still valid.
     return {view->ir_node, false};
   }
-  view->ir_node = ir::NodeOperand(std::make_shared<ir::ops::View>(
+  view->ir_node = ir::Value(std::make_shared<ir::ops::View>(
       view->alias->ir_node, view->shape.dimensions()));
   return {view->ir_node, true};
 }
@@ -521,7 +521,7 @@ void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
                          const XLATensor& tensor2) {
   ir::NodePtr constant =
       ir::ops::ScalarOp(value.toDouble(), tensor1.shape().get().element_type());
-  ir::NodeOperand div = tensor1.GetIrNode() / tensor2.GetIrNode();
+  ir::Value div = tensor1.GetIrNode() / tensor2.GetIrNode();
   SetIrNode(GetIrNode() + div * constant);
 }
 
@@ -529,7 +529,7 @@ void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
                          const XLATensor& tensor2) {
   ir::NodePtr constant =
       ir::ops::ScalarOp(value.toDouble(), tensor1.shape().get().element_type());
-  ir::NodeOperand mul = tensor1.GetIrNode() * tensor2.GetIrNode();
+  ir::Value mul = tensor1.GetIrNode() * tensor2.GetIrNode();
   SetIrNode(GetIrNode() + mul * constant);
 }
 
@@ -552,7 +552,7 @@ XLATensor XLATensor::relu() const {
 }
 
 XLATensor XLATensor::threshold(float threshold, float value) const {
-  return Create(ir::NodeOperand(std::make_shared<ir::ops::Threshold>(
+  return Create(ir::Value(std::make_shared<ir::ops::Threshold>(
                     GetIrNode(), threshold, value)),
                 GetDevice());
 }
@@ -590,7 +590,7 @@ XLATensor XLATensor::max_pool2d(
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) const {
-  return Create(ir::NodeOperand(std::make_shared<ir::ops::MaxPool2d>(
+  return Create(ir::Value(std::make_shared<ir::ops::MaxPool2d>(
                     GetIrNode(), kernel_size, stride, padding)),
                 GetDevice());
 }
@@ -601,7 +601,7 @@ XLATensor XLATensor::avg_pool2d(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool count_include_pad) const {
   return Create(
-      ir::NodeOperand(std::make_shared<ir::ops::AvgPool2d>(
+      ir::Value(std::make_shared<ir::ops::AvgPool2d>(
           GetIrNode(), kernel_size, stride, padding, count_include_pad)),
       GetDevice());
 }
@@ -619,7 +619,7 @@ XLATensor XLATensor::avg_pool2d_backward(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool count_include_pad) {
-  return Create(ir::NodeOperand(std::make_shared<ir::ops::AvgPool2dBackward>(
+  return Create(ir::Value(std::make_shared<ir::ops::AvgPool2dBackward>(
                     out_backprop.GetIrNode(), input.GetIrNode(), kernel_size,
                     stride, padding, count_include_pad)),
                 out_backprop.GetDevice());
@@ -634,12 +634,9 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::conv2d_backward(
   const auto node = std::make_shared<ir::ops::Conv2dBackward>(
       out_backprop.GetIrNode(), input.GetIrNode(), weight.GetIrNode(), stride,
       padding, use_full_conv_precision);
-  XLATensor grad_input =
-      Create(ir::NodeOperand(node, 0), out_backprop.GetDevice());
-  XLATensor grad_weight =
-      Create(ir::NodeOperand(node, 1), out_backprop.GetDevice());
-  XLATensor grad_bias =
-      Create(ir::NodeOperand(node, 2), out_backprop.GetDevice());
+  XLATensor grad_input = Create(ir::Value(node, 0), out_backprop.GetDevice());
+  XLATensor grad_weight = Create(ir::Value(node, 1), out_backprop.GetDevice());
+  XLATensor grad_bias = Create(ir::Value(node, 2), out_backprop.GetDevice());
   return std::make_tuple(std::move(grad_input), std::move(grad_weight),
                          std::move(grad_bias));
 }
@@ -647,7 +644,7 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::conv2d_backward(
 XLATensor XLATensor::log_softmax_backward(const XLATensor& grad_output,
                                           const XLATensor& output,
                                           xla::int64 dim) {
-  return Create(ir::NodeOperand(std::make_shared<ir::ops::LogSoftmaxBackward>(
+  return Create(ir::Value(std::make_shared<ir::ops::LogSoftmaxBackward>(
                     grad_output.GetIrNode(), output.GetIrNode(), dim)),
                 grad_output.GetDevice());
 }
@@ -655,7 +652,7 @@ XLATensor XLATensor::log_softmax_backward(const XLATensor& grad_output,
 XLATensor XLATensor::threshold_backward(const XLATensor& grad_output,
                                         const XLATensor& input,
                                         float threshold) {
-  return Create(ir::NodeOperand(std::make_shared<ir::ops::ThresholdBackward>(
+  return Create(ir::Value(std::make_shared<ir::ops::ThresholdBackward>(
                     grad_output.GetIrNode(), input.GetIrNode(), threshold)),
                 grad_output.GetDevice());
 }
@@ -680,7 +677,7 @@ XLATensor XLATensor::view(
   // This node is not a view, and creating a view forks the current node into
   // becoming one itself. This means creating an alias with the current IR Node,
   // and using the same alias for the created IR Node.
-  ir::NodeOperand ir_node = GetIrNode();
+  ir::Value ir_node = GetIrNode();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_node);
   data()->view = std::make_shared<View>(ir_node.shape(), alias);
 
@@ -693,7 +690,7 @@ XLATensor XLATensor::view(
 
 XLATensor XLATensor::log_softmax(xla::int64 dim) const {
   return Create(
-      ir::NodeOperand(std::make_shared<ir::ops::LogSoftmax>(GetIrNode(), dim)),
+      ir::Value(std::make_shared<ir::ops::LogSoftmax>(GetIrNode(), dim)),
       GetDevice());
 }
 
@@ -719,7 +716,7 @@ void XLATensor::ApplyPendingGraph() {
   // This method is called to ensure that the tensor data is available on
   // device, so that a call to CurrentXlaData() returns a valid pointer.
   if (CurrentXlaData() == nullptr) {
-    ir::NodeOperand ir_node = CurrentIrNode();
+    ir::Value ir_node = CurrentIrNode();
     if (ir_node) {
       ir::LoweringContext lowering_ctx("ApplyPendingGraph");
       xla::XlaOp root = lowering_ctx.GetOutputOp(ir_node);
@@ -937,7 +934,7 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
     auto generator = [&, device_context, index]() {
       std::vector<xla::int64> device_index_mapping;
       for (auto i : device_context->index_mapping) {
-        ir::NodeOperand ir_node = (*tensors)[i].CurrentIrNode();
+        ir::Value ir_node = (*tensors)[i].CurrentIrNode();
         xla::XlaOp root = device_context->lowering_ctx.GetOutputOp(ir_node);
         device_context->lowering_ctx.AddResult(root);
         device_index_mapping.push_back((*tensors)[i].GetUniqueId());

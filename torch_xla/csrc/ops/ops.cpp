@@ -11,7 +11,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-NodePtr ReluOp(const NodeOperand& input) {
+NodePtr ReluOp(const Value& input) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
@@ -29,7 +29,7 @@ NodePtr ReluOp(const NodeOperand& input) {
                             output_shape, std::move(lower_fn));
 }
 
-NodePtr TransposeOp(const NodeOperand& input) {
+NodePtr TransposeOp(const Value& input) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
@@ -47,8 +47,8 @@ NodePtr TransposeOp(const NodeOperand& input) {
                             output_shape, std::move(lower_fn));
 }
 
-NodePtr AddMatMulOp(const NodeOperand& input, const NodeOperand& weight,
-                    const NodeOperand& bias, bool use_full_conv_precision) {
+NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
+                    bool use_full_conv_precision) {
   const auto precision_level = use_full_conv_precision
                                    ? xla::PrecisionConfig::HIGHEST
                                    : xla::PrecisionConfig::DEFAULT;
@@ -84,7 +84,7 @@ NodePtr AddMatMulOp(const NodeOperand& input, const NodeOperand& weight,
                             std::move(lower_fn));
 }
 
-NodePtr MatMulOp(const NodeOperand& input, const NodeOperand& weight,
+NodePtr MatMulOp(const Value& input, const Value& weight,
                  bool use_full_conv_precision) {
   const auto precision_level = use_full_conv_precision
                                    ? xla::PrecisionConfig::HIGHEST
@@ -111,7 +111,7 @@ NodePtr MatMulOp(const NodeOperand& input, const NodeOperand& weight,
                             output_shape, std::move(lower_fn));
 }
 
-NodePtr NllLossOp(const NodeOperand& logits, const NodeOperand& labels) {
+NodePtr NllLossOp(const Value& logits, const Value& labels) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
     xla::XlaOp logits = loctx->GetOutputOp(node.operand(0));
@@ -131,8 +131,7 @@ NodePtr NllLossOp(const NodeOperand& logits, const NodeOperand& labels) {
                             std::move(lower_fn));
 }
 
-NodePtr NllLossBackwardOp(const NodeOperand& logits,
-                          const NodeOperand& labels) {
+NodePtr NllLossBackwardOp(const Value& logits, const Value& labels) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
     xla::XlaOp logits = loctx->GetOutputOp(node.operand(0));

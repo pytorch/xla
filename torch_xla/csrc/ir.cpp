@@ -33,7 +33,7 @@ std::string Output::ToString() const {
   return ss.str();
 }
 
-const xla::Shape& NodeOperand::shape() const { return node->shape(index); }
+const xla::Shape& Value::shape() const { return node->shape(index); }
 
 OpKind OpKind::Get(const std::string& name) {
   return OpKind(c10::Symbol::fromQualString(name));

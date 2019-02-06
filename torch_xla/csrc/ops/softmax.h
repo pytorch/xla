@@ -9,7 +9,7 @@ namespace ops {
 // IR node for log(softmax) operation.
 class LogSoftmax : public Node {
  public:
-  LogSoftmax(const NodeOperand& input, xla::int64 dim);
+  LogSoftmax(const Value& input, xla::int64 dim);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

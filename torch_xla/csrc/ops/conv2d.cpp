@@ -14,7 +14,7 @@ namespace {
 
 // The bias doesn't matter for shape inference.
 xla::Shape NodeOutputShape(
-    const NodeOperand& input, const NodeOperand& weight,
+    const Value& input, const Value& weight,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   auto lower_for_shape_fn =
@@ -38,8 +38,7 @@ xla::PrecisionConfig::Precision MakePrecisionConfig(
 
 }  // namespace
 
-Conv2d::Conv2d(const NodeOperand& input, const NodeOperand& weight,
-               const NodeOperand& bias,
+Conv2d::Conv2d(const Value& input, const Value& weight, const Value& bias,
                tensorflow::gtl::ArraySlice<const xla::int64> stride,
                tensorflow::gtl::ArraySlice<const xla::int64> padding,
                bool use_full_conv_precision)
@@ -50,7 +49,7 @@ Conv2d::Conv2d(const NodeOperand& input, const NodeOperand& weight,
       padding_(padding.begin(), padding.end()),
       precision_(MakePrecisionConfig(use_full_conv_precision)) {}
 
-Conv2d::Conv2d(const NodeOperand& input, const NodeOperand& weight,
+Conv2d::Conv2d(const Value& input, const Value& weight,
                tensorflow::gtl::ArraySlice<const xla::int64> stride,
                tensorflow::gtl::ArraySlice<const xla::int64> padding,
                bool use_full_conv_precision)
