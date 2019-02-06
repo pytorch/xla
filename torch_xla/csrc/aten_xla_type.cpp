@@ -176,6 +176,23 @@ at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
       XlaHelpers::I64List(padding)));
 }
 
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
+    const at::Tensor& self, at::IntList kernel_size, at::IntList stride,
+    at::IntList padding, at::IntList dilation, bool ceil_mode) const {
+  // Lowering when ceil_mode or dilation is set not supported yet.
+  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeBase::max_pool2d_with_indices(
+        self, kernel_size, stride, padding, dilation, ceil_mode);
+  }
+  return std::make_tuple(
+      bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).max_pool2d(
+          XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+          XlaHelpers::I64List(padding))),
+      bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).max_pool2d_indices(
+          XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+          XlaHelpers::I64List(padding))));
+}
+
 at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
                                    at::IntList kernel_size, at::IntList stride,
                                    at::IntList padding, bool ceil_mode,
@@ -206,6 +223,22 @@ at::Tensor AtenXlaType::avg_pool2d_backward(const at::Tensor& grad_output,
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), count_include_pad));
+}
+
+at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntList kernel_size, at::IntList stride, at::IntList padding,
+    at::IntList dilation, bool ceil_mode, const at::Tensor& indices) const {
+  // Lowering when ceil_mode or dilation is set not supported yet.
+  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeBase::max_pool2d_with_indices_backward(
+        grad_output, self, kernel_size, stride, padding, dilation, ceil_mode,
+        indices);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::max_pool2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding)));
 }
 
 at::Tensor AtenXlaType::_log_softmax_backward_data(

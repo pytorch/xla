@@ -64,6 +64,10 @@ class AtenXlaType : public AtenXlaTypeBase {
                         at::IntList stride, at::IntList padding,
                         at::IntList dilation, bool ceil_mode) const override;
 
+  std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
+      const at::Tensor& self, at::IntList kernel_size, at::IntList stride,
+      at::IntList padding, at::IntList dilation, bool ceil_mode) const override;
+
   at::Tensor avg_pool2d(const at::Tensor& self, at::IntList kernel_size,
                         at::IntList stride, at::IntList padding, bool ceil_mode,
                         bool count_include_pad) const override;
@@ -73,6 +77,12 @@ class AtenXlaType : public AtenXlaTypeBase {
                                  at::IntList kernel_size, at::IntList stride,
                                  at::IntList padding, bool ceil_mode,
                                  bool count_include_pad) const override;
+
+  at::Tensor max_pool2d_with_indices_backward(
+      const at::Tensor& grad_output, const at::Tensor& self,
+      at::IntList kernel_size, at::IntList stride, at::IntList padding,
+      at::IntList dilation, bool ceil_mode,
+      const at::Tensor& indices) const override;
 
   at::Tensor _log_softmax_backward_data(const at::Tensor& grad_output,
                                         const at::Tensor& output, int64_t dim,
