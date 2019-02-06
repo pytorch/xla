@@ -1,8 +1,10 @@
 #ifndef TENSORFLOW_COMPILER_XLA_RPC_UTIL_H_
 #define TENSORFLOW_COMPILER_XLA_RPC_UTIL_H_
 
+#include <functional>
 #include <memory>
 #include <vector>
+#include <set>
 
 #include "absl/types/optional.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
@@ -87,6 +89,49 @@ std::vector<T> ToVector(const S& input) {
 
 static inline size_t HashCombine(size_t a, size_t b) {
   return a ^ (b + 0x9e3779b97f4a7c15 + (a << 6) + (a >> 2));
+}
+
+template <typename T>
+size_t Hash(const T& value) {
+  return std::hash<T>()(value);
+}
+
+// Forward declare to allow hashes of vectors of vectors to work.
+template <typename T>
+size_t ContainerHash(const T& values);
+
+template <typename T>
+size_t Hash(tensorflow::gtl::ArraySlice<const T> values) {
+  return ContainerHash(values);
+}
+
+template <typename T>
+size_t Hash(const std::vector<T>& values) {
+  return ContainerHash(values);
+}
+
+template <typename T>
+size_t Hash(const std::set<T>& values) {
+  return ContainerHash(values);
+}
+
+template <typename T>
+size_t ContainerHash(const T& values) {
+  size_t h = 0x5a2d296e9;
+  for (auto& value : values) {
+    h = HashCombine(h, Hash(value));
+  }
+  return h;
+}
+
+template <typename T = void>
+size_t MHash() {
+  return 0x5a2d296e9;
+}
+
+template <typename T, typename... Targs>
+size_t MHash(T value, Targs... Fargs) {
+  return HashCombine(Hash(value), MHash(Fargs...));
 }
 
 }  // namespace util

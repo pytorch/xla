@@ -3,6 +3,7 @@
 #include "ops/infer_output_shape.h"
 #include "pooling.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -33,7 +34,8 @@ MaxPool2d::MaxPool2d(const NodeOperand& input,
                      tensorflow::gtl::ArraySlice<const xla::int64> stride,
                      tensorflow::gtl::ArraySlice<const xla::int64> padding)
     : Node(ir::OpKind(at::aten::max_pool2d), {input},
-           NodeOutputShape(input, kernel_size, stride, padding)),
+           NodeOutputShape(input, kernel_size, stride, padding),
+           /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
       kernel_size_(kernel_size.begin(), kernel_size.end()),
       stride_(stride.begin(), stride.end()),
       padding_(padding.begin(), padding.end()) {}

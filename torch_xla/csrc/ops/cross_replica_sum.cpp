@@ -2,6 +2,7 @@
 
 #include "lowering_context.h"
 #include "ops/xla_ops.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -9,7 +10,8 @@ namespace ops {
 
 CrossReplicaSum::CrossReplicaSum(const NodeOperand& operand,
                                  std::vector<std::vector<xla::int64>> groups)
-    : Node(xla_cross_replica_sum, {operand}, operand.node->shape()),
+    : Node(xla_cross_replica_sum, {operand}, operand.node->shape(),
+           /*num_outputs=*/1, xla::util::MHash(groups)),
       groups_(std::move(groups)) {}
 
 std::string CrossReplicaSum::ToString() const {
