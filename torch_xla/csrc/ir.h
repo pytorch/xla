@@ -91,10 +91,9 @@ template <typename T>
 using OutputMap = std::unordered_map<Output, T, Output::Hasher>;
 
 // Represents an input/operand for a Node object.
-struct NodeOperand {
-  NodeOperand() = default;
-  NodeOperand(NodePtr node, size_t index = 0)
-      : node(std::move(node)), index(index) {}
+struct Value {
+  Value() = default;
+  Value(NodePtr node, size_t index = 0) : node(std::move(node)), index(index) {}
 
   const xla::Shape& shape() const;
 
@@ -136,7 +135,7 @@ inline std::ostream& operator<<(std::ostream& stream, const OpKind& op) {
   return stream;
 }
 
-using OpList = tensorflow::gtl::ArraySlice<const NodeOperand>;
+using OpList = tensorflow::gtl::ArraySlice<const Value>;
 
 // A node in the graph. Nodes for operations which requires extra data to be
 // stored for lowering, should inherit from this class and add operation

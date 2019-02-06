@@ -13,8 +13,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(
-    const NodeOperand& grad_output, const NodeOperand& input,
-    const NodeOperand& weight,
+    const Value& grad_output, const Value& input, const Value& weight,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   auto lower_for_shape_fn =
@@ -43,8 +42,7 @@ xla::PrecisionConfig::Precision MakePrecisionConfig(
 }  // namespace
 
 Conv2dBackward::Conv2dBackward(
-    const NodeOperand& grad_output, const NodeOperand& input,
-    const NodeOperand& weight,
+    const Value& grad_output, const Value& input, const Value& weight,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool use_full_conv_precision)

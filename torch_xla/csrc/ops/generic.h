@@ -15,7 +15,7 @@ class Generic : public Node {
  public:
   using LowerFn = std::function<XlaOpVector(const Node&, LoweringContext*)>;
 
-  Generic(OpKind op, tensorflow::gtl::ArraySlice<const NodeOperand> operands,
+  Generic(OpKind op, tensorflow::gtl::ArraySlice<const Value> operands,
           xla::Shape shape, LowerFn lower_fn, size_t num_outputs = 1);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;

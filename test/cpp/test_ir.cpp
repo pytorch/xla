@@ -18,7 +18,7 @@ TEST(IrTest, TestScalarCreate) {
 TEST(IrTest, TestReplace) {
   ir::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
   ir::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::NodeOperand add = scalar1 + scalar2;
+  ir::Value add = scalar1 + scalar2;
   EXPECT_EQ(scalar1->uses().size(), 1);
   EXPECT_EQ(scalar2->uses().size(), 1);
 
@@ -34,20 +34,20 @@ TEST(IrTest, TestReplace) {
 TEST(IrTest, TestHash) {
   ir::NodePtr scalar1 = ir::ops::ScalarOp(1.0, xla::F32);
   ir::NodePtr scalar2 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::NodeOperand add1 = scalar1 + scalar2;
+  ir::Value add1 = scalar1 + scalar2;
 
   ir::NodePtr scalar3 = ir::ops::ScalarOp(1.0, xla::F32);
   ir::NodePtr scalar4 = ir::ops::ScalarOp(2.0, xla::F32);
-  ir::NodeOperand add2 = scalar1 + scalar2;
+  ir::Value add2 = scalar1 + scalar2;
 
   ir::NodePtr scalar5 = ir::ops::ScalarOp(11.0, xla::F32);
   ir::NodePtr scalar6 = ir::ops::ScalarOp(22.0, xla::F32);
-  ir::NodeOperand add3 = scalar5 + scalar6;
+  ir::Value add3 = scalar5 + scalar6;
 
   EXPECT_EQ(add1->hash(), add2->hash());
   EXPECT_NE(add1->hash(), add3->hash());
 
-  ir::NodeOperand sub = scalar1 - scalar2;
+  ir::Value sub = scalar1 - scalar2;
 
   EXPECT_NE(add1->hash(), sub->hash());
 }

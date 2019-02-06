@@ -11,7 +11,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(
-    const NodeOperand& grad_output, const NodeOperand& input,
+    const Value& grad_output, const Value& input,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
@@ -33,7 +33,7 @@ xla::Shape NodeOutputShape(
 }  // namespace
 
 AvgPool2dBackward::AvgPool2dBackward(
-    const NodeOperand& grad_output, const NodeOperand& input,
+    const Value& grad_output, const Value& input,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,

@@ -10,8 +10,8 @@ namespace ops {
 
 class Conv2dBackward : public Node {
  public:
-  Conv2dBackward(const NodeOperand& grad_output, const NodeOperand& input,
-                 const NodeOperand& weight,
+  Conv2dBackward(const Value& grad_output, const Value& input,
+                 const Value& weight,
                  tensorflow::gtl::ArraySlice<const xla::int64> stride,
                  tensorflow::gtl::ArraySlice<const xla::int64> padding,
                  bool use_full_conv_precision);

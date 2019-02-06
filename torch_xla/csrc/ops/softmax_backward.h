@@ -8,7 +8,7 @@ namespace ops {
 
 class LogSoftmaxBackward : public Node {
  public:
-  LogSoftmaxBackward(const NodeOperand& grad_output, const NodeOperand& output,
+  LogSoftmaxBackward(const Value& grad_output, const Value& output,
                      xla::int64 dim);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;

@@ -9,7 +9,7 @@ namespace ops {
 // IR node for 2D max pooling.
 class MaxPool2d : public Node {
  public:
-  MaxPool2d(const NodeOperand& input,
+  MaxPool2d(const Value& input,
             tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
             tensorflow::gtl::ArraySlice<const xla::int64> stride,
             tensorflow::gtl::ArraySlice<const xla::int64> padding);

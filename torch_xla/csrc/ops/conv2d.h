@@ -11,13 +11,12 @@ namespace ops {
 // IR node for 2D convolutions with or without bias.
 class Conv2d : public Node {
  public:
-  Conv2d(const NodeOperand& input, const NodeOperand& weight,
-         const NodeOperand& bias,
+  Conv2d(const Value& input, const Value& weight, const Value& bias,
          tensorflow::gtl::ArraySlice<const xla::int64> stride,
          tensorflow::gtl::ArraySlice<const xla::int64> padding,
          bool use_full_conv_precision);
 
-  Conv2d(const NodeOperand& input, const NodeOperand& weight,
+  Conv2d(const Value& input, const Value& weight,
          tensorflow::gtl::ArraySlice<const xla::int64> stride,
          tensorflow::gtl::ArraySlice<const xla::int64> padding,
          bool use_full_conv_precision);
