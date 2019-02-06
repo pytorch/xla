@@ -3,6 +3,7 @@
 #include "lowering_context.h"
 #include "ops/infer_output_shape.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -25,7 +26,8 @@ xla::Shape NodeOutputShape(const NodeOperand& input, xla::int64 dim) {
 
 LogSoftmax::LogSoftmax(const NodeOperand& input, xla::int64 dim)
     : Node(ir::OpKind(at::aten::log_softmax), {input},
-           NodeOutputShape(input, dim)),
+           NodeOutputShape(input, dim), /*num_outputs=*/1,
+           xla::util::MHash(dim)),
       dim_(dim) {}
 
 XlaOpVector LogSoftmax::Lower(LoweringContext* loctx) const {

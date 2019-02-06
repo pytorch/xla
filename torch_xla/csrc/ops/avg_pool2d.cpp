@@ -3,6 +3,7 @@
 #include "ops/infer_output_shape.h"
 #include "pooling.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -37,7 +38,8 @@ AvgPool2d::AvgPool2d(const NodeOperand& input,
                      bool count_include_pad)
     : Node(ir::OpKind(at::aten::avg_pool2d), {input},
            NodeOutputShape(input, kernel_size, stride, padding,
-                           count_include_pad)),
+                           count_include_pad),
+           /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
       kernel_size_(kernel_size.begin(), kernel_size.end()),
       stride_(stride.begin(), stride.end()),
       padding_(padding.begin(), padding.end()),
