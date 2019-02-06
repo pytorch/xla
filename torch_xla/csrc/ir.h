@@ -219,5 +219,10 @@ inline std::ostream& operator<<(std::ostream& stream, const Node& node) {
   return stream;
 }
 
+template <typename T, typename... Args>
+NodePtr MakeNode(Args&&... args) {
+  return std::make_shared<T>(std::forward<Args>(args)...);
+}
+
 }  // namespace ir
 }  // namespace torch_xla
