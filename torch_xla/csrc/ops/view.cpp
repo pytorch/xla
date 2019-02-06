@@ -5,6 +5,7 @@
 #include "lowering_context.h"
 #include "ops/infer_output_shape.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -29,7 +30,8 @@ xla::Shape NodeOutputShape(
 View::View(const NodeOperand& input,
            tensorflow::gtl::ArraySlice<const xla::int64> output_size)
     : Node(ir::OpKind(at::aten::view), {input},
-           NodeOutputShape(input, output_size)),
+           NodeOutputShape(input, output_size), /*num_outputs=*/1,
+           xla::util::MHash(output_size)),
       output_size_(output_size.begin(), output_size.end()) {}
 
 XlaOpVector View::Lower(LoweringContext* loctx) const {

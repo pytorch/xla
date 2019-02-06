@@ -5,6 +5,7 @@
 #include "lowering_context.h"
 #include "ops/infer_output_shape.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -43,7 +44,8 @@ Conv2d::Conv2d(const NodeOperand& input, const NodeOperand& weight,
                tensorflow::gtl::ArraySlice<const xla::int64> padding,
                bool use_full_conv_precision)
     : Node(ir::OpKind(at::aten::convolution), {input, weight, bias},
-           NodeOutputShape(input, weight, stride, padding)),
+           NodeOutputShape(input, weight, stride, padding),
+           /*num_outputs=*/1, xla::util::MHash(stride, padding)),
       stride_(stride.begin(), stride.end()),
       padding_(padding.begin(), padding.end()),
       precision_(MakePrecisionConfig(use_full_conv_precision)) {}

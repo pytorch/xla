@@ -39,11 +39,12 @@ OpKind OpKind::Get(const std::string& name) {
   return OpKind(c10::Symbol::fromQualString(name));
 }
 
-Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs)
+Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
+           size_t hash_seed)
     : op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
-      hash_(op_.hash()) {
+      hash_(xla::util::HashCombine(op_.hash(), hash_seed)) {
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
     graph_size_ += operand.node->graph_size();

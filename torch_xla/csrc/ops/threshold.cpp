@@ -1,13 +1,15 @@
 #include "ops/threshold.h"
 #include "elementwise.h"
 #include "lowering_context.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace torch_xla {
 namespace ir {
 namespace ops {
 
 Threshold::Threshold(const NodeOperand& input, float threshold, float value)
-    : Node(ir::OpKind(at::aten::threshold), {input}, input.node->shape()),
+    : Node(ir::OpKind(at::aten::threshold), {input}, input.node->shape(),
+           /*num_outputs=*/1, xla::util::MHash(threshold, value)),
       threshold_(threshold),
       value_(value) {}
 

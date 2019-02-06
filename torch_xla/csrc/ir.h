@@ -149,7 +149,8 @@ class Node {
   // Creates a new node with the given op name. The op is a unique identifier
   // for the operation. The num_outputs tells how many outputs a given operation
   // generates.
-  Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs = 1);
+  Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs = 1,
+       size_t hash_seed = 0x5a2d296e9);
 
   // Contructor used to create leaf nodes.
   Node(OpKind op, xla::Shape shape, size_t hash_seed);
