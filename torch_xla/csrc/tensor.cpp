@@ -594,6 +594,15 @@ XLATensor XLATensor::max_pool2d(
                 GetDevice());
 }
 
+XLATensor XLATensor::max_pool2d_indices(
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) const {
+  return Create(ir::Value(std::make_shared<ir::ops::MaxPool2dIndices>(
+                    GetIrNode(), kernel_size, stride, padding)),
+                GetDevice());
+}
+
 XLATensor XLATensor::avg_pool2d(
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
