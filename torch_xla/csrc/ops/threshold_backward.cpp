@@ -7,8 +7,8 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-ThresholdBackward::ThresholdBackward(const NodeOperand& grad_output,
-                                     const NodeOperand& input, float threshold)
+ThresholdBackward::ThresholdBackward(const Value& grad_output,
+                                     const Value& input, float threshold)
     : Node(ir::OpKind(at::aten::threshold_backward), {grad_output, input},
            input.node->shape(), /*num_outputs=*/1, xla::util::MHash(threshold)),
       threshold_(threshold) {}

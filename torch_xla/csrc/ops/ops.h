@@ -32,31 +32,32 @@ inline NodePtr DeviceDataOp(
   return std::make_shared<DeviceData>(std::move(data));
 }
 
-inline NodePtr GenericOp(
-    OpKind op, tensorflow::gtl::ArraySlice<const NodeOperand> operands,
-    xla::Shape shape, Generic::LowerFn lower_fn, size_t num_outputs = 1) {
+inline NodePtr GenericOp(OpKind op,
+                         tensorflow::gtl::ArraySlice<const Value> operands,
+                         xla::Shape shape, Generic::LowerFn lower_fn,
+                         size_t num_outputs = 1) {
   return std::make_shared<Generic>(std::move(op), operands, std::move(shape),
                                    std::move(lower_fn), num_outputs);
 }
 
-inline NodePtr CrossReplicaSumOp(const NodeOperand& operand,
+inline NodePtr CrossReplicaSumOp(const Value& operand,
                                  std::vector<std::vector<xla::int64>> groups) {
   return std::make_shared<CrossReplicaSum>(operand, std::move(groups));
 }
 
-NodePtr ReluOp(const NodeOperand& input);
+NodePtr ReluOp(const Value& input);
 
-NodePtr TransposeOp(const NodeOperand& input);
+NodePtr TransposeOp(const Value& input);
 
-NodePtr AddMatMulOp(const NodeOperand& input, const NodeOperand& weight,
-                    const NodeOperand& bias, bool use_full_conv_precision);
+NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
+                    bool use_full_conv_precision);
 
-NodePtr MatMulOp(const NodeOperand& input, const NodeOperand& weight,
+NodePtr MatMulOp(const Value& input, const Value& weight,
                  bool use_full_conv_precision);
 
-NodePtr NllLossOp(const NodeOperand& logits, const NodeOperand& labels);
+NodePtr NllLossOp(const Value& logits, const Value& labels);
 
-NodePtr NllLossBackwardOp(const NodeOperand& logits, const NodeOperand& labels);
+NodePtr NllLossBackwardOp(const Value& logits, const Value& labels);
 
 }  // namespace ops
 }  // namespace ir

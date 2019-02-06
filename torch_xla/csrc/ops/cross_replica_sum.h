@@ -8,7 +8,7 @@ namespace ops {
 
 class CrossReplicaSum : public Node {
  public:
-  CrossReplicaSum(const NodeOperand& operand,
+  CrossReplicaSum(const Value& operand,
                   std::vector<std::vector<xla::int64>> groups);
 
   std::string ToString() const override;

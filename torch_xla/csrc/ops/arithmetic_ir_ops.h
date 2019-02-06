@@ -5,10 +5,10 @@
 namespace torch_xla {
 namespace ir {
 
-NodeOperand operator+(const NodeOperand& node1, const NodeOperand& node2);
-NodeOperand operator-(const NodeOperand& node1, const NodeOperand& node2);
-NodeOperand operator*(const NodeOperand& node1, const NodeOperand& node2);
-NodeOperand operator/(const NodeOperand& node1, const NodeOperand& node2);
+Value operator+(const Value& node1, const Value& node2);
+Value operator-(const Value& node1, const Value& node2);
+Value operator*(const Value& node1, const Value& node2);
+Value operator/(const Value& node1, const Value& node2);
 
 }  // namespace ir
 }  // namespace torch_xla

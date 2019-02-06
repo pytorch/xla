@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Threshold::Threshold(const NodeOperand& input, float threshold, float value)
+Threshold::Threshold(const Value& input, float threshold, float value)
     : Node(ir::OpKind(at::aten::threshold), {input}, input.node->shape(),
            /*num_outputs=*/1, xla::util::MHash(threshold, value)),
       threshold_(threshold),

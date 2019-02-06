@@ -8,7 +8,7 @@ namespace ops {
 
 class ThresholdBackward : public Node {
  public:
-  ThresholdBackward(const NodeOperand& grad_output, const NodeOperand& input,
+  ThresholdBackward(const Value& grad_output, const Value& input,
                     float threshold);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;

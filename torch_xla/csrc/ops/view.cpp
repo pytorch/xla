@@ -13,7 +13,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(
-    const NodeOperand& input,
+    const Value& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
   auto lower_for_shape_fn =
       [&output_sizes](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
@@ -27,7 +27,7 @@ xla::Shape NodeOutputShape(
 
 }  // namespace
 
-View::View(const NodeOperand& input,
+View::View(const Value& input,
            tensorflow::gtl::ArraySlice<const xla::int64> output_size)
     : Node(ir::OpKind(at::aten::view), {input},
            NodeOutputShape(input, output_size), /*num_outputs=*/1,

@@ -9,7 +9,7 @@ namespace ops {
 // IR node for the threshold operation.
 class Threshold : public Node {
  public:
-  Threshold(const NodeOperand& input, float threshold, float value);
+  Threshold(const Value& input, float threshold, float value);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
