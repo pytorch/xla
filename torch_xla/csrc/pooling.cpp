@@ -57,19 +57,6 @@ PoolingOpAttributes Pooling2DOpAttributes(
   return {kernel_size, stride, padding};
 }
 
-// Extract the pooling attributes for the given 2D pooling operator "node".
-PoolingOpAttributes Pooling2DOpAttributes(const torch::jit::Node* pooling_2d) {
-  const auto kernel_size_attr = XlaHelpers::I64List(
-      pooling_2d->get<std::vector<int64_t>>(at::attr::kernel_size).value());
-  const auto stride_attr = XlaHelpers::I64List(
-      pooling_2d->get<std::vector<int64_t>>(at::attr::stride).value());
-  const auto padding_attr = XlaHelpers::I64List(
-      pooling_2d->get<std::vector<int64_t>>(at::attr::padding).value());
-  return Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size_attr,
-                               /*stride_attr=*/stride_attr,
-                               /*padding_attr=*/padding_attr);
-}
-
 void CheckAvgPool2DIsSupported(const torch::jit::Node* node) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_GE(node_inputs.size(), size_t(6));
@@ -136,6 +123,21 @@ xla::XlaOp BuildMaxPool2d(
 xla::XlaOp BuildMaxPool2dBackward(const torch::jit::Node* node,
                                   const xla::XlaOp& out_backprop,
                                   const xla::XlaOp& input) {
+  const auto kernel_size =
+      node->get<std::vector<int64_t>>(at::attr::kernel_size).value();
+  const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
+  const auto padding =
+      node->get<std::vector<int64_t>>(at::attr::padding).value();
+  return BuildMaxPool2dBackward(
+      out_backprop, input, XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding));
+}
+
+xla::XlaOp BuildMaxPool2dBackward(
+    const xla::XlaOp& out_backprop, const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   xla::XlaBuilder* builder = out_backprop.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp init_value =
@@ -143,7 +145,9 @@ xla::XlaOp BuildMaxPool2dBackward(const torch::jit::Node* node,
   xla::XlaComputation select = CreateGeComputation(input_shape.element_type());
   xla::XlaComputation scatter =
       XlaHelpers::CreateAddComputation(input_shape.element_type());
-  PoolingOpAttributes pooling_op_attributes = Pooling2DOpAttributes(node);
+  PoolingOpAttributes pooling_op_attributes =
+      Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size,
+                            /*stride_attr=*/stride, /*padding_attr=*/padding);
   std::vector<std::pair<xla::int64, xla::int64>> window_padding;
   window_padding.resize(2);
   window_padding.insert(window_padding.end(),

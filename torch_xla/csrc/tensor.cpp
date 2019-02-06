@@ -20,6 +20,8 @@
 #include "ops/generic.h"
 #include "ops/infer_output_shape.h"
 #include "ops/max_pool2d.h"
+#include "ops/max_pool2d_backward.h"
+#include "ops/max_pool2d_indices.h"
 #include "ops/ops.h"
 #include "ops/scalar.h"
 #include "ops/softmax.h"
@@ -630,6 +632,17 @@ XLATensor XLATensor::avg_pool2d_backward(
   return Create(ir::MakeNode<ir::ops::AvgPool2dBackward>(
                     out_backprop.GetIrNode(), input.GetIrNode(), kernel_size,
                     stride, padding, count_include_pad),
+                out_backprop.GetDevice());
+}
+
+XLATensor XLATensor::max_pool2d_backward(
+    const XLATensor& out_backprop, const XLATensor& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  return Create(ir::Value(std::make_shared<ir::ops::MaxPool2dBackward>(
+                    out_backprop.GetIrNode(), input.GetIrNode(), kernel_size,
+                    stride, padding)),
                 out_backprop.GetDevice());
 }
 

@@ -136,6 +136,11 @@ class XLATensor {
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
       tensorflow::gtl::ArraySlice<const xla::int64> padding) const;
 
+  XLATensor max_pool2d_indices(
+      tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+      tensorflow::gtl::ArraySlice<const xla::int64> stride,
+      tensorflow::gtl::ArraySlice<const xla::int64> padding) const;
+
   XLATensor avg_pool2d(
       tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
@@ -158,6 +163,12 @@ class XLATensor {
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
       tensorflow::gtl::ArraySlice<const xla::int64> padding,
       bool count_include_pad);
+
+  static XLATensor max_pool2d_backward(
+      const XLATensor& out_backprop, const XLATensor& input,
+      tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+      tensorflow::gtl::ArraySlice<const xla::int64> stride,
+      tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
   static std::tuple<XLATensor, XLATensor, XLATensor> conv2d_backward(
       const XLATensor& out_backprop, const XLATensor& input,

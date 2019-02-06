@@ -23,6 +23,13 @@ xla::XlaOp BuildMaxPool2dBackward(const torch::jit::Node* node,
                                   const xla::XlaOp& out_backprop,
                                   const xla::XlaOp& input);
 
+// Same as above, with kernel size, stride and padding provided as parameters.
+xla::XlaOp BuildMaxPool2dBackward(
+    const xla::XlaOp& out_backprop, const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+
 // Computes average pooling for the given input with the attributes specified in
 // the given node.
 xla::XlaOp BuildAvgPool2d(const torch::jit::Node* node,
