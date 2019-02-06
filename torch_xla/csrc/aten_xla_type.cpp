@@ -9,6 +9,16 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
+namespace {
+
+// Returns true if dilation is non-trivial (not 1) in at least one dimension.
+bool IsNonTrivialDilation(at::IntList dilation) {
+  return std::any_of(
+      dilation.begin(), dilation.end(),
+      [](const int64_t dim_dilation) { return dim_dilation != 1; });
+}
+
+}  // namespace
 
 bool AtenXlaType::s_use_full_conv_precision_ = false;
 
@@ -68,11 +78,8 @@ at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
                                const at::Tensor& weight, const at::Tensor& bias,
                                at::IntList stride, at::IntList padding,
                                at::IntList dilation, int64_t groups) const {
-  bool has_dilation =
-      std::any_of(dilation.begin(), dilation.end(),
-                  [](const int64_t dim_dilation) { return dim_dilation != 1; });
   // Dilated or grouped convolutions aren't lowered to XLA yet.
-  if (has_dilation || groups != 1) {
+  if (IsNonTrivialDilation(dilation) || groups != 1) {
     return AtenXlaTypeBase::conv2d(input, weight, bias, stride, padding,
                                    dilation, groups);
   }
@@ -118,8 +125,8 @@ at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
                                    at::IntList kernel_size, at::IntList stride,
                                    at::IntList padding, at::IntList dilation,
                                    bool ceil_mode) const {
-  // Lowering when ceil_mode is set not supported yet.
-  if (ceil_mode) {
+  // Lowering when dilation is non-trivial or ceil_mode is set not supported.
+  if (ceil_mode || IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool2d(self, kernel_size, stride, padding,
                                        dilation, ceil_mode);
   }
