@@ -60,8 +60,13 @@ git clone --recursive https://github.com/pytorch/pytorch.git
 mv xla/ pytorch/
 cd pytorch
 
-# TODO(jysohn): remove following patching once pytorch JIT bug is fixed
-git checkout $(cat xla/.torch_commit_id)
+# Checkout the PT commit ID if we have one.
+COMMITID_FILE="xla/.torch_commit_id"
+if [ -e "$COMMITID_FILE" ]; then
+  git checkout $(cat "$COMMITID_FILE")
+fi
+
+# Apply patches to PT which are required by the XLA support.
 xla/scripts/apply_patches.sh
 # Build and install torch wheel and collect artifact
 export NO_CUDA=1
