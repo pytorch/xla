@@ -21,7 +21,6 @@
 #include "ops/infer_output_shape.h"
 #include "ops/max_pool2d.h"
 #include "ops/max_pool2d_backward.h"
-#include "ops/max_pool2d_indices.h"
 #include "ops/ops.h"
 #include "ops/scalar.h"
 #include "ops/softmax.h"
@@ -596,15 +595,6 @@ XLATensor XLATensor::max_pool2d(
                 GetDevice());
 }
 
-XLATensor XLATensor::max_pool2d_indices(
-    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) const {
-  return Create(ir::MakeNode<ir::ops::MaxPool2dIndices>(
-                    GetIrNode(), kernel_size, stride, padding),
-                GetDevice());
-}
-
 XLATensor XLATensor::avg_pool2d(
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
@@ -724,6 +714,11 @@ XLATensor XLATensor::nll_loss_backward(const XLATensor& input,
   return Create(
       ir::ops::NllLossBackwardOp(input.GetIrNode(), target.GetIrNode()),
       input.GetDevice());
+}
+
+XLATensor XLATensor::not_supported(c10::Symbol node_symbol,
+                                   const Device& device) {
+  return Create(ir::ops::NotSupportedOp(node_symbol), device);
 }
 
 XLATensor XLATensor::cross_replica_sum(
