@@ -12,3 +12,5 @@ def _torch_xla_zeros_like(p):
 
 
 torch.zeros_like = _torch_xla_zeros_like
+
+_XLAC._register_aten_types()
