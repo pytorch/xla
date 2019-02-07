@@ -574,7 +574,7 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
           ForEachDevice([&](const Device& device) {
             at::Tensor bias =
                 with_bias ? GetTestTesor({out_channels}) : at::Tensor();
-            TestBackward({GetTestTesor({4, in_channels, 16, 16}),
+            TestBackward({GetTestTesor({4, in_channels, 32, 32}),
                           GetTestTesor({out_channels, in_channels, kernel_size,
                                         kernel_size}),
                           bias},
@@ -674,6 +674,15 @@ TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
       TestBackward({input, target}, device, testfn);
     });
   }
+}
+
+TEST_F(AtenXlaTensorTest, TestViewBackward) {
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return inputs[0].view({-1, 320});
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({GetTestTesor({32, 20, 4, 4})}, device, testfn);
+  });
 }
 
 }  // namespace cpp_test
