@@ -38,6 +38,10 @@ def _gen_tensor(*args, **kwargs):
   return torch.randn(*args, **kwargs)
 
 
+def _xla_device(n=0):
+  return torch.device('xla:{}'.format(n))
+
+
 class Holder(object):
   pass
 
@@ -1351,6 +1355,13 @@ class TestXLATensor(XlaTestCase):
       expected = x.log_softmax(dim)
       out = xt_x.log_softmax(dim).to_tensor()
       self.assertEqualRel(out.data, expected.data)
+
+
+class TestAtenXlaTensor(XlaTestCase):
+
+  def test_size(self):
+    x = _gen_tensor(4, 2, device=_xla_device())
+    torch_xla._XLAC._get_xla_tensor(x)
 
 
 if __name__ == '__main__':

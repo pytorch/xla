@@ -6,21 +6,17 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch_util.h"
 
 namespace torch_xla {
 namespace cpp_test {
 
-at::Tensor ToTensor(const at::Tensor& tensor) {
-  return tensor.is_variable() ? torch::autograd::as_variable_ref(tensor).data()
-                              : tensor;
-}
-
 at::Tensor ToTensor(XLATensor& xla_tensor) {
-  return ToTensor(xla_tensor.ToTensor());
+  return torch_xla::ToTensor(xla_tensor.ToTensor());
 }
 
 at::Tensor ToCpuTensor(const at::Tensor& t) {
-  at::Tensor tensor = ToTensor(t);
+  at::Tensor tensor = torch_xla::ToTensor(t);
   XLATensorImpl* impl =
       dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
   return impl != nullptr ? ToTensor(impl->tensor()) : tensor;
