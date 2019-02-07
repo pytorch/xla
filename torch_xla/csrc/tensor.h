@@ -75,12 +75,12 @@ class XLATensor {
 
   // Retrieves the current IR Node, or nullptr in case no active IR Node is
   // available.
-  ir::Value CurrentIrNode() const;
+  ir::Value CurrentIrValue() const;
 
   // Retrieves the IR Node representing this XLATensor. One will be created if
   // missing. Note that although this is a const API, it actually changes the
   // internal state ofthe object.
-  ir::Value GetIrNode() const;
+  ir::Value GetIrValue() const;
 
   const c10::optional<at::Tensor>& CurrentTensorData() const;
 
@@ -231,12 +231,12 @@ class XLATensor {
 
   // When a "view" (capture by reference) is taken on a node, an Alias object is
   // created on the captured node itself, with its current IR Node value.
-  // Inplace operations using the SetIrNode() API to update the current value,
-  // will notice the presence of the alias, and also update the Alias ir_node.
+  // Inplace operations using the SetIrValue() API to update the current value,
+  // will notice the presence of the alias, and also update the Alias ir_value.
   struct Alias {
-    explicit Alias(ir::Value ir_node) : ir_node(std::move(ir_node)) {}
+    explicit Alias(ir::Value ir_value) : ir_value(std::move(ir_value)) {}
 
-    ir::Value ir_node;
+    ir::Value ir_value;
   };
 
   // A view represents a state of an XLA tensor in which its current value is a
@@ -248,11 +248,11 @@ class XLATensor {
 
     xla::Shape shape;
     std::shared_ptr<Alias> alias;
-    ir::Value ir_node;
+    ir::Value ir_value;
   };
 
   struct ViewIrNode {
-    ir::Value ir_node;
+    ir::Value ir_value;
     bool updated;
   };
 
@@ -265,8 +265,8 @@ class XLATensor {
         : xla_data(std::move(xla_data)),
           device(device),
           unique_id(GetNextTensorId()) {}
-    Data(ir::Value ir_node, const Device& device)
-        : ir_node(std::move(ir_node)),
+    Data(ir::Value ir_value, const Device& device)
+        : ir_value(std::move(ir_value)),
           device(device),
           unique_id(GetNextTensorId()) {}
     Data(std::shared_ptr<View> view, const Device& device)
@@ -279,7 +279,7 @@ class XLATensor {
     ~Data();
 
     std::shared_ptr<xla::ComputationClient::Data> xla_data;
-    ir::Value ir_node;
+    ir::Value ir_value;
     std::shared_ptr<View> view;
     c10::optional<at::Tensor> tensor_data;
     Device device;
@@ -291,18 +291,18 @@ class XLATensor {
   XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
             bool requires_grad);
-  XLATensor(ir::Value ir_node, const Device& device);
+  XLATensor(ir::Value ir_value, const Device& device);
   XLATensor(std::shared_ptr<View> view, const Device& device);
   XLATensor(std::shared_ptr<Data> data);
 
-  static XLATensor Create(ir::Value ir_node, const Device& device);
+  static XLATensor Create(ir::Value ir_value, const Device& device);
   static XLATensor Create(std::shared_ptr<View> view, const Device& device);
 
   Data* data() const;
 
   std::shared_ptr<Data> data_ptr() const { return data_; }
 
-  void SetIrNode(ir::Value ir_node);
+  void SetIrValue(ir::Value ir_value);
 
   void SetTensorData(at::Tensor tensor_data);
 
