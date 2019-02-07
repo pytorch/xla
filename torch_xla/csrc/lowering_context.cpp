@@ -34,7 +34,7 @@ xla::int64 LoweringContext::AddResult(xla::XlaOp op) {
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::Build() {
   if (!root_tuple_.empty()) {
-    auto root = xla::Tuple(builder(), root_tuple_);
+    xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     return builder()->Build(root);
   }
   return builder()->Build();
