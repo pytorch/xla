@@ -12,10 +12,22 @@ at::Tensor CreateEmptyTensor(at::IntList size,
   return at::empty(size, options.device(at::kCPU));
 }
 
+at::Tensor CreateRandTensor(at::IntArrayRef size,
+                            at::Generator* generator,
+                            const at::TensorOptions& options) {
+  return at::randn(size, generator, options.device(at::DeviceType::CPU));
+}
+
+at::Tensor CreateRandTensor(at::IntArrayRef size,
+                            const at::TensorOptions& options) {
+  return at::randn(size, options.device(at::DeviceType::CPU));
+}
+
 XLATensor& GetXlaTensor(const at::Tensor& tensor) {
   XLATensorImpl* impl =
       dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
-  XLA_CHECK(impl != nullptr);
+  XLA_CHECK(impl != nullptr)
+      << "Input tensor is not an XLA tensor: " << tensor.toString();
   return impl->tensor();
 }
 

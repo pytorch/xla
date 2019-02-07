@@ -6,6 +6,7 @@
 #include <ATen/ATen.h>
 #include "module.h"
 #include "tensor.h"
+#include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/pybind_utils.h"
 
 namespace torch_xla {
@@ -19,6 +20,11 @@ py::object XlaPackTensorList(const XlaModule::TensorBatchVector& outputs);
 // Makes a deep copy of an ATEN tensor.
 static inline at::Tensor CopyTensor(const at::Tensor& ref) {
   return ref.to(ref.options(), /*non_blocking=*/false, /*copy=*/true);
+}
+
+static inline at::Tensor ToTensor(const at::Tensor& tensor) {
+  return tensor.is_variable() ? torch::autograd::as_variable_ref(tensor).data()
+                              : tensor;
 }
 
 }  // namespace torch_xla

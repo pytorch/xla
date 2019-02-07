@@ -1,5 +1,7 @@
 #include "init_python_bindings.h"
 
+#include "aten_xla_bridge.h"
+#include "aten_xla_type.h"
 #include "module.h"
 #include "passes/eval_static_size.h"
 #include "passes/replace_in_place_ops.h"
@@ -58,6 +60,10 @@ void InitXlaModuleBindings(py::module m) {
       .def("parameters_buffers", [](XlaModule& xla_module) {
         return xla_module.parameters_buffers();
       });
+  m.def("_register_aten_types", []() { AtenXlaType::RegisterAtenTypes(); });
+  m.def("_get_xla_tensor", [](const at::Tensor& tensor) -> XLATensor {
+    return bridge::GetXlaTensor(ToTensor(tensor));
+  });
   m.def("_xla_sync_multi", [](std::vector<XLATensor>& tensors) {
     NoGilSection nogil;
     XLATensor::ApplyPendingGraph(&tensors, /*apply_context=*/nullptr);

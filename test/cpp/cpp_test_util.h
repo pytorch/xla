@@ -18,8 +18,6 @@ namespace cpp_test {
 // tensor, it will be returned.
 at::Tensor ToCpuTensor(const at::Tensor& t);
 
-at::Tensor ToTensor(const at::Tensor& tensor);
-
 at::Tensor ToTensor(XLATensor& xla_tensor);
 
 bool EqualValues(at::Tensor a, at::Tensor b);
