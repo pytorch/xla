@@ -205,7 +205,7 @@ std::shared_ptr<xla::ComputationClient::Data> XLATensor::GetXlaData() {
   bool up_to_date = true;
   if (data()->view != nullptr) {
     ViewIrNode ir_node_updated = GetViewIrNode(data()->view.get());
-    if (ir_node_updated.updated) {
+    if (ir_node_updated.updated || !data()->ir_node) {
       up_to_date = false;
       data()->ir_node = ir_node_updated.ir_node;
     }
