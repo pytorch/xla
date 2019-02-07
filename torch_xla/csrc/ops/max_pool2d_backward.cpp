@@ -19,8 +19,7 @@ xla::Shape NodeOutputShape(
       [stride, padding,
        kernel_size](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 2)
-        << "Unexpected number of operands: " << operands.size();
+    XLA_CHECK_EQ(operands.size(), 2);
     return BuildMaxPool2dBackward(/*out_backprop=*/operands[0],
                                   /*input=*/operands[1], kernel_size, stride,
                                   padding);

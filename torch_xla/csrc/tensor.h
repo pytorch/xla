@@ -184,7 +184,8 @@ class XLATensor {
   static XLATensor nll_loss_backward(const XLATensor& input,
                                      const XLATensor& target);
 
-  static XLATensor not_supported(c10::Symbol node_symbol, const Device& device);
+  static XLATensor not_supported(c10::Symbol node_symbol, xla::Shape shape,
+                                 const Device& device);
 
   XLATensor cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups) const;

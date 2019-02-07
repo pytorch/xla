@@ -151,16 +151,13 @@ NodePtr NllLossBackwardOp(const Value& logits, const Value& labels) {
                             std::move(lower_fn));
 }
 
-NodePtr NotSupportedOp(c10::Symbol node_symbol) {
+NodePtr NotSupportedOp(c10::Symbol node_symbol, xla::Shape shape) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
     XLA_ERROR() << "Node not supported: " << node.ToString();
-    return {};
   };
-  return ir::ops::GenericOp(
-      ir::OpKind(node_symbol), {},
-      xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {}),
-      std::move(lower_fn));
+  return ir::ops::GenericOp(ir::OpKind(node_symbol), {}, std::move(shape),
+                            std::move(lower_fn));
 }
 
 }  // namespace ops

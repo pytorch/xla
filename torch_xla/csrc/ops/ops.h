@@ -61,7 +61,7 @@ NodePtr NllLossBackwardOp(const Value& logits, const Value& labels);
 
 // Placeholder node which is never to be used. Using it would throw an error
 // during lowering.
-NodePtr NotSupportedOp(c10::Symbol node_symbol);
+NodePtr NotSupportedOp(c10::Symbol node_symbol, xla::Shape shape);
 
 }  // namespace ops
 }  // namespace ir
