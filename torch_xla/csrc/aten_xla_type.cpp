@@ -184,13 +184,18 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
     return AtenXlaTypeBase::max_pool2d_with_indices(
         self, kernel_size, stride, padding, dilation, ceil_mode);
   }
+  // TODO(asuhan): Here we return a placeholder tensor for the indices we hope
+  // to never evaluate, which works for the backward of max_pool2d. However, the
+  // user could request the indices to be returned, in which case we'd throw. We
+  // need to either provide a lowering or improve our infrastructure to be able
+  // to route to ATen the evaluation of outputs we hope to be unused.
   return std::make_tuple(
       bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).max_pool2d(
           XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
           XlaHelpers::I64List(padding))),
-      bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).max_pool2d_indices(
-          XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-          XlaHelpers::I64List(padding))));
+      bridge::AtenFromXlaTensor(
+          XLATensor::not_supported(at::aten::max_pool2d_with_indices,
+                                   bridge::GetXlaTensor(self).GetDevice())));
 }
 
 at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,

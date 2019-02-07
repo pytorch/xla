@@ -136,11 +136,6 @@ class XLATensor {
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
       tensorflow::gtl::ArraySlice<const xla::int64> padding) const;
 
-  XLATensor max_pool2d_indices(
-      tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-      tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding) const;
-
   XLATensor avg_pool2d(
       tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
@@ -188,6 +183,8 @@ class XLATensor {
 
   static XLATensor nll_loss_backward(const XLATensor& input,
                                      const XLATensor& target);
+
+  static XLATensor not_supported(c10::Symbol node_symbol, const Device& device);
 
   XLATensor cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups) const;
