@@ -17,8 +17,7 @@ at::Tensor CreateEmptyTensor(at::IntList size,
                              const at::TensorOptions& options);
 
 // Helper function which creates a random CPU ATEN tensor.
-at::Tensor CreateRandTensor(at::IntArrayRef size,
-                            at::Generator* generator,
+at::Tensor CreateRandTensor(at::IntArrayRef size, at::Generator* generator,
                             const at::TensorOptions& options);
 at::Tensor CreateRandTensor(at::IntArrayRef size,
                             const at::TensorOptions& options);
