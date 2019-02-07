@@ -628,6 +628,7 @@ CreateTranslationHandlers() {
   (*t)[at::aten::size] = TranslateSize;
   (*t)[at::prim::Constant] = TranslateConstant;
   (*t)[at::prim::Undefined] = TranslateUndefined;
+  (*t)[at::prim::None] = TranslateUndefined;
   (*t)[at::aten::_grad_sum_to_size] = TranslateGradSumToSize;
   (*t)[at::prim::ListConstruct] = TranslateNop;
   return t;
