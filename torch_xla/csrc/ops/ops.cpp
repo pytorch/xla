@@ -146,7 +146,7 @@ NodePtr NllLossBackwardOp(const Value& logits, const Value& labels) {
   };
   xla::Shape output_shape = ir::ops::InferOutputShape(
       {logits.node->shape(), labels.node->shape()}, lower_for_shape_fn);
-  return ir::ops::GenericOp(ir::OpKind(at::aten::nll_loss),
+  return ir::ops::GenericOp(ir::OpKind(at::aten::nll_loss_backward),
                             ir::OpList{logits, labels}, output_shape,
                             std::move(lower_fn));
 }
