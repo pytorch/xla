@@ -15,7 +15,7 @@ To build:
   git clone --recursive https://github.com/pytorch/xla.git
   ```
 
-* Checkout the following commit ID specified in xla/.torch_commit_id:
+* If a file named xla/.torch_commit_id exists, use its content to checkout the PyTorch commit ID:
 
   ```
   git checkout $(cat xla/.torch_commit_id)
