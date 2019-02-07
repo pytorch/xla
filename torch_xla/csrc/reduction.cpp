@@ -8,10 +8,9 @@ xla::XlaOp BuildSum(const torch::jit::Node* node, const xla::XlaOp& operand) {
   if (node->get<bool>(at::attr::keepdim).value()) {
     XLA_ERROR() << "Sum with keepdim set not supported yet";
   }
-  auto builder = operand.builder();
   xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operand);
-  const auto init_value =
-      XlaHelpers::ScalarValue<float>(0, operand_shape.element_type(), builder);
+  xla::XlaOp init_value = XlaHelpers::ScalarValue<float>(
+      0, operand_shape.element_type(), operand.builder());
   const auto dimensions_to_reduce =
       node->get<std::vector<int64_t>>(at::attr::dim).value();
   return xla::Reduce(
