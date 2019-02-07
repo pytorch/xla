@@ -27,7 +27,7 @@ std::vector<at::Tensor> XlaCreateTensorList(
   std::vector<bool> defined_writeable;
   std::vector<bool> tensor_is_defined(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
-    auto& tensor = tensors[i];
+    const at::Tensor& tensor = tensors[i];
     if (!tensor.defined()) {
       XLA_CHECK(writeable == nullptr || !(*writeable)[i])
           << "Trying to write to an undefined tensor";
