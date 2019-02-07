@@ -27,9 +27,9 @@ xla::XlaOp BuildArithmeticOp(const torch::jit::Node* node,
 
 xla::XlaOp BuildComparisonOp(const torch::jit::Node* node,
                              const xla::XlaOp& operand) {
-  auto builder = operand.builder();
+  xla::XlaBuilder* builder = operand.builder();
   xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operand);
-  const auto xla_other = XlaHelpers::ScalarValue(
+  xla::XlaOp xla_other = XlaHelpers::ScalarValue(
       node->get<at::Scalar>(at::attr::other).value().to<float>(),
       operand_shape.element_type(), builder);
   xla::XlaOp pred;
@@ -46,15 +46,15 @@ xla::XlaOp BuildComparisonOp(const torch::jit::Node* node,
 
 xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
                           const float threshold, const float value) {
-  auto builder = input.builder();
+  xla::XlaBuilder* builder = input.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto input_sizes = XlaHelpers::ShapeSizes(input_shape);
   std::vector<xla::int64> broadcast_sizes(input_sizes.begin(),
                                           input_sizes.end());
   xla::Shape output_shape = XlaHelpers::ShapeOfXlaOp(output);
-  const auto xla_threshold = XlaHelpers::ScalarValue<float>(
+  xla::XlaOp xla_threshold = XlaHelpers::ScalarValue<float>(
       threshold, input_shape.element_type(), builder);
-  const auto xla_value = XlaHelpers::ScalarValue<float>(
+  xla::XlaOp xla_value = XlaHelpers::ScalarValue<float>(
       value, output_shape.element_type(), builder);
   return xla::Select(xla::Gt(input, xla_threshold), output,
                      xla::Broadcast(xla_value, broadcast_sizes));
@@ -73,7 +73,7 @@ xla::XlaOp BuildTypeAs(const torch::jit::Node* node,
   const auto output_tensor_type =
       node_outputs[0]->type()->cast<at::DimensionedTensorType>();
   XLA_CHECK(output_tensor_type);
-  const auto target_type = XlaHelpers::MakeXlaPrimitiveType(
+  xla::PrimitiveType target_type = XlaHelpers::MakeXlaPrimitiveType(
       output_tensor_type->scalarType(), /*device=*/nullptr);
   return xla::ConvertElementType(operand, target_type);
 }

@@ -23,8 +23,8 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
     input_size[2 + i] += 2 * padding_attr[i];
   }
   tensorflow::TensorShape input_shape(input_size);
-  const auto filter = xla::Transpose(weight, {2, 3, 1, 0});
-  auto builder = grad_output.builder();
+  xla::XlaOp filter = xla::Transpose(weight, {2, 3, 1, 0});
+  xla::XlaBuilder* builder = grad_output.builder();
   const auto filter_size = XlaHelpers::SizesOfXlaOp(filter);
   tensorflow::TensorShape filter_shape(filter_size);
   tensorflow::TensorShape out_backprop_shape(
@@ -35,7 +35,7 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
   tensorflow::ConvBackpropDimensions dims;
   constexpr int num_spatial_dims = 2;
   std::vector<int> dilations{1, 1, 1, 1};
-  const auto status = ConvBackpropComputeDimensionsV2(
+  xla::Status status = ConvBackpropComputeDimensionsV2(
       "thnn_conv2d_backward", num_spatial_dims, input_shape, filter_shape,
       out_backprop_shape, dilations, strides, tensorflow::Padding::VALID,
       /*explicit_paddings=*/{}, tensorflow::TensorFormat::FORMAT_NCHW, &dims);
@@ -87,7 +87,8 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
     padding_config.add_dimensions();
   }
   for (int i = 0; i < 2; ++i) {
-    auto* dims = padding_config.add_dimensions();
+    xla::PaddingConfig::PaddingConfigDimension* dims =
+        padding_config.add_dimensions();
     dims->set_edge_padding_low(-padding_attr[i]);
     dims->set_edge_padding_high(-padding_attr[i]);
   }
@@ -135,7 +136,7 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
   tensorflow::ConvBackpropDimensions dims;
   constexpr int num_spatial_dims = 2;
   std::vector<int> dilations{1, 1, 1, 1};
-  const auto status = ConvBackpropComputeDimensionsV2(
+  xla::Status status = ConvBackpropComputeDimensionsV2(
       "thnn_conv2d_backward", num_spatial_dims, activations_shape, filter_shape,
       out_backprop_shape, dilations, strides, tensorflow::Padding::VALID,
       /*explicit_paddings=*/{}, tensorflow::TensorFormat::FORMAT_NCHW, &dims);
@@ -215,12 +216,12 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
   }
 
   // Redo the initial input padding.
-  const auto padding_config =
+  xla::PaddingConfig padding_config =
       XlaHelpers::MakeXlaPaddingConfig(XlaHelpers::I64List(padding_attr));
 
-  auto builder = grad_output.builder();
+  xla::XlaBuilder* builder = grad_output.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const auto padded_input = xla::Pad(
+  xla::XlaOp padded_input = xla::Pad(
       input,
       XlaHelpers::ScalarValue<float>(0, input_shape.element_type(), builder),
       padding_config);
@@ -290,14 +291,14 @@ xla::XlaOp BuildConvolutionBias(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     const xla::PrecisionConfig::Precision conv_precision) {
-  const auto conv =
+  xla::XlaOp conv =
       BuildConvolution(input, kernel, stride, padding, conv_precision);
   auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
   XLA_CHECK_EQ(broadcast_sizes.size(), 4);
   // Remove the channels dimension.
   broadcast_sizes.erase(broadcast_sizes.begin() + 1);
   // Make the bias match the output dimensions.
-  const auto bias_broadcast =
+  xla::XlaOp bias_broadcast =
       xla::Transpose(xla::Broadcast(bias, broadcast_sizes), {0, 3, 1, 2});
   return conv + bias_broadcast;
 }
@@ -320,13 +321,13 @@ Conv2DGrads BuildConv2dBackward(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     const xla::PrecisionConfig::Precision conv_precision) {
-  const auto grad_input = BuildThnnConv2dBackwardInput(
+  xla::XlaOp grad_input = BuildThnnConv2dBackwardInput(
       grad_output, input, weight, stride, padding, conv_precision);
-  const auto grad_weight = BuildThnnConv2dBackwardWeight(
+  xla::XlaOp grad_weight = BuildThnnConv2dBackwardWeight(
       grad_output, input, weight, stride, padding, conv_precision);
-  auto builder = grad_output.builder();
+  xla::XlaBuilder* builder = grad_output.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const auto grad_bias = xla::Reduce(
+  xla::XlaOp grad_bias = xla::Reduce(
       grad_output,
       XlaHelpers::ScalarValue<float>(0, input_shape.element_type(), builder),
       XlaHelpers::CreateAddComputation(input_shape.element_type()), {0, 2, 3});
