@@ -97,7 +97,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
     TensorBatchVector::value_type replica_params;
     TensorBatchVector::value_type optimizable_replica_params;
     for (size_t j = 0; j < params_buffers_regather.size(); ++j) {
-      const auto& var_ref =
+      const torch::autograd::Variable& var_ref =
           torch::autograd::as_variable_ref(*params_buffers_regather[j]);
       replica_params.push_back(
           XLATensor::Create(var_ref, device, var_ref.requires_grad()));
@@ -244,7 +244,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
       XLA_CHECK_GE(raw_output_index, input_vjps_real_outputs);
       XLA_CHECK_LT(raw_output_index - input_vjps_real_outputs,
                    replica_captured_outputs.size());
-      auto p =
+      XLATensor p =
           replica_captured_outputs[raw_output_index - input_vjps_real_outputs];
       replica_raw_grad_outputs.push_back(p);
       if (i == 0) {
@@ -397,8 +397,9 @@ xla::XlaComputation XlaModule::BuildFusedTrainComputation(
   xla::XlaBuilder b("XlaFusedComputation");
   // Build the forward pass program without compiling it, the backward pass
   // needs to be called before finalizing it.
-  auto computation_in_outs = xla_fwd_impl.BuildComputationProgram(
-      forward_shapes, backward_size_op_values_, &b);
+  XlaComputationInOut computation_in_outs =
+      xla_fwd_impl.BuildComputationProgram(forward_shapes,
+                                           backward_size_op_values_, &b);
   // Take the XLA outputs from the forward pass and set them for the backward
   // call in the same order the standalone, unfused version takes its arguments.
   XLA_CHECK(!computation_in_outs.outputs.empty());
@@ -447,7 +448,7 @@ xla::XlaComputation XlaModule::BuildFusedTrainComputation(
   }
   // The arguments are set up correctly, call into the backward computation.
   XlaTranslator xla_bwd_impl(gradient_.df, GetPrecisionConfig());
-  auto backward_computation =
+  xla::XlaComputation backward_computation =
       xla_bwd_impl
           .BuildComputation("XlaBackward", backward_shapes,
                             backward_size_op_values_,
@@ -497,8 +498,9 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
     }
 
     XlaTranslator xla_fwd_impl(gradient_.f, GetPrecisionConfig());
-    auto forward_translation_result = xla_fwd_impl.BuildComputation(
-        "XlaForward", forward_shapes, backward_size_op_values_);
+    XlaTranslationResult forward_translation_result =
+        xla_fwd_impl.BuildComputation("XlaForward", forward_shapes,
+                                      backward_size_op_values_);
     backward_size_op_values_ = SetBackwardSizeOpValues(
         forward_translation_result.ret_size_op_values, gradient_);
 
@@ -691,9 +693,9 @@ std::vector<Device> XlaModule::CommonDevicesForReplicas(
 xla::Shape XlaModule::GetResultShape(const xla::XlaComputation& computation,
                                      const TensorBatchVector& input_tensors) {
   auto devices = CommonDevicesForReplicas(input_tensors);
-  const auto program_shape = computation.GetProgramShape().ValueOrDie();
-  const auto result_shape = program_shape.result();
-  return MakeShapeWithDeviceLayout(result_shape, devices.front().hw_type);
+  xla::ProgramShape program_shape = computation.GetProgramShape().ValueOrDie();
+  return MakeShapeWithDeviceLayout(program_shape.result(),
+                                   devices.front().hw_type);
 }
 
 }  // namespace torch_xla

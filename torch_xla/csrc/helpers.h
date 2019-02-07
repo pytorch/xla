@@ -34,7 +34,7 @@ class XlaHelpers {
   // Creates a XLA constant for the given scalar_value.
   template <class T>
   static xla::XlaOp ScalarValue(T scalar_value, xla::XlaBuilder* builder) {
-    const auto scalar_literal = xla::LiteralUtil::CreateR0<T>(scalar_value);
+    xla::Literal scalar_literal = xla::LiteralUtil::CreateR0<T>(scalar_value);
     return xla::ConstantLiteral(builder, scalar_literal);
   }
 
@@ -65,7 +65,7 @@ class XlaHelpers {
   template <class T>
   static xla::XlaOp ScalarBroadcast(T scalar_value, const xla::Shape& shape,
                                     xla::XlaBuilder* builder) {
-    auto scalar_op =
+    xla::XlaOp scalar_op =
         ScalarValue<T>(scalar_value, shape.element_type(), builder);
     return xla::Broadcast(scalar_op, ShapeSizes(shape));
   }
