@@ -563,7 +563,7 @@ XLATensor XLATensor::conv2d(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool use_full_conv_precision) const {
-  ir::NodePtr ir_node = std::make_shared<ir::ops::Conv2d>(
+  ir::NodePtr ir_node = ir::MakeNode<ir::ops::Conv2d>(
       GetIrNode(), weight.GetIrNode(), bias.GetIrNode(), stride, padding,
       use_full_conv_precision);
   return Create(ir_node, GetDevice());
@@ -575,8 +575,8 @@ XLATensor XLATensor::conv2d(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool use_full_conv_precision) const {
   ir::NodePtr ir_node =
-      std::make_shared<ir::ops::Conv2d>(GetIrNode(), weight.GetIrNode(), stride,
-                                        padding, use_full_conv_precision);
+      ir::MakeNode<ir::ops::Conv2d>(GetIrNode(), weight.GetIrNode(), stride,
+                                    padding, use_full_conv_precision);
   return Create(ir_node, GetDevice());
 }
 
@@ -600,8 +600,8 @@ XLATensor XLATensor::max_pool2d_indices(
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) const {
-  return Create(ir::Value(std::make_shared<ir::ops::MaxPool2dIndices>(
-                    GetIrNode(), kernel_size, stride, padding)),
+  return Create(ir::MakeNode<ir::ops::MaxPool2dIndices>(
+                    GetIrNode(), kernel_size, stride, padding),
                 GetDevice());
 }
 
@@ -640,9 +640,9 @@ XLATensor XLATensor::max_pool2d_backward(
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
-  return Create(ir::Value(std::make_shared<ir::ops::MaxPool2dBackward>(
+  return Create(ir::MakeNode<ir::ops::MaxPool2dBackward>(
                     out_backprop.GetIrNode(), input.GetIrNode(), kernel_size,
-                    stride, padding)),
+                    stride, padding),
                 out_backprop.GetDevice());
 }
 
@@ -652,7 +652,7 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::conv2d_backward(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool use_full_conv_precision) {
-  const auto node = std::make_shared<ir::ops::Conv2dBackward>(
+  ir::NodePtr node = ir::MakeNode<ir::ops::Conv2dBackward>(
       out_backprop.GetIrNode(), input.GetIrNode(), weight.GetIrNode(), stride,
       padding, use_full_conv_precision);
   XLATensor grad_input = Create(ir::Value(node, 0), out_backprop.GetDevice());
