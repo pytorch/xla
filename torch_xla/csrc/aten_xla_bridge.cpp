@@ -12,8 +12,7 @@ at::Tensor CreateEmptyTensor(at::IntList size,
   return at::empty(size, options.device(at::kCPU));
 }
 
-at::Tensor CreateRandTensor(at::IntArrayRef size,
-                            at::Generator* generator,
+at::Tensor CreateRandTensor(at::IntArrayRef size, at::Generator* generator,
                             const at::TensorOptions& options) {
   return at::randn(size, generator, options.device(at::DeviceType::CPU));
 }
