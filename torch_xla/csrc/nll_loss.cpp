@@ -25,7 +25,7 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
   std::iota(linspace_data.begin(), linspace_data.end(), 0);
   std::vector<xla::int64> linspace_dims(output_dims, 1);
   linspace_dims[axis] = depth;
-  const auto linspace_xla_shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(
+  xla::Shape linspace_xla_shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(
       xla::PrimitiveType::S64, linspace_dims);
   xla::BorrowingLiteral linspace_literal(
       reinterpret_cast<const char*>(linspace_data.data()), linspace_xla_shape);
@@ -74,8 +74,8 @@ xla::XlaOp BuildNllLoss(const xla::XlaOp& logits, const xla::XlaOp& labels) {
 xla::XlaOp BuildNllLossBackward(const xla::XlaOp& logits,
                                 const xla::XlaOp& labels) {
   const int kBatchDim = 0;
-  auto builder = logits.builder();
-  const auto logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
+  xla::XlaBuilder* builder = logits.builder();
+  xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
   xla::XlaOp one_hot_labels = LabelsToOneHot(
       /*builder=*/builder,
       /*depth=*/logits_shape.dimensions(1),
@@ -85,7 +85,7 @@ xla::XlaOp BuildNllLossBackward(const xla::XlaOp& logits,
       XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder),
       /*off_value=*/
       XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder));
-  const auto batch = XlaHelpers::ScalarValue<float>(
+  xla::XlaOp batch = XlaHelpers::ScalarValue<float>(
       logits_shape.dimensions(kBatchDim), logits_shape.element_type(), builder);
   // Compute -one_hot_labels / batch.
   return xla::Neg(one_hot_labels) / batch;

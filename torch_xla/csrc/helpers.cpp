@@ -47,7 +47,8 @@ xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfig(
     padding_config.add_dimensions();
   }
   for (int i = 0; i < 2; ++i) {
-    auto* dims = padding_config.add_dimensions();
+    xla::PaddingConfig::PaddingConfigDimension* dims =
+        padding_config.add_dimensions();
     dims->set_edge_padding_low(padding[i]);
     dims->set_edge_padding_high(padding[i]);
   }
@@ -56,9 +57,9 @@ xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfig(
 
 xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
   xla::XlaBuilder reduction_builder("xla_add_computation");
-  const auto x = xla::Parameter(&reduction_builder, 0,
+  xla::XlaOp x = xla::Parameter(&reduction_builder, 0,
                                 xla::ShapeUtil::MakeShape(type, {}), "x");
-  const auto y = xla::Parameter(&reduction_builder, 1,
+  xla::XlaOp y = xla::Parameter(&reduction_builder, 1,
                                 xla::ShapeUtil::MakeShape(type, {}), "y");
   Add(x, y);
   return reduction_builder.Build().ConsumeValueOrDie();

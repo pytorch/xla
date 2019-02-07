@@ -42,7 +42,7 @@ std::vector<xla::int64> GetCompleteShape(
   c10::optional<size_t> incomplete_dim;
   int64_t incomplete_element_count = 1;
   for (size_t dim = 0; dim < output_sizes.size(); ++dim) {
-    const auto dim_size = output_sizes[dim];
+    xla::int64 dim_size = output_sizes[dim];
     if (dim_size < 0) {
       XLA_CHECK(!incomplete_dim)
           << "More than one incomplete dimension found: " << *incomplete_dim
@@ -55,7 +55,7 @@ std::vector<xla::int64> GetCompleteShape(
   if (!incomplete_dim) {
     return std::vector<xla::int64>(output_sizes.begin(), output_sizes.end());
   }
-  const auto total_element_count =
+  int64_t total_element_count =
       std::accumulate(input_sizes.begin(), input_sizes.end(), int64_t(1),
                       std::multiplies<int64_t>());
   XLA_CHECK_EQ(total_element_count % incomplete_element_count, 0)
@@ -114,13 +114,13 @@ xla::XlaOp BuildExpand(
   for (size_t i = 0; i < output_sizes.size() - input_sizes.size(); ++i) {
     input_sizes.insert(input_sizes.begin(), 1);
   }
-  const auto implicit_reshape = xla::Reshape(input, input_sizes);
+  xla::XlaOp implicit_reshape = xla::Reshape(input, input_sizes);
   // Squeeze the trivial (of size 1) dimensions.
   std::vector<xla::int64> non_singleton_dimensions;
   std::copy_if(input_sizes.begin(), input_sizes.end(),
                std::back_inserter(non_singleton_dimensions),
                [](const size_t dim_size) { return dim_size != 1; });
-  const auto squeezed_input =
+  xla::XlaOp squeezed_input =
       xla::Reshape(implicit_reshape, non_singleton_dimensions);
   // Broadcast the squeezed tensor, the additional dimensions are to the left.
   std::vector<xla::int64> broadcast_sizes;
@@ -129,7 +129,7 @@ xla::XlaOp BuildExpand(
       broadcast_sizes.push_back(output_sizes[i]);
     }
   }
-  const auto broadcast = xla::Broadcast(squeezed_input, broadcast_sizes);
+  xla::XlaOp broadcast = xla::Broadcast(squeezed_input, broadcast_sizes);
   // Bring the dimensions added by broadcast where the trivial dimensions were.
   std::vector<xla::int64> reshape_permutation;
   for (size_t i = 0; i < input_sizes.size(); ++i) {
@@ -157,7 +157,7 @@ xla::XlaOp BuildStack(
   // Reshape inputs along the dim axis.
   for (size_t i = 0; i < stack_inputs.size(); ++i) {
     const auto stack_input = stack_inputs[i];
-    const auto stack_input_op = node_op(stack_input);
+    xla::XlaOp stack_input_op = node_op(stack_input);
     auto reshaped_input_size = XlaHelpers::SizesOfXlaOp(stack_input_op);
     reshaped_input_size.insert(reshaped_input_size.begin() + dim, 1);
     reshaped_inputs.push_back(
@@ -198,7 +198,7 @@ std::vector<xla::XlaOp> BuildChunk(const torch::jit::Node* node,
   std::vector<xla::XlaOp> splits(chunks);
   int64_t start_idx = 0;
   for (int64_t i = 0; i < chunks; ++i) {
-    const auto length = split_sizes[i];
+    int64_t length = split_sizes[i];
     splits[i] = SliceInDim(input, start_idx, start_idx + length, 1, dim);
     start_idx += length;
   }

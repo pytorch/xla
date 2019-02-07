@@ -225,7 +225,7 @@ void TranslateConvolutionBackward(
     const torch::jit::Node* node, ComputationContext* cctx,
     xla::PrecisionConfig::Precision conv_precision, xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 9);
-  const auto conv2d_grads = BuildConv2dBackward(
+  Conv2DGrads conv2d_grads = BuildConv2dBackward(
       node, cctx->OpForInput(node, 0), cctx->OpForInput(node, 1),
       cctx->OpForInput(node, 2), conv_precision);
   const auto node_outputs = node->outputs();
@@ -329,7 +329,7 @@ void TranslateSqrt(const torch::jit::Node* node, ComputationContext* cctx,
                    xla::PrecisionConfig::Precision /*conv_precision*/,
                    xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
-  const auto xla_input = cctx->OpForInput(node, 0);
+  xla::XlaOp xla_input = cctx->OpForInput(node, 0);
   xla::XlaOp xla_output = xla::Sqrt(xla_input);
   cctx->AddNodeOp(node, xla_output);
 }
@@ -338,7 +338,7 @@ void TranslateRsqrt(const torch::jit::Node* node, ComputationContext* cctx,
                     xla::PrecisionConfig::Precision /*conv_precision*/,
                     xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
-  const auto xla_input = cctx->OpForInput(node, 0);
+  xla::XlaOp xla_input = cctx->OpForInput(node, 0);
   xla::XlaOp xla_output = xla::Rsqrt(xla_input);
   cctx->AddNodeOp(node, xla_output);
 }
@@ -347,7 +347,7 @@ void TranslateNeg(const torch::jit::Node* node, ComputationContext* cctx,
                   xla::PrecisionConfig::Precision /*conv_precision*/,
                   xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
-  const auto xla_input = cctx->OpForInput(node, 0);
+  xla::XlaOp xla_input = cctx->OpForInput(node, 0);
   xla::XlaOp xla_output = xla::Neg(xla_input);
   cctx->AddNodeOp(node, xla_output);
 }
@@ -356,7 +356,7 @@ void TranslateTanh(const torch::jit::Node* node, ComputationContext* cctx,
                    xla::PrecisionConfig::Precision /*conv_precision*/,
                    xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
-  const auto xla_input = cctx->OpForInput(node, 0);
+  xla::XlaOp xla_input = cctx->OpForInput(node, 0);
   xla::XlaOp xla_output = xla::Tanh(xla_input);
   cctx->AddNodeOp(node, xla_output);
 }
@@ -365,9 +365,9 @@ void TranslateSigmoid(const torch::jit::Node* node, ComputationContext* cctx,
                       xla::PrecisionConfig::Precision /*conv_precision*/,
                       xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
-  const auto xla_input = cctx->OpForInput(node, 0);
+  xla::XlaOp xla_input = cctx->OpForInput(node, 0);
   xla::Shape xla_input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
-  const auto half =
+  xla::XlaOp half =
       XlaHelpers::ScalarValue<float>(0.5, xla_input_shape.element_type(), b);
   xla::XlaOp xla_output = half + half * xla::Tanh(half * xla_input);
   cctx->AddNodeOp(node, xla_output);
@@ -377,7 +377,7 @@ void TranslateRelu(const torch::jit::Node* node, ComputationContext* cctx,
                    xla::PrecisionConfig::Precision /*conv_precision*/,
                    xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
-  const auto xla_input = cctx->OpForInput(node, 0);
+  xla::XlaOp xla_input = cctx->OpForInput(node, 0);
   xla::XlaOp xla_output = BuildRelu(xla_input);
   cctx->AddNodeOp(node, xla_output);
 }
@@ -479,7 +479,7 @@ void TranslateBatchNorm(const torch::jit::Node* node, ComputationContext* cctx,
                         xla::PrecisionConfig::Precision /*conv_precision*/,
                         xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 8);
-  const auto outputs =
+  BatchNormOutput outputs =
       BuildBatchNorm(node, cctx->OpForInput(node, 0), cctx->OpForInput(node, 1),
                      cctx->OpForInput(node, 2));
   const auto node_outputs = node->outputs();
@@ -500,7 +500,7 @@ void TranslateBatchNormBackward(
     xla::PrecisionConfig::Precision /*conv_precision*/,
     xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 10);
-  auto grads =
+  BatchNormGrads grads =
       BuildBatchNormBackward(node, cctx->OpForInput(node, 0),  // grad_output
                              cctx->OpForInput(node, 1),        // input
                              cctx->OpForInput(node, 2),        // weight
@@ -652,7 +652,7 @@ XlaTranslationResult XlaTranslator::BuildComputation(
     const XlaComputationInOut::SizeOpValues& param_size_op_values,
     const BuildOptions& options) const {
   xla::XlaBuilder b(name);
-  auto computation_program =
+  XlaComputationInOut computation_program =
       BuildComputationProgram(parameter_shapes, param_size_op_values, &b);
   if (options.output_transform) {
     for (size_t i = 0; i < computation_program.outputs.size(); ++i) {
@@ -678,7 +678,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
        ++parameter_number) {
     torch::jit::Value* graph_input = graph_inputs[parameter_number];
     if (parameter_shapes[parameter_number].kind == ParameterKind::kGraphInput) {
-      auto param_no = cctx.GetInputsSize();
+      size_t param_no = cctx.GetInputsSize();
       const auto parameter_op =
           xla::Parameter(b, param_no, parameter_shapes[parameter_number].shape,
                          "param_" + std::to_string(param_no));

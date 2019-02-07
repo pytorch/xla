@@ -22,9 +22,9 @@ struct PoolingOpAttributes {
 
 xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
   xla::XlaBuilder reduction_builder("xla_ge_computation");
-  const auto x = xla::Parameter(&reduction_builder, 0,
+  xla::XlaOp x = xla::Parameter(&reduction_builder, 0,
                                 xla::ShapeUtil::MakeShape(type, {}), "x");
-  const auto y = xla::Parameter(&reduction_builder, 1,
+  xla::XlaOp y = xla::Parameter(&reduction_builder, 1,
                                 xla::ShapeUtil::MakeShape(type, {}), "y");
   xla::Ge(x, y);
   return reduction_builder.Build().ConsumeValueOrDie();
@@ -115,14 +115,14 @@ xla::XlaOp BuildMaxPool2d(
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
-  auto builder = input.builder();
+  xla::XlaBuilder* builder = input.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const auto init_value =
+  xla::Literal init_value =
       xla::LiteralUtil::MinValue(input_shape.element_type());
-  const auto xla_init_value = xla::ConstantLiteral(builder, init_value);
-  const auto padding_config = XlaHelpers::MakeXlaPaddingConfig(padding);
-  const auto padded_input = xla::Pad(input, xla_init_value, padding_config);
-  const auto pooling_op_attributes =
+  xla::XlaOp xla_init_value = xla::ConstantLiteral(builder, init_value);
+  xla::PaddingConfig padding_config = XlaHelpers::MakeXlaPaddingConfig(padding);
+  xla::XlaOp padded_input = xla::Pad(input, xla_init_value, padding_config);
+  PoolingOpAttributes pooling_op_attributes =
       Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size,
                             /*stride_attr=*/stride, /*padding_attr=*/padding);
   return xla::MaxPool(
@@ -136,14 +136,14 @@ xla::XlaOp BuildMaxPool2d(
 xla::XlaOp BuildMaxPool2dBackward(const torch::jit::Node* node,
                                   const xla::XlaOp& out_backprop,
                                   const xla::XlaOp& input) {
-  auto builder = out_backprop.builder();
+  xla::XlaBuilder* builder = out_backprop.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const auto init_value =
+  xla::XlaOp init_value =
       XlaHelpers::ScalarValue<float>(0, input_shape.element_type(), builder);
-  const auto select = CreateGeComputation(input_shape.element_type());
-  const auto scatter =
+  xla::XlaComputation select = CreateGeComputation(input_shape.element_type());
+  xla::XlaComputation scatter =
       XlaHelpers::CreateAddComputation(input_shape.element_type());
-  const auto pooling_op_attributes = Pooling2DOpAttributes(node);
+  PoolingOpAttributes pooling_op_attributes = Pooling2DOpAttributes(node);
   std::vector<std::pair<xla::int64, xla::int64>> window_padding;
   window_padding.resize(2);
   window_padding.insert(window_padding.end(),
@@ -185,7 +185,7 @@ xla::XlaOp BuildAvgPool2d(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool count_include_pad) {
-  const auto pooling_op_attributes =
+  PoolingOpAttributes pooling_op_attributes =
       Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size,
                             /*stride_attr=*/stride, /*padding_attr=*/padding);
   return xla::AvgPool(
@@ -222,7 +222,7 @@ xla::XlaOp BuildAvgPool2dBackward(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool count_include_pad) {
-  const auto pooling_op_attributes =
+  PoolingOpAttributes pooling_op_attributes =
       Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size,
                             /*stride_attr=*/stride, /*padding_attr=*/padding);
   auto gradients_size = XlaHelpers::SizesOfXlaOp(input);
