@@ -716,9 +716,9 @@ XLATensor XLATensor::nll_loss_backward(const XLATensor& input,
       input.GetDevice());
 }
 
-XLATensor XLATensor::not_supported(c10::Symbol node_symbol,
+XLATensor XLATensor::not_supported(c10::Symbol node_symbol, xla::Shape shape,
                                    const Device& device) {
-  return Create(ir::ops::NotSupportedOp(node_symbol), device);
+  return Create(ir::ops::NotSupportedOp(node_symbol, shape), device);
 }
 
 XLATensor XLATensor::cross_replica_sum(
