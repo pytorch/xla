@@ -218,10 +218,10 @@ static inline void RegisterAtenXlaTypes() {{
   auto& context = at::globalContext();
   context.registerType(at::Backend::XLA, at::ScalarType::Byte, GetXLATypeByte());
   context.registerType(at::Backend::XLA, at::ScalarType::Char, GetXLATypeChar());
-  context.registerType(at::Backend::XLA, at::ScalarType::Float, GetXLATypeFloat());
+  context.registerType(at::Backend::XLA, at::ScalarType::Short, GetXLATypeShort());
   context.registerType(at::Backend::XLA, at::ScalarType::Int, GetXLATypeInt());
   context.registerType(at::Backend::XLA, at::ScalarType::Long, GetXLATypeLong());
-  context.registerType(at::Backend::XLA, at::ScalarType::Short, GetXLATypeShort());
+  context.registerType(at::Backend::XLA, at::ScalarType::Float, GetXLATypeFloat());
 }}
 
 }}  // namespace torch_xla
