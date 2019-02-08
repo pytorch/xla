@@ -229,7 +229,9 @@ static inline void RegisterAtenXlaTypes() {{
 
 _XLA_FUNCTIONS = {
     'empty': 'bridge::CreateEmptyTensor',
+    'ones': 'bridge::CreateOnesTensor',
     'randn': 'bridge::CreateRandTensor',
+    'zeros': 'bridge::CreateZerosTensor',
 }
 
 _RESULT_NAME = 'x_result'

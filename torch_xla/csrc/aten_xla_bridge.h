@@ -22,6 +22,12 @@ at::Tensor CreateRandTensor(at::IntArrayRef size, at::Generator* generator,
 at::Tensor CreateRandTensor(at::IntArrayRef size,
                             const at::TensorOptions& options);
 
+at::Tensor CreateOnesTensor(at::IntArrayRef size,
+                            const at::TensorOptions& options);
+
+at::Tensor CreateZerosTensor(at::IntArrayRef size,
+                             const at::TensorOptions& options);
+
 // Extracts the XLATensor out of our version of at::Tensor. Throws an exception
 // if tensor is not an XLA tensor.
 XLATensor& GetXlaTensor(const at::Tensor& tensor);
