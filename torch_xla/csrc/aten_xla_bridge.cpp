@@ -22,6 +22,16 @@ at::Tensor CreateRandTensor(at::IntArrayRef size,
   return at::randn(size, options.device(at::DeviceType::CPU));
 }
 
+at::Tensor CreateOnesTensor(at::IntArrayRef size,
+                            const at::TensorOptions& options) {
+  return at::ones(size, options.device(at::DeviceType::CPU));
+}
+
+at::Tensor CreateZerosTensor(at::IntArrayRef size,
+                             const at::TensorOptions& options) {
+  return at::zeros(size, options.device(at::DeviceType::CPU));
+}
+
 XLATensor& GetXlaTensor(const at::Tensor& tensor) {
   XLATensorImpl* impl =
       dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
