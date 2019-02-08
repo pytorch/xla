@@ -46,8 +46,6 @@ _FN_BLACKLIST = set([
     # ATEN functions
     'toBackend',
     'toScalarType',
-    'copy',
-    'copy_',
     'backward',
     'set_data',
     'tensorFromBlob',
