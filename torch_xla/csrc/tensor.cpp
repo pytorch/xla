@@ -13,6 +13,7 @@
 #include "ops/arithmetic_ir_ops.h"
 #include "ops/avg_pool2d.h"
 #include "ops/avg_pool2d_backward.h"
+#include "ops/constant.h"
 #include "ops/conv2d.h"
 #include "ops/conv2d_backward.h"
 #include "ops/cross_replica_sum.h"
@@ -303,6 +304,19 @@ void XLATensor::TryLimitGraphSize() {
   }
 }
 
+ir::Value XLATensor::GetIrValue(const at::Tensor& tensor_data) const {
+  // We are asked to create an IR Node from a tensor data. Do we force the
+  // creation of device memory, or we generate an IR Node Constant for it?
+  static const xla::int64 kMaxConstantSize = 1000000;
+  auto tensor_shape = shape();
+  if (xla::ShapeUtil::ByteSizeOf(tensor_shape) > kMaxConstantSize) {
+    data()->xla_data = TensorToXlaData(tensor_data, GetDevice());
+    return CreateTensorNode(data()->xla_data);
+  }
+  xla::Literal literal = GetTensorLiteral(tensor_data, &tensor_shape.get());
+  return ir::MakeNode<ir::ops::Constant>(std::move(literal));
+}
+
 ir::Value XLATensor::GetIrValue() const {
   ir::Value ir_value = CurrentIrValue();
   if (ir_value) {
@@ -321,12 +335,7 @@ ir::Value XLATensor::GetIrValue() const {
   }
   const c10::optional<at::Tensor>& tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
-  // Now we have a tensor data. Do we force the creation of device memory, or we
-  // generate an IR Node Constant for it?
-  // TODO: For now force device data, but considerations about tensor size could
-  // drive different logic.
-  data()->xla_data = TensorToXlaData(*tensor_data, GetDevice());
-  data()->ir_value = CreateTensorNode(data()->xla_data);
+  data()->ir_value = GetIrValue(*tensor_data);
   return data()->ir_value;
 }
 
