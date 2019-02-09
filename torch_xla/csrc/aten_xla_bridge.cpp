@@ -7,31 +7,6 @@
 namespace torch_xla {
 namespace bridge {
 
-at::Tensor CreateEmptyTensor(at::IntList size,
-                             const at::TensorOptions& options) {
-  return at::empty(size, options.device(at::kCPU));
-}
-
-at::Tensor CreateRandTensor(at::IntArrayRef size, at::Generator* generator,
-                            const at::TensorOptions& options) {
-  return at::randn(size, generator, options.device(at::DeviceType::CPU));
-}
-
-at::Tensor CreateRandTensor(at::IntArrayRef size,
-                            const at::TensorOptions& options) {
-  return at::randn(size, options.device(at::DeviceType::CPU));
-}
-
-at::Tensor CreateOnesTensor(at::IntArrayRef size,
-                            const at::TensorOptions& options) {
-  return at::ones(size, options.device(at::DeviceType::CPU));
-}
-
-at::Tensor CreateZerosTensor(at::IntArrayRef size,
-                             const at::TensorOptions& options) {
-  return at::zeros(size, options.device(at::DeviceType::CPU));
-}
-
 XLATensor& GetXlaTensor(const at::Tensor& tensor) {
   XLATensorImpl* impl =
       dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());

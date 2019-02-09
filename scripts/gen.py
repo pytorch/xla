@@ -227,11 +227,17 @@ static inline void RegisterAtenXlaTypes() {{
 }}  // namespace torch_xla
 """
 
-_XLA_FUNCTIONS = {
-    'empty': 'bridge::CreateEmptyTensor',
-    'ones': 'bridge::CreateOnesTensor',
-    'randn': 'bridge::CreateRandTensor',
-    'zeros': 'bridge::CreateZerosTensor',
+_XLA_FUNCTIONS = {}
+
+_CTOR_FUNCTIONS = {
+    'empty': '.device(at::DeviceType::CPU)',
+    'linspace': '.device(at::DeviceType::CPU)',
+    'logspace': '.device(at::DeviceType::CPU)',
+    'ones': '.device(at::DeviceType::CPU)',
+    'ones_like': '.device(at::DeviceType::CPU)',
+    'randn': '.device(at::DeviceType::CPU)',
+    'zeros': '.device(at::DeviceType::CPU)',
+    'zeros_like': '.device(at::DeviceType::CPU)',
 }
 
 _RESULT_NAME = 'x_result'
@@ -661,6 +667,15 @@ def get_handling_function(ctx, fname, xla_ref_param):
   return xla_function or ctx.get_function(fname, xla_ref_param)
 
 
+def rewrite_tensor_options(fname, pname):
+  rw = _CTOR_FUNCTIONS.get(fname, None)
+  if rw is None:
+    return '', pname
+  xname = 'o_{}'.format(pname)
+  code = '  at::TensorOptions {} = {}{};\n'.format(xname, pname, rw)
+  return code, xname
+
+
 def get_xla_wrapper(orig_sig, ctx):
   tree = _PARSER.parse(orig_sig)
   xtree = _XPARSER.parse(orig_sig)
@@ -695,6 +710,10 @@ def get_xla_wrapper(orig_sig, ctx):
       xname = 'l_{}'.format(pname)
       code += ('  auto {} = bridge::XlaCreateTensorList({}, '
                '/*writeable=*/nullptr);\n').format(xname, pname)
+      param_vars.append(xname)
+    elif cptype == 'TensorOptions':
+      gcode, xname = rewrite_tensor_options(fname, pname)
+      code += gcode
       param_vars.append(xname)
     elif cptype != 'Tensor':
       param_vars.append(pname)

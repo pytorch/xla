@@ -12,22 +12,6 @@
 namespace torch_xla {
 namespace bridge {
 
-// Helper function which creates an empty CPU ATEN tensor.
-at::Tensor CreateEmptyTensor(at::IntList size,
-                             const at::TensorOptions& options);
-
-// Helper function which creates a random CPU ATEN tensor.
-at::Tensor CreateRandTensor(at::IntArrayRef size, at::Generator* generator,
-                            const at::TensorOptions& options);
-at::Tensor CreateRandTensor(at::IntArrayRef size,
-                            const at::TensorOptions& options);
-
-at::Tensor CreateOnesTensor(at::IntArrayRef size,
-                            const at::TensorOptions& options);
-
-at::Tensor CreateZerosTensor(at::IntArrayRef size,
-                             const at::TensorOptions& options);
-
 // Extracts the XLATensor out of our version of at::Tensor. Throws an exception
 // if tensor is not an XLA tensor.
 XLATensor& GetXlaTensor(const at::Tensor& tensor);
