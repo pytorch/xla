@@ -3,6 +3,7 @@
 #include "tensor_impl.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch_util.h"
 
 namespace torch_xla {
 namespace bridge {
@@ -29,10 +30,10 @@ std::vector<at::Tensor> XlaCreateTensorList(
       XLA_CHECK(writeable == nullptr || !(*writeable)[i])
           << "Trying to write to an undefined tensor";
     } else if (tensor.device().is_cpu()) {
-      aten_xla_tensors[i] = tensor;
+      aten_xla_tensors[i] = ToTensor(tensor);
     } else {
       to_translate[i] = true;
-      xla_tensors.push_back(GetXlaTensor(tensor));
+      xla_tensors.push_back(GetXlaTensor(ToTensor(tensor)));
       if (writeable != nullptr) {
         defined_writeable.push_back((*writeable)[i]);
       }
@@ -60,7 +61,7 @@ std::vector<at::Tensor> CreateXlaTensors(const std::vector<at::Tensor>& tensors,
 }
 
 Device XlaTensorDevice(const at::Tensor& tensor) {
-  return GetXlaTensor(tensor).GetDevice();
+  return GetXlaTensor(ToTensor(tensor)).GetDevice();
 }
 
 Device XlaTensorDevice(const at::TensorOptions& tensor_options) {
