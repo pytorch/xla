@@ -87,10 +87,6 @@ class XlaHelpers {
   // Creates a binary add computation.
   static xla::XlaComputation CreateAddComputation(xla::PrimitiveType type);
 
-  // Converts the given scalar type to an XLA primitive type.
-  static xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
-                                                 const Device* device);
-
   // Performs type promotion to make sure both operations return the same type.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
                                                          const xla::XlaOp& op2);
@@ -168,10 +164,6 @@ class XlaHelpers {
         op1, op2,
         [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 / op2; });
   }
-
-  // Checks whether BF16 should be used as default floating point type for XLA
-  // computations.
-  static bool UseBF16();
 };
 
 }  // namespace torch_xla

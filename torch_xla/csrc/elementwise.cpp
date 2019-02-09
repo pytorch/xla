@@ -1,6 +1,7 @@
 #include "elementwise.h"
 
 #include "helpers.h"
+#include "tensor_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
@@ -73,7 +74,7 @@ xla::XlaOp BuildTypeAs(const torch::jit::Node* node,
   const auto output_tensor_type =
       node_outputs[0]->type()->cast<at::DimensionedTensorType>();
   XLA_CHECK(output_tensor_type);
-  xla::PrimitiveType target_type = XlaHelpers::MakeXlaPrimitiveType(
+  xla::PrimitiveType target_type = MakeXlaPrimitiveType(
       output_tensor_type->scalarType(), /*device=*/nullptr);
   return xla::ConvertElementType(operand, target_type);
 }

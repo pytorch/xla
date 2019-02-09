@@ -1,5 +1,7 @@
 #!/bin/bash
 set -ex
+RUNDIR="$(cd "$(dirname "$0")" ; pwd -P)"
+BUILDDIR="$RUNDIR/build"
 VERB=
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
@@ -20,10 +22,10 @@ do
 done
 shift $(($OPTIND - 1))
 
-rm -rf build
-mkdir build 2>/dev/null
-pushd build
-cmake .. \
+rm -rf "$BUILDDIR"
+mkdir "$BUILDDIR" 2>/dev/null
+pushd "$BUILDDIR"
+cmake "$RUNDIR" \
     -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")\
     -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
 make $VERB
@@ -34,5 +36,5 @@ else
 fi
 popd
 if [ $RMBUILD -eq 1 ]; then
-  rm -rf build
+  rm -rf "$BUILDDIR"
 fi

@@ -12,6 +12,13 @@
 #include "torch/csrc/autograd/variable.h"
 
 namespace torch_xla {
+namespace detail {
+
+// Checks whether BF16 should be used as default floating point type for XLA
+// computations.
+bool UseBF16();
+
+}  // namespace detail
 
 std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape);
 
@@ -60,5 +67,9 @@ xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
                                             const Device* device);
 
 at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type);
+
+  // Converts the given scalar type to an XLA primitive type.
+xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
+                                        const Device* device);
 
 }  // namespace torch_xla
