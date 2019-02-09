@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include <ATen/Device.h>
 #include <ATen/Functions.h>
 #include <ATen/Tensor.h>
 #include <ATen/Type.h>
@@ -45,6 +46,8 @@ static inline Device XlaTensorDevice(const at::TensorList& tensors) {
 }
 
 Device XlaTensorDevice(const at::TensorOptions& tensor_options);
+
+Device AtenDeviceToXlaDevice(const c10::Device& device);
 
 // Creates an ATen tensor with XLA type id from an XLATensor.
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor);

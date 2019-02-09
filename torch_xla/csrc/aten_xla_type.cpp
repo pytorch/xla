@@ -11,6 +11,21 @@
 namespace torch_xla {
 namespace {
 
+struct XlaOptions {
+  XlaOptions(const at::TensorOptions& options, Device device)
+      : device(std::move(device)) {
+    if (options.has_device()) {
+      device = bridge::AtenDeviceToXlaDevice(options.device());
+    }
+    if (options.has_dtype()) {
+      scalar_type = c10::typeMetaToScalarType(options.dtype());
+    }
+  }
+
+  Device device;
+  c10::optional<at::ScalarType> scalar_type;
+};
+
 // Returns true if dilation is non-trivial (not 1) in at least one dimension.
 bool IsNonTrivialDilation(at::IntList dilation) {
   return std::any_of(
@@ -25,6 +40,34 @@ bool AtenXlaType::s_use_full_conv_precision_ = false;
 AtenXlaType::AtenXlaType(at::TensorTypeId type_id, bool is_variable,
                          bool is_undefined)
     : AtenXlaTypeBase(type_id, is_variable, is_undefined) {}
+
+at::Tensor AtenXlaType::zeros_like(const at::Tensor& self) const {
+  XLATensor& self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::zeros_like(
+      self_tensor, self_tensor.GetDevice(), c10::nullopt));
+}
+
+at::Tensor AtenXlaType::zeros_like(const at::Tensor& self,
+                                   const at::TensorOptions& options) const {
+  XLATensor& self_tensor = bridge::GetXlaTensor(self);
+  XlaOptions xla_options(options, self_tensor.GetDevice());
+  return bridge::AtenFromXlaTensor(XLATensor::zeros_like(
+      self_tensor, xla_options.device, xla_options.scalar_type));
+}
+
+at::Tensor AtenXlaType::ones_like(const at::Tensor& self) const {
+  XLATensor& self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::ones_like(self_tensor, self_tensor.GetDevice(), c10::nullopt));
+}
+
+at::Tensor AtenXlaType::ones_like(const at::Tensor& self,
+                                  const at::TensorOptions& options) const {
+  XLATensor& self_tensor = bridge::GetXlaTensor(self);
+  XlaOptions xla_options(options, self_tensor.GetDevice());
+  return bridge::AtenFromXlaTensor(XLATensor::ones_like(
+      self_tensor, xla_options.device, xla_options.scalar_type));
+}
 
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) const {

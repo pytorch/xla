@@ -1,5 +1,6 @@
 #include "aten_xla_bridge.h"
 
+#include "device.h"
 #include "tensor_impl.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -64,21 +65,28 @@ Device XlaTensorDevice(const at::Tensor& tensor) {
   return GetXlaTensor(ToTensor(tensor)).GetDevice();
 }
 
-Device XlaTensorDevice(const at::TensorOptions& tensor_options) {
-  static Device* xla_device =
-      new Device(xla::ComputationClient::Get()->GetDefaultDevice());
-  at::DeviceType at_device_type = tensor_options.device().type();
-  switch (at_device_type) {
+Device AtenDeviceToXlaDevice(const c10::Device& device) {
+  int ordinal = device.has_index() ? device.index() : 0;
+  switch (device.type()) {
     case at::kCPU:
-      return Device(DeviceType::CPU, 0);
+      return Device(DeviceType::CPU, ordinal);
     case at::kCUDA:
-      return Device(DeviceType::GPU, 0);
-    case at::kXLA:
-      return *xla_device;
+      return Device(DeviceType::GPU, ordinal);
+    case at::kXLA: {
+      Device xla_device = *GetDefaultDevice();
+      xla_device.ordinal = ordinal;
+      return xla_device;
+    }
     default:
-      XLA_ERROR() << "Device type " << DeviceTypeName(at_device_type, false)
+      XLA_ERROR() << "Device type " << DeviceTypeName(device.type(), false)
                   << " not supported";
   }
+}
+
+Device XlaTensorDevice(const at::TensorOptions& tensor_options) {
+  return tensor_options.has_device()
+             ? AtenDeviceToXlaDevice(tensor_options.device())
+             : *GetDefaultDevice();
 }
 
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor) {

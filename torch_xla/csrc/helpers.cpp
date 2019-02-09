@@ -7,17 +7,6 @@
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 
 namespace torch_xla {
-namespace {
-
-bool ShouldUseBF16() {
-  int use_fp16 = xla::sys_util::GetEnvInt("XLA_USE_BF16", 0);
-  if (use_fp16 != 0) {
-    TF_LOG(INFO) << "Using BF16 data type for floating point values";
-  }
-  return use_fp16 != 0;
-}
-
-}  // namespace
 
 xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
     const xla::PrecisionConfig::Precision conv_precision) {
@@ -63,35 +52,6 @@ xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
                                 xla::ShapeUtil::MakeShape(type, {}), "y");
   Add(x, y);
   return reduction_builder.Build().ConsumeValueOrDie();
-}
-
-xla::PrimitiveType XlaHelpers::MakeXlaPrimitiveType(at::ScalarType scalar_type,
-                                                    const Device* device) {
-  if (device == nullptr) {
-    device = GetDefaultDevice();
-  }
-  switch (scalar_type) {
-    case at::ScalarType::Float:
-      // When PyTorch will support native BF16 type, the global configuration
-      // can be replaced (or augmented) with the proper mapping.
-      return UseBF16() ? xla::PrimitiveType::BF16 : xla::PrimitiveType::F32;
-    case at::ScalarType::Byte:
-      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::U8
-                                                : xla::PrimitiveType::S64;
-    case at::ScalarType::Char:
-      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S8
-                                                : xla::PrimitiveType::S64;
-    case at::ScalarType::Short:
-      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S16
-                                                : xla::PrimitiveType::S64;
-    case at::ScalarType::Int:
-      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S32
-                                                : xla::PrimitiveType::S64;
-    case at::ScalarType::Long:
-      return xla::PrimitiveType::S64;
-    default:
-      XLA_ERROR() << "Type not supported: " << scalar_type;
-  }
 }
 
 xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
@@ -245,11 +205,6 @@ xla::XlaOp XlaHelpers::PromotedBinaryOp(
         bin_op) {
   std::pair<xla::XlaOp, xla::XlaOp> vops = PromoteSecond(op1, op2);
   return bin_op(vops.first, vops.second);
-}
-
-bool XlaHelpers::UseBF16() {
-  static bool use_fp16 = ShouldUseBF16();
-  return use_fp16;
 }
 
 }  // namespace torch_xla
