@@ -41,6 +41,11 @@ class AtenXlaType : public AtenXlaTypeBase {
                     at::IntList padding, at::IntList dilation,
                     int64_t groups) const override;
 
+  std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv2d_forward(
+      const at::Tensor& self, const at::Tensor& weight,
+      at::IntArrayRef kernel_size, const at::Tensor& bias,
+      at::IntArrayRef stride, at::IntArrayRef padding) const override;
+
   std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv2d_backward(
       const at::Tensor& grad_output, const at::Tensor& self,
       const at::Tensor& weight, at::IntList kernel_size, at::IntList stride,

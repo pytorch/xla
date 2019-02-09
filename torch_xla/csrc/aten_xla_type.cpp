@@ -104,6 +104,20 @@ at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
   }
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::thnn_conv2d_forward(
+    const at::Tensor& self, const at::Tensor& weight,
+    at::IntArrayRef kernel_size, const at::Tensor& bias, at::IntArrayRef stride,
+    at::IntArrayRef padding) const {
+  at::Tensor undefined = at::empty({});
+  // TODO(asuhan): double check it's ok to return undefined for finput and
+  // fgrad_input.
+  return std::make_tuple(
+      conv2d(/*input=*/self, /*weight=*/weight, /*bias=*/bias,
+             /*stride=*/stride, /*padding=*/padding, /*dilation=*/{1, 1},
+             /*groups=*/1),
+      undefined, undefined);
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::thnn_conv2d_backward(const at::Tensor& grad_output,
                                   const at::Tensor& self,
