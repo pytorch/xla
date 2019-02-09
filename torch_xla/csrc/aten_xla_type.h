@@ -9,6 +9,14 @@ class AtenXlaType : public AtenXlaTypeBase {
  public:
   AtenXlaType(at::TensorTypeId type_id, bool is_variable, bool is_undefined);
 
+  at::Tensor zeros_like(const at::Tensor& self) const override;
+  at::Tensor zeros_like(const at::Tensor& self,
+                        const at::TensorOptions& options) const override;
+
+  at::Tensor ones_like(const at::Tensor& self) const override;
+  at::Tensor ones_like(const at::Tensor& self,
+                       const at::TensorOptions& options) const override;
+
   at::Tensor add(const at::Tensor& self, const at::Tensor& other,
                  at::Scalar alpha) const override;
 

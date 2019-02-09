@@ -193,8 +193,7 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   XLA_CHECK(data()->tensor_data);
   return MakeArrayShapeFromDimensions(
       data()->tensor_data->sizes(),
-      XlaHelpers::MakeXlaPrimitiveType(data()->tensor_data->type().scalarType(),
-                                       &device),
+      MakeXlaPrimitiveType(data()->tensor_data->type().scalarType(), &device),
       device.hw_type);
 }
 
@@ -607,6 +606,24 @@ XLATensor XLATensor::avg_pool2d(
       ir::MakeNode<ir::ops::AvgPool2d>(GetIrValue(), kernel_size, stride,
                                        padding, count_include_pad),
       GetDevice());
+}
+
+XLATensor XLATensor::ones_like(const XLATensor& input, const Device& device,
+                               c10::optional<at::ScalarType> scalar_type) {
+  xla::Shape tensor_shape = input.shape();
+  if (scalar_type) {
+    tensor_shape.set_element_type(MakeXlaPrimitiveType(*scalar_type, &device));
+  }
+  return Create(ir::MakeNode<ir::ops::Scalar>(1, tensor_shape), device);
+}
+
+XLATensor XLATensor::zeros_like(const XLATensor& input, const Device& device,
+                                c10::optional<at::ScalarType> scalar_type) {
+  xla::Shape tensor_shape = input.shape();
+  if (scalar_type) {
+    tensor_shape.set_element_type(MakeXlaPrimitiveType(*scalar_type, &device));
+  }
+  return Create(ir::MakeNode<ir::ops::Scalar>(0, tensor_shape), device);
 }
 
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,

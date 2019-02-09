@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CDIR=$(dirname $0)
+CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 XDIR=$CDIR/..
 PTDIR=$XDIR/..
 

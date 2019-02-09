@@ -9,11 +9,21 @@
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 
 namespace torch_xla {
 namespace {
+
+bool ShouldUseBF16() {
+  int use_fp16 = xla::sys_util::GetEnvInt("XLA_USE_BF16", 0);
+  if (use_fp16 != 0) {
+    TF_LOG(INFO) << "Using BF16 data type for floating point values";
+  }
+  return use_fp16 != 0;
+}
 
 xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type) {
   switch (scalar_type) {
@@ -285,6 +295,15 @@ at::Tensor XlaLiteralToTensor(const xla::Literal& literal, at::ScalarType atype,
 
 }  // namespace
 
+namespace detail {
+
+bool UseBF16() {
+  static bool use_fp16 = ShouldUseBF16();
+  return use_fp16;
+}
+
+}  // namespace detail
+
 std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
   std::vector<xla::int64> strides(shape.rank());
   xla::int64 stride = 1;
@@ -423,8 +442,7 @@ xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
     device = GetDefaultDevice();
   }
   return MakeArrayShapeFromDimensions(
-      tensor.sizes(),
-      XlaHelpers::MakeXlaPrimitiveType(tensor.type().scalarType(), device),
+      tensor.sizes(), MakeXlaPrimitiveType(tensor.type().scalarType(), device),
       device->hw_type);
 }
 
@@ -445,6 +463,36 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
       return at::ScalarType::Long;
     default:
       XLA_ERROR() << "XLA type not supported: " << xla_type;
+  }
+}
+
+xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
+                                        const Device* device) {
+  if (device == nullptr) {
+    device = GetDefaultDevice();
+  }
+  switch (scalar_type) {
+    case at::ScalarType::Float:
+      // When PyTorch will support native BF16 type, the global configuration
+      // can be replaced (or augmented) with the proper mapping.
+      return detail::UseBF16() ? xla::PrimitiveType::BF16
+                               : xla::PrimitiveType::F32;
+    case at::ScalarType::Byte:
+      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::U8
+                                                : xla::PrimitiveType::S64;
+    case at::ScalarType::Char:
+      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S8
+                                                : xla::PrimitiveType::S64;
+    case at::ScalarType::Short:
+      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S16
+                                                : xla::PrimitiveType::S64;
+    case at::ScalarType::Int:
+      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S32
+                                                : xla::PrimitiveType::S64;
+    case at::ScalarType::Long:
+      return xla::PrimitiveType::S64;
+    default:
+      XLA_ERROR() << "Type not supported: " << scalar_type;
   }
 }
 

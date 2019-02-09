@@ -149,6 +149,12 @@ class XLATensor {
 
   XLATensor log_softmax(xla::int64 dim) const;
 
+  static XLATensor ones_like(const XLATensor& input, const Device& device,
+                             c10::optional<at::ScalarType> scalar_type);
+
+  static XLATensor zeros_like(const XLATensor& input, const Device& device,
+                              c10::optional<at::ScalarType> scalar_type);
+
   static XLATensor mm(const XLATensor& input, const XLATensor& weight,
                       bool use_full_conv_precision);
 
