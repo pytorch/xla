@@ -42,35 +42,34 @@ XLATensor& GetXlaTensor(const at::Tensor& tensor) {
 
 std::vector<at::Tensor> XlaCreateTensorList(
     const at::TensorList& tensors, const std::vector<bool>* writeable) {
+  std::vector<at::Tensor> aten_xla_tensors(tensors.size());
   std::vector<XLATensor> xla_tensors;
   // We need to separate out the defined tensors first, GetXlaTensor() doesn't
   // work with undefined tensors.
   std::vector<bool> defined_writeable;
-  std::vector<bool> tensor_is_defined(tensors.size());
+  std::vector<bool> to_translate(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
     const at::Tensor& tensor = tensors[i];
     if (!tensor.defined()) {
       XLA_CHECK(writeable == nullptr || !(*writeable)[i])
           << "Trying to write to an undefined tensor";
-      continue;
-    }
-    tensor_is_defined[i] = true;
-    xla_tensors.push_back(GetXlaTensor(tensor));
-    if (writeable != nullptr) {
-      defined_writeable.push_back((*writeable)[i]);
+    } else if (tensor.device().is_cpu()) {
+      aten_xla_tensors[i] = tensor;
+    } else {
+      to_translate[i] = true;
+      xla_tensors.push_back(GetXlaTensor(tensor));
+      if (writeable != nullptr) {
+        defined_writeable.push_back((*writeable)[i]);
+      }
     }
   }
   auto defined_aten_xla_tensors = XLATensor::GetTensors(
       &xla_tensors, writeable ? &defined_writeable : nullptr);
   // Insert undefined tensors into the result, back into the original undefined
   // positions.
-  std::vector<at::Tensor> aten_xla_tensors;
   for (size_t i = 0, defined_pos = 0; i < tensors.size(); ++i) {
-    if (tensor_is_defined[i]) {
-      aten_xla_tensors.push_back(
-          std::move(defined_aten_xla_tensors[defined_pos++]));
-    } else {
-      aten_xla_tensors.emplace_back();
+    if (to_translate[i]) {
+      aten_xla_tensors[i] = std::move(defined_aten_xla_tensors[defined_pos++]);
     }
   }
   return aten_xla_tensors;
