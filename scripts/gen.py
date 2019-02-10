@@ -82,6 +82,7 @@ _FN_BLACKLIST = set([
     'unsafeStorageFromTH',
     'unsafeTensorFromTH',
     # XLA/TPU functions
+    '_s_copy_from',
     'ones',
     'ones_like',
     'zeros',

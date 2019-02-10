@@ -8,6 +8,7 @@
 #include "helpers.h"
 #include "tensor_impl.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch_util.h"
 
 namespace torch_xla {
 namespace {
@@ -48,6 +49,17 @@ bool AtenXlaType::s_use_full_conv_precision_ = false;
 AtenXlaType::AtenXlaType(at::TensorTypeId type_id, bool is_variable,
                          bool is_undefined)
     : AtenXlaTypeBase(type_id, is_variable, is_undefined) {}
+
+at::Tensor AtenXlaType::_s_copy_from(const at::Tensor& self,
+                                     const at::Tensor& /* dst */,
+                                     bool /* non_blocking */) const {
+  std::vector<at::Tensor> tensors = {self};
+  std::vector<bool> writeables = {false};
+  auto xla_tensors = bridge::XlaCreateTensorList(tensors, &writeables);
+  // Do not mark the tensor creation as writeable to not discard the XLA tensor
+  // device context, but make a copy to avoid core data to be shared.
+  return CopyTensor(xla_tensors.front());
+}
 
 at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
                               const at::TensorOptions& options) const {
