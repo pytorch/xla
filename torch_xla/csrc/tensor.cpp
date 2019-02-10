@@ -617,6 +617,13 @@ XLATensor XLATensor::avg_pool2d(
       GetDevice());
 }
 
+XLATensor XLATensor::ones(tensorflow::gtl::ArraySlice<const xla::int64> size,
+                          const Device& device, at::ScalarType scalar_type) {
+  xla::Shape shape = MakeArrayShapeFromDimensions(
+      size, MakeXlaPrimitiveType(scalar_type, &device), device.hw_type);
+  return Create(ir::MakeNode<ir::ops::Scalar>(1, std::move(shape)), device);
+}
+
 XLATensor XLATensor::ones_like(const XLATensor& input, const Device& device,
                                c10::optional<at::ScalarType> scalar_type) {
   xla::Shape tensor_shape = input.shape();
@@ -624,6 +631,13 @@ XLATensor XLATensor::ones_like(const XLATensor& input, const Device& device,
     tensor_shape.set_element_type(MakeXlaPrimitiveType(*scalar_type, &device));
   }
   return Create(ir::MakeNode<ir::ops::Scalar>(1, tensor_shape), device);
+}
+
+XLATensor XLATensor::zeros(tensorflow::gtl::ArraySlice<const xla::int64> size,
+                           const Device& device, at::ScalarType scalar_type) {
+  xla::Shape shape = MakeArrayShapeFromDimensions(
+      size, MakeXlaPrimitiveType(scalar_type, &device), device.hw_type);
+  return Create(ir::MakeNode<ir::ops::Scalar>(0, std::move(shape)), device);
 }
 
 XLATensor XLATensor::zeros_like(const XLATensor& input, const Device& device,
