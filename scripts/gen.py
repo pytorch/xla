@@ -7,10 +7,24 @@ import os
 import re
 import sys
 
-FuncGen = collections.namedtuple(
+
+def namedtuple_with_defaults(typename, field_names, default_values=()):
+  ntuple = collections.namedtuple(typename, field_names)
+  ntuple.__new__.__defaults__ = (None,) * len(ntuple._fields)
+  if isinstance(default_values, collections.Mapping):
+    prototype = ntuple(**default_values)
+  else:
+    prototype = ntuple(*default_values)
+  ntuple.__new__.__defaults__ = tuple(prototype)
+  return ntuple
+
+
+FuncGen = namedtuple_with_defaults(
     'FuncGen',
     'tree, xtree, rwxtree, func, xfunc, code, sig, rwsig, cppsig, funsig, mapsig'
 )
+
+FuncOpts = namedtuple_with_defaults('FuncOpts', 'ref_param')
 
 _GRAMMAR = r"""
     start: type fnname "(" params ")"
@@ -68,6 +82,8 @@ _FN_BLACKLIST = set([
     'unsafeStorageFromTH',
     'unsafeTensorFromTH',
     # XLA/TPU functions
+    'ones_like',
+    'zeros_like',
 ])
 
 _FN_BLACKLIST_REGEX = [
@@ -234,10 +250,17 @@ _CTOR_FUNCTIONS = {
     'linspace': '.device(at::DeviceType::CPU)',
     'logspace': '.device(at::DeviceType::CPU)',
     'ones': '.device(at::DeviceType::CPU)',
-    'ones_like': '.device(at::DeviceType::CPU)',
     'randn': '.device(at::DeviceType::CPU)',
     'zeros': '.device(at::DeviceType::CPU)',
-    'zeros_like': '.device(at::DeviceType::CPU)',
+}
+
+_FUNCTION_OPTIONS = {
+    'to(Tensor, TensorOptions, bool, bool) -> Tensor':
+        FuncOpts(ref_param='options'),
+    'to(Tensor, Device, ScalarType, bool, bool) -> Tensor':
+        FuncOpts(ref_param='device'),
+    'to(Tensor, Tensor, bool, bool) -> Tensor':
+        FuncOpts(ref_param='other'),
 }
 
 _RESULT_NAME = 'x_result'
@@ -584,7 +607,7 @@ def get_return_value(rtype, rname, param, var, ref_param):
         rname, param_name(ref_param))
 
 
-def get_reference_param(params):
+def get_reference_param(params, fnopts=None):
   # The reference parameter is the Tensor object which we use to extract the
   # result Tensor device, if any.
   ref_param = None
@@ -593,13 +616,15 @@ def get_reference_param(params):
     ptype = param_type(p)
     cptype = type_core(ptype)
     pname = param_name(p)
-    if cptype == 'TensorOptions' or cptype == 'TensorList':
+    if fnopts and fnopts.ref_param == pname:
+      return p
+    if not other and (cptype == 'TensorOptions' or cptype == 'TensorList'):
       other = p
     if cptype != 'Tensor':
       continue
-    if pname == 'self' or type_is_const(ptype):
-      return p
-    ref_param = p
+    if not ref_param and (pname == 'self' or type_is_const(ptype)):
+      ref_param = p
+    other = p
   return ref_param or other
 
 
@@ -683,7 +708,8 @@ def get_xla_wrapper(orig_sig, ctx):
   rwsig = rewrite_signature(orig_sig, _TYPE_NSMAP)
   rwxtree = _XPARSER.parse(rwsig)
   params = get_parameters(tree)
-  ref_param = get_reference_param(params)
+  fnopts = _FUNCTION_OPTIONS.get(mapsig, None)
+  ref_param = get_reference_param(params, fnopts=fnopts)
 
   # There are a few functions with the same function name but different
   # parameter list. Generate a unique XL function name here.
@@ -727,7 +753,7 @@ def get_xla_wrapper(orig_sig, ctx):
     else:
       xname = tfetcher.add(pname, True)
       param_vars.append(xname)
-    if p == ref_param:
+    if p == ref_param and not (fnopts and fnopts.ref_param):
       xla_ref_param = param_vars[-1]
   code += tfetcher.generate()
   result_assign = generate_result_assignment(tree, _RESULT_NAME)
@@ -829,8 +855,9 @@ def generate(args):
       fgen = get_xla_wrapper(ts, ctx)
       if fgen:
         fgens.append(fgen)
-    except:
-      pass
+    except Exception as e:
+      print(
+          'File to generate wrapper for {}: {}'.format(ts, e), file=sys.stderr)
   print(
       'Generated {} wrappers for {}'.format(len(fgens), args.typedef),
       file=sys.stderr)
