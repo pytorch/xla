@@ -304,16 +304,22 @@ void XLATensor::TryLimitGraphSize() {
   }
 }
 
-ir::Value XLATensor::GetIrValue(const at::Tensor& tensor_data) const {
-  // We are asked to create an IR Node from a tensor data. Do we force the
-  // creation of device memory, or we generate an IR Node Constant for it?
-  static const xla::int64 kMaxConstantSize = 1000000;
-  auto tensor_shape = shape();
-  if (xla::ShapeUtil::ByteSizeOf(tensor_shape) > kMaxConstantSize) {
-    data()->xla_data = TensorToXlaData(tensor_data, GetDevice());
+ir::Value XLATensor::GetIrValue(const at::Tensor& tensor) const {
+  // We are asked to create an IR Node from a tensor data.
+  // If the constant is small enough, create a Constant IR Node which will
+  // result in an XLA constant added to the graph. This has the advantage of XLA
+  // optimizations potentially doing a better job on it.
+  // If the constant size is above a given threshold, create device data to host
+  // them.
+  static const xla::int64 kMaxConstantSize = 128 * 1024;
+  xla::int64 size = tensor.type().elementSizeInBytes() * tensor.numel();
+  if (size > kMaxConstantSize) {
+    data()->xla_data = TensorToXlaData(tensor, GetDevice());
     return CreateTensorNode(data()->xla_data);
   }
-  xla::Literal literal = GetTensorLiteral(tensor_data, &tensor_shape.get());
+  xla::Shape tensor_shape =
+      CreateComputationShapeFromTensor(tensor, &GetDevice());
+  xla::Literal literal = GetTensorLiteral(tensor, &tensor_shape);
   return ir::MakeNode<ir::ops::Constant>(std::move(literal));
 }
 
