@@ -15,7 +15,10 @@ namespace bridge {
 
 // Extracts the XLATensor out of our version of at::Tensor. Throws an exception
 // if tensor is not an XLA tensor.
-XLATensor& GetXlaTensor(const at::Tensor& tensor);
+XLATensor GetXlaTensor(const at::Tensor& tensor);
+
+// Fetches the underline XLATensor object if tensor is an XLA tensor.
+c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor);
 
 // Creates a vector of at::Tensor objects extracted from a list of XLA tensors.
 // If the writeable vector is not nullptr, it must be the same size as tensors,
@@ -32,20 +35,15 @@ at::Tensor XlaToAtenTensor(const at::Tensor& tensor);
 // discard any device side data. Throws if tensor is not an XLA tensor.
 at::Tensor XlaToAtenMutableTensor(const at::Tensor& tensor);
 
-// Given a vector of at::Tensor creates a vector of XLA tensors on the given
-// device.
-std::vector<at::Tensor> CreateXlaTensors(const std::vector<at::Tensor>& tensors,
-                                         const Device& device);
-
 // Extracts the device out of the XLA tensor. Throws an exception if tensor is
 // not an XLA tensor.
-Device XlaTensorDevice(const at::Tensor& tensor);
+c10::optional<Device> GetXlaDevice(const at::Tensor& tensor);
 
-static inline Device XlaTensorDevice(const at::TensorList& tensors) {
-  return XlaTensorDevice(tensors.at(0));
-}
+c10::optional<Device> GetXlaDevice(const at::TensorList& tensors);
 
-Device XlaTensorDevice(const at::TensorOptions& tensor_options);
+c10::optional<Device> GetXlaDevice(const at::TensorOptions& tensor_options);
+
+c10::optional<Device> GetXlaDevice(const c10::Device& device);
 
 Device AtenDeviceToXlaDevice(const c10::Device& device);
 
@@ -53,7 +51,13 @@ Device AtenDeviceToXlaDevice(const c10::Device& device);
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor);
 
 // Creates an XLA tensor holding the data in tensor, on the given device.
-at::Tensor CreateXlaTensor(at::Tensor tensor, const Device& device);
+at::Tensor CreateXlaTensor(at::Tensor tensor,
+                           const c10::optional<Device>& device);
+
+// Given a vector of at::Tensor creates a vector of XLA tensors on the given
+// device.
+std::vector<at::Tensor> CreateXlaTensors(const std::vector<at::Tensor>& tensors,
+                                         const c10::optional<Device>& device);
 
 }  // namespace bridge
 }  // namespace torch_xla

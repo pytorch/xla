@@ -580,7 +580,7 @@ def get_return_value(rtype, rname, param, var, ref_param):
     # If instead the return type is a value Tensor, we create a new one by
     # wrapping the proper local variable which has been created by calling
     # into the CPU tensor implementation.
-    return 'bridge::CreateXlaTensor({}, bridge::XlaTensorDevice({}))'.format(
+    return 'bridge::CreateXlaTensor({}, bridge::GetXlaDevice({}))'.format(
         rname, param_name(ref_param))
 
 
@@ -642,7 +642,7 @@ def generate_return_stmt(t, rtype_str, fname, rname, params, param_vars,
     retstr = get_tuple_return(rtype, rtype_str, rname, params, param_vars,
                               ref_param)
   elif ctype == 'std::vector':
-    retstr = 'bridge::CreateXlaTensors({}, bridge::XlaTensorDevice({}))'.format(
+    retstr = 'bridge::CreateXlaTensors({}, bridge::GetXlaDevice({}))'.format(
         rname, param_name(ref_param))
   elif ctype == 'Tensor':
     retstr = get_return_value(rtype, rname, params[0], param_vars[0], ref_param)
