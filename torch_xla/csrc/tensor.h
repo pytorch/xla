@@ -313,7 +313,7 @@ class XLATensor {
   std::shared_ptr<Data> data_ptr() const { return data_; }
 
   // Creates an IR value from ATEN tensor data.
-  ir::Value GetIrValue(const at::Tensor& tensor_data) const;
+  ir::Value GetIrValue(const at::Tensor& tensor) const;
 
   void SetIrValue(ir::Value ir_value);
 
