@@ -100,7 +100,7 @@ find_library(CAFFE_LIB "libcaffe2.so"
 # undefined symbol error at link time. At runtime everything resolves correctly.
 target_link_libraries(
   test_ptxla
-  -Wl,--unresolved-symbols=ignore-all
+  -Wl,--unresolved-symbols=ignore-in-shared-libs
   "${PTXLA_LIB}"
   "${PTXLA_LIBDIR}/torch_xla/lib/libxla_computation_client.so"
   "${PTPY_LIB}"
