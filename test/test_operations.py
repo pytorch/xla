@@ -1359,9 +1359,10 @@ class TestXLATensor(XlaTestCase):
 
 class TestAtenXlaTensor(XlaTestCase):
 
-  def test_size(self):
-    x = _gen_tensor(4, 2, device=_xla_device())
-    torch_xla._XLAC._get_xla_tensor(x)
+  def test_get_xla_tensor(self):
+    t = _gen_tensor(4, 2, device=_xla_device())
+    x = torch_xla._XLAC._get_xla_tensor(t)
+    self.assertEqual(t.data.cpu(), x.to_tensor())
 
 
 if __name__ == '__main__':
