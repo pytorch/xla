@@ -72,7 +72,7 @@ _FN_BLACKLIST = set([
 
 _FN_BLACKLIST_REGEX = [
     # ATEN functions
-    r'.*cudnn',
+    r'[^(]*cudnn',
     # XLA/TPU functions
 ]
 
@@ -317,11 +317,11 @@ def list_get(l, n):
   return l[n] if n < len(l) else None
 
 
-def is_blacklisted_fn(fname):
-  if fname in _FN_BLACKLIST:
+def is_blacklisted_fn(fname, mapsig):
+  if fname in _FN_BLACKLIST or mapsig in _FN_BLACKLIST:
     return True
   for frx in _FN_BLACKLIST_REGEX:
-    if re.match(frx, fname):
+    if re.match(frx, fname) or re.match(frx, mapsig):
       return True
   return False
 
@@ -679,6 +679,7 @@ def rewrite_tensor_options(fname, pname):
 def get_xla_wrapper(orig_sig, ctx):
   tree = _PARSER.parse(orig_sig)
   xtree = _XPARSER.parse(orig_sig)
+  mapsig = create_map_sig(xtree, orig_sig)
   rwsig = rewrite_signature(orig_sig, _TYPE_NSMAP)
   rwxtree = _XPARSER.parse(rwsig)
   params = get_parameters(tree)
@@ -698,6 +699,9 @@ def get_xla_wrapper(orig_sig, ctx):
     return 'xla_' + x + post
 
   sig, fname, xfname = get_function_signature(rwxtree, rwsig, gen_fnname)
+  if is_blacklisted_fn(fname, mapsig):
+    return None
+
   code = '{} {}{{\n'.format(sig, 'const ' if ctx.gen_class_mode else '')
   xla_ref_param = param_name(ref_param) if ref_param else None
   tfetcher = TensorFetcher('xlatens')
@@ -755,7 +759,7 @@ def get_xla_wrapper(orig_sig, ctx):
       rwsig=rwsig,
       cppsig=sig,
       funsig=create_stdfunc_sig(rwxtree, rwsig),
-      mapsig=create_map_sig(xtree, orig_sig))
+      mapsig=mapsig)
 
 
 def extract_functions(path):
@@ -766,10 +770,8 @@ def extract_functions(path):
       continue
     fndef = m.group(1)
     try:
-      tree = _PARSER.parse(fndef)
-      fname = get_function_name(tree)
-      if not is_blacklisted_fn(fname):
-        functions.append(fndef)
+      _XPARSER.parse(fndef)
+      functions.append(fndef)
     except:
       pass
   return functions
@@ -823,7 +825,15 @@ def generate(args):
   fgens = []
   ctx = Context(args.functions, args.native_functions, args.gen_class_mode)
   for ts in fndefs:
-    fgens.append(get_xla_wrapper(ts, ctx))
+    try:
+      fgen = get_xla_wrapper(ts, ctx)
+      if fgen:
+        fgens.append(fgen)
+    except:
+      pass
+  print(
+      'Generated {} wrappers for {}'.format(len(fgens), args.typedef),
+      file=sys.stderr)
 
   functions = generate_functions(fgens)
   if args.gen_class_mode:
