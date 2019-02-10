@@ -9,12 +9,20 @@
 namespace torch_xla {
 namespace bridge {
 
-XLATensor& GetXlaTensor(const at::Tensor& tensor) {
+c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor) {
   XLATensorImpl* impl =
       dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
-  XLA_CHECK(impl != nullptr)
-      << "Input tensor is not an XLA tensor: " << tensor.toString();
+  if (impl == nullptr) {
+    return c10::nullopt;
+  }
   return impl->tensor();
+}
+
+XLATensor GetXlaTensor(const at::Tensor& tensor) {
+  auto xtensor = TryGetXlaTensor(tensor);
+  XLA_CHECK(xtensor) << "Input tensor is not an XLA tensor: "
+                     << tensor.toString();
+  return *xtensor;
 }
 
 std::vector<at::Tensor> XlaCreateTensorList(
@@ -52,17 +60,38 @@ std::vector<at::Tensor> XlaCreateTensorList(
   return aten_xla_tensors;
 }
 
-std::vector<at::Tensor> CreateXlaTensors(const std::vector<at::Tensor>& tensors,
-                                         const Device& device) {
-  std::vector<at::Tensor> xtensors;
-  for (auto& tensor : tensors) {
-    xtensors.push_back(CreateXlaTensor(tensor, device));
+c10::optional<Device> GetXlaDevice(const at::Tensor& tensor) {
+  auto xtensor = TryGetXlaTensor(ToTensor(tensor));
+  if (!xtensor) {
+    return c10::nullopt;
   }
-  return xtensors;
+  return xtensor->GetDevice();
 }
 
-Device XlaTensorDevice(const at::Tensor& tensor) {
-  return GetXlaTensor(ToTensor(tensor)).GetDevice();
+c10::optional<Device> GetXlaDevice(const at::TensorList& tensors) {
+  for (const auto& tensor : tensors) {
+    auto device = GetXlaDevice(tensor);
+    if (device) {
+      return device;
+    }
+  }
+  return c10::nullopt;
+}
+
+c10::optional<Device> GetXlaDevice(const at::TensorOptions& tensor_options) {
+  if (!tensor_options.has_device()) {
+    return c10::nullopt;
+  }
+  return GetXlaDevice(tensor_options.device());
+}
+
+c10::optional<Device> GetXlaDevice(const c10::Device& device) {
+  if (device.type() != at::kXLA) {
+    return c10::nullopt;
+  }
+  Device xla_device = *GetDefaultDevice();
+  xla_device.ordinal = device.has_index() ? device.index() : 0;
+  return xla_device;
 }
 
 Device AtenDeviceToXlaDevice(const c10::Device& device) {
@@ -83,23 +112,27 @@ Device AtenDeviceToXlaDevice(const c10::Device& device) {
   }
 }
 
-Device XlaTensorDevice(const at::TensorOptions& tensor_options) {
-  return tensor_options.has_device()
-             ? AtenDeviceToXlaDevice(tensor_options.device())
-             : *GetDefaultDevice();
-}
-
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor) {
   return at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
 }
 
-at::Tensor CreateXlaTensor(at::Tensor tensor, const Device& device) {
-  if (tensor.defined()) {
+at::Tensor CreateXlaTensor(at::Tensor tensor,
+                           const c10::optional<Device>& device) {
+  if (tensor.defined() && device) {
     XLATensor xla_tensor =
-        XLATensor::Create(std::move(tensor), device, /*requires_grad=*/false);
+        XLATensor::Create(std::move(tensor), *device, /*requires_grad=*/false);
     tensor = AtenFromXlaTensor(xla_tensor);
   }
   return tensor;
+}
+
+std::vector<at::Tensor> CreateXlaTensors(const std::vector<at::Tensor>& tensors,
+                                         const c10::optional<Device>& device) {
+  std::vector<at::Tensor> xtensors;
+  for (auto& tensor : tensors) {
+    xtensors.push_back(CreateXlaTensor(tensor, device));
+  }
+  return xtensors;
 }
 
 }  // namespace bridge

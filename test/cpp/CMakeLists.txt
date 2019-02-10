@@ -74,13 +74,6 @@ target_compile_options(test_ptxla PRIVATE ${TGT_OPTS})
 
 add_dependencies(test_ptxla googletest)
 
-if(MSVC)
-  set(SUFFIX ".lib")
-else()
-  set(SUFFIX ".a")
-  set(PTHREAD "-pthread")
-endif()
-
 ExternalProject_Get_Property(googletest BINARY_DIR)
 
 file(GLOB XLAC_LIBS "${PTXLA_LIBDIR}/_XLAC.*.so")
@@ -103,15 +96,19 @@ find_library(C10_LIB "libc10.so"
 find_library(CAFFE_LIB "libcaffe2.so"
   HINTS "${PT_DIR}/build/lib")
 
+# Use --unresolved-symbols=ignore-all to get around the c10::Half::from_bits
+# undefined symbol error at link time. At runtime everything resolves correctly.
 target_link_libraries(
   test_ptxla
+  -Wl,--unresolved-symbols=ignore-all
   "${PTXLA_LIB}"
   "${PTXLA_LIBDIR}/torch_xla/lib/libxla_computation_client.so"
   "${PTPY_LIB}"
   "${PT_LIB}"
-  "${C10_LIB}"
   "${CAFFE_LIB}"
-  "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest${SUFFIX}"
+  "${C10_LIB}"
+  "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a"
   "${PYTHON_LIBRARY}"
-  ${PTHREAD}
+  -pthread
+  -lstdc++
   -ldl)
