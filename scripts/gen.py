@@ -82,7 +82,9 @@ _FN_BLACKLIST = set([
     'unsafeStorageFromTH',
     'unsafeTensorFromTH',
     # XLA/TPU functions
+    'ones',
     'ones_like',
+    'zeros',
     'zeros_like',
 ])
 
@@ -249,9 +251,7 @@ _CTOR_FUNCTIONS = {
     'empty': '.device(at::DeviceType::CPU)',
     'linspace': '.device(at::DeviceType::CPU)',
     'logspace': '.device(at::DeviceType::CPU)',
-    'ones': '.device(at::DeviceType::CPU)',
     'randn': '.device(at::DeviceType::CPU)',
-    'zeros': '.device(at::DeviceType::CPU)',
 }
 
 _FUNCTION_OPTIONS = {

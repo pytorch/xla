@@ -4,6 +4,7 @@
 
 #include "aten_xla_bridge.h"
 #include "aten_xla_type_instances.h"
+#include "device.h"
 #include "helpers.h"
 #include "tensor_impl.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -12,7 +13,8 @@ namespace torch_xla {
 namespace {
 
 struct XlaOptions {
-  XlaOptions(const at::TensorOptions& options, Device device)
+  XlaOptions(const at::TensorOptions& options,
+             c10::optional<Device> device = c10::nullopt)
       : device(std::move(device)) {
     if (options.has_device()) {
       device = bridge::AtenDeviceToXlaDevice(options.device());
@@ -22,7 +24,13 @@ struct XlaOptions {
     }
   }
 
-  Device device;
+  Device get_device() const { return device ? *device : *GetDefaultDevice(); }
+
+  at::ScalarType get_scalar_type() const {
+    return scalar_type ? *scalar_type : at::ScalarType::Float;
+  }
+
+  c10::optional<Device> device;
   c10::optional<at::ScalarType> scalar_type;
 };
 
@@ -41,6 +49,14 @@ AtenXlaType::AtenXlaType(at::TensorTypeId type_id, bool is_variable,
                          bool is_undefined)
     : AtenXlaTypeBase(type_id, is_variable, is_undefined) {}
 
+at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
+                              const at::TensorOptions& options) const {
+  XlaOptions xla_options(options);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::zeros(XlaHelpers::I64List(size), xla_options.get_device(),
+                       xla_options.get_scalar_type()));
+}
+
 at::Tensor AtenXlaType::zeros_like(const at::Tensor& self) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::zeros_like(
@@ -52,7 +68,15 @@ at::Tensor AtenXlaType::zeros_like(const at::Tensor& self,
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XlaOptions xla_options(options, self_tensor.GetDevice());
   return bridge::AtenFromXlaTensor(XLATensor::zeros_like(
-      self_tensor, xla_options.device, xla_options.scalar_type));
+      self_tensor, xla_options.get_device(), xla_options.scalar_type));
+}
+
+at::Tensor AtenXlaType::ones(at::IntArrayRef size,
+                             const at::TensorOptions& options) const {
+  XlaOptions xla_options(options);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::ones(XlaHelpers::I64List(size), xla_options.get_device(),
+                      xla_options.get_scalar_type()));
 }
 
 at::Tensor AtenXlaType::ones_like(const at::Tensor& self) const {
@@ -66,7 +90,7 @@ at::Tensor AtenXlaType::ones_like(const at::Tensor& self,
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XlaOptions xla_options(options, self_tensor.GetDevice());
   return bridge::AtenFromXlaTensor(XLATensor::ones_like(
-      self_tensor, xla_options.device, xla_options.scalar_type));
+      self_tensor, xla_options.get_device(), xla_options.scalar_type));
 }
 
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
