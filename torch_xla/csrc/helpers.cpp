@@ -28,6 +28,22 @@ xla::XlaOp XlaHelpers::CreateReturnValue(
   }
 }
 
+std::vector<xla::int64> XlaHelpers::DropDimensions(
+    tensorflow::gtl::ArraySlice<const xla::int64> sizes,
+    tensorflow::gtl::ArraySlice<const xla::int64> drop_dims) {
+  std::vector<xla::int64> new_dims;
+  size_t drop_index = 0;
+  for (size_t i = 0; i < sizes.size(); ++i) {
+    if (drop_index < drop_dims.size() && i == drop_dims[drop_index]) {
+      ++drop_index;
+    } else {
+      new_dims.push_back(sizes[i]);
+    }
+  }
+  XLA_CHECK_EQ(drop_index, drop_dims.size());
+  return new_dims;
+}
+
 xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfig(
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   XLA_CHECK_EQ(padding.size(), 2) << "Only 2D padding supported";

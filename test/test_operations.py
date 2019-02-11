@@ -1161,6 +1161,16 @@ class TestReplicatedSum(XlaTestCase):
       self.compareReplicated(model, inputs, out)
 
 
+class TestSelect(XlaTestCase):
+
+  def test_get_xla_tensor(self):
+    x = _gen_tensor(14, 24, 8, device=_xla_device())
+    t = x.data.cpu()
+    sx = x.select(1, 12)
+    tx = t.select(1, 12)
+    self.assertEqual(tx, sx.data.cpu())
+
+
 class TestXLATensor(XlaTestCase):
 
   def test_size(self):

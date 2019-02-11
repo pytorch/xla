@@ -24,6 +24,7 @@
 #include "ops/max_pool2d_backward.h"
 #include "ops/ops.h"
 #include "ops/scalar.h"
+#include "ops/select.h"
 #include "ops/softmax.h"
 #include "ops/softmax_backward.h"
 #include "ops/threshold.h"
@@ -664,6 +665,12 @@ XLATensor XLATensor::zeros_like(const XLATensor& input, const Device& device,
     tensor_shape.set_element_type(MakeXlaPrimitiveType(*scalar_type, &device));
   }
   return Create(ir::MakeNode<ir::ops::Scalar>(0, tensor_shape), device);
+}
+
+XLATensor XLATensor::select(const XLATensor& input, int64_t dim,
+                            int64_t index) {
+  return Create(ir::MakeNode<ir::ops::Select>(input.GetIrValue(), dim, index),
+                input.GetDevice());
 }
 
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,
