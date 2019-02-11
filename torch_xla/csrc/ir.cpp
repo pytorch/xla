@@ -47,8 +47,8 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
       hash_(xla::util::HashCombine(op_.hash(), hash_seed)) {
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
-    graph_size_ += operand.node->graph_size();
-    hash_ = xla::util::HashCombine(hash_, operand.node->hash());
+    graph_size_ += operand->graph_size();
+    hash_ = xla::util::HashCombine(hash_, operand->hash());
   }
 }
 

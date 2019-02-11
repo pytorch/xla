@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(
                                   /*input=*/operands[1], kernel_size, stride,
                                   padding, count_include_pad);
   };
-  return InferOutputShape({grad_output.node->shape(), input.node->shape()},
+  return InferOutputShape({grad_output->shape(), input->shape()},
                           lower_for_shape_fn);
 }
 

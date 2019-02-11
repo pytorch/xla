@@ -19,7 +19,7 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 dim) {
         << "Unexpected number of operands: " << operands.size();
     return BuildLogSoftmax(operands[0], dim);
   };
-  return InferOutputShape({input.node->shape()}, lower_for_shape_fn);
+  return InferOutputShape({input->shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
