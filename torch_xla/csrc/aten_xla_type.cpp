@@ -70,14 +70,14 @@ at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
 }
 
 at::Tensor AtenXlaType::zeros_like(const at::Tensor& self) const {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
   return bridge::AtenFromXlaTensor(XLATensor::zeros_like(
       self_tensor, self_tensor.GetDevice(), c10::nullopt));
 }
 
 at::Tensor AtenXlaType::zeros_like(const at::Tensor& self,
                                    const at::TensorOptions& options) const {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
   XlaOptions xla_options(options, self_tensor.GetDevice());
   return bridge::AtenFromXlaTensor(XLATensor::zeros_like(
       self_tensor, xla_options.get_device(), xla_options.scalar_type));
@@ -92,14 +92,14 @@ at::Tensor AtenXlaType::ones(at::IntArrayRef size,
 }
 
 at::Tensor AtenXlaType::ones_like(const at::Tensor& self) const {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
   return bridge::AtenFromXlaTensor(
       XLATensor::ones_like(self_tensor, self_tensor.GetDevice(), c10::nullopt));
 }
 
 at::Tensor AtenXlaType::ones_like(const at::Tensor& self,
                                   const at::TensorOptions& options) const {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
   XlaOptions xla_options(options, self_tensor.GetDevice());
   return bridge::AtenFromXlaTensor(XLATensor::ones_like(
       self_tensor, xla_options.get_device(), xla_options.scalar_type));
