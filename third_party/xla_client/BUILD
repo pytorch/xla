@@ -98,7 +98,7 @@ cc_library(
         "//tensorflow/compiler/xrt:xrt_server",
         "//tensorflow/compiler/xrt/cc:xrt_ops",
         "//tensorflow/contrib/tpu:all_ops",
-        "//tensorflow/contrib/tpu/proto:topology_proto_cc",
+        "//tensorflow/core/protobuf/tpu:topology_proto_cc",
         "//tensorflow/core:core_cpu",
         "//tensorflow/core:framework_internal",
         "//tensorflow/core:lib",
