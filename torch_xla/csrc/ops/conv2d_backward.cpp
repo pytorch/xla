@@ -29,7 +29,7 @@ xla::Shape NodeOutputShape(
                       {grads.grad_input, grads.grad_weight, grads.grad_bias});
   };
   return InferOutputShape(
-      {grad_output.node->shape(), input.node->shape(), weight.node->shape()},
+      {grad_output->shape(), input->shape(), weight->shape()},
       lower_for_shape_fn);
 }
 

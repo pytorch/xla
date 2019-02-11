@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(
         << "Unexpected number of operands: " << operands.size();
     return BuildMaxPool2d(operands[0], kernel_size, stride, padding);
   };
-  return InferOutputShape({input.node->shape()}, lower_for_shape_fn);
+  return InferOutputShape({input->shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
