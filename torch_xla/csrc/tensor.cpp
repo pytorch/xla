@@ -495,6 +495,17 @@ void XLATensor::add_(const XLATensor& other, const at::Scalar& alpha) {
   SetIrValue(GetIrValue() + other.GetIrValue() * constant);
 }
 
+XLATensor XLATensor::sub(const XLATensor& other,
+                         const at::Scalar& alpha) const {
+  ir::NodePtr constant = ir::ops::ScalarOp(alpha.toDouble(), other.shape());
+  return Create(GetIrValue() - other.GetIrValue() * constant, data()->device);
+}
+
+void XLATensor::sub_(const XLATensor& other, const at::Scalar& alpha) {
+  ir::NodePtr constant = ir::ops::ScalarOp(alpha.toDouble(), other.shape());
+  SetIrValue(GetIrValue() - other.GetIrValue() * constant);
+}
+
 XLATensor XLATensor::mul(const XLATensor& other) const {
   return Create(GetIrValue() * other.GetIrValue(), data()->device);
 }

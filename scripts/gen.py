@@ -87,6 +87,7 @@ _FN_BLACKLIST = set([
     'ones',
     'ones_like',
     'zeros',
+    'zero_',
     'zeros_like',
 ])
 
