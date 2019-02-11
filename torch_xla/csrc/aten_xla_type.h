@@ -9,6 +9,8 @@ class AtenXlaType : public AtenXlaTypeBase {
  public:
   AtenXlaType(at::TensorTypeId type_id, bool is_variable, bool is_undefined);
 
+  int64_t numel(const at::Tensor & self) const override;
+
   at::Tensor _s_copy_from(const at::Tensor& self, const at::Tensor& dst,
                           bool non_blocking) const override;
 
