@@ -28,6 +28,10 @@ XLATensor GetXlaTensor(const at::Tensor& tensor) {
   return *xtensor;
 }
 
+XLATensor GetXlaTensorUnwrap(const at::Tensor& tensor) {
+  return GetXlaTensor(ToTensor(tensor));
+}
+
 std::vector<at::Tensor> XlaCreateTensorList(
     const at::TensorList& tensors, const std::vector<bool>* writeable) {
   std::vector<at::Tensor> aten_xla_tensors(tensors.size());
@@ -45,7 +49,7 @@ std::vector<at::Tensor> XlaCreateTensorList(
       aten_xla_tensors[i] = ToTensor(tensor);
     } else {
       to_translate[i] = true;
-      xla_tensors.push_back(GetXlaTensor(ToTensor(tensor)));
+      xla_tensors.push_back(GetXlaTensorUnwrap(tensor));
       if (writeable != nullptr) {
         defined_writeable.push_back((*writeable)[i]);
       }
