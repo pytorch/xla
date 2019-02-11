@@ -273,6 +273,12 @@ at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntList size) const {
       bridge::GetXlaTensor(self).view(XlaHelpers::I64List(size)));
 }
 
+at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,
+                               int64_t index) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::select(bridge::GetXlaTensor(self), dim, index));
+}
+
 at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim) const {
   return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).log_softmax(dim));
 }

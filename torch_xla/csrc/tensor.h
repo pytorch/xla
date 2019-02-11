@@ -162,6 +162,8 @@ class XLATensor {
   static XLATensor zeros_like(const XLATensor& input, const Device& device,
                               c10::optional<at::ScalarType> scalar_type);
 
+  static XLATensor select(const XLATensor& input, int64_t dim, int64_t index);
+
   static XLATensor mm(const XLATensor& input, const XLATensor& weight,
                       bool use_full_conv_precision);
 
