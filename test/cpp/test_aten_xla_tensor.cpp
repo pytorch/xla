@@ -528,6 +528,37 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, DISABLED_TestBatchNorm2D) {
+  int num_features = 3;
+  at::Tensor input = GetTestTesor({14, num_features, 5, 7});
+  at::Tensor weight = GetTestTesor({num_features});
+  at::Tensor bias = GetTestTesor({num_features});
+  at::Tensor running_mean =
+      at::zeros({num_features}, at::TensorOptions(at::kFloat));
+  at::Tensor running_var =
+      at::ones({num_features}, at::TensorOptions(at::kFloat));
+  double momentum = 0.1;
+  double eps = 0.5;
+  at::Tensor output = at::batch_norm(
+      /*input=*/input, /*weight=*/weight, /*bias=*/bias,
+      /*running_mean=*/running_mean, /*running_var=*/running_var,
+      /*training=*/true, /*momentum=*/momentum, /*eps=*/eps,
+      /*cudnn_enabled=*/false);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
+    at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
+    at::Tensor xla_running_mean = bridge::CreateXlaTensor(running_mean, device);
+    at::Tensor xla_running_var = bridge::CreateXlaTensor(running_var, device);
+    at::Tensor xla_output = at::batch_norm(
+        /*input=*/xla_input, /*weight=*/xla_weight, /*bias=*/xla_bias,
+        /*running_mean=*/xla_running_mean, /*running_var=*/xla_running_var,
+        /*training=*/true, /*momentum=*/momentum, /*eps=*/eps,
+        /*cudnn_enabled=*/false);
+    AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
