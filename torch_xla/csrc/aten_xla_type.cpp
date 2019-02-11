@@ -336,6 +336,21 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
       XlaHelpers::I64List(padding), count_include_pad));
 }
 
+at::Tensor AtenXlaType::batch_norm(
+    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
+    const at::Tensor& running_mean, const at::Tensor& running_var,
+    bool training, double momentum, double eps, bool cudnn_enabled) const {
+  if (input.dim() != 4 || cudnn_enabled) {
+    return AtenXlaTypeBase::batch_norm(input, weight, bias, running_mean,
+                                       running_var, training, momentum, eps,
+                                       cudnn_enabled);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::batch_norm(
+      bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight),
+      bridge::GetXlaTensor(bias), bridge::GetXlaTensor(running_mean),
+      bridge::GetXlaTensor(running_var), momentum, eps));
+}
+
 at::Tensor AtenXlaType::avg_pool2d_backward(const at::Tensor& grad_output,
                                             const at::Tensor& self,
                                             at::IntList kernel_size,

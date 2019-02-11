@@ -13,6 +13,7 @@
 #include "ops/arithmetic_ir_ops.h"
 #include "ops/avg_pool2d.h"
 #include "ops/avg_pool2d_backward.h"
+#include "ops/batch_norm_forward.h"
 #include "ops/constant.h"
 #include "ops/conv2d.h"
 #include "ops/conv2d_backward.h"
@@ -678,6 +679,18 @@ XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,
   return Create(ir::ops::MatMulOp(input.GetIrValue(), weight.GetIrValue(),
                                   use_full_conv_precision),
                 input.GetDevice());
+}
+
+XLATensor XLATensor::batch_norm(const XLATensor& input, const XLATensor& weight,
+                                const XLATensor& bias,
+                                const XLATensor& running_mean,
+                                const XLATensor& running_var, double momentum,
+                                double eps) {
+  return Create(
+      ir::MakeNode<ir::ops::BatchNormForward>(
+          input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue(),
+          running_mean.GetIrValue(), running_var.GetIrValue(), momentum, eps),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::avg_pool2d_backward(

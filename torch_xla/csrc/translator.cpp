@@ -479,9 +479,11 @@ void TranslateBatchNorm(const torch::jit::Node* node, ComputationContext* cctx,
                         xla::PrecisionConfig::Precision /*conv_precision*/,
                         xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 8);
+  const float eps_value =
+      node->get<at::Scalar>(at::attr::eps).value().to<float>();
   BatchNormOutput outputs =
-      BuildBatchNorm(node, cctx->OpForInput(node, 0), cctx->OpForInput(node, 1),
-                     cctx->OpForInput(node, 2));
+      BuildBatchNorm(cctx->OpForInput(node, 0), cctx->OpForInput(node, 1),
+                     cctx->OpForInput(node, 2), eps_value);
   const auto node_outputs = node->outputs();
   cctx->AddValueOp(node_outputs[0], outputs.output);
   if (node->kind() == at::aten::batch_norm) {
@@ -500,12 +502,15 @@ void TranslateBatchNormBackward(
     xla::PrecisionConfig::Precision /*conv_precision*/,
     xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 10);
+  const float eps_value =
+      node->get<at::Scalar>(at::attr::eps).value().to<float>();
   BatchNormGrads grads =
-      BuildBatchNormBackward(node, cctx->OpForInput(node, 0),  // grad_output
-                             cctx->OpForInput(node, 1),        // input
-                             cctx->OpForInput(node, 2),        // weight
-                             cctx->OpForInput(node, 5),        // save_mean
-                             cctx->OpForInput(node, 6));       // save_std
+      BuildBatchNormBackward(cctx->OpForInput(node, 0),  // grad_output
+                             cctx->OpForInput(node, 1),  // input
+                             cctx->OpForInput(node, 2),  // weight
+                             cctx->OpForInput(node, 5),  // save_mean
+                             cctx->OpForInput(node, 6),  // save_std
+                             eps_value);                 // eps_value
   const auto node_outputs = node->outputs();
   cctx->AddValueOp(node_outputs[0], grads.grad_input);
   cctx->AddValueOp(node_outputs[1], grads.grad_weight);
