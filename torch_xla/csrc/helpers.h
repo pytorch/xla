@@ -84,6 +84,11 @@ class XlaHelpers {
   static xla::PaddingConfig MakeXlaPaddingConfig(
       tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
+  // Creates a set of dimension by dropping the drop_dims ones.
+  static std::vector<xla::int64> DropDimensions(
+      tensorflow::gtl::ArraySlice<const xla::int64> sizes,
+      tensorflow::gtl::ArraySlice<const xla::int64> drop_dims);
+
   // Creates a binary add computation.
   static xla::XlaComputation CreateAddComputation(xla::PrimitiveType type);
 
