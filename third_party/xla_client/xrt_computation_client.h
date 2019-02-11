@@ -26,8 +26,8 @@
 #include "tensorflow/compiler/xrt/cc/ops/xrt_execute_op.h"
 #include "tensorflow/compiler/xrt/cc/ops/xrt_state_ops.h"
 #include "tensorflow/compiler/xrt/xrt.pb.h"
-#include "tensorflow/contrib/tpu/proto/topology.pb.h"
 #include "tensorflow/core/framework/tensor.h"
+#include "tensorflow/core/protobuf/tpu/topology.pb.h"
 
 namespace xla {
 
