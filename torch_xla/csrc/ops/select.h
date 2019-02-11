@@ -21,8 +21,8 @@ class Select : public Node {
   xla::int64 index() const { return index_; }
 
  private:
-  xla::int64 dim_ = 0;
-  xla::int64 index_ = 0;
+  xla::int64 dim_;
+  xla::int64 index_;
 };
 
 }  // namespace ops
