@@ -94,6 +94,9 @@ class XLATensor {
   XLATensor add(const XLATensor& other, const at::Scalar& alpha) const;
   void add_(const XLATensor& other, const at::Scalar& alpha);
 
+  XLATensor sub(const XLATensor& other, const at::Scalar& alpha) const;
+  void sub_(const XLATensor& other, const at::Scalar& alpha);
+
   XLATensor mul(const XLATensor& other) const;
   XLATensor mul(const at::Scalar& other) const;
   void mul_(const XLATensor& other);

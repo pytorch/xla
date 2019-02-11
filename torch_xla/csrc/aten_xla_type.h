@@ -9,7 +9,7 @@ class AtenXlaType : public AtenXlaTypeBase {
  public:
   AtenXlaType(at::TensorTypeId type_id, bool is_variable, bool is_undefined);
 
-  int64_t numel(const at::Tensor & self) const override;
+  int64_t numel(const at::Tensor& self) const override;
 
   at::Tensor _s_copy_from(const at::Tensor& self, const at::Tensor& dst,
                           bool non_blocking) const override;
@@ -19,6 +19,7 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor zeros_like(const at::Tensor& self) const override;
   at::Tensor zeros_like(const at::Tensor& self,
                         const at::TensorOptions& options) const override;
+  at::Tensor& zero_(at::Tensor& self) const override;
 
   at::Tensor ones(at::IntArrayRef size,
                   const at::TensorOptions& options) const override;
@@ -28,18 +29,20 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor add(const at::Tensor& self, const at::Tensor& other,
                  at::Scalar alpha) const override;
-
   at::Tensor& add_(at::Tensor& self, const at::Tensor& other,
+                   at::Scalar alpha) const override;
+
+  at::Tensor sub(const at::Tensor& self, const at::Tensor& other,
+                 at::Scalar alpha) const override;
+  at::Tensor& sub_(at::Tensor& self, const at::Tensor& other,
                    at::Scalar alpha) const override;
 
   at::Tensor mul(const at::Tensor& self,
                  const at::Tensor& other) const override;
-
   at::Tensor& mul_(at::Tensor& self, const at::Tensor& other) const override;
 
   at::Tensor div(const at::Tensor& self,
                  const at::Tensor& other) const override;
-
   at::Tensor& div_(at::Tensor& self, const at::Tensor& other) const override;
 
   int64_t size(const at::Tensor& self, int64_t dim) const override;

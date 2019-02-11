@@ -88,6 +88,11 @@ at::Tensor AtenXlaType::zeros_like(const at::Tensor& self,
       self_tensor, xla_options.get_device(), xla_options.scalar_type));
 }
 
+at::Tensor& AtenXlaType::zero_(at::Tensor& self) const {
+  bridge::GetXlaTensor(self).zero_();
+  return self;
+}
+
 at::Tensor AtenXlaType::ones(at::IntArrayRef size,
                              const at::TensorOptions& options) const {
   XlaOptions xla_options(options);
@@ -119,6 +124,18 @@ at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
 at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Tensor& other,
                               at::Scalar alpha) const {
   bridge::GetXlaTensor(self).add_(bridge::GetXlaTensor(other), alpha);
+  return self;
+}
+
+at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
+                            at::Scalar alpha) const {
+  return bridge::AtenFromXlaTensor(
+      bridge::GetXlaTensor(self).sub(bridge::GetXlaTensor(other), alpha));
+}
+
+at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Tensor& other,
+                              at::Scalar alpha) const {
+  bridge::GetXlaTensor(self).sub_(bridge::GetXlaTensor(other), alpha);
   return self;
 }
 
