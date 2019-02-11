@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(
     return BuildConvolution(operands[0], operands[1], stride, padding,
                             xla::PrecisionConfig::DEFAULT);
   };
-  return InferOutputShape({input.node->shape(), weight.node->shape()},
+  return InferOutputShape({input->shape(), weight->shape()},
                           lower_for_shape_fn);
 }
 

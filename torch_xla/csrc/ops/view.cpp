@@ -22,7 +22,7 @@ xla::Shape NodeOutputShape(
         << "Unexpected number of operands: " << operands.size();
     return BuildView(operands[0], output_sizes);
   };
-  return InferOutputShape({input.node->shape()}, lower_for_shape_fn);
+  return InferOutputShape({input->shape()}, lower_for_shape_fn);
 }
 
 }  // namespace

@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(
     return BuildAvgPool2d(operands[0], kernel_size, stride, padding,
                           count_include_pad);
   };
-  return InferOutputShape({input.node->shape()}, lower_for_shape_fn);
+  return InferOutputShape({input->shape()}, lower_for_shape_fn);
 }
 
 }  // namespace

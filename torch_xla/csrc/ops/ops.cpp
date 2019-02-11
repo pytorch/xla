@@ -24,7 +24,7 @@ NodePtr ReluOp(const Value& input) {
     return BuildRelu(operands[0]);
   };
   xla::Shape output_shape =
-      ir::ops::InferOutputShape({input.node->shape()}, lower_for_shape_fn);
+      ir::ops::InferOutputShape({input->shape()}, lower_for_shape_fn);
   return ir::ops::GenericOp(ir::OpKind(at::aten::relu), ir::OpList{input},
                             output_shape, std::move(lower_fn));
 }
@@ -42,7 +42,7 @@ NodePtr TransposeOp(const Value& input) {
     return xla::Transpose(operands[0], {1, 0});
   };
   xla::Shape output_shape =
-      ir::ops::InferOutputShape({input.node->shape()}, lower_for_shape_fn);
+      ir::ops::InferOutputShape({input->shape()}, lower_for_shape_fn);
   return ir::ops::GenericOp(ir::OpKind(at::aten::t), ir::OpList{input},
                             output_shape, std::move(lower_fn));
 }
@@ -78,7 +78,7 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
     return xla::Dot(operands[0], operands[1]);
   };
   xla::Shape output_shape = ir::ops::InferOutputShape(
-      {input.node->shape(), weight.node->shape()}, lower_for_shape_fn);
+      {input->shape(), weight->shape()}, lower_for_shape_fn);
   return ir::ops::GenericOp(ir::OpKind(at::aten::addmm),
                             ir::OpList{input, weight, bias}, output_shape,
                             std::move(lower_fn));
@@ -106,7 +106,7 @@ NodePtr MatMulOp(const Value& input, const Value& weight,
     return xla::Dot(operands[0], operands[1]);
   };
   xla::Shape output_shape = ir::ops::InferOutputShape(
-      {input.node->shape(), weight.node->shape()}, lower_for_shape_fn);
+      {input->shape(), weight->shape()}, lower_for_shape_fn);
   return ir::ops::GenericOp(ir::OpKind(at::aten::mm), ir::OpList{input, weight},
                             output_shape, std::move(lower_fn));
 }
@@ -125,7 +125,7 @@ NodePtr NllLossOp(const Value& logits, const Value& labels) {
     return BuildNllLoss(/*logits=*/operands[0], /*labels=*/operands[1]);
   };
   xla::Shape output_shape = ir::ops::InferOutputShape(
-      {logits.node->shape(), labels.node->shape()}, lower_for_shape_fn);
+      {logits->shape(), labels->shape()}, lower_for_shape_fn);
   return ir::ops::GenericOp(ir::OpKind(at::aten::nll_loss),
                             ir::OpList{logits, labels}, output_shape,
                             std::move(lower_fn));
@@ -145,7 +145,7 @@ NodePtr NllLossBackwardOp(const Value& logits, const Value& labels) {
     return BuildNllLossBackward(/*logits=*/operands[0], /*labels=*/operands[1]);
   };
   xla::Shape output_shape = ir::ops::InferOutputShape(
-      {logits.node->shape(), labels.node->shape()}, lower_for_shape_fn);
+      {logits->shape(), labels->shape()}, lower_for_shape_fn);
   return ir::ops::GenericOp(ir::OpKind(at::aten::nll_loss_backward),
                             ir::OpList{logits, labels}, output_shape,
                             std::move(lower_fn));
