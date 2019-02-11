@@ -167,6 +167,12 @@ class XLATensor {
   static XLATensor mm(const XLATensor& input, const XLATensor& weight,
                       bool use_full_conv_precision);
 
+  static XLATensor batch_norm(const XLATensor& input, const XLATensor& weight,
+                              const XLATensor& bias,
+                              const XLATensor& running_mean,
+                              const XLATensor& running_var, double momentum,
+                              double eps);
+
   static XLATensor avg_pool2d_backward(
       const XLATensor& out_backprop, const XLATensor& input,
       tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,

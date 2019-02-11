@@ -3,14 +3,11 @@
 
 namespace torch_xla {
 
-BatchNormOutput BuildBatchNorm(const torch::jit::Node* node,
-                               const xla::XlaOp& input,
-                               const xla::XlaOp& weight,
-                               const xla::XlaOp& bias) {
+BatchNormOutput BuildBatchNorm(const xla::XlaOp& input,
+                               const xla::XlaOp& weight, const xla::XlaOp& bias,
+                               float eps_value) {
   xla::XlaBuilder* builder = input.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const float eps_value =
-      node->get<at::Scalar>(at::attr::eps).value().to<float>();
   xla::XlaOp eps =
       XlaHelpers::ScalarValue(eps_value, input_shape.element_type(), builder);
   xla::XlaOp one =
@@ -27,16 +24,14 @@ BatchNormOutput BuildBatchNorm(const torch::jit::Node* node,
   return {output, save_mean, save_invstd_eps};
 }
 
-BatchNormGrads BuildBatchNormBackward(const torch::jit::Node* node,
-                                      const xla::XlaOp& grad,
+BatchNormGrads BuildBatchNormBackward(const xla::XlaOp& grad,
                                       const xla::XlaOp& input,
                                       const xla::XlaOp& weight,
                                       const xla::XlaOp& save_mean,
-                                      const xla::XlaOp& save_invstd_eps) {
+                                      const xla::XlaOp& save_invstd_eps,
+                                      float eps_value) {
   xla::XlaBuilder* builder = grad.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const float eps_value =
-      node->get<at::Scalar>(at::attr::eps).value().to<float>();
   xla::XlaOp eps =
       XlaHelpers::ScalarValue(eps_value, input_shape.element_type(), builder);
   xla::XlaOp one =

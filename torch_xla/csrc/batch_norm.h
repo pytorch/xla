@@ -17,16 +17,15 @@ struct BatchNormGrads {
   xla::XlaOp grad_bias;
 };
 
-BatchNormOutput BuildBatchNorm(const torch::jit::Node* node,
-                               const xla::XlaOp& input,
-                               const xla::XlaOp& weight,
-                               const xla::XlaOp& bias);
+BatchNormOutput BuildBatchNorm(const xla::XlaOp& input,
+                               const xla::XlaOp& weight, const xla::XlaOp& bias,
+                               float eps_value);
 
-BatchNormGrads BuildBatchNormBackward(const torch::jit::Node* node,
-                                      const xla::XlaOp& grad,
+BatchNormGrads BuildBatchNormBackward(const xla::XlaOp& grad,
                                       const xla::XlaOp& input,
                                       const xla::XlaOp& weight,
                                       const xla::XlaOp& save_mean,
-                                      const xla::XlaOp& save_invstd_eps);
+                                      const xla::XlaOp& save_invstd_eps,
+                                      float eps_value);
 
 }  // namespace torch_xla
