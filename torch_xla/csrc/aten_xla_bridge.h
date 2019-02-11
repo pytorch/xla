@@ -17,9 +17,6 @@ namespace bridge {
 // if tensor is not an XLA tensor.
 XLATensor GetXlaTensor(const at::Tensor& tensor);
 
-// Fetches the underline XLATensor object if tensor is an XLA tensor.
-c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor);
-
 // Creates a vector of at::Tensor objects extracted from a list of XLA tensors.
 // If the writeable vector is not nullptr, it must be the same size as tensors,
 // and the corresponding bool tells whether the ATEN tensor to be retrieved
