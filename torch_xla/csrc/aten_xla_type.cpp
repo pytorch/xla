@@ -50,6 +50,11 @@ AtenXlaType::AtenXlaType(at::TensorTypeId type_id, bool is_variable,
                          bool is_undefined)
     : AtenXlaTypeBase(type_id, is_variable, is_undefined) {}
 
+int64_t AtenXlaType::numel(const at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return xla::ShapeUtil::ElementsIn(self_tensor.shape());
+}
+
 at::Tensor AtenXlaType::_s_copy_from(const at::Tensor& self,
                                      const at::Tensor& /* dst */,
                                      bool /* non_blocking */) const {
