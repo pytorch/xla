@@ -27,6 +27,11 @@ std::string Use::ToString() const {
   return ss.str();
 }
 
+size_t Output::Hasher::operator()(const Output& output) const {
+  return xla::util::HashCombine(reinterpret_cast<std::ptrdiff_t>(output.node),
+                                output.index);
+}
+
 std::string Output::ToString() const {
   std::stringstream ss;
   ss << node->ToString() << ", index=" << index;

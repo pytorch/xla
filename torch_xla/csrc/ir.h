@@ -57,10 +57,7 @@ inline std::ostream& operator<<(std::ostream& stream, const Use& use) {
 // each single output.
 struct Output {
   struct Hasher {
-    size_t operator()(const Output& output) const {
-      size_t h = reinterpret_cast<std::ptrdiff_t>(output.node);
-      return h ^ (output.index + 0x9e3779b97f4a7c15 + (h << 6) + (h >> 2));
-    }
+    size_t operator()(const Output& output) const;
   };
 
   Output() = default;
