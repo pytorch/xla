@@ -12,8 +12,7 @@ namespace {
 
 xla::Shape GetSelectShape(const xla::Shape& input_shape, xla::int64 dim,
                           xla::int64 index) {
-  auto new_dims =
-      XlaHelpers::DropDimensions(input_shape.dimensions(), {dim});
+  auto new_dims = XlaHelpers::DropDimensions(input_shape.dimensions(), {dim});
   return xla::ShapeUtil::MakeShape(input_shape.element_type(), new_dims);
 }
 
@@ -21,7 +20,7 @@ xla::Shape GetSelectShape(const xla::Shape& input_shape, xla::int64 dim,
 
 Select::Select(const Value& input, xla::int64 dim, xla::int64 index)
     : Node(ir::OpKind(at::aten::select), {input},
-           GetSelectShape(input->shape(), dim, index),
+           GetSelectShape(input.shape(), dim, index),
            /*num_outputs=*/1, xla::util::MHash(dim, index)),
       dim_(dim),
       index_(index) {}

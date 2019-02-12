@@ -28,9 +28,8 @@ xla::Shape NodeOutputShape(
     return xla::Tuple(operands[0].builder(),
                       {grads.grad_input, grads.grad_weight, grads.grad_bias});
   };
-  return InferOutputShape(
-      {grad_output->shape(), input->shape(), weight->shape()},
-      lower_for_shape_fn);
+  return InferOutputShape({grad_output.shape(), input.shape(), weight.shape()},
+                          lower_for_shape_fn);
 }
 
 xla::PrecisionConfig::Precision MakePrecisionConfig(

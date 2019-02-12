@@ -10,7 +10,7 @@ namespace ops {
 
 CrossReplicaSum::CrossReplicaSum(const Value& operand,
                                  std::vector<std::vector<xla::int64>> groups)
-    : Node(xla_cross_replica_sum, {operand}, operand->shape(),
+    : Node(xla_cross_replica_sum, {operand}, operand.shape(),
            /*num_outputs=*/1, xla::util::MHash(groups)),
       groups_(std::move(groups)) {}
 

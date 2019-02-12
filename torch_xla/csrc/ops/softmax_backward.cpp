@@ -20,7 +20,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& output,
     return BuildLogSoftmaxGrad(/*grad_output=*/operands[0],
                                /*output=*/operands[1], dim);
   };
-  return InferOutputShape({grad_output.node->shape(), output.node->shape()},
+  return InferOutputShape({grad_output.shape(), output.shape()},
                           lower_for_shape_fn);
 }
 
