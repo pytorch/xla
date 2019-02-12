@@ -102,12 +102,14 @@ void Node::ReplaceAllUsesWith(NodePtr node, size_t index) {
 }
 
 XlaOpVector Node::ReturnOp(xla::XlaOp op, LoweringContext* loctx) const {
+  XLA_CHECK_EQ(num_outputs(), 1);
   loctx->AssignOutputOp(Output(this), op);
   return XlaOpVector({std::move(op)});
 }
 
 XlaOpVector Node::ReturnOps(tensorflow::gtl::ArraySlice<const xla::XlaOp> ops,
                             LoweringContext* loctx) const {
+  XLA_CHECK_EQ(num_outputs(), ops.size());
   XlaOpVector result;
   for (size_t i = 0; i < ops.size(); ++i) {
     loctx->AssignOutputOp(Output(this, i), ops[i]);
