@@ -5,6 +5,16 @@ set -e
 # Display commands being run.
 set -x
 
+function install_bazel() {
+  local BAZEL_VERSION="0.22.0"
+  local BAZEL_FILE="bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh"
+  sudo apt-get install pkg-config zip zlib1g-dev unzip
+  curl -L -O "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_FILE}"
+  chmod 755 "$BAZEL_FILE"
+  ./"$BAZEL_FILE" --user
+  export PATH="$PATH:$HOME/bin"
+}
+
 # Setup build environment
 ## Update compilers to use gcc/g++/cpp-6 as default
 sudo apt-get update
@@ -44,11 +54,14 @@ curl -O https://repo.anaconda.com/archive/Anaconda3-5.2.0-Linux-x86_64.sh
 sh Anaconda3-5.2.0-Linux-x86_64.sh -b
 export PATH="$HOME/anaconda3/bin:$PATH"
 
+# Install Bazel
+install_bazel
+
 ## Setup conda env
 conda create --name pytorch python=3.5 anaconda
 source activate pytorch
 export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
-conda install -y numpy pyyaml mkl mkl-include setuptools cmake cffi typing bazel
+conda install -y numpy pyyaml mkl mkl-include setuptools cmake cffi typing
 sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
 
 # Install the Lark parser required for the XLA->ATEN Type code generation.
