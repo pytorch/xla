@@ -3,10 +3,11 @@ set -ex
 RUNDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 BUILDDIR="$RUNDIR/build"
 VERB=
+FILTER=
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 
-while getopts 'VLK' OPTION
+while getopts 'VLKF:' OPTION
 do
   case $OPTION in
     V)
@@ -17,6 +18,9 @@ do
       ;;
     K)
       RMBUILD=0
+      ;;
+    F)
+      FILTER="--gtest_filter=$OPTARG"
       ;;
   esac
 done
@@ -30,9 +34,9 @@ cmake "$RUNDIR" \
     -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
 make $VERB
 if [ "$LOGFILE" != "" ]; then
-  ./test_ptxla 2>$LOGFILE
+  ./test_ptxla ${FILTER:+"$FILTER"} 2>$LOGFILE
 else
-  ./test_ptxla
+  ./test_ptxla ${FILTER:+"$FILTER"}
 fi
 popd
 if [ $RMBUILD -eq 1 ]; then
