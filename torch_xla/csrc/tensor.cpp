@@ -10,6 +10,7 @@
 #include "data_ops.h"
 #include "helpers.h"
 #include "lowering_context.h"
+#include "ops/adaptive_avg_pool2d.h"
 #include "ops/arithmetic_ir_ops.h"
 #include "ops/avg_pool2d.h"
 #include "ops/avg_pool2d_backward.h"
@@ -731,6 +732,14 @@ XLATensor::native_batch_norm_backward(
   XLATensor grad_bias = Create(ir::Value(node, 2), input.GetDevice());
   return std::make_tuple(std::move(grad_input), std::move(grad_weight),
                          std::move(grad_bias));
+}
+
+XLATensor XLATensor::adaptive_avg_pool2d(
+    const XLATensor& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
+  return Create(
+      ir::MakeNode<ir::ops::AdaptiveAvgPool2d>(input.GetIrValue(), output_size),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::avg_pool2d_backward(

@@ -177,6 +177,10 @@ class XLATensor {
                               const XLATensor& running_var, double momentum,
                               double eps);
 
+  static XLATensor adaptive_avg_pool2d(
+      const XLATensor& input,
+      tensorflow::gtl::ArraySlice<const xla::int64> output_size);
+
   static XLATensor avg_pool2d_backward(
       const XLATensor& out_backprop, const XLATensor& input,
       tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
