@@ -8,31 +8,13 @@
 namespace torch_xla {
 namespace ir {
 namespace ops {
-namespace {
-
-xla::Shape NodeOutputShape(const Value& input, const Value& weight,
-                           const Value& bias) {
-  auto lower_for_shape_fn =
-      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 3)
-        << "Unexpected number of operands: " << operands.size();
-    BatchNormOutput xla_outputs =
-        BuildBatchNorm(operands[0], operands[1], operands[2], 0);
-    return xla_outputs.output;
-  };
-  return InferOutputShape({input->shape(), weight->shape(), bias->shape()},
-                          lower_for_shape_fn);
-}
-
-}  // namespace
 
 BatchNormForward::BatchNormForward(const Value& input, const Value& weight,
                                    const Value& bias, const Value& running_mean,
                                    const Value& running_var, double momentum,
                                    double eps)
     : Node(ir::OpKind(at::aten::batch_norm),
-           {input, weight, bias, running_mean, running_var},
-           NodeOutputShape(input, weight, bias),
+           {input, weight, bias, running_mean, running_var}, input->shape(),
            /*num_outputs=*/1, xla::util::MHash(momentum, eps)),
       momentum_(momentum),
       eps_(eps) {}
