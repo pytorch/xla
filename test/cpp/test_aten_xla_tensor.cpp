@@ -539,24 +539,27 @@ TEST_F(AtenXlaTensorTest, DISABLED_TestBatchNorm2D) {
       at::ones({num_features}, at::TensorOptions(at::kFloat));
   double momentum = 0.1;
   double eps = 0.5;
-  at::Tensor output = at::batch_norm(
-      /*input=*/input, /*weight=*/weight, /*bias=*/bias,
-      /*running_mean=*/running_mean, /*running_var=*/running_var,
-      /*training=*/true, /*momentum=*/momentum, /*eps=*/eps,
-      /*cudnn_enabled=*/false);
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
-    at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
-    at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
-    at::Tensor xla_running_mean = bridge::CreateXlaTensor(running_mean, device);
-    at::Tensor xla_running_var = bridge::CreateXlaTensor(running_var, device);
-    at::Tensor xla_output = at::batch_norm(
-        /*input=*/xla_input, /*weight=*/xla_weight, /*bias=*/xla_bias,
-        /*running_mean=*/xla_running_mean, /*running_var=*/xla_running_var,
-        /*training=*/true, /*momentum=*/momentum, /*eps=*/eps,
+  for (bool training : {true, false}) {
+    at::Tensor output = at::batch_norm(
+        /*input=*/input, /*weight=*/weight, /*bias=*/bias,
+        /*running_mean=*/running_mean, /*running_var=*/running_var,
+        /*training=*/training, /*momentum=*/momentum, /*eps=*/eps,
         /*cudnn_enabled=*/false);
-    AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
-  });
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
+      at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
+      at::Tensor xla_running_mean =
+          bridge::CreateXlaTensor(running_mean, device);
+      at::Tensor xla_running_var = bridge::CreateXlaTensor(running_var, device);
+      at::Tensor xla_output = at::batch_norm(
+          /*input=*/xla_input, /*weight=*/xla_weight, /*bias=*/xla_bias,
+          /*running_mean=*/xla_running_mean, /*running_var=*/xla_running_var,
+          /*training=*/training, /*momentum=*/momentum, /*eps=*/eps,
+          /*cudnn_enabled=*/false);
+      AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
+    });
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
