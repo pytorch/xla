@@ -49,7 +49,7 @@ Conv2dBackward::Conv2dBackward(
     : Node(ir::OpKind(at::aten::thnn_conv2d_backward),
            {grad_output, input, weight},
            NodeOutputShape(grad_output, input, weight, stride, padding),
-           /*num_outputs=*/1, xla::util::MHash(stride, padding)),
+           /*num_outputs=*/3, xla::util::MHash(stride, padding)),
       stride_(stride.begin(), stride.end()),
       padding_(padding.begin(), padding.end()),
       precision_(MakePrecisionConfig(use_full_conv_precision)) {}
