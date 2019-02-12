@@ -56,14 +56,16 @@ int64_t AtenXlaType::numel(const at::Tensor& self) const {
 }
 
 at::Tensor AtenXlaType::_s_copy_from(const at::Tensor& self,
-                                     const at::Tensor& /* dst */,
+                                     const at::Tensor& dst,
                                      bool /* non_blocking */) const {
+  // Do not mark the tensor creation as writeable to not discard the XLA tensor
+  // device context, but make a copy to avoid core data to be shared.
   std::vector<at::Tensor> tensors = {self};
   std::vector<bool> writeables = {false};
   auto xla_tensors = bridge::XlaCreateTensorList(tensors, &writeables);
-  // Do not mark the tensor creation as writeable to not discard the XLA tensor
-  // device context, but make a copy to avoid core data to be shared.
-  return CopyTensor(xla_tensors.front());
+  // Hack in an overwrite of a const tensor.
+  const_cast<at::Tensor&>(dst) = CopyTensor(xla_tensors.front());
+  return dst;
 }
 
 at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
