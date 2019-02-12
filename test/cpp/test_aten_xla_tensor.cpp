@@ -26,7 +26,7 @@ class AtenXlaTensorTest : public TorchXlaTest {
   }
 };
 
-at::Tensor GetTestTesor(at::IntList sizes) {
+at::Tensor GetTestTensor(at::IntList sizes) {
   return at::rand(sizes, at::TensorOptions(at::kFloat));
 }
 
@@ -509,7 +509,7 @@ TEST_F(AtenXlaTensorTest, TestConv2DNonSquare) {
 TEST_F(AtenXlaTensorTest, TestNllLoss) {
   int batch = 3;
   int classes = 5;
-  at::Tensor input = GetTestTesor({batch, classes});
+  at::Tensor input = GetTestTensor({batch, classes});
   at::Tensor target =
       at::empty({batch}, at::TensorOptions(at::kLong)).random_(0, classes);
   at::Tensor undef_weight;
@@ -530,9 +530,9 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
 
 TEST_F(AtenXlaTensorTest, DISABLED_TestBatchNorm2D) {
   int num_features = 3;
-  at::Tensor input = GetTestTesor({14, num_features, 5, 7});
-  at::Tensor weight = GetTestTesor({num_features});
-  at::Tensor bias = GetTestTesor({num_features});
+  at::Tensor input = GetTestTensor({14, num_features, 5, 7});
+  at::Tensor weight = GetTestTensor({num_features});
+  at::Tensor bias = GetTestTensor({num_features});
   at::Tensor running_mean =
       at::zeros({num_features}, at::TensorOptions(at::kFloat));
   at::Tensor running_var =
@@ -577,7 +577,7 @@ TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
           };
 
           ForEachDevice([&](const Device& device) {
-            TestBackward({GetTestTesor({4, 1, 28, 28})}, device, testfn);
+            TestBackward({GetTestTensor({4, 1, 28, 28})}, device, testfn);
           });
         }
       }
@@ -604,10 +604,10 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
 
           ForEachDevice([&](const Device& device) {
             at::Tensor bias =
-                with_bias ? GetTestTesor({out_channels}) : at::Tensor();
-            TestBackward({GetTestTesor({4, in_channels, 32, 32}),
-                          GetTestTesor({out_channels, in_channels, kernel_size,
-                                        kernel_size}),
+                with_bias ? GetTestTensor({out_channels}) : at::Tensor();
+            TestBackward({GetTestTensor({4, in_channels, 32, 32}),
+                          GetTestTensor({out_channels, in_channels, kernel_size,
+                                         kernel_size}),
                           bias},
                          device, testfn);
           });
@@ -632,7 +632,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
         };
 
         ForEachDevice([&](const Device& device) {
-          TestBackward({GetTestTesor({1, 64, 112, 112})}, device, testfn);
+          TestBackward({GetTestTensor({1, 64, 112, 112})}, device, testfn);
         });
       }
     }
@@ -646,7 +646,7 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
     };
 
     ForEachDevice([&](const Device& device) {
-      TestBackward({GetTestTesor({5, 3, 4, 2})}, device, testfn, /*rtol=*/1e-3,
+      TestBackward({GetTestTensor({5, 3, 4, 2})}, device, testfn, /*rtol=*/1e-3,
                    /*atol=*/1e-5);
     });
   }
@@ -657,7 +657,7 @@ TEST_F(AtenXlaTensorTest, TestReluBackward) {
     return at::relu(inputs[0]);
   };
   ForEachDevice([&](const Device& device) {
-    TestBackward({GetTestTesor({2, 1, 4, 6})}, device, testfn);
+    TestBackward({GetTestTensor({2, 1, 4, 6})}, device, testfn);
   });
 }
 
@@ -666,7 +666,7 @@ TEST_F(AtenXlaTensorTest, TestTransposeBackward) {
     return at::t(inputs[0]);
   };
   ForEachDevice([&](const Device& device) {
-    TestBackward({GetTestTesor({2, 3})}, device, testfn);
+    TestBackward({GetTestTensor({2, 3})}, device, testfn);
   });
 }
 
@@ -681,8 +681,8 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
     };
     ForEachDevice([&](const Device& device) {
       TestBackward(
-          {GetTestTesor({labels}), GetTestTesor({in_channels, out_channels}),
-           GetTestTesor({out_channels, labels})},
+          {GetTestTensor({labels}), GetTestTensor({in_channels, out_channels}),
+           GetTestTensor({out_channels, labels})},
           device, testfn);
     });
   }
@@ -691,7 +691,7 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
 TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
   int batch = 3;
   int classes = 5;
-  at::Tensor input = GetTestTesor({batch, classes});
+  at::Tensor input = GetTestTensor({batch, classes});
   at::Tensor target =
       at::empty({batch}, at::TensorOptions(at::kLong)).random_(0, classes);
   at::Tensor undef_weight;
@@ -712,7 +712,7 @@ TEST_F(AtenXlaTensorTest, TestViewBackward) {
     return inputs[0].view({-1, 320});
   };
   ForEachDevice([&](const Device& device) {
-    TestBackward({GetTestTesor({32, 20, 4, 4})}, device, testfn);
+    TestBackward({GetTestTensor({32, 20, 4, 4})}, device, testfn);
   });
 }
 
