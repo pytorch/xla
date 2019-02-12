@@ -528,7 +528,7 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
   }
 }
 
-TEST_F(AtenXlaTensorTest, DISABLED_TestBatchNorm2D) {
+TEST_F(AtenXlaTensorTest, TestBatchNorm2D) {
   int num_features = 3;
   at::Tensor input = GetTestTensor({14, num_features, 5, 7});
   at::Tensor weight = GetTestTensor({num_features});
