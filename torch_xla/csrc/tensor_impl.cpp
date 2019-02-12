@@ -1,5 +1,6 @@
 #include "tensor_impl.h"
 
+#include <c10/core/Allocator.h>
 #include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/macros/Macros.h>
 
@@ -8,6 +9,18 @@
 
 namespace torch_xla {
 namespace {
+
+struct XLAAllocator : public c10::Allocator {
+  c10::DataPtr allocate(size_t n) const override {
+    return c10::DataPtr();
+  }
+};
+
+struct XLAAllocatorRegistrar {
+  XLAAllocatorRegistrar() {
+    caffe2::SetAllocator(c10::DeviceType::XLA, new XLAAllocator());
+  }
+};
 
 struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   at::DeviceType type() const override { return at::DeviceType::XLA; }
@@ -37,9 +50,10 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   c10::DeviceIndex deviceCount() const override { return 1; }
 };
 
-}  // namespace
-
 C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
+XLAAllocatorRegistrar g_allocator_registrar;
+
+}  // namespace
 
 XLATensorImpl::XLATensorImpl(XLATensor tensor)
     : c10::TensorImpl(GetStorage(tensor), c10::XLATensorId(),
