@@ -6,6 +6,7 @@
 #include "aten_xla_type_instances.h"
 #include "device.h"
 #include "helpers.h"
+#include "pooling.h"
 #include "tensor_impl.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_util.h"
@@ -344,6 +345,17 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).avg_pool2d(
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), count_include_pad));
+}
+
+at::Tensor AtenXlaType::adaptive_avg_pool2d(const at::Tensor& self,
+                                            at::IntArrayRef output_size) const {
+  if (self.dim() != 4 ||
+      !IsSupportedAdaptiveAvgPool2d(XlaHelpers::I64List(self.sizes()),
+                                    XlaHelpers::I64List(output_size))) {
+    return AtenXlaTypeBase::adaptive_avg_pool2d(self, output_size);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::adaptive_avg_pool2d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(output_size)));
 }
 
 at::Tensor AtenXlaType::batch_norm(

@@ -63,9 +63,19 @@ xla::XlaOp BuildAvgPool2dBackward(
 xla::XlaOp BuildAdaptiveAvgPool2d(const torch::jit::Node* node,
                                   const xla::XlaOp& input);
 
+// Same as above, with output size provided as parameter.
+xla::XlaOp BuildAdaptiveAvgPool2d(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_size);
+
 // Computes the gradient for adaptive average pooling.
-xla::XlaOp BuildAdaptiveAvgPool2dBackward(const torch::jit::Node* node,
-                                          const xla::XlaOp& out_backprop,
+xla::XlaOp BuildAdaptiveAvgPool2dBackward(const xla::XlaOp& out_backprop,
                                           const xla::XlaOp& input);
+
+// Returns true if XLA lowering is supported for the given input and output size
+// combination.
+bool IsSupportedAdaptiveAvgPool2d(
+    tensorflow::gtl::ArraySlice<const xla::int64> input_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_size);
 
 }  // namespace torch_xla
