@@ -14,7 +14,7 @@ BatchNormForward::BatchNormForward(const Value& input, const Value& weight,
                                    const Value& running_var, double momentum,
                                    double eps)
     : Node(ir::OpKind(at::aten::batch_norm),
-           {input, weight, bias, running_mean, running_var}, input->shape(),
+           {input, weight, bias, running_mean, running_var}, input.shape(),
            /*num_outputs=*/1, xla::util::MHash(momentum, eps)),
       momentum_(momentum),
       eps_(eps) {}
