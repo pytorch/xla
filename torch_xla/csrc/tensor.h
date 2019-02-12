@@ -205,6 +205,20 @@ class XLATensor {
   static XLATensor nll_loss_backward(const XLATensor& input,
                                      const XLATensor& target);
 
+  // Like batch_norm, but returns additional save_mean and save_invstd used by
+  // the backward pass.
+  static std::tuple<XLATensor, XLATensor, XLATensor> native_batch_norm(
+      const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
+      const XLATensor& running_mean, const XLATensor& running_var,
+      double momentum, double eps);
+
+  // Returns the input, weight and bias gradients.
+  static std::tuple<XLATensor, XLATensor, XLATensor> native_batch_norm_backward(
+      const XLATensor& grad_out, const XLATensor& input,
+      const XLATensor& weight, const XLATensor& running_mean,
+      const XLATensor& running_var, const XLATensor& save_mean,
+      const XLATensor& save_invstd, double eps);
+
   static XLATensor not_supported(c10::Symbol node_symbol, xla::Shape shape,
                                  const Device& device);
 

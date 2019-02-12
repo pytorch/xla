@@ -23,6 +23,8 @@
 #include "ops/infer_output_shape.h"
 #include "ops/max_pool2d.h"
 #include "ops/max_pool2d_backward.h"
+#include "ops/native_batch_norm_backward.h"
+#include "ops/native_batch_norm_forward.h"
 #include "ops/ops.h"
 #include "ops/scalar.h"
 #include "ops/select.h"
@@ -691,6 +693,36 @@ XLATensor XLATensor::batch_norm(const XLATensor& input, const XLATensor& weight,
           input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue(),
           running_mean.GetIrValue(), running_var.GetIrValue(), momentum, eps),
       input.GetDevice());
+}
+
+std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
+    const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
+    const XLATensor& running_mean, const XLATensor& running_var,
+    double momentum, double eps) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormForward>(
+      input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue(),
+      running_mean.GetIrValue(), running_var.GetIrValue(), momentum, eps);
+  XLATensor output = Create(ir::Value(node, 0), input.GetDevice());
+  XLATensor save_mean = Create(ir::Value(node, 1), input.GetDevice());
+  XLATensor save_invstd = Create(ir::Value(node, 2), input.GetDevice());
+  return std::make_tuple(std::move(output), std::move(save_mean),
+                         std::move(save_invstd));
+}
+
+std::tuple<XLATensor, XLATensor, XLATensor>
+XLATensor::native_batch_norm_backward(
+    const XLATensor& grad_out, const XLATensor& input, const XLATensor& weight,
+    const XLATensor& running_mean, const XLATensor& running_var,
+    const XLATensor& save_mean, const XLATensor& save_invstd, double eps) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormBackward>(
+      grad_out.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
+      running_mean.GetIrValue(), running_var.GetIrValue(),
+      save_mean.GetIrValue(), save_invstd.GetIrValue(), eps);
+  XLATensor grad_input = Create(ir::Value(node, 0), input.GetDevice());
+  XLATensor grad_weight = Create(ir::Value(node, 1), input.GetDevice());
+  XLATensor grad_bias = Create(ir::Value(node, 2), input.GetDevice());
+  return std::make_tuple(std::move(grad_input), std::move(grad_weight),
+                         std::move(grad_bias));
 }
 
 XLATensor XLATensor::avg_pool2d_backward(
