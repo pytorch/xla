@@ -92,7 +92,12 @@ struct Value {
   Value() = default;
   Value(NodePtr node, size_t index = 0) : node(std::move(node)), index(index) {}
 
+  // Retrieves the shape of this value. If the IR Node generating the value is a
+  // multi-output node, the shape returned by this API will not be the full
+  // tuple shape, but only the shape at index referred by this value.
+  // To retrieve the full tuple shape in that case, use the node_shape() API.
   const xla::Shape& shape() const;
+  const xla::Shape& node_shape() const;
 
   operator bool() const { return node != nullptr; }
 
@@ -157,8 +162,12 @@ class Node {
 
   size_t num_outputs() const { return num_outputs_; }
 
+  // Retrieves the full shape of the IR Node. Note that if this is a
+  // multi-output node, the returned shape will be a tuple.
   const xla::Shape& shape() const { return shape_; }
 
+  // Retrieves the shape of the output at a given index. If the node is not a
+  // multi-output node, output_index must be zero.
   const xla::Shape& shape(size_t output_index) const;
 
   const std::vector<Output>& operands() const { return operands_as_outputs_; }

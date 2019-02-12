@@ -40,6 +40,8 @@ std::string Output::ToString() const {
 
 const xla::Shape& Value::shape() const { return node->shape(index); }
 
+const xla::Shape& Value::node_shape() const { return node->shape(); }
+
 OpKind OpKind::Get(const std::string& name) {
   return OpKind(c10::Symbol::fromQualString(name));
 }
