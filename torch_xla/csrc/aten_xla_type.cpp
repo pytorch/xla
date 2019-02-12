@@ -342,7 +342,7 @@ at::Tensor AtenXlaType::batch_norm(
     const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
     const at::Tensor& running_mean, const at::Tensor& running_var,
     bool training, double momentum, double eps, bool cudnn_enabled) const {
-  if (input.dim() != 4 || cudnn_enabled) {
+  if (input.dim() != 4 || cudnn_enabled || !training) {
     return AtenXlaTypeBase::batch_norm(input, weight, bias, running_mean,
                                        running_var, training, momentum, eps,
                                        cudnn_enabled);
