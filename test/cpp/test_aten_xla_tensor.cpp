@@ -33,13 +33,17 @@ at::Tensor GetTestTensor(at::IntList sizes) {
 void TestBackward(
     const std::vector<at::Tensor>& inputs, const Device& device,
     const std::function<at::Tensor(const std::vector<at::Tensor>&)>& testfn,
-    double rtol = 1e-5, double atol = 1e-8) {
+    double rtol = 1e-5, double atol = 1e-8,
+    const std::vector<bool>& inputs_require_grad = {}) {
+  CHECK(inputs_require_grad.empty() ||
+        inputs.size() == inputs_require_grad.size());
   std::vector<at::Tensor> input_vars;
   std::vector<at::Tensor> xinput_vars;
-  for (const auto& input : inputs) {
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    auto& input = inputs[i];
     if (input.defined()) {
-      const bool requires_grad = (input.scalar_type() == at::kFloat ||
-                                  input.scalar_type() == at::kDouble);
+      const bool requires_grad =
+          inputs_require_grad.empty() ? true : inputs_require_grad[i];
       input_vars.push_back(
           torch::autograd::make_variable(input, requires_grad));
 
@@ -705,7 +709,8 @@ TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
           /*reduction=*/reduction);
     };
     ForEachDevice([&](const Device& device) {
-      TestBackward({input, target}, device, testfn);
+      TestBackward({input, target}, device, testfn, /*rtol=*/1e-5,
+                   /*atol=*/1e-8, /*inputs_require_grad=*/{true, false});
     });
   }
 }
@@ -716,6 +721,32 @@ TEST_F(AtenXlaTensorTest, TestViewBackward) {
   };
   ForEachDevice([&](const Device& device) {
     TestBackward({GetTestTensor({32, 20, 4, 4})}, device, testfn);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBatchNorm2DBackward) {
+  double momentum = 0.1;
+  double eps = 0.5;
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::batch_norm(
+        /*input=*/inputs[0], /*weight=*/inputs[1], /*bias=*/inputs[2],
+        /*running_mean=*/inputs[3], /*running_var=*/inputs[4],
+        /*training=*/true, /*momentum=*/momentum, /*eps=*/eps,
+        /*cudnn_enabled=*/false);
+  };
+  int num_features = 3;
+  ForEachDevice([&](const Device& device) {
+    at::Tensor input = GetTestTensor({14, num_features, 5, 7});
+    at::Tensor weight = GetTestTensor({num_features});
+    at::Tensor bias = GetTestTensor({num_features});
+    at::Tensor running_mean =
+        at::zeros({num_features}, at::TensorOptions(at::kFloat));
+    at::Tensor running_var =
+        at::ones({num_features}, at::TensorOptions(at::kFloat));
+    TestBackward({input, weight, bias, running_mean, running_var}, device,
+                 testfn,
+                 /*rtol=*/1e-3, /*atol=*/1e-4,
+                 /*inputs_require_grad=*/{true, true, true, false, false});
   });
 }
 

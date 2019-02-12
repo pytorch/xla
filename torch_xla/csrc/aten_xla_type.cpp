@@ -353,6 +353,24 @@ at::Tensor AtenXlaType::batch_norm(
       bridge::GetXlaTensor(running_var), momentum, eps));
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_batch_norm(
+    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
+    const at::Tensor& running_mean, const at::Tensor& running_var,
+    bool training, double momentum, double eps) const {
+  if (input.dim() != 4 || !training) {
+    return AtenXlaTypeBase::native_batch_norm(input, weight, bias, running_mean,
+                                              running_var, training, momentum,
+                                              eps);
+  }
+  auto outputs = XLATensor::native_batch_norm(
+      bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight),
+      bridge::GetXlaTensor(bias), bridge::GetXlaTensor(running_mean),
+      bridge::GetXlaTensor(running_var), momentum, eps);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<1>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<2>(outputs)));
+}
+
 at::Tensor AtenXlaType::avg_pool2d_backward(const at::Tensor& grad_output,
                                             const at::Tensor& self,
                                             at::IntList kernel_size,
@@ -417,6 +435,37 @@ at::Tensor AtenXlaType::nll_loss_backward(
   }
   return bridge::AtenFromXlaTensor(XLATensor::nll_loss_backward(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(target)));
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor>
+AtenXlaType::native_batch_norm_backward(
+    const at::Tensor& grad_out, const at::Tensor& input,
+    const at::Tensor& weight, const at::Tensor& running_mean,
+    const at::Tensor& running_var, const at::Tensor& save_mean,
+    const at::Tensor& save_invstd, bool train, double eps,
+    std::array<bool, 3> output_mask) const {
+  if (input.dim() != 4 || !train) {
+    return AtenXlaTypeBase::native_batch_norm_backward(
+        grad_out, input, weight, running_mean, running_var, save_mean,
+        save_invstd, train, eps, output_mask);
+  }
+  at::Tensor undefined;
+  auto gradients = XLATensor::native_batch_norm_backward(
+      /*grad_out=*/bridge::GetXlaTensor(grad_out),
+      /*input=*/bridge::GetXlaTensor(input),
+      /*weight=*/bridge::GetXlaTensor(weight),
+      /*running_mean=*/bridge::GetXlaTensor(running_mean),
+      /*running_var=*/bridge::GetXlaTensor(running_var),
+      /*save_mean=*/bridge::GetXlaTensor(save_mean),
+      /*save_invstd=*/bridge::GetXlaTensor(save_invstd),
+      /*eps=*/eps);
+  return std::make_tuple(
+      output_mask[0] ? bridge::AtenFromXlaTensor(std::get<0>(gradients))
+                     : undefined,
+      output_mask[1] ? bridge::AtenFromXlaTensor(std::get<1>(gradients))
+                     : undefined,
+      output_mask[2] ? bridge::AtenFromXlaTensor(std::get<2>(gradients))
+                     : undefined);
 }
 
 void AtenXlaType::SetFullConvPrecision(

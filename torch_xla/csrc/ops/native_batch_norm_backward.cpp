@@ -1,0 +1,64 @@
+#include "ops/native_batch_norm_backward.h"
+#include "batch_norm.h"
+#include "lowering_context.h"
+#include "ops/infer_output_shape.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
+
+namespace torch_xla {
+namespace ir {
+namespace ops {
+namespace {
+
+xla::Shape NodeOutputShape(const Value& grad_out, const Value& input,
+                           const Value& weight, const Value& save_mean,
+                           const Value& save_invstd) {
+  auto lower_for_shape_fn =
+      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 5);
+    BatchNormGrads xla_outputs = BuildBatchNormBackward(
+        operands[0], operands[1], operands[2], operands[3], operands[4], 0);
+    return xla::Tuple(operands[0].builder(),
+                      {xla_outputs.grad_input, xla_outputs.grad_weight,
+                       xla_outputs.grad_bias});
+  };
+  return InferOutputShape({grad_out.shape(), input.shape(), weight.shape(),
+                           save_mean.shape(), save_invstd.shape()},
+                          lower_for_shape_fn);
+}
+
+}  // namespace
+
+NativeBatchNormBackward::NativeBatchNormBackward(
+    const Value& grad_out, const Value& input, const Value& weight,
+    const Value& running_mean, const Value& running_var, const Value& save_mean,
+    const Value& save_invstd, double eps)
+    : Node(ir::OpKind(at::aten::native_batch_norm_backward),
+           {grad_out, input, weight, running_mean, running_var, save_mean,
+            save_invstd},
+           NodeOutputShape(grad_out, input, weight, save_mean, save_invstd),
+           /*num_outputs=*/3, xla::util::MHash(eps)),
+      eps_(eps) {}
+
+XlaOpVector NativeBatchNormBackward::Lower(LoweringContext* loctx) const {
+  xla::XlaOp grad_out = loctx->GetOutputOp(operand(0));
+  xla::XlaOp input = loctx->GetOutputOp(operand(1));
+  xla::XlaOp weight = loctx->GetOutputOp(operand(2));
+  xla::XlaOp save_mean = loctx->GetOutputOp(operand(5));
+  xla::XlaOp save_invstd = loctx->GetOutputOp(operand(6));
+  BatchNormGrads grads = BuildBatchNormBackward(grad_out, input, weight,
+                                                save_mean, save_invstd, eps_);
+  return ReturnOps({std::move(grads.grad_input), std::move(grads.grad_weight),
+                    std::move(grads.grad_bias)},
+                   loctx);
+}
+
+std::string NativeBatchNormBackward::ToString() const {
+  std::stringstream ss;
+  ss << Node::ToString() << ", eps=" << eps_;
+  return ss.str();
+}
+
+}  // namespace ops
+}  // namespace ir
+}  // namespace torch_xla
