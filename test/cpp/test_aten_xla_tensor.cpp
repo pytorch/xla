@@ -434,6 +434,20 @@ TEST_F(AtenXlaTensorTest, TestAvgPool2DNonSquare) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2D) {
+  at::Tensor input = at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat));
+  for (int64_t output_size : {7, 8}) {
+    at::Tensor output =
+        at::adaptive_avg_pool2d(input, {output_size, output_size});
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output =
+          at::adaptive_avg_pool2d(xla_input, {output_size, output_size});
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestConv2D) {
   int in_channels = 3;
   int out_channels = 7;

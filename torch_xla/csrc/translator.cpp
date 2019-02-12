@@ -321,7 +321,7 @@ void TranslateAdaptiveAvgPoolBackward(
     xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::XlaOp xla_output = BuildAdaptiveAvgPool2dBackward(
-      node, cctx->OpForInput(node, 0), cctx->OpForInput(node, 1));
+      cctx->OpForInput(node, 0), cctx->OpForInput(node, 1));
   cctx->AddNodeOp(node, xla_output);
 }
 

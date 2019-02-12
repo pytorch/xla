@@ -69,8 +69,8 @@ void CheckAvgPool2DIsSupported(const torch::jit::Node* node) {
 // Compute the average pool kernel size required for the specified output_size
 // from the given input_size, when the stride is the same as the kernel size.
 std::vector<xla::int64> AdaptiveAvgPoolKernelSize(
-    const std::vector<xla::int64>& input_size,
-    const std::vector<xla::int64>& output_size) {
+    tensorflow::gtl::ArraySlice<const xla::int64> input_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
   // Create a NCHW kernel size with 1 for batch size and feature.
   std::vector<xla::int64> kernel_size(2, 1);
   for (int spatial_dim = 0; spatial_dim < 2; ++spatial_dim) {
@@ -84,6 +84,17 @@ std::vector<xla::int64> AdaptiveAvgPoolKernelSize(
 }
 
 }  // namespace
+
+bool IsSupportedAdaptiveAvgPool2d(
+    tensorflow::gtl::ArraySlice<const xla::int64> input_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
+  for (int spatial_dim = 0; spatial_dim < 2; ++spatial_dim) {
+    if (input_size[2 + spatial_dim] % output_size[spatial_dim] != 0) {
+      return false;
+    }
+  }
+  return true;
+}
 
 xla::XlaOp BuildMaxPool2d(const torch::jit::Node* node,
                           const xla::XlaOp& input) {
@@ -244,6 +255,12 @@ xla::XlaOp BuildAdaptiveAvgPool2d(const torch::jit::Node* node,
                                   const xla::XlaOp& input) {
   const auto output_size = XlaHelpers::I64List(
       node->get<std::vector<int64_t>>(at::attr::output_size).value());
+  return BuildAdaptiveAvgPool2d(input, output_size);
+}
+
+xla::XlaOp BuildAdaptiveAvgPool2d(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
   XLA_CHECK_EQ(output_size.size(), 2) << "Invalid output size rank";
   const auto input_size = XlaHelpers::SizesOfXlaOp(input);
   XLA_CHECK_EQ(input_size.size(), 4) << "Only 4D tensors supported";
@@ -258,8 +275,7 @@ xla::XlaOp BuildAdaptiveAvgPool2d(const torch::jit::Node* node,
       /*counts_include_padding=*/false);
 }
 
-xla::XlaOp BuildAdaptiveAvgPool2dBackward(const torch::jit::Node* node,
-                                          const xla::XlaOp& out_backprop,
+xla::XlaOp BuildAdaptiveAvgPool2dBackward(const xla::XlaOp& out_backprop,
                                           const xla::XlaOp& input) {
   const auto out_backprop_size = XlaHelpers::SizesOfXlaOp(out_backprop);
   XLA_CHECK_EQ(out_backprop_size.size(), 4)
