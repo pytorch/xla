@@ -6,6 +6,7 @@
 #include "nll_loss.h"
 #include "ops/infer_output_shape.h"
 #include "pooling.h"
+#include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
@@ -86,6 +87,28 @@ NodePtr Log(const Value& input) {
   };
   return ir::ops::GenericOp(ir::OpKind(at::aten::log), ir::OpList{input},
                             input.shape(), std::move(lower_fn));
+}
+
+NodePtr Sqrt(const Value& input) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(xla::Sqrt(xla_input), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::sqrt), ir::OpList{input},
+                            input.shape(), std::move(lower_fn));
+}
+
+NodePtr Pow(const Value& input, const Value& exponent) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_exponent = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(xla::Pow(xla_input, xla_exponent), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::pow),
+                            ir::OpList{input, exponent}, input.shape(),
+                            std::move(lower_fn));
 }
 
 NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
