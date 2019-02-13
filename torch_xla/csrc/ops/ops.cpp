@@ -295,6 +295,65 @@ NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
                             std::move(lower_fn));
 }
 
+namespace {
+
+xla::XlaOp BuildComparisonOp(c10::Symbol kind, const xla::XlaOp& input,
+                             const xla::XlaOp& other) {
+  xla::XlaOp pred;
+  switch (kind) {
+    case at::aten::ne: {
+      pred = xla::Ne(input, other);
+      break;
+    }
+    case at::aten::eq: {
+      pred = xla::Eq(input, other);
+      break;
+    }
+    case at::aten::ge: {
+      pred = xla::Ge(input, other);
+      break;
+    }
+    case at::aten::le: {
+      pred = xla::Le(input, other);
+      break;
+    }
+    case at::aten::gt: {
+      pred = xla::Gt(input, other);
+      break;
+    }
+    case at::aten::lt: {
+      pred = xla::Lt(input, other);
+      break;
+    }
+    default:
+      XLA_ERROR() << "Invalid comparison operator kind: "
+                  << kind.toQualString();
+  }
+  return xla::ConvertElementType(pred, xla::PrimitiveType::U8);
+}
+
+}  // namespace
+
+NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
+  auto lower_fn = [kind](const ir::Node& node,
+                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_output = BuildComparisonOp(kind, xla_input, xla_other);
+    return node.ReturnOp(xla_output, loctx);
+  };
+  auto lower_for_shape_fn =
+      [kind](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2);
+    return BuildComparisonOp(kind, operands[0], operands[1]);
+  };
+  xla::Shape output_shape = ir::ops::InferOutputShape(
+      {input.shape(), other.shape()}, lower_for_shape_fn);
+  return ir::ops::GenericOp(ir::OpKind(kind), {input, other},
+                            std::move(output_shape), std::move(lower_fn));
+}
+
 NodePtr NotSupportedOp(c10::Symbol node_symbol, xla::Shape shape) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
