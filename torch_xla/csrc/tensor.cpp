@@ -125,8 +125,9 @@ XLATensor XLATensor::Create(
   return xtensor;
 }
 
-XLATensor XLATensor::Create(ir::Value ir_value, const Device& device) {
-  XLATensor xtensor(std::move(ir_value), device);
+XLATensor XLATensor::Create(ir::Value ir_value, const Device& device,
+                            xla::Shape logical_shape) {
+  XLATensor xtensor(std::move(ir_value), device, std::move(logical_shape));
   TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
@@ -149,8 +150,10 @@ XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
   data()->requires_grad = requires_grad;
 }
 
-XLATensor::XLATensor(ir::Value ir_value, const Device& device)
-    : data_(std::make_shared<Data>(std::move(ir_value), device)) {
+XLATensor::XLATensor(ir::Value ir_value, const Device& device,
+                     xla::Shape logical_shape)
+    : data_(std::make_shared<Data>(std::move(ir_value), device)),
+      logical_shape_(std::move(logical_shape)) {
   TryLimitGraphSize();
 }
 
@@ -184,6 +187,14 @@ at::ScalarType XLATensor::dtype() const {
 }
 
 xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
+  if (logical_shape_.element_type() !=
+      xla::PrimitiveType::PRIMITIVE_TYPE_INVALID) {
+    return logical_shape_;
+  }
+  return GetPhysicalShape();
+}
+
+xla::util::MaybeRef<xla::Shape> XLATensor::GetPhysicalShape() const {
   if (data()->view != nullptr) {
     return data()->view->shape;
   }
@@ -270,8 +281,8 @@ std::string XLATensor::DumpGraphNodeComputation() const {
 
 void XLATensor::SetXlaData(
     std::shared_ptr<xla::ComputationClient::Data> xla_data) {
-  XLA_CHECK(xla::ShapeUtil::Equal(shape(), xla_data->shape()))
-      << shape() << " vs " << xla_data->shape() << "\n"
+  XLA_CHECK(xla::ShapeUtil::Equal(GetPhysicalShape(), xla_data->shape()))
+      << GetPhysicalShape() << " vs " << xla_data->shape() << "\n"
       << DumpGraphNodeComputation();
   data()->xla_data = std::move(xla_data);
   data()->ir_value = ir::Value();
@@ -387,7 +398,7 @@ at::Tensor XLATensor::ToTensor() {
     // is available on the tensor.
     std::vector<xla::Literal> literals =
         xla::ComputationClient::Get()->TransferFromServer({GetXlaData()});
-    tensor_data = MakeTensorFromXlaLiteral(literals.front());
+    tensor_data = MakeTensorFromXlaLiteral(literals.front(), dtype());
     SetTensorData(*tensor_data);
   }
   return *tensor_data;
@@ -439,7 +450,8 @@ std::vector<at::Tensor> XLATensor::GetTensors(
       results.push_back(*tensor_data);
     } else {
       XLA_CHECK_LT(literals_index, literals.size());
-      results.push_back(MakeTensorFromXlaLiteral(literals[literals_index]));
+      results.push_back(MakeTensorFromXlaLiteral(literals[literals_index],
+                                                 (*tensors)[i].dtype()));
       ++literals_index;
     }
   }
@@ -598,73 +610,74 @@ xla::int64 XLATensor::size(int dim) const {
 }
 
 XLATensor XLATensor::ne(const XLATensor& input, const at::Scalar& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::ne, input.GetIrValue(), other),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::ne, input, other);
 }
 
 XLATensor XLATensor::ne(const XLATensor& input, const XLATensor& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::ne, input.GetIrValue(),
-                                      other.GetIrValue()),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::ne, input, other);
 }
 
 XLATensor XLATensor::eq(const XLATensor& input, const at::Scalar& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::eq, input.GetIrValue(), other),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::eq, input, other);
 }
 
 XLATensor XLATensor::eq(const XLATensor& input, const XLATensor& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::eq, input.GetIrValue(),
-                                      other.GetIrValue()),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::eq, input, other);
 }
 
 XLATensor XLATensor::ge(const XLATensor& input, const at::Scalar& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::ge, input.GetIrValue(), other),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::ge, input, other);
 }
 
 XLATensor XLATensor::ge(const XLATensor& input, const XLATensor& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::ge, input.GetIrValue(),
-                                      other.GetIrValue()),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::ge, input, other);
 }
 
 XLATensor XLATensor::le(const XLATensor& input, const at::Scalar& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::le, input.GetIrValue(), other),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::le, input, other);
 }
 
 XLATensor XLATensor::le(const XLATensor& input, const XLATensor& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::le, input.GetIrValue(),
-                                      other.GetIrValue()),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::le, input, other);
 }
 
 XLATensor XLATensor::gt(const XLATensor& input, const at::Scalar& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::gt, input.GetIrValue(), other),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::gt, input, other);
 }
 
 XLATensor XLATensor::gt(const XLATensor& input, const XLATensor& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::gt, input.GetIrValue(),
-                                      other.GetIrValue()),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::gt, input, other);
 }
 
 XLATensor XLATensor::lt(const XLATensor& input, const at::Scalar& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::lt, input.GetIrValue(), other),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::lt, input, other);
 }
 
 XLATensor XLATensor::lt(const XLATensor& input, const XLATensor& other) {
-  return Create(ir::ops::ComparisonOp(at::aten::lt, input.GetIrValue(),
-                                      other.GetIrValue()),
-                input.GetDevice());
+  return DispatchComparisonOp(at::aten::lt, input, other);
 }
 
 XLATensor XLATensor::relu(const XLATensor& input) {
   return Create(ir::ops::ReluOp(input.GetIrValue()), input.GetDevice());
+}
+
+XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
+                                          const XLATensor& input,
+                                          const at::Scalar& other) {
+  ir::NodePtr node = ir::ops::ComparisonOp(kind, input.GetIrValue(), other);
+  xla::Shape logical_shape = node->shape();
+  logical_shape.set_element_type(xla::PrimitiveType::U8);
+  return Create(node, input.GetDevice(), logical_shape);
+}
+
+XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
+                                          const XLATensor& input,
+                                          const XLATensor& other) {
+  ir::NodePtr node =
+      ir::ops::ComparisonOp(kind, input.GetIrValue(), other.GetIrValue());
+  xla::Shape logical_shape = node->shape();
+  logical_shape.set_element_type(xla::PrimitiveType::U8);
+  return Create(node, input.GetDevice(), logical_shape);
 }
 
 XLATensor XLATensor::threshold(const XLATensor& input, float threshold,
@@ -1006,7 +1019,7 @@ void XLATensor::ApplyPendingGraph() {
       xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
       xla::XlaComputation computation =
           lowering_ctx.Build(root).ConsumeValueOrDie();
-      auto output_shape = shape();
+      auto output_shape = GetPhysicalShape();
       auto compiled_computation = xla::ComputationClient::Get()->Compile(
           std::move(computation), {GetDevice().ToString()},
           &output_shape.get());

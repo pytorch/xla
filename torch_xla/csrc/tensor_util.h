@@ -33,8 +33,9 @@ xla::Shape MakeArrayShapeFromDimensions(const at::IntList& dimensions,
                                         xla::PrimitiveType type,
                                         DeviceType device_type);
 
-// Converts an ATEN tensor to an XLA literal.
-at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal);
+// Converts an XLA literal to an at::Tensor of the given element type.
+at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
+                                    at::ScalarType dest_element_type);
 
 // Uploads an ATEN tensor data to the device and fetches the corresponding
 // device data handle.
@@ -68,7 +69,7 @@ xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
 
 at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type);
 
-  // Converts the given scalar type to an XLA primitive type.
+// Converts the given scalar type to an XLA primitive type.
 xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
                                         const Device* device);
 
