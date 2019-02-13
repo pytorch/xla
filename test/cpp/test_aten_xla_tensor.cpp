@@ -680,6 +680,14 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2D) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestDim) {
+  at::Tensor input = GetTestTensor({2, 3});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    EXPECT_EQ(input.dim(), xla_input.dim());
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
