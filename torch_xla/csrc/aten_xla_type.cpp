@@ -181,16 +181,30 @@ at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other) const {
   return self;
 }
 
-at::Tensor AtenXlaType::neg(const at::Tensor& input) const {
-  return bridge::AtenFromXlaTensor(XLATensor::neg(bridge::GetXlaTensor(input)));
+at::Tensor AtenXlaType::neg(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::neg(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor AtenXlaType::sin(const at::Tensor& input) const {
-  return bridge::AtenFromXlaTensor(XLATensor::sin(bridge::GetXlaTensor(input)));
+at::Tensor AtenXlaType::sin(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::sin(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor AtenXlaType::cos(const at::Tensor& input) const {
-  return bridge::AtenFromXlaTensor(XLATensor::cos(bridge::GetXlaTensor(input)));
+at::Tensor AtenXlaType::cos(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::cos(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::clamp(const at::Tensor& self,
+                              c10::optional<at::Scalar> min,
+                              c10::optional<at::Scalar> max) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::clamp(bridge::GetXlaTensor(self), min, max));
+}
+
+at::Tensor& AtenXlaType::clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
+                                c10::optional<at::Scalar> max) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::clamp_(self_tensor, min, max);
+  return self;
 }
 
 int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {

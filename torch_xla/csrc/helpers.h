@@ -16,6 +16,11 @@ namespace torch_xla {
 // Miscellaneous helpers for XLA lowering.
 class XlaHelpers {
  public:
+  struct MinMax {
+    at::Scalar min;
+    at::Scalar max;
+  };
+
   template <class T>
   static xla::Literal ScalarLiteral(T scalar_value, xla::PrimitiveType type) {
     switch (type) {
@@ -88,6 +93,9 @@ class XlaHelpers {
   static std::vector<xla::int64> DropDimensions(
       tensorflow::gtl::ArraySlice<const xla::int64> sizes,
       tensorflow::gtl::ArraySlice<const xla::int64> drop_dims);
+
+  // Retrieves type's minimum and maximum values.
+  static MinMax MinMaxValues(xla::PrimitiveType type);
 
   // Creates a binary add computation.
   static xla::XlaComputation CreateAddComputation(xla::PrimitiveType type);
