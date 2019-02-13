@@ -22,6 +22,8 @@
 #include "ops/device_data.h"
 #include "ops/generic.h"
 #include "ops/infer_output_shape.h"
+#include "ops/log_softmax.h"
+#include "ops/log_softmax_backward.h"
 #include "ops/max_pool2d.h"
 #include "ops/max_pool2d_backward.h"
 #include "ops/native_batch_norm_backward.h"
@@ -30,7 +32,6 @@
 #include "ops/scalar.h"
 #include "ops/select.h"
 #include "ops/softmax.h"
-#include "ops/softmax_backward.h"
 #include "ops/threshold.h"
 #include "ops/threshold_backward.h"
 #include "ops/view.h"
@@ -894,6 +895,11 @@ XLATensor XLATensor::view(
 
 XLATensor XLATensor::log_softmax(const XLATensor& input, xla::int64 dim) {
   return Create(ir::MakeNode<ir::ops::LogSoftmax>(input.GetIrValue(), dim),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::softmax(const XLATensor& input, xla::int64 dim) {
+  return Create(ir::MakeNode<ir::ops::Softmax>(input.GetIrValue(), dim),
                 input.GetDevice());
 }
 

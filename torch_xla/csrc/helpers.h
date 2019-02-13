@@ -100,6 +100,8 @@ class XlaHelpers {
   // Creates a binary add computation.
   static xla::XlaComputation CreateAddComputation(xla::PrimitiveType type);
 
+  static xla::XlaComputation CreateMaxComputation(xla::PrimitiveType type);
+
   // Performs type promotion to make sure both operations return the same type.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
                                                          const xla::XlaOp& op2);
