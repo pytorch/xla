@@ -112,15 +112,27 @@ class XLATensor {
   // Additional operations which are part of the PyTorch Tensor functionality.
   xla::int64 size(int dim) const;
 
+  static XLATensor ne(const XLATensor& input, const at::Scalar& other);
+
   static XLATensor ne(const XLATensor& input, const XLATensor& other);
+
+  static XLATensor eq(const XLATensor& input, const at::Scalar& other);
 
   static XLATensor eq(const XLATensor& input, const XLATensor& other);
 
+  static XLATensor ge(const XLATensor& input, const at::Scalar& other);
+
   static XLATensor ge(const XLATensor& input, const XLATensor& other);
+
+  static XLATensor le(const XLATensor& input, const at::Scalar& other);
 
   static XLATensor le(const XLATensor& input, const XLATensor& other);
 
+  static XLATensor gt(const XLATensor& input, const at::Scalar& other);
+
   static XLATensor gt(const XLATensor& input, const XLATensor& other);
+
+  static XLATensor lt(const XLATensor& input, const at::Scalar& other);
 
   static XLATensor lt(const XLATensor& input, const XLATensor& other);
 
