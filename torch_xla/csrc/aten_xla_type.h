@@ -124,6 +124,9 @@ class AtenXlaType : public AtenXlaTypeBase {
                                  at::IntList padding, bool ceil_mode,
                                  bool count_include_pad) const override;
 
+  at::Tensor adaptive_avg_pool2d_backward(
+      const at::Tensor& grad_output, const at::Tensor& self) const override;
+
   at::Tensor max_pool2d_with_indices_backward(
       const at::Tensor& grad_output, const at::Tensor& self,
       at::IntList kernel_size, at::IntList stride, at::IntList padding,

@@ -5,6 +5,7 @@
 #include "lowering_context.h"
 #include "nll_loss.h"
 #include "ops/infer_output_shape.h"
+#include "pooling.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
@@ -168,6 +169,29 @@ NodePtr NllLossBackwardOp(const Value& logits, const Value& labels) {
       {logits.shape(), labels.shape()}, lower_for_shape_fn);
   return ir::ops::GenericOp(ir::OpKind(at::aten::nll_loss_backward),
                             ir::OpList{logits, labels}, output_shape,
+                            std::move(lower_fn));
+}
+
+NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
+                                  const Value& input) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp grad_output = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp input = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_output = BuildAdaptiveAvgPool2dBackward(
+        /*out_backprop=*/grad_output, /*input=*/input);
+    return node.ReturnOp(xla_output, loctx);
+  };
+  auto lower_for_shape_fn =
+      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 2);
+    return BuildAdaptiveAvgPool2dBackward(/*out_backprop=*/operands[0],
+                                          /*input=*/operands[1]);
+  };
+  xla::Shape output_shape = ir::ops::InferOutputShape(
+      {grad_output.shape(), input.shape()}, lower_for_shape_fn);
+  return ir::ops::GenericOp(ir::OpKind(at::aten::adaptive_avg_pool2d_backward),
+                            ir::OpList{grad_output, input}, output_shape,
                             std::move(lower_fn));
 }
 

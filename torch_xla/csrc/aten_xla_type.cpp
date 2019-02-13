@@ -409,6 +409,20 @@ at::Tensor AtenXlaType::avg_pool2d_backward(const at::Tensor& grad_output,
       XlaHelpers::I64List(padding), count_include_pad));
 }
 
+at::Tensor AtenXlaType::adaptive_avg_pool2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self) const {
+  if (grad_output.dim() != 4) {
+    return AtenXlaTypeBase::adaptive_avg_pool2d_backward(grad_output, self);
+  }
+  std::vector<xla::int64> output_size{grad_output.size(2), grad_output.size(3)};
+  if (!IsSupportedAdaptiveAvgPool2d(XlaHelpers::I64List(self.sizes()),
+                                    output_size)) {
+    return AtenXlaTypeBase::adaptive_avg_pool2d_backward(grad_output, self);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::adaptive_avg_pool2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntList kernel_size, at::IntList stride, at::IntList padding,

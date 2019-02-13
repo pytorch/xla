@@ -626,6 +626,17 @@ TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DBackward) {
+  for (int64_t output_size : {7, 8}) {
+    auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+      return at::adaptive_avg_pool2d(inputs[0], {output_size, output_size});
+    };
+    ForEachDevice([&](const Device& device) {
+      TestBackward({GetTestTensor({4, 1, 28, 28})}, device, testfn);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
   int in_channels = 3;
   int out_channels = 7;
