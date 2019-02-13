@@ -6,9 +6,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Softmax : public Node {
+// IR node for log(softmax) operation.
+class LogSoftmax : public Node {
  public:
-  Softmax(const Value& input, xla::int64 dim);
+  LogSoftmax(const Value& input, xla::int64 dim);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -17,6 +18,7 @@ class Softmax : public Node {
   xla::int64 dim() const { return dim_; }
 
  private:
+  // The dimension along which the result is computed.
   xla::int64 dim_;
 };
 

@@ -368,6 +368,11 @@ at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim) const {
       XLATensor::log_softmax(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor AtenXlaType::softmax(const at::Tensor& self, int64_t dim) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::softmax(bridge::GetXlaTensor(self), dim));
+}
+
 at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
                                    at::IntList kernel_size, at::IntList stride,
                                    at::IntList padding, at::IntList dilation,

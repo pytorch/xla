@@ -122,6 +122,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor log_softmax(const at::Tensor& self, int64_t dim) const override;
 
+  at::Tensor softmax(const at::Tensor& self, int64_t dim) const override;
+
   at::Tensor max_pool2d(const at::Tensor& self, at::IntList kernel_size,
                         at::IntList stride, at::IntList padding,
                         at::IntList dilation, bool ceil_mode) const override;
