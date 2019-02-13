@@ -164,6 +164,10 @@ class XLATensor {
 
   static XLATensor select(const XLATensor& input, int64_t dim, int64_t index);
 
+  static XLATensor sin(const XLATensor& input);
+
+  static XLATensor cos(const XLATensor& input);
+
   static XLATensor mm(const XLATensor& input, const XLATensor& weight,
                       bool use_full_conv_precision);
 

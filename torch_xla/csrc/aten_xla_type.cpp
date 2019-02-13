@@ -163,6 +163,14 @@ at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other) const {
   return self;
 }
 
+at::Tensor AtenXlaType::sin(const at::Tensor& input) const {
+  return bridge::AtenFromXlaTensor(XLATensor::sin(bridge::GetXlaTensor(input)));
+}
+
+at::Tensor AtenXlaType::cos(const at::Tensor& input) const {
+  return bridge::AtenFromXlaTensor(XLATensor::cos(bridge::GetXlaTensor(input)));
+}
+
 int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
   return bridge::GetXlaTensor(self).size(dim);
 }
