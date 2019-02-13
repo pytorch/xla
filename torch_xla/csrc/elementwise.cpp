@@ -68,7 +68,7 @@ xla::XlaOp BuildComparisonOp(c10::Symbol kind, const xla::XlaOp& input,
       XLA_ERROR() << "Invalid comparison operator kind: "
                   << kind.toQualString();
   }
-  return xla::ConvertElementType(pred, xla::PrimitiveType::U8);
+  return xla::ConvertElementType(pred, xla::PrimitiveType::S32);
 }
 
 xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,

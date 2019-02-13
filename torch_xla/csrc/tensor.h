@@ -60,6 +60,7 @@ class XLATensor {
 
   at::ScalarType dtype() const;
   xla::util::MaybeRef<xla::Shape> shape() const;
+  xla::util::MaybeRef<xla::Shape> GetPhysicalShape() const;
   const Device& GetDevice() const;
   xla::int64 GetUniqueId() const;
 
@@ -135,6 +136,17 @@ class XLATensor {
   static XLATensor lt(const XLATensor& input, const at::Scalar& other);
 
   static XLATensor lt(const XLATensor& input, const XLATensor& other);
+
+  // Dispatches a comparison operator, setting the logical type of the result
+  // appropriately.
+  static XLATensor DispatchComparisonOp(c10::Symbol kind,
+                                        const XLATensor& input,
+                                        const at::Scalar& other);
+
+  // Same as above, with the second input a tensor as well.
+  static XLATensor DispatchComparisonOp(c10::Symbol kind,
+                                        const XLATensor& input,
+                                        const XLATensor& other);
 
   static XLATensor relu(const XLATensor& input);
 
@@ -395,11 +407,12 @@ class XLATensor {
   XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
             bool requires_grad);
-  XLATensor(ir::Value ir_value, const Device& device);
+  XLATensor(ir::Value ir_value, const Device& device, xla::Shape logical_shape);
   XLATensor(std::shared_ptr<View> view, const Device& device);
   XLATensor(std::shared_ptr<Data> data);
 
-  static XLATensor Create(ir::Value ir_value, const Device& device);
+  static XLATensor Create(ir::Value ir_value, const Device& device,
+                          xla::Shape logical_shape = {});
   static XLATensor Create(std::shared_ptr<View> view, const Device& device);
 
   Data* data() const;
@@ -455,6 +468,9 @@ class XLATensor {
   static xla::int64 GetNextTensorId();
 
   std::shared_ptr<Data> data_;
+  // For some types (U8, S8 etc), the logical type of the tensor doesn't match
+  // the type of the underlying data.
+  xla::Shape logical_shape_;
 };
 
 }  // namespace torch_xla
