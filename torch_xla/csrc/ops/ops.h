@@ -49,6 +49,10 @@ NodePtr ReluOp(const Value& input);
 
 NodePtr TransposeOp(const Value& input);
 
+NodePtr Exp(const Value& input);
+
+NodePtr Log(const Value& input);
+
 NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
                     bool use_full_conv_precision);
 

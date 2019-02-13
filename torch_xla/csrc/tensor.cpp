@@ -683,6 +683,14 @@ XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,
                 input.GetDevice());
 }
 
+XLATensor XLATensor::exp(const XLATensor& input) {
+  return Create(ir::ops::Exp(input.GetIrValue()), input.GetDevice());
+}
+
+XLATensor XLATensor::log(const XLATensor& input) {
+  return Create(ir::ops::Log(input.GetIrValue()), input.GetDevice());
+}
+
 XLATensor XLATensor::batch_norm(const XLATensor& input, const XLATensor& weight,
                                 const XLATensor& bias,
                                 const XLATensor& running_mean,

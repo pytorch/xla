@@ -117,6 +117,14 @@ at::Tensor AtenXlaType::ones_like(const at::Tensor& self,
       self_tensor, xla_options.get_device(), xla_options.scalar_type));
 }
 
+at::Tensor AtenXlaType::exp(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::exp(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::log(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::log(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) const {
   return bridge::AtenFromXlaTensor(

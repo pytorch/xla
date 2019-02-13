@@ -167,6 +167,10 @@ class XLATensor {
   static XLATensor mm(const XLATensor& input, const XLATensor& weight,
                       bool use_full_conv_precision);
 
+  static XLATensor exp(const XLATensor& input);
+
+  static XLATensor log(const XLATensor& input);
+
   static XLATensor batch_norm(const XLATensor& input, const XLATensor& weight,
                               const XLATensor& bias,
                               const XLATensor& running_mean,

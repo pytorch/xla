@@ -27,6 +27,10 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor ones_like(const at::Tensor& self,
                        const at::TensorOptions& options) const override;
 
+  at::Tensor exp(const at::Tensor& self) const override;
+
+  at::Tensor log(const at::Tensor& self) const override;
+
   at::Tensor add(const at::Tensor& self, const at::Tensor& other,
                  at::Scalar alpha) const override;
   at::Tensor& add_(at::Tensor& self, const at::Tensor& other,
