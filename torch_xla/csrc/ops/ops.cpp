@@ -295,45 +295,6 @@ NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
                             std::move(lower_fn));
 }
 
-namespace {
-
-xla::XlaOp BuildComparisonOp(c10::Symbol kind, const xla::XlaOp& input,
-                             const xla::XlaOp& other) {
-  xla::XlaOp pred;
-  switch (kind) {
-    case at::aten::ne: {
-      pred = xla::Ne(input, other);
-      break;
-    }
-    case at::aten::eq: {
-      pred = xla::Eq(input, other);
-      break;
-    }
-    case at::aten::ge: {
-      pred = xla::Ge(input, other);
-      break;
-    }
-    case at::aten::le: {
-      pred = xla::Le(input, other);
-      break;
-    }
-    case at::aten::gt: {
-      pred = xla::Gt(input, other);
-      break;
-    }
-    case at::aten::lt: {
-      pred = xla::Lt(input, other);
-      break;
-    }
-    default:
-      XLA_ERROR() << "Invalid comparison operator kind: "
-                  << kind.toQualString();
-  }
-  return xla::ConvertElementType(pred, xla::PrimitiveType::U8);
-}
-
-}  // namespace
-
 NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
   auto lower_fn = [kind](const ir::Node& node,
                          ir::LoweringContext* loctx) -> ir::XlaOpVector {

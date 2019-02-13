@@ -593,7 +593,12 @@ CreateTranslationHandlers() {
   (*t)[at::aten::div] = TranslateArithmetic;
   (*t)[at::aten::sub] = TranslateArithmetic;
   (*t)[at::aten::mul] = TranslateArithmetic;
+  (*t)[at::aten::ne] = TranslateComparison;
+  (*t)[at::aten::eq] = TranslateComparison;
+  (*t)[at::aten::ge] = TranslateComparison;
+  (*t)[at::aten::le] = TranslateComparison;
   (*t)[at::aten::gt] = TranslateComparison;
+  (*t)[at::aten::lt] = TranslateComparison;
   (*t)[at::aten::type_as] = TranslateTypeAs;
   (*t)[at::aten::convolution] = TranslateConvolution;
   (*t)[at::aten::thnn_conv2d_forward] = TranslateConvolution;

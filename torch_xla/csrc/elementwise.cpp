@@ -33,16 +33,42 @@ xla::XlaOp BuildComparisonOp(const torch::jit::Node* node,
   xla::XlaOp xla_other = XlaHelpers::ScalarValue(
       node->get<at::Scalar>(at::attr::other).value().to<float>(),
       operand_shape.element_type(), builder);
+  return BuildComparisonOp(node->kind(), operand, xla_other);
+}
+
+xla::XlaOp BuildComparisonOp(c10::Symbol kind, const xla::XlaOp& input,
+                             const xla::XlaOp& other) {
   xla::XlaOp pred;
-  switch (node->kind()) {
+  switch (kind) {
+    case at::aten::ne: {
+      pred = xla::Ne(input, other);
+      break;
+    }
+    case at::aten::eq: {
+      pred = xla::Eq(input, other);
+      break;
+    }
+    case at::aten::ge: {
+      pred = xla::Ge(input, other);
+      break;
+    }
+    case at::aten::le: {
+      pred = xla::Le(input, other);
+      break;
+    }
     case at::aten::gt: {
-      pred = xla::Gt(operand, xla_other);
+      pred = xla::Gt(input, other);
+      break;
+    }
+    case at::aten::lt: {
+      pred = xla::Lt(input, other);
       break;
     }
     default:
-      XLA_ERROR() << "Invalid binary operator kind: " << node->kind();
+      XLA_ERROR() << "Invalid comparison operator kind: "
+                  << kind.toQualString();
   }
-  return xla::ConvertElementType(pred, xla::PrimitiveType::S8);
+  return xla::ConvertElementType(pred, xla::PrimitiveType::U8);
 }
 
 xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
