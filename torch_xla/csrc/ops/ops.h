@@ -16,10 +16,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-inline NodePtr ScalarOp(double value, xla::Shape shape) {
+inline NodePtr ScalarOp(at::Scalar value, xla::Shape shape) {
   return MakeNode<Scalar>(value, std::move(shape));
 }
-inline NodePtr ScalarOp(double value, xla::PrimitiveType type) {
+inline NodePtr ScalarOp(at::Scalar value, xla::PrimitiveType type) {
   return MakeNode<Scalar>(value, type);
 }
 
@@ -62,6 +62,9 @@ NodePtr Log(const Value& input);
 NodePtr Sqrt(const Value& input);
 
 NodePtr Pow(const Value& input, const Value& exponent);
+
+NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
+              c10::optional<at::Scalar> max);
 
 NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
                     bool use_full_conv_precision);

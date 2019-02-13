@@ -121,6 +121,31 @@ NodePtr Pow(const Value& input, const Value& exponent) {
                             std::move(lower_fn));
 }
 
+NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
+              c10::optional<at::Scalar> max) {
+  const xla::Shape& input_shape = input.shape();
+  XlaHelpers::MinMax min_max =
+      XlaHelpers::MinMaxValues(input_shape.element_type());
+  if (!min) {
+    min = min_max.min;
+  }
+  if (!max) {
+    max = min_max.max;
+  }
+  ir::NodePtr min_value = ir::ops::ScalarOp(*min, input_shape.element_type());
+  ir::NodePtr max_value = ir::ops::ScalarOp(*max, input_shape.element_type());
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_min = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_max = loctx->GetOutputOp(node.operand(2));
+    return node.ReturnOp(xla::Clamp(xla_min, xla_input, xla_max), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::clamp),
+                            ir::OpList{input, min_value, max_value},
+                            input_shape, std::move(lower_fn));
+}
+
 NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
                     bool use_full_conv_precision) {
   const auto precision_level = use_full_conv_precision
