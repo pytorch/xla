@@ -55,6 +55,10 @@ NodePtr ReluOp(const Value& input);
 
 NodePtr TransposeOp(const Value& input);
 
+NodePtr Min(const Value& input, const Value& other);
+
+NodePtr Max(const Value& input, const Value& other);
+
 NodePtr Exp(const Value& input);
 
 NodePtr Log(const Value& input);

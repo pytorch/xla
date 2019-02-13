@@ -880,6 +880,16 @@ XLATensor XLATensor::nll_loss_backward(const XLATensor& input,
       input.GetDevice());
 }
 
+XLATensor XLATensor::min(const XLATensor& input, const XLATensor& other) {
+  return Create(ir::ops::Min(input.GetIrValue(), other.GetIrValue()),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::max(const XLATensor& input, const XLATensor& other) {
+  return Create(ir::ops::Max(input.GetIrValue(), other.GetIrValue()),
+                input.GetDevice());
+}
+
 XLATensor XLATensor::not_supported(c10::Symbol node_symbol, xla::Shape shape,
                                    const Device& device) {
   return Create(ir::ops::NotSupportedOp(node_symbol, shape), device);

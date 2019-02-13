@@ -496,6 +496,18 @@ at::Tensor AtenXlaType::nll_loss_backward(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(target)));
 }
 
+at::Tensor AtenXlaType::min(const at::Tensor& self,
+                            const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::min(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor AtenXlaType::max(const at::Tensor& self,
+                            const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::max(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::native_batch_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input,

@@ -157,6 +157,11 @@ class AtenXlaType : public AtenXlaTypeBase {
                                int64_t ignore_index,
                                const at::Tensor& total_weight) const override;
 
+  at::Tensor min(const at::Tensor& self,
+                 const at::Tensor& other) const override;
+  at::Tensor max(const at::Tensor& self,
+                 const at::Tensor& other) const override;
+
   std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm_backward(
       const at::Tensor& grad_out, const at::Tensor& input,
       const at::Tensor& weight, const at::Tensor& running_mean,
