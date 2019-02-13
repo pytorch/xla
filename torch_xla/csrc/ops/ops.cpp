@@ -68,6 +68,26 @@ NodePtr TransposeOp(const Value& input) {
                             output_shape, std::move(lower_fn));
 }
 
+NodePtr Exp(const Value& input) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(xla::Exp(xla_input), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::exp), ir::OpList{input},
+                            input.shape(), std::move(lower_fn));
+}
+
+NodePtr Log(const Value& input) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(xla::Log(xla_input), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::log), ir::OpList{input},
+                            input.shape(), std::move(lower_fn));
+}
+
 NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
                     bool use_full_conv_precision) {
   const auto precision_level = use_full_conv_precision
