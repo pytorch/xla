@@ -175,6 +175,10 @@ class XLATensor {
 
   static XLATensor log(const XLATensor& input);
 
+  static XLATensor sqrt(const XLATensor& input);
+
+  static XLATensor pow(const XLATensor& input, at::Scalar exponent);
+
   static XLATensor batch_norm(const XLATensor& input, const XLATensor& weight,
                               const XLATensor& bias,
                               const XLATensor& running_mean,
