@@ -79,6 +79,28 @@ NodePtr TransposeOp(const Value& input) {
                             output_shape, std::move(lower_fn));
 }
 
+NodePtr Min(const Value& input, const Value& other) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(xla::Min(xla_input, xla_other), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::min), ir::OpList{input, other},
+                            input.shape(), std::move(lower_fn));
+}
+
+NodePtr Max(const Value& input, const Value& other) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(xla::Max(xla_input, xla_other), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::max), ir::OpList{input, other},
+                            input.shape(), std::move(lower_fn));
+}
+
 NodePtr Exp(const Value& input) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
