@@ -63,6 +63,8 @@ NodePtr NllLossOp(const Value& logits, const Value& labels);
 
 NodePtr NllLossBackwardOp(const Value& logits, const Value& labels);
 
+NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output, const Value& input);
+
 // Placeholder node which is never to be used. Using it would throw an error
 // during lowering.
 NodePtr NotSupportedOp(c10::Symbol node_symbol, xla::Shape shape);

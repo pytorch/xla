@@ -754,6 +754,13 @@ XLATensor XLATensor::avg_pool2d_backward(
                 out_backprop.GetDevice());
 }
 
+XLATensor XLATensor::adaptive_avg_pool2d_backward(const XLATensor& grad_output,
+                                                  const XLATensor& input) {
+  return Create(ir::ops::AdaptiveAvgPool2dBackward(grad_output.GetIrValue(),
+                                                   input.GetIrValue()),
+                input.GetDevice());
+}
+
 XLATensor XLATensor::max_pool2d_backward(
     const XLATensor& out_backprop, const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
