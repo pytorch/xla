@@ -33,6 +33,16 @@ NodePtr Sin(const Value& input) {
                             input.shape(), std::move(lower_fn));
 }
 
+NodePtr Neg(const Value& input) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(xla::Neg(xla_input), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::neg), ir::OpList{input},
+                            input.shape(), std::move(lower_fn));
+}
+
 NodePtr ReluOp(const Value& input) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
