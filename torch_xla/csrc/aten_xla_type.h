@@ -67,6 +67,18 @@ class AtenXlaType : public AtenXlaTypeBase {
                  const at::Tensor& other) const override;
   at::Tensor& div_(at::Tensor& self, const at::Tensor& other) const override;
 
+  at::Tensor ne(const at::Tensor& self, const at::Tensor& other) const override;
+
+  at::Tensor eq(const at::Tensor& self, const at::Tensor& other) const override;
+
+  at::Tensor ge(const at::Tensor& self, const at::Tensor& other) const override;
+
+  at::Tensor le(const at::Tensor& self, const at::Tensor& other) const override;
+
+  at::Tensor gt(const at::Tensor& self, const at::Tensor& other) const override;
+
+  at::Tensor lt(const at::Tensor& self, const at::Tensor& other) const override;
+
   at::Tensor neg(const at::Tensor& self) const override;
 
   at::Tensor sin(const at::Tensor& self) const override;

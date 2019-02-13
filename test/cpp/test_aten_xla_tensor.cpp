@@ -143,6 +143,78 @@ TEST_F(AtenXlaTensorTest, TestDivInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestNe) {
+  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor b = GetTestTensor({2, 3});
+  at::Tensor c = at::ne(a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::ne(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestEq) {
+  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor b = a.clone();
+  at::Tensor c = at::eq(a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::eq(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestGe) {
+  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor b = a.clone();
+  at::Tensor c = at::ge(a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::ge(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestLe) {
+  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor b = a.clone();
+  at::Tensor c = at::le(a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::le(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestGt) {
+  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor b = at::add(a.clone(), at::ones_like(a));
+  at::Tensor c = at::gt(b, a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::gt(xla_b, xla_a);
+    AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestLt) {
+  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor b = at::add(a.clone(), at::ones_like(a));
+  at::Tensor c = at::lt(a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::lt(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestIntegerAdd) {
   std::vector<at::ScalarType> types(
       {at::kByte, at::kChar, at::kShort, at::kInt, at::kLong});

@@ -217,6 +217,42 @@ at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other) const {
   return self;
 }
 
+at::Tensor AtenXlaType::ne(const at::Tensor& self,
+                           const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::ne(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor AtenXlaType::eq(const at::Tensor& self,
+                           const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::eq(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor AtenXlaType::ge(const at::Tensor& self,
+                           const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::ge(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor AtenXlaType::le(const at::Tensor& self,
+                           const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::le(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor AtenXlaType::gt(const at::Tensor& self,
+                           const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::gt(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor AtenXlaType::lt(const at::Tensor& self,
+                           const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::lt(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
 at::Tensor AtenXlaType::neg(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::neg(bridge::GetXlaTensor(self)));
 }
