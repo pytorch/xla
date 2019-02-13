@@ -241,6 +241,10 @@ class XLATensor {
   static XLATensor nll_loss_backward(const XLATensor& input,
                                      const XLATensor& target);
 
+  static XLATensor min(const XLATensor& input, const XLATensor& other);
+
+  static XLATensor max(const XLATensor& input, const XLATensor& other);
+
   // Like batch_norm, but returns additional save_mean and save_invstd used by
   // the backward pass.
   static std::tuple<XLATensor, XLATensor, XLATensor> native_batch_norm(
