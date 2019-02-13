@@ -13,6 +13,10 @@ xla::XlaOp BuildArithmeticOp(const torch::jit::Node* node,
 xla::XlaOp BuildComparisonOp(const torch::jit::Node* node,
                              const xla::XlaOp& operand);
 
+// Same as above, with kind provided as parameter.
+xla::XlaOp BuildComparisonOp(c10::Symbol kind, const xla::XlaOp& input,
+                             const xla::XlaOp& other);
+
 // Converts the given operand to the type specified by the given node.
 xla::XlaOp BuildTypeAs(const torch::jit::Node* node, const xla::XlaOp& operand);
 
