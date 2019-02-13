@@ -599,9 +599,19 @@ xla::int64 XLATensor::size(int dim) const {
   return xla_shape.get().dimensions(dim_index);
 }
 
+XLATensor XLATensor::ne(const XLATensor& input, const at::Scalar& other) {
+  return Create(ir::ops::ComparisonOp(at::aten::ne, input.GetIrValue(), other),
+                input.GetDevice());
+}
+
 XLATensor XLATensor::ne(const XLATensor& input, const XLATensor& other) {
   return Create(ir::ops::ComparisonOp(at::aten::ne, input.GetIrValue(),
                                       other.GetIrValue()),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::eq(const XLATensor& input, const at::Scalar& other) {
+  return Create(ir::ops::ComparisonOp(at::aten::eq, input.GetIrValue(), other),
                 input.GetDevice());
 }
 
@@ -611,9 +621,19 @@ XLATensor XLATensor::eq(const XLATensor& input, const XLATensor& other) {
                 input.GetDevice());
 }
 
+XLATensor XLATensor::ge(const XLATensor& input, const at::Scalar& other) {
+  return Create(ir::ops::ComparisonOp(at::aten::ge, input.GetIrValue(), other),
+                input.GetDevice());
+}
+
 XLATensor XLATensor::ge(const XLATensor& input, const XLATensor& other) {
   return Create(ir::ops::ComparisonOp(at::aten::ge, input.GetIrValue(),
                                       other.GetIrValue()),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::le(const XLATensor& input, const at::Scalar& other) {
+  return Create(ir::ops::ComparisonOp(at::aten::le, input.GetIrValue(), other),
                 input.GetDevice());
 }
 
@@ -623,9 +643,19 @@ XLATensor XLATensor::le(const XLATensor& input, const XLATensor& other) {
                 input.GetDevice());
 }
 
+XLATensor XLATensor::gt(const XLATensor& input, const at::Scalar& other) {
+  return Create(ir::ops::ComparisonOp(at::aten::gt, input.GetIrValue(), other),
+                input.GetDevice());
+}
+
 XLATensor XLATensor::gt(const XLATensor& input, const XLATensor& other) {
   return Create(ir::ops::ComparisonOp(at::aten::gt, input.GetIrValue(),
                                       other.GetIrValue()),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::lt(const XLATensor& input, const at::Scalar& other) {
+  return Create(ir::ops::ComparisonOp(at::aten::lt, input.GetIrValue(), other),
                 input.GetDevice());
 }
 
