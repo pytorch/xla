@@ -11,6 +11,26 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
+NodePtr Cos(const Value& input) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(xla::Cos(xla_input), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::cos), ir::OpList{input},
+                            input.shape(), std::move(lower_fn));
+}
+
+NodePtr Sin(const Value& input) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(xla::Sin(xla_input), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::sin), ir::OpList{input},
+                            input.shape(), std::move(lower_fn));
+}
+
 NodePtr ReluOp(const Value& input) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {

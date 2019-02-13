@@ -676,6 +676,14 @@ XLATensor XLATensor::select(const XLATensor& input, int64_t dim,
                 input.GetDevice());
 }
 
+XLATensor XLATensor::sin(const XLATensor& input) {
+  return Create(ir::ops::Sin(input.GetIrValue()), input.GetDevice());
+}
+
+XLATensor XLATensor::cos(const XLATensor& input) {
+  return Create(ir::ops::Cos(input.GetIrValue()), input.GetDevice());
+}
+
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,
                         bool use_full_conv_precision) {
   return Create(ir::ops::MatMulOp(input.GetIrValue(), weight.GetIrValue(),

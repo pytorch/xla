@@ -45,6 +45,10 @@ class AtenXlaType : public AtenXlaTypeBase {
                  const at::Tensor& other) const override;
   at::Tensor& div_(at::Tensor& self, const at::Tensor& other) const override;
 
+  at::Tensor sin(const at::Tensor& input) const override;
+
+  at::Tensor cos(const at::Tensor& input) const override;
+
   int64_t size(const at::Tensor& self, int64_t dim) const override;
 
   at::Tensor relu(const at::Tensor& self) const override;
