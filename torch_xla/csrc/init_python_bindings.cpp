@@ -191,7 +191,7 @@ void InitXlaTensorBindings(py::module m) {
              self.addcmul_(alpha, tensor1, tensor2);
              return self;
            })
-      .def("t", [](const XLATensor& self) { return self.t(); })
+      .def("t", [](const XLATensor& self) { return XLATensor::t(self); })
       .def("view",
            [](const XLATensor& self, py::args args) {
              std::vector<xla::int64> output_sizes;
@@ -201,7 +201,9 @@ void InitXlaTensorBindings(py::module m) {
              return self.view(output_sizes);
            })
       .def("log_softmax",
-           [](const XLATensor& self, int dim) { return self.log_softmax(dim); })
+           [](const XLATensor& self, int dim) {
+             return XLATensor::log_softmax(self, dim);
+           })
       .def("cross_replica_sum",
            [](const XLATensor& self, const py::list& groups) {
              std::vector<std::vector<xla::int64>> crs_groups;
@@ -249,9 +251,9 @@ void InitXlaTensorBindings(py::module m) {
         s << m.ToTensor();
         return s.str();
       });
-  m.def("relu", [](const XLATensor& self) { return self.relu(); });
+  m.def("relu", [](const XLATensor& self) { return XLATensor::relu(self); });
   m.def("threshold", [](const XLATensor& self, float threshold, float value) {
-    return self.threshold(threshold, value);
+    return XLATensor::threshold(self, threshold, value);
   });
   m.def(
       "conv2d",
@@ -259,8 +261,8 @@ void InitXlaTensorBindings(py::module m) {
          int padding, bool use_full_conv_precision) {
         std::vector<xla::int64> stride_2d(2, stride);
         std::vector<xla::int64> padding_2d(2, padding);
-        return self.conv2d(weight, stride_2d, padding_2d,
-                           use_full_conv_precision);
+        return XLATensor::conv2d(self, weight, stride_2d, padding_2d,
+                                 use_full_conv_precision);
       },
       py::arg("input"), py::arg("weight"), py::arg("stride") = 1,
       py::arg("padding") = 0, py::arg("use_full_conv_precision") = false);
@@ -270,8 +272,8 @@ void InitXlaTensorBindings(py::module m) {
          int stride, int padding, bool use_full_conv_precision) {
         std::vector<xla::int64> stride_2d(2, stride);
         std::vector<xla::int64> padding_2d(2, padding);
-        return self.conv2d(weight, bias, stride_2d, padding_2d,
-                           use_full_conv_precision);
+        return XLATensor::conv2d(self, weight, bias, stride_2d, padding_2d,
+                                 use_full_conv_precision);
       },
       py::arg("input"), py::arg("weight"), py::arg("bias"),
       py::arg("stride") = 1, py::arg("padding") = 0,
@@ -281,7 +283,8 @@ void InitXlaTensorBindings(py::module m) {
       [](const XLATensor& self, const XLATensor& weight,
          const std::vector<xla::int64>& stride,
          const std::vector<xla::int64>& padding, bool use_full_conv_precision) {
-        return self.conv2d(weight, stride, padding, use_full_conv_precision);
+        return XLATensor::conv2d(self, weight, stride, padding,
+                                 use_full_conv_precision);
       },
       py::arg("input"), py::arg("weight"),
       py::arg("stride") = std::vector<xla::int64>{1, 1},
@@ -293,8 +296,8 @@ void InitXlaTensorBindings(py::module m) {
       [](const XLATensor& self, const XLATensor& weight, const XLATensor& bias,
          const std::vector<xla::int64>& stride,
          const std::vector<xla::int64>& padding, bool use_full_conv_precision) {
-        return self.conv2d(weight, bias, stride, padding,
-                           use_full_conv_precision);
+        return XLATensor::conv2d(self, weight, bias, stride, padding,
+                                 use_full_conv_precision);
       },
       py::arg("input"), py::arg("weight"), py::arg("bias"),
       py::arg("stride") = std::vector<xla::int64>{1, 1},
@@ -304,15 +307,15 @@ void InitXlaTensorBindings(py::module m) {
       "addmm",
       [](XLATensor& bias, const XLATensor& input, const XLATensor& weight,
          bool use_full_conv_precision) {
-        return input.addmm(weight, bias, use_full_conv_precision);
+        return XLATensor::addmm(input, weight, bias, use_full_conv_precision);
       },
       py::arg("bias"), py::arg("input"), py::arg("weight"),
       py::arg("use_full_conv_precision") = false);
   m.def(
       "max_pool2d",
       [](const XLATensor& self, int kernel_size, int stride, int padding) {
-        return self.max_pool2d({kernel_size, kernel_size}, {stride, stride},
-                               {padding, padding});
+        return XLATensor::max_pool2d(self, {kernel_size, kernel_size},
+                                     {stride, stride}, {padding, padding});
       },
       py::arg("input"), py::arg("kernel_size"), py::arg("stride") = 1,
       py::arg("padding") = 0);
@@ -321,7 +324,7 @@ void InitXlaTensorBindings(py::module m) {
       [](const XLATensor& self, const std::vector<xla::int64>& kernel_size,
          const std::vector<xla::int64>& stride,
          const std::vector<xla::int64>& padding) {
-        return self.max_pool2d(kernel_size, stride, padding);
+        return XLATensor::max_pool2d(self, kernel_size, stride, padding);
       },
       py::arg("input"), py::arg("kernel_size"),
       py::arg("stride") = std::vector<xla::int64>{1, 1},
@@ -330,8 +333,9 @@ void InitXlaTensorBindings(py::module m) {
       "avg_pool2d",
       [](const XLATensor& self, int kernel_size, int stride, int padding,
          bool count_include_pad) {
-        return self.avg_pool2d({kernel_size, kernel_size}, {stride, stride},
-                               {padding, padding}, count_include_pad);
+        return XLATensor::avg_pool2d(self, {kernel_size, kernel_size},
+                                     {stride, stride}, {padding, padding},
+                                     count_include_pad);
       },
       py::arg("input"), py::arg("kernel_size"), py::arg("stride") = 1,
       py::arg("padding") = 0, py::arg("count_include_pad") = true);
@@ -340,7 +344,8 @@ void InitXlaTensorBindings(py::module m) {
       [](const XLATensor& self, const std::vector<xla::int64>& kernel_size,
          const std::vector<xla::int64>& stride,
          const std::vector<xla::int64>& padding, bool count_include_pad) {
-        return self.avg_pool2d(kernel_size, stride, padding, count_include_pad);
+        return XLATensor::avg_pool2d(self, kernel_size, stride, padding,
+                                     count_include_pad);
       },
       py::arg("input"), py::arg("kernel_size"),
       py::arg("stride") = std::vector<xla::int64>{1, 1},

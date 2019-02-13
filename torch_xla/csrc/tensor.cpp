@@ -579,64 +579,68 @@ xla::int64 XLATensor::size(int dim) const {
   return xla_shape.get().dimensions(dim_index);
 }
 
-XLATensor XLATensor::relu() const {
-  return Create(ir::ops::ReluOp(GetIrValue()), GetDevice());
+XLATensor XLATensor::relu(const XLATensor& input) {
+  return Create(ir::ops::ReluOp(input.GetIrValue()), input.GetDevice());
 }
 
-XLATensor XLATensor::threshold(float threshold, float value) const {
+XLATensor XLATensor::threshold(const XLATensor& input, float threshold,
+                               float value) {
   return Create(
-      ir::MakeNode<ir::ops::Threshold>(GetIrValue(), threshold, value),
-      GetDevice());
+      ir::MakeNode<ir::ops::Threshold>(input.GetIrValue(), threshold, value),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::conv2d(
-    const XLATensor& weight, const XLATensor& bias,
+    const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    bool use_full_conv_precision) const {
+    bool use_full_conv_precision) {
   ir::NodePtr ir_value = ir::MakeNode<ir::ops::Conv2d>(
-      GetIrValue(), weight.GetIrValue(), bias.GetIrValue(), stride, padding,
-      use_full_conv_precision);
-  return Create(ir_value, GetDevice());
+      input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue(), stride,
+      padding, use_full_conv_precision);
+  return Create(ir_value, input.GetDevice());
 }
 
 XLATensor XLATensor::conv2d(
-    const XLATensor& weight,
+    const XLATensor& input, const XLATensor& weight,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    bool use_full_conv_precision) const {
+    bool use_full_conv_precision) {
   ir::NodePtr ir_value =
-      ir::MakeNode<ir::ops::Conv2d>(GetIrValue(), weight.GetIrValue(), stride,
-                                    padding, use_full_conv_precision);
-  return Create(ir_value, GetDevice());
+      ir::MakeNode<ir::ops::Conv2d>(input.GetIrValue(), weight.GetIrValue(),
+                                    stride, padding, use_full_conv_precision);
+  return Create(ir_value, input.GetDevice());
 }
 
-XLATensor XLATensor::addmm(const XLATensor& weight, const XLATensor& bias,
-                           bool use_full_conv_precision) const {
+XLATensor XLATensor::addmm(const XLATensor& input, const XLATensor& weight,
+                           const XLATensor& bias,
+                           bool use_full_conv_precision) {
   return Create(
-      ir::ops::AddMatMulOp(GetIrValue(), weight.GetIrValue(), bias.GetIrValue(),
-                           use_full_conv_precision),
-      GetDevice());
+      ir::ops::AddMatMulOp(input.GetIrValue(), weight.GetIrValue(),
+                           bias.GetIrValue(), use_full_conv_precision),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::max_pool2d(
+    const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) const {
-  return Create(ir::MakeNode<ir::ops::MaxPool2d>(GetIrValue(), kernel_size,
-                                                 stride, padding),
-                GetDevice());
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  return Create(ir::MakeNode<ir::ops::MaxPool2d>(input.GetIrValue(),
+                                                 kernel_size, stride, padding),
+                input.GetDevice());
 }
 
 XLATensor XLATensor::avg_pool2d(
+    const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    bool count_include_pad) const {
+    bool count_include_pad) {
   return Create(
-      ir::MakeNode<ir::ops::AvgPool2d>(GetIrValue(), kernel_size, stride,
+      ir::MakeNode<ir::ops::AvgPool2d>(input.GetIrValue(), kernel_size, stride,
                                        padding, count_include_pad),
-      GetDevice());
+      input.GetDevice());
 }
 
 XLATensor XLATensor::ones(tensorflow::gtl::ArraySlice<const xla::int64> size,
@@ -823,8 +827,8 @@ XLATensor XLATensor::threshold_backward(const XLATensor& grad_output,
                 grad_output.GetDevice());
 }
 
-XLATensor XLATensor::t() const {
-  return Create(ir::ops::TransposeOp(GetIrValue()), GetDevice());
+XLATensor XLATensor::t(const XLATensor& input) {
+  return Create(ir::ops::TransposeOp(input.GetIrValue()), input.GetDevice());
 }
 
 XLATensor XLATensor::view(
@@ -855,9 +859,9 @@ XLATensor XLATensor::view(
   return Create(std::make_shared<View>(std::move(shape), alias), GetDevice());
 }
 
-XLATensor XLATensor::log_softmax(xla::int64 dim) const {
-  return Create(ir::MakeNode<ir::ops::LogSoftmax>(GetIrValue(), dim),
-                GetDevice());
+XLATensor XLATensor::log_softmax(const XLATensor& input, xla::int64 dim) {
+  return Create(ir::MakeNode<ir::ops::LogSoftmax>(input.GetIrValue(), dim),
+                input.GetDevice());
 }
 
 XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target) {

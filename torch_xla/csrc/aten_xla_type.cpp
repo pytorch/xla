@@ -194,13 +194,13 @@ int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
 }
 
 at::Tensor AtenXlaType::relu(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).relu());
+  return bridge::AtenFromXlaTensor(XLATensor::relu(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::threshold(const at::Tensor& self, at::Scalar threshold,
                                   at::Scalar value) const {
-  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).threshold(
-      threshold.to<double>(), value.to<double>()));
+  return bridge::AtenFromXlaTensor(XLATensor::threshold(
+      bridge::GetXlaTensor(self), threshold.to<double>(), value.to<double>()));
 }
 
 at::Tensor AtenXlaType::threshold_backward(const at::Tensor& grad_output,
@@ -221,14 +221,15 @@ at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
                                    dilation, groups);
   }
   if (bias.defined()) {
-    return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(input).conv2d(
-        bridge::GetXlaTensor(weight), bridge::GetXlaTensor(bias),
-        XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
+    return bridge::AtenFromXlaTensor(XLATensor::conv2d(
+        bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight),
+        bridge::GetXlaTensor(bias), XlaHelpers::I64List(stride),
+        XlaHelpers::I64List(padding),
         /*use_full_conv_precision=*/s_use_full_conv_precision_));
   } else {
-    return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(input).conv2d(
-        bridge::GetXlaTensor(weight), XlaHelpers::I64List(stride),
-        XlaHelpers::I64List(padding),
+    return bridge::AtenFromXlaTensor(XLATensor::conv2d(
+        bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight),
+        XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
         /*use_full_conv_precision=*/s_use_full_conv_precision_));
   }
 }
@@ -278,10 +279,11 @@ at::Tensor AtenXlaType::addmm(const at::Tensor& self, const at::Tensor& mat1,
   if (beta.to<double>() != 1 || alpha.to<double>() != 1) {
     return AtenXlaTypeBase::addmm(self, mat1, mat2, beta, alpha);
   }
-  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(mat1).addmm(
-      /*weight=*/bridge::GetXlaTensor(mat2),
-      /*bias=*/bridge::GetXlaTensor(self),
-      /*use_full_conv_precision=*/s_use_full_conv_precision_));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::addmm(bridge::GetXlaTensor(mat1),
+                       /*weight=*/bridge::GetXlaTensor(mat2),
+                       /*bias=*/bridge::GetXlaTensor(self),
+                       /*use_full_conv_precision=*/s_use_full_conv_precision_));
 }
 
 at::Tensor AtenXlaType::mm(const at::Tensor& self,
@@ -293,7 +295,7 @@ at::Tensor AtenXlaType::mm(const at::Tensor& self,
 }
 
 at::Tensor AtenXlaType::t(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).t());
+  return bridge::AtenFromXlaTensor(XLATensor::t(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntList size) const {
@@ -308,7 +310,8 @@ at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,
 }
 
 at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim) const {
-  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).log_softmax(dim));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim));
 }
 
 at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
@@ -320,9 +323,9 @@ at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
     return AtenXlaTypeBase::max_pool2d(self, kernel_size, stride, padding,
                                        dilation, ceil_mode);
   }
-  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).max_pool2d(
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding)));
+  return bridge::AtenFromXlaTensor(XLATensor::max_pool2d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
@@ -338,9 +341,9 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
   // user could request the indices to be returned, in which case we'd throw. We
   // need to either provide a lowering or improve our infrastructure to be able
   // to route to ATen the evaluation of outputs we hope to be unused.
-  XLATensor result = bridge::GetXlaTensor(self).max_pool2d(
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding));
+  XLATensor result = XLATensor::max_pool2d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding));
   xla::Shape indices_shape = result.shape();
   indices_shape.set_element_type(xla::PrimitiveType::S64);
   XLATensor indices_not_supported =
@@ -359,9 +362,10 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
     return AtenXlaTypeBase::avg_pool2d(self, kernel_size, stride, padding,
                                        ceil_mode, count_include_pad);
   }
-  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self).avg_pool2d(
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), count_include_pad));
+  return bridge::AtenFromXlaTensor(XLATensor::avg_pool2d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
+      count_include_pad));
 }
 
 at::Tensor AtenXlaType::adaptive_avg_pool2d(const at::Tensor& self,
