@@ -109,11 +109,6 @@ class XLATensor {
 
   void zero_();
 
-  void addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
-                const XLATensor& tensor2);
-  void addcmul_(const at::Scalar& value, const XLATensor& tensor1,
-                const XLATensor& tensor2);
-
   // Additional operations which are part of the PyTorch Tensor functionality.
   xla::int64 size(int dim) const;
 
@@ -160,6 +155,16 @@ class XLATensor {
                         const Device& device, at::ScalarType scalar_type);
   static XLATensor ones_like(const XLATensor& input, const Device& device,
                              c10::optional<at::ScalarType> scalar_type);
+
+  static XLATensor addcmul(const XLATensor& input, const at::Scalar& value,
+                           const XLATensor& tensor1, const XLATensor& tensor2);
+  static void addcmul_(XLATensor& input, const at::Scalar& value,
+                       const XLATensor& tensor1, const XLATensor& tensor2);
+
+  static XLATensor addcdiv(const XLATensor& input, const at::Scalar& value,
+                           const XLATensor& tensor1, const XLATensor& tensor2);
+  static void addcdiv_(XLATensor& input, const at::Scalar& value,
+                       const XLATensor& tensor1, const XLATensor& tensor2);
 
   static XLATensor zeros(tensorflow::gtl::ArraySlice<const xla::int64> size,
                          const Device& device, at::ScalarType scalar_type);

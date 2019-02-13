@@ -549,20 +549,38 @@ void XLATensor::div_(const at::Scalar& other) {
 
 void XLATensor::zero_() { SetIrValue(ir::ops::ScalarOp(0.0, shape())); }
 
-void XLATensor::addcdiv_(const at::Scalar& value, const XLATensor& tensor1,
-                         const XLATensor& tensor2) {
-  ir::NodePtr constant =
-      ir::ops::ScalarOp(value, tensor1.shape().get().element_type());
-  ir::Value div = tensor1.GetIrValue() / tensor2.GetIrValue();
-  SetIrValue(GetIrValue() + div * constant);
-}
-
-void XLATensor::addcmul_(const at::Scalar& value, const XLATensor& tensor1,
-                         const XLATensor& tensor2) {
+XLATensor XLATensor::addcmul(const XLATensor& input, const at::Scalar& value,
+                             const XLATensor& tensor1,
+                             const XLATensor& tensor2) {
   ir::NodePtr constant =
       ir::ops::ScalarOp(value, tensor1.shape().get().element_type());
   ir::Value mul = tensor1.GetIrValue() * tensor2.GetIrValue();
-  SetIrValue(GetIrValue() + mul * constant);
+  return Create(input.GetIrValue() + mul * constant, input.GetDevice());
+}
+
+void XLATensor::addcmul_(XLATensor& input, const at::Scalar& value,
+                         const XLATensor& tensor1, const XLATensor& tensor2) {
+  ir::NodePtr constant =
+      ir::ops::ScalarOp(value, tensor1.shape().get().element_type());
+  ir::Value mul = tensor1.GetIrValue() * tensor2.GetIrValue();
+  input.SetIrValue(input.GetIrValue() + mul * constant);
+}
+
+XLATensor XLATensor::addcdiv(const XLATensor& input, const at::Scalar& value,
+                             const XLATensor& tensor1,
+                             const XLATensor& tensor2) {
+  ir::NodePtr constant =
+      ir::ops::ScalarOp(value.toDouble(), tensor1.shape().get().element_type());
+  ir::Value div = tensor1.GetIrValue() / tensor2.GetIrValue();
+  return Create(input.GetIrValue() + div * constant, input.GetDevice());
+}
+
+void XLATensor::addcdiv_(XLATensor& input, const at::Scalar& value,
+                         const XLATensor& tensor1, const XLATensor& tensor2) {
+  ir::NodePtr constant =
+      ir::ops::ScalarOp(value.toDouble(), tensor1.shape().get().element_type());
+  ir::Value div = tensor1.GetIrValue() / tensor2.GetIrValue();
+  input.SetIrValue(input.GetIrValue() + div * constant);
 }
 
 xla::int64 XLATensor::size(int dim) const {

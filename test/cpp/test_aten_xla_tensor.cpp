@@ -222,6 +222,34 @@ TEST_F(AtenXlaTensorTest, TestNeg) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestAddCMul) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor d = at::addcmul(a, b, c, 3.1165);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = bridge::CreateXlaTensor(c, device);
+    at::Tensor xla_d = at::addcmul(xla_a, xla_b, xla_c, 3.1165);
+    AllClose(d, xla_d);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestAddCDiv) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::abs(at::rand({2, 2}, at::TensorOptions(at::kFloat))) + 1.0;
+  at::Tensor d = at::addcdiv(a, b, c, 3.1165);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = bridge::CreateXlaTensor(c, device);
+    at::Tensor xla_d = at::addcdiv(xla_a, xla_b, xla_c, 3.1165);
+    AllClose(d, xla_d);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSize) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   int rank = input.dim();

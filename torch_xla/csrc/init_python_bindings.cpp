@@ -179,18 +179,6 @@ void InitXlaTensorBindings(py::module m) {
           py::arg("other"))
       .def("__truediv__",
            [](const XLATensor& self, double other) { return self.div(other); })
-      .def("addcdiv_",
-           [](XLATensor self, double alpha, const XLATensor& tensor1,
-              XLATensor& tensor2) {
-             self.addcdiv_(alpha, tensor1, tensor2);
-             return self;
-           })
-      .def("addcmul_",
-           [](XLATensor self, double alpha, const XLATensor& tensor1,
-              XLATensor& tensor2) {
-             self.addcmul_(alpha, tensor1, tensor2);
-             return self;
-           })
       .def("t", [](const XLATensor& self) { return XLATensor::t(self); })
       .def("view",
            [](const XLATensor& self, py::args args) {
