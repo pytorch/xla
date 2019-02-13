@@ -118,6 +118,42 @@ at::Tensor AtenXlaType::ones_like(const at::Tensor& self,
       self_tensor, xla_options.get_device(), xla_options.scalar_type));
 }
 
+at::Tensor AtenXlaType::addcmul(const at::Tensor& self,
+                                const at::Tensor& tensor1,
+                                const at::Tensor& tensor2,
+                                at::Scalar value) const {
+  return bridge::AtenFromXlaTensor(XLATensor::addcmul(
+      bridge::GetXlaTensor(self), value, bridge::GetXlaTensor(tensor1),
+      bridge::GetXlaTensor(tensor2)));
+}
+
+at::Tensor& AtenXlaType::addcmul_(at::Tensor& self, const at::Tensor& tensor1,
+                                  const at::Tensor& tensor2,
+                                  at::Scalar value) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::addcmul_(self_tensor, value, bridge::GetXlaTensor(tensor1),
+                      bridge::GetXlaTensor(tensor2));
+  return self;
+}
+
+at::Tensor AtenXlaType::addcdiv(const at::Tensor& self,
+                                const at::Tensor& tensor1,
+                                const at::Tensor& tensor2,
+                                at::Scalar value) const {
+  return bridge::AtenFromXlaTensor(XLATensor::addcdiv(
+      bridge::GetXlaTensor(self), value, bridge::GetXlaTensor(tensor1),
+      bridge::GetXlaTensor(tensor2)));
+}
+
+at::Tensor& AtenXlaType::addcdiv_(at::Tensor& self, const at::Tensor& tensor1,
+                                  const at::Tensor& tensor2,
+                                  at::Scalar value) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::addcdiv_(self_tensor, value, bridge::GetXlaTensor(tensor1),
+                      bridge::GetXlaTensor(tensor2));
+  return self;
+}
+
 at::Tensor AtenXlaType::exp(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::exp(bridge::GetXlaTensor(self)));
 }
