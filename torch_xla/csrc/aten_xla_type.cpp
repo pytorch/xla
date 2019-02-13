@@ -126,6 +126,15 @@ at::Tensor AtenXlaType::log(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::log(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::sqrt(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::sqrt(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::pow(bridge::GetXlaTensor(self), exponent));
+}
+
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) const {
   return bridge::AtenFromXlaTensor(

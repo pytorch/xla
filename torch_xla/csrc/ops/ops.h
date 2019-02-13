@@ -57,6 +57,10 @@ NodePtr Exp(const Value& input);
 
 NodePtr Log(const Value& input);
 
+NodePtr Sqrt(const Value& input);
+
+NodePtr Pow(const Value& input, const Value& exponent);
+
 NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
                     bool use_full_conv_precision);
 
