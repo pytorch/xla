@@ -1,5 +1,7 @@
 #include "helpers.h"
 
+#include <limits>
+
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -42,6 +44,46 @@ std::vector<xla::int64> XlaHelpers::DropDimensions(
   }
   XLA_CHECK_EQ(drop_index, drop_dims.size());
   return new_dims;
+}
+
+XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
+  switch (type) {
+    case xla::S8:
+      return {std::numeric_limits<xla::int8>::min(),
+              std::numeric_limits<xla::int8>::max()};
+    case xla::U8:
+      return {std::numeric_limits<xla::uint8>::min(),
+              std::numeric_limits<xla::uint8>::max()};
+    case xla::S16:
+      return {std::numeric_limits<xla::int16>::min(),
+              std::numeric_limits<xla::int16>::max()};
+    case xla::U16:
+      return {std::numeric_limits<xla::uint16>::min(),
+              std::numeric_limits<xla::uint16>::max()};
+    case xla::S32:
+      return {static_cast<int64_t>(std::numeric_limits<xla::int32>::min()),
+              static_cast<int64_t>(std::numeric_limits<xla::int32>::max())};
+    case xla::U32:
+      return {static_cast<int64_t>(std::numeric_limits<xla::uint32>::min()),
+              static_cast<int64_t>(std::numeric_limits<xla::uint32>::max())};
+    case xla::S64:
+      return {static_cast<int64_t>(std::numeric_limits<xla::int64>::min()),
+              static_cast<int64_t>(std::numeric_limits<xla::int64>::max())};
+    case xla::U64:
+      return {static_cast<int64_t>(std::numeric_limits<xla::uint64>::min()),
+              static_cast<int64_t>(std::numeric_limits<xla::uint64>::max())};
+    case xla::BF16:
+    case xla::F32:
+      return {std::numeric_limits<float>::min(),
+              std::numeric_limits<float>::max()};
+    case xla::F64:
+      return {std::numeric_limits<double>::min(),
+              std::numeric_limits<double>::max()};
+    case xla::PRED:
+      return {0, 1};
+    default:
+      XLA_ERROR() << "Unsupported XLA type " << type;
+  }
 }
 
 xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfig(
