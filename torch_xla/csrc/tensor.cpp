@@ -677,6 +677,10 @@ XLATensor XLATensor::select(const XLATensor& input, int64_t dim,
                 input.GetDevice());
 }
 
+XLATensor XLATensor::neg(const XLATensor& input) {
+  return Create(ir::ops::Neg(input.GetIrValue()), input.GetDevice());
+}
+
 XLATensor XLATensor::sin(const XLATensor& input) {
   return Create(ir::ops::Sin(input.GetIrValue()), input.GetDevice());
 }

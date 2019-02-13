@@ -164,6 +164,8 @@ class XLATensor {
 
   static XLATensor select(const XLATensor& input, int64_t dim, int64_t index);
 
+  static XLATensor neg(const XLATensor& input);
+
   static XLATensor sin(const XLATensor& input);
 
   static XLATensor cos(const XLATensor& input);
