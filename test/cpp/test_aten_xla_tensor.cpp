@@ -463,6 +463,18 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmax) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSoftmax) {
+  at::Tensor input = at::rand({10, 8, 24, 16}, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    for (int dim = 0; dim < input.dim(); ++dim) {
+      at::Tensor output = at::softmax(input, dim);
+      at::Tensor xla_output = at::softmax(xla_input, dim);
+      AllClose(output, xla_output, /*rtol=*/1e-3);
+    }
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestMaxPool2D) {
   at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
   int kernel_size = 3;

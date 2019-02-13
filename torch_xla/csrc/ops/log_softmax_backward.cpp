@@ -1,7 +1,7 @@
-#include "ops/softmax_backward.h"
-#include "log_softmax.h"
+#include "ops/log_softmax_backward.h"
 #include "lowering_context.h"
 #include "ops/infer_output_shape.h"
+#include "softmax_builder.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 

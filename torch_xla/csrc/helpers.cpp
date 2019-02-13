@@ -108,8 +108,18 @@ xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
                                 xla::ShapeUtil::MakeShape(type, {}), "x");
   xla::XlaOp y = xla::Parameter(&reduction_builder, 1,
                                 xla::ShapeUtil::MakeShape(type, {}), "y");
-  Add(x, y);
+  xla::Add(x, y);
   return reduction_builder.Build().ConsumeValueOrDie();
+}
+
+xla::XlaComputation XlaHelpers::CreateMaxComputation(xla::PrimitiveType type) {
+  xla::XlaBuilder builder("MaxComputation");
+  xla::XlaOp x =
+      xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
+  xla::XlaOp y =
+      xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
+  xla::Max(x, y);
+  return builder.Build().ConsumeValueOrDie();
 }
 
 xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
