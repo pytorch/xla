@@ -84,6 +84,9 @@ NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output, const Value& input);
 
 NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other);
 
+NodePtr ComparisonOp(c10::Symbol kind, const Value& input,
+                     const at::Scalar& other);
+
 // Placeholder node which is never to be used. Using it would throw an error
 // during lowering.
 NodePtr NotSupportedOp(c10::Symbol node_symbol, xla::Shape shape);

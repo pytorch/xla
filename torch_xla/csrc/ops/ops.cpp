@@ -354,6 +354,12 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
                             std::move(output_shape), std::move(lower_fn));
 }
 
+NodePtr ComparisonOp(c10::Symbol kind, const Value& input,
+                     const at::Scalar& other) {
+  return ComparisonOp(kind, input,
+                      ir::MakeNode<ir::ops::Scalar>(other, input.shape()));
+}
+
 NodePtr NotSupportedOp(c10::Symbol node_symbol, xla::Shape shape) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
