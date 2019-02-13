@@ -117,40 +117,44 @@ class XLATensor {
   // Additional operations which are part of the PyTorch Tensor functionality.
   xla::int64 size(int dim) const;
 
-  XLATensor relu() const;
+  static XLATensor relu(const XLATensor& input);
 
-  XLATensor threshold(float threshold, float value) const;
+  static XLATensor threshold(const XLATensor& input, float threshold,
+                             float value);
 
-  XLATensor conv2d(const XLATensor& weight, const XLATensor& bias,
-                   tensorflow::gtl::ArraySlice<const xla::int64> stride,
-                   tensorflow::gtl::ArraySlice<const xla::int64> padding,
-                   bool use_full_conv_precision) const;
+  static XLATensor conv2d(const XLATensor& input, const XLATensor& weight,
+                          const XLATensor& bias,
+                          tensorflow::gtl::ArraySlice<const xla::int64> stride,
+                          tensorflow::gtl::ArraySlice<const xla::int64> padding,
+                          bool use_full_conv_precision);
 
-  XLATensor conv2d(const XLATensor& weight,
-                   tensorflow::gtl::ArraySlice<const xla::int64> stride,
-                   tensorflow::gtl::ArraySlice<const xla::int64> padding,
-                   bool use_full_conv_precision) const;
+  static XLATensor conv2d(const XLATensor& input, const XLATensor& weight,
+                          tensorflow::gtl::ArraySlice<const xla::int64> stride,
+                          tensorflow::gtl::ArraySlice<const xla::int64> padding,
+                          bool use_full_conv_precision);
 
-  XLATensor addmm(const XLATensor& weight, const XLATensor& bias,
-                  bool use_full_conv_precision) const;
+  static XLATensor addmm(const XLATensor& input, const XLATensor& weight,
+                         const XLATensor& bias, bool use_full_conv_precision);
 
-  XLATensor max_pool2d(
+  static XLATensor max_pool2d(
+      const XLATensor& input,
       tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding) const;
+      tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
-  XLATensor avg_pool2d(
+  static XLATensor avg_pool2d(
+      const XLATensor& input,
       tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
       tensorflow::gtl::ArraySlice<const xla::int64> padding,
-      bool count_include_pad) const;
+      bool count_include_pad);
 
-  XLATensor t() const;
+  static XLATensor t(const XLATensor& input);
 
   XLATensor view(
       tensorflow::gtl::ArraySlice<const xla::int64> output_size) const;
 
-  XLATensor log_softmax(xla::int64 dim) const;
+  static XLATensor log_softmax(const XLATensor& input, xla::int64 dim);
 
   static XLATensor ones(tensorflow::gtl::ArraySlice<const xla::int64> size,
                         const Device& device, at::ScalarType scalar_type);
