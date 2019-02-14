@@ -95,6 +95,26 @@ xla::XlaOp BuildView(
   return xla::Reshape(input, complete_output_sizes);
 }
 
+xla::XlaOp SqueezeTrivialDimension(const xla::XlaOp& input, size_t dim) {
+  auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
+  XLA_CHECK_LT(dim, input_sizes.size());
+  if (input_sizes[dim] != 1) {
+    return input;
+  }
+  input_sizes.erase(input_sizes.begin() + dim);
+  return xla::Reshape(input, input_sizes);
+}
+
+xla::XlaOp SqueezeAllTrivialDimensions(const xla::XlaOp& input) {
+  auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
+  // Squeeze the trivial (of size 1) dimensions.
+  std::vector<xla::int64> non_singleton_dimensions;
+  std::copy_if(input_sizes.begin(), input_sizes.end(),
+               std::back_inserter(non_singleton_dimensions),
+               [](const size_t dim_size) { return dim_size != 1; });
+  return xla::Reshape(input, non_singleton_dimensions);
+}
+
 xla::XlaOp BuildExpand(const torch::jit::Node* node, const xla::XlaOp& input) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_GE(node_inputs.size(), 1);
@@ -115,13 +135,7 @@ xla::XlaOp BuildExpand(
     input_sizes.insert(input_sizes.begin(), 1);
   }
   xla::XlaOp implicit_reshape = xla::Reshape(input, input_sizes);
-  // Squeeze the trivial (of size 1) dimensions.
-  std::vector<xla::int64> non_singleton_dimensions;
-  std::copy_if(input_sizes.begin(), input_sizes.end(),
-               std::back_inserter(non_singleton_dimensions),
-               [](const size_t dim_size) { return dim_size != 1; });
-  xla::XlaOp squeezed_input =
-      xla::Reshape(implicit_reshape, non_singleton_dimensions);
+  xla::XlaOp squeezed_input = SqueezeAllTrivialDimensions(implicit_reshape);
   // Broadcast the squeezed tensor, the additional dimensions are to the left.
   std::vector<xla::int64> broadcast_sizes;
   for (size_t i = 0; i < input_sizes.size(); ++i) {
