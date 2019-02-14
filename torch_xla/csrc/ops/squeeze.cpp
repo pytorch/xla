@@ -10,16 +10,20 @@ namespace ir {
 namespace ops {
 namespace {
 
+xla::XlaOp LowerSqueeze(const xla::XlaOp& input, int dim) {
+  if (dim == -1) {
+    return SqueezeAllTrivialDimensions(input);
+  }
+  XLA_CHECK_GE(dim, 0);
+  return SqueezeTrivialDimension(input, dim);
+}
+
 xla::Shape NodeOutputShape(const Value& input, int dim) {
   auto lower_for_shape_fn =
       [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
-    if (dim == -1) {
-      return SqueezeAllTrivialDimensions(operands[0]);
-    }
-    XLA_CHECK_GE(dim, 0);
-    return SqueezeTrivialDimension(operands[0], dim);
+    return LowerSqueeze(operands[0], dim);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
@@ -33,12 +37,7 @@ Squeeze::Squeeze(const Value& input, int dim)
 
 XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  if (dim_ == -1) {
-    xla::XlaOp output = SqueezeAllTrivialDimensions(input);
-    return ReturnOp(output, loctx);
-  }
-  XLA_CHECK_GE(dim_, 0);
-  xla::XlaOp output = SqueezeTrivialDimension(input, dim_);
+  xla::XlaOp output = LowerSqueeze(input, dim_);
   return ReturnOp(output, loctx);
 }
 
