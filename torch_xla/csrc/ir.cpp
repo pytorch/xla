@@ -1,11 +1,11 @@
-#include "ir.h"
+#include "torch_xla/csrc/ir.h"
 
 #include <functional>
 #include <sstream>
 
-#include "lowering_context.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
 namespace ir {

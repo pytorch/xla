@@ -1,10 +1,10 @@
-#include "aten_xla_bridge.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 
-#include "device.h"
-#include "tensor_impl.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "torch_util.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/tensor_impl.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 namespace bridge {

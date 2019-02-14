@@ -1,9 +1,9 @@
-#include "ops/constant.h"
+#include "torch_xla/csrc/ops/constant.h"
 
 #include <algorithm>
 #include <sstream>
 
-#include "lowering_context.h"
+#include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
 namespace ir {

@@ -7,8 +7,8 @@
 #include <ATen/Tensor.h>
 #include <ATen/Type.h>
 
-#include "device.h"
-#include "tensor.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
 namespace bridge {

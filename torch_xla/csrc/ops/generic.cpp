@@ -1,6 +1,6 @@
-#include "ops/generic.h"
+#include "torch_xla/csrc/ops/generic.h"
 
-#include "lowering_context.h"
+#include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
 namespace ir {

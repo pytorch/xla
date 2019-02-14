@@ -1,10 +1,10 @@
-#include "arithmetic_ir_ops.h"
+#include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 
 #include <memory>
 
-#include "helpers.h"
-#include "lowering_context.h"
-#include "ops/ops.h"
+#include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/ops.h"
 
 namespace torch_xla {
 namespace ir {

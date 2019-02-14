@@ -112,7 +112,7 @@ pytorch_source_path = os.getenv('PYTORCH_SOURCE_PATH',
 third_party_path = os.path.join(base_dir, 'third_party')
 
 include_dirs = [
-    os.path.join(base_dir, 'torch_xla', 'csrc'),
+    base_dir,
 ]
 include_dirs += [
     third_party_path + '/tensorflow/bazel-tensorflow',

@@ -1,5 +1,5 @@
-#include "nll_loss.h"
-#include "helpers.h"
+#include "torch_xla/csrc/nll_loss.h"
+#include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
 namespace {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aten_xla_type_base.h"
+#include "torch_xla/csrc/aten_xla_type_base.h"
 
 namespace torch_xla {
 

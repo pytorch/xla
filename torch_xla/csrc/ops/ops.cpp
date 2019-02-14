@@ -1,13 +1,13 @@
-#include "ops/ops.h"
-#include "data_ops.h"
-#include "elementwise.h"
-#include "helpers.h"
-#include "lowering_context.h"
-#include "nll_loss.h"
-#include "ops/infer_output_shape.h"
-#include "pooling.h"
+#include "torch_xla/csrc/ops/ops.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/elementwise.h"
+#include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/nll_loss.h"
+#include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/pooling.h"
 
 namespace torch_xla {
 namespace ir {
