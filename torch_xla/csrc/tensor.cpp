@@ -70,9 +70,9 @@ void SetMulti(std::vector<XLATensor>* dest_tuple,
 int GetCanonicalDimensionIndex(int dim, int rank) {
   int min_shape_dim = -rank;
   int max_shape_dim = rank - 1;
-  XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim) << absl::StrCat(
-      "Dimension out of range (expected to be in range of [", min_shape_dim,
-      ", ", max_shape_dim, "], but got ", dim, ")");
+  XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim)
+      << "Dimension out of range (expected to be in range of [" << min_shape_dim
+      << ", " << max_shape_dim << "], but got " << dim << ")";
   int dim_index = dim < 0 ? rank + dim : dim;
   XLA_CHECK_GE(dim_index, 0);
   XLA_CHECK_LT(dim_index, rank);
