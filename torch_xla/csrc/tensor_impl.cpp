@@ -74,6 +74,12 @@ c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach()
   return impl;
 }
 
+bool XLATensorImpl::is_contiguous() const {
+  // Only check that the storage is already contiguous.
+  XLA_CHECK(is_contiguous_) << "Non-contiguous storage for XLA tensor";
+  return true;
+}
+
 void XLATensorImpl::SetupSizeProperties() {
   // Fill up the basic dimension data members which the base class
   // implementation uses in its APIs.
