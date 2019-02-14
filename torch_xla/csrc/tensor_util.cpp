@@ -316,7 +316,13 @@ std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
 
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type) {
-  switch (literal.shape().element_type()) {
+  xla::PrimitiveType element_type = literal.shape().element_type();
+  switch (element_type) {
+    case xla::PrimitiveType::PRED: {
+      XLA_CHECK_EQ(dest_element_type, at::ScalarType::Byte);
+      return XlaLiteralToTensor<bool, uint8_t>(literal, at::ScalarType::Byte,
+                                               xla::PrimitiveType::PRED);
+    }
     case xla::PrimitiveType::BF16: {
       return XlaLiteralToTensor<tensorflow::bfloat16, float>(
           literal, at::ScalarType::Float, xla::PrimitiveType::F32);
@@ -338,18 +344,8 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
           literal, at::ScalarType::Short, xla::PrimitiveType::S16);
     }
     case xla::PrimitiveType::S32: {
-      switch (dest_element_type) {
-        case at::ScalarType::Int: {
-          return XlaLiteralToTensor<xla::int32, int32_t>(
-              literal, at::ScalarType::Int, xla::PrimitiveType::S32);
-        }
-        case at::ScalarType::Byte: {
-          return XlaLiteralToTensor<xla::int32, uint8_t>(
-              literal, at::ScalarType::Byte, xla::PrimitiveType::S32);
-        }
-        default:
-          XLA_ERROR() << "Unexpected destination type: " << dest_element_type;
-      }
+      return XlaLiteralToTensor<xla::int32, int32_t>(
+          literal, at::ScalarType::Int, xla::PrimitiveType::S32);
     }
     case xla::PrimitiveType::S64: {
       return XlaLiteralToTensor<xla::int64, int64_t>(
