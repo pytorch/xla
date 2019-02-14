@@ -220,6 +220,9 @@ class AtenXlaType : public AtenXlaTypeBase {
       const at::Tensor& save_invstd, bool train, double eps,
       std::array<bool, 3> output_mask) const override;
 
+  at::Tensor squeeze(const at::Tensor& self) const override;
+  at::Tensor squeeze(const at::Tensor& self, int64_t dim) const override;
+
   static void SetFullConvPrecision(bool use_full_conv_precision = true);
 
   // Registers the ATEN types for the XLA tensors.

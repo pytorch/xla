@@ -27,6 +27,13 @@ xla::XlaOp BuildView(
     const xla::XlaOp& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
 
+// Squeezes the given dimension if trivial (size 1), returns the unchanged input
+// otherwise.
+xla::XlaOp SqueezeTrivialDimension(const xla::XlaOp& input, size_t dim);
+
+// Squeezes out the trivial (size 1) dimensions of the input.
+xla::XlaOp SqueezeAllTrivialDimensions(const xla::XlaOp& input);
+
 // Creates a new tensor with the singleton dimensions expanded to the sizes
 // specified by the "size" attribute of the given node.
 xla::XlaOp BuildExpand(const torch::jit::Node* node, const xla::XlaOp& input);

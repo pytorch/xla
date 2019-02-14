@@ -920,6 +920,29 @@ TEST_F(AtenXlaTensorTest, TestContiguous) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSqueezeAll) {
+  at::Tensor input = GetTestTensor({2, 1, 3, 1});
+  at::Tensor output = at::squeeze(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::squeeze(xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestSqueezeOne) {
+  at::Tensor input = GetTestTensor({2, 1, 3, 1});
+  int rank = input.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    at::Tensor output = at::squeeze(input, dim);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = at::squeeze(xla_input, dim);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {

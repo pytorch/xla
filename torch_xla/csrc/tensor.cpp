@@ -41,6 +41,7 @@
 #include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/slice.h"
 #include "torch_xla/csrc/ops/softmax.h"
+#include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/view.h"
@@ -62,6 +63,20 @@ void SetMulti(std::vector<XLATensor>* dest_tuple,
     // Prefer not to make SetXlaData() non-const.
     (*dest_tuple)[dest_tuple_index].SetXlaData(std::move(new_dest_elements[i]));
   }
+}
+
+// Get the canonical dimension index in the [0, rank) interval. Negative indices
+// are interpreted as follows: -1 is rank-1, -2 is rank-2 etc.
+int GetCanonicalDimensionIndex(int dim, int rank) {
+  int min_shape_dim = -rank;
+  int max_shape_dim = rank - 1;
+  XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim) << absl::StrCat(
+      "Dimension out of range (expected to be in range of [", min_shape_dim,
+      ", ", max_shape_dim, "], but got ", dim, ")");
+  int dim_index = dim < 0 ? rank + dim : dim;
+  XLA_CHECK_GE(dim_index, 0);
+  XLA_CHECK_LT(dim_index, rank);
+  return dim_index;
 }
 
 }  // namespace
@@ -590,15 +605,8 @@ void XLATensor::addcdiv_(XLATensor& input, const at::Scalar& value,
 
 xla::int64 XLATensor::size(int dim) const {
   auto xla_shape = shape();
-  int rank = xla_shape.get().dimensions_size();
-  int min_shape_dim = -rank;
-  int max_shape_dim = rank - 1;
-  XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim) << absl::StrCat(
-      "Dimension out of range (expected to be in range of [", min_shape_dim,
-      ", ", max_shape_dim, "], but got ", dim, ")");
-  int dim_index = dim < 0 ? rank + dim : dim;
-  XLA_CHECK_GE(dim_index, 0);
-  XLA_CHECK_LT(dim_index, rank);
+  int rank = xla_shape.get().rank();
+  int dim_index = GetCanonicalDimensionIndex(dim, rank);
   return xla_shape.get().dimensions(dim_index);
 }
 
@@ -867,6 +875,17 @@ XLATensor::native_batch_norm_backward(
   XLATensor grad_bias = Create(ir::Value(node, 2), input.GetDevice());
   return std::make_tuple(std::move(grad_input), std::move(grad_weight),
                          std::move(grad_bias));
+}
+
+XLATensor XLATensor::squeeze(const XLATensor& input) {
+  return Create(ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), -1),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::squeeze(const XLATensor& input, int dim) {
+  int squeeze_dim = GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  return Create(ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), squeeze_dim),
+                input.GetDevice());
 }
 
 XLATensor XLATensor::adaptive_avg_pool2d(

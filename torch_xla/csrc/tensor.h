@@ -309,6 +309,13 @@ class XLATensor {
       const XLATensor& running_var, const XLATensor& save_mean,
       const XLATensor& save_invstd, double eps);
 
+  // Squeeze out all trivial (size 1) dimensions.
+  static XLATensor squeeze(const XLATensor& input);
+
+  // Squeeze out the specified dimension index, if trivial (size 1). Returns
+  // unchanged input otherwise.
+  static XLATensor squeeze(const XLATensor& input, int dim);
+
   static XLATensor not_supported(c10::Symbol node_symbol, xla::Shape shape,
                                  const Device& device);
 
