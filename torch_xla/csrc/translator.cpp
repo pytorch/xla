@@ -1,24 +1,24 @@
-#include "translator.h"
+#include "torch_xla/csrc/translator.h"
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include "batch_norm.h"
-#include "convolution.h"
-#include "data_ops.h"
-#include "elementwise.h"
-#include "helpers.h"
-#include "nll_loss.h"
-#include "pooling.h"
-#include "reduction.h"
-#include "size_ops.h"
-#include "softmax_builder.h"
-#include "tensor.h"
-#include "tensor_util.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/jit/passes/dead_code_elimination.h"
+#include "torch_xla/csrc/batch_norm.h"
+#include "torch_xla/csrc/convolution.h"
+#include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/elementwise.h"
+#include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/nll_loss.h"
+#include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/reduction.h"
+#include "torch_xla/csrc/size_ops.h"
+#include "torch_xla/csrc/softmax_builder.h"
+#include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {

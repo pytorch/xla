@@ -4,13 +4,13 @@
 #include <string>
 #include <unordered_map>
 
-#include "device.h"
-#include "ir.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 

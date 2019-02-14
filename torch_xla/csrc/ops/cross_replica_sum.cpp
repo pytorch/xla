@@ -1,8 +1,8 @@
-#include "ops/cross_replica_sum.h"
+#include "torch_xla/csrc/ops/cross_replica_sum.h"
 
-#include "lowering_context.h"
-#include "ops/xla_ops.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
 namespace ir {

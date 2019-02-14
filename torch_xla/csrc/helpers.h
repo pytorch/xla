@@ -3,13 +3,13 @@
 #include <functional>
 #include <vector>
 
-#include "device.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch/csrc/jit/ir.h"
+#include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
 

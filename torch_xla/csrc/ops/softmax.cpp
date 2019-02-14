@@ -1,7 +1,7 @@
-#include "ops/softmax.h"
-#include "lowering_context.h"
-#include "softmax_builder.h"
+#include "torch_xla/csrc/ops/softmax.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/softmax_builder.h"
 
 namespace torch_xla {
 namespace ir {

@@ -1,15 +1,15 @@
-#include "aten_xla_type.h"
+#include "torch_xla/csrc/aten_xla_type.h"
 
 #include <mutex>
 
-#include "aten_xla_bridge.h"
-#include "aten_xla_type_instances.h"
-#include "device.h"
-#include "helpers.h"
-#include "pooling.h"
-#include "tensor_impl.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "torch_util.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/aten_xla_type_instances.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/tensor_impl.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 namespace {
@@ -249,8 +249,8 @@ int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
 
 at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
                               int64_t start, int64_t end, int64_t step) const {
-  return bridge::AtenFromXlaTensor(XLATensor::slice(
-      bridge::GetXlaTensor(self), dim, start, end, step));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::slice(bridge::GetXlaTensor(self), dim, start, end, step));
 }
 
 at::Tensor AtenXlaType::relu(const at::Tensor& self) const {

@@ -2,7 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "torch/csrc/jit/ir.h"
-#include "translator.h"
+#include "torch_xla/csrc/translator.h"
 
 // Collection of XLA lowerings for operations which query or sum to size.
 

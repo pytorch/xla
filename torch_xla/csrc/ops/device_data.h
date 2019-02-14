@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ir.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 namespace ir {

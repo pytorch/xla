@@ -1,9 +1,9 @@
-#include "ops/device_data.h"
+#include "torch_xla/csrc/ops/device_data.h"
 
 #include <sstream>
 
-#include "lowering_context.h"
-#include "ops/xla_ops.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
 namespace ir {

@@ -5,12 +5,12 @@
 
 #include <memory>
 
-#include "ir.h"
-#include "ops/constant.h"
-#include "ops/cross_replica_sum.h"
-#include "ops/device_data.h"
-#include "ops/generic.h"
-#include "ops/scalar.h"
+#include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/ops/constant.h"
+#include "torch_xla/csrc/ops/cross_replica_sum.h"
+#include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/ops/generic.h"
+#include "torch_xla/csrc/ops/scalar.h"
 
 namespace torch_xla {
 namespace ir {

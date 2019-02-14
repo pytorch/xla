@@ -1,4 +1,4 @@
-#include "remove_unused_forward_outputs.h"
+#include "torch_xla/csrc/passes/remove_unused_forward_outputs.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/jit/ir.h"

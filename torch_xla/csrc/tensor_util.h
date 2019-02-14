@@ -3,13 +3,13 @@
 #include <string>
 #include <vector>
 
-#include "device.h"
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
 namespace detail {
@@ -68,7 +68,7 @@ xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
 
 at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type);
 
-  // Converts the given scalar type to an XLA primitive type.
+// Converts the given scalar type to an XLA primitive type.
 xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
                                         const Device* device);
 
