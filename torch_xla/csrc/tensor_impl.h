@@ -20,6 +20,8 @@ class XLATensorImpl : public c10::TensorImpl {
 
   c10::intrusive_ptr<c10::TensorImpl> shallow_copy_and_detach() const override;
 
+  bool is_contiguous() const override;
+
  private:
   void SetupSizeProperties();
 

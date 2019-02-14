@@ -910,6 +910,16 @@ TEST_F(AtenXlaTensorTest, TestDim) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestContiguous) {
+  at::Tensor input = GetTestTensor({2, 3});
+  at::Tensor output = at::native::contiguous(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::native::contiguous(xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
