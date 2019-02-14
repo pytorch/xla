@@ -169,6 +169,13 @@ xla::XlaOp BuildExpand(
   return xla::Reshape(broadcast, reshape_permutation, output_sizes);
 }
 
+xla::XlaOp BuildUnsqueeze(const xla::XlaOp& input, size_t dim) {
+  auto unsqueezed_sizes = XlaHelpers::SizesOfXlaOp(input);
+  XLA_CHECK_LE(dim, unsqueezed_sizes.size());
+  unsqueezed_sizes.insert(unsqueezed_sizes.begin() + dim, 1);
+  return xla::Reshape(input, unsqueezed_sizes);
+}
+
 xla::XlaOp BuildStack(
     const torch::jit::Node* node,
     const std::function<xla::XlaOp(const torch::jit::Value*)>& node_op,
