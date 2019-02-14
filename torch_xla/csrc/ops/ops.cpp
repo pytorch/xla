@@ -13,45 +13,40 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-NodePtr Cos(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(xla::Cos(xla_input), loctx);
-  };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::cos), ir::OpList{input},
-                            input.shape(), std::move(lower_fn));
-}
+#define PTXLA_UNARY_OP(name, sym, xla_fn)                               \
+  NodePtr name(const Value& input) {                                    \
+    auto lower_fn = [](const ir::Node& node,                            \
+                       ir::LoweringContext* loctx) -> ir::XlaOpVector { \
+      xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));       \
+      return node.ReturnOp(xla_fn(xla_input), loctx);                   \
+    };                                                                  \
+    return ir::ops::GenericOp(ir::OpKind(sym), ir::OpList{input},       \
+                              input.shape(), std::move(lower_fn));      \
+  }
 
-NodePtr Sin(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(xla::Sin(xla_input), loctx);
-  };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::sin), ir::OpList{input},
-                            input.shape(), std::move(lower_fn));
-}
+#define PTXLA_BINARY_OP(name, sym, xla_fn)                                 \
+  NodePtr name(const Value& input0, const Value& input1) {                 \
+    auto lower_fn = [](const ir::Node& node,                               \
+                       ir::LoweringContext* loctx) -> ir::XlaOpVector {    \
+      xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand(0));         \
+      xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand(1));         \
+      return node.ReturnOp(xla_fn(xla_input0, xla_input1), loctx);         \
+    };                                                                     \
+    return ir::ops::GenericOp(ir::OpKind(sym), ir::OpList{input0, input1}, \
+                              input0.shape(), std::move(lower_fn));        \
+  }
 
-NodePtr Neg(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(xla::Neg(xla_input), loctx);
-  };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::neg), ir::OpList{input},
-                            input.shape(), std::move(lower_fn));
-}
+PTXLA_UNARY_OP(Cos, at::aten::cos, xla::Cos);
+PTXLA_UNARY_OP(Sin, at::aten::sin, xla::Sin);
+PTXLA_UNARY_OP(Neg, at::aten::neg, xla::Neg);
+PTXLA_UNARY_OP(Abs, at::aten::abs, xla::Abs);
+PTXLA_UNARY_OP(Exp, at::aten::exp, xla::Exp);
+PTXLA_UNARY_OP(Log, at::aten::log, xla::Log);
+PTXLA_UNARY_OP(Sqrt, at::aten::sqrt, xla::Sqrt);
 
-NodePtr Abs(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(xla::Abs(xla_input), loctx);
-  };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::abs), ir::OpList{input},
-                            input.shape(), std::move(lower_fn));
-}
+PTXLA_BINARY_OP(Min, at::aten::min, xla::Min);
+PTXLA_BINARY_OP(Max, at::aten::max, xla::Max);
+PTXLA_BINARY_OP(Pow, at::aten::pow, xla::Pow);
 
 NodePtr ReluOp(const Value& input) {
   auto lower_fn = [](const ir::Node& node,
@@ -87,70 +82,6 @@ NodePtr TransposeOp(const Value& input) {
       ir::ops::InferOutputShape({input.shape()}, lower_for_shape_fn);
   return ir::ops::GenericOp(ir::OpKind(at::aten::t), ir::OpList{input},
                             output_shape, std::move(lower_fn));
-}
-
-NodePtr Min(const Value& input, const Value& other) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(xla::Min(xla_input, xla_other), loctx);
-  };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::min), ir::OpList{input, other},
-                            input.shape(), std::move(lower_fn));
-}
-
-NodePtr Max(const Value& input, const Value& other) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(xla::Max(xla_input, xla_other), loctx);
-  };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::max), ir::OpList{input, other},
-                            input.shape(), std::move(lower_fn));
-}
-
-NodePtr Exp(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(xla::Exp(xla_input), loctx);
-  };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::exp), ir::OpList{input},
-                            input.shape(), std::move(lower_fn));
-}
-
-NodePtr Log(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(xla::Log(xla_input), loctx);
-  };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::log), ir::OpList{input},
-                            input.shape(), std::move(lower_fn));
-}
-
-NodePtr Sqrt(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(xla::Sqrt(xla_input), loctx);
-  };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::sqrt), ir::OpList{input},
-                            input.shape(), std::move(lower_fn));
-}
-
-NodePtr Pow(const Value& input, const Value& exponent) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_exponent = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(xla::Pow(xla_input, xla_exponent), loctx);
-  };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::pow),
-                            ir::OpList{input, exponent}, input.shape(),
-                            std::move(lower_fn));
 }
 
 NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
