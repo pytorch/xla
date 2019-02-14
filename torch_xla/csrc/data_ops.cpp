@@ -1,11 +1,11 @@
-#include "data_ops.h"
+#include "torch_xla/csrc/data_ops.h"
 
 #include <functional>
 #include <numeric>
 
-#include "helpers.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
+#include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
 namespace {

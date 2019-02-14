@@ -1,4 +1,4 @@
-#include "remove_in_place_out_param_ops.h"
+#include "torch_xla/csrc/passes/remove_in_place_out_param_ops.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 

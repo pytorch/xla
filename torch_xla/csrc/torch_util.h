@@ -4,10 +4,10 @@
 #include <vector>
 
 #include <ATen/ATen.h>
-#include "module.h"
-#include "tensor.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/pybind_utils.h"
+#include "torch_xla/csrc/module.h"
+#include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
 

@@ -1,4 +1,4 @@
-#include "device.h"
+#include "torch_xla/csrc/device.h"
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"

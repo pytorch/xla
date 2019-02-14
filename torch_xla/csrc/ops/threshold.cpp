@@ -1,7 +1,7 @@
-#include "ops/threshold.h"
-#include "elementwise.h"
-#include "lowering_context.h"
+#include "torch_xla/csrc/ops/threshold.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/elementwise.h"
+#include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
 namespace ir {

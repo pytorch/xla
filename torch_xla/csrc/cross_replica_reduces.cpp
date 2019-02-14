@@ -1,6 +1,6 @@
-#include "cross_replica_reduces.h"
+#include "torch_xla/csrc/cross_replica_reduces.h"
 #include <vector>
-#include "helpers.h"
+#include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
 

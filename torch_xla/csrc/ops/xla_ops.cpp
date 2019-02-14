@@ -1,4 +1,4 @@
-#include "ops/xla_ops.h"
+#include "torch_xla/csrc/ops/xla_ops.h"
 
 namespace torch_xla {
 namespace ir {

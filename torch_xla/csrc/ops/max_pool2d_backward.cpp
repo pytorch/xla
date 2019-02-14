@@ -1,9 +1,9 @@
-#include "ops/max_pool2d_backward.h"
-#include "lowering_context.h"
-#include "ops/infer_output_shape.h"
-#include "pooling.h"
+#include "torch_xla/csrc/ops/max_pool2d_backward.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/pooling.h"
 
 namespace torch_xla {
 namespace ir {

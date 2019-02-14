@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ir.h"
+#include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 namespace ir {

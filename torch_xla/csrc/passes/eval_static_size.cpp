@@ -1,4 +1,4 @@
-#include "eval_static_size.h"
+#include "torch_xla/csrc/passes/eval_static_size.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 

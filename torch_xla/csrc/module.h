@@ -2,11 +2,11 @@
 
 #include <initializer_list>
 
-#include "tensor.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/script/module.h"
 #include "torch/csrc/utils/disallow_copy.h"
-#include "translator.h"
+#include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/translator.h"
 
 #include <atomic>
 #include <map>

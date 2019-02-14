@@ -1,17 +1,9 @@
-#include "module.h"
-#include "helpers.h"
+#include "torch_xla/csrc/module.h"
+#include "torch_xla/csrc/helpers.h"
 
 #include <algorithm>
 #include <set>
 #include "c10/util/Exception.h"
-#include "cross_replica_reduces.h"
-#include "passes/eval_static_size.h"
-#include "passes/remove_in_place_out_param_ops.h"
-#include "passes/remove_unused_forward_outputs.h"
-#include "passes/replace_in_place_ops.h"
-#include "passes/replace_untraced_operators.h"
-#include "passes/threshold_backward_peephole.h"
-#include "tensor_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch/csrc/jit/passes/canonicalize_ops.h"
@@ -21,6 +13,14 @@
 #include "torch/csrc/jit/passes/lower_tuples.h"
 #include "torch/csrc/jit/passes/shape_analysis.h"
 #include "torch/csrc/jit/passes/specialize_undef.h"
+#include "torch_xla/csrc/cross_replica_reduces.h"
+#include "torch_xla/csrc/passes/eval_static_size.h"
+#include "torch_xla/csrc/passes/remove_in_place_out_param_ops.h"
+#include "torch_xla/csrc/passes/remove_unused_forward_outputs.h"
+#include "torch_xla/csrc/passes/replace_in_place_ops.h"
+#include "torch_xla/csrc/passes/replace_untraced_operators.h"
+#include "torch_xla/csrc/passes/threshold_backward_peephole.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {

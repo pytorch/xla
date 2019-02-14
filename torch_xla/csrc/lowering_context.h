@@ -6,11 +6,11 @@
 #include <utility>
 #include <vector>
 
-#include "ir.h"
-#include "ir_util.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/ir_util.h"
 
 namespace torch_xla {
 namespace ir {

@@ -1,17 +1,17 @@
-#include "init_python_bindings.h"
+#include "torch_xla/csrc/init_python_bindings.h"
 
-#include "aten_xla_bridge.h"
-#include "aten_xla_type.h"
-#include "module.h"
-#include "passes/eval_static_size.h"
-#include "passes/replace_in_place_ops.h"
-#include "passes/replace_untraced_operators.h"
-#include "passes/threshold_backward_peephole.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
-#include "torch_util.h"
-#include "translator.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/aten_xla_type.h"
+#include "torch_xla/csrc/module.h"
+#include "torch_xla/csrc/passes/eval_static_size.h"
+#include "torch_xla/csrc/passes/replace_in_place_ops.h"
+#include "torch_xla/csrc/passes/replace_untraced_operators.h"
+#include "torch_xla/csrc/passes/threshold_backward_peephole.h"
+#include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/translator.h"
 
 namespace torch_xla {
 namespace {

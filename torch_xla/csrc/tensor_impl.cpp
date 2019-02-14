@@ -1,11 +1,11 @@
-#include "tensor_impl.h"
+#include "torch_xla/csrc/tensor_impl.h"
 
 #include <c10/core/Allocator.h>
 #include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/macros/Macros.h>
 
-#include "tensor_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {

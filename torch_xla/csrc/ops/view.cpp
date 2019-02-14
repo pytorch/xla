@@ -1,11 +1,11 @@
-#include "ops/view.h"
+#include "torch_xla/csrc/ops/view.h"
 
 #include "absl/strings/str_join.h"
-#include "data_ops.h"
-#include "lowering_context.h"
-#include "ops/infer_output_shape.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
 namespace ir {
