@@ -319,6 +319,9 @@ class XLATensor {
   // unchanged input otherwise.
   static XLATensor squeeze(const XLATensor& input, int dim);
 
+  // Insert a dimension of size one at the specified position.
+  static XLATensor unsqueeze(const XLATensor& input, int dim);
+
   static XLATensor not_supported(c10::Symbol node_symbol, xla::Shape shape,
                                  const Device& device);
 

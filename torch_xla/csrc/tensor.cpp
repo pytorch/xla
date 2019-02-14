@@ -45,6 +45,7 @@
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
+#include "torch_xla/csrc/ops/unsqueeze.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/translator.h"
@@ -894,6 +895,14 @@ XLATensor XLATensor::squeeze(const XLATensor& input, int dim) {
   int squeeze_dim = GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   return Create(ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), squeeze_dim),
                 input.GetDevice());
+}
+
+XLATensor XLATensor::unsqueeze(const XLATensor& input, int dim) {
+  int squeeze_dim =
+      GetCanonicalDimensionIndex(dim, input.shape().get().rank() + 1);
+  return Create(
+      ir::MakeNode<ir::ops::Unsqueeze>(input.GetIrValue(), squeeze_dim),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::adaptive_avg_pool2d(
