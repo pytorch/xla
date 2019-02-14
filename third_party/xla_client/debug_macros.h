@@ -1,6 +1,7 @@
 #ifndef TENSORFLOW_COMPILER_XLA_RPC_DEBUG_MACROS_H_
 #define TENSORFLOW_COMPILER_XLA_RPC_DEBUG_MACROS_H_
 
+#include "tensorflow/compiler/xla/statusor.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/core/platform/stacktrace.h"
 
@@ -20,5 +21,11 @@
   TF_CHECK_LT(a, b) << "\n" << tensorflow::CurrentStackTrace()
 #define XLA_CHECK_GT(a, b) \
   TF_CHECK_GT(a, b) << "\n" << tensorflow::CurrentStackTrace()
+
+template <typename T>
+T ConsumeValue(xla::StatusOr<T>&& status) {
+  XLA_CHECK_OK(status.status());
+  return status.ConsumeValueOrDie();
+}
 
 #endif  // TENSORFLOW_COMPILER_XLA_RPC_DEBUG_MACROS_H_
