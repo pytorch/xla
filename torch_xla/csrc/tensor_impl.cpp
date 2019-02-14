@@ -112,8 +112,8 @@ caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
 
 c10::Storage XLATensorImpl::GetStorage(const XLATensor& tensor) {
   Device device = tensor.GetDevice();
-  return c10::Storage(at::Device(c10::DeviceType::XLA, device.ordinal),
-                      GetTypeMeta(tensor));
+  return c10::Storage::create_legacy(
+      at::Device(c10::DeviceType::XLA, device.ordinal), GetTypeMeta(tensor));
 }
 
 }  // namespace torch_xla
