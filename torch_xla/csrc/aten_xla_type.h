@@ -97,6 +97,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor cos(const at::Tensor& self) const override;
 
+  at::Tensor abs(const at::Tensor& self) const override;
+
   at::Tensor clamp(const at::Tensor& self, c10::optional<at::Scalar> min,
                    c10::optional<at::Scalar> max) const override;
 

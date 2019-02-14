@@ -51,6 +51,8 @@ NodePtr Sin(const Value& input);
 
 NodePtr Neg(const Value& input);
 
+NodePtr Abs(const Value& input);
+
 NodePtr ReluOp(const Value& input);
 
 NodePtr TransposeOp(const Value& input);

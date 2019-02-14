@@ -224,6 +224,8 @@ class XLATensor {
 
   static XLATensor cos(const XLATensor& input);
 
+  static XLATensor abs(const XLATensor& input);
+
   static XLATensor clamp(const XLATensor& input, c10::optional<at::Scalar> min,
                          c10::optional<at::Scalar> max);
 
