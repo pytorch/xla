@@ -38,37 +38,23 @@ xla::XlaOp BuildComparisonOp(const torch::jit::Node* node,
 
 xla::XlaOp BuildComparisonOp(c10::Symbol kind, const xla::XlaOp& input,
                              const xla::XlaOp& other) {
-  xla::XlaOp pred;
   switch (kind) {
-    case at::aten::ne: {
-      pred = xla::Ne(input, other);
-      break;
-    }
-    case at::aten::eq: {
-      pred = xla::Eq(input, other);
-      break;
-    }
-    case at::aten::ge: {
-      pred = xla::Ge(input, other);
-      break;
-    }
-    case at::aten::le: {
-      pred = xla::Le(input, other);
-      break;
-    }
-    case at::aten::gt: {
-      pred = xla::Gt(input, other);
-      break;
-    }
-    case at::aten::lt: {
-      pred = xla::Lt(input, other);
-      break;
-    }
+    case at::aten::ne:
+      return xla::Ne(input, other);
+    case at::aten::eq:
+      return xla::Eq(input, other);
+    case at::aten::ge:
+      return xla::Ge(input, other);
+    case at::aten::le:
+      return xla::Le(input, other);
+    case at::aten::gt:
+      return xla::Gt(input, other);
+    case at::aten::lt:
+      return xla::Lt(input, other);
     default:
       XLA_ERROR() << "Invalid comparison operator kind: "
                   << kind.toQualString();
   }
-  return pred;
 }
 
 xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
