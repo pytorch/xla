@@ -780,6 +780,10 @@ XLATensor XLATensor::cos(const XLATensor& input) {
   return Create(ir::ops::Cos(input.GetIrValue()), input.GetDevice());
 }
 
+XLATensor XLATensor::abs(const XLATensor& input) {
+  return Create(ir::ops::Abs(input.GetIrValue()), input.GetDevice());
+}
+
 XLATensor XLATensor::clamp(const XLATensor& input,
                            c10::optional<at::Scalar> min,
                            c10::optional<at::Scalar> max) {
