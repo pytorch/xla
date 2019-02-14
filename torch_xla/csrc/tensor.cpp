@@ -38,6 +38,7 @@
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/ops.h"
+#include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/slice.h"
@@ -884,6 +885,13 @@ XLATensor::native_batch_norm_backward(
   XLATensor grad_bias = Create(ir::Value(node, 2), input.GetDevice());
   return std::make_tuple(std::move(grad_input), std::move(grad_weight),
                          std::move(grad_bias));
+}
+
+XLATensor XLATensor::permute(
+    const XLATensor& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> dims) {
+  return Create(ir::MakeNode<ir::ops::Permute>(input.GetIrValue(), dims),
+                input.GetDevice());
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input) {

@@ -676,6 +676,12 @@ AtenXlaType::native_batch_norm_backward(
                      : undefined);
 }
 
+at::Tensor AtenXlaType::permute(const at::Tensor& self,
+                                at::IntArrayRef dims) const {
+  return bridge::AtenFromXlaTensor(XLATensor::permute(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
+}
+
 at::Tensor AtenXlaType::squeeze(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::squeeze(bridge::GetXlaTensor(self)));

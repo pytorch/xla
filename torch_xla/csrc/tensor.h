@@ -312,6 +312,10 @@ class XLATensor {
       const XLATensor& running_var, const XLATensor& save_mean,
       const XLATensor& save_invstd, double eps);
 
+  // Permute the dimensions of this tensor according to the given permutation.
+  static XLATensor permute(const XLATensor& input,
+                           tensorflow::gtl::ArraySlice<const xla::int64> dims);
+
   // Squeeze out all trivial (size 1) dimensions.
   static XLATensor squeeze(const XLATensor& input);
 

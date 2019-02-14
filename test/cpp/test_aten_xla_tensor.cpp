@@ -973,6 +973,20 @@ TEST_F(AtenXlaTensorTest, TestUnsqueeze) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestPermute) {
+  at::Tensor input = GetTestTensor({2, 3, 4});
+  std::vector<std::vector<int64_t>> dims_permutations = {
+      {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
+  for (std::vector<int64_t> dims_permutation : dims_permutations) {
+    at::Tensor output = input.permute(dims_permutation);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = xla_input.permute(dims_permutation);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {

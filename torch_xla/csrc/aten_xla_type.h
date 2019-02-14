@@ -223,6 +223,9 @@ class AtenXlaType : public AtenXlaTypeBase {
       const at::Tensor& save_invstd, bool train, double eps,
       std::array<bool, 3> output_mask) const override;
 
+  at::Tensor permute(const at::Tensor& self,
+                     at::IntArrayRef dims) const override;
+
   at::Tensor squeeze(const at::Tensor& self) const override;
   at::Tensor squeeze(const at::Tensor& self, int64_t dim) const override;
 
