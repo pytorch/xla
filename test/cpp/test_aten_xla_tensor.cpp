@@ -443,6 +443,23 @@ TEST_F(AtenXlaTensorTest, TestSlice) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestGather) {
+  at::Tensor a = at::rand({3, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::empty({3, 3}, at::TensorOptions(at::kLong));
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      b[i][j] = (i + j) % 3;
+    }
+  }
+  at::Tensor c = at::gather(a, 1, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::gather(xla_a, 1, xla_b);
+    AllClose(c, xla_c);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::relu(input);

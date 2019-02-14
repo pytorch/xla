@@ -49,7 +49,7 @@ XlaOpVector Slice::Lower(LoweringContext* loctx) const {
 
 std::string Slice::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=[" << dim_ << ", start=[" << start_
+  ss << Node::ToString() << ", dim=" << dim_ << ", start=" << start_
      << ", end=" << end_ << ", step=" << step_;
   return ss.str();
 }

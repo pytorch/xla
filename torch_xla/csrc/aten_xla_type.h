@@ -110,6 +110,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor slice(const at::Tensor& self, int64_t dim, int64_t start,
                    int64_t end, int64_t step) const override;
 
+  at::Tensor gather(const at::Tensor& self, int64_t dim,
+                    const at::Tensor& index) const override;
+
   at::Tensor relu(const at::Tensor& self) const override;
 
   at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,

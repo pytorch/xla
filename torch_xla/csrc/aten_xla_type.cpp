@@ -323,6 +323,12 @@ at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
       XLATensor::slice(bridge::GetXlaTensor(self), dim, start, end, step));
 }
 
+at::Tensor AtenXlaType::gather(const at::Tensor& self, int64_t dim,
+                               const at::Tensor& index) const {
+  return bridge::AtenFromXlaTensor(XLATensor::gather(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
+}
+
 at::Tensor AtenXlaType::relu(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::relu(bridge::GetXlaTensor(self)));
 }

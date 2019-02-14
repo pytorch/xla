@@ -235,6 +235,9 @@ class XLATensor {
   static XLATensor slice(const XLATensor& input, xla::int64 dim,
                          xla::int64 start, xla::int64 end, xla::int64 step);
 
+  static XLATensor gather(const XLATensor& input, xla::int64 dim,
+                          const XLATensor& index);
+
   static XLATensor mm(const XLATensor& input, const XLATensor& weight,
                       bool use_full_conv_precision);
 
