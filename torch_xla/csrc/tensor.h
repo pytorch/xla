@@ -60,7 +60,13 @@ class XLATensor {
 
   at::ScalarType dtype() const;
   xla::util::MaybeRef<xla::Shape> shape() const;
-  xla::util::MaybeRef<xla::Shape> GetPhysicalShape() const;
+
+  xla::PrimitiveType GetElementType() const {
+    return logical_element_type_ == xla::PrimitiveType::PRIMITIVE_TYPE_INVALID
+               ? shape().get().element_type()
+               : logical_element_type_;
+  }
+
   const Device& GetDevice() const;
   xla::int64 GetUniqueId() const;
 
@@ -407,12 +413,14 @@ class XLATensor {
   XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
             bool requires_grad);
-  XLATensor(ir::Value ir_value, const Device& device, xla::Shape logical_shape);
+  XLATensor(ir::Value ir_value, const Device& device,
+            xla::PrimitiveType logical_element_type);
   XLATensor(std::shared_ptr<View> view, const Device& device);
   XLATensor(std::shared_ptr<Data> data);
 
   static XLATensor Create(ir::Value ir_value, const Device& device,
-                          xla::Shape logical_shape = {});
+                          xla::PrimitiveType logical_element_type =
+                              xla::PrimitiveType::PRIMITIVE_TYPE_INVALID);
   static XLATensor Create(std::shared_ptr<View> view, const Device& device);
 
   Data* data() const;
@@ -470,7 +478,8 @@ class XLATensor {
   std::shared_ptr<Data> data_;
   // For some types (U8, S8 etc), the logical type of the tensor doesn't match
   // the type of the underlying data.
-  xla::Shape logical_shape_;
+  xla::PrimitiveType logical_element_type_ =
+      xla::PrimitiveType::PRIMITIVE_TYPE_INVALID;
 };
 
 }  // namespace torch_xla
