@@ -152,8 +152,8 @@ XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
 
 XLATensor::XLATensor(ir::Value ir_value, const Device& device,
                      xla::PrimitiveType logical_element_type)
-    : data_(std::make_shared<Data>(std::move(ir_value), device)),
-      logical_element_type_(logical_element_type) {
+    : data_(std::make_shared<Data>(std::move(ir_value), device,
+                                   logical_element_type)) {
   TryLimitGraphSize();
 }
 
