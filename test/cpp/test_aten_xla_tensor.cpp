@@ -285,6 +285,16 @@ TEST_F(AtenXlaTensorTest, TestSize) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSlice) {
+  at::Tensor a = at::rand({32, 24, 16}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::slice(a, 1, 0, 16, 1);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::slice(xla_a, 1, 0, 16, 1);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::relu(input);

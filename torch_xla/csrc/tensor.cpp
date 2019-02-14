@@ -29,6 +29,7 @@
 #include "ops/ops.h"
 #include "ops/scalar.h"
 #include "ops/select.h"
+#include "ops/slice.h"
 #include "ops/softmax.h"
 #include "ops/softmax_backward.h"
 #include "ops/threshold.h"
@@ -721,6 +722,13 @@ XLATensor XLATensor::clamp(const XLATensor& input,
 void XLATensor::clamp_(XLATensor& input, c10::optional<at::Scalar> min,
                        c10::optional<at::Scalar> max) {
   input.SetIrValue(ir::ops::Clamp(input.GetIrValue(), min, max));
+}
+
+XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
+                           xla::int64 start, xla::int64 end, xla::int64 step) {
+  return Create(
+      ir::MakeNode<ir::ops::Slice>(input.GetIrValue(), dim, start, end, step),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,
