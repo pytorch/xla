@@ -126,8 +126,8 @@ XLATensor XLATensor::Create(
 }
 
 XLATensor XLATensor::Create(ir::Value ir_value, const Device& device,
-                            xla::Shape logical_shape) {
-  XLATensor xtensor(std::move(ir_value), device, std::move(logical_shape));
+                            xla::PrimitiveType logical_element_type) {
+  XLATensor xtensor(std::move(ir_value), device, logical_element_type);
   TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
@@ -151,9 +151,9 @@ XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
 }
 
 XLATensor::XLATensor(ir::Value ir_value, const Device& device,
-                     xla::Shape logical_shape)
+                     xla::PrimitiveType logical_element_type)
     : data_(std::make_shared<Data>(std::move(ir_value), device)),
-      logical_shape_(std::move(logical_shape)) {
+      logical_element_type_(logical_element_type) {
   TryLimitGraphSize();
 }
 
@@ -183,18 +183,10 @@ void XLATensor::SetGradient(const XLATensor& grad) {
 }
 
 at::ScalarType XLATensor::dtype() const {
-  return TensorTypeFromXlaType(shape().get().element_type());
+  return TensorTypeFromXlaType(GetElementType());
 }
 
 xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
-  if (logical_shape_.element_type() !=
-      xla::PrimitiveType::PRIMITIVE_TYPE_INVALID) {
-    return logical_shape_;
-  }
-  return GetPhysicalShape();
-}
-
-xla::util::MaybeRef<xla::Shape> XLATensor::GetPhysicalShape() const {
   if (data()->view != nullptr) {
     return data()->view->shape;
   }
@@ -281,8 +273,8 @@ std::string XLATensor::DumpGraphNodeComputation() const {
 
 void XLATensor::SetXlaData(
     std::shared_ptr<xla::ComputationClient::Data> xla_data) {
-  XLA_CHECK(xla::ShapeUtil::Equal(GetPhysicalShape(), xla_data->shape()))
-      << GetPhysicalShape() << " vs " << xla_data->shape() << "\n"
+  XLA_CHECK(xla::ShapeUtil::Equal(shape(), xla_data->shape()))
+      << shape() << " vs " << xla_data->shape() << "\n"
       << DumpGraphNodeComputation();
   data()->xla_data = std::move(xla_data);
   data()->ir_value = ir::Value();
@@ -665,9 +657,7 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& input,
                                           const at::Scalar& other) {
   ir::NodePtr node = ir::ops::ComparisonOp(kind, input.GetIrValue(), other);
-  xla::Shape logical_shape = node->shape();
-  logical_shape.set_element_type(xla::PrimitiveType::U8);
-  return Create(node, input.GetDevice(), logical_shape);
+  return Create(node, input.GetDevice(), xla::PrimitiveType::U8);
 }
 
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
@@ -675,9 +665,7 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& other) {
   ir::NodePtr node =
       ir::ops::ComparisonOp(kind, input.GetIrValue(), other.GetIrValue());
-  xla::Shape logical_shape = node->shape();
-  logical_shape.set_element_type(xla::PrimitiveType::U8);
-  return Create(node, input.GetDevice(), logical_shape);
+  return Create(node, input.GetDevice(), xla::PrimitiveType::U8);
 }
 
 XLATensor XLATensor::threshold(const XLATensor& input, float threshold,
@@ -1019,7 +1007,7 @@ void XLATensor::ApplyPendingGraph() {
       xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
       xla::XlaComputation computation =
           lowering_ctx.Build(root).ConsumeValueOrDie();
-      auto output_shape = GetPhysicalShape();
+      auto output_shape = shape();
       auto compiled_computation = xla::ComputationClient::Get()->Compile(
           std::move(computation), {GetDevice().ToString()},
           &output_shape.get());

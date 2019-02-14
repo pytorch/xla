@@ -11,9 +11,7 @@ namespace torch_xla {
 namespace {
 
 struct XLAAllocator : public c10::Allocator {
-  c10::DataPtr allocate(size_t n) const override {
-    return c10::DataPtr();
-  }
+  c10::DataPtr allocate(size_t n) const override { return c10::DataPtr(); }
 };
 
 struct XLAAllocatorRegistrar {
@@ -93,8 +91,8 @@ void XLATensorImpl::SetupSizeProperties() {
 }
 
 caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
-  auto shape = tensor.shape();
-  switch (shape.get().element_type()) {
+  xla::PrimitiveType element_type = tensor.GetElementType();
+  switch (element_type) {
     case xla::PrimitiveType::F32:
       return caffe2::TypeMeta::Make<float>();
     case xla::PrimitiveType::U8:
@@ -108,7 +106,7 @@ caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
     case xla::PrimitiveType::S64:
       return caffe2::TypeMeta::Make<int64_t>();
     default:
-      XLA_ERROR() << "Type not supported: " << shape;
+      XLA_ERROR() << "Type not supported: " << element_type;
   }
 }
 
