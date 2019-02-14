@@ -187,6 +187,9 @@ class XLATensor {
   static void clamp_(XLATensor& input, c10::optional<at::Scalar> min,
                      c10::optional<at::Scalar> max);
 
+  static XLATensor slice(const XLATensor& input, xla::int64 dim,
+                         xla::int64 start, xla::int64 end, xla::int64 step);
+
   static XLATensor mm(const XLATensor& input, const XLATensor& weight,
                       bool use_full_conv_precision);
 
