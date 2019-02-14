@@ -295,6 +295,10 @@ at::Tensor AtenXlaType::cos(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::cos(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::abs(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::abs(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::clamp(const at::Tensor& self,
                               c10::optional<at::Scalar> min,
                               c10::optional<at::Scalar> max) const {
