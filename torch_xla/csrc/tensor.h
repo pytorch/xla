@@ -62,9 +62,10 @@ class XLATensor {
   xla::util::MaybeRef<xla::Shape> shape() const;
 
   xla::PrimitiveType GetElementType() const {
-    return logical_element_type_ == xla::PrimitiveType::PRIMITIVE_TYPE_INVALID
+    return data()->logical_element_type ==
+                   xla::PrimitiveType::PRIMITIVE_TYPE_INVALID
                ? shape().get().element_type()
-               : logical_element_type_;
+               : data()->logical_element_type;
   }
 
   const Device& GetDevice() const;
@@ -387,10 +388,12 @@ class XLATensor {
         : xla_data(std::move(xla_data)),
           device(device),
           unique_id(GetNextTensorId()) {}
-    Data(ir::Value ir_value, const Device& device)
+    Data(ir::Value ir_value, const Device& device,
+         xla::PrimitiveType logical_element_type)
         : ir_value(std::move(ir_value)),
           device(device),
-          unique_id(GetNextTensorId()) {}
+          unique_id(GetNextTensorId()),
+          logical_element_type(logical_element_type) {}
     Data(std::shared_ptr<View> view, const Device& device)
         : view(std::move(view)), device(device), unique_id(GetNextTensorId()) {}
     Data(at::Tensor tensor_data, const Device& device)
@@ -408,6 +411,10 @@ class XLATensor {
     xla::int64 unique_id = 0;
     std::shared_ptr<XLATensor> grad;
     bool requires_grad = false;
+    // For some types (U8, S8 etc), the logical type of the tensor doesn't match
+    // the type of the underlying data.
+    xla::PrimitiveType logical_element_type =
+        xla::PrimitiveType::PRIMITIVE_TYPE_INVALID;
   };
 
   XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
@@ -476,10 +483,6 @@ class XLATensor {
   static xla::int64 GetNextTensorId();
 
   std::shared_ptr<Data> data_;
-  // For some types (U8, S8 etc), the logical type of the tensor doesn't match
-  // the type of the underlying data.
-  xla::PrimitiveType logical_element_type_ =
-      xla::PrimitiveType::PRIMITIVE_TYPE_INVALID;
 };
 
 }  // namespace torch_xla
