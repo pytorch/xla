@@ -960,6 +960,19 @@ TEST_F(AtenXlaTensorTest, TestSqueezeOne) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestUnsqueeze) {
+  at::Tensor input = GetTestTensor({2, 3});
+  int rank = input.dim() + 1;
+  for (int dim = -rank; dim < rank; ++dim) {
+    at::Tensor output = at::unsqueeze(input, dim);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = at::unsqueeze(xla_input, dim);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
