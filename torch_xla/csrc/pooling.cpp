@@ -27,7 +27,7 @@ xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
   xla::XlaOp y = xla::Parameter(&reduction_builder, 1,
                                 xla::ShapeUtil::MakeShape(type, {}), "y");
   xla::Ge(x, y);
-  return reduction_builder.Build().ConsumeValueOrDie();
+  return ConsumeValue(reduction_builder.Build());
 }
 
 // Construct the pooling attributes for the given kernel size, stride and

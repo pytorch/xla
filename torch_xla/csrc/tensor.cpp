@@ -266,9 +266,8 @@ std::string XLATensor::DumpGraphNodeComputation() const {
   if (ir_value) {
     ir::LoweringContext lowering_ctx("DumpGraphNodeComputation");
     xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
-    auto computation = lowering_ctx.Build(root).ConsumeValueOrDie();
-    hlo_text =
-        xla::xrt_util::GetComputationHloText(computation).ConsumeValueOrDie();
+    auto computation = ConsumeValue(lowering_ctx.Build(root));
+    hlo_text = ConsumeValue(xla::xrt_util::GetComputationHloText(computation));
   }
   return hlo_text;
 }
@@ -1023,8 +1022,7 @@ void XLATensor::ApplyPendingGraph() {
     if (ir_value) {
       ir::LoweringContext lowering_ctx("ApplyPendingGraph");
       xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
-      xla::XlaComputation computation =
-          lowering_ctx.Build(root).ConsumeValueOrDie();
+      xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build(root));
       auto output_shape = shape();
       auto compiled_computation = xla::ComputationClient::Get()->Compile(
           std::move(computation), {GetDevice().ToString()},
@@ -1245,9 +1243,9 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
       index_mapping[index] = std::move(device_index_mapping);
 
       xla::XlaComputation computation =
-          device_context->lowering_ctx.Build().ConsumeValueOrDie();
+          ConsumeValue(device_context->lowering_ctx.Build());
       xla::ProgramShape program_shape =
-          computation.GetProgramShape().ConsumeValueOrDie();
+          ConsumeValue(computation.GetProgramShape());
       shapes[index] =
           MakeShapeWithDeviceLayout(program_shape.result(), device.hw_type);
       devices[index] = device.ToString();
