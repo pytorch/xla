@@ -5,7 +5,6 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch/csrc/jit/ir.h"
-#include "torch_xla/csrc/translator.h"
 
 // Collection of XLA lowerings for operations which only involve some form of
 // data movement and no computation.
@@ -31,7 +30,8 @@ xla::XlaOp BuildView(
 // Creates a tensor reshape operation.
 xla::XlaOp BuildReshape(
     const torch::jit::Node* node, const xla::XlaOp& input,
-    const XlaComputationInOut::SizeOpValues& size_op_values_tracking);
+    const std::unordered_map<size_t, std::vector<xla::int64>>&
+        size_op_values_tracking);
 
 // Squeezes the given dimension if trivial (size 1), returns the unchanged input
 // otherwise.

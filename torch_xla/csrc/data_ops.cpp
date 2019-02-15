@@ -87,7 +87,8 @@ xla::XlaOp BuildView(
 
 xla::XlaOp BuildReshape(
     const torch::jit::Node* node, const xla::XlaOp& input,
-    const XlaComputationInOut::SizeOpValues& size_op_values_tracking) {
+    const std::unordered_map<size_t, std::vector<xla::int64>>&
+        size_op_values_tracking) {
   std::vector<xla::int64> output_sizes;
   if (node->hasAttribute(at::attr::shape)) {
     output_sizes = XlaHelpers::I64List(
