@@ -34,6 +34,26 @@ std::vector<const torch::jit::Value*> InputListAttr(
   XLA_ERROR() << "Constant with id " << id << " not found";
 }
 
+std::vector<xla::XlaOp> BuildChunk(const xla::XlaOp& input, xla::int64 chunks,
+                                   xla::int64 dim) {
+  XLA_CHECK_GE(dim, 0) << "Negative dimension specified for chunk operator";
+  const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
+  XLA_CHECK_LT(dim, input_sizes.size())
+      << "Invalid dimension specified for chunk operator";
+  int64_t size_in_dim = input_sizes[dim];
+  int64_t split_size = RoundUpDiv(size_in_dim, chunks);
+  std::vector<int64_t> split_sizes(chunks, split_size);
+  split_sizes[chunks - 1] = split_size - (split_size * chunks - size_in_dim);
+  std::vector<xla::XlaOp> splits(chunks);
+  int64_t start_idx = 0;
+  for (int64_t i = 0; i < chunks; ++i) {
+    int64_t length = split_sizes[i];
+    splits[i] = SliceInDim(input, start_idx, start_idx + length, 1, dim);
+    start_idx += length;
+  }
+  return splits;
+}
+
 }  // namespace
 
 std::vector<xla::int64> GetCompleteShape(
@@ -221,26 +241,26 @@ xla::XlaOp BuildCat(
   return xla::ConcatInDim(b, cat_inputs, dim);
 }
 
+xla::int64 RoundUpDiv(xla::int64 dividend, xla::int64 divisor) {
+  XLA_CHECK_GT(divisor, 0);
+  return (dividend + divisor - 1) / divisor;
+}
+
 std::vector<xla::XlaOp> BuildChunk(const torch::jit::Node* node,
                                    const xla::XlaOp& input) {
   int64_t chunks = node->get<int64_t>(at::attr::chunks).value();
   int64_t dim = node->get<int64_t>(at::attr::dim).value();
-  XLA_CHECK_GE(dim, 0) << "Negative dimension specified for chunk operator";
+  return BuildChunk(input, chunks, dim);
+}
+
+std::vector<xla::XlaOp> BuildSplit(const xla::XlaOp& input,
+                                   xla::int64 split_size, xla::int64 dim) {
   const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
-  XLA_CHECK_LT(dim, input_sizes.size())
-      << "Invalid dimension specified for chunk operator";
-  int64_t size_in_dim = input_sizes[dim];
-  int64_t split_size = (size_in_dim + chunks - 1) / chunks;
-  std::vector<int64_t> split_sizes(chunks, split_size);
-  split_sizes[chunks - 1] = split_size - (split_size * chunks - size_in_dim);
-  std::vector<xla::XlaOp> splits(chunks);
-  int64_t start_idx = 0;
-  for (int64_t i = 0; i < chunks; ++i) {
-    int64_t length = split_sizes[i];
-    splits[i] = SliceInDim(input, start_idx, start_idx + length, 1, dim);
-    start_idx += length;
-  }
-  return splits;
+  XLA_CHECK_LT(dim, input_sizes.size());
+  xla::int64 size_in_dim = input_sizes[dim];
+  XLA_CHECK_GT(split_size, 0);
+  xla::int64 chunks = RoundUpDiv(size_in_dim, split_size);
+  return BuildChunk(input, chunks, dim);
 }
 
 }  // namespace torch_xla
