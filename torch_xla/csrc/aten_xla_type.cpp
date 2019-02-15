@@ -160,7 +160,8 @@ at::Tensor AtenXlaType::exp(const at::Tensor& self) const {
 }
 
 at::Tensor AtenXlaType::expm1(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(XLATensor::expm1(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::expm1(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::log(const at::Tensor& self) const {
@@ -168,7 +169,8 @@ at::Tensor AtenXlaType::log(const at::Tensor& self) const {
 }
 
 at::Tensor AtenXlaType::log1p(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(XLATensor::log1p(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::log1p(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::sqrt(const at::Tensor& self) const {
@@ -702,7 +704,33 @@ at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
 }
 
 at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
-                             at::ScalarType dtype) const {}
+                             at::ScalarType dtype) const {
+  return bridge::AtenFromXlaTensor(XLATensor::mean(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions*/ false, dtype));
+}
+
+at::Tensor AtenXlaType::argmax(const at::Tensor& self, int64_t dim,
+                               bool keepdim) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::argmax(bridge::GetXlaTensor(self), dim, keepdim));
+}
+
+at::Tensor AtenXlaType::argmax(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::argmax(
+      bridge::GetXlaTensor(self), /*dim=*/-1, /*keepdim=*/false));
+}
+
+at::Tensor AtenXlaType::argmin(const at::Tensor& self, int64_t dim,
+                               bool keepdim) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::argmin(bridge::GetXlaTensor(self), dim, keepdim));
+}
+
+at::Tensor AtenXlaType::argmin(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::argmin(
+      bridge::GetXlaTensor(self), /*dim=*/-1, /*keepdim=*/false));
+}
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::native_batch_norm_backward(
