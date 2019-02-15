@@ -356,6 +356,19 @@ at::Tensor AtenXlaType::gather(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
+at::Tensor AtenXlaType::expand(const at::Tensor& self, at::IntArrayRef size,
+                               bool implicit) const {
+  return bridge::AtenFromXlaTensor(XLATensor::expand(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(size)));
+}
+
+at::Tensor AtenXlaType::expand_as(const at::Tensor& self,
+                                  const at::Tensor& other) const {
+  XLATensor other_tensor = bridge::GetXlaTensor(other);
+  return bridge::AtenFromXlaTensor(XLATensor::expand(
+      bridge::GetXlaTensor(self), other_tensor.shape().get().dimensions()));
+}
+
 at::Tensor AtenXlaType::relu(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::relu(bridge::GetXlaTensor(self)));
 }
