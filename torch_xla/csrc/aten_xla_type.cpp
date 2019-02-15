@@ -792,6 +792,11 @@ at::Tensor AtenXlaType::where(const at::Tensor& condition,
       bridge::GetXlaTensor(other)));
 }
 
+at::Tensor AtenXlaType::triu(const at::Tensor& self, int64_t diagonal) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::triu(bridge::GetXlaTensor(self), diagonal));
+}
+
 void AtenXlaType::SetFullConvPrecision(
     bool use_full_conv_precision /*= true*/) {
   s_use_full_conv_precision_ = use_full_conv_precision;
