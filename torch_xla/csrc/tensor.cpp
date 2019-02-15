@@ -848,8 +848,16 @@ XLATensor XLATensor::exp(const XLATensor& input) {
   return Create(ir::ops::Exp(input.GetIrValue()), input.GetDevice());
 }
 
+XLATensor XLATensor::expm1(const XLATensor& input) {
+  return Create(ir::ops::Expm1(input.GetIrValue()), input.GetDevice());
+}
+
 XLATensor XLATensor::log(const XLATensor& input) {
   return Create(ir::ops::Log(input.GetIrValue()), input.GetDevice());
+}
+
+XLATensor XLATensor::log1p(const XLATensor& input) {
+  return Create(ir::ops::Log1p(input.GetIrValue()), input.GetDevice());
 }
 
 XLATensor XLATensor::sqrt(const XLATensor& input) {

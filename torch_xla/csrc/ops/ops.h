@@ -71,7 +71,11 @@ NodePtr Max(const Value& input, const Value& other);
 
 NodePtr Exp(const Value& input);
 
+NodePtr Expm1(const Value& input);
+
 NodePtr Log(const Value& input);
+
+NodePtr Log1p(const Value& input);
 
 NodePtr Sqrt(const Value& input);
 
