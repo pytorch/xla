@@ -422,11 +422,20 @@ void TranslateLogSoftmaxBackward(
   cctx->AddNodeOp(node, xla_output);
 }
 
+void TranslateView(const torch::jit::Node* node, ComputationContext* cctx,
+                   xla::PrecisionConfig::Precision /*conv_precision*/,
+                   xla::XlaBuilder* /*b*/) {
+  XLA_CHECK_EQ(node->inputs().size(), 2);
+  xla::XlaOp xla_output = BuildView(node, cctx->OpForInput(node, 0));
+  cctx->AddNodeOp(node, xla_output);
+}
+
 void TranslateReshape(const torch::jit::Node* node, ComputationContext* cctx,
                       xla::PrecisionConfig::Precision /*conv_precision*/,
                       xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
-  xla::XlaOp xla_output = BuildView(node, cctx->OpForInput(node, 0));
+  xla::XlaOp xla_output =
+      BuildReshape(node, cctx->OpForInput(node, 0), cctx->GetSizeOpValues());
   cctx->AddNodeOp(node, xla_output);
 }
 
@@ -624,7 +633,7 @@ CreateTranslationHandlers() {
   (*t)[at::aten::log_softmax] = TranslateLogSoftmax;
   (*t)[at::aten::_log_softmax_backward_data] = TranslateLogSoftmaxBackward;
   (*t)[at::aten::reshape] = TranslateReshape;
-  (*t)[at::aten::view] = TranslateReshape;
+  (*t)[at::aten::view] = TranslateView;
   (*t)[at::aten::expand] = TranslateExpand;
   (*t)[at::aten::stack] = TranslateStack;
   (*t)[at::aten::cat] = TranslateCat;

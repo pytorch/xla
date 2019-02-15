@@ -72,18 +72,8 @@ xla::XlaOp BuildView(const torch::jit::Node* node, const xla::XlaOp& input) {
   XLA_CHECK_EQ(node_inputs.size(), 2);
   const auto node_outputs = node->outputs();
   XLA_CHECK_EQ(node_outputs.size(), 1);
-  // Try to use the second argument of the operator as the target shape.
-  std::vector<int64_t> output_sizes;
-  switch (node->kind()) {
-    case at::aten::view:
-      output_sizes = node->get<std::vector<int64_t>>(at::attr::size).value();
-      break;
-    case at::aten::reshape:
-      output_sizes = node->get<std::vector<int64_t>>(at::attr::shape).value();
-      break;
-    default:
-      XLA_ERROR() << "Unexpected node kind, must be view or reshape";
-  }
+  std::vector<int64_t> output_sizes =
+      node->get<std::vector<int64_t>>(at::attr::size).value();
   return BuildView(input, XlaHelpers::I64List(output_sizes));
 }
 
@@ -93,6 +83,25 @@ xla::XlaOp BuildView(
   const auto complete_output_sizes =
       GetCompleteShape(output_sizes, XlaHelpers::SizesOfXlaOp(input));
   return xla::Reshape(input, complete_output_sizes);
+}
+
+xla::XlaOp BuildReshape(
+    const torch::jit::Node* node, const xla::XlaOp& input,
+    const XlaComputationInOut::SizeOpValues& size_op_values_tracking) {
+  std::vector<xla::int64> output_sizes;
+  if (node->hasAttribute(at::attr::shape)) {
+    output_sizes = XlaHelpers::I64List(
+        node->get<std::vector<int64_t>>(at::attr::shape).value());
+  } else {
+    const auto size_op_value_it =
+        size_op_values_tracking.find(node->input(1)->unique());
+    XLA_CHECK(size_op_value_it != size_op_values_tracking.end())
+        << "at::aten::reshape only allowed when second parameter is a "
+           "constant size: "
+        << *node;
+    output_sizes = size_op_value_it->second;
+  }
+  return BuildView(input, output_sizes);
 }
 
 xla::XlaOp SqueezeTrivialDimension(const xla::XlaOp& input, size_t dim) {
