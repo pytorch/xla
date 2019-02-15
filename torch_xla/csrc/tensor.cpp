@@ -49,6 +49,7 @@
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
+#include "torch_xla/csrc/ops/triu.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -948,6 +949,11 @@ XLATensor XLATensor::unsqueeze(const XLATensor& input, int dim) {
   return Create(
       ir::MakeNode<ir::ops::Unsqueeze>(input.GetIrValue(), squeeze_dim),
       input.GetDevice());
+}
+
+XLATensor XLATensor::triu(const XLATensor& input, xla::int64 diagonal) {
+  return Create(ir::MakeNode<ir::ops::Triu>(input.GetIrValue(), diagonal),
+                input.GetDevice());
 }
 
 XLATensor XLATensor::where(const XLATensor& condition, const XLATensor& input,
