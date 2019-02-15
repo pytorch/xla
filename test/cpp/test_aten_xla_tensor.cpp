@@ -510,6 +510,25 @@ TEST_F(AtenXlaTensorTest, TestPow) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestWhere) {
+  at::Tensor a = at::rand({3, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({3, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::empty({3, 3}, at::TensorOptions(at::kByte));
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      c[i][j] = i == j;
+    }
+  }
+  at::Tensor d = at::where(c, a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = bridge::CreateXlaTensor(c, device);
+    at::Tensor xla_d = at::where(xla_c, xla_a, xla_b);
+    AllClose(d, xla_d);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestThreshold) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   float threshold = 0.4;
