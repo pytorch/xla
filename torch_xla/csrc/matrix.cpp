@@ -9,4 +9,9 @@ xla::XlaOp BuildTriu(const xla::XlaOp& input, int diagonal) {
                      xla::ZerosLike(input), input);
 }
 
+xla::XlaOp BuildTril(const xla::XlaOp& input, int diagonal) {
+  return xla::Select(xla::TriangleMask(input, diagonal), input,
+                     xla::ZerosLike(input));
+}
+
 }  // namespace torch_xla
