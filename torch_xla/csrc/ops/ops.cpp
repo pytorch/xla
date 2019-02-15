@@ -256,6 +256,22 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input,
                       ir::MakeNode<ir::ops::Scalar>(other, input.shape()));
 }
 
+NodePtr Where(const Value& condition, const Value& input, const Value& other) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_condition = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp pred_condition =
+        xla::ConvertElementType(xla_condition, xla::PrimitiveType::PRED);
+    return node.ReturnOp(xla::Select(pred_condition, xla_input, xla_other),
+                         loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::where),
+                            {condition, input, other}, input.shape(),
+                            std::move(lower_fn));
+}
+
 NodePtr NotSupportedOp(c10::Symbol node_symbol, xla::Shape shape) {
   auto lower_fn = [](const ir::Node& node,
                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
