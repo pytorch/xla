@@ -1156,6 +1156,49 @@ TEST_F(AtenXlaTensorTest, TestPermute) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestTriu) {
+  int size = 5;
+  at::Tensor input = GetTestTensor({size, size});
+  // Test all diagonals and out of bounds (must be no-op).
+  for (int diagonal = -size; diagonal <= size; ++diagonal) {
+    at::Tensor output = at::triu(input, diagonal);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = at::triu(xla_input, diagonal);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestTriuNonSquare) {
+  int size = 5;
+  at::Tensor input = GetTestTensor({size, size + 1});
+  // Test all diagonals and out of bounds (must be no-op).
+  for (int diagonal = -size; diagonal <= size; ++diagonal) {
+    at::Tensor output = at::triu(input, diagonal);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = at::triu(xla_input, diagonal);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestTriuBatch) {
+  int size = 5;
+  int batch_size = 3;
+  at::Tensor input = GetTestTensor({batch_size, size, size});
+  // Test all diagonals and out of bounds (must be no-op).
+  for (int diagonal = -size; diagonal <= size; ++diagonal) {
+    at::Tensor output = at::triu(input, diagonal);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = at::triu(xla_input, diagonal);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {

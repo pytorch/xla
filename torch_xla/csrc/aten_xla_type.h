@@ -263,6 +263,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor where(const at::Tensor& condition, const at::Tensor& self,
                    const at::Tensor& other) const override;
 
+  at::Tensor triu(const at::Tensor& self, int64_t diagonal) const override;
+
   static void SetFullConvPrecision(bool use_full_conv_precision = true);
 
   // Registers the ATEN types for the XLA tensors.
