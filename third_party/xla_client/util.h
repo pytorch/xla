@@ -82,6 +82,13 @@ std::vector<typename C::value_type::element_type*> GetSharedPointers(
   return pointers;
 }
 
+template <typename T>
+std::vector<T> Iota(size_t size, T init = 0) {
+  std::vector<T> result(size);
+  std::iota(result.begin(), result.end(), init);
+  return result;
+}
+
 template <typename T, typename S>
 std::vector<T> ToVector(const S& input) {
   return std::vector<T>(input.begin(), input.end());

@@ -3,6 +3,7 @@
 #include <mutex>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type_instances.h"
 #include "torch_xla/csrc/device.h"
@@ -660,6 +661,40 @@ at::Tensor AtenXlaType::max(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(
       XLATensor::max(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
+
+at::Tensor AtenXlaType::mean(const at::Tensor& self,
+                             at::ScalarType dtype) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::mean(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions*/ false, dtype));
+}
+
+at::Tensor AtenXlaType::mean(const at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::mean(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions*/ false, c10::nullopt));
+}
+
+at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
+                             bool keepdim, at::ScalarType dtype) const {
+  return bridge::AtenFromXlaTensor(XLATensor::mean(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions*/ keepdim, dtype));
+}
+
+at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
+                             bool keepdim) const {
+  return bridge::AtenFromXlaTensor(XLATensor::mean(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions*/ keepdim, c10::nullopt));
+}
+
+at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
+                             at::ScalarType dtype) const {}
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::native_batch_norm_backward(

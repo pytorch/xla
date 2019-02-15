@@ -257,6 +257,11 @@ class XLATensor {
 
   static XLATensor pow(const XLATensor& input, at::Scalar exponent);
 
+  static XLATensor mean(const XLATensor& input,
+                        std::vector<xla::int64> dimensions,
+                        bool keep_reduced_dimensions,
+                        c10::optional<at::ScalarType> dtype);
+
   static XLATensor batch_norm(const XLATensor& input, const XLATensor& weight,
                               const XLATensor& bias,
                               const XLATensor& running_mean,

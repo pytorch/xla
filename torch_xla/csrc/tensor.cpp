@@ -35,6 +35,7 @@
 #include "torch_xla/csrc/ops/log_softmax_backward.h"
 #include "torch_xla/csrc/ops/max_pool2d.h"
 #include "torch_xla/csrc/ops/max_pool2d_backward.h"
+#include "torch_xla/csrc/ops/mean.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/ops.h"
@@ -859,6 +860,16 @@ XLATensor XLATensor::pow(const XLATensor& input, at::Scalar exponent) {
   ir::NodePtr exponent_node = ir::ops::ScalarOp(exponent, input.shape());
   return Create(ir::ops::Pow(input.GetIrValue(), exponent_node),
                 input.GetDevice());
+}
+
+XLATensor XLATensor::mean(const XLATensor& input,
+                          std::vector<xla::int64> dimensions,
+                          bool keep_reduced_dimensions,
+                          c10::optional<at::ScalarType> dtype) {
+  return Create(
+      ir::MakeNode<ir::ops::Mean>(input.GetIrValue(), std::move(dimensions),
+                                  keep_reduced_dimensions, dtype),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::batch_norm(const XLATensor& input, const XLATensor& weight,
