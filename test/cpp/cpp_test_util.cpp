@@ -1,6 +1,7 @@
 #include "cpp_test_util.h"
 #include "tensor_impl.h"
 
+#include <iostream>
 #include <string>
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
@@ -37,10 +38,15 @@ void ForEachDevice(const std::function<void(const Device&)>& devfn) {
   devfn(Device(default_device));
 }
 
-void AllClose(at::Tensor tensor, at::Tensor xla_tensor, double rtol,
-              double atol) {
-  EXPECT_TRUE(
-      ToCpuTensor(xla_tensor).allclose(ToCpuTensor(tensor), rtol, atol));
+bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
+                 double atol) {
+  tensor1 = ToCpuTensor(tensor1);
+  tensor2 = ToCpuTensor(tensor2);
+  bool equal = tensor1.allclose(tensor2, rtol, atol);
+  if (!equal) {
+    std::cout << tensor1 << "\n-vs-\n" << tensor2 << "\n";
+  }
+  return equal;
 }
 
 }  // namespace cpp_test
