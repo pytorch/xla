@@ -315,11 +315,9 @@ class XLATensor {
 
   static XLATensor max(const XLATensor& input, const XLATensor& other);
 
-  static XLATensor argmax(const XLATensor& input, xla::int64 dim,
-                          bool keepdim);
+  static XLATensor argmax(const XLATensor& input, xla::int64 dim, bool keepdim);
 
-  static XLATensor argmin(const XLATensor& input, xla::int64 dim,
-                          bool keepdim);
+  static XLATensor argmin(const XLATensor& input, xla::int64 dim, bool keepdim);
 
   // Like batch_norm, but returns additional save_mean and save_invstd used by
   // the backward pass.
