@@ -619,8 +619,11 @@ CreateTranslationHandlers() {
   (*t)[at::aten::max_pool2d_with_indices_backward] = TranslateMaxPoolBackward;
   (*t)[at::aten::avg_pool2d] = TranslateAvgPool;
   (*t)[at::aten::avg_pool2d_backward] = TranslateAvgPoolBackward;
-  (*t)[at::aten::adaptive_avg_pool2d] = TranslateAdaptiveAvgPool;
-  (*t)[at::aten::adaptive_avg_pool2d_backward] =
+  // TODO: Switch to normal form once the string is preoperly externalized.
+  (*t)[torch::jit::NodeKind::fromQualString("aten::_adaptive_avg_pool2d")] =
+      TranslateAdaptiveAvgPool;
+  (*t)[torch::jit::NodeKind::fromQualString(
+      "aten::_adaptive_avg_pool2d_backward")] =
       TranslateAdaptiveAvgPoolBackward;
   (*t)[at::aten::sqrt] = TranslateSqrt;
   (*t)[at::aten::rsqrt] = TranslateRsqrt;

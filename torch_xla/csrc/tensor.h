@@ -274,7 +274,7 @@ class XLATensor {
                               const XLATensor& running_var, double momentum,
                               double eps);
 
-  static XLATensor adaptive_avg_pool2d(
+  static XLATensor _adaptive_avg_pool2d(
       const XLATensor& input,
       tensorflow::gtl::ArraySlice<const xla::int64> output_size);
 
@@ -285,8 +285,8 @@ class XLATensor {
       tensorflow::gtl::ArraySlice<const xla::int64> padding,
       bool count_include_pad);
 
-  static XLATensor adaptive_avg_pool2d_backward(const XLATensor& grad_output,
-                                                const XLATensor& input);
+  static XLATensor _adaptive_avg_pool2d_backward(const XLATensor& grad_output,
+                                                 const XLATensor& input);
 
   static XLATensor max_pool2d_backward(
       const XLATensor& out_backprop, const XLATensor& input,
