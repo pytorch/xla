@@ -22,13 +22,18 @@ at::Tensor ToTensor(XLATensor& xla_tensor);
 
 bool EqualValues(at::Tensor a, at::Tensor b);
 
-static inline void AllClose(at::Tensor tensor, XLATensor& xla_tensor,
+bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol = 1e-5,
+                 double atol = 1e-8);
+
+static inline void AllClose(at::Tensor tensor, at::Tensor xla_tensor,
                             double rtol = 1e-5, double atol = 1e-8) {
-  EXPECT_TRUE(tensor.allclose(ToTensor(xla_tensor), rtol, atol));
+  EXPECT_TRUE(CloseValues(tensor, xla_tensor, rtol, atol));
 }
 
-void AllClose(at::Tensor tensor, at::Tensor xla_tensor, double rtol = 1e-5,
-              double atol = 1e-8);
+static inline void AllClose(at::Tensor tensor, XLATensor& xla_tensor,
+                            double rtol = 1e-5, double atol = 1e-8) {
+  EXPECT_TRUE(CloseValues(tensor, ToTensor(xla_tensor), rtol, atol));
+}
 
 void ForEachDevice(const std::function<void(const Device&)>& devfn);
 
