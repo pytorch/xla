@@ -955,7 +955,7 @@ XLATensor XLATensor::where(const XLATensor& condition, const XLATensor& input,
                 input.GetDevice());
 }
 
-XLATensor XLATensor::adaptive_avg_pool2d(
+XLATensor XLATensor::_adaptive_avg_pool2d(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
   return Create(
@@ -975,8 +975,8 @@ XLATensor XLATensor::avg_pool2d_backward(
                 out_backprop.GetDevice());
 }
 
-XLATensor XLATensor::adaptive_avg_pool2d_backward(const XLATensor& grad_output,
-                                                  const XLATensor& input) {
+XLATensor XLATensor::_adaptive_avg_pool2d_backward(const XLATensor& grad_output,
+                                                   const XLATensor& input) {
   return Create(ir::ops::AdaptiveAvgPool2dBackward(grad_output.GetIrValue(),
                                                    input.GetIrValue()),
                 input.GetDevice());

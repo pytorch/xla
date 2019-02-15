@@ -180,8 +180,8 @@ class AtenXlaType : public AtenXlaTypeBase {
                         at::IntList stride, at::IntList padding, bool ceil_mode,
                         bool count_include_pad) const override;
 
-  at::Tensor adaptive_avg_pool2d(const at::Tensor& self,
-                                 at::IntArrayRef output_size) const override;
+  at::Tensor _adaptive_avg_pool2d(const at::Tensor& self,
+                                  at::IntArrayRef output_size) const override;
 
   at::Tensor batch_norm(const at::Tensor& input, const at::Tensor& weight,
                         const at::Tensor& bias, const at::Tensor& running_mean,
@@ -200,7 +200,7 @@ class AtenXlaType : public AtenXlaTypeBase {
                                  at::IntList padding, bool ceil_mode,
                                  bool count_include_pad) const override;
 
-  at::Tensor adaptive_avg_pool2d_backward(
+  at::Tensor _adaptive_avg_pool2d_backward(
       const at::Tensor& grad_output, const at::Tensor& self) const override;
 
   at::Tensor max_pool2d_with_indices_backward(
