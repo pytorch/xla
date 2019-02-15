@@ -237,6 +237,14 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim,
                   at::ScalarType dtype) const override;
 
+  at::Tensor argmax(const at::Tensor& self, int64_t dim,
+                    bool keepdim) const override;
+  at::Tensor argmax(const at::Tensor& self) const override;
+
+  at::Tensor argmin(const at::Tensor& self, int64_t dim,
+                    bool keepdim) const override;
+  at::Tensor argmin(const at::Tensor& self) const override;
+
   std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm_backward(
       const at::Tensor& grad_out, const at::Tensor& input,
       const at::Tensor& weight, const at::Tensor& running_mean,

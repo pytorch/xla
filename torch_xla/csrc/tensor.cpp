@@ -19,6 +19,8 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool2d.h"
+#include "torch_xla/csrc/ops/arg_max.h"
+#include "torch_xla/csrc/ops/arg_min.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/avg_pool2d.h"
 #include "torch_xla/csrc/ops/avg_pool2d_backward.h"
@@ -1086,6 +1088,18 @@ XLATensor XLATensor::min(const XLATensor& input, const XLATensor& other) {
 
 XLATensor XLATensor::max(const XLATensor& input, const XLATensor& other) {
   return Create(ir::ops::Max(input.GetIrValue(), other.GetIrValue()),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::argmax(const XLATensor& input, xla::int64 dim,
+                            bool keepdim) {
+  return Create(ir::MakeNode<ir::ops::ArgMax>(input.GetIrValue(), dim, keepdim),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::argmin(const XLATensor& input, xla::int64 dim,
+                            bool keepdim) {
+  return Create(ir::MakeNode<ir::ops::ArgMin>(input.GetIrValue(), dim, keepdim),
                 input.GetDevice());
 }
 
