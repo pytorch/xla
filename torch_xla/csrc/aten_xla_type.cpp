@@ -691,6 +691,14 @@ at::Tensor AtenXlaType::unsqueeze(const at::Tensor& self, int64_t dim) const {
       XLATensor::unsqueeze(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor AtenXlaType::where(const at::Tensor& condition,
+                              const at::Tensor& self,
+                              const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(XLATensor::where(
+      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(other)));
+}
+
 void AtenXlaType::SetFullConvPrecision(
     bool use_full_conv_precision /*= true*/) {
   s_use_full_conv_precision_ = use_full_conv_precision;

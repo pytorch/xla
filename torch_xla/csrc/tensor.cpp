@@ -905,6 +905,13 @@ XLATensor XLATensor::unsqueeze(const XLATensor& input, int dim) {
       input.GetDevice());
 }
 
+XLATensor XLATensor::where(const XLATensor& condition, const XLATensor& input,
+                           const XLATensor& other) {
+  return Create(ir::ops::Where(condition.GetIrValue(), input.GetIrValue(),
+                               other.GetIrValue()),
+                input.GetDevice());
+}
+
 XLATensor XLATensor::adaptive_avg_pool2d(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
