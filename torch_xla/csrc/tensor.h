@@ -220,9 +220,17 @@ class XLATensor {
 
   static XLATensor neg(const XLATensor& input);
 
+  static XLATensor asin(const XLATensor& input);
+
   static XLATensor sin(const XLATensor& input);
 
+  static XLATensor sinh(const XLATensor& input);
+
+  static XLATensor acos(const XLATensor& input);
+
   static XLATensor cos(const XLATensor& input);
+
+  static XLATensor cosh(const XLATensor& input);
 
   static XLATensor abs(const XLATensor& input);
 

@@ -287,12 +287,28 @@ at::Tensor AtenXlaType::neg(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::neg(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::asin(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::asin(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::sin(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::sin(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::sinh(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::sinh(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::acos(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::acos(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::cos(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::cos(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::cosh(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::cosh(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::abs(const at::Tensor& self) const {
