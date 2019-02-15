@@ -1212,6 +1212,40 @@ TEST_F(AtenXlaTensorTest, TestPermute) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSplit) {
+  at::Tensor input = GetTestTensor({7, 8, 9});
+  int rank = input.dim();
+  for (int split_size : {2, 3}) {
+    for (int dim = -rank; dim < rank; ++dim) {
+      std::vector<at::Tensor> outputs = at::split(input, split_size, dim);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+        std::vector<at::Tensor> xla_outputs =
+            at::split(xla_input, split_size, dim);
+        ASSERT_EQ(outputs.size(), xla_outputs.size());
+        for (size_t i = 0; i < outputs.size(); ++i) {
+          AllClose(outputs[i], xla_outputs[i]);
+        }
+      });
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestSplitEmpty) {
+  at::Tensor input = GetTestTensor({0});
+  int split_size = 0;
+  int dim = 0;
+  std::vector<at::Tensor> outputs = at::split(input, split_size, dim);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    std::vector<at::Tensor> xla_outputs = at::split(xla_input, split_size, dim);
+    ASSERT_EQ(outputs.size(), xla_outputs.size());
+    for (size_t i = 0; i < outputs.size(); ++i) {
+      AllClose(outputs[i], xla_outputs[i]);
+    }
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestTriu) {
   int size = 5;
   at::Tensor input = GetTestTensor({size, size});

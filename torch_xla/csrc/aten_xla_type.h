@@ -262,6 +262,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor permute(const at::Tensor& self,
                      at::IntArrayRef dims) const override;
 
+  std::vector<at::Tensor> split(const at::Tensor& self, int64_t split_size,
+                                int64_t dim) const override;
+
   at::Tensor squeeze(const at::Tensor& self) const override;
   at::Tensor squeeze(const at::Tensor& self, int64_t dim) const override;
 

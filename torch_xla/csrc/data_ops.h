@@ -70,10 +70,19 @@ xla::XlaOp BuildCat(
     const std::function<xla::XlaOp(const torch::jit::Value*)>& node_op,
     xla::XlaBuilder* b);
 
+// Integer division of "dividend" by "divisor" rounding up.
+xla::int64 RoundUpDiv(xla::int64 dividend, xla::int64 divisor);
+
 // Splits a tensor into a specific number of chunks specified by the "chunks"
 // attribute of the given node, along an existing dimension specified by the
 // "dim" attribute of the given node.
 std::vector<xla::XlaOp> BuildChunk(const torch::jit::Node* node,
                                    const xla::XlaOp& input);
+
+// Splits a tensor nto equally sized chunks (if possible). Last chunk will be
+// smaller if the tensor size along the given dimension "dim" is not divisible
+// by "split_size".
+std::vector<xla::XlaOp> BuildSplit(const xla::XlaOp& input,
+                                   xla::int64 split_size, xla::int64 dim);
 
 }  // namespace torch_xla
