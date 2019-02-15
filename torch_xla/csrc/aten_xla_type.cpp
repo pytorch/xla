@@ -160,7 +160,8 @@ at::Tensor AtenXlaType::exp(const at::Tensor& self) const {
 }
 
 at::Tensor AtenXlaType::expm1(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(XLATensor::expm1(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::expm1(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::log(const at::Tensor& self) const {
@@ -168,7 +169,8 @@ at::Tensor AtenXlaType::log(const at::Tensor& self) const {
 }
 
 at::Tensor AtenXlaType::log1p(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(XLATensor::log1p(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::log1p(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::sqrt(const at::Tensor& self) const {
@@ -352,6 +354,19 @@ at::Tensor AtenXlaType::gather(const at::Tensor& self, int64_t dim,
                                const at::Tensor& index) const {
   return bridge::AtenFromXlaTensor(XLATensor::gather(
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
+}
+
+at::Tensor AtenXlaType::expand(const at::Tensor& self, at::IntArrayRef size,
+                               bool implicit) const {
+  return bridge::AtenFromXlaTensor(XLATensor::expand(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(size)));
+}
+
+at::Tensor AtenXlaType::expand_as(const at::Tensor& self,
+                                  const at::Tensor& other) const {
+  XLATensor other_tensor = bridge::GetXlaTensor(other);
+  return bridge::AtenFromXlaTensor(XLATensor::expand(
+      bridge::GetXlaTensor(self), other_tensor.shape().get().dimensions()));
 }
 
 at::Tensor AtenXlaType::relu(const at::Tensor& self) const {

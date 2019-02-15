@@ -530,6 +530,28 @@ TEST_F(AtenXlaTensorTest, TestGather) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestExpand) {
+  at::Tensor a = at::rand({3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::native::expand(a, {2, 3, 4}, /*implicit=*/false);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::native::expand(xla_a, {2, 3, 4}, /*implicit=*/false);
+    AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestExpandAs) {
+  at::Tensor a = at::rand({3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({2, 3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::native::expand_as(a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::native::expand_as(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::relu(input);

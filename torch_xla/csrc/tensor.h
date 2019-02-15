@@ -246,6 +246,8 @@ class XLATensor {
   static XLATensor gather(const XLATensor& input, xla::int64 dim,
                           const XLATensor& index);
 
+  static XLATensor expand(const XLATensor& input, std::vector<xla::int64> size);
+
   static XLATensor mm(const XLATensor& input, const XLATensor& weight,
                       bool use_full_conv_precision);
 

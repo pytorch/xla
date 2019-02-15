@@ -28,6 +28,7 @@
 #include "torch_xla/csrc/ops/conv2d_backward.h"
 #include "torch_xla/csrc/ops/cross_replica_sum.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -835,6 +836,13 @@ XLATensor XLATensor::gather(const XLATensor& input, xla::int64 dim,
   return Create(ir::MakeNode<ir::ops::Gather>(input.GetIrValue(), dim,
                                               index.GetIrValue()),
                 input.GetDevice());
+}
+
+XLATensor XLATensor::expand(const XLATensor& input,
+                            std::vector<xla::int64> size) {
+  return Create(
+      ir::MakeNode<ir::ops::Expand>(input.GetIrValue(), std::move(size)),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,

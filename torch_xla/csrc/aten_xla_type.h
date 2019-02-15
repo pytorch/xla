@@ -125,6 +125,11 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor gather(const at::Tensor& self, int64_t dim,
                     const at::Tensor& index) const override;
 
+  at::Tensor expand(const at::Tensor& self, at::IntArrayRef size,
+                    bool implicit) const override;
+  at::Tensor expand_as(const at::Tensor& self,
+                       const at::Tensor& other) const override;
+
   at::Tensor relu(const at::Tensor& self) const override;
 
   at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
