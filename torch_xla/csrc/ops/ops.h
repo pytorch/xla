@@ -45,9 +45,17 @@ inline NodePtr CrossReplicaSumOp(const Value& operand,
   return MakeNode<CrossReplicaSum>(operand, std::move(groups));
 }
 
+NodePtr Acos(const Value& input);
+
 NodePtr Cos(const Value& input);
 
+NodePtr Cosh(const Value& input);
+
+NodePtr Asin(const Value& input);
+
 NodePtr Sin(const Value& input);
+
+NodePtr Sinh(const Value& input);
 
 NodePtr Neg(const Value& input);
 
