@@ -251,7 +251,11 @@ class XLATensor {
 
   static XLATensor exp(const XLATensor& input);
 
+  static XLATensor expm1(const XLATensor& input);
+
   static XLATensor log(const XLATensor& input);
+
+  static XLATensor log1p(const XLATensor& input);
 
   static XLATensor sqrt(const XLATensor& input);
 

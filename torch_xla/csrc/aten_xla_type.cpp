@@ -158,8 +158,16 @@ at::Tensor AtenXlaType::exp(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::exp(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::expm1(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::expm1(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::log(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::log(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::log1p(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::log1p(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::sqrt(const at::Tensor& self) const {

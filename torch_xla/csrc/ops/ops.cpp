@@ -45,7 +45,9 @@ PTXLA_UNARY_OP(Sinh, at::aten::sinh, xla::Sinh);
 PTXLA_UNARY_OP(Neg, at::aten::neg, xla::Neg);
 PTXLA_UNARY_OP(Abs, at::aten::abs, xla::Abs);
 PTXLA_UNARY_OP(Exp, at::aten::exp, xla::Exp);
+PTXLA_UNARY_OP(Expm1, at::aten::expm1, xla::Expm1);
 PTXLA_UNARY_OP(Log, at::aten::log, xla::Log);
+PTXLA_UNARY_OP(Log1p, at::aten::log1p, xla::Log1p);
 PTXLA_UNARY_OP(Sqrt, at::aten::sqrt, xla::Sqrt);
 
 PTXLA_BINARY_OP(Min, at::aten::min, xla::Min);

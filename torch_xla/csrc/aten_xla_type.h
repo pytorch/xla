@@ -43,7 +43,11 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor exp(const at::Tensor& self) const override;
 
+  at::Tensor expm1(const at::Tensor& self) const override;
+
   at::Tensor log(const at::Tensor& self) const override;
+
+  at::Tensor log1p(const at::Tensor& self) const override;
 
   at::Tensor sqrt(const at::Tensor& self) const override;
 
