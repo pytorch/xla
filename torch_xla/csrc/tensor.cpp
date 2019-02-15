@@ -47,6 +47,7 @@
 #include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/slice.h"
 #include "torch_xla/csrc/ops/softmax.h"
+#include "torch_xla/csrc/ops/split.h"
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
@@ -939,6 +940,28 @@ XLATensor XLATensor::permute(
     tensorflow::gtl::ArraySlice<const xla::int64> dims) {
   return Create(ir::MakeNode<ir::ops::Permute>(input.GetIrValue(), dims),
                 input.GetDevice());
+}
+
+std::vector<XLATensor> XLATensor::split(const XLATensor& input,
+                                        xla::int64 split_size, xla::int64 dim) {
+  int split_dim = GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  xla::int64 size_in_dim = input.shape().get().dimensions(split_dim);
+  // Deal with 0 split size, it's a corner case which is only allowed when the
+  // dimension size is 0 as well.
+  if (split_size == 0) {
+    XLA_CHECK_EQ(size_in_dim, 0);
+    xla::Literal literal(input.shape().get());
+    return {Create(ir::MakeNode<ir::ops::Constant>(std::move(literal)),
+                   input.GetDevice())};
+  }
+  xla::int64 chunks = RoundUpDiv(size_in_dim, split_size);
+  ir::NodePtr node =
+      ir::MakeNode<ir::ops::Split>(input.GetIrValue(), split_size, split_dim);
+  std::vector<XLATensor> result;
+  for (xla::int64 i = 0; i < chunks; ++i) {
+    result.push_back(Create(ir::Value(node, i), input.GetDevice()));
+  }
+  return result;
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input) {

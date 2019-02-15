@@ -339,6 +339,9 @@ class XLATensor {
   static XLATensor permute(const XLATensor& input,
                            tensorflow::gtl::ArraySlice<const xla::int64> dims);
 
+  static std::vector<XLATensor> split(const XLATensor& self,
+                                      xla::int64 split_size, xla::int64 dim);
+
   // Squeeze out all trivial (size 1) dimensions.
   static XLATensor squeeze(const XLATensor& input);
 

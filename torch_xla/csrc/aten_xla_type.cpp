@@ -782,6 +782,18 @@ at::Tensor AtenXlaType::permute(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
 }
 
+std::vector<at::Tensor> AtenXlaType::split(const at::Tensor& self,
+                                           int64_t split_size,
+                                           int64_t dim) const {
+  auto xla_tensors =
+      XLATensor::split(bridge::GetXlaTensor(self), split_size, dim);
+  std::vector<at::Tensor> tensors;
+  for (XLATensor& xla_tensor : xla_tensors) {
+    tensors.emplace_back(bridge::AtenFromXlaTensor(std::move(xla_tensor)));
+  }
+  return tensors;
+}
+
 at::Tensor AtenXlaType::squeeze(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::squeeze(bridge::GetXlaTensor(self)));
