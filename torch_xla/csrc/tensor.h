@@ -265,6 +265,10 @@ class XLATensor {
 
   static XLATensor log1p(const XLATensor& input);
 
+  static XLATensor erf(const XLATensor& input);
+
+  static XLATensor erfc(const XLATensor& input);
+
   static XLATensor sqrt(const XLATensor& input);
 
   static XLATensor pow(const XLATensor& input, at::Scalar exponent);

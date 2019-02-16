@@ -73,6 +73,10 @@ NodePtr Exp(const Value& input);
 
 NodePtr Expm1(const Value& input);
 
+NodePtr Erf(const Value& input);
+
+NodePtr Erfc(const Value& input);
+
 NodePtr Log(const Value& input);
 
 NodePtr Log1p(const Value& input);
