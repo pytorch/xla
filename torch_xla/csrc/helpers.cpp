@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
+#include "torch_xla/csrc/convert_ops.h"
 
 namespace torch_xla {
 
@@ -48,38 +49,38 @@ std::vector<xla::int64> XlaHelpers::DropDimensions(
 
 XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
   switch (type) {
-    case xla::S8:
+    case xla::PrimitiveType::S8:
       return {std::numeric_limits<xla::int8>::min(),
               std::numeric_limits<xla::int8>::max()};
-    case xla::U8:
+    case xla::PrimitiveType::U8:
       return {std::numeric_limits<xla::uint8>::min(),
               std::numeric_limits<xla::uint8>::max()};
-    case xla::S16:
+    case xla::PrimitiveType::S16:
       return {std::numeric_limits<xla::int16>::min(),
               std::numeric_limits<xla::int16>::max()};
-    case xla::U16:
+    case xla::PrimitiveType::U16:
       return {std::numeric_limits<xla::uint16>::min(),
               std::numeric_limits<xla::uint16>::max()};
-    case xla::S32:
+    case xla::PrimitiveType::S32:
       return {static_cast<int64_t>(std::numeric_limits<xla::int32>::min()),
               static_cast<int64_t>(std::numeric_limits<xla::int32>::max())};
-    case xla::U32:
+    case xla::PrimitiveType::U32:
       return {static_cast<int64_t>(std::numeric_limits<xla::uint32>::min()),
               static_cast<int64_t>(std::numeric_limits<xla::uint32>::max())};
-    case xla::S64:
+    case xla::PrimitiveType::S64:
       return {static_cast<int64_t>(std::numeric_limits<xla::int64>::min()),
               static_cast<int64_t>(std::numeric_limits<xla::int64>::max())};
-    case xla::U64:
+    case xla::PrimitiveType::U64:
       return {static_cast<int64_t>(std::numeric_limits<xla::uint64>::min()),
               static_cast<int64_t>(std::numeric_limits<xla::uint64>::max())};
-    case xla::BF16:
-    case xla::F32:
+    case xla::PrimitiveType::BF16:
+    case xla::PrimitiveType::F32:
       return {std::numeric_limits<float>::min(),
               std::numeric_limits<float>::max()};
-    case xla::F64:
+    case xla::PrimitiveType::F64:
       return {std::numeric_limits<double>::min(),
               std::numeric_limits<double>::max()};
-    case xla::PRED:
+    case xla::PrimitiveType::PRED:
       return {0, 1};
     default:
       XLA_ERROR() << "Unsupported XLA type " << type;
@@ -146,26 +147,27 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
   if (xla::primitive_util::IsFloatingPointType(type1)) {
     if (!xla::primitive_util::IsFloatingPointType(type2) || size1 >= size2) {
       return std::pair<xla::XlaOp, xla::XlaOp>(
-          op1, xla::ConvertElementType(op2, type1));
+          op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
     }
     return std::pair<xla::XlaOp, xla::XlaOp>(
-        xla::ConvertElementType(op1, type2), op2);
+        ConvertTo(op1, type1, type2, /*device=*/nullptr), op2);
   }
   if (xla::primitive_util::IsFloatingPointType(type2) || size2 >= size1) {
     return std::pair<xla::XlaOp, xla::XlaOp>(
-        xla::ConvertElementType(op1, type2), op2);
+        ConvertTo(op1, type1, type2, /*device=*/nullptr), op2);
   }
-  return std::pair<xla::XlaOp, xla::XlaOp>(op1,
-                                           xla::ConvertElementType(op2, type1));
+  return std::pair<xla::XlaOp, xla::XlaOp>(
+      op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
     const xla::XlaOp& op1, const xla::XlaOp& op2) {
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
-  return type1 == type2 ? std::pair<xla::XlaOp, xla::XlaOp>(op1, op2)
-                        : std::pair<xla::XlaOp, xla::XlaOp>(
-                              op1, xla::ConvertElementType(op2, type1));
+  return type1 == type2
+             ? std::pair<xla::XlaOp, xla::XlaOp>(op1, op2)
+             : std::pair<xla::XlaOp, xla::XlaOp>(
+                   op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
 }
 
 xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
