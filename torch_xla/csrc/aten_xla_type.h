@@ -14,6 +14,19 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor _s_copy_from(const at::Tensor& self, const at::Tensor& dst,
                           bool non_blocking) const override;
 
+  at::Tensor _cast_Byte(const at::Tensor& self,
+                        bool non_blocking) const override;
+  at::Tensor _cast_Char(const at::Tensor& self,
+                        bool non_blocking) const override;
+  at::Tensor _cast_Float(const at::Tensor& self,
+                         bool non_blocking) const override;
+  at::Tensor _cast_Int(const at::Tensor& self,
+                       bool non_blocking) const override;
+  at::Tensor _cast_Long(const at::Tensor& self,
+                        bool non_blocking) const override;
+  at::Tensor _cast_Short(const at::Tensor& self,
+                         bool non_blocking) const override;
+
   at::Tensor zeros(at::IntArrayRef size,
                    const at::TensorOptions& options) const override;
   at::Tensor zeros_like(const at::Tensor& self) const override;

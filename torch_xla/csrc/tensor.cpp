@@ -25,6 +25,7 @@
 #include "torch_xla/csrc/ops/avg_pool2d.h"
 #include "torch_xla/csrc/ops/avg_pool2d_backward.h"
 #include "torch_xla/csrc/ops/batch_norm_forward.h"
+#include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/conv2d.h"
 #include "torch_xla/csrc/ops/conv2d_backward.h"
@@ -1065,6 +1066,11 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::conv2d_backward(
   XLATensor grad_bias = Create(ir::Value(node, 2), out_backprop.GetDevice());
   return std::make_tuple(std::move(grad_input), std::move(grad_weight),
                          std::move(grad_bias));
+}
+
+XLATensor XLATensor::cast(const XLATensor& input, at::ScalarType dtype) {
+  return Create(ir::MakeNode<ir::ops::Cast>(input.GetIrValue(), dtype),
+                input.GetDevice());
 }
 
 XLATensor XLATensor::log_softmax_backward(const XLATensor& grad_output,
