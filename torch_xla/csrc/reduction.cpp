@@ -3,25 +3,12 @@
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
+namespace {
 
-xla::XlaOp BuildSum(const torch::jit::Node* node, const xla::XlaOp& operand) {
-  if (node->get<bool>(at::attr::keepdim).value()) {
-    XLA_ERROR() << "Sum with keepdim set not supported yet";
-  }
-  xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operand);
-  xla::XlaOp init_value = XlaHelpers::ScalarValue<float>(
-      0, operand_shape.element_type(), operand.builder());
-  const auto dimensions_to_reduce =
-      node->get<std::vector<int64_t>>(at::attr::dim).value();
-  return xla::Reduce(
-      operand, init_value,
-      XlaHelpers::CreateAddComputation(operand_shape.element_type()),
-      XlaHelpers::I64List(dimensions_to_reduce));
-}
-
-xla::XlaOp BuildMean(const xla::XlaOp& input,
-                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-                     bool keep_reduced_dimensions) {
+xla::XlaOp CreateSummation(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    bool keep_reduced_dimensions, bool scale) {
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp init_value = XlaHelpers::ScalarValue<float>(
       0, input_shape.element_type(), input.builder());
@@ -42,7 +29,7 @@ xla::XlaOp BuildMean(const xla::XlaOp& input,
   xla::XlaOp result = xla::Reduce(
       input, init_value,
       XlaHelpers::CreateAddComputation(input_shape.element_type()), dimensions);
-  if (element_count > 1) {
+  if (scale && element_count > 1) {
     xla::XlaOp scale = XlaHelpers::ScalarValue<float>(
         1.0f / static_cast<float>(element_count), input_shape.element_type(),
         input.builder());
@@ -52,6 +39,37 @@ xla::XlaOp BuildMean(const xla::XlaOp& input,
     result = xla::Reshape(result, new_dimensions);
   }
   return result;
+}
+
+}  // namespace
+
+xla::XlaOp BuildSum(const torch::jit::Node* node, const xla::XlaOp& operand) {
+  if (node->get<bool>(at::attr::keepdim).value()) {
+    XLA_ERROR() << "Sum with keepdim set not supported yet";
+  }
+  xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operand);
+  xla::XlaOp init_value = XlaHelpers::ScalarValue<float>(
+      0, operand_shape.element_type(), operand.builder());
+  const auto dimensions_to_reduce =
+      node->get<std::vector<int64_t>>(at::attr::dim).value();
+  return xla::Reduce(
+      operand, init_value,
+      XlaHelpers::CreateAddComputation(operand_shape.element_type()),
+      XlaHelpers::I64List(dimensions_to_reduce));
+}
+
+xla::XlaOp BuildMean(const xla::XlaOp& input,
+                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+                     bool keep_reduced_dimensions) {
+  return CreateSummation(input, dimensions, keep_reduced_dimensions,
+                         /*scale=*/true);
+}
+
+xla::XlaOp BuildSum(const xla::XlaOp& input,
+                    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+                    bool keep_reduced_dimensions) {
+  return CreateSummation(input, dimensions, keep_reduced_dimensions,
+                         /*scale=*/false);
 }
 
 }  // namespace torch_xla

@@ -271,6 +271,11 @@ class XLATensor {
                         bool keep_reduced_dimensions,
                         c10::optional<at::ScalarType> dtype);
 
+  static XLATensor sum(const XLATensor& input,
+                       std::vector<xla::int64> dimensions,
+                       bool keep_reduced_dimensions,
+                       c10::optional<at::ScalarType> dtype);
+
   static XLATensor batch_norm(const XLATensor& input, const XLATensor& weight,
                               const XLATensor& bias,
                               const XLATensor& running_mean,

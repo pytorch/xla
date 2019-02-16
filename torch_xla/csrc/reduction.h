@@ -17,4 +17,11 @@ xla::XlaOp BuildMean(const xla::XlaOp& input,
                      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                      bool keep_reduced_dimensions);
 
+// Builds the sum of all values by reducing all the dimensions listed in
+// dimensions. If keep_reduced_dimensions is true, the reduced dimensions will
+// be retained, with value 1.
+xla::XlaOp BuildSum(const xla::XlaOp& input,
+                    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+                    bool keep_reduced_dimensions);
+
 }  // namespace torch_xla

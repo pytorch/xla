@@ -354,6 +354,46 @@ TEST_F(AtenXlaTensorTest, TestMeanInDims) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSum) {
+  at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::sum(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::sum(xla_a);
+    AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestSumInDim) {
+  at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::sum(a, {1});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::sum(xla_a, {1});
+    AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestSumInDims) {
+  at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::sum(a, {0, 1});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::sum(xla_a, {0, 1});
+    AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestSumInDimsKeep) {
+  at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::sum(a, {0, 1}, /*keepdim=*/true);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::sum(xla_a, {0, 1}, /*keepdim=*/true);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestArgMin) {
   at::Tensor a = at::rand({4, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::argmin(a);
