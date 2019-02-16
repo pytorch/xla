@@ -486,16 +486,15 @@ xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
                                : xla::PrimitiveType::F32;
     case at::ScalarType::Byte:
       return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::U8
-                                                : xla::PrimitiveType::S64;
+                                                : xla::PrimitiveType::S32;
     case at::ScalarType::Char:
       return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S8
-                                                : xla::PrimitiveType::S64;
+                                                : xla::PrimitiveType::S32;
     case at::ScalarType::Short:
       return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S16
-                                                : xla::PrimitiveType::S64;
+                                                : xla::PrimitiveType::S32;
     case at::ScalarType::Int:
-      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S32
-                                                : xla::PrimitiveType::S64;
+      return xla::PrimitiveType::S32;
     case at::ScalarType::Long:
       return xla::PrimitiveType::S64;
     default:
