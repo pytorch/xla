@@ -70,9 +70,6 @@ xla::XlaOp BuildCat(
     const std::function<xla::XlaOp(const torch::jit::Value*)>& node_op,
     xla::XlaBuilder* b);
 
-// Integer division of "dividend" by "divisor" rounding up.
-xla::int64 RoundUpDiv(xla::int64 dividend, xla::int64 divisor);
-
 // Splits a tensor into a specific number of chunks specified by the "chunks"
 // attribute of the given node, along an existing dimension specified by the
 // "dim" attribute of the given node.

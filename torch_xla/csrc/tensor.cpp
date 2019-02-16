@@ -956,17 +956,18 @@ XLATensor XLATensor::permute(
 
 std::vector<XLATensor> XLATensor::split(const XLATensor& input,
                                         xla::int64 split_size, xla::int64 dim) {
-  int split_dim = GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  xla::int64 size_in_dim = input.shape().get().dimensions(split_dim);
+  auto input_shape = input.shape();
+  int split_dim = GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  xla::int64 size_in_dim = input_shape.get().dimensions(split_dim);
   // Deal with 0 split size, it's a corner case which is only allowed when the
   // dimension size is 0 as well.
   if (split_size == 0) {
     XLA_CHECK_EQ(size_in_dim, 0);
-    xla::Literal literal(input.shape().get());
+    xla::Literal literal(input_shape.get());
     return {Create(ir::MakeNode<ir::ops::Constant>(std::move(literal)),
                    input.GetDevice())};
   }
-  xla::int64 chunks = RoundUpDiv(size_in_dim, split_size);
+  xla::int64 chunks = xla::CeilOfRatio(size_in_dim, split_size);
   ir::NodePtr node =
       ir::MakeNode<ir::ops::Split>(input.GetIrValue(), split_size, split_dim);
   std::vector<XLATensor> result;
