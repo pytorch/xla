@@ -48,6 +48,7 @@
 #include "torch_xla/csrc/ops/slice.h"
 #include "torch_xla/csrc/ops/softmax.h"
 #include "torch_xla/csrc/ops/squeeze.h"
+#include "torch_xla/csrc/ops/stack.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/tril.h"
@@ -847,6 +848,17 @@ XLATensor XLATensor::expand(const XLATensor& input,
   return Create(
       ir::MakeNode<ir::ops::Expand>(input.GetIrValue(), std::move(size)),
       input.GetDevice());
+}
+
+XLATensor XLATensor::stack(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
+                           xla::int64 dim) {
+  XLA_CHECK_GT(tensors.size(), 0);
+  std::vector<ir::Value> values;
+  for (auto& tensor : tensors) {
+    values.push_back(tensor.GetIrValue());
+  }
+  return Create(ir::MakeNode<ir::ops::Stack>(values, dim),
+                tensors[0].GetDevice());
 }
 
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,

@@ -177,6 +177,19 @@ xla::XlaOp BuildUnsqueeze(const xla::XlaOp& input, size_t dim) {
 }
 
 xla::XlaOp BuildStack(
+    tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs, xla::int64 dim) {
+  // Reshape inputs along the dim axis.
+  XLA_CHECK_GT(inputs.size(), 0);
+  std::vector<xla::XlaOp> reshaped_inputs;
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    auto input_size = XlaHelpers::SizesOfXlaOp(inputs[i]);
+    input_size.insert(input_size.begin() + dim, 1);
+    reshaped_inputs.push_back(xla::Reshape(inputs[i], input_size));
+  }
+  return xla::ConcatInDim(inputs[0].builder(), reshaped_inputs, dim);
+}
+
+xla::XlaOp BuildStack(
     const torch::jit::Node* node,
     const std::function<xla::XlaOp(const torch::jit::Value*)>& node_op,
     xla::XlaBuilder* b) {
@@ -184,17 +197,11 @@ xla::XlaOp BuildStack(
   XLA_CHECK_EQ(node_inputs.size(), size_t(2));
   const auto stack_inputs = InputListAttr(node, node_inputs[0]->unique());
   const auto dim = node->get<int64_t>(at::attr::dim).value();
-  std::vector<xla::XlaOp> reshaped_inputs;
-  // Reshape inputs along the dim axis.
+  std::vector<xla::XlaOp> inputs;
   for (size_t i = 0; i < stack_inputs.size(); ++i) {
-    const auto stack_input = stack_inputs[i];
-    xla::XlaOp stack_input_op = node_op(stack_input);
-    auto reshaped_input_size = XlaHelpers::SizesOfXlaOp(stack_input_op);
-    reshaped_input_size.insert(reshaped_input_size.begin() + dim, 1);
-    reshaped_inputs.push_back(
-        xla::Reshape(stack_input_op, reshaped_input_size));
+    inputs.push_back(node_op(stack_inputs[i]));
   }
-  return xla::ConcatInDim(b, reshaped_inputs, dim);
+  return BuildStack(inputs, dim);
 }
 
 xla::XlaOp BuildCat(
