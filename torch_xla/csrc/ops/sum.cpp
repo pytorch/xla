@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/ops/mean.h"
+#include "torch_xla/csrc/ops/sum.h"
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -14,11 +14,11 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerMean(const xla::XlaOp& input,
-                     const std::vector<xla::int64>& dimensions,
-                     bool keep_reduced_dimensions,
-                     c10::optional<at::ScalarType> dtype) {
-  xla::XlaOp result = BuildMean(input, dimensions, keep_reduced_dimensions);
+xla::XlaOp LowerSum(const xla::XlaOp& input,
+                    const std::vector<xla::int64>& dimensions,
+                    bool keep_reduced_dimensions,
+                    c10::optional<at::ScalarType> dtype) {
+  xla::XlaOp result = BuildSum(input, dimensions, keep_reduced_dimensions);
   return dtype ? xla::ConvertElementType(
                      result, MakeXlaPrimitiveType(*dtype, /*device=*/nullptr))
                : result;
@@ -31,16 +31,16 @@ xla::Shape NodeOutputShape(const Value& input,
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
-    return LowerMean(operands[0], dimensions, keep_reduced_dimensions, dtype);
+    return LowerSum(operands[0], dimensions, keep_reduced_dimensions, dtype);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Mean::Mean(const Value& input, std::vector<xla::int64> dimensions,
-           bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::mean), {input},
+Sum::Sum(const Value& input, std::vector<xla::int64> dimensions,
+         bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
+    : Node(ir::OpKind(at::aten::sum), {input},
            NodeOutputShape(input, dimensions, keep_reduced_dimensions, dtype),
            /*num_outputs=*/1,
            xla::util::MHash(dimensions, keep_reduced_dimensions,
@@ -49,13 +49,13 @@ Mean::Mean(const Value& input, std::vector<xla::int64> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
 
-XlaOpVector Mean::Lower(LoweringContext* loctx) const {
+XlaOpVector Sum::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(
-      LowerMean(input, dimensions_, keep_reduced_dimensions_, dtype_), loctx);
+      LowerSum(input, dimensions_, keep_reduced_dimensions_, dtype_), loctx);
 }
 
-std::string Mean::ToString() const {
+std::string Sum::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", dimensions=[" << absl::StrJoin(dimensions_, ", ")
      << "], keep_reduced_dimensions=" << keep_reduced_dimensions_

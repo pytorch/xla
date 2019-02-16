@@ -326,6 +326,44 @@ at::Tensor AtenXlaType::abs(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::abs(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::sum(const at::Tensor& self,
+                            at::ScalarType dtype) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::sum(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false, dtype));
+}
+
+at::Tensor AtenXlaType::sum(const at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::sum(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false, c10::nullopt));
+}
+
+at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
+                            bool keepdim, at::ScalarType dtype) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::sum(bridge::GetXlaTensor(self),
+                     xla::util::ToVector<xla::int64>(dim), keepdim, dtype));
+}
+
+at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
+                            bool keepdim) const {
+  return bridge::AtenFromXlaTensor(XLATensor::sum(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim), keepdim,
+      c10::nullopt));
+}
+
+at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
+                            at::ScalarType dtype) const {
+  return bridge::AtenFromXlaTensor(XLATensor::sum(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions=*/false, dtype));
+}
+
 at::Tensor AtenXlaType::clamp(const at::Tensor& self,
                               c10::optional<at::Scalar> min,
                               c10::optional<at::Scalar> max) const {

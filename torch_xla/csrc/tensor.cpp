@@ -50,6 +50,7 @@
 #include "torch_xla/csrc/ops/split.h"
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
+#include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/tril.h"
@@ -902,6 +903,16 @@ XLATensor XLATensor::mean(const XLATensor& input,
   return Create(
       ir::MakeNode<ir::ops::Mean>(input.GetIrValue(), std::move(dimensions),
                                   keep_reduced_dimensions, dtype),
+      input.GetDevice());
+}
+
+XLATensor XLATensor::sum(const XLATensor& input,
+                         std::vector<xla::int64> dimensions,
+                         bool keep_reduced_dimensions,
+                         c10::optional<at::ScalarType> dtype) {
+  return Create(
+      ir::MakeNode<ir::ops::Sum>(input.GetIrValue(), std::move(dimensions),
+                                 keep_reduced_dimensions, dtype),
       input.GetDevice());
 }
 
