@@ -746,6 +746,26 @@ TEST_F(AtenXlaTensorTest, TestLog1p) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestErf) {
+  at::Tensor a = at::randn({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::erf(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::erf(xla_a);
+    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestErfc) {
+  at::Tensor a = at::randn({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::erfc(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::erfc(xla_a);
+    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSqrt) {
   at::Tensor a = at::abs(at::rand({2, 2}, at::TensorOptions(at::kFloat)));
   at::Tensor b = at::sqrt(a);
