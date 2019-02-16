@@ -9,7 +9,6 @@
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch/csrc/jit/ir.h"
-#include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
 
