@@ -248,6 +248,9 @@ class XLATensor {
 
   static XLATensor expand(const XLATensor& input, std::vector<xla::int64> size);
 
+  static XLATensor stack(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
+                         xla::int64 dim);
+
   static XLATensor mm(const XLATensor& input, const XLATensor& weight,
                       bool use_full_conv_precision);
 

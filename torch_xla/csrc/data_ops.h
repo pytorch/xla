@@ -52,6 +52,10 @@ xla::XlaOp BuildExpand(
 // Insert a dimension of size one at the specified position.
 xla::XlaOp BuildUnsqueeze(const xla::XlaOp& input, size_t dim);
 
+// Concatenates a list of tensors along a new dimension dim.
+xla::XlaOp BuildStack(
+    tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs, xla::int64 dim);
+
 // Concatenates a list of tensors along a new dimension specified by the "dim"
 // attribute of the given node.
 xla::XlaOp BuildStack(
