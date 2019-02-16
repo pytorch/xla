@@ -192,6 +192,8 @@ class XLATensor {
   XLATensor view(
       tensorflow::gtl::ArraySlice<const xla::int64> output_size) const;
 
+  static XLATensor cast(const XLATensor& input, at::ScalarType dtype);
+
   static XLATensor log_softmax(const XLATensor& input, xla::int64 dim);
 
   static XLATensor softmax(const XLATensor& input, xla::int64 dim);

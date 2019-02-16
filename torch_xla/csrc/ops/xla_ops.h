@@ -30,6 +30,7 @@ class OpKindWrapper {
 
 extern const OpKindWrapper xla_device_data;
 extern const OpKindWrapper xla_cross_replica_sum;
+extern const OpKindWrapper xla_cast;
 
 }  // namespace ops
 }  // namespace ir
