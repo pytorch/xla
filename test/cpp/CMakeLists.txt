@@ -67,7 +67,12 @@ set(TGT_OPTS
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  list(APPEND TGT_OPTS -Wno-macro-redefined -Wno-return-std-move)
+  # The -fsized-deallocation is required for Clang to prevent an error on
+  # pytorch pybind11 about the operator delete being called inappropriately.
+  list(APPEND TGT_OPTS
+    -Wno-macro-redefined
+    -Wno-return-std-move
+    -fsized-deallocation)
 endif()
 
 target_compile_options(test_ptxla PRIVATE ${TGT_OPTS})
@@ -109,6 +114,7 @@ target_link_libraries(
   "${C10_LIB}"
   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a"
   "${PYTHON_LIBRARY}"
+  -lutil
   -pthread
   -lstdc++
   -ldl)
