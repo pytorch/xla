@@ -68,6 +68,56 @@ void TestBackward(
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestCastByte) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
+  at::Tensor b = at::_cast_Byte(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::_cast_Byte(xla_a);
+    EXPECT_TRUE(EqualValues(b, xla_b));
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestCastShort) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
+  at::Tensor b = at::_cast_Short(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::_cast_Short(xla_a);
+    EXPECT_TRUE(EqualValues(b, xla_b));
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestCastInt) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
+  at::Tensor b = at::_cast_Int(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::_cast_Int(xla_a);
+    EXPECT_TRUE(EqualValues(b, xla_b));
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestCastLong) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
+  at::Tensor b = at::_cast_Long(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::_cast_Long(xla_a);
+    EXPECT_TRUE(EqualValues(b, xla_b));
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestCastFLoat) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
+  at::Tensor b = at::_cast_Float(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::_cast_Float(xla_a);
+    EXPECT_TRUE(EqualValues(b, xla_b));
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAdd) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));

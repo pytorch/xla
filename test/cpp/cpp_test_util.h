@@ -6,8 +6,8 @@
 #include <ATen/ATen.h>
 #include <gtest/gtest.h>
 
-#include "device.h"
-#include "tensor.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -20,7 +20,7 @@ at::Tensor ToCpuTensor(const at::Tensor& t);
 
 at::Tensor ToTensor(XLATensor& xla_tensor);
 
-bool EqualValues(at::Tensor a, at::Tensor b);
+bool EqualValues(at::Tensor tensor1, at::Tensor tensor2);
 
 bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol = 1e-5,
                  double atol = 1e-8);
