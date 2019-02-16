@@ -91,4 +91,11 @@ xla::XlaOp BuildTypeAs(const torch::jit::Node* node,
   return xla::ConvertElementType(operand, target_type);
 }
 
+xla::XlaOp BuildSigmoid(const xla::XlaOp& input) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp half =
+      XlaHelpers::ScalarValue<float>(0.5, shape.element_type(), input.builder());
+  return  half + half * xla::Tanh(half * input);
+}
+
 }  // namespace torch_xla

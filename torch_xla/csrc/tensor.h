@@ -196,6 +196,9 @@ class XLATensor {
 
   static XLATensor softmax(const XLATensor& input, xla::int64 dim);
 
+  static XLATensor sigmoid(const XLATensor& input);
+  static void sigmoid_(XLATensor& input);
+
   static XLATensor ones(tensorflow::gtl::ArraySlice<const xla::int64> size,
                         const Device& device, at::ScalarType scalar_type);
   static XLATensor ones_like(const XLATensor& input, const Device& device,

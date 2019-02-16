@@ -524,6 +524,16 @@ TEST_F(AtenXlaTensorTest, TestAbs) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSigmoid) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::sigmoid(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::sigmoid(xla_a);
+    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAddCMul) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
