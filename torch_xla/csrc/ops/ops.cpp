@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
@@ -281,7 +282,8 @@ NodePtr Where(const Value& condition, const Value& input, const Value& other) {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(2));
     xla::XlaOp pred_condition =
-        xla::ConvertElementType(xla_condition, xla::PrimitiveType::PRED);
+        ConvertTo(xla_condition, XlaHelpers::TypeOfXlaOp(xla_condition),
+                  xla::PrimitiveType::PRED, /*device=*/nullptr);
     return node.ReturnOp(xla::Select(pred_condition, xla_input, xla_other),
                          loctx);
   };
