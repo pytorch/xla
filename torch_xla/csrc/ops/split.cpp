@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/split.h"
+#include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -28,7 +29,7 @@ Split::Split(const Value& input, xla::int64 split_size, xla::int64 dim)
     : Node(ir::OpKind(at::aten::split), {input},
            NodeOutputShape(input, split_size, dim),
            /*num_outputs=*/
-           RoundUpDiv(input.shape().dimensions(dim), split_size),
+           xla::CeilOfRatio(input.shape().dimensions(dim), split_size),
            xla::util::MHash(split_size, dim)),
       split_size_(split_size),
       dim_(dim) {}
