@@ -726,7 +726,6 @@ class XlaNllLoss(nn.Module):
 
 class TestNllLoss(TestCase):
 
-  @unittest.skip('Unsupported operator: aten::nll_loss_forward')
   def test(self):
     input = _gen_tensor(3, 5, requires_grad=True)
     target = torch.empty(3, dtype=torch.long).random_(5)
@@ -1019,7 +1018,6 @@ class TestGradients(XlaTestCase):
         inputs = [_gen_tensor(batch, 9, requires_grad=True)]
         self.checkGrad(model, inputs, xla=True)
 
-  @unittest.skip('Unsupported operator: aten::nll_loss_forward')
   def test_nll_loss(self):
     input = _gen_tensor(3, 5, requires_grad=True)
     target = torch.empty(3, dtype=torch.long).random_(5)
