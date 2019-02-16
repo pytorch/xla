@@ -23,9 +23,7 @@
 namespace torch_xla {
 namespace {
 
-xla::XlaOp GetConstantOp(xla::XlaBuilder* builder,
-                         const torch::jit::Node* node) {
-  auto value = toIValue(node->output()).value();
+xla::XlaOp GetConstantOp(xla::XlaBuilder* builder, const c10::IValue& value) {
   if (value.isTensor()) {
     auto tensor = value.toTensor();
     xla::Shape shape = CreateComputationShapeFromTensor(tensor,
@@ -567,7 +565,12 @@ void TranslateSize(const torch::jit::Node* node, ComputationContext* cctx,
 void TranslateConstant(const torch::jit::Node* node, ComputationContext* cctx,
                        xla::PrecisionConfig::Precision /*conv_precision*/,
                        xla::XlaBuilder* b) {
-  cctx->AddNodeOp(node, GetConstantOp(b, node));
+  auto value = toIValue(node->output()).value();
+  if (value.isNone()) {
+    cctx->AddUndefinedInput(ComputationContext::OutputId(node));
+  } else {
+    cctx->AddNodeOp(node, GetConstantOp(b, value));
+  }
 }
 
 void TranslateUndefined(const torch::jit::Node* node, ComputationContext* cctx,
