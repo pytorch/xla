@@ -111,6 +111,15 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor abs(const at::Tensor& self) const override;
 
+  at::Tensor sum(const at::Tensor& self, at::ScalarType dtype) const override;
+  at::Tensor sum(const at::Tensor& self) const override;
+  at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim, bool keepdim,
+                 at::ScalarType dtype) const override;
+  at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
+                 bool keepdim) const override;
+  at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
+                 at::ScalarType dtype) const override;
+
   at::Tensor clamp(const at::Tensor& self, c10::optional<at::Scalar> min,
                    c10::optional<at::Scalar> max) const override;
 

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <ATen/ATen.h>
+#include <c10/util/Optional.h>
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/pybind_utils.h"
 #include "torch_xla/csrc/module.h"
@@ -25,6 +26,11 @@ static inline at::Tensor CopyTensor(const at::Tensor& ref) {
 static inline at::Tensor ToTensor(const at::Tensor& tensor) {
   return tensor.is_variable() ? torch::autograd::as_variable_ref(tensor).data()
                               : tensor;
+}
+
+template <typename T, typename S>
+T OptionalOr(const c10::optional<S>& value, T defval) {
+  return value ? static_cast<T>(*value) : defval;
 }
 
 }  // namespace torch_xla
