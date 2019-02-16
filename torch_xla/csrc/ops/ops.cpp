@@ -90,6 +90,16 @@ NodePtr TransposeOp(const Value& input) {
                             output_shape, std::move(lower_fn));
 }
 
+NodePtr Sigmoid(const Value& input) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildSigmoid(xla_input), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::sigmoid), ir::OpList{input},
+                            input.shape(), std::move(lower_fn));
+}
+
 NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
               c10::optional<at::Scalar> max) {
   const xla::Shape& input_shape = input.shape();

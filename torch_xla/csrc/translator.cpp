@@ -366,11 +366,7 @@ void TranslateSigmoid(const torch::jit::Node* node, ComputationContext* cctx,
                       xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
   xla::XlaOp xla_input = cctx->OpForInput(node, 0);
-  xla::Shape xla_input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
-  xla::XlaOp half =
-      XlaHelpers::ScalarValue<float>(0.5, xla_input_shape.element_type(), b);
-  xla::XlaOp xla_output = half + half * xla::Tanh(half * xla_input);
-  cctx->AddNodeOp(node, xla_output);
+  cctx->AddNodeOp(node, BuildSigmoid(xla_input));
 }
 
 void TranslateRelu(const torch::jit::Node* node, ComputationContext* cctx,

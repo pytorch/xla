@@ -1136,6 +1136,14 @@ XLATensor XLATensor::softmax(const XLATensor& input, xla::int64 dim) {
                 input.GetDevice());
 }
 
+XLATensor XLATensor::sigmoid(const XLATensor& input) {
+  return Create(ir::ops::Sigmoid(input.GetIrValue()), input.GetDevice());
+}
+
+void XLATensor::sigmoid_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Sigmoid(input.GetIrValue()));
+}
+
 XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target) {
   return Create(ir::ops::NllLossOp(input.GetIrValue(), target.GetIrValue()),
                 input.GetDevice());

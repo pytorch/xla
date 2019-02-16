@@ -28,4 +28,6 @@ xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
 // Computes the rectified linear unit (replace negative elements with 0).
 xla::XlaOp BuildRelu(const xla::XlaOp& input);
 
+xla::XlaOp BuildSigmoid(const xla::XlaOp& input);
+
 }  // namespace torch_xla
