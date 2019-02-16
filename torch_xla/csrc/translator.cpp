@@ -530,11 +530,34 @@ void TranslateSum(const torch::jit::Node* node, ComputationContext* cctx,
 
 void TranslateNllLoss(const torch::jit::Node* node, ComputationContext* cctx,
                       xla::PrecisionConfig::Precision /*conv_precision*/,
-                      xla::XlaBuilder* /*b*/) {
+                      xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 5);
-  xla::XlaOp xla_output =
-      BuildNllLoss(cctx->OpForInput(node, 0), cctx->OpForInput(node, 1));
-  cctx->AddNodeOp(node, xla_output);
+  xla::XlaOp logits = cctx->OpForInput(node, 0);
+  xla::XlaOp xla_output = BuildNllLoss(logits, cctx->OpForInput(node, 1));
+  const auto node_outputs = node->outputs();
+  XLA_CHECK_GE(node_outputs.size(), 1);
+  cctx->AddNodeOpById(node_outputs[0]->unique(), xla_output);
+  switch (node->kind()) {
+    case at::aten::nll_loss: {
+      XLA_CHECK_EQ(node_outputs.size(), 1);
+      break;
+    }
+    case at::aten::nll_loss_forward: {
+      xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
+      XLA_CHECK_EQ(logits_shape.rank(), 2);
+      // TODO(asuhan): Figure out what to do with total weight on the tracing
+      // JIT path.
+      xla::Shape total_weight_shape = xla::ShapeUtil::MakeShape(
+          xla::PrimitiveType::F32, {logits_shape.dimensions(0)});
+      xla::XlaOp total_weight =
+          XlaHelpers::ScalarBroadcast(1, total_weight_shape, b);
+      XLA_CHECK_EQ(node_outputs.size(), 2);
+      cctx->AddNodeOpById(node_outputs[1]->unique(), total_weight);
+      break;
+    }
+    default:
+      XLA_ERROR() << "Invalid node kind: " << node->kind().toQualString();
+  }
 }
 
 void TranslateNllLossBackward(
@@ -644,6 +667,7 @@ CreateTranslationHandlers() {
   (*t)[at::aten::native_batch_norm_backward] = TranslateBatchNormBackward;
   (*t)[at::aten::sum] = TranslateSum;
   (*t)[at::aten::nll_loss] = TranslateNllLoss;
+  (*t)[at::aten::nll_loss_forward] = TranslateNllLoss;
   (*t)[at::aten::nll_loss_backward] = TranslateNllLossBackward;
   (*t)[at::aten::size] = TranslateSize;
   (*t)[at::prim::Constant] = TranslateConstant;
