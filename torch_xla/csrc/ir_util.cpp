@@ -41,9 +41,16 @@ std::vector<const Node*> Util::ComputePostOrder(const Node* node,
   return post_order;
 }
 
-std::vector<const Node*> Util::ComputePostOrder(const Node* node) {
+std::vector<const Node*> Util::ComputePostOrder(
+    tensorflow::gtl::ArraySlice<const Node* const> nodes) {
   EmissionMap emap;
-  return ComputePostOrder(node, &emap);
+  std::vector<const Node*> post_order;
+  for (auto node : nodes) {
+    auto node_post_order = ComputePostOrder(node, &emap);
+    post_order.insert(post_order.end(), node_post_order.begin(),
+                      node_post_order.end());
+  }
+  return post_order;
 }
 
 }  // namespace ir
