@@ -580,6 +580,12 @@ at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim) const {
       XLATensor::log_softmax(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor AtenXlaType::_log_softmax(const at::Tensor& self, int64_t dim,
+                                     bool /* half_to_float */) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim));
+}
+
 at::Tensor AtenXlaType::softmax(const at::Tensor& self, int64_t dim) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::softmax(bridge::GetXlaTensor(self), dim));
