@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -27,7 +28,11 @@ class Util {
   // detected.
   static std::vector<const Node*> ComputePostOrder(const Node* node,
                                                    EmissionMap* emap);
-  static std::vector<const Node*> ComputePostOrder(const Node* node);
+
+  // Same as above, but computes the post order on the set of nodes specified as
+  // argument.
+  static std::vector<const Node*> ComputePostOrder(
+      tensorflow::gtl::ArraySlice<const Node* const> nodes);
 };
 
 }  // namespace ir
