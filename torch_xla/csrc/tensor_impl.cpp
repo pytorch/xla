@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/tensor_impl.h"
 
 #include <c10/core/Allocator.h>
+#include <c10/core/ScalarType.h>
 #include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/macros/Macros.h>
 
@@ -97,23 +98,8 @@ void XLATensorImpl::SetupSizeProperties() {
 }
 
 caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
-  xla::PrimitiveType element_type = tensor.GetElementType();
-  switch (element_type) {
-    case xla::PrimitiveType::F32:
-      return caffe2::TypeMeta::Make<float>();
-    case xla::PrimitiveType::U8:
-      return caffe2::TypeMeta::Make<uint8_t>();
-    case xla::PrimitiveType::S8:
-      return caffe2::TypeMeta::Make<int8_t>();
-    case xla::PrimitiveType::S16:
-      return caffe2::TypeMeta::Make<int16_t>();
-    case xla::PrimitiveType::S32:
-      return caffe2::TypeMeta::Make<int32_t>();
-    case xla::PrimitiveType::S64:
-      return caffe2::TypeMeta::Make<int64_t>();
-    default:
-      XLA_ERROR() << "Type not supported: " << element_type;
-  }
+  return c10::scalarTypeToTypeMeta(
+      TensorTypeFromXlaType(tensor.GetElementType()));
 }
 
 c10::Storage XLATensorImpl::GetStorage(const XLATensor& tensor) {
