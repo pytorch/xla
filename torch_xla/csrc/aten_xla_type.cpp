@@ -634,9 +634,9 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
       XlaHelpers::I64List(stride), XlaHelpers::I64List(padding));
   xla::Shape indices_shape = result.shape();
   indices_shape.set_element_type(xla::PrimitiveType::S64);
-  XLATensor indices_not_supported =
-      XLATensor::not_supported(at::aten::max_pool2d_with_indices, indices_shape,
-                               bridge::GetXlaTensor(self).GetDevice());
+  XLATensor indices_not_supported = XLATensor::not_supported(
+      "aten::max_pool2d_with_indices.indices", indices_shape,
+      bridge::GetXlaTensor(self).GetDevice());
   return std::make_tuple(bridge::AtenFromXlaTensor(result),
                          bridge::AtenFromXlaTensor(indices_not_supported));
 }

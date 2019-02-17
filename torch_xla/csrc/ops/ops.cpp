@@ -292,15 +292,6 @@ NodePtr Where(const Value& condition, const Value& input, const Value& other) {
                             std::move(lower_fn));
 }
 
-NodePtr NotSupportedOp(c10::Symbol node_symbol, xla::Shape shape) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    XLA_ERROR() << "Node not supported: " << node.ToString();
-  };
-  return ir::ops::GenericOp(ir::OpKind(node_symbol), {}, std::move(shape),
-                            std::move(lower_fn));
-}
-
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

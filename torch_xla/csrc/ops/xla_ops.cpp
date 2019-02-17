@@ -7,6 +7,7 @@ namespace ops {
 const OpKindWrapper xla_device_data("xla::device_data");
 const OpKindWrapper xla_cross_replica_sum("xla::cross_replica_sum");
 const OpKindWrapper xla_cast("xla::cast");
+const OpKindWrapper xla_not_supported("xla::not_supported");
 
 }  // namespace ops
 }  // namespace ir
