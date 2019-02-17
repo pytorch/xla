@@ -254,6 +254,10 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor nll_loss(const at::Tensor& self, const at::Tensor& target,
                       const at::Tensor& weight, int64_t reduction,
                       int64_t ignore_index) const override;
+  std::tuple<at::Tensor, at::Tensor> nll_loss_forward(
+      const at::Tensor& self, const at::Tensor& target,
+      const at::Tensor& weight, int64_t reduction,
+      int64_t ignore_index) const override;
 
   at::Tensor nll_loss_backward(const at::Tensor& grad_output,
                                const at::Tensor& self, const at::Tensor& target,

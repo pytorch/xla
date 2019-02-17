@@ -767,6 +767,19 @@ at::Tensor AtenXlaType::nll_loss(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(target)));
 }
 
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
+    const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
+    int64_t reduction, int64_t ignore_index) const {
+  if (weight.defined()) {
+    return AtenXlaTypeBase::nll_loss_forward(self, target, weight, reduction,
+                                             ignore_index);
+  }
+  at::Tensor total_weight =
+      at::ones({}, at::TensorOptions(at::ScalarType::Float));
+  return std::make_tuple(
+      nll_loss(self, target, weight, reduction, ignore_index), total_weight);
+}
+
 at::Tensor AtenXlaType::nll_loss_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Tensor& target, const at::Tensor& weight, int64_t reduction,
