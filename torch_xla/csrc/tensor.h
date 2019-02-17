@@ -380,7 +380,7 @@ class XLATensor {
   static XLATensor where(const XLATensor& condition, const XLATensor& input,
                          const XLATensor& other);
 
-  static XLATensor not_supported(c10::Symbol node_symbol, xla::Shape shape,
+  static XLATensor not_supported(std::string description, xla::Shape shape,
                                  const Device& device);
 
   XLATensor cross_replica_sum(
