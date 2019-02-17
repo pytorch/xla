@@ -42,6 +42,7 @@
 #include "torch_xla/csrc/ops/mean.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
+#include "torch_xla/csrc/ops/not_supported.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/scalar.h"
@@ -1192,9 +1193,11 @@ XLATensor XLATensor::argmin(const XLATensor& input, xla::int64 dim,
                 input.GetDevice());
 }
 
-XLATensor XLATensor::not_supported(c10::Symbol node_symbol, xla::Shape shape,
+XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
                                    const Device& device) {
-  return Create(ir::ops::NotSupportedOp(node_symbol, shape), device);
+  return Create(ir::MakeNode<ir::ops::NotSupported>(std::move(description),
+                                                    std::move(shape)),
+                device);
 }
 
 XLATensor XLATensor::cross_replica_sum(
