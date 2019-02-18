@@ -115,7 +115,7 @@ TEST_F(TensorTest, TestView) {
   auto output = input.view({-1, 320});
   ForEachDevice([&](const Device& device) {
     auto dev_input = XLATensor::Create(input, device, /*requires_grad=*/false);
-    auto dev_output = dev_input.view({-1, 320});
+    auto dev_output = XLATensor::view(dev_input, {-1, 320});
     AllClose(output, dev_output);
   });
 }
@@ -131,7 +131,7 @@ TEST_F(TensorTest, TestViewMod) {
         at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
     auto dev_input = XLATensor::Create(xinput, device, /*requires_grad=*/false);
     auto dev_one = XLATensor::Create(one, device, /*requires_grad=*/false);
-    auto dev_output = dev_input.view({-1, 320});
+    auto dev_output = XLATensor::view(dev_input, {-1, 320});
     dev_output.add_(dev_one, 1.0);
     dev_input.add_(dev_one, 1.0);
     AllClose(output, dev_output);
@@ -151,9 +151,9 @@ TEST_F(TensorTest, TestViewModComplex) {
         at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
     auto dev_input = XLATensor::Create(xinput, device, /*requires_grad=*/false);
     auto dev_one = XLATensor::Create(one, device, /*requires_grad=*/false);
-    auto dev_output1 = dev_input.view({-1, 320});
+    auto dev_output1 = XLATensor::view(dev_input, {-1, 320});
     dev_output1.add_(dev_one, 1.0);
-    auto dev_output2 = dev_input.view({-1, 160});
+    auto dev_output2 = XLATensor::view(dev_input, {-1, 160});
     dev_output2.add_(dev_one, 1.0);
     AllClose(output1, dev_output1);
     AllClose(output2, dev_output2);
@@ -172,9 +172,9 @@ TEST_F(TensorTest, TestViewOfViewMod) {
         at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
     auto dev_input = XLATensor::Create(xinput, device, /*requires_grad=*/false);
     auto dev_one = XLATensor::Create(one, device, /*requires_grad=*/false);
-    auto dev_output1 = dev_input.view({-1, 320});
+    auto dev_output1 = XLATensor::view(dev_input, {-1, 320});
     dev_output1.add_(dev_one, 1.0);
-    auto dev_output2 = dev_output1.view({-1, 160});
+    auto dev_output2 = XLATensor::view(dev_output1, {-1, 160});
     dev_output2.add_(dev_one, 1.0);
     AllClose(output1, dev_output1);
     AllClose(output2, dev_output2);
