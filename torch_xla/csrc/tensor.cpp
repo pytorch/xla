@@ -45,6 +45,7 @@
 #include "torch_xla/csrc/ops/not_supported.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
+#include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/slice.h"
@@ -984,6 +985,13 @@ XLATensor XLATensor::permute(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> dims) {
   return Create(ir::MakeNode<ir::ops::Permute>(input.GetIrValue(), dims),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::repeat(
+    const XLATensor& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> repeats) {
+  return Create(ir::MakeNode<ir::ops::Repeat>(input.GetIrValue(), repeats),
                 input.GetDevice());
 }
 

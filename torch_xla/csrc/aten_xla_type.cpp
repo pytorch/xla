@@ -914,6 +914,12 @@ at::Tensor AtenXlaType::permute(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
 }
 
+at::Tensor AtenXlaType::repeat(const at::Tensor& self,
+                               at::IntArrayRef repeats) const {
+  return bridge::AtenFromXlaTensor(XLATensor::repeat(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(repeats)));
+}
+
 std::vector<at::Tensor> AtenXlaType::split(const at::Tensor& self,
                                            int64_t split_size,
                                            int64_t dim) const {

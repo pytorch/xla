@@ -53,8 +53,8 @@ xla::XlaOp BuildExpand(
 xla::XlaOp BuildUnsqueeze(const xla::XlaOp& input, size_t dim);
 
 // Concatenates a list of tensors along a new dimension dim.
-xla::XlaOp BuildStack(
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs, xla::int64 dim);
+xla::XlaOp BuildStack(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
+                      xla::int64 dim);
 
 // Concatenates a list of tensors along a new dimension specified by the "dim"
 // attribute of the given node.
@@ -69,6 +69,10 @@ xla::XlaOp BuildCat(
     const torch::jit::Node* node,
     const std::function<xla::XlaOp(const torch::jit::Value*)>& node_op,
     xla::XlaBuilder* b);
+
+// Repeats the input tensor along each dimension by the given number of repeats.
+xla::XlaOp BuildRepeat(const xla::XlaOp& input,
+                       tensorflow::gtl::ArraySlice<const xla::int64> repeats);
 
 // Splits a tensor into a specific number of chunks specified by the "chunks"
 // attribute of the given node, along an existing dimension specified by the

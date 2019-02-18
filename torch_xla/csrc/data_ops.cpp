@@ -197,8 +197,8 @@ xla::XlaOp BuildUnsqueeze(const xla::XlaOp& input, size_t dim) {
   return xla::Reshape(input, unsqueezed_sizes);
 }
 
-xla::XlaOp BuildStack(
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs, xla::int64 dim) {
+xla::XlaOp BuildStack(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
+                      xla::int64 dim) {
   // Reshape inputs along the dim axis.
   XLA_CHECK_GT(inputs.size(), 0);
   std::vector<xla::XlaOp> reshaped_inputs;
@@ -240,6 +240,27 @@ xla::XlaOp BuildCat(
     cat_inputs.push_back(node_op(stack_input));
   }
   return xla::ConcatInDim(b, cat_inputs, dim);
+}
+
+xla::XlaOp BuildRepeat(const xla::XlaOp& input,
+                       tensorflow::gtl::ArraySlice<const xla::int64> repeats) {
+  const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
+  XLA_CHECK_GE(repeats.size(), input_sizes.size())
+      << "Number of dimensions of repeat dims can not be smaller than number "
+         "of dimensions of tensor";
+  size_t broadcast_dims = repeats.size() - input_sizes.size();
+  xla::XlaOp repeated = input;
+  for (size_t dim = 0; dim < input_sizes.size(); ++dim) {
+    std::vector<xla::XlaOp> repeated_inputs(repeats[broadcast_dims + dim],
+                                            repeated);
+    repeated = xla::ConcatInDim(input.builder(), repeated_inputs, dim);
+  }
+  if (repeats.size() > input_sizes.size()) {
+    std::vector<xla::int64> remaining_repeats(repeats.begin(),
+                                              repeats.begin() + broadcast_dims);
+    repeated = xla::Broadcast(repeated, remaining_repeats);
+  }
+  return repeated;
 }
 
 std::vector<xla::XlaOp> BuildChunk(const torch::jit::Node* node,
