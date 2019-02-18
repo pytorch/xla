@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/ops.h"
+
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/convert_ops.h"
@@ -9,6 +10,7 @@
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -168,8 +170,8 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
                             std::move(lower_fn));
 }
 
-NodePtr MatMulOp(const Value& input, const Value& weight,
-                 bool use_full_conv_precision) {
+NodePtr Dot(const Value& input, const Value& weight,
+            bool use_full_conv_precision) {
   const auto precision_level = use_full_conv_precision
                                    ? xla::PrecisionConfig::HIGHEST
                                    : xla::PrecisionConfig::DEFAULT;
@@ -192,6 +194,23 @@ NodePtr MatMulOp(const Value& input, const Value& weight,
   xla::Shape output_shape = ir::ops::InferOutputShape(
       {input.shape(), weight.shape()}, lower_for_shape_fn);
   return ir::ops::GenericOp(ir::OpKind(at::aten::mm), ir::OpList{input, weight},
+                            output_shape, std::move(lower_fn));
+}
+
+NodePtr MatMul(const Value& lhs, const Value& rhs) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(CreateMatMul(xla_lhs, xla_rhs), loctx);
+  };
+  auto lower_for_shape_fn =
+      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+    return CreateMatMul(operands[0], operands[1]);
+  };
+  xla::Shape output_shape =
+      ir::ops::InferOutputShape({lhs.shape(), rhs.shape()}, lower_for_shape_fn);
+  return ir::ops::GenericOp(ir::OpKind(at::aten::matmul), ir::OpList{lhs, rhs},
                             output_shape, std::move(lower_fn));
 }
 

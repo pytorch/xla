@@ -198,6 +198,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor mm(const at::Tensor& self, const at::Tensor& mat2) const override;
 
+  at::Tensor matmul(const at::Tensor& self,
+                    const at::Tensor& other) const override;
+
   at::Tensor t(const at::Tensor& self) const override;
 
   at::Tensor view(const at::Tensor& self, at::IntList size) const override;

@@ -580,6 +580,12 @@ at::Tensor AtenXlaType::mm(const at::Tensor& self,
                     /*use_full_conv_precision=*/s_use_full_conv_precision_));
 }
 
+at::Tensor AtenXlaType::matmul(const at::Tensor& self,
+                               const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(XLATensor::matmul(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
 at::Tensor AtenXlaType::t(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::t(bridge::GetXlaTensor(self)));
 }
