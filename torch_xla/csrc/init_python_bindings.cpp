@@ -220,7 +220,7 @@ void InitXlaTensorBindings(py::module m) {
              for (const auto& output_dim_size : args) {
                output_sizes.push_back(output_dim_size.cast<xla::int64>());
              }
-             return self.view(output_sizes);
+             return XLATensor::view(self, output_sizes);
            })
       .def("log_softmax",
            [](const XLATensor& self, int dim) {
