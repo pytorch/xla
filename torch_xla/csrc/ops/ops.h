@@ -57,6 +57,12 @@ NodePtr Sin(const Value& input);
 
 NodePtr Sinh(const Value& input);
 
+NodePtr Atan(const Value& input);
+
+NodePtr Tan(const Value& input);
+
+NodePtr Tanh(const Value& input);
+
 NodePtr Neg(const Value& input);
 
 NodePtr Abs(const Value& input);

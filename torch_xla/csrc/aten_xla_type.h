@@ -126,6 +126,12 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor cosh(const at::Tensor& self) const override;
 
+  at::Tensor atan(const at::Tensor& self) const override;
+
+  at::Tensor tan(const at::Tensor& self) const override;
+
+  at::Tensor tanh(const at::Tensor& self) const override;
+
   at::Tensor abs(const at::Tensor& self) const override;
 
   at::Tensor sum(const at::Tensor& self, at::ScalarType dtype) const override;
