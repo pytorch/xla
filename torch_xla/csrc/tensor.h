@@ -362,6 +362,12 @@ class XLATensor {
   static XLATensor permute(const XLATensor& input,
                            tensorflow::gtl::ArraySlice<const xla::int64> dims);
 
+  // Repeats the input tensor along each dimension by the given number of
+  // repeats.
+  static XLATensor repeat(
+      const XLATensor& input,
+      tensorflow::gtl::ArraySlice<const xla::int64> repeats);
+
   static std::vector<XLATensor> split(const XLATensor& self,
                                       xla::int64 split_size, xla::int64 dim);
 
