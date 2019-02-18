@@ -578,7 +578,7 @@ at::Tensor AtenXlaType::t(const at::Tensor& self) const {
 
 at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntList size) const {
   return bridge::AtenFromXlaTensor(
-      bridge::GetXlaTensor(self).view(XlaHelpers::I64List(size)));
+      XLATensor::view(bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
 }
 
 at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,

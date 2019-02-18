@@ -1134,6 +1134,12 @@ XLATensor XLATensor::t(const XLATensor& input) {
 }
 
 XLATensor XLATensor::view(
+    const XLATensor& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
+  return input.CreateView(output_size);
+}
+
+XLATensor XLATensor::CreateView(
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) const {
   if (data()->view != nullptr) {
     // Handle view of a view. This node is already a view, so use the view alias

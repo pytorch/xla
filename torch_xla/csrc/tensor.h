@@ -189,8 +189,9 @@ class XLATensor {
 
   static XLATensor t(const XLATensor& input);
 
-  XLATensor view(
-      tensorflow::gtl::ArraySlice<const xla::int64> output_size) const;
+  static XLATensor view(
+      const XLATensor& input,
+      tensorflow::gtl::ArraySlice<const xla::int64> output_size);
 
   static XLATensor cast(const XLATensor& input, at::ScalarType dtype);
 
@@ -525,6 +526,9 @@ class XLATensor {
   void SetIrValue(ir::Value ir_value);
 
   void SetTensorData(at::Tensor tensor_data);
+
+  XLATensor CreateView(
+      tensorflow::gtl::ArraySlice<const xla::int64> output_size) const;
 
   // Discards all the XLA and IR data, by making the ATEN tensor one the only
   // source for this XLA tensor. An error is generated if the XLA tensor does
