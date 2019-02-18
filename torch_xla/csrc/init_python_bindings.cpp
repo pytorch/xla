@@ -1,10 +1,14 @@
 #include "torch_xla/csrc/init_python_bindings.h"
 
+#include <string>
+#include <vector>
+
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type.h"
+#include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/module.h"
 #include "torch_xla/csrc/passes/eval_static_size.h"
 #include "torch_xla/csrc/passes/replace_in_place_ops.h"
@@ -21,6 +25,17 @@ struct NoGilSection {
   ~NoGilSection() { PyEval_RestoreThread(state); }
   PyThreadState* state = nullptr;
 };
+
+std::string GetTensorsDot(const std::vector<at::Tensor>& tensors) {
+  std::vector<const ir::Node*> nodes;
+  std::vector<ir::Value> values;
+  for (auto& tensor : tensors) {
+    XLATensor xtensor = bridge::GetXlaTensor(ToTensor(tensor));
+    values.push_back(xtensor.GetIrValue());
+    nodes.push_back(values.back().node.get());
+  }
+  return ir::DumpUtil::ToDot(nodes);
+}
 
 void InitXlaModuleBindings(py::module m) {
   py::class_<XlaModule, std::shared_ptr<XlaModule>>(m, "XlaModule")
@@ -64,6 +79,10 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_get_xla_tensor", [](const at::Tensor& tensor) -> XLATensor {
     return bridge::GetXlaTensor(ToTensor(tensor));
   });
+  m.def("_get_xla_tensors_dot",
+        [](const std::vector<at::Tensor>& tensors) -> std::string {
+          return GetTensorsDot(tensors);
+        });
   m.def("_xla_sync_multi", [](std::vector<XLATensor>& tensors) {
     NoGilSection nogil;
     XLATensor::ApplyPendingGraph(&tensors, /*apply_context=*/nullptr);
