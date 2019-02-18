@@ -12,6 +12,9 @@ class DumpUtil {
  public:
   static std::string ToDot(
       tensorflow::gtl::ArraySlice<const Node* const> nodes);
+
+  static std::string ToText(
+      tensorflow::gtl::ArraySlice<const Node* const> nodes);
 };
 
 }  // namespace ir

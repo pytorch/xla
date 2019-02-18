@@ -20,6 +20,11 @@ struct AttrTag {
   std::string::size_type pos;
 };
 
+std::string::size_type SkipTagSeparator(const std::string& node_string,
+                                        std::string::size_type pos) {
+  return node_string.compare(pos, 2, ", ") == 0 ? pos + 2 : pos;
+}
+
 absl::optional<AttrTag> ParseAttrTag(const std::string& node_string,
                                      std::string::size_type pos) {
   const std::regex tag_regex("^([a-zA-Z0-9_]+)=");
@@ -37,7 +42,7 @@ absl::optional<AttrTag> ParseAttrTag(const std::string& node_string,
   tag.name = match[1].str();
   for (pos = vpos; pos < node_string.size(); ++pos) {
     if (nested_open < 0) {
-      if (node_string.compare(pos, 2, ", ") == 0) {
+      if (SkipTagSeparator(node_string, pos) != pos) {
         break;
       }
       switch (node_string[pos]) {
@@ -78,31 +83,36 @@ NodeIdMap GenerateIdMap(
   return id_map;
 }
 
-std::string GenerateDotNodeLabel(const Node* node) {
-  static const size_t kMaxValueSize = 64;
-  std::stringstream ss;
-  ss << node->op() << "\\n" << node->shape();
-
+std::vector<AttrTag> GetNodeTags(const Node* node) {
   std::string node_string = node->ToString();
   std::string op_string = node->op().ToString();
   std::string::size_type pos = node_string.find(op_string);
   XLA_CHECK_NE(pos, std::string::npos) << node_string << " : " << op_string;
   pos += op_string.size();
+  std::vector<AttrTag> tags;
   for (;;) {
-    if (node_string.compare(pos, 2, ", ") == 0) {
-      pos += 2;
-    }
+    pos = SkipTagSeparator(node_string, pos);
     auto tag = ParseAttrTag(node_string, pos);
     if (!tag) {
       break;
     }
-    ss << "\\n" << tag->name << "=";
-    if (tag->value.size() < kMaxValueSize) {
-      ss << tag->value;
-    } else {
-      ss << tag->value.substr(0, kMaxValueSize) << "...";
-    }
     pos = tag->pos;
+    tags.push_back(std::move(*tag));
+  }
+  return tags;
+}
+
+std::string GenerateDotNodeLabel(const Node* node) {
+  static const size_t kMaxValueSize = 64;
+  std::stringstream ss;
+  ss << node->op() << "\\n" << node->shape();
+  for (auto& tag : GetNodeTags(node)) {
+    ss << "\\n" << tag.name << "=";
+    if (tag.value.size() < kMaxValueSize) {
+      ss << tag.value;
+    } else {
+      ss << tag.value.substr(0, kMaxValueSize) << "...";
+    }
   }
   return ss.str();
 }
@@ -110,6 +120,27 @@ std::string GenerateDotNodeLabel(const Node* node) {
 std::string GenerateDotNodeSpec(const Node* node) {
   std::stringstream ss;
   ss << "label=\"" << GenerateDotNodeLabel(node) << "\"";
+  return ss.str();
+}
+
+std::string GenerateTextNodeSpec(const Node* node, const NodeIdMap& id_map) {
+  std::stringstream ss;
+  ss << node->shape() << " " << node->op() << "(";
+  size_t count = 0;
+  for (auto& output : node->operands()) {
+    if (count > 0) {
+      ss << ", ";
+    }
+    ss << "%" << id_map.at(output.node);
+    if (output.node->num_outputs() > 1) {
+      ss << "." << output.index;
+    }
+    ++count;
+  }
+  ss << ")";
+  for (auto& tag : GetNodeTags(node)) {
+    ss << ", " << tag.name << "=" << tag.value;
+  }
   return ss.str();
 }
 
@@ -135,6 +166,20 @@ std::string DumpUtil::ToDot(
       }
       ss << "\n";
     }
+  }
+  ss << "}\n";
+  return ss.str();
+}
+
+std::string DumpUtil::ToText(
+    tensorflow::gtl::ArraySlice<const Node* const> nodes) {
+  auto post_order = Util::ComputePostOrder(nodes);
+  NodeIdMap id_map = GenerateIdMap(post_order);
+  std::stringstream ss;
+  ss << "IR {\n";
+  for (auto node : post_order) {
+    ss << "  %" << id_map.at(node) << " = "
+       << GenerateTextNodeSpec(node, id_map) << "\n";
   }
   ss << "}\n";
   return ss.str();
