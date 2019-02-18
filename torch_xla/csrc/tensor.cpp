@@ -817,6 +817,18 @@ XLATensor XLATensor::cosh(const XLATensor& input) {
   return Create(ir::ops::Cosh(input.GetIrValue()), input.GetDevice());
 }
 
+XLATensor XLATensor::atan(const XLATensor& input) {
+  return Create(ir::ops::Atan(input.GetIrValue()), input.GetDevice());
+}
+
+XLATensor XLATensor::tan(const XLATensor& input) {
+  return Create(ir::ops::Tan(input.GetIrValue()), input.GetDevice());
+}
+
+XLATensor XLATensor::tanh(const XLATensor& input) {
+  return Create(ir::ops::Tanh(input.GetIrValue()), input.GetDevice());
+}
+
 XLATensor XLATensor::abs(const XLATensor& input) {
   return Create(ir::ops::Abs(input.GetIrValue()), input.GetDevice());
 }

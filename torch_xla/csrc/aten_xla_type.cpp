@@ -366,6 +366,18 @@ at::Tensor AtenXlaType::cosh(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::cosh(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::atan(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::atan(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::tan(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::tan(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::tanh(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::tanh(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::abs(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::abs(bridge::GetXlaTensor(self)));
 }

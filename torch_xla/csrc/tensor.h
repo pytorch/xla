@@ -237,6 +237,12 @@ class XLATensor {
 
   static XLATensor cosh(const XLATensor& input);
 
+  static XLATensor atan(const XLATensor& input);
+
+  static XLATensor tan(const XLATensor& input);
+
+  static XLATensor tanh(const XLATensor& input);
+
   static XLATensor abs(const XLATensor& input);
 
   static XLATensor clamp(const XLATensor& input, c10::optional<at::Scalar> min,
