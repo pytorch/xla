@@ -293,6 +293,44 @@ at::Tensor XlaLiteralToTensor(const xla::Literal& literal, at::ScalarType atype,
   return tensor;
 }
 
+template <typename SType>
+at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
+                                    xla::PrimitiveType source_element_type,
+                                    at::ScalarType dest_element_type) {
+  switch (dest_element_type) {
+    case at::ScalarType::Byte: {
+      return XlaLiteralToTensor<SType, uint8_t>(literal, dest_element_type,
+                                                source_element_type);
+    }
+    case at::ScalarType::Char: {
+      return XlaLiteralToTensor<SType, int8_t>(literal, dest_element_type,
+                                               source_element_type);
+    }
+    case at::ScalarType::Short: {
+      return XlaLiteralToTensor<SType, int16_t>(literal, dest_element_type,
+                                                source_element_type);
+    }
+    case at::ScalarType::Int: {
+      return XlaLiteralToTensor<SType, int32_t>(literal, dest_element_type,
+                                                source_element_type);
+    }
+    case at::ScalarType::Long: {
+      return XlaLiteralToTensor<SType, int64_t>(literal, dest_element_type,
+                                                source_element_type);
+    }
+    case at::ScalarType::Float: {
+      return XlaLiteralToTensor<SType, float>(literal, dest_element_type,
+                                              source_element_type);
+    }
+    case at::ScalarType::Double: {
+      return XlaLiteralToTensor<SType, double>(literal, dest_element_type,
+                                               source_element_type);
+    }
+    default:
+      XLA_ERROR() << "Unsupported scalar type: " << dest_element_type;
+  }
+}
+
 }  // namespace
 
 namespace detail {
@@ -318,39 +356,30 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type) {
   xla::PrimitiveType element_type = literal.shape().element_type();
   switch (element_type) {
-    case xla::PrimitiveType::PRED: {
-      XLA_CHECK_EQ(dest_element_type, at::ScalarType::Byte);
-      return XlaLiteralToTensor<bool, uint8_t>(literal, at::ScalarType::Byte,
-                                               xla::PrimitiveType::PRED);
-    }
-    case xla::PrimitiveType::BF16: {
-      return XlaLiteralToTensor<tensorflow::bfloat16, float>(
-          literal, at::ScalarType::Float, xla::PrimitiveType::F32);
-    }
-    case xla::PrimitiveType::F32: {
-      return XlaLiteralToTensor<float, float>(literal, at::ScalarType::Float,
-                                              xla::PrimitiveType::F32);
-    }
-    case xla::PrimitiveType::U8: {
-      return XlaLiteralToTensor<xla::uint8, uint8_t>(
-          literal, at::ScalarType::Byte, xla::PrimitiveType::U8);
-    }
-    case xla::PrimitiveType::S8: {
-      return XlaLiteralToTensor<xla::int8, int8_t>(
-          literal, at::ScalarType::Char, xla::PrimitiveType::S8);
-    }
-    case xla::PrimitiveType::S16: {
-      return XlaLiteralToTensor<xla::int16, int16_t>(
-          literal, at::ScalarType::Short, xla::PrimitiveType::S16);
-    }
-    case xla::PrimitiveType::S32: {
-      return XlaLiteralToTensor<xla::int32, int32_t>(
-          literal, at::ScalarType::Int, xla::PrimitiveType::S32);
-    }
-    case xla::PrimitiveType::S64: {
-      return XlaLiteralToTensor<xla::int64, int64_t>(
-          literal, at::ScalarType::Long, xla::PrimitiveType::S64);
-    }
+    case xla::PrimitiveType::PRED:
+      return XlaLiteralToTensorHelper<bool>(literal, element_type,
+                                            dest_element_type);
+    case xla::PrimitiveType::BF16:
+      return XlaLiteralToTensorHelper<tensorflow::bfloat16>(
+          literal, element_type, dest_element_type);
+    case xla::PrimitiveType::F32:
+      return XlaLiteralToTensorHelper<float>(literal, element_type,
+                                             dest_element_type);
+    case xla::PrimitiveType::U8:
+      return XlaLiteralToTensorHelper<xla::uint8>(literal, element_type,
+                                                  dest_element_type);
+    case xla::PrimitiveType::S8:
+      return XlaLiteralToTensorHelper<xla::int8>(literal, element_type,
+                                                 dest_element_type);
+    case xla::PrimitiveType::S16:
+      return XlaLiteralToTensorHelper<xla::int16>(literal, element_type,
+                                                  dest_element_type);
+    case xla::PrimitiveType::S32:
+      return XlaLiteralToTensorHelper<xla::int32>(literal, element_type,
+                                                  dest_element_type);
+    case xla::PrimitiveType::S64:
+      return XlaLiteralToTensorHelper<xla::int64>(literal, element_type,
+                                                  dest_element_type);
     default:
       XLA_ERROR() << "Unsupported literal type: " << literal.shape();
   }
