@@ -99,8 +99,10 @@ NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
 NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
                     bool use_full_conv_precision);
 
-NodePtr MatMulOp(const Value& input, const Value& weight,
-                 bool use_full_conv_precision);
+NodePtr Dot(const Value& input, const Value& weight,
+            bool use_full_conv_precision);
+
+NodePtr MatMul(const Value& lhs, const Value& rhs);
 
 NodePtr NllLossOp(const Value& logits, const Value& labels);
 
