@@ -7,12 +7,12 @@
 
 #include <torch/csrc/autograd/function.h>
 #include <torch/csrc/autograd/variable.h>
-#include "aten_xla_bridge.h"
-#include "aten_xla_type_instances.h"
 #include "cpp_test_util.h"
-#include "tensor_impl.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "torch_util.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/aten_xla_type_instances.h"
+#include "torch_xla/csrc/tensor_impl.h"
+#include "torch_xla/csrc/torch_util.h"
 #include "torch_xla_test.h"
 
 namespace torch_xla {
