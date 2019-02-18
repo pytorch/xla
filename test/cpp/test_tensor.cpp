@@ -1,17 +1,74 @@
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <vector>
 
 #include <ATen/ATen.h>
 #include "cpp_test_util.h"
-#include "tensor.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {
+namespace {
+
+bool CheckBidirectionalConversion(
+    const at::Tensor& input, at::ScalarType dest_element_type,
+    c10::optional<xla::PrimitiveType> xla_type = c10::nullopt) {
+  xla::Literal literal = GetTensorLiteral(input, /*shape=*/nullptr);
+  if (xla_type) {
+    literal = literal.Convert(*xla_type).ConsumeValueOrDie();
+  }
+  at::Tensor converted = MakeTensorFromXlaLiteral(literal, dest_element_type);
+  return EqualValues(converted, input);
+}
+
+}  // namespace
 
 using TensorTest = TorchXlaTest;
+
+TEST_F(TensorTest, TestConversions) {
+  {
+    at::Tensor a = at::randint(std::numeric_limits<uint8_t>::min(),
+                               std::numeric_limits<uint8_t>::max(), {2, 2},
+                               at::TensorOptions(at::kByte));
+    CheckBidirectionalConversion(a, at::ScalarType::Short);
+    CheckBidirectionalConversion(a, at::ScalarType::Int);
+    CheckBidirectionalConversion(a, at::ScalarType::Long);
+  }
+  {
+    at::Tensor a = at::randint(std::numeric_limits<int8_t>::min(),
+                               std::numeric_limits<int8_t>::max(), {2, 2},
+                               at::TensorOptions(at::kChar));
+    CheckBidirectionalConversion(a, at::ScalarType::Short);
+    CheckBidirectionalConversion(a, at::ScalarType::Int);
+    CheckBidirectionalConversion(a, at::ScalarType::Long);
+  }
+  {
+    at::Tensor a = at::randint(std::numeric_limits<int16_t>::min(),
+                               std::numeric_limits<int16_t>::max(), {2, 2},
+                               at::TensorOptions(at::kShort));
+    CheckBidirectionalConversion(a, at::ScalarType::Int);
+    CheckBidirectionalConversion(a, at::ScalarType::Long);
+  }
+  {
+    at::Tensor a = at::randint(std::numeric_limits<int32_t>::min(),
+                               std::numeric_limits<int32_t>::max(), {2, 2},
+                               at::TensorOptions(at::kInt));
+    CheckBidirectionalConversion(a, at::ScalarType::Long);
+  }
+  {
+    at::Tensor a = at::randint(0, 1, {2, 2}, at::TensorOptions(at::kByte));
+    CheckBidirectionalConversion(a, at::ScalarType::Byte,
+                                 xla::PrimitiveType::PRED);
+  }
+  {
+    at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+    CheckBidirectionalConversion(a, at::ScalarType::Double);
+  }
+}
 
 TEST_F(TensorTest, TestAdd) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
