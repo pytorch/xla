@@ -273,6 +273,11 @@ at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) const {
   return self;
 }
 
+at::Tensor& AtenXlaType::mul_(at::Tensor& self, at::Scalar other) const {
+  bridge::GetXlaTensor(self).mul_(other);
+  return self;
+}
+
 at::Tensor AtenXlaType::div(const at::Tensor& self,
                             const at::Tensor& other) const {
   return bridge::AtenFromXlaTensor(
