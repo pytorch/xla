@@ -64,6 +64,11 @@ xla::XlaOp BuildStack(
     xla::XlaBuilder* b);
 
 // Concatenates a list of tensors along an existing dimension specified by the
+// dim argument.
+xla::XlaOp BuildCat(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
+                    xla::int64 dim);
+
+// Concatenates a list of tensors along an existing dimension specified by the
 // "dim" attribute of the given node.
 xla::XlaOp BuildCat(
     const torch::jit::Node* node,

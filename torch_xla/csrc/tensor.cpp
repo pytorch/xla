@@ -26,6 +26,7 @@
 #include "torch_xla/csrc/ops/avg_pool2d_backward.h"
 #include "torch_xla/csrc/ops/batch_norm_forward.h"
 #include "torch_xla/csrc/ops/cast.h"
+#include "torch_xla/csrc/ops/cat.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/conv2d.h"
 #include "torch_xla/csrc/ops/conv2d_backward.h"
@@ -875,6 +876,17 @@ XLATensor XLATensor::stack(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
     values.push_back(tensor.GetIrValue());
   }
   return Create(ir::MakeNode<ir::ops::Stack>(values, dim),
+                tensors[0].GetDevice());
+}
+
+XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
+                         xla::int64 dim) {
+  XLA_CHECK_GT(tensors.size(), 0);
+  std::vector<ir::Value> values;
+  for (auto& tensor : tensors) {
+    values.push_back(tensor.GetIrValue());
+  }
+  return Create(ir::MakeNode<ir::ops::Cat>(values, dim),
                 tensors[0].GetDevice());
 }
 
