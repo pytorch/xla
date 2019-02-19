@@ -285,7 +285,8 @@ class XLATensor {
   static XLATensor mm(const XLATensor& input, const XLATensor& weight,
                       bool use_full_conv_precision);
 
-  static XLATensor matmul(const XLATensor& input, const XLATensor& other);
+  static XLATensor matmul(const XLATensor& input, const XLATensor& other,
+                          bool use_full_conv_precision);
 
   static XLATensor exp(const XLATensor& input);
 
