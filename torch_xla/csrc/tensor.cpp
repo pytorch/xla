@@ -526,65 +526,71 @@ XLATensor::ViewIrNode XLATensor::GetViewIrNode(View* view) {
   return {view->ir_value, true};
 }
 
-XLATensor XLATensor::add(const XLATensor& other,
-                         const at::Scalar& alpha) const {
+XLATensor XLATensor::add(const XLATensor& input, const XLATensor& other,
+                         const at::Scalar& alpha) {
   ir::NodePtr constant = ir::ops::ScalarOp(alpha, other.shape());
-  return Create(GetIrValue() + other.GetIrValue() * constant, data()->device);
+  return Create(input.GetIrValue() + other.GetIrValue() * constant,
+                input.GetDevice());
 }
 
-void XLATensor::add_(const XLATensor& other, const at::Scalar& alpha) {
+void XLATensor::add_(XLATensor& input, const XLATensor& other,
+                     const at::Scalar& alpha) {
   ir::NodePtr constant = ir::ops::ScalarOp(alpha, other.shape());
-  SetIrValue(GetIrValue() + other.GetIrValue() * constant);
+  input.SetIrValue(input.GetIrValue() + other.GetIrValue() * constant);
 }
 
-XLATensor XLATensor::sub(const XLATensor& other,
-                         const at::Scalar& alpha) const {
+XLATensor XLATensor::sub(const XLATensor& input, const XLATensor& other,
+                         const at::Scalar& alpha) {
   ir::NodePtr constant = ir::ops::ScalarOp(alpha, other.shape());
-  return Create(GetIrValue() - other.GetIrValue() * constant, data()->device);
+  return Create(input.GetIrValue() - other.GetIrValue() * constant,
+                input.GetDevice());
 }
 
-void XLATensor::sub_(const XLATensor& other, const at::Scalar& alpha) {
+void XLATensor::sub_(XLATensor& input, const XLATensor& other,
+                     const at::Scalar& alpha) {
   ir::NodePtr constant = ir::ops::ScalarOp(alpha, other.shape());
-  SetIrValue(GetIrValue() - other.GetIrValue() * constant);
+  input.SetIrValue(input.GetIrValue() - other.GetIrValue() * constant);
 }
 
-XLATensor XLATensor::mul(const XLATensor& other) const {
-  return Create(GetIrValue() * other.GetIrValue(), data()->device);
+XLATensor XLATensor::mul(const XLATensor& input, const XLATensor& other) {
+  return Create(input.GetIrValue() * other.GetIrValue(), input.GetDevice());
 }
 
-XLATensor XLATensor::mul(const at::Scalar& other) const {
-  ir::NodePtr constant = ir::ops::ScalarOp(other, shape());
-  return Create(GetIrValue() * constant, data()->device);
+XLATensor XLATensor::mul(const XLATensor& input, const at::Scalar& other) {
+  ir::NodePtr constant = ir::ops::ScalarOp(other, input.shape());
+  return Create(input.GetIrValue() * constant, input.GetDevice());
 }
 
-void XLATensor::mul_(const XLATensor& other) {
-  SetIrValue(GetIrValue() * other.GetIrValue());
+void XLATensor::mul_(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(input.GetIrValue() * other.GetIrValue());
 }
 
-void XLATensor::mul_(const at::Scalar& other) {
-  ir::NodePtr constant = ir::ops::ScalarOp(other, shape());
-  SetIrValue(GetIrValue() * constant);
+void XLATensor::mul_(XLATensor& input, const at::Scalar& other) {
+  ir::NodePtr constant = ir::ops::ScalarOp(other, input.shape());
+  input.SetIrValue(input.GetIrValue() * constant);
 }
 
-XLATensor XLATensor::div(const XLATensor& other) const {
-  return Create(GetIrValue() / other.GetIrValue(), data()->device);
+XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other) {
+  return Create(input.GetIrValue() / other.GetIrValue(), input.GetDevice());
 }
 
-XLATensor XLATensor::div(const at::Scalar& other) const {
-  ir::NodePtr constant = ir::ops::ScalarOp(other, shape());
-  return Create(GetIrValue() / constant, data()->device);
+XLATensor XLATensor::div(const XLATensor& input, const at::Scalar& other) {
+  ir::NodePtr constant = ir::ops::ScalarOp(other, input.shape());
+  return Create(input.GetIrValue() / constant, input.GetDevice());
 }
 
-void XLATensor::div_(const XLATensor& other) {
-  SetIrValue(GetIrValue() / other.GetIrValue());
+void XLATensor::div_(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(input.GetIrValue() / other.GetIrValue());
 }
 
-void XLATensor::div_(const at::Scalar& other) {
-  ir::NodePtr constant = ir::ops::ScalarOp(other, shape());
-  SetIrValue(GetIrValue() / constant);
+void XLATensor::div_(XLATensor& input, const at::Scalar& other) {
+  ir::NodePtr constant = ir::ops::ScalarOp(other, input.shape());
+  input.SetIrValue(input.GetIrValue() / constant);
 }
 
-void XLATensor::zero_() { SetIrValue(ir::ops::ScalarOp(0.0, shape())); }
+void XLATensor::zero_(XLATensor& input) {
+  input.SetIrValue(ir::ops::ScalarOp(0.0, input.shape()));
+}
 
 XLATensor XLATensor::addcmul(const XLATensor& input, const at::Scalar& value,
                              const XLATensor& tensor1,
@@ -922,7 +928,7 @@ XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,
                         bool use_full_conv_precision) {
   return Create(ir::ops::Dot(input.GetIrValue(), weight.GetIrValue(),
-                                  use_full_conv_precision),
+                             use_full_conv_precision),
                 input.GetDevice());
 }
 

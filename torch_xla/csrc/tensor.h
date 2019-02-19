@@ -99,23 +99,27 @@ class XLATensor {
   std::vector<int64_t> DimensionSizes() const;
 
   // Basic tensor operations used by the optimizers.
-  XLATensor add(const XLATensor& other, const at::Scalar& alpha) const;
-  void add_(const XLATensor& other, const at::Scalar& alpha);
+  static XLATensor add(const XLATensor& input, const XLATensor& other,
+                       const at::Scalar& alpha);
+  static void add_(XLATensor& input, const XLATensor& other,
+                   const at::Scalar& alpha);
 
-  XLATensor sub(const XLATensor& other, const at::Scalar& alpha) const;
-  void sub_(const XLATensor& other, const at::Scalar& alpha);
+  static XLATensor sub(const XLATensor& input, const XLATensor& other,
+                       const at::Scalar& alpha);
+  static void sub_(XLATensor& input, const XLATensor& other,
+                   const at::Scalar& alpha);
 
-  XLATensor mul(const XLATensor& other) const;
-  XLATensor mul(const at::Scalar& other) const;
-  void mul_(const XLATensor& other);
-  void mul_(const at::Scalar& other);
+  static XLATensor mul(const XLATensor& input, const XLATensor& other);
+  static XLATensor mul(const XLATensor& input, const at::Scalar& other);
+  static void mul_(XLATensor& input, const XLATensor& other);
+  static void mul_(XLATensor& input, const at::Scalar& other);
 
-  XLATensor div(const XLATensor& other) const;
-  XLATensor div(const at::Scalar& other) const;
-  void div_(const XLATensor& other);
-  void div_(const at::Scalar& other);
+  static XLATensor div(const XLATensor& input, const XLATensor& other);
+  static XLATensor div(const XLATensor& input, const at::Scalar& other);
+  static void div_(XLATensor& input, const XLATensor& other);
+  static void div_(XLATensor& input, const at::Scalar& other);
 
-  void zero_();
+  static void zero_(XLATensor& input);
 
   // Additional operations which are part of the PyTorch Tensor functionality.
   xla::int64 size(int dim) const;
