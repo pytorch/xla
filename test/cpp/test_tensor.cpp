@@ -17,7 +17,8 @@ namespace {
 bool CheckBidirectionalConversion(
     const at::Tensor& input, at::ScalarType dest_element_type,
     c10::optional<xla::PrimitiveType> xla_type = c10::nullopt) {
-  xla::Literal literal = GetTensorLiteral(input, /*shape=*/nullptr);
+  xla::Literal literal =
+      GetTensorLiteral(input, /*shape=*/nullptr, /*device=*/nullptr);
   if (xla_type) {
     literal = literal.Convert(*xla_type).ConsumeValueOrDie();
   }

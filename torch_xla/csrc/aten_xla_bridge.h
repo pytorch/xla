@@ -21,6 +21,10 @@ XLATensor GetXlaTensor(const at::Tensor& tensor);
 // underline tensor.
 XLATensor GetXlaTensorUnwrap(const at::Tensor& tensor);
 
+// If tensor is an XLA tensor type, returns the XLATensor embedded within it,
+// otherwise creates a new XLA tensor type with tensor as data.
+XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device);
+
 // Creates a vector of at::Tensor objects extracted from a list of XLA tensors.
 // If the writeable vector is not nullptr, it must be the same size as tensors,
 // and the corresponding bool tells whether the ATEN tensor to be retrieved

@@ -30,7 +30,7 @@ xla::XlaOp GetConstantOp(xla::XlaBuilder* builder,
     auto tensor = value.toTensor();
     xla::Shape shape = CreateComputationShapeFromTensor(tensor,
                                                         /*device=*/nullptr);
-    auto literal = GetTensorLiteral(tensor, &shape);
+    auto literal = GetTensorLiteral(tensor, &shape, /*device=*/nullptr);
     return xla::ConstantLiteral(builder, literal);
   } else if (value.isDouble()) {
     return xla::ConstantR0<float>(builder, value.toDouble());
