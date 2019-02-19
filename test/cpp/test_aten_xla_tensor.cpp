@@ -802,6 +802,17 @@ TEST_F(AtenXlaTensorTest, TestRelu) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestLeakyRelu) {
+  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
+  double negative_slope = 0.01;
+  at::Tensor output = at::leaky_relu(input, negative_slope);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::leaky_relu(xla_input, negative_slope);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestExp) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::exp(a);

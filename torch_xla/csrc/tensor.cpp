@@ -35,6 +35,7 @@
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/ops/leaky_relu.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/log_softmax_backward.h"
 #include "torch_xla/csrc/ops/max_pool2d.h"
@@ -675,6 +676,12 @@ XLATensor XLATensor::lt(const XLATensor& input, const XLATensor& other) {
 
 XLATensor XLATensor::relu(const XLATensor& input) {
   return Create(ir::ops::ReluOp(input.GetIrValue()), input.GetDevice());
+}
+
+XLATensor XLATensor::leaky_relu(const XLATensor& input, double negative_slope) {
+  return Create(
+      ir::MakeNode<ir::ops::LeakyRelu>(input.GetIrValue(), negative_slope),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,

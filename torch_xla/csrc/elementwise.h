@@ -28,6 +28,10 @@ xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
 // Computes the rectified linear unit (replace negative elements with 0).
 xla::XlaOp BuildRelu(const xla::XlaOp& input);
 
+// Computes the leaky rectified linear unit:
+// LeakyReLU(x) = max(0, input) + negative_slope ∗ min(0, input).
+xla::XlaOp BuildLeakyRelu(const xla::XlaOp& input, double negative_slope);
+
 xla::XlaOp BuildSigmoid(const xla::XlaOp& input);
 
 }  // namespace torch_xla
