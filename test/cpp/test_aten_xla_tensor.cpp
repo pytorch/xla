@@ -193,6 +193,31 @@ TEST_F(AtenXlaTensorTest, TestDivInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestRsub) {
+  at::Tensor input = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor other = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Scalar alpha(2.5);
+  at::Tensor result = at::rsub(input, other, alpha);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_other = bridge::CreateXlaTensor(other, device);
+    at::Tensor xla_result = at::rsub(xla_input, xla_other, alpha);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestRsubScalar) {
+  at::Tensor input = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Scalar other(1.5);
+  at::Scalar alpha(2.5);
+  at::Tensor result = at::rsub(input, other, alpha);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_result = at::rsub(xla_input, other, alpha);
+    AllClose(result, xla_result);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestNe) {
   at::Tensor a = GetTestTensor({2, 3});
   at::Tensor b = GetTestTensor({2, 3});
