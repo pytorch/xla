@@ -72,11 +72,8 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(const xla::XlaOp& lhs,
 
 }  // namespace
 
-xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs,
-                        bool use_full_conv_precision) {
-  const auto precision_level = use_full_conv_precision
-                                   ? xla::PrecisionConfig::HIGHEST
-                                   : xla::PrecisionConfig::DEFAULT;
+xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs) {
+  const auto precision_level = XlaHelpers::mat_mul_precision();
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(precision_level);
   // Expand cases in https://pytorch.org/docs/stable/torch.html#torch.matmul

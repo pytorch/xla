@@ -152,8 +152,7 @@ TEST_F(TensorTest, TestAddMatMul) {
     auto dev_weight =
         XLATensor::Create(weight, device, /*requires_grad=*/false);
     auto dev_bias = XLATensor::Create(bias, device, /*requires_grad=*/false);
-    auto dev_output = XLATensor::addmm(dev_input, dev_weight, dev_bias,
-                                       /*use_full_conv_precision=*/true);
+    auto dev_output = XLATensor::addmm(dev_input, dev_weight, dev_bias);
     AllClose(output, dev_output);
   });
 }
@@ -381,13 +380,11 @@ TEST_F(TensorTest, TestConv2D) {
                 XLATensor::Create(bias, device, /*requires_grad=*/false);
             dev_output = XLATensor::conv2d(dev_input, dev_weight, dev_bias,
                                            /*stride=*/{stride, stride},
-                                           /*padding=*/{padding, padding},
-                                           /*use_full_conv_precision=*/true);
+                                           /*padding=*/{padding, padding});
           } else {
             dev_output = XLATensor::conv2d(dev_input, dev_weight,
                                            /*stride=*/{stride, stride},
-                                           /*padding=*/{padding, padding},
-                                           /*use_full_conv_precision=*/true);
+                                           /*padding=*/{padding, padding});
           }
           AllClose(output, dev_output);
         });
@@ -425,13 +422,11 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
                 XLATensor::Create(bias, device, /*requires_grad=*/false);
             dev_output = XLATensor::conv2d(dev_input, dev_weight, dev_bias,
                                            /*stride=*/{stride, stride + 1},
-                                           /*padding=*/{padding, padding + 1},
-                                           /*use_full_conv_precision=*/true);
+                                           /*padding=*/{padding, padding + 1});
           } else {
             dev_output = XLATensor::conv2d(dev_input, dev_weight,
                                            /*stride=*/{stride, stride + 1},
-                                           /*padding=*/{padding, padding + 1},
-                                           /*use_full_conv_precision=*/true);
+                                           /*padding=*/{padding, padding + 1});
           }
           AllClose(output, dev_output);
         });

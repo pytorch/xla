@@ -50,8 +50,7 @@ class XlaTranslator {
     std::function<xla::XlaOp(const xla::XlaOp&, size_t)> output_transform;
   };
 
-  XlaTranslator(const std::shared_ptr<torch::jit::Graph>& graph,
-                const xla::PrecisionConfig::Precision conv_precision);
+  XlaTranslator(const std::shared_ptr<torch::jit::Graph>& graph);
 
   // Builds and compiles the XLA computation for graph_. For the backward
   // computation, param_size_op_values stores the constant values for aten::size
@@ -71,7 +70,6 @@ class XlaTranslator {
 
  private:
   std::shared_ptr<torch::jit::Graph> graph_;
-  xla::PrecisionConfig::Precision conv_precision_;
 };
 
 }  // namespace torch_xla

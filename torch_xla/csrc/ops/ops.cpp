@@ -135,11 +135,10 @@ NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
                             input_shape, std::move(lower_fn));
 }
 
-NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
-                    bool use_full_conv_precision) {
-  const auto precision_level = use_full_conv_precision
-                                   ? xla::PrecisionConfig::HIGHEST
-                                   : xla::PrecisionConfig::DEFAULT;
+NodePtr AddMatMulOp(const Value& input, const Value& weight,
+                    const Value& bias) {
+  const xla::PrecisionConfig::Precision precision_level =
+      XlaHelpers::mat_mul_precision();
   auto lower_fn = [precision_level](
                       const ir::Node& node,
                       ir::LoweringContext* loctx) -> ir::XlaOpVector {
@@ -172,11 +171,9 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
                             std::move(lower_fn));
 }
 
-NodePtr Dot(const Value& input, const Value& weight,
-            bool use_full_conv_precision) {
-  const auto precision_level = use_full_conv_precision
-                                   ? xla::PrecisionConfig::HIGHEST
-                                   : xla::PrecisionConfig::DEFAULT;
+NodePtr Dot(const Value& input, const Value& weight) {
+  const xla::PrecisionConfig::Precision precision_level =
+      XlaHelpers::mat_mul_precision();
   auto lower_fn = [precision_level](
                       const ir::Node& node,
                       ir::LoweringContext* loctx) -> ir::XlaOpVector {
@@ -199,20 +196,16 @@ NodePtr Dot(const Value& input, const Value& weight,
                             output_shape, std::move(lower_fn));
 }
 
-NodePtr MatMul(const Value& lhs, const Value& rhs,
-               bool use_full_conv_precision) {
-  auto lower_fn = [use_full_conv_precision](
-                      const ir::Node& node,
-                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
+NodePtr MatMul(const Value& lhs, const Value& rhs) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
     xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(
-        CreateMatMul(xla_lhs, xla_rhs, use_full_conv_precision), loctx);
+    return node.ReturnOp(CreateMatMul(xla_lhs, xla_rhs), loctx);
   };
   auto lower_for_shape_fn =
       [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
-    // Precision doesn't matter for shape inference.
-    return CreateMatMul(operands[0], operands[1], false);
+    return CreateMatMul(operands[0], operands[1]);
   };
   xla::Shape output_shape =
       ir::ops::InferOutputShape({lhs.shape(), rhs.shape()}, lower_for_shape_fn);

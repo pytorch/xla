@@ -164,7 +164,6 @@ class ComputationContext {
 // Definitions for the translation handlers per node kind.
 
 void TranslateArithmetic(const torch::jit::Node* node, ComputationContext* cctx,
-                         xla::PrecisionConfig::Precision /*conv_precision*/,
                          xla::XlaBuilder* b) {
   const auto node_inputs = node->inputs();
   if (node_inputs.size() < 2) {
@@ -185,7 +184,6 @@ void TranslateArithmetic(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateComparison(const torch::jit::Node* node, ComputationContext* cctx,
-                         xla::PrecisionConfig::Precision /*conv_precision*/,
                          xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::XlaOp xla_output = BuildComparisonOp(node, cctx->OpForInput(node, 0));
@@ -193,7 +191,6 @@ void TranslateComparison(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateTypeAs(const torch::jit::Node* node, ComputationContext* cctx,
-                     xla::PrecisionConfig::Precision /*conv_precision*/,
                      xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::XlaOp xla_output = BuildTypeAs(node, cctx->OpForInput(node, 0));
@@ -201,31 +198,28 @@ void TranslateTypeAs(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateConvolution(const torch::jit::Node* node,
-                          ComputationContext* cctx,
-                          xla::PrecisionConfig::Precision conv_precision,
-                          xla::XlaBuilder* /*b*/) {
+                          ComputationContext* cctx, xla::XlaBuilder* /*b*/) {
   XLA_CHECK_GE(node->inputs().size(), 3);
 
   xla::XlaOp xla_output;
   auto opt_op = cctx->GetOpForInput(node, 3);
   if (opt_op) {  // bias exists
     xla_output = BuildConvolutionBias(node, cctx->OpForInput(node, 0),
-                                      cctx->OpForInput(node, 1), *opt_op,
-                                      conv_precision);
+                                      cctx->OpForInput(node, 1), *opt_op);
   } else {
     xla_output = BuildConvolution(node, cctx->OpForInput(node, 0),
-                                  cctx->OpForInput(node, 1), conv_precision);
+                                  cctx->OpForInput(node, 1));
   }
   cctx->AddNodeOp(node, xla_output);
 }
 
-void TranslateConvolutionBackward(
-    const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision conv_precision, xla::XlaBuilder* /*b*/) {
+void TranslateConvolutionBackward(const torch::jit::Node* node,
+                                  ComputationContext* cctx,
+                                  xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 9);
-  Conv2DGrads conv2d_grads = BuildConv2dBackward(
-      node, cctx->OpForInput(node, 0), cctx->OpForInput(node, 1),
-      cctx->OpForInput(node, 2), conv_precision);
+  Conv2DGrads conv2d_grads =
+      BuildConv2dBackward(node, cctx->OpForInput(node, 0),
+                          cctx->OpForInput(node, 1), cctx->OpForInput(node, 2));
   const auto node_outputs = node->outputs();
   cctx->AddValueOp(node_outputs[0], conv2d_grads.grad_input);
   cctx->AddValueOp(node_outputs[1], conv2d_grads.grad_weight);
@@ -233,7 +227,6 @@ void TranslateConvolutionBackward(
 }
 
 void TranslateTranspose(const torch::jit::Node* node, ComputationContext* cctx,
-                        xla::PrecisionConfig::Precision /*conv_precision*/,
                         xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
   xla::XlaOp xla_output = xla::Transpose(cctx->OpForInput(node, 0), {1, 0});
@@ -241,11 +234,10 @@ void TranslateTranspose(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateAddMatMul(const torch::jit::Node* node, ComputationContext* cctx,
-                        xla::PrecisionConfig::Precision conv_precision,
                         xla::XlaBuilder* /*b*/) {
   XLA_CHECK_GE(node->inputs().size(), 3);
   xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(conv_precision);
+      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   xla::XlaOp xla_output =
       xla::Dot(cctx->OpForInput(node, 1), cctx->OpForInput(node, 2),
                &precision_config) +
@@ -254,18 +246,16 @@ void TranslateAddMatMul(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateMatMul(const torch::jit::Node* node, ComputationContext* cctx,
-                     xla::PrecisionConfig::Precision conv_precision,
                      xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(conv_precision);
+      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   xla::XlaOp xla_output = xla::Dot(
       cctx->OpForInput(node, 0), cctx->OpForInput(node, 1), &precision_config);
   cctx->AddNodeOp(node, xla_output);
 }
 
 void TranslateMaxPool(const torch::jit::Node* node, ComputationContext* cctx,
-                      xla::PrecisionConfig::Precision /*conv_precision*/,
                       xla::XlaBuilder* /*b*/) {
   XLA_CHECK_GE(node->inputs().size(), 1);
   XLA_CHECK_GE(node->outputs().size(), 1);
@@ -275,10 +265,9 @@ void TranslateMaxPool(const torch::jit::Node* node, ComputationContext* cctx,
   cctx->AddValueOp(node_outputs[0], xla_output);
 }
 
-void TranslateMaxPoolBackward(
-    const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision /*conv_precision*/,
-    xla::XlaBuilder* /*b*/) {
+void TranslateMaxPoolBackward(const torch::jit::Node* node,
+                              ComputationContext* cctx,
+                              xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 8);
   xla::XlaOp xla_output = BuildMaxPool2dBackward(
       node, cctx->OpForInput(node, 0), cctx->OpForInput(node, 1));
@@ -286,37 +275,33 @@ void TranslateMaxPoolBackward(
 }
 
 void TranslateAvgPool(const torch::jit::Node* node, ComputationContext* cctx,
-                      xla::PrecisionConfig::Precision /*conv_precision*/,
                       xla::XlaBuilder* /*b*/) {
   XLA_CHECK_GE(node->inputs().size(), 1);
   xla::XlaOp xla_output = BuildAvgPool2d(node, cctx->OpForInput(node, 0));
   cctx->AddNodeOp(node, xla_output);
 }
 
-void TranslateAvgPoolBackward(
-    const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision /*conv_precision*/,
-    xla::XlaBuilder* /*b*/) {
+void TranslateAvgPoolBackward(const torch::jit::Node* node,
+                              ComputationContext* cctx,
+                              xla::XlaBuilder* /*b*/) {
   XLA_CHECK_GE(node->inputs().size(), 2);
   xla::XlaOp xla_output = BuildAvgPool2dBackward(
       node, cctx->OpForInput(node, 0), cctx->OpForInput(node, 1));
   cctx->AddNodeOp(node, xla_output);
 }
 
-void TranslateAdaptiveAvgPool(
-    const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision /*conv_precision*/,
-    xla::XlaBuilder* /*b*/) {
+void TranslateAdaptiveAvgPool(const torch::jit::Node* node,
+                              ComputationContext* cctx,
+                              xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::XlaOp xla_output =
       BuildAdaptiveAvgPool2d(node, cctx->OpForInput(node, 0));
   cctx->AddNodeOp(node, xla_output);
 }
 
-void TranslateAdaptiveAvgPoolBackward(
-    const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision /*conv_precision*/,
-    xla::XlaBuilder* /*b*/) {
+void TranslateAdaptiveAvgPoolBackward(const torch::jit::Node* node,
+                                      ComputationContext* cctx,
+                                      xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::XlaOp xla_output = BuildAdaptiveAvgPool2dBackward(
       cctx->OpForInput(node, 0), cctx->OpForInput(node, 1));
@@ -324,7 +309,6 @@ void TranslateAdaptiveAvgPoolBackward(
 }
 
 void TranslateSqrt(const torch::jit::Node* node, ComputationContext* cctx,
-                   xla::PrecisionConfig::Precision /*conv_precision*/,
                    xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
   xla::XlaOp xla_input = cctx->OpForInput(node, 0);
@@ -333,7 +317,6 @@ void TranslateSqrt(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateRsqrt(const torch::jit::Node* node, ComputationContext* cctx,
-                    xla::PrecisionConfig::Precision /*conv_precision*/,
                     xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
   xla::XlaOp xla_input = cctx->OpForInput(node, 0);
@@ -342,7 +325,6 @@ void TranslateRsqrt(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateNeg(const torch::jit::Node* node, ComputationContext* cctx,
-                  xla::PrecisionConfig::Precision /*conv_precision*/,
                   xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
   xla::XlaOp xla_input = cctx->OpForInput(node, 0);
@@ -351,7 +333,6 @@ void TranslateNeg(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateTanh(const torch::jit::Node* node, ComputationContext* cctx,
-                   xla::PrecisionConfig::Precision /*conv_precision*/,
                    xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
   xla::XlaOp xla_input = cctx->OpForInput(node, 0);
@@ -360,7 +341,6 @@ void TranslateTanh(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateSigmoid(const torch::jit::Node* node, ComputationContext* cctx,
-                      xla::PrecisionConfig::Precision /*conv_precision*/,
                       xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
   xla::XlaOp xla_input = cctx->OpForInput(node, 0);
@@ -368,7 +348,6 @@ void TranslateSigmoid(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateRelu(const torch::jit::Node* node, ComputationContext* cctx,
-                   xla::PrecisionConfig::Precision /*conv_precision*/,
                    xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
   xla::XlaOp xla_input = cctx->OpForInput(node, 0);
@@ -377,7 +356,6 @@ void TranslateRelu(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateThreshold(const torch::jit::Node* node, ComputationContext* cctx,
-                        xla::PrecisionConfig::Precision /*conv_precision*/,
                         xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 3);
   xla::XlaOp xla_output = BuildThreshold(
@@ -387,10 +365,9 @@ void TranslateThreshold(const torch::jit::Node* node, ComputationContext* cctx,
   cctx->AddNodeOp(node, xla_output);
 }
 
-void TranslateThresholdBackward(
-    const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision /*conv_precision*/,
-    xla::XlaBuilder* /*b*/) {
+void TranslateThresholdBackward(const torch::jit::Node* node,
+                                ComputationContext* cctx,
+                                xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 3);
   xla::XlaOp xla_output = BuildThreshold(
       cctx->OpForInput(node, 1), cctx->OpForInput(node, 0),
@@ -399,17 +376,15 @@ void TranslateThresholdBackward(
 }
 
 void TranslateLogSoftmax(const torch::jit::Node* node, ComputationContext* cctx,
-                         xla::PrecisionConfig::Precision /*conv_precision*/,
                          xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), size_t(2));
   xla::XlaOp xla_output = BuildLogSoftmax(node, cctx->OpForInput(node, 0));
   cctx->AddNodeOp(node, xla_output);
 }
 
-void TranslateLogSoftmaxBackward(
-    const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision /*conv_precision*/,
-    xla::XlaBuilder* /*b*/) {
+void TranslateLogSoftmaxBackward(const torch::jit::Node* node,
+                                 ComputationContext* cctx,
+                                 xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 4);
   xla::XlaOp xla_output = BuildLogSoftmaxGrad(node, cctx->OpForInput(node, 0),
                                               cctx->OpForInput(node, 1));
@@ -417,7 +392,6 @@ void TranslateLogSoftmaxBackward(
 }
 
 void TranslateView(const torch::jit::Node* node, ComputationContext* cctx,
-                   xla::PrecisionConfig::Precision /*conv_precision*/,
                    xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::XlaOp xla_output = BuildView(node, cctx->OpForInput(node, 0));
@@ -425,7 +399,6 @@ void TranslateView(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateReshape(const torch::jit::Node* node, ComputationContext* cctx,
-                      xla::PrecisionConfig::Precision /*conv_precision*/,
                       xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::XlaOp xla_output =
@@ -434,7 +407,6 @@ void TranslateReshape(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateExpand(const torch::jit::Node* node, ComputationContext* cctx,
-                     xla::PrecisionConfig::Precision /*conv_precision*/,
                      xla::XlaBuilder* /*b*/) {
   XLA_CHECK_GE(node->inputs().size(), 1);
   xla::XlaOp xla_output = BuildExpand(node, cctx->OpForInput(node, 0));
@@ -442,7 +414,6 @@ void TranslateExpand(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateStack(const torch::jit::Node* node, ComputationContext* cctx,
-                    xla::PrecisionConfig::Precision /*conv_precision*/,
                     xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::XlaOp xla_output = BuildStack(
@@ -455,7 +426,6 @@ void TranslateStack(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateCat(const torch::jit::Node* node, ComputationContext* cctx,
-                  xla::PrecisionConfig::Precision /*conv_precision*/,
                   xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::XlaOp xla_output = BuildCat(
@@ -468,7 +438,6 @@ void TranslateCat(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateChunk(const torch::jit::Node* node, ComputationContext* cctx,
-                    xla::PrecisionConfig::Precision /*conv_precision*/,
                     xla::XlaBuilder* /*b*/) {
   std::vector<xla::XlaOp> xla_outputs =
       BuildChunk(node, cctx->OpForInput(node, 0));
@@ -479,7 +448,6 @@ void TranslateChunk(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateBatchNorm(const torch::jit::Node* node, ComputationContext* cctx,
-                        xla::PrecisionConfig::Precision /*conv_precision*/,
                         xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 8);
   const float eps_value =
@@ -500,10 +468,9 @@ void TranslateBatchNorm(const torch::jit::Node* node, ComputationContext* cctx,
   }
 }
 
-void TranslateBatchNormBackward(
-    const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision /*conv_precision*/,
-    xla::XlaBuilder* /*b*/) {
+void TranslateBatchNormBackward(const torch::jit::Node* node,
+                                ComputationContext* cctx,
+                                xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 10);
   const float eps_value =
       node->get<at::Scalar>(at::attr::eps).value().to<float>();
@@ -521,7 +488,6 @@ void TranslateBatchNormBackward(
 }
 
 void TranslateSum(const torch::jit::Node* node, ComputationContext* cctx,
-                  xla::PrecisionConfig::Precision /*conv_precision*/,
                   xla::XlaBuilder* /*b*/) {
   XLA_CHECK_GE(node->inputs().size(), 1);
   xla::XlaOp xla_output = BuildSum(node, cctx->OpForInput(node, 0));
@@ -529,7 +495,6 @@ void TranslateSum(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateNllLoss(const torch::jit::Node* node, ComputationContext* cctx,
-                      xla::PrecisionConfig::Precision /*conv_precision*/,
                       xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 5);
   xla::XlaOp logits = cctx->OpForInput(node, 0);
@@ -560,10 +525,9 @@ void TranslateNllLoss(const torch::jit::Node* node, ComputationContext* cctx,
   }
 }
 
-void TranslateNllLossBackward(
-    const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision /*conv_precision*/,
-    xla::XlaBuilder* /*b*/) {
+void TranslateNllLossBackward(const torch::jit::Node* node,
+                              ComputationContext* cctx,
+                              xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 7);
   xla::XlaOp xla_output = BuildNllLossBackward(cctx->OpForInput(node, 1),
                                                cctx->OpForInput(node, 2));
@@ -571,7 +535,6 @@ void TranslateNllLossBackward(
 }
 
 void TranslateSize(const torch::jit::Node* node, ComputationContext* cctx,
-                   xla::PrecisionConfig::Precision /*conv_precision*/,
                    xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 1);
   std::vector<xla::int64> size_op_result;
@@ -582,7 +545,6 @@ void TranslateSize(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateConstant(const torch::jit::Node* node, ComputationContext* cctx,
-                       xla::PrecisionConfig::Precision /*conv_precision*/,
                        xla::XlaBuilder* b) {
   auto value = toIValue(node->output()).value();
   if (value.isNone()) {
@@ -593,15 +555,12 @@ void TranslateConstant(const torch::jit::Node* node, ComputationContext* cctx,
 }
 
 void TranslateUndefined(const torch::jit::Node* node, ComputationContext* cctx,
-                        xla::PrecisionConfig::Precision /*conv_precision*/,
                         xla::XlaBuilder* /*b*/) {
   cctx->AddUndefinedInput(ComputationContext::OutputId(node));
 }
 
 void TranslateGradSumToSize(const torch::jit::Node* node,
-                            ComputationContext* cctx,
-                            xla::PrecisionConfig::Precision /*conv_precision*/,
-                            xla::XlaBuilder* /*b*/) {
+                            ComputationContext* cctx, xla::XlaBuilder* /*b*/) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
   xla::XlaOp xla_output = BuildGradSumToSize(node, cctx->OpForInput(node, 0),
                                              cctx->GetSizeOpValues());
@@ -609,13 +568,11 @@ void TranslateGradSumToSize(const torch::jit::Node* node,
 }
 
 void TranslateNop(const torch::jit::Node* /*node*/,
-                  ComputationContext* /*cctx*/,
-                  xla::PrecisionConfig::Precision /*conv_precision*/,
-                  xla::XlaBuilder* /*b*/) {}
+                  ComputationContext* /*cctx*/, xla::XlaBuilder* /*b*/) {}
 
-using TranslationHandler = std::function<void(
-    const torch::jit::Node* node, ComputationContext* cctx,
-    xla::PrecisionConfig::Precision conv_precision, xla::XlaBuilder* b)>;
+using TranslationHandler =
+    std::function<void(const torch::jit::Node* node, ComputationContext* cctx,
+                       xla::XlaBuilder* b)>;
 
 std::unordered_map<torch::jit::NodeKind, TranslationHandler>*
 CreateTranslationHandlers() {
@@ -685,10 +642,8 @@ GetTranslationHandlers() {
 
 }  // namespace
 
-XlaTranslator::XlaTranslator(
-    const std::shared_ptr<torch::jit::Graph>& graph,
-    const xla::PrecisionConfig::Precision conv_precision)
-    : graph_(graph), conv_precision_(conv_precision) {}
+XlaTranslator::XlaTranslator(const std::shared_ptr<torch::jit::Graph>& graph)
+    : graph_(graph) {}
 
 XlaTranslationResult XlaTranslator::BuildComputation(
     const std::string& name,
@@ -750,7 +705,7 @@ XlaComputationInOut XlaTranslator::BuildComputationProgram(
         GetTranslationHandlers()->find(node->kind());
     XLA_CHECK(translation_handler_it != GetTranslationHandlers()->end())
         << "Unsupported operator: " << node->kind().toQualString();
-    translation_handler_it->second(node, &cctx, conv_precision_, b);
+    translation_handler_it->second(node, &cctx, b);
   }
   // Fill in the return tuple.
   const auto return_node = graph_->return_node();

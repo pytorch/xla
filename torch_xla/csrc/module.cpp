@@ -69,10 +69,8 @@ size_t InputVjpsRealOutputCount(const torch::jit::Gradient& gradient) {
 }  // namespace
 
 XlaModule::XlaModule(const std::shared_ptr<torch::jit::script::Module> module,
-                     bool use_full_conv_precision, bool differentiate)
-    : use_full_conv_precision_(use_full_conv_precision),
-      differentiate_(differentiate),
-      script_module_(module) {}
+                     bool differentiate)
+    : differentiate_(differentiate), script_module_(module) {}
 
 void XlaModule::Initialize(const TensorBatchVector& inputs) {
   if (script_module_ == nullptr) {
@@ -273,7 +271,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
           replica_raw_grad_outputs[j].shape(), kind));
     }
 
-    XlaTranslator xla_bwd_impl(gradient_.df, GetPrecisionConfig());
+    XlaTranslator xla_bwd_impl(gradient_.df);
     xla::XlaComputation computation =
         xla_bwd_impl
             .BuildComputation("XlaBackward", backward_shapes,
@@ -386,14 +384,9 @@ const XlaModule::TensorBatchVector& XlaModule::parameters_buffers() {
   return all_params_;
 }
 
-xla::PrecisionConfig::Precision XlaModule::GetPrecisionConfig() const {
-  return use_full_conv_precision_ ? xla::PrecisionConfig::HIGHEST
-                                  : xla::PrecisionConfig::DEFAULT;
-}
-
 xla::XlaComputation XlaModule::BuildFusedTrainComputation(
     const std::vector<XlaTranslator::ParameterShape>& forward_shapes) {
-  XlaTranslator xla_fwd_impl(gradient_.f, GetPrecisionConfig());
+  XlaTranslator xla_fwd_impl(gradient_.f);
   xla::XlaBuilder b("XlaFusedComputation");
   // Build the forward pass program without compiling it, the backward pass
   // needs to be called before finalizing it.
@@ -447,7 +440,7 @@ xla::XlaComputation XlaModule::BuildFusedTrainComputation(
     backward_operands.push_back(p);
   }
   // The arguments are set up correctly, call into the backward computation.
-  XlaTranslator xla_bwd_impl(gradient_.df, GetPrecisionConfig());
+  XlaTranslator xla_bwd_impl(gradient_.df);
   xla::XlaComputation backward_computation =
       xla_bwd_impl
           .BuildComputation("XlaBackward", backward_shapes,
@@ -496,7 +489,7 @@ XlaModule::TensorBatchVector XlaModule::RunUnfusedForward(
           p.shape(), XlaTranslator::ParameterKind::kGraphInput));
     }
 
-    XlaTranslator xla_fwd_impl(gradient_.f, GetPrecisionConfig());
+    XlaTranslator xla_fwd_impl(gradient_.f);
     XlaTranslationResult forward_translation_result =
         xla_fwd_impl.BuildComputation("XlaForward", forward_shapes,
                                       backward_size_op_values_);

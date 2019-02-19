@@ -340,13 +340,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor tril(const at::Tensor& self, int64_t diagonal) const override;
 
-  static void SetFullConvPrecision(bool use_full_conv_precision = true);
-
   // Registers the ATEN types for the XLA tensors.
   static void RegisterAtenTypes();
-
- private:
-  static bool s_use_full_conv_precision_;
 };
 
 }  // namespace torch_xla

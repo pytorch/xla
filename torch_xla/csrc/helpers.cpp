@@ -11,6 +11,9 @@
 
 namespace torch_xla {
 
+xla::PrecisionConfig::Precision XlaHelpers::s_mat_mul_precision =
+    xla::PrecisionConfig::DEFAULT;
+
 xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
     const xla::PrecisionConfig::Precision conv_precision) {
   xla::PrecisionConfig precision_config;

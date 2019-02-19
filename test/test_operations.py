@@ -809,8 +809,7 @@ class TestGradients(XlaTestCase):
     ##############################################################
     # backward with XLA
     if xla:
-      xla_model = torch_xla._XLAC.XlaModule(
-          traced_model, use_full_conv_precision=True)
+      xla_model = torch_xla._XLAC.XlaModule(traced_model)
       inputs_xla = [torch_xla._XLAC.XLATensor(input) for input in inputs]
       xla_model((tuple(inputs_xla)))
       grads_output_xla = [
@@ -1085,8 +1084,7 @@ class TestOptimizer(XlaTestCase):
     input = _gen_tensor(4, 4, requires_grad=True)
     model = nn.Linear(4, 20)
     traced_model = torch.jit.trace(model, input)
-    xla_model = torch_xla._XLAC.XlaModule(
-        traced_model, use_full_conv_precision=True)
+    xla_model = torch_xla._XLAC.XlaModule(traced_model)
     input_xla = [torch_xla._XLAC.XLATensor(input)]
     xla_model((tuple(input_xla)))
     xla_optimizer = optim.SGD(
@@ -1218,15 +1216,13 @@ class TestXLATensor(XlaTestCase):
                 xt_weight,
                 xt_bias,
                 stride=stride,
-                padding=padding,
-                use_full_conv_precision=True).to_tensor()
+                padding=padding).to_tensor()
           else:
             out = torch_xla._XLAC.conv2d(
                 xt_input,
                 xt_weight,
                 stride=stride,
-                padding=padding,
-                use_full_conv_precision=True).to_tensor()
+                padding=padding).to_tensor()
           self.assertEqualRel(out.data, expected.data)
 
   def test_conv2d_non_square(self):
@@ -1255,15 +1251,13 @@ class TestXLATensor(XlaTestCase):
                 xt_weight,
                 xt_bias,
                 stride=[stride, stride + 1],
-                padding=[padding, padding + 1],
-                use_full_conv_precision=True).to_tensor()
+                padding=[padding, padding + 1]).to_tensor()
           else:
             out = torch_xla._XLAC.conv2d(
                 xt_input,
                 xt_weight,
                 stride=[stride, stride + 1],
-                padding=[padding, padding + 1],
-                use_full_conv_precision=True).to_tensor()
+                padding=[padding, padding + 1]).to_tensor()
           self.assertEqualRel(out.data, expected.data)
 
   def test_addmm(self):
@@ -1278,7 +1272,7 @@ class TestXLATensor(XlaTestCase):
     xt_bias = torch_xla._XLAC.XLATensor(bias)
     out = torch.addmm(bias, input, weight)
     expected = torch_xla._XLAC.addmm(
-        xt_bias, xt_input, xt_weight, use_full_conv_precision=True).to_tensor()
+        xt_bias, xt_input, xt_weight).to_tensor()
     self.assertEqualRel(out.data, expected.data)
 
   def test_max_pool2d(self):
@@ -1378,4 +1372,5 @@ class TestAtenXlaTensor(XlaTestCase):
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
   torch.manual_seed(42)
+  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(use_full_mat_mul_precision=True)
   run_tests()

@@ -178,6 +178,17 @@ class XlaHelpers {
         op1, op2,
         [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 / op2; });
   }
+
+  static xla::PrecisionConfig::Precision mat_mul_precision() {
+    return s_mat_mul_precision;
+  }
+
+  static void set_mat_mul_precision(xla::PrecisionConfig::Precision precision) {
+    s_mat_mul_precision = precision;
+  }
+
+ private:
+  static xla::PrecisionConfig::Precision s_mat_mul_precision;
 };
 
 }  // namespace torch_xla

@@ -4,7 +4,6 @@
 
 namespace torch_xla {
 
-xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs,
-                        bool use_full_conv_precision);
+xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs);
 
 }  // namespace torch_xla

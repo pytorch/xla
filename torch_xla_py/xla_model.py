@@ -243,16 +243,14 @@ def create_xla_model(model,
                      inputs,
                      num_cores=1,
                      devices=None,
-                     input_gradients=None,
-                     full_conv_precision=False):
+                     input_gradients=None):
   assert isinstance(inputs, (tuple, list))
   assert num_cores == 1 or num_cores == len(devices)
   replica_inputs = []
   for n in range(0, num_cores):
     replica_inputs.append(inputs)
   traced_model = torch.jit.trace(model, inputs)
-  xla_model = torch_xla._XLAC.XlaModule(
-      traced_model, use_full_conv_precision=full_conv_precision)
+  xla_model = torch_xla._XLAC.XlaModule(traced_model)
   inputs_xla = convert_to_xla_tensors(replica_inputs, devices=devices)
   if input_gradients is not None:
     xla_model.set_input_gradients(input_gradients)
@@ -515,15 +513,13 @@ class XlaModel(object):
           inputs_and_target,
           num_cores=self._num_cores,
           devices=devices,
-          input_gradients=loss_output_grads,
-          full_conv_precision=full_conv_precision)
+          input_gradients=loss_output_grads)
     else:
       self._xla_model, self._traced_model = create_xla_model(
           self._model_fn,
           inputs,
           num_cores=self._num_cores,
-          devices=devices,
-          full_conv_precision=full_conv_precision)
+          devices=devices)
 
   def traced_model(self):
     return self._traced_model

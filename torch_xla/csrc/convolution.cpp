@@ -14,8 +14,7 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
     const xla::XlaOp& grad_output, const xla::XlaOp& input,
     const xla::XlaOp& weight,
     tensorflow::gtl::ArraySlice<const xla::int64> stride_attr,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding_attr,
-    const xla::PrecisionConfig::Precision conv_precision) {
+    tensorflow::gtl::ArraySlice<const xla::int64> padding_attr) {
   XLA_CHECK_EQ(stride_attr.size(), 2);
   // Adjust input size to account for specified padding.
   auto input_size = XlaHelpers::SizesOfXlaOp(input);
@@ -96,7 +95,7 @@ xla::XlaOp BuildThnnConv2dBackwardInput(
   // activation gradients
   //   = gradients (with padding and dilation) <conv> mirrored_weights
   xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(conv_precision);
+      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   xla::Shape weight_shape = XlaHelpers::ShapeOfXlaOp(weight);
   return xla::Pad(
       xla::ConvGeneralDilated(grad_output, mirrored_weights,
@@ -113,8 +112,7 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
     const xla::XlaOp& grad_output, const xla::XlaOp& input,
     const xla::XlaOp& weight,
     tensorflow::gtl::ArraySlice<const xla::int64> stride_attr,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding_attr,
-    const xla::PrecisionConfig::Precision conv_precision) {
+    tensorflow::gtl::ArraySlice<const xla::int64> padding_attr) {
   constexpr int n_dim = 0;
   constexpr int c_dim = 1;
   XLA_CHECK_EQ(padding_attr.size(), 2);
@@ -227,7 +225,7 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
       padding_config);
 
   xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(conv_precision);
+      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   return xla::Transpose(xla::ConvGeneralDilated(
                             padded_input, grad_output, window_strides, padding,
                             /*lhs_dilation=*/ones, rhs_dilation, dnums,
@@ -247,52 +245,45 @@ std::vector<std::pair<xla::int64, xla::int64>> MakePadding(
 
 }  // namespace
 
-xla::XlaOp BuildConvolution(
-    const torch::jit::Node* node, const xla::XlaOp& input,
-    const xla::XlaOp& kernel,
-    const xla::PrecisionConfig::Precision conv_precision) {
+xla::XlaOp BuildConvolution(const torch::jit::Node* node,
+                            const xla::XlaOp& input, const xla::XlaOp& kernel) {
   const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
   const auto padding =
       node->get<std::vector<int64_t>>(at::attr::padding).value();
-  xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(conv_precision);
   return BuildConvolution(input, kernel, XlaHelpers::I64List(stride),
-                          XlaHelpers::I64List(padding), conv_precision);
+                          XlaHelpers::I64List(padding));
 }
 
 xla::XlaOp BuildConvolution(
     const xla::XlaOp& input, const xla::XlaOp& kernel,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    const xla::PrecisionConfig::Precision conv_precision) {
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   const auto dims_padding = MakePadding(padding);
   xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(conv_precision);
+      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   return xla::ConvWithGeneralPadding(
       input, kernel, stride, dims_padding,
       /*feature_group_count*/ 1, /*batch_group_count=*/1, &precision_config);
 }
 
-xla::XlaOp BuildConvolutionBias(
-    const torch::jit::Node* node, const xla::XlaOp& input,
-    const xla::XlaOp& kernel, const xla::XlaOp& bias,
-    const xla::PrecisionConfig::Precision conv_precision) {
+xla::XlaOp BuildConvolutionBias(const torch::jit::Node* node,
+                                const xla::XlaOp& input,
+                                const xla::XlaOp& kernel,
+                                const xla::XlaOp& bias) {
   const auto node_inputs = node->inputs();
   XLA_CHECK_GE(node_inputs.size(), size_t(4));
   const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
   const auto padding =
       node->get<std::vector<int64_t>>(at::attr::padding).value();
   return BuildConvolutionBias(input, kernel, bias, XlaHelpers::I64List(stride),
-                              XlaHelpers::I64List(padding), conv_precision);
+                              XlaHelpers::I64List(padding));
 }
 
 xla::XlaOp BuildConvolutionBias(
     const xla::XlaOp& input, const xla::XlaOp& kernel, const xla::XlaOp& bias,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    const xla::PrecisionConfig::Precision conv_precision) {
-  xla::XlaOp conv =
-      BuildConvolution(input, kernel, stride, padding, conv_precision);
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  xla::XlaOp conv = BuildConvolution(input, kernel, stride, padding);
   auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
   XLA_CHECK_EQ(broadcast_sizes.size(), 4);
   // Remove the channels dimension.
@@ -303,28 +294,27 @@ xla::XlaOp BuildConvolutionBias(
   return conv + bias_broadcast;
 }
 
-Conv2DGrads BuildConv2dBackward(
-    const torch::jit::Node* node, const xla::XlaOp& grad_output,
-    const xla::XlaOp& input, const xla::XlaOp& weight,
-    const xla::PrecisionConfig::Precision conv_precision) {
+Conv2DGrads BuildConv2dBackward(const torch::jit::Node* node,
+                                const xla::XlaOp& grad_output,
+                                const xla::XlaOp& input,
+                                const xla::XlaOp& weight) {
   const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
   const auto padding =
       node->get<std::vector<int64_t>>(at::attr::padding).value();
   return BuildConv2dBackward(grad_output, input, weight,
                              XlaHelpers::I64List(stride),
-                             XlaHelpers::I64List(padding), conv_precision);
+                             XlaHelpers::I64List(padding));
 }
 
 Conv2DGrads BuildConv2dBackward(
     const xla::XlaOp& grad_output, const xla::XlaOp& input,
     const xla::XlaOp& weight,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    const xla::PrecisionConfig::Precision conv_precision) {
-  xla::XlaOp grad_input = BuildThnnConv2dBackwardInput(
-      grad_output, input, weight, stride, padding, conv_precision);
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  xla::XlaOp grad_input =
+      BuildThnnConv2dBackwardInput(grad_output, input, weight, stride, padding);
   xla::XlaOp grad_weight = BuildThnnConv2dBackwardWeight(
-      grad_output, input, weight, stride, padding, conv_precision);
+      grad_output, input, weight, stride, padding);
   xla::XlaBuilder* builder = grad_output.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp grad_bias = xla::Reduce(

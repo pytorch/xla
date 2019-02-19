@@ -22,10 +22,8 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   using TensorBatchVector = std::vector<std::vector<XLATensor>>;
 
   // Creates a new XlaModule from a PyTorch script module "module".
-  // "use_full_conv_precision" controls whether to use maximum precision
-  // available in hardware for convolutions.
   XlaModule(const std::shared_ptr<torch::jit::script::Module> module,
-            bool use_full_conv_precision, bool differentiate);
+            bool differentiate);
 
   TensorBatchVector forward(const TensorBatchVector& inputs);
   // For the given gradient outputs, compute the gradient of input and
@@ -58,8 +56,6 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   void Initialize(const TensorBatchVector& inputs);
 
   void CheckInitialized() const;
-
-  xla::PrecisionConfig::Precision GetPrecisionConfig() const;
 
   // Retrieves the module devices as vector of strings representations, so that
   // it can be passed to the computation client API.
@@ -171,9 +167,6 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // required for the apply.
   XLATensor::ApplyContext apply_context_;
 
-  // Specifies whether to use the highest precision available for convolutions.
-  // Currently it only makes a difference for TPUs.
-  const bool use_full_conv_precision_;
   // Gradients set aside by the fused train computation, to be consumed by the
   // backward call if we receive an unmodified tensor from the forward pass.
   TensorBatchVector grad_inputs_;

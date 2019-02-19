@@ -172,19 +172,18 @@ class XLATensor {
   static XLATensor threshold(const XLATensor& input, float threshold,
                              float value);
 
-  static XLATensor conv2d(const XLATensor& input, const XLATensor& weight,
-                          const XLATensor& bias,
-                          tensorflow::gtl::ArraySlice<const xla::int64> stride,
-                          tensorflow::gtl::ArraySlice<const xla::int64> padding,
-                          bool use_full_conv_precision);
+  static XLATensor conv2d(
+      const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
+      tensorflow::gtl::ArraySlice<const xla::int64> stride,
+      tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
-  static XLATensor conv2d(const XLATensor& input, const XLATensor& weight,
-                          tensorflow::gtl::ArraySlice<const xla::int64> stride,
-                          tensorflow::gtl::ArraySlice<const xla::int64> padding,
-                          bool use_full_conv_precision);
+  static XLATensor conv2d(
+      const XLATensor& input, const XLATensor& weight,
+      tensorflow::gtl::ArraySlice<const xla::int64> stride,
+      tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
   static XLATensor addmm(const XLATensor& input, const XLATensor& weight,
-                         const XLATensor& bias, bool use_full_conv_precision);
+                         const XLATensor& bias);
 
   static XLATensor max_pool2d(
       const XLATensor& input,
@@ -282,11 +281,9 @@ class XLATensor {
   static XLATensor cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                        xla::int64 dim);
 
-  static XLATensor mm(const XLATensor& input, const XLATensor& weight,
-                      bool use_full_conv_precision);
+  static XLATensor mm(const XLATensor& input, const XLATensor& weight);
 
-  static XLATensor matmul(const XLATensor& input, const XLATensor& other,
-                          bool use_full_conv_precision);
+  static XLATensor matmul(const XLATensor& input, const XLATensor& other);
 
   static XLATensor exp(const XLATensor& input);
 
@@ -344,8 +341,7 @@ class XLATensor {
       const XLATensor& out_backprop, const XLATensor& input,
       const XLATensor& weight,
       tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding,
-      bool use_full_conv_precision);
+      tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
   static XLATensor log_softmax_backward(const XLATensor& grad_output,
                                         const XLATensor& output,

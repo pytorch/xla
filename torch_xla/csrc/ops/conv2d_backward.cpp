@@ -22,9 +22,8 @@ xla::Shape NodeOutputShape(
     XLA_CHECK_EQ(operands.size(), 3)
         << "Unexpected number of operands: " << operands.size();
     // The precision doesn't matter for shape inference.
-    Conv2DGrads grads =
-        BuildConv2dBackward(operands[0], operands[1], operands[2], stride,
-                            padding, xla::PrecisionConfig::DEFAULT);
+    Conv2DGrads grads = BuildConv2dBackward(operands[0], operands[1],
+                                            operands[2], stride, padding);
     return xla::Tuple(operands[0].builder(),
                       {grads.grad_input, grads.grad_weight, grads.grad_bias});
   };
@@ -32,33 +31,25 @@ xla::Shape NodeOutputShape(
                           lower_for_shape_fn);
 }
 
-xla::PrecisionConfig::Precision MakePrecisionConfig(
-    bool use_full_conv_precision) {
-  return use_full_conv_precision ? xla::PrecisionConfig::HIGHEST
-                                 : xla::PrecisionConfig::DEFAULT;
-}
-
 }  // namespace
 
 Conv2dBackward::Conv2dBackward(
     const Value& grad_output, const Value& input, const Value& weight,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    bool use_full_conv_precision)
+    tensorflow::gtl::ArraySlice<const xla::int64> padding)
     : Node(ir::OpKind(at::aten::thnn_conv2d_backward),
            {grad_output, input, weight},
            NodeOutputShape(grad_output, input, weight, stride, padding),
            /*num_outputs=*/3, xla::util::MHash(stride, padding)),
       stride_(stride.begin(), stride.end()),
-      padding_(padding.begin(), padding.end()),
-      precision_(MakePrecisionConfig(use_full_conv_precision)) {}
+      padding_(padding.begin(), padding.end()) {}
 
 XlaOpVector Conv2dBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
   xla::XlaOp input = loctx->GetOutputOp(operand(1));
   xla::XlaOp weight = loctx->GetOutputOp(operand(2));
-  auto grads = BuildConv2dBackward(grad_output, input, weight, stride_,
-                                   padding_, precision_);
+  auto grads =
+      BuildConv2dBackward(grad_output, input, weight, stride_, padding_);
   return ReturnOps({std::move(grads.grad_input), std::move(grads.grad_weight),
                     std::move(grads.grad_bias)},
                    loctx);
@@ -67,8 +58,7 @@ XlaOpVector Conv2dBackward::Lower(LoweringContext* loctx) const {
 std::string Conv2dBackward::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", stride=[" << absl::StrJoin(stride_, ", ")
-     << "], padding=[" << absl::StrJoin(padding_, ", ")
-     << "], precision=" << xla::PrecisionConfig::Precision_Name(precision_);
+     << "], padding=[" << absl::StrJoin(padding_, ", ") << "]";
   return ss.str();
 }
 
