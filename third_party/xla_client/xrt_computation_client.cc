@@ -948,6 +948,8 @@ tensorflow::DataType XrtComputationClient::XlaTypeToDataType(
       return tensorflow::DT_UINT64;
     case F32:
       return tensorflow::DT_FLOAT;
+    case F64:
+      return tensorflow::DT_DOUBLE;
     case BF16:
       return tensorflow::DT_BFLOAT16;
     default:

@@ -345,16 +345,13 @@ void XLATensor::TryLimitGraphSize() {
   }
 }
 
+bool XLATensor::ShouldBeOnDevice(const at::Tensor& tensor) const {
+  // Anything which is not a scalar goes on device for now.
+  return tensor.numel() > 1;
+}
+
 ir::Value XLATensor::GetIrValue(const at::Tensor& tensor) const {
-  // We are asked to create an IR Node from a tensor data.
-  // If the constant is small enough, create a Constant IR Node which will
-  // result in an XLA constant added to the graph. This has the advantage of XLA
-  // optimizations potentially doing a better job on it.
-  // If the constant size is above a given threshold, create device data to host
-  // them.
-  static const xla::int64 kMaxConstantSize = 128 * 1024;
-  xla::int64 size = tensor.type().elementSizeInBytes() * tensor.numel();
-  if (size > kMaxConstantSize) {
+  if (ShouldBeOnDevice(tensor)) {
     data()->xla_data = TensorToXlaData(tensor, GetDevice());
     return CreateTensorNode(data()->xla_data);
   }
