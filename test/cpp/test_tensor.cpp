@@ -78,7 +78,7 @@ TEST_F(TensorTest, TestAdd) {
   ForEachDevice([&](const Device& device) {
     auto dev_a = XLATensor::Create(a, device, /*requires_grad=*/false);
     auto dev_b = XLATensor::Create(b, device, /*requires_grad=*/false);
-    auto dev_c = dev_a.add(dev_b, 1.0);
+    auto dev_c = XLATensor::add(dev_a, dev_b, 1.0);
 
     AllClose(c, dev_c);
   });
@@ -96,7 +96,7 @@ TEST_F(TensorTest, TestIntegerAdd) {
 
       auto dev_a = XLATensor::Create(a, device, /*requires_grad=*/false);
       auto dev_b = XLATensor::Create(b, device, /*requires_grad=*/false);
-      auto dev_c = dev_a.add(dev_b, 1.0);
+      auto dev_c = XLATensor::add(dev_a, dev_b, 1.0);
 
       EXPECT_TRUE(EqualValues(c, ToTensor(dev_c)));
     }
@@ -189,8 +189,8 @@ TEST_F(TensorTest, TestViewMod) {
     auto dev_input = XLATensor::Create(xinput, device, /*requires_grad=*/false);
     auto dev_one = XLATensor::Create(one, device, /*requires_grad=*/false);
     auto dev_output = XLATensor::view(dev_input, {-1, 320});
-    dev_output.add_(dev_one, 1.0);
-    dev_input.add_(dev_one, 1.0);
+    XLATensor::add_(dev_output, dev_one, 1.0);
+    XLATensor::add_(dev_input, dev_one, 1.0);
     AllClose(output, dev_output);
     AllClose(input, dev_input);
   });
@@ -209,9 +209,9 @@ TEST_F(TensorTest, TestViewModComplex) {
     auto dev_input = XLATensor::Create(xinput, device, /*requires_grad=*/false);
     auto dev_one = XLATensor::Create(one, device, /*requires_grad=*/false);
     auto dev_output1 = XLATensor::view(dev_input, {-1, 320});
-    dev_output1.add_(dev_one, 1.0);
+    XLATensor::add_(dev_output1, dev_one, 1.0);
     auto dev_output2 = XLATensor::view(dev_input, {-1, 160});
-    dev_output2.add_(dev_one, 1.0);
+    XLATensor::add_(dev_output2, dev_one, 1.0);
     AllClose(output1, dev_output1);
     AllClose(output2, dev_output2);
   });
@@ -230,9 +230,9 @@ TEST_F(TensorTest, TestViewOfViewMod) {
     auto dev_input = XLATensor::Create(xinput, device, /*requires_grad=*/false);
     auto dev_one = XLATensor::Create(one, device, /*requires_grad=*/false);
     auto dev_output1 = XLATensor::view(dev_input, {-1, 320});
-    dev_output1.add_(dev_one, 1.0);
+    XLATensor::add_(dev_output1, dev_one, 1.0);
     auto dev_output2 = XLATensor::view(dev_output1, {-1, 160});
-    dev_output2.add_(dev_one, 1.0);
+    XLATensor::add_(dev_output2, dev_one, 1.0);
     AllClose(output1, dev_output1);
     AllClose(output2, dev_output2);
   });
