@@ -937,8 +937,10 @@ XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,
                 input.GetDevice());
 }
 
-XLATensor XLATensor::matmul(const XLATensor& input, const XLATensor& other) {
-  return Create(ir::ops::MatMul(input.GetIrValue(), other.GetIrValue()),
+XLATensor XLATensor::matmul(const XLATensor& input, const XLATensor& other,
+                            bool use_full_conv_precision) {
+  return Create(ir::ops::MatMul(input.GetIrValue(), other.GetIrValue(),
+                                use_full_conv_precision),
                 input.GetDevice());
 }
 
