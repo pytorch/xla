@@ -155,64 +155,70 @@ void InitXlaTensorBindings(py::module m) {
       .def("size", [](const XLATensor& s) { return s.DimensionSizes(); })
       .def("device",
            [](const XLATensor& s) { return s.GetDevice().ToString(); })
-      .def("__add__", [](const XLATensor& self,
-                         XLATensor& other) { return self.add(other, 1.0); })
-      .def("add", [](const XLATensor& self, double alpha,
-                     const XLATensor& other) { return self.add(other, alpha); })
+      .def("__add__",
+           [](const XLATensor& self, XLATensor& other) {
+             return XLATensor::add(self, other, 1.0);
+           })
+      .def("add",
+           [](const XLATensor& self, double alpha, const XLATensor& other) {
+             return XLATensor::add(self, other, alpha);
+           })
       .def("add_",
            [](XLATensor self, double alpha, const XLATensor& other) {
-             self.add_(other, alpha);
+             XLATensor::add_(self, other, alpha);
              return self;
            })
       .def("add_",
            [](XLATensor self, const XLATensor& other) {
-             self.add_(other, 1.);
+             XLATensor::add_(self, other, 1.0);
              return self;
            })
       .def(
           "__mul__",
           [](const XLATensor& self, const XLATensor& other) {
-            return self.mul(other);
+            return XLATensor::mul(self, other);
           },
           py::arg("other"))
-      .def("__mul__",
-           [](const XLATensor& self, double other) { return self.mul(other); })
+      .def("__mul__", [](const XLATensor& self,
+                         double other) { return XLATensor::mul(self, other); })
       .def(
           "mul",
           [](const XLATensor& self, const XLATensor& other) {
-            return self.mul(other);
+            return XLATensor::mul(self, other);
           },
           py::arg("other"))
-      .def("mul",
-           [](const XLATensor& self, double other) { return self.mul(other); })
+      .def("mul", [](const XLATensor& self,
+                     double other) { return XLATensor::mul(self, other); })
       .def(
           "mul_",
           [](XLATensor self, const XLATensor& other) {
-            self.mul_(other);
+            XLATensor::mul_(self, other);
             return self;
           },
           py::arg("other"))
       .def("mul_",
            [](XLATensor self, double other) {
-             self.mul_(other);
+             XLATensor::mul_(self, other);
              return self;
            })
       .def(
           "__div__",
           [](const XLATensor& self, const XLATensor& other) {
-            return self.div(other);
+            return XLATensor::div(self, other);
           },
           py::arg("other"))
-      .def("__div__",
-           [](const XLATensor& self, double other) { return self.div(other); })
+      .def("__div__", [](const XLATensor& self,
+                         double other) { return XLATensor::div(self, other); })
       .def(
           "__truediv__",
           [](const XLATensor& self, const XLATensor& other) {
-            return self.div(other);
+            return XLATensor::div(self, other);
           },
           py::arg("other"))
       .def("__truediv__",
-           [](const XLATensor& self, double other) { return self.div(other); })
+           [](const XLATensor& self, double other) {
+             return XLATensor::div(self, other);
+           })
       .def("t", [](const XLATensor& self) { return XLATensor::t(self); })
       .def("view",
            [](const XLATensor& self, py::args args) {
@@ -239,7 +245,7 @@ void InitXlaTensorBindings(py::module m) {
            })
       .def("zero_",
            [](XLATensor self) {
-             self.zero_();
+             XLATensor::zero_(self);
              return self;
            })
       .def("detach_",
