@@ -79,6 +79,16 @@ xla::XlaOp BuildRelu(const xla::XlaOp& input) {
                              0, input_shape.element_type(), input.builder()));
 }
 
+xla::XlaOp BuildLeakyRelu(const xla::XlaOp& input,
+                          double negative_slope_value) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero = XlaHelpers::ScalarValue<double>(
+      0, input_shape.element_type(), input.builder());
+  xla::XlaOp negative_slope = XlaHelpers::ScalarValue(
+      negative_slope_value, input_shape.element_type(), input.builder());
+  return xla::Select(xla::Ge(input, zero), input, negative_slope * input);
+}
+
 xla::XlaOp BuildTypeAs(const torch::jit::Node* node,
                        const xla::XlaOp& operand) {
   const auto node_outputs = node->outputs();
@@ -93,9 +103,9 @@ xla::XlaOp BuildTypeAs(const torch::jit::Node* node,
 
 xla::XlaOp BuildSigmoid(const xla::XlaOp& input) {
   xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp half =
-      XlaHelpers::ScalarValue<float>(0.5, shape.element_type(), input.builder());
-  return  half + half * xla::Tanh(half * input);
+  xla::XlaOp half = XlaHelpers::ScalarValue<float>(0.5, shape.element_type(),
+                                                   input.builder());
+  return half + half * xla::Tanh(half * input);
 }
 
 }  // namespace torch_xla
