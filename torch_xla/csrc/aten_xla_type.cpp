@@ -446,6 +446,15 @@ at::Tensor& AtenXlaType::clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
   return self;
 }
 
+at::Tensor AtenXlaType::ceil(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::ceil(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::floor(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::floor(bridge::GetXlaTensor(self)));
+}
+
 int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
   return bridge::GetXlaTensor(self).size(dim);
 }

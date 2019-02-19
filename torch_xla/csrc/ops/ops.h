@@ -96,6 +96,10 @@ NodePtr Sigmoid(const Value& input);
 NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
               c10::optional<at::Scalar> max);
 
+NodePtr Ceil(const Value& input);
+
+NodePtr Floor(const Value& input);
+
 NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
                     bool use_full_conv_precision);
 

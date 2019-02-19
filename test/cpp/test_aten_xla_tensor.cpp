@@ -669,6 +669,26 @@ TEST_F(AtenXlaTensorTest, TestClampMax) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestCeil) {
+  at::Tensor a = at::randn({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
+  at::Tensor b = at::ceil(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::ceil(xla_a);
+    AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestFloor) {
+  at::Tensor a = at::randn({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
+  at::Tensor b = at::floor(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::floor(xla_a);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestNeg) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::neg(a);
