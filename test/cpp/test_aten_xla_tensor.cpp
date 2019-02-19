@@ -1390,7 +1390,7 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
   int classes = 5;
   at::Tensor input = GetTestTensor({batch, classes});
   at::Tensor target =
-      at::empty({batch}, at::TensorOptions(at::kLong)).random_(0, classes);
+      at::randint(0, classes, {batch}, at::TensorOptions(at::kLong));
   at::Tensor undef_weight;
   for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
     at::Tensor output =
@@ -1629,6 +1629,84 @@ TEST_F(AtenXlaTensorTest, TestTrilBatch) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestBitwiseAnd) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor rhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor result = lhs.__and__(rhs);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs, device);
+    at::Tensor xla_rhs = bridge::CreateXlaTensor(rhs, device);
+    at::Tensor xla_result = xla_lhs.__and__(xla_rhs);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseAndScalar) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Scalar rhs(123456789);
+  at::Tensor result = lhs.__and__(rhs);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs, device);
+    at::Tensor xla_result = xla_lhs.__and__(rhs);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseOr) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor rhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor result = lhs.__or__(rhs);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs, device);
+    at::Tensor xla_rhs = bridge::CreateXlaTensor(rhs, device);
+    at::Tensor xla_result = xla_lhs.__or__(xla_rhs);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseOrScalar) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Scalar rhs(123456789);
+  at::Tensor result = lhs.__or__(rhs);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs, device);
+    at::Tensor xla_result = xla_lhs.__or__(rhs);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseXor) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor rhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor result = lhs.__xor__(rhs);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs, device);
+    at::Tensor xla_rhs = bridge::CreateXlaTensor(rhs, device);
+    at::Tensor xla_result = xla_lhs.__xor__(xla_rhs);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseXorScalar) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Scalar rhs(123456789);
+  at::Tensor result = lhs.__xor__(rhs);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs, device);
+    at::Tensor xla_result = xla_lhs.__xor__(rhs);
+    AllClose(result, xla_result);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
@@ -1774,7 +1852,7 @@ TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
   int classes = 5;
   at::Tensor input = GetTestTensor({batch, classes});
   at::Tensor target =
-      at::empty({batch}, at::TensorOptions(at::kLong)).random_(0, classes);
+      at::randint(0, classes, {batch}, at::TensorOptions(at::kLong));
   at::Tensor undef_weight;
   for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
     auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {

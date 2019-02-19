@@ -154,6 +154,18 @@ class XLATensor {
   static XLATensor rsub(const XLATensor& input, const at::Scalar& other,
                         const at::Scalar& alpha);
 
+  static XLATensor __and__(const XLATensor& input, const at::Scalar& other);
+
+  static XLATensor __and__(const XLATensor& input, const XLATensor& other);
+
+  static XLATensor __or__(const XLATensor& input, const at::Scalar& other);
+
+  static XLATensor __or__(const XLATensor& input, const XLATensor& other);
+
+  static XLATensor __xor__(const XLATensor& input, const at::Scalar& other);
+
+  static XLATensor __xor__(const XLATensor& input, const XLATensor& other);
+
   // Dispatches a comparison operator, setting the logical type of the result
   // appropriately.
   static XLATensor DispatchComparisonOp(c10::Symbol kind,
