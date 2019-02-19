@@ -50,9 +50,10 @@ std::vector<std::shared_ptr<xla::ComputationClient::Data>> CreateTensorsData(
 
 // Creates an XLA literal out of an ATEN tensor. If shape is specified, that
 // shape+layout will be used, otherwise one will be generated out of the ATEN
-// tensor shape.
-xla::Literal GetTensorLiteral(const at::Tensor& tensor,
-                              const xla::Shape* shape);
+// tensor shape. The device argument (can be nullptr for the default device)
+// tells the API that the created Literal will be sent to such device.
+xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
+                              const Device* device);
 
 // If "shape" is a tuple, return the element shapes, otherwise return a
 // singleton list containing the original shape.

@@ -360,7 +360,7 @@ ir::Value XLATensor::GetIrValue(const at::Tensor& tensor) const {
   }
   xla::Shape tensor_shape =
       CreateComputationShapeFromTensor(tensor, &GetDevice());
-  xla::Literal literal = GetTensorLiteral(tensor, &tensor_shape);
+  xla::Literal literal = GetTensorLiteral(tensor, &tensor_shape, &GetDevice());
   return ir::MakeNode<ir::ops::Constant>(std::move(literal));
 }
 
@@ -484,6 +484,11 @@ std::vector<at::Tensor> XLATensor::GetTensors(
     XLA_CHECK_EQ(tensors->size(), writeable->size());
     for (size_t i = 0; i < tensors->size(); ++i) {
       if ((*writeable)[i]) {
+        // If all we have for this tensor is ATEN tensor data, we need to set it
+        // before calling DiscardXlaData(), which will otherwise error out.
+        if (!(*tensors)[i].CurrentTensorData()) {
+          (*tensors)[i].SetTensorData(results[i]);
+        }
         (*tensors)[i].DiscardXlaData();
       }
     }
