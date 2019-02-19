@@ -11,6 +11,7 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type_instances.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla_test.h"
@@ -22,7 +23,7 @@ class AtenXlaTensorTest : public TorchXlaTest {
  protected:
   static void SetUpTestCase() {
     AtenXlaType::RegisterAtenTypes();
-    AtenXlaType::SetFullConvPrecision();
+    XlaHelpers::set_mat_mul_precision(xla::PrecisionConfig::HIGHEST);
   }
 };
 

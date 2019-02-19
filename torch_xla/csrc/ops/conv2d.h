@@ -13,13 +13,11 @@ class Conv2d : public Node {
  public:
   Conv2d(const Value& input, const Value& weight, const Value& bias,
          tensorflow::gtl::ArraySlice<const xla::int64> stride,
-         tensorflow::gtl::ArraySlice<const xla::int64> padding,
-         bool use_full_conv_precision);
+         tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
   Conv2d(const Value& input, const Value& weight,
          tensorflow::gtl::ArraySlice<const xla::int64> stride,
-         tensorflow::gtl::ArraySlice<const xla::int64> padding,
-         bool use_full_conv_precision);
+         tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
@@ -29,14 +27,10 @@ class Conv2d : public Node {
 
   const std::vector<xla::int64>& padding() const { return padding_; }
 
-  xla::PrecisionConfig::Precision precision() const { return precision_; }
-
  private:
   // The parameters of the convolution.
   std::vector<xla::int64> stride_;
   std::vector<xla::int64> padding_;
-  // The numeric precision to use on TPU.
-  xla::PrecisionConfig::Precision precision_;
 };
 
 }  // namespace ops
