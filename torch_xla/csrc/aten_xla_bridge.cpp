@@ -32,6 +32,12 @@ XLATensor GetXlaTensorUnwrap(const at::Tensor& tensor) {
   return GetXlaTensor(ToTensor(tensor));
 }
 
+XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device) {
+  auto xtensor = TryGetXlaTensor(tensor);
+  return xtensor ? *xtensor
+                 : XLATensor::Create(tensor, device, /*requires_grad=*/false);
+}
+
 std::vector<at::Tensor> XlaCreateTensorList(
     const at::TensorList& tensors, const std::vector<bool>* writeable) {
   std::vector<at::Tensor> aten_xla_tensors(tensors.size());

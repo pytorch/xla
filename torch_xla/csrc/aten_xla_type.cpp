@@ -273,7 +273,8 @@ at::Tensor AtenXlaType::mul(const at::Tensor& self,
 
 at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::mul_(self_tensor, bridge::GetXlaTensor(other));
+  XLATensor::mul_(self_tensor,
+                  bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()));
   return self;
 }
 

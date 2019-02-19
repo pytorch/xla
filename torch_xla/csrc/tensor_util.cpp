@@ -25,8 +25,12 @@ bool ShouldUseBF16() {
   return use_fp16 != 0;
 }
 
-xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type) {
+xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type,
+                                         const Device& device) {
   switch (scalar_type) {
+    case at::ScalarType::Double:
+      return device.hw_type != DeviceType::TPU ? xla::PrimitiveType::F64
+                                               : xla::PrimitiveType::F32;
     case at::ScalarType::Float:
       return xla::PrimitiveType::F32;
     case at::ScalarType::Byte:
@@ -179,46 +183,52 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
 
 template <typename SType, typename DType>
 void TensorToBuffer(const at::Tensor& tensor, const xla::Shape& dest_shape,
-                    void* dest_buffer, size_t dest_buffer_size) {
+                    void* dest_buffer, size_t dest_buffer_size,
+                    const Device& device) {
   at::Tensor contiguous_tensor = tensor.contiguous();
   xla::Shape src_shape = MakeTorchTensorLayout(
       XlaHelpers::I64List(contiguous_tensor.sizes()),
-      XlaTypeFromTensorType(contiguous_tensor.type().scalarType()));
+      XlaTypeFromTensorType(contiguous_tensor.type().scalarType(), device));
   CopyTensors<SType, DType>(contiguous_tensor.data<SType>(), src_shape,
                             dest_buffer, dest_buffer_size, dest_shape);
 }
 
 template <typename SType>
 void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
-                         void* dest_buffer, size_t dest_buffer_size) {
+                         void* dest_buffer, size_t dest_buffer_size,
+                         const Device& device) {
   switch (dest_shape.element_type()) {
     case xla::PrimitiveType::BF16:
       TensorToBuffer<SType, tensorflow::bfloat16>(
-          tensor, dest_shape, dest_buffer, dest_buffer_size);
+          tensor, dest_shape, dest_buffer, dest_buffer_size, device);
       break;
     case xla::PrimitiveType::F32:
       TensorToBuffer<SType, float>(tensor, dest_shape, dest_buffer,
-                                   dest_buffer_size);
+                                   dest_buffer_size, device);
+      break;
+    case xla::PrimitiveType::F64:
+      TensorToBuffer<SType, double>(tensor, dest_shape, dest_buffer,
+                                    dest_buffer_size, device);
       break;
     case xla::PrimitiveType::U8:
       TensorToBuffer<SType, xla::uint8>(tensor, dest_shape, dest_buffer,
-                                        dest_buffer_size);
+                                        dest_buffer_size, device);
       break;
     case xla::PrimitiveType::S8:
       TensorToBuffer<SType, xla::int8>(tensor, dest_shape, dest_buffer,
-                                       dest_buffer_size);
+                                       dest_buffer_size, device);
       break;
     case xla::PrimitiveType::S16:
       TensorToBuffer<SType, xla::int16>(tensor, dest_shape, dest_buffer,
-                                        dest_buffer_size);
+                                        dest_buffer_size, device);
       break;
     case xla::PrimitiveType::S32:
       TensorToBuffer<SType, xla::int32>(tensor, dest_shape, dest_buffer,
-                                        dest_buffer_size);
+                                        dest_buffer_size, device);
       break;
     case xla::PrimitiveType::S64:
       TensorToBuffer<SType, xla::int64>(tensor, dest_shape, dest_buffer,
-                                        dest_buffer_size);
+                                        dest_buffer_size, device);
       break;
     default:
       XLA_ERROR() << "Destination shape type not supported: " << dest_shape;
@@ -227,31 +237,35 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
 
 void PopulateTensorBuffer(const at::Tensor& tensor,
                           const xla::Shape& dest_shape, void* dest_buffer,
-                          size_t dest_buffer_size) {
+                          size_t dest_buffer_size, const Device& device) {
   switch (tensor.type().scalarType()) {
+    case at::ScalarType::Double:
+      TensorToBufferSType<double>(tensor, dest_shape, dest_buffer,
+                                  dest_buffer_size, device);
+      break;
     case at::ScalarType::Float:
       TensorToBufferSType<float>(tensor, dest_shape, dest_buffer,
-                                 dest_buffer_size);
+                                 dest_buffer_size, device);
       break;
     case at::ScalarType::Byte:
       TensorToBufferSType<uint8_t>(tensor, dest_shape, dest_buffer,
-                                   dest_buffer_size);
+                                   dest_buffer_size, device);
       break;
     case at::ScalarType::Char:
       TensorToBufferSType<int8_t>(tensor, dest_shape, dest_buffer,
-                                  dest_buffer_size);
+                                  dest_buffer_size, device);
       break;
     case at::ScalarType::Short:
       TensorToBufferSType<int16_t>(tensor, dest_shape, dest_buffer,
-                                   dest_buffer_size);
+                                   dest_buffer_size, device);
       break;
     case at::ScalarType::Int:
       TensorToBufferSType<int32_t>(tensor, dest_shape, dest_buffer,
-                                   dest_buffer_size);
+                                   dest_buffer_size, device);
       break;
     case at::ScalarType::Long:
       TensorToBufferSType<int64_t>(tensor, dest_shape, dest_buffer,
-                                   dest_buffer_size);
+                                   dest_buffer_size, device);
       break;
     default:
       XLA_ERROR() << "Tensor type not supported: " << tensor.type();
@@ -264,7 +278,7 @@ std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
       [&](const xla::ComputationClient::TensorSource& source_tensor,
           void* dest_buffer, size_t dest_buffer_size) {
         PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
-                             dest_buffer_size);
+                             dest_buffer_size, device);
       };
 
   std::vector<xla::ComputationClient::TensorSource> source_tensors;
@@ -421,7 +435,7 @@ std::vector<std::shared_ptr<xla::ComputationClient::Data>> CreateTensorsData(
         [&, i](const xla::ComputationClient::TensorSource& source_tensor,
                void* dest_buffer, size_t dest_buffer_size) {
           PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
-                               dest_buffer_size);
+                               dest_buffer_size, device);
         };
     source_tensors.emplace_back(std::move(shape), devices[i],
                                 std::move(populate_fn));
@@ -429,18 +443,21 @@ std::vector<std::shared_ptr<xla::ComputationClient::Data>> CreateTensorsData(
   return xla::ComputationClient::Get()->TransferToServer(source_tensors);
 }
 
-xla::Literal GetTensorLiteral(const at::Tensor& tensor,
-                              const xla::Shape* shape) {
+xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
+                              const Device* device) {
+  if (device == nullptr) {
+    device = GetDefaultDevice();
+  }
   xla::Shape computed_shape;
   if (shape == nullptr) {
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
     computed_shape = MakeTorchTensorLayout(
-        dimensions, XlaTypeFromTensorType(tensor.type().scalarType()));
+        dimensions, XlaTypeFromTensorType(tensor.type().scalarType(), *device));
     shape = &computed_shape;
   }
   xla::Literal literal(*shape);
   PopulateTensorBuffer(tensor, *shape, literal.untyped_data(),
-                       literal.size_bytes());
+                       literal.size_bytes(), *device);
   return literal;
 }
 
@@ -508,6 +525,12 @@ xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
     device = GetDefaultDevice();
   }
   switch (scalar_type) {
+    case at::ScalarType::Double:
+      if (detail::UseBF16()) {
+        return xla::PrimitiveType::BF16;
+      }
+      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::F64
+                                                : xla::PrimitiveType::F32;
     case at::ScalarType::Float:
       // When PyTorch will support native BF16 type, the global configuration
       // can be replaced (or augmented) with the proper mapping.
