@@ -225,6 +225,12 @@ xla::XlaOp BuildStack(
   return BuildStack(inputs, dim);
 }
 
+xla::XlaOp BuildCat(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
+                    xla::int64 dim) {
+  XLA_CHECK_GT(inputs.size(), 0);
+  return xla::ConcatInDim(inputs[0].builder(), inputs, dim);
+}
+
 xla::XlaOp BuildCat(
     const torch::jit::Node* node,
     const std::function<xla::XlaOp(const torch::jit::Value*)>& node_op,
@@ -239,7 +245,7 @@ xla::XlaOp BuildCat(
     const auto stack_input = stack_inputs[i];
     cat_inputs.push_back(node_op(stack_input));
   }
-  return xla::ConcatInDim(b, cat_inputs, dim);
+  return BuildCat(cat_inputs, dim);
 }
 
 xla::XlaOp BuildRepeat(const xla::XlaOp& input,

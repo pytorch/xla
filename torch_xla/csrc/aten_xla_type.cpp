@@ -471,6 +471,14 @@ at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) const {
   return bridge::AtenFromXlaTensor(XLATensor::stack(xla_tensors, dim));
 }
 
+at::Tensor AtenXlaType::cat(at::TensorList tensors, int64_t dim) const {
+  std::vector<XLATensor> xla_tensors;
+  for (auto& tensor : tensors) {
+    xla_tensors.push_back(bridge::GetXlaTensor(tensor));
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::cat(xla_tensors, dim));
+}
+
 at::Tensor AtenXlaType::relu(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::relu(bridge::GetXlaTensor(self)));
 }
