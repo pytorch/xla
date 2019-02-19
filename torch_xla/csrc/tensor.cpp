@@ -854,6 +854,14 @@ void XLATensor::clamp_(XLATensor& input, c10::optional<at::Scalar> min,
   input.SetIrValue(ir::ops::Clamp(input.GetIrValue(), min, max));
 }
 
+XLATensor XLATensor::ceil(const XLATensor& input) {
+  return Create(ir::ops::Ceil(input.GetIrValue()), input.GetDevice());
+}
+
+XLATensor XLATensor::floor(const XLATensor& input) {
+  return Create(ir::ops::Floor(input.GetIrValue()), input.GetDevice());
+}
+
 XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
                            xla::int64 start, xla::int64 end, xla::int64 step) {
   return Create(

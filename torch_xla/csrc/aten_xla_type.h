@@ -149,6 +149,10 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
                      c10::optional<at::Scalar> max) const override;
 
+  at::Tensor ceil(const at::Tensor& self) const override;
+
+  at::Tensor floor(const at::Tensor& self) const override;
+
   int64_t size(const at::Tensor& self, int64_t dim) const override;
 
   at::Tensor slice(const at::Tensor& self, int64_t dim, int64_t start,
