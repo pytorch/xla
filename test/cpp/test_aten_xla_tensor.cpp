@@ -1727,7 +1727,7 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
 
     ForEachDevice([&](const Device& device) {
       TestBackward({GetTestTensor({5, 3, 4, 2})}, device, testfn, /*rtol=*/1e-3,
-                   /*atol=*/1e-5);
+                   /*atol=*/1e-4);
     });
   }
 }
