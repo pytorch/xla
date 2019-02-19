@@ -80,6 +80,12 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& sub_(at::Tensor& self, const at::Tensor& other,
                    at::Scalar alpha) const override;
 
+  at::Tensor rsub(const at::Tensor& self, const at::Tensor& other,
+                  at::Scalar alpha) const override;
+
+  at::Tensor rsub(const at::Tensor& self, at::Scalar other,
+                  at::Scalar alpha) const override;
+
   at::Tensor mul(const at::Tensor& self,
                  const at::Tensor& other) const override;
   at::Tensor& mul_(at::Tensor& self, const at::Tensor& other) const override;

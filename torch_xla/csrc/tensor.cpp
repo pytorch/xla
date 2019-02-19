@@ -675,6 +675,20 @@ XLATensor XLATensor::lt(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
 }
 
+XLATensor XLATensor::rsub(const XLATensor& input, const XLATensor& other,
+                          const at::Scalar& alpha) {
+  ir::NodePtr alpha_xla = ir::ops::ScalarOp(alpha, other.shape());
+  return Create(other.GetIrValue() - alpha_xla * input.GetIrValue(),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::rsub(const XLATensor& input, const at::Scalar& other,
+                          const at::Scalar& alpha) {
+  ir::NodePtr alpha_xla = ir::ops::ScalarOp(alpha, input.shape());
+  ir::NodePtr other_xla = ir::ops::ScalarOp(other, input.shape());
+  return Create(other_xla - alpha_xla * input.GetIrValue(), input.GetDevice());
+}
+
 XLATensor XLATensor::relu(const XLATensor& input) {
   return Create(ir::ops::ReluOp(input.GetIrValue()), input.GetDevice());
 }

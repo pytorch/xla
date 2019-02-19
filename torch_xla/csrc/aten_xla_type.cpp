@@ -250,6 +250,18 @@ at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Tensor& other,
   return self;
 }
 
+at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Tensor& other,
+                             at::Scalar alpha) const {
+  return bridge::AtenFromXlaTensor(XLATensor::rsub(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other), alpha));
+}
+
+at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
+                             at::Scalar alpha) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::rsub(bridge::GetXlaTensor(self), other, alpha));
+}
+
 at::Tensor AtenXlaType::mul(const at::Tensor& self,
                             const at::Tensor& other) const {
   return bridge::AtenFromXlaTensor(
