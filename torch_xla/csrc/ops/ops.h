@@ -106,7 +106,8 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias,
 NodePtr Dot(const Value& input, const Value& weight,
             bool use_full_conv_precision);
 
-NodePtr MatMul(const Value& lhs, const Value& rhs);
+NodePtr MatMul(const Value& lhs, const Value& rhs,
+               bool use_full_conv_precision);
 
 NodePtr NllLossOp(const Value& logits, const Value& labels);
 

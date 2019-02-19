@@ -72,7 +72,13 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(const xla::XlaOp& lhs,
 
 }  // namespace
 
-xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs) {
+xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs,
+                        bool use_full_conv_precision) {
+  const auto precision_level = use_full_conv_precision
+                                   ? xla::PrecisionConfig::HIGHEST
+                                   : xla::PrecisionConfig::DEFAULT;
+  xla::PrecisionConfig precision_config =
+      XlaHelpers::BuildPrecisionConfig(precision_level);
   // Expand cases in https://pytorch.org/docs/stable/torch.html#torch.matmul
   xla::Shape lhs_shape = XlaHelpers::ShapeOfXlaOp(lhs);
   xla::Shape rhs_shape = XlaHelpers::ShapeOfXlaOp(rhs);
@@ -109,7 +115,7 @@ xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs) {
     dims.add_lhs_contracting_dimensions(lhs_shape.rank() - 1);
     dims.add_rhs_contracting_dimensions(lhs_shape.rank() - 2);
 
-    return xla::DotGeneral(reshaped_lhs, reshaped_rhs, dims);
+    return xla::DotGeneral(reshaped_lhs, reshaped_rhs, dims, &precision_config);
   }
   XLA_ERROR() << "Unsupported matmul operation: matmul(" << lhs_shape << ", "
               << rhs_shape << ")";
