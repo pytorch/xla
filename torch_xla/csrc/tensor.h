@@ -541,6 +541,10 @@ class XLATensor {
 
   std::shared_ptr<Data> data_ptr() const { return data_; }
 
+  // Returns whether the tensor should be put as device data, or as a constant
+  // in the graph.
+  bool ShouldBeOnDevice(const at::Tensor& tensor) const;
+
   // Creates an IR value from ATEN tensor data.
   ir::Value GetIrValue(const at::Tensor& tensor) const;
 
