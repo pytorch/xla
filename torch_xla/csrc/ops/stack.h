@@ -9,8 +9,7 @@ namespace ops {
 
 class Stack : public Node {
  public:
-  Stack(tensorflow::gtl::ArraySlice<const ir::Value> values,
-        xla::int64 dim);
+  Stack(tensorflow::gtl::ArraySlice<const ir::Value> values, xla::int64 dim);
 
   std::string ToString() const override;
 

@@ -922,7 +922,7 @@ XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight,
                         bool use_full_conv_precision) {
   return Create(ir::ops::Dot(input.GetIrValue(), weight.GetIrValue(),
-                                  use_full_conv_precision),
+                             use_full_conv_precision),
                 input.GetDevice());
 }
 
