@@ -46,8 +46,6 @@ bool IsNonTrivialDilation(at::IntList dilation) {
 
 }  // namespace
 
-bool AtenXlaType::s_use_full_conv_precision_ = false;
-
 AtenXlaType::AtenXlaType(at::TensorTypeId type_id, bool is_variable,
                          bool is_undefined)
     : AtenXlaTypeBase(type_id, is_variable, is_undefined) {}
@@ -549,13 +547,11 @@ at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
     return bridge::AtenFromXlaTensor(XLATensor::conv2d(
         bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight),
         bridge::GetXlaTensor(bias), XlaHelpers::I64List(stride),
-        XlaHelpers::I64List(padding),
-        /*use_full_conv_precision=*/s_use_full_conv_precision_));
+        XlaHelpers::I64List(padding)));
   } else {
     return bridge::AtenFromXlaTensor(XLATensor::conv2d(
         bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight),
-        XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
-        /*use_full_conv_precision=*/s_use_full_conv_precision_));
+        XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
   }
 }
 
@@ -587,8 +583,7 @@ AtenXlaType::thnn_conv2d_backward(const at::Tensor& grad_output,
       /*input=*/bridge::GetXlaTensor(self),
       /*weight=*/bridge::GetXlaTensor(weight),
       /*stride=*/XlaHelpers::I64List(stride),
-      /*padding=*/XlaHelpers::I64List(padding),
-      /*use_full_conv_precision=*/s_use_full_conv_precision_);
+      /*padding=*/XlaHelpers::I64List(padding));
   return std::make_tuple(
       output_mask[0] ? bridge::AtenFromXlaTensor(std::get<0>(gradients))
                      : undefined,
@@ -607,23 +602,20 @@ at::Tensor AtenXlaType::addmm(const at::Tensor& self, const at::Tensor& mat1,
   return bridge::AtenFromXlaTensor(
       XLATensor::addmm(bridge::GetXlaTensor(mat1),
                        /*weight=*/bridge::GetXlaTensor(mat2),
-                       /*bias=*/bridge::GetXlaTensor(self),
-                       /*use_full_conv_precision=*/s_use_full_conv_precision_));
+                       /*bias=*/bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::mm(const at::Tensor& self,
                            const at::Tensor& mat2) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::mm(/*input=*/bridge::GetXlaTensor(self),
-                    /*weight=*/bridge::GetXlaTensor(mat2),
-                    /*use_full_conv_precision=*/s_use_full_conv_precision_));
+                    /*weight=*/bridge::GetXlaTensor(mat2)));
 }
 
 at::Tensor AtenXlaType::matmul(const at::Tensor& self,
                                const at::Tensor& other) const {
   return bridge::AtenFromXlaTensor(XLATensor::matmul(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other),
-      /*use_full_conv_precision=*/s_use_full_conv_precision_));
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
 at::Tensor AtenXlaType::t(const at::Tensor& self) const {
@@ -1017,11 +1009,6 @@ at::Tensor AtenXlaType::triu(const at::Tensor& self, int64_t diagonal) const {
 at::Tensor AtenXlaType::tril(const at::Tensor& self, int64_t diagonal) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::tril(bridge::GetXlaTensor(self), diagonal));
-}
-
-void AtenXlaType::SetFullConvPrecision(
-    bool use_full_conv_precision /*= true*/) {
-  s_use_full_conv_precision_ = use_full_conv_precision;
 }
 
 void AtenXlaType::RegisterAtenTypes() {
