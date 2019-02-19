@@ -164,6 +164,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor stack(at::TensorList tensors, int64_t dim) const override;
 
+  at::Tensor cat(at::TensorList tensors, int64_t dim) const override;
+
   at::Tensor relu(const at::Tensor& self) const override;
 
   at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,

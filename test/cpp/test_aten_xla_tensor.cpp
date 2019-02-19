@@ -737,6 +737,20 @@ TEST_F(AtenXlaTensorTest, TestStack) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestCat) {
+  at::Tensor a = at::rand({2, 1, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({2, 2, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::rand({2, 3, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor d = at::cat({a, b, c}, 1);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = bridge::CreateXlaTensor(c, device);
+    at::Tensor xla_d = at::cat({xla_a, xla_b, xla_c}, 1);
+    AllClose(d, xla_d);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestRepeat) {
   std::vector<std::vector<int64_t>> repeats_list = {{4, 2}, {4, 2, 3}};
   std::vector<std::vector<int64_t>> input_size_list = {{3}, {2, 4}};
