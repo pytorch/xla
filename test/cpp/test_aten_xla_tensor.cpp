@@ -780,6 +780,56 @@ TEST_F(AtenXlaTensorTest, TestMatmulBcast) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
+  at::Tensor a = at::rand({5}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({5}, at::TensorOptions(at::kFloat));
+  std::string equation = "i,j->ij";
+  at::Tensor c = at::einsum(equation, {a, b});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::einsum(equation, {xla_a, xla_b});
+    AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
+  at::Tensor a = at::rand({3, 2, 5}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({3, 5, 4}, at::TensorOptions(at::kFloat));
+  std::string equation = "bij,bjk->bik";
+  at::Tensor c = at::einsum(equation, {a, b});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::einsum(equation, {xla_a, xla_b});
+    AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestEinsumUnsupportedInputCount) {
+  at::Tensor input = at::rand({3, 3}, at::TensorOptions(at::kFloat));
+  std::string equation = "ii->i";
+  at::Tensor result = at::einsum(equation, {input});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_result = at::einsum(equation, {xla_input});
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestEinsumUnsupportedEquation) {
+  at::Tensor x = at::rand({2, 3, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor y = at::rand({4}, at::TensorOptions(at::kFloat));
+  std::string equation = "ijj,k->ik";
+  at::Tensor result = at::einsum(equation, {x, y});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_x = bridge::CreateXlaTensor(x, device);
+    at::Tensor xla_y = bridge::CreateXlaTensor(y, device);
+    at::Tensor xla_result = at::einsum(equation, {xla_x, xla_y});
+    AllClose(result, xla_result);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAddCMul) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));

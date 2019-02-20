@@ -307,6 +307,11 @@ class XLATensor {
 
   static XLATensor matmul(const XLATensor& input, const XLATensor& other);
 
+  // A generalized contraction between tensors of arbitrary dimension defined by
+  // the given equation and applied to the input tensors.
+  static XLATensor einsum(const std::string& equation,
+                          tensorflow::gtl::ArraySlice<const XLATensor> tensors);
+
   static XLATensor exp(const XLATensor& input);
 
   static XLATensor expm1(const XLATensor& input);
