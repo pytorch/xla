@@ -591,6 +591,20 @@ void XLATensor::div_(XLATensor& input, const at::Scalar& other) {
   input.SetIrValue(input.GetIrValue() / constant);
 }
 
+XLATensor XLATensor::fmod(const XLATensor& input, const XLATensor& other) {
+  return Create(ir::ops::Fmod(input.GetIrValue(), other.GetIrValue()),
+                input.GetDevice());
+}
+
+void XLATensor::fmod_(XLATensor& input, at::Scalar other) {
+  ir::NodePtr constant = ir::ops::ScalarOp(other, input.shape());
+  input.SetIrValue(ir::ops::Fmod(input.GetIrValue(), constant));
+}
+
+void XLATensor::fmod_(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(ir::ops::Fmod(input.GetIrValue(), other.GetIrValue()));
+}
+
 void XLATensor::zero_(XLATensor& input) {
   input.SetIrValue(ir::ops::ScalarOp(0.0, input.shape()));
 }

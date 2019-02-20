@@ -304,6 +304,24 @@ at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other) const {
   return self;
 }
 
+at::Tensor AtenXlaType::fmod(const at::Tensor& self,
+                             const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::fmod(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor& AtenXlaType::fmod_(at::Tensor& self, at::Scalar other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::fmod_(self_tensor, other);
+  return self;
+}
+
+at::Tensor& AtenXlaType::fmod_(at::Tensor& self, const at::Tensor& other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::fmod_(self_tensor, bridge::GetXlaTensor(other));
+  return self;
+}
+
 at::Tensor AtenXlaType::ne(const at::Tensor& self, at::Scalar other) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::ne(bridge::GetXlaTensor(self), other));

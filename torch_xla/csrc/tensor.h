@@ -119,6 +119,10 @@ class XLATensor {
   static void div_(XLATensor& input, const XLATensor& other);
   static void div_(XLATensor& input, const at::Scalar& other);
 
+  static XLATensor fmod(const XLATensor& input, const XLATensor& other);
+  static void fmod_(XLATensor& input, at::Scalar other);
+  static void fmod_(XLATensor& input, const XLATensor& other);
+
   static void zero_(XLATensor& input);
 
   // Additional operations which are part of the PyTorch Tensor functionality.
@@ -403,7 +407,7 @@ class XLATensor {
       const XLATensor& input,
       tensorflow::gtl::ArraySlice<const xla::int64> repeats);
 
-  static std::vector<XLATensor> split(const XLATensor& self,
+  static std::vector<XLATensor> split(const XLATensor& input,
                                       xla::int64 split_size, xla::int64 dim);
 
   // Squeeze out all trivial (size 1) dimensions.

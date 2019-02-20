@@ -99,6 +99,11 @@ class AtenXlaType : public AtenXlaTypeBase {
                  const at::Tensor& other) const override;
   at::Tensor& div_(at::Tensor& self, const at::Tensor& other) const override;
 
+  at::Tensor fmod(const at::Tensor& self,
+                  const at::Tensor& other) const override;
+  at::Tensor& fmod_(at::Tensor& self, at::Scalar other) const override;
+  at::Tensor& fmod_(at::Tensor& self, const at::Tensor& other) const override;
+
   at::Tensor ne(const at::Tensor& self, at::Scalar other) const override;
 
   at::Tensor ne(const at::Tensor& self, const at::Tensor& other) const override;
