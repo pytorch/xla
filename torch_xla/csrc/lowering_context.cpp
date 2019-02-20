@@ -1,5 +1,8 @@
 #include "torch_xla/csrc/lowering_context.h"
 
+#include <sstream>
+#include <stdexcept>
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
@@ -54,7 +57,14 @@ xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
   auto it = emitted_outputs_.find(output);
   if (it == emitted_outputs_.end()) {
     for (auto node : Util::ComputePostOrder(output.node, &emit_status_)) {
-      node->Lower(this);
+      try {
+        node->Lower(this);
+      } catch (const std::exception& ex) {
+        ReportBuilderError(node, ex.what());
+      }
+      if (!builder()->first_error().ok()) {
+        ReportBuilderError(node, /*error_msg=*/nullptr);
+      }
     }
     // At this point the outpout better be present, otherwise there is an issue
     // with the lowering code.
@@ -63,6 +73,22 @@ xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
         << "No XLA operation emitted for output: " << output;
   }
   return it->second;
+}
+
+void LoweringContext::ReportBuilderError(const Node* node,
+                                         const char* error_msg) {
+  std::stringstream ss;
+  ss << "Error while lowering: " << node->ToString() << "\n";
+  if (!builder()->first_error().ok()) {
+    // TODO: Use the new XlaBuilder::GetCurrentStatus() once it shows up, in
+    // order to get the C++ frame to the XLA error as well.
+    ss << "XLA builder error: " << builder()->first_error() << "\n";
+  }
+  if (error_msg != nullptr) {
+    ss << "Error: " << error_msg << "\n";
+  }
+  ss << node->metadata().frame_info;
+  throw std::runtime_error(ss.str());
 }
 
 }  // namespace ir
