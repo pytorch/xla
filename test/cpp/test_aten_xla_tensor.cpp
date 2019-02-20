@@ -1737,6 +1737,30 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorScalar) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestConstantPad) {
+  at::Tensor input = at::rand({4, 2, 5}, at::TensorOptions(at::kFloat));
+  std::vector<int64_t> pad{1, 2, 3, 4, 5, 6};
+  float pad_value = 5;
+  at::Tensor output = at::constant_pad_nd(input, pad, pad_value);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::constant_pad_nd(xla_input, pad, pad_value);
+    AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestConstantPadIncomplete) {
+  at::Tensor input = at::rand({4, 2, 5}, at::TensorOptions(at::kFloat));
+  std::vector<int64_t> pad{1, 2};
+  float pad_value = 5;
+  at::Tensor output = at::constant_pad_nd(input, pad, pad_value);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::constant_pad_nd(xla_input, pad, pad_value);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {

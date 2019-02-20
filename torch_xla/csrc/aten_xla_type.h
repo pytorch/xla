@@ -180,6 +180,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
                      c10::optional<at::Scalar> max) const override;
 
+  at::Tensor constant_pad_nd(const at::Tensor& self, at::IntArrayRef pad,
+                             at::Scalar value) const override;
+
   at::Tensor ceil(const at::Tensor& self) const override;
 
   at::Tensor floor(const at::Tensor& self) const override;

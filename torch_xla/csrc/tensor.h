@@ -279,6 +279,12 @@ class XLATensor {
   static void clamp_(XLATensor& input, c10::optional<at::Scalar> min,
                      c10::optional<at::Scalar> max);
 
+  // Pad with the given value and size specified by the given list of low and
+  // high paddings.
+  static XLATensor constant_pad_nd(
+      const XLATensor& input, tensorflow::gtl::ArraySlice<const xla::int64> pad,
+      const at::Scalar& value);
+
   static XLATensor ceil(const XLATensor& input);
 
   static XLATensor floor(const XLATensor& input);
