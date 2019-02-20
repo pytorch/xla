@@ -148,8 +148,6 @@ class AtenXlaTypeBase : public at::TypeDefault {{
 
   std::unique_ptr<at::Generator> generator() const override;
 
-  at::TypeID ID() const override;
-
 {hfuncs}
 }};
 
@@ -193,10 +191,6 @@ std::unique_ptr<at::Generator> AtenXlaTypeBase::generator() const {{
   return std::unique_ptr<at::Generator>(new at::CPUGenerator(&at::globalContext()));
 }}
 
-at::TypeID AtenXlaTypeBase::ID() const {{
-  return {typeid};
-}}
-
 {funcs}
 }}  // namespace torch_xla
 """
@@ -209,6 +203,10 @@ class {type_name} : public AtenXlaType {{
 
   at::ScalarType scalarType() const override {{
     return {scalar_type};
+  }}
+
+  at::TypeID ID() const override {{
+    return {typeid};
   }}
 
   const char* toString() const override {{
@@ -244,6 +242,7 @@ static inline void RegisterAtenXlaTypes() {{
   context.registerType(at::Backend::XLA, at::ScalarType::Int, GetXLATypeInt());
   context.registerType(at::Backend::XLA, at::ScalarType::Long, GetXLATypeLong());
   context.registerType(at::Backend::XLA, at::ScalarType::Float, GetXLATypeFloat());
+  context.registerType(at::Backend::XLA, at::ScalarType::Double, GetXLATypeDouble());
 }}
 
 }}  // namespace torch_xla
@@ -359,32 +358,44 @@ def create_type_instances():
       type_name='XLATypeByte',
       scalar_type='at::ScalarType::Byte',
       sizeof=1,
-      tensorid='c10::XLATensorId()')
+      tensorid='c10::XLATensorId()',
+      typeid='at::TypeID::XLAByte')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeChar',
       scalar_type='at::ScalarType::Char',
       sizeof=1,
-      tensorid='c10::XLATensorId()')
+      tensorid='c10::XLATensorId()',
+      typeid='at::TypeID::XLAChar')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeShort',
       scalar_type='at::ScalarType::Short',
       sizeof=2,
-      tensorid='c10::XLATensorId()')
+      tensorid='c10::XLATensorId()',
+      typeid='at::TypeID::XLAShort')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeInt',
       scalar_type='at::ScalarType::Int',
       sizeof=4,
-      tensorid='c10::XLATensorId()')
+      tensorid='c10::XLATensorId()',
+      typeid='at::TypeID::XLAInt')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeLong',
       scalar_type='at::ScalarType::Long',
       sizeof=8,
-      tensorid='c10::XLATensorId()')
+      tensorid='c10::XLATensorId()',
+      typeid='at::TypeID::XLALong')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeFloat',
       scalar_type='at::ScalarType::Float',
       sizeof=4,
-      tensorid='c10::XLATensorId()')
+      tensorid='c10::XLATensorId()',
+      typeid='at::TypeID::XLAFloat')
+  code += _CLASS_INST_HEADER.format(
+      type_name='XLATypeDouble',
+      scalar_type='at::ScalarType::Double',
+      sizeof=8,
+      tensorid='c10::XLATensorId()',
+      typeid='at::TypeID::XLADouble')
   return code
 
 
@@ -894,8 +905,7 @@ def generate(args):
             gen=os.path.basename(sys.argv[0]),
             funcs=functions,
             backend='at::Backend::XLA',
-            device_type='at::DeviceType::XLA',
-            typeid='at::TypeID::XLA'),
+            device_type='at::DeviceType::XLA'),
         file=gen_cpp_output_file(args))
     instances = create_type_instances()
     print(
