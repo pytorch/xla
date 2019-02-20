@@ -220,6 +220,16 @@ at::Tensor AtenXlaType::sqrt(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::sqrt(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::rsqrt(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::rsqrt(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::reciprocal(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::reciprocal(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::pow(bridge::GetXlaTensor(self), exponent));
