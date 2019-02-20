@@ -379,6 +379,9 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
     case xla::PrimitiveType::F32:
       return XlaLiteralToTensorHelper<float>(literal, element_type,
                                              dest_element_type);
+    case xla::PrimitiveType::F64:
+      return XlaLiteralToTensorHelper<double>(literal, element_type,
+                                              dest_element_type);
     case xla::PrimitiveType::U8:
       return XlaLiteralToTensorHelper<xla::uint8>(literal, element_type,
                                                   dest_element_type);
@@ -504,6 +507,8 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
     case xla::PrimitiveType::BF16:
     case xla::PrimitiveType::F32:
       return at::ScalarType::Float;
+    case xla::PrimitiveType::F64:
+      return at::ScalarType::Double;
     case xla::PrimitiveType::U8:
       return at::ScalarType::Byte;
     case xla::PrimitiveType::S8:
