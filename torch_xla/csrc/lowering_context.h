@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/core/platform/macros.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_util.h"
 
@@ -55,6 +56,10 @@ class LoweringContext {
   xla::StatusOr<xla::XlaComputation> Build(const xla::XlaOp& root);
 
  private:
+  // Reports an XLA builder error for the given node.
+  TF_ATTRIBUTE_NORETURN void ReportBuilderError(const Node* node,
+                                                const char* error_msg);
+
   xla::XlaBuilder builder_;
   std::vector<std::shared_ptr<xla::ComputationClient::Data>> parameters_;
   std::unordered_map<xla::ComputationClient::Data*, xla::XlaOp> parameters_map_;
