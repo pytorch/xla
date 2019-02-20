@@ -8,6 +8,7 @@
 #include "torch_xla/csrc/aten_xla_type_instances.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -687,6 +688,18 @@ at::Tensor AtenXlaType::matmul(const at::Tensor& self,
                                const at::Tensor& other) const {
   return bridge::AtenFromXlaTensor(XLATensor::matmul(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor AtenXlaType::einsum(std::string equation,
+                               at::TensorList tensors) const {
+  if (tensors.size() != 2 || !ir::ops::Einsum::SupportsEquation(equation)) {
+    return AtenXlaTypeBase::einsum(equation, tensors);
+  }
+  std::vector<XLATensor> xla_tensors;
+  for (const auto& tensor : tensors) {
+    xla_tensors.push_back(bridge::GetXlaTensor(tensor));
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::einsum(equation, xla_tensors));
 }
 
 at::Tensor AtenXlaType::t(const at::Tensor& self) const {
