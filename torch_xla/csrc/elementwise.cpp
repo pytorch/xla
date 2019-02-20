@@ -108,4 +108,11 @@ xla::XlaOp BuildSigmoid(const xla::XlaOp& input) {
   return half + half * xla::Tanh(half * input);
 }
 
+xla::XlaOp BuildReciprocal(const xla::XlaOp& input) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1., shape.element_type(),
+                                                  input.builder());
+  return xla::Div(one, input);
+}
+
 }  // namespace torch_xla

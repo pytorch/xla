@@ -32,6 +32,12 @@ xla::XlaOp BuildRelu(const xla::XlaOp& input);
 // LeakyReLU(x) = max(0, input) + negative_slope ∗ min(0, input).
 xla::XlaOp BuildLeakyRelu(const xla::XlaOp& input, double negative_slope);
 
+// Computes the sigmoid function using Tanh
+// Sigmoid(x) = (tanh(x ∗ 0.5) + 1) ∗ 0.5
 xla::XlaOp BuildSigmoid(const xla::XlaOp& input);
+
+// Computes the reciprocal function.
+// Reciprocal(x) = 1 / x
+xla::XlaOp BuildReciprocal(const xla::XlaOp& input);
 
 }  // namespace torch_xla

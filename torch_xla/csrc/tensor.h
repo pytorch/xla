@@ -311,6 +311,10 @@ class XLATensor {
 
   static XLATensor sqrt(const XLATensor& input);
 
+  static XLATensor rsqrt(const XLATensor& input);
+
+  static XLATensor reciprocal(const XLATensor& input);
+
   static XLATensor pow(const XLATensor& input, at::Scalar exponent);
 
   static XLATensor mean(const XLATensor& input,

@@ -89,6 +89,10 @@ NodePtr Log1p(const Value& input);
 
 NodePtr Sqrt(const Value& input);
 
+NodePtr Rsqrt(const Value& input);
+
+NodePtr ReciprocalOp(const Value& input);
+
 NodePtr Pow(const Value& input, const Value& exponent);
 
 NodePtr Sigmoid(const Value& input);
