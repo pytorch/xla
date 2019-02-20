@@ -29,6 +29,7 @@
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/cat.h"
 #include "torch_xla/csrc/ops/constant.h"
+#include "torch_xla/csrc/ops/constant_pad_nd.h"
 #include "torch_xla/csrc/ops/conv2d.h"
 #include "torch_xla/csrc/ops/conv2d_backward.h"
 #include "torch_xla/csrc/ops/cross_replica_sum.h"
@@ -929,6 +930,16 @@ XLATensor XLATensor::clamp(const XLATensor& input,
 void XLATensor::clamp_(XLATensor& input, c10::optional<at::Scalar> min,
                        c10::optional<at::Scalar> max) {
   input.SetIrValue(ir::ops::Clamp(input.GetIrValue(), min, max));
+}
+
+XLATensor XLATensor::constant_pad_nd(
+    const XLATensor& input, tensorflow::gtl::ArraySlice<const xla::int64> pad,
+    const at::Scalar& value) {
+  std::vector<xla::int64> complete_pad(pad.begin(), pad.end());
+  complete_pad.resize(2 * input.shape().get().rank());
+  return Create(ir::MakeNode<ir::ops::ConstantPadNd>(input.GetIrValue(),
+                                                     complete_pad, value),
+                input.GetDevice());
 }
 
 XLATensor XLATensor::ceil(const XLATensor& input) {

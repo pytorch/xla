@@ -106,6 +106,21 @@ xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfig(
   return padding_config;
 }
 
+xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfigFromNdPadding(
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  xla::PaddingConfig padding_config;
+  XLA_CHECK_EQ(padding.size() % 2, 0)
+      << "Padding specification must have even length";
+  XLA_CHECK(!padding.empty()) << "Padding specification cannot be empty";
+  for (int i = 0; i < padding.size(); i += 2) {
+    xla::PaddingConfig::PaddingConfigDimension* dims =
+        padding_config.add_dimensions();
+    dims->set_edge_padding_low(padding[padding.size() - i - 2]);
+    dims->set_edge_padding_high(padding[padding.size() - i - 1]);
+  }
+  return padding_config;
+}
+
 xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
   xla::XlaBuilder reduction_builder("xla_add_computation");
   xla::XlaOp x = xla::Parameter(&reduction_builder, 0,

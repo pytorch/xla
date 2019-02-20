@@ -316,7 +316,8 @@ at::Tensor& AtenXlaType::fmod_(at::Tensor& self, at::Scalar other) const {
   return self;
 }
 
-at::Tensor& AtenXlaType::fmod_(at::Tensor& self, const at::Tensor& other) const {
+at::Tensor& AtenXlaType::fmod_(at::Tensor& self,
+                               const at::Tensor& other) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::fmod_(self_tensor, bridge::GetXlaTensor(other));
   return self;
@@ -517,6 +518,13 @@ at::Tensor& AtenXlaType::clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::clamp_(self_tensor, min, max);
   return self;
+}
+
+at::Tensor AtenXlaType::constant_pad_nd(const at::Tensor& self,
+                                        at::IntArrayRef pad,
+                                        at::Scalar value) const {
+  return bridge::AtenFromXlaTensor(XLATensor::constant_pad_nd(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(pad), value));
 }
 
 at::Tensor AtenXlaType::ceil(const at::Tensor& self) const {
