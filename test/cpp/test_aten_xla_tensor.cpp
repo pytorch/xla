@@ -764,7 +764,7 @@ TEST_F(AtenXlaTensorTest, TestMatmul_2x2) {
     at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
     at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
     at::Tensor xla_c = at::matmul(xla_a, xla_b);
-    AllClose(c, xla_c);
+    AllClose(c, xla_c, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
 }
 
