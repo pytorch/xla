@@ -11,18 +11,6 @@
 namespace torch_xla {
 namespace ir {
 namespace ops {
-namespace {
-
-std::ostream& operator<<(std::ostream& ostrm, const at::Scalar& s) {
-  return ostrm << (s.isFloatingPoint() ? s.toDouble() : s.toLong());
-}
-
-size_t ScalarHash(const at::Scalar& s) {
-  return s.isFloatingPoint() ? std::hash<double>()(s.toDouble())
-                             : std::hash<long>()(s.toLong());
-}
-
-}  // namespace
 
 Scalar::Scalar(at::Scalar value, xla::Shape shape)
     : Node(OpKind(at::prim::Constant), shape, ScalarHash(value)),

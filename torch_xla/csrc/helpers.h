@@ -5,6 +5,7 @@
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
@@ -48,6 +49,17 @@ class XlaHelpers {
     return xla::ConstantLiteral(builder, ScalarLiteral(scalar_value, type));
   }
 
+  static xla::XlaOp ScalarValue(const at::Scalar& scalar_value,
+                                xla::PrimitiveType type,
+                                xla::XlaBuilder* builder) {
+    if (scalar_value.isFloatingPoint()) {
+      return ScalarValue(scalar_value.toDouble(), type, builder);
+    }
+    XLA_CHECK(scalar_value.isIntegral()) << "Scalar type not supported";
+    return ScalarValue(static_cast<xla::int64>(scalar_value.toLong()), type,
+                       builder);
+  }
+
   // Returns the list of dimension sizes for the given shape.
   static std::vector<xla::int64> ShapeSizes(const xla::Shape& shape) {
     return xla::util::ToVector<xla::int64>(shape.dimensions());
@@ -86,6 +98,10 @@ class XlaHelpers {
 
   // Creates an XLA padding configuration from a padding attribute value.
   static xla::PaddingConfig MakeXlaPaddingConfig(
+      tensorflow::gtl::ArraySlice<const xla::int64> padding);
+
+  // Creates an XLA padding configuration from a n-dimensional padding list.
+  static xla::PaddingConfig MakeXlaPaddingConfigFromNdPadding(
       tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
   // Creates a set of dimension by dropping the drop_dims ones.
