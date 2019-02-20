@@ -1006,6 +1006,14 @@ XLATensor XLATensor::sqrt(const XLATensor& input) {
   return Create(ir::ops::Sqrt(input.GetIrValue()), input.GetDevice());
 }
 
+XLATensor XLATensor::rsqrt(const XLATensor& input) {
+  return Create(ir::ops::Rsqrt(input.GetIrValue()), input.GetDevice());
+}
+
+XLATensor XLATensor::reciprocal(const XLATensor& input) {
+  return Create(ir::ops::ReciprocalOp(input.GetIrValue()), input.GetDevice());
+}
+
 XLATensor XLATensor::pow(const XLATensor& input, at::Scalar exponent) {
   ir::NodePtr exponent_node = ir::ops::ScalarOp(exponent, input.shape());
   return Create(ir::ops::Pow(input.GetIrValue(), exponent_node),

@@ -57,12 +57,23 @@ PTXLA_UNARY_OP(Log1p, at::aten::log1p, xla::Log1p);
 PTXLA_UNARY_OP(Erf, at::aten::erf, xla::Erf);
 PTXLA_UNARY_OP(Erfc, at::aten::erfc, xla::Erfc);
 PTXLA_UNARY_OP(Sqrt, at::aten::sqrt, xla::Sqrt);
+PTXLA_UNARY_OP(Rsqrt, at::aten::rsqrt, xla::Rsqrt);
 PTXLA_UNARY_OP(Ceil, at::aten::ceil, xla::Ceil);
 PTXLA_UNARY_OP(Floor, at::aten::floor, xla::Floor);
 
 PTXLA_BINARY_OP(Min, at::aten::min, xla::Min);
 PTXLA_BINARY_OP(Max, at::aten::max, xla::Max);
 PTXLA_BINARY_OP(Pow, at::aten::pow, xla::Pow);
+
+NodePtr ReciprocalOp(const Value& input) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildReciprocal(xla_input), loctx);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::reciprocal), ir::OpList{input},
+                            input.shape(), std::move(lower_fn));
+}  
 
 NodePtr ReluOp(const Value& input) {
   auto lower_fn = [](const ir::Node& node,

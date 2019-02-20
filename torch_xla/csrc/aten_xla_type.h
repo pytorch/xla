@@ -68,6 +68,10 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor sqrt(const at::Tensor& self) const override;
 
+  at::Tensor rsqrt(const at::Tensor& self) const override;
+
+  at::Tensor reciprocal(const at::Tensor& self) const override;
+
   at::Tensor pow(const at::Tensor& self, at::Scalar exponent) const override;
 
   at::Tensor add(const at::Tensor& self, const at::Tensor& other,
