@@ -34,6 +34,7 @@
 #include "torch_xla/csrc/ops/conv2d_backward.h"
 #include "torch_xla/csrc/ops/cross_replica_sum.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
@@ -1001,6 +1002,18 @@ XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight) {
 XLATensor XLATensor::matmul(const XLATensor& input, const XLATensor& other) {
   return Create(ir::ops::MatMul(input.GetIrValue(), other.GetIrValue()),
                 input.GetDevice());
+}
+
+XLATensor XLATensor::einsum(
+    const std::string& equation,
+    tensorflow::gtl::ArraySlice<const XLATensor> tensors) {
+  std::vector<ir::Value> tensor_ir_values;
+  for (const auto& tensor : tensors) {
+    tensor_ir_values.push_back(tensor.GetIrValue());
+  }
+  XLA_CHECK_EQ(tensors.size(), 2);
+  return Create(ir::MakeNode<ir::ops::Einsum>(equation, tensor_ir_values),
+                tensors[0].GetDevice());
 }
 
 XLATensor XLATensor::exp(const XLATensor& input) {
