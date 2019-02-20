@@ -4,8 +4,10 @@
 #include <sstream>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/python_util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -52,6 +54,7 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
       hash_(xla::util::HashCombine(op_.hash(), hash_seed)) {
+  metadata_.frame_info = GetFrameInfo();
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
     graph_size_ += operand->graph_size();
@@ -62,7 +65,9 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
 Node::Node(OpKind op, xla::Shape shape, size_t hash_seed)
     : op_(std::move(op)),
       shape_(std::move(shape)),
-      hash_(GetOpHash(op_, shape_, hash_seed)) {}
+      hash_(GetOpHash(op_, shape_, hash_seed)) {
+  metadata_.frame_info = GetFrameInfo();
+}
 
 Node::~Node() {
   for (size_t i = 0; i < operands_as_outputs_.size(); ++i) {
@@ -137,6 +142,27 @@ size_t Node::GetOpHash(OpKind op, const xla::Shape& shape, size_t hash_seed) {
   size_t h = xla::util::HashCombine(op.hash(),
                                     std::hash<std::string>()(shape.ToString()));
   return xla::util::HashCombine(h, hash_seed);
+}
+
+std::string Node::GetFrameInfo() {
+  // At the time of writing, retrieving Python frames costs from 1us up to 20us.
+  // This per IR Node. Since it is not unreasonable to have a many hundreds of
+  // IR Node, this can be a multi-millisecond cost, which is not negligible.
+  static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
+  if (!wants_frames) {
+    return std::string();
+  }
+  std::vector<SourceLocation> frames = GetPythonFrames();
+  if (frames.empty()) {
+    return std::string();
+  }
+  std::stringstream ss;
+  ss << "Python Frames To IR Node:\n";
+  for (auto& location : frames) {
+    ss << "  " << location.function << " (" << location.file << ":"
+       << location.line << ")\n";
+  }
+  return ss.str();
 }
 
 }  // namespace ir

@@ -1,0 +1,43 @@
+#include "torch_xla/csrc/python_util.h"
+
+#include <Python.h>
+#include <frameobject.h>
+#include <torch/csrc/utils/auto_gil.h>
+#include <torch/csrc/utils/python_strings.h>
+
+namespace torch_xla {
+
+c10::optional<SourceLocation> GetPythonFrameTop() {
+  if (!Py_IsInitialized()) {
+    return c10::nullopt;
+  }
+  AutoGIL gil;
+  PyFrameObject* frame = PyEval_GetFrame();
+  if (frame == nullptr) {
+    return c10::nullopt;
+  }
+  SourceLocation loc;
+  loc.line = PyCode_Addr2Line(frame->f_code, frame->f_lasti);
+  loc.file = THPUtils_unpackString(frame->f_code->co_filename);
+  loc.function = THPUtils_unpackString(frame->f_code->co_name);
+  return loc;
+}
+
+std::vector<SourceLocation> GetPythonFrames() {
+  std::vector<SourceLocation> frames;
+  if (Py_IsInitialized()) {
+    AutoGIL gil;
+    PyFrameObject* frame = PyEval_GetFrame();
+    while (frame != nullptr) {
+      SourceLocation loc;
+      loc.line = PyCode_Addr2Line(frame->f_code, frame->f_lasti);
+      loc.file = THPUtils_unpackString(frame->f_code->co_filename);
+      loc.function = THPUtils_unpackString(frame->f_code->co_name);
+      frames.push_back(std::move(loc));
+      frame = frame->f_back;
+    }
+  }
+  return frames;
+}
+
+}  // namespace torch_xla

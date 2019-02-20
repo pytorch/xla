@@ -27,6 +27,10 @@ using NodePtr = std::shared_ptr<Node>;
 
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 
+struct MetaData {
+  std::string frame_info;
+};
+
 // Represents a use of the output of a given node.
 // If use U is within node N, it means that node U.node is using the output
 // U.index of the node N.
@@ -180,6 +184,8 @@ class Node {
 
   size_t graph_size() const { return graph_size_; }
 
+  const MetaData& metadata() const { return metadata_; }
+
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
 
   void ReplaceAllUsesWith(NodePtr node, size_t index = 0);
@@ -203,6 +209,8 @@ class Node {
 
   static size_t GetOpHash(OpKind op, const xla::Shape& shape, size_t hash_seed);
 
+  static std::string GetFrameInfo();
+
   // The ID of the operation captured by this node.
   OpKind op_;
   size_t num_outputs_ = 1;
@@ -218,6 +226,8 @@ class Node {
   size_t hash_ = 0;
   // An estimation of the number of nodes behind this node.
   size_t graph_size_ = 1;
+  // The metadata attached to the IR node.
+  MetaData metadata_;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const Node& node) {
