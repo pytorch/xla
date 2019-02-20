@@ -95,6 +95,8 @@ NodePtr ReciprocalOp(const Value& input);
 
 NodePtr Pow(const Value& input, const Value& exponent);
 
+NodePtr Fmod(const Value& dividend, const Value& divisor);
+
 NodePtr Sigmoid(const Value& input);
 
 NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,

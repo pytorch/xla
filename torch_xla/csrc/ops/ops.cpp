@@ -64,6 +64,7 @@ PTXLA_UNARY_OP(Floor, at::aten::floor, xla::Floor);
 PTXLA_BINARY_OP(Min, at::aten::min, xla::Min);
 PTXLA_BINARY_OP(Max, at::aten::max, xla::Max);
 PTXLA_BINARY_OP(Pow, at::aten::pow, xla::Pow);
+PTXLA_BINARY_OP(Fmod, at::aten::fmod, xla::Rem);
 
 NodePtr ReciprocalOp(const Value& input) {
   auto lower_fn = [](const ir::Node& node,
@@ -73,7 +74,7 @@ NodePtr ReciprocalOp(const Value& input) {
   };
   return ir::ops::GenericOp(ir::OpKind(at::aten::reciprocal), ir::OpList{input},
                             input.shape(), std::move(lower_fn));
-}  
+}
 
 NodePtr ReluOp(const Value& input) {
   auto lower_fn = [](const ir::Node& node,
