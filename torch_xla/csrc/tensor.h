@@ -430,6 +430,10 @@ class XLATensor {
   // unchanged input otherwise.
   static XLATensor squeeze(const XLATensor& input, int dim);
 
+  // In-place versions of the methods above.
+  static void squeeze_(XLATensor& input);
+  static void squeeze_(XLATensor& input, int dim);
+
   // Insert a dimension of size one at the specified position.
   static XLATensor unsqueeze(const XLATensor& input, int dim);
 
