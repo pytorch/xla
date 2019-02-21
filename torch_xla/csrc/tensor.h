@@ -128,7 +128,7 @@ class XLATensor {
   static void s_copy_(XLATensor& input, const XLATensor& src);
 
   // Additional operations which are part of the PyTorch Tensor functionality.
-  xla::int64 size(int dim) const;
+  xla::int64 size(xla::int64 dim) const;
 
   static XLATensor ne(const XLATensor& input, const at::Scalar& other);
 
@@ -428,14 +428,14 @@ class XLATensor {
 
   // Squeeze out the specified dimension index, if trivial (size 1). Returns
   // unchanged input otherwise.
-  static XLATensor squeeze(const XLATensor& input, int dim);
+  static XLATensor squeeze(const XLATensor& input, xla::int64 dim);
 
   // In-place versions of the methods above.
   static void squeeze_(XLATensor& input);
-  static void squeeze_(XLATensor& input, int dim);
+  static void squeeze_(XLATensor& input, xla::int64 dim);
 
   // Insert a dimension of size one at the specified position.
-  static XLATensor unsqueeze(const XLATensor& input, int dim);
+  static XLATensor unsqueeze(const XLATensor& input, xla::int64 dim);
 
   // Returns the upper triangular part of a matrix (2-D tensor) or batch of
   // matrices input, the other elements of the result tensor out are set to 0.
