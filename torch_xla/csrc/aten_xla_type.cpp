@@ -275,8 +275,10 @@ at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
 
 at::Tensor AtenXlaType::mul(const at::Tensor& self,
                             const at::Tensor& other) const {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::mul(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::mul(
+      self_tensor,
+      bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice())));
 }
 
 at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) const {
@@ -316,7 +318,8 @@ at::Tensor& AtenXlaType::fmod_(at::Tensor& self, at::Scalar other) const {
   return self;
 }
 
-at::Tensor& AtenXlaType::fmod_(at::Tensor& self, const at::Tensor& other) const {
+at::Tensor& AtenXlaType::fmod_(at::Tensor& self,
+                               const at::Tensor& other) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::fmod_(self_tensor, bridge::GetXlaTensor(other));
   return self;
