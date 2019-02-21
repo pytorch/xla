@@ -647,7 +647,7 @@ void XLATensor::addcdiv_(XLATensor& input, const at::Scalar& value,
   input.SetIrValue(input.GetIrValue() + div * constant);
 }
 
-xla::int64 XLATensor::size(int dim) const {
+xla::int64 XLATensor::size(xla::int64 dim) const {
   auto xla_shape = shape();
   int rank = xla_shape.get().rank();
   int dim_index = GetCanonicalDimensionIndex(dim, rank);
@@ -1164,7 +1164,7 @@ XLATensor XLATensor::squeeze(const XLATensor& input) {
                 input.GetDevice());
 }
 
-XLATensor XLATensor::squeeze(const XLATensor& input, int dim) {
+XLATensor XLATensor::squeeze(const XLATensor& input, xla::int64 dim) {
   int squeeze_dim = GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   return Create(ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), squeeze_dim),
                 input.GetDevice());
@@ -1174,13 +1174,13 @@ void XLATensor::squeeze_(XLATensor& input) {
   input.SetIrValue(ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), -1));
 }
 
-void XLATensor::squeeze_(XLATensor& input, int dim) {
+void XLATensor::squeeze_(XLATensor& input, xla::int64 dim) {
   int squeeze_dim = GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   input.SetIrValue(
       ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), squeeze_dim));
 }
 
-XLATensor XLATensor::unsqueeze(const XLATensor& input, int dim) {
+XLATensor XLATensor::unsqueeze(const XLATensor& input, xla::int64 dim) {
   int squeeze_dim =
       GetCanonicalDimensionIndex(dim, input.shape().get().rank() + 1);
   return Create(
