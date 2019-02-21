@@ -1097,6 +1097,12 @@ at::Tensor AtenXlaType::tril(const at::Tensor& self, int64_t diagonal) const {
       XLATensor::tril(bridge::GetXlaTensor(self), diagonal));
 }
 
+at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
+                                 int64_t dim1, int64_t dim2) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::diagonal(bridge::GetXlaTensor(self), offset, dim1, dim2));
+}
+
 void AtenXlaType::RegisterAtenTypes() {
   static std::once_flag once;
   std::call_once(once, []() { RegisterAtenXlaTypes(); });

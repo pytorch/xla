@@ -439,6 +439,11 @@ class XLATensor {
   // matrices input, the other elements of the result tensor out are set to 0.
   static XLATensor tril(const XLATensor& input, xla::int64 diagonal);
 
+  // Returns the diagonal of a matrix (2-D tensor) or batch of matrices. The
+  // matrix dimensions are specified by dim1 and dim2, the diagonal by offset.
+  static XLATensor diagonal(const XLATensor& input, xla::int64 offset,
+                            xla::int64 dim1, xla::int64 dim2);
+
   static XLATensor where(const XLATensor& condition, const XLATensor& input,
                          const XLATensor& other);
 

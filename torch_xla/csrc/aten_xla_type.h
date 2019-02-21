@@ -370,6 +370,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor tril(const at::Tensor& self, int64_t diagonal) const override;
 
+  at::Tensor diagonal(const at::Tensor& self, int64_t offset, int64_t dim1,
+                      int64_t dim2) const override;
+
   // Registers the ATEN types for the XLA tensors.
   static void RegisterAtenTypes();
 };

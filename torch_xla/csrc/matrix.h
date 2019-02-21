@@ -9,4 +9,7 @@ xla::XlaOp BuildTriu(const xla::XlaOp& input, int diagonal);
 
 xla::XlaOp BuildTril(const xla::XlaOp& input, int diagonal);
 
+xla::XlaOp BuildDiagonal(const xla::XlaOp& input, xla::int64 offset,
+                         xla::int64 dim1, xla::int64 dim2);
+
 }  // namespace torch_xla
