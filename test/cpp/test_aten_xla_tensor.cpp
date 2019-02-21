@@ -1709,6 +1709,53 @@ TEST_F(AtenXlaTensorTest, TestTrilBatch) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestDiagonal) {
+  int size = 5;
+  at::Tensor input = GetTestTensor({size, size});
+  // Test all diagonals and out of bounds (must be no-op).
+  for (int diagonal = -size; diagonal <= size; ++diagonal) {
+    at::Tensor output = at::diagonal(input, diagonal);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = at::diagonal(xla_input, diagonal);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestDiagonalNonSquare) {
+  int size = 5;
+  at::Tensor input = GetTestTensor({size, size + 1});
+  // Test all diagonals and out of bounds (must be no-op).
+  for (int diagonal = -size; diagonal <= size; ++diagonal) {
+    at::Tensor output = at::diagonal(input, diagonal);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = at::diagonal(xla_input, diagonal);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestDiagonalBatch) {
+  int size = 5;
+  int batch_size = 3;
+  int dim1 = 1;
+  int dim2 = 2;
+  at::Tensor input = GetTestTensor({batch_size, size, size});
+  // Test all diagonals and out of bounds (must be no-op).
+  for (int diagonal = -size; diagonal <= size; ++diagonal) {
+    at::Tensor output =
+        at::diagonal(input, diagonal, /*dim1=*/dim1, /*dim1=*/dim2);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output =
+          at::diagonal(xla_input, diagonal, /*dim1=*/dim1, /*dim1=*/dim2);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestBitwiseAnd) {
   at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
                                at::TensorOptions(at::kInt));
