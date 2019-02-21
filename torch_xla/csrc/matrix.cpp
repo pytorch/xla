@@ -5,12 +5,12 @@
 
 namespace torch_xla {
 
-xla::XlaOp BuildTriu(const xla::XlaOp& input, int diagonal) {
+xla::XlaOp BuildTriu(const xla::XlaOp& input, xla::int64 diagonal) {
   return xla::Select(xla::TriangleMask(input, diagonal - 1),
                      xla::ZerosLike(input), input);
 }
 
-xla::XlaOp BuildTril(const xla::XlaOp& input, int diagonal) {
+xla::XlaOp BuildTril(const xla::XlaOp& input, xla::int64 diagonal) {
   return xla::Select(xla::TriangleMask(input, diagonal), input,
                      xla::ZerosLike(input));
 }
