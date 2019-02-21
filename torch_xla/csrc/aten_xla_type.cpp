@@ -1106,6 +1106,18 @@ at::Tensor AtenXlaType::squeeze(const at::Tensor& self, int64_t dim) const {
       XLATensor::squeeze(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor& AtenXlaType::squeeze_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::squeeze_(self_tensor);
+  return self;
+}
+
+at::Tensor& AtenXlaType::squeeze_(at::Tensor& self, int64_t dim) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::squeeze_(self_tensor, dim);
+  return self;
+}
+
 at::Tensor AtenXlaType::unsqueeze(const at::Tensor& self, int64_t dim) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::unsqueeze(bridge::GetXlaTensor(self), dim));
