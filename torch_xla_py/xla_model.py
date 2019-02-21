@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import collections
 import gc
+from six import itervalues
 import os
 import queue
 import threading
@@ -14,6 +15,10 @@ import torch_xla_py.keyd_queue as kq
 
 MultiBatch = collections.namedtuple('MultiBatch',
                                     ['batch_number', 'inputs', 'targets'])
+
+
+def xla_device(n=0):
+  return torch.device('xla:{}'.format(n))
 
 
 class RateTracker(object):
@@ -355,6 +360,29 @@ def xla_run_grad(xla_model, grad_outputs, devices=None):
   xla_model.backward(*grads_output_xla)
 
 
+def sync_optimizer(optimizer):
+  sync_tensors = []
+  for group in optimizer.param_groups:
+    for p in group['params']:
+      sync_tensors.append(p.data)
+      if p.grad is not None:
+        sync_tensors.append(p.grad.data)
+      state = optimizer.state.get(p, None)
+      if state:
+        for t in itervalues(state):
+          if isinstance(t, torch.Tensor):
+            sync_tensors.append(t.data)
+
+  torch_xla._XLAC._xla_sync_multi(
+      [torch_xla._XLAC._get_xla_tensor(p) for p in sync_tensors])
+
+
+def optimizer_step(optimizer):
+  loss = optimizer.step()
+  sync_optimizer(optimizer)
+  return loss
+
+
 def category_eval_fn(loss_fn):
 
   def eval_fn(output, target):
@@ -516,10 +544,7 @@ class XlaModel(object):
           input_gradients=loss_output_grads)
     else:
       self._xla_model, self._traced_model = create_xla_model(
-          self._model_fn,
-          inputs,
-          num_cores=self._num_cores,
-          devices=devices)
+          self._model_fn, inputs, num_cores=self._num_cores, devices=devices)
 
   def traced_model(self):
     return self._traced_model
