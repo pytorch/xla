@@ -104,6 +104,33 @@ at::Tensor AtenXlaType::_cast_Short(const at::Tensor& self,
       XLATensor::cast(bridge::GetXlaTensor(self), at::ScalarType::Short));
 }
 
+at::Tensor& AtenXlaType::s_copy_(at::Tensor& self, const at::Tensor& src,
+                                 bool /* non_blocking */) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::s_copy_(
+      self_tensor, bridge::GetOrCreateXlaTensor(src, self_tensor.GetDevice()));
+  return self;
+}
+
+at::Tensor AtenXlaType::empty(at::IntArrayRef size,
+                              const at::TensorOptions& options) const {
+  // PT empty*() are optimizations to avoid initializing the data when it is
+  // known it will be completely rewritten. But since for us doing a zero*()
+  // does not actually end up doing any memory initialization, we use that and
+  // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
+  // s_copy_().
+  return zeros(size, options);
+}
+
+at::Tensor AtenXlaType::empty_like(const at::Tensor& self) const {
+  return zeros_like(self);
+}
+
+at::Tensor AtenXlaType::empty_like(const at::Tensor& self,
+                                   const at::TensorOptions& options) const {
+  return zeros_like(self, options);
+}
+
 at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
                               const at::TensorOptions& options) const {
   XlaOptions xla_options(options);
