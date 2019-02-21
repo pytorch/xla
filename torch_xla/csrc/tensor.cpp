@@ -309,9 +309,6 @@ std::string XLATensor::DumpGraphNodeComputation() const {
 
 void XLATensor::SetXlaData(
     std::shared_ptr<xla::ComputationClient::Data> xla_data) {
-  XLA_CHECK(xla::ShapeUtil::Equal(shape(), xla_data->shape()))
-      << shape() << " vs " << xla_data->shape() << "\n"
-      << DumpGraphNodeComputation();
   data()->xla_data = std::move(xla_data);
   data()->ir_value = ir::Value();
   data()->tensor_data = c10::nullopt;
@@ -1172,6 +1169,16 @@ XLATensor XLATensor::squeeze(const XLATensor& input, int dim) {
                 input.GetDevice());
 }
 
+void XLATensor::squeeze_(XLATensor& input) {
+  input.SetIrValue(ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), -1));
+}
+
+void XLATensor::squeeze_(XLATensor& input, int dim) {
+  int squeeze_dim = GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  input.SetIrValue(
+      ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), squeeze_dim));
+}
+
 XLATensor XLATensor::unsqueeze(const XLATensor& input, int dim) {
   int squeeze_dim =
       GetCanonicalDimensionIndex(dim, input.shape().get().rank() + 1);
@@ -1383,10 +1390,16 @@ void XLATensor::ApplyPendingGraph() {
       ir::LoweringContext lowering_ctx("ApplyPendingGraph");
       xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
       xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build(root));
-      auto output_shape = shape();
+      xla::Shape output_shape = shape().get();
+      const xla::Shape computation_shape =
+          ConsumeValue(computation.GetProgramShape()).result();
+      // Some in-place operations (e.g. squeeze) can change the shape.
+      if (!xla::ShapeUtil::Compatible(computation_shape, output_shape)) {
+        output_shape =
+            MakeShapeWithDeviceLayout(computation_shape, GetDevice().hw_type);
+      }
       auto compiled_computation = xla::ComputationClient::Get()->Compile(
-          std::move(computation), {GetDevice().ToString()},
-          &output_shape.get());
+          std::move(computation), {GetDevice().ToString()}, &output_shape);
       xla::ComputationClient::ExecuteComputationOptions options;
       options.explode_tuple = false;
       auto results = xla::ComputationClient::Get()->ExecuteComputation(

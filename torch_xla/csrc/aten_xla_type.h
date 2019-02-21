@@ -370,6 +370,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor squeeze(const at::Tensor& self) const override;
   at::Tensor squeeze(const at::Tensor& self, int64_t dim) const override;
 
+  at::Tensor& squeeze_(at::Tensor& self) const override;
+  at::Tensor& squeeze_(at::Tensor& self, int64_t dim) const override;
+
   at::Tensor unsqueeze(const at::Tensor& self, int64_t dim) const override;
 
   at::Tensor where(const at::Tensor& condition, const at::Tensor& self,

@@ -1549,6 +1549,17 @@ TEST_F(AtenXlaTensorTest, TestSqueezeAll) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSqueezeAllInPlace) {
+  ForEachDevice([&](const Device& device) {
+    at::Tensor input = GetTestTensor({2, 1, 3, 1});
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor output = input.squeeze_();
+    at::Tensor xla_output = xla_input.squeeze_();
+    AllClose(output, xla_output);
+    AllClose(input, xla_input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSqueezeOne) {
   at::Tensor input = GetTestTensor({2, 1, 3, 1});
   int rank = input.dim();
@@ -1558,6 +1569,20 @@ TEST_F(AtenXlaTensorTest, TestSqueezeOne) {
       at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
       at::Tensor xla_output = at::squeeze(xla_input, dim);
       AllClose(output, xla_output);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestSqueezeOneInPlace) {
+  int rank = 4;
+  for (int dim = -rank; dim < rank; ++dim) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor input = GetTestTensor({2, 1, 3, 1});
+      at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+      at::Tensor output = input.squeeze_(dim);
+      at::Tensor xla_output = xla_input.squeeze_(dim);
+      AllClose(output, xla_output);
+      AllClose(input, xla_input);
     });
   }
 }
