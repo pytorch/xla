@@ -24,6 +24,8 @@ class XlaHelpers {
   template <class T>
   static xla::Literal ScalarLiteral(T scalar_value, xla::PrimitiveType type) {
     switch (type) {
+      case xla::PrimitiveType::F64:
+        return xla::LiteralUtil::CreateR0<double>(scalar_value);
       case xla::PrimitiveType::F32:
         return xla::LiteralUtil::CreateR0<float>(scalar_value);
       case xla::PrimitiveType::BF16:
@@ -31,6 +33,14 @@ class XlaHelpers {
             static_cast<tensorflow::bfloat16>(scalar_value));
       case xla::PrimitiveType::S64:
         return xla::LiteralUtil::CreateR0<xla::int64>(scalar_value);
+      case xla::PrimitiveType::S32:
+        return xla::LiteralUtil::CreateR0<xla::int32>(scalar_value);
+      case xla::PrimitiveType::S16:
+        return xla::LiteralUtil::CreateR0<xla::int16>(scalar_value);
+      case xla::PrimitiveType::S8:
+        return xla::LiteralUtil::CreateR0<xla::int8>(scalar_value);
+      case xla::PrimitiveType::U8:
+        return xla::LiteralUtil::CreateR0<xla::uint8>(scalar_value);
       default:
         return xla::LiteralUtil::CreateR0<T>(scalar_value);
     }
