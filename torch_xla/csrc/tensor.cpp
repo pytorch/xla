@@ -34,6 +34,7 @@
 #include "torch_xla/csrc/ops/conv2d_backward.h"
 #include "torch_xla/csrc/ops/cross_replica_sum.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/gather.h"
@@ -1187,6 +1188,16 @@ XLATensor XLATensor::triu(const XLATensor& input, xla::int64 diagonal) {
 
 XLATensor XLATensor::tril(const XLATensor& input, xla::int64 diagonal) {
   return Create(ir::MakeNode<ir::ops::Tril>(input.GetIrValue(), diagonal),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::diagonal(const XLATensor& input, xla::int64 offset,
+                              xla::int64 dim1, xla::int64 dim2) {
+  int rank = input.shape().get().rank();
+  int canonical_dim1 = GetCanonicalDimensionIndex(dim1, rank);
+  int canonical_dim2 = GetCanonicalDimensionIndex(dim2, rank);
+  return Create(ir::MakeNode<ir::ops::Diagonal>(input.GetIrValue(), offset,
+                                                canonical_dim1, canonical_dim2),
                 input.GetDevice());
 }
 
