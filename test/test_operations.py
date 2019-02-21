@@ -38,8 +38,8 @@ def _gen_tensor(*args, **kwargs):
   return torch.randn(*args, **kwargs)
 
 
-def _xla_device(n=0):
-  return torch.device('xla:{}'.format(n))
+def _gen_int_tensor(*args, **kwargs):
+  return torch.randint(*args, **kwargs)
 
 
 class Holder(object):
@@ -1162,7 +1162,7 @@ class TestReplicatedSum(XlaTestCase):
 class TestSelect(XlaTestCase):
 
   def test_get_xla_tensor(self):
-    x = _gen_tensor(14, 24, 8, device=_xla_device())
+    x = _gen_tensor(14, 24, 8, device=xm.xla_device())
     t = x.data.cpu()
     sx = x.select(1, 12)
     tx = t.select(1, 12)
@@ -1212,16 +1212,11 @@ class TestXLATensor(XlaTestCase):
               input, weight, conv_bias, stride=stride, padding=padding)
           if with_bias:
             out = torch_xla._XLAC.conv2d(
-                xt_input,
-                xt_weight,
-                xt_bias,
-                stride=stride,
+                xt_input, xt_weight, xt_bias, stride=stride,
                 padding=padding).to_tensor()
           else:
             out = torch_xla._XLAC.conv2d(
-                xt_input,
-                xt_weight,
-                stride=stride,
+                xt_input, xt_weight, stride=stride,
                 padding=padding).to_tensor()
           self.assertEqualRel(out.data, expected.data)
 
@@ -1271,8 +1266,7 @@ class TestXLATensor(XlaTestCase):
     xt_weight = torch_xla._XLAC.XLATensor(weight)
     xt_bias = torch_xla._XLAC.XLATensor(bias)
     out = torch.addmm(bias, input, weight)
-    expected = torch_xla._XLAC.addmm(
-        xt_bias, xt_input, xt_weight).to_tensor()
+    expected = torch_xla._XLAC.addmm(xt_bias, xt_input, xt_weight).to_tensor()
     self.assertEqualRel(out.data, expected.data)
 
   def test_max_pool2d(self):
@@ -1364,7 +1358,7 @@ class TestXLATensor(XlaTestCase):
 class TestAtenXlaTensor(XlaTestCase):
 
   def test_get_xla_tensor(self):
-    t = _gen_tensor(4, 2, device=_xla_device())
+    t = _gen_tensor(4, 2, device=xm.xla_device())
     x = torch_xla._XLAC._get_xla_tensor(t)
     self.assertEqual(t.data.cpu(), x.to_tensor())
 
@@ -1372,5 +1366,6 @@ class TestAtenXlaTensor(XlaTestCase):
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
   torch.manual_seed(42)
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(use_full_mat_mul_precision=True)
+  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
+      use_full_mat_mul_precision=True)
   run_tests()
