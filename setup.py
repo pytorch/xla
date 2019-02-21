@@ -50,7 +50,7 @@ def _compile_parallel(self,
 
 
 # Plant the parallel compile function.
-if _check_env_flag('COMPILE_PARALLEL'):
+if _check_env_flag('COMPILE_PARALLEL', default='1'):
   try:
     if (inspect.signature(distutils.ccompiler.CCompiler.compile) ==
         inspect.signature(_compile_parallel)):
