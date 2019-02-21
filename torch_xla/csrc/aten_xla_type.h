@@ -27,6 +27,15 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor _cast_Short(const at::Tensor& self,
                          bool non_blocking) const override;
 
+  at::Tensor& s_copy_(at::Tensor& self, const at::Tensor& src,
+                      bool non_blocking) const override;
+
+  at::Tensor empty(at::IntArrayRef size,
+                   const at::TensorOptions& options) const override;
+  at::Tensor empty_like(const at::Tensor& self) const override;
+  at::Tensor empty_like(const at::Tensor& self,
+                        const at::TensorOptions& options) const override;
+
   at::Tensor zeros(at::IntArrayRef size,
                    const at::TensorOptions& options) const override;
   at::Tensor zeros_like(const at::Tensor& self) const override;

@@ -611,6 +611,10 @@ void XLATensor::zero_(XLATensor& input) {
   input.SetIrValue(ir::ops::ScalarOp(0.0, input.shape()));
 }
 
+void XLATensor::s_copy_(XLATensor& input, const XLATensor& src) {
+  input.SetIrValue(src.GetIrValue());
+}
+
 XLATensor XLATensor::addcmul(const XLATensor& input, const at::Scalar& value,
                              const XLATensor& tensor1,
                              const XLATensor& tensor2) {
