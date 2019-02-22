@@ -120,38 +120,30 @@ at::Tensor AtenXlaType::empty(at::IntArrayRef size,
   // does not actually end up doing any memory initialization, we use that and
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
-  return zeros(size, options);
+  return full(size, 0, options);
 }
 
 at::Tensor AtenXlaType::empty_like(const at::Tensor& self) const {
-  return zeros_like(self);
+  return full_like(self, 0);
 }
 
 at::Tensor AtenXlaType::empty_like(const at::Tensor& self,
                                    const at::TensorOptions& options) const {
-  return zeros_like(self, options);
+  return full_like(self, 0, options);
 }
 
 at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
                               const at::TensorOptions& options) const {
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::zeros(XlaHelpers::I64List(size), xla_options.get_device(),
-                       xla_options.get_scalar_type()));
+  return full(size, 0, options);
 }
 
 at::Tensor AtenXlaType::zeros_like(const at::Tensor& self) const {
-  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
-  return bridge::AtenFromXlaTensor(XLATensor::zeros_like(
-      self_tensor, self_tensor.GetDevice(), c10::nullopt));
+  return full_like(self, 0);
 }
 
 at::Tensor AtenXlaType::zeros_like(const at::Tensor& self,
                                    const at::TensorOptions& options) const {
-  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
-  XlaOptions xla_options(options, self_tensor.GetDevice());
-  return bridge::AtenFromXlaTensor(XLATensor::zeros_like(
-      self_tensor, xla_options.get_device(), xla_options.scalar_type));
+  return full_like(self, 0, options);
 }
 
 at::Tensor& AtenXlaType::zero_(at::Tensor& self) const {
@@ -162,24 +154,40 @@ at::Tensor& AtenXlaType::zero_(at::Tensor& self) const {
 
 at::Tensor AtenXlaType::ones(at::IntArrayRef size,
                              const at::TensorOptions& options) const {
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::ones(XlaHelpers::I64List(size), xla_options.get_device(),
-                      xla_options.get_scalar_type()));
+  return full(size, 1, options);
 }
 
 at::Tensor AtenXlaType::ones_like(const at::Tensor& self) const {
-  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::ones_like(self_tensor, self_tensor.GetDevice(), c10::nullopt));
+  return full_like(self, 1);
 }
 
 at::Tensor AtenXlaType::ones_like(const at::Tensor& self,
                                   const at::TensorOptions& options) const {
+  return full_like(self, 1, options);
+}
+
+at::Tensor AtenXlaType::full(at::IntArrayRef size, at::Scalar fill_value,
+                             const at::TensorOptions& options) const {
+  XlaOptions xla_options(options);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::full(XlaHelpers::I64List(size), fill_value,
+                      xla_options.get_device(), xla_options.get_scalar_type()));
+}
+
+at::Tensor AtenXlaType::full_like(const at::Tensor& self,
+                                  at::Scalar fill_value) const {
+  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
+  return bridge::AtenFromXlaTensor(XLATensor::full_like(
+      self_tensor, fill_value, self_tensor.GetDevice(), c10::nullopt));
+}
+
+at::Tensor AtenXlaType::full_like(const at::Tensor& self, at::Scalar fill_value,
+                                  const at::TensorOptions& options) const {
   XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
   XlaOptions xla_options(options, self_tensor.GetDevice());
-  return bridge::AtenFromXlaTensor(XLATensor::ones_like(
-      self_tensor, xla_options.get_device(), xla_options.scalar_type));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::full_like(self_tensor, fill_value, xla_options.get_device(),
+                           xla_options.scalar_type));
 }
 
 at::Tensor AtenXlaType::addcmul(const at::Tensor& self,
