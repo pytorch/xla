@@ -710,6 +710,27 @@ TEST_F(AtenXlaTensorTest, TestAbs) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestZeros) {
+  at::Tensor a = at::zeros({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor xla_a =
+      at::zeros({2, 2}, at::TensorOptions(at::kFloat).device(at::kXLA));
+  AllClose(a, xla_a);
+}
+
+TEST_F(AtenXlaTensorTest, TestOnes) {
+  at::Tensor a = at::ones({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor xla_a =
+      at::ones({2, 2}, at::TensorOptions(at::kFloat).device(at::kXLA));
+  AllClose(a, xla_a);
+}
+
+TEST_F(AtenXlaTensorTest, TestFull) {
+  at::Tensor a = at::full({2, 2}, 3.1165, at::TensorOptions(at::kFloat));
+  at::Tensor xla_a =
+      at::full({2, 2}, 3.1165, at::TensorOptions(at::kFloat).device(at::kXLA));
+  AllClose(a, xla_a);
+}
+
 TEST_F(AtenXlaTensorTest, TestSigmoid) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::sigmoid(a);

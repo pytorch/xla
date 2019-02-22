@@ -231,9 +231,11 @@ class XLATensor {
   static XLATensor sigmoid(const XLATensor& input);
   static void sigmoid_(XLATensor& input);
 
-  static XLATensor ones(tensorflow::gtl::ArraySlice<const xla::int64> size,
-                        const Device& device, at::ScalarType scalar_type);
-  static XLATensor ones_like(const XLATensor& input, const Device& device,
+  static XLATensor full(tensorflow::gtl::ArraySlice<const xla::int64> size,
+                        at::Scalar fill_value, const Device& device,
+                        at::ScalarType scalar_type);
+  static XLATensor full_like(const XLATensor& input, at::Scalar fill_value,
+                             const Device& device,
                              c10::optional<at::ScalarType> scalar_type);
 
   static XLATensor addcmul(const XLATensor& input, const at::Scalar& value,
@@ -245,11 +247,6 @@ class XLATensor {
                            const XLATensor& tensor1, const XLATensor& tensor2);
   static void addcdiv_(XLATensor& input, const at::Scalar& value,
                        const XLATensor& tensor1, const XLATensor& tensor2);
-
-  static XLATensor zeros(tensorflow::gtl::ArraySlice<const xla::int64> size,
-                         const Device& device, at::ScalarType scalar_type);
-  static XLATensor zeros_like(const XLATensor& input, const Device& device,
-                              c10::optional<at::ScalarType> scalar_type);
 
   static XLATensor select(const XLATensor& input, int64_t dim, int64_t index);
 
