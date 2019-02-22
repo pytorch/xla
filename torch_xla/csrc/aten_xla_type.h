@@ -268,6 +268,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor t(const at::Tensor& self) const override;
 
+  at::Tensor reshape(const at::Tensor& self,
+                     at::IntArrayRef shape) const override;
+
   at::Tensor view(const at::Tensor& self, at::IntList size) const override;
 
   at::Tensor select(const at::Tensor& self, int64_t dim,

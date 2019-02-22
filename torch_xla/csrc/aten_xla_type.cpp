@@ -760,6 +760,12 @@ at::Tensor AtenXlaType::t(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::t(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::reshape(const at::Tensor& self,
+                                at::IntArrayRef shape) const {
+  return bridge::AtenFromXlaTensor(XLATensor::reshape(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(shape)));
+}
+
 at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntList size) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::view(bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));

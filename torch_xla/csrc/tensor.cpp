@@ -1301,6 +1301,13 @@ XLATensor XLATensor::t(const XLATensor& input) {
   return Create(ir::ops::TransposeOp(input.GetIrValue()), input.GetDevice());
 }
 
+XLATensor XLATensor::reshape(
+    const XLATensor& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
+  return Create(ir::MakeNode<ir::ops::View>(input.GetIrValue(), output_size),
+                input.GetDevice());
+}
+
 XLATensor XLATensor::view(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
