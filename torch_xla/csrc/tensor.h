@@ -294,6 +294,9 @@ class XLATensor {
   static XLATensor gather(const XLATensor& input, xla::int64 dim,
                           const XLATensor& index);
 
+  static XLATensor index_select(const XLATensor& input, xla::int64 dim,
+                                const XLATensor& index);
+
   static XLATensor expand(const XLATensor& input, std::vector<xla::int64> size);
 
   static XLATensor stack(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
