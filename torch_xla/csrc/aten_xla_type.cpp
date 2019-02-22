@@ -724,6 +724,12 @@ at::Tensor AtenXlaType::matmul(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
+at::Tensor AtenXlaType::bmm(const at::Tensor& self,
+                            const at::Tensor& mat2) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::bmm(bridge::GetXlaTensor(self), bridge::GetXlaTensor(mat2)));
+}
+
 at::Tensor AtenXlaType::einsum(std::string equation,
                                at::TensorList tensors) const {
   if (tensors.size() != 2 || !ir::ops::Einsum::SupportsEquation(equation)) {

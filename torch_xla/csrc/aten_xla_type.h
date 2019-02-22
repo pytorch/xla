@@ -251,6 +251,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor matmul(const at::Tensor& self,
                     const at::Tensor& other) const override;
 
+  at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2) const override;
+
   at::Tensor einsum(std::string equation,
                     at::TensorList tensors) const override;
 

@@ -309,6 +309,11 @@ class XLATensor {
 
   static XLATensor matmul(const XLATensor& input, const XLATensor& other);
 
+  // Batch matrix multiplication. Both tensors must be 3D, the batch size must
+  // match and the remaining two dimensions must be compatible for matrix
+  // multiplication.
+  static XLATensor bmm(const XLATensor& batch1, const XLATensor& batch2);
+
   // A generalized contraction between tensors of arbitrary dimension defined by
   // the given equation and applied to the input tensors.
   static XLATensor einsum(const std::string& equation,
@@ -634,6 +639,18 @@ class XLATensor {
       std::shared_ptr<xla::ComputationClient::Data> data);
 
   static xla::int64 GetNextTensorId();
+
+  // Checks a tensor rank against an expectation and throws an error on
+  // mismatch.
+  static void CheckRank(const XLATensor& t, xla::int64 expected_rank,
+                        const std::string& tag, const std::string& arg_name,
+                        int arg_number);
+
+  // Checks a tensor dimension size against an expectation and throws an error
+  // on mismatch.
+  static void CheckDimensionSize(const XLATensor& t, xla::int64 dim,
+                                 xla::int64 size, const std::string& tag,
+                                 const std::string& arg_name, int arg_number);
 
   std::shared_ptr<Data> data_;
 };

@@ -1006,6 +1006,18 @@ XLATensor XLATensor::matmul(const XLATensor& input, const XLATensor& other) {
                 input.GetDevice());
 }
 
+XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {
+  // Consistent with the checks in bmm_out_or_baddbmm_.
+  std::string tag = "bmm";
+  CheckRank(batch1, 3, tag, "batch1", 1);
+  CheckRank(batch2, 3, tag, "batch2", 2);
+  xla::int64 batch_size = batch1.size(0);
+  CheckDimensionSize(batch2, 0, batch_size, tag, "batch2", 2);
+  xla::int64 contraction_size = batch1.size(2);
+  CheckDimensionSize(batch2, 1, contraction_size, tag, "batch2", 2);
+  return matmul(batch1, batch2);
+}
+
 XLATensor XLATensor::einsum(
     const std::string& equation,
     tensorflow::gtl::ArraySlice<const XLATensor> tensors) {
@@ -1696,6 +1708,30 @@ Device XLATensor::CommonDeviceForTensors(
     XLA_CHECK_EQ(device, tensor.GetDevice());
   }
   return device;
+}
+
+void XLATensor::CheckRank(const XLATensor& t, xla::int64 expected_rank,
+                          const std::string& tag, const std::string& arg_name,
+                          int arg_number) {
+  xla::int64 actual_rank = t.shape().get().rank();
+  XLA_CHECK_EQ(actual_rank, expected_rank)
+      << "Expected " << expected_rank << "-dimensional tensor, but got "
+      << actual_rank << "-dimensional tensor for "
+      << "argument #" << arg_number << " '" << arg_name << "'"
+      << " (while checking arguments for " << tag << ")";
+}
+
+void XLATensor::CheckDimensionSize(const XLATensor& t, xla::int64 dim,
+                                   xla::int64 expected_size,
+                                   const std::string& tag,
+                                   const std::string& arg_name,
+                                   int arg_number) {
+  xla::int64 dim_size = t.size(dim);
+  XLA_CHECK_EQ(t.size(dim), expected_size)
+      << "Expected tensor to have size " << expected_size << " at dimension "
+      << dim << ", but got size " << dim_size << " for "
+      << "argument #" << arg_number << " '" << arg_name << "'"
+      << " (while checking arguments for " << tag << ")";
 }
 
 }  // namespace torch_xla
