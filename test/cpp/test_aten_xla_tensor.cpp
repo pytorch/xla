@@ -839,7 +839,22 @@ TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestEinsumUnsupportedInputCount) {
+TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinear) {
+  at::Tensor a = at::rand({3, 5, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor l = at::rand({2, 5}, at::TensorOptions(at::kFloat));
+  at::Tensor r = at::rand({2, 4}, at::TensorOptions(at::kFloat));
+  std::string equation = "bn,anm,bm->ba";
+  at::Tensor c = at::einsum(equation, {l, a, r});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_l = bridge::CreateXlaTensor(l, device);
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_r = bridge::CreateXlaTensor(r, device);
+    at::Tensor xla_c = at::einsum(equation, {xla_l, xla_a, xla_r});
+    AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonal) {
   at::Tensor input = at::rand({3, 3}, at::TensorOptions(at::kFloat));
   std::string equation = "ii->i";
   at::Tensor result = at::einsum(equation, {input});
@@ -850,7 +865,29 @@ TEST_F(AtenXlaTensorTest, TestEinsumUnsupportedInputCount) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestEinsumUnsupportedEquation) {
+TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonal) {
+  at::Tensor input = at::rand({4, 3, 3}, at::TensorOptions(at::kFloat));
+  std::string equation = "...ii->...i";
+  at::Tensor result = at::einsum(equation, {input});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_result = at::einsum(equation, {xla_input});
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermute) {
+  at::Tensor input = at::rand({2, 3, 4, 5}, at::TensorOptions(at::kFloat));
+  std::string equation = "...ij->...ji";
+  at::Tensor result = at::einsum(equation, {input});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_result = at::einsum(equation, {xla_input});
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
   at::Tensor x = at::rand({2, 3, 3}, at::TensorOptions(at::kFloat));
   at::Tensor y = at::rand({4}, at::TensorOptions(at::kFloat));
   std::string equation = "ijj,k->ik";
