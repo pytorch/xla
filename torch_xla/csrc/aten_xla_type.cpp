@@ -747,7 +747,7 @@ at::Tensor AtenXlaType::bmm(const at::Tensor& self,
 at::Tensor AtenXlaType::einsum(std::string equation,
                                at::TensorList tensors) const {
   if (tensors.size() != 2 || !ir::ops::Einsum::SupportsEquation(equation)) {
-    return AtenXlaTypeBase::einsum(equation, tensors);
+    return at::native::einsum(equation, tensors);
   }
   std::vector<XLATensor> xla_tensors;
   for (const auto& tensor : tensors) {
