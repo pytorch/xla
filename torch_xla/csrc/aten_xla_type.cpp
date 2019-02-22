@@ -808,6 +808,12 @@ at::Tensor AtenXlaType::expand_as(const at::Tensor& self,
       bridge::GetXlaTensor(self), other_tensor.shape().get().dimensions()));
 }
 
+at::Tensor AtenXlaType::index(const at::Tensor& self,
+                              at::TensorList indices) const {
+  return bridge::AtenFromXlaTensor(XLATensor::index(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensors(indices)));
+}
+
 at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::stack(bridge::GetXlaTensors(tensors), dim));

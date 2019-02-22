@@ -276,6 +276,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor expand_as(const at::Tensor& self,
                        const at::Tensor& other) const override;
 
+  at::Tensor index(const at::Tensor& self,
+                   at::TensorList indices) const override;
+
   at::Tensor stack(at::TensorList tensors, int64_t dim) const override;
 
   at::Tensor cat(at::TensorList tensors, int64_t dim) const override;

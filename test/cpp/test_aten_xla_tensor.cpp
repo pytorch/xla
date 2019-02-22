@@ -1256,6 +1256,71 @@ TEST_F(AtenXlaTensorTest, TestBroadcastTensors) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestOneIndex) {
+  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
+  at::Tensor indices =
+      at::randint(0, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+  at::Tensor result = at::index(params, {indices});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+    at::Tensor xla_indices = bridge::CreateXlaTensor(indices, device);
+    at::Tensor xla_result = at::index(xla_params, {xla_indices});
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestMultiIndexMiddleNull) {
+  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
+  at::Tensor indices_0 =
+      at::randint(0, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+  at::Tensor indices_null;
+  at::Tensor indices_1 =
+      at::randint(0, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+  at::Tensor result = at::index(params, {indices_0, indices_null, indices_1});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+    at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+    at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+    at::Tensor xla_result =
+        at::index(xla_params, {xla_indices_0, indices_null, xla_indices_1});
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestMultiIndexMiddleBroadcast) {
+  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
+  at::Tensor indices_0 =
+      at::randint(0, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+  at::Tensor indices_1 =
+      at::randint(0, 3, {2, 1, 3}, at::TensorOptions(at::kLong));
+  at::Tensor result = at::index(params, {indices_0, indices_1});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+    at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+    at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+    at::Tensor xla_result =
+        at::index(xla_params, {xla_indices_0, xla_indices_1});
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestMultiIndexTailBroadcast) {
+  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
+  at::Tensor indices_0 =
+      at::randint(0, 3, {2, 1, 3}, at::TensorOptions(at::kLong));
+  at::Tensor indices_1 =
+      at::randint(0, 3, {2, 1}, at::TensorOptions(at::kLong));
+  at::Tensor result = at::index(params, {indices_0, indices_1});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+    at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+    at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+    at::Tensor xla_result =
+        at::index(xla_params, {xla_indices_0, xla_indices_1});
+    AllClose(result, xla_result);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::relu(input);

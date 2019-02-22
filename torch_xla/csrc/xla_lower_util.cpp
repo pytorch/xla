@@ -221,4 +221,30 @@ std::vector<xla::XlaOp> CreateBroadcastTensors(
   return result;
 }
 
+xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices) {
+  const xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
+  XLA_CHECK_GE(indices_shape.rank(), 1);
+  xla::int64 num_index_dims =
+      indices_shape.dimensions(indices_shape.rank() - 1);
+  xla::GatherDimensionNumbers dim_numbers;
+  std::vector<xla::int64> slice_sizes;
+  slice_sizes.reserve(input_shape.rank());
+  for (xla::int64 i = 0; i < input_shape.rank(); ++i) {
+    if (i < num_index_dims) {
+      dim_numbers.add_collapsed_slice_dims(i);
+      slice_sizes.push_back(1);
+    } else {
+      slice_sizes.push_back(input_shape.dimensions(i));
+      xla::int64 indices_rank = indices_shape.rank() - 1;
+      dim_numbers.add_offset_dims(i + indices_rank - num_index_dims);
+    }
+  }
+  dim_numbers.set_index_vector_dim(indices_shape.rank() - 1);
+  for (xla::int64 i = 0; i < num_index_dims; i++) {
+    dim_numbers.add_start_index_map(i);
+  }
+  return xla::Gather(input, indices, dim_numbers, slice_sizes);
+}
+
 }  // namespace torch_xla
