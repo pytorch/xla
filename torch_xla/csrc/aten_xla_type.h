@@ -211,6 +211,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor gather(const at::Tensor& self, int64_t dim,
                     const at::Tensor& index) const override;
 
+  at::Tensor index_select(const at::Tensor& self, int64_t dim,
+                          const at::Tensor& index) const override;
+
   at::Tensor expand(const at::Tensor& self, at::IntArrayRef size,
                     bool implicit) const override;
   at::Tensor expand_as(const at::Tensor& self,

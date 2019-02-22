@@ -39,6 +39,7 @@
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
+#include "torch_xla/csrc/ops/index_select.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/leaky_relu.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
@@ -952,6 +953,13 @@ XLATensor XLATensor::gather(const XLATensor& input, xla::int64 dim,
                             const XLATensor& index) {
   return Create(ir::MakeNode<ir::ops::Gather>(input.GetIrValue(), dim,
                                               index.GetIrValue()),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::index_select(const XLATensor& input, xla::int64 dim,
+                                  const XLATensor& index) {
+  return Create(ir::MakeNode<ir::ops::IndexSelect>(input.GetIrValue(), dim,
+                                                   index.GetIrValue()),
                 input.GetDevice());
 }
 

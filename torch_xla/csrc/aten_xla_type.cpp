@@ -595,6 +595,12 @@ at::Tensor AtenXlaType::gather(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
+at::Tensor AtenXlaType::index_select(const at::Tensor& self, int64_t dim,
+                                     const at::Tensor& index) const {
+  return bridge::AtenFromXlaTensor(XLATensor::index_select(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
+}
+
 at::Tensor AtenXlaType::expand(const at::Tensor& self, at::IntArrayRef size,
                                bool implicit) const {
   return bridge::AtenFromXlaTensor(XLATensor::expand(
