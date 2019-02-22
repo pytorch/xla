@@ -18,4 +18,7 @@ xla::XlaOp BuildDropout(const xla::XlaOp& input, float probability);
 std::vector<xla::XlaOp> CreateBroadcastTensors(
     tensorflow::gtl::ArraySlice<const xla::XlaOp> operands);
 
+// Similar to tf.gather_nd, used to implement advanced indexing.
+xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices);
+
 }  // namespace torch_xla
