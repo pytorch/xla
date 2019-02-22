@@ -801,6 +801,18 @@ TEST_F(AtenXlaTensorTest, TestMatmulBcast) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestBatchMatMul) {
+  at::Tensor a = at::rand({3, 6, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({3, 4, 5}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::bmm(a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::bmm(xla_a, xla_b);
+    AllClose(c, xla_c, /*rtol=*/1e-3, /*atol=*/1e-4);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
   at::Tensor a = at::rand({5}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({5}, at::TensorOptions(at::kFloat));
