@@ -19,6 +19,8 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool2d.h"
+#include "torch_xla/csrc/ops/all.h"
+#include "torch_xla/csrc/ops/any.h"
 #include "torch_xla/csrc/ops/arg_max.h"
 #include "torch_xla/csrc/ops/arg_min.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
@@ -653,6 +655,24 @@ xla::int64 XLATensor::size(xla::int64 dim) const {
   int rank = xla_shape.get().rank();
   int dim_index = GetCanonicalDimensionIndex(dim, rank);
   return xla_shape.get().dimensions(dim_index);
+}
+
+XLATensor XLATensor::all(const XLATensor& input,
+                         std::vector<xla::int64> dimensions,
+                         bool keep_reduced_dimensions) {
+  return Create(
+      ir::MakeNode<ir::ops::All>(input.GetIrValue(), std::move(dimensions),
+                                 keep_reduced_dimensions),
+      input.GetDevice());
+}
+
+XLATensor XLATensor::any(const XLATensor& input,
+                         std::vector<xla::int64> dimensions,
+                         bool keep_reduced_dimensions) {
+  return Create(
+      ir::MakeNode<ir::ops::Any>(input.GetIrValue(), std::move(dimensions),
+                                 keep_reduced_dimensions),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::ne(const XLATensor& input, const at::Scalar& other) {

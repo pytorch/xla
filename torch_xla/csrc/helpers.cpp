@@ -122,7 +122,7 @@ xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfigFromNdPadding(
 }
 
 xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
-  xla::XlaBuilder reduction_builder("xla_add_computation");
+  xla::XlaBuilder reduction_builder("AddComputation");
   xla::XlaOp x = xla::Parameter(&reduction_builder, 0,
                                 xla::ShapeUtil::MakeShape(type, {}), "x");
   xla::XlaOp y = xla::Parameter(&reduction_builder, 1,

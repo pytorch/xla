@@ -400,6 +400,66 @@ TEST_F(AtenXlaTensorTest, TestMax) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestAll) {
+  at::Tensor a = at::randint(0, 5, {2, 3, 4}, at::TensorOptions(at::kByte));
+  at::Tensor b = at::all(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::all(xla_a);
+    EqualValues(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestAllDim) {
+  at::Tensor a = at::randint(0, 5, {2, 3, 4}, at::TensorOptions(at::kByte));
+  at::Tensor b = at::all(a, 1, /*keepdim=*/false);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::all(xla_a, 1, /*keepdim=*/false);
+    EqualValues(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestAllDimKeep) {
+  at::Tensor a = at::randint(0, 5, {2, 3, 4}, at::TensorOptions(at::kByte));
+  at::Tensor b = at::all(a, 1, /*keepdim=*/true);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::all(xla_a, 1, /*keepdim=*/true);
+    EqualValues(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestAny) {
+  at::Tensor a = at::randint(0, 5, {2, 3, 4}, at::TensorOptions(at::kByte));
+  at::Tensor b = at::any(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::any(xla_a);
+    EqualValues(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestAnyDim) {
+  at::Tensor a = at::randint(0, 5, {2, 3, 4}, at::TensorOptions(at::kByte));
+  at::Tensor b = at::any(a, 1, /*keepdim=*/false);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::any(xla_a, 1, /*keepdim=*/false);
+    EqualValues(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestAnyDimKeep) {
+  at::Tensor a = at::randint(0, 5, {2, 3, 4}, at::TensorOptions(at::kByte));
+  at::Tensor b = at::any(a, 1, /*keepdim=*/true);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::any(xla_a, 1, /*keepdim=*/true);
+    EqualValues(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestMean) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::mean(a);
