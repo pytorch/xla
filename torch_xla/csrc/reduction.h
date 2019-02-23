@@ -24,4 +24,12 @@ xla::XlaOp BuildSum(const xla::XlaOp& input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions);
 
+xla::XlaOp BuildAll(const xla::XlaOp& input,
+                    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+                    bool keep_reduced_dimensions);
+
+xla::XlaOp BuildAny(const xla::XlaOp& input,
+                    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+                    bool keep_reduced_dimensions);
+
 }  // namespace torch_xla

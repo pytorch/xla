@@ -2,9 +2,6 @@
 
 #include <vector>
 
-#include <c10/core/ScalarType.h>
-#include <c10/util/Optional.h>
-
 #include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/ir.h"
 
@@ -12,10 +9,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Mean : public Node {
+class Any : public Node {
  public:
-  Mean(const Value& input, std::vector<xla::int64> dimensions,
-       bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype);
+  Any(const Value& input, std::vector<xla::int64> dimensions,
+      bool keep_reduced_dimensions);
 
   std::string ToString() const override;
 
@@ -25,12 +22,9 @@ class Mean : public Node {
 
   bool keep_reduced_dimensions() const { return keep_reduced_dimensions_; }
 
-  const c10::optional<at::ScalarType>& dtype() const { return dtype_; }
-
  private:
   std::vector<xla::int64> dimensions_;
   bool keep_reduced_dimensions_;
-  c10::optional<at::ScalarType> dtype_;
 };
 
 }  // namespace ops
