@@ -336,6 +336,10 @@ class XLATensor {
   // multiplication.
   static XLATensor bmm(const XLATensor& batch1, const XLATensor& batch2);
 
+  // Broadcasts the given tensors according to broadcasting semantics.
+  static std::vector<XLATensor> broadcast_tensors(
+      tensorflow::gtl::ArraySlice<const XLATensor> tensors);
+
   // A generalized contraction between tensors of arbitrary dimension defined by
   // the given equation and applied to the input tensors.
   static XLATensor einsum(const std::string& equation,
