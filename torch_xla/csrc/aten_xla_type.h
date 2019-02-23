@@ -289,6 +289,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2) const override;
 
+  std::vector<at::Tensor> broadcast_tensors(
+      at::TensorList tensors) const override;
+
   at::Tensor einsum(std::string equation,
                     at::TensorList tensors) const override;
 
