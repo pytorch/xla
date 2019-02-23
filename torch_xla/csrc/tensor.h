@@ -191,6 +191,7 @@ class XLATensor {
                                         const XLATensor& other);
 
   static XLATensor relu(const XLATensor& input);
+  static void relu_(XLATensor& input);
 
   static XLATensor leaky_relu(const XLATensor& input, double negative_slope);
 
