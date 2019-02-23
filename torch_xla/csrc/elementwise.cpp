@@ -61,16 +61,13 @@ xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
                           const float threshold, const float value) {
   xla::XlaBuilder* builder = input.builder();
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const auto input_sizes = XlaHelpers::ShapeSizes(input_shape);
-  std::vector<xla::int64> broadcast_sizes(input_sizes.begin(),
-                                          input_sizes.end());
   xla::Shape output_shape = XlaHelpers::ShapeOfXlaOp(output);
   xla::XlaOp xla_threshold = XlaHelpers::ScalarValue<float>(
       threshold, input_shape.element_type(), builder);
   xla::XlaOp xla_value = XlaHelpers::ScalarValue<float>(
       value, output_shape.element_type(), builder);
   return xla::Select(xla::Gt(input, xla_threshold), output,
-                     xla::Broadcast(xla_value, broadcast_sizes));
+                     xla::Broadcast(xla_value, input_shape.dimensions()));
 }
 
 xla::XlaOp BuildRelu(const xla::XlaOp& input) {
@@ -117,13 +114,11 @@ xla::XlaOp BuildReciprocal(const xla::XlaOp& input) {
 
 xla::XlaOp BuildSign(const xla::XlaOp& input) {
   xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
-  const auto sizes = XlaHelpers::ShapeSizes(shape);
   xla::XlaOp zero = XlaHelpers::ScalarValue<float>(0., shape.element_type(),
                                                    input.builder());
-  std::vector<xla::int64> broadcast_sizes(sizes.begin(),
-                                          sizes.end());
   return xla::Select(xla::Ne(input, input),
-                     xla::Broadcast(zero, broadcast_sizes), xla::Sign(input));
+                     xla::Broadcast(zero, shape.dimensions()),
+                     xla::Sign(input));
 }
 
 }  // namespace torch_xla
