@@ -65,6 +65,8 @@ NodePtr Tanh(const Value& input);
 
 NodePtr Neg(const Value& input);
 
+NodePtr SignOp(const Value& input);
+
 NodePtr Abs(const Value& input);
 
 NodePtr ReluOp(const Value& input);

@@ -170,6 +170,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor neg(const at::Tensor& self) const override;
 
+  at::Tensor sign(const at::Tensor& self) const override;
+
   at::Tensor asin(const at::Tensor& self) const override;
 
   at::Tensor sin(const at::Tensor& self) const override;
