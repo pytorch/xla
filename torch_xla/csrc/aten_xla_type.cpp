@@ -823,6 +823,12 @@ at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,
       XLATensor::select(bridge::GetXlaTensor(self), dim, index));
 }
 
+at::Tensor AtenXlaType::dropout(const at::Tensor& input, double p,
+                                bool /* train */) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::dropout(bridge::GetXlaTensor(input), p));
+}
+
 at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::log_softmax(bridge::GetXlaTensor(self), dim));

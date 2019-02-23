@@ -37,6 +37,7 @@
 #include "torch_xla/csrc/ops/cross_replica_sum.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
+#include "torch_xla/csrc/ops/dropout.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/gather.h"
@@ -889,6 +890,11 @@ XLATensor XLATensor::full_like(const XLATensor& input, at::Scalar fill_value,
 XLATensor XLATensor::select(const XLATensor& input, int64_t dim,
                             int64_t index) {
   return Create(ir::MakeNode<ir::ops::Select>(input.GetIrValue(), dim, index),
+                input.GetDevice());
+}
+
+XLATensor XLATensor::dropout(const XLATensor& input, double p) {
+  return Create(ir::MakeNode<ir::ops::Dropout>(input.GetIrValue(), p),
                 input.GetDevice());
 }
 

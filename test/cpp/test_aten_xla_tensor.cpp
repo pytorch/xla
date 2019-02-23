@@ -1009,6 +1009,18 @@ TEST_F(AtenXlaTensorTest, TestSize) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestDropout) {
+  at::Tensor a = at::rand({17, 21}, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor b = at::dropout(xla_a, 0.1, /*train=*/true).cpu();
+    double prob =
+        static_cast<double>(b.ne(0.0f).sum().item().toDouble()) / a.numel();
+    EXPECT_GT(prob, 0.06);
+    EXPECT_LT(prob, 0.14);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSlice) {
   at::Tensor a = at::rand({32, 24, 16}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::slice(a, 1, 0, 16, 1);

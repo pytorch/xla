@@ -50,4 +50,10 @@ xla::XlaOp ConvertTo(const xla::XlaOp& op, xla::PrimitiveType from,
   }
 }
 
+xla::XlaOp ConvertToNumeric(const xla::XlaOp& op, xla::PrimitiveType from) {
+  return from != xla::PrimitiveType::PRED
+             ? op
+             : ConvertTo(op, from, xla::PrimitiveType::U8, /*device=*/nullptr);
+}
+
 }  // namespace torch_xla

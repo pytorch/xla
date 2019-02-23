@@ -265,6 +265,8 @@ class XLATensor {
 
   static XLATensor select(const XLATensor& input, int64_t dim, int64_t index);
 
+  static XLATensor dropout(const XLATensor& input, double p);
+
   static XLATensor neg(const XLATensor& input);
 
   static XLATensor sign(const XLATensor& input);
