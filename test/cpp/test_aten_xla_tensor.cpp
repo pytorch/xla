@@ -801,6 +801,13 @@ TEST_F(AtenXlaTensorTest, TestFull) {
   AllClose(a, xla_a);
 }
 
+TEST_F(AtenXlaTensorTest, TestARange) {
+  at::Tensor a = at::arange(0.0, 100.0, 0.5, at::TensorOptions(at::kFloat));
+  at::Tensor xla_a =
+      at::arange(0.0, 100.0, 0.5, at::TensorOptions(at::kFloat).device(at::kXLA));
+  AllClose(a, xla_a);
+}
+
 TEST_F(AtenXlaTensorTest, TestSigmoid) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::sigmoid(a);

@@ -30,8 +30,9 @@ struct XlaOptions {
 
   Device get_device() const { return device ? *device : *GetDefaultDevice(); }
 
-  at::ScalarType get_scalar_type() const {
-    return scalar_type ? *scalar_type : at::ScalarType::Float;
+  at::ScalarType get_scalar_type(
+      at::ScalarType defval = at::ScalarType::Float) const {
+    return scalar_type ? *scalar_type : defval;
   }
 
   c10::optional<Device> device;
@@ -192,6 +193,33 @@ at::Tensor AtenXlaType::full_like(const at::Tensor& self, at::Scalar fill_value,
   return bridge::AtenFromXlaTensor(
       XLATensor::full_like(self_tensor, fill_value, xla_options.get_device(),
                            xla_options.scalar_type));
+}
+
+at::Tensor AtenXlaType::arange(at::Scalar end,
+                               const at::TensorOptions& options) const {
+  XlaOptions xla_options(options);
+  return bridge::AtenFromXlaTensor(XLATensor::arange(
+      0, end, 1, xla_options.get_device(), xla_options.get_scalar_type()));
+}
+
+at::Tensor AtenXlaType::arange(at::Scalar start, at::Scalar end,
+                               const at::TensorOptions& options) const {
+  XlaOptions xla_options(options);
+  return bridge::AtenFromXlaTensor(XLATensor::arange(
+      start, end, 1, xla_options.get_device(), xla_options.get_scalar_type()));
+}
+
+at::Tensor AtenXlaType::arange(at::Scalar start, at::Scalar end,
+                               at::Scalar step,
+                               const at::TensorOptions& options) const {
+  XlaOptions xla_options(options);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::arange(start, end, step, xla_options.get_device(),
+                        xla_options.get_scalar_type()));
+}
+
+at::Tensor AtenXlaType::_dim_arange(const at::Tensor& like, int64_t dim) const {
+  return arange(like.size(dim), like.options().dtype(at::kLong));
 }
 
 at::Tensor AtenXlaType::addcmul(const at::Tensor& self,

@@ -129,6 +129,9 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input,
 
 NodePtr Where(const Value& condition, const Value& input, const Value& other);
 
+NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
+               const at::Scalar& step, at::ScalarType scalar_type);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
