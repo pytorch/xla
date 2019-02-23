@@ -623,6 +623,16 @@ int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
   return bridge::GetXlaTensor(self).size(dim);
 }
 
+at::Tensor AtenXlaType::embedding(const at::Tensor& weight,
+                                  const at::Tensor& indices,
+                                  int64_t padding_idx, bool scale_grad_by_freq,
+                                  bool sparse) const {
+  // TODO: for now route to native, which dispatches supported XLA operations.
+  // We need to make use of the TPU embedding core here eventually.
+  return at::native::embedding(weight, indices, padding_idx, scale_grad_by_freq,
+                               sparse);
+}
+
 at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
                               int64_t start, int64_t end, int64_t step) const {
   return bridge::AtenFromXlaTensor(
