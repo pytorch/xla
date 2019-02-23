@@ -85,6 +85,8 @@ NodePtr Erfc(const Value& input);
 
 NodePtr Log(const Value& input);
 
+NodePtr Log2(const Value& input);
+
 NodePtr Log1p(const Value& input);
 
 NodePtr Sqrt(const Value& input);
