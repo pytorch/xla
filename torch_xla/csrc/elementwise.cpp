@@ -115,4 +115,15 @@ xla::XlaOp BuildReciprocal(const xla::XlaOp& input) {
   return xla::Div(one, input);
 }
 
+xla::XlaOp BuildSign(const xla::XlaOp& input) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const auto sizes = XlaHelpers::ShapeSizes(shape);
+  xla::XlaOp zero = XlaHelpers::ScalarValue<float>(0., shape.element_type(),
+                                                   input.builder());
+  std::vector<xla::int64> broadcast_sizes(sizes.begin(),
+                                          sizes.end());
+  return xla::Select(xla::Ne(input, input),
+                     xla::Broadcast(zero, broadcast_sizes), xla::Sign(input));
+}
+
 }  // namespace torch_xla

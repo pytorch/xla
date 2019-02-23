@@ -267,6 +267,8 @@ class XLATensor {
 
   static XLATensor neg(const XLATensor& input);
 
+  static XLATensor sign(const XLATensor& input);
+
   static XLATensor asin(const XLATensor& input);
 
   static XLATensor sin(const XLATensor& input);

@@ -896,6 +896,10 @@ XLATensor XLATensor::neg(const XLATensor& input) {
   return Create(ir::ops::Neg(input.GetIrValue()), input.GetDevice());
 }
 
+XLATensor XLATensor::sign(const XLATensor& input) {
+  return Create(ir::ops::SignOp(input.GetIrValue()), input.GetDevice());
+}
+
 XLATensor XLATensor::asin(const XLATensor& input) {
   return Create(ir::ops::Asin(input.GetIrValue()), input.GetDevice());
 }
