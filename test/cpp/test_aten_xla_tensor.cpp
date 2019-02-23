@@ -1138,6 +1138,21 @@ TEST_F(AtenXlaTensorTest, TestExpandAs) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestBroadcastTensors) {
+  at::Tensor a = at::rand({2, 1, 1}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({2, 1}, at::TensorOptions(at::kFloat));
+  std::vector<at::Tensor> c = at::broadcast_tensors({a, b});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    std::vector<at::Tensor> xla_c = at::broadcast_tensors({xla_a, xla_b});
+    ASSERT_EQ(c.size(), xla_c.size());
+    for (size_t i = 0; i < c.size(); ++i) {
+      AllClose(c[i], xla_c[i]);
+    }
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::relu(input);

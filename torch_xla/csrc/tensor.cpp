@@ -1053,6 +1053,21 @@ XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {
   return matmul(batch1, batch2);
 }
 
+std::vector<XLATensor> XLATensor::broadcast_tensors(
+    tensorflow::gtl::ArraySlice<const XLATensor> tensors) {
+  XLA_CHECK(!tensors.empty()) << "broadcast_tensors cannot take an empty list";
+  std::vector<ir::Value> tensor_ir_values;
+  for (const auto& tensor : tensors) {
+    tensor_ir_values.push_back(tensor.GetIrValue());
+  }
+  ir::NodePtr node = ir::ops::BroadcastTensors(tensor_ir_values);
+  std::vector<XLATensor> result;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    result.push_back(Create(ir::Value(node, i), tensors.front().GetDevice()));
+  }
+  return result;
+}
+
 XLATensor XLATensor::einsum(
     const std::string& equation,
     tensorflow::gtl::ArraySlice<const XLATensor> tensors) {

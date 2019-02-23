@@ -375,6 +375,31 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
   return MakeNode<Constant>(std::move(values));
 }
 
+NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    std::vector<xla::XlaOp> xla_operands;
+    for (const Output& operand : node.operands()) {
+      xla_operands.push_back(loctx->GetOutputOp(operand));
+    }
+    return node.ReturnOps(CreateBroadcastTensors(xla_operands), loctx);
+  };
+  std::vector<xla::Shape> tensor_shapes;
+  for (const Value& tensor : tensors) {
+    tensor_shapes.push_back(tensor.shape());
+  }
+  auto lower_for_shape_fn =
+      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      -> xla::XlaOp {
+    auto results = CreateBroadcastTensors(operands);
+    return xla::Tuple(results.front().builder(), results);
+  };
+  return ir::ops::GenericOp(ir::OpKind(at::aten::broadcast_tensors), tensors,
+                            InferOutputShape(tensor_shapes, lower_for_shape_fn),
+                            std::move(lower_fn),
+                            /*num_outputs=*/tensors.size());
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

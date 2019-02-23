@@ -828,6 +828,20 @@ at::Tensor AtenXlaType::bmm(const at::Tensor& self,
       XLATensor::bmm(bridge::GetXlaTensor(self), bridge::GetXlaTensor(mat2)));
 }
 
+std::vector<at::Tensor> AtenXlaType::broadcast_tensors(
+    at::TensorList tensors) const {
+  std::vector<XLATensor> xla_tensors;
+  for (const auto& tensor : tensors) {
+    xla_tensors.push_back(bridge::GetXlaTensor(tensor));
+  }
+  auto xla_result_tuple = XLATensor::broadcast_tensors(xla_tensors);
+  std::vector<at::Tensor> result_tuple;
+  for (auto& xla_result : xla_result_tuple) {
+    result_tuple.push_back(bridge::AtenFromXlaTensor(std::move(xla_result)));
+  }
+  return result_tuple;
+}
+
 at::Tensor AtenXlaType::einsum(std::string equation,
                                at::TensorList tensors) const {
   if (tensors.size() != 2 || !ir::ops::Einsum::SupportsEquation(equation)) {

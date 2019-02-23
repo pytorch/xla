@@ -132,6 +132,8 @@ NodePtr Where(const Value& condition, const Value& input, const Value& other);
 NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
                const at::Scalar& step, at::ScalarType scalar_type);
 
+NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

@@ -135,4 +135,21 @@ xla::XlaOp BuildDropout(const xla::XlaOp& input, float probability) {
   return input * mask;
 }
 
+std::vector<xla::XlaOp> CreateBroadcastTensors(
+    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) {
+  xla::Shape result_shape = XlaHelpers::ShapeOfXlaOp(operands.front());
+  std::vector<xla::Shape> operand_shapes;
+  for (const xla::XlaOp operand : operands) {
+    xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operand);
+    operand_shapes.push_back(operand_shape);
+    result_shape = XlaHelpers::GetPromotedShape(result_shape, operand_shape);
+  }
+  std::vector<xla::XlaOp> result;
+  for (size_t i = 0; i < operands.size(); ++i) {
+    result.push_back(XlaHelpers::ImplicitBroadcast(
+        operands[i], operand_shapes[i], result_shape));
+  }
+  return result;
+}
+
 }  // namespace torch_xla
