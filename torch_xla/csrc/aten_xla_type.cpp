@@ -666,6 +666,12 @@ at::Tensor AtenXlaType::relu(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::relu(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::relu_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::relu_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::leaky_relu(const at::Tensor& self,
                                    at::Scalar negative_slope) const {
   return bridge::AtenFromXlaTensor(XLATensor::leaky_relu(
