@@ -58,6 +58,14 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
                        const at::TensorOptions& options) const override;
 
+  at::Tensor arange(at::Scalar end,
+                    const at::TensorOptions& options) const override;
+  at::Tensor arange(at::Scalar start, at::Scalar end,
+                    const at::TensorOptions& options) const override;
+  at::Tensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
+                    const at::TensorOptions& options) const override;
+  at::Tensor _dim_arange(const at::Tensor& like, int64_t dim) const override;
+
   at::Tensor addcmul(const at::Tensor& self, const at::Tensor& tensor1,
                      const at::Tensor& tensor2,
                      at::Scalar value) const override;

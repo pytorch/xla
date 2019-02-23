@@ -658,6 +658,11 @@ xla::int64 XLATensor::size(xla::int64 dim) const {
   return xla_shape.get().dimensions(dim_index);
 }
 
+XLATensor XLATensor::arange(at::Scalar start, at::Scalar end, at::Scalar step,
+                            const Device& device, at::ScalarType scalar_type) {
+  return Create(ir::ops::ARange(start, end, step, scalar_type), device);
+}
+
 XLATensor XLATensor::all(const XLATensor& input,
                          std::vector<xla::int64> dimensions,
                          bool keep_reduced_dimensions) {
@@ -742,14 +747,14 @@ XLATensor XLATensor::__and__(const XLATensor& input, const at::Scalar& other) {
   XLA_CHECK(xla::ShapeUtil::ElementIsIntegral(input.shape()))
       << "Bitwise and is only supported for integer type tensors";
   ir::NodePtr other_broadcasted_ir = ir::ops::ScalarOp(other, input.shape());
-  return Create(ir::BitwiseAnd(input.GetIrValue(), other_broadcasted_ir),
+  return Create(ir::ops::BitwiseAnd(input.GetIrValue(), other_broadcasted_ir),
                 input.GetDevice());
 }
 
 XLATensor XLATensor::__and__(const XLATensor& input, const XLATensor& other) {
   XLA_CHECK(xla::ShapeUtil::ElementIsIntegral(input.shape()))
       << "Bitwise and is only supported for integer type tensors";
-  return Create(ir::BitwiseAnd(input.GetIrValue(), other.GetIrValue()),
+  return Create(ir::ops::BitwiseAnd(input.GetIrValue(), other.GetIrValue()),
                 input.GetDevice());
 }
 
@@ -757,14 +762,14 @@ XLATensor XLATensor::__or__(const XLATensor& input, const at::Scalar& other) {
   XLA_CHECK(xla::ShapeUtil::ElementIsIntegral(input.shape()))
       << "Bitwise or is only supported for integer type tensors";
   ir::NodePtr other_broadcasted_ir = ir::ops::ScalarOp(other, input.shape());
-  return Create(ir::BitwiseOr(input.GetIrValue(), other_broadcasted_ir),
+  return Create(ir::ops::BitwiseOr(input.GetIrValue(), other_broadcasted_ir),
                 input.GetDevice());
 }
 
 XLATensor XLATensor::__or__(const XLATensor& input, const XLATensor& other) {
   XLA_CHECK(xla::ShapeUtil::ElementIsIntegral(input.shape()))
       << "Bitwise or is only supported for integer type tensors";
-  return Create(ir::BitwiseOr(input.GetIrValue(), other.GetIrValue()),
+  return Create(ir::ops::BitwiseOr(input.GetIrValue(), other.GetIrValue()),
                 input.GetDevice());
 }
 
@@ -772,14 +777,14 @@ XLATensor XLATensor::__xor__(const XLATensor& input, const at::Scalar& other) {
   XLA_CHECK(xla::ShapeUtil::ElementIsIntegral(input.shape()))
       << "Bitwise xor is only supported for integer type tensors";
   ir::NodePtr other_broadcasted_ir = ir::ops::ScalarOp(other, input.shape());
-  return Create(ir::BitwiseXor(input.GetIrValue(), other_broadcasted_ir),
+  return Create(ir::ops::BitwiseXor(input.GetIrValue(), other_broadcasted_ir),
                 input.GetDevice());
 }
 
 XLATensor XLATensor::__xor__(const XLATensor& input, const XLATensor& other) {
   XLA_CHECK(xla::ShapeUtil::ElementIsIntegral(input.shape()))
       << "Bitwise xor is only supported for integer type tensors";
-  return Create(ir::BitwiseXor(input.GetIrValue(), other.GetIrValue()),
+  return Create(ir::ops::BitwiseXor(input.GetIrValue(), other.GetIrValue()),
                 input.GetDevice());
 }
 

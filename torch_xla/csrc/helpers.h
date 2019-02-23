@@ -3,7 +3,10 @@
 #include <functional>
 #include <vector>
 
+#include <c10/core/Scalar.h>
+
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -205,6 +208,11 @@ class XlaHelpers {
     return PromotedBinaryOp(
         op1, op2,
         [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 / op2; });
+  }
+
+  template <typename T>
+  static xla::Literal Range(T start, T end, T step) {
+    return xla::LiteralUtil::CreateR1<T>(xla::util::Range<T>(start, end, step));
   }
 
   static xla::PrecisionConfig::Precision mat_mul_precision() {

@@ -89,6 +89,16 @@ std::vector<T> Iota(size_t size, T init = 0) {
   return result;
 }
 
+template <typename T>
+std::vector<T> Range(T start, T end, T step = 1) {
+  std::vector<T> result;
+  result.reserve(static_cast<size_t>((end - start) / step));
+  for (; start < end; start += step) {
+    result.push_back(start);
+  }
+  return result;
+}
+
 template <typename T, typename S>
 std::vector<T> ToVector(const S& input) {
   return std::vector<T>(input.begin(), input.end());
