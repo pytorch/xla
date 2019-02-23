@@ -766,6 +766,10 @@ XLATensor XLATensor::relu(const XLATensor& input) {
   return Create(ir::ops::ReluOp(input.GetIrValue()), input.GetDevice());
 }
 
+void XLATensor::relu_(XLATensor& input) {
+  input.SetIrValue(ir::ops::ReluOp(input.GetIrValue()));
+}
+
 XLATensor XLATensor::leaky_relu(const XLATensor& input, double negative_slope) {
   return Create(
       ir::MakeNode<ir::ops::LeakyRelu>(input.GetIrValue(), negative_slope),
