@@ -239,6 +239,10 @@ at::Tensor AtenXlaType::log(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::log(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::log2(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::log2(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::log1p(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::log1p(bridge::GetXlaTensor(self)));

@@ -16,27 +16,27 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-#define PTXLA_UNARY_OP(name, sym, xla_fn)                               \
-  NodePtr name(const Value& input) {                                    \
-    auto lower_fn = [](const ir::Node& node,                            \
-                       ir::LoweringContext* loctx) -> ir::XlaOpVector { \
-      xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));       \
-      return node.ReturnOp(xla_fn(xla_input), loctx);                   \
-    };                                                                  \
-    return ir::ops::GenericOp(ir::OpKind(sym), ir::OpList{input},       \
-                              input.shape(), std::move(lower_fn));      \
+#define PTXLA_UNARY_OP(name, sym, xla_fn)                         \
+  NodePtr name(const Value& input) {                              \
+    auto lower_fn = [](const Node& node,                          \
+                       LoweringContext* loctx) -> XlaOpVector {   \
+      xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0)); \
+      return node.ReturnOp(xla_fn(xla_input), loctx);             \
+    };                                                            \
+    return GenericOp(OpKind(sym), OpList{input}, input.shape(),   \
+                     std::move(lower_fn));                        \
   }
 
-#define PTXLA_BINARY_OP(name, sym, xla_fn)                                 \
-  NodePtr name(const Value& input0, const Value& input1) {                 \
-    auto lower_fn = [](const ir::Node& node,                               \
-                       ir::LoweringContext* loctx) -> ir::XlaOpVector {    \
-      xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand(0));         \
-      xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand(1));         \
-      return node.ReturnOp(xla_fn(xla_input0, xla_input1), loctx);         \
-    };                                                                     \
-    return ir::ops::GenericOp(ir::OpKind(sym), ir::OpList{input0, input1}, \
-                              input0.shape(), std::move(lower_fn));        \
+#define PTXLA_BINARY_OP(name, sym, xla_fn)                                \
+  NodePtr name(const Value& input0, const Value& input1) {                \
+    auto lower_fn = [](const Node& node,                                  \
+                       LoweringContext* loctx) -> XlaOpVector {           \
+      xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand(0));        \
+      xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand(1));        \
+      return node.ReturnOp(xla_fn(xla_input0, xla_input1), loctx);        \
+    };                                                                    \
+    return GenericOp(OpKind(sym), OpList{input0, input1}, input0.shape(), \
+                     std::move(lower_fn));                                \
   }
 
 PTXLA_UNARY_OP(Acos, at::aten::acos, xla::Acos);
@@ -66,19 +66,29 @@ PTXLA_BINARY_OP(Max, at::aten::max, xla::Max);
 PTXLA_BINARY_OP(Pow, at::aten::pow, xla::Pow);
 PTXLA_BINARY_OP(Fmod, at::aten::fmod, xla::Rem);
 
+NodePtr Log2(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp result = xla::Log(xla_input);
+    xla::XlaOp ln2 = XlaHelpers::ScalarValue<float>(
+        1.442695, node.shape().element_type(), xla_input.builder());
+    return node.ReturnOp(result * ln2, loctx);
+  };
+  return GenericOp(OpKind(at::aten::log2), OpList{input}, input.shape(),
+                   std::move(lower_fn));
+}
+
 NodePtr ReciprocalOp(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     return node.ReturnOp(BuildReciprocal(xla_input), loctx);
   };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::reciprocal), ir::OpList{input},
-                            input.shape(), std::move(lower_fn));
+  return GenericOp(OpKind(at::aten::reciprocal), OpList{input}, input.shape(),
+                   std::move(lower_fn));
 }
 
 NodePtr ReluOp(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_output = BuildRelu(xla_input);
     return node.ReturnOp(xla_output, loctx);
@@ -89,14 +99,13 @@ NodePtr ReluOp(const Value& input) {
     return BuildRelu(operands[0]);
   };
   xla::Shape output_shape =
-      ir::ops::InferOutputShape({input.shape()}, lower_for_shape_fn);
-  return ir::ops::GenericOp(ir::OpKind(at::aten::relu), ir::OpList{input},
-                            output_shape, std::move(lower_fn));
+      InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return GenericOp(OpKind(at::aten::relu), OpList{input}, output_shape,
+                   std::move(lower_fn));
 }
 
 NodePtr TransposeOp(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_output = xla::Transpose(xla_input, {1, 0});
     return node.ReturnOp(xla_output, loctx);
@@ -107,19 +116,18 @@ NodePtr TransposeOp(const Value& input) {
     return xla::Transpose(operands[0], {1, 0});
   };
   xla::Shape output_shape =
-      ir::ops::InferOutputShape({input.shape()}, lower_for_shape_fn);
-  return ir::ops::GenericOp(ir::OpKind(at::aten::t), ir::OpList{input},
-                            output_shape, std::move(lower_fn));
+      InferOutputShape({input.shape()}, lower_for_shape_fn);
+  return GenericOp(OpKind(at::aten::t), OpList{input}, output_shape,
+                   std::move(lower_fn));
 }
 
 NodePtr Sigmoid(const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     return node.ReturnOp(BuildSigmoid(xla_input), loctx);
   };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::sigmoid), ir::OpList{input},
-                            input.shape(), std::move(lower_fn));
+  return GenericOp(OpKind(at::aten::sigmoid), OpList{input}, input.shape(),
+                   std::move(lower_fn));
 }
 
 NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
@@ -133,27 +141,24 @@ NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
   if (!max) {
     max = min_max.max;
   }
-  ir::NodePtr min_value = ir::ops::ScalarOp(*min, input_shape.element_type());
-  ir::NodePtr max_value = ir::ops::ScalarOp(*max, input_shape.element_type());
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  NodePtr min_value = ScalarOp(*min, input_shape.element_type());
+  NodePtr max_value = ScalarOp(*max, input_shape.element_type());
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_min = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_max = loctx->GetOutputOp(node.operand(2));
     return node.ReturnOp(xla::Clamp(xla_min, xla_input, xla_max), loctx);
   };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::clamp),
-                            ir::OpList{input, min_value, max_value},
-                            input_shape, std::move(lower_fn));
+  return GenericOp(OpKind(at::aten::clamp), OpList{input, min_value, max_value},
+                   input_shape, std::move(lower_fn));
 }
 
 NodePtr AddMatMulOp(const Value& input, const Value& weight,
                     const Value& bias) {
   const xla::PrecisionConfig::Precision precision_level =
       XlaHelpers::mat_mul_precision();
-  auto lower_fn = [precision_level](
-                      const ir::Node& node,
-                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [precision_level](const Node& node,
+                                    LoweringContext* loctx) -> XlaOpVector {
     XLA_CHECK_EQ(node.operands().size(), 3) << "Unexpected number of operands";
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
@@ -176,19 +181,17 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight,
     XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
     return xla::Dot(operands[0], operands[1]);
   };
-  xla::Shape output_shape = ir::ops::InferOutputShape(
-      {input.shape(), weight.shape()}, lower_for_shape_fn);
-  return ir::ops::GenericOp(ir::OpKind(at::aten::addmm),
-                            ir::OpList{input, weight, bias}, output_shape,
-                            std::move(lower_fn));
+  xla::Shape output_shape =
+      InferOutputShape({input.shape(), weight.shape()}, lower_for_shape_fn);
+  return GenericOp(OpKind(at::aten::addmm), OpList{input, weight, bias},
+                   output_shape, std::move(lower_fn));
 }
 
 NodePtr Dot(const Value& input, const Value& weight) {
   const xla::PrecisionConfig::Precision precision_level =
       XlaHelpers::mat_mul_precision();
-  auto lower_fn = [precision_level](
-                      const ir::Node& node,
-                      ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [precision_level](const Node& node,
+                                    LoweringContext* loctx) -> XlaOpVector {
     XLA_CHECK_EQ(node.operands().size(), 2) << "Unexpected number of operands";
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
@@ -202,15 +205,14 @@ NodePtr Dot(const Value& input, const Value& weight) {
     XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
     return xla::Dot(operands[0], operands[1]);
   };
-  xla::Shape output_shape = ir::ops::InferOutputShape(
-      {input.shape(), weight.shape()}, lower_for_shape_fn);
-  return ir::ops::GenericOp(ir::OpKind(at::aten::mm), ir::OpList{input, weight},
-                            output_shape, std::move(lower_fn));
+  xla::Shape output_shape =
+      InferOutputShape({input.shape(), weight.shape()}, lower_for_shape_fn);
+  return GenericOp(OpKind(at::aten::mm), OpList{input, weight}, output_shape,
+                   std::move(lower_fn));
 }
 
 NodePtr MatMul(const Value& lhs, const Value& rhs) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand(1));
     return node.ReturnOp(CreateMatMul(xla_lhs, xla_rhs), loctx);
@@ -220,14 +222,13 @@ NodePtr MatMul(const Value& lhs, const Value& rhs) {
     return CreateMatMul(operands[0], operands[1]);
   };
   xla::Shape output_shape =
-      ir::ops::InferOutputShape({lhs.shape(), rhs.shape()}, lower_for_shape_fn);
-  return ir::ops::GenericOp(ir::OpKind(at::aten::matmul), ir::OpList{lhs, rhs},
-                            output_shape, std::move(lower_fn));
+      InferOutputShape({lhs.shape(), rhs.shape()}, lower_for_shape_fn);
+  return GenericOp(OpKind(at::aten::matmul), OpList{lhs, rhs}, output_shape,
+                   std::move(lower_fn));
 }
 
 NodePtr NllLossOp(const Value& logits, const Value& labels) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp logits = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp labels = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_output = BuildNllLoss(logits, labels);
@@ -238,16 +239,14 @@ NodePtr NllLossOp(const Value& logits, const Value& labels) {
     XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
     return BuildNllLoss(/*logits=*/operands[0], /*labels=*/operands[1]);
   };
-  xla::Shape output_shape = ir::ops::InferOutputShape(
-      {logits.shape(), labels.shape()}, lower_for_shape_fn);
-  return ir::ops::GenericOp(ir::OpKind(at::aten::nll_loss),
-                            ir::OpList{logits, labels}, output_shape,
-                            std::move(lower_fn));
+  xla::Shape output_shape =
+      InferOutputShape({logits.shape(), labels.shape()}, lower_for_shape_fn);
+  return GenericOp(OpKind(at::aten::nll_loss), OpList{logits, labels},
+                   output_shape, std::move(lower_fn));
 }
 
 NodePtr NllLossBackwardOp(const Value& logits, const Value& labels) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp logits = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp labels = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_output = BuildNllLossBackward(logits, labels);
@@ -258,17 +257,15 @@ NodePtr NllLossBackwardOp(const Value& logits, const Value& labels) {
     XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
     return BuildNllLossBackward(/*logits=*/operands[0], /*labels=*/operands[1]);
   };
-  xla::Shape output_shape = ir::ops::InferOutputShape(
-      {logits.shape(), labels.shape()}, lower_for_shape_fn);
-  return ir::ops::GenericOp(ir::OpKind(at::aten::nll_loss_backward),
-                            ir::OpList{logits, labels}, output_shape,
-                            std::move(lower_fn));
+  xla::Shape output_shape =
+      InferOutputShape({logits.shape(), labels.shape()}, lower_for_shape_fn);
+  return GenericOp(OpKind(at::aten::nll_loss_backward), OpList{logits, labels},
+                   output_shape, std::move(lower_fn));
 }
 
 NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
                                   const Value& input) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp grad_output = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp input = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_output = BuildAdaptiveAvgPool2dBackward(
@@ -281,16 +278,16 @@ NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
     return BuildAdaptiveAvgPool2dBackward(/*out_backprop=*/operands[0],
                                           /*input=*/operands[1]);
   };
-  xla::Shape output_shape = ir::ops::InferOutputShape(
+  xla::Shape output_shape = InferOutputShape(
       {grad_output.shape(), input.shape()}, lower_for_shape_fn);
-  return ir::ops::GenericOp(ir::OpKind(at::aten::adaptive_avg_pool2d_backward),
-                            ir::OpList{grad_output, input}, output_shape,
-                            std::move(lower_fn));
+  return GenericOp(OpKind(at::aten::adaptive_avg_pool2d_backward),
+                   OpList{grad_output, input}, output_shape,
+                   std::move(lower_fn));
 }
 
 NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
-  auto lower_fn = [kind](const ir::Node& node,
-                         ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [kind](const Node& node,
+                         LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_output = BuildComparisonOp(kind, xla_input, xla_other);
@@ -298,19 +295,17 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
   };
   xla::Shape output_shape = input.shape();
   output_shape.set_element_type(xla::PrimitiveType::PRED);
-  return ir::ops::GenericOp(ir::OpKind(kind), {input, other},
-                            std::move(output_shape), std::move(lower_fn));
+  return GenericOp(OpKind(kind), {input, other}, std::move(output_shape),
+                   std::move(lower_fn));
 }
 
 NodePtr ComparisonOp(c10::Symbol kind, const Value& input,
                      const at::Scalar& other) {
-  return ComparisonOp(kind, input,
-                      ir::MakeNode<ir::ops::Scalar>(other, input.shape()));
+  return ComparisonOp(kind, input, MakeNode<Scalar>(other, input.shape()));
 }
 
 NodePtr Where(const Value& condition, const Value& input, const Value& other) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_condition = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(2));
@@ -320,9 +315,8 @@ NodePtr Where(const Value& condition, const Value& input, const Value& other) {
     return node.ReturnOp(xla::Select(pred_condition, xla_input, xla_other),
                          loctx);
   };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::where),
-                            {condition, input, other}, input.shape(),
-                            std::move(lower_fn));
+  return GenericOp(OpKind(at::aten::where), {condition, input, other},
+                   input.shape(), std::move(lower_fn));
 }
 
 }  // namespace ops

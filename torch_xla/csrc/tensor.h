@@ -332,6 +332,8 @@ class XLATensor {
 
   static XLATensor log(const XLATensor& input);
 
+  static XLATensor log2(const XLATensor& input);
+
   static XLATensor log1p(const XLATensor& input);
 
   static XLATensor erf(const XLATensor& input);
