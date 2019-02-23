@@ -1314,6 +1314,22 @@ TEST_F(AtenXlaTensorTest, TestAddMatMul) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestEmbedding) {
+  at::Tensor a = at::rand({32, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor i = at::randint(0, 31, {3, 4}, at::TensorOptions(at::kLong));
+  at::Tensor b =
+      at::embedding(a, i, /*padding_idx=*/0, /*scale_grad_by_freq=*/false,
+                    /*sparse=*/false);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_i = bridge::CreateXlaTensor(i, device);
+    at::Tensor xla_b = at::embedding(xla_a, xla_i, /*padding_idx=*/0,
+                                     /*scale_grad_by_freq=*/false,
+                                     /*sparse=*/false);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestTranspose) {
   at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::t(input);
