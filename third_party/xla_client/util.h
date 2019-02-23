@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <memory>
+#include <numeric>
 #include <set>
 #include <vector>
 
@@ -102,6 +103,12 @@ std::vector<T> Range(T start, T end, T step = 1) {
 template <typename T, typename S>
 std::vector<T> ToVector(const S& input) {
   return std::vector<T>(input.begin(), input.end());
+}
+
+template <typename T, typename S>
+T Multiply(const S& input) {
+  return std::accumulate(input.begin(), input.end(), T(1),
+                         std::multiplies<T>());
 }
 
 static inline size_t HashCombine(size_t a, size_t b) {
