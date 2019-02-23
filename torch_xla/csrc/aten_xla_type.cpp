@@ -507,6 +507,10 @@ at::Tensor AtenXlaType::neg(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::neg(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::sign(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::sign(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::asin(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::asin(bridge::GetXlaTensor(self)));
 }
