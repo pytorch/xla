@@ -366,6 +366,34 @@ at::Tensor& AtenXlaType::fmod_(at::Tensor& self,
   return self;
 }
 
+at::Tensor AtenXlaType::all(const at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::all(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions*/ false));
+}
+
+at::Tensor AtenXlaType::all(const at::Tensor& self, int64_t dim,
+                            bool keepdim) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::all(bridge::GetXlaTensor(self), {dim}, keepdim));
+}
+
+at::Tensor AtenXlaType::any(const at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::any(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions*/ false));
+}
+
+at::Tensor AtenXlaType::any(const at::Tensor& self, int64_t dim,
+                            bool keepdim) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::any(bridge::GetXlaTensor(self), {dim}, keepdim));
+}
+
 at::Tensor AtenXlaType::ne(const at::Tensor& self, at::Scalar other) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::ne(bridge::GetXlaTensor(self), other));

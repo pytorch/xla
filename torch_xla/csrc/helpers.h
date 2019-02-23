@@ -41,6 +41,8 @@ class XlaHelpers {
         return xla::LiteralUtil::CreateR0<xla::int8>(scalar_value);
       case xla::PrimitiveType::U8:
         return xla::LiteralUtil::CreateR0<xla::uint8>(scalar_value);
+      case xla::PrimitiveType::PRED:
+        return xla::LiteralUtil::CreateR0<bool>(scalar_value);
       default:
         return xla::LiteralUtil::CreateR0<T>(scalar_value);
     }

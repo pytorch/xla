@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
@@ -158,13 +159,11 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight,
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand(2));
-    const auto bias_sizes =
-        XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(xla_bias));
+    const auto bias_sizes = XlaHelpers::SizesOfXlaOp(xla_bias);
     xla::PrecisionConfig precision_config =
         XlaHelpers::BuildPrecisionConfig(precision_level);
     xla::XlaOp xla_dot = xla::Dot(xla_input, xla_weight, &precision_config);
-    const auto dot_sizes =
-        XlaHelpers::ShapeSizes(XlaHelpers::ShapeOfXlaOp(xla_dot));
+    const auto dot_sizes = XlaHelpers::SizesOfXlaOp(xla_dot);
     if (bias_sizes != dot_sizes) {
       xla_bias = BuildExpand(xla_bias, dot_sizes);
     }
