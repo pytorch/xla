@@ -113,6 +113,10 @@ at::Tensor& AtenXlaType::s_copy_(at::Tensor& self, const at::Tensor& src,
   return self;
 }
 
+at::Tensor AtenXlaType::contiguous(const at::Tensor& self) const {
+  return self;
+}
+
 at::Tensor AtenXlaType::empty(at::IntArrayRef size,
                               const at::TensorOptions& options) const {
   // PT empty*() are optimizations to avoid initializing the data when it is
