@@ -1126,6 +1126,16 @@ TEST_F(AtenXlaTensorTest, TestExpand) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestExpandBack) {
+  at::Tensor a = at::rand({3, 1}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::native::expand(a, {3, 4}, /*implicit=*/false);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::native::expand(xla_a, {3, 4}, /*implicit=*/false);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestExpandAs) {
   at::Tensor a = at::rand({3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 3, 4}, at::TensorOptions(at::kFloat));
@@ -2083,6 +2093,23 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorScalar) {
     at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs, device);
     at::Tensor xla_result = xla_lhs.__xor__(rhs);
     AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestMeshgrid) {
+  at::Tensor a = at::rand({3}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({2}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::rand({4}, at::TensorOptions(at::kFloat));
+  auto d = at::meshgrid({a, b, c});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = bridge::CreateXlaTensor(c, device);
+    auto xla_d = at::meshgrid({xla_a, xla_b, xla_c});
+    EXPECT_EQ(d.size(), xla_d.size());
+    for (size_t i = 0; i < d.size(); ++i) {
+      AllClose(d[i], xla_d[i]);
+    }
   });
 }
 

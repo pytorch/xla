@@ -631,6 +631,10 @@ at::Tensor& AtenXlaType::clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
   return self;
 }
 
+std::vector<at::Tensor> AtenXlaType::meshgrid(at::TensorList tensors) const {
+  return at::native::meshgrid(tensors);
+}
+
 at::Tensor AtenXlaType::constant_pad_nd(const at::Tensor& self,
                                         at::IntArrayRef pad,
                                         at::Scalar value) const {

@@ -3,8 +3,10 @@
 #include <functional>
 #include <numeric>
 
+#include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/helpers.h"
 
@@ -61,7 +63,7 @@ std::vector<xla::int64> GetCompleteShape(
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes,
     tensorflow::gtl::ArraySlice<const xla::int64> input_sizes) {
   c10::optional<size_t> incomplete_dim;
-  int64_t incomplete_element_count = 1;
+  xla::int64 incomplete_element_count = 1;
   for (size_t dim = 0; dim < output_sizes.size(); ++dim) {
     xla::int64 dim_size = output_sizes[dim];
     if (dim_size < 0) {
@@ -73,16 +75,19 @@ std::vector<xla::int64> GetCompleteShape(
       incomplete_element_count *= dim_size;
     }
   }
+  xla::int64 total_element_count = xla::util::Multiply<xla::int64>(input_sizes);
   if (!incomplete_dim) {
-    return std::vector<xla::int64>(output_sizes.begin(), output_sizes.end());
+    XLA_CHECK_EQ(total_element_count,
+                 xla::util::Multiply<xla::int64>(output_sizes))
+        << "[" << absl::StrJoin(output_sizes, ", ") << "] vs. ["
+        << "[" << absl::StrJoin(input_sizes, ", ") << "]";
+    return xla::util::ToVector<xla::int64>(output_sizes);
   }
-  int64_t total_element_count =
-      std::accumulate(input_sizes.begin(), input_sizes.end(), int64_t(1),
-                      std::multiplies<int64_t>());
   XLA_CHECK_EQ(total_element_count % incomplete_element_count, 0)
-      << "Cannot infer remaining dimension";
-  std::vector<xla::int64> complete_output_sizes(output_sizes.begin(),
-                                                output_sizes.end());
+      << "[" << absl::StrJoin(output_sizes, ", ") << "] vs. ["
+      << "[" << absl::StrJoin(input_sizes, ", ") << "]";
+  std::vector<xla::int64> complete_output_sizes =
+      xla::util::ToVector<xla::int64>(output_sizes);
   complete_output_sizes[*incomplete_dim] =
       total_element_count / incomplete_element_count;
   return complete_output_sizes;
@@ -162,32 +167,11 @@ xla::XlaOp BuildExpand(
   auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   // Adjust the rank of the input to match the rank of the output.
   XLA_CHECK_LE(input_sizes.size(), output_sizes.size());
-  for (size_t i = 0; i < output_sizes.size() - input_sizes.size(); ++i) {
-    input_sizes.insert(input_sizes.begin(), 1);
-  }
+  input_sizes.insert(input_sizes.begin(),
+                     output_sizes.size() - input_sizes.size(), 1);
   xla::XlaOp implicit_reshape = xla::Reshape(input, input_sizes);
-  xla::XlaOp squeezed_input = SqueezeAllTrivialDimensions(implicit_reshape);
-  // Broadcast the squeezed tensor, the additional dimensions are to the left.
-  std::vector<xla::int64> broadcast_sizes;
-  for (size_t i = 0; i < input_sizes.size(); ++i) {
-    if (input_sizes[i] == 1) {
-      broadcast_sizes.push_back(output_sizes[i]);
-    }
-  }
-  xla::XlaOp broadcast = xla::Broadcast(squeezed_input, broadcast_sizes);
-  // Bring the dimensions added by broadcast where the trivial dimensions were.
-  std::vector<xla::int64> reshape_permutation;
-  for (size_t i = 0; i < input_sizes.size(); ++i) {
-    if (input_sizes[i] == 1) {
-      reshape_permutation.push_back(i);
-    }
-  }
-  for (size_t i = 0; i < input_sizes.size(); ++i) {
-    if (input_sizes[i] != 1) {
-      reshape_permutation.push_back(i);
-    }
-  }
-  return xla::Reshape(broadcast, reshape_permutation, output_sizes);
+  return xla::BroadcastInDim(implicit_reshape, output_sizes,
+                             xla::util::Iota<xla::int64>(output_sizes.size()));
 }
 
 xla::XlaOp BuildUnsqueeze(const xla::XlaOp& input, size_t dim) {
