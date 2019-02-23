@@ -118,4 +118,21 @@ xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs) {
               << rhs_shape << ")";
 }
 
+xla::XlaOp BuildDropout(const xla::XlaOp& input, float probability) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero =
+      XlaHelpers::ScalarValue<float>(0, shape.element_type(), input.builder());
+  xla::XlaOp one =
+      XlaHelpers::ScalarValue<float>(1, shape.element_type(), input.builder());
+  xla::XlaOp prob =
+      XlaHelpers::ScalarBroadcast<float>(probability, shape, input.builder());
+  xla::XlaOp noise = xla::RngUniform(zero, one, shape);
+  xla::XlaOp mask =
+      xla::ConvertElementType(xla::Lt(noise, prob), shape.element_type());
+  if (probability > 0.0f) {
+    mask = mask / prob;
+  }
+  return input * mask;
+}
+
 }  // namespace torch_xla

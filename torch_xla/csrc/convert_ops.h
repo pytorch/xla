@@ -9,4 +9,6 @@ namespace torch_xla {
 xla::XlaOp ConvertTo(const xla::XlaOp& op, xla::PrimitiveType from,
                      xla::PrimitiveType to, const Device* device);
 
+xla::XlaOp ConvertToNumeric(const xla::XlaOp& op, xla::PrimitiveType from);
+
 }  // namespace torch_xla

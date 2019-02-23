@@ -288,6 +288,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor select(const at::Tensor& self, int64_t dim,
                     int64_t index) const override;
 
+  at::Tensor dropout(const at::Tensor& input, double p,
+                     bool train) const override;
+
   at::Tensor log_softmax(const at::Tensor& self, int64_t dim) const override;
   at::Tensor _log_softmax(const at::Tensor& self, int64_t dim,
                           bool half_to_float) const override;
