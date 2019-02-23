@@ -209,6 +209,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
                      c10::optional<at::Scalar> max) const override;
 
+  std::vector<at::Tensor> meshgrid(at::TensorList tensors) const override;
+
   at::Tensor constant_pad_nd(const at::Tensor& self, at::IntArrayRef pad,
                              at::Scalar value) const override;
 
