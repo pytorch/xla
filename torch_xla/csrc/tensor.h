@@ -130,6 +130,9 @@ class XLATensor {
   // Additional operations which are part of the PyTorch Tensor functionality.
   xla::int64 size(xla::int64 dim) const;
 
+  static XLATensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
+                          const Device& device, at::ScalarType scalar_type);
+
   static XLATensor all(const XLATensor& input,
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions);

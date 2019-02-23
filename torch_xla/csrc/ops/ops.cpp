@@ -9,8 +9,10 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
+#include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
@@ -325,6 +327,52 @@ NodePtr Where(const Value& condition, const Value& input, const Value& other) {
   };
   return GenericOp(OpKind(at::aten::where), {condition, input, other},
                    input.shape(), std::move(lower_fn));
+}
+
+NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
+               const at::Scalar& step, at::ScalarType scalar_type) {
+  xla::PrimitiveType type = MakeXlaPrimitiveType(scalar_type,
+                                                 /*device=*/nullptr);
+  xla::Literal values;
+  switch (type) {
+    case xla::PrimitiveType::BF16:
+      values = XlaHelpers::Range<tensorflow::bfloat16>(
+          static_cast<tensorflow::bfloat16>(start.toFloat()),
+          static_cast<tensorflow::bfloat16>(end.toFloat()),
+          static_cast<tensorflow::bfloat16>(step.toFloat()));
+      break;
+    case xla::PrimitiveType::F32:
+      values = XlaHelpers::Range<float>(start.toFloat(), end.toFloat(),
+                                        step.toFloat());
+      break;
+    case xla::PrimitiveType::F64:
+      values = XlaHelpers::Range<double>(start.toDouble(), end.toDouble(),
+                                         step.toDouble());
+      break;
+    case xla::PrimitiveType::U8:
+      values = XlaHelpers::Range<xla::uint8>(start.toByte(), end.toByte(),
+                                             step.toByte());
+      break;
+    case xla::PrimitiveType::S8:
+      values = XlaHelpers::Range<xla::int8>(start.toChar(), end.toChar(),
+                                            step.toChar());
+      break;
+    case xla::PrimitiveType::S16:
+      values = XlaHelpers::Range<xla::int16>(start.toShort(), end.toShort(),
+                                             step.toShort());
+      break;
+    case xla::PrimitiveType::S32:
+      values = XlaHelpers::Range<xla::int32>(start.toInt(), end.toInt(),
+                                             step.toInt());
+      break;
+    case xla::PrimitiveType::S64:
+      values = XlaHelpers::Range<xla::int64>(start.toLong(), end.toLong(),
+                                             step.toLong());
+      break;
+    default:
+      XLA_ERROR() << "XLA type not supported: " << type;
+  }
+  return MakeNode<Constant>(std::move(values));
 }
 
 }  // namespace ops
