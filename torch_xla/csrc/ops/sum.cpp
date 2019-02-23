@@ -2,6 +2,7 @@
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -18,10 +19,15 @@ xla::XlaOp LowerSum(const xla::XlaOp& input,
                     const std::vector<xla::int64>& dimensions,
                     bool keep_reduced_dimensions,
                     c10::optional<at::ScalarType> dtype) {
-  xla::XlaOp result = BuildSum(input, dimensions, keep_reduced_dimensions);
-  return dtype ? xla::ConvertElementType(
-                     result, MakeXlaPrimitiveType(*dtype, /*device=*/nullptr))
-               : result;
+  xla::XlaOp casted_input;
+  if (dtype) {
+    casted_input = ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),
+                             MakeXlaPrimitiveType(*dtype, /*device=*/nullptr),
+                             /*device=*/nullptr);
+  } else {
+    casted_input = ConvertToNumeric(input, XlaHelpers::TypeOfXlaOp(input));
+  }
+  return BuildSum(casted_input, dimensions, keep_reduced_dimensions);
 }
 
 xla::Shape NodeOutputShape(const Value& input,
