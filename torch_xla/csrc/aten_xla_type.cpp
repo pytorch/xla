@@ -288,6 +288,11 @@ at::Tensor AtenXlaType::erfc(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::erfc(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::erfinv(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::erfinv(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::sqrt(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::sqrt(bridge::GetXlaTensor(self)));
 }
