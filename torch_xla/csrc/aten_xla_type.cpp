@@ -844,11 +844,7 @@ std::vector<at::Tensor> AtenXlaType::broadcast_tensors(
     xla_tensors.push_back(bridge::GetXlaTensor(tensor));
   }
   auto xla_result_tuple = XLATensor::broadcast_tensors(xla_tensors);
-  std::vector<at::Tensor> result_tuple;
-  for (auto& xla_result : xla_result_tuple) {
-    result_tuple.push_back(bridge::AtenFromXlaTensor(std::move(xla_result)));
-  }
-  return result_tuple;
+  return bridge::AtenFromXlaTensors(xla_result_tuple);
 }
 
 at::Tensor AtenXlaType::einsum(std::string equation,
@@ -1228,11 +1224,14 @@ std::vector<at::Tensor> AtenXlaType::split(const at::Tensor& self,
                                            int64_t dim) const {
   auto xla_tensors =
       XLATensor::split(bridge::GetXlaTensor(self), split_size, dim);
-  std::vector<at::Tensor> tensors;
-  for (XLATensor& xla_tensor : xla_tensors) {
-    tensors.emplace_back(bridge::AtenFromXlaTensor(std::move(xla_tensor)));
-  }
-  return tensors;
+  return bridge::AtenFromXlaTensors(xla_tensors);
+}
+
+std::vector<at::Tensor> AtenXlaType::split_with_sizes(
+    const at::Tensor& self, at::IntArrayRef split_sizes, int64_t dim) const {
+  auto xla_tensors = XLATensor::split_with_sizes(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(split_sizes), dim);
+  return bridge::AtenFromXlaTensors(xla_tensors);
 }
 
 at::Tensor AtenXlaType::squeeze(const at::Tensor& self) const {

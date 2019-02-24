@@ -129,6 +129,16 @@ at::Tensor AtenFromXlaTensor(XLATensor xla_tensor) {
   return at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
 }
 
+std::vector<at::Tensor> AtenFromXlaTensors(
+    tensorflow::gtl::ArraySlice<const XLATensor> xla_tensors) {
+  std::vector<at::Tensor> tensors;
+  tensors.reserve(xla_tensors.size());
+  for (auto& tensor : xla_tensors) {
+    tensors.emplace_back(AtenFromXlaTensor(tensor));
+  }
+  return tensors;
+}
+
 at::Tensor CreateXlaTensor(at::Tensor tensor,
                            const c10::optional<Device>& device) {
   if (tensor.defined() && device) {

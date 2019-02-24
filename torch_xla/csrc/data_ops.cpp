@@ -51,7 +51,7 @@ std::vector<xla::XlaOp> BuildChunk(const xla::XlaOp& input, xla::int64 chunks,
   xla::int64 start_idx = 0;
   for (xla::int64 i = 0; i < chunks; ++i) {
     xla::int64 length = split_sizes[i];
-    splits[i] = SliceInDim(input, start_idx, start_idx + length, 1, dim);
+    splits[i] = xla::SliceInDim(input, start_idx, start_idx + length, 1, dim);
     start_idx += length;
   }
   return splits;
@@ -260,14 +260,35 @@ std::vector<xla::XlaOp> BuildChunk(const torch::jit::Node* node,
   return BuildChunk(input, chunks, dim);
 }
 
-std::vector<xla::XlaOp> BuildSplit(const xla::XlaOp& input,
-                                   xla::int64 split_size, xla::int64 dim) {
+size_t ComputeSplitCount(
+    xla::int64 dim_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> split_sizes) {
+  size_t count = 0;
+  for (auto size : split_sizes) {
+    if (size > dim_size) {
+      break;
+    }
+    dim_size -= size;
+    ++count;
+  }
+  return count;
+}
+
+std::vector<xla::XlaOp> BuildSplit(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> split_sizes, xla::int64 dim) {
   const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
-  XLA_CHECK_LT(dim, input_sizes.size());
-  xla::int64 size_in_dim = input_sizes[dim];
-  XLA_CHECK_GT(split_size, 0);
-  xla::int64 chunks = xla::CeilOfRatio(size_in_dim, split_size);
-  return BuildChunk(input, chunks, dim);
+  xla::int64 dim_size = input_sizes.at(dim);
+  xla::int64 index = 0;
+  std::vector<xla::XlaOp> splits;
+  for (auto size : split_sizes) {
+    if (index + size > dim_size) {
+      break;
+    }
+    splits.emplace_back(SliceInDim(input, index, index + size, 1, dim));
+    index += size;
+  }
+  return splits;
 }
 
 }  // namespace torch_xla
