@@ -1092,8 +1092,10 @@ XLATensor XLATensor::log(const XLATensor& input) {
   return Create(ir::ops::Log(input.GetIrValue()), input.GetDevice());
 }
 
-XLATensor XLATensor::log2(const XLATensor& input) {
-  return Create(ir::ops::Log2(input.GetIrValue()), input.GetDevice());
+XLATensor XLATensor::log_base(const XLATensor& input, ir::OpKind op,
+                              double base) {
+  return Create(ir::ops::LogBase(input.GetIrValue(), op, base),
+                input.GetDevice());
 }
 
 XLATensor XLATensor::log1p(const XLATensor& input) {
