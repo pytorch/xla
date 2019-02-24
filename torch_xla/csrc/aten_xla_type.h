@@ -94,6 +94,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor erfc(const at::Tensor& self) const override;
 
+  at::Tensor erfinv(const at::Tensor& self) const override;
+
   at::Tensor sqrt(const at::Tensor& self) const override;
 
   at::Tensor rsqrt(const at::Tensor& self) const override;

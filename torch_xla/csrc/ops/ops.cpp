@@ -59,6 +59,7 @@ PTXLA_UNARY_OP(Log, at::aten::log, xla::Log);
 PTXLA_UNARY_OP(Log1p, at::aten::log1p, xla::Log1p);
 PTXLA_UNARY_OP(Erf, at::aten::erf, xla::Erf);
 PTXLA_UNARY_OP(Erfc, at::aten::erfc, xla::Erfc);
+PTXLA_UNARY_OP(Erfinv, at::aten::erfinv, xla::ErfInv);
 PTXLA_UNARY_OP(Sqrt, at::aten::sqrt, xla::Sqrt);
 PTXLA_UNARY_OP(Rsqrt, at::aten::rsqrt, xla::Rsqrt);
 PTXLA_UNARY_OP(Ceil, at::aten::ceil, xla::Ceil);
@@ -376,8 +377,8 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
 }
 
 NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+  auto lower_fn = [](const Node& node,
+                     LoweringContext* loctx) -> XlaOpVector {
     std::vector<xla::XlaOp> xla_operands;
     for (const Output& operand : node.operands()) {
       xla_operands.push_back(loctx->GetOutputOp(operand));
@@ -394,10 +395,9 @@ NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
     auto results = CreateBroadcastTensors(operands);
     return xla::Tuple(results.front().builder(), results);
   };
-  return ir::ops::GenericOp(ir::OpKind(at::aten::broadcast_tensors), tensors,
-                            InferOutputShape(tensor_shapes, lower_for_shape_fn),
-                            std::move(lower_fn),
-                            /*num_outputs=*/tensors.size());
+  return GenericOp(OpKind(at::aten::broadcast_tensors), tensors,
+                   InferOutputShape(tensor_shapes, lower_for_shape_fn),
+                   std::move(lower_fn), /*num_outputs=*/tensors.size());
 }
 
 }  // namespace ops

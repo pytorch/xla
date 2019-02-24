@@ -1108,6 +1108,10 @@ XLATensor XLATensor::erfc(const XLATensor& input) {
   return Create(ir::ops::Erfc(input.GetIrValue()), input.GetDevice());
 }
 
+XLATensor XLATensor::erfinv(const XLATensor& input) {
+  return Create(ir::ops::Erfinv(input.GetIrValue()), input.GetDevice());
+}
+
 XLATensor XLATensor::sqrt(const XLATensor& input) {
   return Create(ir::ops::Sqrt(input.GetIrValue()), input.GetDevice());
 }
