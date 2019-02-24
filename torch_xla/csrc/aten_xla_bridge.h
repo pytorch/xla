@@ -7,6 +7,7 @@
 #include <ATen/Tensor.h>
 #include <ATen/Type.h>
 
+#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
 
@@ -50,6 +51,9 @@ Device AtenDeviceToXlaDevice(const c10::Device& device);
 
 // Creates an ATen tensor with XLA type id from an XLATensor.
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor);
+
+std::vector<at::Tensor> AtenFromXlaTensors(
+    tensorflow::gtl::ArraySlice<const XLATensor> xla_tensors);
 
 // Creates an XLA tensor holding the data in tensor, on the given device.
 at::Tensor CreateXlaTensor(at::Tensor tensor,

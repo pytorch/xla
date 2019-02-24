@@ -456,6 +456,10 @@ class XLATensor {
   static std::vector<XLATensor> split(const XLATensor& input,
                                       xla::int64 split_size, xla::int64 dim);
 
+  static std::vector<XLATensor> split_with_sizes(
+      const XLATensor& input,
+      tensorflow::gtl::ArraySlice<const xla::int64> split_size, xla::int64 dim);
+
   // Squeeze out all trivial (size 1) dimensions.
   static XLATensor squeeze(const XLATensor& input);
 
@@ -638,6 +642,9 @@ class XLATensor {
   //   for i in range(0, 100000):
   //     a = a + b
   void TryLimitGraphSize();
+
+  static std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node,
+                                                  const Device& device);
 
   // Extracts the current IR Node out of a view, into a ViewIrNode structure
   // where the updated fields tells whether a new IR Node has been created, or

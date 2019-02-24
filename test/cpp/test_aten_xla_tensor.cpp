@@ -803,8 +803,8 @@ TEST_F(AtenXlaTensorTest, TestFull) {
 
 TEST_F(AtenXlaTensorTest, TestARange) {
   at::Tensor a = at::arange(0.0, 100.0, 0.5, at::TensorOptions(at::kFloat));
-  at::Tensor xla_a =
-      at::arange(0.0, 100.0, 0.5, at::TensorOptions(at::kFloat).device(at::kXLA));
+  at::Tensor xla_a = at::arange(0.0, 100.0, 0.5,
+                                at::TensorOptions(at::kFloat).device(at::kXLA));
   AllClose(a, xla_a);
 }
 
@@ -1873,6 +1873,24 @@ TEST_F(AtenXlaTensorTest, TestSplitEmpty) {
       AllClose(outputs[i], xla_outputs[i]);
     }
   });
+}
+
+TEST_F(AtenXlaTensorTest, TestSplitWithSizes) {
+  at::Tensor input = GetTestTensor({15, 15, 15});
+  int rank = input.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    std::vector<at::Tensor> outputs =
+        at::split_with_sizes(input, {4, 5, 6}, dim);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      std::vector<at::Tensor> xla_outputs =
+          at::split_with_sizes(xla_input, {4, 5, 6}, dim);
+      ASSERT_EQ(outputs.size(), xla_outputs.size());
+      for (size_t i = 0; i < outputs.size(); ++i) {
+        AllClose(outputs[i], xla_outputs[i]);
+      }
+    });
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestTriu) {

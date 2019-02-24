@@ -521,6 +521,16 @@ xla::int64 XLATensor::GetNextTensorId() {
   return id_generator->fetch_add(1);
 }
 
+std::vector<XLATensor> XLATensor::MakeOutputTensors(ir::NodePtr node,
+                                                    const Device& device) {
+  std::vector<XLATensor> tensors;
+  tensors.reserve(node->num_outputs());
+  for (size_t i = 0; i < node->num_outputs(); ++i) {
+    tensors.push_back(Create(ir::Value(node, i), device));
+  }
+  return tensors;
+}
+
 XLATensor::ViewIrNode XLATensor::GetViewIrNode(View* view) {
   if (view->ir_value &&
       view->ir_value->operand(0).node == view->alias->ir_value.node.get()) {
@@ -1061,11 +1071,7 @@ std::vector<XLATensor> XLATensor::broadcast_tensors(
     tensor_ir_values.push_back(tensor.GetIrValue());
   }
   ir::NodePtr node = ir::ops::BroadcastTensors(tensor_ir_values);
-  std::vector<XLATensor> result;
-  for (size_t i = 0; i < tensors.size(); ++i) {
-    result.push_back(Create(ir::Value(node, i), tensors.front().GetDevice()));
-  }
-  return result;
+  return MakeOutputTensors(node, tensors.front().GetDevice());
 }
 
 XLATensor XLATensor::einsum(
@@ -1206,23 +1212,33 @@ std::vector<XLATensor> XLATensor::split(const XLATensor& input,
                                         xla::int64 split_size, xla::int64 dim) {
   auto input_shape = input.shape();
   int split_dim = GetCanonicalDimensionIndex(dim, input_shape.get().rank());
-  xla::int64 size_in_dim = input_shape.get().dimensions(split_dim);
-  // Deal with 0 split size, it's a corner case which is only allowed when the
-  // dimension size is 0 as well.
+  xla::int64 dim_size = input_shape.get().dimensions(split_dim);
   if (split_size == 0) {
-    XLA_CHECK_EQ(size_in_dim, 0);
+    // Deal with 0 split size, it's a corner case which is only allowed when the
+    // dimension size is 0 as well.
+    XLA_CHECK_EQ(dim_size, 0);
     xla::Literal literal(input_shape.get());
     return {Create(ir::MakeNode<ir::ops::Constant>(std::move(literal)),
                    input.GetDevice())};
   }
-  xla::int64 chunks = xla::CeilOfRatio(size_in_dim, split_size);
-  ir::NodePtr node =
-      ir::MakeNode<ir::ops::Split>(input.GetIrValue(), split_size, split_dim);
-  std::vector<XLATensor> result;
-  for (xla::int64 i = 0; i < chunks; ++i) {
-    result.push_back(Create(ir::Value(node, i), input.GetDevice()));
+  std::vector<xla::int64> split_sizes;
+  for (; dim_size > 0; dim_size -= split_size) {
+    split_sizes.push_back(std::min<xla::int64>(dim_size, split_size));
   }
-  return result;
+  ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
+      input.GetIrValue(), std::move(split_sizes), split_dim);
+  return MakeOutputTensors(node, input.GetDevice());
+}
+
+std::vector<XLATensor> XLATensor::split_with_sizes(
+    const XLATensor& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> split_size, xla::int64 dim) {
+  auto input_shape = input.shape();
+  int split_dim = GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
+      input.GetIrValue(), xla::util::ToVector<xla::int64>(split_size),
+      split_dim);
+  return MakeOutputTensors(node, input.GetDevice());
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input) {
