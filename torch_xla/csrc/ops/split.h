@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -9,18 +11,18 @@ namespace ops {
 // Split the tensor into chunks along a given dimension.
 class Split : public Node {
  public:
-  Split(const Value& input, xla::int64 split_size, xla::int64 dim);
+  Split(const Value& input, std::vector<xla::int64> split_sizes, xla::int64 dim);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;
 
-  xla::int64 split_size() const { return split_size_; }
+  const std::vector<xla::int64>& split_sizes() const { return split_sizes_; }
 
   xla::int64 dim() const { return dim_; }
 
  private:
-  xla::int64 split_size_;
+  std::vector<xla::int64> split_sizes_;
   xla::int64 dim_;
 };
 

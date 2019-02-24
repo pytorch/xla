@@ -85,10 +85,15 @@ xla::XlaOp BuildRepeat(const xla::XlaOp& input,
 std::vector<xla::XlaOp> BuildChunk(const torch::jit::Node* node,
                                    const xla::XlaOp& input);
 
-// Splits a tensor nto equally sized chunks (if possible). Last chunk will be
-// smaller if the tensor size along the given dimension "dim" is not divisible
-// by "split_size".
-std::vector<xla::XlaOp> BuildSplit(const xla::XlaOp& input,
-                                   xla::int64 split_size, xla::int64 dim);
+// Computes the number of splits with a dimension size and the split sizes.
+size_t ComputeSplitCount(
+    xla::int64 dim_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> split_sizes);
+
+// Splits a tensor into parts whose size is passed in split_sizes, along the dim
+// dimension.
+std::vector<xla::XlaOp> BuildSplit(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> split_sizes, xla::int64 dim);
 
 }  // namespace torch_xla

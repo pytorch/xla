@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/split.h"
-#include "tensorflow/compiler/xla/util.h"
+
+#include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -11,38 +12,39 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input, xla::int64 split_size,
+xla::Shape NodeOutputShape(const Value& input,
+                           const std::vector<xla::int64>& split_sizes,
                            xla::int64 dim) {
   auto lower_for_shape_fn =
-      [split_size, dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 1);
     return xla::Tuple(operands[0].builder(),
-                      BuildSplit(operands[0], split_size, dim));
+                      BuildSplit(operands[0], split_sizes, dim));
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-Split::Split(const Value& input, xla::int64 split_size, xla::int64 dim)
+Split::Split(const Value& input, std::vector<xla::int64> split_sizes,
+             xla::int64 dim)
     : Node(ir::OpKind(at::aten::split), {input},
-           NodeOutputShape(input, split_size, dim),
-           /*num_outputs=*/
-           xla::CeilOfRatio(input.shape().dimensions(dim), split_size),
-           xla::util::MHash(split_size, dim)),
-      split_size_(split_size),
+           NodeOutputShape(input, split_sizes, dim),
+           ComputeSplitCount(input.shape().dimensions(dim), split_sizes),
+           xla::util::MHash(split_sizes, dim)),
+      split_sizes_(std::move(split_sizes)),
       dim_(dim) {}
 
 XlaOpVector Split::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  const auto outputs = BuildSplit(input, split_size_, dim_);
+  const auto outputs = BuildSplit(input, split_sizes_, dim_);
   return ReturnOps(outputs, loctx);
 }
 
 std::string Split::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", split_size=" << split_size_ << ", dim=" << dim_;
+  ss << Node::ToString() << ", split_sizes=["
+     << absl::StrJoin(split_sizes_, ", ") << "], dim=" << dim_;
   return ss.str();
 }
 
