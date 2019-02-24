@@ -359,6 +359,8 @@ class XLATensor {
 
   static XLATensor erfc(const XLATensor& input);
 
+  static XLATensor erfinv(const XLATensor& input);
+
   static XLATensor sqrt(const XLATensor& input);
 
   static XLATensor rsqrt(const XLATensor& input);

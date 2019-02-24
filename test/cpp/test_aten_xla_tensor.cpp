@@ -1244,6 +1244,16 @@ TEST_F(AtenXlaTensorTest, TestErfc) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestErfinv) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::erfinv(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::erfinv(xla_a);
+    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSqrt) {
   at::Tensor a = at::abs(at::rand({2, 2}, at::TensorOptions(at::kFloat)));
   at::Tensor b = at::sqrt(a);
