@@ -272,7 +272,13 @@ at::Tensor AtenXlaType::log(const at::Tensor& self) const {
 }
 
 at::Tensor AtenXlaType::log2(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(XLATensor::log2(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(XLATensor::log_base(
+      bridge::GetXlaTensor(self), ir::OpKind(at::aten::log2), 2.0));
+}
+
+at::Tensor AtenXlaType::log10(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::log_base(
+      bridge::GetXlaTensor(self), ir::OpKind(at::aten::log10), 10.0));
 }
 
 at::Tensor AtenXlaType::log1p(const at::Tensor& self) const {

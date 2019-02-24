@@ -88,6 +88,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor log2(const at::Tensor& self) const override;
 
+  at::Tensor log10(const at::Tensor& self) const override;
+
   at::Tensor log1p(const at::Tensor& self) const override;
 
   at::Tensor erf(const at::Tensor& self) const override;
