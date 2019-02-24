@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/ops/ops.h"
 
+#include <cmath>
+
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -70,16 +72,16 @@ PTXLA_BINARY_OP(Max, at::aten::max, xla::Max);
 PTXLA_BINARY_OP(Pow, at::aten::pow, xla::Pow);
 PTXLA_BINARY_OP(Fmod, at::aten::fmod, xla::Rem);
 
-NodePtr Log2(const Value& input) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+NodePtr LogBase(const Value& input, OpKind op, double base) {
+  auto lower_fn = [base](const Node& node,
+                         LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp result = xla::Log(xla_input);
     xla::XlaOp ln2 = XlaHelpers::ScalarValue<float>(
-        1.442695, node.shape().element_type(), xla_input.builder());
+        1.0 / std::log(base), node.shape().element_type(), xla_input.builder());
     return node.ReturnOp(result * ln2, loctx);
   };
-  return GenericOp(OpKind(at::aten::log2), OpList{input}, input.shape(),
-                   std::move(lower_fn));
+  return GenericOp(op, OpList{input}, input.shape(), std::move(lower_fn));
 }
 
 NodePtr ReciprocalOp(const Value& input) {
@@ -377,8 +379,7 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
 }
 
 NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
-  auto lower_fn = [](const Node& node,
-                     LoweringContext* loctx) -> XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     std::vector<xla::XlaOp> xla_operands;
     for (const Output& operand : node.operands()) {
       xla_operands.push_back(loctx->GetOutputOp(operand));

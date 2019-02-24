@@ -89,7 +89,7 @@ NodePtr Erfinv(const Value& input);
 
 NodePtr Log(const Value& input);
 
-NodePtr Log2(const Value& input);
+NodePtr LogBase(const Value& input, OpKind op, double base);
 
 NodePtr Log1p(const Value& input);
 
