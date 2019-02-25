@@ -82,6 +82,24 @@ xla::XlaOp CreateSummation(
   return result;
 }
 
+xla::XlaOp CreateProduct(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    bool keep_reduced_dimensions) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp init_value =
+      XlaHelpers::ScalarValue<float>(1, shape.element_type(), input.builder());
+  ReductionInfo rinfo =
+      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
+  xla::XlaOp result = xla::Reduce(
+      input, init_value, XlaHelpers::CreateMulComputation(shape.element_type()),
+      dimensions);
+  if (keep_reduced_dimensions) {
+    result = xla::Reshape(result, rinfo.new_dimensions);
+  }
+  return result;
+}
+
 }  // namespace
 
 xla::XlaOp BuildSum(const torch::jit::Node* node, const xla::XlaOp& operand) {
@@ -99,6 +117,21 @@ xla::XlaOp BuildSum(const torch::jit::Node* node, const xla::XlaOp& operand) {
       XlaHelpers::I64List(dimensions_to_reduce));
 }
 
+xla::XlaOp BuildProd(const torch::jit::Node* node, const xla::XlaOp& operand) {
+  if (node->get<bool>(at::attr::keepdim).value()) {
+    XLA_ERROR() << "Product with keepdim set not supported yet";
+  }
+  xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operand);
+  xla::XlaOp init_value = XlaHelpers::ScalarValue<float>(
+      1, operand_shape.element_type(), operand.builder());
+  const auto dimensions_to_reduce =
+      node->get<std::vector<int64_t>>(at::attr::dim).value();
+  return xla::Reduce(
+      operand, init_value,
+      XlaHelpers::CreateMulComputation(operand_shape.element_type()),
+      XlaHelpers::I64List(dimensions_to_reduce));
+}
+
 xla::XlaOp BuildMean(const xla::XlaOp& input,
                      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                      bool keep_reduced_dimensions) {
@@ -113,6 +146,12 @@ xla::XlaOp BuildSum(const xla::XlaOp& input,
                          /*scale=*/false);
 }
 
+xla::XlaOp BuildProd(const xla::XlaOp& input,
+                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+                     bool keep_reduced_dimensions) {
+  return CreateProduct(input, dimensions, keep_reduced_dimensions);
+}
+
 xla::XlaOp BuildAll(const xla::XlaOp& input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions) {
@@ -122,8 +161,8 @@ xla::XlaOp BuildAll(const xla::XlaOp& input,
   xla::XlaOp init_value = xla::ConstantLiteral(
       input.builder(), xla::LiteralUtil::One(shape.element_type()));
   xla::XlaOp result =
-      xla::Reduce(input, init_value,
-                  CreateAllComputation(shape.element_type()), dimensions);
+      xla::Reduce(input, init_value, CreateAllComputation(shape.element_type()),
+                  dimensions);
   if (keep_reduced_dimensions) {
     result = xla::Reshape(result, rinfo.new_dimensions);
   }
@@ -139,8 +178,8 @@ xla::XlaOp BuildAny(const xla::XlaOp& input,
   xla::XlaOp init_value = xla::ConstantLiteral(
       input.builder(), xla::LiteralUtil::Zero(shape.element_type()));
   xla::XlaOp result =
-      xla::Reduce(input, init_value,
-                  CreateAnyComputation(shape.element_type()), dimensions);
+      xla::Reduce(input, init_value, CreateAnyComputation(shape.element_type()),
+                  dimensions);
   if (keep_reduced_dimensions) {
     result = xla::Reshape(result, rinfo.new_dimensions);
   }

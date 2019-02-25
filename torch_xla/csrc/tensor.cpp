@@ -55,6 +55,7 @@
 #include "torch_xla/csrc/ops/not_supported.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
+#include "torch_xla/csrc/ops/prod.h"
 #include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/select.h"
@@ -1155,6 +1156,16 @@ XLATensor XLATensor::sum(const XLATensor& input,
   return Create(
       ir::MakeNode<ir::ops::Sum>(input.GetIrValue(), std::move(dimensions),
                                  keep_reduced_dimensions, dtype),
+      input.GetDevice());
+}
+
+XLATensor XLATensor::prod(const XLATensor& input,
+                          std::vector<xla::int64> dimensions,
+                          bool keep_reduced_dimensions,
+                          c10::optional<at::ScalarType> dtype) {
+  return Create(
+      ir::MakeNode<ir::ops::Prod>(input.GetIrValue(), std::move(dimensions),
+                                  keep_reduced_dimensions, dtype),
       input.GetDevice());
 }
 

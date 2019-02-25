@@ -416,24 +416,24 @@ void TranslateExpand(const torch::jit::Node* node, ComputationContext* cctx,
 void TranslateStack(const torch::jit::Node* node, ComputationContext* cctx,
                     xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
-  xla::XlaOp xla_output = BuildStack(
-      node,
-      [cctx](const torch::jit::Value* node) -> xla::XlaOp {
-        return cctx->GetOpForValue(node);
-      },
-      b);
+  xla::XlaOp xla_output =
+      BuildStack(node,
+                 [cctx](const torch::jit::Value* node) -> xla::XlaOp {
+                   return cctx->GetOpForValue(node);
+                 },
+                 b);
   cctx->AddNodeOp(node, xla_output);
 }
 
 void TranslateCat(const torch::jit::Node* node, ComputationContext* cctx,
                   xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
-  xla::XlaOp xla_output = BuildCat(
-      node,
-      [cctx](const torch::jit::Value* node) -> xla::XlaOp {
-        return cctx->GetOpForValue(node);
-      },
-      b);
+  xla::XlaOp xla_output =
+      BuildCat(node,
+               [cctx](const torch::jit::Value* node) -> xla::XlaOp {
+                 return cctx->GetOpForValue(node);
+               },
+               b);
   cctx->AddNodeOp(node, xla_output);
 }
 
@@ -491,6 +491,13 @@ void TranslateSum(const torch::jit::Node* node, ComputationContext* cctx,
                   xla::XlaBuilder* /*b*/) {
   XLA_CHECK_GE(node->inputs().size(), 1);
   xla::XlaOp xla_output = BuildSum(node, cctx->OpForInput(node, 0));
+  cctx->AddNodeOp(node, xla_output);
+}
+
+void TranslateProd(const torch::jit::Node* node, ComputationContext* cctx,
+                   xla::XlaBuilder* /*b*/) {
+  XLA_CHECK_GE(node->inputs().size(), 1);
+  xla::XlaOp xla_output = BuildProd(node, cctx->OpForInput(node, 0));
   cctx->AddNodeOp(node, xla_output);
 }
 
@@ -623,6 +630,7 @@ CreateTranslationHandlers() {
   (*t)[at::aten::batch_norm] = TranslateBatchNorm;
   (*t)[at::aten::native_batch_norm_backward] = TranslateBatchNormBackward;
   (*t)[at::aten::sum] = TranslateSum;
+  (*t)[at::aten::prod] = TranslateProd;
   (*t)[at::aten::nll_loss] = TranslateNllLoss;
   (*t)[at::aten::nll_loss_forward] = TranslateNllLoss;
   (*t)[at::aten::nll_loss_backward] = TranslateNllLossBackward;

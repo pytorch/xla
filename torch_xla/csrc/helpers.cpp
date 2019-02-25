@@ -131,6 +131,16 @@ xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
   return ConsumeValue(reduction_builder.Build());
 }
 
+xla::XlaComputation XlaHelpers::CreateMulComputation(xla::PrimitiveType type) {
+  xla::XlaBuilder reduction_builder("MulComputation");
+  xla::XlaOp x = xla::Parameter(&reduction_builder, 0,
+                                xla::ShapeUtil::MakeShape(type, {}), "x");
+  xla::XlaOp y = xla::Parameter(&reduction_builder, 1,
+                                xla::ShapeUtil::MakeShape(type, {}), "y");
+  xla::Mul(x, y);
+  return ConsumeValue(reduction_builder.Build());
+}
+
 xla::XlaComputation XlaHelpers::CreateMaxComputation(xla::PrimitiveType type) {
   xla::XlaBuilder builder("MaxComputation");
   xla::XlaOp x =
