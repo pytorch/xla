@@ -708,19 +708,19 @@ at::Tensor AtenXlaType::expand_as(const at::Tensor& self,
 }
 
 at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) const {
-  std::vector<XLATensor> xla_tensors;
-  for (auto& tensor : tensors) {
-    xla_tensors.push_back(bridge::GetXlaTensor(tensor));
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::stack(xla_tensors, dim));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::stack(bridge::GetXlaTensors(tensors), dim));
 }
 
 at::Tensor AtenXlaType::cat(at::TensorList tensors, int64_t dim) const {
-  std::vector<XLATensor> xla_tensors;
-  for (auto& tensor : tensors) {
-    xla_tensors.push_back(bridge::GetXlaTensor(tensor));
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::cat(xla_tensors, dim));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::cat(bridge::GetXlaTensors(tensors), dim));
+}
+
+std::vector<at::Tensor> AtenXlaType::unbind(const at::Tensor& self,
+                                            int64_t dim) const {
+  return bridge::AtenFromXlaTensors(
+      XLATensor::unbind(bridge::GetXlaTensor(self), dim));
 }
 
 at::Tensor AtenXlaType::relu(const at::Tensor& self) const {
@@ -845,12 +845,8 @@ at::Tensor AtenXlaType::bmm(const at::Tensor& self,
 
 std::vector<at::Tensor> AtenXlaType::broadcast_tensors(
     at::TensorList tensors) const {
-  std::vector<XLATensor> xla_tensors;
-  for (const auto& tensor : tensors) {
-    xla_tensors.push_back(bridge::GetXlaTensor(tensor));
-  }
-  auto xla_result_tuple = XLATensor::broadcast_tensors(xla_tensors);
-  return bridge::AtenFromXlaTensors(xla_result_tuple);
+  return bridge::AtenFromXlaTensors(
+      XLATensor::broadcast_tensors(bridge::GetXlaTensors(tensors)));
 }
 
 at::Tensor AtenXlaType::einsum(std::string equation,
@@ -858,11 +854,8 @@ at::Tensor AtenXlaType::einsum(std::string equation,
   if (tensors.size() != 2 || !ir::ops::Einsum::SupportsEquation(equation)) {
     return at::native::einsum(equation, tensors);
   }
-  std::vector<XLATensor> xla_tensors;
-  for (const auto& tensor : tensors) {
-    xla_tensors.push_back(bridge::GetXlaTensor(tensor));
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::einsum(equation, xla_tensors));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::einsum(equation, bridge::GetXlaTensors(tensors)));
 }
 
 at::Tensor AtenXlaType::t(const at::Tensor& self) const {

@@ -327,6 +327,10 @@ class XLATensor {
   static XLATensor cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                        xla::int64 dim);
 
+  // Returns a tuple of all slices along a given dimension with that dimension
+  // removed.
+  static std::vector<XLATensor> unbind(const XLATensor& input, xla::int64 dim);
+
   static XLATensor mm(const XLATensor& input, const XLATensor& weight);
 
   static XLATensor matmul(const XLATensor& input, const XLATensor& other);
