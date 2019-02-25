@@ -904,8 +904,11 @@ XLATensor XLATensor::full_like(const XLATensor& input, at::Scalar fill_value,
 
 XLATensor XLATensor::select(const XLATensor& input, int64_t dim,
                             int64_t index) {
-  return Create(ir::MakeNode<ir::ops::Select>(input.GetIrValue(), dim, index),
-                input.GetDevice());
+  auto input_shape = input.shape();
+  int select_dim = GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  return Create(
+      ir::MakeNode<ir::ops::Select>(input.GetIrValue(), select_dim, index),
+      input.GetDevice());
 }
 
 XLATensor XLATensor::dropout(const XLATensor& input, double p) {
