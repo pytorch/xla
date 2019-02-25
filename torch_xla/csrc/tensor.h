@@ -266,7 +266,8 @@ class XLATensor {
   static void addcdiv_(XLATensor& input, const at::Scalar& value,
                        const XLATensor& tensor1, const XLATensor& tensor2);
 
-  static XLATensor select(const XLATensor& input, int64_t dim, int64_t index);
+  static XLATensor select(const XLATensor& input, xla::int64 dim,
+                          xla::int64 index);
 
   static XLATensor dropout(const XLATensor& input, double p);
 
@@ -680,6 +681,9 @@ class XLATensor {
       std::shared_ptr<xla::ComputationClient::Data> data);
 
   static xla::int64 GetNextTensorId();
+
+  static xla::int64 GetCanonicalDimension(const XLATensor& input,
+                                          xla::int64 dim);
 
   // Checks a tensor rank against an expectation and throws an error on
   // mismatch.

@@ -1362,6 +1362,13 @@ class TestAtenXlaTensor(XlaTestCase):
     x = torch_xla._XLAC._get_xla_tensor(t)
     self.assertEqual(t.data.cpu(), x.to_tensor())
 
+  def test_negative_slice(self):
+    t = _gen_tensor(32, 24, 32)
+    x = t.to(xm.xla_device())
+    t_slice = t[:, :, -1]
+    x_slice = x[:, :, -1]
+    self.assertEqual(t_slice.data, x_slice.data.cpu())
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
