@@ -68,6 +68,7 @@
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
+#include "torch_xla/csrc/ops/topk.h"
 #include "torch_xla/csrc/ops/tril.h"
 #include "torch_xla/csrc/ops/triu.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
@@ -906,6 +907,15 @@ std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
                                                      bool keepdim) {
   ir::NodePtr node =
       ir::MakeNode<ir::ops::KthValue>(input.GetIrValue(), k, dim, keepdim);
+  return std::make_tuple(Create(ir::Value(node, 0), input.GetDevice()),
+                         Create(ir::Value(node, 1), input.GetDevice()));
+}
+
+std::tuple<XLATensor, XLATensor> XLATensor::topk(const XLATensor& input,
+                                                 xla::int64 k, xla::int64 dim,
+                                                 bool largest, bool sorted) {
+  ir::NodePtr node =
+      ir::MakeNode<ir::ops::TopK>(input.GetIrValue(), k, dim, largest, sorted);
   return std::make_tuple(Create(ir::Value(node, 0), input.GetDevice()),
                          Create(ir::Value(node, 1), input.GetDevice()));
 }

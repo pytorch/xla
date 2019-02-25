@@ -81,8 +81,6 @@ std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
   xla::Shape iota_shape =
       xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, shape.dimensions());
   xla::XlaOp iota = xla::Iota(input.builder(), iota_shape, dim);
-  // TODO: Remember to add is_stable=true as last Sort() argument when fetching
-  // the new TF head.
   xla::XlaOp sort_result = xla::Sort(
       {input, iota},
       xla::CreateScalarLtComputation(
@@ -101,11 +99,47 @@ std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
   xla::XlaOp indices = xla::Slice(xla::GetTupleElement(sort_result, 1),
                                   start_indices, limit_indices, strides);
   if (!keepdim) {
-    auto reshape_sizes =
-        XlaHelpers::DropDimensions(shape.dimensions(), {dim});
+    auto reshape_sizes = XlaHelpers::DropDimensions(shape.dimensions(), {dim});
     values = xla::Reshape(values, reshape_sizes);
     indices = xla::Reshape(indices, reshape_sizes);
   }
+  // aten::kthvalue() wants Long tensors as indices.
+  return {values, xla::ConvertElementType(indices, xla::PrimitiveType::S64)};
+}
+
+std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
+                                   xla::int64 dim, bool largest, bool sorted) {
+  // TODO: Implement the no sorted topk, which means emit winning K elements in
+  // native order.
+  XLA_CHECK(sorted) << "Not sorted CreateTopK() not implemented";
+
+  auto identity = [](const xla::XlaOp& op) -> xla::XlaOp { return op; };
+  auto neg = [](const xla::XlaOp& op) -> xla::XlaOp { return xla::Neg(op); };
+  auto input_transform = largest ? neg : identity;
+
+  // Here 'k' is 1 based (1...).
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  XLA_CHECK_LE(k, shape.dimensions(dim));
+  xla::Shape iota_shape =
+      xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, shape.dimensions());
+  xla::XlaOp iota = xla::Iota(input.builder(), iota_shape, dim);
+  xla::XlaOp sort_result = xla::Sort(
+      {input_transform(input), iota},
+      xla::CreateScalarLtComputation(
+          {shape.element_type(), xla::PrimitiveType::S32}, input.builder()),
+      dim);
+
+  std::vector<xla::int64> start_indices(shape.rank(), 0);
+  std::vector<xla::int64> limit_indices(shape.dimensions().begin(),
+                                        shape.dimensions().end());
+  limit_indices[dim] = k;
+  std::vector<xla::int64> strides(shape.rank(), 1);
+
+  xla::XlaOp values =
+      input_transform(xla::Slice(xla::GetTupleElement(sort_result, 0),
+                                 start_indices, limit_indices, strides));
+  xla::XlaOp indices = xla::Slice(xla::GetTupleElement(sort_result, 1),
+                                  start_indices, limit_indices, strides);
   // aten::kthvalue() wants Long tensors as indices.
   return {values, xla::ConvertElementType(indices, xla::PrimitiveType::S64)};
 }
