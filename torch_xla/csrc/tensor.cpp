@@ -1045,11 +1045,10 @@ XLATensor XLATensor::expand(const XLATensor& input,
 XLATensor XLATensor::index(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const XLATensor> indices) {
-  auto broadcasted_indices = broadcast_tensors(indices);
-  xla::int64 indices_rank = broadcasted_indices.front().shape().get().rank();
+  xla::int64 indices_rank = indices.front().shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single gather.
-  XLATensor indices_nd = XLATensor::stack(broadcasted_indices, indices_rank);
+  XLATensor indices_nd = XLATensor::stack(indices, indices_rank);
   return Create(ir::ops::IndexOp(input.GetIrValue(), indices_nd.GetIrValue()),
                 input.GetDevice());
 }
