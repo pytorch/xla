@@ -14,6 +14,6 @@ struct CanonicalIndexInfo {
 // are first and the tail of null indices is dropped. The dimensions of the base
 // are reordered to be consistent with this reordering.
 CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
-                                         at::TensorList indices);
+                                         at::TensorList orig_indices);
 
 }  // namespace torch_xla
