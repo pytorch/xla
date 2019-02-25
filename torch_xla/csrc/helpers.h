@@ -124,6 +124,10 @@ class XlaHelpers {
       tensorflow::gtl::ArraySlice<const xla::int64> sizes,
       tensorflow::gtl::ArraySlice<const xla::int64> drop_dims);
 
+  // Get the canonical dimension index in the [0, rank) interval. Negative
+  // indices are interpreted as follows: -1 is rank-1, -2 is rank-2 etc.
+  static int GetCanonicalDimensionIndex(int dim, int rank);
+
   // Retrieves type's minimum and maximum values.
   static MinMax MinMaxValues(xla::PrimitiveType type);
 
