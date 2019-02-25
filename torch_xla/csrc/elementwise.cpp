@@ -107,15 +107,15 @@ xla::XlaOp BuildSigmoid(const xla::XlaOp& input) {
 
 xla::XlaOp BuildReciprocal(const xla::XlaOp& input) {
   xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1., shape.element_type(),
-                                                  input.builder());
+  xla::XlaOp one =
+      XlaHelpers::ScalarValue<float>(1., shape.element_type(), input.builder());
   return xla::Div(one, input);
 }
 
 xla::XlaOp BuildSign(const xla::XlaOp& input) {
   xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp zero = XlaHelpers::ScalarValue<float>(0., shape.element_type(),
-                                                   input.builder());
+  xla::XlaOp zero =
+      XlaHelpers::ScalarValue<float>(0., shape.element_type(), input.builder());
   return xla::Select(xla::Ne(input, input),
                      xla::Broadcast(zero, shape.dimensions()),
                      xla::Sign(input));
