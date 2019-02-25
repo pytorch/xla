@@ -697,6 +697,12 @@ class XLATensor {
 
   static xla::int64 GetNextTensorId();
 
+  // Wraps index tensors once into the [0, dim_size) interval, where dim_size is
+  // the size of the current indexed dimension.
+  static std::vector<XLATensor> WrapIndicesOnce(
+      const XLATensor& input,
+      tensorflow::gtl::ArraySlice<const XLATensor> indices);
+
   static xla::int64 GetCanonicalDimension(const XLATensor& input,
                                           xla::int64 dim);
 

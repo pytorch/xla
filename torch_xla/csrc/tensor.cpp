@@ -1045,10 +1045,11 @@ XLATensor XLATensor::expand(const XLATensor& input,
 XLATensor XLATensor::index(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const XLATensor> indices) {
-  xla::int64 indices_rank = indices.front().shape().get().rank();
+  auto canonical_indices = WrapIndicesOnce(input, indices);
+  xla::int64 indices_rank = canonical_indices.front().shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single gather.
-  XLATensor indices_nd = XLATensor::stack(indices, indices_rank);
+  XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
   return Create(ir::ops::IndexOp(input.GetIrValue(), indices_nd.GetIrValue()),
                 input.GetDevice());
 }
@@ -1867,6 +1868,24 @@ Device XLATensor::CommonDeviceForTensors(
     XLA_CHECK_EQ(device, tensor.GetDevice());
   }
   return device;
+}
+
+std::vector<XLATensor> XLATensor::WrapIndicesOnce(
+    const XLATensor& input,
+    tensorflow::gtl::ArraySlice<const XLATensor> indices) {
+  std::vector<XLATensor> canonical_indices;
+  XLA_CHECK_LE(indices.size(), input.shape().get().rank());
+  for (size_t dim_idx = 0; dim_idx < indices.size(); ++dim_idx) {
+    const XLATensor& dim_index = indices[dim_idx];
+    int64_t dim_size = input.shape().get().dimensions(dim_idx);
+    XLATensor wrapped_dim_index =
+        Create(dim_index.GetIrValue() +
+                   ir::ops::ScalarOp(at::Scalar(dim_size), dim_index.shape()),
+               input.GetDevice());
+    XLATensor wrap_cond = lt(indices[dim_idx], at::Scalar(int64_t(0)));
+    canonical_indices.push_back(where(wrap_cond, wrapped_dim_index, dim_index));
+  }
+  return canonical_indices;
 }
 
 xla::int64 XLATensor::GetCanonicalDimension(const XLATensor& input,
