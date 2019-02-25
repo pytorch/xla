@@ -90,20 +90,6 @@ void SetMulti(std::vector<XLATensor>* dest_tuple,
   }
 }
 
-// Get the canonical dimension index in the [0, rank) interval. Negative indices
-// are interpreted as follows: -1 is rank-1, -2 is rank-2 etc.
-int GetCanonicalDimensionIndex(int dim, int rank) {
-  int min_shape_dim = -rank;
-  int max_shape_dim = rank - 1;
-  XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim)
-      << "Dimension out of range (expected to be in range of [" << min_shape_dim
-      << ", " << max_shape_dim << "], but got " << dim << ")";
-  int dim_index = dim < 0 ? rank + dim : dim;
-  XLA_CHECK_GE(dim_index, 0);
-  XLA_CHECK_LT(dim_index, rank);
-  return dim_index;
-}
-
 }  // namespace
 
 // The tensors arena tracks all the XLA tensors which are currently live. This
@@ -664,7 +650,7 @@ void XLATensor::addcdiv_(XLATensor& input, const at::Scalar& value,
 xla::int64 XLATensor::size(xla::int64 dim) const {
   auto xla_shape = shape();
   int rank = xla_shape.get().rank();
-  int dim_index = GetCanonicalDimensionIndex(dim, rank);
+  int dim_index = XlaHelpers::GetCanonicalDimensionIndex(dim, rank);
   return xla_shape.get().dimensions(dim_index);
 }
 
@@ -905,7 +891,8 @@ XLATensor XLATensor::full_like(const XLATensor& input, at::Scalar fill_value,
 XLATensor XLATensor::select(const XLATensor& input, int64_t dim,
                             int64_t index) {
   auto input_shape = input.shape();
-  int select_dim = GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  int select_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   return Create(
       ir::MakeNode<ir::ops::Select>(input.GetIrValue(), select_dim, index),
       input.GetDevice());
@@ -1231,7 +1218,8 @@ XLATensor XLATensor::repeat(
 std::vector<XLATensor> XLATensor::split(const XLATensor& input,
                                         xla::int64 split_size, xla::int64 dim) {
   auto input_shape = input.shape();
-  int split_dim = GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  int split_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   xla::int64 dim_size = input_shape.get().dimensions(split_dim);
   if (split_size == 0) {
     // Deal with 0 split size, it's a corner case which is only allowed when the
@@ -1254,7 +1242,8 @@ std::vector<XLATensor> XLATensor::split_with_sizes(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> split_size, xla::int64 dim) {
   auto input_shape = input.shape();
-  int split_dim = GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  int split_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
       input.GetIrValue(), xla::util::ToVector<xla::int64>(split_size),
       split_dim);
@@ -1267,7 +1256,8 @@ XLATensor XLATensor::squeeze(const XLATensor& input) {
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input, xla::int64 dim) {
-  int squeeze_dim = GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  int squeeze_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   return Create(ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), squeeze_dim),
                 input.GetDevice());
 }
@@ -1277,14 +1267,15 @@ void XLATensor::squeeze_(XLATensor& input) {
 }
 
 void XLATensor::squeeze_(XLATensor& input, xla::int64 dim) {
-  int squeeze_dim = GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  int squeeze_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   input.SetIrValue(
       ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), squeeze_dim));
 }
 
 XLATensor XLATensor::unsqueeze(const XLATensor& input, xla::int64 dim) {
-  int squeeze_dim =
-      GetCanonicalDimensionIndex(dim, input.shape().get().rank() + 1);
+  int squeeze_dim = XlaHelpers::GetCanonicalDimensionIndex(
+      dim, input.shape().get().rank() + 1);
   return Create(
       ir::MakeNode<ir::ops::Unsqueeze>(input.GetIrValue(), squeeze_dim),
       input.GetDevice());
@@ -1303,8 +1294,8 @@ XLATensor XLATensor::tril(const XLATensor& input, xla::int64 diagonal) {
 XLATensor XLATensor::diagonal(const XLATensor& input, xla::int64 offset,
                               xla::int64 dim1, xla::int64 dim2) {
   int rank = input.shape().get().rank();
-  int canonical_dim1 = GetCanonicalDimensionIndex(dim1, rank);
-  int canonical_dim2 = GetCanonicalDimensionIndex(dim2, rank);
+  int canonical_dim1 = XlaHelpers::GetCanonicalDimensionIndex(dim1, rank);
+  int canonical_dim2 = XlaHelpers::GetCanonicalDimensionIndex(dim2, rank);
   return Create(ir::MakeNode<ir::ops::Diagonal>(input.GetIrValue(), offset,
                                                 canonical_dim1, canonical_dim2),
                 input.GetDevice());
