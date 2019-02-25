@@ -416,24 +416,24 @@ void TranslateExpand(const torch::jit::Node* node, ComputationContext* cctx,
 void TranslateStack(const torch::jit::Node* node, ComputationContext* cctx,
                     xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
-  xla::XlaOp xla_output =
-      BuildStack(node,
-                 [cctx](const torch::jit::Value* node) -> xla::XlaOp {
-                   return cctx->GetOpForValue(node);
-                 },
-                 b);
+  xla::XlaOp xla_output = BuildStack(
+      node,
+      [cctx](const torch::jit::Value* node) -> xla::XlaOp {
+        return cctx->GetOpForValue(node);
+      },
+      b);
   cctx->AddNodeOp(node, xla_output);
 }
 
 void TranslateCat(const torch::jit::Node* node, ComputationContext* cctx,
                   xla::XlaBuilder* b) {
   XLA_CHECK_EQ(node->inputs().size(), 2);
-  xla::XlaOp xla_output =
-      BuildCat(node,
-               [cctx](const torch::jit::Value* node) -> xla::XlaOp {
-                 return cctx->GetOpForValue(node);
-               },
-               b);
+  xla::XlaOp xla_output = BuildCat(
+      node,
+      [cctx](const torch::jit::Value* node) -> xla::XlaOp {
+        return cctx->GetOpForValue(node);
+      },
+      b);
   cctx->AddNodeOp(node, xla_output);
 }
 
