@@ -268,6 +268,10 @@ class XLATensor {
 
   static XLATensor select(const XLATensor& input, int64_t dim, int64_t index);
 
+  static std::tuple<XLATensor, XLATensor> kthvalue(const XLATensor& input,
+                                                   xla::int64 k, xla::int64 dim,
+                                                   bool keepdim);
+
   static XLATensor dropout(const XLATensor& input, double p);
 
   static XLATensor neg(const XLATensor& input);

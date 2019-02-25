@@ -376,6 +376,23 @@ TEST_F(AtenXlaTensorTest, TestIntegerAdd) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestKthValue) {
+  at::Tensor a = at::rand({4, 5, 3}, at::TensorOptions(at::kFloat));
+  for (int k = 1; k <= 3; ++k) {
+    for (int dim = 0; dim < 3; ++dim) {
+      for (bool keepdim : {false, true}) {
+        auto b = at::kthvalue(a, k, dim, keepdim);
+        ForEachDevice([&](const Device& device) {
+          at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+          auto xla_b = at::kthvalue(xla_a, k, dim, keepdim);
+          AllClose(std::get<0>(b), std::get<0>(xla_b));
+          AllClose(std::get<1>(b), std::get<1>(xla_b));
+        });
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestMin) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));

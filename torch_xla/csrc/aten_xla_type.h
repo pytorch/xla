@@ -241,6 +241,10 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   int64_t size(const at::Tensor& self, int64_t dim) const override;
 
+  std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self, int64_t k,
+                                              int64_t dim,
+                                              bool keepdim) const override;
+
   at::Tensor embedding(const at::Tensor& weight, const at::Tensor& indices,
                        int64_t padding_idx, bool scale_grad_by_freq,
                        bool sparse) const override;
