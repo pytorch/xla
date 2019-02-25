@@ -891,14 +891,14 @@ XLATensor XLATensor::full_like(const XLATensor& input, at::Scalar fill_value,
                 device);
 }
 
-XLATensor XLATensor::select(const XLATensor& input, int64_t dim,
-                            int64_t index) {
+XLATensor XLATensor::select(const XLATensor& input, xla::int64 dim,
+                            xla::int64 index) {
   auto input_shape = input.shape();
-  int select_dim =
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
-  return Create(
-      ir::MakeNode<ir::ops::Select>(input.GetIrValue(), select_dim, index),
-      input.GetDevice());
+  dim = XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  index = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
+                                           index);
+  return Create(ir::MakeNode<ir::ops::Select>(input.GetIrValue(), dim, index),
+                input.GetDevice());
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
@@ -1005,6 +1005,12 @@ XLATensor XLATensor::floor(const XLATensor& input) {
 
 XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
                            xla::int64 start, xla::int64 end, xla::int64 step) {
+  auto input_shape = input.shape();
+  dim = XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  start = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
+                                           start);
+  end = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
+                                         end);
   return Create(
       ir::MakeNode<ir::ops::Slice>(input.GetIrValue(), dim, start, end, step),
       input.GetDevice());
@@ -1012,15 +1018,17 @@ XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
 
 XLATensor XLATensor::gather(const XLATensor& input, xla::int64 dim,
                             const XLATensor& index) {
-  return Create(ir::MakeNode<ir::ops::Gather>(input.GetIrValue(), dim,
+  return Create(ir::MakeNode<ir::ops::Gather>(input.GetIrValue(),
+                                              GetCanonicalDimension(input, dim),
                                               index.GetIrValue()),
                 input.GetDevice());
 }
 
 XLATensor XLATensor::index_select(const XLATensor& input, xla::int64 dim,
                                   const XLATensor& index) {
-  return Create(ir::MakeNode<ir::ops::IndexSelect>(input.GetIrValue(), dim,
-                                                   index.GetIrValue()),
+  return Create(ir::MakeNode<ir::ops::IndexSelect>(
+                    input.GetIrValue(), GetCanonicalDimension(input, dim),
+                    index.GetIrValue()),
                 input.GetDevice());
 }
 
@@ -1288,9 +1296,8 @@ XLATensor XLATensor::squeeze(const XLATensor& input) {
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input, xla::int64 dim) {
-  int squeeze_dim =
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  return Create(ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), squeeze_dim),
+  return Create(ir::MakeNode<ir::ops::Squeeze>(
+                    input.GetIrValue(), GetCanonicalDimension(input, dim)),
                 input.GetDevice());
 }
 
@@ -1299,10 +1306,8 @@ void XLATensor::squeeze_(XLATensor& input) {
 }
 
 void XLATensor::squeeze_(XLATensor& input, xla::int64 dim) {
-  int squeeze_dim =
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
-  input.SetIrValue(
-      ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), squeeze_dim));
+  input.SetIrValue(ir::MakeNode<ir::ops::Squeeze>(
+      input.GetIrValue(), GetCanonicalDimension(input, dim)));
 }
 
 XLATensor XLATensor::unsqueeze(const XLATensor& input, xla::int64 dim) {
@@ -1828,6 +1833,12 @@ Device XLATensor::CommonDeviceForTensors(
     XLA_CHECK_EQ(device, tensor.GetDevice());
   }
   return device;
+}
+
+xla::int64 XLATensor::GetCanonicalDimension(const XLATensor& input,
+                                            xla::int64 dim) {
+  return XlaHelpers::GetCanonicalDimensionIndex(dim,
+                                                input.shape().get().rank());
 }
 
 void XLATensor::CheckRank(const XLATensor& t, xla::int64 expected_rank,
