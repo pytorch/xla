@@ -134,6 +134,9 @@ class XlaHelpers {
   // Creates a binary add computation.
   static xla::XlaComputation CreateAddComputation(xla::PrimitiveType type);
 
+  // Creates a binary mul computation.
+  static xla::XlaComputation CreateMulComputation(xla::PrimitiveType type);
+
   static xla::XlaComputation CreateMaxComputation(xla::PrimitiveType type);
 
   // Performs type promotion to make sure both operations return the same type.

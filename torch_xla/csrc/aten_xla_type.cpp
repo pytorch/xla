@@ -628,6 +628,42 @@ at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
+at::Tensor AtenXlaType::prod(const at::Tensor& self,
+                             at::ScalarType dtype) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::prod(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false, dtype));
+}
+
+at::Tensor AtenXlaType::prod(const at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::prod(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false, c10::nullopt));
+}
+
+at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim, bool keepdim,
+                             at::ScalarType dtype) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::prod(bridge::GetXlaTensor(self), {dim}, keepdim, dtype));
+}
+
+at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim,
+                             bool keepdim) const {
+  return bridge::AtenFromXlaTensor(XLATensor::prod(
+      bridge::GetXlaTensor(self), {dim}, keepdim, c10::nullopt));
+}
+
+at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim,
+                             at::ScalarType dtype) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::prod(bridge::GetXlaTensor(self), {dim},
+                      /*keep_reduced_dimensions=*/false, dtype));
+}
+
 at::Tensor AtenXlaType::clamp(const at::Tensor& self,
                               c10::optional<at::Scalar> min,
                               c10::optional<at::Scalar> max) const {
