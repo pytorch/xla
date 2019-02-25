@@ -762,10 +762,68 @@ at::Tensor AtenXlaType::expand_as(const at::Tensor& self,
       bridge::GetXlaTensor(self), other_tensor.shape().get().dimensions()));
 }
 
+namespace {
+
+bool hasContiguousSubspace(at::TensorList tl) {
+  // true if all the non-null tensors are adjacent
+  auto isDefined = [](const at::Tensor& tensor) { return tensor.defined(); };
+  auto isNull = [](const at::Tensor& tensor) { return !tensor.defined(); };
+  auto start = std::find_if(tl.begin(), tl.end(), isDefined);
+  auto stop = std::find_if(tl.rbegin(), tl.rend(), isDefined);
+  auto it = std::find_if(start, stop.base(), isNull);
+  return it == stop.base();
+}
+
+// Transposes the tensor and indices together so that all the non-null indices
+// index the first k dimensions of the tensor. Returns the transposed tensor
+// and the reordered indices. For example:
+//  transposeToFront(tensor, {nullptr, a, nullptr, b})
+// returns
+//  tensor.permute([1, 3, 0, 2]), {a, b, nullptr, nullptr}
+std::tuple<at::Tensor, std::vector<at::Tensor>> transposeToFront(
+    at::Tensor self, at::TensorList indices) {
+  std::vector<int64_t> dims;
+  std::vector<at::Tensor> transposedIndices;
+  dims.reserve(self.dim());
+  for (int64_t i = 0; i < self.dim(); i++) {
+    if (indices[i].defined()) {
+      dims.push_back(i);
+      transposedIndices.emplace_back(indices[i]);
+    }
+  }
+  for (int64_t i = 0; i < self.dim(); i++) {
+    if (!indices[i].defined()) {
+      dims.push_back(i);
+      transposedIndices.emplace_back();
+    }
+  }
+  return std::make_tuple(self.permute(dims), std::move(transposedIndices));
+}
+
+}  // namespace
+
 at::Tensor AtenXlaType::index(const at::Tensor& self,
                               at::TensorList indices) const {
+  at::Tensor new_self = self;
+  std::vector<at::Tensor> new_indices(indices.begin(), indices.end());
+  // add missing null Tensors so that it matches self.dim()
+  while (new_indices.size() < static_cast<size_t>(self.dim())) {
+    new_indices.emplace_back();
+  }
+  // if the non-null indices are not all adjacent, transpose self and indices
+  // together so that they're adjacent at the front
+  if (!hasContiguousSubspace(new_indices)) {
+    std::tie(new_self, new_indices) = transposeToFront(self, new_indices);
+  }
+  std::vector<at::Tensor> not_null_indices;
+  for (const auto& index : new_indices) {
+    if (!index.defined()) {
+      break;
+    }
+    not_null_indices.push_back(index);
+  }
   return bridge::AtenFromXlaTensor(XLATensor::index(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensors(indices)));
+      bridge::GetXlaTensor(new_self), bridge::GetXlaTensors(not_null_indices)));
 }
 
 at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) const {
