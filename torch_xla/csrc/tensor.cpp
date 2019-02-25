@@ -1044,6 +1044,17 @@ XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                 tensors[0].GetDevice());
 }
 
+std::vector<XLATensor> XLATensor::unbind(const XLATensor& input,
+                                         xla::int64 dim) {
+  xla::int64 dim_size = input.size(dim);
+  std::vector<XLATensor> slices;
+  slices.reserve(dim_size);
+  for (xla::int64 index = 0; index < dim_size; ++index) {
+    slices.push_back(select(input, dim, index));
+  }
+  return slices;
+}
+
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight) {
   return Create(ir::ops::Dot(input.GetIrValue(), weight.GetIrValue()),
                 input.GetDevice());

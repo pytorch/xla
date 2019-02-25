@@ -254,6 +254,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor cat(at::TensorList tensors, int64_t dim) const override;
 
+  std::vector<at::Tensor> unbind(const at::Tensor& self,
+                                 int64_t dim) const override;
+
   at::Tensor relu(const at::Tensor& self) const override;
   at::Tensor& relu_(at::Tensor& self) const override;
 
