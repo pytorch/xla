@@ -715,10 +715,6 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::topk(const at::Tensor& self,
                                                      int64_t k, int64_t dim,
                                                      bool largest,
                                                      bool sorted) const {
-  // TODO: Implement the non default not-sorted topk on the XLA side.
-  if (!sorted) {
-    return AtenXlaTypeBase::topk(self, k, dim, largest, sorted);
-  }
   auto results =
       XLATensor::topk(bridge::GetXlaTensor(self), k, dim, largest, sorted);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),

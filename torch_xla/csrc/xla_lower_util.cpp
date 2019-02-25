@@ -108,11 +108,8 @@ std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
 }
 
 std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
-                                   xla::int64 dim, bool largest, bool sorted) {
-  // TODO: Implement the no sorted topk, which means emit winning K elements in
-  // native order.
-  XLA_CHECK(sorted) << "Not sorted CreateTopK() not implemented";
-
+                                   xla::int64 dim, bool largest,
+                                   bool /* sorted */) {
   auto identity = [](const xla::XlaOp& op) -> xla::XlaOp { return op; };
   auto neg = [](const xla::XlaOp& op) -> xla::XlaOp { return xla::Neg(op); };
   auto input_transform = largest ? neg : identity;
@@ -140,7 +137,7 @@ std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
                                  start_indices, limit_indices, strides));
   xla::XlaOp indices = xla::Slice(xla::GetTupleElement(sort_result, 1),
                                   start_indices, limit_indices, strides);
-  // aten::kthvalue() wants Long tensors as indices.
+  // aten::topk() wants Long tensors as indices.
   return {values, xla::ConvertElementType(indices, xla::PrimitiveType::S64)};
 }
 
