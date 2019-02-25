@@ -272,6 +272,10 @@ class XLATensor {
                                                    xla::int64 k, xla::int64 dim,
                                                    bool keepdim);
 
+  static std::tuple<XLATensor, XLATensor> topk(const XLATensor& input,
+                                               xla::int64 k, xla::int64 dim,
+                                               bool largest, bool sorted);
+
   static XLATensor dropout(const XLATensor& input, double p);
 
   static XLATensor neg(const XLATensor& input);

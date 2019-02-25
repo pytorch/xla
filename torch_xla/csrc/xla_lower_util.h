@@ -8,6 +8,9 @@ namespace torch_xla {
 std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
                                        xla::int64 dim, bool keepdim);
 
+std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
+                                   xla::int64 dim, bool largest, bool sorted);
+
 xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs);
 
 xla::XlaOp BuildDropout(const xla::XlaOp& input, float probability);
