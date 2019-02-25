@@ -1287,6 +1287,24 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexMiddleNull) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestMultiIndexTailNull) {
+  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
+  at::Tensor indices_0 =
+      at::randint(0, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+  at::Tensor indices_null;
+  at::Tensor indices_1 =
+      at::randint(0, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+  at::Tensor result = at::index(params, {indices_0, indices_1, indices_null});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+    at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+    at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+    at::Tensor xla_result =
+        at::index(xla_params, {xla_indices_0, xla_indices_1, indices_null});
+    AllClose(result, xla_result);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestMultiIndexMiddleBroadcast) {
   at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
   at::Tensor indices_0 =

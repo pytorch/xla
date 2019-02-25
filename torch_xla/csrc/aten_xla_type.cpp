@@ -8,6 +8,7 @@
 #include "torch_xla/csrc/aten_xla_type_instances.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/index_op_util.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
@@ -810,8 +811,11 @@ at::Tensor AtenXlaType::expand_as(const at::Tensor& self,
 
 at::Tensor AtenXlaType::index(const at::Tensor& self,
                               at::TensorList indices) const {
-  return bridge::AtenFromXlaTensor(XLATensor::index(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensors(indices)));
+  CanonicalIndexInfo canonical_index_info =
+      GetCanonicalIndexInfo(self, indices);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::index(bridge::GetXlaTensor(canonical_index_info.base),
+                       bridge::GetXlaTensors(canonical_index_info.indices)));
 }
 
 at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) const {
