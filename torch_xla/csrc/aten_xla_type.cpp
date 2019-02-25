@@ -666,6 +666,15 @@ int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
   return bridge::GetXlaTensor(self).size(dim);
 }
 
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
+                                                         int64_t k, int64_t dim,
+                                                         bool keepdim) const {
+  auto results =
+      XLATensor::kthvalue(bridge::GetXlaTensor(self), k, dim, keepdim);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
+}
+
 at::Tensor AtenXlaType::embedding(const at::Tensor& weight,
                                   const at::Tensor& indices,
                                   int64_t padding_idx, bool scale_grad_by_freq,

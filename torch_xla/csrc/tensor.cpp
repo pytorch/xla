@@ -44,6 +44,7 @@
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/index_select.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/ops/kth_value.h"
 #include "torch_xla/csrc/ops/leaky_relu.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/log_softmax_backward.h"
@@ -906,6 +907,16 @@ XLATensor XLATensor::select(const XLATensor& input, int64_t dim,
                             int64_t index) {
   return Create(ir::MakeNode<ir::ops::Select>(input.GetIrValue(), dim, index),
                 input.GetDevice());
+}
+
+std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
+                                                     xla::int64 k,
+                                                     xla::int64 dim,
+                                                     bool keepdim) {
+  ir::NodePtr node =
+      ir::MakeNode<ir::ops::KthValue>(input.GetIrValue(), k, dim, keepdim);
+  return std::make_tuple(Create(ir::Value(node, 0), input.GetDevice()),
+                         Create(ir::Value(node, 1), input.GetDevice()));
 }
 
 XLATensor XLATensor::dropout(const XLATensor& input, double p) {
