@@ -28,6 +28,16 @@ XLATensor GetXlaTensor(const at::Tensor& tensor) {
   return *xtensor;
 }
 
+std::vector<XLATensor> GetXlaTensors(
+    tensorflow::gtl::ArraySlice<const at::Tensor> tensors) {
+  std::vector<XLATensor> xla_tensors;
+  xla_tensors.reserve(tensors.size());
+  for (const auto& tensor : tensors) {
+    xla_tensors.push_back(bridge::GetXlaTensor(tensor));
+  }
+  return xla_tensors;
+}
+
 XLATensor GetXlaTensorUnwrap(const at::Tensor& tensor) {
   return GetXlaTensor(ToTensor(tensor));
 }
