@@ -50,16 +50,29 @@ std::vector<xla::int64> XlaHelpers::DropDimensions(
   return new_dims;
 }
 
-int XlaHelpers::GetCanonicalDimensionIndex(int dim, int rank) {
-  int min_shape_dim = -rank;
-  int max_shape_dim = rank - 1;
+xla::int64 XlaHelpers::GetCanonicalDimensionIndex(xla::int64 dim,
+                                                  xla::int64 rank) {
+  xla::int64 min_shape_dim = -rank;
+  xla::int64 max_shape_dim = rank - 1;
   XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim)
-      << "Dimension out of range (expected to be in range of [" << min_shape_dim
+      << "Value out of range (expected to be in range of [" << min_shape_dim
       << ", " << max_shape_dim << "], but got " << dim << ")";
-  int dim_index = dim < 0 ? rank + dim : dim;
+  xla::int64 dim_index = dim < 0 ? rank + dim : dim;
   XLA_CHECK_GE(dim_index, 0);
   XLA_CHECK_LT(dim_index, rank);
   return dim_index;
+}
+
+xla::int64 XlaHelpers::GetCanonicalPosition(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, xla::int64 dim,
+    xla::int64 pos) {
+  dim = GetCanonicalDimensionIndex(dim, dimensions.size());
+  if (pos < 0) {
+    pos = GetCanonicalDimensionIndex(pos, dimensions[dim]);
+  } else {
+    pos = std::min<xla::int64>(pos, dimensions[dim]);
+  }
+  return pos;
 }
 
 XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
