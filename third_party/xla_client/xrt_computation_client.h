@@ -148,6 +148,8 @@ class XrtComputationClient : public ComputationClient {
 
   string GetDefaultDevice() const override;
 
+  void SetRngSeed(size_t seed) override;
+
  private:
   // When we split a batch operation into per-session batches, we use this data
   // structure to collect the per-session work.
@@ -362,6 +364,7 @@ class XrtComputationClient : public ComputationClient {
   util::Cache<string, std::shared_ptr<Computation>,
               util::PartialHasher<string, 4096>>
       compilation_cache_;
+  std::atomic<size_t> rng_seed_;
   // Access to the following members must be done while holding lock_.
   // XRT thread safety semantics.
   std::vector<DeviceHandle> released_data_handles_;

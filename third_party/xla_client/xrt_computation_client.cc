@@ -22,8 +22,8 @@ namespace xla {
 XrtComputationClient::XrtComputationClient(
     XrtComputationClient::Options options)
     : options_(std::move(options)),
-      compilation_cache_(
-          sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 64)) {
+      compilation_cache_(sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 64)),
+      rng_seed_(0x5a2d296e9) {
   auto default_device_target =
       options_.device_map.find(options_.default_device);
   XLA_CHECK(default_device_target != options_.device_map.end());
@@ -509,6 +509,7 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     exec_config.set_release_input_handles(false);
     exec_config.set_release_compilation_handle(false);
     exec_config.set_return_exploded_tuple(explode_tuple);
+    exec_config.set_rng_seed(rng_seed_);
     feed_inputs->insert(
         {cached_node.holders[1], exec_config.SerializeAsString()});
     feed_inputs->insert({cached_node.holders[2], inputs});
@@ -538,6 +539,7 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     exec_config.set_release_input_handles(false);
     exec_config.set_release_compilation_handle(false);
     exec_config.set_return_exploded_tuple(explode_tuple);
+    exec_config.set_rng_seed(rng_seed_);
     feed_inputs->insert(
         {cached_node.holders[1], exec_config.SerializeAsString()});
     feed_inputs->insert({cached_node.holders[2], inputs});
@@ -792,6 +794,8 @@ XrtComputationClient::GetComputationResults(
 string XrtComputationClient::GetDefaultDevice() const {
   return options_.default_device;
 }
+
+void XrtComputationClient::SetRngSeed(size_t seed) { rng_seed_ = seed; }
 
 const XrtSession::CachedNode& XrtComputationClient::GetCompileNode(
     XrtSession* session, const tensorflow::Scope& scope,
