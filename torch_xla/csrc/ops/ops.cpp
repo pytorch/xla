@@ -401,22 +401,6 @@ NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
                    std::move(lower_fn), /*num_outputs=*/tensors.size());
 }
 
-NodePtr IndexOp(const Value& input, const Value& indices) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_indices = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(CreateIndex(xla_input, xla_indices), loctx);
-  };
-  auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp { return CreateIndex(operands[0], operands[1]); };
-  return ir::ops::GenericOp(
-      ir::OpKind(at::aten::index), {input, indices},
-      InferOutputShape({input.shape(), indices.shape()}, lower_for_shape_fn),
-      std::move(lower_fn));
-}
-
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

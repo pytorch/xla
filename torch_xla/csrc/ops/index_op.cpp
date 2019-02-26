@@ -1,8 +1,13 @@
-#include "torch_xla/csrc/index_op_util.h"
+#include "torch_xla/csrc/ops/index_op.h"
 #include <ATen/ExpandUtils.h>
 #include <ATen/Functions.h>
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
+#include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/ops/ops.h"
+#include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
 namespace {
@@ -11,9 +16,11 @@ void CheckIndexTensorTypes(at::TensorList indices) {
   for (auto& tensor : indices) {
     if (tensor.defined()) {
       auto& type = tensor.type();
-      auto scalarType = type.scalarType();
-      if (scalarType != at::kLong && scalarType != at::kByte) {
-        XLA_ERROR() << "tensors used as indices must be long or byte tensors";
+      auto scalar_type = type.scalarType();
+      if (scalar_type != at::kLong && scalar_type != at::kByte) {
+        XLA_ERROR() << "Tensors used as indices must be long or byte tensors, "
+                       "found scalar type: "
+                    << scalar_type;
       }
     }
   }
@@ -79,6 +86,45 @@ CanonicalIndexInfo TransposeToFront(at::Tensor base, at::TensorList indices) {
   return {base.permute(dims), std::move(transposed_indices)};
 }
 
+// Wraps index tensors once into the [0, dim_size) interval, where dim_size is
+// the size of the current indexed dimension.
+std::vector<XLATensor> WrapIndicesOnce(
+    const XLATensor& base,
+    tensorflow::gtl::ArraySlice<const XLATensor> indices) {
+  std::vector<XLATensor> canonical_indices;
+  XLA_CHECK_LE(indices.size(), base.shape().get().rank());
+  for (size_t dim_idx = 0; dim_idx < indices.size(); ++dim_idx) {
+    const XLATensor& dim_index = indices[dim_idx];
+    int64_t dim_size = base.shape().get().dimensions(dim_idx);
+    XLATensor wrapped_dim_index = XLATensor::Create(
+        dim_index.GetIrValue() +
+            ir::ops::ScalarOp(at::Scalar(dim_size), dim_index.shape()),
+        base.GetDevice());
+    XLATensor wrap_cond =
+        XLATensor::lt(indices[dim_idx], at::Scalar(int64_t(0)));
+    canonical_indices.push_back(
+        XLATensor::where(wrap_cond, wrapped_dim_index, dim_index));
+  }
+  return canonical_indices;
+}
+
+ir::NodePtr IndexOp(const ir::Value& base, const ir::Value& indices) {
+  auto lower_fn = [](const ir::Node& node,
+                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_indices = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(CreateIndex(xla_input, xla_indices), loctx);
+  };
+  auto lower_for_shape_fn =
+      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      -> xla::XlaOp { return CreateIndex(operands[0], operands[1]); };
+  return ir::ops::GenericOp(
+      ir::OpKind(at::aten::index), {base, indices},
+      ir::ops::InferOutputShape({base.shape(), indices.shape()},
+                                lower_for_shape_fn),
+      std::move(lower_fn));
+}
+
 }  // namespace
 
 CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
@@ -98,6 +144,20 @@ CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
     }
   }
   return canonical_index_info;
+}
+
+XLATensor IndexByTensors(const XLATensor& base,
+                         tensorflow::gtl::ArraySlice<const XLATensor> indices) {
+  if (indices.empty()) {
+    return base;
+  }
+  auto canonical_indices = WrapIndicesOnce(base, indices);
+  xla::int64 indices_rank = canonical_indices.front().shape().get().rank();
+  // Stack the indices to allow the whole multi-indexing to be dispatched with a
+  // single gather.
+  XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
+  return XLATensor::Create(IndexOp(base.GetIrValue(), indices_nd.GetIrValue()),
+                           base.GetDevice());
 }
 
 }  // namespace torch_xla
