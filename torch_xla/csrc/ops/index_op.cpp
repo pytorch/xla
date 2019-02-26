@@ -1,6 +1,8 @@
 #include "torch_xla/csrc/ops/index_op.h"
+
 #include <ATen/ExpandUtils.h>
 #include <ATen/Functions.h>
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -15,8 +17,7 @@ namespace {
 void CheckIndexTensorTypes(at::TensorList indices) {
   for (auto& tensor : indices) {
     if (tensor.defined()) {
-      auto& type = tensor.type();
-      auto scalar_type = type.scalarType();
+      at::ScalarType scalar_type = tensor.scalar_type();
       if (scalar_type != at::kLong && scalar_type != at::kByte) {
         XLA_ERROR() << "Tensors used as indices must be long or byte tensors, "
                        "found scalar type: "
@@ -92,10 +93,11 @@ std::vector<XLATensor> WrapIndicesOnce(
     const XLATensor& base,
     tensorflow::gtl::ArraySlice<const XLATensor> indices) {
   std::vector<XLATensor> canonical_indices;
-  XLA_CHECK_LE(indices.size(), base.shape().get().rank());
+  auto base_shape_ref = base.shape();
+  XLA_CHECK_LE(indices.size(), base_shape_ref.get().rank());
   for (size_t dim_idx = 0; dim_idx < indices.size(); ++dim_idx) {
     const XLATensor& dim_index = indices[dim_idx];
-    int64_t dim_size = base.shape().get().dimensions(dim_idx);
+    int64_t dim_size = base_shape_ref.get().dimensions(dim_idx);
     XLATensor wrapped_dim_index = XLATensor::Create(
         dim_index.GetIrValue() +
             ir::ops::ScalarOp(at::Scalar(dim_size), dim_index.shape()),
