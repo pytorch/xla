@@ -156,8 +156,9 @@ XLATensor XLATensor::Create(
   return xtensor;
 }
 
-XLATensor XLATensor::Create(ir::Value ir_value, const Device& device,
-                            xla::PrimitiveType logical_element_type) {
+XLATensor XLATensor::Create(
+    ir::Value ir_value, const Device& device,
+    c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(ir_value), device, logical_element_type);
   TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
@@ -182,7 +183,7 @@ XLATensor::XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
 }
 
 XLATensor::XLATensor(ir::Value ir_value, const Device& device,
-                     xla::PrimitiveType logical_element_type)
+                     c10::optional<at::ScalarType> logical_element_type)
     : data_(std::make_shared<Data>(std::move(ir_value), device,
                                    logical_element_type)) {
   TryLimitGraphSize();
@@ -214,7 +215,9 @@ void XLATensor::SetGradient(const XLATensor& grad) {
 }
 
 at::ScalarType XLATensor::dtype() const {
-  return TensorTypeFromXlaType(GetElementType());
+  return data()->logical_element_type
+             ? *data()->logical_element_type
+             : TensorTypeFromXlaType(shape().get().element_type());
 }
 
 xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
@@ -805,7 +808,7 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& input,
                                           const at::Scalar& other) {
   ir::NodePtr node = ir::ops::ComparisonOp(kind, input.GetIrValue(), other);
-  return Create(node, input.GetDevice(), xla::PrimitiveType::U8);
+  return Create(node, input.GetDevice(), at::ScalarType::Byte);
 }
 
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
@@ -813,7 +816,7 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& other) {
   ir::NodePtr node =
       ir::ops::ComparisonOp(kind, input.GetIrValue(), other.GetIrValue());
-  return Create(node, input.GetDevice(), xla::PrimitiveType::U8);
+  return Create(node, input.GetDevice(), at::ScalarType::Byte);
 }
 
 XLATensor XLATensor::threshold(const XLATensor& input, float threshold,
@@ -1147,8 +1150,7 @@ XLATensor XLATensor::log_base(const XLATensor& input, ir::OpKind op,
                 input.GetDevice());
 }
 
-void XLATensor::log_base_(XLATensor& input, ir::OpKind op,
-                          double base) {
+void XLATensor::log_base_(XLATensor& input, ir::OpKind op, double base) {
   input.SetIrValue(ir::ops::LogBase(input.GetIrValue(), op, base));
 }
 

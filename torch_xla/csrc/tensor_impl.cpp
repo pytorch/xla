@@ -98,8 +98,7 @@ void XLATensorImpl::SetupSizeProperties() {
 }
 
 caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
-  return c10::scalarTypeToTypeMeta(
-      TensorTypeFromXlaType(tensor.GetElementType()));
+  return c10::scalarTypeToTypeMeta(tensor.dtype());
 }
 
 c10::Storage XLATensorImpl::GetStorage(const XLATensor& tensor) {
