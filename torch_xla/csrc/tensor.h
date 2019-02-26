@@ -359,14 +359,19 @@ class XLATensor {
                           tensorflow::gtl::ArraySlice<const XLATensor> tensors);
 
   static XLATensor exp(const XLATensor& input);
+  static void exp_(XLATensor& input);
 
   static XLATensor expm1(const XLATensor& input);
+  static void expm1_(XLATensor& input);
 
   static XLATensor log(const XLATensor& input);
+  static void log_(XLATensor& input);
 
   static XLATensor log_base(const XLATensor& input, ir::OpKind op, double base);
+  static void log_base_(XLATensor& input, ir::OpKind op, double base);
 
   static XLATensor log1p(const XLATensor& input);
+  static void log1p_(XLATensor& input);
 
   static XLATensor erf(const XLATensor& input);
 
