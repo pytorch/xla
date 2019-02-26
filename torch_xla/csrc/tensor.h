@@ -38,6 +38,10 @@ class XLATensor {
       std::shared_ptr<xla::ComputationClient::Data> xla_data,
       bool requires_grad);
 
+  static XLATensor Create(
+      ir::Value ir_value, const Device& device,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+
   // Creates an empty/null tensor.
   XLATensor() = default;
 
@@ -630,9 +634,6 @@ class XLATensor {
   XLATensor(std::shared_ptr<View> view, const Device& device);
   XLATensor(std::shared_ptr<Data> data);
 
-  static XLATensor Create(
-      ir::Value ir_value, const Device& device,
-      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   static XLATensor Create(std::shared_ptr<View> view, const Device& device);
 
   Data* data() const;
@@ -696,12 +697,6 @@ class XLATensor {
       std::shared_ptr<xla::ComputationClient::Data> data);
 
   static xla::int64 GetNextTensorId();
-
-  // Wraps index tensors once into the [0, dim_size) interval, where dim_size is
-  // the size of the current indexed dimension.
-  static std::vector<XLATensor> WrapIndicesOnce(
-      const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const XLATensor> indices);
 
   static xla::int64 GetCanonicalDimension(const XLATensor& input,
                                           xla::int64 dim);
