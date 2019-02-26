@@ -2,6 +2,7 @@
 #include <ATen/ExpandUtils.h>
 #include <ATen/Functions.h>
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 
 namespace torch_xla {
 namespace {
@@ -88,7 +89,15 @@ CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
   auto indices = at::expand_outplace(ExpandByteTensors(base, orig_indices));
   // If the non-null indices are not all adjacent, transpose base and indices
   // together so that they're adjacent at the front.
-  return TransposeToFront(base, indices);
+  CanonicalIndexInfo canonical_index_info = TransposeToFront(base, indices);
+  // Ensure indices are on the same device as the base.
+  for (size_t i = 0; i < canonical_index_info.indices.size(); i++) {
+    if (canonical_index_info.indices[i].device() != base.device()) {
+      canonical_index_info.indices[i] =
+          canonical_index_info.indices[i].to(base.device());
+    }
+  }
+  return canonical_index_info;
 }
 
 }  // namespace torch_xla
