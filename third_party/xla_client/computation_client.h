@@ -162,6 +162,8 @@ class ComputationClient {
 
   virtual string GetDefaultDevice() const = 0;
 
+  virtual void SetRngSeed(size_t seed) = 0;
+
   // Utility API around the vector based Compile() API to compile a single
   // computation.
   std::shared_ptr<Computation> Compile(XlaComputation computation,
