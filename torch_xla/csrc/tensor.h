@@ -61,13 +61,6 @@ class XLATensor {
   at::ScalarType dtype() const;
   xla::util::MaybeRef<xla::Shape> shape() const;
 
-  xla::PrimitiveType GetElementType() const {
-    return data()->logical_element_type ==
-                   xla::PrimitiveType::PRIMITIVE_TYPE_INVALID
-               ? shape().get().element_type()
-               : data()->logical_element_type;
-  }
-
   const Device& GetDevice() const;
   xla::int64 GetUniqueId() const;
 
@@ -597,7 +590,7 @@ class XLATensor {
           device(device),
           unique_id(GetNextTensorId()) {}
     Data(ir::Value ir_value, const Device& device,
-         xla::PrimitiveType logical_element_type)
+         c10::optional<at::ScalarType> logical_element_type)
         : ir_value(std::move(ir_value)),
           device(device),
           unique_id(GetNextTensorId()),
@@ -619,23 +612,20 @@ class XLATensor {
     xla::int64 unique_id = 0;
     std::shared_ptr<XLATensor> grad;
     bool requires_grad = false;
-    // For some types (U8, S8 etc), the logical type of the tensor doesn't match
-    // the type of the underlying data.
-    xla::PrimitiveType logical_element_type =
-        xla::PrimitiveType::PRIMITIVE_TYPE_INVALID;
+    c10::optional<at::ScalarType> logical_element_type;
   };
 
   XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
             bool requires_grad);
   XLATensor(ir::Value ir_value, const Device& device,
-            xla::PrimitiveType logical_element_type);
+            c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(std::shared_ptr<View> view, const Device& device);
   XLATensor(std::shared_ptr<Data> data);
 
-  static XLATensor Create(ir::Value ir_value, const Device& device,
-                          xla::PrimitiveType logical_element_type =
-                              xla::PrimitiveType::PRIMITIVE_TYPE_INVALID);
+  static XLATensor Create(
+      ir::Value ir_value, const Device& device,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   static XLATensor Create(std::shared_ptr<View> view, const Device& device);
 
   Data* data() const;
