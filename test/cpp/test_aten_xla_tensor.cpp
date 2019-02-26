@@ -1269,6 +1269,18 @@ TEST_F(AtenXlaTensorTest, TestOneIndex) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
+  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
+  at::Tensor indices =
+      at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+  at::Tensor result = at::index(params, {indices});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+    at::Tensor xla_result = at::index(xla_params, {indices});
+    AllClose(result, xla_result);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestMultiIndexMiddleNull) {
   at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
   at::Tensor indices_0 =
