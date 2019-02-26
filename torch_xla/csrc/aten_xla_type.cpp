@@ -272,13 +272,31 @@ at::Tensor AtenXlaType::exp(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::exp(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::exp_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::exp_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::expm1(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::expm1(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::expm1_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::expm1_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::log(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::log(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::log_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::log_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::log2(const at::Tensor& self) const {
@@ -286,14 +304,32 @@ at::Tensor AtenXlaType::log2(const at::Tensor& self) const {
       bridge::GetXlaTensor(self), ir::OpKind(at::aten::log2), 2.0));
 }
 
+at::Tensor& AtenXlaType::log2_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::log_base_(self_tensor, ir::OpKind(at::aten::log2), 2.0);
+  return self;
+}
+
 at::Tensor AtenXlaType::log10(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::log_base(
       bridge::GetXlaTensor(self), ir::OpKind(at::aten::log10), 10.0));
 }
 
+at::Tensor& AtenXlaType::log10_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::log_base_(self_tensor, ir::OpKind(at::aten::log10), 10.0);
+  return self;
+}
+
 at::Tensor AtenXlaType::log1p(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::log1p(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::log1p_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::log1p_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::erf(const at::Tensor& self) const {

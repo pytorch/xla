@@ -84,16 +84,22 @@ class AtenXlaType : public AtenXlaTypeBase {
                        at::Scalar value) const override;
 
   at::Tensor exp(const at::Tensor& self) const override;
+  at::Tensor& exp_(at::Tensor& self) const override;
 
   at::Tensor expm1(const at::Tensor& self) const override;
+  at::Tensor& expm1_(at::Tensor& self) const override;
 
   at::Tensor log(const at::Tensor& self) const override;
+  at::Tensor& log_(at::Tensor& self) const override;
 
   at::Tensor log2(const at::Tensor& self) const override;
+  at::Tensor& log2_(at::Tensor& self) const override;
 
   at::Tensor log10(const at::Tensor& self) const override;
+  at::Tensor& log10_(at::Tensor& self) const override;
 
   at::Tensor log1p(const at::Tensor& self) const override;
+  at::Tensor& log1p_(at::Tensor& self) const override;
 
   at::Tensor erf(const at::Tensor& self) const override;
 
