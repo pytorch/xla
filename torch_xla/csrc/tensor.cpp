@@ -1121,12 +1121,24 @@ XLATensor XLATensor::exp(const XLATensor& input) {
   return Create(ir::ops::Exp(input.GetIrValue()), input.GetDevice());
 }
 
+void XLATensor::exp_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Exp(input.GetIrValue()));
+}
+
 XLATensor XLATensor::expm1(const XLATensor& input) {
   return Create(ir::ops::Expm1(input.GetIrValue()), input.GetDevice());
 }
 
+void XLATensor::expm1_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Expm1(input.GetIrValue()));
+}
+
 XLATensor XLATensor::log(const XLATensor& input) {
   return Create(ir::ops::Log(input.GetIrValue()), input.GetDevice());
+}
+
+void XLATensor::log_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Log(input.GetIrValue()));
 }
 
 XLATensor XLATensor::log_base(const XLATensor& input, ir::OpKind op,
@@ -1135,8 +1147,17 @@ XLATensor XLATensor::log_base(const XLATensor& input, ir::OpKind op,
                 input.GetDevice());
 }
 
+void XLATensor::log_base_(XLATensor& input, ir::OpKind op,
+                          double base) {
+  input.SetIrValue(ir::ops::LogBase(input.GetIrValue(), op, base));
+}
+
 XLATensor XLATensor::log1p(const XLATensor& input) {
   return Create(ir::ops::Log1p(input.GetIrValue()), input.GetDevice());
+}
+
+void XLATensor::log1p_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Log1p(input.GetIrValue()));
 }
 
 XLATensor XLATensor::erf(const XLATensor& input) {
