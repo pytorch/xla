@@ -11,6 +11,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   int64_t numel(const at::Tensor& self) const override;
 
+  at::Tensor copy(const at::Tensor& src, bool non_blocking,
+                  at::optional<c10::Device> to_device) const override;
+
   at::Tensor _s_copy_from(const at::Tensor& self, const at::Tensor& dst,
                           bool non_blocking) const override;
 

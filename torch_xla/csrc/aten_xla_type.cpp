@@ -57,6 +57,16 @@ int64_t AtenXlaType::numel(const at::Tensor& self) const {
   return xla::ShapeUtil::ElementsIn(self_tensor.shape());
 }
 
+at::Tensor AtenXlaType::copy(const at::Tensor& src, bool /* non_blocking */,
+                             at::optional<c10::Device> to_device) const {
+  std::vector<at::Tensor> tensors = {src};
+  std::vector<bool> writeables = {false};
+  auto xla_tensors = bridge::XlaCreateTensorList(tensors, &writeables);
+  Device device = to_device ? bridge::AtenDeviceToXlaDevice(*to_device)
+                            : *GetDefaultDevice();
+  return bridge::CreateXlaTensor(xla_tensors.front(), device);
+}
+
 at::Tensor AtenXlaType::_s_copy_from(const at::Tensor& self,
                                      const at::Tensor& dst,
                                      bool /* non_blocking */) const {
