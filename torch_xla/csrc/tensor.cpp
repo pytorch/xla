@@ -941,36 +941,72 @@ XLATensor XLATensor::asin(const XLATensor& input) {
   return Create(ir::ops::Asin(input.GetIrValue()), input.GetDevice());
 }
 
+void XLATensor::asin_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Asin(input.GetIrValue()));
+}
+
 XLATensor XLATensor::sin(const XLATensor& input) {
   return Create(ir::ops::Sin(input.GetIrValue()), input.GetDevice());
+}
+
+void XLATensor::sin_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Sin(input.GetIrValue()));
 }
 
 XLATensor XLATensor::sinh(const XLATensor& input) {
   return Create(ir::ops::Sinh(input.GetIrValue()), input.GetDevice());
 }
 
+void XLATensor::sinh_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Sinh(input.GetIrValue()));
+}
+
 XLATensor XLATensor::acos(const XLATensor& input) {
   return Create(ir::ops::Acos(input.GetIrValue()), input.GetDevice());
+}
+
+void XLATensor::acos_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Acos(input.GetIrValue()));
 }
 
 XLATensor XLATensor::cos(const XLATensor& input) {
   return Create(ir::ops::Cos(input.GetIrValue()), input.GetDevice());
 }
 
+void XLATensor::cos_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Cos(input.GetIrValue()));
+}
+
 XLATensor XLATensor::cosh(const XLATensor& input) {
   return Create(ir::ops::Cosh(input.GetIrValue()), input.GetDevice());
+}
+
+void XLATensor::cosh_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Cosh(input.GetIrValue()));
 }
 
 XLATensor XLATensor::atan(const XLATensor& input) {
   return Create(ir::ops::Atan(input.GetIrValue()), input.GetDevice());
 }
 
+void XLATensor::atan_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Atan(input.GetIrValue()));
+}
+
 XLATensor XLATensor::tan(const XLATensor& input) {
   return Create(ir::ops::Tan(input.GetIrValue()), input.GetDevice());
 }
 
+void XLATensor::tan_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Tan(input.GetIrValue()));
+}
+
 XLATensor XLATensor::tanh(const XLATensor& input) {
   return Create(ir::ops::Tanh(input.GetIrValue()), input.GetDevice());
+}
+
+void XLATensor::tanh_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Tanh(input.GetIrValue()));
 }
 
 XLATensor XLATensor::abs(const XLATensor& input) {
