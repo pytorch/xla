@@ -181,7 +181,9 @@ xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
 }
 
 std::vector<xla::int64> XlaHelpers::SizesOfXlaOp(const xla::XlaOp& op) {
-  return ShapeSizes(ShapeOfXlaOp(op));
+  xla::Shape op_shape = ShapeOfXlaOp(op);
+  return std::vector<xla::int64>(op_shape.dimensions().begin(),
+                                 op_shape.dimensions().end());
 }
 
 xla::PrimitiveType XlaHelpers::TypeOfXlaOp(const xla::XlaOp& op) {

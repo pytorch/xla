@@ -1371,7 +1371,7 @@ XLATensor XLATensor::masked_fill(const XLATensor& input, const XLATensor& mask,
                                  const at::Scalar& value) {
   // Expand mask to be the same size as input.
   ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
-      mask.GetIrValue(), XlaHelpers::ShapeSizes(input.shape()));
+      mask.GetIrValue(), input.shape().get().dimensions());
   return input.CreateFrom(ir::MakeNode<ir::ops::MaskedFill>(
       input.GetIrValue(), expanded_mask, value));
 }
@@ -1380,7 +1380,7 @@ void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                              const at::Scalar& value) {
   // Expand mask to be the same size as input.
   ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
-      mask.GetIrValue(), XlaHelpers::ShapeSizes(input.shape()));
+      mask.GetIrValue(), input.shape().get().dimensions());
   input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(input.GetIrValue(),
                                                      expanded_mask, value));
 }
