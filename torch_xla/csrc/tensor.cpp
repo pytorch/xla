@@ -1397,9 +1397,11 @@ XLATensor XLATensor::tril(const XLATensor& input, xla::int64 diagonal) {
 
 XLATensor XLATensor::diagonal(const XLATensor& input, xla::int64 offset,
                               xla::int64 dim1, xla::int64 dim2) {
-  int rank = input.shape().get().rank();
-  int canonical_dim1 = XlaHelpers::GetCanonicalDimensionIndex(dim1, rank);
-  int canonical_dim2 = XlaHelpers::GetCanonicalDimensionIndex(dim2, rank);
+  xla::int64 rank = input.shape().get().rank();
+  xla::int64 canonical_dim1 =
+      XlaHelpers::GetCanonicalDimensionIndex(dim1, rank);
+  xla::int64 canonical_dim2 =
+      XlaHelpers::GetCanonicalDimensionIndex(dim2, rank);
   return input.CreateFrom(ir::MakeNode<ir::ops::Diagonal>(
       input.GetIrValue(), offset, canonical_dim1, canonical_dim2));
 }

@@ -889,6 +889,11 @@ std::vector<at::Tensor> AtenXlaType::unbind(const at::Tensor& self,
       XLATensor::unbind(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor AtenXlaType::diag(const at::Tensor& self, int64_t diagonal) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::diagonal(bridge::GetXlaTensor(self), diagonal, -2, -1));
+}
+
 at::Tensor AtenXlaType::relu(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::relu(bridge::GetXlaTensor(self)));
 }
