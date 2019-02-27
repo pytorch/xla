@@ -603,13 +603,14 @@ class XLATensor {
     Data(ir::Value ir_value, const Device& device,
          c10::optional<at::ScalarType> logical_element_type)
         : ir_value(std::move(ir_value)),
+          logical_element_type(logical_element_type),
           device(device),
-          unique_id(GetNextTensorId()),
-          logical_element_type(logical_element_type) {}
+          unique_id(GetNextTensorId()) {}
     Data(std::shared_ptr<View> view, const Device& device)
         : view(std::move(view)), device(device), unique_id(GetNextTensorId()) {}
     Data(at::Tensor tensor_data, const Device& device)
-        : tensor_data(std::move(tensor_data)),
+        : logical_element_type(tensor_data.scalar_type()),
+          tensor_data(std::move(tensor_data)),
           device(device),
           unique_id(GetNextTensorId()) {}
 
@@ -618,12 +619,12 @@ class XLATensor {
     std::shared_ptr<xla::ComputationClient::Data> xla_data;
     ir::Value ir_value;
     std::shared_ptr<View> view;
+    c10::optional<at::ScalarType> logical_element_type;
     c10::optional<at::Tensor> tensor_data;
     Device device;
     xla::int64 unique_id = 0;
     std::shared_ptr<XLATensor> grad;
     bool requires_grad = false;
-    c10::optional<at::ScalarType> logical_element_type;
   };
 
   XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
