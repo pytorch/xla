@@ -196,22 +196,31 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor sign(const at::Tensor& self) const override;
 
   at::Tensor asin(const at::Tensor& self) const override;
+  at::Tensor& asin_(at::Tensor& self) const override;
 
   at::Tensor sin(const at::Tensor& self) const override;
+  at::Tensor& sin_(at::Tensor& self) const override;
 
   at::Tensor sinh(const at::Tensor& self) const override;
+  at::Tensor& sinh_(at::Tensor& self) const override;
 
   at::Tensor acos(const at::Tensor& self) const override;
+  at::Tensor& acos_(at::Tensor& self) const override;
 
   at::Tensor cos(const at::Tensor& self) const override;
+  at::Tensor& cos_(at::Tensor& self) const override;
 
   at::Tensor cosh(const at::Tensor& self) const override;
+  at::Tensor& cosh_(at::Tensor& self) const override;
 
   at::Tensor atan(const at::Tensor& self) const override;
+  at::Tensor& atan_(at::Tensor& self) const override;
 
   at::Tensor tan(const at::Tensor& self) const override;
+  at::Tensor& tan_(at::Tensor& self) const override;
 
   at::Tensor tanh(const at::Tensor& self) const override;
+  at::Tensor& tanh_(at::Tensor& self) const override;
 
   at::Tensor abs(const at::Tensor& self) const override;
 
