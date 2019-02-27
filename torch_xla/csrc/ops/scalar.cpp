@@ -71,7 +71,7 @@ XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
 
   xla::XlaOp op = xla::ConstantLiteral(loctx->builder(), literal);
   if (shape().rank() > 0) {
-    op = xla::Broadcast(op, XlaHelpers::ShapeSizes(shape()));
+    op = xla::Broadcast(op, shape().dimensions());
   }
   return ReturnOp(op, loctx);
 }
