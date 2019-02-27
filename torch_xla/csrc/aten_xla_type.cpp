@@ -1426,6 +1426,37 @@ at::Tensor AtenXlaType::unsqueeze(const at::Tensor& self, int64_t dim) const {
       XLATensor::unsqueeze(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
+                                      at::Scalar value) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::masked_fill_(self_tensor, bridge::GetXlaTensor(mask), value);
+  return self;
+}
+
+at::Tensor AtenXlaType::masked_fill(const at::Tensor& self,
+                                    const at::Tensor& mask,
+                                    at::Scalar value) const {
+  return bridge::AtenFromXlaTensor(XLATensor::masked_fill(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(mask), value));
+}
+
+at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
+                                      const at::Tensor& value) const {
+  XLA_CHECK_EQ(value.dim(), 0) << "masked_fill_ only supports a 0-dimensional "
+                               << "value tensor, but got tensor "
+                               << "with " << value.dim() << " dimension(s).";
+  return masked_fill_(self, mask, value.item());
+}
+
+at::Tensor AtenXlaType::masked_fill(const at::Tensor& self,
+                                    const at::Tensor& mask,
+                                    const at::Tensor& value) const {
+  XLA_CHECK_EQ(value.dim(), 0) << "masked_fill only supports a 0-dimensional "
+                               << "value tensor, but got tensor "
+                               << "with " << value.dim() << " dimension(s).";
+  return masked_fill(self, mask, value.item());
+}
+
 at::Tensor AtenXlaType::where(const at::Tensor& condition,
                               const at::Tensor& self,
                               const at::Tensor& other) const {

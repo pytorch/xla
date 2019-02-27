@@ -49,6 +49,7 @@
 #include "torch_xla/csrc/ops/leaky_relu.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/log_softmax_backward.h"
+#include "torch_xla/csrc/ops/masked_fill.h"
 #include "torch_xla/csrc/ops/max_pool2d.h"
 #include "torch_xla/csrc/ops/max_pool2d_backward.h"
 #include "torch_xla/csrc/ops/mean.h"
@@ -1364,6 +1365,24 @@ XLATensor XLATensor::unsqueeze(const XLATensor& input, xla::int64 dim) {
       dim, input.shape().get().rank() + 1);
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Unsqueeze>(input.GetIrValue(), squeeze_dim));
+}
+
+XLATensor XLATensor::masked_fill(const XLATensor& input, const XLATensor& mask,
+                                 const at::Scalar& value) {
+  // Expand mask to be the same size as input.
+  ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
+      mask.GetIrValue(), XlaHelpers::ShapeSizes(input.shape()));
+  return input.CreateFrom(ir::MakeNode<ir::ops::MaskedFill>(
+      input.GetIrValue(), expanded_mask, value));
+}
+
+void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
+                             const at::Scalar& value) {
+  // Expand mask to be the same size as input.
+  ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
+      mask.GetIrValue(), XlaHelpers::ShapeSizes(input.shape()));
+  input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(input.GetIrValue(),
+                                                     expanded_mask, value));
 }
 
 XLATensor XLATensor::triu(const XLATensor& input, xla::int64 diagonal) {
