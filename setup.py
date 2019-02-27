@@ -17,6 +17,8 @@ import shutil
 import subprocess
 import sys
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 def _check_env_flag(name, default=''):
   return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
@@ -85,7 +87,18 @@ class Clean(distutils.command.clean.clean):
     distutils.command.clean.clean.run(self)
 
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
+class Build(BuildExtension):
+
+  def run(self):
+    # Run the original BuildExtension first. We need this before building
+    # the tests.
+    BuildExtension.run(self)
+    # Build the C++ tests
+    cmd = [os.path.join(base_dir, 'test/cpp/run_tests.sh'), '-B']
+    if subprocess.call(cmd) != 0:
+      print('Failed to build tests: {}'.format(cmd), file=sys.stderr)
+      sys.exit(1)
+
 
 # Generate the code before globbing!
 generate_code_cmd = [os.path.join(base_dir, 'scripts', 'generate_code.sh')]
@@ -200,9 +213,13 @@ setup(
     package_data={
         'torch_xla': [
             'lib/*.so*',
-        ]
+        ],
     },
+    data_files=[
+        'test/cpp/build/test_ptxla',
+        'scripts/fixup_binary.py',
+    ],
     cmdclass={
-        'build_ext': BuildExtension,
+        'build_ext': Build,
         'clean': Clean,
     })
