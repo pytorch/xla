@@ -36,7 +36,8 @@ class XLATensor {
                           bool requires_grad);
   static XLATensor Create(
       std::shared_ptr<xla::ComputationClient::Data> xla_data,
-      bool requires_grad);
+      bool requires_grad,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensor Create(
       ir::Value ir_value, const Device& device,
@@ -605,8 +606,10 @@ class XLATensor {
   // object.
   struct Data {
     Data(std::shared_ptr<xla::ComputationClient::Data> xla_data,
-         const Device& device)
+         const Device& device,
+         c10::optional<at::ScalarType> logical_element_type)
         : xla_data(std::move(xla_data)),
+          logical_element_type(logical_element_type),
           device(device),
           unique_id(GetNextTensorId()) {}
     Data(ir::Value ir_value, const Device& device,
@@ -615,8 +618,12 @@ class XLATensor {
           logical_element_type(logical_element_type),
           device(device),
           unique_id(GetNextTensorId()) {}
-    Data(std::shared_ptr<View> view, const Device& device)
-        : view(std::move(view)), device(device), unique_id(GetNextTensorId()) {}
+    Data(std::shared_ptr<View> view, const Device& device,
+         c10::optional<at::ScalarType> logical_element_type)
+        : view(std::move(view)),
+          logical_element_type(logical_element_type),
+          device(device),
+          unique_id(GetNextTensorId()) {}
     Data(at::Tensor tensor_data, const Device& device)
         : logical_element_type(tensor_data.scalar_type()),
           tensor_data(std::move(tensor_data)),
@@ -638,13 +645,17 @@ class XLATensor {
 
   XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
   XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
-            bool requires_grad);
+            bool requires_grad,
+            c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(ir::Value ir_value, const Device& device,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-  XLATensor(std::shared_ptr<View> view, const Device& device);
+  XLATensor(std::shared_ptr<View> view, const Device& device,
+            c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(std::shared_ptr<Data> data);
 
-  static XLATensor Create(std::shared_ptr<View> view, const Device& device);
+  static XLATensor Create(
+      std::shared_ptr<View> view, const Device& device,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   Data* data() const;
 
@@ -664,6 +675,15 @@ class XLATensor {
   XLATensor CreateView(
       tensorflow::gtl::ArraySlice<const xla::int64> output_size) const;
 
+  // Create a new XLA tensor with the same metadata of the input tensor (with
+  // possible overrides), and the new IR value.
+  XLATensor CreateFrom(ir::Value ir_value) const;
+  XLATensor CreateFrom(ir::Value ir_value, const Device& device) const;
+  XLATensor CreateFrom(ir::Value ir_value,
+                       at::ScalarType logical_element_type) const;
+  XLATensor CreateFrom(ir::Value ir_value, const Device& device,
+                       at::ScalarType logical_element_type) const;
+
   // Discards all the XLA and IR data, by making the ATEN tensor one the only
   // source for this XLA tensor. An error is generated if the XLA tensor does
   // not have ATEN tensors data.
@@ -676,8 +696,7 @@ class XLATensor {
   //     a = a + b
   void TryLimitGraphSize();
 
-  static std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node,
-                                                  const Device& device);
+  std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node) const;
 
   // Extracts the current IR Node out of a view, into a ViewIrNode structure
   // where the updated fields tells whether a new IR Node has been created, or

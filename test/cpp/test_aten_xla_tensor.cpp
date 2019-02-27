@@ -109,7 +109,7 @@ TEST_F(AtenXlaTensorTest, TestCastLong) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestCastFLoat) {
+TEST_F(AtenXlaTensorTest, TestCastFloat) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
   at::Tensor b = at::_cast_Float(a);
   ForEachDevice([&](const Device& device) {
@@ -117,6 +117,15 @@ TEST_F(AtenXlaTensorTest, TestCastFLoat) {
     at::Tensor xla_b = at::_cast_Float(xla_a);
     EXPECT_TRUE(EqualValues(b, xla_b));
   });
+}
+
+TEST_F(AtenXlaTensorTest, TestRetainType) {
+  at::Tensor xla_a =
+      at::zeros({2, 2}, at::TensorOptions(at::kByte).device(at::kXLA));
+  at::Tensor xla_b =
+      at::ones({2, 2}, at::TensorOptions(at::kByte).device(at::kXLA));
+  at::Tensor xla_c = xla_a + xla_b;
+  EXPECT_EQ(xla_c.scalar_type(), at::ScalarType::Byte);
 }
 
 TEST_F(AtenXlaTensorTest, TestAdd) {
