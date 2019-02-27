@@ -2068,6 +2068,46 @@ TEST_F(AtenXlaTensorTest, TestUnsqueeze) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestMaskedFill) {
+  at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor mask = at::randint(0, 2, {2, 3}, at::TensorOptions(at::kByte));
+  at::Scalar value(42);
+  at::Tensor result = at::masked_fill(input, mask, value);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_mask = bridge::CreateXlaTensor(mask, device);
+    at::Tensor xla_result = at::masked_fill(xla_input, xla_mask, value);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestMaskedFillInPlace) {
+  at::Scalar value(42);
+  at::Tensor mask = at::randint(0, 2, {2, 3}, at::TensorOptions(at::kByte));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor xla_mask = bridge::CreateXlaTensor(mask, device);
+    at::Tensor result = input.masked_fill_(mask, value);
+    at::Tensor xla_result = xla_input.masked_fill_(xla_mask, value);
+    AllClose(result, xla_result);
+    AllClose(input, xla_input);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {
+  at::Tensor input = at::rand({2, 5, 4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor mask = at::randint(0, 2, {4, 1}, at::TensorOptions(at::kByte));
+  at::Scalar value(42);
+  at::Tensor result = at::masked_fill(input, mask, value);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_mask = bridge::CreateXlaTensor(mask, device);
+    at::Tensor xla_result = at::masked_fill(xla_input, xla_mask, value);
+    AllClose(result, xla_result);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestPermute) {
   at::Tensor input = GetTestTensor({2, 3, 4});
   std::vector<std::vector<int64_t>> dims_permutations = {

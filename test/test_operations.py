@@ -1369,6 +1369,18 @@ class TestAtenXlaTensor(XlaTestCase):
     x_slice = x[:, :, -1]
     self.assertEqual(t_slice.data, x_slice.data.cpu())
 
+  def test_masked_fill_with_tensor(self):
+    input = _gen_tensor(2, 5, 4, 3)
+    mask = torch.randint(0, 2, input.size(), dtype=torch.uint8)
+    value = torch.tensor(42)
+    xla_input = input.to(xm.xla_device())
+    xla_mask = mask.to(xm.xla_device())
+    xla_value = value.to(xm.xla_device())
+    result = torch.masked_fill(input, mask, value)
+    xla_result = torch.masked_fill(xla_input, xla_mask, xla_value)
+    self.assertEqual(input.data, xla_input.data.cpu())
+    self.assertEqual(result.data, xla_result.data.cpu())
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
