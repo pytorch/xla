@@ -839,7 +839,8 @@ at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
 }
 
 at::Tensor AtenXlaType::gather(const at::Tensor& self, int64_t dim,
-                               const at::Tensor& index) const {
+                               const at::Tensor& index,
+                               bool /* sparse_grad */) const {
   return bridge::AtenFromXlaTensor(XLATensor::gather(
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }

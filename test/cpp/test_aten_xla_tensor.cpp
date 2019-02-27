@@ -1192,13 +1192,15 @@ TEST_F(AtenXlaTensorTest, TestGather) {
       b[i][j] = (i + j) % 3;
     }
   }
-  at::Tensor c = at::gather(a, 1, b);
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
-    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
-    at::Tensor xla_c = at::gather(xla_a, 1, xla_b);
-    AllClose(c, xla_c);
-  });
+  for (bool sparse_grad : {false, true}) {
+    at::Tensor c = at::gather(a, 1, b, sparse_grad);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+      at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+      at::Tensor xla_c = at::gather(xla_a, 1, xla_b, sparse_grad);
+      AllClose(c, xla_c);
+    });
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexSelect) {
