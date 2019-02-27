@@ -513,6 +513,16 @@ class XLATensor {
   // Insert a dimension of size one at the specified position.
   static XLATensor unsqueeze(const XLATensor& input, xla::int64 dim);
 
+  // Fills elements of the input tensor with the provided value where mask is
+  // one. The shape of mask must be broadcastable with the shape of the
+  // underlying tensor.
+  static XLATensor masked_fill(const XLATensor& input, const XLATensor& mask,
+                               const at::Scalar& value);
+
+  // In-place version of the method above.
+  static void masked_fill_(XLATensor& input, const XLATensor& mask,
+                           const at::Scalar& value);
+
   // Returns the upper triangular part of a matrix (2-D tensor) or batch of
   // matrices input, the other elements of the result tensor out are set to 0.
   static XLATensor triu(const XLATensor& input, xla::int64 diagonal);
