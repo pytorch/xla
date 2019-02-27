@@ -275,7 +275,7 @@ class AtenXlaType : public AtenXlaTypeBase {
                    int64_t end, int64_t step) const override;
 
   at::Tensor gather(const at::Tensor& self, int64_t dim,
-                    const at::Tensor& index) const override;
+                    const at::Tensor& index, bool sparse_grad) const override;
 
   at::Tensor index_select(const at::Tensor& self, int64_t dim,
                           const at::Tensor& index) const override;
