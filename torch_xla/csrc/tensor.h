@@ -281,22 +281,31 @@ class XLATensor {
   static XLATensor sign(const XLATensor& input);
 
   static XLATensor asin(const XLATensor& input);
+  static void asin_(XLATensor& input);
 
   static XLATensor sin(const XLATensor& input);
+  static void sin_(XLATensor& input);
 
   static XLATensor sinh(const XLATensor& input);
+  static void sinh_(XLATensor& input);
 
   static XLATensor acos(const XLATensor& input);
+  static void acos_(XLATensor& input);
 
   static XLATensor cos(const XLATensor& input);
+  static void cos_(XLATensor& input);
 
   static XLATensor cosh(const XLATensor& input);
+  static void cosh_(XLATensor& input);
 
   static XLATensor atan(const XLATensor& input);
+  static void atan_(XLATensor& input);
 
   static XLATensor tan(const XLATensor& input);
+  static void tan_(XLATensor& input);
 
   static XLATensor tanh(const XLATensor& input);
+  static void tanh_(XLATensor& input);
 
   static XLATensor abs(const XLATensor& input);
 

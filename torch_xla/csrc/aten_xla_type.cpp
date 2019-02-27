@@ -601,36 +601,90 @@ at::Tensor AtenXlaType::asin(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::asin(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::asin_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::asin_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::sin(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::sin(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::sin_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::sin_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::sinh(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::sinh(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::sinh_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::sinh_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::acos(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::acos(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::acos_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::acos_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::cos(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::cos(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::cos_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::cos_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::cosh(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::cosh(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::cosh_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::cosh_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::atan(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::atan(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::atan_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::atan_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::tan(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::tan(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::tan_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::tan_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::tanh(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::tanh(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::tanh_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::tanh_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::abs(const at::Tensor& self) const {
