@@ -2260,6 +2260,20 @@ TEST_F(AtenXlaTensorTest, TestTrilBatch) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestDiag) {
+  int size = 7;
+  at::Tensor input = GetTestTensor({size, size});
+  // Test all diagonals and out of bounds (must be no-op).
+  for (int diagonal = -size; diagonal <= size; ++diagonal) {
+    at::Tensor output = at::diag(input, diagonal);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = at::diag(xla_input, diagonal);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestDiagonal) {
   int size = 5;
   at::Tensor input = GetTestTensor({size, size});
