@@ -9,7 +9,7 @@ xla::XlaOp BuildCrossReplicaSum(const xla::XlaOp& operand, int num_replicas) {
   auto shape = XlaHelpers::ShapeOfXlaOp(operand);
   auto scaling_value = XlaHelpers::ScalarValue<float>(
       1.0 / num_replicas, shape.element_type(), operand.builder());
-  return crs * xla::Broadcast(scaling_value, XlaHelpers::ShapeSizes(shape));
+  return crs * xla::Broadcast(scaling_value, shape.dimensions());
 }
 
 }  // namespace torch_xla
