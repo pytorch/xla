@@ -4,10 +4,11 @@ RUNDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 BUILDDIR="$RUNDIR/build"
 VERB=
 FILTER=
+BUILD_ONLY=0
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 
-while getopts 'VLKF:' OPTION
+while getopts 'VLKBF:' OPTION
 do
   case $OPTION in
     V)
@@ -18,6 +19,9 @@ do
       ;;
     K)
       RMBUILD=0
+      ;;
+    B)
+      BUILD_ONLY=1
       ;;
     F)
       FILTER="--gtest_filter=$OPTARG"
@@ -32,13 +36,15 @@ pushd "$BUILDDIR"
 cmake "$RUNDIR" \
     -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")\
     -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
-make $VERB
-if [ "$LOGFILE" != "" ]; then
-  ./test_ptxla ${FILTER:+"$FILTER"} 2>$LOGFILE
-else
-  ./test_ptxla ${FILTER:+"$FILTER"}
+make -j $VERB
+if [ $BUILD_ONLY -eq 0 ]; then
+  if [ "$LOGFILE" != "" ]; then
+    ./test_ptxla ${FILTER:+"$FILTER"} 2>$LOGFILE
+  else
+    ./test_ptxla ${FILTER:+"$FILTER"}
+  fi
 fi
 popd
-if [ $RMBUILD -eq 1 ]; then
+if [ $RMBUILD -eq 1 -a $BUILD_ONLY -eq 0 ]; then
   rm -rf "$BUILDDIR"
 fi
