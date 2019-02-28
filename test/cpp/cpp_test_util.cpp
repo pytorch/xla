@@ -6,7 +6,8 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/autograd/variable.h"
-#include "torch_xla/csrc/tensor_impl.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
@@ -18,9 +19,8 @@ at::Tensor ToTensor(XLATensor& xla_tensor) {
 
 at::Tensor ToCpuTensor(const at::Tensor& t) {
   at::Tensor tensor = torch_xla::ToTensor(t);
-  XLATensorImpl* impl =
-      dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
-  return impl != nullptr ? ToTensor(impl->tensor()) : tensor;
+  c10::optional<XLATensor> xtensor = bridge::TryGetXlaTensor(tensor);
+  return xtensor ? ToTensor(*xtensor) : tensor;
 }
 
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
@@ -66,6 +66,11 @@ void WithAllDevices(
   if (!devices.empty()) {
     devfn(devices);
   }
+}
+
+std::string GetTensorTextGraph(at::Tensor tensor) {
+  XLATensor xtensor = bridge::GetXlaTensor(tensor);
+  return ir::DumpUtil::ToText({xtensor.GetIrValue().node.get()});
 }
 
 }  // namespace cpp_test

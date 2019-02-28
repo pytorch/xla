@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <functional>
+#include <string>
 
 #include <ATen/ATen.h>
 #include <gtest/gtest.h>
@@ -40,6 +41,8 @@ void ForEachDevice(const std::function<void(const Device&)>& devfn);
 void WithAllDevices(
     DeviceType device_type,
     const std::function<void(const std::vector<Device>&)>& devfn);
+
+std::string GetTensorTextGraph(at::Tensor tensor);
 
 }  // namespace cpp_test
 }  // namespace torch_xla

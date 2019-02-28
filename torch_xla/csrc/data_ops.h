@@ -96,4 +96,15 @@ std::vector<xla::XlaOp> BuildSplit(
     const xla::XlaOp& input,
     tensorflow::gtl::ArraySlice<const xla::int64> split_sizes, xla::int64 dim);
 
+// Creates an updated version of input, where, starting at base_indices, source
+// if overlapped with input.
+xla::XlaOp BuildUpdateSlice(
+    const xla::XlaOp& input, const xla::XlaOp& source,
+    tensorflow::gtl::ArraySlice<const xla::int64> base_indices);
+
+xla::XlaOp BuildSlice(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> base_indices,
+    tensorflow::gtl::ArraySlice<const xla::int64> sizes);
+
 }  // namespace torch_xla

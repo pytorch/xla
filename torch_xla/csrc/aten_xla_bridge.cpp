@@ -8,7 +8,6 @@
 
 namespace torch_xla {
 namespace bridge {
-namespace {
 
 c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor) {
   XLATensorImpl* impl =
@@ -18,8 +17,6 @@ c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor) {
   }
   return impl->tensor();
 }
-
-}  // namespace
 
 XLATensor GetXlaTensor(const at::Tensor& tensor) {
   auto xtensor = TryGetXlaTensor(tensor);

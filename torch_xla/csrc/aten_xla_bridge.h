@@ -14,6 +14,8 @@
 namespace torch_xla {
 namespace bridge {
 
+c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor);
+
 // Extracts the XLATensor out of our version of at::Tensor. Throws an exception
 // if tensor is not an XLA tensor.
 XLATensor GetXlaTensor(const at::Tensor& tensor);
