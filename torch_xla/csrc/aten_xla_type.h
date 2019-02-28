@@ -192,8 +192,10 @@ class AtenXlaType : public AtenXlaTypeBase {
                      const at::Tensor& other) const override;
 
   at::Tensor neg(const at::Tensor& self) const override;
+  at::Tensor& neg_(at::Tensor& self) const override;
 
   at::Tensor sign(const at::Tensor& self) const override;
+  at::Tensor& sign_(at::Tensor& self) const override;
 
   at::Tensor asin(const at::Tensor& self) const override;
   at::Tensor& asin_(at::Tensor& self) const override;
@@ -223,6 +225,7 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& tanh_(at::Tensor& self) const override;
 
   at::Tensor abs(const at::Tensor& self) const override;
+  at::Tensor& abs_(at::Tensor& self) const override;
 
   at::Tensor sum(const at::Tensor& self, at::ScalarType dtype) const override;
   at::Tensor sum(const at::Tensor& self) const override;
@@ -254,8 +257,10 @@ class AtenXlaType : public AtenXlaTypeBase {
                              at::Scalar value) const override;
 
   at::Tensor ceil(const at::Tensor& self) const override;
+  at::Tensor& ceil_(at::Tensor& self) const override;
 
   at::Tensor floor(const at::Tensor& self) const override;
+  at::Tensor& floor_(at::Tensor& self) const override;
 
   int64_t size(const at::Tensor& self, int64_t dim) const override;
 

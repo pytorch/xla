@@ -593,8 +593,20 @@ at::Tensor AtenXlaType::neg(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::neg(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::neg_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::neg_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::sign(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::sign(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::sign_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::sign_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::asin(const at::Tensor& self) const {
@@ -689,6 +701,12 @@ at::Tensor& AtenXlaType::tanh_(at::Tensor& self) const {
 
 at::Tensor AtenXlaType::abs(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::abs(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::abs_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::abs_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::sum(const at::Tensor& self,
@@ -794,9 +812,21 @@ at::Tensor AtenXlaType::ceil(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::ceil(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::ceil_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::ceil_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::floor(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::floor(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::floor_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::floor_(self_tensor);
+  return self;
 }
 
 int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
