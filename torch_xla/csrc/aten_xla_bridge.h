@@ -41,8 +41,8 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors,
 // discard any device side data. Throws if tensor is not an XLA tensor.
 at::Tensor XlaToAtenMutableTensor(const at::Tensor& tensor);
 
-// Extracts the device out of the XLA tensor. Throws an exception if tensor is
-// not an XLA tensor.
+// Tries to extract the device out of the XLA tensor. Returns nullopt if the
+// input is not an XLA tensor.
 c10::optional<Device> GetXlaDevice(const at::Tensor& tensor);
 
 c10::optional<Device> GetXlaDevice(const at::TensorList& tensors);

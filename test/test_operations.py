@@ -1381,6 +1381,34 @@ class TestAtenXlaTensor(XlaTestCase):
     self.assertEqual(input.data, xla_input.data.cpu())
     self.assertEqual(result.data, xla_result.data.cpu())
 
+  def test_add_mixed_device(self):
+    input = _gen_tensor(3, 800, 1066)
+    xla_input = input.to(xm.xla_device())
+    output = input + 2
+    xla_output = xla_input + 2
+    self.assertEqual(output.data, xla_output.data.cpu())
+
+  def test_mul_mixed_device(self):
+    input = _gen_tensor(3, 800, 1066)
+    xla_input = input.to(xm.xla_device())
+    output = input * 2
+    xla_output = xla_input * 2
+    self.assertEqual(output.data, xla_output.data.cpu())
+
+  def test_sub_mixed_device(self):
+    input = _gen_tensor(3, 800, 1066)
+    xla_input = input.to(xm.xla_device())
+    output = input - 2
+    xla_output = xla_input - 2
+    self.assertEqual(output.data, xla_output.data.cpu())
+
+  def test_div_mixed_device(self):
+    input = _gen_tensor(3, 800, 1066)
+    xla_input = input.to(xm.xla_device())
+    output = input / 2
+    xla_output = xla_input / 2
+    self.assertEqual(output.data, xla_output.data.cpu())
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
