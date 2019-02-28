@@ -231,7 +231,7 @@ at::ScalarType XLATensor::dtype() const {
 
 xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   if (data()->view != nullptr) {
-    return data()->view->shape;
+    return data()->view->shape();
   }
   if (data()->xla_data != nullptr) {
     return data()->xla_data->shape();
@@ -256,7 +256,7 @@ xla::int64 XLATensor::GetUniqueId() const { return data()->unique_id; }
 std::shared_ptr<xla::ComputationClient::Data> XLATensor::GetXlaData() {
   bool up_to_date = true;
   if (data()->view != nullptr) {
-    ViewIrNode ir_value_updated = GetViewIrNode(data()->view.get());
+    View::IrNode ir_value_updated = data()->view->GetViewIrNode();
     if (ir_value_updated.updated || !data()->ir_value) {
       up_to_date = false;
       data()->ir_value = ir_value_updated.ir_value;
@@ -325,7 +325,7 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
     // If we have an active view, and a SetIrValue() happens, it means we are
     // within an in-place execution context, and we need to update the view's
     // alias as well.
-    data()->view->alias->ir_value = ir_value;
+    data()->view->Update(ir_value);
   }
   // We do not want to nullify that XLA data pointer here, as otherwise the
   // tensor apply computation caching will not work correctly.
@@ -383,7 +383,7 @@ ir::Value XLATensor::GetIrValue() const {
     data()->ir_value = CreateTensorNode(xla_data);
     return data()->ir_value;
   }
-  const c10::optional<at::Tensor>& tensor_data = CurrentTensorData();
+  c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
   data()->ir_value = GetIrValue(*tensor_data);
   return data()->ir_value;
@@ -391,7 +391,7 @@ ir::Value XLATensor::GetIrValue() const {
 
 ir::Value XLATensor::CurrentIrValue() const {
   if (data()->view != nullptr) {
-    return GetViewIrNode(data()->view.get()).ir_value;
+    return data()->view->GetViewIrNode().ir_value;
   }
   return data()->ir_value;
 }
@@ -400,7 +400,10 @@ void XLATensor::SetTensorData(at::Tensor tensor_data) {
   data()->tensor_data = std::move(tensor_data);
 }
 
-const c10::optional<at::Tensor>& XLATensor::CurrentTensorData() const {
+c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
+  if (data()->view != nullptr && !data()->view->IsUpToDate()) {
+    return c10::nullopt;
+  }
   return data()->tensor_data;
 }
 
@@ -535,18 +538,6 @@ std::vector<XLATensor> XLATensor::MakeOutputTensors(ir::NodePtr node) const {
     tensors.push_back(CreateFrom(ir::Value(node, i)));
   }
   return tensors;
-}
-
-XLATensor::ViewIrNode XLATensor::GetViewIrNode(View* view) {
-  if (view->ir_value &&
-      view->ir_value->operand(0).node == view->alias->ir_value.node.get()) {
-    // If the existing ir_value (which is a ir::ops::View) operand(0) still
-    // matches the current aliased node, the current IR Node is still valid.
-    return {view->ir_value, false};
-  }
-  view->ir_value = ir::MakeNode<ir::ops::View>(view->alias->ir_value,
-                                               view->shape.dimensions());
-  return {view->ir_value, true};
 }
 
 XLATensor XLATensor::add(const XLATensor& input, const XLATensor& other,
@@ -1666,20 +1657,29 @@ XLATensor XLATensor::reshape(
 XLATensor XLATensor::view(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
-  return input.CreateView(output_size);
+  auto input_shape = input.shape();
+  std::vector<xla::int64> complete_dimensions =
+      GetCompleteShape(output_size, input_shape.get().dimensions());
+  xla::Shape shape = MakeArrayShapeFromDimensions(
+      complete_dimensions, input_shape.get().element_type(),
+      input.GetDevice().hw_type);
+  ViewInfo view_info(std::move(shape), input_shape.get().dimensions());
+  return input.CreateView(std::move(view_info));
 }
 
-XLATensor XLATensor::CreateView(
-    tensorflow::gtl::ArraySlice<const xla::int64> output_size) const {
+XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
+                            xla::int64 start, xla::int64 length) {
+  auto input_shape = input.shape();
+  xla::Shape narrow_shape = input_shape;
+  narrow_shape.set_dimensions(dim, length);
+  ViewInfo view_info(std::move(narrow_shape), input_shape.get().dimensions());
+  view_info.indices[dim] = start;
+  return input.CreateView(std::move(view_info));
+}
+
+XLATensor XLATensor::CreateView(ViewInfo view_info) const {
   if (data()->view != nullptr) {
-    // Handle view of a view. This node is already a view, so use the view
-    // alias to create the new IR Node.
-    std::vector<xla::int64> complete_dimensions =
-        GetCompleteShape(output_size, data()->view->shape.dimensions());
-    xla::Shape shape = MakeArrayShapeFromDimensions(
-        complete_dimensions, data()->view->shape.element_type(),
-        GetDevice().hw_type);
-    return Create(std::make_shared<View>(std::move(shape), data()->view->alias),
+    return Create(data()->view->CreateSubView(view_info.shape, view_info),
                   GetDevice(), dtype());
   }
   // This node is not a view, and creating a view forks the current node into
@@ -1687,15 +1687,11 @@ XLATensor XLATensor::CreateView(
   // Node, and using the same alias for the created IR Node.
   ir::Value ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
-  data()->view = std::make_shared<View>(ir_value.shape(), alias);
-
-  std::vector<xla::int64> complete_dimensions =
-      GetCompleteShape(output_size, ir_value.shape().dimensions());
-  xla::Shape shape = MakeArrayShapeFromDimensions(
-      complete_dimensions, ir_value.shape().element_type(),
-      GetDevice().hw_type);
-  return Create(std::make_shared<View>(std::move(shape), alias), GetDevice(),
-                dtype());
+  ViewInfo this_view_info(ir_value.shape(), ir_value.shape().dimensions());
+  data()->view = std::make_shared<View>(ir_value.shape(), alias,
+                                        std::move(this_view_info));
+  return Create(std::make_shared<View>(view_info.shape, alias, view_info),
+                GetDevice(), dtype());
 }
 
 XLATensor XLATensor::log_softmax(const XLATensor& input, xla::int64 dim) {
@@ -1831,8 +1827,7 @@ std::vector<size_t> XLATensor::GetApplyOrder(
       } else {
         // The tensor only has at::Tensor data. We need to queue it for a
         // device upload.
-        const c10::optional<at::Tensor>& tensor_data =
-            tensors[i].CurrentTensorData();
+        c10::optional<at::Tensor> tensor_data = tensors[i].CurrentTensorData();
         XLA_CHECK(tensor_data);
         at_tensors.push_back(*tensor_data);
         devices.push_back(tensors[i].GetDevice().ToString());

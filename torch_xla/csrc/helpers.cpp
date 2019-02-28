@@ -190,6 +190,21 @@ xla::PrimitiveType XlaHelpers::TypeOfXlaOp(const xla::XlaOp& op) {
   return ShapeOfXlaOp(op).element_type();
 }
 
+xla::XlaOp XlaHelpers::ReshapeToRank(const xla::XlaOp& input,
+                                     xla::int64 expected_rank,
+                                     xla::int64 offset) {
+  xla::Shape shape = ShapeOfXlaOp(input);
+  XLA_CHECK_LE(offset + shape.rank(), expected_rank);
+  if (shape.rank() == expected_rank) {
+    return input;
+  }
+  std::vector<xla::int64> dimensions(expected_rank - offset - shape.rank(), 1);
+  dimensions.insert(dimensions.end(), shape.dimensions().begin(),
+                    shape.dimensions().end());
+  dimensions.insert(dimensions.end(), offset, 1);
+  return xla::Reshape(input, dimensions);
+}
+
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
     const xla::XlaOp& op1, const xla::XlaOp& op2) {
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
