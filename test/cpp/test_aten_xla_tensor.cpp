@@ -2191,6 +2191,37 @@ TEST_F(AtenXlaTensorTest, TestSplitWithSizes) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestCrossImplicitDim) {
+  std::vector<std::vector<int64_t>> dim_sizes = {
+      {4, 5, 3}, {4, 3, 5}, {3, 4, 5}};
+  for (auto dim_size : dim_sizes) {
+    at::Tensor input = GetTestTensor(dim_size);
+    at::Tensor other = GetTestTensor(dim_size);
+    at::Tensor result = at::cross(input, other);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_other = bridge::CreateXlaTensor(other, device);
+      at::Tensor xla_result = at::cross(xla_input, xla_other);
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestCrossExplicitDim) {
+  std::vector<int64_t> dim_size = {3, 3};
+  at::Tensor input = GetTestTensor(dim_size);
+  at::Tensor other = GetTestTensor(dim_size);
+  for (size_t dim = 0; dim < dim_size.size(); ++dim) {
+    at::Tensor result = at::cross(input, other, dim);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_other = bridge::CreateXlaTensor(other, device);
+      at::Tensor xla_result = at::cross(xla_input, xla_other, dim);
+      AllClose(result, xla_result);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestTriu) {
   int size = 5;
   at::Tensor input = GetTestTensor({size, size});
