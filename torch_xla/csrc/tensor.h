@@ -528,6 +528,12 @@ class XLATensor {
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            const at::Scalar& value);
 
+  // Returns the cross product of the two input tensors in the given dimension.
+  // If the dimension is not given, it defaults to the first dimension found
+  // with the size 3.
+  static XLATensor cross(const XLATensor& input, const XLATensor& other,
+                         xla::int64 dim);
+
   // Returns the upper triangular part of a matrix (2-D tensor) or batch of
   // matrices input, the other elements of the result tensor out are set to 0.
   static XLATensor triu(const XLATensor& input, xla::int64 diagonal);
@@ -549,6 +555,12 @@ class XLATensor {
 
   XLATensor cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups) const;
+
+  // Returns the sub-tensor at the given index in the given dimension. Its rank
+  // is one less than the input, in other words the singleton dimension is
+  // squeezed out.
+  static XLATensor IndexAcrossDims(const XLATensor& input, xla::int64 dim,
+                                   xla::int64 index);
 
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();

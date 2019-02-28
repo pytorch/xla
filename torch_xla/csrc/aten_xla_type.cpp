@@ -1515,6 +1515,12 @@ at::Tensor AtenXlaType::where(const at::Tensor& condition,
       bridge::GetXlaTensor(other)));
 }
 
+at::Tensor AtenXlaType::cross(const at::Tensor& self, const at::Tensor& other,
+                              int64_t dim) const {
+  return bridge::AtenFromXlaTensor(XLATensor::cross(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other), dim));
+}
+
 at::Tensor AtenXlaType::triu(const at::Tensor& self, int64_t diagonal) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::triu(bridge::GetXlaTensor(self), diagonal));
