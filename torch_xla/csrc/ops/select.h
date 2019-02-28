@@ -1,7 +1,5 @@
 #pragma once
 
-#include "tensorflow/compiler/xla/xla_data.pb.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
