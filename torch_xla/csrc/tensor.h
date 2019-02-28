@@ -278,8 +278,10 @@ class XLATensor {
   static XLATensor dropout(const XLATensor& input, double p);
 
   static XLATensor neg(const XLATensor& input);
+  static void neg_(XLATensor& input);
 
   static XLATensor sign(const XLATensor& input);
+  static void sign_(XLATensor& input);
 
   static XLATensor asin(const XLATensor& input);
   static void asin_(XLATensor& input);
@@ -309,6 +311,7 @@ class XLATensor {
   static void tanh_(XLATensor& input);
 
   static XLATensor abs(const XLATensor& input);
+  static void abs_(XLATensor& input);
 
   static XLATensor clamp(const XLATensor& input, c10::optional<at::Scalar> min,
                          c10::optional<at::Scalar> max);
@@ -323,8 +326,10 @@ class XLATensor {
       const at::Scalar& value);
 
   static XLATensor ceil(const XLATensor& input);
+  static void ceil_(XLATensor& input);
 
   static XLATensor floor(const XLATensor& input);
+  static void floor_(XLATensor& input);
 
   static XLATensor slice(const XLATensor& input, xla::int64 dim,
                          xla::int64 start, xla::int64 end, xla::int64 step);

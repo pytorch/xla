@@ -933,8 +933,16 @@ XLATensor XLATensor::neg(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Neg(input.GetIrValue()));
 }
 
+void XLATensor::neg_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Neg(input.GetIrValue()));
+}
+
 XLATensor XLATensor::sign(const XLATensor& input) {
   return input.CreateFrom(ir::ops::SignOp(input.GetIrValue()));
+}
+
+void XLATensor::sign_(XLATensor& input) {
+  input.SetIrValue(ir::ops::SignOp(input.GetIrValue()));
 }
 
 XLATensor XLATensor::asin(const XLATensor& input) {
@@ -1013,6 +1021,10 @@ XLATensor XLATensor::abs(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Abs(input.GetIrValue()));
 }
 
+void XLATensor::abs_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Abs(input.GetIrValue()));
+}
+
 XLATensor XLATensor::clamp(const XLATensor& input,
                            c10::optional<at::Scalar> min,
                            c10::optional<at::Scalar> max) {
@@ -1037,8 +1049,16 @@ XLATensor XLATensor::ceil(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Ceil(input.GetIrValue()));
 }
 
+void XLATensor::ceil_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Ceil(input.GetIrValue()));
+}
+
 XLATensor XLATensor::floor(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Floor(input.GetIrValue()));
+}
+
+void XLATensor::floor_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Floor(input.GetIrValue()));
 }
 
 XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
