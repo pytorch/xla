@@ -1405,6 +1405,36 @@ void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                                                      expanded_mask, value));
 }
 
+XLATensor XLATensor::cross(const XLATensor& input, const XLATensor& other,
+                           xla::int64 dim) {
+  if (dim < 0) {
+    auto input_shape_ref = input.shape();
+    auto dim_3_it = std::find((*input_shape_ref).dimensions().begin(),
+                              (*input_shape_ref).dimensions().end(), 3);
+    XLA_CHECK(dim_3_it != (*input_shape_ref).dimensions().end())
+        << "No dimension of size 3 in input: " << (*input_shape_ref).ToString();
+    dim = dim_3_it - (*input_shape_ref).dimensions().begin();
+  }
+  XLA_CHECK_EQ(input.size(dim), 3)
+      << "Invalid cross argument: dimension " << dim << " does not have size 3";
+  XLA_CHECK_LT(dim, input.shape().get().rank())
+      << "Invalid cross argument: dimension " << dim << " out of range";
+  // Extract the slices for each axis.
+  XLATensor u1 = IndexAcrossDims(input, dim, 0);
+  XLATensor v1 = IndexAcrossDims(other, dim, 0);
+  XLATensor u2 = IndexAcrossDims(input, dim, 1);
+  XLATensor v2 = IndexAcrossDims(other, dim, 1);
+  XLATensor u3 = IndexAcrossDims(input, dim, 2);
+  XLATensor v3 = IndexAcrossDims(other, dim, 2);
+  // Compute the term for each axis.
+  at::Scalar one(1);
+  XLATensor s1 = sub(mul(u2, v3), mul(u3, v2), one);
+  XLATensor s2 = sub(mul(u3, v1), mul(u1, v3), one);
+  XLATensor s3 = sub(mul(u1, v2), mul(u2, v1), one);
+  // Stack the terms into one result tensor.
+  return stack({s1, s2, s3}, dim);
+}
+
 XLATensor XLATensor::triu(const XLATensor& input, xla::int64 diagonal) {
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Triu>(input.GetIrValue(), diagonal));
@@ -1627,6 +1657,11 @@ XLATensor XLATensor::CreateFrom(ir::Value ir_value,
 XLATensor XLATensor::CreateFrom(ir::Value ir_value, const Device& device,
                                 at::ScalarType logical_element_type) const {
   return Create(std::move(ir_value), device, logical_element_type);
+}
+
+XLATensor XLATensor::IndexAcrossDims(const XLATensor& input, xla::int64 dim,
+                                     xla::int64 index) {
+  return squeeze(slice(input, dim, index, index + 1, 1));
 }
 
 void XLATensor::ApplyPendingGraph() {
