@@ -822,6 +822,15 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::topk(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::sort(const at::Tensor& self,
+                                                     int64_t dim,
+                                                     bool descending) const {
+  auto results = XLATensor::topk(bridge::GetXlaTensor(self), self.size(dim),
+                                 dim, descending, true);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
+}
+
 at::Tensor AtenXlaType::embedding(const at::Tensor& weight,
                                   const at::Tensor& indices,
                                   int64_t padding_idx, bool scale_grad_by_freq,
