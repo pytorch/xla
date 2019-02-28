@@ -1978,6 +1978,103 @@ TEST_F(AtenXlaTensorTest, TestViewOfViewMod) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestNarrow) {
+  at::Tensor a = at::rand({8, 10, 4, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = a.narrow(1, 2, 6);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = xla_a.narrow(1, 2, 6);
+    AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestNarrowUpdate) {
+  at::Tensor a = at::rand({3, 8, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor a_copy = a.clone();
+  at::Tensor b = at::rand({3, 4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor c = a.narrow(1, 2, 4);
+  c.add_(b, 1.0);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a_copy, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = xla_a.narrow(1, 2, 4);
+    xla_c.add_(xla_b, 1.0);
+    AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestNarrowUpdateBaseCheck) {
+  at::Tensor a = at::zeros({8, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor a_copy = a.clone();
+  at::Tensor b = at::ones({4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor c = a.narrow(0, 2, 4);
+  c.add_(b, 1.0);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a_copy, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = xla_a.narrow(0, 2, 4);
+    xla_c.add_(xla_b, 1.0);
+    AllClose(a, xla_a);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestNarrowUpdateTwoSlices) {
+  at::Tensor a = at::zeros({8, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor a_copy = a.clone();
+  at::Tensor b = at::ones({2, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor c = b + 1;
+  at::Tensor d = a.narrow(0, 2, 2);
+  at::Tensor e = a.narrow(0, 6, 2);
+  d.add_(b, 1.0);
+  e.add_(c, 1.0);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a_copy, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = bridge::CreateXlaTensor(c, device);
+    at::Tensor xla_d = xla_a.narrow(0, 2, 2);
+    at::Tensor xla_e = xla_a.narrow(0, 6, 2);
+    xla_d.add_(xla_b, 1.0);
+    xla_e.add_(xla_c, 1.0);
+    AllClose(d, xla_d);
+    AllClose(e, xla_e);
+    AllClose(a, xla_a);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestNarrowUpdateView) {
+  at::Tensor a = at::rand({8, 2, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor a_copy = a.clone();
+  at::Tensor b = at::rand({4, 6}, at::TensorOptions(at::kFloat));
+  at::Tensor c = a.narrow(0, 2, 4);
+  at::Tensor d = c.view({4, 6});
+  d.add_(b, 1.0);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a_copy, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = xla_a.narrow(0, 2, 4);
+    at::Tensor xla_d = xla_c.view({4, 6});
+    xla_d.add_(xla_b, 1.0);
+    AllClose(d, xla_d);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestNarrowInNarrowUpdate) {
+  at::Tensor a = at::rand({3, 8, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor a_copy = a.clone();
+  at::Tensor b = at::rand({3, 2, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor c = a.narrow(1, 1, 6);
+  at::Tensor d = c.narrow(1, 1, 2);
+  d.add_(b, 1.0);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a_copy, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = xla_a.narrow(1, 1, 6);
+    at::Tensor xla_d = xla_c.narrow(1, 1, 2);
+    xla_d.add_(xla_b, 1.0);
+    AllClose(a, xla_a);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestLogSoftmax) {
   at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
   ForEachDevice([&](const Device& device) {

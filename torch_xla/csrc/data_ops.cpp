@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/data_ops.h"
 
+#include <algorithm>
 #include <functional>
 #include <numeric>
 
@@ -80,12 +81,12 @@ std::vector<xla::int64> GetCompleteShape(
     XLA_CHECK_EQ(total_element_count,
                  xla::util::Multiply<xla::int64>(output_sizes))
         << "[" << absl::StrJoin(output_sizes, ", ") << "] vs. ["
-        << "[" << absl::StrJoin(input_sizes, ", ") << "]";
+        << absl::StrJoin(input_sizes, ", ") << "]";
     return xla::util::ToVector<xla::int64>(output_sizes);
   }
   XLA_CHECK_EQ(total_element_count % incomplete_element_count, 0)
       << "[" << absl::StrJoin(output_sizes, ", ") << "] vs. ["
-      << "[" << absl::StrJoin(input_sizes, ", ") << "]";
+      << absl::StrJoin(input_sizes, ", ") << "]";
   std::vector<xla::int64> complete_output_sizes =
       xla::util::ToVector<xla::int64>(output_sizes);
   complete_output_sizes[*incomplete_dim] =
@@ -289,6 +290,33 @@ std::vector<xla::XlaOp> BuildSplit(
     index += size;
   }
   return splits;
+}
+
+xla::XlaOp BuildUpdateSlice(
+    const xla::XlaOp& input, const xla::XlaOp& source,
+    tensorflow::gtl::ArraySlice<const xla::int64> base_indices) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp reshaped_source =
+      XlaHelpers::ReshapeToRank(source, input_shape.rank());
+  std::vector<xla::XlaOp> start_indices;
+  for (auto index : base_indices) {
+    start_indices.push_back(
+        XlaHelpers::ScalarValue<xla::int64>(index, input.builder()));
+  }
+  return xla::DynamicUpdateSlice(input, reshaped_source, start_indices);
+}
+
+xla::XlaOp BuildSlice(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> base_indices,
+    tensorflow::gtl::ArraySlice<const xla::int64> sizes) {
+  XLA_CHECK_EQ(base_indices.size(), sizes.size());
+  std::vector<xla::int64> limit_indices(base_indices.begin(),
+                                        base_indices.end());
+  std::transform(limit_indices.begin(), limit_indices.end(), sizes.begin(),
+                 limit_indices.begin(), std::plus<xla::int64>());
+  std::vector<xla::int64> strides(base_indices.size(), 1);
+  return xla::Slice(input, base_indices, limit_indices, strides);
 }
 
 }  // namespace torch_xla

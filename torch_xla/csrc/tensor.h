@@ -11,13 +11,13 @@
 #include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/view.h"
 
 namespace torch_xla {
 
 class XLATensor {
   class TensorsArena;
   struct Data;
-  struct View;
 
  public:
   // The context used by the ApplyPendingGraph() API, in order to allow it speed
@@ -88,7 +88,7 @@ class XLATensor {
   // internal state ofthe object.
   ir::Value GetIrValue() const;
 
-  const c10::optional<at::Tensor>& CurrentTensorData() const;
+  c10::optional<at::Tensor> CurrentTensorData() const;
 
   // Makes the data references from the current tensor, point to the ones from
   // the source tensor.
@@ -258,6 +258,9 @@ class XLATensor {
   static XLATensor view(
       const XLATensor& input,
       tensorflow::gtl::ArraySlice<const xla::int64> output_size);
+
+  static XLATensor narrow(const XLATensor& input, xla::int64 dim,
+                          xla::int64 start, xla::int64 length);
 
   static XLATensor cast(const XLATensor& input, at::ScalarType dtype);
 
@@ -625,33 +628,6 @@ class XLATensor {
   // Maps from ComputationClient Data unique ID to XLA tensor unique ID.
   using DataUidMap = std::unordered_map<xla::int64, xla::int64>;
 
-  // When a "view" (capture by reference) is taken on a node, an Alias object is
-  // created on the captured node itself, with its current IR Node value.
-  // Inplace operations using the SetIrValue() API to update the current value,
-  // will notice the presence of the alias, and also update the Alias ir_value.
-  struct Alias {
-    explicit Alias(ir::Value ir_value) : ir_value(std::move(ir_value)) {}
-
-    ir::Value ir_value;
-  };
-
-  // A view represents a state of an XLA tensor in which its current value is a
-  // view/reference of another tensor (IR Node). A View is fed by an Alias,
-  // which captures the current value of the input tensor.
-  struct View {
-    View(xla::Shape shape, std::shared_ptr<Alias> alias)
-        : shape(std::move(shape)), alias(std::move(alias)) {}
-
-    xla::Shape shape;
-    std::shared_ptr<Alias> alias;
-    ir::Value ir_value;
-  };
-
-  struct ViewIrNode {
-    ir::Value ir_value;
-    bool updated;
-  };
-
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
@@ -723,8 +699,7 @@ class XLATensor {
 
   void SetTensorData(at::Tensor tensor_data);
 
-  XLATensor CreateView(
-      tensorflow::gtl::ArraySlice<const xla::int64> output_size) const;
+  XLATensor CreateView(ViewInfo view_info) const;
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
@@ -750,11 +725,6 @@ class XLATensor {
   void TryLimitGraphSize();
 
   std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node) const;
-
-  // Extracts the current IR Node out of a view, into a ViewIrNode structure
-  // where the updated fields tells whether a new IR Node has been created, or
-  // the cached one returned.
-  static ViewIrNode GetViewIrNode(View* view);
 
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.
