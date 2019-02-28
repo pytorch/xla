@@ -419,6 +419,23 @@ TEST_F(AtenXlaTensorTest, TestTopK) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSort) {
+  at::Tensor a = at::rand({4, 5, 3}, at::TensorOptions(at::kFloat));
+  for (int k = 1; k <= 3; ++k) {
+    for (int dim = 0; dim < 3; ++dim) {
+      for (bool descending : {false, true}) {
+        auto b = at::sort(a, dim, descending);
+        ForEachDevice([&](const Device& device) {
+          at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+          auto xla_b = at::sort(xla_a, dim, descending);
+          AllClose(std::get<0>(b), std::get<0>(xla_b));
+          AllClose(std::get<1>(b), std::get<1>(xla_b));
+        });
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestMin) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
