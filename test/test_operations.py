@@ -1409,6 +1409,10 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_output = xla_input / 2
     self.assertEqual(output.data, xla_output.data.cpu())
 
+  def test_rand(self):
+    x = torch.rand(3, 5, device=xm.xla_device())
+    self.assertEqual(x.device.type, 'xla')
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
