@@ -556,12 +556,6 @@ class XLATensor {
   XLATensor cross_replica_sum(
       const std::vector<std::vector<xla::int64>>& groups) const;
 
-  // Returns the sub-tensor at the given index in the given dimension. Its rank
-  // is one less than the input, in other words the singleton dimension is
-  // squeezed out.
-  static XLATensor IndexAcrossDims(const XLATensor& input, xla::int64 dim,
-                                   xla::int64 index);
-
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
 
