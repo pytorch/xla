@@ -393,16 +393,22 @@ class XLATensor {
   static void log1p_(XLATensor& input);
 
   static XLATensor erf(const XLATensor& input);
+  static void erf_(XLATensor& input);
 
   static XLATensor erfc(const XLATensor& input);
+  static void erfc_(XLATensor& input);
 
   static XLATensor erfinv(const XLATensor& input);
+  static void erfinv_(XLATensor& input);
 
   static XLATensor sqrt(const XLATensor& input);
+  static void sqrt_(XLATensor& input);
 
   static XLATensor rsqrt(const XLATensor& input);
+  static void rsqrt_(XLATensor& input);
 
   static XLATensor reciprocal(const XLATensor& input);
+  static void reciprocal_(XLATensor& input);
 
   static XLATensor pow(const XLATensor& input, at::Scalar exponent);
 
