@@ -102,16 +102,22 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& log1p_(at::Tensor& self) const override;
 
   at::Tensor erf(const at::Tensor& self) const override;
+  at::Tensor& erf_(at::Tensor& self) const override;
 
   at::Tensor erfc(const at::Tensor& self) const override;
+  at::Tensor& erfc_(at::Tensor& self) const override;
 
   at::Tensor erfinv(const at::Tensor& self) const override;
+  at::Tensor& erfinv_(at::Tensor& self) const override;
 
   at::Tensor sqrt(const at::Tensor& self) const override;
+  at::Tensor& sqrt_(at::Tensor& self) const override;
 
   at::Tensor rsqrt(const at::Tensor& self) const override;
+  at::Tensor& rsqrt_(at::Tensor& self) const override;
 
   at::Tensor reciprocal(const at::Tensor& self) const override;
+  at::Tensor& reciprocal_(at::Tensor& self) const override;
 
   at::Tensor pow(const at::Tensor& self, at::Scalar exponent) const override;
 

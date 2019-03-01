@@ -337,8 +337,20 @@ at::Tensor AtenXlaType::erf(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::erf(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::erf_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::erf_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::erfc(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::erfc(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::erfc_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::erfc_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::erfinv(const at::Tensor& self) const {
@@ -346,8 +358,20 @@ at::Tensor AtenXlaType::erfinv(const at::Tensor& self) const {
       XLATensor::erfinv(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::erfinv_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::erfinv_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::sqrt(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::sqrt(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::sqrt_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::sqrt_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::rsqrt(const at::Tensor& self) const {
@@ -355,9 +379,21 @@ at::Tensor AtenXlaType::rsqrt(const at::Tensor& self) const {
       XLATensor::rsqrt(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::rsqrt_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::rsqrt_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::reciprocal(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::reciprocal(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::reciprocal_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::reciprocal_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) const {
