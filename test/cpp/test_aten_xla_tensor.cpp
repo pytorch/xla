@@ -770,6 +770,18 @@ TEST_F(AtenXlaTensorTest, TestAtan) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestAtan2) {
+  at::Tensor a = at::randn({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::randn({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::atan2(a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::atan2(xla_a, xla_b);
+    AllClose(c, xla_c, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestTan) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::tan(a);
@@ -1542,13 +1554,25 @@ TEST_F(AtenXlaTensorTest, TestPow) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestFmod) {
+TEST_F(AtenXlaTensorTest, TestFmodScalar) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
   at::Tensor b = at::fmod(a, 2.0);
   ForEachDevice([&](const Device& device) {
     at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
     at::Tensor xla_b = at::fmod(xla_a, 2.0);
     AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestFmodTensor) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
+  at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat)) * 10.0;
+  at::Tensor c = at::fmod(a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::fmod(xla_a, xla_b);
+    AllClose(c, xla_c);
   });
 }
 

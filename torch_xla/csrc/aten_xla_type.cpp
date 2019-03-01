@@ -721,6 +721,19 @@ at::Tensor& AtenXlaType::atan_(at::Tensor& self) const {
   return self;
 }
 
+at::Tensor AtenXlaType::atan2(const at::Tensor& self,
+                              const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::atan2(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor& AtenXlaType::atan2_(at::Tensor& self,
+                                const at::Tensor& other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::atan2_(self_tensor, bridge::GetXlaTensor(other));
+  return self;
+}
+
 at::Tensor AtenXlaType::tan(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::tan(bridge::GetXlaTensor(self)));
 }

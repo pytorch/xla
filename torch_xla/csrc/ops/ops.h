@@ -59,6 +59,8 @@ NodePtr Sinh(const Value& input);
 
 NodePtr Atan(const Value& input);
 
+NodePtr Atan2(const Value& input, const Value& other);
+
 NodePtr Tan(const Value& input);
 
 NodePtr Tanh(const Value& input);
