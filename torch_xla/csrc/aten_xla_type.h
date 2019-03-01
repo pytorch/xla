@@ -148,6 +148,7 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor fmod(const at::Tensor& self,
                   const at::Tensor& other) const override;
+  at::Tensor fmod(const at::Tensor& self, at::Scalar other) const override;
   at::Tensor& fmod_(at::Tensor& self, at::Scalar other) const override;
   at::Tensor& fmod_(at::Tensor& self, const at::Tensor& other) const override;
 
@@ -224,7 +225,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor atan(const at::Tensor& self) const override;
   at::Tensor& atan_(at::Tensor& self) const override;
 
-  at::Tensor atan2(const at::Tensor& self, const at::Tensor& other) const override;
+  at::Tensor atan2(const at::Tensor& self,
+                   const at::Tensor& other) const override;
   at::Tensor& atan2_(at::Tensor& self, const at::Tensor& other) const override;
 
   at::Tensor tan(const at::Tensor& self) const override;
