@@ -304,6 +304,9 @@ class XLATensor {
   static XLATensor atan(const XLATensor& input);
   static void atan_(XLATensor& input);
 
+  static XLATensor atan2(const XLATensor& input, const XLATensor& other);
+  static void atan2_(XLATensor& input, const XLATensor& other);
+
   static XLATensor tan(const XLATensor& input);
   static void tan_(XLATensor& input);
 

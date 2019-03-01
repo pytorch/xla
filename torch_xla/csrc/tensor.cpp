@@ -1002,6 +1002,14 @@ void XLATensor::atan_(XLATensor& input) {
   input.SetIrValue(ir::ops::Atan(input.GetIrValue()));
 }
 
+XLATensor XLATensor::atan2(const XLATensor& input, const XLATensor& other) {
+  return input.CreateFrom(ir::ops::Atan2(input.GetIrValue(), other.GetIrValue()));
+}
+
+void XLATensor::atan2_(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(ir::ops::Atan2(input.GetIrValue(), other.GetIrValue()));
+}
+
 XLATensor XLATensor::tan(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Tan(input.GetIrValue()));
 }

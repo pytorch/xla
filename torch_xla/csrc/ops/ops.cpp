@@ -71,6 +71,7 @@ PTXLA_BINARY_OP(Min, at::aten::min, xla::Min);
 PTXLA_BINARY_OP(Max, at::aten::max, xla::Max);
 PTXLA_BINARY_OP(Pow, at::aten::pow, xla::Pow);
 PTXLA_BINARY_OP(Fmod, at::aten::fmod, xla::Rem);
+PTXLA_BINARY_OP(Atan2, at::aten::atan2, xla::Atan2);
 
 NodePtr LogBase(const Value& input, OpKind op, double base) {
   auto lower_fn = [base](const Node& node,
