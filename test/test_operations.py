@@ -227,12 +227,12 @@ class XlaTestCase(TestCase):
     grad_output.grad = grad_output.data
     output.backward(grad_output)
     xla_model.backward([grad_output])
-    xla_updated_params = [p.grad.to_tensor() for p in xla_model.parameters()[0]]
+    xla_updated_params = [p.grad for p in xla_model.parameters()[0]]
     updated_params = [p.grad for p in model.parameters()]
     self.assertEqual(len(xla_updated_params), len(updated_params))
     for i in range(0, len(updated_params)):
       self.assertEqualRel(
-          xla_updated_params[i],
+          xla_updated_params[i].to(device='cpu'),
           updated_params[i],
           rel_err=rel_err,
           abs_err=abs_err)
@@ -818,8 +818,7 @@ class TestGradients(XlaTestCase):
       ]
       xla_model.backward((tuple(grads_output_xla)))
       grad_inputs_xla = [input_xla.grad.to_tensor() for input_xla in inputs_xla]
-      grad_inputs_xla.extend(
-          [p.grad.to_tensor() for p in xla_model.parameters()[0]])
+      grad_inputs_xla.extend([p.grad for p in xla_model.parameters()[0]])
     ##############################################################
     # forward + backward with regular autograd / torch
     outputs_gt = model(*inputs)
@@ -838,7 +837,8 @@ class TestGradients(XlaTestCase):
     if xla:
       for i, (grad_input_jit, grad_input_xla) in enumerate(
           zip(grad_inputs, grad_inputs_xla)):
-        self.assertEqualRel(grad_input_jit, grad_input_xla, rel_err, abs_err)
+        self.assertEqualRel(grad_input_jit, grad_input_xla.to(device='cpu'),
+                            rel_err, abs_err)
 
   def test_avgpool(self):
 
@@ -1105,12 +1105,11 @@ class TestOptimizer(XlaTestCase):
     for _ in range(0, nsteps):
       xla_optimizer.step()
       optimizer.step()
-      xla_updated_params = [
-          p.to_tensor().data for p in xla_model.parameters()[0]
-      ]
+      xla_updated_params = [p.data for p in xla_model.parameters()[0]]
       updated_params = [p.data for p in model.parameters()]
       for i in range(0, len(updated_params)):
-        self.assertEqualRel(xla_updated_params[i], updated_params[i])
+        self.assertEqualRel(xla_updated_params[i].to(device='cpu'),
+                            updated_params[i])
 
   def test_sgd(self):
     for weight_decay in [0, 5e-4]:

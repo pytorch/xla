@@ -18,6 +18,10 @@ namespace bridge {
 // if tensor is not an XLA tensor.
 XLATensor GetXlaTensor(const at::Tensor& tensor);
 
+// Gets the reference to the underlying XLATensor. Throws an exception if tensor
+// is not an XLA tensor.
+XLATensor& AsXlaTensor(const at::Tensor& tensor);
+
 // Same as above, applied to a list of tensors.
 std::vector<XLATensor> GetXlaTensors(
     tensorflow::gtl::ArraySlice<const at::Tensor> tensors);

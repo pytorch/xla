@@ -13,6 +13,7 @@
 #include "torch/csrc/jit/passes/lower_tuples.h"
 #include "torch/csrc/jit/passes/shape_analysis.h"
 #include "torch/csrc/jit/passes/specialize_autogradzero.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/passes/eval_static_size.h"
 #include "torch_xla/csrc/passes/remove_in_place_out_param_ops.h"
@@ -92,13 +93,15 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   // cores. We might need to do something smarter here.
   devices_ = CommonDevicesForReplicas(inputs);
   for (const auto& device : devices_) {
-    TensorBatchVector::value_type replica_params;
-    TensorBatchVector::value_type optimizable_replica_params;
+    AtenTensorBatchVector::value_type replica_params;
+    AtenTensorBatchVector::value_type optimizable_replica_params;
     for (size_t j = 0; j < params_buffers_regather.size(); ++j) {
-      const torch::autograd::Variable& var_ref =
-          torch::autograd::as_variable_ref(*params_buffers_regather[j]);
-      replica_params.push_back(
-          XLATensor::Create(var_ref, device, var_ref.requires_grad()));
+      all_params_owned_.push_back(
+          bridge::CreateXlaTensor(*params_buffers_regather[j], device));
+      const torch::autograd::Variable var_ref = torch::autograd::make_variable(
+          all_params_owned_.back(),
+          params_buffers_regather[j]->requires_grad());
+      replica_params.push_back(var_ref);
       if (param_requires_grad[j]) {
         optimizable_replica_params.push_back(replica_params.back());
       }
@@ -298,7 +301,7 @@ void XlaModule::backward(const TensorBatchVector& grad_outputs) {
 
 void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs,
                                TensorBatchVector* inputs,
-                               TensorBatchVector* optimizable_params,
+                               AtenTensorBatchVector* optimizable_params,
                                const std::vector<bool>& inputs_require_grad,
                                const torch::jit::Graph& df) {
   size_t inputs_require_grad_count =
@@ -318,8 +321,12 @@ void XlaModule::ApplyGradients(const TensorBatchVector& grad_inputs,
       }
     }
     for (size_t j = 0; j < replica_optimizable_params.size(); j++) {
-      replica_optimizable_params[j].SetGradient(
-          replica_grad_inputs[grad_index]);
+      bridge::AsXlaTensor(replica_optimizable_params[j])
+          .SetGradient(replica_grad_inputs[grad_index]);
+      if (!replica_optimizable_params[j].grad().defined()) {
+        replica_optimizable_params[j].grad() = torch::autograd::make_variable(
+            bridge::AtenFromXlaTensor(replica_grad_inputs[grad_index]), true);
+      }
       ++grad_index;
     }
   }
@@ -374,12 +381,12 @@ XlaModule::TensorBatchVector XlaModule::RunFusedTrain(
   return forward_result;
 }
 
-const XlaModule::TensorBatchVector& XlaModule::parameters() {
+const XlaModule::AtenTensorBatchVector& XlaModule::parameters() {
   CheckInitialized();
   return optimizable_params_;
 }
 
-const XlaModule::TensorBatchVector& XlaModule::parameters_buffers() {
+const XlaModule::AtenTensorBatchVector& XlaModule::parameters_buffers() {
   CheckInitialized();
   return all_params_;
 }
@@ -560,7 +567,7 @@ XlaModule::TensorBatchVector XlaModule::PrepareForwardInput(
       replica_inputs_params_buffers.push_back(p);
     }
     for (auto& p : all_params_[i]) {
-      replica_inputs_params_buffers.push_back(p);
+      replica_inputs_params_buffers.push_back(bridge::AsXlaTensor(p));
     }
     inputs_params_buffers.push_back(std::move(replica_inputs_params_buffers));
   }

@@ -20,6 +20,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // The i-th entry in this vector, is a vector of XLA tensors which belong the
   // i-th replica.
   using TensorBatchVector = std::vector<std::vector<XLATensor>>;
+  using AtenTensorBatchVector = std::vector<std::vector<at::Tensor>>;
 
   // Creates a new XlaModule from a PyTorch script module "module".
   XlaModule(const std::shared_ptr<torch::jit::script::Module> module,
@@ -30,8 +31,8 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // parameters and set it as their grad field.
   void backward(const TensorBatchVector& grad_outputs);
 
-  const TensorBatchVector& parameters();
-  const TensorBatchVector& parameters_buffers();
+  const AtenTensorBatchVector& parameters();
+  const AtenTensorBatchVector& parameters_buffers();
 
   // When we want to enable forward+backward fusion, we need to feed the
   // backward with the gradient of the output.
@@ -111,7 +112,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // vector tell which inputs requires the gradient to be updated.
   static void ApplyGradients(const TensorBatchVector& grad_inputs,
                              TensorBatchVector* inputs,
-                             TensorBatchVector* optimizable_params,
+                             AtenTensorBatchVector* optimizable_params,
                              const std::vector<bool>& inputs_require_grad,
                              const torch::jit::Graph& df);
 
@@ -140,9 +141,11 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // devices_[i].
   std::vector<Device> devices_;
   // The module parameters which are marked for being subject to optimization.
-  TensorBatchVector optimizable_params_;
+  AtenTensorBatchVector optimizable_params_;
   // All the module parameters (which include the optimizable_params_ ones).
-  TensorBatchVector all_params_;
+  AtenTensorBatchVector all_params_;
+  // Keeps ownership of the module parameters for all replicas.
+  std::vector<at::Tensor> all_params_owned_;
 
   std::shared_ptr<xla::ComputationClient::Computation> forward_computation_;
   std::shared_ptr<xla::ComputationClient::Computation> backward_computation_;

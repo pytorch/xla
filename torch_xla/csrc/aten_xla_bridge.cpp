@@ -28,6 +28,13 @@ XLATensor GetXlaTensor(const at::Tensor& tensor) {
   return *xtensor;
 }
 
+XLATensor& AsXlaTensor(const at::Tensor& tensor) {
+  XLATensorImpl* impl =
+      dynamic_cast<XLATensorImpl*>(ToTensor(tensor).unsafeGetTensorImpl());
+  XLA_CHECK(impl) << "Input tensor is not an XLA tensor: " << tensor.toString();
+  return impl->tensor();
+}
+
 std::vector<XLATensor> GetXlaTensors(
     tensorflow::gtl::ArraySlice<const at::Tensor> tensors) {
   std::vector<XLATensor> xla_tensors;
