@@ -101,10 +101,18 @@ class XLATensor {
                        const at::Scalar& alpha);
   static void add_(XLATensor& input, const XLATensor& other,
                    const at::Scalar& alpha);
+  static XLATensor add(const XLATensor& input, const at::Scalar& other,
+                       const at::Scalar& alpha);
+  static void add_(XLATensor& input, const at::Scalar& other,
+                   const at::Scalar& alpha);
 
   static XLATensor sub(const XLATensor& input, const XLATensor& other,
                        const at::Scalar& alpha);
   static void sub_(XLATensor& input, const XLATensor& other,
+                   const at::Scalar& alpha);
+  static XLATensor sub(const XLATensor& input, const at::Scalar& other,
+                       const at::Scalar& alpha);
+  static void sub_(XLATensor& input, const at::Scalar& other,
                    const at::Scalar& alpha);
 
   static XLATensor mul(const XLATensor& input, const XLATensor& other);
