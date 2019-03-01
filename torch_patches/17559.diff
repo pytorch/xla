@@ -1,13 +1,19 @@
-diff --git a/c10/CMakeLists.txt b/c10/CMakeLists.txt
-index 81fab30d5..ffbddf526 100644
---- a/c10/CMakeLists.txt
-+++ b/c10/CMakeLists.txt
-@@ -40,7 +40,7 @@ add_library(c10 ${C10_SRCS} ${C10_HEADERS})
- # If building shared library, set dllimport/dllexport proper.
- target_compile_options(c10 PRIVATE "-DC10_BUILD_MAIN_LIB")
- # Enable hidden visibility if compiler supports it.
--if (${COMPILER_SUPPORTS_HIDDEN_VISIBILITY})
-+if (${COMPILER_SUPPORTS_HIDDEN_VISIBILITY} AND (NOT "$ENV{C10_VISIBIBLE}" STREQUAL "1"))
-   target_compile_options(c10 PRIVATE "-fvisibility=hidden")
- endif()
+commit ea321e15b9b17c85712d4fec013ca71a9d4fab7e
+Author: Davide Libenzi <dlibenzi@google.com>
+Date:   Fri Mar 1 09:31:46 2019 -0800
+
+    Tag Half structure definition as C10_API to allow symbols export.
+
+diff --git a/c10/util/Half.h b/c10/util/Half.h
+index e3ba80419..ec10a2bdb 100644
+--- a/c10/util/Half.h
++++ b/c10/util/Half.h
+@@ -321,7 +321,7 @@ namespace detail {
  
+ } // namespace detail
+ 
+-struct alignas(2) Half {
++struct C10_API alignas(2) Half {
+   unsigned short x;
+ 
+   struct from_bits_t {};
