@@ -556,6 +556,20 @@ void XLATensor::add_(XLATensor& input, const XLATensor& other,
   input.SetIrValue(input.GetIrValue() + other.GetIrValue() * constant);
 }
 
+XLATensor XLATensor::add(const XLATensor& input, const at::Scalar& other,
+                         const at::Scalar& alpha) {
+  ir::NodePtr other_constant = ir::ops::ScalarOp(other, input.shape());
+  ir::NodePtr alpha_constant = ir::ops::ScalarOp(alpha, input.shape());
+  return input.CreateFrom(input.GetIrValue() + other_constant * alpha_constant);
+}
+
+void XLATensor::add_(XLATensor& input, const at::Scalar& other,
+                     const at::Scalar& alpha) {
+  ir::NodePtr other_constant = ir::ops::ScalarOp(other, input.shape());
+  ir::NodePtr alpha_constant = ir::ops::ScalarOp(alpha, input.shape());
+  input.SetIrValue(input.GetIrValue() + other_constant * alpha_constant);
+}
+
 XLATensor XLATensor::sub(const XLATensor& input, const XLATensor& other,
                          const at::Scalar& alpha) {
   ir::NodePtr constant = ir::ops::ScalarOp(alpha, other.shape());
@@ -566,6 +580,20 @@ void XLATensor::sub_(XLATensor& input, const XLATensor& other,
                      const at::Scalar& alpha) {
   ir::NodePtr constant = ir::ops::ScalarOp(alpha, other.shape());
   input.SetIrValue(input.GetIrValue() - other.GetIrValue() * constant);
+}
+
+XLATensor XLATensor::sub(const XLATensor& input, const at::Scalar& other,
+                         const at::Scalar& alpha) {
+  ir::NodePtr other_constant = ir::ops::ScalarOp(other, input.shape());
+  ir::NodePtr alpha_constant = ir::ops::ScalarOp(alpha, input.shape());
+  return input.CreateFrom(input.GetIrValue() - other_constant * alpha_constant);
+}
+
+void XLATensor::sub_(XLATensor& input, const at::Scalar& other,
+                     const at::Scalar& alpha) {
+  ir::NodePtr other_constant = ir::ops::ScalarOp(other, input.shape());
+  ir::NodePtr alpha_constant = ir::ops::ScalarOp(alpha, input.shape());
+  input.SetIrValue(input.GetIrValue() - other_constant * alpha_constant);
 }
 
 XLATensor XLATensor::mul(const XLATensor& input, const XLATensor& other) {
