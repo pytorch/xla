@@ -1221,24 +1221,48 @@ XLATensor XLATensor::erf(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Erf(input.GetIrValue()));
 }
 
+void XLATensor::erf_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Erf(input.GetIrValue()));
+}
+
 XLATensor XLATensor::erfc(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Erfc(input.GetIrValue()));
+}
+
+void XLATensor::erfc_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Erfc(input.GetIrValue()));
 }
 
 XLATensor XLATensor::erfinv(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Erfinv(input.GetIrValue()));
 }
 
+void XLATensor::erfinv_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Erfinv(input.GetIrValue()));
+}
+
 XLATensor XLATensor::sqrt(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Sqrt(input.GetIrValue()));
+}
+
+void XLATensor::sqrt_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Sqrt(input.GetIrValue()));
 }
 
 XLATensor XLATensor::rsqrt(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Rsqrt(input.GetIrValue()));
 }
 
+void XLATensor::rsqrt_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Rsqrt(input.GetIrValue()));
+}
+
 XLATensor XLATensor::reciprocal(const XLATensor& input) {
   return input.CreateFrom(ir::ops::ReciprocalOp(input.GetIrValue()));
+}
+
+void XLATensor::reciprocal_(XLATensor& input) {
+  input.SetIrValue(ir::ops::ReciprocalOp(input.GetIrValue()));
 }
 
 XLATensor XLATensor::pow(const XLATensor& input, at::Scalar exponent) {
