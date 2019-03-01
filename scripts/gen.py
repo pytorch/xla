@@ -254,6 +254,7 @@ _CTOR_FUNCTIONS = {
     'empty': '.device(at::DeviceType::CPU)',
     'linspace': '.device(at::DeviceType::CPU)',
     'logspace': '.device(at::DeviceType::CPU)',
+    'rand': '.device(at::DeviceType::CPU)',
     'randn': '.device(at::DeviceType::CPU)',
     'randint': '.device(at::DeviceType::CPU)',
 }
