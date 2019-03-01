@@ -609,6 +609,11 @@ XLATensor XLATensor::fmod(const XLATensor& input, const XLATensor& other) {
       ir::ops::Fmod(input.GetIrValue(), other.GetIrValue()));
 }
 
+XLATensor XLATensor::fmod(const XLATensor& input, at::Scalar other) {
+  ir::NodePtr constant = ir::ops::ScalarOp(other, input.shape());
+  return input.CreateFrom(ir::ops::Fmod(input.GetIrValue(), constant));
+}
+
 void XLATensor::fmod_(XLATensor& input, at::Scalar other) {
   ir::NodePtr constant = ir::ops::ScalarOp(other, input.shape());
   input.SetIrValue(ir::ops::Fmod(input.GetIrValue(), constant));
@@ -1003,7 +1008,8 @@ void XLATensor::atan_(XLATensor& input) {
 }
 
 XLATensor XLATensor::atan2(const XLATensor& input, const XLATensor& other) {
-  return input.CreateFrom(ir::ops::Atan2(input.GetIrValue(), other.GetIrValue()));
+  return input.CreateFrom(
+      ir::ops::Atan2(input.GetIrValue(), other.GetIrValue()));
 }
 
 void XLATensor::atan2_(XLATensor& input, const XLATensor& other) {
