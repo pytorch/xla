@@ -118,6 +118,7 @@ class XLATensor {
   static void div_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor fmod(const XLATensor& input, const XLATensor& other);
+  static XLATensor fmod(const XLATensor& input, at::Scalar other);
   static void fmod_(XLATensor& input, at::Scalar other);
   static void fmod_(XLATensor& input, const XLATensor& other);
 
