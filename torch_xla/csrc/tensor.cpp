@@ -432,6 +432,11 @@ at::Tensor XLATensor::ToTensor() {
   return *tensor_data;
 }
 
+void XLATensor::SetScalarType(
+    c10::optional<at::ScalarType> logical_element_type) {
+  data()->logical_element_type = logical_element_type;
+}
+
 void XLATensor::DiscardXlaData() {
   XLA_CHECK(data()->tensor_data);
   data()->xla_data = nullptr;
