@@ -12,7 +12,7 @@
 #include "torch/csrc/jit/passes/dead_code_elimination.h"
 #include "torch/csrc/jit/passes/lower_tuples.h"
 #include "torch/csrc/jit/passes/shape_analysis.h"
-#include "torch/csrc/jit/passes/specialize_undef.h"
+#include "torch/csrc/jit/passes/specialize_autogradzero.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/passes/eval_static_size.h"
 #include "torch_xla/csrc/passes/remove_in_place_out_param_ops.h"
@@ -163,7 +163,7 @@ torch::jit::Gradient XlaModule::ComputeGradient(
   ReplaceUntracedOperators(gradient.f);
   EliminateDeadCode(gradient.f);
   // Run the backward passes.
-  specializeUndef(*(gradient.df.get()));
+  specializeAutogradZero(*(gradient.df.get()));
   ConstantPropagation(gradient.df);
   ThresholdBackwardPeephole(gradient.df);
   EliminateDeadCode(gradient.df);

@@ -223,7 +223,7 @@ def forward_passes(graph):
 
 
 def backward_passes(graph):
-  torch._C._jit_pass_specialize_undef(graph)
+  torch._C._jit_pass_specialize_autogradzero(graph)
   torch._C._jit_pass_constant_propagation(graph)
   torch_xla._XLAC._jit_pass_threshold_backward_peephole(graph)
   torch._C._jit_pass_dce(graph)
