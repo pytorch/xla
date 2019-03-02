@@ -715,6 +715,8 @@ class XLATensor {
   XLATensor CreateFrom(ir::Value ir_value, const Device& device,
                        at::ScalarType logical_element_type) const;
 
+  void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
+
   // Discards all the XLA and IR data, by making the ATEN tensor one the only
   // source for this XLA tensor. An error is generated if the XLA tensor does
   // not have ATEN tensors data.
