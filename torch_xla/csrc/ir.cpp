@@ -34,6 +34,10 @@ size_t Output::Hasher::operator()(const Output& output) const {
                                 output.index);
 }
 
+const xla::Shape& Output::shape() const { return node->shape(index); }
+
+const xla::Shape& Output::node_shape() const { return node->shape(); }
+
 std::string Output::ToString() const {
   std::stringstream ss;
   ss << node->ToString() << ", index=" << index;
