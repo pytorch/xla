@@ -1114,9 +1114,18 @@ XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                          xla::int64 dim) {
   XLA_CHECK_GT(tensors.size(), 0);
   std::vector<ir::Value> values;
+
+  bool set_dim = false;
   for (auto& tensor : tensors) {
-    values.push_back(tensor.GetIrValue());
+    if (xla::ShapeUtil::ElementsIn(tensor.shape()) > 0) {
+      if (!set_dim) {
+        dim = GetCanonicalDimension(tensor, dim);
+        set_dim = true;
+      }
+      values.push_back(tensor.GetIrValue());
+    }
   }
+
   return tensors[0].CreateFrom(ir::MakeNode<ir::ops::Cat>(values, dim));
 }
 
