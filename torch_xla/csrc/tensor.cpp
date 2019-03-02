@@ -712,32 +712,72 @@ XLATensor XLATensor::ge(const XLATensor& input, const at::Scalar& other) {
   return DispatchComparisonOp(at::aten::ge, input, other);
 }
 
+void XLATensor::ge_(XLATensor& input, const at::Scalar& other) {
+  input.SetIrValue(
+      ir::ops::ComparisonOp(at::aten::ge, input.GetIrValue(), other));
+}
+
 XLATensor XLATensor::ge(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::ge, input, other);
+}
+
+void XLATensor::ge_(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(ir::ops::ComparisonOp(at::aten::ge, input.GetIrValue(),
+                                         other.GetIrValue()));
 }
 
 XLATensor XLATensor::le(const XLATensor& input, const at::Scalar& other) {
   return DispatchComparisonOp(at::aten::le, input, other);
 }
 
+void XLATensor::le_(XLATensor& input, const at::Scalar& other) {
+  input.SetIrValue(
+      ir::ops::ComparisonOp(at::aten::le, input.GetIrValue(), other));
+}
+
 XLATensor XLATensor::le(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::le, input, other);
+}
+
+void XLATensor::le_(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(ir::ops::ComparisonOp(at::aten::le, input.GetIrValue(),
+                                         other.GetIrValue()));
 }
 
 XLATensor XLATensor::gt(const XLATensor& input, const at::Scalar& other) {
   return DispatchComparisonOp(at::aten::gt, input, other);
 }
 
+void XLATensor::gt_(XLATensor& input, const at::Scalar& other) {
+  input.SetIrValue(
+      ir::ops::ComparisonOp(at::aten::gt, input.GetIrValue(), other));
+}
+
 XLATensor XLATensor::gt(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::gt, input, other);
+}
+
+void XLATensor::gt_(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(ir::ops::ComparisonOp(at::aten::gt, input.GetIrValue(),
+                                         other.GetIrValue()));
 }
 
 XLATensor XLATensor::lt(const XLATensor& input, const at::Scalar& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
 }
 
+void XLATensor::lt_(XLATensor& input, const at::Scalar& other) {
+  input.SetIrValue(
+      ir::ops::ComparisonOp(at::aten::lt, input.GetIrValue(), other));
+}
+
 XLATensor XLATensor::lt(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
+}
+
+void XLATensor::lt_(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(ir::ops::ComparisonOp(at::aten::lt, input.GetIrValue(),
+                                         other.GetIrValue()));
 }
 
 XLATensor XLATensor::rsub(const XLATensor& input, const XLATensor& other,

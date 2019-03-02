@@ -148,20 +148,28 @@ class XLATensor {
   static XLATensor eq(const XLATensor& input, const XLATensor& other);
 
   static XLATensor ge(const XLATensor& input, const at::Scalar& other);
+  static void ge_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor ge(const XLATensor& input, const XLATensor& other);
+  static void ge_(XLATensor& input, const XLATensor& other);
 
   static XLATensor le(const XLATensor& input, const at::Scalar& other);
+  static void le_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor le(const XLATensor& input, const XLATensor& other);
+  static void le_(XLATensor& input, const XLATensor& other);
 
   static XLATensor gt(const XLATensor& input, const at::Scalar& other);
+  static void gt_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor gt(const XLATensor& input, const XLATensor& other);
+  static void gt_(XLATensor& input, const XLATensor& other);
 
   static XLATensor lt(const XLATensor& input, const at::Scalar& other);
+  static void lt_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor lt(const XLATensor& input, const XLATensor& other);
+  static void lt_(XLATensor& input, const XLATensor& other);
 
   static XLATensor rsub(const XLATensor& input, const XLATensor& other,
                         const at::Scalar& alpha);

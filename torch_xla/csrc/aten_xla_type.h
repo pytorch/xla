@@ -168,20 +168,28 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor eq(const at::Tensor& self, const at::Tensor& other) const override;
 
   at::Tensor ge(const at::Tensor& self, at::Scalar other) const override;
+  at::Tensor& ge_(at::Tensor& self, at::Scalar other) const override;
 
   at::Tensor ge(const at::Tensor& self, const at::Tensor& other) const override;
+  at::Tensor& ge_(at::Tensor& self, const at::Tensor& other) const override;
 
   at::Tensor le(const at::Tensor& self, at::Scalar other) const override;
+  at::Tensor& le_(at::Tensor& self, at::Scalar other) const override;
 
   at::Tensor le(const at::Tensor& self, const at::Tensor& other) const override;
+  at::Tensor& le_(at::Tensor& self, const at::Tensor& other) const override;
 
   at::Tensor gt(const at::Tensor& self, at::Scalar other) const override;
+  at::Tensor& gt_(at::Tensor& self, at::Scalar other) const override;
 
   at::Tensor gt(const at::Tensor& self, const at::Tensor& other) const override;
+  at::Tensor& gt_(at::Tensor& self, const at::Tensor& other) const override;
 
   at::Tensor lt(const at::Tensor& self, at::Scalar other) const override;
+  at::Tensor& lt_(at::Tensor& self, at::Scalar other) const override;
 
   at::Tensor lt(const at::Tensor& self, const at::Tensor& other) const override;
+  at::Tensor& lt_(at::Tensor& self, const at::Tensor& other) const override;
 
   at::Tensor __and__(const at::Tensor& self, at::Scalar other) const override;
 
