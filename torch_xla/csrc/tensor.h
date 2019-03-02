@@ -118,6 +118,7 @@ class XLATensor {
   static void div_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor fmod(const XLATensor& input, const XLATensor& other);
+  static XLATensor fmod(const XLATensor& input, at::Scalar other);
   static void fmod_(XLATensor& input, at::Scalar other);
   static void fmod_(XLATensor& input, const XLATensor& other);
 
@@ -147,20 +148,28 @@ class XLATensor {
   static XLATensor eq(const XLATensor& input, const XLATensor& other);
 
   static XLATensor ge(const XLATensor& input, const at::Scalar& other);
+  static void ge_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor ge(const XLATensor& input, const XLATensor& other);
+  static void ge_(XLATensor& input, const XLATensor& other);
 
   static XLATensor le(const XLATensor& input, const at::Scalar& other);
+  static void le_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor le(const XLATensor& input, const XLATensor& other);
+  static void le_(XLATensor& input, const XLATensor& other);
 
   static XLATensor gt(const XLATensor& input, const at::Scalar& other);
+  static void gt_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor gt(const XLATensor& input, const XLATensor& other);
+  static void gt_(XLATensor& input, const XLATensor& other);
 
   static XLATensor lt(const XLATensor& input, const at::Scalar& other);
+  static void lt_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor lt(const XLATensor& input, const XLATensor& other);
+  static void lt_(XLATensor& input, const XLATensor& other);
 
   static XLATensor rsub(const XLATensor& input, const XLATensor& other,
                         const at::Scalar& alpha);
@@ -304,6 +313,9 @@ class XLATensor {
   static XLATensor atan(const XLATensor& input);
   static void atan_(XLATensor& input);
 
+  static XLATensor atan2(const XLATensor& input, const XLATensor& other);
+  static void atan2_(XLATensor& input, const XLATensor& other);
+
   static XLATensor tan(const XLATensor& input);
   static void tan_(XLATensor& input);
 
@@ -393,16 +405,22 @@ class XLATensor {
   static void log1p_(XLATensor& input);
 
   static XLATensor erf(const XLATensor& input);
+  static void erf_(XLATensor& input);
 
   static XLATensor erfc(const XLATensor& input);
+  static void erfc_(XLATensor& input);
 
   static XLATensor erfinv(const XLATensor& input);
+  static void erfinv_(XLATensor& input);
 
   static XLATensor sqrt(const XLATensor& input);
+  static void sqrt_(XLATensor& input);
 
   static XLATensor rsqrt(const XLATensor& input);
+  static void rsqrt_(XLATensor& input);
 
   static XLATensor reciprocal(const XLATensor& input);
+  static void reciprocal_(XLATensor& input);
 
   static XLATensor pow(const XLATensor& input, at::Scalar exponent);
 
@@ -704,6 +722,8 @@ class XLATensor {
                        at::ScalarType logical_element_type) const;
   XLATensor CreateFrom(ir::Value ir_value, const Device& device,
                        at::ScalarType logical_element_type) const;
+
+  void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
   // Discards all the XLA and IR data, by making the ATEN tensor one the only
   // source for this XLA tensor. An error is generated if the XLA tensor does

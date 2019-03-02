@@ -561,8 +561,8 @@ void TranslateConstant(const torch::jit::Node* node, ComputationContext* cctx,
   }
 }
 
-void TranslateUndefined(const torch::jit::Node* node, ComputationContext* cctx,
-                        xla::XlaBuilder* /*b*/) {
+void TranslateAutogradZero(const torch::jit::Node* node,
+                           ComputationContext* cctx, xla::XlaBuilder* /*b*/) {
   cctx->AddUndefinedInput(ComputationContext::OutputId(node));
 }
 
@@ -636,7 +636,7 @@ CreateTranslationHandlers() {
   (*t)[at::aten::nll_loss_backward] = TranslateNllLossBackward;
   (*t)[at::aten::size] = TranslateSize;
   (*t)[at::prim::Constant] = TranslateConstant;
-  (*t)[at::prim::Undefined] = TranslateUndefined;
+  (*t)[at::prim::AutogradZero] = TranslateAutogradZero;
   (*t)[at::aten::_grad_sum_to_size] = TranslateGradSumToSize;
   (*t)[at::prim::ListConstruct] = TranslateNop;
   return t;

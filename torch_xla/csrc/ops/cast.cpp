@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/cast.h"
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -28,8 +29,10 @@ Cast::Cast(const Value& input, at::ScalarType dtype)
 
 XlaOpVector Cast::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp output = xla::ConvertElementType(
-      input, MakeXlaPrimitiveType(dtype_, /*device=*/nullptr));
+  xla::XlaOp output =
+      ConvertTo(input, operand(0).shape().element_type(),
+                MakeXlaPrimitiveType(dtype_, /*device=*/nullptr),
+                /*device=*/nullptr);
   return ReturnOp(output, loctx);
 }
 
