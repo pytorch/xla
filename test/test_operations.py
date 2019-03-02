@@ -1369,6 +1369,22 @@ class TestAtenXlaTensor(XlaTestCase):
     x_slice = x[:, :, -1]
     self.assertEqual(t_slice.data, x_slice.data.cpu())
 
+  def test_negative_cat(self):
+    t = _gen_tensor(2, 5, 3)
+    x = t.to(xm.xla_device())
+    t_cat = torch.cat([t, t], -1)
+    x_cat = torch.cat([x, x], -1)
+    self.assertEqual(t_cat.data, x_cat.data.cpu())
+
+  def test_cat_empty_tensor(self):
+    t = _gen_tensor(2, 5, 3)
+    empty_tensor = torch.Tensor()
+    x = t.to(xm.xla_device())
+    empty_tensor_xla = empty_tensor.to(xm.xla_device())
+    t_cat = torch.cat([t, empty_tensor], 0)
+    x_cat = torch.cat([x, empty_tensor_xla], 0)
+    self.assertEqual(t_cat.data, x_cat.data.cpu())
+
   def test_masked_fill_with_tensor(self):
     input = _gen_tensor(2, 5, 4, 3)
     mask = torch.randint(0, 2, input.size(), dtype=torch.uint8)
