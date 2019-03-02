@@ -264,6 +264,21 @@ TEST_F(AtenXlaTensorTest, TestGe) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestGeInplace) {
+  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor b = a.clone();
+  b[0] += 1;
+  b[1] -= 1;
+  at::Tensor a_copy = a.clone();
+  a.ge_(b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a_copy, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    xla_a.ge_(xla_b);
+    AllClose(xla_a, a);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestLe) {
   at::Tensor a = GetTestTensor({2, 3});
   at::Tensor b = a.clone();
@@ -273,6 +288,21 @@ TEST_F(AtenXlaTensorTest, TestLe) {
     at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
     at::Tensor xla_c = at::le(xla_a, xla_b);
     AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestLeInplace) {
+  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor b = a.clone();
+  b[0] += 1;
+  b[1] -= 1;
+  at::Tensor a_copy = a.clone();
+  a.le_(b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a_copy, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    xla_a.le_(xla_b);
+    AllClose(xla_a, a);
   });
 }
 
@@ -288,6 +318,21 @@ TEST_F(AtenXlaTensorTest, TestGt) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestGtInplace) {
+  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor b = a.clone();
+  b[0] += 1;
+  b[1] -= 1;
+  at::Tensor a_copy = a.clone();
+  a.gt_(b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a_copy, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    xla_a.gt_(xla_b);
+    AllClose(xla_a, a);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestLt) {
   at::Tensor a = GetTestTensor({2, 3});
   at::Tensor b = at::add(a.clone(), at::ones_like(a));
@@ -297,6 +342,21 @@ TEST_F(AtenXlaTensorTest, TestLt) {
     at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
     at::Tensor xla_c = at::lt(xla_a, xla_b);
     AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestLtInplace) {
+  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor b = a.clone();
+  b[0] += 1;
+  b[1] -= 1;
+  at::Tensor a_copy = a.clone();
+  a.lt_(b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a_copy, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    xla_a.lt_(xla_b);
+    AllClose(xla_a, a);
   });
 }
 
@@ -333,6 +393,18 @@ TEST_F(AtenXlaTensorTest, TestGeScalar) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestGeScalarInplace) {
+  at::Tensor input = at::arange(-1., 1.5, 0.5, at::TensorOptions(at::kFloat));
+  at::Scalar other(float(0));
+  at::Tensor input_copy = input.clone();
+  input.ge_(other);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input_copy, device);
+    xla_input.ge_(other);
+    AllClose(xla_input, input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestLeScalar) {
   at::Tensor input = at::ones({2, 3});
   at::Scalar other(float(1));
@@ -341,6 +413,18 @@ TEST_F(AtenXlaTensorTest, TestLeScalar) {
     at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     at::Tensor xla_result = at::le(xla_input, other);
     AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestLeScalarInplace) {
+  at::Tensor input = at::arange(-1., 1.5, 0.5, at::TensorOptions(at::kFloat));
+  at::Scalar other(float(0));
+  at::Tensor input_copy = input.clone();
+  input.le_(other);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input_copy, device);
+    xla_input.le_(other);
+    AllClose(xla_input, input);
   });
 }
 
@@ -355,6 +439,18 @@ TEST_F(AtenXlaTensorTest, TestGtScalar) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestGtScalarInplace) {
+  at::Tensor input = at::arange(-1., 1.5, 0.5, at::TensorOptions(at::kFloat));
+  at::Scalar other(float(0));
+  at::Tensor input_copy = input.clone();
+  input.gt_(other);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input_copy, device);
+    xla_input.gt_(other);
+    AllClose(xla_input, input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestLtScalar) {
   at::Tensor input = at::ones({2, 3});
   at::Scalar other(float(1.5));
@@ -363,6 +459,18 @@ TEST_F(AtenXlaTensorTest, TestLtScalar) {
     at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     at::Tensor xla_result = at::lt(xla_input, other);
     AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestLtScalarInplace) {
+  at::Tensor input = at::arange(-1., 1.5, 0.5, at::TensorOptions(at::kFloat));
+  at::Scalar other(float(0));
+  at::Tensor input_copy = input.clone();
+  input.lt_(other);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input_copy, device);
+    xla_input.lt_(other);
+    AllClose(xla_input, input);
   });
 }
 
