@@ -34,7 +34,8 @@ void RemoveInputFromBackwardGraph(Gradient* gradient, size_t output_idx,
         std::find(node_inputs.begin(), node_inputs.end(), captured_output);
     if (captured_output_it != node_inputs.end()) {
       WithInsertPoint guard(*it);
-      Node* undef = gradient->df->insertNode(gradient->df->createUndefined());
+      Node* undef =
+          gradient->df->insertNode(gradient->df->createAutogradZero());
       TF_VLOG(3) << "Replacing input at index "
                  << captured_output_it - node_inputs.begin() << " of " << **it
                  << " with undefined";
