@@ -795,6 +795,14 @@ string XrtComputationClient::GetDefaultDevice() const {
   return options_.default_device;
 }
 
+std::vector<string> XrtComputationClient::GetAvailableDevices() const {
+  std::vector<string> devices;
+  for (const auto& dev_target : options_.device_map) {
+    devices.push_back(dev_target.first);
+  }
+  return devices;
+}
+
 void XrtComputationClient::SetRngSeed(size_t seed) { rng_seed_ = seed; }
 
 const XrtSession::CachedNode& XrtComputationClient::GetCompileNode(
