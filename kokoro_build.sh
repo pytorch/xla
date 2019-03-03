@@ -9,7 +9,7 @@ set -x
 git submodule update --init --recursive
 
 # Build torch_xla wheel in conda environment
-export NO_CUDA=1
+export NO_CUDA=1 VERSIONED_XLA_BUILD=1
 python setup.py bdist_wheel
 
 # Artifacts for pytorch-tpu wheel build collected (as nightly and with date)

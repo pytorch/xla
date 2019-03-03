@@ -182,13 +182,14 @@ if DEBUG:
 
 extra_link_args += ['-lxla_computation_client']
 
-version = '0.1'
-try:
-  sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
-                                cwd=base_dir).decode('ascii').strip()
-  version += '+' + sha[:7]
-except Exception:
-  pass
+version = os.getenv('TORCH_XLA_VERSION', '0.1')
+if _check_env_flag('VERSIONED_XLA_BUILD', default='0'):
+  try:
+    sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+                                  cwd=base_dir).decode('ascii').strip()
+    version += '+' + sha[:7]
+  except Exception:
+    pass
 
 setup(
     name='torch_xla',
