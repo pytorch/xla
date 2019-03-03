@@ -1182,7 +1182,10 @@ XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
   XLA_CHECK_GT(tensors.size(), 0);
   std::vector<ir::Value> values;
   for (auto& tensor : tensors) {
-    values.push_back(tensor.GetIrValue());
+    if (xla::ShapeUtil::ElementsIn(tensor.shape()) > 0) {
+      dim = GetCanonicalDimension(tensor, dim);
+      values.push_back(tensor.GetIrValue());
+    }
   }
   return tensors[0].CreateFrom(ir::MakeNode<ir::ops::Cat>(values, dim));
 }
