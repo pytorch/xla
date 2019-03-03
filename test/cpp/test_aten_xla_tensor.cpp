@@ -27,10 +27,6 @@ class AtenXlaTensorTest : public TorchXlaTest {
   }
 };
 
-at::Tensor GetTestTensor(at::IntList sizes) {
-  return at::rand(sizes, at::TensorOptions(at::kFloat));
-}
-
 void TestBackward(
     const std::vector<at::Tensor>& inputs, const Device& device,
     const std::function<at::Tensor(const std::vector<at::Tensor>&)>& testfn,
@@ -346,8 +342,8 @@ TEST_F(AtenXlaTensorTest, TestRsubScalar) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNe) {
-  at::Tensor a = GetTestTensor({2, 3});
-  at::Tensor b = GetTestTensor({2, 3});
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor c = at::ne(a, b);
   ForEachDevice([&](const Device& device) {
     at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
@@ -358,7 +354,7 @@ TEST_F(AtenXlaTensorTest, TestNe) {
 }
 
 TEST_F(AtenXlaTensorTest, TestEq) {
-  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = a.clone();
   at::Tensor c = at::eq(a, b);
   ForEachDevice([&](const Device& device) {
@@ -370,7 +366,7 @@ TEST_F(AtenXlaTensorTest, TestEq) {
 }
 
 TEST_F(AtenXlaTensorTest, TestGe) {
-  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = a.clone();
   at::Tensor c = at::ge(a, b);
   ForEachDevice([&](const Device& device) {
@@ -382,7 +378,7 @@ TEST_F(AtenXlaTensorTest, TestGe) {
 }
 
 TEST_F(AtenXlaTensorTest, TestGeInplace) {
-  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = a.clone();
   b[0] += 1;
   b[1] -= 1;
@@ -397,7 +393,7 @@ TEST_F(AtenXlaTensorTest, TestGeInplace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLe) {
-  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = a.clone();
   at::Tensor c = at::le(a, b);
   ForEachDevice([&](const Device& device) {
@@ -409,7 +405,7 @@ TEST_F(AtenXlaTensorTest, TestLe) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLeInplace) {
-  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = a.clone();
   b[0] += 1;
   b[1] -= 1;
@@ -424,7 +420,7 @@ TEST_F(AtenXlaTensorTest, TestLeInplace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestGt) {
-  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::add(a.clone(), at::ones_like(a));
   at::Tensor c = at::gt(b, a);
   ForEachDevice([&](const Device& device) {
@@ -436,7 +432,7 @@ TEST_F(AtenXlaTensorTest, TestGt) {
 }
 
 TEST_F(AtenXlaTensorTest, TestGtInplace) {
-  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = a.clone();
   b[0] += 1;
   b[1] -= 1;
@@ -451,7 +447,7 @@ TEST_F(AtenXlaTensorTest, TestGtInplace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLt) {
-  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::add(a.clone(), at::ones_like(a));
   at::Tensor c = at::lt(a, b);
   ForEachDevice([&](const Device& device) {
@@ -463,7 +459,7 @@ TEST_F(AtenXlaTensorTest, TestLt) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLtInplace) {
-  at::Tensor a = GetTestTensor({2, 3});
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = a.clone();
   b[0] += 1;
   b[1] -= 1;
@@ -1427,7 +1423,7 @@ TEST_F(AtenXlaTensorTest, TestRepeat) {
   std::vector<std::vector<int64_t>> input_size_list = {{3}, {2, 4}};
   for (const auto& repeats : repeats_list) {
     for (const auto& input_size : input_size_list) {
-      at::Tensor input = GetTestTensor(input_size);
+      at::Tensor input = at::rand(input_size, at::TensorOptions(at::kFloat));
       at::Tensor output = input.repeat(repeats);
       ForEachDevice([&](const Device& device) {
         at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
@@ -2202,7 +2198,7 @@ TEST_F(AtenXlaTensorTest, TestConv2DNonSquare) {
 TEST_F(AtenXlaTensorTest, TestNllLoss) {
   int batch = 3;
   int classes = 5;
-  at::Tensor input = GetTestTensor({batch, classes});
+  at::Tensor input = at::rand({batch, classes}, at::TensorOptions(at::kFloat));
   at::Tensor target =
       at::randint(0, classes, {batch}, at::TensorOptions(at::kLong));
   at::Tensor undef_weight;
@@ -2223,9 +2219,10 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
 
 TEST_F(AtenXlaTensorTest, TestBatchNorm2D) {
   int num_features = 3;
-  at::Tensor input = GetTestTensor({14, num_features, 5, 7});
-  at::Tensor weight = GetTestTensor({num_features});
-  at::Tensor bias = GetTestTensor({num_features});
+  at::Tensor input =
+      at::rand({14, num_features, 5, 7}, at::TensorOptions(at::kFloat));
+  at::Tensor weight = at::rand({num_features}, at::TensorOptions(at::kFloat));
+  at::Tensor bias = at::rand({num_features}, at::TensorOptions(at::kFloat));
   at::Tensor running_mean =
       at::zeros({num_features}, at::TensorOptions(at::kFloat));
   at::Tensor running_var =
@@ -2256,7 +2253,7 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2D) {
 }
 
 TEST_F(AtenXlaTensorTest, TestDim) {
-  at::Tensor input = GetTestTensor({2, 3});
+  at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   ForEachDevice([&](const Device& device) {
     at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     EXPECT_EQ(input.dim(), xla_input.dim());
@@ -2264,7 +2261,7 @@ TEST_F(AtenXlaTensorTest, TestDim) {
 }
 
 TEST_F(AtenXlaTensorTest, TestContiguous) {
-  at::Tensor input = GetTestTensor({2, 3});
+  at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::native::contiguous(input);
   ForEachDevice([&](const Device& device) {
     at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
@@ -2274,7 +2271,7 @@ TEST_F(AtenXlaTensorTest, TestContiguous) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSqueezeAll) {
-  at::Tensor input = GetTestTensor({2, 1, 3, 1});
+  at::Tensor input = at::rand({2, 1, 3, 1}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::squeeze(input);
   ForEachDevice([&](const Device& device) {
     at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
@@ -2285,7 +2282,7 @@ TEST_F(AtenXlaTensorTest, TestSqueezeAll) {
 
 TEST_F(AtenXlaTensorTest, TestSqueezeAllInPlace) {
   ForEachDevice([&](const Device& device) {
-    at::Tensor input = GetTestTensor({2, 1, 3, 1});
+    at::Tensor input = at::rand({2, 1, 3, 1}, at::TensorOptions(at::kFloat));
     at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
     at::Tensor output = input.squeeze_();
     at::Tensor xla_output = xla_input.squeeze_();
@@ -2295,7 +2292,7 @@ TEST_F(AtenXlaTensorTest, TestSqueezeAllInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSqueezeOne) {
-  at::Tensor input = GetTestTensor({2, 1, 3, 1});
+  at::Tensor input = at::rand({2, 1, 3, 1}, at::TensorOptions(at::kFloat));
   int rank = input.dim();
   for (int dim = -rank; dim < rank; ++dim) {
     at::Tensor output = at::squeeze(input, dim);
@@ -2311,7 +2308,7 @@ TEST_F(AtenXlaTensorTest, TestSqueezeOneInPlace) {
   int rank = 4;
   for (int dim = -rank; dim < rank; ++dim) {
     ForEachDevice([&](const Device& device) {
-      at::Tensor input = GetTestTensor({2, 1, 3, 1});
+      at::Tensor input = at::rand({2, 1, 3, 1}, at::TensorOptions(at::kFloat));
       at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
       at::Tensor output = input.squeeze_(dim);
       at::Tensor xla_output = xla_input.squeeze_(dim);
@@ -2322,7 +2319,7 @@ TEST_F(AtenXlaTensorTest, TestSqueezeOneInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestUnsqueeze) {
-  at::Tensor input = GetTestTensor({2, 3});
+  at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   int rank = input.dim() + 1;
   for (int dim = -rank; dim < rank; ++dim) {
     at::Tensor output = at::unsqueeze(input, dim);
@@ -2375,7 +2372,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {
 }
 
 TEST_F(AtenXlaTensorTest, TestPermute) {
-  at::Tensor input = GetTestTensor({2, 3, 4});
+  at::Tensor input = at::rand({2, 3, 4}, at::TensorOptions(at::kFloat));
   std::vector<std::vector<int64_t>> dims_permutations = {
       {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
   for (std::vector<int64_t> dims_permutation : dims_permutations) {
@@ -2389,7 +2386,7 @@ TEST_F(AtenXlaTensorTest, TestPermute) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSplit) {
-  at::Tensor input = GetTestTensor({7, 8, 9});
+  at::Tensor input = at::rand({7, 8, 9}, at::TensorOptions(at::kFloat));
   int rank = input.dim();
   for (int split_size : {2, 3}) {
     for (int dim = -rank; dim < rank; ++dim) {
@@ -2408,7 +2405,7 @@ TEST_F(AtenXlaTensorTest, TestSplit) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSplitEmpty) {
-  at::Tensor input = GetTestTensor({0});
+  at::Tensor input = at::rand({0}, at::TensorOptions(at::kFloat));
   int split_size = 0;
   int dim = 0;
   std::vector<at::Tensor> outputs = at::split(input, split_size, dim);
@@ -2423,7 +2420,7 @@ TEST_F(AtenXlaTensorTest, TestSplitEmpty) {
 }
 
 TEST_F(AtenXlaTensorTest, TestSplitWithSizes) {
-  at::Tensor input = GetTestTensor({15, 15, 15});
+  at::Tensor input = at::rand({15, 15, 15}, at::TensorOptions(at::kFloat));
   int rank = input.dim();
   for (int dim = -rank; dim < rank; ++dim) {
     std::vector<at::Tensor> outputs =
@@ -2444,8 +2441,8 @@ TEST_F(AtenXlaTensorTest, TestCrossImplicitDim) {
   std::vector<std::vector<int64_t>> dim_sizes = {
       {4, 5, 3}, {4, 3, 5}, {3, 4, 5}};
   for (auto dim_size : dim_sizes) {
-    at::Tensor input = GetTestTensor(dim_size);
-    at::Tensor other = GetTestTensor(dim_size);
+    at::Tensor input = at::rand(dim_size, at::TensorOptions(at::kFloat));
+    at::Tensor other = at::rand(dim_size, at::TensorOptions(at::kFloat));
     at::Tensor result = at::cross(input, other);
     ForEachDevice([&](const Device& device) {
       at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
@@ -2458,8 +2455,8 @@ TEST_F(AtenXlaTensorTest, TestCrossImplicitDim) {
 
 TEST_F(AtenXlaTensorTest, TestCrossExplicitDim) {
   std::vector<int64_t> dim_size = {3, 3};
-  at::Tensor input = GetTestTensor(dim_size);
-  at::Tensor other = GetTestTensor(dim_size);
+  at::Tensor input = at::rand(dim_size, at::TensorOptions(at::kFloat));
+  at::Tensor other = at::rand(dim_size, at::TensorOptions(at::kFloat));
   for (size_t dim = 0; dim < dim_size.size(); ++dim) {
     at::Tensor result = at::cross(input, other, dim);
     ForEachDevice([&](const Device& device) {
@@ -2473,7 +2470,7 @@ TEST_F(AtenXlaTensorTest, TestCrossExplicitDim) {
 
 TEST_F(AtenXlaTensorTest, TestTriu) {
   int size = 5;
-  at::Tensor input = GetTestTensor({size, size});
+  at::Tensor input = at::rand({size, size}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
   for (int diagonal = -size; diagonal <= size; ++diagonal) {
     at::Tensor output = at::triu(input, diagonal);
@@ -2487,7 +2484,7 @@ TEST_F(AtenXlaTensorTest, TestTriu) {
 
 TEST_F(AtenXlaTensorTest, TestTriuNonSquare) {
   int size = 5;
-  at::Tensor input = GetTestTensor({size, size + 1});
+  at::Tensor input = at::rand({size, size + 1}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
   for (int diagonal = -size; diagonal <= size; ++diagonal) {
     at::Tensor output = at::triu(input, diagonal);
@@ -2502,7 +2499,8 @@ TEST_F(AtenXlaTensorTest, TestTriuNonSquare) {
 TEST_F(AtenXlaTensorTest, TestTriuBatch) {
   int size = 5;
   int batch_size = 3;
-  at::Tensor input = GetTestTensor({batch_size, size, size});
+  at::Tensor input =
+      at::rand({batch_size, size, size}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
   for (int diagonal = -size; diagonal <= size; ++diagonal) {
     at::Tensor output = at::triu(input, diagonal);
@@ -2516,7 +2514,7 @@ TEST_F(AtenXlaTensorTest, TestTriuBatch) {
 
 TEST_F(AtenXlaTensorTest, TestTril) {
   int size = 5;
-  at::Tensor input = GetTestTensor({size, size});
+  at::Tensor input = at::rand({size, size}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
   for (int diagonal = -size; diagonal <= size; ++diagonal) {
     at::Tensor output = at::tril(input, diagonal);
@@ -2530,7 +2528,7 @@ TEST_F(AtenXlaTensorTest, TestTril) {
 
 TEST_F(AtenXlaTensorTest, TestTrilNonSquare) {
   int size = 5;
-  at::Tensor input = GetTestTensor({size, size + 1});
+  at::Tensor input = at::rand({size, size + 1}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
   for (int diagonal = -size; diagonal <= size; ++diagonal) {
     at::Tensor output = at::tril(input, diagonal);
@@ -2545,7 +2543,8 @@ TEST_F(AtenXlaTensorTest, TestTrilNonSquare) {
 TEST_F(AtenXlaTensorTest, TestTrilBatch) {
   int size = 5;
   int batch_size = 3;
-  at::Tensor input = GetTestTensor({batch_size, size, size});
+  at::Tensor input =
+      at::rand({batch_size, size, size}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
   for (int diagonal = -size; diagonal <= size; ++diagonal) {
     at::Tensor output = at::tril(input, diagonal);
@@ -2559,7 +2558,7 @@ TEST_F(AtenXlaTensorTest, TestTrilBatch) {
 
 TEST_F(AtenXlaTensorTest, TestDiag) {
   int size = 7;
-  at::Tensor input = GetTestTensor({size, size});
+  at::Tensor input = at::rand({size, size}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
   for (int diagonal = -size; diagonal <= size; ++diagonal) {
     at::Tensor output = at::diag(input, diagonal);
@@ -2573,7 +2572,7 @@ TEST_F(AtenXlaTensorTest, TestDiag) {
 
 TEST_F(AtenXlaTensorTest, TestDiagonal) {
   int size = 5;
-  at::Tensor input = GetTestTensor({size, size});
+  at::Tensor input = at::rand({size, size}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
   for (int diagonal = -size; diagonal <= size; ++diagonal) {
     at::Tensor output = at::diagonal(input, diagonal);
@@ -2587,7 +2586,7 @@ TEST_F(AtenXlaTensorTest, TestDiagonal) {
 
 TEST_F(AtenXlaTensorTest, TestDiagonalNonSquare) {
   int size = 5;
-  at::Tensor input = GetTestTensor({size, size + 1});
+  at::Tensor input = at::rand({size, size + 1}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
   for (int diagonal = -size; diagonal <= size; ++diagonal) {
     at::Tensor output = at::diagonal(input, diagonal);
@@ -2604,7 +2603,8 @@ TEST_F(AtenXlaTensorTest, TestDiagonalBatch) {
   int batch_size = 3;
   int dim1 = 1;
   int dim2 = 2;
-  at::Tensor input = GetTestTensor({batch_size, size, size});
+  at::Tensor input =
+      at::rand({batch_size, size, size}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
   for (int diagonal = -size; diagonal <= size; ++diagonal) {
     at::Tensor output =
@@ -2755,7 +2755,9 @@ TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
           };
 
           ForEachDevice([&](const Device& device) {
-            TestBackward({GetTestTensor({4, 1, 28, 28})}, device, testfn);
+            TestBackward(
+                {at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat))},
+                device, testfn);
           });
         }
       }
@@ -2769,7 +2771,8 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DBackward) {
       return at::adaptive_avg_pool2d(inputs[0], {output_size, output_size});
     };
     ForEachDevice([&](const Device& device) {
-      TestBackward({GetTestTensor({4, 1, 28, 28})}, device, testfn);
+      TestBackward({at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat))},
+                   device, testfn);
     });
   }
 }
@@ -2793,12 +2796,16 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
 
           ForEachDevice([&](const Device& device) {
             at::Tensor bias =
-                with_bias ? GetTestTensor({out_channels}) : at::Tensor();
-            TestBackward({GetTestTensor({4, in_channels, 32, 32}),
-                          GetTestTensor({out_channels, in_channels, kernel_size,
-                                         kernel_size}),
-                          bias},
-                         device, testfn);
+                with_bias
+                    ? at::rand({out_channels}, at::TensorOptions(at::kFloat))
+                    : at::Tensor();
+            TestBackward(
+                {at::rand({4, in_channels, 32, 32},
+                          at::TensorOptions(at::kFloat)),
+                 at::rand({out_channels, in_channels, kernel_size, kernel_size},
+                          at::TensorOptions(at::kFloat)),
+                 bias},
+                device, testfn);
           });
         }
       };
@@ -2821,7 +2828,9 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
         };
 
         ForEachDevice([&](const Device& device) {
-          TestBackward({GetTestTensor({1, 64, 112, 112})}, device, testfn);
+          TestBackward(
+              {at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat))},
+              device, testfn);
         });
       }
     }
@@ -2835,8 +2844,8 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
     };
 
     ForEachDevice([&](const Device& device) {
-      TestBackward({GetTestTensor({5, 3, 4, 2})}, device, testfn, /*rtol=*/1e-3,
-                   /*atol=*/1e-4);
+      TestBackward({at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat))},
+                   device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
     });
   }
 }
@@ -2846,7 +2855,8 @@ TEST_F(AtenXlaTensorTest, TestReluBackward) {
     return at::relu(inputs[0]);
   };
   ForEachDevice([&](const Device& device) {
-    TestBackward({GetTestTensor({2, 1, 4, 6})}, device, testfn);
+    TestBackward({at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat))},
+                 device, testfn);
   });
 }
 
@@ -2855,7 +2865,8 @@ TEST_F(AtenXlaTensorTest, TestTransposeBackward) {
     return at::t(inputs[0]);
   };
   ForEachDevice([&](const Device& device) {
-    TestBackward({GetTestTensor({2, 3})}, device, testfn);
+    TestBackward({at::rand({2, 3}, at::TensorOptions(at::kFloat))}, device,
+                 testfn);
   });
 }
 
@@ -2870,8 +2881,9 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
     };
     ForEachDevice([&](const Device& device) {
       TestBackward(
-          {GetTestTensor({labels}), GetTestTensor({in_channels, out_channels}),
-           GetTestTensor({out_channels, labels})},
+          {at::rand({labels}, at::TensorOptions(at::kFloat)),
+           at::rand({in_channels, out_channels}, at::TensorOptions(at::kFloat)),
+           at::rand({out_channels, labels}, at::TensorOptions(at::kFloat))},
           device, testfn);
     });
   }
@@ -2880,7 +2892,7 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
 TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
   int batch = 3;
   int classes = 5;
-  at::Tensor input = GetTestTensor({batch, classes});
+  at::Tensor input = at::rand({batch, classes}, at::TensorOptions(at::kFloat));
   at::Tensor target =
       at::randint(0, classes, {batch}, at::TensorOptions(at::kLong));
   at::Tensor undef_weight;
@@ -2902,7 +2914,8 @@ TEST_F(AtenXlaTensorTest, TestViewBackward) {
     return inputs[0].view({-1, 320});
   };
   ForEachDevice([&](const Device& device) {
-    TestBackward({GetTestTensor({32, 20, 4, 4})}, device, testfn);
+    TestBackward({at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat))},
+                 device, testfn);
   });
 }
 
@@ -2918,9 +2931,10 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2DBackward) {
   };
   int num_features = 3;
   ForEachDevice([&](const Device& device) {
-    at::Tensor input = GetTestTensor({14, num_features, 5, 7});
-    at::Tensor weight = GetTestTensor({num_features});
-    at::Tensor bias = GetTestTensor({num_features});
+    at::Tensor input =
+        at::rand({14, num_features, 5, 7}, at::TensorOptions(at::kFloat));
+    at::Tensor weight = at::rand({num_features}, at::TensorOptions(at::kFloat));
+    at::Tensor bias = at::rand({num_features}, at::TensorOptions(at::kFloat));
     at::Tensor running_mean =
         at::zeros({num_features}, at::TensorOptions(at::kFloat));
     at::Tensor running_var =
