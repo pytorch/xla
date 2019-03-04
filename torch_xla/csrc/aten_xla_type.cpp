@@ -582,10 +582,22 @@ at::Tensor AtenXlaType::ne(const at::Tensor& self, at::Scalar other) const {
       XLATensor::ne(bridge::GetXlaTensor(self), other));
 }
 
+at::Tensor& AtenXlaType::ne_(at::Tensor& self, at::Scalar other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::ne_(self_tensor, other);
+  return self;
+}
+
 at::Tensor AtenXlaType::ne(const at::Tensor& self,
                            const at::Tensor& other) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::ne(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor& AtenXlaType::ne_(at::Tensor& self, const at::Tensor& other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::ne_(self_tensor, bridge::GetXlaTensor(other));
+  return self;
 }
 
 at::Tensor AtenXlaType::eq(const at::Tensor& self, at::Scalar other) const {
@@ -593,10 +605,22 @@ at::Tensor AtenXlaType::eq(const at::Tensor& self, at::Scalar other) const {
       XLATensor::eq(bridge::GetXlaTensor(self), other));
 }
 
+at::Tensor& AtenXlaType::eq_(at::Tensor& self, at::Scalar other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::eq_(self_tensor, other);
+  return self;
+}
+
 at::Tensor AtenXlaType::eq(const at::Tensor& self,
                            const at::Tensor& other) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::eq(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor& AtenXlaType::eq_(at::Tensor& self, const at::Tensor& other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::eq_(self_tensor, bridge::GetXlaTensor(other));
+  return self;
 }
 
 at::Tensor AtenXlaType::ge(const at::Tensor& self, at::Scalar other) const {
