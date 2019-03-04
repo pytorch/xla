@@ -281,9 +281,13 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor clamp(const at::Tensor& self, c10::optional<at::Scalar> min,
                    c10::optional<at::Scalar> max) const override;
+  at::Tensor clamp_max(const at::Tensor& self, at::Scalar max) const override;
+  at::Tensor clamp_min(const at::Tensor& self, at::Scalar min) const override;
 
   at::Tensor& clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
                      c10::optional<at::Scalar> max) const override;
+  at::Tensor& clamp_max_(at::Tensor& self, at::Scalar max) const override;
+  at::Tensor& clamp_min_(at::Tensor& self, at::Scalar min) const override;
 
   std::vector<at::Tensor> meshgrid(at::TensorList tensors) const override;
 
