@@ -964,10 +964,34 @@ at::Tensor AtenXlaType::clamp(const at::Tensor& self,
       XLATensor::clamp(bridge::GetXlaTensor(self), min, max));
 }
 
+at::Tensor AtenXlaType::clamp_max(const at::Tensor& self,
+                                  at::Scalar max) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::clamp(bridge::GetXlaTensor(self), c10::nullopt, max));
+}
+
+at::Tensor AtenXlaType::clamp_min(const at::Tensor& self,
+                                  at::Scalar min) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::clamp(bridge::GetXlaTensor(self), min, c10::nullopt));
+}
+
 at::Tensor& AtenXlaType::clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
                                 c10::optional<at::Scalar> max) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::clamp_(self_tensor, min, max);
+  return self;
+}
+
+at::Tensor& AtenXlaType::clamp_max_(at::Tensor& self, at::Scalar max) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::clamp_(self_tensor, c10::nullopt, max);
+  return self;
+}
+
+at::Tensor& AtenXlaType::clamp_min_(at::Tensor& self, at::Scalar min) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::clamp_(self_tensor, min, c10::nullopt);
   return self;
 }
 
