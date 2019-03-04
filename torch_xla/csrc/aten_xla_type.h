@@ -393,6 +393,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor view(const at::Tensor& self, at::IntList size) const override;
 
+  at::Tensor view_as(const at::Tensor& self,
+                     const at::Tensor& other) const override;
+
   at::Tensor narrow(const at::Tensor& self, int64_t dim, int64_t start,
                     int64_t length) const override;
 
