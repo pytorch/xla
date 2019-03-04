@@ -171,12 +171,16 @@ class AtenXlaType : public AtenXlaTypeBase {
                  bool keepdim) const override;
 
   at::Tensor ne(const at::Tensor& self, at::Scalar other) const override;
+  at::Tensor& ne_(at::Tensor& self, at::Scalar other) const override;
 
   at::Tensor ne(const at::Tensor& self, const at::Tensor& other) const override;
+  at::Tensor& ne_(at::Tensor& self, const at::Tensor& other) const override;
 
   at::Tensor eq(const at::Tensor& self, at::Scalar other) const override;
+  at::Tensor& eq_(at::Tensor& self, at::Scalar other) const override;
 
   at::Tensor eq(const at::Tensor& self, const at::Tensor& other) const override;
+  at::Tensor& eq_(at::Tensor& self, const at::Tensor& other) const override;
 
   at::Tensor ge(const at::Tensor& self, at::Scalar other) const override;
   at::Tensor& ge_(at::Tensor& self, at::Scalar other) const override;

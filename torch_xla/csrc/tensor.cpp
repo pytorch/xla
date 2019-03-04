@@ -729,16 +729,40 @@ XLATensor XLATensor::ne(const XLATensor& input, const at::Scalar& other) {
   return DispatchComparisonOp(at::aten::ne, input, other);
 }
 
+void XLATensor::ne_(XLATensor& input, const at::Scalar& other) {
+  ir::NodePtr cmp_result =
+      ir::ops::ComparisonOp(at::aten::ne, input.GetIrValue(), other);
+  input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
+}
+
 XLATensor XLATensor::ne(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::ne, input, other);
+}
+
+void XLATensor::ne_(XLATensor& input, const XLATensor& other) {
+  ir::NodePtr cmp_result = ir::ops::ComparisonOp(
+      at::aten::ne, input.GetIrValue(), other.GetIrValue());
+  input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
 XLATensor XLATensor::eq(const XLATensor& input, const at::Scalar& other) {
   return DispatchComparisonOp(at::aten::eq, input, other);
 }
 
+void XLATensor::eq_(XLATensor& input, const at::Scalar& other) {
+  ir::NodePtr cmp_result =
+      ir::ops::ComparisonOp(at::aten::eq, input.GetIrValue(), other);
+  input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
+}
+
 XLATensor XLATensor::eq(const XLATensor& input, const XLATensor& other) {
   return DispatchComparisonOp(at::aten::eq, input, other);
+}
+
+void XLATensor::eq_(XLATensor& input, const XLATensor& other) {
+  ir::NodePtr cmp_result = ir::ops::ComparisonOp(
+      at::aten::eq, input.GetIrValue(), other.GetIrValue());
+  input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
 XLATensor XLATensor::ge(const XLATensor& input, const at::Scalar& other) {
