@@ -10,5 +10,10 @@ class TorchXlaTest : public ::testing::Test {
   void SetUp() override;
 };
 
+class AtenXlaTensorTestBase : public TorchXlaTest {
+ protected:
+  static void SetUpTestCase();
+};
+
 }  // namespace cpp_test
 }  // namespace torch_xla
