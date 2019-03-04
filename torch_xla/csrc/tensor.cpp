@@ -1543,6 +1543,10 @@ void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                                                      expanded_mask, value));
 }
 
+void XLATensor::fill_(XLATensor& input, const at::Scalar& value) {
+  input.SetIrValue(ir::ops::ScalarOp(value, input.shape()));
+}
+
 XLATensor XLATensor::cross(const XLATensor& input, const XLATensor& other,
                            xla::int64 dim) {
   return tensor_ops::Cross(input, other, dim);

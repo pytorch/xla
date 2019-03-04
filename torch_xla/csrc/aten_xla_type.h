@@ -519,6 +519,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor unsqueeze(const at::Tensor& self, int64_t dim) const override;
 
+  at::Tensor& fill_(at::Tensor& self, at::Scalar value) const override;
+  at::Tensor& fill_(at::Tensor& self, const at::Tensor& value) const override;
+
   at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
                            at::Scalar value) const override;
 
