@@ -361,6 +361,10 @@ ir::Value XLATensor::GetIrValue(const at::Tensor& tensor) const {
     data()->xla_data = TensorToXlaData(tensor, GetDevice());
     return CreateTensorNode(data()->xla_data);
   }
+  if (tensor.dim() == 0) {
+    // Avoid the overhead of creating an XLA tensor which merely wraps a scalar.
+    return ir::ops::ScalarOp(tensor.item(), shape());
+  }
   xla::Shape tensor_shape =
       CreateComputationShapeFromTensor(tensor, &GetDevice());
   xla::Literal literal = GetTensorLiteral(tensor, &tensor_shape, &GetDevice());

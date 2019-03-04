@@ -463,8 +463,10 @@ at::Tensor& AtenXlaType::sub_(at::Tensor& self, at::Scalar other,
 
 at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Tensor& other,
                              at::Scalar alpha) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::rsub(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other), alpha));
+      bridge::GetXlaTensor(self),
+      bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()), alpha));
 }
 
 at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
