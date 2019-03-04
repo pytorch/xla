@@ -52,5 +52,21 @@ bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
   return equal;
 }
 
+void WithAllDevices(
+    DeviceType device_type,
+    const std::function<void(const std::vector<Device>&)>& devfn) {
+  std::vector<Device> devices;
+  for (const auto& device_str :
+       xla::ComputationClient::Get()->GetAvailableDevices()) {
+    Device device(device_str);
+    if (device.hw_type == device_type) {
+      devices.push_back(device);
+    }
+  }
+  if (!devices.empty()) {
+    devfn(devices);
+  }
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla

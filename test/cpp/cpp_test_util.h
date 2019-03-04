@@ -37,5 +37,9 @@ static inline void AllClose(at::Tensor tensor, XLATensor& xla_tensor,
 
 void ForEachDevice(const std::function<void(const Device&)>& devfn);
 
+void WithAllDevices(
+    DeviceType device_type,
+    const std::function<void(const std::vector<Device>&)>& devfn);
+
 }  // namespace cpp_test
 }  // namespace torch_xla
