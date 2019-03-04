@@ -2075,6 +2075,18 @@ TEST_F(AtenXlaTensorTest, TestNarrowInNarrowUpdate) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestViewAs) {
+  at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor empty = at::empty({32, 320});
+  at::Tensor output = input.view_as(empty);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_empty = bridge::CreateXlaTensor(empty, device);
+    at::Tensor xla_output = xla_input.view_as(xla_empty);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestLogSoftmax) {
   at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
   ForEachDevice([&](const Device& device) {
