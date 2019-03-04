@@ -558,6 +558,9 @@ class XLATensor {
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            const at::Scalar& value);
 
+  // Fills the input with the given value.
+  static void fill_(XLATensor& input, const at::Scalar& value);
+
   // Returns the cross product of the two input tensors in the given dimension.
   // If the dimension is not given, it defaults to the first dimension found
   // with the size 3.

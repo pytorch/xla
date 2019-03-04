@@ -1666,6 +1666,20 @@ at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
   return masked_fill_(self, mask, value.item());
 }
 
+at::Tensor& AtenXlaType::fill_(at::Tensor& self, at::Scalar value) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::fill_(self_tensor, value);
+  return self;
+}
+
+at::Tensor& AtenXlaType::fill_(at::Tensor& self,
+                               const at::Tensor& value) const {
+  XLA_CHECK_EQ(value.dim(), 0) << "fill_ only supports a 0-dimensional "
+                               << "value tensor, but got tensor "
+                               << "with " << value.dim() << " dimension(s).";
+  return fill_(self, value.item());
+}
+
 at::Tensor AtenXlaType::masked_fill(const at::Tensor& self,
                                     const at::Tensor& mask,
                                     const at::Tensor& value) const {

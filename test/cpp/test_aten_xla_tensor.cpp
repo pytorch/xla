@@ -2391,6 +2391,31 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestFill) {
+  at::Scalar value(42);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor input = at::empty({2, 3}, at::TensorOptions(at::kFloat));
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor result = at::fill_(input, value);
+    at::Tensor xla_result = at::fill_(xla_input, value);
+    AllClose(result, xla_result);
+    AllClose(input, xla_input);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestFillWithRank0) {
+  at::Tensor value = at::scalar_tensor(42);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor input = at::empty({2, 3}, at::TensorOptions(at::kFloat));
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor result = at::fill_(input, value);
+    at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+    at::Tensor xla_result = at::fill_(xla_input, value);
+    AllClose(result, xla_result);
+    AllClose(input, xla_input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestPermute) {
   at::Tensor input = at::rand({2, 3, 4}, at::TensorOptions(at::kFloat));
   std::vector<std::vector<int64_t>> dims_permutations = {
