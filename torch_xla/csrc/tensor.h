@@ -148,12 +148,16 @@ class XLATensor {
                        bool keep_reduced_dimensions);
 
   static XLATensor ne(const XLATensor& input, const at::Scalar& other);
+  static void ne_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor ne(const XLATensor& input, const XLATensor& other);
+  static void ne_(XLATensor& input, const XLATensor& other);
 
   static XLATensor eq(const XLATensor& input, const at::Scalar& other);
+  static void eq_(XLATensor& input, const at::Scalar& other);
 
   static XLATensor eq(const XLATensor& input, const XLATensor& other);
+  static void eq_(XLATensor& input, const XLATensor& other);
 
   static XLATensor ge(const XLATensor& input, const at::Scalar& other);
   static void ge_(XLATensor& input, const at::Scalar& other);
