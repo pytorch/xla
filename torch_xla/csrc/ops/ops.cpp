@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "tensorflow/compiler/xla/client/lib/math.h"
+#include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
@@ -450,6 +451,18 @@ NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
   NodePtr exp = Pow(input, norm_exp);
   NodePtr result = MakeNode<Sum>(exp, dimensions, keepdim, dtype);
   return Pow(result, norm_exp_inv);
+}
+
+NodePtr Identity(xla::int64 lines, xla::int64 cols,
+                 xla::PrimitiveType element_type) {
+  auto lower_fn = [=](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    return node.ReturnOp(
+        xla::IdentityMatrix(loctx->builder(), element_type, lines, cols),
+        loctx);
+  };
+  return GenericOp(OpKind(at::aten::eye), {},
+                   xla::ShapeUtil::MakeShape(element_type, {lines, cols}),
+                   std::move(lower_fn));
 }
 
 }  // namespace ops

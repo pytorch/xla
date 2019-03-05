@@ -40,7 +40,6 @@
 #include "torch_xla/csrc/ops/dropout.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/expand.h"
-#include "torch_xla/csrc/ops/eye.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/index_op.h"
@@ -1615,8 +1614,8 @@ XLATensor XLATensor::cross(const XLATensor& input, const XLATensor& other,
 XLATensor XLATensor::eye(xla::int64 lines, xla::int64 cols,
                          const Device& device, at::ScalarType element_type) {
   return XLATensor::Create(
-      ir::MakeNode<ir::ops::Eye>(lines, cols,
-                                 MakeXlaPrimitiveType(element_type, &device)),
+      ir::ops::Identity(lines, cols,
+                        MakeXlaPrimitiveType(element_type, &device)),
       device, element_type);
 }
 
@@ -1634,9 +1633,9 @@ XLATensor XLATensor::trace(const XLATensor& input) {
   auto input_shape_ref = input.shape();
   XLA_CHECK_EQ((*input_shape_ref).rank(), 2)
       << "invalid argument for trace: expected a matrix";
-  ir::NodePtr eye = ir::MakeNode<ir::ops::Eye>(
-      (*input_shape_ref).dimensions(0), (*input_shape_ref).dimensions(1),
-      (*input_shape_ref).element_type());
+  ir::NodePtr eye = ir::ops::Identity((*input_shape_ref).dimensions(0),
+                                      (*input_shape_ref).dimensions(1),
+                                      (*input_shape_ref).element_type());
   return XLATensor::sum(input.CreateFrom(eye * input.GetIrValue()), {0, 1},
                         false, input.dtype());
 }
