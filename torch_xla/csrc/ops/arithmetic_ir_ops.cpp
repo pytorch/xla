@@ -9,7 +9,7 @@
 namespace torch_xla {
 namespace ir {
 
-Value operator+(const Value& node1, const Value& node2) {
+NodePtr operator+(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
@@ -21,7 +21,7 @@ Value operator+(const Value& node1, const Value& node2) {
       std::move(lower_fn));
 }
 
-Value operator-(const Value& node1, const Value& node2) {
+NodePtr operator-(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
@@ -33,7 +33,7 @@ Value operator-(const Value& node1, const Value& node2) {
       std::move(lower_fn));
 }
 
-Value operator*(const Value& node1, const Value& node2) {
+NodePtr operator*(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
@@ -45,7 +45,7 @@ Value operator*(const Value& node1, const Value& node2) {
       std::move(lower_fn));
 }
 
-Value operator/(const Value& node1, const Value& node2) {
+NodePtr operator/(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
