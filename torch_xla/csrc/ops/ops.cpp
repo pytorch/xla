@@ -14,6 +14,7 @@
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -413,6 +414,42 @@ NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
   return GenericOp(OpKind(at::aten::broadcast_tensors), tensors,
                    InferOutputShape(tensor_shapes, lower_for_shape_fn),
                    std::move(lower_fn), /*num_outputs=*/tensors.size());
+}
+
+NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
+             c10::optional<at::ScalarType> dtype, at::IntArrayRef dim,
+             bool keepdim) {
+  std::vector<xla::int64> dimensions(dim.begin(), dim.end());
+  if (dimensions.empty()) {
+    dimensions = xla::util::Iota<xla::int64>(input.shape().rank());
+  }
+  if (!p.has_value() || p->toDouble() == 2.0) {
+    NodePtr square = input * input;
+    NodePtr result = MakeNode<Sum>(square, dimensions, keepdim, dtype);
+    return Sqrt(result);
+  }
+  double norm_value = p->toDouble();
+  if (norm_value == 1.0) {
+    // Contrary to documentation, norm(p=1) has nothing to do with traces and
+    // standard mathematical definitions of nuclear norms:
+    //
+    //   >>> import torch
+    //   >>> x = torch.randn(4, 4)
+    //   >>> print(torch.norm(x, 1))
+    //   tensor(11.9437)
+    //   >>> print(torch.trace(x.abs()))
+    //   tensor(3.1235)
+    //   >>> print(x.abs().sum())
+    //   tensor(11.9437)
+    return MakeNode<Sum>(Abs(input), dimensions, keepdim, dtype);
+  }
+  // Generic sum(x^p)^(1/p) norms.
+  NodePtr norm_exp = ScalarOp(norm_value, input.shape().element_type());
+  NodePtr norm_exp_inv =
+      ScalarOp(1.0 / norm_value, input.shape().element_type());
+  NodePtr exp = Pow(input, norm_exp);
+  NodePtr result = MakeNode<Sum>(exp, dimensions, keepdim, dtype);
+  return Pow(result, norm_exp_inv);
 }
 
 }  // namespace ops
