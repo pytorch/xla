@@ -1147,6 +1147,13 @@ at::Tensor AtenXlaType::leaky_relu(const at::Tensor& self,
       bridge::GetXlaTensor(self), negative_slope.to<double>()));
 }
 
+at::Tensor& AtenXlaType::leaky_relu_(at::Tensor& self,
+                                     at::Scalar negative_slope) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::leaky_relu_(self_tensor, negative_slope.to<double>());
+  return self;
+}
+
 at::Tensor AtenXlaType::threshold(const at::Tensor& self, at::Scalar threshold,
                                   at::Scalar value) const {
   return bridge::AtenFromXlaTensor(XLATensor::threshold(
