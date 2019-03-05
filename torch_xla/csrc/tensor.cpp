@@ -1037,6 +1037,13 @@ XLATensor XLATensor::dropout(const XLATensor& input, double p) {
       ir::MakeNode<ir::ops::Dropout>(input.GetIrValue(), p));
 }
 
+XLATensor XLATensor::norm(const XLATensor& input, c10::optional<at::Scalar> p,
+                          c10::optional<at::ScalarType> dtype,
+                          at::IntArrayRef dim, bool keepdim) {
+  return input.CreateFrom(
+      ir::ops::Norm(input.GetIrValue(), p, dtype, dim, keepdim));
+}
+
 XLATensor XLATensor::neg(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Neg(input.GetIrValue()));
 }
