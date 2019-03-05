@@ -1619,6 +1619,13 @@ at::Tensor AtenXlaType::nll_loss_backward(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(target)));
 }
 
+at::Tensor AtenXlaType::smooth_l1_loss(const at::Tensor& self,
+                                       const at::Tensor& target,
+                                       int64_t reduction) const {
+  return bridge::AtenFromXlaTensor(XLATensor::smooth_l1_loss(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), reduction));
+}
+
 at::Tensor AtenXlaType::min(const at::Tensor& self,
                             const at::Tensor& other) const {
   return bridge::AtenFromXlaTensor(

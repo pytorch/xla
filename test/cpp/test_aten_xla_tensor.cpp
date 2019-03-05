@@ -2593,6 +2593,22 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSmoothL1Loss) {
+  at::Tensor input = at::randn({2, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor target = at::randn({2, 4}, at::TensorOptions(at::kFloat));
+  for (Reduction::Reduction reduction :
+       {Reduction::None, Reduction::Mean, Reduction::Sum}) {
+    at::Tensor output = at::smooth_l1_loss(input, target, reduction);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_target = bridge::CreateXlaTensor(target, device);
+      at::Tensor xla_output =
+          at::smooth_l1_loss(xla_input, xla_target, reduction);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestBatchNorm2D) {
   int num_features = 3;
   at::Tensor input =

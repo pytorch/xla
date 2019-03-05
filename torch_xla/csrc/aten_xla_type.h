@@ -508,6 +508,9 @@ class AtenXlaType : public AtenXlaTypeBase {
                                int64_t ignore_index,
                                const at::Tensor& total_weight) const override;
 
+  at::Tensor smooth_l1_loss(const at::Tensor& self, const at::Tensor& target,
+                            int64_t reduction) const override;
+
   at::Tensor min(const at::Tensor& self,
                  const at::Tensor& other) const override;
   at::Tensor max(const at::Tensor& self,
