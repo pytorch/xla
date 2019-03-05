@@ -303,6 +303,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor trunc(const at::Tensor& self) const override;
   at::Tensor& trunc_(at::Tensor& self) const override;
 
+  at::Tensor frac(const at::Tensor& self) const override;
+  at::Tensor& frac_(at::Tensor& self) const override;
+
   int64_t size(const at::Tensor& self, int64_t dim) const override;
 
   std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self, int64_t k,

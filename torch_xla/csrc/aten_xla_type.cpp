@@ -1038,6 +1038,17 @@ at::Tensor& AtenXlaType::trunc_(at::Tensor& self) const {
   return self;
 }
 
+at::Tensor AtenXlaType::frac(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::frac(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::frac_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::frac_(self_tensor);
+  return self;
+}
+
 int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
   return bridge::GetXlaTensor(self).size(dim);
 }

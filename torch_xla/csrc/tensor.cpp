@@ -1186,6 +1186,14 @@ void XLATensor::trunc_(XLATensor& input) {
   input.SetIrValue(ir::ops::Trunc(input.GetIrValue()));
 }
 
+XLATensor XLATensor::frac(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::FracOp(input.GetIrValue()));
+}
+
+void XLATensor::frac_(XLATensor& input) {
+  input.SetIrValue(ir::ops::FracOp(input.GetIrValue()));
+}
+
 XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
                            xla::int64 start, xla::int64 end, xla::int64 step) {
   auto input_shape = input.shape();

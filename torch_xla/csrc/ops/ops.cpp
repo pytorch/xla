@@ -76,14 +76,24 @@ PTXLA_BINARY_OP(Atan2, at::aten::atan2, xla::Atan2);
 
 NodePtr Trunc(const Value& input) { return Floor(Abs(input)) * SignOp(input); }
 
+NodePtr FracOp(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input_floor = xla::Floor(xla_input);
+    return node.ReturnOp(xla_input - xla_input_floor, loctx);
+  };
+  return GenericOp(OpKind(at::aten::frac), OpList{input}, input.shape(),
+                   std::move(lower_fn));
+}
+
 NodePtr LogBase(const Value& input, OpKind op, double base) {
   auto lower_fn = [base](const Node& node,
                          LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp result = xla::Log(xla_input);
-    xla::XlaOp ln2 = XlaHelpers::ScalarValue<float>(
+    xla::XlaOp ln_base = XlaHelpers::ScalarValue<float>(
         1.0 / std::log(base), node.shape().element_type(), xla_input.builder());
-    return node.ReturnOp(result * ln2, loctx);
+    return node.ReturnOp(result * ln_base, loctx);
   };
   return GenericOp(op, OpList{input}, input.shape(), std::move(lower_fn));
 }
