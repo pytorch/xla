@@ -4,6 +4,8 @@
 
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "tensorflow/compiler/xla/client/lib/svd.h"
+#include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
@@ -463,6 +465,30 @@ NodePtr Identity(xla::int64 lines, xla::int64 cols,
   return GenericOp(OpKind(at::aten::eye), {},
                    xla::ShapeUtil::MakeShape(element_type, {lines, cols}),
                    std::move(lower_fn));
+}
+
+NodePtr SVD(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp input = loctx->GetOutputOp(node.operand(0));
+    xla::SVDResult svd_result =
+        xla::SVD(input, /*max_iter=*/100, /*epsilon=*/1e-6,
+                 XlaHelpers::mat_mul_precision());
+    return node.ReturnOps({svd_result.u, svd_result.d, svd_result.v}, loctx);
+  };
+  const xla::Shape& input_shape = input.shape();
+  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  xla::int64 m_dim = input_shape.dimensions(input_shape.rank() - 2);
+  xla::int64 n_dim = input_shape.dimensions(input_shape.rank() - 1);
+  // U is MxM
+  xla::Shape ushape(input_shape);
+  ushape.set_dimensions(input_shape.rank() - 1, m_dim);
+  // V is NxN
+  xla::Shape vshape(input_shape);
+  vshape.set_dimensions(input_shape.rank() - 2, n_dim);
+  xla::Shape shape =
+      xla::ShapeUtil::MakeTupleShape({ushape, input_shape, vshape});
+  return GenericOp(OpKind(at::aten::svd), {input}, std::move(shape),
+                   std::move(lower_fn), /*num_outputs=*/3);
 }
 
 }  // namespace ops
