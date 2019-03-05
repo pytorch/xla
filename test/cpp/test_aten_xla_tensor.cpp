@@ -3361,6 +3361,22 @@ TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSmoothL1LossBackward) {
+  at::Tensor input = at::randn({2, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor target = at::randn({2, 4}, at::TensorOptions(at::kFloat));
+  for (Reduction::Reduction reduction :
+       {Reduction::None, Reduction::Mean, Reduction::Sum}) {
+    auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+      return at::smooth_l1_loss(/*input=*/inputs[0], /*target=*/inputs[1],
+                                /*reduction=*/reduction);
+    };
+    ForEachDevice([&](const Device& device) {
+      TestBackward({input, target}, device, testfn, /*rtol=*/1e-5,
+                   /*atol=*/1e-8, /*inputs_require_grad=*/{true, false});
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestViewBackward) {
   auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
     return inputs[0].view({-1, 320});

@@ -81,5 +81,40 @@ XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
   }
 }
 
+XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
+                               const XLATensor& input, const XLATensor& target,
+                               xla::int64 reduction) {
+  auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});
+  XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
+  const XLATensor& broadcasted_input = broadcasted_inputs[0];
+  const XLATensor& broadcasted_target = broadcasted_inputs[1];
+  at::Scalar one(1.);
+  XLATensor diff = XLATensor::sub(broadcasted_input, broadcasted_target, one);
+  XLATensor abs_diff = XLATensor::abs(diff);
+  XLATensor grad_squared_loss =
+      XLATensor::sub(broadcasted_input, broadcasted_target, one);
+  XLATensor ones = XLATensor::full_like(broadcasted_input, one,
+                                        broadcasted_input.GetDevice(),
+                                        broadcasted_input.dtype());
+  // NB: We can't use XLATensor::sign(), it returns zero for input zero.
+  XLATensor grad_l1_loss =
+      XLATensor::where(XLATensor::gt(broadcasted_input, broadcasted_target),
+                       ones, XLATensor::neg(ones));
+  XLATensor elementwise_loss_backward = XLATensor::where(
+      XLATensor::lt(abs_diff, one), grad_squared_loss, grad_l1_loss);
+  switch (reduction) {
+    case Reduction::None:
+    case Reduction::Sum:
+      return XLATensor::mul(elementwise_loss_backward, grad_output);
+    case Reduction::Mean: {
+      double grad_scale = xla::ShapeUtil::ElementsIn(broadcasted_input.shape());
+      return XLATensor::mul(
+          XLATensor::div(elementwise_loss_backward, grad_scale), grad_output);
+    }
+    default:
+      XLA_ERROR() << "Invalid reduction type: " << reduction;
+  }
+}
+
 }  // namespace tensor_ops
 }  // namespace torch_xla

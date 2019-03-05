@@ -524,6 +524,12 @@ class XLATensor {
                                   const XLATensor& target,
                                   xla::int64 reduction);
 
+  // Returns the gradient of the input of a smooth_l1_loss operation.
+  static XLATensor smooth_l1_loss_backward(const XLATensor& grad_output,
+                                           const XLATensor& input,
+                                           const XLATensor& target,
+                                           xla::int64 reduction);
+
   static XLATensor min(const XLATensor& input, const XLATensor& other);
 
   static XLATensor max(const XLATensor& input, const XLATensor& other);

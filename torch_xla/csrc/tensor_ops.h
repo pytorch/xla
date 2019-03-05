@@ -14,5 +14,9 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other, xla::int64 dim);
 XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
                        xla::int64 reduction);
 
+XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
+                               const XLATensor& input, const XLATensor& target,
+                               xla::int64 reduction);
+
 }  // namespace tensor_ops
 }  // namespace torch_xla
