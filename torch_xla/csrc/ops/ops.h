@@ -114,6 +114,8 @@ NodePtr Ceil(const Value& input);
 
 NodePtr Floor(const Value& input);
 
+NodePtr Trunc(const Value& input);
+
 NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias);
 
 NodePtr Dot(const Value& input, const Value& weight);
