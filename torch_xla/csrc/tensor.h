@@ -359,6 +359,9 @@ class XLATensor {
   static XLATensor floor(const XLATensor& input);
   static void floor_(XLATensor& input);
 
+  static XLATensor trunc(const XLATensor& input);
+  static void trunc_(XLATensor& input);
+
   static XLATensor slice(const XLATensor& input, xla::int64 dim,
                          xla::int64 start, xla::int64 end, xla::int64 step);
 

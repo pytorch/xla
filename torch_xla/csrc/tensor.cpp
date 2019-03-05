@@ -1177,6 +1177,14 @@ void XLATensor::floor_(XLATensor& input) {
   input.SetIrValue(ir::ops::Floor(input.GetIrValue()));
 }
 
+XLATensor XLATensor::trunc(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Trunc(input.GetIrValue()));
+}
+
+void XLATensor::trunc_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Trunc(input.GetIrValue()));
+}
+
 XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
                            xla::int64 start, xla::int64 end, xla::int64 step) {
   auto input_shape = input.shape();

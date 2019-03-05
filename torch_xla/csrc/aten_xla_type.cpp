@@ -1027,6 +1027,17 @@ at::Tensor& AtenXlaType::floor_(at::Tensor& self) const {
   return self;
 }
 
+at::Tensor AtenXlaType::trunc(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::trunc(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::trunc_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::trunc_(self_tensor);
+  return self;
+}
+
 int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
   return bridge::GetXlaTensor(self).size(dim);
 }
