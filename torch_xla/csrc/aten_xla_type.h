@@ -319,6 +319,16 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor gather(const at::Tensor& self, int64_t dim,
                     const at::Tensor& index, bool sparse_grad) const override;
 
+  at::Tensor& scatter_(at::Tensor& self, int64_t dim, const at::Tensor& index,
+                       const at::Tensor& src) const override;
+  at::Tensor scatter(const at::Tensor& self, int64_t dim,
+                     const at::Tensor& index,
+                     const at::Tensor& src) const override;
+  at::Tensor& scatter_(at::Tensor& self, int64_t dim, const at::Tensor& index,
+                       at::Scalar value) const override;
+  at::Tensor scatter(const at::Tensor& self, int64_t dim,
+                     const at::Tensor& index, at::Scalar value) const override;
+
   at::Tensor index_select(const at::Tensor& self, int64_t dim,
                           const at::Tensor& index) const override;
 

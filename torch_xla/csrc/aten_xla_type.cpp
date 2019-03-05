@@ -1058,6 +1058,38 @@ at::Tensor AtenXlaType::gather(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
+at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
+                                  const at::Tensor& index,
+                                  const at::Tensor& src) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::scatter_(self_tensor, dim, bridge::GetXlaTensor(index),
+                      bridge::GetXlaTensor(src));
+  return self;
+}
+
+at::Tensor AtenXlaType::scatter(const at::Tensor& self, int64_t dim,
+                                const at::Tensor& index,
+                                const at::Tensor& src) const {
+  return bridge::AtenFromXlaTensor(XLATensor::scatter(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
+      bridge::GetXlaTensor(src)));
+}
+
+at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
+                                  const at::Tensor& index,
+                                  at::Scalar value) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::scatter_(self_tensor, dim, bridge::GetXlaTensor(index), value);
+  return self;
+}
+
+at::Tensor AtenXlaType::scatter(const at::Tensor& self, int64_t dim,
+                                const at::Tensor& index,
+                                at::Scalar value) const {
+  return bridge::AtenFromXlaTensor(XLATensor::scatter(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index), value));
+}
+
 at::Tensor AtenXlaType::index_select(const at::Tensor& self, int64_t dim,
                                      const at::Tensor& index) const {
   return bridge::AtenFromXlaTensor(XLATensor::index_select(

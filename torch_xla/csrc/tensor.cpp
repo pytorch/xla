@@ -61,6 +61,7 @@
 #include "torch_xla/csrc/ops/prod.h"
 #include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/scalar.h"
+#include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/slice.h"
 #include "torch_xla/csrc/ops/softmax.h"
@@ -1189,6 +1190,36 @@ XLATensor XLATensor::gather(const XLATensor& input, xla::int64 dim,
   return input.CreateFrom(ir::MakeNode<ir::ops::Gather>(
       input.GetIrValue(), GetCanonicalDimension(input, dim),
       index.GetIrValue()));
+}
+
+void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
+                         const XLATensor& index, const XLATensor& src) {
+  input.SetIrValue(ir::MakeNode<ir::ops::Scatter>(
+      input.GetIrValue(), GetCanonicalDimension(input, dim), index.GetIrValue(),
+      src.GetIrValue()));
+}
+
+XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
+                             const XLATensor& index, const XLATensor& src) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::Scatter>(
+      input.GetIrValue(), GetCanonicalDimension(input, dim), index.GetIrValue(),
+      src.GetIrValue()));
+}
+
+void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
+                         const XLATensor& index, at::Scalar value) {
+  ir::NodePtr constant = ir::ops::ScalarOp(value, input.shape());
+  input.SetIrValue(ir::MakeNode<ir::ops::Scatter>(
+      input.GetIrValue(), GetCanonicalDimension(input, dim), index.GetIrValue(),
+      constant));
+}
+
+XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
+                             const XLATensor& index, at::Scalar value) {
+  ir::NodePtr constant = ir::ops::ScalarOp(value, input.shape());
+  return input.CreateFrom(ir::MakeNode<ir::ops::Scatter>(
+      input.GetIrValue(), GetCanonicalDimension(input, dim), index.GetIrValue(),
+      constant));
 }
 
 XLATensor XLATensor::index_select(const XLATensor& input, xla::int64 dim,
