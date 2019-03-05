@@ -142,6 +142,10 @@ NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
 
 NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors);
 
+NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
+             c10::optional<at::ScalarType> dtype, at::IntArrayRef dim,
+             bool keepdim);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

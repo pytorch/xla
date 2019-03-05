@@ -427,6 +427,15 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor dropout(const at::Tensor& input, double p,
                      bool train) const override;
 
+  at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
+                  at::ScalarType dtype) const override;
+  at::Tensor norm(const at::Tensor& self, at::Scalar p) const override;
+  at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
+                  at::IntArrayRef dim, bool keepdim,
+                  at::ScalarType dtype) const override;
+  at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
+                  at::IntArrayRef dim, bool keepdim) const override;
+
   at::Tensor log_softmax(const at::Tensor& self, int64_t dim) const override;
   at::Tensor _log_softmax(const at::Tensor& self, int64_t dim,
                           bool half_to_float) const override;

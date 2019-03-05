@@ -1039,8 +1039,7 @@ at::Tensor& AtenXlaType::trunc_(at::Tensor& self) const {
 }
 
 at::Tensor AtenXlaType::frac(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::frac(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(XLATensor::frac(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor& AtenXlaType::frac_(at::Tensor& self) const {
@@ -1363,6 +1362,32 @@ at::Tensor AtenXlaType::dropout(const at::Tensor& input, double p,
                                 bool /* train */) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::dropout(bridge::GetXlaTensor(input), p));
+}
+
+at::Tensor AtenXlaType::norm(const at::Tensor& self,
+                             c10::optional<at::Scalar> p,
+                             at::ScalarType dtype) const {
+  return bridge::AtenFromXlaTensor(XLATensor::norm(
+      bridge::GetXlaTensor(self), p, dtype, {}, /*keepdim=*/false));
+}
+
+at::Tensor AtenXlaType::norm(const at::Tensor& self, at::Scalar p) const {
+  return bridge::AtenFromXlaTensor(XLATensor::norm(
+      bridge::GetXlaTensor(self), p, c10::nullopt, {}, /*keepdim=*/false));
+}
+
+at::Tensor AtenXlaType::norm(const at::Tensor& self,
+                             c10::optional<at::Scalar> p, at::IntArrayRef dim,
+                             bool keepdim, at::ScalarType dtype) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::norm(bridge::GetXlaTensor(self), p, dtype, dim, keepdim));
+}
+
+at::Tensor AtenXlaType::norm(const at::Tensor& self,
+                             c10::optional<at::Scalar> p, at::IntArrayRef dim,
+                             bool keepdim) const {
+  return bridge::AtenFromXlaTensor(XLATensor::norm(
+      bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
 }
 
 at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim) const {

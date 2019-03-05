@@ -302,6 +302,10 @@ class XLATensor {
 
   static XLATensor dropout(const XLATensor& input, double p);
 
+  static XLATensor norm(const XLATensor& input, c10::optional<at::Scalar> p,
+                        c10::optional<at::ScalarType> dtype,
+                        at::IntArrayRef dim, bool keepdim);
+
   static XLATensor neg(const XLATensor& input);
   static void neg_(XLATensor& input);
 
