@@ -149,6 +149,8 @@ NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
 NodePtr Identity(xla::int64 lines, xla::int64 cols,
                  xla::PrimitiveType element_type);
 
+NodePtr SVD(const Value& input);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
