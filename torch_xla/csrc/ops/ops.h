@@ -146,6 +146,9 @@ NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
              c10::optional<at::ScalarType> dtype, at::IntArrayRef dim,
              bool keepdim);
 
+NodePtr Identity(xla::int64 lines, xla::int64 cols,
+                 xla::PrimitiveType element_type);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
