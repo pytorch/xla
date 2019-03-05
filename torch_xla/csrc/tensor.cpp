@@ -907,6 +907,11 @@ XLATensor XLATensor::leaky_relu(const XLATensor& input, double negative_slope) {
       ir::MakeNode<ir::ops::LeakyRelu>(input.GetIrValue(), negative_slope));
 }
 
+void XLATensor::leaky_relu_(XLATensor& input, double negative_slope) {
+  input.SetIrValue(
+      ir::MakeNode<ir::ops::LeakyRelu>(input.GetIrValue(), negative_slope));
+}
+
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& input,
                                           const at::Scalar& other) {
