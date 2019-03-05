@@ -1153,6 +1153,16 @@ TEST_F(AtenXlaTensorTest, TestTrunc) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestFrac) {
+  at::Tensor a = at::randn({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
+  at::Tensor b = at::frac(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::frac(xla_a);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestNeg) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::neg(a);
