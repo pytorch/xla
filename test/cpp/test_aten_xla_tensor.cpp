@@ -1714,6 +1714,38 @@ TEST_F(AtenXlaTensorTest, TestExpandAs) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestEye) {
+  int n = 5;
+  at::Tensor out = at::eye(n, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_out =
+        at::eye(n, at::TensorOptions(at::kFloat).device(at::kXLA));
+    AllClose(out, xla_out);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestEyeWide) {
+  int lines = 3;
+  int cols = 5;
+  at::Tensor out = at::eye(lines, cols, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_out =
+        at::eye(lines, cols, at::TensorOptions(at::kFloat).device(at::kXLA));
+    AllClose(out, xla_out);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestEyeNarrow) {
+  int lines = 5;
+  int cols = 3;
+  at::Tensor out = at::eye(lines, cols, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_out =
+        at::eye(lines, cols, at::TensorOptions(at::kFloat).device(at::kXLA));
+    AllClose(out, xla_out);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestBroadcastTensors) {
   at::Tensor a = at::rand({2, 1, 1}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 1}, at::TensorOptions(at::kFloat));

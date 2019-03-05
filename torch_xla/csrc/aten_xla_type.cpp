@@ -1154,6 +1154,17 @@ at::Tensor AtenXlaType::expand_as(const at::Tensor& self,
       bridge::GetXlaTensor(self), other_tensor.shape().get().dimensions()));
 }
 
+at::Tensor AtenXlaType::eye(int64_t n, const at::TensorOptions& options) const {
+  return eye(n, n, options);
+}
+
+at::Tensor AtenXlaType::eye(int64_t n, int64_t m,
+                            const at::TensorOptions& options) const {
+  XlaOptions xla_options(options);
+  return bridge::AtenFromXlaTensor(XLATensor::eye(
+      n, m, xla_options.get_device(), xla_options.get_scalar_type()));
+}
+
 at::Tensor AtenXlaType::index(const at::Tensor& self,
                               at::TensorList indices) const {
   CanonicalIndexInfo canonical_index_info =
