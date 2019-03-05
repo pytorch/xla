@@ -514,6 +514,12 @@ class XLATensor {
   static XLATensor nll_loss_backward(const XLATensor& input,
                                      const XLATensor& target);
 
+  // Computes a loss that uses a squared term if the absolute element-wise error
+  // falls below 1 and an L1 term otherwise.
+  static XLATensor smooth_l1_loss(const XLATensor& input,
+                                  const XLATensor& target,
+                                  xla::int64 reduction);
+
   static XLATensor min(const XLATensor& input, const XLATensor& other);
 
   static XLATensor max(const XLATensor& input, const XLATensor& other);

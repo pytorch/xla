@@ -1039,8 +1039,7 @@ at::Tensor& AtenXlaType::trunc_(at::Tensor& self) const {
 }
 
 at::Tensor AtenXlaType::frac(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::frac(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(XLATensor::frac(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor& AtenXlaType::frac_(at::Tensor& self) const {
@@ -1581,6 +1580,13 @@ at::Tensor AtenXlaType::nll_loss_backward(
   }
   return bridge::AtenFromXlaTensor(XLATensor::nll_loss_backward(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(target)));
+}
+
+at::Tensor AtenXlaType::smooth_l1_loss(const at::Tensor& self,
+                                       const at::Tensor& target,
+                                       int64_t reduction) const {
+  return bridge::AtenFromXlaTensor(XLATensor::smooth_l1_loss(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), reduction));
 }
 
 at::Tensor AtenXlaType::min(const at::Tensor& self,

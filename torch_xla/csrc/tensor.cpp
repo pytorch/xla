@@ -1779,6 +1779,12 @@ XLATensor XLATensor::nll_loss_backward(const XLATensor& input,
       ir::ops::NllLossBackwardOp(input.GetIrValue(), target.GetIrValue()));
 }
 
+XLATensor XLATensor::smooth_l1_loss(const XLATensor& input,
+                                    const XLATensor& target,
+                                    xla::int64 reduction) {
+  return tensor_ops::SmoothL1Loss(input, target, reduction);
+}
+
 XLATensor XLATensor::min(const XLATensor& input, const XLATensor& other) {
   return input.CreateFrom(ir::ops::Min(input.GetIrValue(), other.GetIrValue()));
 }

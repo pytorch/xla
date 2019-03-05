@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/tensor_ops.h"
 
+#include <ATen/core/Reduction.h>
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
@@ -47,6 +49,36 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
       XLATensor::sub(XLATensor::mul(u1, v2), XLATensor::mul(u2, v1), one);
   // Stack the terms into one result tensor.
   return XLATensor::stack({s1, s2, s3}, dim);
+}
+
+XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
+                       xla::int64 reduction) {
+  auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});
+  XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
+  const XLATensor& broadcasted_input = broadcasted_inputs[0];
+  const XLATensor& broadcasted_target = broadcasted_inputs[1];
+  at::Scalar one(1.);
+  XLATensor diff = XLATensor::sub(broadcasted_input, broadcasted_target, one);
+  at::Scalar half(0.5);
+  XLATensor abs_diff = XLATensor::abs(diff);
+  XLATensor squared_loss = XLATensor::mul(XLATensor::mul(diff, diff), half);
+  XLATensor l1_loss = XLATensor::sub(abs_diff, half, one);
+  XLATensor elementwise_loss =
+      XLATensor::where(XLATensor::lt(abs_diff, one), squared_loss, l1_loss);
+  auto all_dimensions =
+      xla::util::Iota<xla::int64>((*broadcasted_input.shape()).rank());
+  switch (reduction) {
+    case Reduction::None:
+      return elementwise_loss;
+    case Reduction::Mean:
+      return XLATensor::mean(elementwise_loss, all_dimensions, false,
+                             broadcasted_input.dtype());
+    case Reduction::Sum:
+      return XLATensor::sum(elementwise_loss, all_dimensions, false,
+                            broadcasted_input.dtype());
+    default:
+      XLA_ERROR() << "Invalid reduction type: " << reduction;
+  }
 }
 
 }  // namespace tensor_ops
