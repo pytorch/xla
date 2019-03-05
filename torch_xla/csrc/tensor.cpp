@@ -40,6 +40,7 @@
 #include "torch_xla/csrc/ops/dropout.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/eye.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/index_op.h"
@@ -1609,6 +1610,14 @@ void XLATensor::fill_(XLATensor& input, const at::Scalar& value) {
 XLATensor XLATensor::cross(const XLATensor& input, const XLATensor& other,
                            xla::int64 dim) {
   return tensor_ops::Cross(input, other, dim);
+}
+
+XLATensor XLATensor::eye(xla::int64 lines, xla::int64 cols,
+                         const Device& device, at::ScalarType element_type) {
+  return XLATensor::Create(
+      ir::MakeNode<ir::ops::Eye>(lines, cols,
+                                 MakeXlaPrimitiveType(element_type, &device)),
+      device, element_type);
 }
 
 XLATensor XLATensor::triu(const XLATensor& input, xla::int64 diagonal) {

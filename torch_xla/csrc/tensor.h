@@ -590,6 +590,10 @@ class XLATensor {
   static XLATensor cross(const XLATensor& input, const XLATensor& other,
                          xla::int64 dim);
 
+  // Returns a 2-D tensor with ones on the diagonal and zeros elsewhere.
+  static XLATensor eye(xla::int64 lines, xla::int64 cols, const Device& device,
+                       at::ScalarType element_type);
+
   // Returns the upper triangular part of a matrix (2-D tensor) or batch of
   // matrices input, the other elements of the result tensor out are set to 0.
   static XLATensor triu(const XLATensor& input, xla::int64 diagonal);
