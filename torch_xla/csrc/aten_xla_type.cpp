@@ -1845,6 +1845,11 @@ at::Tensor AtenXlaType::tril(const at::Tensor& self, int64_t diagonal) const {
       XLATensor::tril(bridge::GetXlaTensor(self), diagonal));
 }
 
+at::Tensor AtenXlaType::trace(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::trace(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
                                  int64_t dim1, int64_t dim2) const {
   return bridge::AtenFromXlaTensor(

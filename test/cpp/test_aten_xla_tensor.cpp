@@ -2957,6 +2957,41 @@ TEST_F(AtenXlaTensorTest, TestTrilBatch) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestTrace) {
+  int n = 5;
+  at::Tensor input = at::rand({n, n}, at::TensorOptions(at::kFloat));
+  at::Tensor output = at::trace(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::trace(xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestTraceWide) {
+  int lines = 3;
+  int cols = 5;
+  at::Tensor input = at::rand({lines, cols}, at::TensorOptions(at::kFloat));
+  at::Tensor output = at::trace(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::trace(xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestTraceNarrow) {
+  int lines = 5;
+  int cols = 3;
+  at::Tensor input = at::rand({lines, cols}, at::TensorOptions(at::kFloat));
+  at::Tensor output = at::trace(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::trace(xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestDiag) {
   int size = 7;
   at::Tensor input = at::rand({size, size}, at::TensorOptions(at::kFloat));

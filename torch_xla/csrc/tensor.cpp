@@ -1630,6 +1630,17 @@ XLATensor XLATensor::tril(const XLATensor& input, xla::int64 diagonal) {
       ir::MakeNode<ir::ops::Tril>(input.GetIrValue(), diagonal));
 }
 
+XLATensor XLATensor::trace(const XLATensor& input) {
+  auto input_shape_ref = input.shape();
+  XLA_CHECK_EQ((*input_shape_ref).rank(), 2)
+      << "invalid argument for trace: expected a matrix";
+  ir::NodePtr eye = ir::MakeNode<ir::ops::Eye>(
+      (*input_shape_ref).dimensions(0), (*input_shape_ref).dimensions(1),
+      (*input_shape_ref).element_type());
+  return XLATensor::sum(input.CreateFrom(eye * input.GetIrValue()), {0, 1},
+                        false, input.dtype());
+}
+
 XLATensor XLATensor::diagonal(const XLATensor& input, xla::int64 offset,
                               xla::int64 dim1, xla::int64 dim2) {
   xla::int64 rank = input.shape().get().rank();
