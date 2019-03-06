@@ -73,8 +73,6 @@ NodePtr Abs(const Value& input);
 
 NodePtr ReluOp(const Value& input);
 
-NodePtr TransposeOp(const Value& input);
-
 NodePtr Min(const Value& input, const Value& other);
 
 NodePtr Max(const Value& input, const Value& other);

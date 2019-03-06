@@ -247,10 +247,6 @@ class XLATensor {
       tensorflow::gtl::ArraySlice<const xla::int64> padding,
       bool count_include_pad);
 
-  static XLATensor t(const XLATensor& input);
-
-  static void t_(XLATensor& input);
-
   // Swap given dimensions of the input.
   static XLATensor transpose(const XLATensor& input, xla::int64 dim0,
                              xla::int64 dim1);

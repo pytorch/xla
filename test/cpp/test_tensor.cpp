@@ -159,10 +159,10 @@ TEST_F(TensorTest, TestAddMatMul) {
 
 TEST_F(TensorTest, TestTranspose) {
   at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
-  auto output = input.t();
+  auto output = at::transpose(input, 0, 1);
   ForEachDevice([&](const Device& device) {
     auto dev_input = XLATensor::Create(input, device, /*requires_grad=*/false);
-    auto dev_output = XLATensor::t(dev_input);
+    auto dev_output = XLATensor::transpose(dev_input, 0, 1);
     AllClose(output, dev_output);
   });
 }

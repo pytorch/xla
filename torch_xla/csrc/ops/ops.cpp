@@ -135,23 +135,6 @@ NodePtr ReluOp(const Value& input) {
                    std::move(lower_fn));
 }
 
-NodePtr TransposeOp(const Value& input) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_output = xla::Transpose(xla_input, {1, 0});
-    return node.ReturnOp(xla_output, loctx);
-  };
-  auto lower_for_shape_fn =
-      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
-    return xla::Transpose(operands[0], {1, 0});
-  };
-  xla::Shape output_shape =
-      InferOutputShape({input.shape()}, lower_for_shape_fn);
-  return GenericOp(OpKind(at::aten::t), OpList{input}, output_shape,
-                   std::move(lower_fn));
-}
-
 NodePtr Sigmoid(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));

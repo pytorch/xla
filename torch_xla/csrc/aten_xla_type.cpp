@@ -1338,12 +1338,13 @@ at::Tensor AtenXlaType::einsum(std::string equation,
 }
 
 at::Tensor AtenXlaType::t(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(XLATensor::t(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::transpose(bridge::GetXlaTensor(self), 0, 1));
 }
 
 at::Tensor& AtenXlaType::t_(at::Tensor& self) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::t_(self_tensor);
+  XLATensor::transpose_(self_tensor, 0, 1);
   return self;
 }
 
