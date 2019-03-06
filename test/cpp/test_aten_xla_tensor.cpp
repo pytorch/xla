@@ -2786,6 +2786,20 @@ TEST_F(AtenXlaTensorTest, TestUnsqueeze) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestUnsqueezeInPlace) {
+  at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
+  int rank = input.dim() + 1;
+  for (int dim = -rank; dim < rank; ++dim) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+      at::Tensor output = input.unsqueeze_(dim);
+      at::Tensor xla_output = xla_input.unsqueeze_(dim);
+      AllClose(output, xla_output);
+      AllClose(input, xla_input);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestMaskedFill) {
   at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor mask = at::randint(0, 2, {2, 3}, at::TensorOptions(at::kByte));
