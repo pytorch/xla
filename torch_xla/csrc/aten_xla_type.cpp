@@ -1808,6 +1808,12 @@ at::Tensor AtenXlaType::unsqueeze(const at::Tensor& self, int64_t dim) const {
       XLATensor::unsqueeze(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor& AtenXlaType::unsqueeze_(at::Tensor& self, int64_t dim) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::unsqueeze_(self_tensor, dim);
+  return self;
+}
+
 at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                       at::Scalar value) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
