@@ -2196,6 +2196,17 @@ TEST_F(AtenXlaTensorTest, TestTranspose) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestTransposeInPlace) {
+  at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor output = input.t_();
+    at::Tensor xla_output = xla_input.t_();
+    AllClose(output, xla_output);
+    AllClose(input, xla_input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestReshape) {
   at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::reshape(input, {-1, 320});

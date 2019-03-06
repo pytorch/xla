@@ -1734,6 +1734,10 @@ XLATensor XLATensor::t(const XLATensor& input) {
   return input.CreateFrom(ir::ops::TransposeOp(input.GetIrValue()));
 }
 
+void XLATensor::t_(XLATensor& input) {
+  input.SetIrValue(ir::ops::TransposeOp(input.GetIrValue()));
+}
+
 XLATensor XLATensor::reshape(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) {

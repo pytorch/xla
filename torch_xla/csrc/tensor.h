@@ -247,6 +247,8 @@ class XLATensor {
 
   static XLATensor t(const XLATensor& input);
 
+  static void t_(XLATensor& input);
+
   // Returns a tensor with the same data and number of elements as input, but
   // with the specified shape.
   static XLATensor reshape(
