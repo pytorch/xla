@@ -1052,6 +1052,14 @@ int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
   return bridge::GetXlaTensor(self).size(dim);
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::svd(
+    const at::Tensor& self, bool some, bool compute_uv) const {
+  auto results = XLATensor::svd(bridge::GetXlaTensor(self), some, compute_uv);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)),
+                         bridge::AtenFromXlaTensor(std::get<2>(results)));
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
                                                          int64_t k, int64_t dim,
                                                          bool keepdim) const {

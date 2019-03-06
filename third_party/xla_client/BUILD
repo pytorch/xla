@@ -16,10 +16,6 @@ exports_files(
 tf_cc_shared_object(
     name = "libxla_computation_client.so",
     linkopts = select({
-        "//tensorflow:darwin": [
-            "-Wl,-exported_symbols_list",  # This line must be directly followed by the exported_symbols.lds file
-            "$(location //tensorflow/compiler/xla/xla_client:tf_exported_symbols.lds)",
-        ],
         "//tensorflow:windows": [],
         "//conditions:default": [
             "-z defs",
@@ -36,6 +32,7 @@ tf_cc_shared_object(
         "//tensorflow/compiler/xla/client:global_data",
         "//tensorflow/compiler/xla/client:xla_builder",
         "//tensorflow/compiler/xla/client:xla_computation",
+        "//tensorflow/compiler/xla/client/lib:svd",
         "//tensorflow/compiler/xla/rpc:grpc_stub",
         "//tensorflow/compiler/xla/xla_client:tf_exported_symbols.lds",
         "//tensorflow/compiler/xla/xla_client:tf_version_script.lds",
@@ -97,8 +94,6 @@ cc_library(
         "//tensorflow/compiler/xrt:xrt_proto",
         "//tensorflow/compiler/xrt:xrt_server",
         "//tensorflow/compiler/xrt/cc:xrt_ops",
-        "//tensorflow/contrib/tpu:all_ops",
-        "//tensorflow/core/protobuf/tpu:topology_proto_cc",
         "//tensorflow/core:core_cpu",
         "//tensorflow/core:framework_internal",
         "//tensorflow/core:lib",
@@ -107,6 +102,7 @@ cc_library(
         "//tensorflow/core/distributed_runtime/rpc:grpc_runtime",
         "//tensorflow/core/kernels:conv_ops",
         "//tensorflow/core/kernels:data_flow",
+        "//tensorflow/core/protobuf/tpu:topology_proto_cc",
         "//tensorflow/stream_executor:stream_executor_impl",
         "@com_google_absl//absl/strings",
     ],
