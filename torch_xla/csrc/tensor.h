@@ -612,9 +612,15 @@ class XLATensor {
   // matrices input, the other elements of the result tensor out are set to 0.
   static XLATensor triu(const XLATensor& input, xla::int64 diagonal);
 
+  // In-place version of the method above.
+  static void triu_(XLATensor& input, xla::int64 diagonal);
+
   // Returns the lower triangular part of a matrix (2-D tensor) or batch of
   // matrices input, the other elements of the result tensor out are set to 0.
   static XLATensor tril(const XLATensor& input, xla::int64 diagonal);
+
+  // In-place version of the method above.
+  static void tril_(XLATensor& input, xla::int64 diagonal);
 
   // Returns the sum of the elements of the diagonal of the input 2-D matrix.
   static XLATensor trace(const XLATensor& input);

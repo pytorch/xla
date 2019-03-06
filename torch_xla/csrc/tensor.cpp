@@ -1624,9 +1624,17 @@ XLATensor XLATensor::triu(const XLATensor& input, xla::int64 diagonal) {
       ir::MakeNode<ir::ops::Triu>(input.GetIrValue(), diagonal));
 }
 
+void XLATensor::triu_(XLATensor& input, xla::int64 diagonal) {
+  input.SetIrValue(ir::MakeNode<ir::ops::Triu>(input.GetIrValue(), diagonal));
+}
+
 XLATensor XLATensor::tril(const XLATensor& input, xla::int64 diagonal) {
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Tril>(input.GetIrValue(), diagonal));
+}
+
+void XLATensor::tril_(XLATensor& input, xla::int64 diagonal) {
+  input.SetIrValue(ir::MakeNode<ir::ops::Tril>(input.GetIrValue(), diagonal));
 }
 
 XLATensor XLATensor::trace(const XLATensor& input) {
