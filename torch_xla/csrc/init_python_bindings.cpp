@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -159,7 +160,12 @@ void InitXlaTensorBindings(py::module m) {
              return torch::autograd::make_variable(s.ToTensor(),
                                                    s.RequiresGrad());
            })
-      .def("size", [](const XLATensor& s) { return s.DimensionSizes(); })
+      .def("size",
+           [](const XLATensor& s) {
+             auto tensor_shape = s.shape();
+             return xla::util::ToVector<int64_t>(
+                 tensor_shape.get().dimensions());
+           })
       .def("device",
            [](const XLATensor& s) { return s.GetDevice().ToString(); })
       .def("__add__",
