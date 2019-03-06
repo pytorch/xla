@@ -2879,6 +2879,31 @@ TEST_F(AtenXlaTensorTest, TestPermute) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestTransposeDims) {
+  at::Tensor input = at::rand({2, 3, 4}, at::TensorOptions(at::kFloat));
+  int dim0 = 0;
+  int dim1 = 2;
+  at::Tensor output = at::transpose(input, dim0, dim1);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::transpose(xla_input, dim0, dim1);
+    AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestTransposeDimsInPlace) {
+  at::Tensor input = at::rand({2, 3, 4}, at::TensorOptions(at::kFloat));
+  int dim0 = 0;
+  int dim1 = 2;
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor output = input.transpose_(dim0, dim1);
+    at::Tensor xla_output = xla_input.transpose_(dim0, dim1);
+    AllClose(output, xla_output);
+    AllClose(input, xla_input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSplit) {
   at::Tensor input = at::rand({7, 8, 9}, at::TensorOptions(at::kFloat));
   int rank = input.dim();

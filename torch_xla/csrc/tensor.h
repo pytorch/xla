@@ -249,6 +249,13 @@ class XLATensor {
 
   static void t_(XLATensor& input);
 
+  // Swap given dimensions of the input.
+  static XLATensor transpose(const XLATensor& input, xla::int64 dim0,
+                             xla::int64 dim1);
+
+  // In-place version of the method above.
+  static void transpose_(XLATensor& input, xla::int64 dim0, xla::int64 dim1);
+
   // Returns a tensor with the same data and number of elements as input, but
   // with the specified shape.
   static XLATensor reshape(
