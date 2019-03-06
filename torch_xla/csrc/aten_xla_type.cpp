@@ -1341,6 +1341,12 @@ at::Tensor AtenXlaType::t(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::t(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor& AtenXlaType::t_(at::Tensor& self) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::t_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::reshape(const at::Tensor& self,
                                 at::IntArrayRef shape) const {
   return bridge::AtenFromXlaTensor(XLATensor::reshape(
