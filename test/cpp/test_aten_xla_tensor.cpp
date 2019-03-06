@@ -891,6 +891,36 @@ TEST_F(AtenXlaTensorTest, TestNormNuclear) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestFrobeniusNorm) {
+  at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::frobenius_norm(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::frobenius_norm(xla_a);
+    AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestFrobeniusNormInDim) {
+  at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::frobenius_norm(a, {1}, /*keepdim=*/false);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::frobenius_norm(xla_a, {1}, /*keepdim=*/false);
+    AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestFrobeniusNormInDims) {
+  at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::frobenius_norm(a, {1, 2}, /*keepdim=*/false);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::frobenius_norm(xla_a, {1, 2}, /*keepdim=*/false);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestProd) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::prod(a);
