@@ -1745,14 +1745,6 @@ XLATensor XLATensor::threshold_backward(const XLATensor& grad_output,
       grad_output.GetIrValue(), input.GetIrValue(), threshold));
 }
 
-XLATensor XLATensor::t(const XLATensor& input) {
-  return input.CreateFrom(ir::ops::TransposeOp(input.GetIrValue()));
-}
-
-void XLATensor::t_(XLATensor& input) {
-  input.SetIrValue(ir::ops::TransposeOp(input.GetIrValue()));
-}
-
 XLATensor XLATensor::transpose(const XLATensor& input, xla::int64 dim0,
                                xla::int64 dim1) {
   xla::int64 rank = input.shape().get().rank();

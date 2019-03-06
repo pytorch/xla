@@ -232,7 +232,10 @@ void InitXlaTensorBindings(py::module m) {
            [](const XLATensor& self, double other) {
              return XLATensor::div(self, other);
            })
-      .def("t", [](const XLATensor& self) { return XLATensor::t(self); })
+      .def("t",
+           [](const XLATensor& self) {
+             return XLATensor::transpose(self, 0, 1);
+           })
       .def("view",
            [](const XLATensor& self, py::args args) {
              std::vector<xla::int64> output_sizes;
