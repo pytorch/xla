@@ -11,11 +11,9 @@ namespace torch_xla {
 
 struct ViewInfo {
   ViewInfo() = default;
-  ViewInfo(xla::Shape shape, std::vector<xla::int64> sizes)
-      : shape(std::move(shape)),
-        indices(sizes.size(), 0),
-        sizes(std::move(sizes)) {}
-  explicit ViewInfo(xla::Shape shape) : shape(std::move(shape)) {}
+  ViewInfo(xla::Shape shape, std::vector<xla::int64> sizes);
+  ViewInfo(std::vector<xla::int64> sizes, std::vector<xla::int64> permutation,
+           xla::PrimitiveType type);
 
   // The shape of the result of a view. In case of narrowing, this represents
   // the size of the narrow slice.
@@ -25,6 +23,8 @@ struct ViewInfo {
   std::vector<xla::int64> indices;
   // The dimension sizes of the source of this view.
   std::vector<xla::int64> sizes;
+  // The permutation to be used. If empty, this is not a permute operation.
+  std::vector<xla::int64> permutation;
 };
 
 // When a "view" (capture by reference) is taken on a node, an Alias object is
