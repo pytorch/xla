@@ -103,6 +103,8 @@ NodePtr Pow(const Value& input, const Value& exponent);
 
 NodePtr Fmod(const Value& dividend, const Value& divisor);
 
+NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1);
+
 NodePtr Sigmoid(const Value& input);
 
 NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,

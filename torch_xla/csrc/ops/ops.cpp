@@ -16,6 +16,7 @@
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -134,6 +135,17 @@ NodePtr ReluOp(const Value& input) {
       InferOutputShape({input.shape()}, lower_for_shape_fn);
   return GenericOp(OpKind(at::aten::relu), OpList{input}, output_shape,
                    std::move(lower_fn));
+}
+
+NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1) {
+  xla::int64 rank = input.shape().rank();
+  xla::int64 canonical_dim0 =
+      XlaHelpers::GetCanonicalDimensionIndex(dim0, rank);
+  xla::int64 canonical_dim1 =
+      XlaHelpers::GetCanonicalDimensionIndex(dim1, rank);
+  auto permute_dims = xla::util::Iota<xla::int64>(rank);
+  std::swap(permute_dims[canonical_dim0], permute_dims[canonical_dim1]);
+  return ir::MakeNode<ir::ops::Permute>(input, permute_dims);
 }
 
 NodePtr Sigmoid(const Value& input) {
