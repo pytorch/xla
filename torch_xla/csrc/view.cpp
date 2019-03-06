@@ -4,9 +4,12 @@
 #include <functional>
 #include <numeric>
 
+#include "tensorflow/compiler/xla/shape_util.h"
+#include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/ops/generic_slice.h"
+#include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/update_slice.h"
 #include "torch_xla/csrc/ops/view.h"
 
@@ -22,6 +25,8 @@ ir::Value ApplyViewInfo(ir::Value ir_value, const ViewInfo& view_info) {
   if (IsNarrow(view_info)) {
     return ir::MakeNode<ir::ops::GenericSlice>(ir_value, view_info.indices,
                                                view_info.shape.dimensions());
+  } else if (!view_info.permutation.empty()) {
+    return ir::MakeNode<ir::ops::Permute>(ir_value, view_info.permutation);
   } else {
     return ir::MakeNode<ir::ops::View>(ir_value, view_info.shape.dimensions());
   }
@@ -43,6 +48,9 @@ ir::Value ApplyUpdate(ir::Value ir_value,
     if (IsNarrow(view_info)) {
       result = ir::MakeNode<ir::ops::UpdateSlice>(tmp_values[i - 1], result,
                                                   view_info.indices);
+    } else if (!view_info.permutation.empty()) {
+      result = ir::MakeNode<ir::ops::Permute>(
+          result, xla::InversePermutation(view_info.permutation));
     } else {
       result = ir::MakeNode<ir::ops::View>(result, view_info.sizes);
     }
@@ -51,6 +59,18 @@ ir::Value ApplyUpdate(ir::Value ir_value,
 }
 
 }  // namespace
+
+ViewInfo::ViewInfo(xla::Shape shape, std::vector<xla::int64> sizes)
+    : shape(std::move(shape)),
+      indices(sizes.size(), 0),
+      sizes(std::move(sizes)) {}
+
+ViewInfo::ViewInfo(std::vector<xla::int64> sizes,
+                   std::vector<xla::int64> permutation, xla::PrimitiveType type)
+    : shape(xla::ShapeUtil::MakeShape(type, xla::Permute(permutation, sizes))),
+      indices(sizes.size(), 0),
+      sizes(std::move(sizes)),
+      permutation(std::move(permutation)) {}
 
 void Alias::Update(ir::Value ir_value, std::vector<ViewInfo> view_infos) {
   updates_.push_back({std::move(ir_value), std::move(view_infos)});
