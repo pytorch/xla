@@ -1401,6 +1401,16 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
       bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
 }
 
+at::Tensor AtenXlaType::frobenius_norm(const at::Tensor& self) const {
+  return at::native::frobenius_norm(self);
+}
+
+at::Tensor AtenXlaType::frobenius_norm(const at::Tensor& self,
+                                       at::IntArrayRef dim,
+                                       bool keepdim) const {
+  return at::native::frobenius_norm(self, dim, keepdim);
+}
+
 at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::log_softmax(bridge::GetXlaTensor(self), dim));

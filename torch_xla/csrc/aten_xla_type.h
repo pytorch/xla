@@ -440,6 +440,10 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
                   at::IntArrayRef dim, bool keepdim) const override;
 
+  at::Tensor frobenius_norm(const at::Tensor& self) const override;
+  at::Tensor frobenius_norm(const at::Tensor& self, at::IntArrayRef dim,
+                            bool keepdim) const override;
+
   at::Tensor log_softmax(const at::Tensor& self, int64_t dim) const override;
   at::Tensor _log_softmax(const at::Tensor& self, int64_t dim,
                           bool half_to_float) const override;
