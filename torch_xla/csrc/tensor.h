@@ -587,6 +587,9 @@ class XLATensor {
   // Insert a dimension of size one at the specified position.
   static XLATensor unsqueeze(const XLATensor& input, xla::int64 dim);
 
+  // In-place version of the method above.
+  static void unsqueeze_(XLATensor& input, xla::int64 dim);
+
   // Fills elements of the input tensor with the provided value where mask is
   // one. The shape of mask must be broadcastable with the shape of the
   // underlying tensor.

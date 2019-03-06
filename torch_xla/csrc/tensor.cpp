@@ -1589,6 +1589,13 @@ XLATensor XLATensor::unsqueeze(const XLATensor& input, xla::int64 dim) {
       ir::MakeNode<ir::ops::Unsqueeze>(input.GetIrValue(), squeeze_dim));
 }
 
+void XLATensor::unsqueeze_(XLATensor& input, xla::int64 dim) {
+  int squeeze_dim = XlaHelpers::GetCanonicalDimensionIndex(
+      dim, input.shape().get().rank() + 1);
+  input.SetIrValue(
+      ir::MakeNode<ir::ops::Unsqueeze>(input.GetIrValue(), squeeze_dim));
+}
+
 XLATensor XLATensor::masked_fill(const XLATensor& input, const XLATensor& mask,
                                  const at::Scalar& value) {
   // Expand mask to be the same size as input.
