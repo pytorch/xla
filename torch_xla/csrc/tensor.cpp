@@ -69,6 +69,7 @@
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
 #include "torch_xla/csrc/ops/sum.h"
+#include "torch_xla/csrc/ops/svd.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
@@ -1009,6 +1010,15 @@ XLATensor XLATensor::select(const XLATensor& input, xla::int64 dim,
                                            index);
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Select>(input.GetIrValue(), dim, index));
+}
+
+std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::svd(
+    const XLATensor& input, bool some, bool compute_uv) {
+  ir::NodePtr node =
+      ir::MakeNode<ir::ops::SVD>(input.GetIrValue(), some, compute_uv);
+  return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
+                         input.CreateFrom(ir::Value(node, 1)),
+                         input.CreateFrom(ir::Value(node, 2)));
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,

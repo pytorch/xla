@@ -292,6 +292,10 @@ class XLATensor {
   static XLATensor select(const XLATensor& input, xla::int64 dim,
                           xla::int64 index);
 
+  static std::tuple<XLATensor, XLATensor, XLATensor> svd(const XLATensor& input,
+                                                         bool some,
+                                                         bool compute_uv);
+
   static std::tuple<XLATensor, XLATensor> kthvalue(const XLATensor& input,
                                                    xla::int64 k, xla::int64 dim,
                                                    bool keepdim);

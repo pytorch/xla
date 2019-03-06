@@ -626,6 +626,28 @@ TEST_F(AtenXlaTensorTest, TestIntegerAdd) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSVD) {
+  static const int dims[] = {4, 7};
+  for (auto m : dims) {
+    for (auto n : dims) {
+      at::Tensor a = at::rand({m, n}, at::TensorOptions(at::kFloat));
+      auto b = at::svd(a, /*some=*/true, /*compute_uv=*/true);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+        auto xla_b = at::svd(xla_a, /*some=*/true, /*compute_uv=*/true);
+        // The U and V matrices might have different sign for column vectors, so
+        // cannot be compared if not by absolute value.
+        AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+        AllClose(std::get<1>(b), std::get<1>(xla_b), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+        AllClose(std::get<2>(b).abs(), std::get<2>(xla_b).abs(), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+      });
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestKthValue) {
   at::Tensor a = at::rand({4, 5, 3}, at::TensorOptions(at::kFloat));
   for (int k = 1; k <= 3; ++k) {
