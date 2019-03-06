@@ -3036,6 +3036,36 @@ TEST_F(AtenXlaTensorTest, TestTrilBatch) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestTriuInPlace) {
+  int size = 5;
+  // Test all diagonals and out of bounds (must be no-op).
+  for (int diagonal = -size; diagonal <= size; ++diagonal) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor input = at::rand({size, size}, at::TensorOptions(at::kFloat));
+      at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+      at::Tensor output = input.triu_(diagonal);
+      at::Tensor xla_output = xla_input.triu_(diagonal);
+      AllClose(output, xla_output);
+      AllClose(input, xla_input);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestTrilInPlace) {
+  int size = 5;
+  // Test all diagonals and out of bounds (must be no-op).
+  for (int diagonal = -size; diagonal <= size; ++diagonal) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor input = at::rand({size, size}, at::TensorOptions(at::kFloat));
+      at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+      at::Tensor output = input.tril_(diagonal);
+      at::Tensor xla_output = xla_input.tril_(diagonal);
+      AllClose(output, xla_output);
+      AllClose(input, xla_input);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestTrace) {
   int n = 5;
   at::Tensor input = at::rand({n, n}, at::TensorOptions(at::kFloat));
