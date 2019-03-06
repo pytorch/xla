@@ -596,8 +596,10 @@ class AtenXlaType : public AtenXlaTypeBase {
                    int64_t dim) const override;
 
   at::Tensor triu(const at::Tensor& self, int64_t diagonal) const override;
+  at::Tensor& triu_(at::Tensor& self, int64_t diagonal) const override;
 
   at::Tensor tril(const at::Tensor& self, int64_t diagonal) const override;
+  at::Tensor& tril_(at::Tensor& self, int64_t diagonal) const override;
 
   at::Tensor trace(const at::Tensor& self) const override;
 

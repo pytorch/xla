@@ -1880,9 +1880,21 @@ at::Tensor AtenXlaType::triu(const at::Tensor& self, int64_t diagonal) const {
       XLATensor::triu(bridge::GetXlaTensor(self), diagonal));
 }
 
+at::Tensor& AtenXlaType::triu_(at::Tensor& self, int64_t diagonal) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::triu_(self_tensor, diagonal);
+  return self;
+}
+
 at::Tensor AtenXlaType::tril(const at::Tensor& self, int64_t diagonal) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::tril(bridge::GetXlaTensor(self), diagonal));
+}
+
+at::Tensor& AtenXlaType::tril_(at::Tensor& self, int64_t diagonal) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::tril_(self_tensor, diagonal);
+  return self;
 }
 
 at::Tensor AtenXlaType::trace(const at::Tensor& self) const {
