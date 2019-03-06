@@ -1748,6 +1748,30 @@ void XLATensor::t_(XLATensor& input) {
   input.SetIrValue(ir::ops::TransposeOp(input.GetIrValue()));
 }
 
+XLATensor XLATensor::transpose(const XLATensor& input, xla::int64 dim0,
+                               xla::int64 dim1) {
+  xla::int64 rank = input.shape().get().rank();
+  xla::int64 canonical_dim0 =
+      XlaHelpers::GetCanonicalDimensionIndex(dim0, rank);
+  xla::int64 canonical_dim1 =
+      XlaHelpers::GetCanonicalDimensionIndex(dim1, rank);
+  auto permute_dims = xla::util::Iota<xla::int64>(rank);
+  std::swap(permute_dims[canonical_dim0], permute_dims[canonical_dim1]);
+  return permute(input, permute_dims);
+}
+
+void XLATensor::transpose_(XLATensor& input, xla::int64 dim0, xla::int64 dim1) {
+  xla::int64 rank = input.shape().get().rank();
+  xla::int64 canonical_dim0 =
+      XlaHelpers::GetCanonicalDimensionIndex(dim0, rank);
+  xla::int64 canonical_dim1 =
+      XlaHelpers::GetCanonicalDimensionIndex(dim1, rank);
+  auto permute_dims = xla::util::Iota<xla::int64>(rank);
+  std::swap(permute_dims[canonical_dim0], permute_dims[canonical_dim1]);
+  input.SetIrValue(
+      ir::MakeNode<ir::ops::Permute>(input.GetIrValue(), permute_dims));
+}
+
 XLATensor XLATensor::reshape(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
