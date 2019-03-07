@@ -1060,6 +1060,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::svd(
                          bridge::AtenFromXlaTensor(std::get<2>(results)));
 }
 
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::qr(
+    const at::Tensor& self) const {
+  // Currently, ATen doesn't have a full_matrices option. Once this
+  // is added, this API will have to be changed.
+  auto results = XLATensor::qr(bridge::GetXlaTensor(self), false);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
                                                          int64_t k, int64_t dim,
                                                          bool keepdim) const {

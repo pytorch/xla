@@ -299,6 +299,9 @@ class XLATensor {
                                                          bool some,
                                                          bool compute_uv);
 
+  static std::tuple<XLATensor, XLATensor> qr(const XLATensor& input,
+                                             bool full_matrices);
+
   static std::tuple<XLATensor, XLATensor> kthvalue(const XLATensor& input,
                                                    xla::int64 k, xla::int64 dim,
                                                    bool keepdim);
