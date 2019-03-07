@@ -3,16 +3,33 @@
 from __future__ import print_function
 
 import argparse
-import distutils.sysconfig
 import glob
 import os
+import site
 import subprocess
 
 
-def find_torch_xla_site(site_path):
-  dirs = glob.glob(os.path.join(site_path, 'torch_xla*'))
-  # Get the most recent one.
-  return sorted(dirs, key=os.path.getmtime)[-1]
+def find_torch_xla_site(site_paths):
+  for site_path in site_paths:
+    # If there is one named 'torch_xla', this is what we pick.
+    path = os.path.join(site_path, 'torch_xla', 'lib')
+    if os.path.isdir(path):
+      return [site_path, path]
+    dirs = glob.glob(os.path.join(site_path, 'torch_xla*'))
+    # Get the most recent one.
+    for xpath in sorted(dirs, key=os.path.getmtime):
+      path = os.path.join(xpath, 'lib')
+      if os.path.isdir(path):
+        return [site_path, path]
+  raise RuntimeError('Unable to find torch_xla package in {}'.format(site_path))
+
+
+def find_torch_site(site_paths):
+  for site_path in site_paths:
+    path = os.path.join(site_path, 'torch', 'lib')
+    if os.path.isdir(path):
+      return [path]
+  raise RuntimeError('Unable to find torch package in {}'.format(site_path))
 
 
 def list_rpaths(path):
@@ -29,13 +46,11 @@ def set_rpaths(path, rpaths):
 
 
 def fixup_binary(args):
-  site_path = distutils.sysconfig.get_python_lib()
-  site_xla_path = find_torch_xla_site(site_path)
+  site_paths = site.getsitepackages()
+  xla_rpaths = find_torch_xla_site(site_paths)
+  torch_rpaths = find_torch_site(site_paths)
   rpaths = list_rpaths(args.binary)
-  rpaths = [
-      os.path.join(site_xla_path, 'torch_xla/lib'), site_xla_path,
-      os.path.join(site_path, 'torch/lib'),
-  ] + rpaths
+  rpaths = xla_rpaths + torch_rpaths + rpaths
   set_rpaths(args.binary, rpaths)
 
 
