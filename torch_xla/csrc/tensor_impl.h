@@ -20,7 +20,15 @@ class XLATensorImpl : public c10::TensorImpl {
 
   c10::intrusive_ptr<c10::TensorImpl> shallow_copy_and_detach() const override;
 
+  at::IntArrayRef sizes() const override;
+
+  int64_t dim() const override;
+
+  int64_t numel() const override;
+
   bool is_contiguous() const override;
+
+  int64_t size(int64_t d) const override;
 
  private:
   void SetupSizeProperties();

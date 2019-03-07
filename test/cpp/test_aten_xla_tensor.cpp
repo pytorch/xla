@@ -2780,6 +2780,10 @@ TEST_F(AtenXlaTensorTest, TestSqueezeAllInPlace) {
     at::Tensor xla_output = xla_input.squeeze_();
     AllClose(output, xla_output);
     AllClose(input, xla_input);
+    ASSERT_EQ(input.dim(), xla_input.dim());
+    for (int64_t dim_idx = 0; dim_idx < input.dim(); ++dim_idx) {
+      ASSERT_EQ(input.size(dim_idx), xla_input.size(dim_idx));
+    }
   });
 }
 
@@ -2806,6 +2810,10 @@ TEST_F(AtenXlaTensorTest, TestSqueezeOneInPlace) {
       at::Tensor xla_output = xla_input.squeeze_(dim);
       AllClose(output, xla_output);
       AllClose(input, xla_input);
+      ASSERT_EQ(input.dim(), xla_input.dim());
+      for (int64_t dim_idx = 0; dim_idx < input.dim(); ++dim_idx) {
+        ASSERT_EQ(input.size(dim_idx), xla_input.size(dim_idx));
+      }
     });
   }
 }
@@ -2833,6 +2841,10 @@ TEST_F(AtenXlaTensorTest, TestUnsqueezeInPlace) {
       at::Tensor xla_output = xla_input.unsqueeze_(dim);
       AllClose(output, xla_output);
       AllClose(input, xla_input);
+      ASSERT_EQ(input.dim(), xla_input.dim());
+      for (int64_t dim_idx = 0; dim_idx < input.dim(); ++dim_idx) {
+        ASSERT_EQ(input.size(dim_idx), xla_input.size(dim_idx));
+      }
     });
   }
 }
