@@ -327,7 +327,7 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
     // If we have an active view, and a SetIrValue() happens, it means we are
     // within an in-place execution context, and we need to update the view's
     // alias as well.
-    data()->view->Update(ir_value);
+    data()->view = UpdateView(data()->view, ir_value);
   }
   // We do not want to nullify that XLA data pointer here, as otherwise the
   // tensor apply computation caching will not work correctly.
@@ -1782,6 +1782,19 @@ XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
   ViewInfo view_info(std::move(narrow_shape), input_shape.get().dimensions());
   view_info.indices[dim] = start;
   return input.CreateView(std::move(view_info));
+}
+
+std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
+                                            ir::Value ir_value) const {
+  if (ir_value.shape().dimensions() != view->shape().dimensions()) {
+    XLA_CHECK_EQ(xla::util::Multiply<xla::int64>(ir_value.shape().dimensions()),
+                 xla::util::Multiply<xla::int64>(view->shape().dimensions()))
+        << ir_value.shape() << " vs. " << view->shape();
+    ViewInfo view_info(ir_value.shape(), view->shape().dimensions());
+    view = view->CreateSubView(view_info.shape, view_info);
+  }
+  view->Update(ir_value);
+  return view;
 }
 
 XLATensor XLATensor::CreateView(ViewInfo view_info) const {
