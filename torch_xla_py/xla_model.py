@@ -4,7 +4,7 @@ import collections
 import gc
 from six import itervalues
 import os
-import queue
+import re
 import threading
 import time
 import torch
@@ -19,6 +19,18 @@ MultiBatch = collections.namedtuple('MultiBatch',
 
 def xla_device(n=0):
   return torch.device('xla:{}'.format(n))
+
+
+def get_xla_supported_devices(devkind=None):
+  devkind = devkind or ['TPU', 'GPU', 'CPU']
+  devices = torch_xla._XLAC._xla_get_devices()
+  for kind in devkind:
+    kind_devices = []
+    for i, device in enumerate(devices):
+      if re.match(kind + r':\d+$', device):
+        kind_devices.append('xla:{}'.format(i))
+    if kind_devices:
+      return kind_devices
 
 
 class RateTracker(object):
@@ -222,6 +234,7 @@ def backward_passes(graph):
 
 
 def convert_to_xla_tensors(inputs, devices=None):
+
   def convert(tensors, devices):
     assert devices
     return torch_xla._XLAC._xla_create_tensors(tensors, devices)
@@ -233,6 +246,7 @@ def convert_to_xla_tensors(inputs, devices=None):
 
 
 def convert_to_tensors(inputs):
+
   def convert(tensors, devices):
     assert not devices
     return torch_xla._XLAC._xla_to_tensors(tensors)

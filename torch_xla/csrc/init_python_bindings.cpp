@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
@@ -98,6 +99,9 @@ void InitXlaModuleBindings(py::module m) {
               };
           return GetTensorsDump(tensors, coverter);
         });
+  m.def("_xla_get_devices", []() {
+    return xla::ComputationClient::Get()->GetAvailableDevices();
+  });
   m.def("_xla_sync_multi", [](std::vector<XLATensor>& tensors) {
     NoGilSection nogil;
     XLATensor::ApplyPendingGraph(&tensors, /*apply_context=*/nullptr);
