@@ -771,7 +771,7 @@ class TestGradients(XlaTestCase):
     xm.forward_passes(fwd.graph)
 
     inputs_params = inputs + list(model.parameters())
-    inputs_params_buffers = inputs + list(fwd.params())
+    inputs_params_buffers = inputs + list(fwd.initial_ivalues())
 
     gradient = torch._C._jit_differentiate(fwd.graph)
     xm.forward_passes(gradient.f)
