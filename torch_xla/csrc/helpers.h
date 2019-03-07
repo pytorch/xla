@@ -148,6 +148,11 @@ class XlaHelpers {
                                   xla::int64 expected_rank,
                                   xla::int64 offset = 0);
 
+  // Creates a transposition from the given input and dimensions.
+  static std::vector<xla::int64> MakeTransposePermutation(xla::int64 dim0,
+                                                          xla::int64 dim1,
+                                                          xla::int64 rank);
+
   // Performs type promotion to make sure both operations return the same type.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
                                                          const xla::XlaOp& op2);
