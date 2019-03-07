@@ -25,22 +25,37 @@
 namespace torch_xla {
 namespace {
 
+// Extract the IValue pointers from a named IValue dictionary.
+std::unordered_set<torch::jit::IValue*> ToIValueSet(
+    const torch::OrderedDict<std::string, torch::jit::script::NamedIValue>&
+        named_ivalue_dict) {
+  std::unordered_set<torch::jit::IValue*> ivalue_set;
+  for (auto& named_ivalue : named_ivalue_dict) {
+    ivalue_set.insert(named_ivalue->slot());
+  }
+  XLA_CHECK_EQ(ivalue_set.size(), named_ivalue_dict.size())
+      << "Found duplicated values in the named IValue dictionary";
+  return ivalue_set;
+}
+
 void GatherParameters(std::vector<at::Tensor>* values,
                       std::vector<bool>* requires_grad,
-                      const torch::jit::script::Module& m) {
-  for (auto& param : m.get_parameters()) {
-    values->push_back(param->slot()->toTensor());
-    requires_grad->push_back(true);
-  }
-  for (auto& param : m.get_attributes()) {
-    if (!param->slot()->isTensor()) {
-      continue;
+                      const torch::jit::script::Module& m,
+                      const torch::jit::script::Method* forward) {
+  const auto parameter_set = ToIValueSet(m.get_parameters());
+  const auto attribute_set = ToIValueSet(m.get_attributes());
+  for (torch::jit::IValue* initial_ivalue : forward->initial_ivalues()) {
+    if (parameter_set.find(initial_ivalue) != parameter_set.end()) {
+      values->push_back(initial_ivalue->toTensor());
+      requires_grad->push_back(true);
+    } else if (attribute_set.find(initial_ivalue) != attribute_set.end() &&
+               initial_ivalue->isTensor()) {
+      values->push_back(initial_ivalue->toTensor());
+      requires_grad->push_back(false);
     }
-    values->push_back(param->slot()->toTensor());
-    requires_grad->push_back(false);
   }
   for (const auto& sub : m.get_modules()) {
-    GatherParameters(values, requires_grad, *sub->module);
+    GatherParameters(values, requires_grad, *sub->module, forward);
   }
 }
 
@@ -94,7 +109,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   std::vector<at::Tensor> params_buffers_regather;
   std::vector<bool> param_requires_grad;
   GatherParameters(&params_buffers_regather, &param_requires_grad,
-                   *script_module_);
+                   *script_module_, forward);
   // The loop below is going to send individual parameters to the different
   // cores. We might need to do something smarter here.
   devices_ = CommonDevicesForReplicas(inputs);
