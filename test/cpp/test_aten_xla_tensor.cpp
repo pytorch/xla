@@ -648,6 +648,24 @@ TEST_F(AtenXlaTensorTest, TestSVD) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestQR) {
+  static const int dims[] = {4, 7};
+  for (auto m : dims) {
+    for (auto n : dims) {
+      at::Tensor a = at::rand({m, n}, at::TensorOptions(at::kFloat));
+      auto b = at::qr(a);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+        auto xla_b = at::qr(xla_a);
+        AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+        AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(), /*rtol=*/1e-3,
+                 /*atol=*/1e-4);
+      });
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestKthValue) {
   at::Tensor a = at::rand({4, 5, 3}, at::TensorOptions(at::kFloat));
   for (int k = 1; k <= 3; ++k) {

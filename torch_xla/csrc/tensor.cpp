@@ -59,6 +59,7 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/prod.h"
+#include "torch_xla/csrc/ops/qr.h"
 #include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
@@ -1014,6 +1015,14 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::svd(
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)),
                          input.CreateFrom(ir::Value(node, 2)));
+}
+
+std::tuple<XLATensor, XLATensor> XLATensor::qr(const XLATensor& input,
+                                               bool full_matrices) {
+  ir::NodePtr node =
+      ir::MakeNode<ir::ops::QR>(input.GetIrValue(), full_matrices);
+  return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
+                         input.CreateFrom(ir::Value(node, 1)));
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
