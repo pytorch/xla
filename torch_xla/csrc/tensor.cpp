@@ -1517,8 +1517,11 @@ XLATensor::native_batch_norm_backward(
 XLATensor XLATensor::permute(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const xla::int64> dims) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Permute>(input.GetIrValue(), dims));
+  auto input_shape = input.shape();
+  ViewInfo view_info(
+      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()),
+      xla::util::ToVector<xla::int64>(dims), input_shape.get().element_type());
+  return input.CreateView(std::move(view_info));
 }
 
 XLATensor XLATensor::repeat(
@@ -1747,7 +1750,13 @@ XLATensor XLATensor::threshold_backward(const XLATensor& grad_output,
 
 XLATensor XLATensor::transpose(const XLATensor& input, xla::int64 dim0,
                                xla::int64 dim1) {
-  return input.CreateFrom(ir::ops::TransposeOp(input.GetIrValue(), dim0, dim1));
+  auto input_shape = input.shape();
+  auto permute_dims = XlaHelpers::MakeTransposePermutation(
+      /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
+  ViewInfo view_info(
+      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()),
+      permute_dims, input_shape.get().element_type());
+  return input.CreateView(std::move(view_info));
 }
 
 void XLATensor::transpose_(XLATensor& input, xla::int64 dim0, xla::int64 dim1) {

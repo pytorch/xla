@@ -2288,6 +2288,25 @@ TEST_F(AtenXlaTensorTest, TestViewOfViewMod) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestViewSqueezeAddInPlace) {
+  at::Tensor input = at::zeros({2, 3, 1}, at::TensorOptions(at::kFloat));
+  std::vector<int64_t> view_size = {2, 3, 1, 1};
+  int squeeze_dim = 2;
+  at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor output = input.view(view_size);
+    output.squeeze_(squeeze_dim);
+    output.add_(one, 1.0);
+    at::Tensor xla_one = bridge::CreateXlaTensor(one, device);
+    at::Tensor xla_output = xla_input.view(view_size);
+    xla_output.squeeze_(squeeze_dim);
+    xla_output.add_(xla_one, 1.0);
+    AllClose(output, xla_output);
+    AllClose(input, xla_input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestNarrow) {
   at::Tensor a = at::rand({8, 10, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = a.narrow(1, 2, 6);
@@ -2879,6 +2898,29 @@ TEST_F(AtenXlaTensorTest, TestPermute) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestPermuteMod) {
+  std::vector<std::vector<int64_t>> dims_permutations = {
+      {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
+  std::vector<int64_t> input_sizes = {2, 3, 4};
+  for (std::vector<int64_t> dims_permutation : dims_permutations) {
+    at::Tensor input = at::zeros(input_sizes, at::TensorOptions(at::kFloat));
+    at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
+    at::Tensor output = input.permute(dims_permutation);
+    output.add_(one, 1.0);
+    input.add_(one, 1.0);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xinput = at::zeros(input_sizes, at::TensorOptions(at::kFloat));
+      at::Tensor xla_input = bridge::CreateXlaTensor(xinput, device);
+      at::Tensor xla_one = bridge::CreateXlaTensor(one, device);
+      at::Tensor xla_output = xla_input.permute(dims_permutation);
+      xla_output.add_(xla_one, 1.0);
+      xla_input.add_(xla_one, 1.0);
+      AllClose(output, xla_output);
+      AllClose(input, xla_input);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestTransposeDims) {
   at::Tensor input = at::rand({2, 3, 4}, at::TensorOptions(at::kFloat));
   int dim0 = 0;
@@ -2888,6 +2930,27 @@ TEST_F(AtenXlaTensorTest, TestTransposeDims) {
     at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     at::Tensor xla_output = at::transpose(xla_input, dim0, dim1);
     AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestTransposeDimsMod) {
+  std::vector<int64_t> input_sizes = {2, 3, 4};
+  int dim0 = 0;
+  int dim1 = 2;
+  at::Tensor input = at::zeros(input_sizes, at::TensorOptions(at::kFloat));
+  at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
+  at::Tensor output = at::transpose(input, dim0, dim1);
+  output.add_(one, 1.0);
+  input.add_(one, 1.0);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xinput = at::zeros(input_sizes, at::TensorOptions(at::kFloat));
+    at::Tensor xla_input = bridge::CreateXlaTensor(xinput, device);
+    at::Tensor xla_one = bridge::CreateXlaTensor(one, device);
+    at::Tensor xla_output = at::transpose(xla_input, dim0, dim1);
+    xla_output.add_(xla_one, 1.0);
+    xla_input.add_(xla_one, 1.0);
+    AllClose(output, xla_output);
+    AllClose(input, xla_input);
   });
 }
 

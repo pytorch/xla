@@ -205,6 +205,16 @@ xla::XlaOp XlaHelpers::ReshapeToRank(const xla::XlaOp& input,
   return xla::Reshape(input, dimensions);
 }
 
+std::vector<xla::int64> XlaHelpers::MakeTransposePermutation(xla::int64 dim0,
+                                                             xla::int64 dim1,
+                                                             xla::int64 rank) {
+  xla::int64 canonical_dim0 = GetCanonicalDimensionIndex(dim0, rank);
+  xla::int64 canonical_dim1 = GetCanonicalDimensionIndex(dim1, rank);
+  auto permute_dims = xla::util::Iota<xla::int64>(rank);
+  std::swap(permute_dims[canonical_dim0], permute_dims[canonical_dim1]);
+  return permute_dims;
+}
+
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
     const xla::XlaOp& op1, const xla::XlaOp& op2) {
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);

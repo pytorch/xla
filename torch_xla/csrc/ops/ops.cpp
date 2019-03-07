@@ -138,14 +138,10 @@ NodePtr ReluOp(const Value& input) {
 }
 
 NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1) {
-  xla::int64 rank = input.shape().rank();
-  xla::int64 canonical_dim0 =
-      XlaHelpers::GetCanonicalDimensionIndex(dim0, rank);
-  xla::int64 canonical_dim1 =
-      XlaHelpers::GetCanonicalDimensionIndex(dim1, rank);
-  auto permute_dims = xla::util::Iota<xla::int64>(rank);
-  std::swap(permute_dims[canonical_dim0], permute_dims[canonical_dim1]);
-  return ir::MakeNode<ir::ops::Permute>(input, permute_dims);
+  return ir::MakeNode<ir::ops::Permute>(
+      input,
+      XlaHelpers::MakeTransposePermutation(/*dim0=*/dim0, /*dim1=*/dim1,
+                                           /*rank=*/input.shape().rank()));
 }
 
 NodePtr Sigmoid(const Value& input) {
