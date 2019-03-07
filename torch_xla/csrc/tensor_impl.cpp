@@ -75,10 +75,30 @@ c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach()
   return impl;
 }
 
+at::IntArrayRef XLATensorImpl::sizes() const {
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  return c10::TensorImpl::sizes();
+}
+
+int64_t XLATensorImpl::dim() const {
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  return c10::TensorImpl::dim();
+}
+
+int64_t XLATensorImpl::numel() const {
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  return c10::TensorImpl::numel();
+}
+
 bool XLATensorImpl::is_contiguous() const {
   // Only check that the storage is already contiguous.
   XLA_CHECK(is_contiguous_) << "Non-contiguous storage for XLA tensor";
   return true;
+}
+
+int64_t XLATensorImpl::size(int64_t d) const {
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  return c10::TensorImpl::size(d);
 }
 
 void XLATensorImpl::SetupSizeProperties() {
