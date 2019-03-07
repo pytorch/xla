@@ -25,12 +25,19 @@
 namespace torch_xla {
 namespace {
 
-void GatherParameters(std::vector<at::Tensor*>* values,
+void GatherParameters(std::vector<at::Tensor>* values,
                       std::vector<bool>* requires_grad,
                       const torch::jit::script::Module& m) {
   for (auto& param : m.get_parameters()) {
-    values->push_back(param->slot());
-    requires_grad->push_back(!param->is_buffer);
+    values->push_back(param->slot()->toTensor());
+    requires_grad->push_back(true);
+  }
+  for (auto& param : m.get_attributes()) {
+    if (!param->slot()->isTensor()) {
+      continue;
+    }
+    values->push_back(param->slot()->toTensor());
+    requires_grad->push_back(false);
   }
   for (const auto& sub : m.get_modules()) {
     GatherParameters(values, requires_grad, *sub->module);
@@ -84,7 +91,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
   RunForwardPasses(&forward_graph);
 
   // Convert model parameters to vector of XLATensors.
-  std::vector<at::Tensor*> params_buffers_regather;
+  std::vector<at::Tensor> params_buffers_regather;
   std::vector<bool> param_requires_grad;
   GatherParameters(&params_buffers_regather, &param_requires_grad,
                    *script_module_);
@@ -96,7 +103,7 @@ void XlaModule::Initialize(const TensorBatchVector& inputs) {
     TensorBatchVector::value_type optimizable_replica_params;
     for (size_t j = 0; j < params_buffers_regather.size(); ++j) {
       const torch::autograd::Variable& var_ref =
-          torch::autograd::as_variable_ref(*params_buffers_regather[j]);
+          torch::autograd::as_variable_ref(params_buffers_regather[j]);
       replica_params.push_back(
           XLATensor::Create(var_ref, device, var_ref.requires_grad()));
       if (param_requires_grad[j]) {
