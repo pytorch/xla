@@ -311,6 +311,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   std::tuple<at::Tensor, at::Tensor, at::Tensor> svd(
       const at::Tensor& self, bool some, bool compute_uv) const override;
 
+  std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self) const override;
+
   std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self, int64_t k,
                                               int64_t dim,
                                               bool keepdim) const override;
