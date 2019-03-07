@@ -26,6 +26,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
+import torch_xla_py.parallel_loader as pl
 import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
 import torchvision
@@ -47,25 +48,12 @@ class Holder(object):
 
 
 def _get_device_support(devname):
-  assert devname in ['TPU', 'CPU']
-  # If the Cloud TPU config file is present, we support TPUs.
-  if (os.path.isfile(os.path.join(os.environ['HOME'], '.pytorch_tpu.conf')) or
-      os.environ.get('XRT_TPU_CONFIG', None)):
-    if devname == 'TPU':
-      return DeviceSupport(
-          num_devices=int(os.environ.get('TPU_NUM_DEVICES', 8)))
-    return DeviceSupport(num_devices=int(os.environ.get('CPU_NUM_DEVICES', 1)))
-
-  xrt_devmap = os.environ.get('XRT_DEVICE_MAP', None)
-  if xrt_devmap is None:
-    return None
+  devices = torch_xla._XLAC._xla_get_devices()
   num_devices = 0
-  for dev_spec in xrt_devmap.split('|'):
-    dev_parts = dev_spec.split(';')
-    if dev_parts[0].startswith(devname):
+  for device in devices:
+    if re.match(devname + r':\d+$', device):
       num_devices += 1
-  if num_devices > 0:
-    return DeviceSupport(num_devices=num_devices)
+  return DeviceSupport(num_devices=num_devices) if num_devices > 0 else None
 
 
 def _support_replicated(devname, num_devices):
@@ -236,6 +224,22 @@ class XlaTestCase(TestCase):
           updated_params[i],
           rel_err=rel_err,
           abs_err=abs_err)
+
+
+class TestParallelLoader(XlaTestCase):
+
+  def test(self):
+    devices = xm.get_xla_supported_devices()
+    A = 3.11
+    B = 4.09
+    batch_size = 128
+    gen = xu.FnDataGenerator(
+        lambda x: x * A + B, batch_size, _gen_tensor, dim=8, count=10)
+    para_loader = pl.ParallelLoader(gen, batch_size * 1, devices)
+    for x, (data, target) in para_loader:
+      for device in devices:
+        dx = para_loader.to(data, device)
+        self.assertEqual(dx.device, torch.device(device))
 
 
 class TestMulAdd(XlaTestCase):
