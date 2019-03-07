@@ -130,7 +130,8 @@ class LinearIndex(object):
 
 class ToXlaTensorArena(object):
 
-  def __init__(self):
+  def __init__(self, convert_fn):
+    self.convert_fn = convert_fn
     self._tensors = []
     self._devices = []
     self._converted_tensors = None
@@ -144,17 +145,8 @@ class ToXlaTensorArena(object):
     return LinearIndex(len(self._tensors) - 1)
 
   def convert(self):
-    if not self._tensors:
-      return
-    if type(self._tensors[0]) == torch.Tensor:
-      assert self._devices
-      self._converted_tensors = torch_xla._XLAC._xla_create_tensors(
-          self._tensors, self._devices)
-    elif type(self._tensors[0]) == torch_xla._XLAC.XLATensor:
-      assert not self._devices
-      self._converted_tensors = torch_xla._XLAC._xla_to_tensors(self._tensors)
-    else:
-      self._converted_tensors = self._tensors
+    if self._tensors:
+      self._converted_tensors = self.convert_fn(self._tensors, self._devices)
 
   def get_converted_tensor(self, lindex):
     assert isinstance(lindex, LinearIndex)
@@ -230,14 +222,22 @@ def backward_passes(graph):
 
 
 def convert_to_xla_tensors(inputs, devices=None):
-  arena = ToXlaTensorArena()
+  def convert(tensors, devices):
+    assert devices
+    return torch_xla._XLAC._xla_create_tensors(tensors, devices)
+
+  arena = ToXlaTensorArena(convert)
   tensors = _collect_tensors(arena, torch.Tensor, inputs, devices=devices)
   arena.convert()
   return _replace_tensors(arena, tensors)
 
 
 def convert_to_tensors(inputs):
-  arena = ToXlaTensorArena()
+  def convert(tensors, devices):
+    assert not devices
+    return torch_xla._XLAC._xla_to_tensors(tensors)
+
+  arena = ToXlaTensorArena(convert)
   tensors = _collect_tensors(
       arena, torch_xla._XLAC.XLATensor, inputs, device=None)
   arena.convert()
@@ -399,12 +399,14 @@ class LoaderWrapper(object):
 
   def __init__(self,
                loader,
-               prefetch_size,
+               convert_fn,
                batch_size,
+               prefetch_size=4,
                num_cores=1,
                devices=None,
                fused_mode=False):
     self._loader = loader
+    self._convert_fn = convert_fn
     self._prefetch_size = prefetch_size
     self._batch_size = batch_size
     self._num_cores = num_cores
@@ -473,9 +475,9 @@ class LoaderWrapper(object):
       if item is None:
         break
       batch_number, (inputs, targets) = item
-      inputs_xla = convert_to_xla_tensors(inputs, devices=self._devices)
+      inputs_xla = self._convert_fn(inputs, devices=self._devices)
       if targets:
-        targets_xla = convert_to_xla_tensors(targets, devices=self._devices)
+        targets_xla = self._convert_fn(targets, devices=self._devices)
       else:
         targets_xla = []
       self._queue.put(batch_number, (inputs_xla, targets_xla))
@@ -607,8 +609,9 @@ class XlaModel(object):
             metrics_debug=False):
     wloader = LoaderWrapper(
         samples_loader,
-        self._loader_prefetch,
+        convert_to_xla_tensors,
         batch_size,
+        prefetch_size=self._loader_prefetch,
         num_cores=self._num_cores,
         devices=self._devices,
         fused_mode=True)
@@ -641,8 +644,9 @@ class XlaModel(object):
   def test(self, samples_loader, eval_fn, batch_size, log_fn=print):
     wloader = LoaderWrapper(
         samples_loader,
-        self._loader_prefetch,
+        convert_to_xla_tensors,
         batch_size,
+        prefetch_size=self._loader_prefetch,
         num_cores=self._num_cores,
         devices=self._devices,
         fused_mode=True)
