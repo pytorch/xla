@@ -1,14 +1,9 @@
 from __future__ import division
 from __future__ import print_function
 
-import collections
-from six import itervalues
 import multiprocessing.dummy
-import os
 import threading
-import time
 import torch
-import torch.nn as nn
 import torch_xla
 import torch_xla_py.utils as xu
 import torch_xla_py.keyd_queue as kq
