@@ -757,6 +757,9 @@ class XLATensor {
 
   void SetTensorData(at::Tensor tensor_data);
 
+  std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,
+                                   ir::Value ir_value) const;
+
   XLATensor CreateView(ViewInfo view_info) const;
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
