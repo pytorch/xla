@@ -795,6 +795,10 @@ string XrtComputationClient::GetDefaultDevice() const {
   return options_.default_device;
 }
 
+size_t XrtComputationClient::GetNumDevices() const {
+  return options_.device_map.size();
+}
+
 std::vector<string> XrtComputationClient::GetAvailableDevices() const {
   std::vector<string> devices;
   for (const auto& dev_target : options_.device_map) {

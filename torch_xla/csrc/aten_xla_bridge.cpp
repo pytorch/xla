@@ -1,5 +1,9 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 
+#include <map>
+#include <string>
+#include <vector>
+
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/device.h"
@@ -8,6 +12,41 @@
 
 namespace torch_xla {
 namespace bridge {
+namespace {
+
+class AtenXlaDeviceMapper {
+ public:
+  static AtenXlaDeviceMapper* Get();
+
+  size_t GetDeviceOrdinal(const Device& device) const {
+    auto it = devices_ordinals_.find(device);
+    XLA_CHECK(it != devices_ordinals_.end()) << device;
+    return it->second;
+  }
+
+  const Device& GetDeviceFromOrdinal(size_t ordinal) const {
+    return devices_.at(ordinal);
+  }
+
+ private:
+  AtenXlaDeviceMapper() {
+    for (auto& device_str :
+         xla::ComputationClient::Get()->GetAvailableDevices()) {
+      devices_.emplace_back(device_str);
+      devices_ordinals_[devices_.back()] = devices_.size() - 1;
+    }
+  }
+
+  std::vector<Device> devices_;
+  std::map<Device, size_t> devices_ordinals_;
+};
+
+AtenXlaDeviceMapper* AtenXlaDeviceMapper::Get() {
+  static AtenXlaDeviceMapper* device_mapper = new AtenXlaDeviceMapper();
+  return device_mapper;
+}
+
+}  // namespace
 
 c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor) {
   XLATensorImpl* impl =
@@ -109,27 +148,27 @@ c10::optional<Device> GetXlaDevice(const c10::Device& device) {
   if (device.type() != at::kXLA) {
     return c10::nullopt;
   }
-  Device xla_device = *GetDefaultDevice();
-  xla_device.ordinal = device.has_index() ? device.index() : 0;
-  return xla_device;
+  return AtenDeviceToXlaDevice(device);
 }
 
 Device AtenDeviceToXlaDevice(const c10::Device& device) {
-  int ordinal = device.has_index() ? device.index() : 0;
-  switch (device.type()) {
-    case at::kCPU:
-      return Device(DeviceType::CPU, ordinal);
-    case at::kCUDA:
-      return Device(DeviceType::GPU, ordinal);
-    case at::kXLA: {
-      Device xla_device = *GetDefaultDevice();
-      xla_device.ordinal = ordinal;
-      return xla_device;
+  XLA_CHECK_EQ(device.type(), at::kXLA) << device;
+  int ordinal = device.has_index() ? device.index() : -1;
+  if (ordinal < 0) {
+    c10::Device current_device = XLATensorImpl::GetCurrentAtenDevice();
+    if (current_device.has_index()) {
+      ordinal = current_device.index();
     }
-    default:
-      XLA_ERROR() << "Device type " << DeviceTypeName(device.type(), false)
-                  << " not supported";
   }
+  if (ordinal < 0) {
+    return *GetDefaultDevice();
+  }
+  return AtenXlaDeviceMapper::Get()->GetDeviceFromOrdinal(ordinal);
+}
+
+c10::Device XlaDeviceToAtenDevice(const Device& device) {
+  return c10::Device(at::kXLA,
+                     AtenXlaDeviceMapper::Get()->GetDeviceOrdinal(device));
 }
 
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor) {

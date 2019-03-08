@@ -19,8 +19,8 @@ namespace {
 
 struct XlaOptions {
   XlaOptions(const at::TensorOptions& options,
-             c10::optional<Device> device = c10::nullopt)
-      : device(std::move(device)) {
+             c10::optional<Device> device_opt = c10::nullopt)
+      : device(std::move(device_opt)) {
     if (options.has_device()) {
       device = bridge::AtenDeviceToXlaDevice(options.device());
     }

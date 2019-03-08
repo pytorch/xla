@@ -30,6 +30,8 @@ class XLATensorImpl : public c10::TensorImpl {
 
   int64_t size(int64_t d) const override;
 
+  static c10::Device GetCurrentAtenDevice();
+
  private:
   void SetupSizeProperties();
 
