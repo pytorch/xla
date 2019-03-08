@@ -123,6 +123,11 @@ class XlaHelpers {
   // indices are interpreted as follows: -1 is rank-1, -2 is rank-2 etc.
   static xla::int64 GetCanonicalDimensionIndex(xla::int64 dim, xla::int64 rank);
 
+  // Same as above, for multiple dimensions.
+  static std::vector<xla::int64> GetCanonicalDimensionIndices(
+      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+      xla::int64 rank);
+
   // Returns the canonical position in the dim dimension, handling negative
   // values for the position.
   static xla::int64 GetCanonicalPosition(

@@ -63,6 +63,15 @@ xla::int64 XlaHelpers::GetCanonicalDimensionIndex(xla::int64 dim,
   return dim_index;
 }
 
+std::vector<xla::int64> XlaHelpers::GetCanonicalDimensionIndices(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, xla::int64 rank) {
+  std::vector<xla::int64> canonical_dim_indices;
+  for (xla::int64 dim : dimensions) {
+    canonical_dim_indices.push_back(GetCanonicalDimensionIndex(dim, rank));
+  }
+  return canonical_dim_indices;
+}
+
 xla::int64 XlaHelpers::GetCanonicalPosition(
     tensorflow::gtl::ArraySlice<const xla::int64> dimensions, xla::int64 dim,
     xla::int64 pos) {

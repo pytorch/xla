@@ -1750,8 +1750,8 @@ at::Tensor AtenXlaType::argmax(const at::Tensor& self, int64_t dim,
 }
 
 at::Tensor AtenXlaType::argmax(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(XLATensor::argmax(
-      bridge::GetXlaTensor(self), /*dim=*/-1, /*keepdim=*/false));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::argmax(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::argmin(const at::Tensor& self, int64_t dim,
@@ -1761,8 +1761,8 @@ at::Tensor AtenXlaType::argmin(const at::Tensor& self, int64_t dim,
 }
 
 at::Tensor AtenXlaType::argmin(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(XLATensor::argmin(
-      bridge::GetXlaTensor(self), /*dim=*/-1, /*keepdim=*/false));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::argmin(bridge::GetXlaTensor(self)));
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
