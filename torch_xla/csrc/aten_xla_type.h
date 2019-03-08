@@ -120,6 +120,11 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& reciprocal_(at::Tensor& self) const override;
 
   at::Tensor pow(const at::Tensor& self, at::Scalar exponent) const override;
+  at::Tensor pow(const at::Tensor& self,
+                 const at::Tensor& exponent) const override;
+  at::Tensor pow(at::Scalar self, const at::Tensor& exponent) const override;
+  at::Tensor& pow_(at::Tensor& self, at::Scalar exponent) const override;
+  at::Tensor& pow_(at::Tensor& self, const at::Tensor& exponent) const override;
 
   at::Tensor add(const at::Tensor& self, const at::Tensor& other,
                  at::Scalar alpha) const override;
