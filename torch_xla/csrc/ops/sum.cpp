@@ -16,7 +16,7 @@ namespace ops {
 namespace {
 
 xla::XlaOp LowerSum(const xla::XlaOp& input,
-                    const std::vector<xla::int64>& dimensions,
+                    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions,
                     c10::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input;
@@ -30,10 +30,10 @@ xla::XlaOp LowerSum(const xla::XlaOp& input,
   return BuildSum(casted_input, dimensions, keep_reduced_dimensions);
 }
 
-xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<xla::int64>& dimensions,
-                           bool keep_reduced_dimensions,
-                           c10::optional<at::ScalarType> dtype) {
+xla::Shape NodeOutputShape(
+    const Value& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype) {
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
