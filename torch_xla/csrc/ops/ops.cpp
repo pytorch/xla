@@ -410,9 +410,9 @@ NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
 }
 
 NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
-             c10::optional<at::ScalarType> dtype, at::IntArrayRef dim,
-             bool keepdim) {
-  std::vector<xla::int64> dimensions(dim.begin(), dim.end());
+             c10::optional<at::ScalarType> dtype,
+             tensorflow::gtl::ArraySlice<const xla::int64> dims, bool keepdim) {
+  auto dimensions = xla::util::ToVector<xla::int64>(dims);
   if (dimensions.empty()) {
     dimensions = xla::util::Iota<xla::int64>(input.shape().rank());
   }
