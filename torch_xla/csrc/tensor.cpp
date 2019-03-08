@@ -1372,6 +1372,9 @@ XLATensor XLATensor::mean(const XLATensor& input,
                           std::vector<xla::int64> dimensions,
                           bool keep_reduced_dimensions,
                           c10::optional<at::ScalarType> dtype) {
+  for (auto& d : dimensions) {
+    d = GetCanonicalDimension(input, d);
+  }
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Mean>(input.GetIrValue(), std::move(dimensions),
                                   keep_reduced_dimensions, dtype));
