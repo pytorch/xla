@@ -55,6 +55,8 @@ c10::optional<Device> GetXlaDevice(const c10::Device& device);
 
 Device AtenDeviceToXlaDevice(const c10::Device& device);
 
+c10::Device XlaDeviceToAtenDevice(const Device& device);
+
 // Creates an ATen tensor with XLA type id from an XLATensor.
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor);
 

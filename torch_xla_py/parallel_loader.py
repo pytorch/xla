@@ -74,18 +74,34 @@ class ParallelLoader(object):
     self._loader_queue.close_write()
 
   def _create_tensor_slices(self, data):
-    mini_batch_size = self._batch_size // len(self._devices)
-    slices = []
-    for x in range(0, self._batch_size, mini_batch_size):
-      slices.append(data[x:x + mini_batch_size])
-    return slices
+    if isinstance(data, torch.Tensor):
+      mini_batch_size = self._batch_size // len(self._devices)
+      slices = []
+      for x in range(0, self._batch_size, mini_batch_size):
+        slices.append(data[x:x + mini_batch_size])
+      return slices
+    elif isinstance(data, (list, tuple)):
+      slices = []
+      for xdata in data:
+        slices.append(self._create_tensor_slices(xdata))
+      return list(zip(*slices))
+    else:
+      raise RuntimeError('Unsupported input type: {}'.format(type(data)))
 
   def _send_to_devices(self, slices, pool):
 
     def _send(i):
-      return slices[i].to(torch.device(self._devices[i]))
+      return slices[i].to(device=torch.device(self._devices[i]))
 
-    return pool.map(_send, range(0, len(slices)))
+    if isinstance(slices[0], torch.Tensor):
+      return pool.map(_send, range(0, len(slices)))
+    elif isinstance(slices[0], (list, tuple)):
+      device_slices = []
+      for xslice in slices:
+        device_slices.append(self._send_to_devices(xslice, pool))
+      return list(zip(*device_slices))
+    else:
+      raise RuntimeError('Unsupported input type: {}'.format(type(slices[0])))
 
   def _worker(self):
     pool = multiprocessing.dummy.Pool(len(self._devices))
