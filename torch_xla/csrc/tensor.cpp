@@ -1456,6 +1456,25 @@ XLATensor XLATensor::pow(const XLATensor& input, at::Scalar exponent) {
   return input.CreateFrom(ir::ops::Pow(input.GetIrValue(), exponent_node));
 }
 
+XLATensor XLATensor::pow(const XLATensor& input, const XLATensor& exponent) {
+  return input.CreateFrom(
+      ir::ops::Pow(input.GetIrValue(), exponent.GetIrValue()));
+}
+
+XLATensor XLATensor::pow(at::Scalar input, const XLATensor& exponent) {
+  ir::NodePtr input_node = ir::ops::ScalarOp(input, exponent.shape());
+  return exponent.CreateFrom(ir::ops::Pow(input_node, exponent.GetIrValue()));
+}
+
+void XLATensor::pow_(XLATensor& input, at::Scalar exponent) {
+  ir::NodePtr exponent_node = ir::ops::ScalarOp(exponent, input.shape());
+  input.SetIrValue(ir::ops::Pow(input.GetIrValue(), exponent_node));
+}
+
+void XLATensor::pow_(XLATensor& input, const XLATensor& exponent) {
+  input.SetIrValue(ir::ops::Pow(input.GetIrValue(), exponent.GetIrValue()));
+}
+
 XLATensor XLATensor::mean(const XLATensor& input,
                           std::vector<xla::int64> dimensions,
                           bool keep_reduced_dimensions,

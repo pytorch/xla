@@ -401,6 +401,30 @@ at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) const {
       XLATensor::pow(bridge::GetXlaTensor(self), exponent));
 }
 
+at::Tensor AtenXlaType::pow(const at::Tensor& self,
+                            const at::Tensor& exponent) const {
+  return bridge::AtenFromXlaTensor(XLATensor::pow(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(exponent)));
+}
+
+at::Tensor AtenXlaType::pow(at::Scalar self, const at::Tensor& exponent) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::pow(self, bridge::GetXlaTensor(exponent)));
+}
+
+at::Tensor& AtenXlaType::pow_(at::Tensor& self, at::Scalar exponent) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::pow_(self_tensor, exponent);
+  return self;
+}
+
+at::Tensor& AtenXlaType::pow_(at::Tensor& self,
+                              const at::Tensor& exponent) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::pow_(self_tensor, bridge::GetXlaTensor(exponent));
+  return self;
+}
+
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
