@@ -5,7 +5,9 @@
 #include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/macros/Macros.h>
 
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -21,32 +23,37 @@ struct XLAAllocatorRegistrar {
   }
 };
 
+thread_local c10::Device g_current_device(at::DeviceType::XLA, 0);
+
 struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   at::DeviceType type() const override { return at::DeviceType::XLA; }
 
-  c10::Device exchangeDevice(c10::Device) const override {
-    return c10::Device(at::DeviceType::XLA, 0);
+  c10::Device exchangeDevice(c10::Device device) const override {
+    std::swap(g_current_device, device);
+    return device;
   }
 
-  c10::Device getDevice() const override {
-    return c10::Device(at::DeviceType::XLA, 0);
+  c10::Device getDevice() const override { return g_current_device; }
+
+  void setDevice(c10::Device device) const override {
+    g_current_device = device;
   }
 
-  void setDevice(c10::Device) const override {}
+  void uncheckedSetDevice(c10::Device device) const noexcept override {
+    g_current_device = device;
+  }
 
-  void uncheckedSetDevice(c10::Device d) const noexcept override {}
-
-  c10::Stream getStream(c10::Device d) const noexcept override {
-    return c10::Stream(c10::Stream::DEFAULT,
-                       c10::Device(at::DeviceType::XLA, 0));
+  c10::Stream getStream(c10::Device device) const noexcept override {
+    return c10::Stream(c10::Stream::DEFAULT, device);
   }
 
   c10::Stream exchangeStream(c10::Stream s) const noexcept override {
-    return c10::Stream(c10::Stream::DEFAULT,
-                       c10::Device(at::DeviceType::XLA, 0));
+    return c10::Stream(c10::Stream::DEFAULT, g_current_device);
   }
 
-  c10::DeviceIndex deviceCount() const override { return 1; }
+  c10::DeviceIndex deviceCount() const override {
+    return xla::ComputationClient::Get()->GetNumDevices();
+  }
 };
 
 C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
@@ -123,8 +130,10 @@ caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
 
 c10::Storage XLATensorImpl::GetStorage(const XLATensor& tensor) {
   Device device = tensor.GetDevice();
-  return c10::Storage::create_legacy(
-      at::Device(c10::DeviceType::XLA, device.ordinal), GetTypeMeta(tensor));
+  return c10::Storage::create_legacy(bridge::XlaDeviceToAtenDevice(device),
+                                     GetTypeMeta(tensor));
 }
+
+c10::Device XLATensorImpl::GetCurrentAtenDevice() { return g_current_device; }
 
 }  // namespace torch_xla

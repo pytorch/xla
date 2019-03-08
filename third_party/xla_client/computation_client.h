@@ -162,6 +162,8 @@ class ComputationClient {
 
   virtual string GetDefaultDevice() const = 0;
 
+  virtual size_t GetNumDevices() const = 0;
+
   virtual std::vector<string> GetAvailableDevices() const = 0;
 
   virtual void SetRngSeed(size_t seed) = 0;

@@ -232,14 +232,28 @@ class TestParallelLoader(XlaTestCase):
     devices = xm.get_xla_supported_devices()
     A = 3.11
     B = 4.09
-    batch_size = 128
+    batch_size = 128 * len(devices)
     gen = xu.FnDataGenerator(
-        lambda x: x * A + B, batch_size, _gen_tensor, dim=8, count=10)
-    para_loader = pl.ParallelLoader(gen, batch_size * 1, devices)
+        lambda x: x * A + B, batch_size, _gen_tensor, dims=[8], count=10)
+    para_loader = pl.ParallelLoader(gen, batch_size, devices)
     for x, (data, target) in para_loader:
       for device in devices:
         dx = para_loader.to(data, device)
         self.assertEqual(dx.device, torch.device(device))
+
+
+class TestAtenTensorTo(XlaTestCase):
+
+  def test(self):
+    devices = xm.get_xla_supported_devices()
+    for device in reversed(devices):
+      t = _gen_tensor(8, 12)
+      tto = t.to(device=torch.device(device))
+      self.assertEqual(tto.device, torch.device(device))
+    t = _gen_tensor(8, 12).to(device=torch.device(devices[0]))
+    for device in devices[1:]:
+      tto = t.to(device=torch.device(device))
+      self.assertEqual(tto.device, torch.device(device))
 
 
 class TestMulAdd(XlaTestCase):

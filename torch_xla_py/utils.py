@@ -40,11 +40,11 @@ class SampleGenerator(object):
 
 class FnDataGenerator(object):
 
-  def __init__(self, func, batch_size, gen_tensor, dim=1, count=1):
+  def __init__(self, func, batch_size, gen_tensor, dims=None, count=1):
     self._func = func
     self._batch_size = batch_size
     self._gen_tensor = gen_tensor
-    self._dim = dim
+    self._dims = list(dims) if dims else [1]
     self._count = count
     self._emitted = 0
 
@@ -56,7 +56,7 @@ class FnDataGenerator(object):
         self._func,
         self._batch_size,
         self._gen_tensor,
-        dim=self._dim,
+        dims=self._dims,
         count=self._count)
 
   def __next__(self):
@@ -65,7 +65,7 @@ class FnDataGenerator(object):
   def next(self):
     if self._emitted >= self._count:
       raise StopIteration
-    data = self._gen_tensor(self._batch_size, self._dim)
+    data = self._gen_tensor(self._batch_size, *self._dims)
     target = self._func(data)
     self._emitted += 1
     return data, target

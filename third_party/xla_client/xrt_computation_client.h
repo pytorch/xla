@@ -148,6 +148,8 @@ class XrtComputationClient : public ComputationClient {
 
   string GetDefaultDevice() const override;
 
+  size_t GetNumDevices() const override;
+
   std::vector<string> GetAvailableDevices() const override;
 
   void SetRngSeed(size_t seed) override;
