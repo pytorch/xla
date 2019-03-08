@@ -468,6 +468,10 @@ class XLATensor {
   static void reciprocal_(XLATensor& input);
 
   static XLATensor pow(const XLATensor& input, at::Scalar exponent);
+  static XLATensor pow(const XLATensor& input, const XLATensor& exponent);
+  static XLATensor pow(at::Scalar input, const XLATensor& exponent);
+  static void pow_(XLATensor& input, at::Scalar exponent);
+  static void pow_(XLATensor& input, const XLATensor& exponent);
 
   static XLATensor mean(const XLATensor& input,
                         std::vector<xla::int64> dimensions,

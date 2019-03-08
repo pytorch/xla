@@ -2102,13 +2102,74 @@ TEST_F(AtenXlaTensorTest, TestReciprocal) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestPow) {
-  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
-  at::Tensor b = at::pow(a, 4.09);
+TEST_F(AtenXlaTensorTest, TestPowTensorScalar) {
+  at::Tensor base = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Scalar exponent = 4.09;
+  at::Tensor result = at::pow(base, exponent);
   ForEachDevice([&](const Device& device) {
-    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
-    at::Tensor xla_b = at::pow(xla_a, 4.09);
-    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
+    at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
+    at::Tensor xla_result = at::pow(xla_base, exponent);
+    AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestPowTensorScalarInPlace) {
+  at::Tensor base = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Scalar exponent = 4.09;
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
+    at::Tensor result = base.pow_(exponent);
+    at::Tensor xla_result = xla_base.pow_(exponent);
+    AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
+    AllClose(base, xla_base, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestPowTensorTensor) {
+  at::Tensor base = at::abs(at::rand({4, 2}, at::TensorOptions(at::kFloat)));
+  at::Tensor exponent = at::rand({4, 2});
+  at::Tensor result = at::pow(base, exponent);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
+    at::Tensor xla_exponent = bridge::CreateXlaTensor(exponent, device);
+    at::Tensor xla_result = at::pow(xla_base, xla_exponent);
+    AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestPowTensorTensorInPlace) {
+  at::Tensor base = at::abs(at::rand({4, 2}, at::TensorOptions(at::kFloat)));
+  at::Tensor exponent = at::rand({4, 2});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
+    at::Tensor result = base.pow_(exponent);
+    at::Tensor xla_exponent = bridge::CreateXlaTensor(exponent, device);
+    at::Tensor xla_result = xla_base.pow_(xla_exponent);
+    AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
+    AllClose(base, xla_base, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestPowTensorTensorBroadcast) {
+  at::Tensor base = at::abs(at::rand({4, 2}, at::TensorOptions(at::kFloat)));
+  at::Tensor exponent = at::rand({4, 1});
+  at::Tensor result = at::pow(base, exponent);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
+    at::Tensor xla_exponent = bridge::CreateXlaTensor(exponent, device);
+    at::Tensor xla_result = at::pow(xla_base, xla_exponent);
+    AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestPowScalarTensor) {
+  at::Scalar base = 3.5;
+  at::Tensor exponent = at::rand({4, 2});
+  at::Tensor result = at::pow(base, exponent);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_exponent = bridge::CreateXlaTensor(exponent, device);
+    at::Tensor xla_result = at::pow(base, xla_exponent);
+    AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
 }
 
