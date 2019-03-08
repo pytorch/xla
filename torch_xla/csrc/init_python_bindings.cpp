@@ -99,9 +99,8 @@ void InitXlaModuleBindings(py::module m) {
               };
           return GetTensorsDump(tensors, coverter);
         });
-  m.def("_xla_get_devices", []() {
-    return xla::ComputationClient::Get()->GetAvailableDevices();
-  });
+  m.def("_xla_get_devices",
+        []() { return xla::ComputationClient::Get()->GetAvailableDevices(); });
   m.def("_xla_sync_multi", [](std::vector<XLATensor>& tensors) {
     NoGilSection nogil;
     XLATensor::ApplyPendingGraph(&tensors, /*apply_context=*/nullptr);
