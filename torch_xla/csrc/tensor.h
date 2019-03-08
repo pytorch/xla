@@ -818,9 +818,6 @@ class XLATensor {
 
   static xla::int64 GetNextTensorId();
 
-  static xla::int64 GetCanonicalDimension(const XLATensor& input,
-                                          xla::int64 dim);
-
   // Checks a tensor rank against an expectation and throws an error on
   // mismatch.
   static void CheckRank(const XLATensor& t, xla::int64 expected_rank,
