@@ -32,6 +32,10 @@ class XLATensorImpl : public c10::TensorImpl {
 
   static c10::Device GetCurrentAtenDevice();
 
+  static c10::Device SetCurrentAtenDevice(c10::Device device);
+
+  static void AtenInitialize();
+
  private:
   void SetupSizeProperties();
 

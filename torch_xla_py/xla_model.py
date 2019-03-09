@@ -21,6 +21,10 @@ def xla_device(n=0):
   return torch.device('xla:{}'.format(n))
 
 
+def is_xla_tensor(tensor):
+  return tensor.device.type == 'xla'
+
+
 def get_xla_supported_devices(devkind=None):
   devkind = devkind or ['TPU', 'GPU', 'CPU']
   devices = torch_xla._XLAC._xla_get_devices()
@@ -387,8 +391,11 @@ def sync_optimizer(optimizer):
           if isinstance(t, torch.Tensor):
             sync_tensors.append(t.data)
 
-  torch_xla._XLAC._xla_sync_multi(
-      [torch_xla._XLAC._get_xla_tensor(p) for p in sync_tensors])
+  torch_xla._XLAC._xla_sync_multi([
+      torch_xla._XLAC._get_xla_tensor(p)
+      for p in sync_tensors
+      if is_xla_tensor(p)
+  ])
 
 
 def optimizer_step(optimizer):
