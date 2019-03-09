@@ -149,6 +149,9 @@ NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
 NodePtr Identity(xla::int64 lines, xla::int64 cols,
                  xla::PrimitiveType element_type);
 
+NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
+            at::Scalar input_scale);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

@@ -2226,6 +2226,35 @@ TEST_F(AtenXlaTensorTest, TestThreshold) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestElu) {
+  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
+  at::Scalar alpha = 0.5;
+  at::Scalar scale = 2.5;
+  at::Scalar input_scale = 1.5;
+  float value = 20;
+  at::Tensor output = at::elu(input, alpha, scale, input_scale);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::elu(xla_input, alpha, scale, input_scale);
+    AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestEluInPlace) {
+  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
+  at::Scalar alpha = 0.5;
+  at::Scalar scale = 2.5;
+  at::Scalar input_scale = 1.5;
+  float value = 20;
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor output = at::elu_(input, alpha, scale, input_scale);
+    at::Tensor xla_output = at::elu_(xla_input, alpha, scale, input_scale);
+    AllClose(output, xla_output);
+    AllClose(input, xla_input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAddMatMul) {
   int in_channels = 32;
   int out_channels = 320;
