@@ -1787,6 +1787,11 @@ at::Tensor AtenXlaType::argmax(const at::Tensor& self, int64_t dim,
       XLATensor::argmax(bridge::GetXlaTensor(self), dim, keepdim));
 }
 
+at::Tensor AtenXlaType::_argmax(const at::Tensor& self, int64_t dim,
+                                bool keepdim) const {
+  return at::native::_argmax(self, dim, keepdim);
+}
+
 at::Tensor AtenXlaType::argmax(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::argmax(bridge::GetXlaTensor(self)));
@@ -1796,6 +1801,11 @@ at::Tensor AtenXlaType::argmin(const at::Tensor& self, int64_t dim,
                                bool keepdim) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::argmin(bridge::GetXlaTensor(self), dim, keepdim));
+}
+
+at::Tensor AtenXlaType::_argmin(const at::Tensor& self, int64_t dim,
+                                bool keepdim) const {
+  return at::native::_argmin(self, dim, keepdim);
 }
 
 at::Tensor AtenXlaType::argmin(const at::Tensor& self) const {

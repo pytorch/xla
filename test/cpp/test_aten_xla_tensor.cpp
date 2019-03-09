@@ -1099,6 +1099,18 @@ TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
+  at::Tensor a = at::rand({4, 4, 4}, at::TensorOptions(at::kFloat));
+  for (int dim : {1, -2}) {
+    at::Tensor b = at::_argmin(a, dim, /*keepdim=*/false);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+      at::Tensor xla_b = at::_argmin(xla_a, dim, /*keepdim=*/false);
+      AllClose(b, xla_b);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestArgMax) {
   at::Tensor a = at::rand({4, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::argmax(a);
@@ -1141,6 +1153,18 @@ TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
     at::Tensor xla_b = at::argmax(xla_a);
     AllClose(b, xla_b);
   });
+}
+
+TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
+  at::Tensor a = at::rand({4, 4, 4}, at::TensorOptions(at::kFloat));
+  for (int dim : {1, -2}) {
+    at::Tensor b = at::_argmax(a, dim, /*keepdim=*/false);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+      at::Tensor xla_b = at::_argmax(xla_a, dim, /*keepdim=*/false);
+      AllClose(b, xla_b);
+    });
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestAsin) {
