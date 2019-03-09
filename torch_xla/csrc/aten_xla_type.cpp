@@ -47,6 +47,11 @@ bool IsNonTrivialDilation(at::IntList dilation) {
       [](const int64_t dim_dilation) { return dim_dilation != 1; });
 }
 
+void AtenInitialize() {
+  RegisterAtenXlaTypes();
+  XLATensorImpl::AtenInitialize();
+}
+
 }  // namespace
 
 AtenXlaType::AtenXlaType(at::TensorTypeId type_id, bool is_variable,
@@ -2023,9 +2028,9 @@ at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
       XLATensor::diagonal(bridge::GetXlaTensor(self), offset, dim1, dim2));
 }
 
-void AtenXlaType::RegisterAtenTypes() {
+void AtenXlaType::InitializeAtenBindings() {
   static std::once_flag once;
-  std::call_once(once, []() { RegisterAtenXlaTypes(); });
+  std::call_once(once, []() { AtenInitialize(); });
 }
 
 }  // namespace torch_xla

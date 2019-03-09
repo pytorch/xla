@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import os
 import sys
+import time
 
 
 class Cleaner(object):
@@ -120,3 +121,10 @@ def eprint(*args, **kwargs):
 
 def get_print_fn(debug):
   return eprint if debug else null_print
+
+
+def timed(fn, msg='', printfn=eprint):
+  s = time.time()
+  result = fn()
+  printfn('{}{:.3f}ms'.format(msg, 1000.0 * (time.time() - s)))
+  return result

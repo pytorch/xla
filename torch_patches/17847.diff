@@ -1,0 +1,220 @@
+commit 64bb50e6f3c7e05810c175f7eead967091c09ec0
+Author: Davide Libenzi <dlibenzi@google.com>
+Date:   Sat Mar 9 18:21:09 2019 -0800
+
+    Enable autograd to recognize the XLA backend as one providing multiple devices, while not being CUDA/HIP.
+
+diff --git a/aten/src/ATen/Context.h b/aten/src/ATen/Context.h
+index ff75ba3a7..c2a8ca1aa 100644
+--- a/aten/src/ATen/Context.h
++++ b/aten/src/ATen/Context.h
+@@ -12,6 +12,7 @@
+ #include <ATen/core/VariableHooksInterface.h>
+ #include <ATen/detail/CUDAHooksInterface.h>
+ #include <ATen/detail/HIPHooksInterface.h>
++#include <ATen/detail/XLAHooksInterface.h>
+ #include <ATen/detail/ComplexHooksInterface.h>
+ #include <c10/util/Exception.h>
+ 
+@@ -76,6 +77,9 @@ class CAFFE2_API Context {
+   bool hasHIP() const {
+     return detail::getHIPHooks().hasHIP();
+   }
++  bool hasXLA() const {
++    return detail::getXLAHooks() != nullptr;
++  }
+   // defined in header so that getNonVariableType has ability to inline
+   // call_once check. getNonVariableType is called fairly frequently
+   THCState* lazyInitCUDA() {
+@@ -204,7 +208,15 @@ static inline bool hasHIP() {
+   return globalContext().hasHIP();
+ }
+ 
++static inline bool hasXLA() {
++  return globalContext().hasXLA();
++}
++
+ static inline size_t getNumGPUs() {
++  auto xla_hooks = detail::getXLAHooks();
++  if (xla_hooks != nullptr) {
++    return xla_hooks->num_devices();
++  }
+   if (hasCUDA()) {
+     return detail::getCUDAHooks().getNumGPUs();
+   }
+diff --git a/aten/src/ATen/detail/XLAHooksInterface.cpp b/aten/src/ATen/detail/XLAHooksInterface.cpp
+new file mode 100644
+index 000000000..70ec52355
+--- /dev/null
++++ b/aten/src/ATen/detail/XLAHooksInterface.cpp
+@@ -0,0 +1,22 @@
++#include <ATen/detail/XLAHooksInterface.h>
++
++#include <atomic>
++
++namespace at {
++namespace detail {
++namespace {
++
++std::atomic<XLAHooksInterface*> g_xla_hooks(nullptr);
++
++}  // namespace
++
++const XLAHooksInterface* getXLAHooks() {
++  return g_xla_hooks;
++}
++
++void setXLAHooks(XLAHooksInterface* xla_hooks) {
++  g_xla_hooks = xla_hooks;
++}
++
++} // namespace detail
++} // namespace at
+diff --git a/aten/src/ATen/detail/XLAHooksInterface.h b/aten/src/ATen/detail/XLAHooksInterface.h
+new file mode 100644
+index 000000000..2a74c085d
+--- /dev/null
++++ b/aten/src/ATen/detail/XLAHooksInterface.h
+@@ -0,0 +1,19 @@
++#pragma once
++
++#include <c10/macros/Export.h>
++
++namespace at {
++
++struct CAFFE2_API XLAHooksInterface {
++  virtual ~XLAHooksInterface() {}
++
++  virtual int num_devices() const = 0;
++};
++
++namespace detail {
++
++CAFFE2_API const XLAHooksInterface* getXLAHooks();
++CAFFE2_API void setXLAHooks(XLAHooksInterface* xla_hooks);
++
++} // namespace detail
++} // namespace at
+diff --git a/torch/csrc/autograd/engine.cpp b/torch/csrc/autograd/engine.cpp
+index 44ab9c535..480f321b0 100644
+--- a/torch/csrc/autograd/engine.cpp
++++ b/torch/csrc/autograd/engine.cpp
+@@ -220,6 +220,9 @@ auto Engine::thread_init(int device) -> void {
+     if (at::hasHIP()) {
+       guard.reset_device(at::Device(at::DeviceType::HIP, device));
+     }
++    if (at::hasXLA()) {
++      guard.reset_device(at::Device(at::DeviceType::XLA, device));
++    }
+   }
+   worker_device = device;
+   thread_main(nullptr);
+@@ -352,7 +355,7 @@ static void validate_outputs(const edge_list& edges, variable_list& grads, const
+       ss << metadata.type() << " but got " << grads[i].type();
+       AT_ERROR(format_error(ss.str()));
+     }
+-    const auto output_device = output.is_cuda() ? output.get_device() : -1;
++    const auto output_device = get_tensor_device(output);
+     if (output_device != metadata.device()) {
+       std::stringstream ss;
+       ss << "invalid gradient at index " << i << " - expected device ";
+diff --git a/torch/csrc/autograd/input_buffer.cpp b/torch/csrc/autograd/input_buffer.cpp
+index 5322bee67..d14eab743 100644
+--- a/torch/csrc/autograd/input_buffer.cpp
++++ b/torch/csrc/autograd/input_buffer.cpp
+@@ -1,6 +1,7 @@
+ #include <torch/csrc/autograd/input_buffer.h>
+ 
+ #include <torch/csrc/autograd/functions/basic_ops.h>
++#include <torch/csrc/autograd/input_metadata.h>
+ 
+ #include <ATen/DeviceGuard.h>
+ 
+@@ -42,8 +43,11 @@ void InputBuffer::add(size_t pos, Variable var) {
+ 
+ auto InputBuffer::device() const -> int {
+   for (auto& var : buffer) {
+-    if (var.defined() && var.is_cuda()) {
+-      return var.get_device();
++    if (var.defined()) {
++      int device = get_tensor_device(var);
++      if (device >= 0) {
++        return device;
++      }
+     }
+   }
+   return -1;
+diff --git a/torch/csrc/autograd/input_metadata.h b/torch/csrc/autograd/input_metadata.h
+index 678e7a1ed..e0c08a52c 100644
+--- a/torch/csrc/autograd/input_metadata.h
++++ b/torch/csrc/autograd/input_metadata.h
+@@ -6,6 +6,14 @@
+ 
+ namespace torch { namespace autograd {
+ 
++inline int get_tensor_device(const at::Tensor& tensor) {
++  if (tensor.is_cuda() ||
++      (tensor.type().backend() == at::Backend::XLA && at::hasXLA())) {
++    return tensor.get_device();
++  }
++  return -1;
++}
++
+ /// A tensor's type and shape. Each Function records the required type and
+ /// shape of its inputs. If is_valid() is false, then the corresponding input
+ /// is not used and may be an undefined tensor.
+@@ -16,7 +24,7 @@ struct InputMetadata {
+   : type_{&type} , shape_{shape}, device_{device} { }
+ 
+   InputMetadata(const at::Tensor& t)
+-  : InputMetadata(t.type(), t.sizes(), t.is_cuda() ? t.get_device() : - 1) { }
++  : InputMetadata(t.type(), t.sizes(), get_tensor_device(t)) { }
+ 
+   bool is_valid() const {
+     return type_ != nullptr;
+diff --git a/torch/csrc/autograd/python_hook.cpp b/torch/csrc/autograd/python_hook.cpp
+index b3763e497..786356591 100644
+--- a/torch/csrc/autograd/python_hook.cpp
++++ b/torch/csrc/autograd/python_hook.cpp
+@@ -169,15 +169,12 @@ static void check_single_result(PyObject* _original, PyObject* _result, PyObject
+     throw std::runtime_error(ss.str());
+   }
+ 
+-  if (original.is_cuda() != result.is_cuda()) {
++  if (original.type().backend() != result.type().backend()) {
+     std::stringstream ss;
+     auto name = hook_name(hook);
+-    ss << "hook '" << name << "' has changed the type of value";
+-    if (original.is_cuda()) {
+-      ss << " (was CUDA tensor got CPU tensor)";
+-    } else {
+-      ss << " (was CPU tensor got CUDA tensor)";
+-    }
++    ss << "hook '" << name << "' has changed the type of value (was"
++       << c10::toString(original.type().backend()) << " tensor got "
++       << c10::toString(result.type().backend()) << ")";
+     throw std::runtime_error(ss.str());
+   }
+ 
+diff --git a/torch/csrc/autograd/variable.cpp b/torch/csrc/autograd/variable.cpp
+index c79e76507..b6e698bfb 100644
+--- a/torch/csrc/autograd/variable.cpp
++++ b/torch/csrc/autograd/variable.cpp
+@@ -164,7 +164,7 @@ void Variable::Impl::set_data(Tensor new_data) {
+   auto prior_accumulator = autograd_meta->grad_accumulator_.lock();
+   if (prior_accumulator) {
+     const auto prior_device = prior_accumulator->input_metadata(0).device();
+-    const auto new_device = new_data.is_cuda() ? new_data.get_device() : -1;
++    const auto new_device = get_tensor_device(new_data);
+ 
+     if (new_data.type() != data_.type() || prior_device != new_device) {
+       autograd_meta->grad_accumulator_.reset();
+@@ -217,7 +217,7 @@ const std::shared_ptr<Function>& Variable::grad_fn() const {
+       fn->add_input_metadata(
+         diff_view_meta->base_.type()
+       , sizes() // Note: sizes(), not base_.sizes(), is intentional
+-      , diff_view_meta->base_.is_cuda() ? diff_view_meta->base_.get_device() : -1);
++      , get_tensor_device(diff_view_meta->base_));
+       diff_view_meta->grad_fn_ = std::move(fn);
+       diff_view_meta->attr_version = current_version;
+     }

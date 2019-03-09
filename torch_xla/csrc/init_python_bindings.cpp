@@ -1,7 +1,10 @@
 #include "torch_xla/csrc/init_python_bindings.h"
 
+#include <sstream>
 #include <string>
 #include <vector>
+
+#include <c10/core/Device.h>
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -10,6 +13,7 @@
 #include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type.h"
+#include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/module.h"
@@ -17,6 +21,7 @@
 #include "torch_xla/csrc/passes/replace_in_place_ops.h"
 #include "torch_xla/csrc/passes/replace_untraced_operators.h"
 #include "torch_xla/csrc/passes/threshold_backward_peephole.h"
+#include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/translator.h"
 
@@ -41,6 +46,14 @@ std::string GetTensorsDump(
     nodes.push_back(values.back().node.get());
   }
   return coverter(nodes);
+}
+
+std::string SetCurrentDevice(const std::string& device_str) {
+  c10::Device prev_device =
+      XLATensorImpl::SetCurrentAtenDevice(c10::Device(device_str));
+  std::stringstream ss;
+  ss << prev_device;
+  return ss.str();
 }
 
 void InitXlaModuleBindings(py::module m) {
@@ -79,7 +92,8 @@ void InitXlaModuleBindings(py::module m) {
       .def("parameters_buffers", [](XlaModule& xla_module) {
         return xla_module.parameters_buffers();
       });
-  m.def("_register_aten_types", []() { AtenXlaType::RegisterAtenTypes(); });
+  m.def("_initialize_aten_bindings",
+        []() { AtenXlaType::InitializeAtenBindings(); });
   m.def("_get_xla_tensor", [](const at::Tensor& tensor) -> XLATensor {
     return bridge::GetXlaTensor(ToTensor(tensor));
   });
@@ -101,6 +115,8 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_get_devices",
         []() { return xla::ComputationClient::Get()->GetAvailableDevices(); });
+  m.def("_xla_set_default_device",
+        [](const std::string& device) { return SetCurrentDevice(device); });
   m.def("_xla_sync_multi", [](std::vector<XLATensor>& tensors) {
     NoGilSection nogil;
     XLATensor::ApplyPendingGraph(&tensors, /*apply_context=*/nullptr);
