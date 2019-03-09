@@ -171,6 +171,10 @@ c10::Device XlaDeviceToAtenDevice(const Device& device) {
                      AtenXlaDeviceMapper::Get()->GetDeviceOrdinal(device));
 }
 
+c10::Device AtenDefaultDevice() {
+  return XlaDeviceToAtenDevice(*GetDefaultDevice());
+}
+
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor) {
   return at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
 }
