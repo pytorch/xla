@@ -1401,6 +1401,15 @@ at::Tensor AtenXlaType::bmm(const at::Tensor& self,
       XLATensor::bmm(bridge::GetXlaTensor(self), bridge::GetXlaTensor(mat2)));
 }
 
+at::Tensor AtenXlaType::dot(const at::Tensor& self,
+                            const at::Tensor& tensor) const {
+  XLA_CHECK_EQ(self.dim(), 1)
+      << "dot: Expected 1-D argument self, but got " << self.dim() << "-D";
+  XLA_CHECK_EQ(tensor.dim(), 1)
+      << "dot: Expected 1-D argument tensor, but got " << tensor.dim() << "-D";
+  return matmul(self, tensor);
+}
+
 std::vector<at::Tensor> AtenXlaType::broadcast_tensors(
     at::TensorList tensors) const {
   return bridge::AtenFromXlaTensors(
