@@ -679,7 +679,8 @@ TEST_F(AtenXlaTensorTest, TestSymEig) {
           auto xla_b = at::symeig(xla_a, eigenvectors, upper);
           AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/1e-3,
                    /*atol=*/1e-4);
-          AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(), /*rtol=*/1e-3,
+          AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
+                   /*rtol=*/1e-3,
                    /*atol=*/1e-4);
         });
       }
@@ -1346,29 +1347,33 @@ TEST_F(AtenXlaTensorTest, TestAbs) {
 
 TEST_F(AtenXlaTensorTest, TestZeros) {
   at::Tensor a = at::zeros({2, 2}, at::TensorOptions(at::kFloat));
-  at::Tensor xla_a =
-      at::zeros({2, 2}, at::TensorOptions(at::kFloat).device(at::kXLA));
+  at::Tensor xla_a = at::zeros(
+      {2, 2},
+      at::TensorOptions(at::kFloat).device(bridge::AtenDefaultDevice()));
   AllClose(a, xla_a);
 }
 
 TEST_F(AtenXlaTensorTest, TestOnes) {
   at::Tensor a = at::ones({2, 2}, at::TensorOptions(at::kFloat));
-  at::Tensor xla_a =
-      at::ones({2, 2}, at::TensorOptions(at::kFloat).device(at::kXLA));
+  at::Tensor xla_a = at::ones(
+      {2, 2},
+      at::TensorOptions(at::kFloat).device(bridge::AtenDefaultDevice()));
   AllClose(a, xla_a);
 }
 
 TEST_F(AtenXlaTensorTest, TestFull) {
   at::Tensor a = at::full({2, 2}, 3.1165, at::TensorOptions(at::kFloat));
-  at::Tensor xla_a =
-      at::full({2, 2}, 3.1165, at::TensorOptions(at::kFloat).device(at::kXLA));
+  at::Tensor xla_a = at::full(
+      {2, 2}, 3.1165,
+      at::TensorOptions(at::kFloat).device(bridge::AtenDefaultDevice()));
   AllClose(a, xla_a);
 }
 
 TEST_F(AtenXlaTensorTest, TestARange) {
   at::Tensor a = at::arange(0.0, 100.0, 0.5, at::TensorOptions(at::kFloat));
-  at::Tensor xla_a = at::arange(0.0, 100.0, 0.5,
-                                at::TensorOptions(at::kFloat).device(at::kXLA));
+  at::Tensor xla_a = at::arange(
+      0.0, 100.0, 0.5,
+      at::TensorOptions(at::kFloat).device(bridge::AtenDefaultDevice()));
   AllClose(a, xla_a);
 }
 
@@ -1808,33 +1813,29 @@ TEST_F(AtenXlaTensorTest, TestExpandAs) {
 TEST_F(AtenXlaTensorTest, TestEye) {
   int n = 5;
   at::Tensor out = at::eye(n, at::TensorOptions(at::kFloat));
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_out =
-        at::eye(n, at::TensorOptions(at::kFloat).device(at::kXLA));
-    AllClose(out, xla_out);
-  });
+  at::Tensor xla_out = at::eye(
+      n, at::TensorOptions(at::kFloat).device(bridge::AtenDefaultDevice()));
+  AllClose(out, xla_out);
 }
 
 TEST_F(AtenXlaTensorTest, TestEyeWide) {
   int lines = 3;
   int cols = 5;
   at::Tensor out = at::eye(lines, cols, at::TensorOptions(at::kFloat));
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_out =
-        at::eye(lines, cols, at::TensorOptions(at::kFloat).device(at::kXLA));
-    AllClose(out, xla_out);
-  });
+  at::Tensor xla_out = at::eye(
+      lines, cols,
+      at::TensorOptions(at::kFloat).device(bridge::AtenDefaultDevice()));
+  AllClose(out, xla_out);
 }
 
 TEST_F(AtenXlaTensorTest, TestEyeNarrow) {
   int lines = 5;
   int cols = 3;
   at::Tensor out = at::eye(lines, cols, at::TensorOptions(at::kFloat));
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_out =
-        at::eye(lines, cols, at::TensorOptions(at::kFloat).device(at::kXLA));
-    AllClose(out, xla_out);
-  });
+  at::Tensor xla_out = at::eye(
+      lines, cols,
+      at::TensorOptions(at::kFloat).device(bridge::AtenDefaultDevice()));
+  AllClose(out, xla_out);
 }
 
 TEST_F(AtenXlaTensorTest, TestBroadcastTensors) {
