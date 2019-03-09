@@ -457,6 +457,18 @@ NodePtr Identity(xla::int64 lines, xla::int64 cols,
                    std::move(lower_fn));
 }
 
+NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
+            at::Scalar input_scale) {
+  const xla::Shape& shape = input.shape();
+  NodePtr scaled_input = input * ScalarOp(input_scale, shape);
+  NodePtr zero = ScalarOp(0, shape);
+  NodePtr one = ScalarOp(1, shape);
+  NodePtr alpha_scalar = ScalarOp(alpha, shape);
+  return (Max(zero, scaled_input) +
+          Min(zero, alpha_scalar * (Exp(scaled_input) - one))) *
+         ScalarOp(scale, shape);
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

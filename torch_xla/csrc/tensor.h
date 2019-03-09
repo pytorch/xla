@@ -219,6 +219,11 @@ class XLATensor {
   static XLATensor threshold(const XLATensor& input, float threshold,
                              float value);
 
+  static XLATensor elu(const XLATensor& input, at::Scalar alpha,
+                       at::Scalar scale, at::Scalar input_scale);
+  static void elu_(XLATensor& input, at::Scalar alpha, at::Scalar scale,
+                   at::Scalar input_scale);
+
   static XLATensor conv2d(
       const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
       tensorflow::gtl::ArraySlice<const xla::int64> stride,

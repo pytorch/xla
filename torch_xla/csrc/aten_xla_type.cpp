@@ -1273,6 +1273,19 @@ at::Tensor AtenXlaType::threshold_backward(const at::Tensor& grad_output,
       threshold.to<double>()));
 }
 
+at::Tensor AtenXlaType::elu(const at::Tensor& self, at::Scalar alpha,
+                            at::Scalar scale, at::Scalar input_scale) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::elu(bridge::GetXlaTensor(self), alpha, scale, input_scale));
+}
+
+at::Tensor& AtenXlaType::elu_(at::Tensor& self, at::Scalar alpha,
+                              at::Scalar scale, at::Scalar input_scale) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::elu_(self_tensor, alpha, scale, input_scale);
+  return self;
+}
+
 at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
                                const at::Tensor& weight, const at::Tensor& bias,
                                at::IntList stride, at::IntList padding,

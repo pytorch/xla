@@ -931,6 +931,17 @@ XLATensor XLATensor::threshold(const XLATensor& input, float threshold,
       ir::MakeNode<ir::ops::Threshold>(input.GetIrValue(), threshold, value));
 }
 
+XLATensor XLATensor::elu(const XLATensor& input, at::Scalar alpha,
+                         at::Scalar scale, at::Scalar input_scale) {
+  return input.CreateFrom(
+      ir::ops::Elu(input.GetIrValue(), alpha, scale, input_scale));
+}
+
+void XLATensor::elu_(XLATensor& input, at::Scalar alpha, at::Scalar scale,
+                     at::Scalar input_scale) {
+  input.SetIrValue(ir::ops::Elu(input.GetIrValue(), alpha, scale, input_scale));
+}
+
 XLATensor XLATensor::conv2d(
     const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
