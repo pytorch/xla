@@ -71,6 +71,7 @@
 #include "torch_xla/csrc/ops/stack.h"
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/svd.h"
+#include "torch_xla/csrc/ops/symeig.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
@@ -1032,6 +1033,16 @@ std::tuple<XLATensor, XLATensor> XLATensor::qr(const XLATensor& input,
                                                bool full_matrices) {
   ir::NodePtr node =
       ir::MakeNode<ir::ops::QR>(input.GetIrValue(), full_matrices);
+  return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
+                         input.CreateFrom(ir::Value(node, 1)));
+}
+
+std::tuple<XLATensor, XLATensor> XLATensor::symeig(const XLATensor& input,
+                                                   bool eigenvectors,
+                                                   bool upper) {
+  // SymEig takes lower instead of upper, hence the negation.
+  ir::NodePtr node =
+      ir::MakeNode<ir::ops::SymEig>(input.GetIrValue(), eigenvectors, !upper);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
 }

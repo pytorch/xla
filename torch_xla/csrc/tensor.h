@@ -307,6 +307,9 @@ class XLATensor {
   static std::tuple<XLATensor, XLATensor> qr(const XLATensor& input,
                                              bool full_matrices);
 
+  static std::tuple<XLATensor, XLATensor> symeig(const XLATensor& input,
+                                                 bool eigenvectors, bool upper);
+
   static std::tuple<XLATensor, XLATensor> kthvalue(const XLATensor& input,
                                                    xla::int64 k, xla::int64 dim,
                                                    bool keepdim);
