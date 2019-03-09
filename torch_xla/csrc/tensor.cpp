@@ -652,7 +652,12 @@ void XLATensor::zero_(XLATensor& input) {
 }
 
 void XLATensor::s_copy_(XLATensor& input, const XLATensor& src) {
-  input.SetIrValue(src.GetIrValue());
+  if (input.GetDevice() == src.GetDevice()) {
+    input.SetIrValue(src.GetIrValue());
+  } else {
+    XLA_ERROR() << "Cannot move from " << input.GetDevice() << " to "
+                << src.GetDevice();
+  }
 }
 
 XLATensor XLATensor::addcmul(const XLATensor& input, const at::Scalar& value,

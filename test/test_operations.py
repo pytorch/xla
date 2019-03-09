@@ -26,6 +26,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
+import torch_xla_py.data_parallel as dp
 import torch_xla_py.parallel_loader as pl
 import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
@@ -594,6 +595,33 @@ class TestMNIST(XlaTestCase):
     x = _gen_tensor(batch_size, 1, 28, 28)
     model = XlaMNIST()
     self.compareModel(model, x)
+
+
+class TestParallelTensorMNIST(XlaTestCase):
+
+  def test(self):
+    devices = xm.get_xla_supported_devices()
+    batch_size = 8
+    train_loader = xu.SampleGenerator(
+        data=torch.zeros(batch_size, 1, 28, 28),
+        target=torch.zeros(batch_size, dtype=torch.int64),
+        sample_count=3 * len(devices))
+
+    def loop_fn(model, loader):
+      loss_fn = nn.NLLLoss()
+      optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
+
+      for x, (data, target) in loader:
+        optimizer.zero_grad()
+        output = model(data)
+        loss = loss_fn(output, target)
+        loss.backward()
+        xm.optimizer_step(optimizer)
+        self.assertLess(loss.cpu().item(), 3.0)
+
+    model_parallel = dp.DataParallel(
+        XlaMNIST, train_loader, loop_fn, device_ids=devices)
+    model_parallel()
 
 
 class AxPlusB(nn.Module):

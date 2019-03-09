@@ -11,7 +11,7 @@ namespace cpp_test {
 void TorchXlaTest::SetUp() { at::manual_seed(42); }
 
 void AtenXlaTensorTestBase::SetUpTestCase() {
-  AtenXlaType::RegisterAtenTypes();
+  AtenXlaType::InitializeAtenBindings();
   XlaHelpers::set_mat_mul_precision(xla::PrecisionConfig::HIGHEST);
 }
 
