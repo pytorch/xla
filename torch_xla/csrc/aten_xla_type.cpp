@@ -1286,6 +1286,22 @@ at::Tensor& AtenXlaType::elu_(at::Tensor& self, at::Scalar alpha,
   return self;
 }
 
+at::Tensor AtenXlaType::selu(const at::Tensor& self) const {
+  return at::native::selu(self);
+}
+
+at::Tensor& AtenXlaType::selu_(at::Tensor& self) const {
+  return at::native::selu_(self);
+}
+
+at::Tensor AtenXlaType::celu(const at::Tensor& self, at::Scalar alpha) const {
+  return at::native::celu(self, alpha);
+}
+
+at::Tensor& AtenXlaType::celu_(at::Tensor& self, at::Scalar alpha) const {
+  return at::native::celu_(self, alpha);
+}
+
 at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
                                const at::Tensor& weight, const at::Tensor& bias,
                                at::IntList stride, at::IntList padding,
