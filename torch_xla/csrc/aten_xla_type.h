@@ -318,6 +318,10 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self) const override;
 
+  std::tuple<at::Tensor, at::Tensor> symeig(const at::Tensor& self,
+                                            bool eigenvectors,
+                                            bool upper) const override;
+
   std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self, int64_t k,
                                               int64_t dim,
                                               bool keepdim) const override;

@@ -666,6 +666,27 @@ TEST_F(AtenXlaTensorTest, TestQR) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSymEig) {
+  static const int dims[] = {4, 7};
+  for (auto m : dims) {
+    for (bool eigenvectors : {true, false}) {
+      for (bool upper : {true, false}) {
+        at::Tensor a = at::rand({m, m}, at::TensorOptions(at::kFloat));
+        at::Tensor sym_a = a.mm(a.t());
+        auto b = at::symeig(sym_a, eigenvectors, upper);
+        ForEachDevice([&](const Device& device) {
+          at::Tensor xla_a = bridge::CreateXlaTensor(sym_a, device);
+          auto xla_b = at::symeig(xla_a, eigenvectors, upper);
+          AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/1e-3,
+                   /*atol=*/1e-4);
+          AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(), /*rtol=*/1e-3,
+                   /*atol=*/1e-4);
+        });
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestKthValue) {
   at::Tensor a = at::rand({4, 5, 3}, at::TensorOptions(at::kFloat));
   for (int k = 1; k <= 3; ++k) {

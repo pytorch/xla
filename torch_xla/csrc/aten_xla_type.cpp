@@ -1093,6 +1093,15 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::qr(
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::symeig(const at::Tensor& self,
+                                                       bool eigenvectors,
+                                                       bool upper) const {
+  auto results =
+      XLATensor::symeig(bridge::GetXlaTensor(self), eigenvectors, upper);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
                                                          int64_t k, int64_t dim,
                                                          bool keepdim) const {
