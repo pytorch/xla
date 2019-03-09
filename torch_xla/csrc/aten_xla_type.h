@@ -429,6 +429,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2) const override;
 
+  at::Tensor dot(const at::Tensor& self,
+                 const at::Tensor& tensor) const override;
+
   std::vector<at::Tensor> broadcast_tensors(
       at::TensorList tensors) const override;
 
