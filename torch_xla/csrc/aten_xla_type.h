@@ -392,6 +392,10 @@ class AtenXlaType : public AtenXlaTypeBase {
                  at::Scalar input_scale) const override;
   at::Tensor& elu_(at::Tensor& self, at::Scalar alpha, at::Scalar scale,
                    at::Scalar input_scale) const override;
+  at::Tensor selu(const at::Tensor& self) const override;
+  at::Tensor& selu_(at::Tensor& self) const override;
+  at::Tensor celu(const at::Tensor& self, at::Scalar alpha) const override;
+  at::Tensor& celu_(at::Tensor& self, at::Scalar alpha) const override;
 
   at::Tensor conv2d(const at::Tensor& input, const at::Tensor& weight,
                     const at::Tensor& bias, at::IntList stride,
