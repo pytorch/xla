@@ -688,6 +688,23 @@ TEST_F(AtenXlaTensorTest, TestSymEig) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestCholesky) {
+  static const int dims[] = {4, 7};
+  for (auto m : dims) {
+    for (bool upper : {true, false}) {
+      at::Tensor a = at::rand({3, m, m}, at::TensorOptions(at::kFloat));
+      at::Tensor pd_a = at::matmul(a, at::transpose(a, 1, 2)) +
+                        at::eye(m, at::TensorOptions(at::kFloat));
+      auto b = at::cholesky(pd_a, upper);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_a = bridge::CreateXlaTensor(pd_a, device);
+        auto xla_b = at::cholesky(xla_a, upper);
+        AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-4);
+      });
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestKthValue) {
   at::Tensor a = at::rand({4, 5, 3}, at::TensorOptions(at::kFloat));
   for (int k = 1; k <= 3; ++k) {

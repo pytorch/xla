@@ -1102,6 +1102,11 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::symeig(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
+at::Tensor AtenXlaType::cholesky(const at::Tensor& self, bool upper) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::cholesky(bridge::GetXlaTensor(self), upper));
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
                                                          int64_t k, int64_t dim,
                                                          bool keepdim) const {
