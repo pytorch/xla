@@ -677,11 +677,11 @@ TEST_F(AtenXlaTensorTest, TestSymEig) {
         ForEachDevice([&](const Device& device) {
           at::Tensor xla_a = bridge::CreateXlaTensor(sym_a, device);
           auto xla_b = at::symeig(xla_a, eigenvectors, upper);
-          AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/1e-3,
-                   /*atol=*/1e-4);
+          AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/3e-2,
+                   /*atol=*/1e-2);
           AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
-                   /*rtol=*/1e-3,
-                   /*atol=*/1e-4);
+                   /*rtol=*/3e-2,
+                   /*atol=*/1e-2);
         });
       }
     }
