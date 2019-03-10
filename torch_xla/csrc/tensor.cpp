@@ -30,6 +30,7 @@
 #include "torch_xla/csrc/ops/bitwise_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/cat.h"
+#include "torch_xla/csrc/ops/cholesky.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
 #include "torch_xla/csrc/ops/conv2d.h"
@@ -1051,6 +1052,12 @@ std::tuple<XLATensor, XLATensor> XLATensor::symeig(const XLATensor& input,
       ir::MakeNode<ir::ops::SymEig>(input.GetIrValue(), eigenvectors, !upper);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
+}
+
+XLATensor XLATensor::cholesky(const XLATensor& input, bool upper) {
+  // Cholesky takes lower instead of upper, hence the negation.
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::Cholesky>(input.GetIrValue(), !upper));
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
