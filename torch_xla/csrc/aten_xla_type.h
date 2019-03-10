@@ -322,6 +322,8 @@ class AtenXlaType : public AtenXlaTypeBase {
                                             bool eigenvectors,
                                             bool upper) const override;
 
+  at::Tensor cholesky(const at::Tensor& self, bool upper) const override;
+
   std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self, int64_t k,
                                               int64_t dim,
                                               bool keepdim) const override;

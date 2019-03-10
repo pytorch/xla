@@ -18,7 +18,6 @@ std::vector<xla::XlaOp> LowerQR(const xla::XlaOp& input, bool full_matrices) {
       xla::QRDecomposition(input, /*full_matrices=*/full_matrices,
                            /*block_size=*/128, XlaHelpers::mat_mul_precision())
           .ValueOrDie();
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp q = qr_result.q;
   xla::XlaOp r = qr_result.r;
   return {q, r};

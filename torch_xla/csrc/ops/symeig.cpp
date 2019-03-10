@@ -4,7 +4,6 @@
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/self_adjoint_eig.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
-#include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 
@@ -18,7 +17,6 @@ std::vector<xla::XlaOp> LowerSymEig(const xla::XlaOp& input, bool eigenvectors,
   xla::SelfAdjointEigResult self_adj_eig_result =
       xla::SelfAdjointEig(input, /*lower=*/lower, /*max_iter=*/100,
                           /*epsilon=*/1e-6);
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp v = self_adj_eig_result.v;
   xla::XlaOp w = self_adj_eig_result.w;
   if (!eigenvectors) {

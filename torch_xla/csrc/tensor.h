@@ -310,6 +310,8 @@ class XLATensor {
   static std::tuple<XLATensor, XLATensor> symeig(const XLATensor& input,
                                                  bool eigenvectors, bool upper);
 
+  static XLATensor cholesky(const XLATensor& input, bool upper);
+
   static std::tuple<XLATensor, XLATensor> kthvalue(const XLATensor& input,
                                                    xla::int64 k, xla::int64 dim,
                                                    bool keepdim);
