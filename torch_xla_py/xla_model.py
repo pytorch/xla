@@ -16,9 +16,7 @@ import torch_xla_py.keyd_queue as kq
 MultiBatch = collections.namedtuple('MultiBatch',
                                     ['batch_number', 'inputs', 'targets'])
 
-
-def xla_device(n=0):
-  return torch.device('xla:{}'.format(n))
+_XLA_DEVICES = torch_xla._XLAC._xla_get_devices()
 
 
 def is_xla_tensor(tensor):
@@ -27,14 +25,19 @@ def is_xla_tensor(tensor):
 
 def get_xla_supported_devices(devkind=None):
   devkind = devkind or ['TPU', 'GPU', 'CPU']
-  devices = torch_xla._XLAC._xla_get_devices()
   for kind in devkind:
     kind_devices = []
-    for i, device in enumerate(devices):
+    for i, device in enumerate(_XLA_DEVICES):
       if re.match(kind + r':\d+$', device):
         kind_devices.append('xla:{}'.format(i))
     if kind_devices:
       return kind_devices
+
+
+def xla_device(n=None, devkind=None):
+  if n is None:
+    return get_xla_supported_devices(devkind=devkind)[0]
+  return torch.device('xla:{}'.format(n))
 
 
 class RateTracker(object):
