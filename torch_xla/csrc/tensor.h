@@ -582,6 +582,10 @@ class XLATensor {
   static XLATensor permute(const XLATensor& input,
                            tensorflow::gtl::ArraySlice<const xla::int64> dims);
 
+  // Flips (reverses) the values in the dimensions of the input tensor.
+  static XLATensor flip(const XLATensor& input,
+                        tensorflow::gtl::ArraySlice<const xla::int64> dims);
+
   // Repeats the input tensor along each dimension by the given number of
   // repeats.
   static XLATensor repeat(
