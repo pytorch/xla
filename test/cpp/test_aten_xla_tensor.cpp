@@ -2357,6 +2357,19 @@ TEST_F(AtenXlaTensorTest, TestThreshold) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestThresholdInPlace) {
+  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
+  at::Tensor output = input.clone();
+  float threshold = 0.4;
+  float value = 20;
+  at::threshold_(output, threshold, value);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_output = bridge::CreateXlaTensor(input, device);
+    at::threshold_(xla_output, threshold, value);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestElu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   at::Scalar alpha = 0.5;
