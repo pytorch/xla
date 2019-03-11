@@ -8,6 +8,7 @@
 #include "torch_xla/csrc/aten_xla_type_instances.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/index_op.h"
 #include "torch_xla/csrc/pooling.h"
@@ -1467,6 +1468,31 @@ at::Tensor AtenXlaType::narrow(const at::Tensor& self, int64_t dim,
                                int64_t start, int64_t length) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::narrow(bridge::GetXlaTensor(self), dim, start, length));
+}
+
+at::Tensor AtenXlaType::as_strided(
+    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+    c10::optional<int64_t> storage_offset) const {
+  if (!ir::ops::AsStrided::StrideIsSupported(XlaHelpers::I64List(size),
+                                             XlaHelpers::I64List(stride))) {
+    return AtenXlaTypeBase::as_strided(self, size, stride, storage_offset);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::as_strided(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(size),
+      XlaHelpers::I64Optional(storage_offset)));
+}
+
+at::Tensor& AtenXlaType::as_strided_(
+    at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+    c10::optional<int64_t> storage_offset) const {
+  if (!ir::ops::AsStrided::StrideIsSupported(XlaHelpers::I64List(size),
+                                             XlaHelpers::I64List(stride))) {
+    return AtenXlaTypeBase::as_strided_(self, size, stride, storage_offset);
+  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::as_strided_(self_tensor, XlaHelpers::I64List(size),
+                         XlaHelpers::I64Optional(storage_offset));
+  return self;
 }
 
 at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,

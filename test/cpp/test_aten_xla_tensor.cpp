@@ -3744,6 +3744,50 @@ TEST_F(AtenXlaTensorTest, TestConstantPadIncomplete) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestAsStrided) {
+  at::Tensor input = at::rand({128, 320}, at::TensorOptions(at::kFloat));
+  std::vector<int64_t> size = {128, 20, 4, 4};
+  std::vector<int64_t> stride = {320, 16, 4, 1};
+  at::Tensor output = at::as_strided(input, /*size=*/size, /*stride=*/stride);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output =
+        at::as_strided(xla_input, /*size=*/size, /*stride=*/stride);
+    AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestAsStridedInPlace) {
+  at::Tensor input = at::rand({128, 320}, at::TensorOptions(at::kFloat));
+  std::vector<int64_t> size = {128, 20, 4, 4};
+  std::vector<int64_t> stride = {320, 16, 4, 1};
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor output =
+        at::as_strided_(input, /*size=*/size, /*stride=*/stride);
+    at::Tensor xla_output =
+        at::as_strided_(xla_input, /*size=*/size, /*stride=*/stride);
+    AllClose(output, xla_output);
+    AllClose(input, xla_input);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestAsStridedWithOffset) {
+  at::Tensor input = at::rand({4, 8, 2}, at::TensorOptions(at::kFloat));
+  std::vector<int64_t> size = {4, 4, 2};
+  std::vector<int64_t> stride = {8, 2, 1};
+  int64_t storage_offset = 4;
+  at::Tensor output = at::as_strided(input, /*size=*/size, /*stride=*/stride,
+                                     /*storage_offset=*/storage_offset);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output =
+        at::as_strided(xla_input, /*size=*/size, /*stride=*/stride,
+                       /*storage_offset=*/storage_offset);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
