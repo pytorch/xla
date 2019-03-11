@@ -255,6 +255,14 @@ class TestAtenTensorTo(XlaTestCase):
     for device in devices[1:]:
       tto = t.to(device=torch.device(device))
       self.assertEqual(tto.device, torch.device(device))
+    for i in range(0, len(devices) - 1):
+      dev0 = devices[i]
+      dev1 = devices[i + 1]
+      t0 = torch.zeros(4, 4, device=torch.device(dev0))
+      t1 = t0.to(device=torch.device(dev1))
+      t0 = t0 + torch.ones_like(t0, device=torch.device(dev0))
+      t1 = t1 + torch.ones_like(t1, device=torch.device(dev1))
+      self.assertEqual(t0.cpu(), t1.cpu())
 
 
 class TestMulAdd(XlaTestCase):

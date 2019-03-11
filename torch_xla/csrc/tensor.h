@@ -130,7 +130,7 @@ class XLATensor {
 
   static void zero_(XLATensor& input);
 
-  static void s_copy_(XLATensor& input, const XLATensor& src);
+  static void s_copy_(XLATensor& input, XLATensor& src);
 
   // Additional operations which are part of the PyTorch Tensor functionality.
   xla::int64 size(xla::int64 dim) const;

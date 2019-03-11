@@ -125,8 +125,9 @@ at::Tensor AtenXlaType::_cast_Short(const at::Tensor& self,
 at::Tensor& AtenXlaType::s_copy_(at::Tensor& self, const at::Tensor& src,
                                  bool /* non_blocking */) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::s_copy_(
-      self_tensor, bridge::GetOrCreateXlaTensor(src, self_tensor.GetDevice()));
+  XLATensor src_tensor =
+      bridge::GetOrCreateXlaTensor(src, self_tensor.GetDevice());
+  XLATensor::s_copy_(self_tensor, src_tensor);
   return self;
 }
 

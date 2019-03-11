@@ -652,12 +652,14 @@ void XLATensor::zero_(XLATensor& input) {
   input.SetIrValue(ir::ops::ScalarOp(0.0, input.shape()));
 }
 
-void XLATensor::s_copy_(XLATensor& input, const XLATensor& src) {
+void XLATensor::s_copy_(XLATensor& input, XLATensor& src) {
   if (input.GetDevice() == src.GetDevice()) {
     input.SetIrValue(src.GetIrValue());
   } else {
-    XLA_ERROR() << "Cannot move from " << input.GetDevice() << " to "
-                << src.GetDevice();
+    // TODO: This can be optimized via proper XRT/XLA computation.
+    XLATensor new_tensor = XLATensor::Create(src.ToTensor(), input.GetDevice(),
+                                             src.RequiresGrad());
+    std::swap(input, new_tensor);
   }
 }
 
@@ -2061,13 +2063,14 @@ void XLATensor::ApplyPendingGraph() {
         output_shape =
             MakeShapeWithDeviceLayout(computation_shape, GetDevice().hw_type);
       }
+      std::string device = GetDevice().ToString();
       auto compiled_computation = xla::ComputationClient::Get()->Compile(
-          std::move(computation), {GetDevice().ToString()}, &output_shape);
+          std::move(computation), {device}, &output_shape);
       xla::ComputationClient::ExecuteComputationOptions options;
       options.explode_tuple = false;
       auto results = xla::ComputationClient::Get()->ExecuteComputation(
-          *compiled_computation, lowering_ctx.GetParametersData(),
-          compiled_computation->devices()[0], options);
+          *compiled_computation, lowering_ctx.GetParametersData(), device,
+          options);
       XLA_CHECK_EQ(results.size(), 1);
       SetXlaData(results.front());
     } else {
@@ -2265,10 +2268,10 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
       contexts_map.size());
   size_t index = 0;
   for (auto& device_and_context : contexts_map) {
-    const Device& device = device_and_context.first;
+    Device device = device_and_context.first;
     DeviceContext* device_context = &device_and_context.second;
 
-    auto generator = [&, device_context, index]() {
+    auto generator = [&, device, device_context, index]() {
       std::vector<xla::int64> device_index_mapping;
       for (auto i : device_context->index_mapping) {
         ir::Value ir_value = (*tensors)[i].CurrentIrValue();
