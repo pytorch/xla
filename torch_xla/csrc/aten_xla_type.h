@@ -389,6 +389,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
                        at::Scalar value) const override;
+  at::Tensor& threshold_(at::Tensor& self, at::Scalar threshold,
+                         at::Scalar value) const override;
 
   at::Tensor threshold_backward(const at::Tensor& grad_output,
                                 const at::Tensor& self,

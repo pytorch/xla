@@ -945,6 +945,11 @@ XLATensor XLATensor::threshold(const XLATensor& input, float threshold,
       ir::MakeNode<ir::ops::Threshold>(input.GetIrValue(), threshold, value));
 }
 
+void XLATensor::threshold_(XLATensor& input, float threshold, float value) {
+  input.SetIrValue(
+      ir::MakeNode<ir::ops::Threshold>(input.GetIrValue(), threshold, value));
+}
+
 XLATensor XLATensor::elu(const XLATensor& input, at::Scalar alpha,
                          at::Scalar scale, at::Scalar input_scale) {
   return input.CreateFrom(
