@@ -41,6 +41,7 @@
 #include "torch_xla/csrc/ops/dropout.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/index_op.h"
@@ -1614,6 +1615,13 @@ XLATensor XLATensor::permute(
       XlaHelpers::GetCanonicalDimensionIndices(dims, input_shape.get().rank()),
       input_shape.get().element_type());
   return input.CreateView(std::move(view_info));
+}
+
+XLATensor XLATensor::flip(const XLATensor& input,
+                          tensorflow::gtl::ArraySlice<const xla::int64> dims) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::Flip>(
+      input.GetIrValue(), XlaHelpers::GetCanonicalDimensionIndices(
+                              dims, input.shape().get().rank())));
 }
 
 XLATensor XLATensor::repeat(
