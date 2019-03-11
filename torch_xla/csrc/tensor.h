@@ -184,16 +184,22 @@ class XLATensor {
                         at::Scalar alpha);
 
   static XLATensor __and__(const XLATensor& input, at::Scalar other);
+  static void __iand__(XLATensor& input, at::Scalar other);
 
   static XLATensor __and__(const XLATensor& input, const XLATensor& other);
+  static void __iand__(XLATensor& input, const XLATensor& other);
 
   static XLATensor __or__(const XLATensor& input, at::Scalar other);
+  static void __ior__(XLATensor& input, at::Scalar other);
 
   static XLATensor __or__(const XLATensor& input, const XLATensor& other);
+  static void __ior__(XLATensor& input, const XLATensor& other);
 
   static XLATensor __xor__(const XLATensor& input, at::Scalar other);
+  static void __ixor__(XLATensor& input, at::Scalar other);
 
   static XLATensor __xor__(const XLATensor& input, const XLATensor& other);
+  static void __ixor__(XLATensor& input, const XLATensor& other);
 
   // Dispatches a comparison operator, setting the logical type of the result
   // appropriately.

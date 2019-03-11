@@ -751,15 +751,34 @@ at::Tensor AtenXlaType::__and__(const at::Tensor& self,
       XLATensor::__and__(bridge::GetXlaTensor(self), other));
 }
 
+at::Tensor& AtenXlaType::__iand__(at::Tensor& self, at::Scalar other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::__iand__(self_tensor, other);
+  return self;
+}
+
 at::Tensor AtenXlaType::__and__(const at::Tensor& self,
                                 const at::Tensor& other) const {
   return bridge::AtenFromXlaTensor(XLATensor::__and__(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
+at::Tensor& AtenXlaType::__iand__(at::Tensor& self,
+                                  const at::Tensor& other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::__iand__(self_tensor, bridge::GetXlaTensor(other));
+  return self;
+}
+
 at::Tensor AtenXlaType::__or__(const at::Tensor& self, at::Scalar other) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::__or__(bridge::GetXlaTensor(self), other));
+}
+
+at::Tensor& AtenXlaType::__ior__(at::Tensor& self, at::Scalar other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::__ior__(self_tensor, other);
+  return self;
 }
 
 at::Tensor AtenXlaType::__or__(const at::Tensor& self,
@@ -768,16 +787,36 @@ at::Tensor AtenXlaType::__or__(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
+at::Tensor& AtenXlaType::__ior__(at::Tensor& self,
+                                 const at::Tensor& other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::__ior__(self_tensor, bridge::GetXlaTensor(other));
+  return self;
+}
+
 at::Tensor AtenXlaType::__xor__(const at::Tensor& self,
                                 at::Scalar other) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::__xor__(bridge::GetXlaTensor(self), other));
 }
 
+at::Tensor& AtenXlaType::__ixor__(at::Tensor& self, at::Scalar other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::__ixor__(self_tensor, other);
+  return self;
+}
+
 at::Tensor AtenXlaType::__xor__(const at::Tensor& self,
                                 const at::Tensor& other) const {
   return bridge::AtenFromXlaTensor(XLATensor::__xor__(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor& AtenXlaType::__ixor__(at::Tensor& self,
+                                  const at::Tensor& other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::__ixor__(self_tensor, bridge::GetXlaTensor(other));
+  return self;
 }
 
 at::Tensor AtenXlaType::neg(const at::Tensor& self) const {
