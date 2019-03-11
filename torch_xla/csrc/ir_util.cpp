@@ -53,5 +53,11 @@ std::vector<const Node*> Util::ComputePostOrder(
   return post_order;
 }
 
+size_t Util::GetGraphSize(
+    tensorflow::gtl::ArraySlice<const Node* const> nodes) {
+  std::vector<const Node*> post_order = ComputePostOrder(nodes);
+  return post_order.size();
+}
+
 }  // namespace ir
 }  // namespace torch_xla
