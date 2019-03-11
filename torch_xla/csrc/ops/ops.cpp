@@ -469,6 +469,22 @@ NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
          ScalarOp(scale, shape);
 }
 
+NodePtr Lshift(const Value& input, at::Scalar other) {
+  return input * ScalarOp(pow(2, other.to<double>()), input.shape());
+}
+
+NodePtr Lshift(const Value& input, const Value& other) {
+  return input * Pow(ScalarOp(2, input.shape()), other);
+}
+
+NodePtr Rshift(const Value& input, at::Scalar other) {
+  return input / ScalarOp(pow(2, other.to<double>()), input.shape());
+}
+
+NodePtr Rshift(const Value& input, const Value& other) {
+  return input / Pow(ScalarOp(2, input.shape()), other);
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

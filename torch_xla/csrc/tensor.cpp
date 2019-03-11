@@ -953,6 +953,42 @@ void XLATensor::__ixor__(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::ops::BitwiseXor(input.GetIrValue(), other.GetIrValue()));
 }
 
+XLATensor XLATensor::__lshift__(const XLATensor& input, at::Scalar other) {
+  return input.CreateFrom(ir::ops::Lshift(input.GetIrValue(), other));
+}
+
+XLATensor XLATensor::__lshift__(const XLATensor& input,
+                                const XLATensor& other) {
+  return input.CreateFrom(
+      ir::ops::Lshift(input.GetIrValue(), other.GetIrValue()));
+}
+
+void XLATensor::__ilshift__(XLATensor& input, at::Scalar other) {
+  input.SetIrValue(ir::ops::Lshift(input.GetIrValue(), other));
+}
+
+void XLATensor::__ilshift__(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(ir::ops::Lshift(input.GetIrValue(), other.GetIrValue()));
+}
+
+XLATensor XLATensor::__rshift__(const XLATensor& input, at::Scalar other) {
+  return input.CreateFrom(ir::ops::Rshift(input.GetIrValue(), other));
+}
+
+XLATensor XLATensor::__rshift__(const XLATensor& input,
+                                const XLATensor& other) {
+  return input.CreateFrom(
+      ir::ops::Rshift(input.GetIrValue(), other.GetIrValue()));
+}
+
+void XLATensor::__irshift__(XLATensor& input, at::Scalar other) {
+  input.SetIrValue(ir::ops::Rshift(input.GetIrValue(), other));
+}
+
+void XLATensor::__irshift__(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(ir::ops::Rshift(input.GetIrValue(), other.GetIrValue()));
+}
+
 XLATensor XLATensor::relu(const XLATensor& input) {
   return input.CreateFrom(ir::ops::ReluOp(input.GetIrValue()));
 }

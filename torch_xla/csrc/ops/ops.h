@@ -152,6 +152,14 @@ NodePtr Identity(xla::int64 lines, xla::int64 cols,
 NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
             at::Scalar input_scale);
 
+NodePtr Lshift(const Value& input, at::Scalar other);
+
+NodePtr Lshift(const Value& input, const Value& other);
+
+NodePtr Rshift(const Value& input, at::Scalar other);
+
+NodePtr Rshift(const Value& input, const Value& other);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
