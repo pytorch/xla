@@ -1869,6 +1869,12 @@ at::Tensor AtenXlaType::permute(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
 }
 
+at::Tensor AtenXlaType::flip(const at::Tensor& self,
+                             at::IntArrayRef dims) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::flip(bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
+}
+
 at::Tensor AtenXlaType::transpose(const at::Tensor& self, int64_t dim0,
                                   int64_t dim1) const {
   return bridge::AtenFromXlaTensor(

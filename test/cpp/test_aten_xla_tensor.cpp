@@ -3261,6 +3261,26 @@ TEST_F(AtenXlaTensorTest, TestPermuteMod) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestFlip) {
+  at::Tensor input = at::rand({2, 3, 4}, at::TensorOptions(at::kFloat));
+  std::vector<std::vector<int64_t>> dim_powerset = {
+      {0}, {1}, {2}, {0, 1}, {1, 2}, {2, 0}, {0, 1, 2}};
+  for (std::vector<int64_t> flip_dims : dim_powerset) {
+    for (bool negative_dims : {false, true}) {
+      if (negative_dims) {
+        std::for_each(flip_dims.begin(), flip_dims.end(),
+                      [](int64_t& dim) { dim -= 3; });
+      }
+      at::Tensor output = at::flip(input, flip_dims);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+        at::Tensor xla_output = at::flip(xla_input, flip_dims);
+        AllClose(output, xla_output);
+      });
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestTransposeDims) {
   at::Tensor input = at::rand({2, 3, 4}, at::TensorOptions(at::kFloat));
   int dim0 = 0;
