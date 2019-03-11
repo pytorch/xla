@@ -3652,6 +3652,21 @@ TEST_F(AtenXlaTensorTest, TestBitwiseAnd) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestBitwiseAndInPlace) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor rhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs.clone(), device);
+    at::Tensor result = lhs.__iand__(rhs);
+    at::Tensor xla_rhs = bridge::CreateXlaTensor(rhs, device);
+    at::Tensor xla_result = xla_lhs.__iand__(xla_rhs);
+    AllClose(result, xla_result);
+    AllClose(lhs, xla_lhs);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestBitwiseAndScalar) {
   at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
                                at::TensorOptions(at::kInt));
@@ -3661,6 +3676,19 @@ TEST_F(AtenXlaTensorTest, TestBitwiseAndScalar) {
     at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs, device);
     at::Tensor xla_result = xla_lhs.__and__(rhs);
     AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseAndScalarInPlace) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Scalar rhs(123456789);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs.clone(), device);
+    at::Tensor result = lhs.__iand__(rhs);
+    at::Tensor xla_result = xla_lhs.__iand__(rhs);
+    AllClose(result, xla_result);
+    AllClose(lhs, xla_lhs);
   });
 }
 
@@ -3678,6 +3706,21 @@ TEST_F(AtenXlaTensorTest, TestBitwiseOr) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestBitwiseOrInPlace) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor rhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs.clone(), device);
+    at::Tensor result = lhs.__ior__(rhs);
+    at::Tensor xla_rhs = bridge::CreateXlaTensor(rhs, device);
+    at::Tensor xla_result = xla_lhs.__ior__(xla_rhs);
+    AllClose(result, xla_result);
+    AllClose(lhs, xla_lhs);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestBitwiseOrScalar) {
   at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
                                at::TensorOptions(at::kInt));
@@ -3687,6 +3730,19 @@ TEST_F(AtenXlaTensorTest, TestBitwiseOrScalar) {
     at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs, device);
     at::Tensor xla_result = xla_lhs.__or__(rhs);
     AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseOrScalarInPlace) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Scalar rhs(123456789);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs.clone(), device);
+    at::Tensor result = lhs.__ior__(rhs);
+    at::Tensor xla_result = xla_lhs.__ior__(rhs);
+    AllClose(result, xla_result);
+    AllClose(lhs, xla_lhs);
   });
 }
 
@@ -3704,6 +3760,21 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXor) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestBitwiseXorInPlace) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor rhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs.clone(), device);
+    at::Tensor result = lhs.__ixor__(rhs);
+    at::Tensor xla_rhs = bridge::CreateXlaTensor(rhs, device);
+    at::Tensor xla_result = xla_lhs.__ixor__(xla_rhs);
+    AllClose(result, xla_result);
+    AllClose(lhs, xla_lhs);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestBitwiseXorScalar) {
   at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
                                at::TensorOptions(at::kInt));
@@ -3713,6 +3784,19 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorScalar) {
     at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs, device);
     at::Tensor xla_result = xla_lhs.__xor__(rhs);
     AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseXorScalarInPlace) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Scalar rhs(123456789);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = bridge::CreateXlaTensor(lhs.clone(), device);
+    at::Tensor result = lhs.__ixor__(rhs);
+    at::Tensor xla_result = xla_lhs.__ixor__(rhs);
+    AllClose(result, xla_result);
+    AllClose(lhs, xla_lhs);
   });
 }
 
