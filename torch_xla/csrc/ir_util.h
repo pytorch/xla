@@ -33,6 +33,11 @@ class Util {
   // argument.
   static std::vector<const Node*> ComputePostOrder(
       tensorflow::gtl::ArraySlice<const Node* const> nodes);
+
+  // Retrieves the number of nodes within the graph whose sink are passed in the
+  // nodes argument.
+  static size_t GetGraphSize(
+      tensorflow::gtl::ArraySlice<const Node* const> nodes);
 };
 
 }  // namespace ir
