@@ -465,6 +465,14 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor narrow(const at::Tensor& self, int64_t dim, int64_t start,
                     int64_t length) const override;
 
+  at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size,
+                        at::IntArrayRef stride,
+                        c10::optional<int64_t> storage_offset) const override;
+
+  at::Tensor& as_strided_(at::Tensor& self, at::IntArrayRef size,
+                          at::IntArrayRef stride,
+                          c10::optional<int64_t> storage_offset) const override;
+
   at::Tensor select(const at::Tensor& self, int64_t dim,
                     int64_t index) const override;
 

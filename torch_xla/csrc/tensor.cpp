@@ -25,6 +25,7 @@
 #include "torch_xla/csrc/ops/arg_max.h"
 #include "torch_xla/csrc/ops/arg_min.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
+#include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/avg_pool2d.h"
 #include "torch_xla/csrc/ops/avg_pool2d_backward.h"
 #include "torch_xla/csrc/ops/batch_norm_forward.h"
@@ -1948,6 +1949,19 @@ XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
   view_info.indices[dim] = XlaHelpers::GetCanonicalPosition(
       input_shape.get().dimensions(), dim, start);
   return input.CreateView(std::move(view_info));
+}
+
+XLATensor XLATensor::as_strided(const XLATensor& input,
+                                std::vector<xla::int64> size,
+                                c10::optional<xla::int64> storage_offset) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::AsStrided>(
+      input.GetIrValue(), size, storage_offset));
+}
+
+void XLATensor::as_strided_(XLATensor& input, std::vector<xla::int64> size,
+                            c10::optional<xla::int64> storage_offset) {
+  input.SetIrValue(ir::MakeNode<ir::ops::AsStrided>(input.GetIrValue(), size,
+                                                    storage_offset));
 }
 
 std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,

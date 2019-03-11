@@ -274,6 +274,16 @@ class XLATensor {
   static XLATensor narrow(const XLATensor& input, xla::int64 dim,
                           xla::int64 start, xla::int64 length);
 
+  // Takes a slice from the input as R1 at the specified offset and reshapes it
+  // into the provided size.
+  static XLATensor as_strided(const XLATensor& input,
+                              std::vector<xla::int64> size,
+                              c10::optional<xla::int64> storage_offset);
+
+  // In-place version of the method above.
+  static void as_strided_(XLATensor& input, std::vector<xla::int64> size,
+                          c10::optional<xla::int64> storage_offset);
+
   static XLATensor cast(const XLATensor& input, at::ScalarType dtype);
 
   static XLATensor log_softmax(const XLATensor& input, xla::int64 dim);
