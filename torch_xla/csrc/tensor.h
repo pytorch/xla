@@ -214,6 +214,7 @@ class XLATensor {
 
   static XLATensor threshold(const XLATensor& input, float threshold,
                              float value);
+  static void threshold_(XLATensor& input, float threshold, float value);
 
   static XLATensor elu(const XLATensor& input, at::Scalar alpha,
                        at::Scalar scale, at::Scalar input_scale);

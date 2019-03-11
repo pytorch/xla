@@ -1285,6 +1285,14 @@ at::Tensor AtenXlaType::threshold(const at::Tensor& self, at::Scalar threshold,
       bridge::GetXlaTensor(self), threshold.to<double>(), value.to<double>()));
 }
 
+at::Tensor& AtenXlaType::threshold_(at::Tensor& self, at::Scalar threshold,
+                                    at::Scalar value) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::threshold_(self_tensor, threshold.to<double>(),
+                        value.to<double>());
+  return self;
+}
+
 at::Tensor AtenXlaType::threshold_backward(const at::Tensor& grad_output,
                                            const at::Tensor& self,
                                            at::Scalar threshold) const {
