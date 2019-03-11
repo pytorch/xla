@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <c10/core/Scalar.h>
+#include <c10/util/Optional.h>
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/literal_util.h"
@@ -104,6 +105,10 @@ class XlaHelpers {
   template <typename S>
   static std::vector<xla::int64> I64List(const S& input) {
     return xla::util::ToVector<xla::int64>(input);
+  }
+
+  static c10::optional<xla::int64> I64Optional(c10::optional<int64_t> opt) {
+    return opt ? c10::optional<xla::int64>(*opt) : c10::nullopt;
   }
 
   // Creates an XLA padding configuration from a padding attribute value.
