@@ -3800,6 +3800,102 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorScalarInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestLshift) {
+  at::Tensor input = at::randn({4, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor shift_amount = at::randint(16, input.sizes());
+  at::Tensor result = at::__lshift__(input, shift_amount);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_shift_amount = bridge::CreateXlaTensor(shift_amount, device);
+    at::Tensor xla_result = at::__lshift__(xla_input, xla_shift_amount);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestLshiftInPlace) {
+  at::Tensor input = at::randn({4, 2}, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor shift_amount = at::randint(16, input.sizes());
+    at::Tensor result = input.__ilshift__(shift_amount);
+    at::Tensor xla_shift_amount = bridge::CreateXlaTensor(shift_amount, device);
+    at::Tensor xla_result = xla_input.__ilshift__(xla_shift_amount);
+    AllClose(result, xla_result);
+    AllClose(input, xla_input);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestLshiftScalar) {
+  at::Tensor input = at::randn({4, 2}, at::TensorOptions(at::kFloat));
+  at::Scalar shift_amount = 3;
+  at::Tensor result = at::__lshift__(input, shift_amount);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_result = at::__lshift__(xla_input, shift_amount);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestLshiftScalarInPlace) {
+  at::Tensor input = at::randn({4, 2}, at::TensorOptions(at::kFloat));
+  at::Scalar shift_amount = 3;
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor result = input.__ilshift__(shift_amount);
+    at::Tensor xla_result = xla_input.__ilshift__(shift_amount);
+    AllClose(result, xla_result);
+    AllClose(input, xla_input);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestRshift) {
+  at::Tensor input = at::randn({4, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor shift_amount = at::randint(16, input.sizes());
+  at::Tensor result = at::__rshift__(input, shift_amount);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_shift_amount = bridge::CreateXlaTensor(shift_amount, device);
+    at::Tensor xla_result = at::__rshift__(xla_input, xla_shift_amount);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestRshiftInPlace) {
+  at::Tensor input = at::randn({4, 2}, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor shift_amount = at::randint(16, input.sizes());
+    at::Tensor result = input.__irshift__(shift_amount);
+    at::Tensor xla_shift_amount = bridge::CreateXlaTensor(shift_amount, device);
+    at::Tensor xla_result = xla_input.__irshift__(xla_shift_amount);
+    AllClose(result, xla_result);
+    AllClose(input, xla_input);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestRshiftScalar) {
+  at::Tensor input = at::randn({4, 2}, at::TensorOptions(at::kFloat));
+  at::Scalar shift_amount = 3;
+  at::Tensor result = at::__rshift__(input, shift_amount);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_result = at::__rshift__(xla_input, shift_amount);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestRshiftScalarInPlace) {
+  at::Tensor input = at::randn({4, 2}, at::TensorOptions(at::kFloat));
+  at::Scalar shift_amount = 3;
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+    at::Tensor result = input.__irshift__(shift_amount);
+    at::Tensor xla_result = xla_input.__irshift__(shift_amount);
+    AllClose(result, xla_result);
+    AllClose(input, xla_input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestMeshgrid) {
   at::Tensor a = at::rand({3}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2}, at::TensorOptions(at::kFloat));

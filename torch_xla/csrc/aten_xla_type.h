@@ -234,6 +234,22 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& __ixor__(at::Tensor& self,
                        const at::Tensor& other) const override;
 
+  at::Tensor __lshift__(const at::Tensor& self,
+                        at::Scalar other) const override;
+  at::Tensor __lshift__(const at::Tensor& self,
+                        const at::Tensor& other) const override;
+  at::Tensor& __ilshift__(at::Tensor& self, at::Scalar other) const override;
+  at::Tensor& __ilshift__(at::Tensor& self,
+                          const at::Tensor& other) const override;
+
+  at::Tensor __rshift__(const at::Tensor& self,
+                        at::Scalar other) const override;
+  at::Tensor __rshift__(const at::Tensor& self,
+                        const at::Tensor& other) const override;
+  at::Tensor& __irshift__(at::Tensor& self, at::Scalar other) const override;
+  at::Tensor& __irshift__(at::Tensor& self,
+                          const at::Tensor& other) const override;
+
   at::Tensor neg(const at::Tensor& self) const override;
   at::Tensor& neg_(at::Tensor& self) const override;
 
