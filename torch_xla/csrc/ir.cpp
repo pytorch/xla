@@ -61,7 +61,6 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
   metadata_.frame_info = GetFrameInfo();
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
-    graph_size_ += operand->graph_size();
     hash_ = xla::util::HashCombine(hash_, operand->hash());
   }
 }

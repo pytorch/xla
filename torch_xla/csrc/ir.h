@@ -189,8 +189,6 @@ class Node {
 
   size_t hash() const { return hash_; }
 
-  size_t graph_size() const { return graph_size_; }
-
   const MetaData& metadata() const { return metadata_; }
 
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
@@ -231,8 +229,6 @@ class Node {
   std::set<Use> uses_;
   // The hash value of the graph rooted at this node.
   size_t hash_ = 0;
-  // An estimation of the number of nodes behind this node.
-  size_t graph_size_ = 1;
   // The metadata attached to the IR node.
   MetaData metadata_;
 };

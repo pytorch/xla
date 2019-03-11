@@ -17,6 +17,7 @@
 #include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool2d.h"
 #include "torch_xla/csrc/ops/all.h"
@@ -348,12 +349,14 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
 }
 
 void XLATensor::TryLimitGraphSize() {
-  // If we are accumulating too many nodes in the pending graph, render the XLA
-  // by executing the pending graph.
+  static const size_t kCheckFrequency = 100;
   static const size_t kMaxPendingGraphSize = 1000;
-  if (data()->ir_value &&
-      data()->ir_value->graph_size() > kMaxPendingGraphSize) {
-    ApplyPendingGraph();
+  static std::atomic<size_t> counter(1);
+  if (data()->ir_value && counter.fetch_add(1) % kCheckFrequency == 0) {
+    size_t graph_size = ir::Util::GetGraphSize({data()->ir_value.node.get()});
+    if (graph_size > kMaxPendingGraphSize) {
+      ApplyPendingGraph();
+    }
   }
 }
 
