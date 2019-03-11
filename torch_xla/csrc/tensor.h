@@ -96,32 +96,28 @@ class XLATensor {
 
   // Basic tensor operations used by the optimizers.
   static XLATensor add(const XLATensor& input, const XLATensor& other,
-                       const at::Scalar& alpha);
-  static void add_(XLATensor& input, const XLATensor& other,
-                   const at::Scalar& alpha);
-  static XLATensor add(const XLATensor& input, const at::Scalar& other,
-                       const at::Scalar& alpha);
-  static void add_(XLATensor& input, const at::Scalar& other,
-                   const at::Scalar& alpha);
+                       at::Scalar alpha);
+  static void add_(XLATensor& input, const XLATensor& other, at::Scalar alpha);
+  static XLATensor add(const XLATensor& input, at::Scalar other,
+                       at::Scalar alpha);
+  static void add_(XLATensor& input, at::Scalar other, at::Scalar alpha);
 
   static XLATensor sub(const XLATensor& input, const XLATensor& other,
-                       const at::Scalar& alpha);
-  static void sub_(XLATensor& input, const XLATensor& other,
-                   const at::Scalar& alpha);
-  static XLATensor sub(const XLATensor& input, const at::Scalar& other,
-                       const at::Scalar& alpha);
-  static void sub_(XLATensor& input, const at::Scalar& other,
-                   const at::Scalar& alpha);
+                       at::Scalar alpha);
+  static void sub_(XLATensor& input, const XLATensor& other, at::Scalar alpha);
+  static XLATensor sub(const XLATensor& input, at::Scalar other,
+                       at::Scalar alpha);
+  static void sub_(XLATensor& input, at::Scalar other, at::Scalar alpha);
 
   static XLATensor mul(const XLATensor& input, const XLATensor& other);
-  static XLATensor mul(const XLATensor& input, const at::Scalar& other);
+  static XLATensor mul(const XLATensor& input, at::Scalar other);
   static void mul_(XLATensor& input, const XLATensor& other);
-  static void mul_(XLATensor& input, const at::Scalar& other);
+  static void mul_(XLATensor& input, at::Scalar other);
 
   static XLATensor div(const XLATensor& input, const XLATensor& other);
-  static XLATensor div(const XLATensor& input, const at::Scalar& other);
+  static XLATensor div(const XLATensor& input, at::Scalar other);
   static void div_(XLATensor& input, const XLATensor& other);
-  static void div_(XLATensor& input, const at::Scalar& other);
+  static void div_(XLATensor& input, at::Scalar other);
 
   static XLATensor fmod(const XLATensor& input, const XLATensor& other);
   static XLATensor fmod(const XLATensor& input, at::Scalar other);
@@ -145,57 +141,57 @@ class XLATensor {
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions);
 
-  static XLATensor ne(const XLATensor& input, const at::Scalar& other);
-  static void ne_(XLATensor& input, const at::Scalar& other);
+  static XLATensor ne(const XLATensor& input, at::Scalar other);
+  static void ne_(XLATensor& input, at::Scalar other);
 
   static XLATensor ne(const XLATensor& input, const XLATensor& other);
   static void ne_(XLATensor& input, const XLATensor& other);
 
-  static XLATensor eq(const XLATensor& input, const at::Scalar& other);
-  static void eq_(XLATensor& input, const at::Scalar& other);
+  static XLATensor eq(const XLATensor& input, at::Scalar other);
+  static void eq_(XLATensor& input, at::Scalar other);
 
   static XLATensor eq(const XLATensor& input, const XLATensor& other);
   static void eq_(XLATensor& input, const XLATensor& other);
 
-  static XLATensor ge(const XLATensor& input, const at::Scalar& other);
-  static void ge_(XLATensor& input, const at::Scalar& other);
+  static XLATensor ge(const XLATensor& input, at::Scalar other);
+  static void ge_(XLATensor& input, at::Scalar other);
 
   static XLATensor ge(const XLATensor& input, const XLATensor& other);
   static void ge_(XLATensor& input, const XLATensor& other);
 
-  static XLATensor le(const XLATensor& input, const at::Scalar& other);
-  static void le_(XLATensor& input, const at::Scalar& other);
+  static XLATensor le(const XLATensor& input, at::Scalar other);
+  static void le_(XLATensor& input, at::Scalar other);
 
   static XLATensor le(const XLATensor& input, const XLATensor& other);
   static void le_(XLATensor& input, const XLATensor& other);
 
-  static XLATensor gt(const XLATensor& input, const at::Scalar& other);
-  static void gt_(XLATensor& input, const at::Scalar& other);
+  static XLATensor gt(const XLATensor& input, at::Scalar other);
+  static void gt_(XLATensor& input, at::Scalar other);
 
   static XLATensor gt(const XLATensor& input, const XLATensor& other);
   static void gt_(XLATensor& input, const XLATensor& other);
 
-  static XLATensor lt(const XLATensor& input, const at::Scalar& other);
-  static void lt_(XLATensor& input, const at::Scalar& other);
+  static XLATensor lt(const XLATensor& input, at::Scalar other);
+  static void lt_(XLATensor& input, at::Scalar other);
 
   static XLATensor lt(const XLATensor& input, const XLATensor& other);
   static void lt_(XLATensor& input, const XLATensor& other);
 
   static XLATensor rsub(const XLATensor& input, const XLATensor& other,
-                        const at::Scalar& alpha);
+                        at::Scalar alpha);
 
-  static XLATensor rsub(const XLATensor& input, const at::Scalar& other,
-                        const at::Scalar& alpha);
+  static XLATensor rsub(const XLATensor& input, at::Scalar other,
+                        at::Scalar alpha);
 
-  static XLATensor __and__(const XLATensor& input, const at::Scalar& other);
+  static XLATensor __and__(const XLATensor& input, at::Scalar other);
 
   static XLATensor __and__(const XLATensor& input, const XLATensor& other);
 
-  static XLATensor __or__(const XLATensor& input, const at::Scalar& other);
+  static XLATensor __or__(const XLATensor& input, at::Scalar other);
 
   static XLATensor __or__(const XLATensor& input, const XLATensor& other);
 
-  static XLATensor __xor__(const XLATensor& input, const at::Scalar& other);
+  static XLATensor __xor__(const XLATensor& input, at::Scalar other);
 
   static XLATensor __xor__(const XLATensor& input, const XLATensor& other);
 
@@ -203,7 +199,7 @@ class XLATensor {
   // appropriately.
   static XLATensor DispatchComparisonOp(c10::Symbol kind,
                                         const XLATensor& input,
-                                        const at::Scalar& other);
+                                        at::Scalar other);
 
   // Same as above, with the second input a tensor as well.
   static XLATensor DispatchComparisonOp(c10::Symbol kind,
@@ -287,14 +283,14 @@ class XLATensor {
                              const Device& device,
                              c10::optional<at::ScalarType> scalar_type);
 
-  static XLATensor addcmul(const XLATensor& input, const at::Scalar& value,
+  static XLATensor addcmul(const XLATensor& input, at::Scalar value,
                            const XLATensor& tensor1, const XLATensor& tensor2);
-  static void addcmul_(XLATensor& input, const at::Scalar& value,
+  static void addcmul_(XLATensor& input, at::Scalar value,
                        const XLATensor& tensor1, const XLATensor& tensor2);
 
-  static XLATensor addcdiv(const XLATensor& input, const at::Scalar& value,
+  static XLATensor addcdiv(const XLATensor& input, at::Scalar value,
                            const XLATensor& tensor1, const XLATensor& tensor2);
-  static void addcdiv_(XLATensor& input, const at::Scalar& value,
+  static void addcdiv_(XLATensor& input, at::Scalar value,
                        const XLATensor& tensor1, const XLATensor& tensor2);
 
   static XLATensor select(const XLATensor& input, xla::int64 dim,
@@ -375,7 +371,7 @@ class XLATensor {
   // high paddings.
   static XLATensor constant_pad_nd(
       const XLATensor& input, tensorflow::gtl::ArraySlice<const xla::int64> pad,
-      const at::Scalar& value);
+      at::Scalar value);
 
   static XLATensor ceil(const XLATensor& input);
   static void ceil_(XLATensor& input);
@@ -620,14 +616,14 @@ class XLATensor {
   // one. The shape of mask must be broadcastable with the shape of the
   // underlying tensor.
   static XLATensor masked_fill(const XLATensor& input, const XLATensor& mask,
-                               const at::Scalar& value);
+                               at::Scalar value);
 
   // In-place version of the method above.
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
-                           const at::Scalar& value);
+                           at::Scalar value);
 
   // Fills the input with the given value.
-  static void fill_(XLATensor& input, const at::Scalar& value);
+  static void fill_(XLATensor& input, at::Scalar value);
 
   // Returns the cross product of the two input tensors in the given dimension.
   // If the dimension is not given, it defaults to the first dimension found
