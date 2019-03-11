@@ -820,6 +820,56 @@ at::Tensor& AtenXlaType::__ixor__(at::Tensor& self,
   return self;
 }
 
+at::Tensor AtenXlaType::__lshift__(const at::Tensor& self,
+                                   at::Scalar other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::__lshift__(bridge::GetXlaTensor(self), other));
+}
+
+at::Tensor AtenXlaType::__lshift__(const at::Tensor& self,
+                                   const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(XLATensor::__lshift__(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor& AtenXlaType::__ilshift__(at::Tensor& self, at::Scalar other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::__ilshift__(self_tensor, other);
+  return self;
+}
+
+at::Tensor& AtenXlaType::__ilshift__(at::Tensor& self,
+                                     const at::Tensor& other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::__ilshift__(self_tensor, bridge::GetXlaTensor(other));
+  return self;
+}
+
+at::Tensor AtenXlaType::__rshift__(const at::Tensor& self,
+                                   at::Scalar other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::__rshift__(bridge::GetXlaTensor(self), other));
+}
+
+at::Tensor AtenXlaType::__rshift__(const at::Tensor& self,
+                                   const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(XLATensor::__rshift__(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor& AtenXlaType::__irshift__(at::Tensor& self, at::Scalar other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::__irshift__(self_tensor, other);
+  return self;
+}
+
+at::Tensor& AtenXlaType::__irshift__(at::Tensor& self,
+                                     const at::Tensor& other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::__irshift__(self_tensor, bridge::GetXlaTensor(other));
+  return self;
+}
+
 at::Tensor AtenXlaType::neg(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::neg(bridge::GetXlaTensor(self)));
 }
