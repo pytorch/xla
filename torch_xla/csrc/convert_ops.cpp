@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
@@ -54,6 +55,17 @@ xla::XlaOp ConvertToNumeric(const xla::XlaOp& op, xla::PrimitiveType from) {
   return from != xla::PrimitiveType::PRED
              ? op
              : ConvertTo(op, from, xla::PrimitiveType::U8, /*device=*/nullptr);
+}
+
+xla::XlaOp CastToScalarType(const xla::XlaOp& input,
+                            c10::optional<at::ScalarType> dtype) {
+  if (dtype) {
+    return ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),
+                     MakeXlaPrimitiveType(*dtype, /*device=*/nullptr),
+                     /*device=*/nullptr);
+  } else {
+    return ConvertToNumeric(input, XlaHelpers::TypeOfXlaOp(input));
+  }
 }
 
 }  // namespace torch_xla

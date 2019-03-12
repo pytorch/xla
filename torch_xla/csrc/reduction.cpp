@@ -132,6 +132,20 @@ xla::XlaOp BuildProd(const torch::jit::Node* node, const xla::XlaOp& operand) {
       XlaHelpers::I64List(dimensions_to_reduce));
 }
 
+xla::XlaOp BuildCumulativeComputation(const xla::XlaOp& input, xla::int64 dim,
+                                      const xla::XlaComputation& reducer,
+                                      const xla::XlaOp& init) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  std::vector<xla::int64> window_strides(input_shape.rank(), 1);
+  std::vector<xla::int64> window_dims(input_shape.rank(), 1);
+  window_dims[dim] = input_shape.dimensions(dim);
+  std::vector<std::pair<xla::int64, xla::int64>> padding(input_shape.rank());
+  padding[dim].first = input_shape.dimensions(dim) - 1;
+  return xla::ReduceWindowWithGeneralPadding(
+      input, init, reducer, window_dims, window_strides,
+      /*base_dilations=*/{}, /*window_dilations=*/{}, padding);
+}
+
 xla::XlaOp BuildMean(const xla::XlaOp& input,
                      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                      bool keep_reduced_dimensions) {
