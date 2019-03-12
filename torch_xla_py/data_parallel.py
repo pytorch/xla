@@ -144,6 +144,7 @@ class DataParallel(object):
 
   def _module_runner(self, device, module, loader, result):
     torch_xla._XLAC._xla_set_default_device(device)
+    torch_xla._XLAC._xla_set_replication_devices(self._device_ids)
     result.result = self._loop_fn(module, loader)
 
   def __call__(self):

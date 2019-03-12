@@ -18,6 +18,11 @@
 #include "tensorflow/core/util/device_name_utils.h"
 
 namespace xla {
+namespace {
+
+thread_local std::vector<string> g_replication_devices;
+
+}  // namespace
 
 XrtComputationClient::XrtComputationClient(
     XrtComputationClient::Options options)
@@ -805,6 +810,14 @@ std::vector<string> XrtComputationClient::GetAvailableDevices() const {
     devices.push_back(dev_target.first);
   }
   return devices;
+}
+
+void XrtComputationClient::SetReplicationDevices(std::vector<string> devices) {
+  g_replication_devices = std::move(devices);
+}
+
+const std::vector<string>& XrtComputationClient::GetReplicationDevices() const {
+  return g_replication_devices;
 }
 
 void XrtComputationClient::SetRngSeed(size_t seed) { rng_seed_ = seed; }

@@ -609,23 +609,25 @@ class TestParallelTensorMNIST(XlaTestCase):
 
   def test(self):
     devices = xm.get_xla_supported_devices()
-    batch_size = 8
+    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=8)
+    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     train_loader = xu.SampleGenerator(
         data=torch.zeros(batch_size, 1, 28, 28),
         target=torch.zeros(batch_size, dtype=torch.int64),
-        sample_count=10 * len(devices))
+        sample_count=sample_count * len(devices))
 
     def loop_fn(model, loader):
       loss_fn = nn.NLLLoss()
       optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
       for x, (data, target) in loader:
-        optimizer.zero_grad()
-        output = model(data)
-        loss = loss_fn(output, target)
-        loss.backward()
-        xm.optimizer_step(optimizer)
-        self.assertLess(loss.cpu().item(), 3.0)
+        with xu.TimedScope(msg='Training loop: ', printfn=None):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
+          xm.optimizer_step(optimizer)
+          self.assertLess(loss.cpu().item(), 3.0)
 
     model_parallel = dp.DataParallel(
         XlaMNIST, train_loader, loop_fn, device_ids=devices)
@@ -636,23 +638,25 @@ class TestParallelTensorResnet18(XlaTestCase):
 
   def test(self):
     devices = xm.get_xla_supported_devices()
-    batch_size = 4
+    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
+    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     train_loader = xu.SampleGenerator(
         data=torch.zeros(batch_size, 3, 224, 224),
         target=torch.zeros(batch_size, dtype=torch.int64),
-        sample_count=10 * len(devices))
+        sample_count=sample_count * len(devices))
 
     def loop_fn(model, loader):
       loss_fn = nn.NLLLoss()
       optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
       for x, (data, target) in loader:
-        optimizer.zero_grad()
-        output = model(data)
-        loss = loss_fn(output, target)
-        loss.backward()
-        xm.optimizer_step(optimizer)
-        self.assertLess(loss.cpu().item(), 3.0)
+        with xu.TimedScope(msg='Training loop: ', printfn=None):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
+          xm.optimizer_step(optimizer)
+          self.assertLess(loss.cpu().item(), 3.0)
 
     model_parallel = dp.DataParallel(
         torchvision.models.resnet18, train_loader, loop_fn, device_ids=devices)
