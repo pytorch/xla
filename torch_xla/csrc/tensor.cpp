@@ -644,13 +644,32 @@ XLATensor XLATensor::fmod(const XLATensor& input, at::Scalar other) {
   return input.CreateFrom(ir::ops::Fmod(input.GetIrValue(), constant));
 }
 
+void XLATensor::fmod_(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(ir::ops::Fmod(input.GetIrValue(), other.GetIrValue()));
+}
+
 void XLATensor::fmod_(XLATensor& input, at::Scalar other) {
   ir::NodePtr constant = ir::ops::ScalarOp(other, input.shape());
   input.SetIrValue(ir::ops::Fmod(input.GetIrValue(), constant));
 }
 
-void XLATensor::fmod_(XLATensor& input, const XLATensor& other) {
-  input.SetIrValue(ir::ops::Fmod(input.GetIrValue(), other.GetIrValue()));
+XLATensor XLATensor::remainder(const XLATensor& input, const XLATensor& other) {
+  return input.CreateFrom(
+      ir::ops::Remainder(input.GetIrValue(), other.GetIrValue()));
+}
+
+XLATensor XLATensor::remainder(const XLATensor& input, at::Scalar other) {
+  ir::NodePtr constant = ir::ops::ScalarOp(other, input.shape());
+  return input.CreateFrom(ir::ops::Remainder(input.GetIrValue(), constant));
+}
+
+void XLATensor::remainder_(XLATensor& input, const XLATensor& other) {
+  input.SetIrValue(ir::ops::Remainder(input.GetIrValue(), other.GetIrValue()));
+}
+
+void XLATensor::remainder_(XLATensor& input, at::Scalar other) {
+  ir::NodePtr constant = ir::ops::ScalarOp(other, input.shape());
+  input.SetIrValue(ir::ops::Remainder(input.GetIrValue(), constant));
 }
 
 void XLATensor::zero_(XLATensor& input) {

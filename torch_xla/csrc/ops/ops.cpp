@@ -485,6 +485,12 @@ NodePtr Rshift(const Value& input, const Value& other) {
   return input / Pow(ScalarOp(2, input.shape()), other);
 }
 
+NodePtr Remainder(const Value& input, const Value& divisor) {
+  NodePtr f = Fmod(input, Abs(divisor));
+  return f + divisor * ComparisonOp(at::aten::lt, SignOp(f) * SignOp(divisor),
+                                    ScalarOp(0, input.shape()));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
