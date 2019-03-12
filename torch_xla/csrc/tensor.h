@@ -832,7 +832,7 @@ class XLATensor {
   std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node) const;
 
   // Retrieves the set of devices to be passed to the computation client
-  // Compile() API. This can return a vector with devie itself, or the set of
+  // Compile() API. This can return a vector with device itself, or the set of
   // replication devices set into the computation client.
   static std::vector<std::string> GetCompilationDevices(std::string device);
 
