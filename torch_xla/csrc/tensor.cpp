@@ -38,6 +38,8 @@
 #include "torch_xla/csrc/ops/conv2d.h"
 #include "torch_xla/csrc/ops/conv2d_backward.h"
 #include "torch_xla/csrc/ops/cross_replica_sum.h"
+#include "torch_xla/csrc/ops/cumprod.h"
+#include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/dropout.h"
@@ -1646,6 +1648,22 @@ XLATensor XLATensor::sum(const XLATensor& input,
                                  XlaHelpers::GetCanonicalDimensionIndices(
                                      dimensions, input.shape().get().rank()),
                                  keep_reduced_dimensions, dtype));
+}
+
+XLATensor XLATensor::cumsum(const XLATensor& input, xla::int64 dim,
+                            c10::optional<at::ScalarType> dtype) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::CumSum>(input.GetIrValue(), canonical_dim, dtype));
+}
+
+XLATensor XLATensor::cumprod(const XLATensor& input, xla::int64 dim,
+                             c10::optional<at::ScalarType> dtype) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::CumProd>(input.GetIrValue(), canonical_dim, dtype));
 }
 
 XLATensor XLATensor::prod(const XLATensor& input,

@@ -1082,6 +1082,28 @@ at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim,
                       /*keep_reduced_dimensions=*/false, dtype));
 }
 
+at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim,
+                               at::ScalarType dtype) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::cumsum(bridge::GetXlaTensor(self), dim, dtype));
+}
+
+at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::cumsum(bridge::GetXlaTensor(self), dim, c10::nullopt));
+}
+
+at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim,
+                                at::ScalarType dtype) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::cumprod(bridge::GetXlaTensor(self), dim, dtype));
+}
+
+at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::cumprod(bridge::GetXlaTensor(self), dim, c10::nullopt));
+}
+
 at::Tensor AtenXlaType::clamp(const at::Tensor& self,
                               c10::optional<at::Scalar> min,
                               c10::optional<at::Scalar> max) const {
