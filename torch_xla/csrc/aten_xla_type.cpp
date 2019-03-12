@@ -1576,6 +1576,11 @@ at::Tensor AtenXlaType::narrow(const at::Tensor& self, int64_t dim,
       XLATensor::narrow(bridge::GetXlaTensor(self), dim, start, length));
 }
 
+at::Tensor AtenXlaType::narrow_copy(const at::Tensor& self, int64_t dim,
+                                    int64_t start, int64_t length) const {
+  return at::native::narrow_copy_dense(self, dim, start, length);
+}
+
 at::Tensor AtenXlaType::as_strided(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) const {

@@ -2637,7 +2637,7 @@ TEST_F(AtenXlaTensorTest, TestNarrow) {
       at::Tensor b = a.narrow(dim, start, 6);
       ForEachDevice([&](const Device& device) {
         at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
-        at::Tensor xla_b = xla_a.narrow(dim, 2, 6);
+        at::Tensor xla_b = xla_a.narrow(dim, start, 6);
         AllClose(b, xla_b);
       });
     }
@@ -2751,6 +2751,23 @@ TEST_F(AtenXlaTensorTest, TestNarrowInNarrowUpdate) {
           AllClose(a, xla_a);
         });
       }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestNarrowCopy) {
+  for (xla::int64 dim : {1, -3}) {
+    for (xla::int64 start : {2, -8}) {
+      ForEachDevice([&](const Device& device) {
+        at::Tensor input =
+            at::rand({8, 10, 4, 4}, at::TensorOptions(at::kFloat));
+        at::Tensor xla_input = bridge::CreateXlaTensor(input.clone(), device);
+        at::Tensor result = input.narrow_copy(dim, start, 6);
+        input.add_(1);
+        at::Tensor xla_result = xla_input.narrow_copy(dim, start, 6);
+        xla_input.add_(1);
+        AllClose(result, xla_result);
+      });
     }
   }
 }
