@@ -278,6 +278,8 @@ class XLATensor {
       const XLATensor& input,
       tensorflow::gtl::ArraySlice<const xla::int64> output_size);
 
+  // Returns a new tensor that is a narrowed view of the input in the given
+  // dimension.
   static XLATensor narrow(const XLATensor& input, xla::int64 dim,
                           xla::int64 start, xla::int64 length);
 
