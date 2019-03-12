@@ -567,6 +567,13 @@ at::Tensor AtenXlaType::fmod(const at::Tensor& self,
       XLATensor::fmod(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
+at::Tensor& AtenXlaType::fmod_(at::Tensor& self,
+                               const at::Tensor& other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::fmod_(self_tensor, bridge::GetXlaTensor(other));
+  return self;
+}
+
 at::Tensor AtenXlaType::fmod(const at::Tensor& self, at::Scalar other) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::fmod(bridge::GetXlaTensor(self), other));
@@ -578,10 +585,28 @@ at::Tensor& AtenXlaType::fmod_(at::Tensor& self, at::Scalar other) const {
   return self;
 }
 
-at::Tensor& AtenXlaType::fmod_(at::Tensor& self,
-                               const at::Tensor& other) const {
+at::Tensor AtenXlaType::remainder(const at::Tensor& self,
+                                  const at::Tensor& other) const {
+  return bridge::AtenFromXlaTensor(XLATensor::remainder(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor& AtenXlaType::remainder_(at::Tensor& self,
+                                    const at::Tensor& other) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::fmod_(self_tensor, bridge::GetXlaTensor(other));
+  XLATensor::remainder_(self_tensor, bridge::GetXlaTensor(other));
+  return self;
+}
+
+at::Tensor AtenXlaType::remainder(const at::Tensor& self,
+                                  at::Scalar other) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::remainder(bridge::GetXlaTensor(self), other));
+}
+
+at::Tensor& AtenXlaType::remainder_(at::Tensor& self, at::Scalar other) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::remainder_(self_tensor, other);
   return self;
 }
 

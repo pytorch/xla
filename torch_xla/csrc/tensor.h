@@ -121,8 +121,13 @@ class XLATensor {
 
   static XLATensor fmod(const XLATensor& input, const XLATensor& other);
   static XLATensor fmod(const XLATensor& input, at::Scalar other);
-  static void fmod_(XLATensor& input, at::Scalar other);
   static void fmod_(XLATensor& input, const XLATensor& other);
+  static void fmod_(XLATensor& input, at::Scalar other);
+
+  static XLATensor remainder(const XLATensor& input, const XLATensor& other);
+  static XLATensor remainder(const XLATensor& input, at::Scalar other);
+  static void remainder_(XLATensor& input, const XLATensor& other);
+  static void remainder_(XLATensor& input, at::Scalar other);
 
   static void zero_(XLATensor& input);
 
