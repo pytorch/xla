@@ -128,6 +128,8 @@ class XLATensor {
 
   static void s_copy_(XLATensor& input, XLATensor& src);
 
+  static XLATensor clone(const XLATensor& input);
+
   // Additional operations which are part of the PyTorch Tensor functionality.
   xla::int64 size(xla::int64 dim) const;
 

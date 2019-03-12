@@ -87,6 +87,11 @@ at::Tensor AtenXlaType::_s_copy_from(const at::Tensor& self,
   return dst;
 }
 
+at::Tensor AtenXlaType::clone(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::clone(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::_cast_Byte(const at::Tensor& self,
                                    bool /* non_blocking */) const {
   return bridge::AtenFromXlaTensor(

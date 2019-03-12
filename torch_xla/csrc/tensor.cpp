@@ -666,6 +666,10 @@ void XLATensor::s_copy_(XLATensor& input, XLATensor& src) {
   }
 }
 
+XLATensor XLATensor::clone(const XLATensor& input) {
+  return input.CreateFrom(input.GetIrValue());
+}
+
 XLATensor XLATensor::addcmul(const XLATensor& input, at::Scalar value,
                              const XLATensor& tensor1,
                              const XLATensor& tensor2) {

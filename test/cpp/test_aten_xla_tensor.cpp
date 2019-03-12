@@ -57,6 +57,17 @@ void TestBackward(
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestClone) {
+  ForEachDevice([&](const Device& device) {
+    at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = xla_a.clone();
+    AllClose(a, xla_b);
+    xla_a.add_(1.0);
+    AllClose(a, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestCastByte) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat)) * 100.0;
   at::Tensor b = at::_cast_Byte(a);

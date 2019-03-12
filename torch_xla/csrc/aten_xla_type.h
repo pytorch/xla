@@ -17,6 +17,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor _s_copy_from(const at::Tensor& self, const at::Tensor& dst,
                           bool non_blocking) const override;
 
+  at::Tensor clone(const at::Tensor& self) const override;
+
   at::Tensor _cast_Byte(const at::Tensor& self,
                         bool non_blocking) const override;
   at::Tensor _cast_Char(const at::Tensor& self,
