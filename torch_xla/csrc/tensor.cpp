@@ -323,6 +323,7 @@ std::string XLATensor::DumpGraphNodeComputation() const {
 
 void XLATensor::SetXlaData(
     std::shared_ptr<xla::ComputationClient::Data> xla_data) {
+  data()->view = nullptr;
   data()->xla_data = std::move(xla_data);
   data()->ir_value = ir::Value();
   data()->tensor_data = c10::nullopt;
@@ -2154,7 +2155,7 @@ std::vector<size_t> XLATensor::GetApplyOrder(
   order.reserve(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensors[i].CurrentXlaData() == nullptr) {
-      if (tensors[i].CurrentIrValue().node != nullptr) {
+      if (tensors[i].CurrentIrValue()) {
         // Add only tensors which need to be synced.
         order.push_back(i);
       } else {
