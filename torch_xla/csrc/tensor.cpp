@@ -2121,9 +2121,15 @@ XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
 }
 
 XLATensor XLATensor::cross_replica_sum(
-    const std::vector<std::vector<xla::int64>>& groups) const {
-  ir::NodePtr crs = ir::ops::CrossReplicaSumOp(GetIrValue(), groups);
-  return Create(std::move(crs), data()->device, dtype());
+    const XLATensor& input,
+    const std::vector<std::vector<xla::int64>>& groups) {
+  return input.CreateFrom(
+      ir::ops::CrossReplicaSumOp(input.GetIrValue(), groups));
+}
+
+void XLATensor::cross_replica_sum_(
+    XLATensor& input, const std::vector<std::vector<xla::int64>>& groups) {
+  input.SetIrValue(ir::ops::CrossReplicaSumOp(input.GetIrValue(), groups));
 }
 
 XLATensor XLATensor::CreateFrom(ir::Value ir_value) const {
@@ -2164,7 +2170,7 @@ void XLATensor::ApplyPendingGraph() {
       }
       std::string device = GetDevice().ToString();
       auto compiled_computation = xla::ComputationClient::Get()->Compile(
-          std::move(computation), {device}, &output_shape);
+          std::move(computation), GetCompilationDevices(device), &output_shape);
       xla::ComputationClient::ExecuteComputationOptions options;
       options.explode_tuple = false;
       auto results = xla::ComputationClient::Get()->ExecuteComputation(
@@ -2322,6 +2328,20 @@ XLATensor::DataUidMap XLATensor::CreateDataUidMap(
   return data_uid_map;
 }
 
+std::vector<std::string> XLATensor::GetCompilationDevices(std::string device) {
+  auto& replication_devices =
+      xla::ComputationClient::Get()->GetReplicationDevices();
+  std::vector<std::string> compilation_devices;
+  if (replication_devices.empty()) {
+    compilation_devices.emplace_back(std::move(device));
+  } else {
+    compilation_devices.insert(compilation_devices.end(),
+                               replication_devices.begin(),
+                               replication_devices.end());
+  }
+  return compilation_devices;
+}
+
 void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
                                   ApplyContext* apply_context) {
   struct DeviceContext {
@@ -2388,7 +2408,7 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
           MakeShapeWithDeviceLayout(program_shape.result(), device.hw_type);
       devices[index] = device.ToString();
       instances[index] = {std::move(computation),
-                          std::vector<std::string>({devices[index]}),
+                          GetCompilationDevices(devices[index]),
                           &shapes[index]};
 
       std::vector<xla::ComputationClient::Data*> parameters_data =

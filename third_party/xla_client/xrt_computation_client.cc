@@ -443,7 +443,12 @@ const string& XrtComputationClient::TorchDeviceToXrtDevice(
 
 string XrtComputationClient::GetCompilationDevice(
     tensorflow::gtl::ArraySlice<const string> devices) const {
-  return devices.empty() ? GetDefaultDevice() : devices[0];
+  static std::atomic<size_t> counter(0);
+  if (devices.empty()) {
+    return GetDefaultDevice();
+  }
+  size_t index = counter.fetch_add(1) % devices.size();
+  return devices[index];
 }
 
 std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(

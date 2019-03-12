@@ -40,6 +40,13 @@ def xla_device(n=None, devkind=None):
   return torch.device('xla:{}'.format(n))
 
 
+class OptimizerState(object):
+
+  def __init__(self):
+    self.tensors = []
+    self.gradients = []
+
+
 class RateTracker(object):
 
   def __init__(self, smooth_factor=0.8):
@@ -381,28 +388,32 @@ def xla_run_grad(xla_model, grad_outputs, devices=None):
   xla_model.backward(*grads_output_xla)
 
 
-def sync_optimizer(optimizer):
+def _fetch_optimizer_state(optimizer):
 
-  def add(p):
-    sync_tensors = []
+  def add(p, state):
     if isinstance(p, torch.Tensor):
-      sync_tensors.append(p.data)
+      state.tensors.append(p.data)
       if p.grad is not None:
-        sync_tensors.append(p.grad.data)
-      state = optimizer.state.get(p, None)
-      if state:
-        for x in itervalues(state):
+        state.gradients.append(p.grad.data)
+      pstate = optimizer.state.get(p, None)
+      if pstate:
+        for x in itervalues(pstate):
           if isinstance(x, torch.Tensor):
-            sync_tensors.append(x.data)
+            state.tensors.append(x.data)
     elif isinstance(p, dict):
       for x in itervalues(p):
-        sync_tensors += add(x)
+        add(x, state)
     elif isinstance(p, (list, tuple, set)):
       for x in p:
-        sync_tensors += add(x)
-    return sync_tensors
+        add(x, state)
 
-  sync_tensors = add(optimizer.param_groups)
+  state = OptimizerState()
+  add(optimizer.param_groups, state)
+  return state
+
+
+def _sync_optimizer_state(state):
+  sync_tensors = state.gradients + state.tensors
   torch_xla._XLAC._xla_sync_multi([
       torch_xla._XLAC._get_xla_tensor(p)
       for p in sync_tensors
@@ -411,8 +422,12 @@ def sync_optimizer(optimizer):
 
 
 def optimizer_step(optimizer):
+  state = _fetch_optimizer_state(optimizer)
+  torch_xla._XLAC._xla_cross_replica_sum(state.gradients, [])
   loss = optimizer.step()
-  sync_optimizer(optimizer)
+  # Re-fetching saves one XLA compilation round before steady-state.
+  state = _fetch_optimizer_state(optimizer)
+  _sync_optimizer_state(state)
   return loss
 
 
