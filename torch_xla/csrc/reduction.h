@@ -35,6 +35,12 @@ xla::XlaOp BuildProd(const xla::XlaOp& input,
                      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                      bool keep_reduced_dimensions);
 
+// Compute the cumulative computation specified by "reducer" and "init" in the
+// given dimension "dim".
+xla::XlaOp BuildCumulativeComputation(const xla::XlaOp& input, xla::int64 dim,
+                                      const xla::XlaComputation& reducer,
+                                      const xla::XlaOp& init);
+
 xla::XlaOp BuildAll(const xla::XlaOp& input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions);

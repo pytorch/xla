@@ -19,15 +19,8 @@ xla::XlaOp LowerSum(const xla::XlaOp& input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions,
                     c10::optional<at::ScalarType> dtype) {
-  xla::XlaOp casted_input;
-  if (dtype) {
-    casted_input = ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),
-                             MakeXlaPrimitiveType(*dtype, /*device=*/nullptr),
-                             /*device=*/nullptr);
-  } else {
-    casted_input = ConvertToNumeric(input, XlaHelpers::TypeOfXlaOp(input));
-  }
-  return BuildSum(casted_input, dimensions, keep_reduced_dimensions);
+  return BuildSum(CastToScalarType(input, dtype), dimensions,
+                  keep_reduced_dimensions);
 }
 
 xla::Shape NodeOutputShape(

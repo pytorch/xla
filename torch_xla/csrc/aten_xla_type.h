@@ -310,6 +310,13 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor prod(const at::Tensor& self, int64_t dim,
                   at::ScalarType dtype) const override;
 
+  at::Tensor cumsum(const at::Tensor& self, int64_t dim,
+                    at::ScalarType dtype) const override;
+  at::Tensor cumsum(const at::Tensor& self, int64_t dim) const override;
+  at::Tensor cumprod(const at::Tensor& self, int64_t dim,
+                     at::ScalarType dtype) const override;
+  at::Tensor cumprod(const at::Tensor& self, int64_t dim) const override;
+
   at::Tensor clamp(const at::Tensor& self, c10::optional<at::Scalar> min,
                    c10::optional<at::Scalar> max) const override;
   at::Tensor clamp_max(const at::Tensor& self, at::Scalar max) const override;

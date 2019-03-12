@@ -515,6 +515,14 @@ class XLATensor {
                        bool keep_reduced_dimensions,
                        c10::optional<at::ScalarType> dtype);
 
+  // Returns the cumulative sum of elements of input in the given dimension.
+  static XLATensor cumsum(const XLATensor& input, xla::int64 dim,
+                          c10::optional<at::ScalarType> dtype);
+
+  // Returns the cumulative product of elements of input in the given dimension.
+  static XLATensor cumprod(const XLATensor& input, xla::int64 dim,
+                           c10::optional<at::ScalarType> dtype);
+
   static XLATensor prod(const XLATensor& input,
                         std::vector<xla::int64> dimensions,
                         bool keep_reduced_dimensions,
