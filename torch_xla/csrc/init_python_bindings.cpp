@@ -65,6 +65,21 @@ void SetReplicationDevices(const std::vector<std::string>& devices) {
   xla::ComputationClient::Get()->SetReplicationDevices(replication_devices);
 }
 
+void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors,
+                           const py::list& groups) {
+  std::vector<std::vector<xla::int64>> crs_groups;
+  for (auto& group : groups) {
+    crs_groups.emplace_back();
+    for (auto& replica_id : group.cast<py::list>()) {
+      crs_groups.back().push_back(replica_id.cast<xla::int64>());
+    }
+  }
+  for (auto& tensor : tensors) {
+    XLATensor xtensor = bridge::GetXlaTensor(ToTensor(tensor));
+    XLATensor::cross_replica_sum_(xtensor, crs_groups);
+  }
+}
+
 void InitXlaModuleBindings(py::module m) {
   py::class_<XlaModule, std::shared_ptr<XlaModule>>(m, "XlaModule")
       .def(py::init([](const std::shared_ptr<torch::jit::script::Module> module,
@@ -127,6 +142,10 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_set_replication_devices",
         [](const std::vector<std::string>& devices) {
           SetReplicationDevices(devices);
+        });
+  m.def("_xla_cross_replica_sum",
+        [](const std::vector<at::Tensor>& tensors, const py::list& groups) {
+          InsertCrossReplicaSum(tensors, groups);
         });
   m.def("_xla_set_default_device",
         [](const std::string& device) { return SetCurrentDevice(device); });
@@ -279,17 +298,6 @@ void InitXlaTensorBindings(py::module m) {
       .def("log_softmax",
            [](const XLATensor& self, int dim) {
              return XLATensor::log_softmax(self, dim);
-           })
-      .def("cross_replica_sum",
-           [](const XLATensor& self, const py::list& groups) {
-             std::vector<std::vector<xla::int64>> crs_groups;
-             for (auto& group : groups) {
-               crs_groups.emplace_back();
-               for (auto& replica_id : group.cast<py::list>()) {
-                 crs_groups.back().push_back(replica_id.cast<xla::int64>());
-               }
-             }
-             return self.cross_replica_sum(crs_groups);
            })
       .def("zero_",
            [](XLATensor self) {
