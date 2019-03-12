@@ -160,6 +160,8 @@ NodePtr Rshift(const Value& input, at::Scalar other);
 
 NodePtr Rshift(const Value& input, const Value& other);
 
+NodePtr Remainder(const Value& input, const Value& divisor);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
