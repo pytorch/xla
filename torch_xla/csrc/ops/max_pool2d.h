@@ -9,10 +9,8 @@ namespace ops {
 // IR node for 2D max pooling.
 class MaxPool2d : public Node {
  public:
-  MaxPool2d(const Value& input,
-            tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-            tensorflow::gtl::ArraySlice<const xla::int64> stride,
-            tensorflow::gtl::ArraySlice<const xla::int64> padding);
+  MaxPool2d(const Value& input, std::vector<xla::int64> kernel_size,
+            std::vector<xla::int64> stride, std::vector<xla::int64> padding);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

@@ -237,31 +237,27 @@ class XLATensor {
   static void elu_(XLATensor& input, at::Scalar alpha, at::Scalar scale,
                    at::Scalar input_scale);
 
-  static XLATensor conv2d(
-      const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
-      tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding);
+  static XLATensor conv2d(const XLATensor& input, const XLATensor& weight,
+                          const XLATensor& bias, std::vector<xla::int64> stride,
+                          std::vector<xla::int64> padding);
 
-  static XLATensor conv2d(
-      const XLATensor& input, const XLATensor& weight,
-      tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding);
+  static XLATensor conv2d(const XLATensor& input, const XLATensor& weight,
+                          std::vector<xla::int64> stride,
+                          std::vector<xla::int64> padding);
 
   static XLATensor addmm(const XLATensor& input, const XLATensor& weight,
                          const XLATensor& bias);
 
-  static XLATensor max_pool2d(
-      const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-      tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding);
+  static XLATensor max_pool2d(const XLATensor& input,
+                              std::vector<xla::int64> kernel_size,
+                              std::vector<xla::int64> stride,
+                              std::vector<xla::int64> padding);
 
-  static XLATensor avg_pool2d(
-      const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-      tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding,
-      bool count_include_pad);
+  static XLATensor avg_pool2d(const XLATensor& input,
+                              std::vector<xla::int64> kernel_size,
+                              std::vector<xla::int64> stride,
+                              std::vector<xla::int64> padding,
+                              bool count_include_pad);
 
   // Swap given dimensions of the input.
   static XLATensor transpose(const XLATensor& input, xla::int64 dim0,
@@ -272,9 +268,8 @@ class XLATensor {
 
   // Returns a tensor with the same data and number of elements as input, but
   // with the specified shape.
-  static XLATensor reshape(
-      const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const xla::int64> output_size);
+  static XLATensor reshape(const XLATensor& input,
+                           std::vector<xla::int64> output_size);
 
   // Like reshape, but it returns a view into the original tensor.
   static XLATensor view(
@@ -527,31 +522,29 @@ class XLATensor {
                               const XLATensor& running_var, double momentum,
                               double eps);
 
-  static XLATensor _adaptive_avg_pool2d(
-      const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const xla::int64> output_size);
+  static XLATensor _adaptive_avg_pool2d(const XLATensor& input,
+                                        std::vector<xla::int64> output_size);
 
-  static XLATensor avg_pool2d_backward(
-      const XLATensor& out_backprop, const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-      tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding,
-      bool count_include_pad);
+  static XLATensor avg_pool2d_backward(const XLATensor& out_backprop,
+                                       const XLATensor& input,
+                                       std::vector<xla::int64> kernel_size,
+                                       std::vector<xla::int64> stride,
+                                       std::vector<xla::int64> padding,
+                                       bool count_include_pad);
 
   static XLATensor _adaptive_avg_pool2d_backward(const XLATensor& grad_output,
                                                  const XLATensor& input);
 
-  static XLATensor max_pool2d_backward(
-      const XLATensor& out_backprop, const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-      tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding);
+  static XLATensor max_pool2d_backward(const XLATensor& out_backprop,
+                                       const XLATensor& input,
+                                       std::vector<xla::int64> kernel_size,
+                                       std::vector<xla::int64> stride,
+                                       std::vector<xla::int64> padding);
 
   static std::tuple<XLATensor, XLATensor, XLATensor> conv2d_backward(
       const XLATensor& out_backprop, const XLATensor& input,
-      const XLATensor& weight,
-      tensorflow::gtl::ArraySlice<const xla::int64> stride,
-      tensorflow::gtl::ArraySlice<const xla::int64> padding);
+      const XLATensor& weight, std::vector<xla::int64> stride,
+      std::vector<xla::int64> padding);
 
   static XLATensor log_softmax_backward(const XLATensor& grad_output,
                                         const XLATensor& output,
@@ -611,16 +604,15 @@ class XLATensor {
 
   // Repeats the input tensor along each dimension by the given number of
   // repeats.
-  static XLATensor repeat(
-      const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const xla::int64> repeats);
+  static XLATensor repeat(const XLATensor& input,
+                          std::vector<xla::int64> repeats);
 
   static std::vector<XLATensor> split(const XLATensor& input,
                                       xla::int64 split_size, xla::int64 dim);
 
   static std::vector<XLATensor> split_with_sizes(
-      const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const xla::int64> split_size, xla::int64 dim);
+      const XLATensor& input, std::vector<xla::int64> split_size,
+      xla::int64 dim);
 
   // Squeeze out all trivial (size 1) dimensions.
   static XLATensor squeeze(const XLATensor& input);

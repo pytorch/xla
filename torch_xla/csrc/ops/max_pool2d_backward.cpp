@@ -30,18 +30,18 @@ xla::Shape NodeOutputShape(
 
 }  // namespace
 
-MaxPool2dBackward::MaxPool2dBackward(
-    const Value& grad_output, const Value& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding)
+MaxPool2dBackward::MaxPool2dBackward(const Value& grad_output,
+                                     const Value& input,
+                                     std::vector<xla::int64> kernel_size,
+                                     std::vector<xla::int64> stride,
+                                     std::vector<xla::int64> padding)
     : Node(ir::OpKind(at::aten::max_pool2d_with_indices_backward),
            {grad_output, input},
            NodeOutputShape(grad_output, input, kernel_size, stride, padding),
            /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
-      kernel_size_(kernel_size.begin(), kernel_size.end()),
-      stride_(stride.begin(), stride.end()),
-      padding_(padding.begin(), padding.end()) {}
+      kernel_size_(std::move(kernel_size)),
+      stride_(std::move(stride)),
+      padding_(std::move(padding)) {}
 
 XlaOpVector MaxPool2dBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));

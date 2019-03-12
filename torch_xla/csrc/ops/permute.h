@@ -9,8 +9,7 @@ namespace ops {
 
 class Permute : public Node {
  public:
-  Permute(const Value& input,
-          tensorflow::gtl::ArraySlice<const xla::int64> dims);
+  Permute(const Value& input, std::vector<xla::int64> dims);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

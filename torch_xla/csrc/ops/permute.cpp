@@ -23,11 +23,10 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-Permute::Permute(const Value& input,
-                 tensorflow::gtl::ArraySlice<const xla::int64> dims)
+Permute::Permute(const Value& input, std::vector<xla::int64> dims)
     : Node(ir::OpKind(at::aten::permute), {input}, NodeOutputShape(input, dims),
            /*num_outputs=*/1, xla::util::MHash(dims)),
-      dims_(dims.begin(), dims.end()) {}
+      dims_(std::move(dims)) {}
 
 XlaOpVector Permute::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

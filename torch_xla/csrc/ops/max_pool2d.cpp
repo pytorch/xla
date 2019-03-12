@@ -29,10 +29,9 @@ xla::Shape NodeOutputShape(
 
 }  // namespace
 
-MaxPool2d::MaxPool2d(const Value& input,
-                     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-                     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-                     tensorflow::gtl::ArraySlice<const xla::int64> padding)
+MaxPool2d::MaxPool2d(const Value& input, std::vector<xla::int64> kernel_size,
+                     std::vector<xla::int64> stride,
+                     std::vector<xla::int64> padding)
     : Node(ir::OpKind(at::aten::max_pool2d), {input},
            NodeOutputShape(input, kernel_size, stride, padding),
            /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),

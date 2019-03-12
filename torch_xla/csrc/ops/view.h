@@ -10,8 +10,7 @@ namespace ops {
 // IR node for a tensor view.
 class View : public Node {
  public:
-  View(const Value& input,
-       tensorflow::gtl::ArraySlice<const xla::int64> output_size);
+  View(const Value& input, std::vector<xla::int64> output_size);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

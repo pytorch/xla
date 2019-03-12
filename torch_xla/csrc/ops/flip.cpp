@@ -8,11 +8,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Flip::Flip(const Value& input,
-           tensorflow::gtl::ArraySlice<const xla::int64> dims)
+Flip::Flip(const Value& input, std::vector<xla::int64> dims)
     : Node(ir::OpKind(at::aten::flip), {input}, input.shape(),
            /*num_outputs=*/1, xla::util::MHash(dims)),
-      dims_(dims.begin(), dims.end()) {}
+      dims_(std::move(dims)) {}
 
 XlaOpVector Flip::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

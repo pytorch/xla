@@ -30,13 +30,12 @@ xla::Shape NodeOutputShape(const Value& input,
 
 }  // namespace
 
-ConstantPadNd::ConstantPadNd(const Value& input,
-                             tensorflow::gtl::ArraySlice<const xla::int64> pad,
+ConstantPadNd::ConstantPadNd(const Value& input, std::vector<xla::int64> pad,
                              const at::Scalar& value)
     : Node(ir::OpKind(at::aten::constant_pad_nd), OpList{input},
            NodeOutputShape(input, pad),
            /*num_outputs=*/1, xla::util::MHash(pad, ScalarHash(value))),
-      pad_(pad.begin(), pad.end()),
+      pad_(std::move(pad)),
       value_(value) {}
 
 XlaOpVector ConstantPadNd::Lower(LoweringContext* loctx) const {
