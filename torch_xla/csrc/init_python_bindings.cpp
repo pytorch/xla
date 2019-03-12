@@ -56,6 +56,15 @@ std::string SetCurrentDevice(const std::string& device_str) {
   return ss.str();
 }
 
+void SetReplicationDevices(const std::vector<std::string>& devices) {
+  std::vector<std::string> replication_devices;
+  for (auto& device_str : devices) {
+    Device device = bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
+    replication_devices.emplace_back(device.ToString());
+  }
+  xla::ComputationClient::Get()->SetReplicationDevices(replication_devices);
+}
+
 void InitXlaModuleBindings(py::module m) {
   py::class_<XlaModule, std::shared_ptr<XlaModule>>(m, "XlaModule")
       .def(py::init([](const std::shared_ptr<torch::jit::script::Module> module,
@@ -115,6 +124,10 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_get_devices",
         []() { return xla::ComputationClient::Get()->GetAvailableDevices(); });
+  m.def("_xla_set_replication_devices",
+        [](const std::vector<std::string>& devices) {
+          SetReplicationDevices(devices);
+        });
   m.def("_xla_set_default_device",
         [](const std::string& device) { return SetCurrentDevice(device); });
   m.def("_xla_sync_multi", [](std::vector<XLATensor>& tensors) {

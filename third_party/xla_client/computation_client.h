@@ -166,6 +166,10 @@ class ComputationClient {
 
   virtual std::vector<string> GetAvailableDevices() const = 0;
 
+  virtual void SetReplicationDevices(std::vector<string> devices) = 0;
+
+  virtual const std::vector<string>& GetReplicationDevices() const = 0;
+
   virtual void SetRngSeed(size_t seed) = 0;
 
   // Utility API around the vector based Compile() API to compile a single

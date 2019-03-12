@@ -119,7 +119,9 @@ def eprint(*args, **kwargs):
   print(*args, file=sys.stderr, **kwargs)
 
 
-def get_print_fn(debug):
+def get_print_fn(debug=None):
+  if debug is None:
+    debug = int(os.environ.get('DEBUG', '0'))
   return eprint if debug else null_print
 
 
@@ -128,3 +130,20 @@ def timed(fn, msg='', printfn=eprint):
   result = fn()
   printfn('{}{:.3f}ms'.format(msg, 1000.0 * (time.time() - s)))
   return result
+
+
+class TimedScope(object):
+
+  def __init__(self, msg='', printfn=eprint):
+    if printfn is None:
+      printfn = get_print_fn()
+    self._msg = msg
+    self._printfn = printfn
+
+  def __enter__(self):
+    self._start = time.time()
+    return self
+
+  def __exit__(self, type, value, traceback):
+    self._printfn('{}{:.3f}ms'.format(self._msg,
+                                      1000.0 * (time.time() - self._start)))

@@ -152,6 +152,10 @@ class XrtComputationClient : public ComputationClient {
 
   std::vector<string> GetAvailableDevices() const override;
 
+  void SetReplicationDevices(std::vector<string> devices) override;
+
+  const std::vector<string>& GetReplicationDevices() const override;
+
   void SetRngSeed(size_t seed) override;
 
  private:
