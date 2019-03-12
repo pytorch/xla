@@ -1524,6 +1524,10 @@ at::Tensor AtenXlaType::dot(const at::Tensor& self,
   return matmul(self, tensor);
 }
 
+at::Tensor AtenXlaType::chain_matmul(at::TensorList matrices) const {
+  return at::native::chain_matmul(matrices);
+}
+
 std::vector<at::Tensor> AtenXlaType::broadcast_tensors(
     at::TensorList tensors) const {
   return bridge::AtenFromXlaTensors(
