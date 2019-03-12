@@ -382,18 +382,27 @@ def xla_run_grad(xla_model, grad_outputs, devices=None):
 
 
 def sync_optimizer(optimizer):
-  sync_tensors = []
-  for group in optimizer.param_groups:
-    for p in group['params']:
+
+  def add(p):
+    sync_tensors = []
+    if isinstance(p, torch.Tensor):
       sync_tensors.append(p.data)
       if p.grad is not None:
         sync_tensors.append(p.grad.data)
       state = optimizer.state.get(p, None)
       if state:
-        for t in itervalues(state):
-          if isinstance(t, torch.Tensor):
-            sync_tensors.append(t.data)
+        for x in itervalues(state):
+          if isinstance(x, torch.Tensor):
+            sync_tensors.append(x.data)
+    elif isinstance(p, dict):
+      for x in itervalues(p):
+        sync_tensors += add(x)
+    elif isinstance(p, (list, tuple, set)):
+      for x in p:
+        sync_tensors += add(x)
+    return sync_tensors
 
+  sync_tensors = add(optimizer.param_groups)
   torch_xla._XLAC._xla_sync_multi([
       torch_xla._XLAC._get_xla_tensor(p)
       for p in sync_tensors
