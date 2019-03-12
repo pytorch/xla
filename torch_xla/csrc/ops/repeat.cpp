@@ -23,12 +23,11 @@ xla::Shape NodeOutputShape(
 
 }  // namespace
 
-Repeat::Repeat(const Value& input,
-               tensorflow::gtl::ArraySlice<const xla::int64> repeats)
+Repeat::Repeat(const Value& input, std::vector<xla::int64> repeats)
     : Node(ir::OpKind(at::aten::repeat), {input},
            NodeOutputShape(input, repeats),
            /*num_outputs=*/1, xla::util::MHash(repeats)),
-      repeats_(repeats.begin(), repeats.end()) {}
+      repeats_(std::move(repeats)) {}
 
 XlaOpVector Repeat::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

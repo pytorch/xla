@@ -9,8 +9,7 @@ namespace ops {
 
 class Repeat : public Node {
  public:
-  Repeat(const Value& input,
-         tensorflow::gtl::ArraySlice<const xla::int64> repeats);
+  Repeat(const Value& input, std::vector<xla::int64> repeats);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

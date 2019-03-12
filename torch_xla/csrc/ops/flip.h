@@ -9,7 +9,7 @@ namespace ops {
 
 class Flip : public Node {
  public:
-  Flip(const Value& input, tensorflow::gtl::ArraySlice<const xla::int64> dims);
+  Flip(const Value& input, std::vector<xla::int64> dims);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
