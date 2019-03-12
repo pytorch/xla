@@ -1045,22 +1045,22 @@ void XLATensor::elu_(XLATensor& input, at::Scalar alpha, at::Scalar scale,
   input.SetIrValue(ir::ops::Elu(input.GetIrValue(), alpha, scale, input_scale));
 }
 
-XLATensor XLATensor::conv2d(
-    const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
-  ir::NodePtr ir_value =
-      ir::MakeNode<ir::ops::Conv2d>(input.GetIrValue(), weight.GetIrValue(),
-                                    bias.GetIrValue(), stride, padding);
+XLATensor XLATensor::conv2d(const XLATensor& input, const XLATensor& weight,
+                            const XLATensor& bias,
+                            std::vector<xla::int64> stride,
+                            std::vector<xla::int64> padding) {
+  ir::NodePtr ir_value = ir::MakeNode<ir::ops::Conv2d>(
+      input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue(),
+      std::move(stride), std::move(padding));
   return input.CreateFrom(ir_value);
 }
 
-XLATensor XLATensor::conv2d(
-    const XLATensor& input, const XLATensor& weight,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
-  ir::NodePtr ir_value = ir::MakeNode<ir::ops::Conv2d>(
-      input.GetIrValue(), weight.GetIrValue(), stride, padding);
+XLATensor XLATensor::conv2d(const XLATensor& input, const XLATensor& weight,
+                            std::vector<xla::int64> stride,
+                            std::vector<xla::int64> padding) {
+  ir::NodePtr ir_value =
+      ir::MakeNode<ir::ops::Conv2d>(input.GetIrValue(), weight.GetIrValue(),
+                                    std::move(stride), std::move(padding));
   return input.CreateFrom(ir_value);
 }
 
@@ -1070,23 +1070,23 @@ XLATensor XLATensor::addmm(const XLATensor& input, const XLATensor& weight,
       input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue()));
 }
 
-XLATensor XLATensor::max_pool2d(
-    const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+XLATensor XLATensor::max_pool2d(const XLATensor& input,
+                                std::vector<xla::int64> kernel_size,
+                                std::vector<xla::int64> stride,
+                                std::vector<xla::int64> padding) {
   return input.CreateFrom(ir::MakeNode<ir::ops::MaxPool2d>(
-      input.GetIrValue(), kernel_size, stride, padding));
+      input.GetIrValue(), std::move(kernel_size), std::move(stride),
+      std::move(padding)));
 }
 
-XLATensor XLATensor::avg_pool2d(
-    const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    bool count_include_pad) {
+XLATensor XLATensor::avg_pool2d(const XLATensor& input,
+                                std::vector<xla::int64> kernel_size,
+                                std::vector<xla::int64> stride,
+                                std::vector<xla::int64> padding,
+                                bool count_include_pad) {
   return input.CreateFrom(ir::MakeNode<ir::ops::AvgPool2d>(
-      input.GetIrValue(), kernel_size, stride, padding, count_include_pad));
+      input.GetIrValue(), std::move(kernel_size), std::move(stride),
+      std::move(padding), count_include_pad));
 }
 
 XLATensor XLATensor::full(tensorflow::gtl::ArraySlice<const xla::int64> size,
@@ -1713,11 +1713,10 @@ XLATensor XLATensor::flip(const XLATensor& input,
                               dims, input.shape().get().rank())));
 }
 
-XLATensor XLATensor::repeat(
-    const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> repeats) {
+XLATensor XLATensor::repeat(const XLATensor& input,
+                            std::vector<xla::int64> repeats) {
   return input.CreateFrom(
-      ir::MakeNode<ir::ops::Repeat>(input.GetIrValue(), repeats));
+      ir::MakeNode<ir::ops::Repeat>(input.GetIrValue(), std::move(repeats)));
 }
 
 std::vector<XLATensor> XLATensor::split(const XLATensor& input,
@@ -1744,14 +1743,13 @@ std::vector<XLATensor> XLATensor::split(const XLATensor& input,
 }
 
 std::vector<XLATensor> XLATensor::split_with_sizes(
-    const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> split_size, xla::int64 dim) {
+    const XLATensor& input, std::vector<xla::int64> split_size,
+    xla::int64 dim) {
   auto input_shape = input.shape();
   int split_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
-      input.GetIrValue(), xla::util::ToVector<xla::int64>(split_size),
-      split_dim);
+      input.GetIrValue(), std::move(split_size), split_dim);
   return input.MakeOutputTensors(node);
 }
 
@@ -1871,22 +1869,21 @@ XLATensor XLATensor::where(const XLATensor& condition, const XLATensor& input,
       condition.GetIrValue(), input.GetIrValue(), other.GetIrValue()));
 }
 
-XLATensor XLATensor::_adaptive_avg_pool2d(
-    const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
+XLATensor XLATensor::_adaptive_avg_pool2d(const XLATensor& input,
+                                          std::vector<xla::int64> output_size) {
   return input.CreateFrom(ir::MakeNode<ir::ops::AdaptiveAvgPool2d>(
-      input.GetIrValue(), output_size));
+      input.GetIrValue(), std::move(output_size)));
 }
 
-XLATensor XLATensor::avg_pool2d_backward(
-    const XLATensor& out_backprop, const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    bool count_include_pad) {
+XLATensor XLATensor::avg_pool2d_backward(const XLATensor& out_backprop,
+                                         const XLATensor& input,
+                                         std::vector<xla::int64> kernel_size,
+                                         std::vector<xla::int64> stride,
+                                         std::vector<xla::int64> padding,
+                                         bool count_include_pad) {
   return out_backprop.CreateFrom(ir::MakeNode<ir::ops::AvgPool2dBackward>(
-      out_backprop.GetIrValue(), input.GetIrValue(), kernel_size, stride,
-      padding, count_include_pad));
+      out_backprop.GetIrValue(), input.GetIrValue(), std::move(kernel_size),
+      std::move(stride), std::move(padding), count_include_pad));
 }
 
 XLATensor XLATensor::_adaptive_avg_pool2d_backward(const XLATensor& grad_output,
@@ -1895,24 +1892,23 @@ XLATensor XLATensor::_adaptive_avg_pool2d_backward(const XLATensor& grad_output,
       grad_output.GetIrValue(), input.GetIrValue()));
 }
 
-XLATensor XLATensor::max_pool2d_backward(
-    const XLATensor& out_backprop, const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+XLATensor XLATensor::max_pool2d_backward(const XLATensor& out_backprop,
+                                         const XLATensor& input,
+                                         std::vector<xla::int64> kernel_size,
+                                         std::vector<xla::int64> stride,
+                                         std::vector<xla::int64> padding) {
   return out_backprop.CreateFrom(ir::MakeNode<ir::ops::MaxPool2dBackward>(
-      out_backprop.GetIrValue(), input.GetIrValue(), kernel_size, stride,
-      padding));
+      out_backprop.GetIrValue(), input.GetIrValue(), std::move(kernel_size),
+      std::move(stride), std::move(padding)));
 }
 
 std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::conv2d_backward(
     const XLATensor& out_backprop, const XLATensor& input,
-    const XLATensor& weight,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+    const XLATensor& weight, std::vector<xla::int64> stride,
+    std::vector<xla::int64> padding) {
   ir::NodePtr node = ir::MakeNode<ir::ops::Conv2dBackward>(
       out_backprop.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
-      stride, padding);
+      std::move(stride), std::move(padding));
   XLATensor grad_input = out_backprop.CreateFrom(ir::Value(node, 0));
   XLATensor grad_weight = out_backprop.CreateFrom(ir::Value(node, 1));
   XLATensor grad_bias = out_backprop.CreateFrom(ir::Value(node, 2));
@@ -1956,11 +1952,10 @@ void XLATensor::transpose_(XLATensor& input, xla::int64 dim0, xla::int64 dim1) {
   input.SetIrValue(ir::ops::TransposeOp(input.GetIrValue(), dim0, dim1));
 }
 
-XLATensor XLATensor::reshape(
-    const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
+XLATensor XLATensor::reshape(const XLATensor& input,
+                             std::vector<xla::int64> output_size) {
   return input.CreateFrom(
-      ir::MakeNode<ir::ops::View>(input.GetIrValue(), output_size));
+      ir::MakeNode<ir::ops::View>(input.GetIrValue(), std::move(output_size)));
 }
 
 XLATensor XLATensor::view(

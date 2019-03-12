@@ -8,10 +8,8 @@ namespace ops {
 
 class AvgPool2d : public Node {
  public:
-  AvgPool2d(const Value& input,
-            tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-            tensorflow::gtl::ArraySlice<const xla::int64> stride,
-            tensorflow::gtl::ArraySlice<const xla::int64> padding,
+  AvgPool2d(const Value& input, std::vector<xla::int64> kernel_size,
+            std::vector<xla::int64> stride, std::vector<xla::int64> padding,
             bool count_include_pad);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;

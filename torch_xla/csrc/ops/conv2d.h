@@ -12,12 +12,10 @@ namespace ops {
 class Conv2d : public Node {
  public:
   Conv2d(const Value& input, const Value& weight, const Value& bias,
-         tensorflow::gtl::ArraySlice<const xla::int64> stride,
-         tensorflow::gtl::ArraySlice<const xla::int64> padding);
+         std::vector<xla::int64> stride, std::vector<xla::int64> padding);
 
   Conv2d(const Value& input, const Value& weight,
-         tensorflow::gtl::ArraySlice<const xla::int64> stride,
-         tensorflow::gtl::ArraySlice<const xla::int64> padding);
+         std::vector<xla::int64> stride, std::vector<xla::int64> padding);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

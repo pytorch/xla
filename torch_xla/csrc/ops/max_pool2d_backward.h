@@ -9,9 +9,9 @@ namespace ops {
 class MaxPool2dBackward : public Node {
  public:
   MaxPool2dBackward(const Value& grad_output, const Value& input,
-                    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-                    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-                    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+                    std::vector<xla::int64> kernel_size,
+                    std::vector<xla::int64> stride,
+                    std::vector<xla::int64> padding);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

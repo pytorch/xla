@@ -27,12 +27,11 @@ xla::Shape NodeOutputShape(
 
 }  // namespace
 
-View::View(const Value& input,
-           tensorflow::gtl::ArraySlice<const xla::int64> output_size)
+View::View(const Value& input, std::vector<xla::int64> output_size)
     : Node(ir::OpKind(at::aten::view), {input},
            NodeOutputShape(input, output_size), /*num_outputs=*/1,
            xla::util::MHash(output_size)),
-      output_size_(output_size.begin(), output_size.end()) {}
+      output_size_(std::move(output_size)) {}
 
 XlaOpVector View::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

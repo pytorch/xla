@@ -31,18 +31,16 @@ xla::Shape NodeOutputShape(
 
 }  // namespace
 
-AvgPool2d::AvgPool2d(const Value& input,
-                     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-                     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-                     tensorflow::gtl::ArraySlice<const xla::int64> padding,
-                     bool count_include_pad)
+AvgPool2d::AvgPool2d(const Value& input, std::vector<xla::int64> kernel_size,
+                     std::vector<xla::int64> stride,
+                     std::vector<xla::int64> padding, bool count_include_pad)
     : Node(ir::OpKind(at::aten::avg_pool2d), {input},
            NodeOutputShape(input, kernel_size, stride, padding,
                            count_include_pad),
            /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
-      kernel_size_(kernel_size.begin(), kernel_size.end()),
-      stride_(stride.begin(), stride.end()),
-      padding_(padding.begin(), padding.end()),
+      kernel_size_(std::move(kernel_size)),
+      stride_(std::move(stride)),
+      padding_(std::move(padding)),
       count_include_pad_(count_include_pad) {}
 
 XlaOpVector AvgPool2d::Lower(LoweringContext* loctx) const {
