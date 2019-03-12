@@ -684,8 +684,12 @@ class XLATensor {
   static XLATensor not_supported(std::string description, xla::Shape shape,
                                  const Device& device);
 
-  XLATensor cross_replica_sum(
-      const std::vector<std::vector<xla::int64>>& groups) const;
+  static XLATensor cross_replica_sum(
+      const XLATensor& input,
+      const std::vector<std::vector<xla::int64>>& groups);
+
+  static void cross_replica_sum_(
+      XLATensor& input, const std::vector<std::vector<xla::int64>>& groups);
 
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
@@ -826,6 +830,11 @@ class XLATensor {
   void TryLimitGraphSize();
 
   std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node) const;
+
+  // Retrieves the set of devices to be passed to the computation client
+  // Compile() API. This can return a vector with devie itself, or the set of
+  // replication devices set into the computation client.
+  static std::vector<std::string> GetCompilationDevices(std::string device);
 
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.
