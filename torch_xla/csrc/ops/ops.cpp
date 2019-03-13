@@ -469,6 +469,19 @@ NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
          ScalarOp(scale, shape);
 }
 
+NodePtr EluBackward(const Value& grad_output, const Value& output,
+                    at::Scalar alpha, at::Scalar scale,
+                    at::Scalar input_scale) {
+  const xla::Shape& shape = grad_output.shape();
+  NodePtr negative_output_branch =
+      ScalarOp(input_scale, shape) *
+      (output + ScalarOp(alpha, shape) * ScalarOp(scale, shape));
+  NodePtr positive_output_branch =
+      ScalarOp(scale, shape) * ScalarOp(input_scale, shape);
+  return Where(ComparisonOp(at::aten::gt, output, ScalarOp(0, shape)),
+               positive_output_branch, negative_output_branch);
+}
+
 NodePtr Lshift(const Value& input, at::Scalar other) {
   return input * ScalarOp(pow(2, other.to<double>()), input.shape());
 }

@@ -1456,6 +1456,15 @@ at::Tensor& AtenXlaType::elu_(at::Tensor& self, at::Scalar alpha,
   return self;
 }
 
+at::Tensor AtenXlaType::elu_backward(const at::Tensor& grad_output,
+                                     at::Scalar alpha, at::Scalar scale,
+                                     at::Scalar input_scale,
+                                     const at::Tensor& output) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::elu_backward(bridge::GetXlaTensor(grad_output), alpha, scale,
+                              input_scale, bridge::GetXlaTensor(output)));
+}
+
 at::Tensor AtenXlaType::selu(const at::Tensor& self) const {
   return at::native::selu(self);
 }
