@@ -2203,6 +2203,16 @@ TEST_F(AtenXlaTensorTest, TestReluInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestHardtanh) {
+  at::Tensor input = at::randn({100}, at::TensorOptions(at::kFloat));
+  at::Tensor output = at::hardtanh(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::hardtanh(xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestLeakyRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   double negative_slope = 0.01;
