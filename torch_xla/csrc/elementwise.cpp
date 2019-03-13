@@ -76,6 +76,23 @@ xla::XlaOp BuildRelu(const xla::XlaOp& input) {
                              0, input_shape.element_type(), input.builder()));
 }
 
+xla::XlaOp BuildHardtanhBackward(const xla::XlaOp& grad_output,
+                                 const xla::XlaOp& input, at::Scalar min_val,
+                                 at::Scalar max_val) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(grad_output);
+  xla::PrimitiveType element_type = shape.element_type();
+  xla::XlaBuilder* builder = grad_output.builder();
+  xla::XlaOp low_input = BuildComparisonOp(
+      at::aten::le, input,
+      XlaHelpers::ScalarValue(min_val, element_type, builder));
+  xla::XlaOp high_input = BuildComparisonOp(
+      at::aten::ge, input,
+      XlaHelpers::ScalarValue(max_val, element_type, builder));
+  xla::XlaOp zero = xla::Broadcast(
+      XlaHelpers::ScalarValue(0, element_type, builder), shape.dimensions());
+  return xla::Select(xla::Or(low_input, high_input), zero, grad_output);
+}
+
 xla::XlaOp BuildLeakyRelu(const xla::XlaOp& input,
                           double negative_slope_value) {
   return BuildLeakyReluBackward(input, input, negative_slope_value);
