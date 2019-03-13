@@ -57,6 +57,8 @@ Device AtenDeviceToXlaDevice(const c10::Device& device);
 
 c10::Device XlaDeviceToAtenDevice(const Device& device);
 
+std::string ToXlaString(const c10::Device& device);
+
 c10::Device AtenDefaultDevice();
 
 // Creates an ATen tensor with XLA type id from an XLATensor.

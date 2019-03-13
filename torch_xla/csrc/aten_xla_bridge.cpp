@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/device.h"
@@ -169,6 +170,10 @@ Device AtenDeviceToXlaDevice(const c10::Device& device) {
 c10::Device XlaDeviceToAtenDevice(const Device& device) {
   return c10::Device(at::kXLA,
                      AtenXlaDeviceMapper::Get()->GetDeviceOrdinal(device));
+}
+
+std::string ToXlaString(const c10::Device& device) {
+  return absl::StrCat("xla:", device.index());
 }
 
 c10::Device AtenDefaultDevice() {

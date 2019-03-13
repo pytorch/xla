@@ -65,6 +65,16 @@ void SetReplicationDevices(const std::vector<std::string>& devices) {
   xla::ComputationClient::Get()->SetReplicationDevices(replication_devices);
 }
 
+std::vector<std::string> GetReplicationDevices() {
+  std::vector<std::string> replication_devices;
+  for (auto& device_str :
+       xla::ComputationClient::Get()->GetReplicationDevices()) {
+    c10::Device device = bridge::XlaDeviceToAtenDevice(Device(device_str));
+    replication_devices.emplace_back(bridge::ToXlaString(device));
+  }
+  return replication_devices;
+}
+
 void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
                            const py::list& groups) {
   std::vector<std::vector<xla::int64>> crs_groups;
@@ -143,8 +153,10 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<std::string>& devices) {
           SetReplicationDevices(devices);
         });
-  m.def("_xla_get_replication_devices", []() {
-    return xla::ComputationClient::Get()->GetReplicationDevices();
+  m.def("_xla_get_replication_devices",
+        []() { return GetReplicationDevices(); });
+  m.def("_xla_replication_device_count", []() {
+    return xla::ComputationClient::Get()->GetReplicationDevices().size();
   });
   m.def("_xla_cross_replica_sum", [](const std::vector<at::Tensor>& tensors,
                                      double scale, const py::list& groups) {
