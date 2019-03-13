@@ -11,13 +11,13 @@ namespace ops {
 class ConstantPadNd : public Node {
  public:
   ConstantPadNd(const Value& input, std::vector<xla::int64> pad,
-                const at::Scalar& value);
+                at::Scalar value);
 
   std::string ToString() const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  const at::Scalar& value() const { return value_; }
+  at::Scalar value() const { return value_; }
 
   const std::vector<xla::int64> pad() const { return pad_; }
 

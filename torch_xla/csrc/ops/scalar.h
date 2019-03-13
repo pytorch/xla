@@ -8,11 +8,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-inline std::ostream& operator<<(std::ostream& ostrm, const at::Scalar& s) {
+inline std::ostream& operator<<(std::ostream& ostrm, at::Scalar s) {
   return ostrm << (s.isFloatingPoint() ? s.toDouble() : s.toLong());
 }
 
-inline size_t ScalarHash(const at::Scalar& s) {
+inline size_t ScalarHash(at::Scalar s) {
   return s.isFloatingPoint() ? std::hash<double>()(s.toDouble())
                              : std::hash<long>()(s.toLong());
 }
@@ -30,7 +30,7 @@ class Scalar : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  const at::Scalar& value() const { return value_; }
+  at::Scalar value() const { return value_; }
 
  private:
   at::Scalar value_;

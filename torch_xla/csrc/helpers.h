@@ -65,7 +65,7 @@ class XlaHelpers {
     return xla::ConstantLiteral(builder, ScalarLiteral(scalar_value, type));
   }
 
-  static xla::XlaOp ScalarValue(const at::Scalar& scalar_value,
+  static xla::XlaOp ScalarValue(at::Scalar scalar_value,
                                 xla::PrimitiveType type,
                                 xla::XlaBuilder* builder) {
     if (scalar_value.isFloatingPoint()) {

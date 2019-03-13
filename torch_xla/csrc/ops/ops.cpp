@@ -320,8 +320,7 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
                    std::move(lower_fn));
 }
 
-NodePtr ComparisonOp(c10::Symbol kind, const Value& input,
-                     const at::Scalar& other) {
+NodePtr ComparisonOp(c10::Symbol kind, const Value& input, at::Scalar other) {
   return ComparisonOp(kind, input, MakeNode<Scalar>(other, input.shape()));
 }
 
@@ -340,8 +339,8 @@ NodePtr Where(const Value& condition, const Value& input, const Value& other) {
                    input.shape(), std::move(lower_fn));
 }
 
-NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
-               const at::Scalar& step, at::ScalarType scalar_type) {
+NodePtr ARange(at::Scalar start, at::Scalar end, at::Scalar step,
+               at::ScalarType scalar_type) {
   xla::PrimitiveType type = MakeXlaPrimitiveType(scalar_type,
                                                  /*device=*/nullptr);
   xla::Literal values;
