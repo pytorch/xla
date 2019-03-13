@@ -697,6 +697,15 @@ void XLATensor::elu_(XLATensor& input, at::Scalar alpha, at::Scalar scale,
   input.SetIrValue(ir::ops::Elu(input.GetIrValue(), alpha, scale, input_scale));
 }
 
+XLATensor XLATensor::elu_backward(const XLATensor& grad_output,
+                                  at::Scalar alpha, at::Scalar scale,
+                                  at::Scalar input_scale,
+                                  const XLATensor& output) {
+  return grad_output.CreateFrom(ir::ops::EluBackward(grad_output.GetIrValue(),
+                                                     output.GetIrValue(), alpha,
+                                                     scale, input_scale));
+}
+
 XLATensor XLATensor::erf(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Erf(input.GetIrValue()));
 }
