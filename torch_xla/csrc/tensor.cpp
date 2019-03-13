@@ -2121,15 +2121,17 @@ XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
 }
 
 XLATensor XLATensor::cross_replica_sum(
-    const XLATensor& input,
+    const XLATensor& input, double scale,
     const std::vector<std::vector<xla::int64>>& groups) {
   return input.CreateFrom(
-      ir::ops::CrossReplicaSumOp(input.GetIrValue(), groups));
+      ir::ops::CrossReplicaSumOp(input.GetIrValue(), scale, groups));
 }
 
 void XLATensor::cross_replica_sum_(
-    XLATensor& input, const std::vector<std::vector<xla::int64>>& groups) {
-  input.SetIrValue(ir::ops::CrossReplicaSumOp(input.GetIrValue(), groups));
+    XLATensor& input, double scale,
+    const std::vector<std::vector<xla::int64>>& groups) {
+  input.SetIrValue(
+      ir::ops::CrossReplicaSumOp(input.GetIrValue(), scale, groups));
 }
 
 XLATensor XLATensor::CreateFrom(ir::Value ir_value) const {

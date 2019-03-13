@@ -687,11 +687,12 @@ class XLATensor {
                                  const Device& device);
 
   static XLATensor cross_replica_sum(
-      const XLATensor& input,
+      const XLATensor& input, double scale,
       const std::vector<std::vector<xla::int64>>& groups);
 
   static void cross_replica_sum_(
-      XLATensor& input, const std::vector<std::vector<xla::int64>>& groups);
+      XLATensor& input, double scale,
+      const std::vector<std::vector<xla::int64>>& groups);
 
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();

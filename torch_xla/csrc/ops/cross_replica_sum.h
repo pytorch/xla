@@ -8,14 +8,19 @@ namespace ops {
 
 class CrossReplicaSum : public Node {
  public:
-  CrossReplicaSum(const Value& operand,
+  CrossReplicaSum(const Value& operand, double scale,
                   std::vector<std::vector<xla::int64>> groups);
 
   std::string ToString() const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
+  double scale() const { return scale_; }
+
+  const std::vector<std::vector<xla::int64>>& groups() const { return groups_; }
+
  private:
+  double scale_;
   std::vector<std::vector<xla::int64>> groups_;
 };
 
