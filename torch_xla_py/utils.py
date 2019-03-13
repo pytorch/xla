@@ -126,6 +126,8 @@ def get_print_fn(debug=None):
 
 
 def timed(fn, msg='', printfn=eprint):
+  if printfn is None:
+    printfn = get_print_fn()
   s = time.time()
   result = fn()
   printfn('{}{:.3f}ms'.format(msg, 1000.0 * (time.time() - s)))
