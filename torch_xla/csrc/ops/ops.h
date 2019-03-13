@@ -132,13 +132,12 @@ NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output, const Value& input);
 
 NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other);
 
-NodePtr ComparisonOp(c10::Symbol kind, const Value& input,
-                     const at::Scalar& other);
+NodePtr ComparisonOp(c10::Symbol kind, const Value& input, at::Scalar other);
 
 NodePtr Where(const Value& condition, const Value& input, const Value& other);
 
-NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
-               const at::Scalar& step, at::ScalarType scalar_type);
+NodePtr ARange(at::Scalar start, at::Scalar end, at::Scalar step,
+               at::ScalarType scalar_type);
 
 NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors);
 
