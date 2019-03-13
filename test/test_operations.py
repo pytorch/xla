@@ -623,10 +623,12 @@ class TestParallelTensorMNIST(XlaTestCase):
       for x, (data, target) in loader:
         with xu.TimedScope(msg='Training loop: ', printfn=None):
           optimizer.zero_grad()
-          output = model(data)
-          loss = loss_fn(output, target)
-          loss.backward()
-          xm.optimizer_step(optimizer)
+          output = xu.timed(lambda: model(data), msg='Model: ', printfn=None)
+          loss = xu.timed(
+              lambda: loss_fn(output, target), msg='Loss: ', printfn=None)
+          xu.timed(loss.backward, msg='LossBkw: ', printfn=None)
+          xu.timed(
+              lambda: xm.optimizer_step(optimizer), msg='Step: ', printfn=None)
           self.assertLess(loss.cpu().item(), 3.0)
 
     model_parallel = dp.DataParallel(
@@ -652,10 +654,12 @@ class TestParallelTensorResnet18(XlaTestCase):
       for x, (data, target) in loader:
         with xu.TimedScope(msg='Training loop: ', printfn=None):
           optimizer.zero_grad()
-          output = model(data)
-          loss = loss_fn(output, target)
-          loss.backward()
-          xm.optimizer_step(optimizer)
+          output = xu.timed(lambda: model(data), msg='Model: ', printfn=None)
+          loss = xu.timed(
+              lambda: loss_fn(output, target), msg='Loss: ', printfn=None)
+          xu.timed(loss.backward, msg='LossBkw: ', printfn=None)
+          xu.timed(
+              lambda: xm.optimizer_step(optimizer), msg='Step: ', printfn=None)
           self.assertLess(loss.cpu().item(), 3.0)
 
     model_parallel = dp.DataParallel(
