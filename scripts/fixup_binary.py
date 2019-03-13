@@ -21,6 +21,8 @@ def find_torch_xla_site(site_paths):
       path = os.path.join(xpath, 'lib')
       if os.path.isdir(path):
         return [site_path, path]
+      if os.path.isfile(os.path.join(xpath, 'libptxla.so')):
+        return [site_path, xpath, os.path.join(xpath, 'torch_xla', 'lib')]
   raise RuntimeError('Unable to find torch_xla package in {}'.format(site_path))
 
 
