@@ -4307,6 +4307,17 @@ TEST_F(AtenXlaTensorTest, TestEluBackward) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestLeakyReluBackward) {
+  double negative_slope = 0.01;
+  auto testfn = [=](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::leaky_relu(inputs[0], negative_slope);
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat))},
+                 device, testfn);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestTransposeBackward) {
   auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
     return at::t(inputs[0]);

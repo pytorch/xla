@@ -424,6 +424,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor leaky_relu(const at::Tensor& self,
                         at::Scalar negative_slope) const override;
+  at::Tensor leaky_relu_backward(const at::Tensor& grad_output,
+                                 const at::Tensor& self,
+                                 at::Scalar negative_slope) const override;
   at::Tensor& leaky_relu_(at::Tensor& self,
                           at::Scalar negative_slope) const override;
 
