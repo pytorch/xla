@@ -5,6 +5,7 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
@@ -23,13 +24,22 @@ xla::XlaOp LowerCumProd(const xla::XlaOp& input, xla::int64 dim,
   return BuildCumulativeComputation(casted_input, dim, reducer, init);
 }
 
+xla::Shape NodeOutputShape(const Value& input,
+                           c10::optional<at::ScalarType> dtype) {
+  if (dtype) {
+    return xla::ShapeUtil::ChangeElementType(
+        input.shape(), MakeXlaPrimitiveType(*dtype, /*device=*/nullptr));
+  }
+  return input.shape();
+}
+
 }  // namespace
 
 CumProd::CumProd(const Value& input, xla::int64 dim,
                  c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::cumprod), {input}, input.shape(),
-           /*num_outputs=*/1,
-           xla::util::MHash(dim, OptionalOr<int>(dtype, -1))),
+    : Node(
+          ir::OpKind(at::aten::cumprod), {input}, NodeOutputShape(input, dtype),
+          /*num_outputs=*/1, xla::util::MHash(dim, OptionalOr<int>(dtype, -1))),
       dim_(dim),
       dtype_(dtype) {}
 

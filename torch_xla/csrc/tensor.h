@@ -820,6 +820,9 @@ class XLATensor {
   XLATensor CreateFrom(ir::Value ir_value, const Device& device) const;
   XLATensor CreateFrom(ir::Value ir_value,
                        at::ScalarType logical_element_type) const;
+  XLATensor CreateFrom(
+      ir::Value ir_value,
+      c10::optional<at::ScalarType> logical_element_type_opt) const;
   XLATensor CreateFrom(ir::Value ir_value, const Device& device,
                        at::ScalarType logical_element_type) const;
 

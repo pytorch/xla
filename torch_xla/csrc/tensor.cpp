@@ -1655,7 +1655,8 @@ XLATensor XLATensor::cumsum(const XLATensor& input, xla::int64 dim,
   xla::int64 canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   return input.CreateFrom(
-      ir::MakeNode<ir::ops::CumSum>(input.GetIrValue(), canonical_dim, dtype));
+      ir::MakeNode<ir::ops::CumSum>(input.GetIrValue(), canonical_dim, dtype),
+      dtype);
 }
 
 XLATensor XLATensor::cumprod(const XLATensor& input, xla::int64 dim,
@@ -1663,7 +1664,8 @@ XLATensor XLATensor::cumprod(const XLATensor& input, xla::int64 dim,
   xla::int64 canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
   return input.CreateFrom(
-      ir::MakeNode<ir::ops::CumProd>(input.GetIrValue(), canonical_dim, dtype));
+      ir::MakeNode<ir::ops::CumProd>(input.GetIrValue(), canonical_dim, dtype),
+      dtype);
 }
 
 XLATensor XLATensor::prod(const XLATensor& input,
@@ -2162,6 +2164,16 @@ XLATensor XLATensor::CreateFrom(ir::Value ir_value,
 XLATensor XLATensor::CreateFrom(ir::Value ir_value,
                                 at::ScalarType logical_element_type) const {
   return Create(std::move(ir_value), GetDevice(), logical_element_type);
+}
+
+XLATensor XLATensor::CreateFrom(
+    ir::Value ir_value,
+    c10::optional<at::ScalarType> logical_element_type_opt) const {
+  if (logical_element_type_opt) {
+    return CreateFrom(ir_value, *logical_element_type_opt);
+  } else {
+    return CreateFrom(ir_value);
+  }
 }
 
 XLATensor XLATensor::CreateFrom(ir::Value ir_value, const Device& device,
