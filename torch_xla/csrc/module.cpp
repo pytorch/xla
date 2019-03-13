@@ -619,7 +619,8 @@ XlaTranslator::BuildOptions XlaModule::GetBackwardBuildOptions(
   XlaTranslator::BuildOptions options;
   if (num_replicas > 1) {
     options.output_transform = [num_replicas](const xla::XlaOp& op, size_t) {
-      return BuildCrossReplicaSum(op, num_replicas);
+      double scale = 1.0 / num_replicas;
+      return BuildCrossReplicaSum(op, scale, {});
     };
   }
   return options;
