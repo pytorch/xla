@@ -32,6 +32,10 @@ xla::XlaOp BuildRelu(const xla::XlaOp& input);
 // LeakyReLU(x) = max(0, input) + negative_slope ∗ min(0, input).
 xla::XlaOp BuildLeakyRelu(const xla::XlaOp& input, double negative_slope);
 
+xla::XlaOp BuildLeakyReluBackward(const xla::XlaOp& grad_output,
+                                  const xla::XlaOp& input,
+                                  double negative_slope_value);
+
 // Computes the sigmoid function using Tanh
 // Sigmoid(x) = (tanh(x ∗ 0.5) + 1) ∗ 0.5
 xla::XlaOp BuildSigmoid(const xla::XlaOp& input);

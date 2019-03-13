@@ -78,12 +78,19 @@ xla::XlaOp BuildRelu(const xla::XlaOp& input) {
 
 xla::XlaOp BuildLeakyRelu(const xla::XlaOp& input,
                           double negative_slope_value) {
+  return BuildLeakyReluBackward(input, input, negative_slope_value);
+}
+
+xla::XlaOp BuildLeakyReluBackward(const xla::XlaOp& grad_output,
+                                  const xla::XlaOp& input,
+                                  double negative_slope_value) {
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero = XlaHelpers::ScalarValue<double>(
       0, input_shape.element_type(), input.builder());
   xla::XlaOp negative_slope = XlaHelpers::ScalarValue(
       negative_slope_value, input_shape.element_type(), input.builder());
-  return xla::Select(xla::Ge(input, zero), input, negative_slope * input);
+  return xla::Select(xla::Gt(input, zero), grad_output,
+                     negative_slope * grad_output);
 }
 
 xla::XlaOp BuildTypeAs(const torch::jit::Node* node,
