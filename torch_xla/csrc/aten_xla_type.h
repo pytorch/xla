@@ -478,6 +478,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor chain_matmul(at::TensorList matrices) const override;
 
+  at::Tensor linear(const at::Tensor& input, const at::Tensor& weight,
+                    const at::Tensor& bias) const override;
+
   std::vector<at::Tensor> broadcast_tensors(
       at::TensorList tensors) const override;
 

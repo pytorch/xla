@@ -1575,6 +1575,12 @@ at::Tensor AtenXlaType::chain_matmul(at::TensorList matrices) const {
   return at::native::chain_matmul(matrices);
 }
 
+at::Tensor AtenXlaType::linear(const at::Tensor& input,
+                               const at::Tensor& weight,
+                               const at::Tensor& bias) const {
+  return at::native::linear(input, weight, bias);
+}
+
 std::vector<at::Tensor> AtenXlaType::broadcast_tensors(
     at::TensorList tensors) const {
   return bridge::AtenFromXlaTensors(

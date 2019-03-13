@@ -1642,6 +1642,25 @@ TEST_F(AtenXlaTensorTest, TestChainMatMul) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestLinear) {
+  at::Tensor input = at::rand({2, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor weight = at::rand({3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor bias = at::rand({3});
+  at::Tensor result = at::linear(input, weight);
+  at::Tensor result_with_bias = at::linear(input, weight, bias);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
+    at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
+    at::Tensor xla_result = at::linear(xla_input, xla_weight);
+    at::Tensor xla_result_with_bias =
+        at::linear(xla_input, xla_weight, xla_bias);
+    AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-4);
+    AllClose(result_with_bias, xla_result_with_bias, /*rtol=*/1e-3,
+             /*atol=*/1e-4);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
   at::Tensor a = at::rand({5}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({5}, at::TensorOptions(at::kFloat));
