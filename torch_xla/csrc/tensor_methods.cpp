@@ -49,6 +49,7 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/kth_value.h"
 #include "torch_xla/csrc/ops/leaky_relu.h"
+#include "torch_xla/csrc/ops/leaky_relu_backward.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/log_softmax_backward.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
@@ -927,6 +928,13 @@ void XLATensor::le_(XLATensor& input, const XLATensor& other) {
 XLATensor XLATensor::leaky_relu(const XLATensor& input, double negative_slope) {
   return input.CreateFrom(
       ir::MakeNode<ir::ops::LeakyRelu>(input.GetIrValue(), negative_slope));
+}
+
+XLATensor XLATensor::leaky_relu_backward(const XLATensor& grad_output,
+                                         const XLATensor& input,
+                                         double negative_slope) {
+  return grad_output.CreateFrom(ir::MakeNode<ir::ops::LeakyReluBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), negative_slope));
 }
 
 void XLATensor::leaky_relu_(XLATensor& input, double negative_slope) {
