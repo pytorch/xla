@@ -356,6 +356,9 @@ class XLATensor {
                        at::Scalar scale, at::Scalar input_scale);
   static void elu_(XLATensor& input, at::Scalar alpha, at::Scalar scale,
                    at::Scalar input_scale);
+  static XLATensor elu_backward(const XLATensor& grad_output, at::Scalar alpha,
+                                at::Scalar scale, at::Scalar input_scale,
+                                const XLATensor& output);
 
   static XLATensor eq(const XLATensor& input, at::Scalar other);
   static void eq_(XLATensor& input, at::Scalar other);

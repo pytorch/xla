@@ -4294,6 +4294,19 @@ TEST_F(AtenXlaTensorTest, TestReluBackward) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestEluBackward) {
+  at::Scalar alpha = 0.5;
+  at::Scalar scale = 2.5;
+  at::Scalar input_scale = 1.5;
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::elu(inputs[0], alpha, scale, input_scale);
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat))},
+                 device, testfn);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestTransposeBackward) {
   auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
     return at::t(inputs[0]);
