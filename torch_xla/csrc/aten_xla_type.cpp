@@ -1408,6 +1408,12 @@ at::Tensor& AtenXlaType::relu_(at::Tensor& self) const {
   return self;
 }
 
+at::Tensor AtenXlaType::hardtanh(const at::Tensor& self, at::Scalar min_val,
+                                 at::Scalar max_val) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::hardtanh(bridge::GetXlaTensor(self), min_val, max_val));
+}
+
 at::Tensor AtenXlaType::leaky_relu(const at::Tensor& self,
                                    at::Scalar negative_slope) const {
   return bridge::AtenFromXlaTensor(XLATensor::leaky_relu(

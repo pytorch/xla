@@ -925,6 +925,11 @@ void XLATensor::le_(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
+XLATensor XLATensor::hardtanh(const XLATensor& input, at::Scalar min_val,
+                              at::Scalar max_val) {
+  return input.CreateFrom(ir::ops::Clamp(input.GetIrValue(), min_val, max_val));
+}
+
 XLATensor XLATensor::leaky_relu(const XLATensor& input, double negative_slope) {
   return input.CreateFrom(
       ir::MakeNode<ir::ops::LeakyRelu>(input.GetIrValue(), negative_slope));
