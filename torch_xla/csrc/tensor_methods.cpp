@@ -44,6 +44,7 @@
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
+#include "torch_xla/csrc/ops/hardtanh_backward.h"
 #include "torch_xla/csrc/ops/index_op.h"
 #include "torch_xla/csrc/ops/index_select.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -928,6 +929,13 @@ void XLATensor::le_(XLATensor& input, const XLATensor& other) {
 XLATensor XLATensor::hardtanh(const XLATensor& input, at::Scalar min_val,
                               at::Scalar max_val) {
   return input.CreateFrom(ir::ops::Clamp(input.GetIrValue(), min_val, max_val));
+}
+
+XLATensor XLATensor::hardtanh_backward(const XLATensor& grad_output,
+                                       const XLATensor& input,
+                                       at::Scalar min_val, at::Scalar max_val) {
+  return grad_output.CreateFrom(ir::MakeNode<ir::ops::HardtanhBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), min_val, max_val));
 }
 
 XLATensor XLATensor::leaky_relu(const XLATensor& input, double negative_slope) {

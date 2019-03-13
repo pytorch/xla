@@ -4318,6 +4318,16 @@ TEST_F(AtenXlaTensorTest, TestReluBackward) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestHardtanhBackward) {
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::hardtanh(inputs[0]);
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({at::randn({100}, at::TensorOptions(at::kFloat))}, device,
+                 testfn);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestEluBackward) {
   at::Scalar alpha = 0.5;
   at::Scalar scale = 2.5;
