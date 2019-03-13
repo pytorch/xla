@@ -40,9 +40,9 @@ inline NodePtr GenericOp(OpKind op,
                            std::move(lower_fn), num_outputs);
 }
 
-inline NodePtr CrossReplicaSumOp(const Value& operand,
+inline NodePtr CrossReplicaSumOp(const Value& operand, double scale,
                                  std::vector<std::vector<xla::int64>> groups) {
-  return MakeNode<CrossReplicaSum>(operand, std::move(groups));
+  return MakeNode<CrossReplicaSum>(operand, scale, std::move(groups));
 }
 
 NodePtr Acos(const Value& input);
