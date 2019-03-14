@@ -1614,6 +1614,20 @@ TEST_F(AtenXlaTensorTest, TestDot) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestTensorDot) {
+  at::Tensor a = at::rand({6, 4, 8}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({4, 7, 8}, at::TensorOptions(at::kFloat));
+  std::vector<int64_t> dims_a = {1, 2};
+  std::vector<int64_t> dims_b = {0, 2};
+  at::Tensor c = at::tensordot(a, b, dims_a, dims_b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::tensordot(xla_a, xla_b, dims_a, dims_b);
+    AllClose(c, xla_c);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestBatchMatMul) {
   at::Tensor a = at::rand({3, 6, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({3, 4, 5}, at::TensorOptions(at::kFloat));

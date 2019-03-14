@@ -1598,6 +1598,13 @@ at::Tensor AtenXlaType::linear(const at::Tensor& input,
   return at::native::linear(input, weight, bias);
 }
 
+at::Tensor AtenXlaType::tensordot(const at::Tensor& self,
+                                  const at::Tensor& other,
+                                  at::IntArrayRef dims_self,
+                                  at::IntArrayRef dims_other) const {
+  return at::native::tensordot(self, other, dims_self, dims_other);
+}
+
 std::vector<at::Tensor> AtenXlaType::broadcast_tensors(
     at::TensorList tensors) const {
   return bridge::AtenFromXlaTensors(

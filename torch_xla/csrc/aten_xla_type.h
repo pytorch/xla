@@ -487,6 +487,10 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor linear(const at::Tensor& input, const at::Tensor& weight,
                     const at::Tensor& bias) const override;
 
+  at::Tensor tensordot(const at::Tensor& self, const at::Tensor& other,
+                       at::IntArrayRef dims_self,
+                       at::IntArrayRef dims_other) const override;
+
   std::vector<at::Tensor> broadcast_tensors(
       at::TensorList tensors) const override;
 
