@@ -555,6 +555,9 @@ class AtenXlaType : public AtenXlaTypeBase {
                           bool half_to_float) const override;
 
   at::Tensor softmax(const at::Tensor& self, int64_t dim) const override;
+  at::Tensor _softmax_backward_data(const at::Tensor& grad_output,
+                                    const at::Tensor& output, int64_t dim,
+                                    const at::Tensor& self) const override;
 
   at::Tensor sigmoid(const at::Tensor& self) const override;
   at::Tensor& sigmoid_(at::Tensor& self) const override;
