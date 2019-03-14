@@ -1411,13 +1411,13 @@ at::Tensor& AtenXlaType::relu_(at::Tensor& self) const {
 at::Tensor AtenXlaType::hardtanh(const at::Tensor& self, at::Scalar min_val,
                                  at::Scalar max_val) const {
   return bridge::AtenFromXlaTensor(
-      XLATensor::hardtanh(bridge::GetXlaTensor(self), min_val, max_val));
+      XLATensor::clamp(bridge::GetXlaTensor(self), min_val, max_val));
 }
 
 at::Tensor& AtenXlaType::hardtanh_(at::Tensor& self, at::Scalar min_val,
                                    at::Scalar max_val) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::hardtanh_(self_tensor, min_val, max_val);
+  XLATensor::clamp_(self_tensor, min_val, max_val);
   return self;
 }
 
