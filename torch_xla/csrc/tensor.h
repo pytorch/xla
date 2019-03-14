@@ -449,7 +449,8 @@ class XLATensor {
 
   static XLATensor hardtanh(const XLATensor& input, at::Scalar min_val,
                             at::Scalar max_val);
-
+  static void hardtanh_(XLATensor& input, at::Scalar min_val,
+                        at::Scalar max_val);
   static XLATensor hardtanh_backward(const XLATensor& grad_output,
                                      const XLATensor& input, at::Scalar min_val,
                                      at::Scalar max_val);
