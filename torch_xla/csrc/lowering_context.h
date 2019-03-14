@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/platform/macros.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_util.h"
@@ -18,7 +19,7 @@ namespace ir {
 
 class LoweringContext {
  public:
-  LoweringContext(const std::string& name) : builder_(name) {}
+  explicit LoweringContext(const std::string& name);
 
   xla::XlaBuilder* builder() { return &builder_; }
 
@@ -56,6 +57,9 @@ class LoweringContext {
   xla::StatusOr<xla::XlaComputation> Build(const xla::XlaOp& root);
 
  private:
+  void LowerPostOrder(
+      tensorflow::gtl::ArraySlice<const Node* const> post_order);
+
   // Reports an XLA builder error for the given node.
   TF_ATTRIBUTE_NORETURN void ReportBuilderError(const Node* node,
                                                 const char* error_msg);

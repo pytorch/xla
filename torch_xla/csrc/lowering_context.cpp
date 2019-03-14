@@ -8,6 +8,8 @@
 namespace torch_xla {
 namespace ir {
 
+LoweringContext::LoweringContext(const std::string& name) : builder_(name) {}
+
 xla::XlaOp LoweringContext::GetParameter(
     const std::shared_ptr<xla::ComputationClient::Data>& data) {
   auto it = parameters_map_.find(data.get());
@@ -56,16 +58,8 @@ void LoweringContext::AssignOutputOp(const Output& output, xla::XlaOp op) {
 xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
   auto it = emitted_outputs_.find(output);
   if (it == emitted_outputs_.end()) {
-    for (auto node : Util::ComputePostOrder(output.node, &emit_status_)) {
-      try {
-        node->Lower(this);
-      } catch (const std::exception& ex) {
-        ReportBuilderError(node, ex.what());
-      }
-      if (!builder()->first_error().ok()) {
-        ReportBuilderError(node, /*error_msg=*/nullptr);
-      }
-    }
+    auto post_order = Util::ComputePostOrder(output.node, &emit_status_);
+    LowerPostOrder(post_order);
     // At this point the outpout better be present, otherwise there is an issue
     // with the lowering code.
     it = emitted_outputs_.find(output);
@@ -73,6 +67,20 @@ xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
         << "No XLA operation emitted for output: " << output;
   }
   return it->second;
+}
+
+void LoweringContext::LowerPostOrder(
+    tensorflow::gtl::ArraySlice<const Node* const> post_order) {
+  for (auto node : post_order) {
+    try {
+      node->Lower(this);
+    } catch (const std::exception& ex) {
+      ReportBuilderError(node, ex.what());
+    }
+    if (!builder()->first_error().ok()) {
+      ReportBuilderError(node, /*error_msg=*/nullptr);
+    }
+  }
 }
 
 void LoweringContext::ReportBuilderError(const Node* node,
