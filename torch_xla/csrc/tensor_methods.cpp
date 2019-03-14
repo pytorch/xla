@@ -926,16 +926,6 @@ void XLATensor::le_(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
-XLATensor XLATensor::hardtanh(const XLATensor& input, at::Scalar min_val,
-                              at::Scalar max_val) {
-  return input.CreateFrom(ir::ops::Clamp(input.GetIrValue(), min_val, max_val));
-}
-
-void XLATensor::hardtanh_(XLATensor& input, at::Scalar min_val,
-                          at::Scalar max_val) {
-  input.SetIrValue(ir::ops::Clamp(input.GetIrValue(), min_val, max_val));
-}
-
 XLATensor XLATensor::hardtanh_backward(const XLATensor& grad_output,
                                        const XLATensor& input,
                                        at::Scalar min_val, at::Scalar max_val) {
