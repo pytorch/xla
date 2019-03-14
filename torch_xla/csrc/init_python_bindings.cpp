@@ -166,7 +166,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::string& device) { return SetCurrentDevice(device); });
   m.def("_xla_sync_multi", [](std::vector<XLATensor>& tensors) {
     NoGilSection nogil;
-    XLATensor::ApplyPendingGraph(&tensors, /*apply_context=*/nullptr);
+    XLATensor::SyncTensorsGraph(&tensors);
   });
   m.def("_xla_to_tensors", [](std::vector<XLATensor>& tensors) {
     std::vector<at::Tensor> result;

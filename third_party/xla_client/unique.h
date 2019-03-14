@@ -25,7 +25,9 @@ class Unique {
   }
 
   operator bool() const { return value_.has_value(); }
+  operator const T&() const { return *value_; }
   const T& operator*() const { return *value_; }
+  const T* operator->() const { return value_.operator->(); }
 
  private:
   absl::optional<T> value_;

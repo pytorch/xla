@@ -121,6 +121,10 @@ class XLATensor {
   // Retrieves the set of XLA tensors which are currently live in the system.
   static std::vector<XLATensor> GetLiveTensors();
 
+  // Applies all the pending IR operations queued over the input tensors. All
+  // the tensors must be on the same device.
+  static void SyncTensorsGraph(std::vector<XLATensor>* tensors);
+
   // Applies the queue of operations for a list of tensors. The context of the
   // apply operation will be saved within the apply_context pointer, if not
   // nullptr. The ApplyPendingGraph() API will try to guess whether the current
@@ -752,6 +756,11 @@ class XLATensor {
   // Maps from ComputationClient Data unique ID to XLA tensor unique ID.
   using DataUidMap = std::unordered_map<xla::int64, xla::int64>;
 
+  struct SyncTensorCollection {
+    std::vector<size_t> indices;
+    size_t hash = 0;
+  };
+
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
@@ -870,6 +879,12 @@ class XLATensor {
   // successfully.
   static bool RunCachedApply(std::vector<XLATensor>* tensors,
                              const ApplyContext& apply_context);
+
+  static SyncTensorCollection CollectSyncTensors(
+      const std::vector<XLATensor>& tensors);
+
+  static bool TryRunCachedSync(std::vector<XLATensor>* tensors,
+                               const SyncTensorCollection& coll);
 
   // Returns a permutation which represents an ordering by tensor device and
   // unique ID, of all the tensors which needs sync (the ones which have a graph

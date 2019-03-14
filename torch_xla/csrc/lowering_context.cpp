@@ -8,8 +8,6 @@
 namespace torch_xla {
 namespace ir {
 
-LoweringContext::LoweringContext(const std::string& name) : builder_(name) {}
-
 xla::XlaOp LoweringContext::GetParameter(
     const std::shared_ptr<xla::ComputationClient::Data>& data) {
   auto it = parameters_map_.find(data.get());
