@@ -1792,6 +1792,27 @@ at::Tensor AtenXlaType::softplus_backward(const at::Tensor& grad_output,
       threshold, bridge::GetXlaTensor(output)));
 }
 
+at::Tensor AtenXlaType::log_sigmoid(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::log_sigmoid(bridge::GetXlaTensor(self)));
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::log_sigmoid_forward(
+    const at::Tensor& self) const {
+  auto result_tuple =
+      XLATensor::log_sigmoid_forward(bridge::GetXlaTensor(self));
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(result_tuple)),
+                         bridge::AtenFromXlaTensor(std::get<1>(result_tuple)));
+}
+
+at::Tensor AtenXlaType::log_sigmoid_backward(const at::Tensor& grad_output,
+                                             const at::Tensor& self,
+                                             const at::Tensor& buffer) const {
+  return bridge::AtenFromXlaTensor(XLATensor::log_sigmoid_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(buffer)));
+}
+
 at::Tensor AtenXlaType::sigmoid(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::sigmoid(bridge::GetXlaTensor(self)));

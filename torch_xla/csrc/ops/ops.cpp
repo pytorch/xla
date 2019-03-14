@@ -145,6 +145,26 @@ NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1) {
                                           /*rank=*/input.shape().rank()));
 }
 
+std::tuple<NodePtr, NodePtr> LogSigmoid(const Value& input) {
+  // Use log-sum-exp trick to avoid overflow.
+  NodePtr neg_input = Neg(input);
+  NodePtr max_elem = Max(ScalarOp(0, input.shape()), neg_input);
+  NodePtr buffer = Exp(Neg(max_elem)) + Exp(neg_input - max_elem);
+  NodePtr output = Neg(max_elem + Log(buffer));
+  return std::make_tuple(output, buffer);
+}
+
+NodePtr LogSigmoidBackward(const Value& grad_output, const Value& input,
+                           const Value& buffer) {
+  NodePtr zero = ScalarOp(0, input.shape());
+  NodePtr one = ScalarOp(1, input.shape());
+  NodePtr minus_one = ScalarOp(-1, input.shape());
+  NodePtr max_deriv =
+      Where(ComparisonOp(at::aten::lt, input, zero), minus_one, zero);
+  NodePtr sign = Where(ComparisonOp(at::aten::lt, input, zero), one, minus_one);
+  return grad_output * (Neg(max_deriv) - sign * (buffer - one) / buffer);
+}
+
 NodePtr Sigmoid(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));

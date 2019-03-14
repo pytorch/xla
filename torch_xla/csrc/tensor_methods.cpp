@@ -966,6 +966,24 @@ void XLATensor::log_base_(XLATensor& input, ir::OpKind op, double base) {
   input.SetIrValue(ir::ops::LogBase(input.GetIrValue(), op, base));
 }
 
+XLATensor XLATensor::log_sigmoid(const XLATensor& input) {
+  return input.CreateFrom(std::get<0>(ir::ops::LogSigmoid(input.GetIrValue())));
+}
+
+std::tuple<XLATensor, XLATensor> XLATensor::log_sigmoid_forward(
+    const XLATensor& input) {
+  auto output_and_buffer = ir::ops::LogSigmoid(input.GetIrValue());
+  return std::make_tuple(input.CreateFrom(std::get<0>(output_and_buffer)),
+                         input.CreateFrom(std::get<1>(output_and_buffer)));
+}
+
+XLATensor XLATensor::log_sigmoid_backward(const XLATensor& grad_output,
+                                          const XLATensor& input,
+                                          const XLATensor& buffer) {
+  return grad_output.CreateFrom(ir::ops::LogSigmoidBackward(
+      grad_output.GetIrValue(), input.GetIrValue(), buffer.GetIrValue()));
+}
+
 XLATensor XLATensor::log_softmax(const XLATensor& input, xla::int64 dim) {
   return input.CreateFrom(ir::MakeNode<ir::ops::LogSoftmax>(
       input.GetIrValue(),
