@@ -124,5 +124,15 @@ XLATensor Softplus(const XLATensor& input, at::Scalar beta,
           XLATensor::log1p(XLATensor::exp(XLATensor::mul(input, beta))), beta));
 }
 
+XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
+                           at::Scalar beta, at::Scalar threshold,
+                           const XLATensor& output) {
+  XLATensor scaled_output = XLATensor::mul(output, beta);
+  XLATensor z = XLATensor::exp(scaled_output);
+  return XLATensor::where(
+      XLATensor::gt(scaled_output, threshold), grad_output,
+      XLATensor::mul(grad_output, XLATensor::div(XLATensor::sub(z, 1, 1), z)));
+}
+
 }  // namespace tensor_ops
 }  // namespace torch_xla
