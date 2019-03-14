@@ -18,5 +18,8 @@ XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
                                const XLATensor& input, const XLATensor& target,
                                xla::int64 reduction);
 
+XLATensor Softplus(const XLATensor& input, at::Scalar beta,
+                   at::Scalar threshold);
+
 }  // namespace tensor_ops
 }  // namespace torch_xla

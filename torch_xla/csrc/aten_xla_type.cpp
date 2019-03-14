@@ -1777,6 +1777,12 @@ at::Tensor AtenXlaType::_softmax_backward_data(const at::Tensor& grad_output,
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
 }
 
+at::Tensor AtenXlaType::softplus(const at::Tensor& self, at::Scalar beta,
+                                 at::Scalar threshold) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::softplus(bridge::GetXlaTensor(self), beta, threshold));
+}
+
 at::Tensor AtenXlaType::sigmoid(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::sigmoid(bridge::GetXlaTensor(self)));
