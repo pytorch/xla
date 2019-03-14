@@ -298,6 +298,7 @@ void XLATensor::TryLimitGraphSize() {
   if (data()->ir_value && counter.fetch_add(1) % kCheckFrequency == 0) {
     size_t graph_size = ir::Util::GetGraphSize({data()->ir_value.node.get()});
     if (graph_size > kMaxPendingGraphSize) {
+      XLA_COUNTER("TrimIrGraph", 1);
       ApplyPendingGraph();
     }
   }
