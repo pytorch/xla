@@ -467,6 +467,13 @@ class XLATensor {
   static XLATensor log_base(const XLATensor& input, ir::OpKind op, double base);
   static void log_base_(XLATensor& input, ir::OpKind op, double base);
 
+  static XLATensor log_sigmoid(const XLATensor& input);
+  static std::tuple<XLATensor, XLATensor> log_sigmoid_forward(
+      const XLATensor& input);
+  static XLATensor log_sigmoid_backward(const XLATensor& grad_output,
+                                        const XLATensor& input,
+                                        const XLATensor& buffer);
+
   static XLATensor log_softmax(const XLATensor& input, xla::int64 dim);
 
   static XLATensor log_softmax_backward(const XLATensor& grad_output,

@@ -566,6 +566,13 @@ class AtenXlaType : public AtenXlaTypeBase {
                                at::Scalar threshold,
                                const at::Tensor& output) const override;
 
+  at::Tensor log_sigmoid(const at::Tensor& self) const override;
+  std::tuple<at::Tensor, at::Tensor> log_sigmoid_forward(
+      const at::Tensor& self) const override;
+  at::Tensor log_sigmoid_backward(const at::Tensor& grad_output,
+                                  const at::Tensor& self,
+                                  const at::Tensor& buffer) const override;
+
   at::Tensor sigmoid(const at::Tensor& self) const override;
   at::Tensor& sigmoid_(at::Tensor& self) const override;
   at::Tensor sigmoid_backward(const at::Tensor& grad_output,
