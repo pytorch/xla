@@ -1373,6 +1373,12 @@ void XLATensor::sigmoid_(XLATensor& input) {
   input.SetIrValue(ir::ops::Sigmoid(input.GetIrValue()));
 }
 
+XLATensor XLATensor::sigmoid_backward(const XLATensor& grad_output,
+                                      const XLATensor& output) {
+  return grad_output.CreateFrom(
+      ir::ops::SigmoidBackward(grad_output.GetIrValue(), output.GetIrValue()));
+}
+
 XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
                            xla::int64 start, xla::int64 end, xla::int64 step) {
   auto input_shape = input.shape();

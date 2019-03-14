@@ -107,6 +107,8 @@ NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1);
 
 NodePtr Sigmoid(const Value& input);
 
+NodePtr SigmoidBackward(const Value& grad_output, const Value& output);
+
 NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
                              xla::int64 dim);
 

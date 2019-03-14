@@ -154,6 +154,10 @@ NodePtr Sigmoid(const Value& input) {
                    std::move(lower_fn));
 }
 
+NodePtr SigmoidBackward(const Value& grad_output, const Value& output) {
+  return grad_output * (ScalarOp(1, output.shape()) - output) * output;
+}
+
 NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
                              xla::int64 dim) {
   return ir::MakeNode<LogSoftmaxBackward>(
