@@ -1414,6 +1414,13 @@ at::Tensor AtenXlaType::hardtanh(const at::Tensor& self, at::Scalar min_val,
       XLATensor::hardtanh(bridge::GetXlaTensor(self), min_val, max_val));
 }
 
+at::Tensor& AtenXlaType::hardtanh_(at::Tensor& self, at::Scalar min_val,
+                                   at::Scalar max_val) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::hardtanh_(self_tensor, min_val, max_val);
+  return self;
+}
+
 at::Tensor AtenXlaType::hardtanh_backward(const at::Tensor& grad_output,
                                           const at::Tensor& self,
                                           at::Scalar min_val,
