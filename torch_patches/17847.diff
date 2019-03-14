@@ -1,11 +1,11 @@
-commit 8cd1a4a010715060691eff8d1d507e9ba2280690
+commit fdaec2ec9dc9df3c00e2071a95fced233f6a13f8
 Author: Davide Libenzi <dlibenzi@google.com>
-Date:   Sat Mar 9 18:21:09 2019 -0800
+Date:   Thu Mar 14 16:50:27 2019 -0700
 
-    Enable autograd to recognize the XLA backend as one providing multiple devices, while not being CUDA/HIP.
+    Enable autograd to recognize the XLA backend as one providing multiple devices.
 
 diff --git a/aten/src/ATen/Context.h b/aten/src/ATen/Context.h
-index ff75ba3a7..c2a8ca1aa 100644
+index ff75ba3a7..de828975e 100644
 --- a/aten/src/ATen/Context.h
 +++ b/aten/src/ATen/Context.h
 @@ -12,6 +12,7 @@
@@ -21,12 +21,12 @@ index ff75ba3a7..c2a8ca1aa 100644
      return detail::getHIPHooks().hasHIP();
    }
 +  bool hasXLA() const {
-+    return detail::getXLAHooks() != nullptr;
++    return detail::getXLAHooks().hasXLA();
 +  }
    // defined in header so that getNonVariableType has ability to inline
    // call_once check. getNonVariableType is called fairly frequently
    THCState* lazyInitCUDA() {
-@@ -204,7 +208,15 @@ static inline bool hasHIP() {
+@@ -204,7 +208,14 @@ static inline bool hasHIP() {
    return globalContext().hasHIP();
  }
  
@@ -35,16 +35,15 @@ index ff75ba3a7..c2a8ca1aa 100644
 +}
 +
  static inline size_t getNumGPUs() {
-+  auto xla_hooks = detail::getXLAHooks();
-+  if (xla_hooks != nullptr) {
-+    return xla_hooks->num_devices();
++  if (hasXLA()) {
++    return detail::getXLAHooks().getNumDevices();
 +  }
    if (hasCUDA()) {
      return detail::getCUDAHooks().getNumGPUs();
    }
 diff --git a/aten/src/ATen/detail/XLAHooksInterface.cpp b/aten/src/ATen/detail/XLAHooksInterface.cpp
 new file mode 100644
-index 000000000..70ec52355
+index 000000000..1dc309dcb
 --- /dev/null
 +++ b/aten/src/ATen/detail/XLAHooksInterface.cpp
 @@ -0,0 +1,22 @@
@@ -56,12 +55,12 @@ index 000000000..70ec52355
 +namespace detail {
 +namespace {
 +
-+std::atomic<XLAHooksInterface*> g_xla_hooks(nullptr);
++std::atomic<XLAHooksInterface*> g_xla_hooks(new XLAHooksInterface());
 +
 +}  // namespace
 +
-+const XLAHooksInterface* getXLAHooks() {
-+  return g_xla_hooks;
++const XLAHooksInterface& getXLAHooks() {
++  return *g_xla_hooks.load();
 +}
 +
 +void setXLAHooks(XLAHooksInterface* xla_hooks) {
@@ -72,10 +71,10 @@ index 000000000..70ec52355
 +} // namespace at
 diff --git a/aten/src/ATen/detail/XLAHooksInterface.h b/aten/src/ATen/detail/XLAHooksInterface.h
 new file mode 100644
-index 000000000..2a74c085d
+index 000000000..3dbf848ac
 --- /dev/null
 +++ b/aten/src/ATen/detail/XLAHooksInterface.h
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,25 @@
 +#pragma once
 +
 +#include <c10/macros/Export.h>
@@ -85,12 +84,18 @@ index 000000000..2a74c085d
 +struct CAFFE2_API XLAHooksInterface {
 +  virtual ~XLAHooksInterface() {}
 +
-+  virtual int num_devices() const = 0;
++  virtual bool hasXLA() const {
++    return false;
++  }
++
++  virtual int getNumDevices() const {
++    return 0;
++  }
 +};
 +
 +namespace detail {
 +
-+CAFFE2_API const XLAHooksInterface* getXLAHooks();
++CAFFE2_API const XLAHooksInterface& getXLAHooks();
 +CAFFE2_API void setXLAHooks(XLAHooksInterface* xla_hooks);
 +
 +} // namespace detail
@@ -189,30 +194,6 @@ index 678e7a1ed..e0c08a52c 100644
  
    bool is_valid() const {
      return type_ != nullptr;
-diff --git a/torch/csrc/autograd/python_hook.cpp b/torch/csrc/autograd/python_hook.cpp
-index b3763e497..786356591 100644
---- a/torch/csrc/autograd/python_hook.cpp
-+++ b/torch/csrc/autograd/python_hook.cpp
-@@ -169,15 +169,12 @@ static void check_single_result(PyObject* _original, PyObject* _result, PyObject
-     throw std::runtime_error(ss.str());
-   }
- 
--  if (original.is_cuda() != result.is_cuda()) {
-+  if (original.type().backend() != result.type().backend()) {
-     std::stringstream ss;
-     auto name = hook_name(hook);
--    ss << "hook '" << name << "' has changed the type of value";
--    if (original.is_cuda()) {
--      ss << " (was CUDA tensor got CPU tensor)";
--    } else {
--      ss << " (was CPU tensor got CUDA tensor)";
--    }
-+    ss << "hook '" << name << "' has changed the type of value (was"
-+       << c10::toString(original.type().backend()) << " tensor got "
-+       << c10::toString(result.type().backend()) << ")";
-     throw std::runtime_error(ss.str());
-   }
- 
 diff --git a/torch/csrc/autograd/variable.cpp b/torch/csrc/autograd/variable.cpp
 index 44bd52b72..9b1aa2c79 100644
 --- a/torch/csrc/autograd/variable.cpp

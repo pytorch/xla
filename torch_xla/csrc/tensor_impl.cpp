@@ -58,7 +58,11 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
 };
 
 struct XLAHooksInterface : public at::XLAHooksInterface {
-  int num_devices() const override {
+  bool hasXLA() const override {
+    return true;
+  }
+
+  int getNumDevices() const override {
     return xla::ComputationClient::Get()->GetNumDevices();
   }
 };
