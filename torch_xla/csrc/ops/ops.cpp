@@ -16,7 +16,9 @@
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/ops/log_softmax_backward.h"
 #include "torch_xla/csrc/ops/permute.h"
+#include "torch_xla/csrc/ops/softmax_backward.h"
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -138,10 +140,9 @@ NodePtr ReluOp(const Value& input) {
 }
 
 NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1) {
-  return ir::MakeNode<ir::ops::Permute>(
-      input,
-      XlaHelpers::MakeTransposePermutation(/*dim0=*/dim0, /*dim1=*/dim1,
-                                           /*rank=*/input.shape().rank()));
+  return ir::MakeNode<Permute>(input, XlaHelpers::MakeTransposePermutation(
+                                          /*dim0=*/dim0, /*dim1=*/dim1,
+                                          /*rank=*/input.shape().rank()));
 }
 
 NodePtr Sigmoid(const Value& input) {
@@ -151,6 +152,20 @@ NodePtr Sigmoid(const Value& input) {
   };
   return GenericOp(OpKind(at::aten::sigmoid), OpList{input}, input.shape(),
                    std::move(lower_fn));
+}
+
+NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
+                             xla::int64 dim) {
+  return ir::MakeNode<LogSoftmaxBackward>(
+      grad_output, output,
+      XlaHelpers::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
+}
+
+NodePtr SoftmaxBackwardOp(const Value& grad_output, const Value& output,
+                          xla::int64 dim) {
+  return ir::MakeNode<SoftmaxBackward>(
+      grad_output, output,
+      XlaHelpers::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
 }
 
 NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,

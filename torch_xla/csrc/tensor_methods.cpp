@@ -52,7 +52,6 @@
 #include "torch_xla/csrc/ops/leaky_relu.h"
 #include "torch_xla/csrc/ops/leaky_relu_backward.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
-#include "torch_xla/csrc/ops/log_softmax_backward.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
 #include "torch_xla/csrc/ops/max_pool2d.h"
 #include "torch_xla/csrc/ops/max_pool2d_backward.h"
@@ -70,7 +69,6 @@
 #include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/slice.h"
 #include "torch_xla/csrc/ops/softmax.h"
-#include "torch_xla/csrc/ops/softmax_backward.h"
 #include "torch_xla/csrc/ops/split.h"
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
@@ -977,10 +975,8 @@ XLATensor XLATensor::log_softmax(const XLATensor& input, xla::int64 dim) {
 XLATensor XLATensor::log_softmax_backward(const XLATensor& grad_output,
                                           const XLATensor& output,
                                           xla::int64 dim) {
-  return grad_output.CreateFrom(ir::MakeNode<ir::ops::LogSoftmaxBackward>(
-      grad_output.GetIrValue(), output.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(
-          dim, grad_output.shape().get().rank())));
+  return grad_output.CreateFrom(ir::ops::LogSoftmaxBackwardOp(
+      grad_output.GetIrValue(), output.GetIrValue(), dim));
 }
 
 XLATensor XLATensor::log1p(const XLATensor& input) {
@@ -1435,10 +1431,8 @@ XLATensor XLATensor::softmax(const XLATensor& input, xla::int64 dim) {
 
 XLATensor XLATensor::softmax_backward(const XLATensor& grad_output,
                                       const XLATensor& output, xla::int64 dim) {
-  return grad_output.CreateFrom(ir::MakeNode<ir::ops::SoftmaxBackward>(
-      grad_output.GetIrValue(), output.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(
-          dim, grad_output.shape().get().rank())));
+  return grad_output.CreateFrom(ir::ops::SoftmaxBackwardOp(
+      grad_output.GetIrValue(), output.GetIrValue(), dim));
 }
 
 std::vector<XLATensor> XLATensor::split(const XLATensor& input,
