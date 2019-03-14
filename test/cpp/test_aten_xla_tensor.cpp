@@ -4342,6 +4342,16 @@ TEST_F(AtenXlaTensorTest, TestSoftmaxBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSoftplusBackward) {
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::softplus(inputs[0]);
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat))},
+                 device, testfn);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestReluBackward) {
   auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
     return at::relu(inputs[0]);
