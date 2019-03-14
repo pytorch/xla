@@ -38,7 +38,7 @@ class PerDeviceLoader(object):
     return self.next()
 
   def next(self):
-    item = self._loader.next(self._device)
+    item = self._loader.next_item(self._device)
     if item is None:
       raise StopIteration
     return item
@@ -73,7 +73,7 @@ class ParallelLoader(object):
   def per_device_loader(self, device):
     return PerDeviceLoader(self, device)
 
-  def next(self, device):
+  def next_item(self, device):
     dqueue = self._queues[device]
     return dqueue.queue.get()
 
@@ -158,7 +158,6 @@ class DataParallel(object):
       loader = self._para_loader.per_device_loader(device)
       thread = threading.Thread(
           target=self._module_runner, args=(device, module, loader, result))
-      thread.daemon = True
       thread.start()
       threads.append(thread)
       results.append(result)
