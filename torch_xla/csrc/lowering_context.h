@@ -19,7 +19,7 @@ namespace ir {
 
 class LoweringContext {
  public:
-  explicit LoweringContext(const std::string& name);
+  explicit LoweringContext(const std::string& name) : builder_(name) {}
 
   xla::XlaBuilder* builder() { return &builder_; }
 
