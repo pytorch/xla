@@ -19,10 +19,11 @@ class ThreadResult(object):
 
 class PerDeviceQueue(object):
 
-  def __init__(self, device, maxsize):
+  def __init__(self, device, loader_prefetch_size, device_prefetch_size):
     self.device = device
     self.batch_number = 0
-    self.queue = kq.Queue(maxsize=maxsize)
+    self.loader_queue = kq.Queue(maxsize=loader_prefetch_size)
+    self.queue = kq.Queue(maxsize=device_prefetch_size)
 
 
 class PerDeviceLoader(object):
@@ -58,10 +59,10 @@ class ParallelLoader(object):
     self._batchdim = batchdim
     self._done = False
     self._lock = threading.Lock()
-    self._loader_queue = kq.Queue(maxsize=loader_prefetch_size)
     self._queues = dict()
     for device in self._devices:
-      self._queues[device] = PerDeviceQueue(device, device_prefetch_size)
+      self._queues[device] = PerDeviceQueue(device, loader_prefetch_size,
+                                            device_prefetch_size)
     thread = threading.Thread(target=self._loader_worker)
     thread.daemon = True
     thread.start()
@@ -81,7 +82,7 @@ class ParallelLoader(object):
     self._done = True
     for dqueue in itervalues(self._queues):
       dqueue.queue.close()
-    self._loader_queue.close()
+      dqueue.loader_queue.close()
 
   def _expand_sample_batch(self, data, target):
     # TODO: Expand last sample,target to batch size
@@ -92,6 +93,7 @@ class ParallelLoader(object):
     loader_batches = max(len(self._loader) - 1, 0)
     num_batches = (loader_batches // len(self._devices)) * len(self._devices)
     batch_number = 0
+    queues = list(self._queues.values())
     while batch_number < num_batches and not self._done:
       try:
         data, target = self._loader.next()
@@ -104,13 +106,15 @@ class ParallelLoader(object):
         self._batch_size = data.size()[self._batchdim]
       if data.size()[self._batchdim] != self._batch_size:
         data, target = self._expand_sample_batch(data, target)
-      self._loader_queue.put((batch_number, (data, target)))
+      queues[batch_number % len(queues)].loader_queue.put((batch_number,
+                                                           (data, target)))
       batch_number += 1
-    self._loader_queue.close_write()
+    for dqueue in queues:
+      dqueue.loader_queue.close_write()
 
   def _worker(self, dqueue):
     while True:
-      item = self._loader_queue.get()
+      item = dqueue.loader_queue.get()
       if item is None:
         break
       batch_number, (data, target) = item
@@ -158,6 +162,7 @@ class DataParallel(object):
       loader = self._para_loader.per_device_loader(device)
       thread = threading.Thread(
           target=self._module_runner, args=(device, module, loader, result))
+      thread.daemon = True
       thread.start()
       threads.append(thread)
       results.append(result)
