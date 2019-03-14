@@ -559,6 +559,9 @@ class AtenXlaType : public AtenXlaTypeBase {
                                     const at::Tensor& output, int64_t dim,
                                     const at::Tensor& self) const override;
 
+  at::Tensor softplus(const at::Tensor& self, at::Scalar beta,
+                      at::Scalar threshold) const override;
+
   at::Tensor sigmoid(const at::Tensor& self) const override;
   at::Tensor& sigmoid_(at::Tensor& self) const override;
 
