@@ -651,6 +651,8 @@ class XLATensor {
                                            xla::int64 reduction);
 
   static XLATensor softmax(const XLATensor& input, xla::int64 dim);
+  static XLATensor softmax_backward(const XLATensor& grad_output,
+                                    const XLATensor& output, xla::int64 dim);
 
   static std::vector<XLATensor> split(const XLATensor& input,
                                       xla::int64 split_size, xla::int64 dim);

@@ -4319,6 +4319,19 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSoftmaxBackward) {
+  for (int dim = -4; dim < 4; ++dim) {
+    auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+      return at::softmax(inputs[0], dim);
+    };
+
+    ForEachDevice([&](const Device& device) {
+      TestBackward({at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat))},
+                   device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestReluBackward) {
   auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
     return at::relu(inputs[0]);
