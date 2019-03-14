@@ -1440,6 +1440,14 @@ XLATensor XLATensor::softplus(const XLATensor& input, at::Scalar beta,
   return tensor_ops::Softplus(input, beta, threshold);
 }
 
+XLATensor XLATensor::softplus_backward(const XLATensor& grad_output,
+                                       const XLATensor& input, at::Scalar beta,
+                                       at::Scalar threshold,
+                                       const XLATensor& output) {
+  return tensor_ops::SoftplusBackward(grad_output, input, beta, threshold,
+                                      output);
+}
+
 std::vector<XLATensor> XLATensor::split(const XLATensor& input,
                                         xla::int64 split_size, xla::int64 dim) {
   auto input_shape = input.shape();

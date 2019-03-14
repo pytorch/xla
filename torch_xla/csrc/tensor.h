@@ -656,6 +656,10 @@ class XLATensor {
 
   static XLATensor softplus(const XLATensor& input, at::Scalar beta,
                             at::Scalar threshold);
+  static XLATensor softplus_backward(const XLATensor& grad_output,
+                                     const XLATensor& input, at::Scalar beta,
+                                     at::Scalar threshold,
+                                     const XLATensor& output);
 
   static std::vector<XLATensor> split(const XLATensor& input,
                                       xla::int64 split_size, xla::int64 dim);
