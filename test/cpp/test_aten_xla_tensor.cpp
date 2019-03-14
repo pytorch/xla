@@ -1532,6 +1532,16 @@ TEST_F(AtenXlaTensorTest, TestARange) {
   AllClose(a, xla_a);
 }
 
+TEST_F(AtenXlaTensorTest, TestLogSigmoid) {
+  at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::log_sigmoid(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::log_sigmoid(xla_a);
+    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSigmoid) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::sigmoid(a);
@@ -4323,6 +4333,16 @@ TEST_F(AtenXlaTensorTest, TestSigmoidBackward) {
   ForEachDevice([&](const Device& device) {
     TestBackward({at::rand({2, 2}, at::TensorOptions(at::kFloat))}, device,
                  testfn);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestLogSigmoidBackward) {
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::log_sigmoid(inputs[0]);
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({at::rand({2, 2}, at::TensorOptions(at::kFloat))}, device,
+                 testfn, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
 }
 

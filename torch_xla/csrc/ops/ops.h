@@ -105,6 +105,11 @@ NodePtr Fmod(const Value& dividend, const Value& divisor);
 
 NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1);
 
+std::tuple<NodePtr, NodePtr> LogSigmoid(const Value& input);
+
+NodePtr LogSigmoidBackward(const Value& grad_output, const Value& input,
+                           const Value& buffer);
+
 NodePtr Sigmoid(const Value& input);
 
 NodePtr SigmoidBackward(const Value& grad_output, const Value& output);
