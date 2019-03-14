@@ -24,4 +24,7 @@ xla::XlaOp BuildLogSoftmaxGrad(const xla::XlaOp& grad_output,
 
 xla::XlaOp BuildSoftmax(const xla::XlaOp& logits, xla::int64 dim);
 
+xla::XlaOp BuildSoftmaxGrad(const xla::XlaOp& grad_output,
+                            const xla::XlaOp& output, xla::int64 dim);
+
 }  // namespace torch_xla

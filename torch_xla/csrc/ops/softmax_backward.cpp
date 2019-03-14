@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/ops/log_softmax_backward.h"
+#include "torch_xla/csrc/ops/softmax_backward.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -9,22 +9,22 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-LogSoftmaxBackward::LogSoftmaxBackward(const Value& grad_output,
-                                       const Value& output, xla::int64 dim)
-    : Node(ir::OpKind(at::aten::_log_softmax_backward_data),
-           {grad_output, output}, grad_output.shape(),
+SoftmaxBackward::SoftmaxBackward(const Value& grad_output, const Value& output,
+                                 xla::int64 dim)
+    : Node(ir::OpKind(at::aten::_softmax_backward_data), {grad_output, output},
+           grad_output.shape(),
            /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
-XlaOpVector LogSoftmaxBackward::Lower(LoweringContext* loctx) const {
+XlaOpVector SoftmaxBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = loctx->GetOutputOp(operand(1));
   xla::XlaOp grad_input =
-      BuildLogSoftmaxGrad(/*grad_output=*/grad_output, /*output=*/output, dim_);
+      BuildSoftmaxGrad(/*grad_output=*/grad_output, /*output=*/output, dim_);
   return ReturnOp(grad_input, loctx);
 }
 
-std::string LogSoftmaxBackward::ToString() const {
+std::string SoftmaxBackward::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", dim=" << dim_;
   return ss.str();

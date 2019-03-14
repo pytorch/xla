@@ -70,6 +70,7 @@
 #include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/slice.h"
 #include "torch_xla/csrc/ops/softmax.h"
+#include "torch_xla/csrc/ops/softmax_backward.h"
 #include "torch_xla/csrc/ops/split.h"
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
@@ -1430,6 +1431,14 @@ XLATensor XLATensor::softmax(const XLATensor& input, xla::int64 dim) {
   return input.CreateFrom(ir::MakeNode<ir::ops::Softmax>(
       input.GetIrValue(),
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
+}
+
+XLATensor XLATensor::softmax_backward(const XLATensor& grad_output,
+                                      const XLATensor& output, xla::int64 dim) {
+  return grad_output.CreateFrom(ir::MakeNode<ir::ops::SoftmaxBackward>(
+      grad_output.GetIrValue(), output.GetIrValue(),
+      XlaHelpers::GetCanonicalDimensionIndex(
+          dim, grad_output.shape().get().rank())));
 }
 
 std::vector<XLATensor> XLATensor::split(const XLATensor& input,
