@@ -80,9 +80,7 @@ void LoweringContext::ReportBuilderError(const Node* node,
   std::stringstream ss;
   ss << "Error while lowering: " << node->ToString() << "\n";
   if (!builder()->first_error().ok()) {
-    // TODO: Use the new XlaBuilder::GetCurrentStatus() once it shows up, in
-    // order to get the C++ frame to the XLA error as well.
-    ss << "XLA builder error: " << builder()->first_error() << "\n";
+    ss << "XLA builder error: " << builder()->GetCurrentStatus() << "\n";
   }
   if (error_msg != nullptr) {
     ss << "Error: " << error_msg << "\n";
