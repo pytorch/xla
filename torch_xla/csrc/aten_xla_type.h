@@ -424,6 +424,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor hardtanh(const at::Tensor& self, at::Scalar min_val,
                       at::Scalar max_val) const override;
+  at::Tensor& hardtanh_(at::Tensor& self, at::Scalar min_val,
+                        at::Scalar max_val) const override;
   at::Tensor hardtanh_backward(const at::Tensor& grad_output,
                                const at::Tensor& self, at::Scalar min_val,
                                at::Scalar max_val) const override;
