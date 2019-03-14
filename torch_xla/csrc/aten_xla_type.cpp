@@ -1788,6 +1788,12 @@ at::Tensor& AtenXlaType::sigmoid_(at::Tensor& self) const {
   return self;
 }
 
+at::Tensor AtenXlaType::sigmoid_backward(const at::Tensor& grad_output,
+                                         const at::Tensor& output) const {
+  return bridge::AtenFromXlaTensor(XLATensor::sigmoid_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output)));
+}
+
 at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
                                    at::IntList kernel_size, at::IntList stride,
                                    at::IntList padding, at::IntList dilation,

@@ -561,6 +561,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor sigmoid(const at::Tensor& self) const override;
   at::Tensor& sigmoid_(at::Tensor& self) const override;
+  at::Tensor sigmoid_backward(const at::Tensor& grad_output,
+                              const at::Tensor& output) const override;
 
   at::Tensor max_pool2d(const at::Tensor& self, at::IntList kernel_size,
                         at::IntList stride, at::IntList padding,
