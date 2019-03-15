@@ -413,12 +413,7 @@ def _fetch_optimizer_state(optimizer):
 
 
 def _sync_optimizer_state(state):
-  sync_tensors = state.gradients + state.tensors
-  torch_xla._XLAC._xla_sync_multi([
-      torch_xla._XLAC._get_xla_tensor(p)
-      for p in sync_tensors
-      if is_xla_tensor(p)
-  ])
+  torch_xla._XLAC._xla_sync_multi(state.gradients + state.tensors)
 
 
 def optimizer_step(optimizer):
