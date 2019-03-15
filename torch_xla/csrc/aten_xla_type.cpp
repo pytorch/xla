@@ -2080,10 +2080,18 @@ at::Tensor AtenXlaType::min(const at::Tensor& self,
       XLATensor::min(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
+at::Tensor AtenXlaType::min(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::min(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::max(const at::Tensor& self,
                             const at::Tensor& other) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::max(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor AtenXlaType::max(const at::Tensor& self) const {
+  return bridge::AtenFromXlaTensor(XLATensor::max(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::mean(const at::Tensor& self,

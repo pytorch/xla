@@ -508,6 +508,8 @@ class XLATensor {
 
   static XLATensor max(const XLATensor& input, const XLATensor& other);
 
+  static XLATensor max(const XLATensor& input);
+
   static XLATensor max_pool2d(const XLATensor& input,
                               std::vector<xla::int64> kernel_size,
                               std::vector<xla::int64> stride,
@@ -525,6 +527,8 @@ class XLATensor {
                         c10::optional<at::ScalarType> dtype);
 
   static XLATensor min(const XLATensor& input, const XLATensor& other);
+
+  static XLATensor min(const XLATensor& input);
 
   static XLATensor mm(const XLATensor& input, const XLATensor& weight);
 

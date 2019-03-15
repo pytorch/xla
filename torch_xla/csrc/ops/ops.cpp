@@ -542,6 +542,42 @@ NodePtr Remainder(const Value& input, const Value& divisor) {
                                     ScalarOp(0, input.shape()));
 }
 
+NodePtr MaxUnary(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    xla::PrimitiveType element_type = input_shape.element_type();
+    XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
+    xla::XlaOp init_value =
+        XlaHelpers::ScalarValue(min_max.min, element_type, loctx->builder());
+    xla::XlaOp result = xla::Reduce(
+        xla_input, init_value, XlaHelpers::CreateMaxComputation(element_type),
+        xla::util::Iota<xla::int64>(input_shape.rank()));
+    return node.ReturnOp(xla::Reshape(result, {1}), loctx);
+  };
+  return GenericOp(OpKind(at::aten::max), {input},
+                   xla::ShapeUtil::MakeShape(input.shape().element_type(), {1}),
+                   std::move(lower_fn));
+}
+
+NodePtr MinUnary(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    xla::PrimitiveType element_type = input_shape.element_type();
+    XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
+    xla::XlaOp init_value =
+        XlaHelpers::ScalarValue(min_max.max, element_type, loctx->builder());
+    xla::XlaOp result = xla::Reduce(
+        xla_input, init_value, XlaHelpers::CreateMinComputation(element_type),
+        xla::util::Iota<xla::int64>(input_shape.rank()));
+    return node.ReturnOp(xla::Reshape(result, {1}), loctx);
+  };
+  return GenericOp(OpKind(at::aten::min), {input},
+                   xla::ShapeUtil::MakeShape(input.shape().element_type(), {1}),
+                   std::move(lower_fn));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

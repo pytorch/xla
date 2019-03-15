@@ -185,6 +185,16 @@ xla::XlaComputation XlaHelpers::CreateMaxComputation(xla::PrimitiveType type) {
   return ConsumeValue(builder.Build());
 }
 
+xla::XlaComputation XlaHelpers::CreateMinComputation(xla::PrimitiveType type) {
+  xla::XlaBuilder builder("MinComputation");
+  xla::XlaOp x =
+      xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
+  xla::XlaOp y =
+      xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
+  xla::Min(x, y);
+  return ConsumeValue(builder.Build());
+}
+
 xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
   return ConsumeValue(op.builder()->GetShape(op));
 }

@@ -663,8 +663,10 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor min(const at::Tensor& self,
                  const at::Tensor& other) const override;
+  at::Tensor min(const at::Tensor& self) const override;
   at::Tensor max(const at::Tensor& self,
                  const at::Tensor& other) const override;
+  at::Tensor max(const at::Tensor& self) const override;
 
   at::Tensor mean(const at::Tensor& self, at::ScalarType dtype) const override;
   at::Tensor mean(const at::Tensor& self) const override;

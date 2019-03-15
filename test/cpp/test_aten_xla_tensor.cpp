@@ -793,6 +793,26 @@ TEST_F(AtenXlaTensorTest, TestMax) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestUnaryMin) {
+  at::Tensor input = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor output = at::min(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::min(xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestUnaryMax) {
+  at::Tensor input = at::rand({2, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor output = at::max(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::max(xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAll) {
   at::Tensor a = at::randint(0, 5, {2, 3, 4}, at::TensorOptions(at::kByte));
   at::Tensor b = at::all(a);
