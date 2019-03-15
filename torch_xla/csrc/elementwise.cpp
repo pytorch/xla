@@ -5,6 +5,23 @@
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
+namespace {
+
+xla::XlaOp Between(const xla::XlaOp& input, at::Scalar min_val,
+                   at::Scalar max_val) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::PrimitiveType element_type = shape.element_type();
+  xla::XlaBuilder* builder = input.builder();
+  xla::XlaOp check_low = BuildComparisonOp(
+      at::aten::ge, input,
+      XlaHelpers::ScalarValue(min_val, element_type, builder));
+  xla::XlaOp check_high = BuildComparisonOp(
+      at::aten::le, input,
+      XlaHelpers::ScalarValue(max_val, element_type, builder));
+  return xla::And(check_low, check_high);
+}
+
+}  // namespace
 
 xla::XlaOp BuildArithmeticOp(const torch::jit::Node* node,
                              const xla::XlaOp& lhs, const xla::XlaOp& rhs) {
@@ -76,21 +93,41 @@ xla::XlaOp BuildRelu(const xla::XlaOp& input) {
                              0, input_shape.element_type(), input.builder()));
 }
 
+xla::XlaOp BuildHardshrink(const xla::XlaOp& input, at::Scalar lambda) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  return xla::Select(Between(input, -lambda, lambda),
+                     XlaHelpers::ScalarBroadcast(0, shape, input.builder()),
+                     input);
+}
+
+xla::XlaOp BuildSoftshrink(const xla::XlaOp& input, at::Scalar lambda) {
+  xla::XlaBuilder* builder = input.builder();
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero = XlaHelpers::ScalarBroadcast(0, shape, builder);
+  xla::XlaOp xla_lambd =
+      XlaHelpers::ScalarBroadcast(lambda.to<double>(), shape, builder);
+  xla::XlaOp le_lambda_branch =
+      xla::Select(xla::Lt(input, Neg(xla_lambd)), input + xla_lambd, zero);
+  return xla::Select(xla::Le(input, xla_lambd), le_lambda_branch,
+                     input - xla_lambd);
+}
+
+xla::XlaOp BuildShrinkBackward(const xla::XlaOp& grad_output,
+                               const xla::XlaOp& input, at::Scalar lambda) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  return xla::Select(Between(input, -lambda, lambda),
+                     XlaHelpers::ScalarBroadcast(0, shape, input.builder()),
+                     grad_output);
+}
+
 xla::XlaOp BuildHardtanhBackward(const xla::XlaOp& grad_output,
                                  const xla::XlaOp& input, at::Scalar min_val,
                                  at::Scalar max_val) {
   xla::Shape shape = XlaHelpers::ShapeOfXlaOp(grad_output);
-  xla::PrimitiveType element_type = shape.element_type();
-  xla::XlaBuilder* builder = grad_output.builder();
-  xla::XlaOp low_input = BuildComparisonOp(
-      at::aten::le, input,
-      XlaHelpers::ScalarValue(min_val, element_type, builder));
-  xla::XlaOp high_input = BuildComparisonOp(
-      at::aten::ge, input,
-      XlaHelpers::ScalarValue(max_val, element_type, builder));
   xla::XlaOp zero = xla::Broadcast(
-      XlaHelpers::ScalarValue(0, element_type, builder), shape.dimensions());
-  return xla::Select(xla::Or(low_input, high_input), zero, grad_output);
+      XlaHelpers::ScalarValue(0, shape.element_type(), grad_output.builder()),
+      shape.dimensions());
+  return xla::Select(Between(input, min_val, max_val), grad_output, zero);
 }
 
 xla::XlaOp BuildLeakyRelu(const xla::XlaOp& input,

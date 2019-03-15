@@ -28,6 +28,11 @@ xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
 // Computes the rectified linear unit (replace negative elements with 0).
 xla::XlaOp BuildRelu(const xla::XlaOp& input);
 
+xla::XlaOp BuildHardshrink(const xla::XlaOp& input, at::Scalar lambda);
+xla::XlaOp BuildSoftshrink(const xla::XlaOp& input, at::Scalar lambda);
+xla::XlaOp BuildShrinkBackward(const xla::XlaOp& grad_output,
+                               const xla::XlaOp& input, at::Scalar lambda);
+
 xla::XlaOp BuildHardtanhBackward(const xla::XlaOp& grad_output,
                                  const xla::XlaOp& input, at::Scalar min_val,
                                  at::Scalar max_val);

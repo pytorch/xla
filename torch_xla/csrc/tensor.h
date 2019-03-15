@@ -451,6 +451,11 @@ class XLATensor {
   static XLATensor le(const XLATensor& input, const XLATensor& other);
   static void le_(XLATensor& input, const XLATensor& other);
 
+  static XLATensor hardshrink(const XLATensor& input, at::Scalar lambda);
+  static XLATensor hardshrink_backward(const XLATensor& grad_out,
+                                       const XLATensor& input,
+                                       at::Scalar lambda);
+
   static XLATensor hardtanh_backward(const XLATensor& grad_output,
                                      const XLATensor& input, at::Scalar min_val,
                                      at::Scalar max_val);
@@ -669,6 +674,11 @@ class XLATensor {
                                      const XLATensor& input, at::Scalar beta,
                                      at::Scalar threshold,
                                      const XLATensor& output);
+
+  static XLATensor softshrink(const XLATensor& input, at::Scalar lambda);
+  static XLATensor softshrink_backward(const XLATensor& grad_out,
+                                       const XLATensor& input,
+                                       at::Scalar lambda);
 
   static std::vector<XLATensor> split(const XLATensor& input,
                                       xla::int64 split_size, xla::int64 dim);

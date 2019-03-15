@@ -2225,6 +2225,26 @@ TEST_F(AtenXlaTensorTest, TestReluInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestHardshrink) {
+  at::Tensor input = at::randn({100}, at::TensorOptions(at::kFloat));
+  at::Tensor output = at::hardshrink(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::hardshrink(xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestSoftshrink) {
+  at::Tensor input = at::randn({100}, at::TensorOptions(at::kFloat));
+  at::Tensor output = at::softshrink(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::softshrink(xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestHardtanh) {
   at::Tensor input = at::randn({100}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::hardtanh(input);
@@ -4411,6 +4431,26 @@ TEST_F(AtenXlaTensorTest, TestReluBackward) {
   ForEachDevice([&](const Device& device) {
     TestBackward({at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat))},
                  device, testfn);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestHardshrinkBackward) {
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::hardshrink(inputs[0]);
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({at::randn({100}, at::TensorOptions(at::kFloat))}, device,
+                 testfn);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestSoftshrinkBackward) {
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::softshrink(inputs[0]);
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({at::randn({100}, at::TensorOptions(at::kFloat))}, device,
+                 testfn);
   });
 }
 
