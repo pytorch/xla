@@ -701,6 +701,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor flip(const at::Tensor& self, at::IntArrayRef dims) const override;
 
+  at::Tensor one_hot(const at::Tensor& self,
+                     int64_t num_classes) const override;
+
   at::Tensor transpose(const at::Tensor& self, int64_t dim0,
                        int64_t dim1) const override;
   at::Tensor& transpose_(at::Tensor& self, int64_t dim0,
