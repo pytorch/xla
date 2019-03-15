@@ -711,6 +711,8 @@ class XLATensor {
 
   static XLATensor tanh(const XLATensor& input);
   static void tanh_(XLATensor& input);
+  static XLATensor tanh_backward(const XLATensor& grad_output,
+                                 const XLATensor& output);
 
   static XLATensor threshold(const XLATensor& input, float threshold,
                              float value);

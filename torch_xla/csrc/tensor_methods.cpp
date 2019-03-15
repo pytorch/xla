@@ -1601,6 +1601,12 @@ void XLATensor::tanh_(XLATensor& input) {
   input.SetIrValue(ir::ops::Tanh(input.GetIrValue()));
 }
 
+XLATensor XLATensor::tanh_backward(const XLATensor& grad_output,
+                                   const XLATensor& output) {
+  return XLATensor::mul(grad_output,
+                        XLATensor::rsub(XLATensor::pow(output, 2), 1, 1));
+}
+
 XLATensor XLATensor::threshold(const XLATensor& input, float threshold,
                                float value) {
   return input.CreateFrom(
