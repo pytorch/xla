@@ -90,6 +90,17 @@ void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
   }
 }
 
+void SyncTensors(const std::vector<at::Tensor>& tensors) {
+  std::vector<XLATensor> xtensors;
+  for (auto& tensor : tensors) {
+    auto xtensor = bridge::TryGetXlaTensor(ToTensor(tensor));
+    if (xtensor) {
+      xtensors.push_back(*xtensor);
+    }
+  }
+  XLATensor::SyncTensorsGraph(&xtensors);
+}
+
 void InitXlaModuleBindings(py::module m) {
   py::class_<XlaModule, std::shared_ptr<XlaModule>>(m, "XlaModule")
       .def(py::init([](const std::shared_ptr<torch::jit::script::Module> module,
@@ -151,22 +162,26 @@ void InitXlaModuleBindings(py::module m) {
         []() { return xla::ComputationClient::Get()->GetAvailableDevices(); });
   m.def("_xla_set_replication_devices",
         [](const std::vector<std::string>& devices) {
+          NoGilSection nogil;
           SetReplicationDevices(devices);
         });
-  m.def("_xla_get_replication_devices",
-        []() { return GetReplicationDevices(); });
+  m.def("_xla_get_replication_devices", []() {
+    NoGilSection nogil;
+    return GetReplicationDevices();
+  });
   m.def("_xla_replication_device_count", []() {
     return xla::ComputationClient::Get()->GetReplicationDevices().size();
   });
   m.def("_xla_cross_replica_sum", [](const std::vector<at::Tensor>& tensors,
                                      double scale, const py::list& groups) {
+    NoGilSection nogil;
     InsertCrossReplicaSum(tensors, scale, groups);
   });
   m.def("_xla_set_default_device",
         [](const std::string& device) { return SetCurrentDevice(device); });
-  m.def("_xla_sync_multi", [](std::vector<XLATensor>& tensors) {
+  m.def("_xla_sync_multi", [](const std::vector<at::Tensor>& tensors) {
     NoGilSection nogil;
-    XLATensor::SyncTensorsGraph(&tensors);
+    SyncTensors(tensors);
   });
   m.def("_xla_to_tensors", [](std::vector<XLATensor>& tensors) {
     std::vector<at::Tensor> result;

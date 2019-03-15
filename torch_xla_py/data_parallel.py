@@ -113,13 +113,15 @@ class ParallelLoader(object):
       dqueue.loader_queue.close_write()
 
   def _worker(self, dqueue):
+    device = torch.device(dqueue.device)
     while True:
       item = dqueue.loader_queue.get()
       if item is None:
         break
       batch_number, (data, target) = item
-      data = data.to(device=torch.device(dqueue.device))
-      target = target.to(device=torch.device(dqueue.device))
+      data = data.to(device=device)
+      target = target.to(device=device)
+      torch_xla._XLAC._xla_sync_multi([data, target])
       dqueue.queue.put((dqueue.batch_number, (data, target)))
       dqueue.batch_number += 1
     dqueue.queue.close_write()
