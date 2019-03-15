@@ -1047,6 +1047,18 @@ TEST_F(AtenXlaTensorTest, TestFrobeniusNormInDims) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
+  at::Tensor a = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::nuclear_norm(a);
+  for (bool keepdim : {false, true}) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+      at::Tensor xla_b = at::nuclear_norm(xla_a);
+      AllClose(b, xla_b);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestProd) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::prod(a);
