@@ -4326,6 +4326,16 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestTanhBackward) {
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::tanh(inputs[0]);
+  };
+  ForEachDevice([&](const Device& device) {
+    TestBackward({at::rand({2, 2}, at::TensorOptions(at::kFloat))}, device,
+                 testfn, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSigmoidBackward) {
   auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
     return at::sigmoid(inputs[0]);
