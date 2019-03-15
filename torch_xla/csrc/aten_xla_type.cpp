@@ -1023,6 +1023,12 @@ at::Tensor& AtenXlaType::tanh_(at::Tensor& self) const {
   return self;
 }
 
+at::Tensor AtenXlaType::tanh_backward(const at::Tensor& grad_output,
+                                      const at::Tensor& output) const {
+  return bridge::AtenFromXlaTensor(XLATensor::tanh_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output)));
+}
+
 at::Tensor AtenXlaType::abs(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::abs(bridge::GetXlaTensor(self)));
 }

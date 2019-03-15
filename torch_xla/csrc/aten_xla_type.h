@@ -295,6 +295,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor tanh(const at::Tensor& self) const override;
   at::Tensor& tanh_(at::Tensor& self) const override;
+  at::Tensor tanh_backward(const at::Tensor& grad_output,
+                           const at::Tensor& output) const override;
 
   at::Tensor abs(const at::Tensor& self) const override;
   at::Tensor& abs_(at::Tensor& self) const override;
