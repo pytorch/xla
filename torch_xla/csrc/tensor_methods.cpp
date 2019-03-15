@@ -1068,6 +1068,10 @@ XLATensor XLATensor::max(const XLATensor& input, const XLATensor& other) {
   return input.CreateFrom(ir::ops::Max(input.GetIrValue(), other.GetIrValue()));
 }
 
+XLATensor XLATensor::max(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::MaxUnary(input.GetIrValue()), input.dtype());
+}
+
 XLATensor XLATensor::max_pool2d(const XLATensor& input,
                                 std::vector<xla::int64> kernel_size,
                                 std::vector<xla::int64> stride,
@@ -1100,6 +1104,10 @@ XLATensor XLATensor::mean(const XLATensor& input,
 
 XLATensor XLATensor::min(const XLATensor& input, const XLATensor& other) {
   return input.CreateFrom(ir::ops::Min(input.GetIrValue(), other.GetIrValue()));
+}
+
+XLATensor XLATensor::min(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::MinUnary(input.GetIrValue()), input.dtype());
 }
 
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight) {

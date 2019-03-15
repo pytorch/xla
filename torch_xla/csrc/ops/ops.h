@@ -177,6 +177,10 @@ NodePtr Rshift(const Value& input, const Value& other);
 
 NodePtr Remainder(const Value& input, const Value& divisor);
 
+NodePtr MaxUnary(const Value& input);
+
+NodePtr MinUnary(const Value& input);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
