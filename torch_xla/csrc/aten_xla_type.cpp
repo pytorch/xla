@@ -2207,6 +2207,11 @@ at::Tensor AtenXlaType::flip(const at::Tensor& self,
       XLATensor::flip(bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
 }
 
+at::Tensor AtenXlaType::one_hot(const at::Tensor& self,
+                                int64_t num_classes) const {
+  return at::native::one_hot(self, num_classes);
+}
+
 at::Tensor AtenXlaType::transpose(const at::Tensor& self, int64_t dim0,
                                   int64_t dim1) const {
   return bridge::AtenFromXlaTensor(

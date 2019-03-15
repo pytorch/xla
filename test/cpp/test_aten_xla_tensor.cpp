@@ -2752,6 +2752,18 @@ TEST_F(AtenXlaTensorTest, TestEmbedding) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestOneHot) {
+  int num_classes = 5;
+  at::Tensor input =
+      at::randint(0, num_classes, {10}, at::TensorOptions(at::kLong));
+  at::Tensor output = at::one_hot(input, num_classes);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::one_hot(xla_input, num_classes);
+    EXPECT_TRUE(EqualValues(output, xla_output));
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestTranspose) {
   at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::t(input);
