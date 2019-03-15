@@ -1414,6 +1414,19 @@ at::Tensor& AtenXlaType::relu_(at::Tensor& self) const {
   return self;
 }
 
+at::Tensor AtenXlaType::hardshrink(const at::Tensor& self,
+                                   at::Scalar lambda) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::hardshrink(bridge::GetXlaTensor(self), lambda));
+}
+
+at::Tensor AtenXlaType::hardshrink_backward(const at::Tensor& grad_out,
+                                            const at::Tensor& self,
+                                            at::Scalar lambda) const {
+  return bridge::AtenFromXlaTensor(XLATensor::hardshrink_backward(
+      bridge::GetXlaTensor(grad_out), bridge::GetXlaTensor(self), lambda));
+}
+
 at::Tensor AtenXlaType::hardtanh(const at::Tensor& self, at::Scalar min_val,
                                  at::Scalar max_val) const {
   return bridge::AtenFromXlaTensor(
@@ -1822,6 +1835,19 @@ at::Tensor AtenXlaType::log_sigmoid_backward(const at::Tensor& grad_output,
   return bridge::AtenFromXlaTensor(XLATensor::log_sigmoid_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       bridge::GetXlaTensor(buffer)));
+}
+
+at::Tensor AtenXlaType::softshrink(const at::Tensor& self,
+                                   at::Scalar lambda) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::softshrink(bridge::GetXlaTensor(self), lambda));
+}
+
+at::Tensor AtenXlaType::softshrink_backward(const at::Tensor& grad_out,
+                                            const at::Tensor& self,
+                                            at::Scalar lambda) const {
+  return bridge::AtenFromXlaTensor(XLATensor::softshrink_backward(
+      bridge::GetXlaTensor(grad_out), bridge::GetXlaTensor(self), lambda));
 }
 
 at::Tensor AtenXlaType::sigmoid(const at::Tensor& self) const {
