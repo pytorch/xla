@@ -422,6 +422,12 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor relu(const at::Tensor& self) const override;
   at::Tensor& relu_(at::Tensor& self) const override;
 
+  at::Tensor hardshrink(const at::Tensor& self,
+                        at::Scalar lambda) const override;
+  at::Tensor hardshrink_backward(const at::Tensor& grad_out,
+                                 const at::Tensor& self,
+                                 at::Scalar lambda) const override;
+
   at::Tensor hardtanh(const at::Tensor& self, at::Scalar min_val,
                       at::Scalar max_val) const override;
   at::Tensor& hardtanh_(at::Tensor& self, at::Scalar min_val,
@@ -572,6 +578,12 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor log_sigmoid_backward(const at::Tensor& grad_output,
                                   const at::Tensor& self,
                                   const at::Tensor& buffer) const override;
+
+  at::Tensor softshrink(const at::Tensor& self,
+                        at::Scalar lambda) const override;
+  at::Tensor softshrink_backward(const at::Tensor& grad_output,
+                                 const at::Tensor& self,
+                                 at::Scalar lambda) const override;
 
   at::Tensor sigmoid(const at::Tensor& self) const override;
   at::Tensor& sigmoid_(at::Tensor& self) const override;

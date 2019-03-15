@@ -44,6 +44,7 @@
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
+#include "torch_xla/csrc/ops/hardshrink.h"
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 #include "torch_xla/csrc/ops/index_op.h"
 #include "torch_xla/csrc/ops/index_select.h"
@@ -67,8 +68,10 @@
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/select.h"
+#include "torch_xla/csrc/ops/shrink_backward.h"
 #include "torch_xla/csrc/ops/slice.h"
 #include "torch_xla/csrc/ops/softmax.h"
+#include "torch_xla/csrc/ops/softshrink.h"
 #include "torch_xla/csrc/ops/split.h"
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
@@ -925,6 +928,19 @@ void XLATensor::le_(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
+XLATensor XLATensor::hardshrink(const XLATensor& input, at::Scalar lambda) {
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::Hardshrink>(input.GetIrValue(), lambda));
+}
+
+XLATensor XLATensor::hardshrink_backward(const XLATensor& grad_out,
+                                         const XLATensor& input,
+                                         at::Scalar lambda) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::ShrinkBackward>(
+      ir::OpKind(at::aten::hardshrink_backward), grad_out.GetIrValue(),
+      input.GetIrValue(), lambda));
+}
+
 XLATensor XLATensor::hardtanh_backward(const XLATensor& grad_output,
                                        const XLATensor& input,
                                        at::Scalar min_val, at::Scalar max_val) {
@@ -1470,6 +1486,19 @@ XLATensor XLATensor::softplus_backward(const XLATensor& grad_output,
                                        const XLATensor& output) {
   return tensor_ops::SoftplusBackward(grad_output, input, beta, threshold,
                                       output);
+}
+
+XLATensor XLATensor::softshrink(const XLATensor& input, at::Scalar lambda) {
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::Softshrink>(input.GetIrValue(), lambda));
+}
+
+XLATensor XLATensor::softshrink_backward(const XLATensor& grad_out,
+                                         const XLATensor& input,
+                                         at::Scalar lambda) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::ShrinkBackward>(
+      ir::OpKind(at::aten::softshrink_backward), grad_out.GetIrValue(),
+      input.GetIrValue(), lambda));
 }
 
 std::vector<XLATensor> XLATensor::split(const XLATensor& input,
