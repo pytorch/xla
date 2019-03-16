@@ -51,7 +51,7 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // The i-th entry in this vector, is a vector of XLA computation data which
   // belong the i-th replica.
   using DataBatchVector =
-      std::vector<std::vector<xla::ComputationClient::Data*>>;
+      std::vector<std::vector<xla::ComputationClient::DataPtr>>;
 
   void Initialize(const TensorBatchVector& inputs);
 

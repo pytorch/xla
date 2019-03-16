@@ -170,6 +170,11 @@ class TimedSection {
   int64 start_;
 };
 
+#define XLA_TIMED(name)                                           \
+  static xla::metrics::Metric* timed_metric =                     \
+      new xla::metrics::Metric(name, xla::metrics::MetricFnTime); \
+  xla::metrics::TimedSection timed_section(timed_metric)
+
 }  // namespace metrics
 }  // namespace xla
 

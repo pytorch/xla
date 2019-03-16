@@ -60,8 +60,7 @@ void GatherParameters(std::vector<at::Tensor>* values,
 }
 
 XlaModule::TensorBatchVector CreateResultBatchVector(
-    std::vector<std::vector<std::shared_ptr<xla::ComputationClient::Data>>>
-        results) {
+    std::vector<std::vector<xla::ComputationClient::DataPtr>> results) {
   XlaModule::TensorBatchVector batch_tensors;
   for (auto& replica_result_components : results) {
     XlaModule::TensorBatchVector::value_type replica_tensors;
@@ -600,8 +599,7 @@ std::vector<std::string> XlaModule::GetStringDevices() const {
 XlaModule::TensorBatchVector XlaModule::Execute(
     const xla::ComputationClient::Computation& computation,
     const DataBatchVector& inputs) {
-  std::vector<std::vector<std::shared_ptr<xla::ComputationClient::Data>>>
-      exec_results;
+  std::vector<std::vector<xla::ComputationClient::DataPtr>> exec_results;
   if (inputs.size() == 1) {
     xla::ComputationClient::ExecuteComputationOptions options;
     exec_results.push_back(xla::ComputationClient::Get()->ExecuteComputation(
@@ -684,7 +682,7 @@ XlaModule::DataBatchVector XlaModule::GetDataBatchVector(
     DataBatchVector::value_type replica_inputs_data;
     for (size_t j = 0; j < replica_inputs.size(); ++j) {
       if (zero_input == nullptr || !zero_input->at(j)) {
-        replica_inputs_data.push_back(replica_inputs[j].GetXlaData().get());
+        replica_inputs_data.push_back(replica_inputs[j].GetXlaData());
       }
     }
     inputs_data.push_back(std::move(replica_inputs_data));

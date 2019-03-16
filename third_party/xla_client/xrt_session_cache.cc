@@ -1,8 +1,12 @@
 #include "tensorflow/compiler/xla/xla_client/xrt_session_cache.h"
 
+#include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 
 namespace xla {
+
+XrtSessionCache::XrtSessionCache(std::function<void(XrtSession*)> initfn)
+    : initfn_(std::move(initfn)) {}
 
 XrtSessionCache::Ref XrtSessionCache::GetSession(const string& target) {
   std::lock_guard<std::mutex> lock(lock_);
@@ -32,6 +36,7 @@ void XrtSessionCache::AddSession(std::shared_ptr<XrtSession> session) {
 
 std::shared_ptr<XrtSession> XrtSessionCache::CreateSession(
     const string& target) const {
+  XLA_COUNTER("XrtSessionCount", 1);
   tensorflow::SessionOptions session_options;
   session_options.env = tensorflow::Env::Default();
   session_options.target = target;
@@ -44,7 +49,12 @@ std::shared_ptr<XrtSession> XrtSessionCache::CreateSession(
     rpc_options->set_compression_level(
         sys_util::GetEnvInt("XRT_GRPC_COMPRESSION_LEVEL", 3));
   }
-  return std::make_shared<XrtSession>(session_options);
+  std::shared_ptr<XrtSession> session =
+      std::make_shared<XrtSession>(session_options);
+  if (initfn_ != nullptr) {
+    initfn_(session.get());
+  }
+  return session;
 }
 
 }  // namespace xla

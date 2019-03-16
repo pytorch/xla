@@ -36,7 +36,7 @@ void MultiWait::Reset(size_t count) {
 }
 
 std::function<void()> MultiWait::Completer(std::function<void()> func) {
-  auto completer = [this, func{std::move(func)}]() {
+  auto completer = [this, func = std::move(func)]() {
     try {
       func();
       Done();

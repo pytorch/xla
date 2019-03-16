@@ -52,10 +52,11 @@ void AddXrtHostDevices(const string& worker_name, int task_no,
                        XrtComputationClient::Options* options) {
   struct Devices {
     const char* name;
+    const char* tf_name;
     int count;
   } const devices[] = {
-      {"TPU", sys_util::GetEnvInt("TPU_NUM_DEVICES", 8)},
-      {"CPU", sys_util::GetEnvInt("CPU_NUM_DEVICES", 1)},
+      {"TPU", "TPU", sys_util::GetEnvInt("TPU_NUM_DEVICES", 8)},
+      {"CPU", "XLA_CPU", sys_util::GetEnvInt("CPU_NUM_DEVICES", 1)},
   };
   string host_port = server.compare(0, 7, "grpc://") == 0
                          ? server
@@ -66,9 +67,10 @@ void AddXrtHostDevices(const string& worker_name, int task_no,
     int& device_ordinal = (*device_ordinals)[device.name];
     for (int j = 0; j < device.count; ++j, ++device_ordinal) {
       string device_name = absl::StrCat(device.name, ":", device_ordinal);
+      string tf_device_name = absl::StrCat(device.tf_name, ":", device_ordinal);
       string xrt_device_name =
           absl::StrCat("/job:", worker_name, "/replica:0/task:", task_no,
-                       "/device:", device_name);
+                       "/device:", tf_device_name);
       options->device_map.emplace(device_name, xrt_device_name);
     }
   }

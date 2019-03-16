@@ -634,6 +634,8 @@ class TestParallelTensorMNIST(XlaTestCase):
     model_parallel = dp.DataParallel(
         XlaMNIST, train_loader, loop_fn, device_ids=devices)
     model_parallel()
+    if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
+      print(torch_xla._XLAC._xla_metrics_report())
 
 
 class TestParallelTensorResnet18(XlaTestCase):
@@ -665,6 +667,8 @@ class TestParallelTensorResnet18(XlaTestCase):
     model_parallel = dp.DataParallel(
         torchvision.models.resnet18, train_loader, loop_fn, device_ids=devices)
     model_parallel()
+    if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
+      print(torch_xla._XLAC._xla_metrics_report())
 
 
 class AxPlusB(nn.Module):
