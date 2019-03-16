@@ -1727,8 +1727,8 @@ TEST_F(AtenXlaTensorTest, TestLinear) {
     at::Tensor xla_result = at::linear(xla_input, xla_weight);
     at::Tensor xla_result_with_bias =
         at::linear(xla_input, xla_weight, xla_bias);
-    AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-4);
-    AllClose(result_with_bias, xla_result_with_bias, /*rtol=*/1e-3,
+    AllClose(result, xla_result, /*rtol=*/1e-2, /*atol=*/1e-4);
+    AllClose(result_with_bias, xla_result_with_bias, /*rtol=*/1e-2,
              /*atol=*/1e-4);
   });
 }
@@ -3087,7 +3087,7 @@ TEST_F(AtenXlaTensorTest, TestSoftplus) {
   ForEachDevice([&](const Device& device) {
     at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
     at::Tensor xla_output = at::softplus(xla_input);
-    AllClose(output, xla_output);
+    AllClose(output, xla_output, /*rtol*/1e-4);
   });
 }
 
@@ -4468,7 +4468,7 @@ TEST_F(AtenXlaTensorTest, TestSoftplusBackward) {
   };
   ForEachDevice([&](const Device& device) {
     TestBackward({at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat))},
-                 device, testfn);
+                 device, testfn, /*rtol=*/1e-4);
   });
 }
 
