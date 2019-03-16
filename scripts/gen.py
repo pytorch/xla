@@ -212,10 +212,6 @@ class {type_name} : public AtenXlaType {{
   const char* toString() const override {{
     return "{type_name}";
   }}
-
-  size_t elementSizeInBytes() const override {{
-    return {sizeof};
-  }}
 }};
 
 static inline at::Type* Get{type_name}() {{
@@ -361,43 +357,36 @@ def create_type_instances():
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeByte',
       scalar_type='at::ScalarType::Byte',
-      sizeof=1,
       tensorid='c10::XLATensorId()',
       typeid='at::TypeID::XLAByte')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeChar',
       scalar_type='at::ScalarType::Char',
-      sizeof=1,
       tensorid='c10::XLATensorId()',
       typeid='at::TypeID::XLAChar')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeShort',
       scalar_type='at::ScalarType::Short',
-      sizeof=2,
       tensorid='c10::XLATensorId()',
       typeid='at::TypeID::XLAShort')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeInt',
       scalar_type='at::ScalarType::Int',
-      sizeof=4,
       tensorid='c10::XLATensorId()',
       typeid='at::TypeID::XLAInt')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeLong',
       scalar_type='at::ScalarType::Long',
-      sizeof=8,
       tensorid='c10::XLATensorId()',
       typeid='at::TypeID::XLALong')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeFloat',
       scalar_type='at::ScalarType::Float',
-      sizeof=4,
       tensorid='c10::XLATensorId()',
       typeid='at::TypeID::XLAFloat')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeDouble',
       scalar_type='at::ScalarType::Double',
-      sizeof=8,
       tensorid='c10::XLATensorId()',
       typeid='at::TypeID::XLADouble')
   return code
