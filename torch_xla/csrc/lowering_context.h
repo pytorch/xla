@@ -31,7 +31,10 @@ class LoweringContext {
 
   // Retrieves the vector holding all the tensors associated with the parameter
   // instructions which have been created.
-  std::vector<xla::ComputationClient::Data*> GetParametersData() const;
+  const std::vector<xla::ComputationClient::DataPtr>& GetParametersData()
+      const {
+    return parameters_;
+  }
 
   // Adds the output of a given operation to the result tuple.
   xla::int64 AddResult(xla::XlaOp op);
@@ -65,7 +68,7 @@ class LoweringContext {
                                                 const char* error_msg);
 
   xla::XlaBuilder builder_;
-  std::vector<std::shared_ptr<xla::ComputationClient::Data>> parameters_;
+  std::vector<xla::ComputationClient::DataPtr> parameters_;
   std::unordered_map<xla::ComputationClient::Data*, xla::XlaOp> parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;

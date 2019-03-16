@@ -49,14 +49,14 @@ void TestSingleReplication(const std::vector<Device>& devices) {
   }
   auto tensors_data = CreateTensorsData(tensors, device_strings);
 
-  std::vector<std::vector<std::shared_ptr<xla::ComputationClient::Data>>>
-      results(device_strings.size());
+  std::vector<std::vector<xla::ComputationClient::DataPtr>> results(
+      device_strings.size());
   xla::xla_util::MultiWait mwait(device_strings.size());
   xla::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
       results[i] = xla::ComputationClient::Get()->ExecuteComputation(
-          *compiled_computations[i], {tensors_data[i].get()}, device_strings[i],
+          *compiled_computations[i], {tensors_data[i]}, device_strings[i],
           exec_options);
     };
     xla::xla_env::ScheduleIoClosure(mwait.Completer(std::move(executor)));
