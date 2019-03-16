@@ -1261,6 +1261,11 @@ at::Tensor AtenXlaType::cholesky(const at::Tensor& self, bool upper) const {
       XLATensor::cholesky(bridge::GetXlaTensor(self), upper));
 }
 
+at::Tensor AtenXlaType::argsort(const at::Tensor& self, int64_t dim,
+                                bool descending) const {
+  return std::get<1>(sort(self, dim, descending));
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
                                                          int64_t k, int64_t dim,
                                                          bool keepdim) const {
