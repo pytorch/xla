@@ -6,6 +6,7 @@
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
@@ -35,8 +36,7 @@ class XLATensor {
   static XLATensor Create(const at::Tensor& tensor, const Device& device,
                           bool requires_grad);
   static XLATensor Create(
-      std::shared_ptr<xla::ComputationClient::Data> xla_data,
-      bool requires_grad,
+      xla::ComputationClient::DataPtr xla_data, bool requires_grad,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensor Create(
@@ -73,13 +73,13 @@ class XLATensor {
 
   // Fetches the XLA data behind the tensor. If the tensor has a graph defining
   // its current value, executes the graph and fetches the XLA data result.
-  std::shared_ptr<xla::ComputationClient::Data> GetXlaData();
+  xla::ComputationClient::DataPtr GetXlaData();
 
   // Fetches the current value of the XLA data, which can be missing (nullptr)
   // in case the tensor has a graph defining its current value,
-  std::shared_ptr<xla::ComputationClient::Data> CurrentXlaData() const;
+  xla::ComputationClient::DataPtr CurrentXlaData() const;
 
-  void SetXlaData(std::shared_ptr<xla::ComputationClient::Data> xla_data);
+  void SetXlaData(xla::ComputationClient::DataPtr xla_data);
 
   // Retrieves the current IR Node, or nullptr in case no active IR Node is
   // available.
@@ -800,14 +800,26 @@ class XLATensor {
   struct SyncTensorCollection {
     std::vector<size_t> indices;
     size_t hash = 0;
+    std::vector<xla::util::Cleanup> unlocker;
   };
+
+  struct CachedComputation {
+    CachedComputation(
+        std::shared_ptr<xla::ComputationClient::Computation> computation,
+        size_t num_parameters)
+        : computation(std::move(computation)), num_parameters(num_parameters) {}
+
+    std::shared_ptr<xla::ComputationClient::Computation> computation;
+    size_t num_parameters;
+  };
+
+  using ComputationCache = xla::util::Cache<size_t, CachedComputation>;
 
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
   struct Data {
-    Data(std::shared_ptr<xla::ComputationClient::Data> xla_data,
-         const Device& device,
+    Data(xla::ComputationClient::DataPtr xla_data, const Device& device,
          c10::optional<at::ScalarType> logical_element_type)
         : xla_data(std::move(xla_data)),
           logical_element_type(logical_element_type),
@@ -833,7 +845,7 @@ class XLATensor {
 
     ~Data();
 
-    std::shared_ptr<xla::ComputationClient::Data> xla_data;
+    xla::ComputationClient::DataPtr xla_data;
     ir::Value ir_value;
     std::shared_ptr<View> view;
     c10::optional<at::ScalarType> logical_element_type;
@@ -845,8 +857,7 @@ class XLATensor {
   };
 
   XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
-  XLATensor(std::shared_ptr<xla::ComputationClient::Data> xla_data,
-            bool requires_grad,
+  XLATensor(xla::ComputationClient::DataPtr xla_data, bool requires_grad,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(ir::Value ir_value, const Device& device,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
@@ -921,23 +932,34 @@ class XLATensor {
   static bool RunCachedApply(std::vector<XLATensor>* tensors,
                              const ApplyContext& apply_context);
 
+  static ComputationCache* GetComputationCache();
+
   static SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensor>& tensors);
 
+  // Schedules the execution of a sync tensors operation in background. The
+  // asynchronous operation will hold the device locks by capturing the ones
+  // present within the coll structure.
+  static void ScheduleSyncTensorsGraph(
+      std::vector<XLATensor>* tensors, SyncTensorCollection* coll,
+      std::vector<xla::ComputationClient::DataPtr> parameters_data,
+      std::string device, ComputationCache::TypePtr cached_computation);
+
   static bool TryRunCachedSync(std::vector<XLATensor>* tensors,
-                               const SyncTensorCollection& coll);
+                               SyncTensorCollection* coll);
 
   // Returns a permutation which represents an ordering by tensor device and
   // unique ID, of all the tensors which needs sync (the ones which have a graph
   // backing their value). The tensors which are already sync, will not be
   // returned within the permutation. If a tensor has at::Tensor data only, the
   // at::Tensor data will be uploaded to the device and the tensor will receive
-  // new XLA data.
-  static std::vector<size_t> GetApplyOrder(
+  // new XLA data. This API will perform a barrier on device locks, and will not
+  // hold locks of partecipating devices (as ApplyPendingGraph() is never
+  // asynchronous).
+  static SyncTensorCollection CollectApplyGraphTensors(
       const std::vector<XLATensor>& tensors);
 
-  static ir::Value CreateTensorNode(
-      std::shared_ptr<xla::ComputationClient::Data> data);
+  static ir::Value CreateTensorNode(xla::ComputationClient::DataPtr data);
 
   static xla::int64 GetNextTensorId();
 

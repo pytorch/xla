@@ -31,11 +31,15 @@ class ComputationClient {
 
     const Shape& shape() const { return shape_; }
 
+    virtual void Swap(Data* data) = 0;
+
    private:
     int64 unique_id_ = 0;
     string device_;
     Shape shape_;
   };
+
+  using DataPtr = std::shared_ptr<Data>;
 
   class Computation {
    public:
@@ -105,14 +109,18 @@ class ComputationClient {
 
   virtual ~ComputationClient() {}
 
+  // Creates a Data object with no actual device handle in it. The device handle
+  // will be populated in an asynchrounous fashion.
+  virtual DataPtr CreateDataPlaceholder(string device, Shape shape) = 0;
+
   // Transfers local tensor values to the TPU servers and fetches the handles.
-  virtual std::vector<std::shared_ptr<Data>> TransferToServer(
+  virtual std::vector<DataPtr> TransferToServer(
       tensorflow::gtl::ArraySlice<const TensorSource> tensors) = 0;
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
   virtual std::vector<Literal> TransferFromServer(
-      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> handles) = 0;
+      tensorflow::gtl::ArraySlice<const DataPtr> handles) = 0;
 
   // Compiles a set of computations.
   virtual std::vector<std::shared_ptr<Computation>> Compile(
@@ -122,10 +130,10 @@ class ComputationClient {
   // The passed device must match the common device of the arguments Data.
   // If options.explode_tuple is true, the output tuple will be decomposed into
   // its single elements.
-  virtual std::vector<std::shared_ptr<Data>> ExecuteComputation(
+  virtual std::vector<DataPtr> ExecuteComputation(
       const Computation& computation,
-      tensorflow::gtl::ArraySlice<Data*> arguments, const string& device,
-      const ExecuteComputationOptions& options) = 0;
+      tensorflow::gtl::ArraySlice<const DataPtr> arguments,
+      const string& device, const ExecuteComputationOptions& options) = 0;
 
   // Executes the computation in replicated mode.
   // The size of the arguments vector is the number of replicas to execute,
@@ -138,9 +146,9 @@ class ComputationClient {
   // The result[i], a vector itself, will be the result of the computation fed
   // with arguments[i]. If options.explode_tuple is true, the output tuples will
   // be decomposed into their single elements.
-  virtual std::vector<std::vector<std::shared_ptr<Data>>> ExecuteReplicated(
+  virtual std::vector<std::vector<DataPtr>> ExecuteReplicated(
       const Computation& computation,
-      const std::vector<std::vector<Data*>>& arguments,
+      const std::vector<std::vector<DataPtr>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
       const ExecuteReplicatedOptions& options) = 0;
 
@@ -151,14 +159,14 @@ class ComputationClient {
   // Returns a vector of vectors of device side Data object, with result[i]
   // being the return value of computations[i]. If options.explode_tuple is
   // true, the output tuples will be decomposed into their single elements.
-  virtual std::vector<std::vector<std::shared_ptr<Data>>> ExecuteParallel(
+  virtual std::vector<std::vector<DataPtr>> ExecuteParallel(
       tensorflow::gtl::ArraySlice<const Computation* const> computations,
-      const std::vector<std::vector<Data*>>& arguments,
+      const std::vector<std::vector<DataPtr>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
       const ExecuteParallelOptions& options) = 0;
 
-  virtual std::vector<std::vector<std::shared_ptr<Data>>> DeconstructTuple(
-      tensorflow::gtl::ArraySlice<const std::shared_ptr<Data>> tuples) = 0;
+  virtual std::vector<std::vector<DataPtr>> DeconstructTuple(
+      tensorflow::gtl::ArraySlice<const DataPtr> tuples) = 0;
 
   virtual string GetDefaultDevice() const = 0;
 

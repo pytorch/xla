@@ -8,11 +8,42 @@
 #include <vector>
 
 #include "absl/types/optional.h"
+#include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/lib/hash/hash.h"
 
 namespace xla {
 namespace util {
+
+class Cleanup {
+ public:
+  explicit Cleanup(std::function<void(Status)> func) : func_(std::move(func)) {}
+  Cleanup(Cleanup&& ref) : func_(std::move(ref.func_)) {}
+  Cleanup(const Cleanup&) = delete;
+
+  ~Cleanup() {
+    if (func_ != nullptr) {
+      func_(std::move(status_));
+    }
+  }
+
+  Cleanup& operator=(const Cleanup&) = delete;
+
+  Cleanup& operator=(Cleanup&& ref) {
+    if (this != &ref) {
+      func_ = std::move(ref.func_);
+    }
+    return *this;
+  }
+
+  void Release() { func_ = nullptr; }
+
+  void SetStatus(Status status) { status_ = std::move(status); }
+
+ private:
+  std::function<void(Status)> func_;
+  Status status_;
+};
 
 // Allows APIs which might return const references and values, to not be forced
 // to return values in the signature.

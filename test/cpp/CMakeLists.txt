@@ -56,6 +56,7 @@ set(TORCH_XLA_TEST_SOURCES
   test_mayberef.cpp
   test_replication.cpp
   test_tensor.cpp
+  test_xla_util_cache.cpp
   torch_xla_test.cpp
 )
 

@@ -21,15 +21,6 @@ xla::XlaOp LoweringContext::GetParameter(
   return it->second;
 }
 
-std::vector<xla::ComputationClient::Data*> LoweringContext::GetParametersData()
-    const {
-  std::vector<xla::ComputationClient::Data*> parameters;
-  for (auto& param : parameters_) {
-    parameters.push_back(param.get());
-  }
-  return parameters;
-}
-
 xla::int64 LoweringContext::AddResult(xla::XlaOp op) {
   root_tuple_.push_back(std::move(op));
   return root_tuple_.size() - 1;
