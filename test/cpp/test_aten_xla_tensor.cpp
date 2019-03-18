@@ -650,7 +650,10 @@ TEST_F(AtenXlaTensorTest, TestSVD) {
         // cannot be compared if not by absolute value.
         AllClose(std::get<0>(b).abs(), std::get<0>(xla_b).abs(), /*rtol=*/1e-3,
                  /*atol=*/1e-4);
-        AllClose(std::get<1>(b), std::get<1>(xla_b), /*rtol=*/1e-3,
+        at::Tensor diag = std::get<1>(b);
+        at::Tensor xla_diag = std::get<1>(xla_b);
+        ASSERT_EQ(diag.sizes(), xla_diag.sizes());
+        AllClose(diag, xla_diag, /*rtol=*/1e-3,
                  /*atol=*/1e-4);
         AllClose(std::get<2>(b).abs(), std::get<2>(xla_b).abs(), /*rtol=*/1e-3,
                  /*atol=*/1e-4);
