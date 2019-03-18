@@ -51,6 +51,17 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
   return XLATensor::stack({s1, s2, s3}, dim);
 }
 
+XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal) {
+  xla::int64 size = input.shape().get().dimensions(0);
+  XLATensor identity =
+      XLATensor::eye(size, size, input.GetDevice(), input.dtype());
+  auto padding = diagonal >= 0
+                     ? std::vector<xla::int64>{diagonal, 0, 0, diagonal}
+                     : std::vector<xla::int64>{0, -diagonal, -diagonal, 0};
+  return XLATensor::constant_pad_nd(XLATensor::mul(identity, input), padding,
+                                    0);
+}
+
 XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
                        xla::int64 reduction) {
   auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});

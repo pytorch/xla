@@ -624,6 +624,16 @@ XLATensor XLATensor::cumsum(const XLATensor& input, xla::int64 dim,
       dtype);
 }
 
+XLATensor XLATensor::diag(const XLATensor& input, xla::int64 offset) {
+  xla::int64 rank = input.shape().get().rank();
+  XLA_CHECK(rank == 1 || rank == 2)
+      << "Invalid argument for diag: matrix or a vector expected";
+  if (rank == 1) {
+    return tensor_ops::MakeMatrixWithDiagonal(input, offset);
+  }
+  return diagonal(input, offset, /*dim1=*/-2, /*dim2=*/-1);
+}
+
 XLATensor XLATensor::diagonal(const XLATensor& input, xla::int64 offset,
                               xla::int64 dim1, xla::int64 dim2) {
   xla::int64 rank = input.shape().get().rank();

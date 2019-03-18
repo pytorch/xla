@@ -11,6 +11,8 @@ namespace tensor_ops {
 
 XLATensor Cross(const XLATensor& input, const XLATensor& other, xla::int64 dim);
 
+XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal);
+
 XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
                        xla::int64 reduction);
 
