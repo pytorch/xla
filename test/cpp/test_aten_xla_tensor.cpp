@@ -3923,7 +3923,21 @@ TEST_F(AtenXlaTensorTest, TestTraceNarrow) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestDiag) {
+TEST_F(AtenXlaTensorTest, TestDiagRank1) {
+  int size = 7;
+  at::Tensor input = at::rand({size}, at::TensorOptions(at::kFloat));
+  // Test all diagonals and out of bounds (must be no-op).
+  for (int diagonal = -2 * size; diagonal <= 2 * size; ++diagonal) {
+    at::Tensor output = at::diag(input, diagonal);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = at::diag(xla_input, diagonal);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestDiagRank2) {
   int size = 7;
   at::Tensor input = at::rand({size, size}, at::TensorOptions(at::kFloat));
   // Test all diagonals and out of bounds (must be no-op).
