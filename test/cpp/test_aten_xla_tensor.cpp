@@ -1736,6 +1736,16 @@ TEST_F(AtenXlaTensorTest, TestLinear) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestPinverse) {
+  at::Tensor input = at::rand({4, 6}, at::TensorOptions(at::kFloat));
+  at::Tensor result = at::pinverse(input);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_result = at::pinverse(xla_input);
+    AllClose(result, xla_result, /*rtol=*/1e-4);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
   at::Tensor a = at::rand({5}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({5}, at::TensorOptions(at::kFloat));
