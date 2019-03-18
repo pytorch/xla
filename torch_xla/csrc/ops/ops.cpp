@@ -371,7 +371,9 @@ NodePtr Where(const Value& condition, const Value& input, const Value& other) {
     xla::XlaOp pred_condition =
         ConvertTo(xla_condition, XlaHelpers::TypeOfXlaOp(xla_condition),
                   xla::PrimitiveType::PRED, /*device=*/nullptr);
-    return node.ReturnOp(xla::Select(pred_condition, xla_input, xla_other),
+    auto promoted_branches = XlaHelpers::PromoteShapes(xla_input, xla_other);
+    return node.ReturnOp(xla::Select(pred_condition, promoted_branches.first,
+                                     promoted_branches.second),
                          loctx);
   };
   return GenericOp(OpKind(at::aten::where), {condition, input, other},
