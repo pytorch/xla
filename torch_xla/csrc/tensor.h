@@ -339,6 +339,11 @@ class XLATensor {
   static XLATensor cumsum(const XLATensor& input, xla::int64 dim,
                           c10::optional<at::ScalarType> dtype);
 
+  // If the input is a matrix (2-D tensor), returns a 1-D tensor with the
+  // diagonal elements of the input. If the input is a vector (1-D tensor),
+  // returns a 2-D square tensor with the elements of input as the diagonal.
+  static XLATensor diag(const XLATensor& input, xla::int64 offset);
+
   // Returns the diagonal of a matrix (2-D tensor) or batch of matrices. The
   // matrix dimensions are specified by dim1 and dim2, the diagonal by offset.
   static XLATensor diagonal(const XLATensor& input, xla::int64 offset,

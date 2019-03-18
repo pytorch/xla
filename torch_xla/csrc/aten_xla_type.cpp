@@ -758,7 +758,7 @@ at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim) const {
 
 at::Tensor AtenXlaType::diag(const at::Tensor& self, int64_t diagonal) const {
   return bridge::AtenFromXlaTensor(
-      XLATensor::diagonal(bridge::GetXlaTensor(self), diagonal, -2, -1));
+      XLATensor::diag(bridge::GetXlaTensor(self), diagonal));
 }
 
 at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
