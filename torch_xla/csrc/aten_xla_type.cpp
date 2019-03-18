@@ -1689,6 +1689,10 @@ at::Tensor AtenXlaType::permute(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
 }
 
+at::Tensor AtenXlaType::pinverse(const at::Tensor& self, double rcond) const {
+  return at::native::pinverse(self, rcond);
+}
+
 at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::pow(bridge::GetXlaTensor(self), exponent));
