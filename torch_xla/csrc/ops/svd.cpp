@@ -53,9 +53,9 @@ xla::Shape NodeOutputShape(const Value& input, bool some, bool compute_uv) {
   } else {
     ushape.set_dimensions(input_shape.rank() - 1, std::min(m_dim, n_dim));
   }
-  // D is N
-  xla::Shape dshape(input_shape);
-  dshape.DeleteDimension(input_shape.rank() - 2);
+  // D is min(M, N).
+  xla::Shape dshape = xla::ShapeUtil::MakeShape(input_shape.element_type(),
+                                                {std::min(m_dim, n_dim)});
   // V is NxN
   xla::Shape vshape(input_shape);
   vshape.set_dimensions(input_shape.rank() - 2, n_dim);
