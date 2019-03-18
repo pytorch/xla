@@ -26,6 +26,12 @@ at::Tensor ToCpuTensor(const at::Tensor& t) {
 }
 
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
+  if (tensor1.sizes() != tensor2.sizes()) {
+    std::cerr << "Different sizes:\n"
+              << tensor1.sizes() << "\n-vs-\n"
+              << tensor2.sizes() << "\n";
+    return false;
+  }
   tensor1 = ToCpuTensor(tensor1);
   tensor2 = ToCpuTensor(tensor2);
 
@@ -45,11 +51,17 @@ void ForEachDevice(const std::function<void(const Device&)>& devfn) {
 
 bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
                  double atol) {
+  if (tensor1.sizes() != tensor2.sizes()) {
+    std::cerr << "Different sizes:\n"
+              << tensor1.sizes() << "\n-vs-\n"
+              << tensor2.sizes() << "\n";
+    return false;
+  }
   tensor1 = ToCpuTensor(tensor1);
   tensor2 = ToCpuTensor(tensor2);
   bool equal = tensor1.allclose(tensor2, rtol, atol);
   if (!equal) {
-    std::cout << tensor1 << "\n-vs-\n" << tensor2 << "\n";
+    std::cerr << tensor1 << "\n-vs-\n" << tensor2 << "\n";
   }
   return equal;
 }
