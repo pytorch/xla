@@ -3675,6 +3675,17 @@ TEST_F(AtenXlaTensorTest, TestFlip) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestPixelShuffle) {
+  at::Tensor input = at::rand({5, 18, 4, 4}, at::TensorOptions(at::kFloat));
+  int upscale_factor = 3;
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor output = at::pixel_shuffle(input, upscale_factor);
+    at::Tensor xla_output = at::pixel_shuffle(xla_input, upscale_factor);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSumToSize) {
   at::Tensor input = at::rand({4, 6, 3, 7}, at::TensorOptions(at::kFloat));
   std::vector<int64_t> out_size = {4, 1, 1, 7};
