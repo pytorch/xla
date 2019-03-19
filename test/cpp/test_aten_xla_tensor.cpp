@@ -3651,6 +3651,17 @@ TEST_F(AtenXlaTensorTest, TestFlip) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSumToSize) {
+  at::Tensor input = at::rand({4, 6, 3, 7}, at::TensorOptions(at::kFloat));
+  std::vector<int64_t> out_size = {4, 1, 1, 7};
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor output = input.sum_to_size(out_size);
+    at::Tensor xla_output = xla_input.sum_to_size(out_size);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestTransposeDims) {
   at::Tensor input = at::rand({2, 3, 4}, at::TensorOptions(at::kFloat));
   int dim0 = 0;

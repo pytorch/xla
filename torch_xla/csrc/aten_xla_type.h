@@ -835,6 +835,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
                  at::ScalarType dtype) const override;
 
+  at::Tensor sum_to_size(const at::Tensor& self,
+                         at::IntArrayRef size) const override;
+
   std::tuple<at::Tensor, at::Tensor, at::Tensor> svd(
       const at::Tensor& self, bool some, bool compute_uv) const override;
 
