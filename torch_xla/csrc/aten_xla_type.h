@@ -174,6 +174,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
                     const at::TensorOptions& options) const override;
 
+  at::Tensor& arange_out(at::Tensor& out, at::Scalar start, at::Scalar end,
+                         at::Scalar step) const override;
+
   at::Tensor argmax(const at::Tensor& self, int64_t dim,
                     bool keepdim) const override;
 
@@ -218,6 +221,11 @@ class AtenXlaType : public AtenXlaTypeBase {
                                  at::IntList padding, bool ceil_mode,
                                  bool count_include_pad) const override;
 
+  at::Tensor bartlett_window(int64_t window_length,
+                             const at::TensorOptions& options) const override;
+  at::Tensor bartlett_window(int64_t window_length, bool periodic,
+                             const at::TensorOptions& options) const override;
+
   at::Tensor batch_norm(const at::Tensor& input, const at::Tensor& weight,
                         const at::Tensor& bias, const at::Tensor& running_mean,
                         const at::Tensor& running_var, bool training,
@@ -227,6 +235,11 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor bilinear(const at::Tensor& input1, const at::Tensor& input2,
                       const at::Tensor& weight,
                       const at::Tensor& bias) const override;
+
+  at::Tensor blackman_window(int64_t window_length,
+                             const at::TensorOptions& options) const override;
+  at::Tensor blackman_window(int64_t window_length, bool periodic,
+                             const at::TensorOptions& options) const override;
 
   at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2) const override;
 
@@ -441,6 +454,20 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& gt_(at::Tensor& self, at::Scalar other) const override;
 
   at::Tensor& gt_(at::Tensor& self, const at::Tensor& other) const override;
+
+  at::Tensor hamming_window(int64_t window_length,
+                            const at::TensorOptions& options) const override;
+  at::Tensor hamming_window(int64_t window_length, bool periodic,
+                            const at::TensorOptions& options) const override;
+  at::Tensor hamming_window(int64_t window_length, bool periodic, double alpha,
+                            const at::TensorOptions& options) const override;
+  at::Tensor hamming_window(int64_t window_length, bool periodic, double alpha,
+                            double beta,
+                            const at::TensorOptions& options) const override;
+  at::Tensor hann_window(int64_t window_length,
+                         const at::TensorOptions& options) const override;
+  at::Tensor hann_window(int64_t window_length, bool periodic,
+                         const at::TensorOptions& options) const override;
 
   at::Tensor hardshrink(const at::Tensor& self,
                         at::Scalar lambda) const override;
