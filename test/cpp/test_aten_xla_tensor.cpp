@@ -4022,6 +4022,28 @@ TEST_F(AtenXlaTensorTest, TestDiagonalBatch) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestFlatten) {
+  at::Tensor input = at::rand({4, 7, 5, 3});
+  int rank = input.dim();
+  for (int pos_start_dim = 0; pos_start_dim < rank; ++pos_start_dim) {
+    for (int pos_end_dim = pos_start_dim; pos_end_dim < rank; ++pos_end_dim) {
+      for (bool negative_start_dim : {false, true}) {
+        for (bool negative_end_dim : {false, true}) {
+          int start_dim =
+              negative_start_dim ? pos_start_dim - rank : pos_start_dim;
+          int end_dim = negative_end_dim ? pos_end_dim - rank : pos_end_dim;
+          at::Tensor output = at::flatten(input, start_dim, end_dim);
+          ForEachDevice([&](const Device& device) {
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+            at::Tensor xla_output = at::flatten(xla_input, start_dim, end_dim);
+            AllClose(output, xla_output);
+          });
+        }
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestBitwiseAnd) {
   at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
                                at::TensorOptions(at::kInt));
