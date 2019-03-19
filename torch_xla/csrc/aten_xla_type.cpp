@@ -2162,6 +2162,11 @@ at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
+at::Tensor AtenXlaType::sum_to_size(const at::Tensor& self,
+                                    at::IntArrayRef size) const {
+  return at::native::sum_to_size(self, size);
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::svd(
     const at::Tensor& self, bool some, bool compute_uv) const {
   auto results = XLATensor::svd(bridge::GetXlaTensor(self), some, compute_uv);
