@@ -1833,6 +1833,30 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestBilinear) {
+  int batch_size = 16;
+  int in1_features = 4;
+  int in2_features = 6;
+  int out_features = 8;
+  at::Tensor input1 =
+      at::rand({batch_size, in1_features}, at::TensorOptions(at::kFloat));
+  at::Tensor input2 =
+      at::rand({batch_size, in2_features}, at::TensorOptions(at::kFloat));
+  at::Tensor weight = at::rand({out_features, in1_features, in2_features},
+                               at::TensorOptions(at::kFloat));
+  at::Tensor bias = at::rand({out_features}, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input1 = bridge::CreateXlaTensor(input1, device);
+    at::Tensor xla_input2 = bridge::CreateXlaTensor(input2, device);
+    at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
+    at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
+    at::Tensor result = at::bilinear(input1, input2, weight, bias);
+    at::Tensor xla_result =
+        at::bilinear(xla_input1, xla_input2, xla_weight, xla_bias);
+    AllClose(result, xla_result);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAddCMul) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));

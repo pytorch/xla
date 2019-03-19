@@ -297,6 +297,14 @@ at::Tensor AtenXlaType::_softmax_backward_data(const at::Tensor& grad_output,
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
 }
 
+at::Tensor AtenXlaType::_trilinear(
+    const at::Tensor& i1, const at::Tensor& i2, const at::Tensor& i3,
+    at::IntArrayRef expand1, at::IntArrayRef expand2, at::IntArrayRef expand3,
+    at::IntArrayRef sumdim, int64_t unroll_dim) const {
+  return at::native::_trilinear(i1, i2, i3, expand1, expand2, expand3, sumdim,
+                                unroll_dim);
+}
+
 at::Tensor AtenXlaType::abs(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::abs(bridge::GetXlaTensor(self)));
 }
@@ -577,6 +585,13 @@ at::Tensor AtenXlaType::batch_norm(
       bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight),
       bridge::GetXlaTensor(bias), bridge::GetXlaTensor(running_mean),
       bridge::GetXlaTensor(running_var), momentum, eps));
+}
+
+at::Tensor AtenXlaType::bilinear(const at::Tensor& input1,
+                                 const at::Tensor& input2,
+                                 const at::Tensor& weight,
+                                 const at::Tensor& bias) const {
+  return at::native::bilinear(input1, input2, weight, bias);
 }
 
 at::Tensor AtenXlaType::bmm(const at::Tensor& self,
