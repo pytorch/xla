@@ -109,6 +109,12 @@ class AtenXlaType : public AtenXlaTypeBase {
                                     const at::Tensor& output, int64_t dim,
                                     const at::Tensor& self) const override;
 
+  at::Tensor _trilinear(const at::Tensor& i1, const at::Tensor& i2,
+                        const at::Tensor& i3, at::IntArrayRef expand1,
+                        at::IntArrayRef expand2, at::IntArrayRef expand3,
+                        at::IntArrayRef sumdim,
+                        int64_t unroll_dim) const override;
+
   at::Tensor abs(const at::Tensor& self) const override;
 
   at::Tensor& abs_(at::Tensor& self) const override;
@@ -217,6 +223,10 @@ class AtenXlaType : public AtenXlaTypeBase {
                         const at::Tensor& running_var, bool training,
                         double momentum, double eps,
                         bool cudnn_enabled) const override;
+
+  at::Tensor bilinear(const at::Tensor& input1, const at::Tensor& input2,
+                      const at::Tensor& weight,
+                      const at::Tensor& bias) const override;
 
   at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2) const override;
 
