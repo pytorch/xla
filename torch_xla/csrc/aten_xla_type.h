@@ -652,6 +652,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor permute(const at::Tensor& self,
                      at::IntArrayRef dims) const override;
 
+  at::Tensor pixel_shuffle(const at::Tensor& self,
+                           int64_t upscale_factor) const override;
+
   at::Tensor pinverse(const at::Tensor& self, double rcond) const override;
 
   at::Tensor pow(const at::Tensor& self, at::Scalar exponent) const override;
