@@ -454,6 +454,12 @@ at::Tensor AtenXlaType::arange(at::Scalar start, at::Scalar end,
                         xla_options.get_scalar_type()));
 }
 
+at::Tensor& AtenXlaType::arange_out(at::Tensor& out, at::Scalar start,
+                                    at::Scalar end, at::Scalar step) const {
+  out = arange(start, end, step, out.options());
+  return out;
+}
+
 at::Tensor AtenXlaType::argmax(const at::Tensor& self, int64_t dim,
                                bool keepdim) const {
   return bridge::AtenFromXlaTensor(
@@ -572,6 +578,17 @@ at::Tensor AtenXlaType::avg_pool2d_backward(const at::Tensor& grad_output,
       XlaHelpers::I64List(padding), count_include_pad));
 }
 
+at::Tensor AtenXlaType::bartlett_window(
+    int64_t window_length, const at::TensorOptions& options) const {
+  return at::native::bartlett_window(window_length, options);
+}
+
+at::Tensor AtenXlaType::bartlett_window(
+    int64_t window_length, bool periodic,
+    const at::TensorOptions& options) const {
+  return at::native::bartlett_window(window_length, periodic, options);
+}
+
 at::Tensor AtenXlaType::batch_norm(
     const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
     const at::Tensor& running_mean, const at::Tensor& running_var,
@@ -592,6 +609,17 @@ at::Tensor AtenXlaType::bilinear(const at::Tensor& input1,
                                  const at::Tensor& weight,
                                  const at::Tensor& bias) const {
   return at::native::bilinear(input1, input2, weight, bias);
+}
+
+at::Tensor AtenXlaType::blackman_window(
+    int64_t window_length, const at::TensorOptions& options) const {
+  return at::native::blackman_window(window_length, options);
+}
+
+at::Tensor AtenXlaType::blackman_window(
+    int64_t window_length, bool periodic,
+    const at::TensorOptions& options) const {
+  return at::native::blackman_window(window_length, periodic, options);
 }
 
 at::Tensor AtenXlaType::bmm(const at::Tensor& self,
@@ -1141,6 +1169,39 @@ at::Tensor& AtenXlaType::gt_(at::Tensor& self, const at::Tensor& other) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::gt_(self_tensor, bridge::GetXlaTensor(other));
   return self;
+}
+
+at::Tensor AtenXlaType::hamming_window(int64_t window_length,
+                                       const at::TensorOptions& options) const {
+  return at::native::hamming_window(window_length, options);
+}
+
+at::Tensor AtenXlaType::hamming_window(int64_t window_length, bool periodic,
+                                       const at::TensorOptions& options) const {
+  return at::native::hamming_window(window_length, periodic, options);
+}
+
+at::Tensor AtenXlaType::hamming_window(int64_t window_length, bool periodic,
+                                       double alpha,
+                                       const at::TensorOptions& options) const {
+  return at::native::hamming_window(window_length, periodic, alpha, options);
+}
+
+at::Tensor AtenXlaType::hamming_window(int64_t window_length, bool periodic,
+                                       double alpha, double beta,
+                                       const at::TensorOptions& options) const {
+  return at::native::hamming_window(window_length, periodic, alpha, beta,
+                                    options);
+}
+
+at::Tensor AtenXlaType::hann_window(int64_t window_length,
+                                    const at::TensorOptions& options) const {
+  return at::native::hann_window(window_length, options);
+}
+
+at::Tensor AtenXlaType::hann_window(int64_t window_length, bool periodic,
+                                    const at::TensorOptions& options) const {
+  return at::native::hann_window(window_length, periodic, options);
 }
 
 at::Tensor AtenXlaType::hardshrink(const at::Tensor& self,

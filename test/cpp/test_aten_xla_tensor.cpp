@@ -1583,6 +1583,44 @@ TEST_F(AtenXlaTensorTest, TestARange) {
   AllClose(a, xla_a);
 }
 
+TEST_F(AtenXlaTensorTest, TestBartlettWindow) {
+  int window_length = 10;
+  for (bool periodic : {false, true}) {
+    at::Tensor output = at::bartlett_window(window_length, periodic,
+                                            at::TensorOptions(at::kFloat));
+    at::Tensor xla_output = at::bartlett_window(
+        window_length, periodic,
+        at::TensorOptions(at::kFloat).device(bridge::AtenDefaultDevice()));
+    AllClose(output, xla_output);
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestBlackmanWindow) {
+  int window_length = 10;
+  for (bool periodic : {false, true}) {
+    at::Tensor output = at::blackman_window(window_length, periodic,
+                                            at::TensorOptions(at::kFloat));
+    at::Tensor xla_output = at::blackman_window(
+        window_length, periodic,
+        at::TensorOptions(at::kFloat).device(bridge::AtenDefaultDevice()));
+    AllClose(output, xla_output, /*rtol=*/1e-5, /*atol=*/1e-7);
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestHammingWindow) {
+  double alpha = 0.54;
+  double beta = 0.46;
+  int window_length = 10;
+  for (bool periodic : {false, true}) {
+    at::Tensor output = at::hamming_window(window_length, periodic, alpha, beta,
+                                           at::TensorOptions(at::kFloat));
+    at::Tensor xla_output = at::hamming_window(
+        window_length, periodic, alpha, beta,
+        at::TensorOptions(at::kFloat).device(bridge::AtenDefaultDevice()));
+    AllClose(output, xla_output);
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestLogSigmoid) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::log_sigmoid(a);
