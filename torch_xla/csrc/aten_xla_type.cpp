@@ -761,6 +761,10 @@ at::Tensor AtenXlaType::diag(const at::Tensor& self, int64_t diagonal) const {
       XLATensor::diag(bridge::GetXlaTensor(self), diagonal));
 }
 
+at::Tensor AtenXlaType::diagflat(const at::Tensor& self, int64_t offset) const {
+  return at::native::diagflat(self, offset);
+}
+
 at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
                                  int64_t dim1, int64_t dim2) const {
   return bridge::AtenFromXlaTensor(
