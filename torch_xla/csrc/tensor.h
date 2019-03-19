@@ -50,6 +50,8 @@ class XLATensor {
 
   void detach_() { data()->requires_grad = false; }
 
+  XLATensor detach() const;
+
   bool is_null() const { return data_ptr() == nullptr; }
 
   XLATensor alias() const { return XLATensor(data_ptr()); }

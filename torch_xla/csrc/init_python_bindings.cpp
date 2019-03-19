@@ -341,6 +341,9 @@ void InitXlaTensorBindings(py::module m) {
            })
       .def("size",
            [](const XLATensor& self, int dim) { return self.size(dim); })
+      .def("clone",
+           [](const XLATensor& self) { return XLATensor::clone(self); })
+      .def("detach", [](const XLATensor& self) { return self.detach(); })
       .def_property_readonly(
           "data",
           [](const XLATensor& self) { return py::cast<XLATensor>(self); })
