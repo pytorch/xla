@@ -289,6 +289,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor diag(const at::Tensor& self, int64_t diagonal) const override;
 
+  at::Tensor diagflat(const at::Tensor& self, int64_t offset) const override;
+
   at::Tensor diagonal(const at::Tensor& self, int64_t offset, int64_t dim1,
                       int64_t dim2) const override;
 
