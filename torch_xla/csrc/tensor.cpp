@@ -258,6 +258,12 @@ XLATensor::Data* XLATensor::data() const {
   return data_.get();
 }
 
+XLATensor XLATensor::detach() const {
+  XLATensor detached = XLATensor::clone(*this);
+  detached.detach_();
+  return detached;
+};
+
 xla::int64 XLATensor::size(xla::int64 dim) const {
   auto xla_shape = shape();
   int rank = xla_shape.get().rank();
