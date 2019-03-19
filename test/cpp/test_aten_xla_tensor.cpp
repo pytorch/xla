@@ -3961,6 +3961,19 @@ TEST_F(AtenXlaTensorTest, TestDiagRank2) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestDiagFlat) {
+  at::Tensor input = at::rand({4, 3, 6, 7}, at::TensorOptions(at::kFloat));
+  int rank = input.dim();
+  for (int diagonal = -10; diagonal < 10; ++diagonal) {
+    at::Tensor output = at::diagflat(input, diagonal);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output = at::diagflat(xla_input, diagonal);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestDiagonal) {
   int size = 5;
   at::Tensor input = at::rand({size, size}, at::TensorOptions(at::kFloat));
