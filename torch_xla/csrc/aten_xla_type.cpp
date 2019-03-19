@@ -1713,6 +1713,11 @@ at::Tensor AtenXlaType::permute(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
 }
 
+at::Tensor AtenXlaType::pixel_shuffle(const at::Tensor& self,
+                                      int64_t upscale_factor) const {
+  return at::native::pixel_shuffle(self, upscale_factor);
+}
+
 at::Tensor AtenXlaType::pinverse(const at::Tensor& self, double rcond) const {
   return at::native::pinverse(self, rcond);
 }
