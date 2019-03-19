@@ -377,6 +377,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor& fill_(at::Tensor& self, const at::Tensor& value) const override;
 
+  at::Tensor flatten(const at::Tensor& self, int64_t start_dim,
+                     int64_t end_dim) const override;
+
   at::Tensor flip(const at::Tensor& self, at::IntArrayRef dims) const override;
 
   at::Tensor floor(const at::Tensor& self) const override;
