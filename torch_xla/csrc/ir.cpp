@@ -3,6 +3,7 @@
 #include <functional>
 #include <sstream>
 
+#include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -11,6 +12,17 @@
 
 namespace torch_xla {
 namespace ir {
+namespace {
+
+using ShapeCache = xla::util::Cache<size_t, xla::Shape>;
+
+ShapeCache* GetShapeCache() {
+  static const size_t kMaxShapeCacheSize = 1024;
+  static ShapeCache* cache = new ShapeCache(kMaxShapeCacheSize);
+  return cache;
+}
+
+}  // namespace
 
 bool Use::operator<(const Use& rhs) const {
   if (node->op() != rhs.node->op()) {
@@ -63,6 +75,15 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
     AddOperand(operand.node, operand.index);
     hash_ = xla::util::HashCombine(hash_, operand->hash());
   }
+}
+
+Node::Node(OpKind op, OpList operands,
+           const std::function<xla::Shape()>& shape_fn, size_t num_outputs,
+           size_t hash_seed)
+    : Node(std::move(op), operands, xla::Shape(), num_outputs, hash_seed) {
+  // Forward the constructor to the one above (with empty shape), so we have the
+  // full hash information, then fetch/compute the real shape.
+  shape_ = GetOpShape(shape_fn);
 }
 
 Node::Node(OpKind op, xla::Shape shape, size_t hash_seed)
@@ -145,6 +166,15 @@ size_t Node::GetOpHash(OpKind op, const xla::Shape& shape, size_t hash_seed) {
   size_t h = xla::util::HashCombine(op.hash(),
                                     std::hash<std::string>()(shape.ToString()));
   return xla::util::HashCombine(h, hash_seed);
+}
+
+xla::Shape Node::GetOpShape(const std::function<xla::Shape()>& shape_fn) const {
+  ShapeCache* shape_cache = GetShapeCache();
+  auto shape = shape_cache->Get(hash());
+  if (shape == nullptr) {
+    shape = shape_cache->Add(hash(), std::make_shared<xla::Shape>(shape_fn()));
+  }
+  return *shape;
 }
 
 std::string Node::GetFrameInfo() {

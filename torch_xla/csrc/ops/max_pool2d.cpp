@@ -32,9 +32,12 @@ xla::Shape NodeOutputShape(
 MaxPool2d::MaxPool2d(const Value& input, std::vector<xla::int64> kernel_size,
                      std::vector<xla::int64> stride,
                      std::vector<xla::int64> padding)
-    : Node(ir::OpKind(at::aten::max_pool2d), {input},
-           NodeOutputShape(input, kernel_size, stride, padding),
-           /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
+    : Node(
+          ir::OpKind(at::aten::max_pool2d), {input},
+          [&]() {
+            return NodeOutputShape(input, kernel_size, stride, padding);
+          },
+          /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
       kernel_size_(kernel_size.begin(), kernel_size.end()),
       stride_(stride.begin(), stride.end()),
       padding_(padding.begin(), padding.end()) {}
