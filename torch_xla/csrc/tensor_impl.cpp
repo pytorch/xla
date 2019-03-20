@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/tensor_impl.h"
 
-#include <ATen/detail/XLAHooksInterface.h>
 #include <c10/core/Allocator.h>
 #include <c10/core/ScalarType.h>
 #include <c10/core/impl/DeviceGuardImplInterface.h>
@@ -53,16 +52,6 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   }
 
   c10::DeviceIndex deviceCount() const override {
-    return xla::ComputationClient::Get()->GetNumDevices();
-  }
-};
-
-struct XLAHooksInterface : public at::XLAHooksInterface {
-  bool hasXLA() const override {
-    return true;
-  }
-
-  int getNumDevices() const override {
     return xla::ComputationClient::Get()->GetNumDevices();
   }
 };
@@ -154,7 +143,7 @@ c10::Device XLATensorImpl::SetCurrentAtenDevice(c10::Device device) {
 }
 
 void XLATensorImpl::AtenInitialize() {
-  at::detail::setXLAHooks(new XLAHooksInterface());
+  // ATEN specific initialization calls placed below.
 }
 
 }  // namespace torch_xla
