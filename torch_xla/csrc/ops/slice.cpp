@@ -34,9 +34,10 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, xla::int64 start,
 
 Slice::Slice(const Value& input, xla::int64 dim, xla::int64 start,
              xla::int64 end, xla::int64 step)
-    : Node(ir::OpKind(at::aten::slice), {input},
-           NodeOutputShape(input, dim, start, end, step),
-           /*num_outputs=*/1, xla::util::MHash(dim, start, end, step)),
+    : Node(
+          ir::OpKind(at::aten::slice), {input},
+          [&]() { return NodeOutputShape(input, dim, start, end, step); },
+          /*num_outputs=*/1, xla::util::MHash(dim, start, end, step)),
       dim_(dim),
       start_(start),
       end_(end),

@@ -31,8 +31,10 @@ xla::Shape NodeOutputShape(const Value& input, int dim) {
 }  // namespace
 
 Squeeze::Squeeze(const Value& input, int dim)
-    : Node(ir::OpKind(at::aten::squeeze), {input}, NodeOutputShape(input, dim),
-           /*num_outputs=*/1, xla::util::MHash(dim)),
+    : Node(
+          ir::OpKind(at::aten::squeeze), {input},
+          [&]() { return NodeOutputShape(input, dim); },
+          /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
 XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {

@@ -19,9 +19,10 @@ xla::Shape GetSelectShape(const xla::Shape& input_shape, xla::int64 dim,
 }  // namespace
 
 Select::Select(const Value& input, xla::int64 dim, xla::int64 index)
-    : Node(ir::OpKind(at::aten::select), {input},
-           GetSelectShape(input.shape(), dim, index),
-           /*num_outputs=*/1, xla::util::MHash(dim, index)),
+    : Node(
+          ir::OpKind(at::aten::select), {input},
+          [&]() { return GetSelectShape(input.shape(), dim, index); },
+          /*num_outputs=*/1, xla::util::MHash(dim, index)),
       dim_(dim),
       index_(index) {}
 

@@ -28,9 +28,10 @@ xla::Shape NodeOutputShape(
 }  // namespace
 
 View::View(const Value& input, std::vector<xla::int64> output_size)
-    : Node(ir::OpKind(at::aten::view), {input},
-           NodeOutputShape(input, output_size), /*num_outputs=*/1,
-           xla::util::MHash(output_size)),
+    : Node(
+          ir::OpKind(at::aten::view), {input},
+          [&]() { return NodeOutputShape(input, output_size); },
+          /*num_outputs=*/1, xla::util::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 XlaOpVector View::Lower(LoweringContext* loctx) const {

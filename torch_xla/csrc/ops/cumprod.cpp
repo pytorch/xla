@@ -38,7 +38,8 @@ xla::Shape NodeOutputShape(const Value& input,
 CumProd::CumProd(const Value& input, xla::int64 dim,
                  c10::optional<at::ScalarType> dtype)
     : Node(
-          ir::OpKind(at::aten::cumprod), {input}, NodeOutputShape(input, dtype),
+          ir::OpKind(at::aten::cumprod), {input},
+          [&]() { return NodeOutputShape(input, dtype); },
           /*num_outputs=*/1, xla::util::MHash(dim, OptionalOr<int>(dtype, -1))),
       dim_(dim),
       dtype_(dtype) {}
