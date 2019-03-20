@@ -33,10 +33,11 @@ NativeBatchNormForward::NativeBatchNormForward(const Value& input,
                                                const Value& running_mean,
                                                const Value& running_var,
                                                double momentum, double eps)
-    : Node(ir::OpKind(at::aten::native_batch_norm),
-           {input, weight, bias, running_mean, running_var},
-           NodeOutputShape(input, weight, bias),
-           /*num_outputs=*/3, xla::util::MHash(momentum, eps)),
+    : Node(
+          ir::OpKind(at::aten::native_batch_norm),
+          {input, weight, bias, running_mean, running_var},
+          [&]() { return NodeOutputShape(input, weight, bias); },
+          /*num_outputs=*/3, xla::util::MHash(momentum, eps)),
       momentum_(momentum),
       eps_(eps) {}
 
