@@ -479,6 +479,14 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor index(const at::Tensor& self,
                    at::TensorList indices) const override;
 
+  at::Tensor index_put(const at::Tensor& self, at::TensorList indices,
+                       const at::Tensor& values,
+                       bool accumulate) const override;
+
+  at::Tensor& index_put_(at::Tensor& self, at::TensorList indices,
+                         const at::Tensor& values,
+                         bool accumulate) const override;
+
   at::Tensor index_select(const at::Tensor& self, int64_t dim,
                           const at::Tensor& index) const override;
 

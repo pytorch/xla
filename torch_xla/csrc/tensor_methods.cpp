@@ -897,6 +897,24 @@ XLATensor XLATensor::index(
   return IndexByTensors(input, indices);
 }
 
+XLATensor XLATensor::index_put(
+    const XLATensor& input,
+    tensorflow::gtl::ArraySlice<const XLATensor> indices,
+    const XLATensor& values, bool accumulate,
+    tensorflow::gtl::ArraySlice<const xla::int64> result_permutation) {
+  return input.CreateFrom(IndexPutByTensors(input, indices, values, accumulate,
+                                            result_permutation));
+}
+
+void XLATensor::index_put_(
+    XLATensor& input, const XLATensor& canonical_base,
+    tensorflow::gtl::ArraySlice<const XLATensor> indices,
+    const XLATensor& values, bool accumulate,
+    tensorflow::gtl::ArraySlice<const xla::int64> result_permutation) {
+  input.SetIrValue(IndexPutByTensors(canonical_base, indices, values,
+                                     accumulate, result_permutation));
+}
+
 XLATensor XLATensor::index_select(const XLATensor& input, xla::int64 dim,
                                   const XLATensor& index) {
   return input.CreateFrom(ir::MakeNode<ir::ops::IndexSelect>(
