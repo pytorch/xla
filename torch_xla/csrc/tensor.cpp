@@ -13,6 +13,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
@@ -404,8 +405,10 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
 }
 
 void XLATensor::TryLimitGraphSize() {
-  static const size_t kCheckFrequency = 100;
-  static const size_t kMaxPendingGraphSize = 1000;
+  static const size_t kCheckFrequency =
+      xla::sys_util::GetEnvInt("TRIM_GRAPH_CHECK_FREQUENCY", 100);
+  static const size_t kMaxPendingGraphSize =
+      xla::sys_util::GetEnvInt("TRIM_GRAPH_SIZE", 5000);
   static std::atomic<size_t> counter(1);
   if (data()->ir_value && counter.fetch_add(1) % kCheckFrequency == 0) {
     size_t graph_size = ir::Util::GetGraphSize({data()->ir_value.node.get()});
