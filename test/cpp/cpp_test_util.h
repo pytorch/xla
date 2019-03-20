@@ -44,5 +44,7 @@ void WithAllDevices(
 
 std::string GetTensorTextGraph(at::Tensor tensor);
 
+std::string GetTensorDotGraph(at::Tensor tensor);
+
 }  // namespace cpp_test
 }  // namespace torch_xla

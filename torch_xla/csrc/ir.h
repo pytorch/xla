@@ -132,7 +132,7 @@ struct OpKind {
     return c10::unique_t(op) < c10::unique_t(rhs.op);
   }
 
-  size_t hash() const { return c10::unique_t(op); }
+  size_t hash() const;
 
   std::string ToString() const { return op.toQualString(); }
 

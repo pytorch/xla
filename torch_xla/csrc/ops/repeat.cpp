@@ -24,9 +24,10 @@ xla::Shape NodeOutputShape(
 }  // namespace
 
 Repeat::Repeat(const Value& input, std::vector<xla::int64> repeats)
-    : Node(ir::OpKind(at::aten::repeat), {input},
-           NodeOutputShape(input, repeats),
-           /*num_outputs=*/1, xla::util::MHash(repeats)),
+    : Node(
+          ir::OpKind(at::aten::repeat), {input},
+          [&]() { return NodeOutputShape(input, repeats); },
+          /*num_outputs=*/1, xla::util::MHash(repeats)),
       repeats_(std::move(repeats)) {}
 
 XlaOpVector Repeat::Lower(LoweringContext* loctx) const {

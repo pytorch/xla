@@ -38,9 +38,10 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
 }  // namespace
 
 ArgMin::ArgMin(const Value& input, xla::int64 dim, bool keepdim)
-    : Node(ir::OpKind(at::aten::argmin), {input},
-           NodeOutputShape(input, dim, keepdim),
-           /*num_outputs=*/1, xla::util::MHash(dim, keepdim)),
+    : Node(
+          ir::OpKind(at::aten::argmin), {input},
+          [&]() { return NodeOutputShape(input, dim, keepdim); },
+          /*num_outputs=*/1, xla::util::MHash(dim, keepdim)),
       dim_(dim),
       keepdim_(keepdim) {}
 

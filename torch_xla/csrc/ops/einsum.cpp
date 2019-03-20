@@ -34,9 +34,10 @@ xla::Shape NodeOutputShape(tensorflow::gtl::ArraySlice<const ir::Value> values,
 
 Einsum::Einsum(const std::string& equation,
                tensorflow::gtl::ArraySlice<const ir::Value> values)
-    : Node(ir::OpKind(at::aten::einsum), values,
-           NodeOutputShape(values, equation),
-           /*num_outputs=*/1, xla::util::MHash(equation)),
+    : Node(
+          ir::OpKind(at::aten::einsum), values,
+          [&]() { return NodeOutputShape(values, equation); },
+          /*num_outputs=*/1, xla::util::MHash(equation)),
       equation_(equation) {}
 
 XlaOpVector Einsum::Lower(LoweringContext* loctx) const {

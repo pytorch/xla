@@ -64,6 +64,8 @@ OpKind OpKind::Get(const std::string& name) {
   return OpKind(c10::Symbol::fromQualString(name));
 }
 
+size_t OpKind::hash() const { return xla::util::StringHash(op.toQualString()); }
+
 Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
            size_t hash_seed)
     : op_(std::move(op)),

@@ -46,11 +46,15 @@ xla::Shape NodeOutputShape(const Value& input,
 
 Prod::Prod(const Value& input, std::vector<xla::int64> dimensions,
            bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
-    : Node(ir::OpKind(at::aten::prod), {input},
-           NodeOutputShape(input, dimensions, keep_reduced_dimensions, dtype),
-           /*num_outputs=*/1,
-           xla::util::MHash(dimensions, keep_reduced_dimensions,
-                            OptionalOr<int>(dtype, -1))),
+    : Node(
+          ir::OpKind(at::aten::prod), {input},
+          [&]() {
+            return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
+                                   dtype);
+          },
+          /*num_outputs=*/1,
+          xla::util::MHash(dimensions, keep_reduced_dimensions,
+                           OptionalOr<int>(dtype, -1))),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}

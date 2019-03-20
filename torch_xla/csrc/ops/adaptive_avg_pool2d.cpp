@@ -26,9 +26,10 @@ xla::Shape NodeOutputShape(
 
 AdaptiveAvgPool2d::AdaptiveAvgPool2d(const Value& input,
                                      std::vector<xla::int64> output_size)
-    : Node(ir::OpKind(at::aten::adaptive_avg_pool2d), {input},
-           NodeOutputShape(input, output_size),
-           /*num_outputs=*/1, xla::util::MHash(output_size)),
+    : Node(
+          ir::OpKind(at::aten::adaptive_avg_pool2d), {input},
+          [&]() { return NodeOutputShape(input, output_size); },
+          /*num_outputs=*/1, xla::util::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 XlaOpVector AdaptiveAvgPool2d::Lower(LoweringContext* loctx) const {

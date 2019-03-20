@@ -38,10 +38,13 @@ AvgPool2dBackward::AvgPool2dBackward(const Value& grad_output,
                                      std::vector<xla::int64> stride,
                                      std::vector<xla::int64> padding,
                                      bool count_include_pad)
-    : Node(ir::OpKind(at::aten::avg_pool2d_backward), {grad_output, input},
-           NodeOutputShape(grad_output, input, kernel_size, stride, padding,
-                           count_include_pad),
-           /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
+    : Node(
+          ir::OpKind(at::aten::avg_pool2d_backward), {grad_output, input},
+          [&]() {
+            return NodeOutputShape(grad_output, input, kernel_size, stride,
+                                   padding, count_include_pad);
+          },
+          /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),

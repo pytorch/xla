@@ -47,9 +47,10 @@ xla::Shape NodeOutputShape(const Value& input, bool full_matrices) {
 }  // namespace
 
 QR::QR(const Value& input, bool full_matrices)
-    : Node(ir::OpKind(at::aten::qr), {input},
-           NodeOutputShape(input, full_matrices),
-           /*num_outputs=*/2, xla::util::MHash(full_matrices)),
+    : Node(
+          ir::OpKind(at::aten::qr), {input},
+          [&]() { return NodeOutputShape(input, full_matrices); },
+          /*num_outputs=*/2, xla::util::MHash(full_matrices)),
       full_matrices_(full_matrices) {}
 
 XlaOpVector QR::Lower(LoweringContext* loctx) const {

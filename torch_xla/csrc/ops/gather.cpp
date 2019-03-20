@@ -48,9 +48,10 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
 }  // namespace
 
 Gather::Gather(const Value& input, xla::int64 dim, const Value& index)
-    : Node(ir::OpKind(at::aten::gather), {input, index},
-           NodeOutputShape(input, index, dim),
-           /*num_outputs=*/1, xla::util::MHash(dim)),
+    : Node(
+          ir::OpKind(at::aten::gather), {input, index},
+          [&]() { return NodeOutputShape(input, index, dim); },
+          /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
 XlaOpVector Gather::Lower(LoweringContext* loctx) const {

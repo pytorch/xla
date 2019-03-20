@@ -32,9 +32,10 @@ xla::Shape NodeOutputShape(const Value& input,
 
 ConstantPadNd::ConstantPadNd(const Value& input, std::vector<xla::int64> pad,
                              at::Scalar value)
-    : Node(ir::OpKind(at::aten::constant_pad_nd), OpList{input},
-           NodeOutputShape(input, pad),
-           /*num_outputs=*/1, xla::util::MHash(pad, ScalarHash(value))),
+    : Node(
+          ir::OpKind(at::aten::constant_pad_nd), OpList{input},
+          [&]() { return NodeOutputShape(input, pad); },
+          /*num_outputs=*/1, xla::util::MHash(pad, ScalarHash(value))),
       pad_(std::move(pad)),
       value_(value) {}
 
