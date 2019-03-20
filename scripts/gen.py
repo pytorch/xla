@@ -791,10 +791,7 @@ def get_xla_wrapper(orig_sig, ctx):
   result_assign = generate_result_assignment(tree, _RESULT_NAME)
   code += '  {}{}('.format(result_assign,
                            get_handling_function(ctx, fname, xla_ref_param))
-  for i, v in enumerate(param_vars):
-    if i > 0:
-      code += ', '
-    code += v
+  code += ', '.join(param_vars)
   code += ');\n'
   if result_assign:
     code += ('  static_cast<void>({}); // Avoid warnings in case not '
