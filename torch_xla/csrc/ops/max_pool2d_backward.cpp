@@ -35,10 +35,14 @@ MaxPool2dBackward::MaxPool2dBackward(const Value& grad_output,
                                      std::vector<xla::int64> kernel_size,
                                      std::vector<xla::int64> stride,
                                      std::vector<xla::int64> padding)
-    : Node(ir::OpKind(at::aten::max_pool2d_with_indices_backward),
-           {grad_output, input},
-           NodeOutputShape(grad_output, input, kernel_size, stride, padding),
-           /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
+    : Node(
+          ir::OpKind(at::aten::max_pool2d_with_indices_backward),
+          {grad_output, input},
+          [&]() {
+            return NodeOutputShape(grad_output, input, kernel_size, stride,
+                                   padding);
+          },
+          /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
       padding_(std::move(padding)) {}

@@ -1,6 +1,7 @@
 #ifndef TENSORFLOW_COMPILER_XLA_RPC_UTIL_H_
 #define TENSORFLOW_COMPILER_XLA_RPC_UTIL_H_
 
+#include <cstring>
 #include <functional>
 #include <memory>
 #include <numeric>
@@ -142,13 +143,22 @@ T Multiply(const S& input) {
                          std::multiplies<T>());
 }
 
+static inline size_t DataHash(const void* data, size_t size) {
+  return tensorflow::Hash64(reinterpret_cast<const char*>(data), size,
+                            0x5a2d296e9);
+}
+
+static inline size_t StringHash(const char* data) {
+  return DataHash(data, std::strlen(data));
+}
+
 static inline size_t HashCombine(size_t a, size_t b) {
   return a ^ (b + 0x9e3779b97f4a7c15 + (a << 6) + (a >> 2));
 }
 
 template <typename T>
 size_t Hash(const T& value) {
-  return std::hash<T>()(value);
+  return DataHash(&value, sizeof(value));
 }
 
 // Forward declare to allow hashes of vectors of vectors to work.

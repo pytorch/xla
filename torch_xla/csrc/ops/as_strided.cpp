@@ -44,9 +44,10 @@ xla::Shape NodeOutputShape(const Value& input,
 
 AsStrided::AsStrided(const Value& input, std::vector<xla::int64> size,
                      c10::optional<xla::int64> storage_offset)
-    : Node(ir::OpKind(at::aten::as_strided), {input},
-           NodeOutputShape(input, size, storage_offset), /*num_outputs=*/1,
-           xla::util::MHash(size, storage_offset)),
+    : Node(
+          ir::OpKind(at::aten::as_strided), {input},
+          [&]() { return NodeOutputShape(input, size, storage_offset); },
+          /*num_outputs=*/1, xla::util::MHash(size, storage_offset)),
       size_(std::move(size)),
       storage_offset_(storage_offset) {}
 

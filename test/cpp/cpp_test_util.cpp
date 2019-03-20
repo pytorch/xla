@@ -73,5 +73,10 @@ std::string GetTensorTextGraph(at::Tensor tensor) {
   return ir::DumpUtil::ToText({xtensor.GetIrValue().node.get()});
 }
 
+std::string GetTensorDotGraph(at::Tensor tensor) {
+  XLATensor xtensor = bridge::GetXlaTensor(tensor);
+  return ir::DumpUtil::ToDot({xtensor.GetIrValue().node.get()});
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
