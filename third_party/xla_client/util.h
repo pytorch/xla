@@ -161,6 +161,10 @@ size_t Hash(const T& value) {
   return DataHash(&value, sizeof(value));
 }
 
+static inline size_t Hash(const std::string& value) {
+  return std::hash<std::string>()(value);
+}
+
 // Forward declare to allow hashes of vectors of vectors to work.
 template <typename T>
 size_t ContainerHash(const T& values);
