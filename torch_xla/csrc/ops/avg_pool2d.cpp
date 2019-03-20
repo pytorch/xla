@@ -34,10 +34,13 @@ xla::Shape NodeOutputShape(
 AvgPool2d::AvgPool2d(const Value& input, std::vector<xla::int64> kernel_size,
                      std::vector<xla::int64> stride,
                      std::vector<xla::int64> padding, bool count_include_pad)
-    : Node(ir::OpKind(at::aten::avg_pool2d), {input},
-           NodeOutputShape(input, kernel_size, stride, padding,
-                           count_include_pad),
-           /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
+    : Node(
+          ir::OpKind(at::aten::avg_pool2d), {input},
+          [&]() {
+            return NodeOutputShape(input, kernel_size, stride, padding,
+                                   count_include_pad);
+          },
+          /*num_outputs=*/1, xla::util::MHash(kernel_size, stride, padding)),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),

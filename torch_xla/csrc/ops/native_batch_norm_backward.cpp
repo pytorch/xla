@@ -33,11 +33,15 @@ NativeBatchNormBackward::NativeBatchNormBackward(
     const Value& grad_out, const Value& input, const Value& weight,
     const Value& running_mean, const Value& running_var, const Value& save_mean,
     const Value& save_invstd, double eps)
-    : Node(ir::OpKind(at::aten::native_batch_norm_backward),
-           {grad_out, input, weight, running_mean, running_var, save_mean,
-            save_invstd},
-           NodeOutputShape(grad_out, input, weight, save_mean, save_invstd),
-           /*num_outputs=*/3, xla::util::MHash(eps)),
+    : Node(
+          ir::OpKind(at::aten::native_batch_norm_backward),
+          {grad_out, input, weight, running_mean, running_var, save_mean,
+           save_invstd},
+          [&]() {
+            return NodeOutputShape(grad_out, input, weight, save_mean,
+                                   save_invstd);
+          },
+          /*num_outputs=*/3, xla::util::MHash(eps)),
       eps_(eps) {}
 
 XlaOpVector NativeBatchNormBackward::Lower(LoweringContext* loctx) const {
