@@ -18,6 +18,10 @@ class Generic : public Node {
   Generic(OpKind op, tensorflow::gtl::ArraySlice<const Value> operands,
           xla::Shape shape, LowerFn lower_fn, size_t num_outputs = 1);
 
+  Generic(OpKind op, tensorflow::gtl::ArraySlice<const Value> operands,
+          const std::function<xla::Shape()>& shape_fn, LowerFn lower_fn,
+          size_t num_outputs = 1, size_t hash_seed = 0x5a2d296e9);
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
  private:

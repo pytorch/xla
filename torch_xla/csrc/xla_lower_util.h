@@ -21,4 +21,11 @@ std::vector<xla::XlaOp> CreateBroadcastTensors(
 // Similar to tf.gather_nd, used to implement advanced indexing.
 xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices);
 
+// Similar to tf.scatter_nd, used to implement advanced indexing updates.
+xla::XlaOp CreateIndexUpdate(
+    const xla::XlaOp& buffer, const xla::XlaOp& indices,
+    const xla::XlaOp& updates,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+        combiner);
+
 }  // namespace torch_xla

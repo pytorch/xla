@@ -33,6 +33,10 @@ namespace torch_xla {
 struct CanonicalIndexInfo {
   at::Tensor base;
   std::vector<at::Tensor> indices;
+  // The permutation to be applied to the result. This is needed for indexed
+  // updates, since a permutation is applied to the base to bring non-null
+  // indices to front. This is the inverse of that permutation.
+  std::vector<xla::int64> result_permutation;
 };
 
 // Transform the given base and indices to a form supported by the XLATensor
@@ -46,5 +50,10 @@ CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
 // description.
 XLATensor IndexByTensors(const XLATensor& base,
                          tensorflow::gtl::ArraySlice<const XLATensor> indices);
+
+ir::Value IndexPutByTensors(
+    const XLATensor& base, tensorflow::gtl::ArraySlice<const XLATensor> indices,
+    const XLATensor& updates, bool accumulate,
+    tensorflow::gtl::ArraySlice<const xla::int64> result_permutation);
 
 }  // namespace torch_xla
