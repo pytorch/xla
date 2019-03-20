@@ -40,6 +40,15 @@ inline NodePtr GenericOp(OpKind op,
                            std::move(lower_fn), num_outputs);
 }
 
+inline NodePtr GenericOp(OpKind op,
+                         tensorflow::gtl::ArraySlice<const Value> operands,
+                         const std::function<xla::Shape()>& shape_fn,
+                         Generic::LowerFn lower_fn, size_t num_outputs = 1,
+                         size_t hash_seed = 0x5a2d296e9) {
+  return MakeNode<Generic>(std::move(op), operands, shape_fn,
+                           std::move(lower_fn), num_outputs, hash_seed);
+}
+
 inline NodePtr CrossReplicaSumOp(const Value& operand, double scale,
                                  std::vector<std::vector<xla::int64>> groups) {
   return MakeNode<CrossReplicaSum>(operand, scale, std::move(groups));

@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
@@ -222,8 +223,8 @@ std::vector<xla::XlaOp> CreateBroadcastTensors(
 }
 
 xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices) {
-  const xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const xla::Shape indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::Shape indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
   XLA_CHECK_GE(indices_shape.rank(), 1);
   xla::int64 num_index_dims =
       indices_shape.dimensions(indices_shape.rank() - 1);
@@ -245,6 +246,60 @@ xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices) {
     dim_numbers.add_start_index_map(i);
   }
   return xla::Gather(input, indices, dim_numbers, slice_sizes);
+}
+
+xla::XlaOp CreateIndexUpdate(
+    const xla::XlaOp& buffer, const xla::XlaOp& indices,
+    const xla::XlaOp& values,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+        combiner) {
+  xla::Shape buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
+  xla::Shape indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
+  xla::Shape values_shape = XlaHelpers::ShapeOfXlaOp(values);
+
+  absl::Span<const xla::int64> indices_dims =
+      xla::AsInt64Slice(indices_shape.dimensions());
+  XLA_CHECK(!indices_dims.empty());
+  // The minor dimension of indices contains the indices to update.
+  xla::int64 num_index_dims = indices_dims.back();
+  indices_dims.remove_suffix(1);
+  xla::ScatterDimensionNumbers dim_numbers;
+  dim_numbers.set_index_vector_dim(indices_shape.dimensions_size() - 1);
+
+  xla::int64 values_rank = values_shape.rank();
+  xla::int64 buffer_rank = buffer_shape.rank();
+  xla::int64 num_window_dims_in_values = buffer_rank - num_index_dims;
+
+  // Make the values match the rank expected by scatter.
+  std::vector<xla::int64> expected_values_dims(indices_dims.begin(),
+                                               indices_dims.end());
+  for (xla::int64 dim = num_index_dims; dim < buffer_rank; ++dim) {
+    expected_values_dims.push_back(buffer_shape.dimensions(dim));
+  }
+  xla::XlaOp new_values = BuildExpand(values, expected_values_dims);
+  values_shape = XlaHelpers::ShapeOfXlaOp(new_values);
+  values_rank = values_shape.rank();
+
+  for (xla::int64 i = (values_rank - num_window_dims_in_values);
+       i < values_rank; ++i) {
+    dim_numbers.add_update_window_dims(i);
+  }
+  for (xla::int64 i = 0; i < num_index_dims; ++i) {
+    dim_numbers.add_inserted_window_dims(i);
+    dim_numbers.add_scatter_dims_to_operand_dims(i);
+  }
+  // Build the combiner computation.
+  xla::XlaBuilder cb("scatter-combiner");
+  xla::Shape xla_scalar_shape =
+      xla::ShapeUtil::MakeShape(buffer_shape.element_type(), {});
+  xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
+  xla::XlaOp p1 = xla::Parameter(&cb, 1, xla_scalar_shape, "p1");
+  if (combiner) {
+    combiner(p0, p1, &cb);
+  }
+  xla::XlaComputation combiner_computation = cb.Build().ConsumeValueOrDie();
+  return xla::Scatter(buffer, indices, new_values, combiner_computation,
+                      dim_numbers);
 }
 
 }  // namespace torch_xla
