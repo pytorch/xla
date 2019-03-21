@@ -132,9 +132,10 @@ ir::NodePtr IndexOp(const ir::Value& base, const ir::Value& indices) {
 
 ir::NodePtr IndexPutOp(const ir::Value& buffer, const ir::Value& indices,
                        const ir::Value& values, bool accumulate) {
-  static auto add_scatter_combiner =
-      [](const xla::XlaOp& x, const xla::XlaOp& y,
-         xla::XlaBuilder* builder) -> xla::XlaOp { return x + y; };
+  static std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>
+      add_scatter_combiner =
+          [](const xla::XlaOp& x, const xla::XlaOp& y,
+             xla::XlaBuilder* builder) -> xla::XlaOp { return x + y; };
   auto lower_fn = [accumulate](const ir::Node& node,
                                ir::LoweringContext* loctx) -> ir::XlaOpVector {
     xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
