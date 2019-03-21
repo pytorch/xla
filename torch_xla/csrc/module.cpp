@@ -630,7 +630,7 @@ void XlaModule::FlushTensorsOperations() {
   // fuse the sync operation with the forward+backward+optimizer, we need to
   // have a path leading to the same XLA computation.
   std::vector<XLATensor> tensors = XLATensor::GetLiveTensors();
-  XLATensor::ApplyPendingGraph(&tensors, &apply_context_);
+  XLATensor::ApplyPendingGraph(&tensors);
 }
 
 void XlaModule::ReferenceNewTensorData(const TensorBatchVector& source,

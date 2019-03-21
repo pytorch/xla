@@ -160,13 +160,6 @@ struct XlaModule : public std::enable_shared_from_this<XlaModule> {
   // SetInputGradientsForFusion() API.
   std::vector<at::Tensor> backward_input_gradients_;
 
-  // The context used in FlushTensorsOperations() to be passed to the
-  // XLATensor::ApplyPendingGraph() API, to register the computation and tensor
-  // information of the last apply operation. The XLATensor::ApplyPendingGraph()
-  // API will use that to avoid re-building and re-compiling the XLA computation
-  // required for the apply.
-  XLATensor::ApplyContext apply_context_;
-
   // Gradients set aside by the fused train computation, to be consumed by the
   // backward call if we receive an unmodified tensor from the forward pass.
   TensorBatchVector grad_inputs_;

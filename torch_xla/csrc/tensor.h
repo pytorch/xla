@@ -21,18 +21,6 @@ class XLATensor {
   struct Data;
 
  public:
-  // The context used by the ApplyPendingGraph() API, in order to allow it speed
-  // up operations in case the new tensors graph apply matches the one stored
-  // within the apply context.
-  struct ApplyContext {
-    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-        computations;
-    std::vector<xla::int64> uid_order;
-    std::vector<std::vector<xla::int64>> input_mapping;
-    std::vector<std::vector<xla::int64>> index_mapping;
-    std::vector<std::string> devices;
-  };
-
   static XLATensor Create(const at::Tensor& tensor, const Device& device,
                           bool requires_grad);
   static XLATensor Create(
@@ -127,13 +115,8 @@ class XLATensor {
   // the tensors must be on the same device.
   static void SyncTensorsGraph(std::vector<XLATensor>* tensors);
 
-  // Applies the queue of operations for a list of tensors. The context of the
-  // apply operation will be saved within the apply_context pointer, if not
-  // nullptr. The ApplyPendingGraph() API will try to guess whether the current
-  // apply operation matches the previously cached one in apply_context, and
-  // eventually uses the cached XLA compiled computations to run the apply.
-  static void ApplyPendingGraph(std::vector<XLATensor>* tensors,
-                                ApplyContext* apply_context);
+  // Applies the queue of operations for a list of tensors.
+  static void ApplyPendingGraph(std::vector<XLATensor>* tensors);
 
   // Retrieves the PyTorch tensors behind the XLA tensors. If the writeable
   // vector is not nullptr, it must be the same size as tensors, and the
@@ -836,6 +819,20 @@ class XLATensor {
 
   using ComputationCache = xla::util::Cache<size_t, CachedComputation>;
 
+  // The context used by the ApplyPendingGraph() API, in order to allow it speed
+  // up operations in case the new tensors graph apply matches the one stored
+  // within the apply context.
+  struct ApplyContext {
+    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+        computations;
+    std::vector<xla::int64> uid_order;
+    std::vector<std::vector<xla::int64>> input_mapping;
+    std::vector<std::vector<xla::int64>> index_mapping;
+    std::vector<std::string> devices;
+  };
+
+  using ApplyContextCache = xla::util::Cache<size_t, ApplyContext>;
+
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
   // object.
@@ -954,6 +951,8 @@ class XLATensor {
                              const ApplyContext& apply_context);
 
   static ComputationCache* GetComputationCache();
+
+  static ApplyContextCache* GetApplyContextCache();
 
   static SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensor>& tensors);
