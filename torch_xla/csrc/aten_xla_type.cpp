@@ -444,12 +444,6 @@ at::Tensor AtenXlaType::arange(at::Scalar start, at::Scalar end,
                         xla_options.get_scalar_type()));
 }
 
-at::Tensor& AtenXlaType::arange_out(at::Tensor& out, at::Scalar start,
-                                    at::Scalar end, at::Scalar step) const {
-  out = arange(start, end, step, out.options());
-  return out;
-}
-
 at::Tensor AtenXlaType::argmax(const at::Tensor& self,
                                c10::optional<int64_t> dim, bool keepdim) const {
   return dim ? bridge::AtenFromXlaTensor(

@@ -168,9 +168,6 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
                     const at::TensorOptions& options) const override;
 
-  at::Tensor& arange_out(at::Tensor& out, at::Scalar start, at::Scalar end,
-                         at::Scalar step) const override;
-
   at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
                     bool keepdim) const override;
 
