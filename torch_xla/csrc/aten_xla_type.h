@@ -69,12 +69,6 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor _adaptive_avg_pool2d_backward(
       const at::Tensor& grad_output, const at::Tensor& self) const override;
 
-  at::Tensor _argmax(const at::Tensor& self, int64_t dim,
-                     bool keepdim) const override;
-
-  at::Tensor _argmin(const at::Tensor& self, int64_t dim,
-                     bool keepdim) const override;
-
   at::Tensor _cast_Byte(const at::Tensor& self,
                         bool non_blocking) const override;
 
@@ -177,15 +171,11 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& arange_out(at::Tensor& out, at::Scalar start, at::Scalar end,
                          at::Scalar step) const override;
 
-  at::Tensor argmax(const at::Tensor& self, int64_t dim,
+  at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
                     bool keepdim) const override;
 
-  at::Tensor argmax(const at::Tensor& self) const override;
-
-  at::Tensor argmin(const at::Tensor& self, int64_t dim,
+  at::Tensor argmin(const at::Tensor& self, c10::optional<int64_t> dim,
                     bool keepdim) const override;
-
-  at::Tensor argmin(const at::Tensor& self) const override;
 
   at::Tensor argsort(const at::Tensor& self, int64_t dim,
                      bool descending) const override;

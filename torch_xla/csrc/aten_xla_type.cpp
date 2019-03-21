@@ -213,16 +213,6 @@ at::Tensor AtenXlaType::_adaptive_avg_pool2d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
 }
 
-at::Tensor AtenXlaType::_argmax(const at::Tensor& self, int64_t dim,
-                                bool keepdim) const {
-  return at::native::_argmax(self, dim, keepdim);
-}
-
-at::Tensor AtenXlaType::_argmin(const at::Tensor& self, int64_t dim,
-                                bool keepdim) const {
-  return at::native::_argmin(self, dim, keepdim);
-}
-
 at::Tensor AtenXlaType::_cast_Byte(const at::Tensor& self,
                                    bool /* non_blocking */) const {
   return bridge::AtenFromXlaTensor(
@@ -460,26 +450,20 @@ at::Tensor& AtenXlaType::arange_out(at::Tensor& out, at::Scalar start,
   return out;
 }
 
-at::Tensor AtenXlaType::argmax(const at::Tensor& self, int64_t dim,
-                               bool keepdim) const {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::argmax(bridge::GetXlaTensor(self), dim, keepdim));
+at::Tensor AtenXlaType::argmax(const at::Tensor& self,
+                               c10::optional<int64_t> dim, bool keepdim) const {
+  return dim ? bridge::AtenFromXlaTensor(
+                   XLATensor::argmax(bridge::GetXlaTensor(self), *dim, keepdim))
+             : bridge::AtenFromXlaTensor(
+                   XLATensor::argmax(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor AtenXlaType::argmax(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::argmax(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor AtenXlaType::argmin(const at::Tensor& self, int64_t dim,
-                               bool keepdim) const {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::argmin(bridge::GetXlaTensor(self), dim, keepdim));
-}
-
-at::Tensor AtenXlaType::argmin(const at::Tensor& self) const {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::argmin(bridge::GetXlaTensor(self)));
+at::Tensor AtenXlaType::argmin(const at::Tensor& self,
+                               c10::optional<int64_t> dim, bool keepdim) const {
+  return dim ? bridge::AtenFromXlaTensor(
+                   XLATensor::argmin(bridge::GetXlaTensor(self), *dim, keepdim))
+             : bridge::AtenFromXlaTensor(
+                   XLATensor::argmin(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::argsort(const at::Tensor& self, int64_t dim,
