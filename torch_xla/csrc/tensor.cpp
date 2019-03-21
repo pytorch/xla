@@ -559,7 +559,7 @@ std::vector<at::Tensor> XLATensor::GetTensors(
     std::vector<XLATensor>* tensors, const std::vector<bool>* writeable) {
   // TODO(dlibenzi): We do apply/compute and then fetch. Changing the API to
   // support getting handles and data might save a few pennies here.
-  ApplyPendingGraph(tensors, /*apply_context=*/nullptr);
+  ApplyPendingGraph(tensors);
 
   std::vector<xla::ComputationClient::DataPtr> tensors_data;
   for (auto& tensor : *tensors) {
@@ -782,6 +782,12 @@ bool XLATensor::TryRunCachedSync(std::vector<XLATensor>* tensors,
 XLATensor::ComputationCache* XLATensor::GetComputationCache() {
   static const size_t kMaxCacheSize = 128;
   static ComputationCache* cache = new ComputationCache(kMaxCacheSize);
+  return cache;
+}
+
+XLATensor::ApplyContextCache* XLATensor::GetApplyContextCache() {
+  static const size_t kMaxCacheSize = 128;
+  static ApplyContextCache* cache = new ApplyContextCache(kMaxCacheSize);
   return cache;
 }
 
@@ -1018,8 +1024,7 @@ std::vector<std::string> XLATensor::GetCompilationDevices(std::string device) {
   return compilation_devices;
 }
 
-void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
-                                  ApplyContext* apply_context) {
+void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors) {
   struct DeviceContext {
     DeviceContext() : lowering_ctx("ApplyPendingGraph") {}
 
@@ -1028,23 +1033,25 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
   };
 
   SyncTensorCollection coll = CollectApplyGraphTensors(*tensors);
+  // The hash inside the SyncTensorCollection structure is in tensors order, but
+  // here we need it in apply order.
+  size_t hash = 0;
   std::vector<xla::int64> uid_order;
   uid_order.reserve(coll.indices.size());
   for (auto i : coll.indices) {
+    ir::Value ir_value = (*tensors)[i].CurrentIrValue();
+    hash = xla::util::HashCombine(hash, ir_value->hash());
     uid_order.push_back((*tensors)[i].GetUniqueId());
   }
-  DataUidMap data_uid_map;
-  if (apply_context != nullptr) {
-    // Does it look like the cached context still applies to the new run?
-    if (apply_context->uid_order == uid_order &&
-        RunCachedApply(tensors, *apply_context)) {
-      XLA_COUNTER("CachedApplyGraph", 1);
-      return;
-    }
-    XLA_COUNTER("UncachedApplyGraph", 1);
-    data_uid_map = CreateDataUidMap(*tensors);
+  auto apply_context = GetApplyContextCache()->Get(hash);
+  if (apply_context != nullptr && apply_context->uid_order == uid_order &&
+      RunCachedApply(tensors, *apply_context)) {
+    XLA_COUNTER("CachedApplyGraph", 1);
+    return;
   }
+  XLA_COUNTER("UncachedApplyGraph", 1);
 
+  DataUidMap data_uid_map = CreateDataUidMap(*tensors);
   std::map<Device, DeviceContext> contexts_map;
   for (auto i : coll.indices) {
     DeviceContext* device_context = &contexts_map[(*tensors)[i].GetDevice()];
@@ -1089,19 +1096,17 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
 
       std::vector<xla::ComputationClient::DataPtr> parameters_data =
           device_context->lowering_ctx.GetParametersData();
-      if (apply_context != nullptr) {
-        std::vector<xla::int64> device_input_mapping;
-        for (auto data : parameters_data) {
-          auto it = data_uid_map.find(data->unique_id());
-          if (it != data_uid_map.end()) {
-            device_input_mapping.push_back(it->second);
-          } else {
-            XLA_COUNTER("UnknownTensorData", 1);
-            unknown_params += 1;
-          }
+      std::vector<xla::int64> device_input_mapping;
+      for (auto data : parameters_data) {
+        auto it = data_uid_map.find(data->unique_id());
+        if (it != data_uid_map.end()) {
+          device_input_mapping.push_back(it->second);
+        } else {
+          XLA_COUNTER("UnknownTensorData", 1);
+          unknown_params += 1;
         }
-        input_mapping[index] = std::move(device_input_mapping);
       }
+      input_mapping[index] = std::move(device_input_mapping);
       parameters[index] = std::move(parameters_data);
     };
     xla::xla_env::ScheduleClosure(mwait.Completer(std::move(generator)));
@@ -1126,14 +1131,13 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors,
                context_iterator->second.index_mapping);
       ++context_iterator;
     }
-  }
-  if (apply_context != nullptr) {
+
     if (unknown_params == 0) {
+      apply_context = std::make_shared<ApplyContext>();
       *apply_context = {std::move(computations), std::move(uid_order),
                         std::move(input_mapping), std::move(index_mapping),
                         std::move(devices)};
-    } else {
-      *apply_context = ApplyContext();
+      GetApplyContextCache()->Add(hash, std::move(apply_context));
     }
   }
 }
