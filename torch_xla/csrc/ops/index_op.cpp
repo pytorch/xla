@@ -11,6 +11,7 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
+#include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
@@ -162,6 +163,30 @@ ir::NodePtr IndexPutOp(const ir::Value& buffer, const ir::Value& indices,
       std::move(lower_fn));
 }
 
+ir::NodePtr IndexFillOp(const ir::Value& buffer, xla::int64 dim,
+                        const ir::Value& index, const ir::Value& value) {
+  auto lower_fn = [dim](const ir::Node& node,
+                        ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_value = loctx->GetOutputOp(node.operand(2));
+    return node.ReturnOp(CreateIndexFill(xla_base, dim, xla_index, xla_value),
+                         loctx);
+  };
+  auto lower_for_shape_fn =
+      [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      -> xla::XlaOp {
+    return CreateIndexFill(operands[0], dim, operands[1], operands[2]);
+  };
+  return ir::ops::GenericOp(
+      ir::OpKind(at::aten::index_fill), {buffer, index, value},
+      [&]() {
+        return ir::ops::InferOutputShape(
+            {buffer.shape(), index.shape(), value.shape()}, lower_for_shape_fn);
+      },
+      std::move(lower_fn));
+}
+
 }  // namespace
 
 CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
@@ -213,6 +238,29 @@ ir::Value IndexPutByTensors(
       IndexPutOp(base.GetIrValue(), indices_nd.GetIrValue(),
                  values.GetIrValue(), accumulate),
       xla::util::ToVector<xla::int64>(result_permutation));
+}
+
+ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
+                      const XLATensor& index, at::Scalar value) {
+  XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
+      << "Fill index is expected to be of scalar type Long";
+  XLA_CHECK_EQ(index.shape().get().rank(), 1)
+      << "Fill index is supposed to be a vector";
+  return IndexFillOp(
+      base.GetIrValue(), dim, index.GetIrValue(),
+      ir::ops::ScalarOp(value, base.shape().get().element_type()));
+}
+
+ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
+                      const XLATensor& index, const XLATensor& value) {
+  XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
+      << "Fill index is expected to be of scalar type Long";
+  XLA_CHECK_EQ(index.shape().get().rank(), 1)
+      << "Fill index is supposed to be a vector";
+  XLA_CHECK_EQ(value.shape().get().rank(), 0)
+      << "Fill only supports a 0-dimensional value tensor";
+  return IndexFillOp(base.GetIrValue(), dim, index.GetIrValue(),
+                     value.GetIrValue());
 }
 
 }  // namespace torch_xla
