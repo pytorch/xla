@@ -897,6 +897,35 @@ XLATensor XLATensor::index(
   return IndexByTensors(input, indices);
 }
 
+XLATensor XLATensor::index_fill(const XLATensor& input, xla::int64 dim,
+                                const XLATensor& index, at::Scalar value) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  return input.CreateFrom(IndexFill(input, canonical_dim, index, value));
+}
+
+XLATensor XLATensor::index_fill(const XLATensor& input, xla::int64 dim,
+                                const XLATensor& index,
+                                const XLATensor& value) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  return input.CreateFrom(IndexFill(input, canonical_dim, index, value));
+}
+
+void XLATensor::index_fill_(XLATensor& input, xla::int64 dim,
+                            const XLATensor& index, const XLATensor& value) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  input.SetIrValue(IndexFill(input, canonical_dim, index, value));
+}
+
+void XLATensor::index_fill_(XLATensor& input, xla::int64 dim,
+                            const XLATensor& index, at::Scalar value) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  input.SetIrValue(IndexFill(input, canonical_dim, index, value));
+}
+
 XLATensor XLATensor::index_put(
     const XLATensor& input,
     tensorflow::gtl::ArraySlice<const XLATensor> indices,
