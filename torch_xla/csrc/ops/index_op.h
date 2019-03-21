@@ -56,4 +56,10 @@ ir::Value IndexPutByTensors(
     const XLATensor& updates, bool accumulate,
     tensorflow::gtl::ArraySlice<const xla::int64> result_permutation);
 
+ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
+                      const XLATensor& index, at::Scalar value);
+
+ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
+                      const XLATensor& index, const XLATensor& value);
+
 }  // namespace torch_xla

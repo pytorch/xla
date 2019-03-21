@@ -72,6 +72,21 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(const xla::XlaOp& lhs,
   return std::make_pair(broadcasted_lhs, broadcasted_rhs);
 }
 
+// Builds the computation for the given combiner.
+xla::XlaComputation MakeScatterComputation(
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+        combiner,
+    xla::PrimitiveType element_type) {
+  xla::XlaBuilder cb("ScatterCombiner");
+  xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
+  xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
+  xla::XlaOp p1 = xla::Parameter(&cb, 1, xla_scalar_shape, "p1");
+  if (combiner) {
+    combiner(p0, p1, &cb);
+  }
+  return cb.Build().ConsumeValueOrDie();
+}
+
 }  // namespace
 
 std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
@@ -288,17 +303,39 @@ xla::XlaOp CreateIndexUpdate(
     dim_numbers.add_inserted_window_dims(i);
     dim_numbers.add_scatter_dims_to_operand_dims(i);
   }
-  // Build the combiner computation.
-  xla::XlaBuilder cb("scatter-combiner");
-  xla::Shape xla_scalar_shape =
-      xla::ShapeUtil::MakeShape(buffer_shape.element_type(), {});
-  xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
-  xla::XlaOp p1 = xla::Parameter(&cb, 1, xla_scalar_shape, "p1");
-  if (combiner) {
-    combiner(p0, p1, &cb);
-  }
-  xla::XlaComputation combiner_computation = cb.Build().ConsumeValueOrDie();
+  xla::XlaComputation combiner_computation =
+      MakeScatterComputation(combiner, buffer_shape.element_type());
   return xla::Scatter(buffer, indices, new_values, combiner_computation,
+                      dim_numbers);
+}
+
+xla::XlaOp CreateIndexFill(const xla::XlaOp& buffer, xla::int64 dim,
+                           const xla::XlaOp& index, const xla::XlaOp& value) {
+  xla::Shape buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
+  xla::ScatterDimensionNumbers dim_numbers;
+  dim_numbers.set_index_vector_dim(1);
+  for (xla::int64 window_dim = 0; window_dim < buffer_shape.rank();
+       ++window_dim) {
+    if (window_dim != dim) {
+      dim_numbers.add_update_window_dims(window_dim);
+    } else {
+      dim_numbers.add_inserted_window_dims(window_dim);
+      dim_numbers.add_scatter_dims_to_operand_dims(window_dim);
+    }
+  }
+
+  // Create a no-op combiner computation.
+  xla::XlaComputation combiner_computation =
+      MakeScatterComputation(nullptr, buffer_shape.element_type());
+  // Broadcast the value to the right shape required by scatter.
+  xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
+  std::vector<xla::int64> update_dimensions =
+      xla::util::ToVector<xla::int64>(buffer_shape.dimensions());
+  update_dimensions[dim] = index_shape.dimensions(0);
+  xla::XlaOp updates = xla::Broadcast(
+      xla::ConvertElementType(value, buffer_shape.element_type()),
+      update_dimensions);
+  return xla::Scatter(buffer, index, updates, combiner_computation,
                       dim_numbers);
 }
 

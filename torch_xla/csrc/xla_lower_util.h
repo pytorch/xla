@@ -28,4 +28,7 @@ xla::XlaOp CreateIndexUpdate(
     const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
         combiner);
 
+xla::XlaOp CreateIndexFill(const xla::XlaOp& buffer, xla::int64 dim,
+                           const xla::XlaOp& index, const xla::XlaOp& values);
+
 }  // namespace torch_xla
