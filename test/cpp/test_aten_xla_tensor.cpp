@@ -3181,6 +3181,16 @@ TEST_F(AtenXlaTensorTest, TestViewSqueezeAddInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestUnsafeView) {
+  at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor output = at::_unsafe_view(input, {-1, 320});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::_unsafe_view(xla_input, {-1, 320});
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestNarrow) {
   at::Tensor a = at::rand({8, 10, 4, 4}, at::TensorOptions(at::kFloat));
   for (xla::int64 dim : {1, -3}) {
