@@ -1522,6 +1522,28 @@ class TestAtenXlaTensor(XlaTestCase):
     x = torch.rand(3, 5, device=xm.xla_device())
     self.assertEqual(x.device.type, 'xla')
 
+  def test_slice_copy(self):
+    a = torch.rand(3, 3, 3)
+    xla_device = xm.xla_device()
+    xla_a = a.to(xla_device)
+    shape = (4, 4, 4)
+    b = a.new(*shape).zero_()
+    xla_b = xla_a.new(*shape).zero_()
+    b[:a.shape[0], :a.shape[1], :a.shape[2]].copy_(a)
+    xla_b[:a.shape[0], :a.shape[1], :a.shape[2]].copy_(xla_a)
+    self.assertEqual(b.data, xla_b.data.cpu())
+
+  def test_slice_assign(self):
+    a = torch.rand(3, 3, 3)
+    xla_device = xm.xla_device()
+    xla_a = a.to(xla_device)
+    shape = (4, 4, 4)
+    b = a.new(*shape).zero_()
+    xla_b = xla_a.new(*shape).zero_()
+    b[0, :, :] = 1
+    xla_b[0, :, :] = 1
+    self.assertEqual(b.data, xla_b.data.cpu())
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')

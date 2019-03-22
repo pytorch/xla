@@ -3,6 +3,7 @@
 #include <ATen/core/Reduction.h>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
 namespace tensor_ops {
@@ -143,6 +144,14 @@ XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
   return XLATensor::where(
       XLATensor::gt(scaled_output, threshold), grad_output,
       XLATensor::mul(grad_output, XLATensor::div(XLATensor::sub(z, 1, 1), z)));
+}
+
+XLATensor Select(const XLATensor& input, xla::int64 dim, xla::int64 index) {
+  auto shape = input.shape();
+  dim = XlaHelpers::GetCanonicalDimensionIndex(dim, shape.get().rank());
+  XLATensor result = XLATensor::narrow(input, dim, index, 1);
+  auto new_dims = XlaHelpers::DropDimensions(shape.get().dimensions(), {dim});
+  return XLATensor::view(result, new_dims);
 }
 
 }  // namespace tensor_ops

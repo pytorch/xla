@@ -27,5 +27,7 @@ XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
                            at::Scalar beta, at::Scalar threshold,
                            const XLATensor& output);
 
+XLATensor Select(const XLATensor& input, xla::int64 dim, xla::int64 index);
+
 }  // namespace tensor_ops
 }  // namespace torch_xla
