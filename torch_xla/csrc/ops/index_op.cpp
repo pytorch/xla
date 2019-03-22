@@ -126,8 +126,10 @@ ir::NodePtr IndexOp(const ir::Value& base, const ir::Value& indices) {
       -> xla::XlaOp { return CreateIndex(operands[0], operands[1]); };
   return ir::ops::GenericOp(
       ir::OpKind(at::aten::index), {base, indices},
-      ir::ops::InferOutputShape({base.shape(), indices.shape()},
-                                lower_for_shape_fn),
+      [&]() {
+        return ir::ops::InferOutputShape({base.shape(), indices.shape()},
+                                         lower_for_shape_fn);
+      },
       std::move(lower_fn));
 }
 
