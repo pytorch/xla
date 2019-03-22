@@ -22,8 +22,8 @@
 #include "torch_xla/csrc/ops/arg_min.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/as_strided.h"
-#include "torch_xla/csrc/ops/avg_pool2d.h"
-#include "torch_xla/csrc/ops/avg_pool2d_backward.h"
+#include "torch_xla/csrc/ops/avg_pool_nd.h"
+#include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/batch_norm_forward.h"
 #include "torch_xla/csrc/ops/bitwise_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
@@ -426,13 +426,23 @@ void XLATensor::atan2_(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::ops::Atan2(input.GetIrValue(), other.GetIrValue()));
 }
 
+XLATensor XLATensor::avg_pool1d(const XLATensor& input,
+                                std::vector<xla::int64> kernel_size,
+                                std::vector<xla::int64> stride,
+                                std::vector<xla::int64> padding,
+                                bool count_include_pad) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::AvgPoolNd>(
+      input.GetIrValue(), 1, std::move(kernel_size), std::move(stride),
+      std::move(padding), count_include_pad));
+}
+
 XLATensor XLATensor::avg_pool2d(const XLATensor& input,
                                 std::vector<xla::int64> kernel_size,
                                 std::vector<xla::int64> stride,
                                 std::vector<xla::int64> padding,
                                 bool count_include_pad) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::AvgPool2d>(
-      input.GetIrValue(), std::move(kernel_size), std::move(stride),
+  return input.CreateFrom(ir::MakeNode<ir::ops::AvgPoolNd>(
+      input.GetIrValue(), 2, std::move(kernel_size), std::move(stride),
       std::move(padding), count_include_pad));
 }
 
@@ -442,8 +452,29 @@ XLATensor XLATensor::avg_pool2d_backward(const XLATensor& out_backprop,
                                          std::vector<xla::int64> stride,
                                          std::vector<xla::int64> padding,
                                          bool count_include_pad) {
-  return out_backprop.CreateFrom(ir::MakeNode<ir::ops::AvgPool2dBackward>(
-      out_backprop.GetIrValue(), input.GetIrValue(), std::move(kernel_size),
+  return out_backprop.CreateFrom(ir::MakeNode<ir::ops::AvgPoolNdBackward>(
+      out_backprop.GetIrValue(), input.GetIrValue(), 2, std::move(kernel_size),
+      std::move(stride), std::move(padding), count_include_pad));
+}
+
+XLATensor XLATensor::avg_pool3d(const XLATensor& input,
+                                std::vector<xla::int64> kernel_size,
+                                std::vector<xla::int64> stride,
+                                std::vector<xla::int64> padding,
+                                bool count_include_pad) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::AvgPoolNd>(
+      input.GetIrValue(), 3, std::move(kernel_size), std::move(stride),
+      std::move(padding), count_include_pad));
+}
+
+XLATensor XLATensor::avg_pool3d_backward(const XLATensor& out_backprop,
+                                         const XLATensor& input,
+                                         std::vector<xla::int64> kernel_size,
+                                         std::vector<xla::int64> stride,
+                                         std::vector<xla::int64> padding,
+                                         bool count_include_pad) {
+  return out_backprop.CreateFrom(ir::MakeNode<ir::ops::AvgPoolNdBackward>(
+      out_backprop.GetIrValue(), input.GetIrValue(), 3, std::move(kernel_size),
       std::move(stride), std::move(padding), count_include_pad));
 }
 

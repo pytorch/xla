@@ -6,15 +6,19 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AvgPool2d : public Node {
+class AvgPoolNdBackward : public Node {
  public:
-  AvgPool2d(const Value& input, std::vector<xla::int64> kernel_size,
-            std::vector<xla::int64> stride, std::vector<xla::int64> padding,
-            bool count_include_pad);
+  AvgPoolNdBackward(const Value& grad_output, const Value& input,
+                    xla::int64 spatial_dim_count,
+                    std::vector<xla::int64> kernel_size,
+                    std::vector<xla::int64> stride,
+                    std::vector<xla::int64> padding, bool count_include_pad);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;
+
+  xla::int64 spatial_dim_count() const { return spatial_dim_count_; }
 
   const std::vector<xla::int64>& kernel_size() const { return kernel_size_; }
 
@@ -25,6 +29,7 @@ class AvgPool2d : public Node {
   bool count_include_pad() const { return count_include_pad_; }
 
  private:
+  xla::int64 spatial_dim_count_;
   // The parameters of the pooling. Ceil mode not supported yet.
   std::vector<xla::int64> kernel_size_;
   std::vector<xla::int64> stride_;
