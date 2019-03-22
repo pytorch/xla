@@ -37,8 +37,8 @@ xla::XlaOp BuildAvgPool2d(const torch::jit::Node* node,
 
 // Same as above, with kernel size, stride, padding and whether to include pad
 // provided as parameters.
-xla::XlaOp BuildAvgPool2d(
-    const xla::XlaOp& input,
+xla::XlaOp BuildAvgPoolNd(
+    const xla::XlaOp& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
@@ -51,8 +51,9 @@ xla::XlaOp BuildAvgPool2dBackward(const torch::jit::Node* node,
 
 // Same as above, with kernel size, stride, padding and whether to include pad
 // provided as parameters.
-xla::XlaOp BuildAvgPool2dBackward(
+xla::XlaOp BuildAvgPoolNdBackward(
     const xla::XlaOp& out_backprop, const xla::XlaOp& input,
+    xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,

@@ -528,6 +528,22 @@ at::Tensor& AtenXlaType::atan_(at::Tensor& self) const {
   return self;
 }
 
+at::Tensor AtenXlaType::avg_pool1d(const at::Tensor& self,
+                                   at::IntArrayRef kernel_size,
+                                   at::IntArrayRef stride,
+                                   at::IntArrayRef padding, bool ceil_mode,
+                                   bool count_include_pad) const {
+  // Lowering when ceil_mode is set not supported yet.
+  if (ceil_mode) {
+    return AtenXlaTypeBase::avg_pool1d(self, kernel_size, stride, padding,
+                                       ceil_mode, count_include_pad);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::avg_pool1d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
+      count_include_pad));
+}
+
 at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
                                    at::IntArrayRef kernel_size,
                                    at::IntArrayRef stride,
@@ -555,6 +571,37 @@ at::Tensor AtenXlaType::avg_pool2d_backward(
                                                 count_include_pad);
   }
   return bridge::AtenFromXlaTensor(XLATensor::avg_pool2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding), count_include_pad));
+}
+
+at::Tensor AtenXlaType::avg_pool3d(const at::Tensor& self,
+                                   at::IntArrayRef kernel_size,
+                                   at::IntArrayRef stride,
+                                   at::IntArrayRef padding, bool ceil_mode,
+                                   bool count_include_pad) const {
+  // Lowering when ceil_mode is set not supported yet.
+  if (ceil_mode) {
+    return AtenXlaTypeBase::avg_pool3d(self, kernel_size, stride, padding,
+                                       ceil_mode, count_include_pad);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::avg_pool3d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
+      count_include_pad));
+}
+
+at::Tensor AtenXlaType::avg_pool3d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, bool ceil_mode, bool count_include_pad) const {
+  if (ceil_mode) {
+    return AtenXlaTypeBase::avg_pool3d_backward(grad_output, self, kernel_size,
+                                                stride, padding, ceil_mode,
+                                                count_include_pad);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::avg_pool3d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), count_include_pad));
