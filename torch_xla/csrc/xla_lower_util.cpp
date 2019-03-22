@@ -87,6 +87,42 @@ xla::XlaComputation MakeScatterComputation(
   return cb.Build().ConsumeValueOrDie();
 }
 
+xla::XlaOp CreateIndexAlongDim(
+    const xla::XlaOp& buffer, xla::int64 dim, const xla::XlaOp& index,
+    const xla::XlaOp& value, bool broadcast_value_to_index,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+        combiner) {
+  xla::Shape buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
+  xla::ScatterDimensionNumbers dim_numbers;
+  dim_numbers.set_index_vector_dim(1);
+  for (xla::int64 window_dim = 0; window_dim < buffer_shape.rank();
+       ++window_dim) {
+    if (window_dim != dim) {
+      dim_numbers.add_update_window_dims(window_dim);
+    } else {
+      dim_numbers.add_inserted_window_dims(window_dim);
+      dim_numbers.add_scatter_dims_to_operand_dims(window_dim);
+    }
+  }
+
+  // Create a combiner computation for the scatter.
+  xla::XlaComputation combiner_computation =
+      MakeScatterComputation(combiner, buffer_shape.element_type());
+  // Broadcast the value to the right shape required by scatter.
+  xla::XlaOp updates = value;
+  if (broadcast_value_to_index) {
+    xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
+    std::vector<xla::int64> update_dimensions =
+        xla::util::ToVector<xla::int64>(buffer_shape.dimensions());
+    update_dimensions[dim] = index_shape.dimensions(0);
+    updates = xla::Broadcast(
+        xla::ConvertElementType(value, buffer_shape.element_type()),
+        update_dimensions);
+  }
+  return xla::Scatter(buffer, index, updates, combiner_computation,
+                      dim_numbers);
+}
+
 }  // namespace
 
 std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
@@ -309,34 +345,27 @@ xla::XlaOp CreateIndexUpdate(
                       dim_numbers);
 }
 
+xla::XlaOp CreateIndexAdd(const xla::XlaOp& buffer, xla::int64 dim,
+                          const xla::XlaOp& index, const xla::XlaOp& value) {
+  static std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>
+      add_scatter_combiner =
+          [](const xla::XlaOp& x, const xla::XlaOp& y,
+             xla::XlaBuilder* builder) -> xla::XlaOp { return x + y; };
+  return CreateIndexAlongDim(buffer, dim, index, value,
+                             /*broadcast_value_to_index=*/false,
+                             add_scatter_combiner);
+}
+
+xla::XlaOp CreateIndexCopy(const xla::XlaOp& buffer, xla::int64 dim,
+                           const xla::XlaOp& index, const xla::XlaOp& value) {
+  return CreateIndexAlongDim(buffer, dim, index, value,
+                             /*broadcast_value_to_index=*/false, nullptr);
+}
+
 xla::XlaOp CreateIndexFill(const xla::XlaOp& buffer, xla::int64 dim,
                            const xla::XlaOp& index, const xla::XlaOp& value) {
-  xla::Shape buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
-  xla::ScatterDimensionNumbers dim_numbers;
-  dim_numbers.set_index_vector_dim(1);
-  for (xla::int64 window_dim = 0; window_dim < buffer_shape.rank();
-       ++window_dim) {
-    if (window_dim != dim) {
-      dim_numbers.add_update_window_dims(window_dim);
-    } else {
-      dim_numbers.add_inserted_window_dims(window_dim);
-      dim_numbers.add_scatter_dims_to_operand_dims(window_dim);
-    }
-  }
-
-  // Create a no-op combiner computation.
-  xla::XlaComputation combiner_computation =
-      MakeScatterComputation(nullptr, buffer_shape.element_type());
-  // Broadcast the value to the right shape required by scatter.
-  xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
-  std::vector<xla::int64> update_dimensions =
-      xla::util::ToVector<xla::int64>(buffer_shape.dimensions());
-  update_dimensions[dim] = index_shape.dimensions(0);
-  xla::XlaOp updates = xla::Broadcast(
-      xla::ConvertElementType(value, buffer_shape.element_type()),
-      update_dimensions);
-  return xla::Scatter(buffer, index, updates, combiner_computation,
-                      dim_numbers);
+  return CreateIndexAlongDim(buffer, dim, index, value,
+                             /*broadcast_value_to_index=*/true, nullptr);
 }
 
 }  // namespace torch_xla

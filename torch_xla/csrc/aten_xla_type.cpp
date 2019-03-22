@@ -1231,6 +1231,40 @@ at::Tensor AtenXlaType::index(const at::Tensor& self,
                        bridge::GetXlaTensors(canonical_index_info.indices)));
 }
 
+at::Tensor AtenXlaType::index_add(const at::Tensor& self, int64_t dim,
+                                  const at::Tensor& index,
+                                  const at::Tensor& source) const {
+  return bridge::AtenFromXlaTensor(XLATensor::index_add(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
+      bridge::GetXlaTensor(source)));
+}
+
+at::Tensor& AtenXlaType::index_add_(at::Tensor& self, int64_t dim,
+                                    const at::Tensor& index,
+                                    const at::Tensor& source) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::index_add_(self_tensor, dim, bridge::GetXlaTensor(index),
+                        bridge::GetXlaTensor(source));
+  return self;
+}
+
+at::Tensor AtenXlaType::index_copy(const at::Tensor& self, int64_t dim,
+                                   const at::Tensor& index,
+                                   const at::Tensor& source) const {
+  return bridge::AtenFromXlaTensor(XLATensor::index_copy(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
+      bridge::GetXlaTensor(source)));
+}
+
+at::Tensor& AtenXlaType::index_copy_(at::Tensor& self, int64_t dim,
+                                     const at::Tensor& index,
+                                     const at::Tensor& source) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::index_copy_(self_tensor, dim, bridge::GetXlaTensor(index),
+                         bridge::GetXlaTensor(source));
+  return self;
+}
+
 at::Tensor AtenXlaType::index_fill(const at::Tensor& self, int64_t dim,
                                    const at::Tensor& index,
                                    at::Scalar value) const {

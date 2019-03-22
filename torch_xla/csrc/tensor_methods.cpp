@@ -895,6 +895,36 @@ XLATensor XLATensor::index(
   return IndexByTensors(input, indices);
 }
 
+XLATensor XLATensor::index_add(const XLATensor& input, xla::int64 dim,
+                               const XLATensor& index,
+                               const XLATensor& source) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  return input.CreateFrom(IndexAdd(input, canonical_dim, index, source));
+}
+
+void XLATensor::index_add_(XLATensor& input, xla::int64 dim,
+                           const XLATensor& index, const XLATensor& source) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  input.SetIrValue(IndexAdd(input, canonical_dim, index, source));
+}
+
+XLATensor XLATensor::index_copy(const XLATensor& input, xla::int64 dim,
+                                const XLATensor& index,
+                                const XLATensor& source) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  return input.CreateFrom(IndexCopy(input, canonical_dim, index, source));
+}
+
+void XLATensor::index_copy_(XLATensor& input, xla::int64 dim,
+                            const XLATensor& index, const XLATensor& source) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  input.SetIrValue(IndexCopy(input, canonical_dim, index, source));
+}
+
 XLATensor XLATensor::index_fill(const XLATensor& input, xla::int64 dim,
                                 const XLATensor& index, at::Scalar value) {
   xla::int64 canonical_dim =
