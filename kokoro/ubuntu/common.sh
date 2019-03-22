@@ -61,7 +61,12 @@ install_bazel
 conda create --name pytorch python=3.5 anaconda
 source activate pytorch
 export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
-conda install -y numpy pyyaml mkl mkl-include setuptools cmake cffi typing
+conda install -y numpy pyyaml setuptools cmake cffi typing
+# Pin MKL to older version as as of March 22 2019 the new MKL shipped with
+# Conda breaks the build.
+conda install -y mkl=2019.1
+conda install -y mkl-include=2019.1
+
 sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
 
 # Install the Lark parser required for the XLA->ATEN Type code generation.
