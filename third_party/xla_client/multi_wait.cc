@@ -41,7 +41,7 @@ std::function<void()> MultiWait::Completer(std::function<void()> func) {
       func();
       Done();
     } catch (const std::exception& ex) {
-      Done(tensorflow::errors::Aborted(ex.what()));
+      Done(tensorflow::errors::Internal(ex.what()));
     }
   };
   return completer;
