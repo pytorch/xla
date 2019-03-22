@@ -2051,6 +2051,9 @@ int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
 
 at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
                               int64_t start, int64_t end, int64_t step) const {
+  if (step != 1) {
+    return AtenXlaTypeBase::slice(self, dim, start, end, step);
+  }
   return bridge::AtenFromXlaTensor(
       XLATensor::slice(bridge::GetXlaTensor(self), dim, start, end, step));
 }

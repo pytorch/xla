@@ -67,9 +67,7 @@
 #include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
-#include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/shrink_backward.h"
-#include "torch_xla/csrc/ops/slice.h"
 #include "torch_xla/csrc/ops/softmax.h"
 #include "torch_xla/csrc/ops/softshrink.h"
 #include "torch_xla/csrc/ops/split.h"
@@ -1164,8 +1162,8 @@ void XLATensor::mul_(XLATensor& input, at::Scalar other) {
 XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
                             xla::int64 start, xla::int64 length) {
   auto input_shape = input.shape();
-  xla::Shape narrow_shape = input_shape;
   dim = XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  xla::Shape narrow_shape = input_shape;
   narrow_shape.set_dimensions(dim, length);
   ViewInfo view_info(std::move(narrow_shape), input_shape.get().dimensions());
   view_info.indices[dim] = XlaHelpers::GetCanonicalPosition(
@@ -1427,12 +1425,7 @@ XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
 
 XLATensor XLATensor::select(const XLATensor& input, xla::int64 dim,
                             xla::int64 index) {
-  auto input_shape = input.shape();
-  dim = XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
-  index = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
-                                           index);
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Select>(input.GetIrValue(), dim, index));
+  return tensor_ops::Select(input, dim, index);
 }
 
 XLATensor XLATensor::sigmoid(const XLATensor& input) {
@@ -1447,18 +1440,6 @@ XLATensor XLATensor::sigmoid_backward(const XLATensor& grad_output,
                                       const XLATensor& output) {
   return grad_output.CreateFrom(
       ir::ops::SigmoidBackward(grad_output.GetIrValue(), output.GetIrValue()));
-}
-
-XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
-                           xla::int64 start, xla::int64 end, xla::int64 step) {
-  auto input_shape = input.shape();
-  dim = XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
-  start = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
-                                           start);
-  end = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
-                                         end);
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Slice>(input.GetIrValue(), dim, start, end, step));
 }
 
 XLATensor XLATensor::sign(const XLATensor& input) {
@@ -1483,6 +1464,18 @@ XLATensor XLATensor::sinh(const XLATensor& input) {
 
 void XLATensor::sinh_(XLATensor& input) {
   input.SetIrValue(ir::ops::Sinh(input.GetIrValue()));
+}
+
+XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
+                           xla::int64 start, xla::int64 end, xla::int64 step) {
+  XLA_CHECK_EQ(step, 1);
+  auto input_shape = input.shape();
+  dim = XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  start = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
+                                           start);
+  end = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
+                                         end);
+  return narrow(input, dim, start, end - start);
 }
 
 XLATensor XLATensor::smooth_l1_loss(const XLATensor& input,
