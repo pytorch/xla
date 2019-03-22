@@ -12,7 +12,7 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
                           const xla::XlaOp indices, const xla::XlaOp on_value,
                           const xla::XlaOp off_value) {
   const auto indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
-  const int indices_dims = indices_shape.dimensions_size();
+  const int indices_dims = indices_shape.rank();
   const int output_dims = indices_dims + 1;
 
   // Expand the labels with a depth dimension for the classes.
@@ -32,7 +32,7 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
 
   // Now compare the labels in index form to the iota tensor to get the one hot
   // format.
-  std::vector<xla::int64> broadcast_dims(indices_shape.dimensions_size());
+  std::vector<xla::int64> broadcast_dims(indices_shape.rank());
   std::iota(broadcast_dims.begin(), broadcast_dims.begin() + axis, 0);
   std::iota(broadcast_dims.begin() + axis, broadcast_dims.end(), axis + 1);
   xla::XlaOp linspace_xla;
