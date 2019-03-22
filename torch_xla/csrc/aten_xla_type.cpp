@@ -295,6 +295,11 @@ at::Tensor AtenXlaType::_trilinear(
                                 unroll_dim);
 }
 
+at::Tensor AtenXlaType::_unsafe_view(const at::Tensor& self,
+                                     at::IntArrayRef size) const {
+  return view(self, size);
+}
+
 at::Tensor AtenXlaType::abs(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::abs(bridge::GetXlaTensor(self)));
 }
