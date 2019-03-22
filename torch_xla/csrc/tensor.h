@@ -236,6 +236,12 @@ class XLATensor {
   static XLATensor atan2(const XLATensor& input, const XLATensor& other);
   static void atan2_(XLATensor& input, const XLATensor& other);
 
+  static XLATensor avg_pool1d(const XLATensor& input,
+                              std::vector<xla::int64> kernel_size,
+                              std::vector<xla::int64> stride,
+                              std::vector<xla::int64> padding,
+                              bool count_include_pad);
+
   static XLATensor avg_pool2d(const XLATensor& input,
                               std::vector<xla::int64> kernel_size,
                               std::vector<xla::int64> stride,
@@ -243,6 +249,19 @@ class XLATensor {
                               bool count_include_pad);
 
   static XLATensor avg_pool2d_backward(const XLATensor& out_backprop,
+                                       const XLATensor& input,
+                                       std::vector<xla::int64> kernel_size,
+                                       std::vector<xla::int64> stride,
+                                       std::vector<xla::int64> padding,
+                                       bool count_include_pad);
+
+  static XLATensor avg_pool3d(const XLATensor& input,
+                              std::vector<xla::int64> kernel_size,
+                              std::vector<xla::int64> stride,
+                              std::vector<xla::int64> padding,
+                              bool count_include_pad);
+
+  static XLATensor avg_pool3d_backward(const XLATensor& out_backprop,
                                        const XLATensor& input,
                                        std::vector<xla::int64> kernel_size,
                                        std::vector<xla::int64> stride,

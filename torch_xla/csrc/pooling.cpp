@@ -1,16 +1,18 @@
 #include "torch_xla/csrc/pooling.h"
 #include "tensorflow/compiler/xla/client/lib/pooling.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/jit/autodiff.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
 namespace {
 
-xla::TensorFormat MakeNCHWFormat() {
-  return {/*batch_dimension=*/0,
-          /*feature_dimension=*/1,
-          /*spatial_dimensions=*/std::vector<xla::int64>{2, 3}};
+xla::TensorFormat MakeNCHWFormat(xla::int64 spatial_dim_count) {
+  return {
+      /*batch_dimension=*/0,
+      /*feature_dimension=*/1,
+      /*spatial_dimensions=*/xla::util::Iota<xla::int64>(spatial_dim_count, 2)};
 }
 
 // Holds the attributes common to all pooling operators.
@@ -32,10 +34,11 @@ xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
 
 // Construct the pooling attributes for the given kernel size, stride and
 // padding.
-PoolingOpAttributes Pooling2DOpAttributes(
+PoolingOpAttributes MakePoolingOpAttributes(
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size_attr,
     tensorflow::gtl::ArraySlice<const xla::int64> stride_attr,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding_attr) {
+    tensorflow::gtl::ArraySlice<const xla::int64> padding_attr,
+    xla::int64 spatial_dim_count) {
   // Create a NCHW kernel size with 1 for batch size and feature.
   std::vector<xla::int64> kernel_size(2, 1);
   kernel_size.insert(kernel_size.end(), kernel_size_attr.begin(),
@@ -49,7 +52,7 @@ PoolingOpAttributes Pooling2DOpAttributes(
     stride.resize(2, 1);
     stride.insert(stride.end(), stride_attr.begin(), stride_attr.end());
   }
-  XLA_CHECK_EQ(padding_attr.size(), 2);
+  XLA_CHECK_EQ(padding_attr.size(), spatial_dim_count);
   std::vector<std::pair<xla::int64, xla::int64>> padding;
   for (const xla::int64 dim_pad : padding_attr) {
     padding.push_back(std::make_pair(dim_pad, dim_pad));
@@ -121,14 +124,15 @@ xla::XlaOp BuildMaxPool2d(
   xla::PaddingConfig padding_config = XlaHelpers::MakeXlaPaddingConfig(padding);
   xla::XlaOp padded_input = xla::Pad(input, xla_init_value, padding_config);
   PoolingOpAttributes pooling_op_attributes =
-      Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size,
-                            /*stride_attr=*/stride, /*padding_attr=*/padding);
+      MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
+                              /*stride_attr=*/stride, /*padding_attr=*/padding,
+                              /*spatial_dim_count=*/2);
   return xla::MaxPool(
       /*operand=*/padded_input,
       /*kernel_size=*/pooling_op_attributes.kernel_size,
       /*stride=*/pooling_op_attributes.stride,
       /*padding=*/xla::Padding::kValid,
-      /*data_format=*/MakeNCHWFormat());
+      /*data_format=*/MakeNCHWFormat(2));
 }
 
 xla::XlaOp BuildMaxPool2dBackward(const torch::jit::Node* node,
@@ -157,8 +161,9 @@ xla::XlaOp BuildMaxPool2dBackward(
   xla::XlaComputation scatter =
       XlaHelpers::CreateAddComputation(input_shape.element_type());
   PoolingOpAttributes pooling_op_attributes =
-      Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size,
-                            /*stride_attr=*/stride, /*padding_attr=*/padding);
+      MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
+                              /*stride_attr=*/stride, /*padding_attr=*/padding,
+                              /*spatial_dim_count=*/2);
   std::vector<std::pair<xla::int64, xla::int64>> window_padding;
   window_padding.resize(2);
   window_padding.insert(window_padding.end(),
@@ -186,29 +191,31 @@ xla::XlaOp BuildAvgPool2d(const torch::jit::Node* node,
       node->get<std::vector<int64_t>>(at::attr::padding).value();
   const auto count_include_pad =
       node->get<bool>(at::attr::count_include_pad).value();
-  return BuildAvgPool2d(
+  return BuildAvgPoolNd(
       /*input=*/input,
+      /*spatial_dim_count=*/2,
       /*kernel_size=*/XlaHelpers::I64List(kernel_size),
       /*stride=*/XlaHelpers::I64List(stride),
       /*padding=*/XlaHelpers::I64List(padding),
       /*count_include_pad=*/count_include_pad);
 }
 
-xla::XlaOp BuildAvgPool2d(
-    const xla::XlaOp& input,
+xla::XlaOp BuildAvgPoolNd(
+    const xla::XlaOp& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool count_include_pad) {
   PoolingOpAttributes pooling_op_attributes =
-      Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size,
-                            /*stride_attr=*/stride, /*padding_attr=*/padding);
+      MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
+                              /*stride_attr=*/stride, /*padding_attr=*/padding,
+                              /*spatial_dim_count=*/spatial_dim_count);
   return xla::AvgPool(
       /*operand=*/input,
       /*kernel_size=*/pooling_op_attributes.kernel_size,
       /*stride=*/pooling_op_attributes.stride,
       /*padding=*/pooling_op_attributes.padding,
-      /*data_format=*/MakeNCHWFormat(),
+      /*data_format=*/MakeNCHWFormat(spatial_dim_count),
       /*counts_include_padding=*/count_include_pad);
 }
 
@@ -225,21 +232,23 @@ xla::XlaOp BuildAvgPool2dBackward(const torch::jit::Node* node,
   const auto count_include_pad =
       node->get<bool>(at::attr::count_include_pad).value();
 
-  return BuildAvgPool2dBackward(
-      out_backprop, input, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
-      count_include_pad);
+  return BuildAvgPoolNdBackward(
+      out_backprop, input, /*spatial_dim_count=*/2,
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding), count_include_pad);
 }
 
-xla::XlaOp BuildAvgPool2dBackward(
+xla::XlaOp BuildAvgPoolNdBackward(
     const xla::XlaOp& out_backprop, const xla::XlaOp& input,
+    xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool count_include_pad) {
   PoolingOpAttributes pooling_op_attributes =
-      Pooling2DOpAttributes(/*kernel_size_attr=*/kernel_size,
-                            /*stride_attr=*/stride, /*padding_attr=*/padding);
+      MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
+                              /*stride_attr=*/stride, /*padding_attr=*/padding,
+                              /*spatial_dim_count=*/spatial_dim_count);
   auto gradients_size = XlaHelpers::SizesOfXlaOp(input);
   return xla::AvgPoolGrad(
       /*out_backprop=*/out_backprop,
@@ -247,7 +256,7 @@ xla::XlaOp BuildAvgPool2dBackward(
       /*kernel_size=*/pooling_op_attributes.kernel_size,
       /*stride=*/pooling_op_attributes.stride,
       /*spatial_padding=*/pooling_op_attributes.padding,
-      /*data_format=*/MakeNCHWFormat(),
+      /*data_format=*/MakeNCHWFormat(spatial_dim_count),
       /*counts_include_padding=*/count_include_pad);
 }
 
@@ -271,7 +280,7 @@ xla::XlaOp BuildAdaptiveAvgPool2d(
       /*kernel_size=*/kernel_size,
       /*stride=*/kernel_size,
       /*padding=*/no_padding,
-      /*data_format=*/MakeNCHWFormat(),
+      /*data_format=*/MakeNCHWFormat(2),
       /*counts_include_padding=*/false);
 }
 
@@ -293,7 +302,7 @@ xla::XlaOp BuildAdaptiveAvgPool2dBackward(const xla::XlaOp& out_backprop,
       /*kernel_size=*/kernel_size,
       /*stride=*/kernel_size,
       /*spatial_padding=*/no_padding,
-      /*data_format=*/MakeNCHWFormat(),
+      /*data_format=*/MakeNCHWFormat(2),
       /*counts_include_padding=*/false);
 }
 

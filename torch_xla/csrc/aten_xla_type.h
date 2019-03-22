@@ -201,11 +201,26 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor& atan_(at::Tensor& self) const override;
 
+  at::Tensor avg_pool1d(const at::Tensor& self, at::IntArrayRef kernel_size,
+                        at::IntArrayRef stride, at::IntArrayRef padding,
+                        bool ceil_mode, bool count_include_pad) const override;
+
   at::Tensor avg_pool2d(const at::Tensor& self, at::IntArrayRef kernel_size,
                         at::IntArrayRef stride, at::IntArrayRef padding,
                         bool ceil_mode, bool count_include_pad) const override;
 
   at::Tensor avg_pool2d_backward(const at::Tensor& grad_output,
+                                 const at::Tensor& self,
+                                 at::IntArrayRef kernel_size,
+                                 at::IntArrayRef stride,
+                                 at::IntArrayRef padding, bool ceil_mode,
+                                 bool count_include_pad) const override;
+
+  at::Tensor avg_pool3d(const at::Tensor& self, at::IntArrayRef kernel_size,
+                        at::IntArrayRef stride, at::IntArrayRef padding,
+                        bool ceil_mode, bool count_include_pad) const override;
+
+  at::Tensor avg_pool3d_backward(const at::Tensor& grad_output,
                                  const at::Tensor& self,
                                  at::IntArrayRef kernel_size,
                                  at::IntArrayRef stride,
