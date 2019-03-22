@@ -2570,6 +2570,100 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithTensorInPlace) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestIndexAdd) {
+  at::Tensor base = at::rand({5, 3, 7}, at::TensorOptions(at::kFloat));
+  int index_size = 10;
+  int rank = base.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    at::Tensor index = at::randint(0, base.size(dim), {index_size},
+                                   at::TensorOptions(at::kLong));
+    std::vector<int64_t> value_sizes(base.sizes().begin(), base.sizes().end());
+    int canonical_dim = dim < 0 ? dim + rank : dim;
+    value_sizes[canonical_dim] = index_size;
+    at::Tensor value = at::rand(value_sizes, at::TensorOptions(at::kFloat));
+    at::Tensor result = at::index_add(base, dim, index, value);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
+      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+      at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+      at::Tensor xla_result =
+          at::index_add(xla_base, dim, xla_index, xla_value);
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestIndexAddInPlace) {
+  int index_size = 10;
+  int rank = 3;
+  for (int dim = -rank; dim < rank; ++dim) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor base = at::rand({5, 3, 7}, at::TensorOptions(at::kFloat));
+      at::Tensor index = at::randint(0, base.size(dim), {index_size},
+                                     at::TensorOptions(at::kLong));
+      std::vector<int64_t> value_sizes(base.sizes().begin(),
+                                       base.sizes().end());
+      int canonical_dim = dim < 0 ? dim + rank : dim;
+      value_sizes[canonical_dim] = index_size;
+      at::Tensor value = at::rand(value_sizes, at::TensorOptions(at::kFloat));
+      at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
+      at::Tensor result = base.index_add_(dim, index, value);
+      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+      at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+      at::Tensor xla_result = xla_base.index_add_(dim, xla_index, xla_value);
+      AllClose(result, xla_result);
+      AllClose(base, xla_base);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestIndexCopy) {
+  at::Tensor base = at::rand({5, 3, 7}, at::TensorOptions(at::kFloat));
+  int index_size = 10;
+  int rank = base.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    at::Tensor index = at::randint(0, base.size(dim), {index_size},
+                                   at::TensorOptions(at::kLong));
+    std::vector<int64_t> value_sizes(base.sizes().begin(), base.sizes().end());
+    int canonical_dim = dim < 0 ? dim + rank : dim;
+    value_sizes[canonical_dim] = index_size;
+    at::Tensor value = at::rand(value_sizes, at::TensorOptions(at::kFloat));
+    at::Tensor result = at::index_copy(base, dim, index, value);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
+      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+      at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+      at::Tensor xla_result =
+          at::index_copy(xla_base, dim, xla_index, xla_value);
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestIndexCopyInPlace) {
+  int index_size = 10;
+  int rank = 3;
+  for (int dim = -rank; dim < rank; ++dim) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor base = at::rand({5, 3, 7}, at::TensorOptions(at::kFloat));
+      at::Tensor index = at::randint(0, base.size(dim), {index_size},
+                                     at::TensorOptions(at::kLong));
+      std::vector<int64_t> value_sizes(base.sizes().begin(),
+                                       base.sizes().end());
+      int canonical_dim = dim < 0 ? dim + rank : dim;
+      value_sizes[canonical_dim] = index_size;
+      at::Tensor value = at::rand(value_sizes, at::TensorOptions(at::kFloat));
+      at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
+      at::Tensor result = base.index_copy_(dim, index, value);
+      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+      at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+      at::Tensor xla_result = xla_base.index_copy_(dim, xla_index, xla_value);
+      AllClose(result, xla_result);
+      AllClose(base, xla_base);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::relu(input);

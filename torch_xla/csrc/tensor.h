@@ -433,6 +433,18 @@ class XLATensor {
   static XLATensor index(const XLATensor& input,
                          tensorflow::gtl::ArraySlice<const XLATensor> indices);
 
+  static XLATensor index_add(const XLATensor& input, xla::int64 dim,
+                             const XLATensor& index, const XLATensor& source);
+
+  static void index_add_(XLATensor& input, xla::int64 dim,
+                         const XLATensor& index, const XLATensor& source);
+
+  static XLATensor index_copy(const XLATensor& input, xla::int64 dim,
+                              const XLATensor& index, const XLATensor& source);
+
+  static void index_copy_(XLATensor& input, xla::int64 dim,
+                          const XLATensor& index, const XLATensor& source);
+
   // Fills the elements of the base tensor with the given value in the given
   // dimension, at positions given by the index. The index must be a rank-1
   // tensor.

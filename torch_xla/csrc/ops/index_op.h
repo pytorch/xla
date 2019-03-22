@@ -62,4 +62,10 @@ ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
 ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
                       const XLATensor& index, const XLATensor& value);
 
+ir::Value IndexAdd(const XLATensor& base, xla::int64 dim,
+                   const XLATensor& index, const XLATensor& source);
+
+ir::Value IndexCopy(const XLATensor& base, xla::int64 dim,
+                    const XLATensor& index, const XLATensor& source);
+
 }  // namespace torch_xla

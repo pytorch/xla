@@ -189,6 +189,56 @@ ir::NodePtr IndexFillOp(const ir::Value& buffer, xla::int64 dim,
       std::move(lower_fn));
 }
 
+ir::NodePtr IndexAddOp(const ir::Value& buffer, xla::int64 dim,
+                       const ir::Value& index, const ir::Value& source) {
+  auto lower_fn = [dim](const ir::Node& node,
+                        ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_source = loctx->GetOutputOp(node.operand(2));
+    return node.ReturnOp(CreateIndexAdd(xla_base, dim, xla_index, xla_source),
+                         loctx);
+  };
+  auto lower_for_shape_fn =
+      [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      -> xla::XlaOp {
+    return CreateIndexAdd(operands[0], dim, operands[1], operands[2]);
+  };
+  return ir::ops::GenericOp(
+      ir::OpKind(at::aten::index_add), {buffer, index, source},
+      [&]() {
+        return ir::ops::InferOutputShape(
+            {buffer.shape(), index.shape(), source.shape()},
+            lower_for_shape_fn);
+      },
+      std::move(lower_fn));
+}
+
+ir::NodePtr IndexCopyOp(const ir::Value& buffer, xla::int64 dim,
+                        const ir::Value& index, const ir::Value& source) {
+  auto lower_fn = [dim](const ir::Node& node,
+                        ir::LoweringContext* loctx) -> ir::XlaOpVector {
+    xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_source = loctx->GetOutputOp(node.operand(2));
+    return node.ReturnOp(CreateIndexCopy(xla_base, dim, xla_index, xla_source),
+                         loctx);
+  };
+  auto lower_for_shape_fn =
+      [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      -> xla::XlaOp {
+    return CreateIndexCopy(operands[0], dim, operands[1], operands[2]);
+  };
+  return ir::ops::GenericOp(
+      ir::OpKind(at::aten::index_copy), {buffer, index, source},
+      [&]() {
+        return ir::ops::InferOutputShape(
+            {buffer.shape(), index.shape(), source.shape()},
+            lower_for_shape_fn);
+      },
+      std::move(lower_fn));
+}
+
 }  // namespace
 
 CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
@@ -263,6 +313,26 @@ ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
       << "Fill only supports a 0-dimensional value tensor";
   return IndexFillOp(base.GetIrValue(), dim, index.GetIrValue(),
                      value.GetIrValue());
+}
+
+ir::Value IndexAdd(const XLATensor& base, xla::int64 dim,
+                   const XLATensor& index, const XLATensor& source) {
+  XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
+      << "Add index is expected to be of scalar type Long";
+  XLA_CHECK_EQ(index.shape().get().rank(), 1)
+      << "Add index is supposed to be a vector";
+  return IndexAddOp(base.GetIrValue(), dim, index.GetIrValue(),
+                    source.GetIrValue());
+}
+
+ir::Value IndexCopy(const XLATensor& base, xla::int64 dim,
+                    const XLATensor& index, const XLATensor& source) {
+  XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
+      << "Copy index is expected to be of scalar type Long";
+  XLA_CHECK_EQ(index.shape().get().rank(), 1)
+      << "Copy index is supposed to be a vector";
+  return IndexCopyOp(base.GetIrValue(), dim, index.GetIrValue(),
+                     source.GetIrValue());
 }
 
 }  // namespace torch_xla
