@@ -28,6 +28,12 @@ xla::XlaOp CreateIndexUpdate(
     const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
         combiner);
 
+xla::XlaOp CreateIndexAdd(const xla::XlaOp& buffer, xla::int64 dim,
+                          const xla::XlaOp& index, const xla::XlaOp& value);
+
+xla::XlaOp CreateIndexCopy(const xla::XlaOp& buffer, xla::int64 dim,
+                           const xla::XlaOp& index, const xla::XlaOp& value);
+
 xla::XlaOp CreateIndexFill(const xla::XlaOp& buffer, xla::int64 dim,
                            const xla::XlaOp& index, const xla::XlaOp& values);
 
