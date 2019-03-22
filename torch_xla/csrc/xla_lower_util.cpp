@@ -279,7 +279,7 @@ xla::XlaOp CreateIndexUpdate(
   xla::int64 num_index_dims = indices_dims.back();
   indices_dims.remove_suffix(1);
   xla::ScatterDimensionNumbers dim_numbers;
-  dim_numbers.set_index_vector_dim(indices_shape.dimensions_size() - 1);
+  dim_numbers.set_index_vector_dim(indices_shape.rank() - 1);
 
   xla::int64 values_rank = values_shape.rank();
   xla::int64 buffer_rank = buffer_shape.rank();
