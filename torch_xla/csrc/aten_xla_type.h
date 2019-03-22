@@ -109,6 +109,9 @@ class AtenXlaType : public AtenXlaTypeBase {
                         at::IntArrayRef sumdim,
                         int64_t unroll_dim) const override;
 
+  at::Tensor _unsafe_view(const at::Tensor& self,
+                          at::IntArrayRef size) const override;
+
   at::Tensor abs(const at::Tensor& self) const override;
 
   at::Tensor& abs_(at::Tensor& self) const override;
