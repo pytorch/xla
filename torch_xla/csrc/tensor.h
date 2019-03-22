@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/device.h"
@@ -121,7 +122,7 @@ class XLATensor {
   // Retrieves the PyTorch tensors behind the XLA tensors. If the writeable
   // vector is not nullptr, it must be the same size as tensors, and the
   // corresponding bool tells whether the ATEN tensor to be retrieved should the
-  // a writeable copy.
+  // a writeable copy. All the tensors must be on the same device.
   static std::vector<at::Tensor> GetTensors(std::vector<XLATensor>* tensors,
                                             const std::vector<bool>* writeable);
 
@@ -819,10 +820,52 @@ class XLATensor {
 
   using ComputationCache = xla::util::Cache<size_t, CachedComputation>;
 
+  struct Async {
+    Async(SyncTensorCollection* coll,
+          std::vector<xla::ComputationClient::DataPtr> parameters_data,
+          std::string device, ComputationCache::TypePtr cached_computation)
+        : mwait(1),
+          indices(std::move(coll->indices)),
+          unlocker(std::move(coll->unlocker)),
+          parameters_data(std::move(parameters_data)),
+          device(std::move(device)),
+          cached_computation(std::move(cached_computation)) {
+      tensors_data.reserve(indices.size());
+    }
+
+    xla::xla_util::MultiWait mwait;
+    std::vector<size_t> indices;
+    std::vector<xla::util::Cleanup> unlocker;
+    std::vector<xla::ComputationClient::DataPtr> parameters_data;
+    std::string device;
+    ComputationCache::TypePtr cached_computation;
+    std::vector<xla::ComputationClient::DataPtr> tensors_data;
+  };
+
+  struct SyncTensorsConfig {
+    // Whether we want to force XLA data on the target tensors (hence trimming
+    // the IR graph above them).
+    bool force_xla_data = false;
+  };
+
   // The context used by the ApplyPendingGraph() API, in order to allow it speed
   // up operations in case the new tensors graph apply matches the one stored
   // within the apply context.
   struct ApplyContext {
+    ApplyContext() = default;
+    ApplyContext(
+        std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+            computations,
+        std::vector<xla::int64> uid_order,
+        std::vector<std::vector<xla::int64>> input_mapping,
+        std::vector<std::vector<xla::int64>> index_mapping,
+        std::vector<std::string> devices)
+        : computations(std::move(computations)),
+          uid_order(std::move(uid_order)),
+          input_mapping(std::move(input_mapping)),
+          index_mapping(std::move(index_mapping)),
+          devices(std::move(devices)) {}
+
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
         computations;
     std::vector<xla::int64> uid_order;
@@ -957,16 +1000,26 @@ class XLATensor {
   static SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensor>& tensors);
 
+  // Gathers the XLA device data for all the input tensors, after an
+  // asynchronous operation.
+  static std::vector<xla::ComputationClient::DataPtr> GatherTensorsXlaData(
+      const std::vector<XLATensor>& tensors, std::shared_ptr<Async> async);
+
   // Schedules the execution of a sync tensors operation in background. The
   // asynchronous operation will hold the device locks by capturing the ones
   // present within the coll structure.
-  static void ScheduleSyncTensorsGraph(
-      std::vector<XLATensor>* tensors, SyncTensorCollection* coll,
+  static std::shared_ptr<Async> ScheduleSyncTensorsGraph(
+      std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
+      SyncTensorCollection* coll,
       std::vector<xla::ComputationClient::DataPtr> parameters_data,
       std::string device, ComputationCache::TypePtr cached_computation);
 
-  static bool TryRunCachedSync(std::vector<XLATensor>* tensors,
-                               SyncTensorCollection* coll);
+  static std::shared_ptr<Async> TryRunCachedSync(
+      std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
+      SyncTensorCollection* coll);
+
+  static std::shared_ptr<Async> SyncTensorsGraphInternal(
+      std::vector<XLATensor>* tensors, const SyncTensorsConfig& config);
 
   // Returns a permutation which represents an ordering by tensor device and
   // unique ID, of all the tensors which needs sync (the ones which have a graph
