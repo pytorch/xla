@@ -27,6 +27,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
 import torch_xla_py.data_parallel as dp
+import torch_xla_py.model_comparator as mc
 import torch_xla_py.parallel_loader as pl
 import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
@@ -1550,6 +1551,55 @@ class TestAtenXlaTensor(XlaTestCase):
     b = torch.clamp(a, max=3.4)
     xla_b = torch.clamp(xla_a, max=3.4)
     self.assertEqual(b.data, xla_b.data.cpu())
+
+
+class MNISTComparator(nn.Module):
+
+  def __init__(self):
+    super(MNISTComparator, self).__init__()
+    self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+    self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+    self.fc1 = nn.Linear(320, 50)
+    self.fc2 = nn.Linear(50, 10)
+
+  def forward(self, x):
+    mc.save('inputs', x)
+    x = F.relu(F.max_pool2d(self.conv1(x), 2))
+    mc.save('layer1', x)
+    x = F.relu(F.max_pool2d(self.conv2(x), 2))
+    mc.save('layer2', x)
+    x = x.view(-1, 320)
+    x = F.relu(self.fc1(x))
+    mc.save('relu', x)
+    x = self.fc2(x)
+    x = F.log_softmax(x, dim=1)
+    mc.save('result', x)
+    return x
+
+
+class TestModelComparator(XlaTestCase):
+
+  def test(self):
+    xla_device = xm.xla_device()
+    x = _gen_tensor(8, 1, 28, 28)
+
+    torch.manual_seed(42)
+    model = MNISTComparator()
+    save_dir1 = xu.TmpFolder()
+    mc.configure(save_dir1.name)
+    model(x)
+
+    save_dir2 = xu.TmpFolder()
+    mc.configure(save_dir2.name)
+    torch.manual_seed(42)
+    xla_model = MNISTComparator().to(xla_device)
+    xla_x = x.to(xla_device)
+    xla_model(xla_x)
+
+    report = mc.compare(save_dir1.name, save_dir2.name, rtol=1e-03, atol=1e-04)
+    if report:
+      print(report)
+    self.assertEqual(len(report), 0)
 
 
 if __name__ == '__main__':
