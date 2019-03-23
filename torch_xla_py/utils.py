@@ -2,7 +2,9 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import shutil
 import sys
+import tempfile
 import time
 
 
@@ -13,6 +15,13 @@ class Cleaner(object):
 
   def __del__(self):
     self.func()
+
+
+class TmpFolder(object):
+
+  def __init__(self):
+    self.name = tempfile.mkdtemp()
+    self.cleaner = Cleaner(lambda: shutil.rmtree(self.name))
 
 
 class SampleGenerator(object):
