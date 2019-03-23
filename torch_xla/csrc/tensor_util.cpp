@@ -272,8 +272,9 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
   }
 }
 
-std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
-    const at::Tensor& tensor, const xla::Shape& shape, const Device& device) {
+xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
+                                                const xla::Shape& shape,
+                                                const Device& device) {
   auto populate_fn =
       [&](const xla::ComputationClient::TensorSource& source_tensor,
           void* dest_buffer, size_t dest_buffer_size) {
@@ -420,13 +421,13 @@ xla::Shape MakeArrayShapeFromDimensions(const at::IntList& dimensions,
                                       device_type);
 }
 
-std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
-    const at::Tensor& tensor, const Device& device) {
+xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
+                                                const Device& device) {
   return TensorToXlaData(
       tensor, CreateComputationShapeFromTensor(tensor, &device), device);
 }
 
-std::vector<std::shared_ptr<xla::ComputationClient::Data>> CreateTensorsData(
+std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices) {
   XLA_CHECK_EQ(tensors.size(), devices.size());

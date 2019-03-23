@@ -39,10 +39,6 @@ XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device);
 std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors,
                                             const std::vector<bool>* writeable);
 
-// Creates an at::Tensor out of an XLA tensor, but making the XLA tensor to
-// discard any device side data. Throws if tensor is not an XLA tensor.
-at::Tensor XlaToAtenMutableTensor(const at::Tensor& tensor);
-
 // Tries to extract the device out of the XLA tensor. Returns nullopt if the
 // input is not an XLA tensor.
 c10::optional<Device> GetXlaDevice(const at::Tensor& tensor);
