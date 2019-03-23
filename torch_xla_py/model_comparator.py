@@ -19,7 +19,7 @@ def _index_of(sizes, lindex):
   return list(reversed(index))
 
 
-def _compare_tensors(tensor1, tensor2, rtol=1e-05, atol=1e-08, max_diffs=25):
+def compare_tensors(tensor1, tensor2, rtol=1e-05, atol=1e-08, max_diffs=25):
   sizes1 = list(tensor1.size())
   sizes2 = list(tensor2.size())
   if sizes1 != sizes2:
@@ -91,18 +91,10 @@ def _parse_path(path):
   return m.group(1), int(m.group(2)), step, rpath
 
 
-def _explain_differences(path1, tensor1, path2, tensor2):
-  name, id, step, _ = _parse_path(path1)
-  report = 'Mismatch: {}.{} differs{}\n'.format(
-      name, id, ' in step={}'.format(step) if step is not None else '')
-  report += '{}\nvs.\n{}\n'.format(str(tensor1), str(tensor2))
-  return report
-
-
-def tensor_compare(path1, path2, rtol=1e-05, atol=1e-08):
+def tensor_file_compare(path1, path2, rtol=1e-05, atol=1e-08):
   tensor1 = torch.load(path1)
   tensor2 = torch.load(path2)
-  return _compare_tensors(
+  return compare_tensors(
       tensor1, tensor2, rtol=rtol, atol=atol, max_diffs=_MAX_DIFFS)
 
 
@@ -114,7 +106,7 @@ def compare(save_dir1, save_dir2, rtol=1e-05, atol=1e-08):
     if path1 not in files2:
       report += 'Mismatch: {} not in {}\n'.format(path1, save_dir2)
     else:
-      report += tensor_compare(
+      report += tensor_file_compare(
           os.path.join(save_dir1, path1),
           os.path.join(save_dir2, path1),
           rtol=rtol,
