@@ -87,35 +87,35 @@ xla::int64 XlaHelpers::GetCanonicalPosition(
 XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
   switch (type) {
     case xla::PrimitiveType::S8:
-      return {std::numeric_limits<xla::int8>::min(),
+      return {std::numeric_limits<xla::int8>::lowest(),
               std::numeric_limits<xla::int8>::max()};
     case xla::PrimitiveType::U8:
-      return {std::numeric_limits<xla::uint8>::min(),
+      return {std::numeric_limits<xla::uint8>::lowest(),
               std::numeric_limits<xla::uint8>::max()};
     case xla::PrimitiveType::S16:
-      return {std::numeric_limits<xla::int16>::min(),
+      return {std::numeric_limits<xla::int16>::lowest(),
               std::numeric_limits<xla::int16>::max()};
     case xla::PrimitiveType::U16:
-      return {std::numeric_limits<xla::uint16>::min(),
+      return {std::numeric_limits<xla::uint16>::lowest(),
               std::numeric_limits<xla::uint16>::max()};
     case xla::PrimitiveType::S32:
-      return {static_cast<int64_t>(std::numeric_limits<xla::int32>::min()),
+      return {static_cast<int64_t>(std::numeric_limits<xla::int32>::lowest()),
               static_cast<int64_t>(std::numeric_limits<xla::int32>::max())};
     case xla::PrimitiveType::U32:
-      return {static_cast<int64_t>(std::numeric_limits<xla::uint32>::min()),
+      return {static_cast<int64_t>(std::numeric_limits<xla::uint32>::lowest()),
               static_cast<int64_t>(std::numeric_limits<xla::uint32>::max())};
     case xla::PrimitiveType::S64:
-      return {static_cast<int64_t>(std::numeric_limits<xla::int64>::min()),
+      return {static_cast<int64_t>(std::numeric_limits<xla::int64>::lowest()),
               static_cast<int64_t>(std::numeric_limits<xla::int64>::max())};
     case xla::PrimitiveType::U64:
-      return {static_cast<int64_t>(std::numeric_limits<xla::uint64>::min()),
+      return {static_cast<int64_t>(std::numeric_limits<xla::uint64>::lowest()),
               static_cast<int64_t>(std::numeric_limits<xla::uint64>::max())};
     case xla::PrimitiveType::BF16:
     case xla::PrimitiveType::F32:
-      return {std::numeric_limits<float>::min(),
+      return {std::numeric_limits<float>::lowest(),
               std::numeric_limits<float>::max()};
     case xla::PrimitiveType::F64:
-      return {std::numeric_limits<double>::min(),
+      return {std::numeric_limits<double>::lowest(),
               std::numeric_limits<double>::max()};
     case xla::PrimitiveType::PRED:
       return {0, 1};

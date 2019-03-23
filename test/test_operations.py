@@ -1544,6 +1544,13 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b[0, :, :] = 1
     self.assertEqual(b.data, xla_b.data.cpu())
 
+  def test_clamp(self):
+    a = torch.randn(3, 3)
+    xla_a = a.to(xm.xla_device())
+    b = torch.clamp(a, max=3.4)
+    xla_b = torch.clamp(xla_a, max=3.4)
+    self.assertEqual(b.data, xla_b.data.cpu())
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
