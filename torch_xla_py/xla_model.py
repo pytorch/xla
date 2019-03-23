@@ -419,8 +419,8 @@ def _sync_optimizer_state(state):
 def optimizer_step(optimizer):
   state = _fetch_optimizer_state(optimizer)
   count = torch_xla._XLAC._xla_replication_device_count()
-  scale = 1.0 / count if count > 0 else 1.0
-  torch_xla._XLAC._xla_cross_replica_sum(state.gradients, scale, [])
+  if count > 1:
+    torch_xla._XLAC._xla_cross_replica_sum(state.gradients, 1.0 / count, [])
   loss = optimizer.step()
   # Re-fetching saves one XLA compilation round before steady-state.
   state = _fetch_optimizer_state(optimizer)
