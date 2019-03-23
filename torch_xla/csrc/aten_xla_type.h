@@ -201,14 +201,15 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor& atan_(at::Tensor& self) const override;
 
-  at::Tensor avg_pool2d(const at::Tensor& self, at::IntList kernel_size,
-                        at::IntList stride, at::IntList padding, bool ceil_mode,
-                        bool count_include_pad) const override;
+  at::Tensor avg_pool2d(const at::Tensor& self, at::IntArrayRef kernel_size,
+                        at::IntArrayRef stride, at::IntArrayRef padding,
+                        bool ceil_mode, bool count_include_pad) const override;
 
   at::Tensor avg_pool2d_backward(const at::Tensor& grad_output,
                                  const at::Tensor& self,
-                                 at::IntList kernel_size, at::IntList stride,
-                                 at::IntList padding, bool ceil_mode,
+                                 at::IntArrayRef kernel_size,
+                                 at::IntArrayRef stride,
+                                 at::IntArrayRef padding, bool ceil_mode,
                                  bool count_include_pad) const override;
 
   at::Tensor bartlett_window(int64_t window_length,
@@ -272,8 +273,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor contiguous(const at::Tensor& self) const override;
 
   at::Tensor conv2d(const at::Tensor& input, const at::Tensor& weight,
-                    const at::Tensor& bias, at::IntList stride,
-                    at::IntList padding, at::IntList dilation,
+                    const at::Tensor& bias, at::IntArrayRef stride,
+                    at::IntArrayRef padding, at::IntArrayRef dilation,
                     int64_t groups) const override;
 
   at::Tensor copy(const at::Tensor& src, bool non_blocking,
@@ -601,18 +602,20 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor max(const at::Tensor& self) const override;
 
-  at::Tensor max_pool2d(const at::Tensor& self, at::IntList kernel_size,
-                        at::IntList stride, at::IntList padding,
-                        at::IntList dilation, bool ceil_mode) const override;
+  at::Tensor max_pool2d(const at::Tensor& self, at::IntArrayRef kernel_size,
+                        at::IntArrayRef stride, at::IntArrayRef padding,
+                        at::IntArrayRef dilation,
+                        bool ceil_mode) const override;
 
   std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
-      const at::Tensor& self, at::IntList kernel_size, at::IntList stride,
-      at::IntList padding, at::IntList dilation, bool ceil_mode) const override;
+      const at::Tensor& self, at::IntArrayRef kernel_size,
+      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+      bool ceil_mode) const override;
 
   at::Tensor max_pool2d_with_indices_backward(
       const at::Tensor& grad_output, const at::Tensor& self,
-      at::IntList kernel_size, at::IntList stride, at::IntList padding,
-      at::IntList dilation, bool ceil_mode,
+      at::IntArrayRef kernel_size, at::IntArrayRef stride,
+      at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
       const at::Tensor& indices) const override;
 
   at::Tensor mean(const at::Tensor& self, at::ScalarType dtype) const override;
@@ -935,8 +938,8 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv2d_backward(
       const at::Tensor& grad_output, const at::Tensor& self,
-      const at::Tensor& weight, at::IntList kernel_size, at::IntList stride,
-      at::IntList padding, const at::Tensor& finput,
+      const at::Tensor& weight, at::IntArrayRef kernel_size,
+      at::IntArrayRef stride, at::IntArrayRef padding, const at::Tensor& finput,
       const at::Tensor& fgrad_input,
       std::array<bool, 3> output_mask) const override;
 
@@ -989,7 +992,7 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor& unsqueeze_(at::Tensor& self, int64_t dim) const override;
 
-  at::Tensor view(const at::Tensor& self, at::IntList size) const override;
+  at::Tensor view(const at::Tensor& self, at::IntArrayRef size) const override;
 
   at::Tensor view_as(const at::Tensor& self,
                      const at::Tensor& other) const override;

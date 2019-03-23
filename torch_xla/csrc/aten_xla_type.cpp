@@ -42,7 +42,7 @@ struct XlaOptions {
 };
 
 // Returns true if dilation is non-trivial (not 1) in at least one dimension.
-bool IsNonTrivialDilation(at::IntList dilation) {
+bool IsNonTrivialDilation(at::IntArrayRef dilation) {
   return std::any_of(
       dilation.begin(), dilation.end(),
       [](const int64_t dim_dilation) { return dim_dilation != 1; });
@@ -529,8 +529,9 @@ at::Tensor& AtenXlaType::atan_(at::Tensor& self) const {
 }
 
 at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
-                                   at::IntList kernel_size, at::IntList stride,
-                                   at::IntList padding, bool ceil_mode,
+                                   at::IntArrayRef kernel_size,
+                                   at::IntArrayRef stride,
+                                   at::IntArrayRef padding, bool ceil_mode,
                                    bool count_include_pad) const {
   // Lowering when ceil_mode is set not supported yet.
   if (ceil_mode) {
@@ -543,12 +544,10 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
       count_include_pad));
 }
 
-at::Tensor AtenXlaType::avg_pool2d_backward(const at::Tensor& grad_output,
-                                            const at::Tensor& self,
-                                            at::IntList kernel_size,
-                                            at::IntList stride,
-                                            at::IntList padding, bool ceil_mode,
-                                            bool count_include_pad) const {
+at::Tensor AtenXlaType::avg_pool2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, bool ceil_mode, bool count_include_pad) const {
   // Lowering when ceil_mode is set not supported yet.
   if (ceil_mode) {
     return AtenXlaTypeBase::avg_pool2d_backward(grad_output, self, kernel_size,
@@ -705,8 +704,8 @@ at::Tensor AtenXlaType::contiguous(const at::Tensor& self) const {
 
 at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
                                const at::Tensor& weight, const at::Tensor& bias,
-                               at::IntList stride, at::IntList padding,
-                               at::IntList dilation, int64_t groups) const {
+                               at::IntArrayRef stride, at::IntArrayRef padding,
+                               at::IntArrayRef dilation, int64_t groups) const {
   // Dilated or grouped convolutions aren't lowered to XLA yet.
   if (IsNonTrivialDilation(dilation) || groups != 1) {
     return AtenXlaTypeBase::conv2d(input, weight, bias, stride, padding,
@@ -1528,10 +1527,9 @@ at::Tensor AtenXlaType::max(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::max(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
-                                   at::IntList kernel_size, at::IntList stride,
-                                   at::IntList padding, at::IntList dilation,
-                                   bool ceil_mode) const {
+at::Tensor AtenXlaType::max_pool2d(
+    const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
   // Lowering when dilation is non-trivial or ceil_mode is set not supported.
   if (ceil_mode || IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool2d(self, kernel_size, stride, padding,
@@ -1543,8 +1541,8 @@ at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
-    const at::Tensor& self, at::IntList kernel_size, at::IntList stride,
-    at::IntList padding, at::IntList dilation, bool ceil_mode) const {
+    const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (ceil_mode || IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool2d_with_indices(
@@ -1569,8 +1567,9 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
 
 at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
-    at::IntList kernel_size, at::IntList stride, at::IntList padding,
-    at::IntList dilation, bool ceil_mode, const at::Tensor& indices) const {
+    at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
+    const at::Tensor& indices) const {
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (ceil_mode || IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool2d_with_indices_backward(
@@ -2374,13 +2373,11 @@ at::Tensor AtenXlaType::tensordot(const at::Tensor& self,
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
-AtenXlaType::thnn_conv2d_backward(const at::Tensor& grad_output,
-                                  const at::Tensor& self,
-                                  const at::Tensor& weight,
-                                  at::IntList kernel_size, at::IntList stride,
-                                  at::IntList padding, const at::Tensor& finput,
-                                  const at::Tensor& fgrad_input,
-                                  std::array<bool, 3> output_mask) const {
+AtenXlaType::thnn_conv2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& weight, at::IntArrayRef kernel_size,
+    at::IntArrayRef stride, at::IntArrayRef padding, const at::Tensor& finput,
+    const at::Tensor& fgrad_input, std::array<bool, 3> output_mask) const {
   at::Tensor undefined;
   auto gradients = XLATensor::conv2d_backward(
       /*out_backprop=*/bridge::GetXlaTensor(grad_output),
@@ -2516,7 +2513,8 @@ at::Tensor& AtenXlaType::unsqueeze_(at::Tensor& self, int64_t dim) const {
   return self;
 }
 
-at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntList size) const {
+at::Tensor AtenXlaType::view(const at::Tensor& self,
+                             at::IntArrayRef size) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::view(bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
 }
