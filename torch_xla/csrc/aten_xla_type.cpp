@@ -2463,6 +2463,18 @@ at::Tensor& AtenXlaType::transpose_(at::Tensor& self, int64_t dim0,
   return self;
 }
 
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::triangular_solve(
+    const at::Tensor& b, const at::Tensor& A, bool upper, bool transpose,
+    bool unitriangular) const {
+  // Currently, ATen doesn't have a left_side option. Once this
+  // is added, this API will have to be changed.
+  auto results = XLATensor::triangular_solve(
+      bridge::GetXlaTensor(b), bridge::GetXlaTensor(A), /*left_side=*/true,
+      upper, transpose, unitriangular);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
+}
+
 at::Tensor AtenXlaType::tril(const at::Tensor& self, int64_t diagonal) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::tril(bridge::GetXlaTensor(self), diagonal));
