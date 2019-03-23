@@ -719,6 +719,42 @@ TEST_F(AtenXlaTensorTest, TestCholesky) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestTriangularSolve) {
+  static const int dims[] = {4, 7};
+  for (bool batched_a : {true, false}) {
+    for (bool batched_b : {true, false}) {
+      for (auto m : dims) {
+        for (auto n : dims) {
+          for (bool upper : {true, false}) {
+            for (bool transpose : {true, false}) {
+              for (bool unitriangular : {true, false}) {
+                at::Tensor a = at::randn({m, m}, at::TensorOptions(at::kFloat));
+                at::Tensor b = at::randn({m, n}, at::TensorOptions(at::kFloat));
+                a = batched_a ? a.expand({3, m, m}).clone() : a;
+                b = batched_b ? b.expand({3, m, n}).clone() : b;
+                auto result = at::triangular_solve(
+                    b, a, /*upper=*/upper, /*transpose=*/transpose,
+                    /*unitriangular=*/unitriangular);
+                ForEachDevice([&](const Device& device) {
+                  at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+                  at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+                  auto xla_result = at::triangular_solve(
+                      xla_b, xla_a, /*upper=*/upper, /*transpose=*/transpose,
+                      /*unitriangular=*/unitriangular);
+                  AllClose(std::get<0>(result), std::get<0>(xla_result),
+                           /*rtol=*/1e-3, /*atol=*/1e-4);
+                  AllClose(std::get<1>(result), std::get<1>(xla_result),
+                           /*rtol=*/1e-3, /*atol=*/1e-4);
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestKthValue) {
   at::Tensor a = at::rand({4, 5, 3}, at::TensorOptions(at::kFloat));
   for (int k = 1; k <= 3; ++k) {

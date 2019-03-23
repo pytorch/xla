@@ -760,6 +760,10 @@ class XLATensor {
   // In-place version of the method above.
   static void transpose_(XLATensor& input, xla::int64 dim0, xla::int64 dim1);
 
+  static std::tuple<XLATensor, XLATensor> triangular_solve(
+      const XLATensor& rhs, const XLATensor& lhs, bool left_side, bool upper,
+      bool transpose, bool unitriangular);
+
   // Returns the lower triangular part of a matrix (2-D tensor) or batch of
   // matrices input, the other elements of the result tensor out are set to 0.
   static XLATensor tril(const XLATensor& input, xla::int64 diagonal);

@@ -927,6 +927,10 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor trace(const at::Tensor& self) const override;
 
+  std::tuple<at::Tensor, at::Tensor> triangular_solve(
+      const at::Tensor& b, const at::Tensor& A, bool upper, bool transpose,
+      bool unitriangular) const override;
+
   at::Tensor one_hot(const at::Tensor& self,
                      int64_t num_classes) const override;
 

@@ -81,6 +81,7 @@
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
+#include "torch_xla/csrc/ops/triangular_solve.h"
 #include "torch_xla/csrc/ops/tril.h"
 #include "torch_xla/csrc/ops/triu.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
@@ -1744,6 +1745,17 @@ XLATensor XLATensor::transpose(const XLATensor& input, xla::int64 dim0,
 
 void XLATensor::transpose_(XLATensor& input, xla::int64 dim0, xla::int64 dim1) {
   input.SetIrValue(ir::ops::TransposeOp(input.GetIrValue(), dim0, dim1));
+}
+
+std::tuple<XLATensor, XLATensor> XLATensor::triangular_solve(
+    const XLATensor& rhs, const XLATensor& lhs, bool left_side, bool upper,
+    bool transpose, bool unitriangular) {
+  // TriangularSolve takes lower instead of upper, hence the negation.
+  ir::NodePtr node = ir::MakeNode<ir::ops::TriangularSolve>(
+      rhs.GetIrValue(), lhs.GetIrValue(), left_side, !upper, transpose,
+      unitriangular);
+  return std::make_tuple(rhs.CreateFrom(ir::Value(node, 0)),
+                         rhs.CreateFrom(ir::Value(node, 1)));
 }
 
 XLATensor XLATensor::tril(const XLATensor& input, xla::int64 diagonal) {
