@@ -962,13 +962,6 @@ class XLATensor {
 
   std::shared_ptr<Data> data_ptr() const { return data_; }
 
-  // Returns whether the tensor should be put as device data, or as a constant
-  // in the graph.
-  bool ShouldBeOnDevice(const at::Tensor& tensor) const;
-
-  // Creates an IR value from ATEN tensor data.
-  ir::Value GetIrValue(const at::Tensor& tensor) const;
-
   void SetIrValue(ir::Value ir_value);
 
   void SetTensorData(at::Tensor tensor_data);
@@ -995,7 +988,7 @@ class XLATensor {
   // Discards all the XLA and IR data, by making the ATEN tensor one the only
   // source for this XLA tensor. An error is generated if the XLA tensor does
   // not have ATEN tensors data.
-  void DiscardXlaData();
+  void MakeWriteableTensorDataSource();
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.

@@ -1545,6 +1545,14 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b[0, :, :] = 1
     self.assertEqual(b.data, xla_b.data.cpu())
 
+  def test_slice_stepped_assign(self):
+    a = torch.ones((10, 4))
+    xla_device = xm.xla_device()
+    xla_a = a.to(xla_device)
+    a[:, 0::2] = 2
+    xla_a[:, 0::2] = 2
+    self.assertEqual(a.data, xla_a.data.cpu())
+
   def test_clamp(self):
     a = torch.randn(3, 3)
     xla_a = a.to(xm.xla_device())

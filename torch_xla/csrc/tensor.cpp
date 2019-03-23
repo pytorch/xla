@@ -23,6 +23,7 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/ops.h"
+#include "torch_xla/csrc/ops/tensor_data.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -417,22 +418,6 @@ void XLATensor::TryLimitGraphSize() {
   }
 }
 
-bool XLATensor::ShouldBeOnDevice(const at::Tensor& tensor) const {
-  // Anything which is not a scalar goes on device for now.
-  return tensor.numel() > 1;
-}
-
-ir::Value XLATensor::GetIrValue(const at::Tensor& tensor) const {
-  if (ShouldBeOnDevice(tensor)) {
-    data()->xla_data = TensorToXlaData(tensor, GetDevice());
-    return CreateTensorNode(data()->xla_data);
-  }
-  xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, &GetDevice());
-  xla::Literal literal = GetTensorLiteral(tensor, &tensor_shape, &GetDevice());
-  return ir::MakeNode<ir::ops::Constant>(std::move(literal));
-}
-
 ir::Value XLATensor::GetIrValue() const {
   ir::Value ir_value = CurrentIrValue();
   if (ir_value) {
@@ -451,7 +436,8 @@ ir::Value XLATensor::GetIrValue() const {
   }
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
-  data()->ir_value = GetIrValue(*tensor_data);
+  data()->ir_value =
+      ir::MakeNode<ir::ops::TensorData>(*tensor_data, GetDevice());
   return data()->ir_value;
 }
 
@@ -531,21 +517,26 @@ void XLATensor::SetScalarType(
   data()->logical_element_type = logical_element_type;
 }
 
-void XLATensor::DiscardXlaData() {
-  XLA_CHECK(data()->tensor_data);
+void XLATensor::MakeWriteableTensorDataSource() {
+  c10::optional<at::Tensor> tensor_data = CurrentTensorData();
+  XLA_CHECK(tensor_data);
+  if (data()->view != nullptr) {
+    // We are handing out an at::Tensor which the callers might write into it.
+    // If this is a view, we need to push a TensorData update to the view. A
+    // TensorData node will fetch the status of the at::Tensor at lowering time,
+    // so that all the changes done by the caller, will become visible only when
+    // a value from the view is requested.
+    ir::Value ir_value =
+        ir::MakeNode<ir::ops::TensorData>(*tensor_data, GetDevice());
+    data()->view = UpdateView(data()->view, ir_value);
+  }
   data()->xla_data = nullptr;
   data()->ir_value = ir::Value();
-  data()->view = nullptr;
 }
 
 at::Tensor XLATensor::ToMutableTensor() {
   at::Tensor tensor_data = ToTensor();
-  // In case of the ATEN Tensor data being possibly dirty, we do clear both the
-  // IR Node and the XLA data. This API will be called to feed the tensor data
-  // to ATEN APIs, and when we get to that point, we already lost the full XLA
-  // fusion deal (and hence we do not need to keep the XLA data around for
-  // caching computations).
-  DiscardXlaData();
+  MakeWriteableTensorDataSource();
   return tensor_data;
 }
 
@@ -623,11 +614,12 @@ std::vector<at::Tensor> XLATensor::GetTensors(
     for (size_t i = 0; i < tensors->size(); ++i) {
       if ((*writeable)[i]) {
         // If all we have for this tensor is ATEN tensor data, we need to set it
-        // before calling DiscardXlaData(), which will otherwise error out.
+        // before calling MakeWriteableTensorDataSource(), which will otherwise
+        // error out.
         if (!(*tensors)[i].CurrentTensorData()) {
           (*tensors)[i].SetTensorData(results[i]);
         }
-        (*tensors)[i].DiscardXlaData();
+        (*tensors)[i].MakeWriteableTensorDataSource();
       }
     }
   }

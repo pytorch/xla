@@ -29,8 +29,8 @@ FuncGen = namedtuple_with_defaults(
     'tree, xtree, rwxtree, func, xfunc, code, sig, rwsig, cppsig, funsig, mapsig'
 )
 
-FuncOpts = namedtuple_with_defaults('FuncOpts',
-                                    'ref_param, device_param, outfn_template')
+FuncOpts = namedtuple_with_defaults(
+    'FuncOpts', 'ref_param, device_param, wparams, outfn_template')
 
 _GRAMMAR = r"""
     start: type fnname "(" params ")"
@@ -284,6 +284,8 @@ _FUNCTION_OPTIONS = {
         FuncOpts(ref_param='device'),
     'to(Tensor, Tensor, bool, bool) -> Tensor':
         FuncOpts(ref_param='other'),
+    'slice(Tensor, int64_t, int64_t, int64_t, int64_t) -> Tensor':
+        FuncOpts(wparams=['self']),
 }
 
 _RESULT_NAME = 'x_result'
@@ -338,24 +340,25 @@ class TensorFetcher(object):
 
   def __init__(self, var_name):
     self.var_name = var_name
+    self.tvar_name = '{}_tensors'.format(self.var_name)
+    self.wvar_name = '{}_writeables'.format(self.var_name)
     self.tensors = []
     self.writeable = []
 
   def add(self, name, writeable):
     self.tensors.append(name)
-    self.writeable.append('true' if writeable else 'false')
+    self.writeable.append(writeable)
     return '{}[{}]'.format(self.var_name, len(self.tensors) - 1)
 
   def generate(self):
-    tvar_name = '{}_tensors'.format(self.var_name)
-    wvar_name = '{}_writeables'.format(self.var_name)
     code = ''
     code += '  std::vector<at::Tensor> {} = {{{}}};\n'.format(
-        tvar_name, ', '.join(self.tensors))
+        self.tvar_name, ', '.join(self.tensors))
+    writeable_strings = ['true' if w else 'false' for w in self.writeable]
     code += '  std::vector<bool> {} = {{{}}};\n'.format(
-        wvar_name, ', '.join(self.writeable))
+        self.wvar_name, ', '.join(writeable_strings))
     code += ('  auto {} = bridge::XlaCreateTensorList({}, &{});\n').format(
-        self.var_name, tvar_name, wvar_name)
+        self.var_name, self.tvar_name, self.wvar_name)
     return code
 
 
@@ -380,6 +383,13 @@ def get_outfn_options(fname, mapsig):
   for frx, fnopts in _FN_OUT_REGEX:
     if re.match(frx, fname) or re.match(frx, mapsig):
       return fnopts
+
+
+def is_write_param(fnopts, pname, defval):
+  if fnopts and fnopts.wparams:
+    if pname in fnopts.wparams:
+      return True
+  return defval
 
 
 def create_type_instances():
@@ -831,8 +841,9 @@ def generate_aten_to_xla(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
     pname = param_name(p)
     if cptype == 'TensorList':
       xname = 'l_{}'.format(pname)
-      code += ('  auto {} = bridge::XlaCreateTensorList({}, '
-               '/*writeable=*/nullptr);\n').format(xname, pname)
+      code += (
+          '  auto {} = bridge::XlaCreateTensorList({}, /*writeable=*/nullptr);\n'
+      ).format(xname, pname)
       param_vars.append(xname)
     elif cptype == 'TensorOptions':
       gcode, xname = rewrite_tensor_options(fname, pname)
@@ -841,10 +852,10 @@ def generate_aten_to_xla(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
     elif cptype != 'Tensor':
       param_vars.append(pname)
     elif type_is_const(ptype):
-      xname = tfetcher.add(pname, False)
+      xname = tfetcher.add(pname, is_write_param(fnopts, pname, False))
       param_vars.append(xname)
     else:
-      xname = tfetcher.add(pname, True)
+      xname = tfetcher.add(pname, is_write_param(fnopts, pname, True))
       param_vars.append(xname)
     if p == ref_param and not get_optional(fnopts, 'ref_param'):
       xla_ref_param = param_vars[-1]

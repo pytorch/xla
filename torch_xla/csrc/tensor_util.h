@@ -39,12 +39,12 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
 
 // Uploads an ATEN tensor data to the device and fetches the corresponding
 // device data handle.
-std::shared_ptr<xla::ComputationClient::Data> TensorToXlaData(
-    const at::Tensor& tensor, const Device& device);
+xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
+                                                const Device& device);
 
 // Retrieves the device data handles by parallel uploading data onto the
 // corresponding devices.
-std::vector<std::shared_ptr<xla::ComputationClient::Data>> CreateTensorsData(
+std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices);
 
