@@ -272,8 +272,8 @@ at::Tensor AtenXlaType::_s_copy_from(const at::Tensor& self,
   // Do not mark the tensor creation as writeable to not discard the XLA tensor
   // device context, but make a copy to avoid core data to be shared.
   std::vector<at::Tensor> tensors = {self};
-  std::vector<bool> writeables = {false};
-  auto xla_tensors = bridge::XlaCreateTensorList(tensors, &writeables);
+  auto xla_tensors =
+      bridge::XlaCreateTensorList(tensors, /*writeable=*/nullptr);
   // Hack in an overwrite of a const tensor.
   const_cast<at::Tensor&>(dst) = CopyTensor(xla_tensors.front());
   return dst;
@@ -726,11 +726,11 @@ at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
 at::Tensor AtenXlaType::copy(const at::Tensor& src, bool /* non_blocking */,
                              at::optional<c10::Device> to_device) const {
   std::vector<at::Tensor> tensors = {src};
-  std::vector<bool> writeables = {false};
-  auto xla_tensors = bridge::XlaCreateTensorList(tensors, &writeables);
+  auto xla_tensors =
+      bridge::XlaCreateTensorList(tensors, /*writeable=*/nullptr);
   Device device = to_device ? bridge::AtenDeviceToXlaDevice(*to_device)
                             : *GetDefaultDevice();
-  return bridge::CreateXlaTensor(xla_tensors.front(), device);
+  return bridge::CreateXlaTensor(CopyTensor(xla_tensors.front()), device);
 }
 
 at::Tensor AtenXlaType::cos(const at::Tensor& self) const {
@@ -2016,9 +2016,12 @@ at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
 at::Tensor& AtenXlaType::s_copy_(at::Tensor& self, const at::Tensor& src,
                                  bool /* non_blocking */) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor src_tensor =
-      bridge::GetOrCreateXlaTensor(src, self_tensor.GetDevice());
-  XLATensor::s_copy_(self_tensor, src_tensor);
+  auto xsrc_tensor = bridge::TryGetXlaTensor(src);
+  if (xsrc_tensor) {
+    XLATensor::s_copy_(self_tensor, *xsrc_tensor);
+  } else {
+    self_tensor.SetTensor(CopyTensor(src));
+  }
   return self;
 }
 
@@ -2121,9 +2124,6 @@ int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) const {
 
 at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
                               int64_t start, int64_t end, int64_t step) const {
-  if (step != 1) {
-    return AtenXlaTypeBase::slice(self, dim, start, end, step);
-  }
   return bridge::AtenFromXlaTensor(
       XLATensor::slice(bridge::GetXlaTensor(self), dim, start, end, step));
 }

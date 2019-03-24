@@ -11,6 +11,8 @@ const OpKindWrapper xla_cast("xla::cast");
 const OpKindWrapper xla_not_supported("xla::not_supported");
 const OpKindWrapper xla_update_slice("xla::update_slice");
 const OpKindWrapper xla_generic_slice("xla::generic_slice");
+const OpKindWrapper xla_select("xla::select");
+const OpKindWrapper xla_unselect("xla::unselect");
 
 }  // namespace ops
 }  // namespace ir

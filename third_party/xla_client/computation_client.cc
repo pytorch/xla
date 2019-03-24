@@ -162,6 +162,20 @@ std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
   return std::move(results[0]);
 }
 
+std::vector<string> ComputationClient::GetCompilationDevices(
+    string device) const {
+  auto& replication_devices = GetReplicationDevices();
+  std::vector<string> compilation_devices;
+  if (replication_devices.empty()) {
+    compilation_devices.emplace_back(std::move(device));
+  } else {
+    compilation_devices.insert(compilation_devices.end(),
+                               replication_devices.begin(),
+                               replication_devices.end());
+  }
+  return compilation_devices;
+}
+
 int64 ComputationClient::GetDeviceOrdinal(const string& device) {
   auto pos = device.rfind(':');
   CHECK_NE(pos, string::npos) << device;
