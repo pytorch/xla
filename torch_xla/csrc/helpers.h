@@ -90,11 +90,19 @@ class XlaHelpers {
 
   // Creates a scalar broadcasted to a given shape.
   template <class T>
+  static xla::XlaOp ScalarBroadcast(
+      T scalar_value, xla::PrimitiveType type,
+      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+      xla::XlaBuilder* builder) {
+    xla::XlaOp scalar_op = ScalarValue<T>(scalar_value, type, builder);
+    return xla::Broadcast(scalar_op, dimensions);
+  }
+
+  template <class T>
   static xla::XlaOp ScalarBroadcast(T scalar_value, const xla::Shape& shape,
                                     xla::XlaBuilder* builder) {
-    xla::XlaOp scalar_op =
-        ScalarValue<T>(scalar_value, shape.element_type(), builder);
-    return xla::Broadcast(scalar_op, shape.dimensions());
+    return ScalarBroadcast<T>(scalar_value, shape.element_type(),
+                              shape.dimensions(), builder);
   }
 
   // Creates a convolution or dot precision configuration.

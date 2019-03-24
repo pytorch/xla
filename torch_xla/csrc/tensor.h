@@ -53,6 +53,9 @@ class XLATensor {
   // to other ATEN APIs which will modify its value.
   at::Tensor ToMutableTensor();
 
+  // Assigns the tensor value to the XLA tensor.
+  void SetTensor(at::Tensor tensor);
+
   c10::optional<XLATensor> grad() const;
   void SetGradient(const XLATensor& grad);
 
@@ -101,9 +104,9 @@ class XLATensor {
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
 
-  // Dumps the XLA HLO text of the computation accumulated in the graph node
-  // which is attached to this tensor.
-  std::string DumpGraphNodeComputation() const;
+  // Dumps the XLA HLO text of the computation accumulated in the graph which is
+  // attached the tensors.
+  static std::string DumpHloComputation(const std::vector<XLATensor>& tensors);
 
   // Returns the common device for "tensors". Throws if not all tensors have the
   // same device.
@@ -877,7 +880,7 @@ class XLATensor {
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming
     // the IR graph above them).
-    bool force_xla_data = false;
+    bool force_xla_data = true;
   };
 
   // The context used by the ApplyPendingGraph() API, in order to allow it speed
@@ -970,6 +973,8 @@ class XLATensor {
 
   void SetTensorData(at::Tensor tensor_data);
 
+  View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
+
   std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,
                                    ir::Value ir_value) const;
 
@@ -1003,11 +1008,6 @@ class XLATensor {
 
   std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node) const;
 
-  // Retrieves the set of devices to be passed to the computation client
-  // Compile() API. This can return a vector with device itself, or the set of
-  // replication devices set into the computation client.
-  static std::vector<std::string> GetCompilationDevices(std::string device);
-
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.
   static DataUidMap CreateDataUidMap(const std::vector<XLATensor>& tensors);
@@ -1023,7 +1023,7 @@ class XLATensor {
   static ApplyContextCache* GetApplyContextCache();
 
   static SyncTensorCollection CollectSyncTensors(
-      const std::vector<XLATensor>& tensors);
+      const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config);
 
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.

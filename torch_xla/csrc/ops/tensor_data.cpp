@@ -20,7 +20,7 @@ void PrintValues(std::ostream& stream, const at::Tensor& tensor) {
   size_t num_elements = flat_tensor.numel();
   stream << "[";
   for (size_t i = 0; i < num_elements; ++i) {
-    if (i >= 0) {
+    if (i > 0) {
       stream << ", ";
     }
     stream << data[i];
@@ -59,29 +59,33 @@ TensorData::TensorData(at::Tensor tensor, Device device)
 
 std::string TensorData::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", device=" << device_ << ", values=";
-  PrintTensorValues(ss, tensor_);
+  ss << Node::ToString() << ", device=" << device_;
+  if (ShouldMakeConstant(tensor_)) {
+    ss << ", values=";
+    PrintTensorValues(ss, tensor_);
+  }
   return ss.str();
 }
 
 XlaOpVector TensorData::Lower(LoweringContext* loctx) const {
   if (ShouldMakeConstant(tensor_)) {
-    xla::ComputationClient::DataPtr data = TensorToXlaData(tensor_, device_);
-    return ReturnOp(loctx->GetParameter(data), loctx);
+    xla::Literal value = GetTensorLiteral(tensor_, &shape(), &device_);
+    return ReturnOp(xla::ConstantLiteral(loctx->builder(), value), loctx);
   }
-  xla::Literal value = GetTensorLiteral(tensor_, &shape(), &device_);
-  return ReturnOp(xla::ConstantLiteral(loctx->builder(), value), loctx);
+  xla::ComputationClient::DataPtr data = TensorToXlaData(tensor_, device_);
+  return ReturnOp(loctx->GetParameter(data), loctx);
 }
 
 bool TensorData::ShouldMakeConstant(const at::Tensor& tensor) {
-  // Anything which is not a scalar goes on device for now.
-  return tensor.numel() > 1;
+  // Anything which is not a scalar will not be a constant and will be device
+  // data.
+  return tensor.numel() == 1;
 }
 
 size_t TensorData::GetTensorHashSeed(const at::Tensor& tensor) {
   // If we generate device data, the constant seed is OK (as the shape of it
   // will get into the hash mix in the IrNode constructor).
-  // But if this is a costant, we need to hash the content of the tensor.
+  // But if this is a constant, we need to hash the content of the tensor.
   size_t seed = 0x34acb4b;
   if (ShouldMakeConstant(tensor)) {
     at::Tensor flat_tensor = tensor.contiguous();

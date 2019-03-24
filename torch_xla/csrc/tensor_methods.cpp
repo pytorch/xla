@@ -1528,14 +1528,16 @@ void XLATensor::sinh_(XLATensor& input) {
 
 XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
                            xla::int64 start, xla::int64 end, xla::int64 step) {
-  XLA_CHECK_EQ(step, 1);
   auto input_shape = input.shape();
   dim = XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   start = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
                                            start);
   end = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
                                          end);
-  return narrow(input, dim, start, end - start);
+
+  SelectInfo select = {dim, start, end, step};
+  ViewInfo view_info(input_shape, std::move(select));
+  return input.CreateView(std::move(view_info));
 }
 
 XLATensor XLATensor::smooth_l1_loss(const XLATensor& input,

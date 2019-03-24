@@ -7,7 +7,10 @@
 #include <ATen/ATen.h>
 #include <gtest/gtest.h>
 
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
@@ -45,6 +48,12 @@ void WithAllDevices(
 std::string GetTensorTextGraph(at::Tensor tensor);
 
 std::string GetTensorDotGraph(at::Tensor tensor);
+
+std::vector<xla::ComputationClient::DataPtr> Execute(
+    tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device);
+
+std::vector<at::Tensor> ExecuteAndFetch(
+    tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device);
 
 }  // namespace cpp_test
 }  // namespace torch_xla

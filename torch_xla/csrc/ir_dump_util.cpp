@@ -159,12 +159,22 @@ std::string DumpUtil::ToDot(
   for (auto it = post_order.rbegin(); it != post_order.rend(); ++it) {
     const Node* node = *it;
     size_t id = id_map.at(node);
-    for (auto& output : node->operands()) {
+
+    for (size_t i = 0; i < node->operands().size(); ++i) {
+      const ir::Output& output = node->operand(i);
       ss << "  node" << id_map.at(output.node) << " -> node" << id;
-      if (output.node->num_outputs() > 1) {
-        ss << " [label=\"" << output.index << "\"]";
+      if (node->operands().size() > 1) {
+        ss << " [label=\"i=" << i;
+        if (output.node->num_outputs() > 1) {
+          ss << ",o=" << output.index;
+        }
+        ss << "\"]\n";
+      } else {
+        if (output.node->num_outputs() > 1) {
+          ss << " [label=\"o=" << output.index << "\"]";
+        }
+        ss << "\n";
       }
-      ss << "\n";
     }
   }
   ss << "}\n";

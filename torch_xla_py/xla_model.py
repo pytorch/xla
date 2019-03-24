@@ -10,6 +10,7 @@ import time
 import torch
 import torch.nn as nn
 import torch_xla
+import torch_xla_py.graph_saver as gs
 import torch_xla_py.utils as xu
 import torch_xla_py.keyd_queue as kq
 
@@ -413,6 +414,10 @@ def _fetch_optimizer_state(optimizer):
 
 
 def _sync_optimizer_state(state):
+  save_dir = os.environ.get('SAVE_GRAPH_DIR', None)
+  if save_dir:
+    gs.save_tensors_graph(save_dir, 'optimizer_step',
+                          state.gradients + state.tensors)
   torch_xla._XLAC._xla_sync_multi(state.gradients + state.tensors)
 
 
