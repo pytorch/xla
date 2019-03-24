@@ -186,6 +186,11 @@ class ComputationClient {
                                        std::vector<string> devices,
                                        const Shape* output_shape);
 
+  // Retrieves the set of devices to be passed to the computation client
+  // Compile() API. This can return a vector with device itself, or the set of
+  // replication devices set into the computation client.
+  std::vector<string> GetCompilationDevices(string device) const;
+
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.
   static int64 GetDeviceOrdinal(const string& device);

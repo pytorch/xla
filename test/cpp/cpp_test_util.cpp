@@ -3,11 +3,12 @@
 #include <iostream>
 #include <string>
 
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ir_dump_util.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
@@ -76,6 +77,48 @@ std::string GetTensorTextGraph(at::Tensor tensor) {
 std::string GetTensorDotGraph(at::Tensor tensor) {
   XLATensor xtensor = bridge::GetXlaTensor(tensor);
   return ir::DumpUtil::ToDot({xtensor.GetIrValue().node.get()});
+}
+
+std::vector<xla::ComputationClient::DataPtr> Execute(
+    tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device) {
+  ir::LoweringContext lowering_ctx("Execute");
+  for (auto node : roots) {
+    xla::XlaOp root = lowering_ctx.GetOutputOp(node);
+    lowering_ctx.AddResult(root);
+  }
+
+  xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
+  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  xla::Shape shape =
+      MakeShapeWithDeviceLayout(program_shape.result(), device.hw_type);
+
+  std::vector<xla::ComputationClient::CompileInstance> instances;
+  instances.push_back(
+      {std::move(computation),
+       xla::ComputationClient::Get()->GetCompilationDevices(device.ToString()),
+       &shape});
+
+  std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+      computations =
+          xla::ComputationClient::Get()->Compile(std::move(instances));
+
+  xla::ComputationClient::ExecuteComputationOptions options;
+  return xla::ComputationClient::Get()->ExecuteComputation(
+      *computations.front(), lowering_ctx.GetParametersData(),
+      device.ToString(), options);
+}
+
+std::vector<at::Tensor> ExecuteAndFetch(
+    tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device) {
+  auto results = Execute(roots, device);
+  std::vector<xla::Literal> literals =
+      xla::ComputationClient::Get()->TransferFromServer(results);
+  std::vector<at::Tensor> tensors;
+  for (auto& literal : literals) {
+    tensors.push_back(MakeTensorFromXlaLiteral(
+        literal, TensorTypeFromXlaType(literal.shape().element_type())));
+  }
+  return tensors;
 }
 
 }  // namespace cpp_test

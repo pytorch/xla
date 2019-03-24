@@ -101,6 +101,17 @@ void SyncTensors(const std::vector<at::Tensor>& tensors) {
   XLATensor::SyncTensorsGraph(&xtensors);
 }
 
+std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
+  std::vector<XLATensor> xtensors;
+  for (auto& tensor : tensors) {
+    auto xtensor = bridge::TryGetXlaTensor(ToTensor(tensor));
+    if (xtensor) {
+      xtensors.push_back(*xtensor);
+    }
+  }
+  return XLATensor::DumpHloComputation(xtensors);
+}
+
 void InitXlaModuleBindings(py::module m) {
   py::class_<XlaModule, std::shared_ptr<XlaModule>>(m, "XlaModule")
       .def(py::init([](const std::shared_ptr<torch::jit::script::Module> module,
@@ -157,6 +168,10 @@ void InitXlaModuleBindings(py::module m) {
                 return ir::DumpUtil::ToText(nodes);
               };
           return GetTensorsDump(tensors, coverter);
+        });
+  m.def("_get_xla_tensors_hlo",
+        [](const std::vector<at::Tensor>& tensors) -> std::string {
+          return GetTensorsHloGraph(tensors);
         });
   m.def("_xla_get_devices",
         []() { return xla::ComputationClient::Get()->GetAvailableDevices(); });

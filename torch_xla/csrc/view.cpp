@@ -10,6 +10,8 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/ops/generic_slice.h"
 #include "torch_xla/csrc/ops/permute.h"
+#include "torch_xla/csrc/ops/select.h"
+#include "torch_xla/csrc/ops/unselect.h"
 #include "torch_xla/csrc/ops/update_slice.h"
 #include "torch_xla/csrc/ops/view.h"
 
@@ -22,7 +24,11 @@ bool IsNarrow(const ViewInfo& view_info) {
 }
 
 ir::Value ApplyViewInfo(ir::Value ir_value, const ViewInfo& view_info) {
-  if (IsNarrow(view_info)) {
+  if (view_info.select) {
+    return ir::MakeNode<ir::ops::Select>(
+        ir_value, view_info.select->dim, view_info.select->start,
+        view_info.select->end, view_info.select->stride);
+  } else if (IsNarrow(view_info)) {
     return ir::MakeNode<ir::ops::GenericSlice>(ir_value, view_info.indices,
                                                view_info.shape.dimensions());
   } else if (!view_info.permutation.empty()) {
@@ -45,7 +51,12 @@ ir::Value ApplyUpdate(ir::Value ir_value,
   ir::Value result = update_data.ir_value;
   for (size_t i = update_data.view_infos.size(); i > 0; --i) {
     const ViewInfo& view_info = update_data.view_infos[i - 1];
-    if (IsNarrow(view_info)) {
+    if (view_info.select) {
+      result = ir::MakeNode<ir::ops::Unselect>(
+          tmp_values[i - 1], result, view_info.select->dim,
+          view_info.select->start, view_info.select->end,
+          view_info.select->stride);
+    } else if (IsNarrow(view_info)) {
       result = ir::MakeNode<ir::ops::UpdateSlice>(tmp_values[i - 1], result,
                                                   view_info.indices);
     } else if (!view_info.permutation.empty()) {
@@ -71,8 +82,18 @@ ViewInfo::ViewInfo(std::vector<xla::int64> sizes,
       sizes(std::move(sizes)),
       permutation(std::move(permutation)) {}
 
+ViewInfo::ViewInfo(const xla::Shape& source_shape, SelectInfo select)
+    : shape(ir::ops::Select::MakeSelectShape(
+          source_shape, select.dim, select.start, select.end, select.stride)),
+      sizes(source_shape.dimensions()),
+      select(std::move(select)) {}
+
 void Alias::Update(ir::Value ir_value, std::vector<ViewInfo> view_infos) {
-  updates_.push_back({std::move(ir_value), std::move(view_infos)});
+  if (!updates_.empty() && updates_.back().view_infos == view_infos) {
+    updates_.back().ir_value = std::move(ir_value);
+  } else {
+    updates_.push_back({std::move(ir_value), std::move(view_infos)});
+  }
   ++generation_;
 }
 

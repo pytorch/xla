@@ -3,17 +3,36 @@
 #include <memory>
 #include <vector>
 
+#include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 
+struct SelectInfo {
+  bool operator==(const SelectInfo& ref) const {
+    return dim == ref.dim && start == ref.start && end == ref.end &&
+           stride == ref.stride;
+  }
+
+  xla::int64 dim = 0;
+  xla::int64 start = 0;
+  xla::int64 end = 0;
+  xla::int64 stride = 0;
+};
+
 struct ViewInfo {
   ViewInfo() = default;
   ViewInfo(xla::Shape shape, std::vector<xla::int64> sizes);
   ViewInfo(std::vector<xla::int64> sizes, std::vector<xla::int64> permutation,
            xla::PrimitiveType type);
+  ViewInfo(const xla::Shape& source_shape, SelectInfo select);
+
+  bool operator==(const ViewInfo& ref) const {
+    return shape == ref.shape && indices == ref.indices && sizes == ref.sizes &&
+           permutation == ref.permutation && select == ref.select;
+  }
 
   // The shape of the result of a view. In case of narrowing, this represents
   // the size of the narrow slice.
@@ -25,6 +44,8 @@ struct ViewInfo {
   std::vector<xla::int64> sizes;
   // The permutation to be used. If empty, this is not a permute operation.
   std::vector<xla::int64> permutation;
+  // Information used for sliced views.
+  absl::optional<SelectInfo> select;
 };
 
 // When a "view" (capture by reference) is taken on a node, an Alias object is

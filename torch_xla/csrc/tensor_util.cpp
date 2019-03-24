@@ -525,36 +525,57 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
   }
 }
 
-xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
-                                        const Device* device) {
+xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
+                                          const Device* device) {
   if (device == nullptr) {
     device = GetDefaultDevice();
   }
-  switch (scalar_type) {
-    case at::ScalarType::Double:
+  switch (type) {
+    case xla::PrimitiveType::F64:
       if (detail::UseBF16()) {
         return xla::PrimitiveType::BF16;
       }
       return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::F64
                                                 : xla::PrimitiveType::F32;
-    case at::ScalarType::Float:
+    case xla::PrimitiveType::F32:
       // When PyTorch will support native BF16 type, the global configuration
       // can be replaced (or augmented) with the proper mapping.
       return detail::UseBF16() ? xla::PrimitiveType::BF16
                                : xla::PrimitiveType::F32;
-    case at::ScalarType::Byte:
+    case xla::PrimitiveType::U8:
       return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::U8
                                                 : xla::PrimitiveType::S32;
-    case at::ScalarType::Char:
+    case xla::PrimitiveType::S8:
       return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S8
                                                 : xla::PrimitiveType::S32;
-    case at::ScalarType::Short:
+    case xla::PrimitiveType::U16:
+      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::U16
+                                                : xla::PrimitiveType::S32;
+    case xla::PrimitiveType::S16:
       return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S16
                                                 : xla::PrimitiveType::S32;
+    default:
+      return type;
+  }
+}
+
+xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
+                                        const Device* device) {
+  switch (scalar_type) {
+    case at::ScalarType::Double:
+      return GetDevicePrimitiveType(xla::PrimitiveType::F64, device);
+    case at::ScalarType::Float:
+      return GetDevicePrimitiveType(xla::PrimitiveType::F32, device);
+    case at::ScalarType::Byte:
+      return GetDevicePrimitiveType(xla::PrimitiveType::U8, device);
+    case at::ScalarType::Char:
+      return GetDevicePrimitiveType(xla::PrimitiveType::S8, device);
+    case at::ScalarType::Short:
+      return GetDevicePrimitiveType(xla::PrimitiveType::S16, device);
     case at::ScalarType::Int:
-      return xla::PrimitiveType::S32;
+      return GetDevicePrimitiveType(xla::PrimitiveType::S32, device);
     case at::ScalarType::Long:
-      return xla::PrimitiveType::S64;
+      return GetDevicePrimitiveType(xla::PrimitiveType::S64, device);
     default:
       XLA_ERROR() << "Type not supported: " << scalar_type;
   }
