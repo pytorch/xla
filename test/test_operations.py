@@ -1571,7 +1571,7 @@ class MNISTComparator(nn.Module):
     self.fc2 = nn.Linear(50, 10)
 
   def forward(self, x):
-    mc.save('inputs', x)
+    mc.save(None, x)
     x = F.relu(F.max_pool2d(self.conv1(x), 2))
     mc.save('layer1', x)
     x = F.relu(F.max_pool2d(self.conv2(x), 2))

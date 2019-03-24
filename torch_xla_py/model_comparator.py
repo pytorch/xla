@@ -1,14 +1,18 @@
+#!/usr/bin/env python
+
 from __future__ import division
 from __future__ import print_function
 
+import argparse
 import os
 import re
+import sys
 import torch
+import traceback
 
 _SAVE_DIR = None
 _TENSOR_IDS = {}
 _STEP = None
-_MAX_DIFFS = 25
 
 
 def _index_of(sizes, lindex):
@@ -17,6 +21,25 @@ def _index_of(sizes, lindex):
     index.append(lindex % size)
     lindex = lindex // size
   return list(reversed(index))
+
+
+def _get_save_dir():
+  if _SAVE_DIR is not None:
+    return _SAVE_DIR
+  return os.environ.get('MODELCMP_SAVEDIR', None)
+
+
+def _get_tensor_name(name):
+  if name is None:
+    name = 'noname'
+    # Go fetch first frame which is not this module.
+    self_fname = os.path.basename(__file__)
+    for st in traceback.extract_stack(limit=8):
+      # st = tuple(filename, lineno, function, text)
+      fname = os.path.basename(st[0])
+      if fname != self_fname:
+        return '{}.l{}'.format(fname, st[1])
+  return name
 
 
 def compare_tensors(tensor1, tensor2, rtol=1e-05, atol=1e-08, max_diffs=25):
@@ -50,29 +73,33 @@ def _collect_saved_tensors(path):
   return set(files)
 
 
-def configure(save_dir, max_diffs=25):
-  global _SAVE_DIR, _MAX_DIFFS, _TENSOR_IDS, _STEP
+def configure(save_dir):
+  global _SAVE_DIR, _TENSOR_IDS, _STEP
   _SAVE_DIR = save_dir
-  _MAX_DIFFS = max_diffs
   _TENSOR_IDS = {}
   _STEP = None
 
 
 def save(name, tensor, step=None):
   global _TENSOR_IDS, _STEP
-  if step is not None:
-    path = os.path.join(_SAVE_DIR, 'step-{}'.format(step))
-    if not os.path.isdir(path):
-      os.mkdir(path)
-    if step != _STEP:
-      _STEP = step
-      _TENSOR_IDS = {}
-  else:
-    path = _SAVE_DIR
-  id = _TENSOR_IDS.get(name, 0)
-  _TENSOR_IDS[name] = id + 1
-  path = os.path.join(path, '{}.{}'.format(name, id))
-  torch.save(tensor.data.cpu(), path)
+  # Allow the model compare save API to be left in place and being a noop if
+  # configured with a None _SAVE_DIR.
+  save_dir = _get_save_dir()
+  if save_dir is not None:
+    name = _get_tensor_name(name)
+    if step is not None:
+      path = os.path.join(save_dir, 'step-{}'.format(step))
+      if not os.path.isdir(path):
+        os.mkdir(path)
+      if step != _STEP:
+        _STEP = step
+        _TENSOR_IDS = {}
+    else:
+      path = save_dir
+    id = _TENSOR_IDS.get(name, 0)
+    _TENSOR_IDS[name] = id + 1
+    path = os.path.join(path, '{}.{}'.format(name, id))
+    torch.save(tensor.data.cpu(), path)
   return tensor
 
 
@@ -91,14 +118,22 @@ def _parse_path(path):
   return m.group(1), int(m.group(2)), step, rpath
 
 
-def tensor_file_compare(path1, path2, rtol=1e-05, atol=1e-08):
+def tensor_file_compare(path1, path2, rtol=1e-05, atol=1e-08, max_diffs=25):
   tensor1 = torch.load(path1)
   tensor2 = torch.load(path2)
-  return compare_tensors(
-      tensor1, tensor2, rtol=rtol, atol=atol, max_diffs=_MAX_DIFFS)
+  report = compare_tensors(
+      tensor1, tensor2, rtol=rtol, atol=atol, max_diffs=max_diffs)
+  if report:
+    name, id, step, _ = _parse_path(path1)
+    lines = report.split('\n')
+    report = 'Changes in saved tensor "{}" with id={}{}\n'.format(
+        name, id, ' at step={}'.format(step) if step else '')
+    for line in lines:
+      report += '  {}\n'.format(line)
+  return report
 
 
-def compare(save_dir1, save_dir2, rtol=1e-05, atol=1e-08):
+def compare(save_dir1, save_dir2, rtol=1e-05, atol=1e-08, max_diffs=25):
   files1 = _collect_saved_tensors(save_dir1)
   files2 = _collect_saved_tensors(save_dir2)
   report = ''
@@ -110,8 +145,36 @@ def compare(save_dir1, save_dir2, rtol=1e-05, atol=1e-08):
           os.path.join(save_dir1, path1),
           os.path.join(save_dir2, path1),
           rtol=rtol,
-          atol=atol)
+          atol=atol,
+          max_diffs=max_diffs)
   for path2 in files2:
     if path2 not in files1:
       report += 'Mismatch: {} not in {}\n'.format(path2, save_dir1)
   return report
+
+
+if __name__ == '__main__':
+  arg_parser = argparse.ArgumentParser()
+  arg_parser.add_argument('--rtol', type=float, default=1e-05)
+  arg_parser.add_argument('--atol', type=float, default=1e-08)
+  arg_parser.add_argument('--max_diffs', type=int, default=25)
+  arg_parser.add_argument(
+      'savedir1',
+      type=str,
+      metavar='SAVEDIR1',
+      help='The path to the folder containing the first model savedir')
+  arg_parser.add_argument(
+      'savedir2',
+      type=str,
+      metavar='SAVEDIR2',
+      help='The path to the folder containing the second model savedir')
+  args = arg_parser.parse_args()
+  report = compare(
+      args.savedir1,
+      args.savedir2,
+      rtol=args.rtol,
+      atol=args.atol,
+      max_diffs=args.max_diffs)
+  if report:
+    print(report, file=sys.stderr)
+    sys.exit(1)
