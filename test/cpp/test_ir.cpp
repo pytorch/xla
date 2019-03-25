@@ -7,7 +7,6 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/select.h"
-#include "torch_xla/csrc/ops/tensor_data.h"
 #include "torch_xla/csrc/ops/unselect.h"
 
 namespace torch_xla {
@@ -59,7 +58,8 @@ TEST(IrTest, TestSelectUnselect) {
   ForEachDevice([&](const Device& device) {
     at::Tensor a =
         at::rand({4, 16, 3}, at::TensorOptions(at::kFloat)).abs() + 1.0;
-    ir::Value v_a = ir::MakeNode<ir::ops::TensorData>(a, device);
+
+    ir::Value v_a = GetTensorIrValue(a, device);
     ir::Value v_s = ir::MakeNode<ir::ops::Select>(v_a, /*dim=*/1, /*start=*/3,
                                                   /*end=*/14, /*stride=*/3);
 
@@ -70,7 +70,7 @@ TEST(IrTest, TestSelectUnselect) {
 
     // Paste zeros back into the selected view.
     at::Tensor z = at::zeros_like(b);
-    ir::Value v_z = ir::MakeNode<ir::ops::TensorData>(z, device);
+    ir::Value v_z = GetTensorIrValue(z, device);
     ir::Value v_u =
         ir::MakeNode<ir::ops::Unselect>(v_a, v_z, /*dim=*/1, /*start=*/3,
                                         /*end=*/14, /*stride=*/3);

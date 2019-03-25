@@ -49,6 +49,8 @@ std::string GetTensorTextGraph(at::Tensor tensor);
 
 std::string GetTensorDotGraph(at::Tensor tensor);
 
+ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device);
+
 std::vector<xla::ComputationClient::DataPtr> Execute(
     tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device);
 
