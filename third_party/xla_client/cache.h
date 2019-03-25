@@ -62,7 +62,7 @@ class Cache {
     if (it == element_map_.end()) {
       return false;
     }
-    auto lit = it->second->second;
+    auto lit = it->second;
     element_map_.erase(it);
     element_list_.erase(lit);
     return true;
