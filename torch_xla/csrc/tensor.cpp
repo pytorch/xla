@@ -834,13 +834,15 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
 }
 
 XLATensor::ComputationCache* XLATensor::GetComputationCache() {
-  static const size_t kMaxCacheSize = 128;
+  static const size_t kMaxCacheSize =
+      xla::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
   static ComputationCache* cache = new ComputationCache(kMaxCacheSize);
   return cache;
 }
 
 XLATensor::ApplyContextCache* XLATensor::GetApplyContextCache() {
-  static const size_t kMaxCacheSize = 128;
+  static const size_t kMaxCacheSize =
+      xla::sys_util::GetEnvInt("XLA_APPLY_CONTEXT_CACHE_SIZE", 1024);
   static ApplyContextCache* cache = new ApplyContextCache(kMaxCacheSize);
   return cache;
 }
