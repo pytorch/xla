@@ -38,7 +38,7 @@ xla::Shape Select::MakeSelectShape(const xla::Shape& shape, xla::int64 dim,
                                    xla::int64 start, xla::int64 end,
                                    xla::int64 stride) {
   xla::Shape select_shape(shape);
-  select_shape.set_dimensions(dim, (end - start) / stride);
+  select_shape.set_dimensions(dim, (end - start + stride - 1) / stride);
   return select_shape;
 }
 
