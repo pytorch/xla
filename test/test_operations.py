@@ -1561,6 +1561,27 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_a[:, 1::4] = 2
     self.assertEqual(a.data, xla_a.data.cpu())
 
+  def test_ailing_slice(self):
+    xla_device = xm.xla_device()
+    a = torch.ones((1000, 324)).to(xla_device)
+    xla_a = a.to(xla_device)
+    w = a[:, 2::4]
+    xla_w = a[:, 2::4]
+    dw = torch.clamp(w, max=3.1)
+    xla_dw = torch.clamp(xla_w, max=3.1)
+    self.assertEqual(w.data, xla_w.data.cpu())
+
+  def test_slice_rnd_stepped_assign(self):
+    xla_device = xm.xla_device()
+    size = 10
+    for s in range(0, size - 1):
+      for e in range(1, size - s):
+        a = torch.ones((3, size))
+        xla_a = a.to(xla_device)
+        a[:, s::e] = 2
+        xla_a[:, s::e] = 2
+        self.assertEqual(a.data, xla_a.data.cpu())
+
   def test_clamp(self):
     a = torch.randn(3, 3)
     xla_a = a.to(xm.xla_device())
