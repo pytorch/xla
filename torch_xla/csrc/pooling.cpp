@@ -106,13 +106,13 @@ xla::XlaOp BuildMaxPool2d(const torch::jit::Node* node,
   const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
   const auto padding =
       node->get<std::vector<int64_t>>(at::attr::padding).value();
-  return BuildMaxPool2d(input, XlaHelpers::I64List(kernel_size),
-                        XlaHelpers::I64List(stride),
-                        XlaHelpers::I64List(padding));
+  return BuildMaxPoolNd(
+      input, /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding));
 }
 
-xla::XlaOp BuildMaxPool2d(
-    const xla::XlaOp& input,
+xla::XlaOp BuildMaxPoolNd(
+    const xla::XlaOp& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
@@ -126,13 +126,13 @@ xla::XlaOp BuildMaxPool2d(
   PoolingOpAttributes pooling_op_attributes =
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
                               /*stride_attr=*/stride, /*padding_attr=*/padding,
-                              /*spatial_dim_count=*/2);
+                              /*spatial_dim_count=*/spatial_dim_count);
   return xla::MaxPool(
       /*operand=*/padded_input,
       /*kernel_size=*/pooling_op_attributes.kernel_size,
       /*stride=*/pooling_op_attributes.stride,
       /*padding=*/xla::Padding::kValid,
-      /*data_format=*/MakeNCHWFormat(2));
+      /*data_format=*/MakeNCHWFormat(spatial_dim_count));
 }
 
 xla::XlaOp BuildMaxPool2dBackward(const torch::jit::Node* node,
@@ -143,13 +143,15 @@ xla::XlaOp BuildMaxPool2dBackward(const torch::jit::Node* node,
   const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
   const auto padding =
       node->get<std::vector<int64_t>>(at::attr::padding).value();
-  return BuildMaxPool2dBackward(
-      out_backprop, input, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding));
+  return BuildMaxPoolNdBackward(out_backprop, input, /*spatial_dim_count=*/2,
+                                XlaHelpers::I64List(kernel_size),
+                                XlaHelpers::I64List(stride),
+                                XlaHelpers::I64List(padding));
 }
 
-xla::XlaOp BuildMaxPool2dBackward(
+xla::XlaOp BuildMaxPoolNdBackward(
     const xla::XlaOp& out_backprop, const xla::XlaOp& input,
+    xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
@@ -163,7 +165,7 @@ xla::XlaOp BuildMaxPool2dBackward(
   PoolingOpAttributes pooling_op_attributes =
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
                               /*stride_attr=*/stride, /*padding_attr=*/padding,
-                              /*spatial_dim_count=*/2);
+                              /*spatial_dim_count=*/spatial_dim_count);
   std::vector<std::pair<xla::int64, xla::int64>> window_padding;
   window_padding.resize(2);
   window_padding.insert(window_padding.end(),

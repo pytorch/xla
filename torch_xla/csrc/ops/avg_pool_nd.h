@@ -16,6 +16,8 @@ class AvgPoolNd : public Node {
 
   std::string ToString() const override;
 
+  xla::int64 spatial_dim_count() const { return spatial_dim_count_; }
+
   const std::vector<xla::int64>& kernel_size() const { return kernel_size_; }
 
   const std::vector<xla::int64>& stride() const { return stride_; }

@@ -54,8 +54,8 @@
 #include "torch_xla/csrc/ops/leaky_relu_backward.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
-#include "torch_xla/csrc/ops/max_pool2d.h"
-#include "torch_xla/csrc/ops/max_pool2d_backward.h"
+#include "torch_xla/csrc/ops/max_pool_nd.h"
+#include "torch_xla/csrc/ops/max_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/mean.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
@@ -1189,12 +1189,30 @@ XLATensor XLATensor::max(const XLATensor& input) {
   return input.CreateFrom(ir::ops::MaxUnary(input.GetIrValue()), input.dtype());
 }
 
+XLATensor XLATensor::max_pool1d(const XLATensor& input,
+                                std::vector<xla::int64> kernel_size,
+                                std::vector<xla::int64> stride,
+                                std::vector<xla::int64> padding) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::MaxPoolNd>(
+      input.GetIrValue(), 1, std::move(kernel_size), std::move(stride),
+      std::move(padding)));
+}
+
 XLATensor XLATensor::max_pool2d(const XLATensor& input,
                                 std::vector<xla::int64> kernel_size,
                                 std::vector<xla::int64> stride,
                                 std::vector<xla::int64> padding) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::MaxPool2d>(
-      input.GetIrValue(), std::move(kernel_size), std::move(stride),
+  return input.CreateFrom(ir::MakeNode<ir::ops::MaxPoolNd>(
+      input.GetIrValue(), 2, std::move(kernel_size), std::move(stride),
+      std::move(padding)));
+}
+
+XLATensor XLATensor::max_pool3d(const XLATensor& input,
+                                std::vector<xla::int64> kernel_size,
+                                std::vector<xla::int64> stride,
+                                std::vector<xla::int64> padding) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::MaxPoolNd>(
+      input.GetIrValue(), 3, std::move(kernel_size), std::move(stride),
       std::move(padding)));
 }
 
@@ -1203,8 +1221,18 @@ XLATensor XLATensor::max_pool2d_backward(const XLATensor& out_backprop,
                                          std::vector<xla::int64> kernel_size,
                                          std::vector<xla::int64> stride,
                                          std::vector<xla::int64> padding) {
-  return out_backprop.CreateFrom(ir::MakeNode<ir::ops::MaxPool2dBackward>(
-      out_backprop.GetIrValue(), input.GetIrValue(), std::move(kernel_size),
+  return out_backprop.CreateFrom(ir::MakeNode<ir::ops::MaxPoolNdBackward>(
+      out_backprop.GetIrValue(), input.GetIrValue(), 2, std::move(kernel_size),
+      std::move(stride), std::move(padding)));
+}
+
+XLATensor XLATensor::max_pool3d_backward(const XLATensor& out_backprop,
+                                         const XLATensor& input,
+                                         std::vector<xla::int64> kernel_size,
+                                         std::vector<xla::int64> stride,
+                                         std::vector<xla::int64> padding) {
+  return out_backprop.CreateFrom(ir::MakeNode<ir::ops::MaxPoolNdBackward>(
+      out_backprop.GetIrValue(), input.GetIrValue(), 3, std::move(kernel_size),
       std::move(stride), std::move(padding)));
 }
 

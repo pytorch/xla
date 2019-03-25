@@ -565,12 +565,28 @@ class XLATensor {
 
   static XLATensor max(const XLATensor& input);
 
+  static XLATensor max_pool1d(const XLATensor& input,
+                              std::vector<xla::int64> kernel_size,
+                              std::vector<xla::int64> stride,
+                              std::vector<xla::int64> padding);
+
   static XLATensor max_pool2d(const XLATensor& input,
                               std::vector<xla::int64> kernel_size,
                               std::vector<xla::int64> stride,
                               std::vector<xla::int64> padding);
 
+  static XLATensor max_pool3d(const XLATensor& input,
+                              std::vector<xla::int64> kernel_size,
+                              std::vector<xla::int64> stride,
+                              std::vector<xla::int64> padding);
+
   static XLATensor max_pool2d_backward(const XLATensor& out_backprop,
+                                       const XLATensor& input,
+                                       std::vector<xla::int64> kernel_size,
+                                       std::vector<xla::int64> stride,
+                                       std::vector<xla::int64> padding);
+
+  static XLATensor max_pool3d_backward(const XLATensor& out_backprop,
                                        const XLATensor& input,
                                        std::vector<xla::int64> kernel_size,
                                        std::vector<xla::int64> stride,

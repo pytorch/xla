@@ -617,6 +617,11 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor max(const at::Tensor& self) const override;
 
+  at::Tensor max_pool1d(const at::Tensor& self, at::IntArrayRef kernel_size,
+                        at::IntArrayRef stride, at::IntArrayRef padding,
+                        at::IntArrayRef dilation,
+                        bool ceil_mode) const override;
+
   at::Tensor max_pool2d(const at::Tensor& self, at::IntArrayRef kernel_size,
                         at::IntArrayRef stride, at::IntArrayRef padding,
                         at::IntArrayRef dilation,
@@ -627,7 +632,23 @@ class AtenXlaType : public AtenXlaTypeBase {
       at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
       bool ceil_mode) const override;
 
+  at::Tensor max_pool3d(const at::Tensor& self, at::IntArrayRef kernel_size,
+                        at::IntArrayRef stride, at::IntArrayRef padding,
+                        at::IntArrayRef dilation,
+                        bool ceil_mode) const override;
+
+  std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(
+      const at::Tensor& self, at::IntArrayRef kernel_size,
+      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+      bool ceil_mode) const override;
+
   at::Tensor max_pool2d_with_indices_backward(
+      const at::Tensor& grad_output, const at::Tensor& self,
+      at::IntArrayRef kernel_size, at::IntArrayRef stride,
+      at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
+      const at::Tensor& indices) const override;
+
+  at::Tensor max_pool3d_with_indices_backward(
       const at::Tensor& grad_output, const at::Tensor& self,
       at::IntArrayRef kernel_size, at::IntArrayRef stride,
       at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,

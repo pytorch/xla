@@ -12,8 +12,8 @@ xla::XlaOp BuildMaxPool2d(const torch::jit::Node* node,
                           const xla::XlaOp& input);
 
 // Same as above, with kernel size, stride and padding provided as parameters.
-xla::XlaOp BuildMaxPool2d(
-    const xla::XlaOp& input,
+xla::XlaOp BuildMaxPoolNd(
+    const xla::XlaOp& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding);
@@ -24,8 +24,9 @@ xla::XlaOp BuildMaxPool2dBackward(const torch::jit::Node* node,
                                   const xla::XlaOp& input);
 
 // Same as above, with kernel size, stride and padding provided as parameters.
-xla::XlaOp BuildMaxPool2dBackward(
+xla::XlaOp BuildMaxPoolNdBackward(
     const xla::XlaOp& out_backprop, const xla::XlaOp& input,
+    xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding);
