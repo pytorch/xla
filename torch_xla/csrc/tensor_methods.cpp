@@ -1534,6 +1534,7 @@ XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
                                            start);
   end = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
                                          end);
+  step = std::min(step, end - start);
 
   SelectInfo select = {dim, start, end, step};
   ViewInfo view_info(input_shape, std::move(select));
