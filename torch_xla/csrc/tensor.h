@@ -973,6 +973,8 @@ class XLATensor {
 
   void SetTensorData(at::Tensor tensor_data);
 
+  ir::Value GetXlaDataForTensor(const at::Tensor& tensor) const;
+
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
 
   std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,

@@ -23,7 +23,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/ops/ops.h"
-#include "torch_xla/csrc/ops/tensor_data.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -438,8 +437,7 @@ ir::Value XLATensor::GetIrValue() const {
   }
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
-  data()->ir_value =
-      ir::MakeNode<ir::ops::TensorData>(*tensor_data, GetDevice());
+  data()->ir_value = GetXlaDataForTensor(*tensor_data);
   return data()->ir_value;
 }
 
@@ -459,6 +457,17 @@ c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
     return c10::nullopt;
   }
   return data()->tensor_data;
+}
+
+ir::Value XLATensor::GetXlaDataForTensor(const at::Tensor& tensor) const {
+  const Device& device = GetDevice();
+  if (tensor.numel() == 1) {
+    xla::Shape shape = CreateComputationShapeFromTensor(tensor, &device);
+    xla::Literal value = GetTensorLiteral(tensor, &shape, &device);
+    return ir::MakeNode<ir::ops::Constant>(std::move(value));
+  }
+  xla::ComputationClient::DataPtr data = TensorToXlaData(tensor, device);
+  return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }
 
 View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
@@ -537,8 +546,7 @@ void XLATensor::MakeWriteableTensorDataSource() {
     // TensorData node will fetch the status of the at::Tensor at lowering time,
     // so that all the changes done by the caller, will become visible only when
     // a value from the view is requested.
-    ir::Value ir_value =
-        ir::MakeNode<ir::ops::TensorData>(*tensor_data, GetDevice());
+    ir::Value ir_value = GetXlaDataForTensor(*tensor_data);
     data()->view = UpdateView(data()->view, ir_value);
   }
   data()->xla_data = nullptr;
@@ -554,7 +562,7 @@ at::Tensor XLATensor::ToMutableTensor() {
 void XLATensor::SetTensor(at::Tensor tensor) {
   SetTensorData(tensor);
   if (data()->view != nullptr) {
-    ir::Value ir_value = ir::MakeNode<ir::ops::TensorData>(tensor, GetDevice());
+    ir::Value ir_value = GetXlaDataForTensor(tensor);
     data()->view = UpdateView(data()->view, ir_value);
   }
   data()->xla_data = nullptr;
@@ -814,6 +822,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
     }
   }
   if (cached_computation->num_parameters != parameters_data.size()) {
+    XLA_COUNTER("CachedSyncParamMismatch", 1);
+    GetComputationCache()->Erase(coll->hash);
     return nullptr;
   }
   XLA_COUNTER("CachedSyncTensors", 1);

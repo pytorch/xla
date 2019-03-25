@@ -27,6 +27,13 @@ TEST(XlaUtilCacheTest, BasicTest) {
     auto ptr = cache.Get(i);
     EXPECT_EQ(ptr, nullptr);
   }
+
+  auto ptr = cache.Add(-1, std::make_shared<std::string>("MINUS"));
+  ASSERT_NE(ptr, nullptr);
+  EXPECT_EQ(*ptr, "MINUS");
+  EXPECT_TRUE(cache.Erase(-1));
+  ptr = cache.Get(-1);
+  EXPECT_EQ(ptr, nullptr);
 }
 
 }  // namespace cpp_test

@@ -8,6 +8,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
@@ -77,6 +78,11 @@ std::string GetTensorTextGraph(at::Tensor tensor) {
 std::string GetTensorDotGraph(at::Tensor tensor) {
   XLATensor xtensor = bridge::GetXlaTensor(tensor);
   return ir::DumpUtil::ToDot({xtensor.GetIrValue().node.get()});
+}
+
+ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device) {
+  xla::ComputationClient::DataPtr data = TensorToXlaData(tensor, device);
+  return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
