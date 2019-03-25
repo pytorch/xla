@@ -1574,6 +1574,19 @@ at::Tensor AtenXlaType::max(const at::Tensor& self) const {
   return bridge::AtenFromXlaTensor(XLATensor::max(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::max_pool1d(
+    const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
+  // Lowering when dilation is non-trivial or ceil_mode is set not supported.
+  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeBase::max_pool1d(self, kernel_size, stride, padding,
+                                       dilation, ceil_mode);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::max_pool1d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
+}
+
 at::Tensor AtenXlaType::max_pool2d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
@@ -1627,6 +1640,61 @@ at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding)));
+}
+
+at::Tensor AtenXlaType::max_pool3d(
+    const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
+  // Lowering when dilation is non-trivial or ceil_mode is set not supported.
+  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeBase::max_pool3d(self, kernel_size, stride, padding,
+                                       dilation, ceil_mode);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::max_pool3d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
+}
+
+at::Tensor AtenXlaType::max_pool3d_with_indices_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
+    const at::Tensor& indices) const {
+  // Lowering when ceil_mode or dilation is set not supported yet.
+  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeBase::max_pool3d_with_indices_backward(
+        grad_output, self, kernel_size, stride, padding, dilation, ceil_mode,
+        indices);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::max_pool3d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding)));
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool3d_with_indices(
+    const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
+  // Lowering when ceil_mode or dilation is set not supported yet.
+  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeBase::max_pool3d_with_indices(
+        self, kernel_size, stride, padding, dilation, ceil_mode);
+  }
+  // TODO(asuhan): Here we return a placeholder tensor for the indices we hope
+  // to never evaluate, which works for the backward of max_pool3d. However, the
+  // user could request the indices to be returned, in which case we'd throw. We
+  // need to either provide a lowering or improve our infrastructure to be able
+  // to route to ATen the evaluation of outputs we hope to be unused.
+  XLATensor result = XLATensor::max_pool3d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding));
+  xla::Shape indices_shape = result.shape();
+  indices_shape.set_element_type(xla::PrimitiveType::S64);
+  XLATensor indices_not_supported = XLATensor::not_supported(
+      "aten::max_pool3d_with_indices.indices", indices_shape,
+      bridge::GetXlaTensor(self).GetDevice());
+  return std::make_tuple(bridge::AtenFromXlaTensor(result),
+                         bridge::AtenFromXlaTensor(indices_not_supported));
 }
 
 at::Tensor AtenXlaType::mean(const at::Tensor& self,
