@@ -6,15 +6,17 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-// IR node for 2D max pooling.
-class MaxPool2d : public Node {
+class MaxPoolNd : public Node {
  public:
-  MaxPool2d(const Value& input, std::vector<xla::int64> kernel_size,
-            std::vector<xla::int64> stride, std::vector<xla::int64> padding);
+  MaxPoolNd(const Value& input, xla::int64 spatial_dim_count,
+            std::vector<xla::int64> kernel_size, std::vector<xla::int64> stride,
+            std::vector<xla::int64> padding);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;
+
+  xla::int64 spatial_dim_count() const { return spatial_dim_count_; }
 
   const std::vector<xla::int64>& kernel_size() const { return kernel_size_; }
 
@@ -23,6 +25,7 @@ class MaxPool2d : public Node {
   const std::vector<xla::int64>& padding() const { return padding_; }
 
  private:
+  xla::int64 spatial_dim_count_;
   // The parameters of the pooling. Only support the same kernel size, stride
   // and padding in both dimensions for now.
   std::vector<xla::int64> kernel_size_;
