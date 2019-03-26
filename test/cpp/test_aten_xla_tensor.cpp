@@ -396,6 +396,28 @@ TEST_F(AtenXlaTensorTest, TestEqInplace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestThEq) {
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor b = a.clone();
+  at::Tensor c = at::_th_eq(a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = at::_th_eq(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestThEqScalar) {
+  at::Tensor a = at::full({}, 1.2, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::_th_eq(a, 1.2);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::_th_eq(xla_a, 1.2);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestGe) {
   at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = a.clone();
