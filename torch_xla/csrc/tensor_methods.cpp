@@ -130,8 +130,7 @@ std::vector<xla::int64> CheckIntList(
     return result;
   }
   XLA_CHECK_EQ(result.size(), length)
-      << "Expected a list of " << length << " ints but got " << result.size()
-      << " for '" << name << "'";
+      << "Invalid length for the '" << name << "' attribute";
   return result;
 }
 
