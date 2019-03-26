@@ -236,37 +236,20 @@ class XLATensor {
   static XLATensor atan2(const XLATensor& input, const XLATensor& other);
   static void atan2_(XLATensor& input, const XLATensor& other);
 
-  static XLATensor avg_pool1d(const XLATensor& input,
-                              std::vector<xla::int64> kernel_size,
-                              std::vector<xla::int64> stride,
-                              std::vector<xla::int64> padding,
-                              bool count_include_pad);
+  static XLATensor avg_pool_nd(const XLATensor& input,
+                               xla::int64 spatial_dim_count,
+                               std::vector<xla::int64> kernel_size,
+                               std::vector<xla::int64> stride,
+                               std::vector<xla::int64> padding,
+                               bool count_include_pad);
 
-  static XLATensor avg_pool2d(const XLATensor& input,
-                              std::vector<xla::int64> kernel_size,
-                              std::vector<xla::int64> stride,
-                              std::vector<xla::int64> padding,
-                              bool count_include_pad);
-
-  static XLATensor avg_pool2d_backward(const XLATensor& out_backprop,
-                                       const XLATensor& input,
-                                       std::vector<xla::int64> kernel_size,
-                                       std::vector<xla::int64> stride,
-                                       std::vector<xla::int64> padding,
-                                       bool count_include_pad);
-
-  static XLATensor avg_pool3d(const XLATensor& input,
-                              std::vector<xla::int64> kernel_size,
-                              std::vector<xla::int64> stride,
-                              std::vector<xla::int64> padding,
-                              bool count_include_pad);
-
-  static XLATensor avg_pool3d_backward(const XLATensor& out_backprop,
-                                       const XLATensor& input,
-                                       std::vector<xla::int64> kernel_size,
-                                       std::vector<xla::int64> stride,
-                                       std::vector<xla::int64> padding,
-                                       bool count_include_pad);
+  static XLATensor avg_pool_nd_backward(const XLATensor& out_backprop,
+                                        const XLATensor& input,
+                                        xla::int64 spatial_dim_count,
+                                        std::vector<xla::int64> kernel_size,
+                                        std::vector<xla::int64> stride,
+                                        std::vector<xla::int64> padding,
+                                        bool count_include_pad);
 
   static XLATensor batch_norm(const XLATensor& input, const XLATensor& weight,
                               const XLATensor& bias,
@@ -565,32 +548,18 @@ class XLATensor {
 
   static XLATensor max(const XLATensor& input);
 
-  static XLATensor max_pool1d(const XLATensor& input,
-                              std::vector<xla::int64> kernel_size,
-                              std::vector<xla::int64> stride,
-                              std::vector<xla::int64> padding);
+  static XLATensor max_pool_nd(const XLATensor& input,
+                               xla::int64 spatial_dim_count,
+                               std::vector<xla::int64> kernel_size,
+                               std::vector<xla::int64> stride,
+                               std::vector<xla::int64> padding);
 
-  static XLATensor max_pool2d(const XLATensor& input,
-                              std::vector<xla::int64> kernel_size,
-                              std::vector<xla::int64> stride,
-                              std::vector<xla::int64> padding);
-
-  static XLATensor max_pool3d(const XLATensor& input,
-                              std::vector<xla::int64> kernel_size,
-                              std::vector<xla::int64> stride,
-                              std::vector<xla::int64> padding);
-
-  static XLATensor max_pool2d_backward(const XLATensor& out_backprop,
-                                       const XLATensor& input,
-                                       std::vector<xla::int64> kernel_size,
-                                       std::vector<xla::int64> stride,
-                                       std::vector<xla::int64> padding);
-
-  static XLATensor max_pool3d_backward(const XLATensor& out_backprop,
-                                       const XLATensor& input,
-                                       std::vector<xla::int64> kernel_size,
-                                       std::vector<xla::int64> stride,
-                                       std::vector<xla::int64> padding);
+  static XLATensor max_pool_nd_backward(const XLATensor& out_backprop,
+                                        const XLATensor& input,
+                                        xla::int64 spatial_dim_count,
+                                        std::vector<xla::int64> kernel_size,
+                                        std::vector<xla::int64> stride,
+                                        std::vector<xla::int64> padding);
 
   static XLATensor mean(const XLATensor& input,
                         std::vector<xla::int64> dimensions,
