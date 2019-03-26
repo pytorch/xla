@@ -51,7 +51,7 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
     return c10::Stream(c10::Stream::DEFAULT, g_current_device);
   }
 
-  c10::DeviceIndex deviceCount() const override {
+  c10::DeviceIndex deviceCount() const noexcept override {
     return xla::ComputationClient::Get()->GetNumDevices();
   }
 };
