@@ -1639,6 +1639,15 @@ class TestModelComparator(XlaTestCase):
     self.assertEqual(len(report), 0)
 
 
+class TestGeneric(XlaTestCase):
+
+  def test_zeros_like_patch(self):
+    a = torch.ones(3, 3)
+    b = torch.zeros_like(a, dtype=torch.int8)
+    self.assertEqual(b.dtype, torch.int8)
+    self.assertEqual(b.sum().item(), 0)
+
+
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
   torch.manual_seed(42)
