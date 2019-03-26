@@ -302,6 +302,17 @@ class XLATensor {
       const XLATensor& weight, std::vector<xla::int64> stride,
       std::vector<xla::int64> padding);
 
+  static XLATensor conv_transpose2d(const XLATensor& input,
+                                    const XLATensor& weight,
+                                    const XLATensor& bias,
+                                    std::vector<xla::int64> stride,
+                                    std::vector<xla::int64> padding);
+
+  static XLATensor conv_transpose2d(const XLATensor& input,
+                                    const XLATensor& weight,
+                                    std::vector<xla::int64> stride,
+                                    std::vector<xla::int64> padding);
+
   static XLATensor cos(const XLATensor& input);
   static void cos_(XLATensor& input);
 
