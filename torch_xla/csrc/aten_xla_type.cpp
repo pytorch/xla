@@ -48,6 +48,13 @@ bool IsNonTrivialDilation(at::IntArrayRef dilation) {
       [](const int64_t dim_dilation) { return dim_dilation != 1; });
 }
 
+// Returns true if padding is non-trivial (not 0) in at least one dimension.
+bool IsNonTrivialPadding(at::IntArrayRef padding) {
+  return std::any_of(
+      padding.begin(), padding.end(),
+      [](const int64_t dim_padding) { return dim_padding != 0; });
+}
+
 void AtenInitialize() {
   RegisterAtenXlaTypes();
   XLATensorImpl::AtenInitialize();
@@ -769,6 +776,33 @@ at::Tensor AtenXlaType::conv2d(const at::Tensor& input,
     return bridge::AtenFromXlaTensor(XLATensor::conv2d(
         bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight),
         XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
+  }
+}
+
+at::Tensor AtenXlaType::conv_transpose2d(
+    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
+    at::IntArrayRef stride, at::IntArrayRef padding,
+    at::IntArrayRef output_padding, int64_t groups,
+    at::IntArrayRef dilation) const {
+  // Dilated or grouped transposed convolutions aren't lowered to XLA yet.
+  if (IsNonTrivialPadding(output_padding) || IsNonTrivialDilation(dilation) ||
+      groups != 1) {
+    return AtenXlaTypeBase::conv_transpose2d(
+        input, weight, bias, stride, padding, output_padding, groups, dilation);
+  }
+  if (bias.defined()) {
+    return bridge::AtenFromXlaTensor(XLATensor::conv_transpose2d(
+        /*input=*/bridge::GetXlaTensor(input),
+        /*weight=*/bridge::GetXlaTensor(weight),
+        /*bias=*/bridge::GetXlaTensor(bias),
+        /*stride=*/XlaHelpers::I64List(stride),
+        /*padding=*/XlaHelpers::I64List(padding)));
+  } else {
+    return bridge::AtenFromXlaTensor(XLATensor::conv_transpose2d(
+        /*input=*/bridge::GetXlaTensor(input),
+        /*weight=*/bridge::GetXlaTensor(weight),
+        /*stride=*/XlaHelpers::I64List(stride),
+        /*padding=*/XlaHelpers::I64List(padding)));
   }
 }
 
@@ -2527,6 +2561,24 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::thnn_conv2d_forward(
       conv2d(/*input=*/self, /*weight=*/weight, /*bias=*/bias,
              /*stride=*/stride, /*padding=*/padding, /*dilation=*/{1, 1},
              /*groups=*/1),
+      undefined, undefined);
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor>
+AtenXlaType::thnn_conv_transpose2d_forward(
+    const at::Tensor& self, const at::Tensor& weight,
+    at::IntArrayRef kernel_size, const at::Tensor& bias, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef output_padding,
+    at::IntArrayRef dilation) const {
+  at::Tensor undefined = at::empty({});
+  // TODO(asuhan): double check it's ok to return undefined for finput and
+  // fgrad_input.
+  return std::make_tuple(
+      conv_transpose2d(
+          /*input=*/self, /*weight=*/weight, /*bias=*/bias, /*stride=*/stride,
+          /*padding=*/padding,
+          /*output_padding=*/output_padding, /*groups=*/1,
+          /*dilation=*/dilation),
       undefined, undefined);
 }
 
