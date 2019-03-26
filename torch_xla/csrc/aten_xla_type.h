@@ -292,6 +292,12 @@ class AtenXlaType : public AtenXlaTypeBase {
                     at::IntArrayRef padding, at::IntArrayRef dilation,
                     int64_t groups) const override;
 
+  at::Tensor conv_transpose2d(const at::Tensor& input, const at::Tensor& weight,
+                              const at::Tensor& bias, at::IntArrayRef stride,
+                              at::IntArrayRef padding,
+                              at::IntArrayRef output_padding, int64_t groups,
+                              at::IntArrayRef dilation) const override;
+
   at::Tensor copy(const at::Tensor& src, bool non_blocking,
                   at::optional<c10::Device> to_device) const override;
 
@@ -983,6 +989,12 @@ class AtenXlaType : public AtenXlaTypeBase {
       const at::Tensor& self, const at::Tensor& weight,
       at::IntArrayRef kernel_size, const at::Tensor& bias,
       at::IntArrayRef stride, at::IntArrayRef padding) const override;
+
+  std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv_transpose2d_forward(
+      const at::Tensor& self, const at::Tensor& weight,
+      at::IntArrayRef kernel_size, const at::Tensor& bias,
+      at::IntArrayRef stride, at::IntArrayRef padding,
+      at::IntArrayRef output_padding, at::IntArrayRef dilation) const override;
 
   at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
                        at::Scalar value) const override;

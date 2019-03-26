@@ -29,6 +29,16 @@ xla::XlaOp BuildConvolutionBias(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
+xla::XlaOp BuildTransposedConvolution(
+    const xla::XlaOp& input, const xla::XlaOp& kernel,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+
+xla::XlaOp BuildTransposedConvolutionBias(
+    const xla::XlaOp& input, const xla::XlaOp& kernel, const xla::XlaOp& bias,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+
 struct Conv2DGrads {
   xla::XlaOp grad_input;
   xla::XlaOp grad_weight;

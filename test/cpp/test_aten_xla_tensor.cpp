@@ -4033,6 +4033,51 @@ TEST_F(AtenXlaTensorTest, TestConv2D) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestTransposedConv2D) {
+  int in_channels = 3;
+  int out_channels = 7;
+  int kernel_size = 5;
+  at::Tensor input =
+      at::rand({4, out_channels, 28, 28}, at::TensorOptions(at::kFloat));
+  at::Tensor weight =
+      at::rand({out_channels, in_channels, kernel_size, kernel_size},
+               at::TensorOptions(at::kFloat));
+  at::Tensor bias = at::rand({in_channels}, at::TensorOptions(at::kFloat));
+  at::Tensor bias_undef;
+  for (int stride = 1; stride <= 3; ++stride) {
+    for (int padding = 0; padding <= 2; ++padding) {
+      for (int dilation = 1; dilation <= 2; ++dilation) {
+        for (int output_padding = 0;
+             output_padding < std::min(stride, dilation); ++output_padding) {
+          for (bool with_bias : {true, false}) {
+            // Test dilation through the CPU interop.
+            at::Tensor output = at::conv_transpose2d(
+                input, weight, with_bias ? bias : bias_undef,
+                /*stride=*/{stride, stride},
+                /*padding=*/{padding, padding},
+                /*output_padding=*/output_padding,
+                /*groups=*/1,
+                /*dilation=*/{dilation, dilation});
+            ForEachDevice([&](const Device& device) {
+              at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+              at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
+              at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
+              at::Tensor xla_output = at::conv_transpose2d(
+                  xla_input, xla_weight, with_bias ? xla_bias : bias_undef,
+                  /*stride=*/{stride, stride},
+                  /*padding=*/{padding, padding},
+                  /*output_padding=*/output_padding,
+                  /*groups=*/1,
+                  /*dilation=*/{dilation, dilation});
+              AllClose(output, xla_output);
+            });
+          }
+        };
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestConv2DNonSquare) {
   int in_channels = 3;
   int out_channels = 7;

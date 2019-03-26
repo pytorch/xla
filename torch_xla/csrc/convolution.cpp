@@ -11,17 +11,17 @@ namespace {
 
 // Computes the input gradient for a convolution.
 xla::XlaOp BuildThnnConv2dBackwardInput(
-    const xla::XlaOp& grad_output, const xla::XlaOp& input,
-    const xla::XlaOp& weight,
+    const xla::XlaOp& grad_output, const xla::XlaOp& weight,
+    tensorflow::gtl::ArraySlice<const xla::int64> input_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride_attr,
     tensorflow::gtl::ArraySlice<const xla::int64> padding_attr) {
   XLA_CHECK_EQ(stride_attr.size(), 2);
   // Adjust input size to account for specified padding.
-  auto input_size = XlaHelpers::SizesOfXlaOp(input);
+  auto padded_input_size = xla::util::ToVector<xla::int64>(input_size);
   for (int i = 0; i < 2; ++i) {
-    input_size[2 + i] += 2 * padding_attr[i];
+    padded_input_size[2 + i] += 2 * padding_attr[i];
   }
-  tensorflow::TensorShape input_shape(input_size);
+  tensorflow::TensorShape input_shape(padded_input_size);
   xla::XlaOp filter = xla::Transpose(weight, {2, 3, 1, 0});
   xla::XlaBuilder* builder = grad_output.builder();
   const auto filter_size = XlaHelpers::SizesOfXlaOp(filter);
@@ -311,8 +311,8 @@ Conv2DGrads BuildConv2dBackward(
     const xla::XlaOp& weight,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
-  xla::XlaOp grad_input =
-      BuildThnnConv2dBackwardInput(grad_output, input, weight, stride, padding);
+  xla::XlaOp grad_input = BuildThnnConv2dBackwardInput(
+      grad_output, weight, XlaHelpers::SizesOfXlaOp(input), stride, padding);
   xla::XlaOp grad_weight = BuildThnnConv2dBackwardWeight(
       grad_output, input, weight, stride, padding);
   xla::XlaBuilder* builder = grad_output.builder();
@@ -322,6 +322,38 @@ Conv2DGrads BuildConv2dBackward(
       XlaHelpers::ScalarValue<float>(0, input_shape.element_type(), builder),
       XlaHelpers::CreateAddComputation(input_shape.element_type()), {0, 2, 3});
   return {grad_input, grad_weight, grad_bias};
+}
+
+xla::XlaOp BuildTransposedConvolution(
+    const xla::XlaOp& input, const xla::XlaOp& kernel,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::Shape kernel_shape = XlaHelpers::ShapeOfXlaOp(kernel);
+  std::vector<xla::int64> input_size{input_shape.dimensions(0),
+                                     kernel_shape.dimensions(1)};
+  for (int spatial_dim = 0; spatial_dim < 2; ++spatial_dim) {
+    input_size.push_back(
+        (input_shape.dimensions(2 + spatial_dim) - 1) * stride[spatial_dim] -
+        2 * padding[spatial_dim] + kernel_shape.dimensions(2 + spatial_dim));
+  }
+  return BuildThnnConv2dBackwardInput(input, kernel, input_size, stride,
+                                      padding);
+}
+
+xla::XlaOp BuildTransposedConvolutionBias(
+    const xla::XlaOp& input, const xla::XlaOp& kernel, const xla::XlaOp& bias,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  xla::XlaOp conv = BuildTransposedConvolution(input, kernel, stride, padding);
+  auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
+  XLA_CHECK_EQ(broadcast_sizes.size(), 4);
+  // Remove the channels dimension.
+  broadcast_sizes.erase(broadcast_sizes.begin() + 1);
+  // Make the bias match the output dimensions.
+  xla::XlaOp bias_broadcast =
+      xla::Transpose(xla::Broadcast(bias, broadcast_sizes), {0, 3, 1, 2});
+  return conv + bias_broadcast;
 }
 
 }  // namespace torch_xla
