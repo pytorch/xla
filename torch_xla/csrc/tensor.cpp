@@ -162,11 +162,13 @@ class XLATensor::TensorsArena {
   void RegisterTensor(std::shared_ptr<Data> data) {
     std::lock_guard<std::mutex> lock(lock_);
     tensors_data_.emplace(data.get(), data);
+    XLA_COUNTER("CreateXlaTensor", 1);
   }
 
   void UnregisterTensor(Data* data) {
     std::lock_guard<std::mutex> lock(lock_);
     tensors_data_.erase(data);
+    XLA_COUNTER("DestroyXlaTensor", 1);
   }
 
   std::vector<XLATensor> GetTensors() {
