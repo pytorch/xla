@@ -18,8 +18,7 @@ xla::Shape NodeOutputShape(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     bool count_include_pad) {
   auto lower_for_shape_fn =
-      [spatial_dim_count, kernel_size, stride, padding, count_include_pad](
-          tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1)
         << "Unexpected number of operands: " << operands.size();

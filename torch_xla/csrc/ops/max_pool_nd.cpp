@@ -17,8 +17,7 @@ xla::Shape NodeOutputShape(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   auto lower_for_shape_fn =
-      [spatial_dim_count, kernel_size, stride,
-       padding](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1)
         << "Unexpected number of operands: " << operands.size();
@@ -57,9 +56,9 @@ MaxPoolNd::MaxPoolNd(const Value& input, xla::int64 spatial_dim_count,
           /*num_outputs=*/1,
           xla::util::MHash(spatial_dim_count, kernel_size, stride, padding)),
       spatial_dim_count_(spatial_dim_count),
-      kernel_size_(kernel_size.begin(), kernel_size.end()),
-      stride_(stride.begin(), stride.end()),
-      padding_(padding.begin(), padding.end()) {}
+      kernel_size_(std::move(kernel_size)),
+      stride_(std::move(stride)),
+      padding_(std::move(padding)) {}
 
 XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

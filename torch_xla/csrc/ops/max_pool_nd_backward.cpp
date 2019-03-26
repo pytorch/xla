@@ -16,8 +16,7 @@ xla::Shape NodeOutputShape(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   auto lower_for_shape_fn =
-      [spatial_dim_count, kernel_size, stride,
-       padding](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2);
     return BuildMaxPoolNdBackward(/*out_backprop=*/operands[0],
