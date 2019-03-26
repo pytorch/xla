@@ -538,10 +538,10 @@ at::Tensor AtenXlaType::avg_pool1d(const at::Tensor& self,
     return AtenXlaTypeBase::avg_pool1d(self, kernel_size, stride, padding,
                                        ceil_mode, count_include_pad);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::avg_pool1d(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
-      count_include_pad));
+  return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd(
+      bridge::GetXlaTensor(self), /*spatial_dim_count=*/1,
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding), count_include_pad));
 }
 
 at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
@@ -554,10 +554,10 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
     return AtenXlaTypeBase::avg_pool2d(self, kernel_size, stride, padding,
                                        ceil_mode, count_include_pad);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::avg_pool2d(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
-      count_include_pad));
+  return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd(
+      bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding), count_include_pad));
 }
 
 at::Tensor AtenXlaType::avg_pool2d_backward(
@@ -570,10 +570,11 @@ at::Tensor AtenXlaType::avg_pool2d_backward(
                                                 stride, padding, ceil_mode,
                                                 count_include_pad);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::avg_pool2d_backward(
+  return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), count_include_pad));
+      /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
+      count_include_pad));
 }
 
 at::Tensor AtenXlaType::avg_pool3d(const at::Tensor& self,
@@ -586,10 +587,10 @@ at::Tensor AtenXlaType::avg_pool3d(const at::Tensor& self,
     return AtenXlaTypeBase::avg_pool3d(self, kernel_size, stride, padding,
                                        ceil_mode, count_include_pad);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::avg_pool3d(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
-      count_include_pad));
+  return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd(
+      bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding), count_include_pad));
 }
 
 at::Tensor AtenXlaType::avg_pool3d_backward(
@@ -601,10 +602,11 @@ at::Tensor AtenXlaType::avg_pool3d_backward(
                                                 stride, padding, ceil_mode,
                                                 count_include_pad);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::avg_pool3d_backward(
+  return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), count_include_pad));
+      /*spatial_dim_count=*/3, XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
+      count_include_pad));
 }
 
 at::Tensor AtenXlaType::bartlett_window(
@@ -1582,9 +1584,10 @@ at::Tensor AtenXlaType::max_pool1d(
     return AtenXlaTypeBase::max_pool1d(self, kernel_size, stride, padding,
                                        dilation, ceil_mode);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::max_pool1d(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
+  return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd(
+      bridge::GetXlaTensor(self), /*spatial_dim_count=*/1,
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding)));
 }
 
 at::Tensor AtenXlaType::max_pool2d(
@@ -1595,9 +1598,10 @@ at::Tensor AtenXlaType::max_pool2d(
     return AtenXlaTypeBase::max_pool2d(self, kernel_size, stride, padding,
                                        dilation, ceil_mode);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::max_pool2d(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
+  return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd(
+      bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding)));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
@@ -1613,9 +1617,10 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
   // user could request the indices to be returned, in which case we'd throw. We
   // need to either provide a lowering or improve our infrastructure to be able
   // to route to ATen the evaluation of outputs we hope to be unused.
-  XLATensor result = XLATensor::max_pool2d(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding));
+  XLATensor result = XLATensor::max_pool_nd(
+      bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding));
   xla::Shape indices_shape = result.shape();
   indices_shape.set_element_type(xla::PrimitiveType::S64);
   XLATensor indices_not_supported = XLATensor::not_supported(
@@ -1636,10 +1641,10 @@ at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
         grad_output, self, kernel_size, stride, padding, dilation, ceil_mode,
         indices);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::max_pool2d_backward(
+  return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding)));
+      /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
 }
 
 at::Tensor AtenXlaType::max_pool3d(
@@ -1650,9 +1655,10 @@ at::Tensor AtenXlaType::max_pool3d(
     return AtenXlaTypeBase::max_pool3d(self, kernel_size, stride, padding,
                                        dilation, ceil_mode);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::max_pool3d(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
+  return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd(
+      bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding)));
 }
 
 at::Tensor AtenXlaType::max_pool3d_with_indices_backward(
@@ -1666,10 +1672,10 @@ at::Tensor AtenXlaType::max_pool3d_with_indices_backward(
         grad_output, self, kernel_size, stride, padding, dilation, ceil_mode,
         indices);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::max_pool3d_backward(
+  return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding)));
+      /*spatial_dim_count=*/3, XlaHelpers::I64List(kernel_size),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool3d_with_indices(
@@ -1685,9 +1691,10 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool3d_with_indices(
   // user could request the indices to be returned, in which case we'd throw. We
   // need to either provide a lowering or improve our infrastructure to be able
   // to route to ATen the evaluation of outputs we hope to be unused.
-  XLATensor result = XLATensor::max_pool3d(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding));
+  XLATensor result = XLATensor::max_pool_nd(
+      bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
+      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding));
   xla::Shape indices_shape = result.shape();
   indices_shape.set_element_type(xla::PrimitiveType::S64);
   XLATensor indices_not_supported = XLATensor::not_supported(
