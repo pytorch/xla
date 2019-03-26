@@ -30,7 +30,7 @@ FuncGen = namedtuple_with_defaults(
 )
 
 FuncOpts = namedtuple_with_defaults(
-    'FuncOpts', 'ref_param, device_param, wparams, outfn_template')
+    'FuncOpts', 'ref_param, device_param, wparams, outfn_template, outfn_name')
 
 _GRAMMAR = r"""
     start: type fnname "(" params ")"
@@ -116,6 +116,17 @@ _FN_OUT = {
 # List of tuples with the regex match first, and the corresponding FuncOpts()
 # second.
 _FN_OUT_REGEX = []
+
+_FN_REMAP = {
+    '_th_eq(Tensor, Scalar) -> Tensor': FuncOpts(outfn_name='eq'),
+    '_th_eq(Tensor, Tensor) -> Tensor': FuncOpts(outfn_name='eq'),
+    '_th_ge(Tensor, Scalar) -> Tensor': FuncOpts(outfn_name='ge'),
+    '_th_ge(Tensor, Tensor) -> Tensor': FuncOpts(outfn_name='ge'),
+    '_th_gt(Tensor, Scalar) -> Tensor': FuncOpts(outfn_name='gt'),
+    '_th_gt(Tensor, Tensor) -> Tensor': FuncOpts(outfn_name='gt'),
+    '_th_lt(Tensor, Scalar) -> Tensor': FuncOpts(outfn_name='lt'),
+    '_th_lt(Tensor, Tensor) -> Tensor': FuncOpts(outfn_name='lt'),
+}
 
 _TYPE_NSMAP = {
     'Tensor': 'at::Tensor',
@@ -382,6 +393,13 @@ def get_outfn_options(fname, mapsig):
       return fnopts
   for frx, fnopts in _FN_OUT_REGEX:
     if re.match(frx, fname) or re.match(frx, mapsig):
+      return fnopts
+
+
+def get_remapfn_options(fname, mapsig):
+  for name in [fname, mapsig]:
+    fnopts = _FN_REMAP.get(name, None)
+    if fnopts is not None:
       return fnopts
 
 
@@ -772,6 +790,40 @@ def rewrite_tensor_options(fname, pname):
   return code, xname
 
 
+def get_param_names(params):
+  param_vars = []
+  for p in params:
+    pname = param_name(p)
+    param_vars.append(pname)
+  return param_vars
+
+
+def expand_fn_template(tmpl, param_vars):
+  mdict = {}
+  for i, pname in enumerate(param_vars):
+    mdict[str(i)] = pname
+  return tmpl.substitute(mdict)
+
+
+def create_call(fname, param_vars):
+  return '{}({})'.format(fname, ', '.join(param_vars))
+
+
+def generate_aten_remap(ctx, fname, sig, params, fnopts):
+  code = '{} {}{{\n'.format(sig, 'const ' if ctx.gen_class_mode else '')
+
+  param_vars = get_param_names(params)
+  if fnopts.outfn_template is not None:
+    fcall = expand_fn_template(fnopts.outfn_template, param_vars)
+  else:
+    assert fnopts.outfn_name
+    fcall = create_call(fnopts.outfn_name, param_vars)
+
+  code += '  return {};\n'.format(fcall)
+  code += '}'
+  return code
+
+
 def generate_aten_out(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
   rtype = tree.children[0]
   num_outputs = None
@@ -781,27 +833,14 @@ def generate_aten_out(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
   code = '{} {}{{\n'.format(sig, 'const ' if ctx.gen_class_mode else '')
   code += generate_entry_debug_code(tree, fname, params)
 
-  param_vars = []
-  for p in params:
-    pname = param_name(p)
-    param_vars.append(pname)
-
+  param_vars = get_param_names(params)
   if fnopts.outfn_template is not None:
-    mdict = {}
-    for i, pname in enumerate(param_vars):
-      mdict[str(i)] = pname
-    fcall = fnopts.outfn_template.substitute(mdict)
+    fcall = expand_fn_template(fnopts.outfn_template, param_vars)
   else:
     m = re.match(r'(.*)_out$', fname)
     assert m is not None, fname
-    core_fname = m.group(1)
     out_count = num_outputs if num_outputs is not None else 1
-    fcall = '{}('.format(core_fname)
-    for i in range(out_count, len(param_vars)):
-      if i > out_count:
-        fcall += ', '
-      fcall += param_vars[i]
-    fcall += ')'
+    fcall = create_call(m.group(1), param_vars[out_count:])
 
   if num_outputs is None:
     code += '  {} = {};\n'.format(param_vars[0], fcall)
@@ -903,9 +942,12 @@ def get_xla_wrapper(orig_sig, ctx):
   if is_blacklisted_fn(fname, mapsig):
     return None
   ofnopts = get_outfn_options(fname, mapsig)
+  rfnopts = get_remapfn_options(fname, mapsig)
   if ofnopts is not None:
     code = generate_aten_out(ctx, tree, rwxtree, fname, sig, rwsig, params,
                              ofnopts)
+  elif rfnopts is not None:
+    code = generate_aten_remap(ctx, fname, sig, params, rfnopts)
   else:
     code = generate_aten_to_xla(ctx, tree, rwxtree, fname, sig, rwsig, params,
                                 fnopts)
