@@ -264,10 +264,11 @@ TEST_F(TensorTest, TestMaxPool2D) {
         auto dev_input =
             XLATensor::Create(input, device, /*requires_grad=*/false);
         auto dev_output =
-            XLATensor::max_pool2d(dev_input,
-                                  /*kernel_size=*/{kernel_size, kernel_size},
-                                  /*stride=*/{stride, stride},
-                                  /*padding=*/{padding, padding});
+            XLATensor::max_pool_nd(dev_input,
+                                   /*spatial_dim_count=*/2,
+                                   /*kernel_size=*/{kernel_size, kernel_size},
+                                   /*stride=*/{stride, stride},
+                                   /*padding=*/{padding, padding});
         AllClose(output, dev_output);
       });
     }
@@ -287,8 +288,9 @@ TEST_F(TensorTest, TestMaxPool2DNonSquare) {
       ForEachDevice([&](const Device& device) {
         auto dev_input =
             XLATensor::Create(input, device, /*requires_grad=*/false);
-        auto dev_output = XLATensor::max_pool2d(
+        auto dev_output = XLATensor::max_pool_nd(
             dev_input,
+            /*spatial_dim_count=*/2,
             /*kernel_size=*/{kernel_size, kernel_size + 1},
             /*stride=*/{stride, stride + 1},
             /*padding=*/{padding, padding + 1});
@@ -304,16 +306,17 @@ TEST_F(TensorTest, TestAvgPool2D) {
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
       for (bool count_include_pad : {true, false}) {
-        auto output =
-            at::avg_pool2d(input, /*kernel_size=*/{kernel_size, kernel_size},
-                           /*stride=*/{stride, stride},
-                           /*padding=*/{padding, padding}, /*ceil_mode=*/false,
-                           count_include_pad);
+        auto output = at::avg_pool2d(input,
+                                     /*kernel_size=*/{kernel_size, kernel_size},
+                                     /*stride=*/{stride, stride},
+                                     /*padding=*/{padding, padding},
+                                     /*ceil_mode=*/false, count_include_pad);
         ForEachDevice([&](const Device& device) {
           auto dev_input =
               XLATensor::Create(input, device, /*requires_grad=*/false);
-          auto dev_output = XLATensor::avg_pool2d(
+          auto dev_output = XLATensor::avg_pool_nd(
               dev_input,
+              /*spatial_dim_count=*/2,
               /*kernel_size=*/{kernel_size, kernel_size},
               /*stride=*/{stride, stride},
               /*padding=*/{padding, padding}, count_include_pad);
@@ -331,15 +334,17 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
     for (int padding = 0; padding <= 1; ++padding) {
       for (bool count_include_pad : {true, false}) {
         auto output = at::avg_pool2d(
-            input, /*kernel_size=*/{kernel_size, kernel_size + 1},
+            input,
+            /*kernel_size=*/{kernel_size, kernel_size + 1},
             /*stride=*/{stride, stride + 1},
             /*padding=*/{padding, padding + 1}, /*ceil_mode=*/false,
             /*count_include_pad=*/count_include_pad);
         ForEachDevice([&](const Device& device) {
           auto dev_input =
               XLATensor::Create(input, device, /*requires_grad=*/false);
-          auto dev_output = XLATensor::avg_pool2d(
+          auto dev_output = XLATensor::avg_pool_nd(
               dev_input,
+              /*spatial_dim_count=*/2,
               /*kernel_size=*/{kernel_size, kernel_size + 1},
               /*stride=*/{stride, stride + 1},
               /*padding=*/{padding, padding + 1},

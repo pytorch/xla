@@ -437,8 +437,9 @@ void InitXlaTensorBindings(py::module m) {
   m.def(
       "max_pool2d",
       [](const XLATensor& self, int kernel_size, int stride, int padding) {
-        return XLATensor::max_pool2d(self, {kernel_size, kernel_size},
-                                     {stride, stride}, {padding, padding});
+        return XLATensor::max_pool_nd(self, /*spatial_dim_count=*/2,
+                                      {kernel_size, kernel_size},
+                                      {stride, stride}, {padding, padding});
       },
       py::arg("input"), py::arg("kernel_size"), py::arg("stride") = 1,
       py::arg("padding") = 0);
@@ -447,7 +448,8 @@ void InitXlaTensorBindings(py::module m) {
       [](const XLATensor& self, const std::vector<xla::int64>& kernel_size,
          const std::vector<xla::int64>& stride,
          const std::vector<xla::int64>& padding) {
-        return XLATensor::max_pool2d(self, kernel_size, stride, padding);
+        return XLATensor::max_pool_nd(self, /*spatial_dim_count=*/2,
+                                      kernel_size, stride, padding);
       },
       py::arg("input"), py::arg("kernel_size"),
       py::arg("stride") = std::vector<xla::int64>{1, 1},
@@ -456,9 +458,9 @@ void InitXlaTensorBindings(py::module m) {
       "avg_pool2d",
       [](const XLATensor& self, int kernel_size, int stride, int padding,
          bool count_include_pad) {
-        return XLATensor::avg_pool2d(self, {kernel_size, kernel_size},
-                                     {stride, stride}, {padding, padding},
-                                     count_include_pad);
+        return XLATensor::avg_pool_nd(
+            self, /*spatial_dim_count=*/2, {kernel_size, kernel_size},
+            {stride, stride}, {padding, padding}, count_include_pad);
       },
       py::arg("input"), py::arg("kernel_size"), py::arg("stride") = 1,
       py::arg("padding") = 0, py::arg("count_include_pad") = true);
@@ -467,8 +469,9 @@ void InitXlaTensorBindings(py::module m) {
       [](const XLATensor& self, const std::vector<xla::int64>& kernel_size,
          const std::vector<xla::int64>& stride,
          const std::vector<xla::int64>& padding, bool count_include_pad) {
-        return XLATensor::avg_pool2d(self, kernel_size, stride, padding,
-                                     count_include_pad);
+        return XLATensor::avg_pool_nd(self, /*spatial_dim_count=*/2,
+                                      kernel_size, stride, padding,
+                                      count_include_pad);
       },
       py::arg("input"), py::arg("kernel_size"),
       py::arg("stride") = std::vector<xla::int64>{1, 1},
