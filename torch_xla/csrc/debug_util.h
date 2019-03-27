@@ -1,38 +1,12 @@
 #pragma once
 
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <vector>
 
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
-namespace internal {
-
-struct StreamSink : public std::basic_ostringstream<char> {};
-
-class Streamer {
- public:
-  Streamer(std::ostream& output_stream = std::cerr)
-      : output_stream_(output_stream) {}
-
-  void operator&(const std::basic_ostream<char>& oss) const {
-    const StreamSink& sink = dynamic_cast<const StreamSink&>(oss);
-    output_stream_ << sink.str();
-  }
-
- private:
-  std::ostream& output_stream_;
-};
-
-}  // namespace internal
-
-#define XLA_DEBUG(level)                 \
-  TF_PREDICT_TRUE(!TF_VLOG_IS_ON(level)) \
-  ? (void)0                              \
-  : ::torch_xla::internal::Streamer() & ::torch_xla::internal::StreamSink()
 
 class DebugUtil {
  public:
@@ -47,6 +21,14 @@ class DebugUtil {
   static std::string GetTensorsGraphInfo(
       const std::vector<XLATensor>& tensors, const std::vector<size_t>* indices,
       GraphFormat format = GraphFormat::kText);
+
+  // If the environment variable XLA_SAVE_TENSORS_FILE is set to the proper
+  // output path, an instance of the report returned by GetTensorsGraphInfo() is
+  // saved.
+  static void SaveTensorsGraphInfo(const char* name,
+                                   const std::vector<XLATensor>& tensors,
+                                   const std::vector<size_t>* indices,
+                                   GraphFormat format = GraphFormat::kText);
 };
 
 }  // namespace torch_xla
