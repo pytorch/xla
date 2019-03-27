@@ -62,10 +62,9 @@ conda create --name pytorch python=3.5 anaconda
 source activate pytorch
 export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 conda install -y numpy pyyaml setuptools cmake cffi typing
-# Pin MKL to older version as as of March 22 2019 the new MKL shipped with
-# Conda breaks the build.
-conda install -y mkl=2019.1
-conda install -y mkl-include=2019.1
+
+# Disable MKL because it's a clusterfsck
+# conda install -y mkl mkl-include
 
 sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
 
@@ -87,7 +86,7 @@ fi
 # Apply patches to PT which are required by the XLA support.
 xla/scripts/apply_patches.sh
 # Build and install torch wheel and collect artifact
-export NO_CUDA=1
+export NO_CUDA=1 NO_MKLDNN=1
 python setup.py bdist_wheel
 pip install dist/*.whl
 cd dist && rename "s/\+\w{7}/\+stable/" *.whl && cd ..
