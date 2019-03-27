@@ -1145,6 +1145,28 @@ TEST_F(AtenXlaTensorTest, TestFrobeniusNormInDims) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestGroupNorm) {
+  int num_channels = 6;
+  at::Tensor input =
+      at::rand({20, num_channels, 10, 10}, at::TensorOptions(at::kFloat));
+  at::Tensor weight = at::rand({num_channels}, at::TensorOptions(at::kFloat));
+  at::Tensor bias = at::rand({num_channels}, at::TensorOptions(at::kFloat));
+  double eps = 1e-05;
+  for (int num_groups : {3, 6, 1}) {
+    at::Tensor output = at::group_norm(input, num_groups, weight, bias, eps,
+                                       /*cudnn_enabled=*/false);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
+      at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
+      at::Tensor xla_output =
+          at::group_norm(xla_input, num_groups, xla_weight, xla_bias, eps,
+                         /*cudnn_enabled=*/false);
+      AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
   at::Tensor a = at::rand({4, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::nuclear_norm(a);

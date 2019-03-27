@@ -1227,6 +1227,14 @@ at::Tensor& AtenXlaType::ge_(at::Tensor& self, const at::Tensor& other) const {
   return self;
 }
 
+at::Tensor AtenXlaType::group_norm(const at::Tensor& input, int64_t num_groups,
+                                   const at::Tensor& weight,
+                                   const at::Tensor& bias, double eps,
+                                   bool cudnn_enabled) const {
+  return at::native::group_norm(input, num_groups, weight, bias, eps,
+                                cudnn_enabled);
+}
+
 at::Tensor AtenXlaType::gt(const at::Tensor& self, at::Scalar other) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::gt(bridge::GetXlaTensor(self), other));
