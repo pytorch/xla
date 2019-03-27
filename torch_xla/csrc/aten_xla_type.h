@@ -556,6 +556,11 @@ class AtenXlaType : public AtenXlaTypeBase {
                                               int64_t dim,
                                               bool keepdim) const override;
 
+  at::Tensor layer_norm(const at::Tensor& input,
+                        at::IntArrayRef normalized_shape,
+                        const at::Tensor& weight, const at::Tensor& bias,
+                        double eps, bool cudnn_enable) const override;
+
   at::Tensor le(const at::Tensor& self, at::Scalar other) const override;
 
   at::Tensor le(const at::Tensor& self, const at::Tensor& other) const override;
