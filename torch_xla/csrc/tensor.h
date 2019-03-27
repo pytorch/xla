@@ -252,9 +252,7 @@ class XLATensor {
                                         bool count_include_pad);
 
   static XLATensor batch_norm(const XLATensor& input, const XLATensor& weight,
-                              const XLATensor& bias,
-                              const XLATensor& running_mean,
-                              const XLATensor& running_var, double momentum,
+                              const XLATensor& bias, double momentum,
                               double eps);
 
   // Batch matrix multiplication. Both tensors must be 3D, the batch size must
@@ -598,14 +596,12 @@ class XLATensor {
   // the backward pass.
   static std::tuple<XLATensor, XLATensor, XLATensor> native_batch_norm(
       const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
-      const XLATensor& running_mean, const XLATensor& running_var,
       double momentum, double eps);
 
   // Returns the input, weight and bias gradients.
   static std::tuple<XLATensor, XLATensor, XLATensor> native_batch_norm_backward(
       const XLATensor& grad_out, const XLATensor& input,
-      const XLATensor& weight, const XLATensor& running_mean,
-      const XLATensor& running_var, const XLATensor& save_mean,
+      const XLATensor& weight, const XLATensor& save_mean,
       const XLATensor& save_invstd, double eps);
 
   static XLATensor ne(const XLATensor& input, at::Scalar other);
