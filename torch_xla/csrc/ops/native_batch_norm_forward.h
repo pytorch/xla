@@ -11,8 +11,7 @@ namespace ops {
 class NativeBatchNormForward : public Node {
  public:
   NativeBatchNormForward(const Value& input, const Value& weight,
-                         const Value& bias, const Value& running_mean,
-                         const Value& running_var, double momentum, double eps);
+                         const Value& bias, double momentum, double eps);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

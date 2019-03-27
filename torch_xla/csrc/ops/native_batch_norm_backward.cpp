@@ -31,12 +31,10 @@ xla::Shape NodeOutputShape(const Value& grad_out, const Value& input,
 
 NativeBatchNormBackward::NativeBatchNormBackward(
     const Value& grad_out, const Value& input, const Value& weight,
-    const Value& running_mean, const Value& running_var, const Value& save_mean,
-    const Value& save_invstd, double eps)
+    const Value& save_mean, const Value& save_invstd, double eps)
     : Node(
           ir::OpKind(at::aten::native_batch_norm_backward),
-          {grad_out, input, weight, running_mean, running_var, save_mean,
-           save_invstd},
+          {grad_out, input, weight, save_mean, save_invstd},
           [&]() {
             return NodeOutputShape(grad_out, input, weight, save_mean,
                                    save_invstd);
@@ -48,8 +46,8 @@ XlaOpVector NativeBatchNormBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_out = loctx->GetOutputOp(operand(0));
   xla::XlaOp input = loctx->GetOutputOp(operand(1));
   xla::XlaOp weight = loctx->GetOutputOp(operand(2));
-  xla::XlaOp save_mean = loctx->GetOutputOp(operand(5));
-  xla::XlaOp save_invstd = loctx->GetOutputOp(operand(6));
+  xla::XlaOp save_mean = loctx->GetOutputOp(operand(3));
+  xla::XlaOp save_invstd = loctx->GetOutputOp(operand(4));
   BatchNormGrads grads = BuildBatchNormBackward(grad_out, input, weight,
                                                 save_mean, save_invstd, eps_);
   return ReturnOps({std::move(grads.grad_input), std::move(grads.grad_weight),
