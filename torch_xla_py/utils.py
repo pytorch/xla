@@ -150,11 +150,16 @@ class TimedScope(object):
       printfn = get_print_fn()
     self._msg = msg
     self._printfn = printfn
+    self._error = None
 
   def __enter__(self):
     self._start = time.time()
     return self
 
   def __exit__(self, type, value, traceback):
-    self._printfn('{}{:.3f}ms'.format(self._msg,
-                                      1000.0 * (time.time() - self._start)))
+    if self._error is None:
+      self._printfn('{}{:.3f}ms'.format(self._msg,
+                                        1000.0 * (time.time() - self._start)))
+
+  def set_error(self, error):
+    self._error = error
