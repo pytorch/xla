@@ -80,6 +80,9 @@ XLATensor GetXlaTensorUnwrap(const at::Tensor& tensor) {
 }
 
 XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device) {
+  if (!tensor.defined()) {
+    return XLATensor();
+  }
   auto xtensor = TryGetXlaTensor(tensor);
   return xtensor ? *xtensor
                  : XLATensor::Create(tensor, device, /*requires_grad=*/false);
