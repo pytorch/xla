@@ -18,6 +18,7 @@
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -854,6 +855,9 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     SyncTensorCollection* coll,
     std::vector<xla::ComputationClient::DataPtr> parameters_data,
     std::string device, ComputationCache::TypePtr cached_computation) {
+  XLA_DEBUG(3) << "[ScheduleSyncTensorsGraph]\n"
+               << DebugUtil::GetTensorsGraphInfo(*tensors, &coll->indices);
+
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), device, std::move(cached_computation));
   for (auto index : async->indices) {
