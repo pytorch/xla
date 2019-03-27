@@ -1,6 +1,11 @@
 #include "torch_xla/csrc/debug_util.h"
 
+#include <fstream>
+#include <mutex>
+#include <sstream>
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ir_util.h"
@@ -42,6 +47,21 @@ std::string DebugUtil::GetTensorsGraphInfo(
     XLA_ERROR() << "Invalid graph format: " << format;
   }
   return ss.str();
+}
+
+void DebugUtil::SaveTensorsGraphInfo(const char* name,
+                                     const std::vector<XLATensor>& tensors,
+                                     const std::vector<size_t>* indices,
+                                     GraphFormat format) {
+  static const std::string save_file =
+      xla::sys_util::GetEnvString("XLA_SAVE_TENSORS_FILE", "");
+  if (!save_file.empty()) {
+    static std::mutex lock;
+    std::string info = GetTensorsGraphInfo(tensors, indices, format);
+    std::lock_guard<std::mutex> guard(lock);
+    std::ofstream graph_file(save_file, std::ios_base::app);
+    graph_file << "[" << name << "]\n" << info << "\n";
+  }
 }
 
 }  // namespace torch_xla
