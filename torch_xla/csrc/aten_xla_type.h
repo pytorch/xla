@@ -464,6 +464,10 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor& ge_(at::Tensor& self, const at::Tensor& other) const override;
 
+  at::Tensor group_norm(const at::Tensor& input, int64_t num_groups,
+                        const at::Tensor& weight, const at::Tensor& bias,
+                        double eps, bool cudnn_enabled) const override;
+
   at::Tensor gt(const at::Tensor& self, at::Scalar other) const override;
 
   at::Tensor gt(const at::Tensor& self, const at::Tensor& other) const override;
