@@ -1589,6 +1589,16 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b = torch.clamp(xla_a, max=3.4)
     self.assertEqual(b.data, xla_b.data.cpu())
 
+  def test_max_broadcast(self):
+    xla_device = xm.xla_device()
+    a = torch.rand(3, 1, 2)
+    b = torch.rand(4, 2)
+    c = torch.max(a, b)
+    xla_a = a.to(xla_device)
+    xla_b = b.to(xla_device)
+    xla_c = torch.max(xla_a, xla_b)
+    self.assertEqual(c.data, xla_c.data.cpu())
+
 
 class MNISTComparator(nn.Module):
 
