@@ -32,10 +32,22 @@ def bench_add_mul_div(args):
   device = xm.xla_device()
   a = torch.rand(8, 8)
   b = torch.rand(8, 8).abs() + 1.0
-  c = a * b - a / b
   xla_a = a.to(device)
   xla_b = b.to(device)
   for i in range(0, xu.getenv_as('ADD_MUL_DIV_LOOPS', int, 1000)):
+    xla_c = xla_a * xla_b - xla_a / xla_b
+    _use_result(xla_c)
+  xu.get_print_fn()(torch_xla._XLAC._xla_metrics_report())
+
+
+def bench_add_mul_div_transfer(args):
+  device = xm.xla_device()
+  size = xu.getenv_as('ADD_MUL_DIV_SIZE', int, 100)
+  a = torch.rand(size, size)
+  b = torch.rand(size, size).abs() + 1.0
+  for i in range(0, xu.getenv_as('ADD_MUL_DIV_LOOPS', int, 1000)):
+    xla_a = a.to(device)
+    xla_b = b.to(device)
     xla_c = xla_a * xla_b - xla_a / xla_b
     _use_result(xla_c)
   xu.get_print_fn()(torch_xla._XLAC._xla_metrics_report())
