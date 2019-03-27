@@ -1443,6 +1443,15 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
+at::Tensor AtenXlaType::layer_norm(const at::Tensor& input,
+                                   at::IntArrayRef normalized_shape,
+                                   const at::Tensor& weight,
+                                   const at::Tensor& bias, double eps,
+                                   bool cudnn_enable) const {
+  return at::native::layer_norm(input, normalized_shape, weight, bias, eps,
+                                cudnn_enable);
+}
+
 at::Tensor AtenXlaType::le(const at::Tensor& self, at::Scalar other) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::le(bridge::GetXlaTensor(self), other));
