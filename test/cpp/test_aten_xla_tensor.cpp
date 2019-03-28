@@ -1167,6 +1167,35 @@ TEST_F(AtenXlaTensorTest, TestGroupNorm) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestInstanceNorm) {
+  int batch = 5;
+  int num_channels = 20;
+  at::Tensor input =
+      at::rand({batch, num_channels, 10, 10}, at::TensorOptions(at::kFloat));
+  at::Tensor weight = at::rand({num_channels}, at::TensorOptions(at::kFloat));
+  at::Tensor bias = at::rand({num_channels}, at::TensorOptions(at::kFloat));
+  at::Tensor running_mean =
+      at::zeros({num_channels}, at::TensorOptions(at::kFloat));
+  at::Tensor running_var =
+      at::ones({num_channels}, at::TensorOptions(at::kFloat));
+  double momentum = 0.1;
+  double eps = 1e-05;
+  at::Tensor output = at::instance_norm(
+      input, weight, bias, running_mean, running_var,
+      /*use_input_stats=*/true, momentum, eps, /*cudnn_enabled=*/false);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_weight = bridge::CreateXlaTensor(weight, device);
+    at::Tensor xla_bias = bridge::CreateXlaTensor(bias, device);
+    at::Tensor xla_running_mean = bridge::CreateXlaTensor(running_mean, device);
+    at::Tensor xla_running_var = bridge::CreateXlaTensor(running_var, device);
+    at::Tensor xla_output = at::instance_norm(
+        xla_input, xla_weight, xla_bias, xla_running_mean, xla_running_var,
+        /*use_input_stats=*/true, momentum, eps, /*cudnn_enabled=*/false);
+    AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestLayerNorm) {
   int num_channels = 5;
   std::vector<int64_t> normalized_shape = {10, 10};
