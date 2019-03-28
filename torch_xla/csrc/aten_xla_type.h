@@ -786,6 +786,10 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor ones_like(const at::Tensor& self,
                        const at::TensorOptions& options) const override;
 
+  at::Tensor pairwise_distance(const at::Tensor& x1, const at::Tensor& x2,
+                               double p, double eps,
+                               bool keepdim) const override;
+
   at::Tensor permute(const at::Tensor& self,
                      at::IntArrayRef dims) const override;
 
