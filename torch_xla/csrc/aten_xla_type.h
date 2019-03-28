@@ -317,6 +317,11 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor& cosh_(at::Tensor& self) const override;
 
+  at::Tensor cosine_embedding_loss(const at::Tensor& input1,
+                                   const at::Tensor& input2,
+                                   const at::Tensor& target, double margin,
+                                   int64_t reduction) const override;
+
   at::Tensor cosine_similarity(const at::Tensor& x1, const at::Tensor& x2,
                                int64_t dim, double eps) const override;
 
