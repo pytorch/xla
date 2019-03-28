@@ -1263,6 +1263,26 @@ TEST_F(AtenXlaTensorTest, TestCosineSimilarity) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestCosineEmbeddingLoss) {
+  at::Tensor input1 = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor input2 = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor target = at::rand({4}, at::TensorOptions(at::kFloat));
+  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+    for (double margin : {0., 0.2}) {
+      ForEachDevice([&](const Device& device) {
+        at::Tensor output = at::cosine_embedding_loss(input1, input2, target,
+                                                      margin, reduction);
+        at::Tensor xla_input1 = bridge::CreateXlaTensor(input1, device);
+        at::Tensor xla_input2 = bridge::CreateXlaTensor(input2, device);
+        at::Tensor xla_target = bridge::CreateXlaTensor(target, device);
+        at::Tensor xla_output = at::cosine_embedding_loss(
+            xla_input1, xla_input2, xla_target, margin, reduction);
+        AllClose(output, xla_output);
+      });
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestProd) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::prod(a);
