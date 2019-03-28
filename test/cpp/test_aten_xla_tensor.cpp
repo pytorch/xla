@@ -1301,6 +1301,35 @@ TEST_F(AtenXlaTensorTest, TestHingeEmbeddingLoss) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestTripletMarginLoss) {
+  at::Tensor anchor = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor positive =
+      at::abs(at::rand({4, 3}, at::TensorOptions(at::kFloat)));
+  at::Tensor negative =
+      at::neg(at::abs(at::rand({4, 3}, at::TensorOptions(at::kFloat))));
+  double eps = 1e-6;
+  for (double margin : {0., 0.2}) {
+    for (double p : {1, 2, 3, 4}) {
+      for (bool swap : {false, true}) {
+        for (Reduction::Reduction reduction :
+             {Reduction::Mean, Reduction::Sum}) {
+          ForEachDevice([&](const Device& device) {
+            at::Tensor output = at::triplet_margin_loss(
+                anchor, positive, negative, margin, p, eps, swap, reduction);
+            at::Tensor xla_anchor = bridge::CreateXlaTensor(anchor, device);
+            at::Tensor xla_positive = bridge::CreateXlaTensor(positive, device);
+            at::Tensor xla_negative = bridge::CreateXlaTensor(negative, device);
+            at::Tensor xla_output =
+                at::triplet_margin_loss(xla_anchor, xla_positive, xla_negative,
+                                        margin, p, eps, swap, reduction);
+            AllClose(output, xla_output);
+          });
+        }
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestProd) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::prod(a);
