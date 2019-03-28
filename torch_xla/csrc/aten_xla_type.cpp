@@ -2779,6 +2779,16 @@ at::Tensor& AtenXlaType::tril_(at::Tensor& self, int64_t diagonal) const {
   return self;
 }
 
+at::Tensor AtenXlaType::triplet_margin_loss(const at::Tensor& anchor,
+                                            const at::Tensor& positive,
+                                            const at::Tensor& negative,
+                                            double margin, double p, double eps,
+                                            bool swap,
+                                            int64_t reduction) const {
+  return at::native::triplet_margin_loss(anchor, positive, negative, margin, p,
+                                         eps, swap, reduction);
+}
+
 at::Tensor AtenXlaType::triu(const at::Tensor& self, int64_t diagonal) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::triu(bridge::GetXlaTensor(self), diagonal));

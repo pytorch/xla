@@ -1079,6 +1079,12 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor& tril_(at::Tensor& self, int64_t diagonal) const override;
 
+  at::Tensor triplet_margin_loss(const at::Tensor& anchor,
+                                 const at::Tensor& positive,
+                                 const at::Tensor& negative, double margin,
+                                 double p, double eps, bool swap,
+                                 int64_t reduction) const override;
+
   at::Tensor triu(const at::Tensor& self, int64_t diagonal) const override;
 
   at::Tensor& triu_(at::Tensor& self, int64_t diagonal) const override;
