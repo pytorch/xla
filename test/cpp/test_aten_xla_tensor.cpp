@@ -1229,6 +1229,24 @@ TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestPairwiseDistance) {
+  at::Tensor x1 = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor x2 = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  double eps = 1e-6;
+  for (bool keepdim : {false, true}) {
+    for (double p : {1, 2, 3, 4}) {
+      ForEachDevice([&](const Device& device) {
+        at::Tensor output = at::pairwise_distance(x1, x2, p, eps, keepdim);
+        at::Tensor xla_x1 = bridge::CreateXlaTensor(x1, device);
+        at::Tensor xla_x2 = bridge::CreateXlaTensor(x2, device);
+        at::Tensor xla_output =
+            at::pairwise_distance(xla_x1, xla_x2, p, eps, keepdim);
+        AllClose(output, xla_output);
+      });
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestProd) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::prod(a);

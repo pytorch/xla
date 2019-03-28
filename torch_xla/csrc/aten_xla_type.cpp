@@ -2055,6 +2055,12 @@ at::Tensor AtenXlaType::ones_like(const at::Tensor& self,
   return full_like(self, 1, options);
 }
 
+at::Tensor AtenXlaType::pairwise_distance(const at::Tensor& x1,
+                                          const at::Tensor& x2, double p,
+                                          double eps, bool keepdim) const {
+  return at::native::pairwise_distance(x1, x2, p, eps, keepdim);
+}
+
 at::Tensor AtenXlaType::permute(const at::Tensor& self,
                                 at::IntArrayRef dims) const {
   return bridge::AtenFromXlaTensor(XLATensor::permute(
