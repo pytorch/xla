@@ -520,6 +520,10 @@ class AtenXlaType : public AtenXlaTypeBase {
                                const at::Tensor& self, at::Scalar min_val,
                                at::Scalar max_val) const override;
 
+  at::Tensor hinge_embedding_loss(const at::Tensor& self,
+                                  const at::Tensor& target, double margin,
+                                  int64_t reduction) const override;
+
   at::Tensor index(const at::Tensor& self,
                    at::TensorList indices) const override;
 
