@@ -155,6 +155,8 @@ class AtenXlaType : public AtenXlaTypeBase {
                    const at::Tensor& mat2, at::Scalar beta,
                    at::Scalar alpha) const override;
 
+  at::Tensor alias(const at::Tensor& self) const override;
+
   at::Tensor all(const at::Tensor& self) const override;
 
   at::Tensor all(const at::Tensor& self, int64_t dim,
@@ -303,6 +305,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor copy(const at::Tensor& src, bool non_blocking,
                   at::optional<c10::Device> to_device) const override;
+
+  at::Tensor& copy_(at::Tensor& self, const at::Tensor& src,
+                    bool non_blocking) const override;
 
   at::Tensor cos(const at::Tensor& self) const override;
 
@@ -551,6 +556,13 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor index_select(const at::Tensor& self, int64_t dim,
                           const at::Tensor& index) const override;
+
+  at::Tensor instance_norm(const at::Tensor& input, const at::Tensor& weight,
+                           const at::Tensor& bias,
+                           const at::Tensor& running_mean,
+                           const at::Tensor& running_var, bool use_input_stats,
+                           double momentum, double eps,
+                           bool cudnn_enabled) const override;
 
   std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self, int64_t k,
                                               int64_t dim,

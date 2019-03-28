@@ -410,6 +410,8 @@ at::Tensor AtenXlaType::addmm(const at::Tensor& self, const at::Tensor& mat1,
                        /*bias=*/bridge::GetXlaTensor(self)));
 }
 
+at::Tensor AtenXlaType::alias(const at::Tensor& self) const { return self; }
+
 at::Tensor AtenXlaType::all(const at::Tensor& self) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::all(
@@ -820,6 +822,11 @@ at::Tensor AtenXlaType::copy(const at::Tensor& src, bool /* non_blocking */,
   Device device = to_device ? bridge::AtenDeviceToXlaDevice(*to_device)
                             : *GetDefaultDevice();
   return bridge::CreateXlaTensor(CopyTensor(xla_tensors.front()), device);
+}
+
+at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
+                               bool non_blocking) const {
+  return at::TypeDefault::copy_(self, src, non_blocking);
 }
 
 at::Tensor AtenXlaType::cos(const at::Tensor& self) const {
@@ -1432,6 +1439,23 @@ at::Tensor AtenXlaType::index_select(const at::Tensor& self, int64_t dim,
                                      const at::Tensor& index) const {
   return bridge::AtenFromXlaTensor(XLATensor::index_select(
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
+}
+
+at::Tensor AtenXlaType::instance_norm(const at::Tensor& input,
+                                      const at::Tensor& weight,
+                                      const at::Tensor& bias,
+                                      const at::Tensor& running_mean,
+                                      const at::Tensor& running_var,
+                                      bool use_input_stats, double momentum,
+                                      double eps, bool cudnn_enabled) const {
+  if (cudnn_enabled || !use_input_stats) {
+    return AtenXlaTypeBase::instance_norm(input, weight, bias, running_mean,
+                                          running_var, use_input_stats,
+                                          momentum, eps, cudnn_enabled);
+  }
+  return at::native::instance_norm(input, weight, bias, running_mean,
+                                   running_var, use_input_stats, momentum, eps,
+                                   cudnn_enabled);
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
