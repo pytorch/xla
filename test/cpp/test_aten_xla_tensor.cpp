@@ -1247,6 +1247,22 @@ TEST_F(AtenXlaTensorTest, TestPairwiseDistance) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestCosineSimilarity) {
+  at::Tensor x1 = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor x2 = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  double eps = 1e-8;
+  int rank = x1.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor output = at::cosine_similarity(x1, x2, dim, eps);
+      at::Tensor xla_x1 = bridge::CreateXlaTensor(x1, device);
+      at::Tensor xla_x2 = bridge::CreateXlaTensor(x2, device);
+      at::Tensor xla_output = at::cosine_similarity(xla_x1, xla_x2, dim, eps);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestProd) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::prod(a);
