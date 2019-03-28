@@ -641,6 +641,11 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor& lt_(at::Tensor& self, const at::Tensor& other) const override;
 
+  at::Tensor margin_ranking_loss(const at::Tensor& input1,
+                                 const at::Tensor& input2,
+                                 const at::Tensor& target, double margin,
+                                 int64_t reduction) const override;
+
   at::Tensor masked_fill(const at::Tensor& self, const at::Tensor& mask,
                          at::Scalar value) const override;
 

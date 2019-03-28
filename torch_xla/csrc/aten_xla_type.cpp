@@ -1640,6 +1640,15 @@ at::Tensor& AtenXlaType::lt_(at::Tensor& self, const at::Tensor& other) const {
   return self;
 }
 
+at::Tensor AtenXlaType::margin_ranking_loss(const at::Tensor& input1,
+                                            const at::Tensor& input2,
+                                            const at::Tensor& target,
+                                            double margin,
+                                            int64_t reduction) const {
+  return at::native::margin_ranking_loss(input1, input2, target, margin,
+                                         reduction);
+}
+
 at::Tensor AtenXlaType::masked_fill(const at::Tensor& self,
                                     const at::Tensor& mask,
                                     at::Scalar value) const {
