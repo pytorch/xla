@@ -317,6 +317,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor& cosh_(at::Tensor& self) const override;
 
+  at::Tensor cosine_similarity(const at::Tensor& x1, const at::Tensor& x2,
+                               int64_t dim, double eps) const override;
+
   at::Tensor cross(const at::Tensor& self, const at::Tensor& other,
                    c10::optional<int64_t> dim) const override;
 

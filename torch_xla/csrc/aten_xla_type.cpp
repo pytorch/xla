@@ -849,6 +849,12 @@ at::Tensor& AtenXlaType::cosh_(at::Tensor& self) const {
   return self;
 }
 
+at::Tensor AtenXlaType::cosine_similarity(const at::Tensor& x1,
+                                          const at::Tensor& x2, int64_t dim,
+                                          double eps) const {
+  return at::native::cosine_similarity(x1, x2, dim, eps);
+}
+
 at::Tensor AtenXlaType::cross(const at::Tensor& self, const at::Tensor& other,
                               c10::optional<int64_t> dim) const {
   return bridge::AtenFromXlaTensor(
