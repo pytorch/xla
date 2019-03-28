@@ -1283,6 +1283,24 @@ TEST_F(AtenXlaTensorTest, TestCosineEmbeddingLoss) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestHingeEmbeddingLoss) {
+  at::Tensor input = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor target = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+    for (double margin : {0., 0.2}) {
+      ForEachDevice([&](const Device& device) {
+        at::Tensor output =
+            at::hinge_embedding_loss(input, target, margin, reduction);
+        at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+        at::Tensor xla_target = bridge::CreateXlaTensor(target, device);
+        at::Tensor xla_output =
+            at::hinge_embedding_loss(xla_input, xla_target, margin, reduction);
+        AllClose(output, xla_output);
+      });
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestProd) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::prod(a);
