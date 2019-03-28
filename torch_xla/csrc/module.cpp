@@ -25,11 +25,11 @@
 namespace torch_xla {
 namespace {
 
-// Extract the IValue pointers from a named IValue dictionary.
-std::unordered_set<torch::jit::IValue*> ToIValueSet(
+// Extract the slots from a named IValue dictionary.
+std::unordered_set<torch::jit::script::Slot> ToSlotSet(
     const torch::OrderedDict<std::string, torch::jit::script::NamedIValue>&
         named_ivalue_dict) {
-  std::unordered_set<torch::jit::IValue*> ivalue_set;
+  std::unordered_set<torch::jit::script::Slot> ivalue_set;
   for (auto& named_ivalue : named_ivalue_dict) {
     ivalue_set.insert(named_ivalue->slot());
   }
@@ -42,9 +42,9 @@ void GatherParameters(std::vector<at::Tensor>* values,
                       std::vector<bool>* requires_grad,
                       const torch::jit::script::Module& m,
                       const torch::jit::script::Method* forward) {
-  const auto parameter_set = ToIValueSet(m.get_parameters());
-  const auto attribute_set = ToIValueSet(m.get_attributes());
-  for (torch::jit::IValue* initial_ivalue : forward->initial_ivalues()) {
+  const auto parameter_set = ToSlotSet(m.get_parameters());
+  const auto attribute_set = ToSlotSet(m.get_attributes());
+  for (torch::jit::script::Slot initial_ivalue : forward->initial_ivalues()) {
     if (parameter_set.find(initial_ivalue) != parameter_set.end()) {
       values->push_back(initial_ivalue->toTensor());
       requires_grad->push_back(true);
