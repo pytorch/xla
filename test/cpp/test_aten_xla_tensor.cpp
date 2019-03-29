@@ -1380,6 +1380,20 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogits) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestKlDiv) {
+  at::Tensor input = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor target = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor output = at::kl_div(input, target, reduction);
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_target = bridge::CreateXlaTensor(target, device);
+      at::Tensor xla_output = at::kl_div(xla_input, xla_target, reduction);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestProd) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::prod(a);

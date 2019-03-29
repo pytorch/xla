@@ -587,6 +587,9 @@ class AtenXlaType : public AtenXlaTypeBase {
                            double momentum, double eps,
                            bool cudnn_enabled) const override;
 
+  at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
+                    int64_t reduction) const override;
+
   std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self, int64_t k,
                                               int64_t dim,
                                               bool keepdim) const override;
