@@ -58,6 +58,21 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
   return XLATensor::stack({s1, s2, s3}, canonical_dim);
 }
 
+XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
+                        const XLATensor& target, xla::int64 reduction) {
+  auto input_shape_ref = input.shape();
+  XLATensor expanded_grad_output =
+      XLATensor::expand(grad_output, input_shape_ref.get().dimensions());
+  XLATensor grad_input = XLATensor::where(
+      XLATensor::gt(target, 0),
+      XLATensor::neg(XLATensor::mul(target, expanded_grad_output)),
+      XLATensor::full_like(input, 0, input.GetDevice(), c10::nullopt));
+  double input_elem_count = xla::ShapeUtil::ElementsIn(input_shape_ref.get());
+  return reduction == Reduction::Mean
+             ? XLATensor::div(grad_input, input_elem_count)
+             : grad_input;
+}
+
 XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal) {
   xla::int64 size = input.shape().get().dimensions(0);
   XLATensor identity =

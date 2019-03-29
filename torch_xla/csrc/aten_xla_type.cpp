@@ -1500,6 +1500,15 @@ at::Tensor AtenXlaType::kl_div(const at::Tensor& self, const at::Tensor& target,
   return at::native::kl_div(self, target, reduction);
 }
 
+at::Tensor AtenXlaType::kl_div_backward(const at::Tensor& grad_output,
+                                        const at::Tensor& self,
+                                        const at::Tensor& target,
+                                        int64_t reduction) const {
+  return bridge::AtenFromXlaTensor(XLATensor::kl_div_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(target), reduction));
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
                                                          int64_t k, int64_t dim,
                                                          bool keepdim) const {

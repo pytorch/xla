@@ -498,6 +498,11 @@ class XLATensor {
   static XLATensor index_select(const XLATensor& input, xla::int64 dim,
                                 const XLATensor& index);
 
+  static XLATensor kl_div_backward(const XLATensor& grad_output,
+                                   const XLATensor& input,
+                                   const XLATensor& target,
+                                   xla::int64 reduction);
+
   static XLATensor le(const XLATensor& input, at::Scalar other);
   static void le_(XLATensor& input, at::Scalar other);
 
