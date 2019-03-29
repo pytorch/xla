@@ -590,6 +590,10 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
                     int64_t reduction) const override;
 
+  at::Tensor kl_div_backward(const at::Tensor& grad_output,
+                             const at::Tensor& self, const at::Tensor& target,
+                             int64_t reduction) const override;
+
   std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self, int64_t k,
                                               int64_t dim,
                                               bool keepdim) const override;

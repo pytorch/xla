@@ -6021,5 +6021,18 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestKlDivBackward) {
+  at::Tensor input = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor target = at::rand({4, 3}, at::TensorOptions(at::kFloat));
+  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+    auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+      return at::kl_div(/*self=*/inputs[0], /*target=*/inputs[1], reduction);
+    };
+    ForEachDevice([&](const Device& device) {
+      TestBackward({input, target}, device, testfn);
+    });
+  }
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla

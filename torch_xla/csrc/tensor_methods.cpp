@@ -1085,6 +1085,13 @@ XLATensor XLATensor::index_select(const XLATensor& input, xla::int64 dim,
       index.GetIrValue()));
 }
 
+XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
+                                     const XLATensor& input,
+                                     const XLATensor& target,
+                                     xla::int64 reduction) {
+  return tensor_ops::KlDivBackward(grad_output, input, target, reduction);
+}
+
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
                                                      xla::int64 k,
                                                      xla::int64 dim,
