@@ -1495,6 +1495,11 @@ at::Tensor AtenXlaType::instance_norm(const at::Tensor& input,
                                    cudnn_enabled);
 }
 
+at::Tensor AtenXlaType::kl_div(const at::Tensor& self, const at::Tensor& target,
+                               int64_t reduction) const {
+  return at::native::kl_div(self, target, reduction);
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
                                                          int64_t k, int64_t dim,
                                                          bool keepdim) const {
