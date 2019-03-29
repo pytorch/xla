@@ -1350,6 +1350,36 @@ TEST_F(AtenXlaTensorTest, TestMarginRankingLoss) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestBCEWithLogits) {
+  int batch = 10;
+  int classes = 5;
+  at::Tensor input = at::rand({batch, classes}, at::TensorOptions(at::kFloat));
+  at::Tensor target = at::rand({batch, classes}, at::TensorOptions(at::kFloat));
+  at::Tensor weight = at::rand({classes}, at::TensorOptions(at::kFloat));
+  at::Tensor pos_weight = at::rand({classes}, at::TensorOptions(at::kFloat));
+  at::Tensor undef;
+  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+    for (bool undef_weight : {false, true}) {
+      for (bool undef_pos_weight : {false, true}) {
+        ForEachDevice([&](const Device& device) {
+          at::Tensor output = at::binary_cross_entropy_with_logits(
+              input, target, undef_weight ? undef : weight,
+              undef_pos_weight ? undef : pos_weight, reduction);
+          at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+          at::Tensor xla_target = bridge::CreateXlaTensor(target, device);
+          at::Tensor xla_weight =
+              undef_weight ? undef : bridge::CreateXlaTensor(weight, device);
+          at::Tensor xla_pos_weight =
+              undef_pos_weight ? undef
+                               : bridge::CreateXlaTensor(pos_weight, device);
+          at::Tensor xla_output = at::binary_cross_entropy_with_logits(
+              xla_input, xla_target, xla_weight, xla_pos_weight, reduction);
+        });
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestProd) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::prod(a);
@@ -5939,6 +5969,41 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2DBackward) {
                    /*rtol=*/1e-3, /*atol=*/1e-4,
                    /*inputs_require_grad=*/{true, true, true, false, false});
     });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
+  int batch = 10;
+  int classes = 5;
+  at::Tensor undef;
+  for (Reduction::Reduction reduction :
+       {Reduction::None, Reduction::Mean, Reduction::Sum}) {
+    auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+      return at::binary_cross_entropy_with_logits(
+          /*input=*/inputs[0], /*target=*/inputs[1], /*weight=*/inputs[2],
+          /*pos_weight=*/inputs[3],
+          /*reduction=*/reduction);
+    };
+    for (bool undef_weight : {false, true}) {
+      for (bool undef_pos_weight : {false, true}) {
+        at::Tensor input =
+            at::rand({batch, classes}, at::TensorOptions(at::kFloat));
+        at::Tensor target =
+            at::rand({batch, classes}, at::TensorOptions(at::kFloat));
+        at::Tensor weight =
+            undef_weight ? undef
+                         : at::rand({classes}, at::TensorOptions(at::kFloat));
+        at::Tensor pos_weight =
+            undef_pos_weight
+                ? undef
+                : at::rand({classes}, at::TensorOptions(at::kFloat));
+        ForEachDevice([&](const Device& device) {
+          TestBackward({input, target, weight, pos_weight}, device, testfn,
+                       /*rtol=*/1e-5, /*atol=*/1e-7,
+                       /*inputs_require_grad=*/{true, true, false, false});
+        });
+      }
+    }
   }
 }
 

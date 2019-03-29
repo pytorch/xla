@@ -657,6 +657,21 @@ at::Tensor AtenXlaType::bilinear(const at::Tensor& input1,
   return at::native::bilinear(input1, input2, weight, bias);
 }
 
+at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
+    const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
+    const at::Tensor& pos_weight, int64_t reduction) const {
+  return at::native::binary_cross_entropy_with_logits(self, target, weight,
+                                                      pos_weight, reduction);
+}
+
+at::Tensor AtenXlaType::binary_cross_entropy_with_logits_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& target, const at::Tensor& weight,
+    const at::Tensor& pos_weight, int64_t reduction) const {
+  return at::native::binary_cross_entropy_with_logits_backward(
+      grad_output, self, target, weight, pos_weight, reduction);
+}
+
 at::Tensor AtenXlaType::blackman_window(
     int64_t window_length, const at::TensorOptions& options) const {
   return at::native::blackman_window(window_length, options);
