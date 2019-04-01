@@ -2580,11 +2580,46 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::thnn_conv2d_forward(
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
+AtenXlaType::thnn_conv_transpose2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& weight, at::IntArrayRef kernel_size,
+    at::IntArrayRef stride, at::IntArrayRef padding,
+    at::IntArrayRef output_padding, at::IntArrayRef dilation,
+    const at::Tensor& columns, const at::Tensor& ones,
+    std::array<bool, 3> output_mask) const {
+  // Dilated or grouped transposed convolutions aren't lowered to XLA yet.
+  if (IsNonTrivialPadding(output_padding) || IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeBase::thnn_conv_transpose2d_backward(
+        grad_output, self, weight, kernel_size, stride, padding, output_padding,
+        dilation, columns, ones, output_mask);
+  }
+  at::Tensor undefined;
+  auto gradients = XLATensor::conv_transpose2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(weight), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding));
+  return std::make_tuple(
+      output_mask[0] ? bridge::AtenFromXlaTensor(std::get<0>(gradients))
+                     : undefined,
+      output_mask[1] ? bridge::AtenFromXlaTensor(std::get<1>(gradients))
+                     : undefined,
+      output_mask[2] ? bridge::AtenFromXlaTensor(std::get<2>(gradients))
+                     : undefined);
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::thnn_conv_transpose2d_forward(
     const at::Tensor& self, const at::Tensor& weight,
     at::IntArrayRef kernel_size, const at::Tensor& bias, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef output_padding,
     at::IntArrayRef dilation) const {
+  // When there's dilation or output padding, PyTorch requires the result of
+  // im2col to be returned as well, which is why we can't let this fall through.
+  if (IsNonTrivialPadding(output_padding) || IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeBase::thnn_conv_transpose2d_forward(
+        self, weight, kernel_size, bias, stride, padding, output_padding,
+        dilation);
+  }
   at::Tensor undefined = at::empty({});
   // TODO(asuhan): double check it's ok to return undefined for finput and
   // fgrad_input.
