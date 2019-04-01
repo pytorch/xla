@@ -920,6 +920,13 @@ at::Tensor AtenXlaType::dropout(const at::Tensor& input, double p,
       XLATensor::dropout(bridge::GetXlaTensor(input), p));
 }
 
+at::Tensor& AtenXlaType::dropout_(at::Tensor& self, double p,
+                                  bool /* train */) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::dropout_(self_tensor, p);
+  return self;
+}
+
 at::Tensor AtenXlaType::einsum(std::string equation,
                                at::TensorList tensors) const {
   if (tensors.size() != 2 || !ir::ops::Einsum::SupportsEquation(equation)) {

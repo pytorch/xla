@@ -719,6 +719,10 @@ XLATensor XLATensor::dropout(const XLATensor& input, double p) {
       ir::MakeNode<ir::ops::Dropout>(input.GetIrValue(), p));
 }
 
+void XLATensor::dropout_(XLATensor& input, double p) {
+  input.SetIrValue(ir::MakeNode<ir::ops::Dropout>(input.GetIrValue(), p));
+}
+
 XLATensor XLATensor::eq(const XLATensor& input, at::Scalar other) {
   return DispatchComparisonOp(at::aten::eq, input, other);
 }
