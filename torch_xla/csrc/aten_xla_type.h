@@ -344,6 +344,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor dropout(const at::Tensor& input, double p,
                      bool train) const override;
 
+  at::Tensor& dropout_(at::Tensor& self, double p, bool train) const override;
+
   at::Tensor einsum(std::string equation,
                     at::TensorList tensors) const override;
 
