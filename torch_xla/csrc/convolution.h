@@ -58,4 +58,10 @@ Conv2DGrads BuildConv2dBackward(
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
+Conv2DGrads BuildTransposedConvolutionBackward(
+    const xla::XlaOp& grad_output, const xla::XlaOp& input,
+    const xla::XlaOp& kernel,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+
 }  // namespace torch_xla

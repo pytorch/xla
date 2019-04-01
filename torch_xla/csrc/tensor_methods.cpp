@@ -34,6 +34,7 @@
 #include "torch_xla/csrc/ops/conv2d.h"
 #include "torch_xla/csrc/ops/conv2d_backward.h"
 #include "torch_xla/csrc/ops/conv_transpose2d.h"
+#include "torch_xla/csrc/ops/conv_transpose2d_backward.h"
 #include "torch_xla/csrc/ops/cross_replica_sum.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
@@ -636,6 +637,22 @@ XLATensor XLATensor::conv_transpose2d(const XLATensor& input,
       input.GetIrValue(), weight.GetIrValue(), std::move(stride),
       std::move(padding));
   return input.CreateFrom(node);
+}
+
+std::tuple<XLATensor, XLATensor, XLATensor>
+XLATensor::conv_transpose2d_backward(const XLATensor& out_backprop,
+                                     const XLATensor& input,
+                                     const XLATensor& weight,
+                                     std::vector<xla::int64> stride,
+                                     std::vector<xla::int64> padding) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::ConvTranspose2dBackward>(
+      out_backprop.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
+      std::move(stride), std::move(padding));
+  XLATensor grad_input = out_backprop.CreateFrom(ir::Value(node, 0));
+  XLATensor grad_weight = out_backprop.CreateFrom(ir::Value(node, 1));
+  XLATensor grad_bias = out_backprop.CreateFrom(ir::Value(node, 2));
+  return std::make_tuple(std::move(grad_input), std::move(grad_weight),
+                         std::move(grad_bias));
 }
 
 XLATensor XLATensor::cos(const XLATensor& input) {

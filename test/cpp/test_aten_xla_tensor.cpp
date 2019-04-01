@@ -5371,6 +5371,45 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
+  int in_channels = 2;
+  int out_channels = 3;
+  int kernel_size = 5;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      for (int dilation = 1; dilation <= 2; ++dilation) {
+        for (int output_padding = 0;
+             output_padding < std::min(stride, dilation); ++output_padding) {
+          for (bool with_bias : {true, false}) {
+            // Test dilation through the CPU interop.
+            auto testfn =
+                [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+              return at::conv_transpose2d(inputs[0], inputs[1], inputs[2],
+                                          /*stride=*/{stride, stride},
+                                          /*padding=*/{padding, padding},
+                                          /*output_padding=*/output_padding,
+                                          /*groups=*/1,
+                                          /*dilation=*/{dilation, dilation});
+            };
+            ForEachDevice([&](const Device& device) {
+              at::Tensor input = at::rand({4, out_channels, 14, 14},
+                                          at::TensorOptions(at::kFloat));
+              at::Tensor weight = at::rand(
+                  {out_channels, in_channels, kernel_size, kernel_size},
+                  at::TensorOptions(at::kFloat));
+              at::Tensor bias =
+                  with_bias
+                      ? at::rand({in_channels}, at::TensorOptions(at::kFloat))
+                      : at::Tensor();
+              TestBackward({input, weight, bias}, device, testfn);
+            });
+          }
+        };
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
   int kernel_size = 3;
   for (int stride = 1; stride <= 2; ++stride) {
