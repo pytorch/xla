@@ -226,12 +226,28 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
 
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
+  // Reorder the dimensions of the filter gradient to match the NCHW convention
+  // of PyTorch. The original result of the convolution has the spatial and
+  // feature dimensions swapped and the spatial dimensions reversed.
   return xla::Transpose(xla::ConvGeneralDilated(
                             padded_input, grad_output, window_strides, padding,
                             /*lhs_dilation=*/ones, rhs_dilation, dnums,
                             /*feature_group_count=*/1,
                             /*batch_group_count=*/1, &precision_config),
                         {3, 2, 0, 1});
+}
+
+xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {
+  xla::Shape grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
+  // The bias contribution is linear in each output feature. Reduce the
+  // remaining dimensions to get a tensor of the same shape as the bias, rank-1
+  // with number of output features elements.
+  return xla::Reduce(
+      grad_output,
+      XlaHelpers::ScalarValue<float>(0, grad_output_shape.element_type(),
+                                     grad_output.builder()),
+      XlaHelpers::CreateAddComputation(grad_output_shape.element_type()),
+      {0, 2, 3});
 }
 
 std::vector<std::pair<xla::int64, xla::int64>> MakePadding(
@@ -315,12 +331,7 @@ Conv2DGrads BuildConv2dBackward(
       grad_output, weight, XlaHelpers::SizesOfXlaOp(input), stride, padding);
   xla::XlaOp grad_weight = BuildThnnConv2dBackwardWeight(
       grad_output, input, weight, stride, padding);
-  xla::XlaBuilder* builder = grad_output.builder();
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp grad_bias = xla::Reduce(
-      grad_output,
-      XlaHelpers::ScalarValue<float>(0, input_shape.element_type(), builder),
-      XlaHelpers::CreateAddComputation(input_shape.element_type()), {0, 2, 3});
+  xla::XlaOp grad_bias = BuildGradBias(grad_output);
   return {grad_input, grad_weight, grad_bias};
 }
 
@@ -354,6 +365,19 @@ xla::XlaOp BuildTransposedConvolutionBias(
   xla::XlaOp bias_broadcast =
       xla::Transpose(xla::Broadcast(bias, broadcast_sizes), {0, 3, 1, 2});
   return conv + bias_broadcast;
+}
+
+Conv2DGrads BuildTransposedConvolutionBackward(
+    const xla::XlaOp& grad_output, const xla::XlaOp& input,
+    const xla::XlaOp& kernel,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  xla::XlaOp grad_input =
+      BuildConvolution(grad_output, kernel, stride, padding);
+  xla::XlaOp grad_weight = BuildThnnConv2dBackwardWeight(
+      input, grad_output, kernel, stride, padding);
+  xla::XlaOp grad_bias = BuildGradBias(grad_output);
+  return {grad_input, grad_weight, grad_bias};
 }
 
 }  // namespace torch_xla
