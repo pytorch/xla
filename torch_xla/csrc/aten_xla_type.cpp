@@ -286,6 +286,11 @@ at::Tensor AtenXlaType::_s_copy_from(const at::Tensor& self,
   return dst;
 }
 
+at::Tensor AtenXlaType::_softmax(const at::Tensor& self, int64_t dim,
+                                 bool /* half_to_float */) const {
+  return softmax(self, dim);
+}
+
 at::Tensor AtenXlaType::_softmax_backward_data(const at::Tensor& grad_output,
                                                const at::Tensor& output,
                                                int64_t dim,
