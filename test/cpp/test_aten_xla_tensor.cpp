@@ -3605,6 +3605,20 @@ TEST_F(AtenXlaTensorTest, TestSoftmax) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSoftmaxWrapper) {
+  at::Tensor input = at::rand({10, 8, 24, 16}, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    int rank = input.dim();
+    for (int dim = -rank; dim < rank; ++dim) {
+      at::Tensor output = at::_softmax(input, dim, /*half_to_float=*/false);
+      at::Tensor xla_output =
+          at::_softmax(xla_input, dim, /*half_to_float=*/false);
+      AllClose(output, xla_output, /*rtol=*/1e-3);
+    }
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSoftplus) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   at::Tensor output = at::softplus(input);
