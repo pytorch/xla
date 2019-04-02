@@ -78,7 +78,8 @@ ViewInfo::ViewInfo(xla::Shape shape, std::vector<xla::int64> sizes)
 
 ViewInfo::ViewInfo(std::vector<xla::int64> sizes,
                    std::vector<xla::int64> permutation, xla::PrimitiveType type)
-    : shape(xla::ShapeUtil::MakeShape(type, xla::Permute(permutation, sizes))),
+    : shape(xla::ShapeUtil::MakeShape(
+          type, xla::Permute(xla::InversePermutation(permutation), sizes))),
       sizes(std::move(sizes)),
       permutation(std::move(permutation)) {}
 
