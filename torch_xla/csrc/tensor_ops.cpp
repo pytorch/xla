@@ -20,26 +20,32 @@ XLATensor IndexAcrossDims(const XLATensor& input, xla::int64 dim,
 }  // namespace
 
 XLATensor Cross(const XLATensor& input, const XLATensor& other,
-                xla::int64 dim) {
-  if (dim < 0) {
+                c10::optional<xla::int64> dim) {
+  xla::int64 canonical_dim;
+  if (dim) {
+    canonical_dim = XlaHelpers::GetCanonicalDimensionIndex(
+        *dim, input.shape().get().rank());
+  } else {
     auto input_shape_ref = input.shape();
     auto dim_3_it = std::find((*input_shape_ref).dimensions().begin(),
                               (*input_shape_ref).dimensions().end(), 3);
     XLA_CHECK(dim_3_it != (*input_shape_ref).dimensions().end())
         << "No dimension of size 3 in input: " << (*input_shape_ref).ToString();
-    dim = dim_3_it - (*input_shape_ref).dimensions().begin();
+    canonical_dim = dim_3_it - (*input_shape_ref).dimensions().begin();
   }
-  XLA_CHECK_EQ(input.size(dim), 3)
-      << "Invalid cross argument: dimension " << dim << " does not have size 3";
-  XLA_CHECK_LT(dim, input.shape().get().rank())
-      << "Invalid cross argument: dimension " << dim << " out of range";
+  XLA_CHECK_EQ(input.size(canonical_dim), 3)
+      << "Invalid cross argument: dimension " << canonical_dim
+      << " does not have size 3";
+  XLA_CHECK_LT(canonical_dim, input.shape().get().rank())
+      << "Invalid cross argument: dimension " << canonical_dim
+      << " out of range";
   // Extract the slices for each axis.
-  XLATensor u1 = IndexAcrossDims(input, dim, 0);
-  XLATensor v1 = IndexAcrossDims(other, dim, 0);
-  XLATensor u2 = IndexAcrossDims(input, dim, 1);
-  XLATensor v2 = IndexAcrossDims(other, dim, 1);
-  XLATensor u3 = IndexAcrossDims(input, dim, 2);
-  XLATensor v3 = IndexAcrossDims(other, dim, 2);
+  XLATensor u1 = IndexAcrossDims(input, canonical_dim, 0);
+  XLATensor v1 = IndexAcrossDims(other, canonical_dim, 0);
+  XLATensor u2 = IndexAcrossDims(input, canonical_dim, 1);
+  XLATensor v2 = IndexAcrossDims(other, canonical_dim, 1);
+  XLATensor u3 = IndexAcrossDims(input, canonical_dim, 2);
+  XLATensor v3 = IndexAcrossDims(other, canonical_dim, 2);
   // Compute the term for each axis.
   at::Scalar one(1);
   XLATensor s1 =
@@ -49,7 +55,7 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
   XLATensor s3 =
       XLATensor::sub(XLATensor::mul(u1, v2), XLATensor::mul(u2, v1), one);
   // Stack the terms into one result tensor.
-  return XLATensor::stack({s1, s2, s3}, dim);
+  return XLATensor::stack({s1, s2, s3}, canonical_dim);
 }
 
 XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal) {
