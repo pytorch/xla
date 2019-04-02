@@ -1091,7 +1091,7 @@ TEST_F(AtenXlaTensorTest, TestNormInDimsKeep) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNormGeneral) {
-  at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor a = at::randn({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::norm(a, 3.5);
   ForEachDevice([&](const Device& device) {
     at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
