@@ -168,6 +168,23 @@ class XlaHelpers {
                                   xla::int64 expected_rank,
                                   xla::int64 offset = 0);
 
+  // Gathers the input using the order specified by the permutation. For each i,
+  // output[i] = input[permutation[i]]. The given permutation must be the same
+  // size as the input.
+  template <typename Container>
+  static std::vector<typename Container::value_type> Permute(
+      tensorflow::gtl::ArraySlice<const xla::int64> permutation,
+      const Container& input) {
+    using T = typename Container::value_type;
+    XLA_CHECK(xla::IsPermutation(permutation, input.size()))
+        << "Invalid permutation specified";
+    std::vector<T> output(input.size());
+    for (size_t i = 0; i < permutation.size(); ++i) {
+      output[i] = input[permutation[i]];
+    }
+    return output;
+  }
+
   // Creates a transposition from the given input and dimensions.
   static std::vector<xla::int64> MakeTransposePermutation(xla::int64 dim0,
                                                           xla::int64 dim1,

@@ -559,7 +559,7 @@ NodePtr MaxUnary(const Value& input) {
     return node.ReturnOp(xla::Reshape(result, {1}), loctx);
   };
   return GenericOp(OpKind(at::aten::max), {input},
-                   xla::ShapeUtil::MakeShape(input.shape().element_type(), {1}),
+                   xla::ShapeUtil::MakeShape(input.shape().element_type(), {}),
                    std::move(lower_fn));
 }
 
@@ -577,7 +577,7 @@ NodePtr MinUnary(const Value& input) {
     return node.ReturnOp(xla::Reshape(result, {1}), loctx);
   };
   return GenericOp(OpKind(at::aten::min), {input},
-                   xla::ShapeUtil::MakeShape(input.shape().element_type(), {1}),
+                   xla::ShapeUtil::MakeShape(input.shape().element_type(), {}),
                    std::move(lower_fn));
 }
 

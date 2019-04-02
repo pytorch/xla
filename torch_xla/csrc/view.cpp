@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/generic_slice.h"
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/select.h"
@@ -78,8 +79,8 @@ ViewInfo::ViewInfo(xla::Shape shape, std::vector<xla::int64> sizes)
 
 ViewInfo::ViewInfo(std::vector<xla::int64> sizes,
                    std::vector<xla::int64> permutation, xla::PrimitiveType type)
-    : shape(xla::ShapeUtil::MakeShape(
-          type, xla::Permute(xla::InversePermutation(permutation), sizes))),
+    : shape(xla::ShapeUtil::MakeShape(type,
+                                      XlaHelpers::Permute(permutation, sizes))),
       sizes(std::move(sizes)),
       permutation(std::move(permutation)) {}
 
