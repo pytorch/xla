@@ -313,7 +313,7 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& cosh_(at::Tensor& self) const override;
 
   at::Tensor cross(const at::Tensor& self, const at::Tensor& other,
-                   int64_t dim) const override;
+                   c10::optional<int64_t> dim) const override;
 
   at::Tensor cumprod(const at::Tensor& self, int64_t dim,
                      at::ScalarType dtype) const override;

@@ -9,7 +9,8 @@
 namespace torch_xla {
 namespace tensor_ops {
 
-XLATensor Cross(const XLATensor& input, const XLATensor& other, xla::int64 dim);
+XLATensor Cross(const XLATensor& input, const XLATensor& other,
+                c10::optional<xla::int64> dim);
 
 XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal);
 

@@ -4598,7 +4598,8 @@ TEST_F(AtenXlaTensorTest, TestCrossExplicitDim) {
   std::vector<int64_t> dim_size = {3, 3};
   at::Tensor input = at::rand(dim_size, at::TensorOptions(at::kFloat));
   at::Tensor other = at::rand(dim_size, at::TensorOptions(at::kFloat));
-  for (size_t dim = 0; dim < dim_size.size(); ++dim) {
+  int rank = dim_size.size();
+  for (int dim = -rank; dim < rank; ++dim) {
     at::Tensor result = at::cross(input, other, dim);
     ForEachDevice([&](const Device& device) {
       at::Tensor xla_input = bridge::CreateXlaTensor(input, device);

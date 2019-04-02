@@ -842,9 +842,10 @@ at::Tensor& AtenXlaType::cosh_(at::Tensor& self) const {
 }
 
 at::Tensor AtenXlaType::cross(const at::Tensor& self, const at::Tensor& other,
-                              int64_t dim) const {
-  return bridge::AtenFromXlaTensor(XLATensor::cross(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other), dim));
+                              c10::optional<int64_t> dim) const {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::cross(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other),
+                       XlaHelpers::I64Optional(dim)));
 }
 
 at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim,

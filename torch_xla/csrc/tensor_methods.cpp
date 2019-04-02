@@ -639,7 +639,7 @@ void XLATensor::cosh_(XLATensor& input) {
 }
 
 XLATensor XLATensor::cross(const XLATensor& input, const XLATensor& other,
-                           xla::int64 dim) {
+                           c10::optional<xla::int64> dim) {
   return tensor_ops::Cross(input, other, dim);
 }
 

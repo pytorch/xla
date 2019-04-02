@@ -323,7 +323,7 @@ class XLATensor {
   // If the dimension is not given, it defaults to the first dimension found
   // with the size 3.
   static XLATensor cross(const XLATensor& input, const XLATensor& other,
-                         xla::int64 dim);
+                         c10::optional<xla::int64> dim);
 
   static XLATensor cross_replica_sum(
       const XLATensor& input, double scale,
