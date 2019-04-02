@@ -481,7 +481,7 @@ NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
   NodePtr norm_exp = ScalarOp(norm_value, input.shape().element_type());
   NodePtr norm_exp_inv =
       ScalarOp(1.0 / norm_value, input.shape().element_type());
-  NodePtr exp = Pow(input, norm_exp);
+  NodePtr exp = Pow(Abs(input), norm_exp);
   NodePtr result = MakeNode<Sum>(exp, dimensions, keepdim, dtype);
   return Pow(result, norm_exp_inv);
 }
