@@ -30,7 +30,9 @@ FuncGen = namedtuple_with_defaults(
 )
 
 FuncOpts = namedtuple_with_defaults(
-    'FuncOpts', 'ref_param, device_param, wparams, outfn_template, outfn_name')
+    'FuncOpts',
+    'ref_param, device_param, wparams, outfn_template, outfn_name, shape_check_indices'
+)
 
 _GRAMMAR = r"""
     start: type fnname "(" params ")"
@@ -118,14 +120,28 @@ _FN_OUT = {
 _FN_OUT_REGEX = []
 
 _FN_REMAP = {
-    '_th_eq(Tensor, Scalar) -> Tensor': FuncOpts(outfn_name='eq'),
-    '_th_eq(Tensor, Tensor) -> Tensor': FuncOpts(outfn_name='eq'),
-    '_th_ge(Tensor, Scalar) -> Tensor': FuncOpts(outfn_name='ge'),
-    '_th_ge(Tensor, Tensor) -> Tensor': FuncOpts(outfn_name='ge'),
-    '_th_gt(Tensor, Scalar) -> Tensor': FuncOpts(outfn_name='gt'),
-    '_th_gt(Tensor, Tensor) -> Tensor': FuncOpts(outfn_name='gt'),
-    '_th_lt(Tensor, Scalar) -> Tensor': FuncOpts(outfn_name='lt'),
-    '_th_lt(Tensor, Tensor) -> Tensor': FuncOpts(outfn_name='lt'),
+    '_th_eq(Tensor, Scalar) -> Tensor':
+        FuncOpts(outfn_name='eq'),
+    '_th_eq(Tensor, Tensor) -> Tensor':
+        FuncOpts(outfn_name='eq'),
+    '_th_ge(Tensor, Scalar) -> Tensor':
+        FuncOpts(outfn_name='ge'),
+    '_th_ge(Tensor, Tensor) -> Tensor':
+        FuncOpts(outfn_name='ge'),
+    '_th_gt(Tensor, Scalar) -> Tensor':
+        FuncOpts(outfn_name='gt'),
+    '_th_gt(Tensor, Tensor) -> Tensor':
+        FuncOpts(outfn_name='gt'),
+    '_th_lt(Tensor, Scalar) -> Tensor':
+        FuncOpts(outfn_name='lt'),
+    '_th_lt(Tensor, Tensor) -> Tensor':
+        FuncOpts(outfn_name='lt'),
+    's__th_and(Tensor, Tensor) -> Tensor':
+        FuncOpts(outfn_name='__and__', shape_check_indices=((0, 1),)),
+    's__th_or(Tensor, Tensor) -> Tensor':
+        FuncOpts(outfn_name='__or__', shape_check_indices=((0, 1),)),
+    's__th_xor(Tensor, Tensor) -> Tensor':
+        FuncOpts(outfn_name='__xor__', shape_check_indices=((0, 1),)),
 }
 
 _TYPE_NSMAP = {
@@ -809,6 +825,15 @@ def create_call(fname, param_vars):
   return '{}({})'.format(fname, ', '.join(param_vars))
 
 
+def generate_shape_checks(param_vars, shape_check_indices, fname):
+  code = ''
+  for i, j in shape_check_indices:
+    code += ('  XLA_CHECK({}.sizes() == {}.sizes()) << "Operand shapes must be '
+             'identical for {}, mismatch for arguments {} and {}";\n').format(
+                 param_vars[i], param_vars[j], fname, i + 1, j + 1)
+  return code
+
+
 def generate_aten_remap(ctx, fname, sig, params, fnopts):
   code = '{} {}{{\n'.format(sig, 'const ' if ctx.gen_class_mode else '')
 
@@ -819,6 +844,8 @@ def generate_aten_remap(ctx, fname, sig, params, fnopts):
     assert fnopts.outfn_name
     fcall = create_call(fnopts.outfn_name, param_vars)
 
+  if fnopts.shape_check_indices is not None:
+    code += generate_shape_checks(param_vars, fnopts.shape_check_indices, fname)
   code += '  return {};\n'.format(fcall)
   code += '}'
   return code
@@ -907,8 +934,9 @@ def generate_aten_to_xla(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
   if result_assign:
     code += ('  static_cast<void>({}); // Avoid warnings in case not '
              'used\n'.format(_RESULT_NAME))
-  code += generate_exit_debug_code(
-      tree, fname, _RESULT_NAME if result_assign else None, params, param_vars)
+  code += generate_exit_debug_code(tree, fname,
+                                   _RESULT_NAME if result_assign else None,
+                                   params, param_vars)
   code += generate_return_stmt(tree, get_return_type_str(rwxtree, rwsig), fname,
                                _RESULT_NAME if result_assign else None, params,
                                param_vars, ref_param, fnopts)
