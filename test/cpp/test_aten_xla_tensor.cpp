@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <ATen/ATen.h>
+#include <ATen/LegacyTHFunctions.h>
 #include <ATen/NativeFunctions.h>
 
 #include <torch/csrc/autograd/function.h>
@@ -5082,6 +5083,54 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorScalarInPlace) {
     at::Tensor xla_result = xla_lhs.__ixor__(rhs);
     AllClose(result, xla_result);
     AllClose(lhs, xla_lhs);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseAndAutograd) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor rhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor result = at::legacy::th::__and__(lhs, rhs);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = torch::autograd::make_variable(
+        bridge::CreateXlaTensor(lhs, device), false);
+    at::Tensor xla_rhs = torch::autograd::make_variable(
+        bridge::CreateXlaTensor(rhs, device), false);
+    at::Tensor xla_result = at::legacy::th::__and__(xla_lhs, xla_rhs);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseOrAutograd) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor rhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor result = at::legacy::th::__or__(lhs, rhs);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = torch::autograd::make_variable(
+        bridge::CreateXlaTensor(lhs, device), false);
+    at::Tensor xla_rhs = torch::autograd::make_variable(
+        bridge::CreateXlaTensor(rhs, device), false);
+    at::Tensor xla_result = at::legacy::th::__or__(xla_lhs, xla_rhs);
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseXorAutograd) {
+  at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor rhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
+                               at::TensorOptions(at::kInt));
+  at::Tensor result = at::legacy::th::__xor__(lhs, rhs);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_lhs = torch::autograd::make_variable(
+        bridge::CreateXlaTensor(lhs, device), false);
+    at::Tensor xla_rhs = torch::autograd::make_variable(
+        bridge::CreateXlaTensor(rhs, device), false);
+    at::Tensor xla_result = at::legacy::th::__xor__(xla_lhs, xla_rhs);
+    AllClose(result, xla_result);
   });
 }
 
