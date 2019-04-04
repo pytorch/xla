@@ -54,7 +54,7 @@ void GatherParameters(std::vector<at::Tensor>* values,
     }
   }
   for (const auto& submodule : m.get_modules()) {
-    GatherParameters(values, requires_grad, *submodule, forward);
+    GatherParameters(values, requires_grad, *submodule.module, forward);
   }
 }
 
