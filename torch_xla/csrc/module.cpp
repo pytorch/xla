@@ -27,14 +27,13 @@ namespace {
 
 // Extract the slots from a named IValue dictionary.
 std::unordered_set<torch::jit::script::Slot> ToSlotSet(
-    const torch::OrderedDict<std::string, torch::jit::script::NamedIValue>&
-        named_ivalue_dict) {
+    const c10::ArrayRef<torch::jit::script::NamedIValue>& named_ivalue_list) {
   std::unordered_set<torch::jit::script::Slot> ivalue_set;
-  for (auto& named_ivalue : named_ivalue_dict) {
-    ivalue_set.insert(named_ivalue->slot());
+  for (const auto& named_ivalue : named_ivalue_list) {
+    ivalue_set.insert(named_ivalue.slot());
   }
-  XLA_CHECK_EQ(ivalue_set.size(), named_ivalue_dict.size())
-      << "Found duplicated values in the named IValue dictionary";
+  XLA_CHECK_EQ(ivalue_set.size(), named_ivalue_list.size())
+      << "Found duplicated values in the named IValue list";
   return ivalue_set;
 }
 
@@ -54,8 +53,8 @@ void GatherParameters(std::vector<at::Tensor>* values,
       requires_grad->push_back(false);
     }
   }
-  for (const auto& sub : m.get_modules()) {
-    GatherParameters(values, requires_grad, *sub->module, forward);
+  for (const auto& submodule : m.get_modules()) {
+    GatherParameters(values, requires_grad, *submodule, forward);
   }
 }
 
