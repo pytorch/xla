@@ -409,7 +409,7 @@ def _fetch_optimizer_state(optimizer):
         add(x, state)
 
   state = OptimizerState()
-  add(optimizer.param_groups, state)
+  add(optimizer.__getstate__(), state)
   return state
 
 
