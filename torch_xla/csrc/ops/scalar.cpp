@@ -30,6 +30,9 @@ std::string Scalar::ToString() const {
 XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
   xla::Literal literal(xla::ShapeUtil::MakeShape(shape().element_type(), {}));
   switch (shape().element_type()) {
+    case xla::PRED:
+      literal.Set<bool>({}, static_cast<bool>(value_.toInt()));
+      break;
     case xla::S8:
       literal.Set<xla::int8>({}, static_cast<xla::int8>(value_.toChar()));
       break;
