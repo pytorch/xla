@@ -300,6 +300,7 @@ _CTOR_FUNCTIONS = {
     'rand': '.device(at::DeviceType::CPU)',
     'randn': '.device(at::DeviceType::CPU)',
     'randint': '.device(at::DeviceType::CPU)',
+    'randperm': '.device(at::DeviceType::CPU)',
 }
 
 _FUNCTION_OPTIONS = {
