@@ -39,17 +39,27 @@ namespace ops {
                      std::move(lower_fn));                        \
   }
 
-#define PTXLA_BINARY_OP(name, sym, xla_fn)                                  \
-  NodePtr name(const Value& input0, const Value& input1) {                  \
-    auto lower_fn = [](const Node& node,                                    \
-                       LoweringContext* loctx) -> XlaOpVector {             \
-      xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand(0));          \
-      xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand(1));          \
-      auto promoted = XlaHelpers::Promote(xla_input0, xla_input1);          \
-      return node.ReturnOp(xla_fn(promoted.first, promoted.second), loctx); \
-    };                                                                      \
-    return GenericOp(OpKind(sym), OpList{input0, input1}, input0.shape(),   \
-                     std::move(lower_fn));                                  \
+#define PTXLA_BINARY_OP(name, sym, xla_fn)                                     \
+  NodePtr name(const Value& input0, const Value& input1) {                     \
+    auto shape_fn =                                                            \
+        [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)            \
+        -> xla::XlaOp {                                                        \
+      auto promoted = XlaHelpers::Promote(operands[0], operands[1]);           \
+      return promoted.first;                                                   \
+    };                                                                         \
+    auto lower_fn = [](const Node& node,                                       \
+                       LoweringContext* loctx) -> XlaOpVector {                \
+      xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand(0));             \
+      xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand(1));             \
+      auto promoted = XlaHelpers::Promote(xla_input0, xla_input1);             \
+      return node.ReturnOp(xla_fn(promoted.first, promoted.second), loctx);    \
+    };                                                                         \
+    return GenericOp(                                                          \
+        OpKind(sym), OpList{input0, input1},                                   \
+        [&]() {                                                                \
+          return InferOutputShape({input0.shape(), input1.shape()}, shape_fn); \
+        },                                                                     \
+        std::move(lower_fn));                                                  \
   }
 
 PTXLA_UNARY_OP(Acos, at::aten::acos, xla::Acos);
