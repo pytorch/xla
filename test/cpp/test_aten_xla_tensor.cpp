@@ -2243,6 +2243,52 @@ TEST_F(AtenXlaTensorTest, TestSelect) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestBernoulliScalarProb) {
+  at::Tensor input = at::zeros(1000, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::bernoulli(xla_input, 0.1);
+    double frac = xla_output.sum().item().toDouble() / input.numel();
+    EXPECT_GT(frac, 0.06);
+    EXPECT_LT(frac, 0.14);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBernoulliTensorProb) {
+  std::vector<float> prob_values(1000, 0.1);
+  at::Tensor input = at::tensor(prob_values, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor xla_output = at::bernoulli(xla_input);
+    double frac = xla_output.sum().item().toDouble() / input.numel();
+    EXPECT_GT(frac, 0.06);
+    EXPECT_LT(frac, 0.14);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBernoulliScalarProbInPlace) {
+  at::Tensor input = at::zeros(1000, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    xla_input.bernoulli_(0.1);
+    double frac = xla_input.sum().item().toDouble() / input.numel();
+    EXPECT_GT(frac, 0.06);
+    EXPECT_LT(frac, 0.14);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBernoulliTensorProbInPlace) {
+  at::Tensor input = at::zeros(1000, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+    at::Tensor prob = at::scalar_tensor(0.1, at::TensorOptions(at::kFloat));
+    xla_input.bernoulli_(bridge::CreateXlaTensor(prob, device));
+    double frac = xla_input.sum().item().toDouble() / input.numel();
+    EXPECT_GT(frac, 0.06);
+    EXPECT_LT(frac, 0.14);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestDropout) {
   at::Tensor a = at::rand({17, 21}, at::TensorOptions(at::kFloat));
   ForEachDevice([&](const Device& device) {

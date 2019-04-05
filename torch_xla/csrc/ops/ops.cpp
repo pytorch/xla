@@ -15,6 +15,7 @@
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/constant.h"
+#include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/log_softmax_backward.h"
 #include "torch_xla/csrc/ops/permute.h"
@@ -589,6 +590,20 @@ NodePtr MinUnary(const Value& input) {
   return GenericOp(OpKind(at::aten::min), {input},
                    xla::ShapeUtil::MakeShape(input.shape().element_type(), {}),
                    std::move(lower_fn));
+}
+
+NodePtr Bernoulli(const Value& input, const Value& probability) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_probability = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp result =
+        BuildBernoulli(xla_probability, XlaHelpers::ShapeOfXlaOp(xla_input));
+    return node.ReturnOp(result, loctx);
+  };
+  NodePtr probability_expanded =
+      ir::MakeNode<ir::ops::Expand>(probability, input.shape().dimensions());
+  return GenericOp(OpKind(at::aten::bernoulli), {input, probability_expanded},
+                   input.shape(), std::move(lower_fn));
 }
 
 }  // namespace ops
