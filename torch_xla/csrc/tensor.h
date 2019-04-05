@@ -990,8 +990,6 @@ class XLATensor {
 
   void SetTensorData(at::Tensor tensor_data);
 
-  ir::Value GetXlaDataForTensor(const at::Tensor& tensor) const;
-
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
 
   std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,
@@ -1026,6 +1024,16 @@ class XLATensor {
   void TryLimitGraphSize();
 
   std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node) const;
+
+  static ir::Value GetIrValueForTensor(const at::Tensor& tensor,
+                                       const Device& device);
+
+  static ir::Value GetIrValueForScalar(at::Scalar value,
+                                       xla::PrimitiveType type,
+                                       const Device& device);
+  static ir::Value GetIrValueForScalar(at::Scalar value,
+                                       const xla::Shape& shape,
+                                       const Device& device);
 
   // Create the mapping from computation client Data pointers to the XLA tensors
   // unique ID which are holding it.

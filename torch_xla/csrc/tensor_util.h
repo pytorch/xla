@@ -42,6 +42,8 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
                                                 const Device& device);
 
+size_t TensorHash(const at::Tensor& tensor);
+
 // Retrieves the device data handles by parallel uploading data onto the
 // corresponding devices.
 std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(

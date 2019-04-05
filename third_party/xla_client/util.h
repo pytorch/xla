@@ -137,6 +137,11 @@ std::vector<T> ToVector(const S& input) {
   return std::vector<T>(input.begin(), input.end());
 }
 
+template <typename T>
+typename std::underlying_type<T>::type GetEnumValue(T value) {
+  return static_cast<typename std::underlying_type<T>::type>(value);
+}
+
 template <typename T, typename S>
 T Multiply(const S& input) {
   return std::accumulate(input.begin(), input.end(), T(1),

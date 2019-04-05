@@ -465,6 +465,29 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
   return literal;
 }
 
+size_t TensorHash(const at::Tensor& tensor) {
+  at::Tensor ctensor = tensor.contiguous();
+  int64_t size = ctensor.numel() * ctensor.element_size();
+  switch (ctensor.scalar_type()) {
+    case at::ScalarType::Byte:
+      return xla::util::DataHash(ctensor.data<uint8_t>(), size);
+    case at::ScalarType::Char:
+      return xla::util::DataHash(ctensor.data<int8_t>(), size);
+    case at::ScalarType::Short:
+      return xla::util::DataHash(ctensor.data<int16_t>(), size);
+    case at::ScalarType::Int:
+      return xla::util::DataHash(ctensor.data<int32_t>(), size);
+    case at::ScalarType::Long:
+      return xla::util::DataHash(ctensor.data<int64_t>(), size);
+    case at::ScalarType::Float:
+      return xla::util::DataHash(ctensor.data<float>(), size);
+    case at::ScalarType::Double:
+      return xla::util::DataHash(ctensor.data<double>(), size);
+    default:
+      XLA_ERROR() << "Unsupported scalar type: " << ctensor.scalar_type();
+  }
+}
+
 std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape) {
   std::vector<xla::Shape> component_shapes;
   if (shape.IsTuple()) {

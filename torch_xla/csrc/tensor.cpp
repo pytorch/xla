@@ -22,10 +22,11 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/ops/constant.h"
+#include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 namespace {
@@ -133,6 +134,46 @@ std::vector<xla::util::Cleanup> LockDevices(const std::set<Device>& devices) {
     unlocker.emplace_back(LockDevice(device));
   }
   return unlocker;
+}
+
+struct TensorHasher {
+  size_t operator()(const at::Tensor& tensor) const {
+    return xla::util::HashCombine(xla::util::GetEnumValue(tensor.scalar_type()),
+                                  TensorHash(tensor));
+  };
+};
+struct TensorComparer {
+  bool operator()(const at::Tensor& tensor1, const at::Tensor& tensor2) const {
+    return tensor1.scalar_type() == tensor2.scalar_type() &&
+           tensor1.equal(tensor2);
+  }
+};
+
+using XlaDataCache = xla::util::Cache<at::Tensor, xla::ComputationClient::Data,
+                                      TensorHasher, TensorComparer>;
+
+XlaDataCache* GetXlaDataCache() {
+  static const size_t kMaxCacheSize =
+      xla::sys_util::GetEnvInt("XLA_DEVDATA_CACHE_SIZE", 128);
+  static XlaDataCache* cache = new XlaDataCache(kMaxCacheSize);
+  return cache;
+}
+
+xla::ComputationClient::DataPtr GetDeviceData(const at::Tensor& tensor,
+                                              const Device& device) {
+  xla::ComputationClient::DataPtr device_data = GetXlaDataCache()->Get(tensor);
+  if (device_data == nullptr) {
+    device_data = TensorToXlaData(tensor, device);
+    GetXlaDataCache()->Add(CopyTensor(tensor), device_data);
+  }
+  return device_data;
+}
+
+xla::ComputationClient::DataPtr GetDeviceData(at::Scalar value,
+                                              at::ScalarType scalar_type,
+                                              const Device& device) {
+  return GetDeviceData(at::scalar_tensor(value, at::TensorOptions(scalar_type)),
+                       device);
 }
 
 void SetMulti(std::vector<XLATensor>* dest_tuple,
@@ -440,7 +481,7 @@ ir::Value XLATensor::GetIrValue() const {
   }
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
-  data()->ir_value = GetXlaDataForTensor(*tensor_data);
+  data()->ir_value = GetIrValueForTensor(*tensor_data, GetDevice());
   return data()->ir_value;
 }
 
@@ -462,15 +503,34 @@ c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
   return data()->tensor_data;
 }
 
-ir::Value XLATensor::GetXlaDataForTensor(const at::Tensor& tensor) const {
-  const Device& device = GetDevice();
+ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
+                                         const Device& device) {
+  xla::ComputationClient::DataPtr data;
   if (tensor.numel() == 1) {
-    xla::Shape shape = CreateComputationShapeFromTensor(tensor, &device);
-    xla::Literal value = GetTensorLiteral(tensor, &shape, &device);
-    return ir::MakeNode<ir::ops::Constant>(std::move(value));
+    // For now only route scalars to the cache.
+    data = GetDeviceData(tensor, device);
+  } else {
+    data = TensorToXlaData(tensor, device);
   }
-  xla::ComputationClient::DataPtr data = TensorToXlaData(tensor, device);
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
+}
+
+ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
+                                         xla::PrimitiveType type,
+                                         const Device& device) {
+  xla::ComputationClient::DataPtr data =
+      GetDeviceData(value, TensorTypeFromXlaType(type), device);
+  return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
+}
+
+ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
+                                         const xla::Shape& shape,
+                                         const Device& device) {
+  ir::Value ir_value = GetIrValueForScalar(value, shape.element_type(), device);
+  if (shape.rank() > 0) {
+    ir_value = ir::MakeNode<ir::ops::Expand>(ir_value, shape.dimensions());
+  }
+  return ir_value;
 }
 
 View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
@@ -549,7 +609,7 @@ void XLATensor::MakeWriteableTensorDataSource() {
     // TensorData node will fetch the status of the at::Tensor at lowering time,
     // so that all the changes done by the caller, will become visible only when
     // a value from the view is requested.
-    ir::Value ir_value = GetXlaDataForTensor(*tensor_data);
+    ir::Value ir_value = GetIrValueForTensor(*tensor_data, GetDevice());
     data()->view = UpdateView(data()->view, ir_value);
   }
   data()->xla_data = nullptr;
@@ -565,7 +625,7 @@ at::Tensor XLATensor::ToMutableTensor() {
 void XLATensor::SetTensor(at::Tensor tensor) {
   SetTensorData(tensor);
   if (data()->view != nullptr) {
-    ir::Value ir_value = GetXlaDataForTensor(tensor);
+    ir::Value ir_value = GetIrValueForTensor(tensor, GetDevice());
     data()->view = UpdateView(data()->view, ir_value);
   }
   data()->xla_data = nullptr;
@@ -817,11 +877,14 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
     unique_device.set((*tensors)[index].GetDevice());
   }
   std::vector<xla::ComputationClient::DataPtr> parameters_data;
+  std::unordered_set<xla::int64> data_uids;
   for (auto node : ir::Util::ComputePostOrder(roots)) {
     const ir::ops::DeviceData* device_data =
         dynamic_cast<const ir::ops::DeviceData*>(node);
     if (device_data != nullptr) {
-      parameters_data.push_back(device_data->data());
+      if (data_uids.insert(device_data->data()->unique_id()).second) {
+        parameters_data.push_back(device_data->data());
+      }
     }
   }
   if (cached_computation->num_parameters != parameters_data.size()) {
