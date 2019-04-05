@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 
@@ -105,20 +106,23 @@ xla::XlaOp CreateIndexAlongDim(
     }
   }
 
-  // Create a combiner computation for the scatter.
-  xla::XlaComputation combiner_computation =
-      MakeScatterComputation(combiner, buffer_shape.element_type());
   // Broadcast the value to the right shape required by scatter.
+  xla::Shape value_shape = XlaHelpers::ShapeOfXlaOp(value);
   xla::XlaOp updates = value;
+  if (buffer_shape.element_type() != value_shape.element_type()) {
+    updates = ConvertTo(updates, value_shape.element_type(),
+                        buffer_shape.element_type(), /*device=*/nullptr);
+  }
   if (broadcast_value_to_index) {
     xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
     std::vector<xla::int64> update_dimensions =
         xla::util::ToVector<xla::int64>(buffer_shape.dimensions());
     update_dimensions[dim] = index_shape.dimensions(0);
-    updates = xla::Broadcast(
-        xla::ConvertElementType(value, buffer_shape.element_type()),
-        update_dimensions);
+    updates = xla::Broadcast(updates, update_dimensions);
   }
+  // Create a combiner computation for the scatter.
+  xla::XlaComputation combiner_computation =
+      MakeScatterComputation(combiner, buffer_shape.element_type());
   return xla::Scatter(buffer, index, updates, combiner_computation,
                       dim_numbers);
 }
@@ -327,7 +331,12 @@ xla::XlaOp CreateIndexUpdate(
   for (xla::int64 dim = num_index_dims; dim < buffer_rank; ++dim) {
     expected_values_dims.push_back(buffer_shape.dimensions(dim));
   }
-  xla::XlaOp new_values = BuildExpand(values, expected_values_dims);
+  xla::XlaOp new_values = values;
+  if (buffer_shape.element_type() != values_shape.element_type()) {
+    new_values = ConvertTo(new_values, values_shape.element_type(),
+                           buffer_shape.element_type(), /*device=*/nullptr);
+  }
+  new_values = BuildExpand(new_values, expected_values_dims);
   values_shape = XlaHelpers::ShapeOfXlaOp(new_values);
   values_rank = values_shape.rank();
 

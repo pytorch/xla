@@ -140,8 +140,9 @@ def _dump_differences(target, result, rtol=1e-5, atol=1e-3, max_diff_count=0):
     assert isinstance(result, float)
     check_values(target, result, [])
   if env.max_index is not None:
-    print('\nmax_diff={}\tmax_rel={}\tindex={}'.format(
-        env.max_diff, env.max_rel, env.max_index))
+    print('\nmax_diff={}\tmax_rel={}\tindex={}'.format(env.max_diff,
+                                                       env.max_rel,
+                                                       env.max_index))
 
 
 def _xla_run(model, input, device='TPU'):
@@ -930,8 +931,8 @@ class TestGradients(XlaTestCase):
 
     # TODO: test buffers as well (running_mean, etc.)
     if xla:
-      for i, (grad_input_jit, grad_input_xla) in enumerate(
-          zip(grad_inputs, grad_inputs_xla)):
+      for i, (grad_input_jit,
+              grad_input_xla) in enumerate(zip(grad_inputs, grad_inputs_xla)):
         self.assertEqualRel(grad_input_jit, grad_input_xla, rel_err, abs_err)
 
   def test_avgpool(self):
@@ -1598,6 +1599,14 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b = b.to(xla_device)
     xla_c = torch.max(xla_a, xla_b)
     self.assertEqual(c.data, xla_c.data.cpu())
+
+  def test_index_put(self):
+    xla_device = xm.xla_device()
+    a = torch.tensor([1, 1, 1, 1]).to(xla_device).to(dtype=torch.float32)
+    b = torch.rand(4) > 0.1
+    a[b] = 10
+    vset = b.sum().item()
+    self.assertEqual(a.sum().item(), 10.0 * vset + (4.0 - vset))
 
 
 class MNISTComparator(nn.Module):
