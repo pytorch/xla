@@ -43,13 +43,14 @@ void GatherParameters(std::vector<at::Tensor>* values,
                       const torch::jit::script::Method* forward) {
   const auto parameter_set = ToSlotSet(m.get_parameters());
   const auto attribute_set = ToSlotSet(m.get_attributes());
-  for (torch::jit::script::Slot initial_ivalue : forward->initial_ivalues()) {
-    if (parameter_set.find(initial_ivalue) != parameter_set.end()) {
-      values->push_back(initial_ivalue->toTensor());
+  for (auto& initial_ivalue : forward->initial_ivalues()) {
+    if (parameter_set.find(initial_ivalue->slot()) != parameter_set.end()) {
+      values->push_back(initial_ivalue->slot()->toTensor());
       requires_grad->push_back(true);
-    } else if (attribute_set.find(initial_ivalue) != attribute_set.end() &&
-               initial_ivalue->isTensor()) {
-      values->push_back(initial_ivalue->toTensor());
+    } else if (attribute_set.find(initial_ivalue->slot()) !=
+                   attribute_set.end() &&
+               initial_ivalue->slot()->isTensor()) {
+      values->push_back(initial_ivalue->slot()->toTensor());
       requires_grad->push_back(false);
     }
   }
