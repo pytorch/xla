@@ -648,6 +648,44 @@ at::Tensor AtenXlaType::batch_norm(
       bridge::GetOrCreateXlaTensor(bias, device), momentum, eps));
 }
 
+at::Tensor AtenXlaType::bernoulli(const at::Tensor& self, double p,
+                                  at::Generator* generator) const {
+  if (generator != nullptr) {
+    return AtenXlaTypeBase::bernoulli(self, p, generator);
+  }
+  return bridge::AtenFromXlaTensor(
+      XLATensor::bernoulli(bridge::GetXlaTensor(self), p));
+}
+
+at::Tensor AtenXlaType::bernoulli(const at::Tensor& self,
+                                  at::Generator* generator) const {
+  if (generator != nullptr) {
+    return AtenXlaTypeBase::bernoulli(self, generator);
+  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::bernoulli(self_tensor));
+}
+
+at::Tensor& AtenXlaType::bernoulli_(at::Tensor& self, double p,
+                                    at::Generator* generator) const {
+  if (generator != nullptr) {
+    return AtenXlaTypeBase::bernoulli_(self, p, generator);
+  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::bernoulli_(self_tensor, p);
+  return self;
+}
+
+at::Tensor& AtenXlaType::bernoulli_(at::Tensor& self, const at::Tensor& p,
+                                    at::Generator* generator) const {
+  if (generator != nullptr) {
+    return AtenXlaTypeBase::bernoulli_(self, p, generator);
+  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::bernoulli_(self_tensor, bridge::GetXlaTensor(p));
+  return self;
+}
+
 at::Tensor AtenXlaType::bilinear(const at::Tensor& input1,
                                  const at::Tensor& input2,
                                  const at::Tensor& weight,

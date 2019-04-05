@@ -13,6 +13,9 @@ std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
 
 xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs);
 
+xla::XlaOp BuildBernoulli(const xla::XlaOp& probability,
+                          const xla::Shape& shape);
+
 xla::XlaOp BuildDropout(const xla::XlaOp& input, float probability);
 
 std::vector<xla::XlaOp> CreateBroadcastTensors(

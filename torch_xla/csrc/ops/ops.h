@@ -190,6 +190,8 @@ NodePtr MaxUnary(const Value& input);
 
 NodePtr MinUnary(const Value& input);
 
+NodePtr Bernoulli(const Value& input, const Value& probability);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

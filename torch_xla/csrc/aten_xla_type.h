@@ -241,6 +241,15 @@ class AtenXlaType : public AtenXlaTypeBase {
                         double momentum, double eps,
                         bool cudnn_enabled) const override;
 
+  at::Tensor bernoulli(const at::Tensor& self, double p,
+                       at::Generator* generator) const override;
+  at::Tensor bernoulli(const at::Tensor& self,
+                       at::Generator* generator) const override;
+  at::Tensor& bernoulli_(at::Tensor& self, double p,
+                         at::Generator* generator) const override;
+  at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p,
+                         at::Generator* generator) const override;
+
   at::Tensor bilinear(const at::Tensor& input1, const at::Tensor& input2,
                       const at::Tensor& weight,
                       const at::Tensor& bias) const override;

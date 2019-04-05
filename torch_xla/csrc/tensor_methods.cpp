@@ -514,6 +514,28 @@ XLATensor XLATensor::batch_norm(const XLATensor& input, const XLATensor& weight,
       input.GetIrValue(), weight_value, bias_value, momentum, eps));
 }
 
+XLATensor XLATensor::bernoulli(const XLATensor& input, double probability) {
+  return input.CreateFrom(ir::ops::Bernoulli(
+      input.GetIrValue(),
+      GetIrValueForScalar(probability, input.shape(), input.GetDevice())));
+}
+
+XLATensor XLATensor::bernoulli(const XLATensor& input) {
+  return input.CreateFrom(
+      ir::ops::Bernoulli(input.GetIrValue(), input.GetIrValue()));
+}
+
+void XLATensor::bernoulli_(XLATensor& input, double probability) {
+  input.SetIrValue(ir::ops::Bernoulli(
+      input.GetIrValue(),
+      GetIrValueForScalar(probability, input.shape(), input.GetDevice())));
+}
+
+void XLATensor::bernoulli_(XLATensor& input, const XLATensor& probability) {
+  input.SetIrValue(
+      ir::ops::Bernoulli(input.GetIrValue(), probability.GetIrValue()));
+}
+
 XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {
   // Consistent with the checks in bmm_out_or_baddbmm_.
   std::string tag = "bmm";
