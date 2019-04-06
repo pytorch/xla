@@ -1050,6 +1050,14 @@ at::Tensor AtenXlaType::embedding(const at::Tensor& weight,
                                sparse);
 }
 
+at::Tensor AtenXlaType::embedding_dense_backward(
+    const at::Tensor& grad_output, const at::Tensor& indices,
+    int64_t num_weights, int64_t padding_idx, bool scale_grad_by_freq) const {
+  return bridge::AtenFromXlaTensor(XLATensor::embedding_dense_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(indices),
+      num_weights, padding_idx, scale_grad_by_freq));
+}
+
 at::Tensor AtenXlaType::empty(at::IntArrayRef size,
                               const at::TensorOptions& options) const {
   // PT empty*() are optimizations to avoid initializing the data when it is

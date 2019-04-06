@@ -175,5 +175,48 @@ XLATensor Select(const XLATensor& input, xla::int64 dim, xla::int64 index) {
   return XLATensor::view(result, new_dims);
 }
 
+XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
+                                 const XLATensor& indices,
+                                 xla::int64 num_weights, xla::int64 padding_idx,
+                                 bool scale_grad_by_freq) {
+  XLA_CHECK_EQ(indices.dtype(), at::ScalarType::Long)
+      << "Embedding indices are expected to be of scalar type Long";
+  auto indices_shape_ref = indices.shape();
+  // The weight must be of rank 2, which means the rank of grad_output is one
+  // more than the indices.
+  XLA_CHECK_EQ(grad_output.shape().get().rank(),
+               indices_shape_ref.get().rank() + 1);
+  xla::int64 numel = xla::ShapeUtil::ElementsIn(indices_shape_ref.get());
+  XLATensor grad = XLATensor::view(grad_output, {numel, grad_output.size(-1)});
+  XLATensor grad_weight =
+      XLATensor::full({num_weights, grad_output.size(-1)}, 0,
+                      grad_output.GetDevice(), grad_output.dtype());
+  XLATensor indices_rank1 = XLATensor::view(indices, {numel});
+  if (scale_grad_by_freq) {
+    // Compute the histogram of index values.
+    XLATensor counts =
+        XLATensor::full({num_weights}, 0, indices.GetDevice(), indices.dtype());
+    XLATensor ones =
+        XLATensor::full({numel}, 1, indices.GetDevice(), indices.dtype());
+    XLATensor::index_put_(counts, counts, {indices_rank1}, ones,
+                          /*accumulate=*/true, /*result_permutation=*/{0});
+    XLATensor grad_weights_scale = XLATensor::index(counts, {indices_rank1});
+    // Scale the value of the gradient by the histogram.
+    grad = XLATensor::div(grad, XLATensor::unsqueeze(grad_weights_scale, 1));
+  }
+  // Don't accumulate gradients for indices which are equal with the given
+  // padding_idx.
+  XLATensor skip_padding = XLATensor::unsqueeze(
+      XLATensor::ne(indices_rank1, static_cast<double>(padding_idx)), 1);
+  skip_padding =
+      XLATensor::expand(skip_padding, grad.shape().get().dimensions());
+  XLATensor zero_grad =
+      XLATensor::full_like(grad, 0, grad.GetDevice(), grad.dtype());
+  return XLATensor::index_put(grad_weight, {indices_rank1},
+                              XLATensor::where(skip_padding, grad, zero_grad),
+                              /*accumulate=*/true,
+                              /*result_permutation=*/{0, 1});
+}
+
 }  // namespace tensor_ops
 }  // namespace torch_xla

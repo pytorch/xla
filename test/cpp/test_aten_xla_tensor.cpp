@@ -6099,5 +6099,26 @@ TEST_F(AtenXlaTensorTest, TestKlDivBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
+  int num_weights = 32;
+  for (int padding_idx = -1; padding_idx < num_weights; ++padding_idx) {
+    for (bool scale_grad_by_freq : {false, true}) {
+      auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+        return at::embedding(inputs[0], inputs[1], /*padding_idx=*/padding_idx,
+                             /*scale_grad_by_freq=*/scale_grad_by_freq,
+                             /*sparse=*/false);
+      };
+      ForEachDevice([&](const Device& device) {
+        at::Tensor weight =
+            at::rand({num_weights, 7}, at::TensorOptions(at::kFloat));
+        at::Tensor indices =
+            at::randint(num_weights, {3, 9, 4}, at::TensorOptions(at::kLong));
+        TestBackward({weight, indices}, device, testfn, /*rtol=*/1e-5,
+                     /*atol=*/1e-8, {true, false});
+      });
+    }
+  }
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla

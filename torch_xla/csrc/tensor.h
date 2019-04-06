@@ -380,6 +380,12 @@ class XLATensor {
                                 at::Scalar scale, at::Scalar input_scale,
                                 const XLATensor& output);
 
+  static XLATensor embedding_dense_backward(const XLATensor& grad_output,
+                                            const XLATensor& indices,
+                                            xla::int64 num_weights,
+                                            xla::int64 padding_idx,
+                                            bool scale_grad_by_freq);
+
   static XLATensor eq(const XLATensor& input, at::Scalar other);
   static void eq_(XLATensor& input, at::Scalar other);
 
