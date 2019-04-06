@@ -52,9 +52,12 @@ xla::XlaOp ConvertTo(const xla::XlaOp& op, xla::PrimitiveType from,
 }
 
 xla::XlaOp ConvertToNumeric(const xla::XlaOp& op, xla::PrimitiveType from) {
+  const Device* device = GetDefaultDevice();
   return from != xla::PrimitiveType::PRED
              ? op
-             : ConvertTo(op, from, xla::PrimitiveType::U8, /*device=*/nullptr);
+             : ConvertTo(op, from,
+                         GetDevicePrimitiveType(xla::PrimitiveType::U8, device),
+                         device);
 }
 
 xla::XlaOp CastToScalarType(const xla::XlaOp& input,
