@@ -1612,6 +1612,22 @@ class TestAtenXlaTensor(XlaTestCase):
     vset = b.sum().item()
     self.assertEqual(a.sum().item(), 10.0 * vset + (4.0 - vset))
 
+  def test_pred_type(self):
+    xla_device = xm.xla_device()
+    a = torch.rand(4)
+    b = torch.rand(4)
+    xla_a = a.to(xla_device)
+    xla_b = b.to(xla_device)
+    c = (a >= 0.25)
+    d = (b >= 0.5)
+    xla_c = (xla_a >= 0.25)
+    xla_d = (xla_b >= 0.5)
+    e = torch.cat([a, b], dim=0)
+    xla_e = torch.cat([xla_a, xla_b], dim=0)
+    f = e.sum().item()
+    xla_f = xla_e.sum().item()
+    self.assertEqual(f, xla_f)
+
 
 class MNISTComparator(nn.Module):
 
