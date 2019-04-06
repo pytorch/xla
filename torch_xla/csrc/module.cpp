@@ -27,14 +27,14 @@ namespace {
 
 // Extract the slots from a named IValue dictionary.
 std::unordered_set<torch::jit::script::Slot> ToSlotSet(
-    const c10::ArrayRef<torch::jit::script::NamedIValue>& named_ivalue_list) {
-  std::unordered_set<torch::jit::script::Slot> ivalue_set;
-  for (const auto& named_ivalue : named_ivalue_list) {
-    ivalue_set.insert(named_ivalue.slot());
+    const c10::ArrayRef<torch::jit::script::Slot>& slots) {
+  std::unordered_set<torch::jit::script::Slot> slots_set;
+  for (const auto& slot : slots) {
+    slots_set.insert(slot);
   }
-  XLA_CHECK_EQ(ivalue_set.size(), named_ivalue_list.size())
-      << "Found duplicated values in the named IValue list";
-  return ivalue_set;
+  XLA_CHECK_EQ(slots_set.size(), slots.size())
+      << "Found duplicated values in the Slot list";
+  return slots_set;
 }
 
 void GatherParameters(std::vector<at::Tensor>* values,
@@ -45,16 +45,16 @@ void GatherParameters(std::vector<at::Tensor>* values,
   const auto attribute_set = ToSlotSet(m.get_attributes());
   for (auto& initial_ivalue : forward->initial_ivalues()) {
     if (parameter_set.find(initial_ivalue) != parameter_set.end()) {
-      values->push_back(initial_ivalue->toTensor());
+      values->push_back(initial_ivalue.value().toTensor());
       requires_grad->push_back(true);
     } else if (attribute_set.find(initial_ivalue) != attribute_set.end() &&
-               initial_ivalue->isTensor()) {
-      values->push_back(initial_ivalue->toTensor());
+               initial_ivalue.value().isTensor()) {
+      values->push_back(initial_ivalue.value().toTensor());
       requires_grad->push_back(false);
     }
   }
   for (const auto& submodule : m.get_modules()) {
-    GatherParameters(values, requires_grad, *submodule.module, forward);
+    GatherParameters(values, requires_grad, *submodule, forward);
   }
 }
 
