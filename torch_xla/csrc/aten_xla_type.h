@@ -399,6 +399,11 @@ class AtenXlaType : public AtenXlaTypeBase {
                        int64_t padding_idx, bool scale_grad_by_freq,
                        bool sparse) const override;
 
+  at::Tensor embedding_dense_backward(const at::Tensor& grad_output,
+                                      const at::Tensor& indices,
+                                      int64_t num_weights, int64_t padding_idx,
+                                      bool scale_grad_by_freq) const override;
+
   at::Tensor empty(at::IntArrayRef size,
                    const at::TensorOptions& options) const override;
 

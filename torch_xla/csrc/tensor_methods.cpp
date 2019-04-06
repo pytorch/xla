@@ -1,5 +1,3 @@
-#include "torch_xla/csrc/tensor.h"
-
 #include <algorithm>
 #include <functional>
 
@@ -86,6 +84,7 @@
 #include "torch_xla/csrc/ops/triu.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
 #include "torch_xla/csrc/ops/view.h"
+#include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/translator.h"
@@ -839,6 +838,15 @@ XLATensor XLATensor::elu_backward(const XLATensor& grad_output,
   return grad_output.CreateFrom(ir::ops::EluBackward(grad_output.GetIrValue(),
                                                      output.GetIrValue(), alpha,
                                                      scale, input_scale));
+}
+
+XLATensor XLATensor::embedding_dense_backward(const XLATensor& grad_output,
+                                              const XLATensor& indices,
+                                              xla::int64 num_weights,
+                                              xla::int64 padding_idx,
+                                              bool scale_grad_by_freq) {
+  return tensor_ops::EmbeddingDenseBackward(grad_output, indices, num_weights,
+                                            padding_idx, scale_grad_by_freq);
 }
 
 XLATensor XLATensor::erf(const XLATensor& input) {
