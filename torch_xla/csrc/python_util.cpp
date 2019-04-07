@@ -40,4 +40,14 @@ std::vector<SourceLocation> GetPythonFrames() {
   return frames;
 }
 
+std::ostream& operator<<(std::ostream& stream,
+                         const std::vector<SourceLocation>& frames) {
+  stream << "Python Frames:\n";
+  for (auto& location : frames) {
+    stream << "  " << location.function << " (" << location.file << ":"
+           << location.line << ")\n";
+  }
+  return stream;
+}
+
 }  // namespace torch_xla

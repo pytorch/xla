@@ -8,7 +8,6 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/python_util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -20,6 +19,21 @@ ShapeCache* GetShapeCache() {
   static const size_t kMaxShapeCacheSize = 1024;
   static ShapeCache* cache = new ShapeCache(kMaxShapeCacheSize);
   return cache;
+}
+
+void EmitShortFrameInfo(std::ostream& stream,
+                        const std::vector<SourceLocation>& frames) {
+  if (!frames.empty()) {
+    const SourceLocation& frame = frames.front();
+    std::string::size_type pos = frame.file.find_last_of('/');
+    if (pos == std::string::npos) {
+      pos = 0;
+    } else {
+      ++pos;
+    }
+    stream << ", location=" << frame.function << "@" << frame.file.substr(pos)
+           << ":" << frame.line;
+  }
 }
 
 }  // namespace
@@ -157,6 +171,7 @@ std::string Node::ToString() const {
   if (num_outputs() > 1) {
     ss << ", num_outputs=" << num_outputs();
   }
+  EmitShortFrameInfo(ss, metadata_.frame_info);
   return ss.str();
 }
 
@@ -179,25 +194,12 @@ xla::Shape Node::GetOpShape(const std::function<xla::Shape()>& shape_fn) const {
   return *shape;
 }
 
-std::string Node::GetFrameInfo() {
+std::vector<SourceLocation> Node::GetFrameInfo() {
   // At the time of writing, retrieving Python frames costs from 1us up to 20us.
   // This per IR Node. Since it is not unreasonable to have a many hundreds of
   // IR Node, this can be a multi-millisecond cost, which is not negligible.
   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
-  if (!wants_frames) {
-    return std::string();
-  }
-  std::vector<SourceLocation> frames = GetPythonFrames();
-  if (frames.empty()) {
-    return std::string();
-  }
-  std::stringstream ss;
-  ss << "Python Frames To IR Node:\n";
-  for (auto& location : frames) {
-    ss << "  " << location.function << " (" << location.file << ":"
-       << location.line << ")\n";
-  }
-  return ss.str();
+  return wants_frames ? GetPythonFrames() : std::vector<SourceLocation>();
 }
 
 }  // namespace ir

@@ -17,9 +17,8 @@ def normalize(args):
     line.rstrip('\n')
     m = re.match(r'(\s*)%\d+\s*=\s*(.*::[^(]+\()[^)]*(.*)', line)
     if m:
-      print(m.group(1) + m.group(2) + m.group(3))
-    else:
-      print(line)
+      line = m.group(1) + m.group(2) + m.group(3)
+    print(line)
 
 
 if __name__ == '__main__':
