@@ -1,8 +1,5 @@
 #pragma once
 
-// This is a lower level header. Can depend only on system/c++ headers,
-// tensorflow, PT,... but not from other PT/XLA headers.
-
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -17,6 +14,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/lib/gtl/inlined_vector.h"
+#include "torch_xla/csrc/python_util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -29,7 +27,7 @@ using NodePtr = std::shared_ptr<Node>;
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
 
 struct MetaData {
-  std::string frame_info;
+  std::vector<SourceLocation> frame_info;
 };
 
 // Represents a use of the output of a given node.
@@ -222,7 +220,7 @@ class Node {
 
   static size_t GetOpHash(OpKind op, const xla::Shape& shape, size_t hash_seed);
 
-  static std::string GetFrameInfo();
+  static std::vector<SourceLocation> GetFrameInfo();
 
   // The ID of the operation captured by this node.
   OpKind op_;
