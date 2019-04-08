@@ -142,6 +142,8 @@ _FN_REMAP = {
         FuncOpts(outfn_name='__or__', shape_check_indices=((0, 1),)),
     's__th_xor(Tensor, Tensor) -> Tensor':
         FuncOpts(outfn_name='__xor__', shape_check_indices=((0, 1),)),
+    '_s_where(Tensor, Tensor, Tensor) -> Tensor':
+        FuncOpts(outfn_name='where', shape_check_indices=((0, 1), (0, 2),)),
 }
 
 _TYPE_NSMAP = {
@@ -1063,7 +1065,7 @@ def generate(args):
         fgens.append(fgen)
     except Exception as e:
       print(
-          'File to generate wrapper for {}: {}'.format(ts, e), file=sys.stderr)
+          'Failed to generate wrapper for {}: {}'.format(ts, e), file=sys.stderr)
   print(
       'Generated {} wrappers for {}'.format(len(fgens), args.typedef),
       file=sys.stderr)

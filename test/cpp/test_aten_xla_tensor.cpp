@@ -1,13 +1,12 @@
-#include <gtest/gtest.h>
-
-#include <iostream>
-
 #include <ATen/ATen.h>
 #include <ATen/LegacyTHFunctions.h>
 #include <ATen/NativeFunctions.h>
-
+#include <gtest/gtest.h>
 #include <torch/csrc/autograd/function.h>
 #include <torch/csrc/autograd/variable.h>
+
+#include <iostream>
+
 #include "cpp_test_util.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -3425,6 +3424,25 @@ TEST_F(AtenXlaTensorTest, TestWhereBroadcast) {
     at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
     at::Tensor xla_c = bridge::CreateXlaTensor(c, device);
     at::Tensor xla_d = at::where(xla_c, xla_a, xla_b);
+    AllClose(d, xla_d);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestWhereAutograd) {
+  at::Tensor a = at::rand({3, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({3, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::empty({3, 3}, at::TensorOptions(at::kByte));
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      c[i][j] = i == j;
+    }
+  }
+  at::Tensor d = at::_s_where(c, a, b);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+    at::Tensor xla_c = bridge::CreateXlaTensor(c, device);
+    at::Tensor xla_d = at::_s_where(xla_c, xla_a, xla_b);
     AllClose(d, xla_d);
   });
 }
