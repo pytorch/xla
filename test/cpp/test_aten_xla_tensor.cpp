@@ -1,13 +1,12 @@
-#include <gtest/gtest.h>
-
-#include <iostream>
-
 #include <ATen/ATen.h>
 #include <ATen/LegacyTHFunctions.h>
 #include <ATen/NativeFunctions.h>
-
+#include <gtest/gtest.h>
 #include <torch/csrc/autograd/function.h>
 #include <torch/csrc/autograd/variable.h>
+
+#include <iostream>
+
 #include "cpp_test_util.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -1241,7 +1240,7 @@ TEST_F(AtenXlaTensorTest, TestPairwiseDistance) {
         at::Tensor xla_x2 = bridge::CreateXlaTensor(x2, device);
         at::Tensor xla_output =
             at::pairwise_distance(xla_x1, xla_x2, p, eps, keepdim);
-        AllClose(output, xla_output);
+        AllClose(output, xla_output, /*rtol=*/1e-5, /*atol=*/1e-5);
       });
     }
   }
@@ -6059,7 +6058,7 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
                 : at::rand({classes}, at::TensorOptions(at::kFloat));
         ForEachDevice([&](const Device& device) {
           TestBackward({input, target, weight, pos_weight}, device, testfn,
-                       /*rtol=*/1e-5, /*atol=*/1e-7,
+                       /*rtol=*/1e-3, /*atol=*/1e-5,
                        /*inputs_require_grad=*/{true, true, false, false});
         });
       }
@@ -6075,7 +6074,8 @@ TEST_F(AtenXlaTensorTest, TestKlDivBackward) {
       return at::kl_div(/*self=*/inputs[0], /*target=*/inputs[1], reduction);
     };
     ForEachDevice([&](const Device& device) {
-      TestBackward({input, target}, device, testfn);
+      TestBackward({input, target}, device, testfn, /*rtol=*/1e-4,
+                   /*atol=*/1e-5);
     });
   }
 }
