@@ -398,12 +398,11 @@ def _fetch_optimizer_state(optimizer):
         state.gradients.append(p.grad.data)
       pstate = optimizer.state.get(p, None)
       if pstate:
-        for x in itervalues(pstate):
-          if isinstance(x, torch.Tensor):
-            state.tensors.append(x.data)
+        add(pstate, state)
     elif isinstance(p, dict):
-      for x in itervalues(p):
-        add(x, state)
+      for k, v in p.items():
+        add(k, state)
+        add(v, state)
     elif isinstance(p, (list, tuple, set)):
       for x in p:
         add(x, state)
