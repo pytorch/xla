@@ -26,7 +26,8 @@ import torch_xla_py.xla_model as xm
 
 class BaseBench(object):
 
-  def __init__(self):
+  def __init__(self, args):
+    self.args = args
     self.device = xm.xla_device()
     self.test_time = xu.getenv_as('BENCH_TEST_TIME', float, 5.0)
     torch.manual_seed(42)
@@ -34,20 +35,23 @@ class BaseBench(object):
   def _get_parent_class(self):
     return inspect.getmro(self.__class__)[0]
 
-  def setup(self, args):
+  def setup(self):
     pass
 
   def bench(self):
     raise RuntimeError('Not implemented')
 
   def use_results(self, results):
-    for v in results:
-      v.cpu()
+    if self.args.transfer:
+      for v in results:
+        v.cpu()
+    else:
+      torch_xla._XLAC._xla_sync_multi(results)
 
-  def run(self, args):
+  def run(self):
     bench_name = self._get_parent_class().__name__
     try:
-      self.setup(args)
+      self.setup()
       # Do one warmup run.
       self.bench()
     except Exception as e:
@@ -70,7 +74,7 @@ class BaseBench(object):
 
 class BenchAddMulDiv(BaseBench):
 
-  def setup(self, args):
+  def setup(self):
     self.a = torch.rand(8, 8)
     self.b = torch.rand(8, 8).abs() + 1.0
     self.xla_a = self.a.to(self.device)
@@ -83,7 +87,7 @@ class BenchAddMulDiv(BaseBench):
 
 class BenchAddMulDivTransfer(BaseBench):
 
-  def setup(self, args):
+  def setup(self):
     self.size = xu.getenv_as('ADD_MUL_DIV_SIZE', int, 100)
     self.a = torch.rand(self.size, self.size)
     self.b = torch.rand(self.size, self.size).abs() + 1.0
@@ -112,12 +116,13 @@ def run_benchmarks(args):
   else:
     run_benchs = benchs.keys()
   for name in sorted(run_benchs):
-    bench = benchs[name]()
-    bench.run(args)
+    bench = benchs[name](args)
+    bench.run()
 
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(add_help=False)
+  parser.add_argument('--transfer', action='store_true')
   args, benchs = parser.parse_known_args()
   args.benchs = benchs
 
