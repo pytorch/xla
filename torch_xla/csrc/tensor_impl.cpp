@@ -1,6 +1,5 @@
 #include "torch_xla/csrc/tensor_impl.h"
 
-#include <c10/core/Allocator.h>
 #include <c10/core/ScalarType.h>
 #include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/macros/Macros.h>
@@ -12,16 +11,6 @@
 
 namespace torch_xla {
 namespace {
-
-struct XLAAllocator : public c10::Allocator {
-  c10::DataPtr allocate(size_t n) const override { return c10::DataPtr(); }
-};
-
-struct XLAAllocatorRegistrar {
-  XLAAllocatorRegistrar() {
-    caffe2::SetAllocator(c10::DeviceType::XLA, new XLAAllocator());
-  }
-};
 
 thread_local c10::Device g_current_device(at::DeviceType::XLA, 0);
 
@@ -57,19 +46,21 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
 };
 
 C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
-XLAAllocatorRegistrar g_allocator_registrar;
 
 }  // namespace
 
 XLATensorImpl::XLATensorImpl(XLATensor tensor)
-    : c10::TensorImpl(GetStorage(tensor), c10::XLATensorId(),
+    : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
+                      bridge::XlaDeviceToAtenDevice(tensor.GetDevice()),
                       /*is_variable=*/false),
       tensor_(std::move(tensor)) {
   SetupSizeProperties();
 }
 
 XLATensorImpl::XLATensorImpl(XLATensor tensor, bool is_variable)
-    : c10::TensorImpl(GetStorage(tensor), c10::XLATensorId(), is_variable),
+    : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
+                      bridge::XlaDeviceToAtenDevice(tensor.GetDevice()),
+                      is_variable),
       tensor_(std::move(tensor)) {
   SetupSizeProperties();
 }
@@ -126,12 +117,6 @@ void XLATensorImpl::SetupSizeProperties() {
 
 caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
   return c10::scalarTypeToTypeMeta(tensor.dtype());
-}
-
-c10::Storage XLATensorImpl::GetStorage(const XLATensor& tensor) {
-  Device device = tensor.GetDevice();
-  return c10::Storage::create_legacy(bridge::XlaDeviceToAtenDevice(device),
-                                     GetTypeMeta(tensor));
 }
 
 c10::Device XLATensorImpl::GetCurrentAtenDevice() { return g_current_device; }
