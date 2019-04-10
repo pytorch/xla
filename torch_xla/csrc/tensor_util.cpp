@@ -533,6 +533,7 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
       return at::ScalarType::Float;
     case xla::PrimitiveType::F64:
       return at::ScalarType::Double;
+    case xla::PrimitiveType::PRED:
     case xla::PrimitiveType::U8:
       return at::ScalarType::Byte;
     case xla::PrimitiveType::S8:
