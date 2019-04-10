@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Given a log file in which the XLA metrics report has been dumped, extracts the
-#different metrics across multiple points and produces data in a format which
+# different metrics across multiple points and produces data in a format which
 # can be graphed.
 # Can also produce data which is a combination of other metric, using the
 # --synth parameters:
