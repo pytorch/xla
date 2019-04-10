@@ -55,7 +55,7 @@ c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor) {
   if (impl == nullptr) {
     return c10::nullopt;
   }
-  return impl->tensor();
+  return impl->unsafe_opaque_handle();
 }
 
 XLATensor GetXlaTensor(const at::Tensor& tensor) {

@@ -1,9 +1,9 @@
 #pragma once
 
+#include <ATen/OpaqueTensorImpl.h>
 #include <ATen/Tensor.h>
 #include <ATen/Type.h>
 #include <c10/core/Storage.h>
-#include <c10/core/TensorImpl.h>
 
 #include "torch_xla/csrc/tensor.h"
 
@@ -11,15 +11,15 @@ namespace torch_xla {
 
 // Tensor implementation class used to be fed to the at::Tensor.
 // Its scope is just to handle an XLATensor.
-class XLATensorImpl : public c10::TensorImpl {
+class XLATensorImpl : public at::OpaqueTensorImpl<XLATensor> {
  public:
   explicit XLATensorImpl(XLATensor tensor);
-
-  XLATensor& tensor() { return tensor_; }
 
   c10::intrusive_ptr<c10::TensorImpl> shallow_copy_and_detach() const override;
 
   at::IntArrayRef sizes() const override;
+
+  at::IntArrayRef strides() const override;
 
   int64_t dim() const override;
 
@@ -39,8 +39,6 @@ class XLATensorImpl : public c10::TensorImpl {
   void SetupSizeProperties();
 
   static caffe2::TypeMeta GetTypeMeta(const XLATensor& tensor);
-
-  XLATensor tensor_;
 };
 
 }  // namespace torch_xla

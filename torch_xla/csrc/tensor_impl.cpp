@@ -50,15 +50,17 @@ C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
 }  // namespace
 
 XLATensorImpl::XLATensorImpl(XLATensor tensor)
-    : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
-                      bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
-      tensor_(std::move(tensor)) {
+    : at::OpaqueTensorImpl<XLATensor>(
+          c10::XLATensorId(), GetTypeMeta(tensor),
+          bridge::XlaDeviceToAtenDevice(tensor.GetDevice()), tensor,
+          xla::util::ToVector<int64_t>(tensor.shape().get().dimensions())) {
   SetupSizeProperties();
 }
 
 c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach()
     const {
-  auto impl = c10::make_intrusive<XLATensorImpl>(tensor_);
+  auto impl = c10::make_intrusive<XLATensorImpl>(
+      const_cast<XLATensorImpl*>(this)->unsafe_opaque_handle());
   impl->is_wrapped_number_ = is_wrapped_number_;
   impl->reserved_ = reserved_;
   return impl;
@@ -68,6 +70,8 @@ at::IntArrayRef XLATensorImpl::sizes() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return c10::TensorImpl::sizes();
 }
+
+at::IntArrayRef XLATensorImpl::strides() const { return TensorImpl::strides(); }
 
 int64_t XLATensorImpl::dim() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
@@ -93,7 +97,7 @@ int64_t XLATensorImpl::size(int64_t d) const {
 void XLATensorImpl::SetupSizeProperties() {
   // Fill up the basic dimension data members which the base class
   // implementation uses in its APIs.
-  auto shape = tensor_.shape();
+  auto shape = unsafe_opaque_handle().shape();
   sizes_.clear();
   numel_ = 1;
   for (auto dim : shape.get().dimensions()) {
