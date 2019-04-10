@@ -41,8 +41,6 @@ class XLATensorImpl : public c10::TensorImpl {
 
   static caffe2::TypeMeta GetTypeMeta(const XLATensor& tensor);
 
-  static c10::Storage GetStorage(const XLATensor& tensor);
-
   XLATensor tensor_;
 };
 
