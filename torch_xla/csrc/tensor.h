@@ -112,12 +112,17 @@ class XLATensor {
   // same device.
   static Device CommonDeviceForTensors(const std::vector<XLATensor>& tensors);
 
-  // Retrieves the set of XLA tensors which are currently live in the system.
-  static std::vector<XLATensor> GetLiveTensors();
+  // Retrieves the set of XLA tensors which are currently live in the system,
+  // for the given device. If device is nullptr, the live tensors for all
+  // devices will be returned. Returned tensors are sorted by device as primary
+  // key, and by unique ID as secondary key.
+  static std::vector<XLATensor> GetLiveTensors(const Device* device);
 
   // Applies all the pending IR operations queued over the input tensors. All
   // the tensors must be on the same device.
   static void SyncTensorsGraph(std::vector<XLATensor>* tensors);
+
+  static void SyncLiveTensorsGraph(const Device* device);
 
   // Applies the queue of operations for a list of tensors.
   static void ApplyPendingGraph(std::vector<XLATensor>* tensors);
@@ -979,8 +984,8 @@ class XLATensor {
     std::shared_ptr<View> view;
     c10::optional<at::ScalarType> logical_element_type;
     c10::optional<at::Tensor> tensor_data;
-    Device device;
-    xla::int64 unique_id = 0;
+    const Device device;
+    const xla::int64 unique_id = 0;
     std::shared_ptr<XLATensor> grad;
     bool requires_grad = false;
   };

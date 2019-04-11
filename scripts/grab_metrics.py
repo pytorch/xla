@@ -77,7 +77,7 @@ def create_report(args, metrics):
   else:
     for metric in metrics.keys():
       create_metric_report(args, metric, metrics[metric])
-  for synth in args.synth:
+  for synth in (args.synth or []):
     process_synth(args, synth, metrics)
 
 

@@ -195,6 +195,11 @@ void SetMulti(std::vector<XLATensor>* dest_tuple,
 // operations and ensure the same XLA computations are created during the
 // training loops.
 class XLATensor::TensorsArena {
+  struct DeviceTensors {
+    std::mutex lock;
+    std::map<xla::int64, std::weak_ptr<Data>> tensors_data;
+  };
+
  public:
   static TensorsArena* Get() {
     static TensorsArena* arena = new TensorsArena();
@@ -202,38 +207,57 @@ class XLATensor::TensorsArena {
   }
 
   void RegisterTensor(std::shared_ptr<Data> data) {
-    std::lock_guard<std::mutex> lock(lock_);
-    tensors_data_.emplace(data.get(), data);
+    DeviceTensors* device_tensors = GetDeviceTensors(data->device);
+    std::lock_guard<std::mutex> lock(device_tensors->lock);
+    device_tensors->tensors_data.emplace(data->unique_id, data);
     XLA_COUNTER("CreateXlaTensor", 1);
   }
 
   void UnregisterTensor(Data* data) {
-    std::lock_guard<std::mutex> lock(lock_);
-    tensors_data_.erase(data);
+    DeviceTensors* device_tensors = GetDeviceTensors(data->device);
+    std::lock_guard<std::mutex> lock(device_tensors->lock);
+    device_tensors->tensors_data.erase(data->unique_id);
     XLA_COUNTER("DestroyXlaTensor", 1);
   }
 
-  std::vector<XLATensor> GetTensors() {
-    std::vector<std::shared_ptr<Data>> data_pointers;
-    {
+  std::vector<XLATensor> GetTensors(const Device* device) {
+    std::vector<XLATensor> tensors;
+    if (device == nullptr) {
       std::lock_guard<std::mutex> lock(lock_);
-      for (auto& ptr_wptr : tensors_data_) {
-        std::shared_ptr<Data> data = ptr_wptr.second.lock();
-        if (data != nullptr) {
-          data_pointers.push_back(std::move(data));
+      for (auto& device_tensors : device_tensors_) {
+        std::lock_guard<std::mutex> lock(device_tensors.second->lock);
+        for (auto& uid_wptr : device_tensors.second->tensors_data) {
+          std::shared_ptr<Data> data = uid_wptr.second.lock();
+          if (data != nullptr) {
+            tensors.push_back(XLATensor(std::move(data)));
+          }
         }
       }
-    }
-    std::vector<XLATensor> tensors;
-    for (auto& data : data_pointers) {
-      tensors.push_back(XLATensor(std::move(data)));
+    } else {
+      DeviceTensors* device_tensors = GetDeviceTensors(*device);
+      std::lock_guard<std::mutex> lock(device_tensors->lock);
+      for (auto& uid_wptr : device_tensors->tensors_data) {
+        std::shared_ptr<Data> data = uid_wptr.second.lock();
+        if (data != nullptr) {
+          tensors.push_back(XLATensor(std::move(data)));
+        }
+      }
     }
     return tensors;
   }
 
  private:
+  DeviceTensors* GetDeviceTensors(const Device& device) {
+    std::lock_guard<std::mutex> lock(lock_);
+    auto it = device_tensors_.find(device);
+    if (it == device_tensors_.end()) {
+      it = device_tensors_.emplace(device, new DeviceTensors()).first;
+    }
+    return it->second;
+  }
+
   std::mutex lock_;
-  std::map<Data*, std::weak_ptr<Data>> tensors_data_;
+  std::map<Device, DeviceTensors*> device_tensors_;
 };
 
 XLATensor::Data::~Data() { TensorsArena::Get()->UnregisterTensor(this); }
@@ -632,8 +656,8 @@ void XLATensor::SetTensor(at::Tensor tensor) {
   data()->ir_value = ir::Value();
 }
 
-std::vector<XLATensor> XLATensor::GetLiveTensors() {
-  return TensorsArena::Get()->GetTensors();
+std::vector<XLATensor> XLATensor::GetLiveTensors(const Device* device) {
+  return TensorsArena::Get()->GetTensors(device);
 }
 
 std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
@@ -971,6 +995,11 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
 void XLATensor::SyncTensorsGraph(std::vector<XLATensor>* tensors) {
   SyncTensorsConfig config;
   SyncTensorsGraphInternal(tensors, config);
+}
+
+void XLATensor::SyncLiveTensorsGraph(const Device* device) {
+  auto tensors = GetLiveTensors(device);
+  SyncTensorsGraph(&tensors);
 }
 
 std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(

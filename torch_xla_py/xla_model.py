@@ -417,7 +417,8 @@ def _sync_optimizer_state(state):
   if save_dir:
     gs.save_tensors_graph(save_dir, 'optimizer_step',
                           state.gradients + state.tensors)
-  torch_xla._XLAC._xla_sync_multi(state.gradients + state.tensors)
+  torch_xla._XLAC._xla_sync_live_tensors(
+      torch_xla._XLAC._xla_get_default_device())
 
 
 def optimizer_step(optimizer):
