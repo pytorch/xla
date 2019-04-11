@@ -46,7 +46,7 @@ sudo apt-get -qq install clang-7 clang++-7
 # Bazel dependencies
 sudo apt-get -qq install pkg-config zip zlib1g-dev unzip
 # XLA build requires Bazel
-wget https://github.com/bazelbuild/bazel/releases/download/0.21.0/bazel-0.21.0-installer-linux-x86_64.sh
+wget https://github.com/bazelbuild/bazel/releases/download/0.24.1/bazel-0.24.1-installer-linux-x86_64.sh
 chmod +x bazel-*.sh
 sudo ./bazel-*.sh
 BAZEL="$(which bazel)"
