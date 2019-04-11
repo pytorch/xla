@@ -149,6 +149,11 @@ std::string GenerateTextNodeSpec(const Node* node, const NodeIdMap& id_map) {
 std::string DumpUtil::ToDot(
     tensorflow::gtl::ArraySlice<const Node* const> nodes) {
   auto post_order = Util::ComputePostOrder(nodes);
+  return PostOrderToDot(post_order);
+}
+
+std::string DumpUtil::PostOrderToDot(
+    tensorflow::gtl::ArraySlice<const Node* const> post_order) {
   NodeIdMap id_map = GenerateIdMap(post_order);
   std::stringstream ss;
   ss << "digraph G {\n";
@@ -184,6 +189,11 @@ std::string DumpUtil::ToDot(
 std::string DumpUtil::ToText(
     tensorflow::gtl::ArraySlice<const Node* const> nodes) {
   auto post_order = Util::ComputePostOrder(nodes);
+  return PostOrderToText(post_order);
+}
+
+std::string DumpUtil::PostOrderToText(
+    tensorflow::gtl::ArraySlice<const Node* const> post_order) {
   NodeIdMap id_map = GenerateIdMap(post_order);
   std::stringstream ss;
   ss << "IR {\n";
