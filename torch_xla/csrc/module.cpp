@@ -1,8 +1,8 @@
 #include "torch_xla/csrc/module.h"
-#include "torch_xla/csrc/helpers.h"
 
 #include <algorithm>
 #include <set>
+
 #include "c10/util/Exception.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
@@ -14,6 +14,7 @@
 #include "torch/csrc/jit/passes/shape_analysis.h"
 #include "torch/csrc/jit/passes/specialize_autogradzero.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/passes/eval_static_size.h"
 #include "torch_xla/csrc/passes/remove_in_place_out_param_ops.h"
 #include "torch_xla/csrc/passes/remove_unused_forward_outputs.h"
@@ -628,7 +629,8 @@ void XlaModule::FlushTensorsOperations() {
   // which are not part of the traning loop. Nothing happens, but if we want to
   // fuse the sync operation with the forward+backward+optimizer, we need to
   // have a path leading to the same XLA computation.
-  std::vector<XLATensor> tensors = XLATensor::GetLiveTensors();
+  std::vector<XLATensor> tensors =
+      XLATensor::GetLiveTensors(/*device=*/nullptr);
   XLATensor::ApplyPendingGraph(&tensors);
 }
 

@@ -1,10 +1,11 @@
 #include "torch_xla/csrc/init_python_bindings.h"
 
+#include <c10/core/Device.h>
+#include <c10/util/Optional.h>
+
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <c10/core/Device.h>
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -16,11 +17,13 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
+#include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/module.h"
 #include "torch_xla/csrc/passes/eval_static_size.h"
 #include "torch_xla/csrc/passes/replace_in_place_ops.h"
 #include "torch_xla/csrc/passes/replace_untraced_operators.h"
 #include "torch_xla/csrc/passes/threshold_backward_peephole.h"
+#include "torch_xla/csrc/python_util.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/translator.h"
@@ -33,6 +36,13 @@ struct NoGilSection {
   ~NoGilSection() { PyEval_RestoreThread(state); }
   PyThreadState* state = nullptr;
 };
+
+c10::optional<Device> GetOptionalDevice(const std::string& device_str) {
+  if (device_str.empty()) {
+    return c10::nullopt;
+  }
+  return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
+}
 
 std::string GetTensorsDump(
     const std::vector<at::Tensor>& tensors,
@@ -53,6 +63,12 @@ std::string SetCurrentDevice(const std::string& device_str) {
       XLATensorImpl::SetCurrentAtenDevice(c10::Device(device_str));
   std::stringstream ss;
   ss << prev_device;
+  return ss.str();
+}
+
+std::string GetCurrentDevice() {
+  std::stringstream ss;
+  ss << XLATensorImpl::GetCurrentAtenDevice();
   return ss.str();
 }
 
@@ -101,6 +117,11 @@ void SyncTensors(const std::vector<at::Tensor>& tensors) {
   XLATensor::SyncTensorsGraph(&xtensors);
 }
 
+void SyncLiveTensors(const std::string& device_str) {
+  auto opt_device = GetOptionalDevice(device_str);
+  XLATensor::SyncLiveTensorsGraph(opt_device ? &opt_device.value() : nullptr);
+}
+
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
   std::vector<XLATensor> xtensors;
   for (auto& tensor : tensors) {
@@ -110,6 +131,35 @@ std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
     }
   }
   return XLATensor::DumpHloComputation(xtensors);
+}
+
+std::string GetLiveTensorsReport(size_t nodes_threshold,
+                                 const std::string& device_str) {
+  auto opt_device = GetOptionalDevice(device_str);
+  auto tensors =
+      XLATensor::GetLiveTensors(opt_device ? &opt_device.value() : nullptr);
+  std::stringstream ss;
+  for (auto& tensor : tensors) {
+    ir::Value ir_value = tensor.CurrentIrValue();
+    if (ir_value) {
+      auto post_order = ir::Util::ComputePostOrder({ir_value.node.get()});
+      if (post_order.size() > nodes_threshold) {
+        ss << "Tensor: id=" << tensor.GetUniqueId()
+           << ", shape=" << tensor.shape().get()
+           << ", device=" << tensor.GetDevice()
+           << ", ir_nodes=" << post_order.size() << "\n";
+        for (size_t i = post_order.size(); i > 0; --i) {
+          if (!post_order[i - 1]->metadata().frame_info.empty()) {
+            ss << post_order[i - 1]->metadata().frame_info;
+            break;
+          }
+        }
+        ss << ir::DumpUtil::PostOrderToText(post_order);
+        ss << "\n\n";
+      }
+    }
+  }
+  return ss.str();
 }
 
 void InitXlaModuleBindings(py::module m) {
@@ -194,10 +244,18 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_set_default_device",
         [](const std::string& device) { return SetCurrentDevice(device); });
+  m.def("_xla_get_default_device", []() { return GetCurrentDevice(); });
   m.def("_xla_sync_multi", [](const std::vector<at::Tensor>& tensors) {
     NoGilSection nogil;
     SyncTensors(tensors);
   });
+  m.def(
+      "_xla_sync_live_tensors",
+      [](const std::string& device) {
+        NoGilSection nogil;
+        SyncLiveTensors(device);
+      },
+      py::arg("device") = "");
   m.def("_xla_to_tensors", [](std::vector<XLATensor>& tensors) {
     std::vector<at::Tensor> result;
     {
@@ -226,6 +284,12 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_metrics_report",
         []() { return xla::metrics::CreateMetricReport(); });
+  m.def(
+      "_xla_tensors_report",
+      [](size_t nodes_threshold, const std::string& device) {
+        return GetLiveTensorsReport(nodes_threshold, device);
+      },
+      py::arg("nodes_threshold") = 100, py::arg("device") = "");
   m.def(
       "_xla_set_use_full_mat_mul_precision",
       [](bool use_full_mat_mul_precision) {
