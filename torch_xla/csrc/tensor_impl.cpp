@@ -51,23 +51,14 @@ C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
 
 XLATensorImpl::XLATensorImpl(XLATensor tensor)
     : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
-                      bridge::XlaDeviceToAtenDevice(tensor.GetDevice()),
-                      /*is_variable=*/false),
-      tensor_(std::move(tensor)) {
-  SetupSizeProperties();
-}
-
-XLATensorImpl::XLATensorImpl(XLATensor tensor, bool is_variable)
-    : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
-                      bridge::XlaDeviceToAtenDevice(tensor.GetDevice()),
-                      is_variable),
+                      bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(std::move(tensor)) {
   SetupSizeProperties();
 }
 
 c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach()
     const {
-  auto impl = c10::make_intrusive<XLATensorImpl>(tensor_, is_variable());
+  auto impl = c10::make_intrusive<XLATensorImpl>(tensor_);
   impl->is_wrapped_number_ = is_wrapped_number_;
   impl->reserved_ = reserved_;
   return impl;
