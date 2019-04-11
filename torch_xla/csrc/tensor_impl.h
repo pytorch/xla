@@ -14,7 +14,6 @@ namespace torch_xla {
 class XLATensorImpl : public c10::TensorImpl {
  public:
   explicit XLATensorImpl(XLATensor tensor);
-  XLATensorImpl(XLATensor tensor, bool is_variable);
 
   XLATensor& tensor() { return tensor_; }
 
