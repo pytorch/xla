@@ -6,7 +6,7 @@ set -e
 set -x
 
 function install_bazel() {
-  local BAZEL_VERSION="0.22.0"
+  local BAZEL_VERSION="0.24.1"
   local BAZEL_FILE="bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh"
   sudo apt-get install pkg-config zip zlib1g-dev unzip
   curl -L -O "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_FILE}"
