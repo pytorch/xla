@@ -271,7 +271,7 @@ XLATensor IndexByTensors(const XLATensor& base,
   // single gather.
   XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
   return XLATensor::Create(IndexOp(base.GetIrValue(), indices_nd.GetIrValue()),
-                           base.GetDevice());
+                           base.GetDevice(), base.dtype());
 }
 
 ir::Value IndexPutByTensors(

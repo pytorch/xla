@@ -1600,11 +1600,19 @@ XLATensor XLATensor::rsub(const XLATensor& input, at::Scalar other,
 
 void XLATensor::s_copy_(XLATensor& input, XLATensor& src) {
   if (input.GetDevice() == src.GetDevice()) {
-    input.SetIrValue(src.GetIrValue());
+    if (input.dtype() == src.dtype()) {
+      input.SetIrValue(src.GetIrValue());
+    } else {
+      input.SetIrValue(
+          ir::MakeNode<ir::ops::Cast>(src.GetIrValue(), input.dtype()));
+    }
   } else {
     // TODO: This can be optimized via proper XRT/XLA computation.
     XLATensor new_tensor = XLATensor::Create(src.ToTensor(), input.GetDevice(),
                                              src.RequiresGrad());
+    if (input.dtype() != src.dtype()) {
+      new_tensor = XLATensor::cast(new_tensor, input.dtype());
+    }
     std::swap(input, new_tensor);
   }
 }

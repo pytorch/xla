@@ -1628,6 +1628,12 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_f = xla_e.sum().item()
     self.assertEqual(f, xla_f)
 
+  def test_s_copy_dtype(self):
+    xla_device = xm.xla_device()
+    a = torch.rand(10).to(xla_device).to(dtype=torch.uint8)
+    b = torch.tensor([0, 1, 2, 3]).to(xla_device)
+    self.assertEqual(a[b].dtype, torch.uint8)
+
 
 class MNISTComparator(nn.Module):
 
