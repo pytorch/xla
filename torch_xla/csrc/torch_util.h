@@ -1,10 +1,12 @@
 #pragma once
 
+#include <ATen/ATen.h>
+#include <c10/core/ScalarType.h>
+#include <c10/util/Optional.h>
+
 #include <memory>
 #include <vector>
 
-#include <ATen/ATen.h>
-#include <c10/util/Optional.h>
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/pybind_utils.h"
 #include "torch_xla/csrc/module.h"
@@ -21,6 +23,13 @@ py::object XlaPackTensorList(const XlaModule::TensorBatchVector& outputs);
 // Makes a deep copy of an ATEN tensor.
 static inline at::Tensor CopyTensor(const at::Tensor& ref) {
   return ref.to(ref.options(), /*non_blocking=*/false, /*copy=*/true);
+}
+
+// Same as above, with an additional cast.
+static inline at::Tensor CopyTensor(const at::Tensor& ref,
+                                    at::ScalarType dest_type) {
+  return ref.to(ref.options().dtype(dest_type), /*non_blocking=*/false,
+                /*copy=*/true);
 }
 
 static inline at::Tensor ToTensor(const at::Tensor& tensor) {

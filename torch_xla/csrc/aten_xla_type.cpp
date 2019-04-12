@@ -282,7 +282,8 @@ at::Tensor AtenXlaType::_s_copy_from(const at::Tensor& self,
   auto xla_tensors =
       bridge::XlaCreateTensorList(tensors, /*writeable=*/nullptr);
   // Hack in an overwrite of a const tensor.
-  const_cast<at::Tensor&>(dst) = CopyTensor(xla_tensors.front());
+  const_cast<at::Tensor&>(dst) =
+      CopyTensor(xla_tensors.front(), dst.scalar_type());
   return dst;
 }
 
@@ -2344,7 +2345,7 @@ at::Tensor& AtenXlaType::s_copy_(at::Tensor& self, const at::Tensor& src,
   if (xsrc_tensor) {
     XLATensor::s_copy_(self_tensor, *xsrc_tensor);
   } else {
-    self_tensor.SetTensor(CopyTensor(src));
+    self_tensor.SetTensor(CopyTensor(src, self.scalar_type()));
   }
   return self;
 }
