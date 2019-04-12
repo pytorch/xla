@@ -2471,20 +2471,26 @@ TEST_F(AtenXlaTensorTest, TestScatterScalar) {
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexSelect) {
-  at::Tensor a = at::rand({3, 4}, at::TensorOptions(at::kFloat));
-  at::Tensor b = at::empty({2}, at::TensorOptions(at::kLong));
-  b[0] = 0;
-  b[1] = 2;
-  at::Tensor c0 = at::index_select(a, 0, b);
-  at::Tensor c1 = at::index_select(a, 1, b);
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
-    at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
-    at::Tensor xla_c0 = at::index_select(xla_a, 0, xla_b);
-    at::Tensor xla_c1 = at::index_select(xla_a, 1, xla_b);
-    AllClose(c0, xla_c0);
-    AllClose(c1, xla_c1);
-  });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor a =
+        isFloatingType(scalar_type)
+            ? at::rand({3, 4}, at::TensorOptions(scalar_type))
+            : at::randint(100, {3, 4}, at::TensorOptions(scalar_type));
+    at::Tensor b = at::empty({2}, at::TensorOptions(at::kLong));
+    b[0] = 0;
+    b[1] = 2;
+    at::Tensor c0 = at::index_select(a, 0, b);
+    at::Tensor c1 = at::index_select(a, 1, b);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+      at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+      at::Tensor xla_c0 = at::index_select(xla_a, 0, xla_b);
+      at::Tensor xla_c1 = at::index_select(xla_a, 1, xla_b);
+      AllClose(c0, xla_c0);
+      AllClose(c1, xla_c1);
+    });
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestExpand) {
@@ -2604,311 +2610,418 @@ TEST_F(AtenXlaTensorTest, TestSCopyFrom) {
 }
 
 TEST_F(AtenXlaTensorTest, TestOneIndex) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-  at::Tensor indices =
-      at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor result = at::index(params, {indices});
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-    at::Tensor xla_indices = bridge::CreateXlaTensor(indices, device);
-    at::Tensor xla_result = at::index(xla_params, {xla_indices});
-    AllClose(result, xla_result);
-  });
-}
-
-TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-  at::Tensor indices =
-      at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor result = at::index(params, {indices});
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-    at::Tensor xla_result = at::index(xla_params, {indices});
-    AllClose(result, xla_result);
-  });
-}
-
-TEST_F(AtenXlaTensorTest, TestMultiIndexMiddleNull) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-  at::Tensor indices_0 =
-      at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor indices_null;
-  at::Tensor indices_1 =
-      at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor result = at::index(params, {indices_0, indices_null, indices_1});
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-    at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
-    at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
-    at::Tensor xla_result =
-        at::index(xla_params, {xla_indices_0, indices_null, xla_indices_1});
-    AllClose(result, xla_result);
-  });
-}
-
-TEST_F(AtenXlaTensorTest, TestMultiIndexTailNull) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-  at::Tensor indices_0 =
-      at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor indices_null;
-  at::Tensor indices_1 =
-      at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor result = at::index(params, {indices_0, indices_1, indices_null});
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-    at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
-    at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
-    at::Tensor xla_result =
-        at::index(xla_params, {xla_indices_0, xla_indices_1, indices_null});
-    AllClose(result, xla_result);
-  });
-}
-
-TEST_F(AtenXlaTensorTest, TestMultiIndexMiddleBroadcast) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-  at::Tensor indices_0 =
-      at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor indices_1 =
-      at::randint(-3, 3, {2, 1, 3}, at::TensorOptions(at::kLong));
-  at::Tensor result = at::index(params, {indices_0, indices_1});
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-    at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
-    at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
-    at::Tensor xla_result =
-        at::index(xla_params, {xla_indices_0, xla_indices_1});
-    AllClose(result, xla_result);
-  });
-}
-
-TEST_F(AtenXlaTensorTest, TestMultiIndexTailBroadcast) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-  at::Tensor indices_0 =
-      at::randint(-3, 3, {2, 1, 3}, at::TensorOptions(at::kLong));
-  at::Tensor indices_1 =
-      at::randint(-3, 3, {2, 1}, at::TensorOptions(at::kLong));
-  at::Tensor result = at::index(params, {indices_0, indices_1});
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-    at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
-    at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
-    at::Tensor xla_result =
-        at::index(xla_params, {xla_indices_0, xla_indices_1});
-    AllClose(result, xla_result);
-  });
-}
-
-TEST_F(AtenXlaTensorTest, TestMaskIndex) {
-  at::Tensor params = at::rand({2, 2}, at::TensorOptions(at::kFloat));
-  at::Tensor indices = at::randint(0, 2, {2, 2}, at::TensorOptions(at::kByte));
-  at::Tensor result = at::index(params, {indices});
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-    at::Tensor xla_indices = bridge::CreateXlaTensor(indices, device);
-    at::Tensor xla_result = at::index(xla_params, {xla_indices});
-    AllClose(result, xla_result);
-  });
-}
-
-TEST_F(AtenXlaTensorTest, TestOneIndexPut) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-  at::Tensor indices =
-      at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor values = at::ones({3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-  for (bool accumulate : {false, true}) {
-    at::Tensor result = at::index_put(params, {indices}, values, accumulate);
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor indices =
+        at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+    at::Tensor result = at::index(params, {indices});
     ForEachDevice([&](const Device& device) {
       at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
       at::Tensor xla_indices = bridge::CreateXlaTensor(indices, device);
-      at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
-      at::Tensor xla_result =
-          at::index_put(xla_params, {xla_indices}, xla_values, accumulate);
+      at::Tensor xla_result = at::index(xla_params, {xla_indices});
       AllClose(result, xla_result);
     });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor indices =
+        at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+    at::Tensor result = at::index(params, {indices});
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+      at::Tensor xla_result = at::index(xla_params, {indices});
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMultiIndexMiddleNull) {
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor indices_0 =
+        at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+    at::Tensor indices_null;
+    at::Tensor indices_1 =
+        at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+    at::Tensor result = at::index(params, {indices_0, indices_null, indices_1});
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+      at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+      at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+      at::Tensor xla_result =
+          at::index(xla_params, {xla_indices_0, indices_null, xla_indices_1});
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMultiIndexTailNull) {
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor indices_0 =
+        at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+    at::Tensor indices_null;
+    at::Tensor indices_1 =
+        at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+    at::Tensor result = at::index(params, {indices_0, indices_1, indices_null});
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+      at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+      at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+      at::Tensor xla_result =
+          at::index(xla_params, {xla_indices_0, xla_indices_1, indices_null});
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMultiIndexMiddleBroadcast) {
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor indices_0 =
+        at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+    at::Tensor indices_1 =
+        at::randint(-3, 3, {2, 1, 3}, at::TensorOptions(at::kLong));
+    at::Tensor result = at::index(params, {indices_0, indices_1});
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+      at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+      at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+      at::Tensor xla_result =
+          at::index(xla_params, {xla_indices_0, xla_indices_1});
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMultiIndexTailBroadcast) {
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor indices_0 =
+        at::randint(-3, 3, {2, 1, 3}, at::TensorOptions(at::kLong));
+    at::Tensor indices_1 =
+        at::randint(-3, 3, {2, 1}, at::TensorOptions(at::kLong));
+    at::Tensor result = at::index(params, {indices_0, indices_1});
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+      at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+      at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+      at::Tensor xla_result =
+          at::index(xla_params, {xla_indices_0, xla_indices_1});
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMaskIndex) {
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({2, 2}, at::TensorOptions(scalar_type))
+            : at::randint(100, {2, 2}, at::TensorOptions(scalar_type));
+    at::Tensor indices =
+        at::randint(0, 2, {2, 2}, at::TensorOptions(at::kByte));
+    at::Tensor result = at::index(params, {indices});
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+      at::Tensor xla_indices = bridge::CreateXlaTensor(indices, device);
+      at::Tensor xla_result = at::index(xla_params, {xla_indices});
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestOneIndexPut) {
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor indices =
+        at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+    at::Tensor values =
+        isFloatingType(scalar_type)
+            ? at::rand({3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    for (bool accumulate : {false, true}) {
+      at::Tensor result = at::index_put(params, {indices}, values, accumulate);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+        at::Tensor xla_indices = bridge::CreateXlaTensor(indices, device);
+        at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
+        at::Tensor xla_result =
+            at::index_put(xla_params, {xla_indices}, xla_values, accumulate);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestOneIndexPutInPlace) {
   at::Tensor indices =
       at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor values = at::ones({3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-  for (bool accumulate : {false, true}) {
-    ForEachDevice([&](const Device& device) {
-      at::Tensor params =
-          at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-      at::Tensor xla_params = bridge::CreateXlaTensor(params.clone(), device);
-      at::Tensor result = at::index_put_(params, {indices}, values, accumulate);
-      at::Tensor xla_indices = bridge::CreateXlaTensor(indices, device);
-      at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
-      at::Tensor xla_result =
-          at::index_put_(xla_params, {xla_indices}, xla_values, accumulate);
-      AllClose(result, xla_result);
-      AllClose(params, xla_params);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor values = at::ones({3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    for (bool accumulate : {false, true}) {
+      ForEachDevice([&](const Device& device) {
+        at::Tensor params =
+            isFloatingType(scalar_type)
+                ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+                : at::randint(100, {4, 3, 5, 6, 7},
+                              at::TensorOptions(scalar_type));
+        at::Tensor xla_params = bridge::CreateXlaTensor(params.clone(), device);
+        at::Tensor result =
+            at::index_put_(params, {indices}, values, accumulate);
+        at::Tensor xla_indices = bridge::CreateXlaTensor(indices, device);
+        at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
+        at::Tensor xla_result =
+            at::index_put_(xla_params, {xla_indices}, xla_values, accumulate);
+        AllClose(result, xla_result);
+        AllClose(params, xla_params);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestOneIndexPutTransfer) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
   at::Tensor indices =
       at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor values = at::ones({3, 5, 6, 7}, at::TensorOptions(at::kFloat));
-  for (bool accumulate : {false, true}) {
-    at::Tensor result = at::index_put(params, {indices}, values, accumulate);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-      at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
-      at::Tensor xla_result =
-          at::index_put(xla_params, {indices}, xla_values, accumulate);
-      AllClose(result, xla_result);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor values = at::ones({3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    for (bool accumulate : {false, true}) {
+      at::Tensor result = at::index_put(params, {indices}, values, accumulate);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+        at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
+        at::Tensor xla_result =
+            at::index_put(xla_params, {indices}, xla_values, accumulate);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestMultiIndexPut) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
   at::Tensor indices_0 =
       at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
   at::Tensor indices_1 =
       at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor values = at::ones({5, 6, 7}, at::TensorOptions(at::kFloat));
-  for (bool accumulate : {false, true}) {
-    at::Tensor result =
-        at::index_put(params, {indices_0, indices_1}, values, accumulate);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-      at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
-      at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
-      at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
-      at::Tensor xla_result = at::index_put(
-          xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
-      AllClose(result, xla_result);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor values = at::ones({5, 6, 7}, at::TensorOptions(scalar_type));
+    for (bool accumulate : {false, true}) {
+      at::Tensor result =
+          at::index_put(params, {indices_0, indices_1}, values, accumulate);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+        at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+        at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+        at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
+        at::Tensor xla_result = at::index_put(
+            xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestMultiIndexPutMiddleNull) {
-  at::Tensor params = at::rand({4, 3, 3, 6, 7}, at::TensorOptions(at::kFloat));
   at::Tensor indices_0 =
       at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
   at::Tensor indices_null;
   at::Tensor indices_1 =
       at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
-  at::Tensor values = at::ones({3, 6, 7}, at::TensorOptions(at::kFloat));
-  for (bool accumulate : {false, true}) {
-    at::Tensor result = at::index_put(
-        params, {indices_0, indices_null, indices_1}, values, accumulate);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-      at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
-      at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
-      at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
-      at::Tensor xla_result = at::index_put(
-          xla_params, {xla_indices_0, indices_null, xla_indices_1}, xla_values,
-          accumulate);
-      AllClose(result, xla_result);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 3, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 3, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor values = at::ones({3, 6, 7}, at::TensorOptions(scalar_type));
+    for (bool accumulate : {false, true}) {
+      at::Tensor result = at::index_put(
+          params, {indices_0, indices_null, indices_1}, values, accumulate);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+        at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+        at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+        at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
+        at::Tensor xla_result = at::index_put(
+            xla_params, {xla_indices_0, indices_null, xla_indices_1},
+            xla_values, accumulate);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestMultiIndexPutTailNull) {
-  at::Tensor params = at::rand({4, 3, 3, 6, 7}, at::TensorOptions(at::kFloat));
   at::Tensor indices_0 =
       at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
   at::Tensor indices_1 =
       at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
   at::Tensor indices_null;
-  at::Tensor values = at::ones({3, 6, 7}, at::TensorOptions(at::kFloat));
-  for (bool accumulate : {false, true}) {
-    at::Tensor result = at::index_put(
-        params, {indices_0, indices_1, indices_null}, values, accumulate);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-      at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
-      at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
-      at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
-      at::Tensor xla_result = at::index_put(
-          xla_params, {xla_indices_0, xla_indices_1, indices_null}, xla_values,
-          accumulate);
-      AllClose(result, xla_result);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 3, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 3, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor values = at::ones({3, 6, 7}, at::TensorOptions(scalar_type));
+    for (bool accumulate : {false, true}) {
+      at::Tensor result = at::index_put(
+          params, {indices_0, indices_1, indices_null}, values, accumulate);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+        at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+        at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+        at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
+        at::Tensor xla_result = at::index_put(
+            xla_params, {xla_indices_0, xla_indices_1, indices_null},
+            xla_values, accumulate);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestMultiIndexPutMiddleBroadcast) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
   at::Tensor indices_0 =
       at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
   at::Tensor indices_1 =
       at::randint(-3, 3, {2, 1, 3}, at::TensorOptions(at::kLong));
-  at::Tensor values = at::ones({5, 6, 7}, at::TensorOptions(at::kFloat));
-  for (bool accumulate : {false, true}) {
-    at::Tensor result =
-        at::index_put(params, {indices_0, indices_1}, values, accumulate);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-      at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
-      at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
-      at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
-      at::Tensor xla_result = at::index_put(
-          xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
-      AllClose(result, xla_result);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor values = at::ones({5, 6, 7}, at::TensorOptions(scalar_type));
+    for (bool accumulate : {false, true}) {
+      at::Tensor result =
+          at::index_put(params, {indices_0, indices_1}, values, accumulate);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+        at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+        at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+        at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
+        at::Tensor xla_result = at::index_put(
+            xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestMultiIndexPutTailBroadcast) {
-  at::Tensor params = at::rand({4, 3, 5, 6, 7}, at::TensorOptions(at::kFloat));
   at::Tensor indices_0 =
       at::randint(-3, 3, {2, 1, 3}, at::TensorOptions(at::kLong));
   at::Tensor indices_1 =
       at::randint(-3, 3, {2, 1}, at::TensorOptions(at::kLong));
-  at::Tensor values = at::ones({5, 6, 7}, at::TensorOptions(at::kFloat));
-  for (bool accumulate : {false, true}) {
-    at::Tensor result =
-        at::index_put(params, {indices_0, indices_1}, values, accumulate);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-      at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
-      at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
-      at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
-      at::Tensor xla_result = at::index_put(
-          xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
-      AllClose(result, xla_result);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor values = at::ones({5, 6, 7}, at::TensorOptions(scalar_type));
+    for (bool accumulate : {false, true}) {
+      at::Tensor result =
+          at::index_put(params, {indices_0, indices_1}, values, accumulate);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+        at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+        at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+        at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
+        at::Tensor xla_result = at::index_put(
+            xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestMaskIndexPut) {
-  at::Tensor params = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor indices = at::tensor({0, 1}, at::TensorOptions(at::kByte));
-  at::Tensor values = at::ones({2}, at::TensorOptions(at::kFloat));
-  for (bool accumulate : {false, true}) {
-    at::Tensor result = at::index_put(params, {indices}, values, accumulate);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
-      at::Tensor xla_indices = bridge::CreateXlaTensor(indices, device);
-      at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
-      at::Tensor xla_result =
-          at::index_put(xla_params, {xla_indices}, xla_values, accumulate);
-      AllClose(result, xla_result);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({2, 2}, at::TensorOptions(scalar_type))
+            : at::randint(100, {2, 2}, at::TensorOptions(scalar_type));
+    at::Tensor values = at::ones({2}, at::TensorOptions(scalar_type));
+    for (bool accumulate : {false, true}) {
+      at::Tensor result = at::index_put(params, {indices}, values, accumulate);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+        at::Tensor xla_indices = bridge::CreateXlaTensor(indices, device);
+        at::Tensor xla_values = bridge::CreateXlaTensor(values, device);
+        at::Tensor xla_result =
+            at::index_put(xla_params, {xla_indices}, xla_values, accumulate);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexFillWithScalar) {
-  at::Tensor base = at::rand({3, 4, 5}, at::TensorOptions(at::kFloat));
   at::Tensor index = at::tensor({0, 2}, at::TensorOptions(at::kLong));
   at::Scalar value = 42;
-  int rank = base.dim();
-  for (int dim = -rank; dim < rank; ++dim) {
-    at::Tensor result = at::index_fill(base, dim, index, value);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
-      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
-      at::Tensor xla_result = at::index_fill(xla_base, dim, xla_index, value);
-      AllClose(result, xla_result);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor base =
+        isFloatingType(scalar_type)
+            ? at::rand({3, 4, 5}, at::TensorOptions(scalar_type))
+            : at::randint(100, {3, 4, 5}, at::TensorOptions(scalar_type));
+    int rank = base.dim();
+    for (int dim = -rank; dim < rank; ++dim) {
+      at::Tensor result = at::index_fill(base, dim, index, value);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
+        at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+        at::Tensor xla_result = at::index_fill(xla_base, dim, xla_index, value);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
@@ -2916,146 +3029,202 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithScalarInPlace) {
   at::Tensor index = at::tensor({0, 2}, at::TensorOptions(at::kLong));
   at::Scalar value = 42;
   int rank = 3;
-  for (int dim = -rank; dim < rank; ++dim) {
-    ForEachDevice([&](const Device& device) {
-      at::Tensor base = at::rand({3, 4, 5}, at::TensorOptions(at::kFloat));
-      at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
-      at::Tensor result = base.index_fill_(dim, index, value);
-      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
-      at::Tensor xla_result = xla_base.index_fill_(dim, xla_index, value);
-      AllClose(result, xla_result);
-      AllClose(base, xla_base);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    for (int dim = -rank; dim < rank; ++dim) {
+      ForEachDevice([&](const Device& device) {
+        at::Tensor base =
+            isFloatingType(scalar_type)
+                ? at::rand({3, 4, 5}, at::TensorOptions(scalar_type))
+                : at::randint(100, {3, 4, 5}, at::TensorOptions(scalar_type));
+        at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
+        at::Tensor result = base.index_fill_(dim, index, value);
+        at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+        at::Tensor xla_result = xla_base.index_fill_(dim, xla_index, value);
+        AllClose(result, xla_result);
+        AllClose(base, xla_base);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexFillWithTensor) {
-  at::Tensor base = at::rand({3, 4, 5}, at::TensorOptions(at::kFloat));
   at::Tensor index = at::tensor({0, 2}, at::TensorOptions(at::kLong));
-  at::Tensor value = at::scalar_tensor(42);
-  int rank = base.dim();
-  for (int dim = -rank; dim < rank; ++dim) {
-    at::Tensor result = at::index_fill(base, dim, index, value);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
-      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
-      at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
-      at::Tensor xla_result =
-          at::index_fill(xla_base, dim, xla_index, xla_value);
-      AllClose(result, xla_result);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor base =
+        isFloatingType(scalar_type)
+            ? at::rand({3, 4, 5}, at::TensorOptions(scalar_type))
+            : at::randint(100, {3, 4, 5}, at::TensorOptions(scalar_type));
+    at::Tensor value = at::scalar_tensor(42, at::TensorOptions(scalar_type));
+    int rank = base.dim();
+    for (int dim = -rank; dim < rank; ++dim) {
+      at::Tensor result = at::index_fill(base, dim, index, value);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
+        at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+        at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+        at::Tensor xla_result =
+            at::index_fill(xla_base, dim, xla_index, xla_value);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexFillWithTensorInPlace) {
   at::Tensor index = at::tensor({0, 2}, at::TensorOptions(at::kLong));
-  at::Tensor value = at::scalar_tensor(42);
-  int rank = 3;
-  for (int dim = -rank; dim < rank; ++dim) {
-    ForEachDevice([&](const Device& device) {
-      at::Tensor base = at::rand({3, 4, 5}, at::TensorOptions(at::kFloat));
-      at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
-      at::Tensor result = base.index_fill_(dim, index, value);
-      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
-      at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
-      at::Tensor xla_result = xla_base.index_fill_(dim, xla_index, xla_value);
-      AllClose(result, xla_result);
-      AllClose(base, xla_base);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor value = at::scalar_tensor(42, at::TensorOptions(scalar_type));
+    int rank = 3;
+    for (int dim = -rank; dim < rank; ++dim) {
+      ForEachDevice([&](const Device& device) {
+        at::Tensor base =
+            isFloatingType(scalar_type)
+                ? at::rand({3, 4, 5}, at::TensorOptions(scalar_type))
+                : at::randint(100, {3, 4, 5}, at::TensorOptions(scalar_type));
+        at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
+        at::Tensor result = base.index_fill_(dim, index, value);
+        at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+        at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+        at::Tensor xla_result = xla_base.index_fill_(dim, xla_index, xla_value);
+        AllClose(result, xla_result);
+        AllClose(base, xla_base);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexAdd) {
-  at::Tensor base = at::rand({5, 3, 7}, at::TensorOptions(at::kFloat));
   int index_size = 10;
-  int rank = base.dim();
-  for (int dim = -rank; dim < rank; ++dim) {
-    at::Tensor index = at::randint(0, base.size(dim), {index_size},
-                                   at::TensorOptions(at::kLong));
-    std::vector<int64_t> value_sizes(base.sizes().begin(), base.sizes().end());
-    int canonical_dim = dim < 0 ? dim + rank : dim;
-    value_sizes[canonical_dim] = index_size;
-    at::Tensor value = at::rand(value_sizes, at::TensorOptions(at::kFloat));
-    at::Tensor result = at::index_add(base, dim, index, value);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
-      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
-      at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
-      at::Tensor xla_result =
-          at::index_add(xla_base, dim, xla_index, xla_value);
-      AllClose(result, xla_result);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor base =
+        isFloatingType(scalar_type)
+            ? at::rand({5, 3, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {5, 3, 7}, at::TensorOptions(scalar_type));
+    int rank = base.dim();
+    for (int dim = -rank; dim < rank; ++dim) {
+      at::Tensor index = at::randint(0, base.size(dim), {index_size},
+                                     at::TensorOptions(at::kLong));
+      std::vector<int64_t> value_sizes(base.sizes().begin(),
+                                       base.sizes().end());
+      int canonical_dim = dim < 0 ? dim + rank : dim;
+      value_sizes[canonical_dim] = index_size;
+      at::Tensor value =
+          isFloatingType(scalar_type)
+              ? at::rand(value_sizes, at::TensorOptions(scalar_type))
+              : at::randint(100, value_sizes, at::TensorOptions(scalar_type));
+      at::Tensor result = at::index_add(base, dim, index, value);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
+        at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+        at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+        at::Tensor xla_result =
+            at::index_add(xla_base, dim, xla_index, xla_value);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexAddInPlace) {
   int index_size = 10;
   int rank = 3;
-  for (int dim = -rank; dim < rank; ++dim) {
-    ForEachDevice([&](const Device& device) {
-      at::Tensor base = at::rand({5, 3, 7}, at::TensorOptions(at::kFloat));
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    for (int dim = -rank; dim < rank; ++dim) {
+      ForEachDevice([&](const Device& device) {
+        at::Tensor base =
+            isFloatingType(scalar_type)
+                ? at::rand({5, 3, 7}, at::TensorOptions(scalar_type))
+                : at::randint(100, {5, 3, 7}, at::TensorOptions(scalar_type));
+        at::Tensor index = at::randint(0, base.size(dim), {index_size},
+                                       at::TensorOptions(at::kLong));
+        std::vector<int64_t> value_sizes(base.sizes().begin(),
+                                         base.sizes().end());
+        int canonical_dim = dim < 0 ? dim + rank : dim;
+        value_sizes[canonical_dim] = index_size;
+        at::Tensor value =
+            isFloatingType(scalar_type)
+                ? at::rand(value_sizes, at::TensorOptions(scalar_type))
+                : at::randint(100, value_sizes, at::TensorOptions(scalar_type));
+        at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
+        at::Tensor result = base.index_add_(dim, index, value);
+        at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+        at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+        at::Tensor xla_result = xla_base.index_add_(dim, xla_index, xla_value);
+        AllClose(result, xla_result);
+        AllClose(base, xla_base);
+      });
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestIndexCopy) {
+  int index_size = 10;
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor base =
+        isFloatingType(scalar_type)
+            ? at::rand({5, 3, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {5, 3, 7}, at::TensorOptions(scalar_type));
+    int rank = base.dim();
+    for (int dim = -rank; dim < rank; ++dim) {
       at::Tensor index = at::randint(0, base.size(dim), {index_size},
                                      at::TensorOptions(at::kLong));
       std::vector<int64_t> value_sizes(base.sizes().begin(),
                                        base.sizes().end());
       int canonical_dim = dim < 0 ? dim + rank : dim;
       value_sizes[canonical_dim] = index_size;
-      at::Tensor value = at::rand(value_sizes, at::TensorOptions(at::kFloat));
-      at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
-      at::Tensor result = base.index_add_(dim, index, value);
-      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
-      at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
-      at::Tensor xla_result = xla_base.index_add_(dim, xla_index, xla_value);
-      AllClose(result, xla_result);
-      AllClose(base, xla_base);
-    });
-  }
-}
-
-TEST_F(AtenXlaTensorTest, TestIndexCopy) {
-  at::Tensor base = at::rand({5, 3, 7}, at::TensorOptions(at::kFloat));
-  int index_size = 10;
-  int rank = base.dim();
-  for (int dim = -rank; dim < rank; ++dim) {
-    at::Tensor index = at::randint(0, base.size(dim), {index_size},
-                                   at::TensorOptions(at::kLong));
-    std::vector<int64_t> value_sizes(base.sizes().begin(), base.sizes().end());
-    int canonical_dim = dim < 0 ? dim + rank : dim;
-    value_sizes[canonical_dim] = index_size;
-    at::Tensor value = at::rand(value_sizes, at::TensorOptions(at::kFloat));
-    at::Tensor result = at::index_copy(base, dim, index, value);
-    ForEachDevice([&](const Device& device) {
-      at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
-      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
-      at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
-      at::Tensor xla_result =
-          at::index_copy(xla_base, dim, xla_index, xla_value);
-      AllClose(result, xla_result);
-    });
+      at::Tensor value =
+          isFloatingType(scalar_type)
+              ? at::rand(value_sizes, at::TensorOptions(scalar_type))
+              : at::randint(100, value_sizes, at::TensorOptions(scalar_type));
+      at::Tensor result = at::index_copy(base, dim, index, value);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_base = bridge::CreateXlaTensor(base, device);
+        at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+        at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+        at::Tensor xla_result =
+            at::index_copy(xla_base, dim, xla_index, xla_value);
+        AllClose(result, xla_result);
+      });
+    }
   }
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexCopyInPlace) {
   int index_size = 10;
   int rank = 3;
-  for (int dim = -rank; dim < rank; ++dim) {
-    ForEachDevice([&](const Device& device) {
-      at::Tensor base = at::rand({5, 3, 7}, at::TensorOptions(at::kFloat));
-      at::Tensor index = at::randint(0, base.size(dim), {index_size},
-                                     at::TensorOptions(at::kLong));
-      std::vector<int64_t> value_sizes(base.sizes().begin(),
-                                       base.sizes().end());
-      int canonical_dim = dim < 0 ? dim + rank : dim;
-      value_sizes[canonical_dim] = index_size;
-      at::Tensor value = at::rand(value_sizes, at::TensorOptions(at::kFloat));
-      at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
-      at::Tensor result = base.index_copy_(dim, index, value);
-      at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
-      at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
-      at::Tensor xla_result = xla_base.index_copy_(dim, xla_index, xla_value);
-      AllClose(result, xla_result);
-      AllClose(base, xla_base);
-    });
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    for (int dim = -rank; dim < rank; ++dim) {
+      ForEachDevice([&](const Device& device) {
+        at::Tensor base =
+            isFloatingType(scalar_type)
+                ? at::rand({5, 3, 7}, at::TensorOptions(scalar_type))
+                : at::randint(100, {5, 3, 7}, at::TensorOptions(scalar_type));
+        at::Tensor index = at::randint(0, base.size(dim), {index_size},
+                                       at::TensorOptions(at::kLong));
+        std::vector<int64_t> value_sizes(base.sizes().begin(),
+                                         base.sizes().end());
+        int canonical_dim = dim < 0 ? dim + rank : dim;
+        value_sizes[canonical_dim] = index_size;
+        at::Tensor value =
+            isFloatingType(scalar_type)
+                ? at::rand(value_sizes, at::TensorOptions(scalar_type))
+                : at::randint(100, value_sizes, at::TensorOptions(scalar_type));
+        at::Tensor xla_base = bridge::CreateXlaTensor(base.clone(), device);
+        at::Tensor result = base.index_copy_(dim, index, value);
+        at::Tensor xla_index = bridge::CreateXlaTensor(index, device);
+        at::Tensor xla_value = bridge::CreateXlaTensor(value, device);
+        at::Tensor xla_result = xla_base.index_copy_(dim, xla_index, xla_value);
+        AllClose(result, xla_result);
+        AllClose(base, xla_base);
+      });
+    }
   }
 }
 
