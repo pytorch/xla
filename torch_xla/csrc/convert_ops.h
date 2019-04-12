@@ -14,6 +14,8 @@ xla::XlaOp ConvertTo(const xla::XlaOp& op, xla::PrimitiveType from,
 
 xla::XlaOp ConvertToNumeric(const xla::XlaOp& op, xla::PrimitiveType from);
 
+xla::XlaOp ConvertToNumeric(const xla::XlaOp& op);
+
 // Cast the input to the given dtype. If dtype is null, no-op with the exception
 // of predicates, which are converted to 8-bit unsigned integers.
 xla::XlaOp CastToScalarType(const xla::XlaOp& input,
