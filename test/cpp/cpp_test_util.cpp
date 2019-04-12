@@ -26,10 +26,29 @@ at::Tensor ToCpuTensor(const at::Tensor& t) {
 }
 
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
+  if (tensor1.sizes() != tensor2.sizes() ||
+      tensor1.dtype() != tensor2.dtype()) {
+    std::cerr << "Different shape:\n"
+              << tensor1.dtype() << " " << tensor1.sizes() << "\n-vs-\n"
+              << tensor2.dtype() << " " << tensor2.sizes() << "\n";
+    return false;
+  }
+  tensor1 = ToCpuTensor(tensor1);
+  tensor2 = ToCpuTensor(tensor2);
+
+  at::ScalarType type1 = tensor1.scalar_type();
+  at::ScalarType type2 = tensor2.scalar_type();
+  if (type1 != type2) {
+    tensor1 = tensor1.toType(type2);
+  }
+  return tensor1.equal(tensor2);
+}
+
+bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
   if (tensor1.sizes() != tensor2.sizes()) {
-    std::cerr << "Different sizes:\n"
-              << tensor1.sizes() << "\n-vs-\n"
-              << tensor2.sizes() << "\n";
+    std::cerr << "Different shape:\n"
+              << tensor1.dtype() << " " << tensor1.sizes() << "\n-vs-\n"
+              << tensor2.dtype() << " " << tensor2.sizes() << "\n";
     return false;
   }
   tensor1 = ToCpuTensor(tensor1);
@@ -51,10 +70,11 @@ void ForEachDevice(const std::function<void(const Device&)>& devfn) {
 
 bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
                  double atol) {
-  if (tensor1.sizes() != tensor2.sizes()) {
-    std::cerr << "Different sizes:\n"
-              << tensor1.sizes() << "\n-vs-\n"
-              << tensor2.sizes() << "\n";
+  if (tensor1.sizes() != tensor2.sizes() ||
+      tensor1.dtype() != tensor2.dtype()) {
+    std::cerr << "Different shape:\n"
+              << tensor1.dtype() << " " << tensor1.sizes() << "\n-vs-\n"
+              << tensor2.dtype() << " " << tensor2.sizes() << "\n";
     return false;
   }
   tensor1 = ToCpuTensor(tensor1);
