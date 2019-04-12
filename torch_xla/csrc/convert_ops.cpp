@@ -60,6 +60,10 @@ xla::XlaOp ConvertToNumeric(const xla::XlaOp& op, xla::PrimitiveType from) {
                          device);
 }
 
+xla::XlaOp ConvertToNumeric(const xla::XlaOp& op) {
+  return ConvertToNumeric(op, XlaHelpers::TypeOfXlaOp(op));
+}
+
 xla::XlaOp CastToScalarType(const xla::XlaOp& input,
                             c10::optional<at::ScalarType> dtype) {
   if (dtype) {
