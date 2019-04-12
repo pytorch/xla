@@ -40,6 +40,12 @@ To build:
   export CC=clang-7 CXX=clang++-7
   ```
 
+  You may need to add the following line to your _/etc/apt/sources.conf_ file:
+
+  ```
+  deb http://deb.debian.org/debian/ testing main
+  ```
+
 * Build _PyTorch_ from source following the regular [instructions](https://github.com/pytorch/pytorch#from-source).
 
   ```
