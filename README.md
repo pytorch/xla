@@ -33,17 +33,23 @@ To build:
   pip install lark-parser
   ```
 
-* Currently _PyTorch_ does not build with GCC 6.x, 7.x, and 8.x (various kind of ICEs). CLANG 7.x is known to be working, so install that in your VM:
+* Currently _PyTorch_ does not build with _GCC_ 6.x, 7.x, and 8.x (various kind of ICEs). _CLANG_ 7.x is known to be working, so install that in your VM:
 
   ```
   sudo apt-get install clang-7 clang++-7
   export CC=clang-7 CXX=clang++-7
   ```
 
-  You may need to add the following line to your _/etc/apt/sources.conf_ file:
+  You may need to add the following line to your _/etc/apt/sources.list_ file:
 
   ```
   deb http://deb.debian.org/debian/ testing main
+  ```
+  
+  And run the following command before trying again to install _CLANG_:
+  
+  ```
+  sudo apt-get update
   ```
 
 * Build _PyTorch_ from source following the regular [instructions](https://github.com/pytorch/pytorch#from-source).
