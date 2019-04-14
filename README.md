@@ -89,3 +89,6 @@ the one you have configured.
 
 
 Then run `python test/test_operations.py`. Some of the tests are currently skipped.
+
+
+[![CircleCI](https://circleci.com/gh/pytorch/xla.svg?style=svg)](https://circleci.com/gh/pytorch/xla)
