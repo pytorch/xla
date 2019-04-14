@@ -874,8 +874,8 @@ class TestGradients(XlaTestCase):
 
     ##############################################################
     # Run forward and backwarg graphs via jit interpreter
-    exec_f = torch._C.GraphExecutor(gradient.f, False)
-    exec_df = torch._C.GraphExecutor(gradient.df, False)
+    exec_f = torch_xla._XLAC.GraphExecutor(gradient.f, False)
+    exec_df = torch_xla._XLAC.GraphExecutor(gradient.df, False)
 
     # forward function
     raw_outputs = exec_f(*inputs_params_buffers)
