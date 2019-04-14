@@ -90,6 +90,16 @@ class XLATensor {
   // the source tensor.
   void ReferenceDataFrom(const XLATensor& source);
 
+  // Applies the queue of operations in preparation for using the data.
+  void ApplyPendingGraph();
+
+  static ir::Value GetIrValueForScalar(at::Scalar value,
+                                       xla::PrimitiveType type,
+                                       const Device& device);
+  static ir::Value GetIrValueForScalar(at::Scalar value,
+                                       const xla::Shape& shape,
+                                       const Device& device);
+
   // Dispatches a comparison operator, setting the logical type of the result
   // appropriately.
   static XLATensor DispatchComparisonOp(c10::Symbol kind,
@@ -100,9 +110,6 @@ class XLATensor {
   static XLATensor DispatchComparisonOp(c10::Symbol kind,
                                         const XLATensor& input,
                                         const XLATensor& other);
-
-  // Applies the queue of operations in preparation for using the data.
-  void ApplyPendingGraph();
 
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
   // attached the tensors.
@@ -1047,13 +1054,6 @@ class XLATensor {
   std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node) const;
 
   static ir::Value GetIrValueForTensor(const at::Tensor& tensor,
-                                       const Device& device);
-
-  static ir::Value GetIrValueForScalar(at::Scalar value,
-                                       xla::PrimitiveType type,
-                                       const Device& device);
-  static ir::Value GetIrValueForScalar(at::Scalar value,
-                                       const xla::Shape& shape,
                                        const Device& device);
 
   // Create the mapping from computation client Data pointers to the XLA tensors

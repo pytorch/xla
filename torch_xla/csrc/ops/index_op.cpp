@@ -104,7 +104,8 @@ std::vector<XLATensor> WrapIndicesOnce(
     int64_t dim_size = base_shape_ref.get().dimensions(dim_idx);
     XLATensor wrapped_dim_index = XLATensor::Create(
         dim_index.GetIrValue() +
-            ir::ops::ScalarOp(at::Scalar(dim_size), dim_index.shape()),
+            XLATensor::GetIrValueForScalar(dim_size, dim_index.shape(),
+                                           base.GetDevice()),
         base.GetDevice());
     XLATensor wrap_cond =
         XLATensor::lt(indices[dim_idx], at::Scalar(int64_t(0)));
@@ -300,7 +301,8 @@ ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
       << "Fill index is supposed to be a vector";
   return IndexFillOp(
       base.GetIrValue(), dim, index.GetIrValue(),
-      ir::ops::ScalarOp(value, base.shape().get().element_type()));
+      XLATensor::GetIrValueForScalar(value, base.shape().get().element_type(),
+                                     base.GetDevice()));
 }
 
 ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,

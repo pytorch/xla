@@ -145,10 +145,11 @@ xla::Shape BatchNormFeaturesShape(const XLATensor& input) {
 // Returns the IR for the given input or the provided default value broadcasted
 // to the default shape, if the input is undefined.
 ir::Value GetIrValueOrDefault(const XLATensor& input, at::Scalar default_value,
-                              const xla::Shape& default_shape) {
-  return input.is_null()
-             ? ir::MakeNode<ir::ops::Scalar>(default_value, default_shape)
-             : input.GetIrValue();
+                              const xla::Shape& default_shape,
+                              const Device& device) {
+  return input.is_null() ? XLATensor::GetIrValueForScalar(default_value,
+                                                          default_shape, device)
+                         : input.GetIrValue();
 }
 
 void CheckIsIntegralOrPred(const xla::Shape& shape,
@@ -507,8 +508,10 @@ XLATensor XLATensor::batch_norm(const XLATensor& input, const XLATensor& weight,
                                 const XLATensor& bias, double momentum,
                                 double eps) {
   xla::Shape features_shape = BatchNormFeaturesShape(input);
-  ir::Value weight_value = GetIrValueOrDefault(weight, 1, features_shape);
-  ir::Value bias_value = GetIrValueOrDefault(bias, 0, features_shape);
+  ir::Value weight_value =
+      GetIrValueOrDefault(weight, 1, features_shape, input.GetDevice());
+  ir::Value bias_value =
+      GetIrValueOrDefault(bias, 0, features_shape, input.GetDevice());
   return input.CreateFrom(ir::MakeNode<ir::ops::BatchNormForward>(
       input.GetIrValue(), weight_value, bias_value, momentum, eps));
 }
@@ -958,8 +961,8 @@ XLATensor XLATensor::full(tensorflow::gtl::ArraySlice<const xla::int64> size,
                           at::ScalarType scalar_type) {
   xla::Shape shape = MakeArrayShapeFromDimensions(
       size, MakeXlaPrimitiveType(scalar_type, &device), device.hw_type);
-  return Create(ir::MakeNode<ir::ops::Scalar>(fill_value, std::move(shape)),
-                device, scalar_type);
+  return Create(GetIrValueForScalar(fill_value, shape, device), device,
+                scalar_type);
 }
 
 XLATensor XLATensor::full_like(const XLATensor& input, at::Scalar fill_value,
@@ -971,9 +974,8 @@ XLATensor XLATensor::full_like(const XLATensor& input, at::Scalar fill_value,
   } else {
     scalar_type = input.dtype();
   }
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Scalar>(fill_value, tensor_shape), device,
-      *scalar_type);
+  return input.CreateFrom(GetIrValueForScalar(fill_value, tensor_shape, device),
+                          device, *scalar_type);
 }
 
 XLATensor XLATensor::gather(const XLATensor& input, xla::int64 dim,
@@ -1386,8 +1388,10 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
     const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
     double momentum, double eps) {
   xla::Shape features_shape = BatchNormFeaturesShape(input);
-  ir::Value weight_value = GetIrValueOrDefault(weight, 1, features_shape);
-  ir::Value bias_value = GetIrValueOrDefault(bias, 0, features_shape);
+  ir::Value weight_value =
+      GetIrValueOrDefault(weight, 1, features_shape, input.GetDevice());
+  ir::Value bias_value =
+      GetIrValueOrDefault(bias, 0, features_shape, input.GetDevice());
   ir::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormForward>(
       input.GetIrValue(), weight_value, bias_value, momentum, eps);
   XLATensor output = input.CreateFrom(ir::Value(node, 0));
@@ -1402,7 +1406,8 @@ XLATensor::native_batch_norm_backward(
     const XLATensor& grad_out, const XLATensor& input, const XLATensor& weight,
     const XLATensor& save_mean, const XLATensor& save_invstd, double eps) {
   xla::Shape features_shape = BatchNormFeaturesShape(input);
-  ir::Value weight_value = GetIrValueOrDefault(weight, 1, features_shape);
+  ir::Value weight_value =
+      GetIrValueOrDefault(weight, 1, features_shape, input.GetDevice());
   ir::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormBackward>(
       grad_out.GetIrValue(), input.GetIrValue(), weight_value,
       save_mean.GetIrValue(), save_invstd.GetIrValue(), eps);
