@@ -418,6 +418,21 @@ TEST_F(AtenXlaTensorTest, TestThEqScalar) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestThEqAutograd) {
+  at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
+  at::Tensor b = a.clone();
+  at::Tensor c = at::_th_eq(torch::autograd::make_variable(a, false),
+                            torch::autograd::make_variable(b, false));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = torch::autograd::make_variable(
+        bridge::CreateXlaTensor(a, device), false);
+    at::Tensor xla_b = torch::autograd::make_variable(
+        bridge::CreateXlaTensor(b, device), false);
+    at::Tensor xla_c = at::_th_eq(xla_a, xla_b);
+    EXPECT_TRUE(EqualValues(c, xla_c));
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestGe) {
   at::Tensor a = at::rand({2, 3}, at::TensorOptions(at::kFloat));
   at::Tensor b = a.clone();
