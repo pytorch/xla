@@ -676,6 +676,9 @@ class XLATensor {
   static std::tuple<XLATensor, XLATensor> qr(const XLATensor& input,
                                              bool full_matrices);
 
+  static XLATensor randperm(xla::int64 n, const Device& device,
+                            at::ScalarType scalar_type);
+
   static XLATensor reciprocal(const XLATensor& input);
   static void reciprocal_(XLATensor& input);
 
