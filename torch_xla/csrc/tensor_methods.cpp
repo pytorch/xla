@@ -64,6 +64,7 @@
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/prod.h"
 #include "torch_xla/csrc/ops/qr.h"
+#include "torch_xla/csrc/ops/randperm.h"
 #include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
@@ -1528,6 +1529,14 @@ std::tuple<XLATensor, XLATensor> XLATensor::qr(const XLATensor& input,
       ir::MakeNode<ir::ops::QR>(input.GetIrValue(), full_matrices);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
+}
+
+XLATensor XLATensor::randperm(xla::int64 n, const Device& device,
+                              at::ScalarType element_type) {
+  xla::PrimitiveType xla_element_type =
+      MakeXlaPrimitiveType(element_type, &device);
+  return Create(ir::MakeNode<ir::ops::Randperm>(n, xla_element_type), device,
+                element_type);
 }
 
 XLATensor XLATensor::reciprocal(const XLATensor& input) {

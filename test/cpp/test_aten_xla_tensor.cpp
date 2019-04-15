@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include "cpp_test_util.h"
+#include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
@@ -2326,6 +2327,15 @@ TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
     EXPECT_GT(prob, 0.06);
     EXPECT_LT(prob, 0.14);
   });
+}
+
+TEST_F(AtenXlaTensorTest, TestRandperm) {
+  int n = 5;
+  at::Tensor shuffle = at::randperm(n, at::TensorOptions().device(at::kXLA));
+  at::Tensor shuffle_cpu = ToCpuTensor(shuffle);
+  std::vector<xla::int64> shuffle_data(shuffle_cpu.data<int64_t>(),
+                                       shuffle_cpu.data<int64_t>() + n);
+  EXPECT_TRUE(xla::IsPermutation(shuffle_data, n));
 }
 
 TEST_F(AtenXlaTensorTest, TestSlice) {

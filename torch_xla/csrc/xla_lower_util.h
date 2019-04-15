@@ -18,6 +18,9 @@ xla::XlaOp BuildBernoulli(const xla::XlaOp& probability,
 
 xla::XlaOp BuildDropout(const xla::XlaOp& input, float probability);
 
+xla::XlaOp BuildRandperm(xla::int64 n, xla::PrimitiveType element_type,
+                         xla::XlaBuilder* builder);
+
 std::vector<xla::XlaOp> CreateBroadcastTensors(
     tensorflow::gtl::ArraySlice<const xla::XlaOp> operands);
 
