@@ -1298,6 +1298,14 @@ class TestAtenXlaTensor(XlaTestCase):
         xla_a[:, s::e] = 2
         self.assertEqual(a.data, xla_a.data.cpu())
 
+  def test_empty_advanced_indexing(self):
+    xla_device = xm.xla_device()
+    base = torch.randn(2, 3, 4, 5)
+    xla_base = base.to(device=xla_device)
+    result = base[:, torch.empty(0, 6, dtype=torch.int64)]
+    xla_result = xla_base[:, torch.empty(0, 6, dtype=torch.int64)]
+    self.assertEqual(result, xla_result)
+
   def test_clamp(self):
     a = torch.randn(3, 3)
     xla_a = a.to(xm.xla_device())

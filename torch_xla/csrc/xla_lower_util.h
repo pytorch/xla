@@ -25,7 +25,8 @@ std::vector<xla::XlaOp> CreateBroadcastTensors(
     tensorflow::gtl::ArraySlice<const xla::XlaOp> operands);
 
 // Similar to tf.gather_nd, used to implement advanced indexing.
-xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices);
+xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices,
+                       xla::int64 start_dim);
 
 // Similar to tf.scatter_nd, used to implement advanced indexing updates.
 xla::XlaOp CreateIndexUpdate(
