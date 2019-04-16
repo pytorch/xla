@@ -1345,6 +1345,13 @@ class TestAtenXlaTensor(XlaTestCase):
     b = torch.tensor([0, 1, 2, 3]).to(xla_device)
     self.assertEqual(a[b].dtype, torch.uint8)
 
+  def test_slice_zero_sized_dim(self):
+    xla_device = xm.xla_device()
+    v = torch.randn(2, 3, 4, 5).to(xla_device)
+    y = v[:, :, :, 1]
+    z = y[:, 1:1, :]
+    self.assertEqual(z.size()[1], 0)
+
 
 class MNISTComparator(nn.Module):
 
