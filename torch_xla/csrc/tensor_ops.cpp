@@ -200,7 +200,7 @@ XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
         XLATensor::full({numel}, 1, indices.GetDevice(), indices.dtype());
     XLATensor::index_put_(counts, counts, {indices_rank1}, ones,
                           /*accumulate=*/true, /*result_permutation=*/{0});
-    XLATensor grad_weights_scale = XLATensor::index(counts, {indices_rank1});
+    XLATensor grad_weights_scale = XLATensor::index(counts, {indices_rank1}, 0);
     // Scale the value of the gradient by the histogram.
     grad = XLATensor::div(grad, XLATensor::unsqueeze(grad_weights_scale, 1));
   }

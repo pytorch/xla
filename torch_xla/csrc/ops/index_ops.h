@@ -37,6 +37,8 @@ struct CanonicalIndexInfo {
   // updates, since a permutation is applied to the base to bring non-null
   // indices to front. This is the inverse of that permutation.
   std::vector<xla::int64> result_permutation;
+  // The dimension number at which indexing starts.
+  xla::int64 start_dim = 0;
 };
 
 // Transform the given base and indices to a form supported by the XLATensor
@@ -49,7 +51,8 @@ CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
 // Implements indexing by tensors of long according to the top-level
 // description.
 XLATensor IndexByTensors(const XLATensor& base,
-                         tensorflow::gtl::ArraySlice<const XLATensor> indices);
+                         tensorflow::gtl::ArraySlice<const XLATensor> indices,
+                         xla::int64 start_dim);
 
 ir::Value IndexPutByTensors(
     const XLATensor& base, tensorflow::gtl::ArraySlice<const XLATensor> indices,

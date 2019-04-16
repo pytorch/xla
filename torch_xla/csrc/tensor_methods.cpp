@@ -46,7 +46,7 @@
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/hardshrink.h"
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
-#include "torch_xla/csrc/ops/index_op.h"
+#include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/ops/index_select.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/kth_value.h"
@@ -1027,10 +1027,10 @@ void XLATensor::gt_(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
-XLATensor XLATensor::index(
-    const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const XLATensor> indices) {
-  return IndexByTensors(input, indices);
+XLATensor XLATensor::index(const XLATensor& input,
+                           tensorflow::gtl::ArraySlice<const XLATensor> indices,
+                           xla::int64 start_dim) {
+  return IndexByTensors(input, indices, start_dim);
 }
 
 XLATensor XLATensor::index_add(const XLATensor& input, xla::int64 dim,
