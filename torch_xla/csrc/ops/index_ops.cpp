@@ -1,13 +1,15 @@
-#include "torch_xla/csrc/ops/index_op.h"
+#include "torch_xla/csrc/ops/index_ops.h"
 
 #include <ATen/ExpandUtils.h>
 #include <ATen/Functions.h>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
+#include "torch_xla/csrc/ops/index_get.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
@@ -58,6 +60,25 @@ std::vector<at::Tensor> ExpandByteTensors(const at::Tensor& self,
   return result;
 }
 
+struct IndexAdjacencyInfo {
+  bool contiguous_non_null = false;
+  xla::int64 start_dim = 0;
+};
+
+// Checks whether all the non-null tensors are adjacent, in which case we must
+// not permute the base and instead treat the null tensors prefix as a no-op.
+// Replicates the behavior of at::native::hasContiguousSubspace and also returns
+// the position of the first non-null index.
+IndexAdjacencyInfo GetIndexAdjacencyInfo(at::TensorList indices) {
+  auto is_defined = [](const at::Tensor& tensor) { return tensor.defined(); };
+  auto is_null = [](const at::Tensor& tensor) { return !tensor.defined(); };
+  auto start = std::find_if(indices.begin(), indices.end(), is_defined);
+  auto stop = std::find_if(indices.rbegin(), indices.rend(), is_defined);
+  auto it = std::find_if(start, stop.base(), is_null);
+  xla::int64 start_dim = std::distance(indices.begin(), start);
+  return {it == stop.base(), start_dim};
+}
+
 // Transposes the tensor and indices together so that all the non-null indices
 // index the first k dimensions of the tensor. Returns the transposed tensor and
 // the reordered indices. For example:
@@ -87,21 +108,26 @@ CanonicalIndexInfo TransposeToFront(at::Tensor base, at::TensorList indices) {
   for (size_t i = indices.size(); i < base_rank; ++i) {
     dims.push_back(i);
   }
+  IndexAdjacencyInfo adjacency_info = GetIndexAdjacencyInfo(indices);
+  if (adjacency_info.contiguous_non_null) {
+    return {base, std::move(transposed_indices),
+            xla::util::Iota<xla::int64>(base_rank), adjacency_info.start_dim};
+  }
   return {base.permute(dims), std::move(transposed_indices),
-          xla::InversePermutation(XlaHelpers::I64List(dims))};
+          xla::InversePermutation(XlaHelpers::I64List(dims)), 0};
 }
 
 // Wraps index tensors once into the [0, dim_size) interval, where dim_size is
 // the size of the current indexed dimension.
 std::vector<XLATensor> WrapIndicesOnce(
-    const XLATensor& base,
-    tensorflow::gtl::ArraySlice<const XLATensor> indices) {
+    const XLATensor& base, tensorflow::gtl::ArraySlice<const XLATensor> indices,
+    int start_dim) {
   std::vector<XLATensor> canonical_indices;
   auto base_shape_ref = base.shape();
   XLA_CHECK_LE(indices.size(), base_shape_ref.get().rank());
   for (size_t dim_idx = 0; dim_idx < indices.size(); ++dim_idx) {
     const XLATensor& dim_index = indices[dim_idx];
-    int64_t dim_size = base_shape_ref.get().dimensions(dim_idx);
+    int64_t dim_size = base_shape_ref.get().dimensions(dim_idx + start_dim);
     XLATensor wrapped_dim_index = XLATensor::Create(
         dim_index.GetIrValue() +
             XLATensor::GetIrValueForScalar(dim_size, dim_index.shape(),
@@ -113,25 +139,6 @@ std::vector<XLATensor> WrapIndicesOnce(
         XLATensor::where(wrap_cond, wrapped_dim_index, dim_index));
   }
   return canonical_indices;
-}
-
-ir::NodePtr IndexOp(const ir::Value& base, const ir::Value& indices) {
-  auto lower_fn = [](const ir::Node& node,
-                     ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_indices = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(CreateIndex(xla_input, xla_indices), loctx);
-  };
-  auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp { return CreateIndex(operands[0], operands[1]); };
-  return ir::ops::GenericOp(
-      ir::OpKind(at::aten::index), {base, indices},
-      [&]() {
-        return ir::ops::InferOutputShape({base.shape(), indices.shape()},
-                                         lower_for_shape_fn);
-      },
-      std::move(lower_fn));
 }
 
 ir::NodePtr IndexPutOp(const ir::Value& buffer, const ir::Value& indices,
@@ -262,17 +269,20 @@ CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
 }
 
 XLATensor IndexByTensors(const XLATensor& base,
-                         tensorflow::gtl::ArraySlice<const XLATensor> indices) {
+                         tensorflow::gtl::ArraySlice<const XLATensor> indices,
+                         xla::int64 start_dim) {
   if (indices.empty()) {
     return base;
   }
-  auto canonical_indices = WrapIndicesOnce(base, indices);
+  auto canonical_indices = WrapIndicesOnce(base, indices, start_dim);
   xla::int64 indices_rank = canonical_indices.front().shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single gather.
   XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
-  return XLATensor::Create(IndexOp(base.GetIrValue(), indices_nd.GetIrValue()),
-                           base.GetDevice(), base.dtype());
+  return XLATensor::Create(
+      ir::MakeNode<ir::ops::IndexGet>(base.GetIrValue(),
+                                      indices_nd.GetIrValue(), start_dim),
+      base.GetDevice(), base.dtype());
 }
 
 ir::Value IndexPutByTensors(
@@ -282,7 +292,7 @@ ir::Value IndexPutByTensors(
   if (indices.empty()) {
     return base.GetIrValue();
   }
-  auto canonical_indices = WrapIndicesOnce(base, indices);
+  auto canonical_indices = WrapIndicesOnce(base, indices, 0);
   xla::int64 indices_rank = canonical_indices.front().shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single scatter.

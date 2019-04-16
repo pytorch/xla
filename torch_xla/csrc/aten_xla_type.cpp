@@ -10,7 +10,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/einsum.h"
-#include "torch_xla/csrc/ops/index_op.h"
+#include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -1423,7 +1423,8 @@ at::Tensor AtenXlaType::index(const at::Tensor& self,
       GetCanonicalIndexInfo(self, indices);
   return bridge::AtenFromXlaTensor(
       XLATensor::index(bridge::GetXlaTensor(canonical_index_info.base),
-                       bridge::GetXlaTensors(canonical_index_info.indices)));
+                       bridge::GetXlaTensors(canonical_index_info.indices),
+                       canonical_index_info.start_dim));
 }
 
 at::Tensor AtenXlaType::index_add(const at::Tensor& self, int64_t dim,

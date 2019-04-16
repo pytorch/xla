@@ -472,9 +472,11 @@ class XLATensor {
   // Gather slices from input into a result with shape specified by indices. The
   // shape of the indices are first made consistent using broadcast semantics.
   // For input of shape d1 x d2 x ... x dn and p indices of shape i1 x i2 x ...
-  // x ik, the output shape is i1 x i2 x ... x ik x d(p+1) x ... x dn.
+  // x ik, the output shape is d1 x ... x d(start_dim) x i1 x ... x ik x
+  // d(start_dim+p+1) x ... x dn.
   static XLATensor index(const XLATensor& input,
-                         tensorflow::gtl::ArraySlice<const XLATensor> indices);
+                         tensorflow::gtl::ArraySlice<const XLATensor> indices,
+                         xla::int64 start_dim);
 
   static XLATensor index_add(const XLATensor& input, xla::int64 dim,
                              const XLATensor& index, const XLATensor& source);

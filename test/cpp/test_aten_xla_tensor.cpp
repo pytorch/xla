@@ -2671,6 +2671,30 @@ TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestMultiIndexHeadNull) {
+  for (at::ScalarType scalar_type :
+       {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
+    at::Tensor params =
+        isFloatingType(scalar_type)
+            ? at::rand({4, 3, 5, 6, 7}, at::TensorOptions(scalar_type))
+            : at::randint(100, {4, 3, 5, 6, 7}, at::TensorOptions(scalar_type));
+    at::Tensor indices_null;
+    at::Tensor indices_0 =
+        at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+    at::Tensor indices_1 =
+        at::randint(-3, 3, {2, 4, 3}, at::TensorOptions(at::kLong));
+    at::Tensor result = at::index(params, {indices_null, indices_0, indices_1});
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_params = bridge::CreateXlaTensor(params, device);
+      at::Tensor xla_indices_0 = bridge::CreateXlaTensor(indices_0, device);
+      at::Tensor xla_indices_1 = bridge::CreateXlaTensor(indices_1, device);
+      at::Tensor xla_result =
+          at::index(xla_params, {indices_null, xla_indices_0, xla_indices_1});
+      AllClose(result, xla_result);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestMultiIndexMiddleNull) {
   for (at::ScalarType scalar_type :
        {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {
