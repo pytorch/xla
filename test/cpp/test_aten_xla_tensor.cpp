@@ -5514,6 +5514,19 @@ TEST_F(AtenXlaTensorTest, TestBitwiseAndScalarInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestBitwiseAndPromotion) {
+  at::Tensor input = at::rand({4, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor view = input.reshape(-1);
+  at::Tensor result = at::__and__(view.gt(0), view.ne(0));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = torch::autograd::make_variable(
+        bridge::CreateXlaTensor(input, device), false);
+    at::Tensor xla_view = xla_input.reshape(-1);
+    at::Tensor xla_result = at::__and__(xla_view.gt(0), xla_view.ne(0));
+    EXPECT_TRUE(EqualValues(result, xla_result));
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestBitwiseOr) {
   at::Tensor lhs = at::randint(0, std::numeric_limits<int32_t>::max(), {4, 2},
                                at::TensorOptions(at::kInt));
