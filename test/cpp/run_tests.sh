@@ -2,13 +2,18 @@
 set -ex
 RUNDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 BUILDDIR="$RUNDIR/build"
+BUILDTYPE="Release"
 VERB=
 FILTER=
 BUILD_ONLY=0
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 
-while getopts 'VLKBF:' OPTION
+if [ "$DEBUG" == "1" ]; then
+  BUILDTYPE="Debug"
+fi
+
+while getopts 'VLDKBF:' OPTION
 do
   case $OPTION in
     V)
@@ -16,6 +21,9 @@ do
       ;;
     L)
       LOGFILE=
+      ;;
+    D)
+      BUILDTYPE="Debug"
       ;;
     K)
       RMBUILD=0
@@ -34,8 +42,9 @@ rm -rf "$BUILDDIR"
 mkdir "$BUILDDIR" 2>/dev/null
 pushd "$BUILDDIR"
 cmake "$RUNDIR" \
-    -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")\
-    -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
+  -DCMAKE_BUILD_TYPE=$BUILDTYPE \
+  -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+  -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
 make -j $VERB
 if [ $BUILD_ONLY -eq 0 ]; then
   if [ "$LOGFILE" != "" ]; then

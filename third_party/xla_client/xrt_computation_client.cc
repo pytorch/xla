@@ -1032,6 +1032,8 @@ const XrtSession::CachedNode& XrtComputationClient::GetSubTupleNode(
 tensorflow::DataType XrtComputationClient::XlaTypeToDataType(
     PrimitiveType dtype) {
   switch (dtype) {
+    case PRED:
+      return tensorflow::DT_BOOL;
     case S8:
       return tensorflow::DT_INT8;
     case U8:

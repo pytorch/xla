@@ -23,7 +23,6 @@ ExternalProject_Add(
   GIT_TAG master
   SOURCE_DIR "${GTEST_DIR}/src/googletest-src"
   BINARY_DIR "${GTEST_DIR}/src/googletest-build"
-  CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
   # Disable install step
   INSTALL_COMMAND ""
   LOG_DOWNLOAD ON
