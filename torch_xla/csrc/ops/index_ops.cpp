@@ -10,6 +10,7 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/index_get.h"
+#include "torch_xla/csrc/ops/index_put.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
@@ -141,38 +142,6 @@ std::vector<XLATensor> WrapIndicesOnce(
   return canonical_indices;
 }
 
-ir::NodePtr IndexPutOp(const ir::Value& buffer, const ir::Value& indices,
-                       const ir::Value& values, bool accumulate) {
-  static std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>
-      add_scatter_combiner =
-          [](const xla::XlaOp& x, const xla::XlaOp& y,
-             xla::XlaBuilder* builder) -> xla::XlaOp { return x + y; };
-  auto lower_fn = [accumulate](const ir::Node& node,
-                               ir::LoweringContext* loctx) -> ir::XlaOpVector {
-    xla::XlaOp xla_base = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_indices = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_values = loctx->GetOutputOp(node.operand(2));
-    return node.ReturnOp(
-        CreateIndexUpdate(xla_base, xla_indices, xla_values,
-                          accumulate ? add_scatter_combiner : nullptr),
-        loctx);
-  };
-  auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
-    // The combiner doesn't matter for shape.
-    return CreateIndexUpdate(operands[0], operands[1], operands[2], nullptr);
-  };
-  return ir::ops::GenericOp(
-      ir::OpKind(at::aten::index_put), {buffer, indices, values},
-      [&]() {
-        return ir::ops::InferOutputShape(
-            {buffer.shape(), indices.shape(), values.shape()},
-            lower_for_shape_fn);
-      },
-      std::move(lower_fn));
-}
-
 ir::NodePtr IndexFillOp(const ir::Value& buffer, xla::int64 dim,
                         const ir::Value& index, const ir::Value& value) {
   auto lower_fn = [dim](const ir::Node& node,
@@ -287,19 +256,20 @@ XLATensor IndexByTensors(const XLATensor& base,
 
 ir::Value IndexPutByTensors(
     const XLATensor& base, tensorflow::gtl::ArraySlice<const XLATensor> indices,
-    const XLATensor& values, bool accumulate,
+    xla::int64 start_dim, const XLATensor& values, bool accumulate,
     tensorflow::gtl::ArraySlice<const xla::int64> result_permutation) {
   if (indices.empty()) {
     return base.GetIrValue();
   }
-  auto canonical_indices = WrapIndicesOnce(base, indices, 0);
+  auto canonical_indices = WrapIndicesOnce(base, indices, start_dim);
   xla::int64 indices_rank = canonical_indices.front().shape().get().rank();
   // Stack the indices to allow the whole multi-indexing to be dispatched with a
   // single scatter.
   XLATensor indices_nd = XLATensor::stack(canonical_indices, indices_rank);
   return ir::MakeNode<ir::ops::Permute>(
-      IndexPutOp(base.GetIrValue(), indices_nd.GetIrValue(),
-                 values.GetIrValue(), accumulate),
+      ir::MakeNode<ir::ops::IndexPut>(base.GetIrValue(),
+                                      indices_nd.GetIrValue(), start_dim,
+                                      values.GetIrValue(), accumulate),
       xla::util::ToVector<xla::int64>(result_permutation));
 }
 

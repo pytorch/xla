@@ -56,7 +56,7 @@ XLATensor IndexByTensors(const XLATensor& base,
 
 ir::Value IndexPutByTensors(
     const XLATensor& base, tensorflow::gtl::ArraySlice<const XLATensor> indices,
-    const XLATensor& updates, bool accumulate,
+    xla::int64 start_dim, const XLATensor& updates, bool accumulate,
     tensorflow::gtl::ArraySlice<const xla::int64> result_permutation);
 
 ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,

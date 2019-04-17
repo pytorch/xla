@@ -1121,19 +1121,19 @@ void XLATensor::index_fill_(XLATensor& input, xla::int64 dim,
 
 XLATensor XLATensor::index_put(
     const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const XLATensor> indices,
+    tensorflow::gtl::ArraySlice<const XLATensor> indices, xla::int64 start_dim,
     const XLATensor& values, bool accumulate,
     tensorflow::gtl::ArraySlice<const xla::int64> result_permutation) {
-  return input.CreateFrom(IndexPutByTensors(input, indices, values, accumulate,
-                                            result_permutation));
+  return input.CreateFrom(IndexPutByTensors(input, indices, start_dim, values,
+                                            accumulate, result_permutation));
 }
 
 void XLATensor::index_put_(
     XLATensor& input, const XLATensor& canonical_base,
-    tensorflow::gtl::ArraySlice<const XLATensor> indices,
+    tensorflow::gtl::ArraySlice<const XLATensor> indices, xla::int64 start_dim,
     const XLATensor& values, bool accumulate,
     tensorflow::gtl::ArraySlice<const xla::int64> result_permutation) {
-  input.SetIrValue(IndexPutByTensors(canonical_base, indices, values,
+  input.SetIrValue(IndexPutByTensors(canonical_base, indices, start_dim, values,
                                      accumulate, result_permutation));
 }
 
