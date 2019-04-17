@@ -198,7 +198,8 @@ XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
         XLATensor::full({num_weights}, 0, indices.GetDevice(), indices.dtype());
     XLATensor ones =
         XLATensor::full({numel}, 1, indices.GetDevice(), indices.dtype());
-    XLATensor::index_put_(counts, counts, {indices_rank1}, ones,
+    XLATensor::index_put_(counts, counts, {indices_rank1}, /*start_dim=*/0,
+                          /*values=*/ones,
                           /*accumulate=*/true, /*result_permutation=*/{0});
     XLATensor grad_weights_scale = XLATensor::index(counts, {indices_rank1}, 0);
     // Scale the value of the gradient by the histogram.
@@ -212,10 +213,12 @@ XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
       XLATensor::expand(skip_padding, grad.shape().get().dimensions());
   XLATensor zero_grad =
       XLATensor::full_like(grad, 0, grad.GetDevice(), grad.dtype());
-  return XLATensor::index_put(grad_weight, {indices_rank1},
-                              XLATensor::where(skip_padding, grad, zero_grad),
-                              /*accumulate=*/true,
-                              /*result_permutation=*/{0, 1});
+  return XLATensor::index_put(
+      grad_weight, {indices_rank1},
+      /*start_dim=*/0,
+      /*values=*/XLATensor::where(skip_padding, grad, zero_grad),
+      /*accumulate=*/true,
+      /*result_permutation=*/{0, 1});
 }
 
 }  // namespace tensor_ops

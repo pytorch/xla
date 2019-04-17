@@ -1499,11 +1499,11 @@ at::Tensor AtenXlaType::index_put(const at::Tensor& self,
                                   bool accumulate) const {
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::index_put(bridge::GetXlaTensor(canonical_index_info.base),
-                           bridge::GetXlaTensors(canonical_index_info.indices),
-                           bridge::GetXlaTensor(values), accumulate,
-                           canonical_index_info.result_permutation));
+  return bridge::AtenFromXlaTensor(XLATensor::index_put(
+      bridge::GetXlaTensor(canonical_index_info.base),
+      bridge::GetXlaTensors(canonical_index_info.indices),
+      canonical_index_info.start_dim, bridge::GetXlaTensor(values), accumulate,
+      canonical_index_info.result_permutation));
 }
 
 at::Tensor& AtenXlaType::index_put_(at::Tensor& self, at::TensorList indices,
@@ -1512,11 +1512,11 @@ at::Tensor& AtenXlaType::index_put_(at::Tensor& self, at::TensorList indices,
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::index_put_(self_tensor,
-                        bridge::GetXlaTensor(canonical_index_info.base),
-                        bridge::GetXlaTensors(canonical_index_info.indices),
-                        bridge::GetXlaTensor(values), accumulate,
-                        canonical_index_info.result_permutation);
+  XLATensor::index_put_(
+      self_tensor, bridge::GetXlaTensor(canonical_index_info.base),
+      bridge::GetXlaTensors(canonical_index_info.indices),
+      canonical_index_info.start_dim, bridge::GetXlaTensor(values), accumulate,
+      canonical_index_info.result_permutation);
   return self;
 }
 
