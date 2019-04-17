@@ -49,6 +49,9 @@ xla::XlaOp BuildExpand(
     const xla::XlaOp& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
 
+std::vector<xla::int64> BuildUnsqueezeDimensions(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, size_t dim);
+
 // Insert a dimension of size one at the specified position.
 xla::XlaOp BuildUnsqueeze(const xla::XlaOp& input, size_t dim);
 

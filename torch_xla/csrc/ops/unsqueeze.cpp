@@ -3,7 +3,6 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
 namespace ir {
@@ -11,10 +10,9 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input, int dim) {
-  auto lower_for_shape_fn =
-      [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp { return BuildUnsqueeze(operands[0], dim); };
-  return InferOutputShape({input.shape()}, lower_for_shape_fn);
+  const xla::Shape& shape = input.shape();
+  auto dimensions = BuildUnsqueezeDimensions(shape.dimensions(), dim);
+  return xla::ShapeUtil::MakeShape(shape.element_type(), dimensions);
 }
 
 }  // namespace
@@ -34,7 +32,7 @@ XlaOpVector Unsqueeze::Lower(LoweringContext* loctx) const {
 
 std::string Unsqueeze::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << " dim=" << dim_;
+  ss << Node::ToString() << ", dim=" << dim_;
   return ss.str();
 }
 

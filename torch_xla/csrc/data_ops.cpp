@@ -175,11 +175,18 @@ xla::XlaOp BuildExpand(
                              xla::util::Iota<xla::int64>(output_sizes.size()));
 }
 
+std::vector<xla::int64> BuildUnsqueezeDimensions(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, size_t dim) {
+  XLA_CHECK_LE(dim, dimensions.size());
+  auto unsqueeze_dimensions = xla::util::ToVector<xla::int64>(dimensions);
+  unsqueeze_dimensions.insert(unsqueeze_dimensions.begin() + dim, 1);
+  return unsqueeze_dimensions;
+}
+
 xla::XlaOp BuildUnsqueeze(const xla::XlaOp& input, size_t dim) {
-  auto unsqueezed_sizes = XlaHelpers::SizesOfXlaOp(input);
-  XLA_CHECK_LE(dim, unsqueezed_sizes.size());
-  unsqueezed_sizes.insert(unsqueezed_sizes.begin() + dim, 1);
-  return xla::Reshape(input, unsqueezed_sizes);
+  auto dimensions =
+      BuildUnsqueezeDimensions(XlaHelpers::SizesOfXlaOp(input), dim);
+  return xla::Reshape(input, dimensions);
 }
 
 xla::XlaOp BuildStack(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
