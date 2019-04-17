@@ -228,6 +228,24 @@ class XlaTestCase(TestCase):
           rel_err=rel_err,
           abs_err=abs_err)
 
+  def makeComparable(self, value):
+    if isinstance(value, torch.Tensor):
+      if xm.is_xla_tensor(value.data):
+        return value.data.cpu()
+      return value.data
+    return value
+
+  def runAtenTest(self, tensors, fn, device=None, rel_err=1e-2, abs_err=1e-5):
+    if device is None:
+      device = xm.xla_device()
+    tensors = xu.as_list(tensors)
+    results = xu.as_list(fn(*tensors))
+    xla_tensors = [x.to(device) for x in tensors]
+    xla_results = xu.as_list(fn(*xla_tensors))
+    for at, xt in zip(results, xla_results):
+      self.assertEqualRel(
+          self.makeComparable(xt), at, rel_err=rel_err, abs_err=abs_err)
+
 
 class TestParallelLoader(XlaTestCase):
 
@@ -1351,6 +1369,16 @@ class TestAtenXlaTensor(XlaTestCase):
     y = v[:, :, :, 1]
     z = y[:, 1:1, :]
     self.assertEqual(z.size()[1], 0)
+
+  def test_index_bool(self):
+
+    def test_fn(a):
+      neg_ones = torch.ones_like(a) * -1
+      neg_ones_expanded = neg_ones.unsqueeze(0).unsqueeze(0)
+      a[True] = neg_ones_expanded
+      return a
+
+    self.runAtenTest(torch.rand(2, 3), test_fn)
 
 
 class MNISTComparator(nn.Module):
