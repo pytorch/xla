@@ -129,8 +129,7 @@ NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
 NodePtr SoftmaxBackwardOp(const Value& grad_output, const Value& output,
                           xla::int64 dim);
 
-NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
-              c10::optional<at::Scalar> max);
+NodePtr Clamp(const Value& input, const Value& min, const Value& max);
 
 NodePtr Ceil(const Value& input);
 
