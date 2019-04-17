@@ -2042,10 +2042,12 @@ std::vector<XLATensor> XLATensor::unbind(const XLATensor& input,
 }
 
 XLATensor XLATensor::unsqueeze(const XLATensor& input, xla::int64 dim) {
-  int squeeze_dim = XlaHelpers::GetCanonicalDimensionIndex(
-      dim, input.shape().get().rank() + 1);
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Unsqueeze>(input.GetIrValue(), squeeze_dim));
+  auto input_shape = input.shape();
+  xla::int64 squeeze_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank() + 1);
+  auto dimensions =
+      BuildUnsqueezeDimensions(input_shape.get().dimensions(), squeeze_dim);
+  return view(input, dimensions);
 }
 
 void XLATensor::unsqueeze_(XLATensor& input, xla::int64 dim) {
