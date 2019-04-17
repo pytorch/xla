@@ -283,6 +283,7 @@ namespace torch_xla {{
 {instances}
 static inline void RegisterAtenXlaTypes() {{
   auto& context = at::globalContext();
+  context.registerType(at::Backend::XLA, at::ScalarType::Bool, GetXLATypeBool());
   context.registerType(at::Backend::XLA, at::ScalarType::Byte, GetXLATypeByte());
   context.registerType(at::Backend::XLA, at::ScalarType::Char, GetXLATypeChar());
   context.registerType(at::Backend::XLA, at::ScalarType::Short, GetXLATypeShort());
@@ -433,6 +434,11 @@ def is_write_param(fnopts, pname, defval):
 
 def create_type_instances():
   code = ''
+  code += _CLASS_INST_HEADER.format(
+      type_name='XLATypeBool',
+      scalar_type='at::ScalarType::Bool',
+      tensorid='c10::XLATensorId()',
+      typeid='at::TypeID::XLABool')
   code += _CLASS_INST_HEADER.format(
       type_name='XLATypeByte',
       scalar_type='at::ScalarType::Byte',

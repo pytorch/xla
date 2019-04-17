@@ -136,35 +136,59 @@ std::vector<xla::util::Cleanup> LockDevices(const std::set<Device>& devices) {
   return unlocker;
 }
 
-struct TensorHasher {
-  size_t operator()(const at::Tensor& tensor) const {
-    return xla::util::HashCombine(xla::util::GetEnumValue(tensor.scalar_type()),
-                                  TensorHash(tensor));
+class XlaDataCacheArena {
+ public:
+  struct TensorHasher {
+    size_t operator()(const at::Tensor& tensor) const {
+      return xla::util::HashCombine(
+          xla::util::GetEnumValue(tensor.scalar_type()), TensorHash(tensor));
+    };
   };
-};
-struct TensorComparer {
-  bool operator()(const at::Tensor& tensor1, const at::Tensor& tensor2) const {
-    return tensor1.scalar_type() == tensor2.scalar_type() &&
-           tensor1.equal(tensor2);
+  struct TensorComparer {
+    bool operator()(const at::Tensor& tensor1,
+                    const at::Tensor& tensor2) const {
+      return tensor1.scalar_type() == tensor2.scalar_type() &&
+             tensor1.equal(tensor2);
+    }
+  };
+
+  using XlaDataCache =
+      xla::util::Cache<at::Tensor, xla::ComputationClient::Data, TensorHasher,
+                       TensorComparer>;
+
+  explicit XlaDataCacheArena(size_t max_cache_size)
+      : max_cache_size_(max_cache_size) {}
+
+  XlaDataCache* Get(const Device& device) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = device_caches_.find(device);
+    if (it == device_caches_.end()) {
+      std::unique_ptr<XlaDataCache> cache(new XlaDataCache(max_cache_size_));
+      it = device_caches_.emplace(device, std::move(cache)).first;
+    }
+    return it->second.get();
   }
+
+ private:
+  size_t max_cache_size_ = 0;
+  std::mutex mutex_;
+  std::map<Device, std::unique_ptr<XlaDataCache>> device_caches_;
 };
 
-using XlaDataCache = xla::util::Cache<at::Tensor, xla::ComputationClient::Data,
-                                      TensorHasher, TensorComparer>;
-
-XlaDataCache* GetXlaDataCache() {
+XlaDataCacheArena::XlaDataCache* GetXlaDataCache(const Device& device) {
   static const size_t kMaxCacheSize =
       xla::sys_util::GetEnvInt("XLA_DEVDATA_CACHE_SIZE", 128);
-  static XlaDataCache* cache = new XlaDataCache(kMaxCacheSize);
-  return cache;
+  static XlaDataCacheArena* arena = new XlaDataCacheArena(kMaxCacheSize);
+  return arena->Get(device);
 }
 
 xla::ComputationClient::DataPtr GetDeviceData(const at::Tensor& tensor,
                                               const Device& device) {
-  xla::ComputationClient::DataPtr device_data = GetXlaDataCache()->Get(tensor);
+  XlaDataCacheArena::XlaDataCache* cache = GetXlaDataCache(device);
+  xla::ComputationClient::DataPtr device_data = cache->Get(tensor);
   if (device_data == nullptr) {
     device_data = TensorToXlaData(tensor, device);
-    GetXlaDataCache()->Add(CopyTensor(tensor), device_data);
+    cache->Add(CopyTensor(tensor), device_data);
   }
   return device_data;
 }

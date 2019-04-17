@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/triangular_solve.h"
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -28,6 +29,8 @@ std::pair<xla::Shape, xla::Shape> InferTriangularSolveShape(
   if (xla::ShapeUtil::Compatible(lhs_batch_shape, rhs_batch_shape)) {
     rhs_batch_shape.add_dimensions(nrhs);
     lhs_batch_shape.add_dimensions(n);
+    xla::LayoutUtil::SetToDefaultLayout(&rhs_batch_shape);
+    xla::LayoutUtil::SetToDefaultLayout(&lhs_batch_shape);
     return std::pair<xla::Shape, xla::Shape>(rhs_batch_shape, lhs_batch_shape);
   }
   // Obtain the promoted shapes and add back the trailing dimension.
@@ -36,6 +39,8 @@ std::pair<xla::Shape, xla::Shape> InferTriangularSolveShape(
   xla::Shape lhs_batch_promoted_shape(rhs_batch_promoted_shape);
   rhs_batch_promoted_shape.add_dimensions(nrhs);
   lhs_batch_promoted_shape.add_dimensions(n);
+  xla::LayoutUtil::SetToDefaultLayout(&rhs_batch_promoted_shape);
+  xla::LayoutUtil::SetToDefaultLayout(&lhs_batch_promoted_shape);
   return std::pair<xla::Shape, xla::Shape>(rhs_batch_promoted_shape,
                                            lhs_batch_promoted_shape);
 }
