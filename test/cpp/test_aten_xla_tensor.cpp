@@ -2601,7 +2601,8 @@ TEST_F(AtenXlaTensorTest, TestSCopy) {
   ForEachDevice([&](const Device& device) {
     at::Tensor xla_source = bridge::CreateXlaTensor(source, device);
     at::Tensor xla_destination =
-        at::empty({size}, at::TensorOptions(at::kFloat).device(at::kXLA));
+        at::empty({size}, at::TensorOptions(at::kFloat)
+                              .device(bridge::XlaDeviceToAtenDevice(device)));
     at::s_copy_(xla_destination, xla_source);
     EXPECT_TRUE(EqualValues(destination, xla_destination));
   });
@@ -2614,7 +2615,8 @@ TEST_F(AtenXlaTensorTest, TestSCopyTransfer) {
   at::s_copy_(destination, source);
   ForEachDevice([&](const Device& device) {
     at::Tensor xla_destination =
-        at::empty({size}, at::TensorOptions(at::kFloat).device(at::kXLA));
+        at::empty({size}, at::TensorOptions(at::kFloat)
+                              .device(bridge::XlaDeviceToAtenDevice(device)));
     at::s_copy_(xla_destination, source);
     EXPECT_TRUE(EqualValues(destination, xla_destination));
   });
@@ -2628,7 +2630,8 @@ TEST_F(AtenXlaTensorTest, TestSCopyFrom) {
   ForEachDevice([&](const Device& device) {
     at::Tensor xla_source = bridge::CreateXlaTensor(source, device);
     at::Tensor xla_destination =
-        at::empty({size}, at::TensorOptions(at::kFloat).device(at::kXLA));
+        at::empty({size}, at::TensorOptions(at::kFloat)
+                              .device(bridge::XlaDeviceToAtenDevice(device)));
     at::_s_copy_from(xla_source, xla_destination);
     EXPECT_TRUE(EqualValues(destination, xla_destination));
   });

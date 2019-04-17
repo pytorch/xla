@@ -33,6 +33,8 @@ xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type,
                                                : xla::PrimitiveType::F32;
     case at::ScalarType::Float:
       return xla::PrimitiveType::F32;
+    case at::ScalarType::Bool:
+      return xla::PrimitiveType::PRED;
     case at::ScalarType::Byte:
       return xla::PrimitiveType::U8;
     case at::ScalarType::Char:
@@ -210,6 +212,10 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
       TensorToBuffer<SType, double>(tensor, dest_shape, dest_buffer,
                                     dest_buffer_size, device);
       break;
+    case xla::PrimitiveType::PRED:
+      TensorToBuffer<SType, bool>(tensor, dest_shape, dest_buffer,
+                                  dest_buffer_size, device);
+      break;
     case xla::PrimitiveType::U8:
       TensorToBuffer<SType, xla::uint8>(tensor, dest_shape, dest_buffer,
                                         dest_buffer_size, device);
@@ -246,6 +252,10 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
     case at::ScalarType::Float:
       TensorToBufferSType<float>(tensor, dest_shape, dest_buffer,
                                  dest_buffer_size, device);
+      break;
+    case at::ScalarType::Bool:
+      TensorToBufferSType<bool>(tensor, dest_shape, dest_buffer,
+                                dest_buffer_size, device);
       break;
     case at::ScalarType::Byte:
       TensorToBufferSType<uint8_t>(tensor, dest_shape, dest_buffer,
@@ -292,12 +302,12 @@ xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
 }
 
 template <typename SType, typename DType>
-at::Tensor XlaLiteralToTensor(const xla::Literal& literal, at::ScalarType atype,
-                              xla::PrimitiveType xtype) {
+at::Tensor XlaLiteralToTensor(const xla::Literal& literal,
+                              at::ScalarType atype) {
   std::vector<int64_t> dimensions =
       xla::util::ToVector<int64_t>(literal.shape().dimensions());
-  xla::Shape torch_shape =
-      MakeTorchTensorLayout(literal.shape().dimensions(), xtype);
+  xla::Shape torch_shape = MakeTorchTensorLayout(
+      literal.shape().dimensions(), literal.shape().element_type());
   xla::int64 total_elements = xla::ShapeUtil::ElementsIn(torch_shape);
 
   const auto literal_data = literal.data<SType>();
@@ -310,37 +320,24 @@ at::Tensor XlaLiteralToTensor(const xla::Literal& literal, at::ScalarType atype,
 
 template <typename SType>
 at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
-                                    xla::PrimitiveType source_element_type,
                                     at::ScalarType dest_element_type) {
   switch (dest_element_type) {
-    case at::ScalarType::Byte: {
-      return XlaLiteralToTensor<SType, uint8_t>(literal, dest_element_type,
-                                                source_element_type);
-    }
-    case at::ScalarType::Char: {
-      return XlaLiteralToTensor<SType, int8_t>(literal, dest_element_type,
-                                               source_element_type);
-    }
-    case at::ScalarType::Short: {
-      return XlaLiteralToTensor<SType, int16_t>(literal, dest_element_type,
-                                                source_element_type);
-    }
-    case at::ScalarType::Int: {
-      return XlaLiteralToTensor<SType, int32_t>(literal, dest_element_type,
-                                                source_element_type);
-    }
-    case at::ScalarType::Long: {
-      return XlaLiteralToTensor<SType, int64_t>(literal, dest_element_type,
-                                                source_element_type);
-    }
-    case at::ScalarType::Float: {
-      return XlaLiteralToTensor<SType, float>(literal, dest_element_type,
-                                              source_element_type);
-    }
-    case at::ScalarType::Double: {
-      return XlaLiteralToTensor<SType, double>(literal, dest_element_type,
-                                               source_element_type);
-    }
+    case at::ScalarType::Bool:
+      return XlaLiteralToTensor<SType, bool>(literal, dest_element_type);
+    case at::ScalarType::Byte:
+      return XlaLiteralToTensor<SType, uint8_t>(literal, dest_element_type);
+    case at::ScalarType::Char:
+      return XlaLiteralToTensor<SType, int8_t>(literal, dest_element_type);
+    case at::ScalarType::Short:
+      return XlaLiteralToTensor<SType, int16_t>(literal, dest_element_type);
+    case at::ScalarType::Int:
+      return XlaLiteralToTensor<SType, int32_t>(literal, dest_element_type);
+    case at::ScalarType::Long:
+      return XlaLiteralToTensor<SType, int64_t>(literal, dest_element_type);
+    case at::ScalarType::Float:
+      return XlaLiteralToTensor<SType, float>(literal, dest_element_type);
+    case at::ScalarType::Double:
+      return XlaLiteralToTensor<SType, double>(literal, dest_element_type);
     default:
       XLA_ERROR() << "Unsupported scalar type: " << dest_element_type;
   }
@@ -369,35 +366,26 @@ std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
 
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type) {
-  xla::PrimitiveType element_type = literal.shape().element_type();
-  switch (element_type) {
+  switch (literal.shape().element_type()) {
     case xla::PrimitiveType::PRED:
-      return XlaLiteralToTensorHelper<bool>(literal, element_type,
-                                            dest_element_type);
+      return XlaLiteralToTensorHelper<bool>(literal, dest_element_type);
     case xla::PrimitiveType::BF16:
-      return XlaLiteralToTensorHelper<tensorflow::bfloat16>(
-          literal, element_type, dest_element_type);
+      return XlaLiteralToTensorHelper<tensorflow::bfloat16>(literal,
+                                                            dest_element_type);
     case xla::PrimitiveType::F32:
-      return XlaLiteralToTensorHelper<float>(literal, element_type,
-                                             dest_element_type);
+      return XlaLiteralToTensorHelper<float>(literal, dest_element_type);
     case xla::PrimitiveType::F64:
-      return XlaLiteralToTensorHelper<double>(literal, element_type,
-                                              dest_element_type);
+      return XlaLiteralToTensorHelper<double>(literal, dest_element_type);
     case xla::PrimitiveType::U8:
-      return XlaLiteralToTensorHelper<xla::uint8>(literal, element_type,
-                                                  dest_element_type);
+      return XlaLiteralToTensorHelper<xla::uint8>(literal, dest_element_type);
     case xla::PrimitiveType::S8:
-      return XlaLiteralToTensorHelper<xla::int8>(literal, element_type,
-                                                 dest_element_type);
+      return XlaLiteralToTensorHelper<xla::int8>(literal, dest_element_type);
     case xla::PrimitiveType::S16:
-      return XlaLiteralToTensorHelper<xla::int16>(literal, element_type,
-                                                  dest_element_type);
+      return XlaLiteralToTensorHelper<xla::int16>(literal, dest_element_type);
     case xla::PrimitiveType::S32:
-      return XlaLiteralToTensorHelper<xla::int32>(literal, element_type,
-                                                  dest_element_type);
+      return XlaLiteralToTensorHelper<xla::int32>(literal, dest_element_type);
     case xla::PrimitiveType::S64:
-      return XlaLiteralToTensorHelper<xla::int64>(literal, element_type,
-                                                  dest_element_type);
+      return XlaLiteralToTensorHelper<xla::int64>(literal, dest_element_type);
     default:
       XLA_ERROR() << "Unsupported literal type: " << literal.shape();
   }
@@ -469,6 +457,8 @@ size_t TensorHash(const at::Tensor& tensor) {
   at::Tensor ctensor = tensor.contiguous();
   int64_t size = ctensor.numel() * ctensor.element_size();
   switch (ctensor.scalar_type()) {
+    case at::ScalarType::Bool:
+      return xla::util::DataHash(ctensor.data<bool>(), size);
     case at::ScalarType::Byte:
       return xla::util::DataHash(ctensor.data<uint8_t>(), size);
     case at::ScalarType::Char:
@@ -534,6 +524,7 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
     case xla::PrimitiveType::F64:
       return at::ScalarType::Double;
     case xla::PrimitiveType::PRED:
+      return at::ScalarType::Bool;
     case xla::PrimitiveType::U8:
       return at::ScalarType::Byte;
     case xla::PrimitiveType::S8:
@@ -590,6 +581,8 @@ xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
       return GetDevicePrimitiveType(xla::PrimitiveType::F64, device);
     case at::ScalarType::Float:
       return GetDevicePrimitiveType(xla::PrimitiveType::F32, device);
+    case at::ScalarType::Bool:
+      return GetDevicePrimitiveType(xla::PrimitiveType::PRED, device);
     case at::ScalarType::Byte:
       return GetDevicePrimitiveType(xla::PrimitiveType::U8, device);
     case at::ScalarType::Char:
