@@ -204,27 +204,15 @@ NodePtr SoftmaxBackwardOp(const Value& grad_output, const Value& output,
       XlaHelpers::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
 }
 
-NodePtr Clamp(const Value& input, c10::optional<at::Scalar> min,
-              c10::optional<at::Scalar> max) {
-  const xla::Shape& input_shape = input.shape();
-  XlaHelpers::MinMax min_max =
-      XlaHelpers::MinMaxValues(input_shape.element_type());
-  if (!min) {
-    min = min_max.min;
-  }
-  if (!max) {
-    max = min_max.max;
-  }
-  NodePtr min_value = ScalarOp(*min, input_shape.element_type());
-  NodePtr max_value = ScalarOp(*max, input_shape.element_type());
+NodePtr Clamp(const Value& input, const Value& min, const Value& max) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_min = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_max = loctx->GetOutputOp(node.operand(2));
     return node.ReturnOp(xla::Clamp(xla_min, xla_input, xla_max), loctx);
   };
-  return GenericOp(OpKind(at::aten::clamp), OpList{input, min_value, max_value},
-                   input_shape, std::move(lower_fn));
+  return GenericOp(OpKind(at::aten::clamp), OpList{input, min, max},
+                   input.shape(), std::move(lower_fn));
 }
 
 NodePtr AddMatMulOp(const Value& input, const Value& weight,
