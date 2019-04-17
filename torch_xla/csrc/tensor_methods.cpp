@@ -93,6 +93,29 @@
 namespace torch_xla {
 namespace {
 
+struct MinMaxValues {
+  ir::Value min;
+  ir::Value max;
+};
+
+MinMaxValues GetMinMaxValues(const XLATensor& tensor,
+                             c10::optional<at::Scalar> min,
+                             c10::optional<at::Scalar> max) {
+  auto shape = tensor.shape();
+  XlaHelpers::MinMax min_max =
+      XlaHelpers::MinMaxValues(shape.get().element_type());
+  if (!min) {
+    min = min_max.min;
+  }
+  if (!max) {
+    max = min_max.max;
+  }
+  return {XLATensor::GetIrValueForScalar(*min, shape.get().element_type(),
+                                         tensor.GetDevice()),
+          XLATensor::GetIrValueForScalar(*max, shape.get().element_type(),
+                                         tensor.GetDevice())};
+}
+
 void CheckRank(const XLATensor& t, xla::int64 expected_rank,
                const std::string& tag, const std::string& arg_name,
                int arg_number) {
@@ -598,12 +621,16 @@ XLATensor XLATensor::cholesky(const XLATensor& input, bool upper) {
 XLATensor XLATensor::clamp(const XLATensor& input,
                            c10::optional<at::Scalar> min,
                            c10::optional<at::Scalar> max) {
-  return input.CreateFrom(ir::ops::Clamp(input.GetIrValue(), min, max));
+  MinMaxValues min_max = GetMinMaxValues(input, min, max);
+  return input.CreateFrom(
+      ir::ops::Clamp(input.GetIrValue(), min_max.min, min_max.max));
 }
 
 void XLATensor::clamp_(XLATensor& input, c10::optional<at::Scalar> min,
                        c10::optional<at::Scalar> max) {
-  input.SetIrValue(ir::ops::Clamp(input.GetIrValue(), min, max));
+  MinMaxValues min_max = GetMinMaxValues(input, min, max);
+  input.SetIrValue(
+      ir::ops::Clamp(input.GetIrValue(), min_max.min, min_max.max));
 }
 
 XLATensor XLATensor::clone(const XLATensor& input) {
