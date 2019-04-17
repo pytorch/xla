@@ -338,7 +338,7 @@ xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices,
 }
 
 xla::XlaOp CreateIndexUpdate(
-    const xla::XlaOp& buffer, const xla::XlaOp& indices,
+    const xla::XlaOp& buffer, const xla::XlaOp& indices, xla::int64 start_dim,
     const xla::XlaOp& values,
     const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
         combiner) {
@@ -360,9 +360,13 @@ xla::XlaOp CreateIndexUpdate(
   xla::int64 num_window_dims_in_values = buffer_rank - num_index_dims;
 
   // Make the values match the rank expected by scatter.
-  std::vector<xla::int64> expected_values_dims(indices_dims.begin(),
-                                               indices_dims.end());
-  for (xla::int64 dim = num_index_dims; dim < buffer_rank; ++dim) {
+  std::vector<xla::int64> expected_values_dims;
+  for (xla::int64 dim = 0; dim < start_dim; ++dim) {
+    expected_values_dims.push_back(buffer_shape.dimensions(dim));
+  }
+  expected_values_dims.insert(expected_values_dims.end(), indices_dims.begin(),
+                              indices_dims.end());
+  for (xla::int64 dim = num_index_dims + start_dim; dim < buffer_rank; ++dim) {
     expected_values_dims.push_back(buffer_shape.dimensions(dim));
   }
   xla::XlaOp new_values = values;
@@ -374,13 +378,16 @@ xla::XlaOp CreateIndexUpdate(
   values_shape = XlaHelpers::ShapeOfXlaOp(new_values);
   values_rank = values_shape.rank();
 
-  for (xla::int64 i = (values_rank - num_window_dims_in_values);
+  for (xla::int64 dim = 0; dim < start_dim; ++dim) {
+    dim_numbers.add_update_window_dims(dim);
+  }
+  for (xla::int64 i = values_rank - num_window_dims_in_values + start_dim;
        i < values_rank; ++i) {
     dim_numbers.add_update_window_dims(i);
   }
   for (xla::int64 i = 0; i < num_index_dims; ++i) {
-    dim_numbers.add_inserted_window_dims(i);
-    dim_numbers.add_scatter_dims_to_operand_dims(i);
+    dim_numbers.add_inserted_window_dims(i + start_dim);
+    dim_numbers.add_scatter_dims_to_operand_dims(i + start_dim);
   }
   xla::XlaComputation combiner_computation =
       MakeScatterComputation(combiner, buffer_shape.element_type());

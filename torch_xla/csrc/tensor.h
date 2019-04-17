@@ -511,13 +511,13 @@ class XLATensor {
   static XLATensor index_put(
       const XLATensor& input,
       tensorflow::gtl::ArraySlice<const XLATensor> indices,
-      const XLATensor& values, bool accumulate,
+      xla::int64 start_dim, const XLATensor& values, bool accumulate,
       tensorflow::gtl::ArraySlice<const xla::int64> result_permutation);
 
   static void index_put_(
       XLATensor& input, const XLATensor& canonical_base,
       tensorflow::gtl::ArraySlice<const XLATensor> indices,
-      const XLATensor& values, bool accumulate,
+      xla::int64 start_dim, const XLATensor& values, bool accumulate,
       tensorflow::gtl::ArraySlice<const xla::int64> result_permutation);
 
   static XLATensor index_select(const XLATensor& input, xla::int64 dim,
