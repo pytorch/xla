@@ -239,8 +239,8 @@ class XlaTestCase(TestCase):
     if device is None:
       device = xm.xla_device()
     tensors = xu.as_list(tensors)
-    results = xu.as_list(fn(*tensors))
     xla_tensors = [x.to(device) for x in tensors]
+    results = xu.as_list(fn(*tensors))
     xla_results = xu.as_list(fn(*xla_tensors))
     for at, xt in zip(results, xla_results):
       self.assertEqualRel(
