@@ -37,7 +37,9 @@ def get_xla_supported_devices(devkind=None):
 
 def xla_device(n=None, devkind=None):
   if n is None:
-    return get_xla_supported_devices(devkind=devkind)[0]
+    devices = get_xla_supported_devices(devkind=devkind)
+    assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
+    return torch.device(devices[0])
   return torch.device('xla:{}'.format(n))
 
 
