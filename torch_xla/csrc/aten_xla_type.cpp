@@ -868,16 +868,6 @@ at::Tensor AtenXlaType::conv_transpose2d(
   }
 }
 
-at::Tensor AtenXlaType::copy(const at::Tensor& src, bool /* non_blocking */,
-                             at::optional<c10::Device> to_device) const {
-  std::vector<at::Tensor> tensors = {src};
-  auto xla_tensors =
-      bridge::XlaCreateTensorList(tensors, /*writeable=*/nullptr);
-  Device device = to_device ? bridge::AtenDeviceToXlaDevice(*to_device)
-                            : *GetDefaultDevice();
-  return bridge::CreateXlaTensor(CopyTensor(xla_tensors.front()), device);
-}
-
 at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
                                bool non_blocking) const {
   return at::TypeDefault::copy_(self, src, non_blocking);

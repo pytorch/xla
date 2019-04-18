@@ -323,9 +323,6 @@ class AtenXlaType : public AtenXlaTypeBase {
                               at::IntArrayRef output_padding, int64_t groups,
                               at::IntArrayRef dilation) const override;
 
-  at::Tensor copy(const at::Tensor& src, bool non_blocking,
-                  at::optional<c10::Device> to_device) const override;
-
   at::Tensor& copy_(at::Tensor& self, const at::Tensor& src,
                     bool non_blocking) const override;
 
