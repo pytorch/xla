@@ -908,15 +908,9 @@ class XLATensor {
   struct Async {
     Async(SyncTensorCollection* coll,
           std::vector<xla::ComputationClient::DataPtr> parameters_data,
-          std::string device, ComputationCache::TypePtr cached_computation)
-        : mwait(1),
-          indices(std::move(coll->indices)),
-          unlocker(std::move(coll->unlocker)),
-          parameters_data(std::move(parameters_data)),
-          device(std::move(device)),
-          cached_computation(std::move(cached_computation)) {
-      tensors_data.reserve(indices.size());
-    }
+          std::string device, ComputationCache::TypePtr cached_computation);
+
+    void Wait();
 
     xla::xla_util::MultiWait mwait;
     std::vector<size_t> indices;

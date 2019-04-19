@@ -286,6 +286,38 @@ class XLATensor::TensorsArena {
 
 XLATensor::Data::~Data() { TensorsArena::Get()->UnregisterTensor(this); }
 
+XLATensor::Async::Async(
+    SyncTensorCollection* coll,
+    std::vector<xla::ComputationClient::DataPtr> parameters_data,
+    std::string device, ComputationCache::TypePtr cached_computation)
+    : mwait(1),
+      indices(std::move(coll->indices)),
+      unlocker(std::move(coll->unlocker)),
+      parameters_data(std::move(parameters_data)),
+      device(std::move(device)),
+      cached_computation(std::move(cached_computation)) {
+  tensors_data.reserve(indices.size());
+}
+
+void XLATensor::Async::Wait() {
+  XLA_CHECK_OK(mwait.Wait());
+  // Accessing other Async members is safe only after MultiWait::Wait()
+  // completes.
+  xla::Status status;
+  for (auto& cleanup : unlocker) {
+    const xla::Status& cleanup_status = cleanup.GetStatus();
+    if (!cleanup_status.ok()) {
+      if (status.ok()) {
+        status = cleanup_status;
+      }
+      // If we observe the status here, no need to let it propagate to the next
+      // device lock operation.
+      cleanup.SetStatus(xla::Status::OK());
+    }
+  }
+  XLA_CHECK_OK(status);
+}
+
 XLATensor XLATensor::Create(const at::Tensor& tensor, const Device& device,
                             bool requires_grad) {
   XLATensor xtensor(tensor, device, requires_grad);
