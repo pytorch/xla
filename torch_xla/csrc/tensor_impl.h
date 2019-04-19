@@ -35,6 +35,10 @@ class XLATensorImpl : public c10::TensorImpl {
 
   static void AtenInitialize();
 
+  const at::Storage& storage() const override;
+
+  bool has_storage() const override;
+
  private:
   void SetupSizeProperties();
 
