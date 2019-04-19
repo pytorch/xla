@@ -34,6 +34,7 @@ void CheckComputationStatus(
       XLA_LOG_LINES(tensorflow::ERROR, hlo_text);
     }
     TF_LOG(ERROR) << "StackTrace:\n" << tensorflow::CurrentStackTrace();
+    TF_LOG(ERROR) << "Status: " << status;
     throw std::runtime_error(status.ToString());
   }
 }
