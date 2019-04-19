@@ -6,6 +6,7 @@
 #include <memory>
 #include <numeric>
 #include <set>
+#include <type_traits>
 #include <vector>
 
 #include "absl/types/optional.h"
@@ -161,7 +162,8 @@ static inline size_t HashCombine(size_t a, size_t b) {
   return a ^ (b + 0x9e3779b97f4a7c15 + (a << 6) + (a >> 2));
 }
 
-template <typename T>
+template <typename T, typename std::enable_if<
+                          std::is_arithmetic<T>::value>::type* = nullptr>
 size_t Hash(const T& value) {
   return DataHash(&value, sizeof(value));
 }

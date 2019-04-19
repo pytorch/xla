@@ -4,6 +4,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -47,7 +48,9 @@ AsStrided::AsStrided(const Value& input, std::vector<xla::int64> size,
     : Node(
           ir::OpKind(at::aten::as_strided), {input},
           [&]() { return NodeOutputShape(input, size, storage_offset); },
-          /*num_outputs=*/1, xla::util::MHash(size, storage_offset)),
+          /*num_outputs=*/1,
+          xla::util::MHash(size,
+                           OptionalOr<xla::int64>(storage_offset, 0x311bd6))),
       size_(std::move(size)),
       storage_offset_(storage_offset) {}
 
