@@ -14,8 +14,8 @@
 namespace torch_xla {
 
 std::string DebugUtil::GetTensorsGraphInfo(
-    const std::vector<XLATensor>& tensors, const std::vector<size_t>* indices,
-    GraphFormat format) {
+    tensorflow::gtl::ArraySlice<const XLATensor> tensors,
+    const std::vector<size_t>* indices, GraphFormat format) {
   std::vector<const ir::Node*> roots;
   if (indices != nullptr) {
     for (auto index : *indices) {
@@ -49,10 +49,9 @@ std::string DebugUtil::GetTensorsGraphInfo(
   return ss.str();
 }
 
-void DebugUtil::SaveTensorsGraphInfo(const char* name,
-                                     const std::vector<XLATensor>& tensors,
-                                     const std::vector<size_t>* indices,
-                                     GraphFormat format) {
+void DebugUtil::SaveTensorsGraphInfo(
+    const char* name, tensorflow::gtl::ArraySlice<const XLATensor> tensors,
+    const std::vector<size_t>* indices, GraphFormat format) {
   static const std::string save_file =
       xla::sys_util::GetEnvString("XLA_SAVE_TENSORS_FILE", "");
   if (!save_file.empty()) {
