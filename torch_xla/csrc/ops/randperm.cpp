@@ -11,7 +11,8 @@ namespace ops {
 Randperm::Randperm(xla::int64 upper_bound, xla::PrimitiveType element_type)
     : Node(ir::OpKind(at::aten::randperm), {},
            xla::ShapeUtil::MakeShape(element_type, {upper_bound}),
-           /*num_outputs=*/1, xla::util::MHash(upper_bound, element_type)),
+           /*num_outputs=*/1,
+           xla::util::MHash(upper_bound, static_cast<int>(element_type))),
       upper_bound_(upper_bound),
       element_type_(element_type) {}
 
