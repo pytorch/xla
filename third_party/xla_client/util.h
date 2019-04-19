@@ -42,6 +42,8 @@ class Cleanup {
 
   void SetStatus(Status status) { status_ = std::move(status); }
 
+  const Status& GetStatus() const { return status_; }
+
  private:
   std::function<void(Status)> func_;
   Status status_;
