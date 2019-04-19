@@ -1257,6 +1257,10 @@ class TestAtenXlaTensor(XlaTestCase):
     x = torch.randperm(3, device=xm.xla_device())
     self.assertEqual(x.device.type, 'xla')
 
+  def test_no_storage(self):
+    x = torch.randn(5, device=xm.xla_device())
+    self.assertRaises(Exception, x.device)
+
   def test_slice_copy(self):
     a = torch.rand(3, 3, 3)
     xla_device = xm.xla_device()
