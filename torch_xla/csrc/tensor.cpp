@@ -861,6 +861,9 @@ void XLATensor::ApplyPendingGraph() {
   if (CurrentXlaData() == nullptr) {
     ir::Value ir_value = CurrentIrValue();
     if (ir_value) {
+      DebugUtil::SaveTensorsGraphInfo("ApplyPendingGraphSingle", {*this},
+                                      /*indices=*/nullptr);
+
       ir::LoweringContext lowering_ctx("ApplyPendingGraph");
       xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
       xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build(root));
@@ -1226,6 +1229,8 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors) {
   };
 
   SyncTensorCollection coll = CollectApplyGraphTensors(*tensors);
+  DebugUtil::SaveTensorsGraphInfo("ApplyPendingGraph", *tensors, &coll.indices);
+
   // The hash inside the SyncTensorCollection structure is in tensors order, but
   // here we need it in apply order.
   size_t hash = 0;
