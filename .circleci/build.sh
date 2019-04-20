@@ -42,7 +42,7 @@ sudo add-apt-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
 sudo apt-get -qq update
 
-sudo apt-get -qq install clang-7 clang++-7
+sudo apt-get -qq install gcc-7 g++-7
 # Bazel dependencies
 sudo apt-get -qq install pkg-config zip zlib1g-dev unzip
 # XLA build requires Bazel
