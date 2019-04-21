@@ -414,24 +414,21 @@ def _fetch_optimizer_state(optimizer):
   return state
 
 
-def _sync_optimizer_state(state):
+def _mark_step(state):
   save_dir = os.environ.get('SAVE_GRAPH_DIR', None)
   if save_dir:
     gs.save_tensors_graph(save_dir, 'optimizer_step',
                           state.gradients + state.tensors)
-  torch_xla._XLAC._xla_sync_live_tensors(
-      torch_xla._XLAC._xla_get_default_device())
+  torch_xla._XLAC._xla_step_marker(torch_xla._XLAC._xla_get_default_device())
 
 
-def optimizer_step(optimizer):
+def optimizer_step(optimizer, closure=None):
   state = _fetch_optimizer_state(optimizer)
   count = torch_xla._XLAC._xla_replication_device_count()
   if count > 1:
     torch_xla._XLAC._xla_cross_replica_sum(state.gradients, 1.0 / count, [])
-  loss = optimizer.step()
-  # Re-fetching saves one XLA compilation round before steady-state.
-  state = _fetch_optimizer_state(optimizer)
-  _sync_optimizer_state(state)
+  loss = optimizer.step(closure=closure)
+  _mark_step(state)
   return loss
 
 
