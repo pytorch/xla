@@ -214,77 +214,126 @@ void SetMulti(std::vector<XLATensor>* dest_tuple,
 
 }  // namespace
 
-// The tensors arena tracks all the XLA tensors which are currently live. This
-// is used to create XLA computation "barriers" in order to flush pending
+// The DeviceContextArena holds per device live information and statistics,
+// among which the XLA tensors which are currently alive in the system. This is
+// used to create XLA computation "barriers" in order to flush pending
 // operations and ensure the same XLA computations are created during the
 // training loops.
-class XLATensor::TensorsArena {
-  struct DeviceTensors {
+class XLATensor::DeviceContextArena {
+  struct DeviceContext {
     std::mutex lock;
     std::map<xla::int64, std::weak_ptr<Data>> tensors_data;
+    std::set<size_t> sync_hashes;
   };
 
  public:
-  static TensorsArena* Get() {
-    static TensorsArena* arena = new TensorsArena();
+  static DeviceContextArena* Get() {
+    static DeviceContextArena* arena = new DeviceContextArena();
     return arena;
   }
 
   void RegisterTensor(std::shared_ptr<Data> data) {
-    DeviceTensors* device_tensors = GetDeviceTensors(data->device);
-    std::lock_guard<std::mutex> lock(device_tensors->lock);
-    device_tensors->tensors_data.emplace(data->unique_id, data);
+    DeviceContext* devctx = GetDeviceContext(data->device);
+    std::lock_guard<std::mutex> lock(devctx->lock);
+    devctx->tensors_data.emplace(data->unique_id, data);
     XLA_COUNTER("CreateXlaTensor", 1);
   }
 
   void UnregisterTensor(Data* data) {
-    DeviceTensors* device_tensors = GetDeviceTensors(data->device);
-    std::lock_guard<std::mutex> lock(device_tensors->lock);
-    device_tensors->tensors_data.erase(data->unique_id);
+    DeviceContext* devctx = GetDeviceContext(data->device);
+    std::lock_guard<std::mutex> lock(devctx->lock);
+    devctx->tensors_data.erase(data->unique_id);
     XLA_COUNTER("DestroyXlaTensor", 1);
   }
 
-  std::vector<XLATensor> GetTensors(const Device* device) {
+  std::vector<XLATensor> GetLiveTensors(const Device* device) {
     std::vector<XLATensor> tensors;
-    if (device == nullptr) {
-      std::lock_guard<std::mutex> lock(lock_);
-      for (auto& device_tensors : device_tensors_) {
-        std::lock_guard<std::mutex> lock(device_tensors.second->lock);
-        for (auto& uid_wptr : device_tensors.second->tensors_data) {
-          std::shared_ptr<Data> data = uid_wptr.second.lock();
-          if (data != nullptr) {
-            tensors.push_back(XLATensor(std::move(data)));
-          }
-        }
-      }
-    } else {
-      DeviceTensors* device_tensors = GetDeviceTensors(*device);
-      std::lock_guard<std::mutex> lock(device_tensors->lock);
-      for (auto& uid_wptr : device_tensors->tensors_data) {
+    auto fn = [&](DeviceContext* devctx) {
+      std::lock_guard<std::mutex> lock(devctx->lock);
+      for (auto& uid_wptr : devctx->tensors_data) {
         std::shared_ptr<Data> data = uid_wptr.second.lock();
         if (data != nullptr) {
           tensors.push_back(XLATensor(std::move(data)));
         }
       }
-    }
+    };
+    ForAllDeviceContexts(fn, device);
     return tensors;
   }
 
+  void ClearProfileData(const Device* device) {
+    auto fn = [&](DeviceContext* devctx) {
+      std::lock_guard<std::mutex> lock(devctx->lock);
+      devctx->sync_hashes.clear();
+    };
+    ForAllDeviceContexts(fn, device);
+  }
+
+  void AddSyncedHash(const Device& device, size_t hash) {
+    DeviceContext* devctx = GetDeviceContext(device);
+    std::lock_guard<std::mutex> lock(devctx->lock);
+    devctx->sync_hashes.insert(hash);
+  }
+
  private:
-  DeviceTensors* GetDeviceTensors(const Device& device) {
+  std::vector<DeviceContext*> GetAllDeviceContexts() {
+    std::vector<DeviceContext*> all_device_contexts;
     std::lock_guard<std::mutex> lock(lock_);
-    auto it = device_tensors_.find(device);
-    if (it == device_tensors_.end()) {
-      it = device_tensors_.emplace(device, new DeviceTensors()).first;
+    all_device_contexts.reserve(device_contexts_.size());
+    for (auto& device_contexts : device_contexts_) {
+      all_device_contexts.push_back(device_contexts.second);
+    }
+    return all_device_contexts;
+  }
+
+  void ForAllDeviceContexts(const std::function<void(DeviceContext*)>& fn,
+                            const Device* device) {
+    if (device == nullptr) {
+      for (auto devctx : GetAllDeviceContexts()) {
+        fn(devctx);
+      }
+    } else {
+      fn(GetDeviceContext(*device));
+    }
+  }
+
+  DeviceContext* GetDeviceContext(const Device& device) {
+    std::lock_guard<std::mutex> lock(lock_);
+    auto it = device_contexts_.find(device);
+    if (it == device_contexts_.end()) {
+      it = device_contexts_.emplace(device, new DeviceContext()).first;
     }
     return it->second;
   }
 
   std::mutex lock_;
-  std::map<Device, DeviceTensors*> device_tensors_;
+  std::map<Device, DeviceContext*> device_contexts_;
 };
 
-XLATensor::Data::~Data() { TensorsArena::Get()->UnregisterTensor(this); }
+class XLATensor::IrNodeMetaData : public ir::UserMetaData {
+ public:
+  void BindTensorData(std::shared_ptr<Data> data) {
+    tensors_data_.emplace(data->unique_id, data);
+  }
+
+  void UnbindTensorData(Data* data) { tensors_data_.erase(data->unique_id); }
+
+  std::vector<std::shared_ptr<Data>> GetBoundTensorData() const {
+    std::vector<std::shared_ptr<Data>> tensors_data;
+    for (auto& uid_wptr : tensors_data_) {
+      std::shared_ptr<Data> data = uid_wptr.second.lock();
+      if (data != nullptr) {
+        tensors_data.push_back(std::move(data));
+      }
+    }
+    return tensors_data;
+  }
+
+ private:
+  std::map<xla::int64, std::weak_ptr<Data>> tensors_data_;
+};
+
+XLATensor::Data::~Data() { DeviceContextArena::Get()->UnregisterTensor(this); }
 
 XLATensor::Async::Async(
     SyncTensorCollection* coll,
@@ -321,7 +370,7 @@ void XLATensor::Async::Wait() {
 XLATensor XLATensor::Create(const at::Tensor& tensor, const Device& device,
                             bool requires_grad) {
   XLATensor xtensor(tensor, device, requires_grad);
-  TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
+  DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
 
@@ -329,7 +378,7 @@ XLATensor XLATensor::Create(
     xla::ComputationClient::DataPtr xla_data, bool requires_grad,
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(xla_data), requires_grad, logical_element_type);
-  TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
+  DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
 
@@ -337,7 +386,7 @@ XLATensor XLATensor::Create(
     ir::Value ir_value, const Device& device,
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(ir_value), device, logical_element_type);
-  TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
+  DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
 
@@ -345,7 +394,7 @@ XLATensor XLATensor::Create(
     std::shared_ptr<View> view, const Device& device,
     c10::optional<at::ScalarType> logical_element_type) {
   XLATensor xtensor(std::move(view), device, logical_element_type);
-  TensorsArena::Get()->RegisterTensor(xtensor.data_ptr());
+  DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
 
@@ -367,6 +416,11 @@ XLATensor::XLATensor(ir::Value ir_value, const Device& device,
                      c10::optional<at::ScalarType> logical_element_type)
     : data_(std::make_shared<Data>(std::move(ir_value), device,
                                    logical_element_type)) {
+  // This can't be in the Data constructor, as binding wants an
+  // std::shared_ptr<Data>, since the metadata holds std::weak_ptr<Data> (can't
+  // hold shared pointers as it'd fall into circular refcounting).
+  data()->ir_value->get_user_metadata<IrNodeMetaData>()->BindTensorData(
+      data_ptr());
   TryLimitGraphSize();
 }
 
@@ -446,7 +500,7 @@ xla::ComputationClient::DataPtr XLATensor::GetXlaData() {
     View::IrNode ir_value_updated = GetViewUpdate(data()->view);
     if (ir_value_updated.updated || !data()->ir_value) {
       up_to_date = false;
-      data()->ir_value = ir_value_updated.ir_value;
+      AssignIrValue(std::move(ir_value_updated.ir_value));
     }
   }
   if (up_to_date) {
@@ -503,7 +557,7 @@ std::string XLATensor::DumpHloComputation(
 void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data) {
   data()->view = nullptr;
   data()->xla_data = std::move(xla_data);
-  data()->ir_value = ir::Value();
+  AssignIrValue(ir::Value());
   data()->tensor_data = c10::nullopt;
 }
 
@@ -523,9 +577,24 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
   // node nullify that, it will not be found.
   // We do have logic in CurrentXlaData() to verify that the XLA data pointer is
   // actually valid, as far as tensor value goes.
-  data()->ir_value = std::move(ir_value);
+  AssignIrValue(std::move(ir_value));
   data()->tensor_data = c10::nullopt;
   TryLimitGraphSize();
+}
+
+void XLATensor::AssignIrValue(ir::Value ir_value) const {
+  ir::Value prev_ir_value = data()->ir_value;
+  if (prev_ir_value) {
+    IrNodeMetaData* meta = prev_ir_value->user_metadata<IrNodeMetaData>();
+    // If there is a current IR value, it must have IrNodeMetaData as we should
+    // have previously registered it.
+    XLA_CHECK(meta != nullptr);
+    meta->UnbindTensorData(data());
+  }
+  if (ir_value) {
+    ir_value->get_user_metadata<IrNodeMetaData>()->BindTensorData(data_ptr());
+  }
+  data()->ir_value = std::move(ir_value);
 }
 
 void XLATensor::TryLimitGraphSize() {
@@ -556,12 +625,12 @@ ir::Value XLATensor::GetIrValue() const {
     // will still collapse them all into a single XLA parameter op). So call
     // which wants the XLA data will still find it, w/out having to fetch it via
     // a computation client from-server call.
-    data()->ir_value = CreateTensorNode(xla_data);
+    AssignIrValue(CreateTensorNode(xla_data));
     return data()->ir_value;
   }
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
-  data()->ir_value = GetIrValueForTensor(*tensor_data, GetDevice());
+  AssignIrValue(GetIrValueForTensor(*tensor_data, GetDevice()));
   return data()->ir_value;
 }
 
@@ -658,7 +727,7 @@ void XLATensor::ReferenceDataFrom(const XLATensor& source) {
       << shape() << " vs " << source.shape();
 
   data()->xla_data = source.data()->xla_data;
-  data()->ir_value = source.data()->ir_value;
+  AssignIrValue(source.data()->ir_value);
   data()->tensor_data = source.data()->tensor_data;
 }
 
@@ -693,7 +762,7 @@ void XLATensor::MakeWriteableTensorDataSource() {
     data()->view = UpdateView(data()->view, ir_value);
   }
   data()->xla_data = nullptr;
-  data()->ir_value = ir::Value();
+  AssignIrValue(ir::Value());
 }
 
 at::Tensor XLATensor::ToMutableTensor() {
@@ -709,11 +778,11 @@ void XLATensor::SetTensor(at::Tensor tensor) {
     data()->view = UpdateView(data()->view, ir_value);
   }
   data()->xla_data = nullptr;
-  data()->ir_value = ir::Value();
+  AssignIrValue(ir::Value());
 }
 
 std::vector<XLATensor> XLATensor::GetLiveTensors(const Device* device) {
-  return TensorsArena::Get()->GetTensors(device);
+  return DeviceContextArena::Get()->GetLiveTensors(device);
 }
 
 std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
@@ -1059,6 +1128,10 @@ void XLATensor::SyncTensorsGraph(std::vector<XLATensor>* tensors) {
 void XLATensor::SyncLiveTensorsGraph(const Device* device) {
   auto tensors = GetLiveTensors(device);
   SyncTensorsGraph(&tensors);
+}
+
+void XLATensor::MarkStep(const Device* device) {
+  DeviceContextArena::Get()->ClearProfileData(device);
 }
 
 std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ATen/core/interned_strings.h>
+
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -10,7 +12,6 @@
 #include <utility>
 #include <vector>
 
-#include <ATen/core/interned_strings.h>
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/lib/gtl/inlined_vector.h"
@@ -25,6 +26,12 @@ class LoweringContext;
 using NodePtr = std::shared_ptr<Node>;
 
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
+
+// The base class for user defined metadata which is possible to attach to IR
+// nodes.
+struct UserMetaData {
+  virtual ~UserMetaData() {}
+};
 
 struct MetaData {
   std::vector<SourceLocation> frame_info;
@@ -195,6 +202,19 @@ class Node {
 
   const MetaData& metadata() const { return metadata_; }
 
+  template <typename T>
+  T* user_metadata() const {
+    return dynamic_cast<T*>(user_metadata_.get());
+  }
+
+  template <typename T>
+  T* get_user_metadata() {
+    if (user_metadata_ == nullptr) {
+      user_metadata_ = std::make_shared<T>();
+    }
+    return dynamic_cast<T*>(user_metadata_.get());
+  }
+
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
 
   void ReplaceAllUsesWith(NodePtr node, size_t index = 0);
@@ -235,8 +255,11 @@ class Node {
   std::set<Use> uses_;
   // The hash value of the graph rooted at this node.
   size_t hash_ = 0;
-  // The metadata attached to the IR node.
+  // The IR specific metadata attached to the IR node.
   MetaData metadata_;
+  // The IR framework user can attach a user defined metadata object deriving
+  // from UserMetaData.
+  std::shared_ptr<UserMetaData> user_metadata_;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const Node& node) {

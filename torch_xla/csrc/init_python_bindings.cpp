@@ -122,6 +122,13 @@ void SyncLiveTensors(const std::string& device_str) {
   XLATensor::SyncLiveTensorsGraph(opt_device ? &opt_device.value() : nullptr);
 }
 
+void StepMarker(const std::string& device_str) {
+  auto opt_device = GetOptionalDevice(device_str);
+  const Device* device = opt_device ? &opt_device.value() : nullptr;
+  XLATensor::SyncLiveTensorsGraph(device);
+  XLATensor::MarkStep(device);
+}
+
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
   std::vector<XLATensor> xtensors;
   for (auto& tensor : tensors) {
@@ -254,6 +261,13 @@ void InitXlaModuleBindings(py::module m) {
       [](const std::string& device) {
         NoGilSection nogil;
         SyncLiveTensors(device);
+      },
+      py::arg("device") = "");
+  m.def(
+      "_xla_step_marker",
+      [](const std::string& device) {
+        NoGilSection nogil;
+        StepMarker(device);
       },
       py::arg("device") = "");
   m.def("_xla_to_tensors", [](std::vector<XLATensor>& tensors) {
