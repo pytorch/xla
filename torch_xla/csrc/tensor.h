@@ -18,7 +18,8 @@
 namespace torch_xla {
 
 class XLATensor {
-  class TensorsArena;
+  class DeviceContextArena;
+  class IrNodeMetaData;
   struct Data;
 
  public:
@@ -129,7 +130,13 @@ class XLATensor {
   // the tensors must be on the same device.
   static void SyncTensorsGraph(std::vector<XLATensor>* tensors);
 
+  // Makes sure that any outstanding IR operation accumulated over live tensors,
+  // gets turned into device data.
   static void SyncLiveTensorsGraph(const Device* device);
+
+  // Marks an execution step, which allows the tensor framework to understand
+  // the computation boundaries.
+  static void MarkStep(const Device* device);
 
   // Applies the queue of operations for a list of tensors.
   static void ApplyPendingGraph(std::vector<XLATensor>* tensors);
@@ -1014,6 +1021,8 @@ class XLATensor {
   std::shared_ptr<Data> data_ptr() const { return data_; }
 
   void SetIrValue(ir::Value ir_value);
+
+  void AssignIrValue(ir::Value ir_value) const;
 
   void SetTensorData(at::Tensor tensor_data);
 
