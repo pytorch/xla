@@ -2,7 +2,7 @@
 
 #include <ATen/ATen.h>
 
-#include "torch_xla/csrc/aten_xla_type_instances.h"
+#include "torch_xla/csrc/aten_xla_type.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
