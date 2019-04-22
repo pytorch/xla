@@ -1,11 +1,12 @@
 #include "torch_xla/csrc/aten_xla_type.h"
 
+#include <ATen/Context.h>
+
 #include <mutex>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
-#include "torch_xla/csrc/aten_xla_type_instances.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
@@ -56,7 +57,11 @@ bool IsNonTrivialPadding(at::IntArrayRef padding) {
 }
 
 void AtenInitialize() {
-  RegisterAtenXlaTypes();
+  auto& context = at::globalContext();
+  context.registerType(
+      at::Backend::XLA,
+      new AtenXlaType(c10::XLATensorId(), /*is_variable=*/false,
+                      /*is_undefined=*/false));
   XLATensorImpl::AtenInitialize();
 }
 
