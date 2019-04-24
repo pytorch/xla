@@ -602,6 +602,7 @@ CreateTranslationHandlers() {
   (*t)[at::aten::addmm] = TranslateAddMatMul;
   (*t)[at::aten::mm] = TranslateMatMul;
   (*t)[at::aten::max_pool2d_with_indices] = TranslateMaxPool;
+  (*t)[at::aten::max_pool2d] = TranslateMaxPool;
   (*t)[at::aten::max_pool2d_with_indices_backward] = TranslateMaxPoolBackward;
   (*t)[at::aten::avg_pool2d] = TranslateAvgPool;
   (*t)[at::aten::avg_pool2d_backward] = TranslateAvgPoolBackward;
