@@ -286,7 +286,7 @@ def create_xla_model(model,
   for n in range(0, num_cores):
     replica_inputs.append(inputs)
   traced_model = torch.jit.trace(model, inputs)
-  xla_model = torch_xla._XLAC.XlaModule(traced_model)
+  xla_model = torch_xla._XLAC.XlaModule(traced_model._c)
   inputs_xla = convert_to_xla_tensors(replica_inputs, devices=devices)
   if input_gradients is not None:
     xla_model.set_input_gradients(input_gradients)
