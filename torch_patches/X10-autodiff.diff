@@ -1,0 +1,42 @@
+diff --git a/torch/csrc/jit/autodiff.cpp b/torch/csrc/jit/autodiff.cpp
+index 922681ec8..9a783be07 100644
+--- a/torch/csrc/jit/autodiff.cpp
++++ b/torch/csrc/jit/autodiff.cpp
+@@ -65,6 +65,7 @@ bool isDifferentiable(Node* n) {
+       "aten::fmod(Tensor self, Scalar other) -> Tensor",
+       "aten::remainder(Tensor self, Scalar other) -> Tensor",
+       "aten::max_pool2d_with_indices(Tensor self, int[] kernel_size, int[] stride, int[] padding, int[] dilation, bool ceil_mode) -> (Tensor, Tensor)",
++      "aten::max_pool2d(Tensor self, int[] kernel_size, int[] stride, int[] padding, int[] dilation, bool ceil_mode) -> Tensor",
+       "aten::thnn_conv2d_forward(Tensor self, Tensor weight, int[] kernel_size, Tensor? bias, int[] stride, int[] padding) -> (Tensor, Tensor, Tensor)",
+       "aten::native_batch_norm(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps) -> (Tensor, Tensor, Tensor)",
+   };
+@@ -367,6 +368,29 @@ class GradientHelper {
+               nullptr,
+               nullptr};
+ 
++    } else if (
++        node->matches(
++            "aten::max_pool2d(Tensor self, int[] kernel_size, int[] stride, int[] padding, int[] dilation, bool ceil_mode) -> Tensor")) {
++      AT_ASSERT(grads.size() == 1);
++      auto graph = node->owningGraph();
++      at::Tensor undefined = at::zeros({});
++      auto backward_value = graph->insert(
++          aten::max_pool2d_with_indices_backward,
++          {grads.at(0).value(),
++           node->namedInput(attr::self),
++           node->namedInput(attr::kernel_size),
++           node->namedInput(attr::stride),
++           node->namedInput(attr::padding),
++           node->namedInput(attr::dilation),
++           node->namedInput(attr::ceil_mode),
++           graph->insertConstant(undefined)});
++      return {backward_value->node()->output(0),
++              nullptr,
++              nullptr,
++              nullptr,
++              nullptr,
++              nullptr};
++
+     } else if (
+         node->matches(
+             "aten::thnn_conv2d_forward(Tensor self, Tensor weight, int[] kernel_size, Tensor? bias, int[] stride, int[] padding) -> (Tensor, Tensor, Tensor)")) {
