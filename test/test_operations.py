@@ -298,7 +298,7 @@ class TestMulAdd(XlaTestCase):
     y = torch.rand(3, 5)
     model = XlaMulAdd()
     traced_model = torch.jit.trace(model, (x, y))
-    xla_model = torch_xla._XLAC.XlaModule(traced_model)
+    xla_model = torch_xla._XLAC.XlaModule(traced_model._c)
     inputs_xla = [torch_xla._XLAC.XLATensor(x), torch_xla._XLAC.XLATensor(y)]
     output_xla = xla_model((tuple(inputs_xla)))
     expected = model(x, y)
@@ -391,7 +391,7 @@ class TestStack(XlaTestCase):
     for dim in [0, 1]:
       model = XlaStack(dim)
       traced_model = torch.jit.trace(model, (x, y))
-      xla_model = torch_xla._XLAC.XlaModule(traced_model, differentiate=False)
+      xla_model = torch_xla._XLAC.XlaModule(traced_model._c, differentiate=False)
       inputs_xla = [torch_xla._XLAC.XLATensor(x), torch_xla._XLAC.XLATensor(y)]
       output_xla = xla_model((tuple(inputs_xla)))
       expected = model(x, y)
@@ -844,7 +844,7 @@ class TestNllLoss(TestCase):
     target = torch.empty(3, dtype=torch.long).random_(5)
     model = XlaNllLoss()
     traced_model = torch.jit.trace(model, (input, target))
-    xla_model = torch_xla._XLAC.XlaModule(traced_model)
+    xla_model = torch_xla._XLAC.XlaModule(traced_model._c)
     xla_inputs = [
         torch_xla._XLAC.XLATensor(input),
         torch_xla._XLAC.XLATensor(target)
@@ -908,7 +908,7 @@ class TestOptimizer(XlaTestCase):
     input = _gen_tensor(4, 4, requires_grad=True)
     model = nn.Linear(4, 20)
     traced_model = torch.jit.trace(model, input)
-    xla_model = torch_xla._XLAC.XlaModule(traced_model)
+    xla_model = torch_xla._XLAC.XlaModule(traced_model._c)
     input_xla = [torch_xla._XLAC.XLATensor(input)]
     xla_model((tuple(input_xla)))
     xla_optimizer = optim.SGD(
