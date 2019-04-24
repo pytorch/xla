@@ -19,7 +19,7 @@ xla::XlaOp LowerArgMin(const xla::XlaOp& input, xla::int64 dim, bool keepdim) {
     operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(shape)});
     shape = XlaHelpers::ShapeOfXlaOp(operand);
   }
-  xla::XlaOp result = xla::ArgMin(operand, xla::PrimitiveType::S64, dim);
+  xla::XlaOp result = xla::ArgMinTwoPass(operand, xla::PrimitiveType::S64, dim);
   if (keepdim) {
     auto dimensions = xla::util::ToVector<xla::int64>(shape.dimensions());
     dimensions[dim] = 1;
