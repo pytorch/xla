@@ -919,7 +919,7 @@ class XLATensor {
 
     void Wait();
 
-    xla::xla_util::MultiWait mwait;
+    xla::util::MultiWait mwait;
     std::vector<size_t> indices;
     std::vector<xla::util::Cleanup> unlocker;
     std::vector<xla::ComputationClient::DataPtr> parameters_data;
@@ -1081,10 +1081,20 @@ class XLATensor {
   static SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config);
 
+  // Implementation of the GetTensors() API using the op-by-op executor.
+  static std::vector<at::Tensor> GetTensorsOpByOp(
+      std::vector<XLATensor>* tensors, const std::vector<bool>* writeable);
+
+  // Runs an asynchronous syn operation using the op-by-op executor.
+  static void SyncTensorsGraphOpByOp(std::vector<XLATensor>* tensors);
+
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.
   static std::vector<xla::ComputationClient::DataPtr> GatherTensorsXlaData(
-      const std::vector<XLATensor>& tensors, std::shared_ptr<Async> async);
+      const std::vector<XLATensor>& tensors,
+      tensorflow::gtl::ArraySlice<const size_t> indices,
+      tensorflow::gtl::ArraySlice<const xla::ComputationClient::DataPtr>
+          tensors_data);
 
   // Schedules the execution of a sync tensors operation in background. The
   // asynchronous operation will hold the device locks by capturing the ones

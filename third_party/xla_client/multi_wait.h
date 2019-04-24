@@ -9,7 +9,7 @@
 #include "tensorflow/compiler/xla/types.h"
 
 namespace xla {
-namespace xla_util {
+namespace util {
 
 // Support waiting for a number of tasks to complete.
 class MultiWait {
@@ -41,7 +41,7 @@ class MultiWait {
   Status status_;
 };
 
-}  // namespace xla_util
+}  // namespace util
 }  // namespace xla
 
 #endif  // TENSORFLOW_COMPILER_XLA_XLA_CLIENT_MULTI_WAIT_H_

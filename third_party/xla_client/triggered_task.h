@@ -9,7 +9,7 @@
 #include <vector>
 
 namespace xla {
-namespace xla_util {
+namespace util {
 
 // Wraps a function which should be run many times upon user activations.
 class TriggeredTask {
@@ -49,7 +49,7 @@ class TriggeredTask {
   std::vector<std::unique_ptr<std::thread>> threads_;
 };
 
-}  // namespace xla_util
+}  // namespace util
 }  // namespace xla
 
 #endif  // TENSORFLOW_COMPILER_XLA_XLA_CLIENT_TRIGGERED_TASK_H_

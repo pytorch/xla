@@ -2,13 +2,28 @@
 
 #include <stdexcept>
 
+#include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/platform/stacktrace.h"
 
 namespace xla {
-namespace xrt_util {
+namespace util {
+namespace {
+
+size_t SingleShapeHash(const Shape& shape, size_t seed) {
+  for (auto dim : shape.layout().minor_to_major()) {
+    seed = HashCombine(seed, dim);
+  }
+  for (auto dim : shape.dimensions()) {
+    seed = HashCombine(seed, dim);
+  }
+  return HashCombine(seed, static_cast<int>(shape.element_type()));
+}
+
+}  // namespace
 
 StatusOr<std::unique_ptr<HloModule>> CreateModuleFromProto(
     const HloModuleProto& proto, const DebugOptions& debug_options) {
@@ -39,5 +54,14 @@ void CheckComputationStatus(
   }
 }
 
-}  // namespace xrt_util
+size_t ShapeHash(const Shape& shape) {
+  size_t hash = 0xa5d2d6916;
+  ShapeUtil::ForEachSubshape(shape,
+                             [&](const Shape& subshape, const ShapeIndex&) {
+                               hash = SingleShapeHash(subshape, hash);
+                             });
+  return hash;
+}
+
+}  // namespace util
 }  // namespace xla

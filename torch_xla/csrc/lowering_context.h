@@ -59,10 +59,11 @@ class LoweringContext {
   // API after having called the AddResult() API.
   xla::StatusOr<xla::XlaComputation> Build(const xla::XlaOp& root);
 
- private:
-  void LowerPostOrder(
-      tensorflow::gtl::ArraySlice<const Node* const> post_order);
+  // Lowers a single IR node. All the inputs to the node must have a lowering
+  // before calling this API. Returns the generated XLA operations.
+  XlaOpVector LowerNode(const Node* node);
 
+ private:
   // Reports an XLA builder error for the given node.
   TF_ATTRIBUTE_NORETURN void ReportBuilderError(const Node* node,
                                                 const char* error_msg);

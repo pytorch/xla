@@ -50,9 +50,11 @@ include_directories(
 set(TORCH_XLA_TEST_SOURCES
   main.cpp
   cpp_test_util.cpp
+  test_async_task.cpp
   test_aten_xla_tensor.cpp
   test_ir.cpp
   test_mayberef.cpp
+  test_op_by_op_executor.cpp
   test_replication.cpp
   test_tensor.cpp
   test_xla_util_cache.cpp

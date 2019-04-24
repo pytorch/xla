@@ -5,7 +5,7 @@
 #include "tensorflow/core/lib/core/errors.h"
 
 namespace xla {
-namespace xla_util {
+namespace util {
 
 void MultiWait::Done(Status status) {
   bool notify = false;
@@ -47,5 +47,5 @@ std::function<void()> MultiWait::Completer(std::function<void()> func) {
   return completer;
 }
 
-}  // namespace xla_util
+}  // namespace util
 }  // namespace xla

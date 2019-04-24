@@ -1,7 +1,7 @@
 #include "tensorflow/compiler/xla/xla_client/triggered_task.h"
 
 namespace xla {
-namespace xla_util {
+namespace util {
 
 TriggeredTask::TriggeredTask(std::function<void()> function, size_t num_threads)
     : function_(std::move(function)), running_(num_threads) {
@@ -68,5 +68,5 @@ void TriggeredTask::Runner() {
   }
 }
 
-}  // namespace xla_util
+}  // namespace util
 }  // namespace xla

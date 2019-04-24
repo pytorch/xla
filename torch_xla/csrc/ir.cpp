@@ -85,7 +85,8 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
     : op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
-      hash_(xla::util::HashCombine(op_.hash(), hash_seed)) {
+      node_hash_(xla::util::HashCombine(op_.hash(), hash_seed)),
+      hash_(node_hash_) {
   metadata_.frame_info = GetFrameInfo();
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
@@ -105,7 +106,8 @@ Node::Node(OpKind op, OpList operands,
 Node::Node(OpKind op, xla::Shape shape, size_t hash_seed)
     : op_(std::move(op)),
       shape_(std::move(shape)),
-      hash_(GetOpHash(op_, shape_, hash_seed)) {
+      node_hash_(GetOpHash(op_, shape_, hash_seed)),
+      hash_(node_hash_) {
   metadata_.frame_info = GetFrameInfo();
 }
 
