@@ -198,6 +198,8 @@ class Node {
 
   const std::set<Use>& uses() const { return uses_; }
 
+  size_t node_hash() const { return node_hash_; }
+
   size_t hash() const { return hash_; }
 
   const MetaData& metadata() const { return metadata_; }
@@ -253,6 +255,8 @@ class Node {
   std::vector<Output> operands_as_outputs_;
   // We use a set for uses, as we want deterministic use sequencing.
   std::set<Use> uses_;
+  // The hash value of this node.
+  size_t node_hash_ = 0;
   // The hash value of the graph rooted at this node.
   size_t hash_ = 0;
   // The IR specific metadata attached to the IR node.

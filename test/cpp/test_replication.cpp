@@ -1,8 +1,7 @@
+#include <ATen/ATen.h>
 #include <gtest/gtest.h>
 
 #include <iostream>
-
-#include <ATen/ATen.h>
 
 #include "cpp_test_util.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
@@ -51,7 +50,7 @@ void TestSingleReplication(const std::vector<Device>& devices) {
 
   std::vector<std::vector<xla::ComputationClient::DataPtr>> results(
       device_strings.size());
-  xla::xla_util::MultiWait mwait(device_strings.size());
+  xla::util::MultiWait mwait(device_strings.size());
   xla::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
@@ -59,7 +58,7 @@ void TestSingleReplication(const std::vector<Device>& devices) {
           *compiled_computations[i], {tensors_data[i]}, device_strings[i],
           exec_options);
     };
-    xla::xla_env::ScheduleIoClosure(mwait.Completer(std::move(executor)));
+    xla::env::ScheduleIoClosure(mwait.Completer(std::move(executor)));
   }
   ASSERT_EQ(mwait.Wait(), xla::Status::OK());
 

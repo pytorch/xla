@@ -490,7 +490,7 @@ xla::XlaComputation XlaModule::BuildFusedTrainComputation(
 
   xla::XlaComputation computation = b.Build().ValueOrDie();
   TF_VLOG(5) << "Fused computation:\n"
-             << ConsumeValue(xla::xrt_util::GetComputationHloText(computation));
+             << ConsumeValue(xla::util::GetComputationHloText(computation));
   return computation;
 }
 

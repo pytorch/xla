@@ -56,6 +56,10 @@ ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device);
 std::vector<xla::ComputationClient::DataPtr> Execute(
     tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device);
 
+std::vector<at::Tensor> Fetch(
+    tensorflow::gtl::ArraySlice<const xla::ComputationClient::DataPtr>
+        device_data);
+
 std::vector<at::Tensor> ExecuteAndFetch(
     tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device);
 
