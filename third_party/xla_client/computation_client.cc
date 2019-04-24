@@ -228,6 +228,12 @@ metrics::Metric* ComputationClient::ExecuteParallelMetric() {
   return metric;
 }
 
+metrics::Metric* ComputationClient::ExecuteChainedMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("ExecuteChainedTime", metrics::MetricFnTime);
+  return metric;
+}
+
 metrics::Metric* ComputationClient::DeconstructTupleMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("DeconstructTupleTime", metrics::MetricFnTime);

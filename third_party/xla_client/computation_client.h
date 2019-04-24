@@ -31,7 +31,7 @@ class ComputationClient {
 
     const Shape& shape() const { return shape_; }
 
-    virtual void Swap(Data* data) = 0;
+    virtual void Assign(const Data& data) = 0;
 
    private:
     int64 unique_id_ = 0;
@@ -62,6 +62,8 @@ class ComputationClient {
     ProgramShape program_shape_;
     std::vector<string> devices_;
   };
+
+  using ComputationPtr = std::shared_ptr<Computation>;
 
   // The TensorSource provides a way for a client to populate a buffer allocated
   // by the core computation client code.
@@ -105,6 +107,33 @@ class ComputationClient {
 
   struct ExecuteParallelOptions : public ExecuteOptions {};
 
+  // Describes an operation to be fed to the ExecuteChained() API.
+  // If the device_data member is not nullptr, this operation is a device data
+  // input. Otherwise computation must not be nullptr, and represents the
+  // computation to be executed. The indices of the inputs to the computation,
+  // are coming from the inputs member. Since the operations fed to
+  // ExecuteChained() are a valid post-order, the op_index indices listed within
+  // the inputs member must be lower of the index of the current
+  // ExecuteChainedOp within the post-order. If the outputs member has values,
+  // the result of this ExecuteChainedOp will become an output of the
+  // ExecuteChained() API, with the output_index output of this ExecuteChainedOp
+  // feeding the result_index result.
+  struct ExecuteChainedOp {
+    struct Input {
+      size_t op_index;
+      size_t output_index;
+    };
+    struct Output {
+      size_t output_index;
+      size_t result_index;
+    };
+
+    DataPtr device_data;
+    ComputationPtr computation;
+    std::vector<Output> outputs;
+    std::vector<Input> inputs;
+  };
+
   static StatusOr<std::unique_ptr<ComputationClient>> Create();
 
   virtual ~ComputationClient() {}
@@ -123,7 +152,7 @@ class ComputationClient {
       tensorflow::gtl::ArraySlice<const DataPtr> handles) = 0;
 
   // Compiles a set of computations.
-  virtual std::vector<std::shared_ptr<Computation>> Compile(
+  virtual std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) = 0;
 
   // Executes computation with arguments and returns the result.
@@ -165,6 +194,16 @@ class ComputationClient {
       tensorflow::gtl::ArraySlice<const string> devices,
       const ExecuteParallelOptions& options) = 0;
 
+  // Executes a serie of operations, whose results are input of other
+  // operations. The ops is a valid post-order for the execution, which means
+  // that the inputs of op at index I, will have to be coming from ops at index
+  // lower than I. It returns a vector of device data shared pointers, one for
+  // every ExecuteChainedOp marked with is_result=true, in the order they appear
+  // within the ops post-order.
+  virtual std::vector<DataPtr> ExecuteChained(
+      tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
+      const string& device) = 0;
+
   virtual std::vector<std::vector<DataPtr>> DeconstructTuple(
       tensorflow::gtl::ArraySlice<const DataPtr> tuples) = 0;
 
@@ -182,9 +221,9 @@ class ComputationClient {
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.
-  std::shared_ptr<Computation> Compile(XlaComputation computation,
-                                       std::vector<string> devices,
-                                       const Shape* output_shape);
+  ComputationPtr Compile(XlaComputation computation,
+                         std::vector<string> devices,
+                         const Shape* output_shape);
 
   // Retrieves the set of devices to be passed to the computation client
   // Compile() API. This can return a vector with device itself, or the set of
@@ -209,6 +248,7 @@ class ComputationClient {
   static metrics::Metric* ExecuteMetric();
   static metrics::Metric* ExecuteReplicatedMetric();
   static metrics::Metric* ExecuteParallelMetric();
+  static metrics::Metric* ExecuteChainedMetric();
   static metrics::Metric* DeconstructTupleMetric();
   static metrics::Counter* CreateDataHandlesCounter();
   static metrics::Counter* ReleaseDataHandlesCounter();

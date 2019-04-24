@@ -22,6 +22,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/op_by_op_executor.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
@@ -551,7 +552,7 @@ std::string XLATensor::DumpHloComputation(
     }
   }
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
-  return ConsumeValue(xla::xrt_util::GetComputationHloText(computation));
+  return ConsumeValue(xla::util::GetComputationHloText(computation));
 }
 
 void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data) {
@@ -786,37 +787,81 @@ std::vector<XLATensor> XLATensor::GetLiveTensors(const Device* device) {
 }
 
 std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
-    const std::vector<XLATensor>& tensors, std::shared_ptr<Async> async) {
-  std::vector<xla::ComputationClient::DataPtr> tensors_data;
-  if (async != nullptr) {
-    size_t indices_index = 0;
-    for (size_t i = 0; i < tensors.size(); ++i) {
-      if (indices_index < async->indices.size() &&
-          i == async->indices[indices_index]) {
-        // If we are at the current index (it means that the tensor at index
-        // 'i' had an IR node to sync, use the XLA data held within the Async
-        // object.
-        tensors_data.push_back(async->tensors_data[indices_index]);
-        ++indices_index;
-      } else if (!tensors[i].CurrentTensorData()) {
-        xla::ComputationClient::DataPtr xla_data = tensors[i].CurrentXlaData();
-        XLA_CHECK(xla_data != nullptr);
-        tensors_data.push_back(std::move(xla_data));
-      }
+    const std::vector<XLATensor>& tensors,
+    tensorflow::gtl::ArraySlice<const size_t> indices,
+    tensorflow::gtl::ArraySlice<const xla::ComputationClient::DataPtr>
+        tensors_data) {
+  std::vector<xla::ComputationClient::DataPtr> result_tensors_data;
+  size_t indices_index = 0;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    if (indices_index < indices.size() && i == indices[indices_index]) {
+      // If we are at the current index (it means that the tensor at index
+      // 'i' had an IR node to sync, use the XLA data held within the Async
+      // object.
+      result_tensors_data.push_back(tensors_data[indices_index]);
+      ++indices_index;
+    } else if (!tensors[i].CurrentTensorData()) {
+      xla::ComputationClient::DataPtr xla_data = tensors[i].CurrentXlaData();
+      XLA_CHECK(xla_data != nullptr);
+      result_tensors_data.push_back(std::move(xla_data));
     }
-  } else {
-    // If we are here, async is nullptr, which means that none of the input
-    // tensors had an IR node to sync. This means that they either have
-    // at::Tensor data, or XLA data.
-    for (auto& tensor : tensors) {
-      if (!tensor.CurrentTensorData()) {
-        xla::ComputationClient::DataPtr xla_data = tensor.CurrentXlaData();
-        XLA_CHECK(xla_data != nullptr);
-        tensors_data.push_back(std::move(xla_data));
+  }
+  return result_tensors_data;
+}
+
+std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
+    std::vector<XLATensor>* tensors, const std::vector<bool>* writeable) {
+  SyncTensorsConfig config;
+  config.force_xla_data = false;
+  SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
+  std::vector<xla::ComputationClient::DataPtr> async_tensors_data;
+  if (!coll.indices.empty()) {
+    DebugUtil::SaveTensorsGraphInfo("GetTensorsOpByOp", *tensors,
+                                    &coll.indices);
+
+    xla::util::Unique<Device> unique_device;
+    std::vector<ir::Value> roots;
+    for (auto index : coll.indices) {
+      roots.push_back((*tensors)[index].CurrentIrValue());
+      unique_device.set((*tensors)[index].GetDevice());
+    }
+    async_tensors_data =
+        OpByOpExecutor::Get()->Execute(roots, unique_device->ToString());
+  }
+
+  std::vector<xla::ComputationClient::DataPtr> tensors_data =
+      GatherTensorsXlaData(*tensors, coll.indices, async_tensors_data);
+  std::vector<xla::Literal> literals =
+      xla::ComputationClient::Get()->TransferFromServer(tensors_data);
+  std::vector<at::Tensor> results;
+  size_t literals_index = 0;
+  results.reserve(tensors->size());
+  for (size_t i = 0; i < tensors->size(); ++i) {
+    c10::optional<at::Tensor> tensor_data = (*tensors)[i].CurrentTensorData();
+    if (tensor_data) {
+      results.push_back(*tensor_data);
+    } else {
+      XLA_CHECK_LT(literals_index, literals.size());
+      results.push_back(MakeTensorFromXlaLiteral(literals[literals_index],
+                                                 (*tensors)[i].dtype()));
+      ++literals_index;
+    }
+  }
+  if (writeable != nullptr) {
+    XLA_CHECK_EQ(tensors->size(), writeable->size());
+    for (size_t i = 0; i < tensors->size(); ++i) {
+      if ((*writeable)[i]) {
+        // If all we have for this tensor is ATEN tensor data, we need to set it
+        // before calling MakeWriteableTensorDataSource(), which will otherwise
+        // error out.
+        if (!(*tensors)[i].CurrentTensorData()) {
+          (*tensors)[i].SetTensorData(results[i]);
+        }
+        (*tensors)[i].MakeWriteableTensorDataSource();
       }
     }
   }
-  return tensors_data;
+  return results;
 }
 
 std::vector<at::Tensor> XLATensor::GetTensors(
@@ -828,7 +873,13 @@ std::vector<at::Tensor> XLATensor::GetTensors(
     XLA_CHECK_OK(async->mwait.Wait());
   }
   std::vector<xla::ComputationClient::DataPtr> tensors_data =
-      GatherTensorsXlaData(*tensors, async);
+      GatherTensorsXlaData(
+          *tensors,
+          async != nullptr ? async->indices
+                           : tensorflow::gtl::ArraySlice<const size_t>(),
+          async != nullptr ? async->tensors_data
+                           : tensorflow::gtl::ArraySlice<
+                                 const xla::ComputationClient::DataPtr>());
   std::vector<xla::Literal> literals =
       xla::ComputationClient::Get()->TransferFromServer(tensors_data);
   std::vector<at::Tensor> results;
@@ -1020,7 +1071,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
     return nullptr;
   }
 
-  xla::xla_util::Unique<Device> unique_device;
+  xla::util::Unique<Device> unique_device;
   std::vector<const ir::Node*> roots;
   roots.reserve(coll->indices.size());
   for (auto index : coll->indices) {
@@ -1103,7 +1154,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
           async->device, options);
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
-          async->tensors_data[i]->Swap(results[i].get());
+          async->tensors_data[i]->Assign(*results[i]);
         } else {
           async->tensors_data[i] = std::move(results[i]);
         }
@@ -1116,7 +1167,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     }
   };
 
-  xla::xla_env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
+  xla::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
   return async;
 }
 
@@ -1134,6 +1185,60 @@ void XLATensor::MarkStep(const Device* device) {
   DeviceContextArena::Get()->ClearProfileData(device);
 }
 
+void XLATensor::SyncTensorsGraphOpByOp(std::vector<XLATensor>* tensors) {
+  struct OpByOpAsync {
+    explicit OpByOpAsync(SyncTensorCollection coll) : coll(std::move(coll)) {}
+
+    SyncTensorCollection coll;
+    std::vector<xla::ComputationClient::DataPtr> tensors_data;
+    xla::util::Unique<Device> unique_device;
+    std::vector<ir::Value> roots;
+  };
+
+  SyncTensorsConfig config;
+  config.force_xla_data = true;
+  SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
+  if (!coll.indices.empty()) {
+    DebugUtil::SaveTensorsGraphInfo("SyncTensorsGraphOpByOp", *tensors,
+                                    &coll.indices);
+
+    auto async = std::make_shared<OpByOpAsync>(std::move(coll));
+    for (auto index : async->coll.indices) {
+      XLATensor& tensor = (*tensors)[index];
+      async->roots.push_back(tensor.CurrentIrValue());
+      async->unique_device.set(tensor.GetDevice());
+
+      xla::ComputationClient::DataPtr xla_data = tensor.CurrentXlaData();
+      if (xla_data == nullptr && config.force_xla_data) {
+        xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
+            async->unique_device->ToString(), tensor.shape());
+        tensor.SetXlaData(xla_data);
+      }
+      async->tensors_data.emplace_back(std::move(xla_data));
+    }
+
+    auto syncfn = [async]() {
+      try {
+        std::vector<xla::ComputationClient::DataPtr> results =
+            OpByOpExecutor::Get()->Execute(async->roots,
+                                           async->unique_device->ToString());
+        for (size_t i = 0; i < results.size(); ++i) {
+          if (async->tensors_data[i] != nullptr) {
+            async->tensors_data[i]->Assign(*results[i]);
+          }
+        }
+      } catch (const std::exception& ex) {
+        xla::Status status = tensorflow::errors::Internal(ex.what());
+        for (auto& unlocker : async->coll.unlocker) {
+          unlocker.SetStatus(status);
+        }
+      }
+    };
+
+    xla::env::ScheduleIoClosure(std::move(syncfn));
+  }
+}
+
 std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     std::vector<XLATensor>* tensors, const SyncTensorsConfig& config) {
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
@@ -1146,7 +1251,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   }
   XLA_COUNTER("UncachedSyncTensors", 1);
 
-  xla::xla_util::Unique<Device> unique_device;
+  xla::util::Unique<Device> unique_device;
   ir::LoweringContext lowering_ctx("SyncTensorsGraph");
   for (auto index : coll.indices) {
     ir::Value ir_value = (*tensors)[index].CurrentIrValue();
@@ -1336,7 +1441,7 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors) {
   std::vector<std::vector<xla::int64>> index_mapping(contexts_map.size());
   std::vector<std::string> devices(contexts_map.size());
   std::vector<xla::Shape> shapes(contexts_map.size());
-  xla::xla_util::MultiWait mwait(contexts_map.size());
+  xla::util::MultiWait mwait(contexts_map.size());
   std::vector<xla::ComputationClient::CompileInstance> instances(
       contexts_map.size());
   size_t index = 0;
@@ -1381,7 +1486,7 @@ void XLATensor::ApplyPendingGraph(std::vector<XLATensor>* tensors) {
       input_mapping[index] = std::move(device_input_mapping);
       parameters[index] = std::move(parameters_data);
     };
-    xla::xla_env::ScheduleClosure(mwait.Completer(std::move(generator)));
+    xla::env::ScheduleClosure(mwait.Completer(std::move(generator)));
     ++index;
   }
   TF_CHECK_OK(mwait.Wait());

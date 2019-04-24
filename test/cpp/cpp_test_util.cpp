@@ -146,17 +146,23 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
       device.ToString(), options);
 }
 
-std::vector<at::Tensor> ExecuteAndFetch(
-    tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device) {
-  auto results = Execute(roots, device);
+std::vector<at::Tensor> Fetch(
+    tensorflow::gtl::ArraySlice<const xla::ComputationClient::DataPtr>
+        device_data) {
   std::vector<xla::Literal> literals =
-      xla::ComputationClient::Get()->TransferFromServer(results);
+      xla::ComputationClient::Get()->TransferFromServer(device_data);
   std::vector<at::Tensor> tensors;
   for (auto& literal : literals) {
     tensors.push_back(MakeTensorFromXlaLiteral(
         literal, TensorTypeFromXlaType(literal.shape().element_type())));
   }
   return tensors;
+}
+
+std::vector<at::Tensor> ExecuteAndFetch(
+    tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device) {
+  auto results = Execute(roots, device);
+  return Fetch(results);
 }
 
 }  // namespace cpp_test

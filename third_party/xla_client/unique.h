@@ -7,7 +7,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace xla {
-namespace xla_util {
+namespace util {
 
 // Helper class to allow tracking zero or more things, which should be forcibly
 // be one only thing.
@@ -33,7 +33,7 @@ class Unique {
   absl::optional<T> value_;
 };
 
-}  // namespace xla_util
+}  // namespace util
 }  // namespace xla
 
 #endif  // TENSORFLOW_COMPILER_XLA_XLA_CLIENT_UNIQUE_H_

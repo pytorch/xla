@@ -39,61 +39,54 @@ class XrtComputationClient : public ComputationClient {
   };
 
   struct XrtHandle {
-    explicit XrtHandle(XrtComputationClient* self)
-        : self(self), handle(0), valid(false) {}
     XrtHandle(XrtComputationClient* self, int64 handle)
-        : self(self), handle(handle), valid(true) {}
-
-    absl::optional<int64> Release() {
-      if (!valid) {
-        return absl::nullopt;
-      }
-      valid = false;
-      return handle;
-    }
-
-    int64 get_handle() const {
-      XLA_CHECK(valid) << "Invalid handle: " << handle;
-      return handle;
-    }
+        : self(self), handle(handle) {}
 
     XrtComputationClient* self;
     int64 handle;
-    bool valid;
   };
 
-  struct XrtData : public Data, public XrtHandle {
+  using XrtHandlePtr = std::shared_ptr<XrtHandle>;
+
+  struct XrtData : public Data {
     XrtData(XrtComputationClient* self, string device, Shape device_shape)
-        : Data(std::move(device), std::move(device_shape)), XrtHandle(self) {}
+        : Data(std::move(device), std::move(device_shape)) {}
     XrtData(XrtComputationClient* self, string device, Shape device_shape,
             int64 handle)
         : Data(std::move(device), std::move(device_shape)),
-          XrtHandle(self, handle) {}
+          handle_ptr(std::make_shared<XrtHandle>(self, handle)) {}
 
     ~XrtData() override {
-      if (valid) {
-        self->ReleaseXrtData(this);
+      if (handle_ptr != nullptr && handle_ptr.use_count() == 1) {
+        handle_ptr->self->ReleaseXrtData(this);
       }
     }
 
-    void Swap(Data* data) override;
+    int64 get_handle() const { return handle_ptr->handle; }
+
+    void Assign(const Data& data) override;
+
+    XrtHandlePtr handle_ptr;
   };
 
-  struct XrtComputation : public Computation, public XrtHandle {
+  struct XrtComputation : public Computation {
     XrtComputation(XrtComputationClient* self, XlaComputation computation,
                    ProgramShape program_shape, std::vector<string> devices,
                    int64 handle, string compilation_device)
         : Computation(std::move(computation), std::move(program_shape),
                       std::move(devices)),
-          XrtHandle(self, handle),
+          handle_ptr(std::make_shared<XrtHandle>(self, handle)),
           compilation_device(std::move(compilation_device)) {}
 
     ~XrtComputation() override {
-      if (valid) {
-        self->ReleaseXrtComputation(this);
+      if (handle_ptr.use_count() == 1) {
+        handle_ptr->self->ReleaseXrtComputation(this);
       }
     }
 
+    int64 get_handle() const { return handle_ptr->handle; }
+
+    XrtHandlePtr handle_ptr;
     string compilation_device;
   };
 
@@ -134,7 +127,7 @@ class XrtComputationClient : public ComputationClient {
   std::vector<Literal> TransferFromServer(
       tensorflow::gtl::ArraySlice<const DataPtr> handles) override;
 
-  std::vector<std::shared_ptr<Computation>> Compile(
+  std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) override;
 
   std::vector<DataPtr> ExecuteComputation(
@@ -153,6 +146,10 @@ class XrtComputationClient : public ComputationClient {
       const std::vector<std::vector<DataPtr>>& arguments,
       tensorflow::gtl::ArraySlice<const string> devices,
       const ExecuteParallelOptions& options) override;
+
+  std::vector<DataPtr> ExecuteChained(
+      tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
+      const string& device) override;
 
   std::vector<std::vector<DataPtr>> DeconstructTuple(
       tensorflow::gtl::ArraySlice<const DataPtr> tuples) override;
@@ -201,7 +198,7 @@ class XrtComputationClient : public ComputationClient {
 
   tensorflow::Tensor GetArgumentsInputs(
       tensorflow::gtl::ArraySlice<const DataPtr> arguments,
-      const string& device, tensorflow::ClientSession::FeedType* feed_inputs);
+      const string& device);
 
   std::vector<tensorflow::Output> CreateExecuteOps(
       XrtSessionCache::SessionMap* session_map,
@@ -239,12 +236,12 @@ class XrtComputationClient : public ComputationClient {
           XrtSession*, const tensorflow::Scope&, const string&)>& op_generator,
       metrics::Metric* timed_metric, metrics::Counter* destroy_counter);
 
-  bool ReleaseHandle(XrtHandle* handle, const string& device,
+  void ReleaseHandle(int64 handle, const string& device,
                      std::vector<DeviceHandle>* handles);
 
-  bool ReleaseXrtData(XrtData* xrt_data);
+  void ReleaseXrtData(XrtData* xrt_data);
 
-  bool ReleaseXrtComputation(XrtComputation* xrt_computation);
+  void ReleaseXrtComputation(XrtComputation* xrt_computation);
 
   // Starts the handle releaser thread (which runs the HandleReleaser() API).
   void StartHandleReleaser();
@@ -383,7 +380,7 @@ class XrtComputationClient : public ComputationClient {
   std::map<string, std::vector<int>> device_mesh_coords_;
   XrtSessionCache session_cache_;
   XrtSessionCache alloc_session_cache_;
-  std::unique_ptr<xla_util::TriggeredTask> triggered_task_;
+  std::unique_ptr<util::TriggeredTask> triggered_task_;
   util::Cache<string, Computation, util::PartialHasher<string, 4096>>
       compilation_cache_;
   std::atomic<size_t> rng_seed_;

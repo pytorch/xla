@@ -3,6 +3,7 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/python_util.h"
 
@@ -49,7 +50,9 @@ xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
   auto it = emitted_outputs_.find(output);
   if (it == emitted_outputs_.end()) {
     auto post_order = Util::ComputePostOrder(output.node, &emit_status_);
-    LowerPostOrder(post_order);
+    for (auto node : post_order) {
+      LowerNode(node);
+    }
     // At this point the outpout better be present, otherwise there is an issue
     // with the lowering code.
     it = emitted_outputs_.find(output);
@@ -59,18 +62,17 @@ xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
   return it->second;
 }
 
-void LoweringContext::LowerPostOrder(
-    tensorflow::gtl::ArraySlice<const Node* const> post_order) {
-  for (auto node : post_order) {
-    try {
-      node->Lower(this);
-    } catch (const std::exception& ex) {
-      ReportBuilderError(node, ex.what());
-    }
-    if (!builder()->first_error().ok()) {
-      ReportBuilderError(node, /*error_msg=*/nullptr);
-    }
+XlaOpVector LoweringContext::LowerNode(const Node* node) {
+  XlaOpVector result_ops;
+  try {
+    result_ops = node->Lower(this);
+  } catch (const std::exception& ex) {
+    ReportBuilderError(node, ex.what());
   }
+  if (!builder()->first_error().ok()) {
+    ReportBuilderError(node, /*error_msg=*/nullptr);
+  }
+  return result_ops;
 }
 
 void LoweringContext::ReportBuilderError(const Node* node,
