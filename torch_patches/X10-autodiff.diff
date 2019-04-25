@@ -1,8 +1,8 @@
 diff --git a/torch/csrc/jit/autodiff.cpp b/torch/csrc/jit/autodiff.cpp
-index 922681ec8..9a783be07 100644
+index 908a5b587..f70b733f4 100644
 --- a/torch/csrc/jit/autodiff.cpp
 +++ b/torch/csrc/jit/autodiff.cpp
-@@ -65,6 +65,7 @@ bool isDifferentiable(Node* n) {
+@@ -66,6 +66,7 @@ bool isDifferentiable(Node* n) {
        "aten::fmod(Tensor self, Scalar other) -> Tensor",
        "aten::remainder(Tensor self, Scalar other) -> Tensor",
        "aten::max_pool2d_with_indices(Tensor self, int[] kernel_size, int[] stride, int[] padding, int[] dilation, bool ceil_mode) -> (Tensor, Tensor)",
@@ -10,7 +10,16 @@ index 922681ec8..9a783be07 100644
        "aten::thnn_conv2d_forward(Tensor self, Tensor weight, int[] kernel_size, Tensor? bias, int[] stride, int[] padding) -> (Tensor, Tensor, Tensor)",
        "aten::native_batch_norm(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps) -> (Tensor, Tensor, Tensor)",
    };
-@@ -367,6 +368,29 @@ class GradientHelper {
+@@ -202,7 +203,7 @@ class GradientHelper {
+     }
+     // If AD is defined using torchscript, use it instead of symbolic
+     auto script_grads = build_script_grad(node, grad_values);
+-    if (script_grads)
++    if (script_grads && node->kind() != aten::max_pool2d)
+       return *script_grads;
+     // Definition not found in torchscript, look up in the buildSymbolicGradient
+     // TODO: migrate all to using torchscript
+@@ -368,6 +369,29 @@ class GradientHelper {
                nullptr,
                nullptr};
  
