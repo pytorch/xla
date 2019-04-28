@@ -368,17 +368,16 @@ void XLATensor::Async::Wait() {
   XLA_CHECK_OK(status);
 }
 
-XLATensor XLATensor::Create(const at::Tensor& tensor, const Device& device,
-                            bool requires_grad) {
-  XLATensor xtensor(tensor, device, requires_grad);
+XLATensor XLATensor::Create(const at::Tensor& tensor, const Device& device) {
+  XLATensor xtensor(tensor, device);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
 
 XLATensor XLATensor::Create(
-    xla::ComputationClient::DataPtr xla_data, bool requires_grad,
+    xla::ComputationClient::DataPtr xla_data,
     c10::optional<at::ScalarType> logical_element_type) {
-  XLATensor xtensor(std::move(xla_data), requires_grad, logical_element_type);
+  XLATensor xtensor(std::move(xla_data), logical_element_type);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
 }
@@ -399,19 +398,13 @@ XLATensor XLATensor::Create(
   return xtensor;
 }
 
-XLATensor::XLATensor(const at::Tensor& tensor, const Device& device,
-                     bool requires_grad)
-    : data_(std::make_shared<Data>(tensor, device)) {
-  data()->requires_grad = requires_grad;
-}
+XLATensor::XLATensor(const at::Tensor& tensor, const Device& device)
+    : data_(std::make_shared<Data>(tensor, device)) {}
 
 XLATensor::XLATensor(xla::ComputationClient::DataPtr xla_data,
-                     bool requires_grad,
                      c10::optional<at::ScalarType> logical_element_type)
     : data_(std::make_shared<Data>(xla_data, Device(xla_data->device()),
-                                   logical_element_type)) {
-  data()->requires_grad = requires_grad;
-}
+                                   logical_element_type)) {}
 
 XLATensor::XLATensor(ir::Value ir_value, const Device& device,
                      c10::optional<at::ScalarType> logical_element_type)
@@ -437,32 +430,11 @@ XLATensor::Data* XLATensor::data() const {
   return data_.get();
 }
 
-XLATensor XLATensor::detach() const {
-  XLATensor detached = XLATensor::clone(*this);
-  detached.detach_();
-  return detached;
-}
-
 xla::int64 XLATensor::size(xla::int64 dim) const {
   auto xla_shape = shape();
   int rank = xla_shape.get().rank();
   int dim_index = XlaHelpers::GetCanonicalDimensionIndex(dim, rank);
   return xla_shape.get().dimensions(dim_index);
-}
-
-c10::optional<XLATensor> XLATensor::grad() const {
-  if (data()->grad == nullptr) {
-    return c10::nullopt;
-  }
-  return *data()->grad;
-}
-
-void XLATensor::SetGradient(const XLATensor& grad) {
-  if (data()->grad == nullptr) {
-    data()->grad = std::make_shared<XLATensor>(grad);
-  } else {
-    data()->grad->ReferenceDataFrom(grad);
-  }
 }
 
 at::ScalarType XLATensor::dtype() const {
@@ -722,16 +694,6 @@ XLATensor XLATensor::CreateView(ViewInfo view_info) const {
                 GetDevice(), dtype());
 }
 
-void XLATensor::ReferenceDataFrom(const XLATensor& source) {
-  XLA_CHECK_EQ(data()->device, source.data()->device);
-  XLA_CHECK(xla::ShapeUtil::Equal(shape(), source.shape()))
-      << shape() << " vs " << source.shape();
-
-  data()->xla_data = source.data()->xla_data;
-  AssignIrValue(source.data()->ir_value);
-  data()->tensor_data = source.data()->tensor_data;
-}
-
 at::Tensor XLATensor::ToTensor() {
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
@@ -920,9 +882,8 @@ std::vector<XLATensor> XLATensor::CreateTensors(
       CreateTensorsData(tensors, devices);
   std::vector<XLATensor> xla_tensors;
   for (size_t i = 0; i < handles.size(); ++i) {
-    xla_tensors.push_back(Create(std::move(handles[i]),
-                                 tensors[i].requires_grad(),
-                                 tensors[i].scalar_type()));
+    xla_tensors.push_back(
+        Create(std::move(handles[i]), tensors[i].scalar_type()));
   }
   return xla_tensors;
 }

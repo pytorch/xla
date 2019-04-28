@@ -1,13 +1,12 @@
-from __future__ import division
-
 import test_utils
 
 FLAGS = test_utils.parse_common_options(
-    datadir='/tmp/mnist-data', batch_size=256, target_accuracy=98.0)
+    datadir='/tmp/mnist-data', batch_size=128, target_accuracy=98.0)
 
 from common_utils import TestCase, run_tests
 import os
 import shutil
+import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -42,11 +41,12 @@ class MNIST(nn.Module):
 
 
 def train_mnist():
+  assert FLAGS.num_cores == 1
   torch.manual_seed(1)
   # Training settings
-  lr = 0.01 * FLAGS.num_cores
+  lr = 0.01
   momentum = 0.5
-  log_interval = max(1, int(10 / FLAGS.num_cores))
+  log_interval = 5
 
   if FLAGS.fake_data:
     train_loader = xu.SampleGenerator(
@@ -82,34 +82,63 @@ def train_mnist():
         shuffle=True,
         num_workers=FLAGS.num_workers)
 
-  model = MNIST()
-
-  # Trace the model.
-  devices = [':{}'.format(n) for n in range(0, FLAGS.num_cores)]
-  inputs = torch.zeros(FLAGS.batch_size, 1, 28, 28)
-  target = torch.zeros(FLAGS.batch_size, dtype=torch.int64)
-  xla_model = xm.XlaModel(
-      model, [inputs],
-      loss_fn=F.nll_loss,
-      target=target,
-      num_cores=FLAGS.num_cores,
-      devices=devices)
-  optimizer = optim.SGD(xla_model.parameters_list(), lr=lr, momentum=momentum)
-
-  log_fn = xm.get_log_fn(logdir=FLAGS.logdir)
+  device = xm.xla_device()
+  model = MNIST().to(device=device)
+  optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+  loss_fn = nn.NLLLoss()
+  accuracy = None
   for epoch in range(1, FLAGS.num_epochs + 1):
-    xla_model.train(
-        train_loader,
-        optimizer,
-        FLAGS.batch_size,
-        log_interval=log_interval,
-        metrics_debug=FLAGS.metrics_debug,
-        log_fn=log_fn)
-    accuracy = xla_model.test(
-        test_loader,
-        xm.category_eval_fn(F.nll_loss),
-        FLAGS.batch_size,
-        log_fn=log_fn)
+    # Training loop for epoch.
+    start_time = time.time()
+    processed = 0
+    for batch_idx, (data, target) in enumerate(train_loader):
+      if data.size()[0] != FLAGS.batch_size:
+        break
+      data = data.to(device=device)
+      target = target.to(device=device)
+
+      optimizer.zero_grad()
+      y = model(data)
+      loss = loss_fn(y, target)
+      loss.backward()
+      xm.optimizer_step(optimizer)
+
+      processed += FLAGS.batch_size
+      if batch_idx % log_interval == 0:
+        print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
+              'Loss: {:.6f}\tSamples/sec: {:.1f}'.format(
+                  epoch, processed,
+                  len(train_loader) * FLAGS.batch_size,
+                  100. * batch_idx / len(train_loader), loss,
+                  processed / (time.time() - start_time)))
+
+    # Eval loop for epoch.
+    start_time = time.time()
+    correct_count = 0
+    test_loss = 0
+    count = 0
+    for batch_idx, (data, target) in enumerate(test_loader):
+      if data.size()[0] != FLAGS.batch_size:
+        break
+      data = data.to(device=device)
+      target = target.to(device=device)
+
+      y = model(data)
+      test_loss += loss_fn(y, target).sum().item()
+      pred = y.max(1, keepdim=True)[1]
+      correct_count += pred.eq(target.view_as(pred)).sum().item()
+      count += FLAGS.batch_size
+
+    test_loss /= count
+    accuracy = 100.0 * correct_count / count
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%), '
+          'Samples/sec: {:.1f}\n'.format(test_loss, correct_count, count,
+                                         accuracy,
+                                         count / (time.time() - start_time)))
+    # Debug metric dumping.
+    if FLAGS.metrics_debug:
+      print(torch_xla._XLAC._xla_metrics_report())
+
   return accuracy
 
 
