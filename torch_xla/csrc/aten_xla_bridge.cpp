@@ -84,8 +84,7 @@ XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device) {
     return XLATensor();
   }
   auto xtensor = TryGetXlaTensor(tensor);
-  return xtensor ? *xtensor
-                 : XLATensor::Create(tensor, device, /*requires_grad=*/false);
+  return xtensor ? *xtensor : XLATensor::Create(tensor, device);
 }
 
 std::vector<at::Tensor> XlaCreateTensorList(
@@ -200,8 +199,7 @@ std::vector<at::Tensor> AtenFromXlaTensors(
 at::Tensor CreateXlaTensor(at::Tensor tensor,
                            const c10::optional<Device>& device) {
   if (tensor.defined() && device) {
-    XLATensor xla_tensor =
-        XLATensor::Create(std::move(tensor), *device, /*requires_grad=*/false);
+    XLATensor xla_tensor = XLATensor::Create(std::move(tensor), *device);
     tensor = AtenFromXlaTensor(xla_tensor);
   }
   return tensor;
