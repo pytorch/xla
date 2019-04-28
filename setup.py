@@ -115,8 +115,7 @@ if subprocess.call(build_libs_cmd) != 0:
 
 # Fetch the sources to be built.
 torch_xla_sources = (
-    glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
-    glob.glob('torch_xla/csrc/passes/*.cpp'))
+    glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp'))
 
 # Constant known variables used throughout this file
 lib_path = os.path.join(base_dir, 'torch_xla', 'lib')

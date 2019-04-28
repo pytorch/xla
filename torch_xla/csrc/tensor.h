@@ -23,10 +23,9 @@ class XLATensor {
   struct Data;
 
  public:
-  static XLATensor Create(const at::Tensor& tensor, const Device& device,
-                          bool requires_grad);
+  static XLATensor Create(const at::Tensor& tensor, const Device& device);
   static XLATensor Create(
-      xla::ComputationClient::DataPtr xla_data, bool requires_grad,
+      xla::ComputationClient::DataPtr xla_data,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensor Create(
@@ -35,12 +34,6 @@ class XLATensor {
 
   // Creates an empty/null tensor.
   XLATensor() = default;
-
-  bool RequiresGrad() const { return data()->requires_grad; }
-
-  void detach_() { data()->requires_grad = false; }
-
-  XLATensor detach() const;
 
   bool is_null() const { return data_ptr() == nullptr; }
 
@@ -56,9 +49,6 @@ class XLATensor {
 
   // Assigns the tensor value to the XLA tensor.
   void SetTensor(at::Tensor tensor);
-
-  c10::optional<XLATensor> grad() const;
-  void SetGradient(const XLATensor& grad);
 
   at::ScalarType dtype() const;
   xla::util::MaybeRef<xla::Shape> shape() const;
@@ -86,10 +76,6 @@ class XLATensor {
   ir::Value GetIrValue() const;
 
   c10::optional<at::Tensor> CurrentTensorData() const;
-
-  // Makes the data references from the current tensor, point to the ones from
-  // the source tensor.
-  void ReferenceDataFrom(const XLATensor& source);
 
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
@@ -999,12 +985,10 @@ class XLATensor {
     c10::optional<at::Tensor> tensor_data;
     const Device device;
     const xla::int64 unique_id = 0;
-    std::shared_ptr<XLATensor> grad;
-    bool requires_grad = false;
   };
 
-  XLATensor(const at::Tensor& tensor, const Device& device, bool requires_grad);
-  XLATensor(xla::ComputationClient::DataPtr xla_data, bool requires_grad,
+  XLATensor(const at::Tensor& tensor, const Device& device);
+  XLATensor(xla::ComputationClient::DataPtr xla_data,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   XLATensor(ir::Value ir_value, const Device& device,
             c10::optional<at::ScalarType> logical_element_type = c10::nullopt);

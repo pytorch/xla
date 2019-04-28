@@ -88,7 +88,6 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "torch_xla/csrc/translator.h"
 
 namespace torch_xla {
 namespace {
@@ -1649,8 +1648,7 @@ void XLATensor::s_copy_(XLATensor& input, XLATensor& src) {
     }
   } else {
     // TODO: This can be optimized via proper XRT/XLA computation.
-    XLATensor new_tensor = XLATensor::Create(src.ToTensor(), input.GetDevice(),
-                                             src.RequiresGrad());
+    XLATensor new_tensor = XLATensor::Create(src.ToTensor(), input.GetDevice());
     if (input.dtype() != src.dtype()) {
       new_tensor = XLATensor::cast(new_tensor, input.dtype());
     }

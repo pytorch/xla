@@ -2,31 +2,19 @@
 
 namespace torch_xla {
 
-XlaModule::TensorBatchVector XlaCreateTensorList(const py::tuple& tuple) {
-  XlaModule::TensorBatchVector result;
-  result.reserve(tuple.size());
-  for (auto& replica_tuple : tuple) {
-    XlaModule::TensorBatchVector::value_type replica_result;
-    for (auto& e : replica_tuple) {
-      auto variable = py::cast<XLATensor>(e);
-      replica_result.push_back(variable);
-    }
-    result.push_back(std::move(replica_result));
-  }
-  return result;
+at::Tensor CopyTensor(const at::Tensor& ref) {
+  return ref.to(ref.options(), /*non_blocking=*/false, /*copy=*/true);
 }
 
-py::object XlaPackTensorList(const XlaModule::TensorBatchVector& outputs) {
-  py::tuple tuple(outputs.size());
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    const auto& replica_outputs = outputs[i];
-    py::tuple replica_tuple(replica_outputs.size());
-    for (size_t j = 0; j < replica_outputs.size(); j++) {
-      replica_tuple[j] = py::cast(replica_outputs[j]);
-    }
-    tuple[i] = replica_tuple;
-  }
-  return std::move(tuple);
+// Same as above, with an additional cast.
+at::Tensor CopyTensor(const at::Tensor& ref, at::ScalarType dest_type) {
+  return ref.to(ref.options().dtype(dest_type), /*non_blocking=*/false,
+                /*copy=*/true);
+}
+
+at::Tensor ToTensor(const at::Tensor& tensor) {
+  return tensor.is_variable() ? torch::autograd::as_variable_ref(tensor).data()
+                              : tensor;
 }
 
 }  // namespace torch_xla
