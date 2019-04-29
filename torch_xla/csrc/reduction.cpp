@@ -102,36 +102,6 @@ xla::XlaOp CreateProduct(
 
 }  // namespace
 
-xla::XlaOp BuildSum(const torch::jit::Node* node, const xla::XlaOp& operand) {
-  if (node->get<bool>(at::attr::keepdim).value()) {
-    XLA_ERROR() << "Sum with keepdim set not supported yet";
-  }
-  xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operand);
-  xla::XlaOp init_value = XlaHelpers::ScalarValue<float>(
-      0, operand_shape.element_type(), operand.builder());
-  const auto dimensions_to_reduce =
-      node->get<std::vector<int64_t>>(at::attr::dim).value();
-  return xla::Reduce(
-      operand, init_value,
-      XlaHelpers::CreateAddComputation(operand_shape.element_type()),
-      XlaHelpers::I64List(dimensions_to_reduce));
-}
-
-xla::XlaOp BuildProd(const torch::jit::Node* node, const xla::XlaOp& operand) {
-  if (node->get<bool>(at::attr::keepdim).value()) {
-    XLA_ERROR() << "Product with keepdim set not supported yet";
-  }
-  xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operand);
-  xla::XlaOp init_value = XlaHelpers::ScalarValue<float>(
-      1, operand_shape.element_type(), operand.builder());
-  const auto dimensions_to_reduce =
-      node->get<std::vector<int64_t>>(at::attr::dim).value();
-  return xla::Reduce(
-      operand, init_value,
-      XlaHelpers::CreateMulComputation(operand_shape.element_type()),
-      XlaHelpers::I64List(dimensions_to_reduce));
-}
-
 xla::XlaOp BuildCumulativeComputation(const xla::XlaOp& input, xla::int64 dim,
                                       const xla::XlaComputation& reducer,
                                       const xla::XlaOp& init) {

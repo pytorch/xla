@@ -126,15 +126,6 @@ std::vector<std::pair<xla::int64, xla::int64>> MakePadding(
 
 }  // namespace
 
-xla::XlaOp BuildConvolution(const torch::jit::Node* node,
-                            const xla::XlaOp& input, const xla::XlaOp& kernel) {
-  const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
-  const auto padding =
-      node->get<std::vector<int64_t>>(at::attr::padding).value();
-  return BuildConvolution(input, kernel, XlaHelpers::I64List(stride),
-                          XlaHelpers::I64List(padding));
-}
-
 xla::XlaOp BuildConvolution(
     const xla::XlaOp& input, const xla::XlaOp& kernel,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
@@ -145,19 +136,6 @@ xla::XlaOp BuildConvolution(
   return xla::ConvWithGeneralPadding(
       input, kernel, stride, dims_padding,
       /*feature_group_count*/ 1, /*batch_group_count=*/1, &precision_config);
-}
-
-xla::XlaOp BuildConvolutionBias(const torch::jit::Node* node,
-                                const xla::XlaOp& input,
-                                const xla::XlaOp& kernel,
-                                const xla::XlaOp& bias) {
-  const auto node_inputs = node->inputs();
-  XLA_CHECK_GE(node_inputs.size(), size_t(4));
-  const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
-  const auto padding =
-      node->get<std::vector<int64_t>>(at::attr::padding).value();
-  return BuildConvolutionBias(input, kernel, bias, XlaHelpers::I64List(stride),
-                              XlaHelpers::I64List(padding));
 }
 
 xla::XlaOp BuildConvolutionBias(
@@ -173,18 +151,6 @@ xla::XlaOp BuildConvolutionBias(
   xla::XlaOp bias_broadcast =
       xla::Transpose(xla::Broadcast(bias, broadcast_sizes), {0, 3, 1, 2});
   return conv + bias_broadcast;
-}
-
-Conv2DGrads BuildConv2dBackward(const torch::jit::Node* node,
-                                const xla::XlaOp& grad_output,
-                                const xla::XlaOp& input,
-                                const xla::XlaOp& kernel) {
-  const auto stride = node->get<std::vector<int64_t>>(at::attr::stride).value();
-  const auto padding =
-      node->get<std::vector<int64_t>>(at::attr::padding).value();
-  return BuildConv2dBackward(grad_output, input, kernel,
-                             XlaHelpers::I64List(stride),
-                             XlaHelpers::I64List(padding));
 }
 
 Conv2DGrads BuildConv2dBackward(

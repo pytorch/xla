@@ -60,26 +60,10 @@ xla::XlaOp SoftmaxSumOfGrad(const xla::XlaOp& grad_output, xla::int64 dim) {
 
 }  // namespace
 
-xla::XlaOp BuildLogSoftmax(const torch::jit::Node* node,
-                           const xla::XlaOp& logits) {
-  // Inspired from tf2xla.
-  const auto node_inputs = node->inputs();
-  XLA_CHECK_EQ(node_inputs.size(), size_t(2));
-  xla::int64 dim = node->get<int64_t>(at::attr::dim).value();
-  return BuildLogSoftmax(logits, dim);
-}
-
 xla::XlaOp BuildLogSoftmax(const xla::XlaOp& logits, xla::int64 dim) {
   SoftMaxPartials parts = LogSoftmaxPartials(logits, dim);
   return xla::Sub(parts.shifted_logits, xla::Log(parts.reduce),
                   parts.broadcast_dimensions);
-}
-
-xla::XlaOp BuildLogSoftmaxGrad(const torch::jit::Node* node,
-                               const xla::XlaOp& grad_output,
-                               const xla::XlaOp& output) {
-  xla::int64 dim = node->get<int64_t>(at::attr::dim).value();
-  return BuildLogSoftmaxGrad(grad_output, output, dim);
 }
 
 xla::XlaOp BuildLogSoftmaxGrad(const xla::XlaOp& grad_output,
