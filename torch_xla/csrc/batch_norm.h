@@ -1,7 +1,6 @@
 #pragma once
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "torch/csrc/jit/ir.h"
 
 namespace torch_xla {
 
