@@ -142,6 +142,13 @@ class Counter {
     __counter->AddValue(value);                 \
   } while (0)
 
+#define XLA_VALUE_METRIC(name, value)                                    \
+  do {                                                                   \
+    static ::xla::metrics::Metric* __metric =                            \
+        new ::xla::metrics::Metric(name, ::xla::metrics::MetricFnValue); \
+    __metric->AddSample(value);                                          \
+  } while (0)
+
 // Creates a report with the current metrics statistics.
 string CreateMetricReport();
 
