@@ -6,6 +6,7 @@
 #include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
@@ -62,6 +63,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   }
   std::vector<const ir::Node*> post_order =
       ir::Util::ComputePostOrder(root_nodes);
+  XLA_VALUE_METRIC("OpByOpPostOrderSize", post_order.size());
 
   std::unordered_map<const ir::Node*, size_t> node_to_index;
   node_to_index.reserve(post_order.size());
