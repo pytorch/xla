@@ -2,17 +2,8 @@
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
-#include "torch/csrc/jit/ir.h"
 
 namespace torch_xla {
-
-// Sum the given operand elements along the dimension specified by the "dim"
-// attribute of the node.
-xla::XlaOp BuildSum(const torch::jit::Node* node, const xla::XlaOp& operand);
-
-// Compute the product of the given operand elements along the dimension
-// specified by the "dim" attribute of the node.
-xla::XlaOp BuildProd(const torch::jit::Node* node, const xla::XlaOp& operand);
 
 // Builds a mean by reducing all the dimensions listed in dimensions. If
 // keep_reduced_dimensions is true, the reduced dimensions will be retained,
