@@ -16,12 +16,22 @@ namespace torch_xla {
 std::string DebugUtil::GetTensorsGraphInfo(
     tensorflow::gtl::ArraySlice<const XLATensor> tensors,
     const std::vector<size_t>* indices, GraphFormat format) {
+  std::stringstream ss;
+  std::vector<SourceLocation> frames = GetPythonFrames();
+  ss << "TensorsGraphInfo:\n";
+  for (auto& location : frames) {
+    ss << "  " << location.function << " (" << location.file << ":"
+       << location.line << ")\n";
+  }
+  ss << "\n";
+
   std::vector<const ir::Node*> roots;
   if (indices != nullptr) {
     for (auto index : *indices) {
       ir::Value ir_value = tensors[index].CurrentIrValue();
       if (ir_value) {
         roots.push_back(ir_value.node.get());
+        ss << "Sync tensor with IR: " << roots.back()->ToString() << "\n";
       }
     }
   } else {
@@ -29,15 +39,9 @@ std::string DebugUtil::GetTensorsGraphInfo(
       ir::Value ir_value = tensor.CurrentIrValue();
       if (ir_value) {
         roots.push_back(ir_value.node.get());
+        ss << "Sync tensor with IR: " << roots.back()->ToString() << "\n";
       }
     }
-  }
-  std::stringstream ss;
-  std::vector<SourceLocation> frames = GetPythonFrames();
-  ss << "TensorsGraphInfo:\n";
-  for (auto& location : frames) {
-    ss << "  " << location.function << " (" << location.file << ":"
-       << location.line << ")\n";
   }
   if (format == GraphFormat::kText) {
     ss << "\n" << ir::DumpUtil::ToText(roots) << "\n";
