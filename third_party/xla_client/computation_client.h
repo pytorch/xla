@@ -121,11 +121,11 @@ class ComputationClient {
   struct ExecuteChainedOp {
     struct Input {
       size_t op_index;
-      size_t output_index;
+      absl::optional<size_t> output_index;
     };
     struct Output {
-      size_t output_index;
       size_t result_index;
+      absl::optional<size_t> output_index;
     };
 
     DataPtr device_data;
