@@ -492,25 +492,7 @@ xla::ComputationClient::DataPtr XLATensor::GetXlaData() {
 }
 
 xla::ComputationClient::DataPtr XLATensor::CurrentXlaData() const {
-  if (data()->xla_data != nullptr) {
-    // When we set a new Node for a tensor, we leave the XLA data pointer alive,
-    // as it is needed in order for the cached tensor apply operation to work.
-    // See comment in the SetIrValue() API.
-    // In order to verify that that data is still valid as far as current tensor
-    // data POV, we need to verify that the eventual IR Node is a DeviceData
-    // node, and that its ComputationClient data pointer matches.
-    ir::Value ir_value = CurrentIrValue();
-    if (!ir_value) {
-      // If there is no IR node, then the XLA data is valid.
-      return data()->xla_data;
-    }
-    const ir::ops::DeviceData* device_data =
-        dynamic_cast<const ir::ops::DeviceData*>(ir_value.node.get());
-    if (device_data != nullptr && device_data->data() == data()->xla_data) {
-      return data()->xla_data;
-    }
-  }
-  return nullptr;
+  return data()->xla_data;
 }
 
 std::string XLATensor::DumpHloComputation(
@@ -541,16 +523,8 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
     // alias as well.
     data()->view = UpdateView(data()->view, ir_value);
   }
-  // We do not want to nullify that XLA data pointer here, as otherwise the
-  // tensor apply computation caching will not work correctly.
-  // If A is a tensor, a typical optimizer step computation will do:
-  //  A' = F(A)
-  // The cached apply computation will want to find the previous XLA data for
-  // A's unique ID (as that data will be input to F()), but if setting A's IR
-  // node nullify that, it will not be found.
-  // We do have logic in CurrentXlaData() to verify that the XLA data pointer is
-  // actually valid, as far as tensor value goes.
   AssignIrValue(std::move(ir_value));
+  data()->xla_data = nullptr;
   data()->tensor_data = c10::nullopt;
   TryLimitGraphSize();
 }
