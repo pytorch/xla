@@ -254,6 +254,23 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
     return std::pair<xla::XlaOp, xla::XlaOp>(
         ConvertTo(op1, type1, type2, /*device=*/nullptr), op2);
   }
+  if (xla::primitive_util::IsIntegralType(type1) &&
+      xla::primitive_util::IsIntegralType(type2)) {
+    if (size1 >= size2) {
+      return std::pair<xla::XlaOp, xla::XlaOp>(
+          op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
+    }
+    return std::pair<xla::XlaOp, xla::XlaOp>(
+        ConvertTo(op1, type1, type2, /*device=*/nullptr), op2);
+  }
+  if (type1 == xla::PrimitiveType::PRED) {
+    return std::pair<xla::XlaOp, xla::XlaOp>(
+        ConvertTo(op1, type1, type2, /*device=*/nullptr), op2);
+  }
+  if (type2 == xla::PrimitiveType::PRED) {
+    return std::pair<xla::XlaOp, xla::XlaOp>(
+        op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
+  }
   return std::pair<xla::XlaOp, xla::XlaOp>(
       op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
 }
