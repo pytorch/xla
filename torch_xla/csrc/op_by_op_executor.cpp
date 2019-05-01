@@ -19,6 +19,17 @@
 namespace torch_xla {
 namespace {
 
+absl::optional<size_t> GetOutputIndex(bool is_device_data, size_t index) {
+  // The output of every result of an op-by-op computation is wrapped into a
+  // tuple, so we need to use the index to extract it. Device data instead is
+  // already unwrapped, so we need to pass an empty index so that TF/XRT code
+  // uses the result buffer directly.
+  if (is_device_data) {
+    return absl::nullopt;
+  }
+  return index;
+}
+
 size_t ComputeNodeKey(const ir::Node* node) {
   size_t key = 0x129b98d6968b7;
   for (auto& operand : node->operands()) {
@@ -75,6 +86,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   std::vector<size_t> cache_keys;
   std::unordered_map<size_t, std::vector<size_t>> compile_indices;
   std::list<xla::Shape> compile_shapes;
+  std::vector<bool> device_data_ops(post_order.size());
   std::vector<xla::ComputationClient::CompileInstance> compile_instances;
   std::vector<xla::ComputationClient::ExecuteChainedOp> chained_exec_ops(
       post_order.size());
@@ -84,6 +96,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     const ir::ops::DeviceData* device_data =
         dynamic_cast<const ir::ops::DeviceData*>(node);
     if (device_data != nullptr) {
+      device_data_ops[i] = true;
       cxop.device_data = device_data->data();
     } else {
       size_t cache_key = ComputeNodeKey(node);
@@ -111,15 +124,20 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
         }
       }
       for (auto& operand : node->operands()) {
-        cxop.inputs.push_back({node_to_index.at(operand.node), operand.index});
+        size_t op_index = node_to_index.at(operand.node);
+        cxop.inputs.push_back(
+            {op_index,
+             GetOutputIndex(device_data_ops[op_index], operand.index)});
       }
     }
   }
   // Fixup the requested outputs (roots) within the chained ops vector.
   for (size_t i = 0; i < roots.size(); ++i) {
     size_t op_index = node_to_index.at(roots[i].node.get());
-    chained_exec_ops[op_index].outputs.push_back({roots[i].index, i});
+    chained_exec_ops[op_index].outputs.push_back(
+        {i, GetOutputIndex(device_data_ops[op_index], roots[i].index)});
   }
+
   // If we missed the cache for certain ops, compile them now and fixup the
   // chained ops vector.
   if (!compile_instances.empty()) {

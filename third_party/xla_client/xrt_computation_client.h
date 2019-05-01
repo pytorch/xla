@@ -285,12 +285,26 @@ class XrtComputationClient : public ComputationClient {
   //  )
   //
   // With:
-  //  holders[0] = XLA Computation handle place-holder (DT_INT^%)
+  //  holders[0] = XLA Computation handle place-holder (DT_INT64)
   //  holders[1] = xrt::XRTExecutionConfig place-holder (DT_STRING)
   //  holders[2] = Inputs for the XRTExecute (DT_INT64[])
   const XrtSession::CachedNode& GetExecuteNode(XrtSession* session,
                                                const tensorflow::Scope& scope,
                                                const string& device) const;
+
+  // Creates an XRT graph with an XRTExecute operation:
+  //
+  //  XRTExecuteChained(
+  //    holders[0],
+  //    holders[1]
+  //  )
+  //
+  // With:
+  //  holders[0] = xrt::XRTChainedExecutePlan place-holder (DT_STRING)
+  //  holders[1] = xrt::XRTChainedExecuteConfig place-holder (DT_STRING)
+  const XrtSession::CachedNode& GetExecuteChainedNode(
+      XrtSession* session, const tensorflow::Scope& scope,
+      const string& device) const;
 
   // Creates an XRT graph with an XRTReadLiteral operation:
   //

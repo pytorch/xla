@@ -493,17 +493,15 @@ std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape) {
 
 xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
                                      DeviceType device_type) {
-  std::vector<xla::Shape> shape_components = GetComponentShapes(shape);
-  std::vector<xla::Shape> shape_components_with_layout;
-  XLA_CHECK(!shape_components.empty());
-  for (const auto& shape_component : shape_components) {
-    shape_components_with_layout.push_back(MakeArrayShapeFromDimensions(
-        xla::util::ToVector<int64_t>(shape_component.dimensions()),
-        shape_component.element_type(), device_type));
-  }
-  return shape.IsTuple()
-             ? xla::ShapeUtil::MakeTupleShape(shape_components_with_layout)
-             : shape_components_with_layout.front();
+  xla::Shape device_shape(shape);
+  xla::ShapeUtil::ForEachMutableSubshape(
+      &device_shape, [&](xla::Shape* subshape, const xla::ShapeIndex&) {
+        if (subshape->IsArray()) {
+          *subshape = MakeArrayShapeFromDimensions(
+              subshape->dimensions(), subshape->element_type(), device_type);
+        }
+      });
+  return device_shape;
 }
 
 xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
