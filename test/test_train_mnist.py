@@ -83,6 +83,7 @@ def train_mnist():
         num_workers=FLAGS.num_workers)
 
   device = xm.xla_device()
+  torch_xla._XLAC._xla_set_default_device(str(device))
   model = MNIST().to(device=device)
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
   loss_fn = nn.NLLLoss()
