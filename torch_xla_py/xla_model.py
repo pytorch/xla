@@ -148,66 +148,62 @@ class TestStepMetrics(object):
                                   self._accuracy, self._examples_per_sec)
 
 
-class LinearIndex(object):
-
-  def __init__(self, index):
-    self.index = index
-
-
 class ToXlaTensorArena(object):
 
-  def __init__(self, convert_fn):
-    self.convert_fn = convert_fn
+  def __init__(self, convert_fn, select_fn):
+    self._convert_fn = convert_fn
+    self._select_fn = select_fn
     self._tensors = []
-    self._devices = []
-    self._converted_tensors = None
 
-  def add(self, tensor, device=None):
-    if self._tensors:
-      assert type(self._tensors[0]) == type(tensor)
+  def _add(self, tensor):
     self._tensors.append(tensor)
-    if device is not None:
-      self._devices.append(device)
-    return LinearIndex(len(self._tensors) - 1)
 
-  def convert(self):
+  def _convert(self):
+    self._index = 0
     if self._tensors:
-      self._converted_tensors = self.convert_fn(self._tensors, self._devices)
+      self._converted_tensors = self._convert_fn(self._tensors)
+    else:
+      self._converted_tensors = []
 
-  def get_converted_tensor(self, lindex):
-    assert isinstance(lindex, LinearIndex)
-    assert self._converted_tensors is not None
-    assert lindex.index < len(self._converted_tensors)
-    return self._converted_tensors[lindex.index]
+  def _get_converted_tensor(self):
+    assert self._index < len(self._converted_tensors)
+    new_tensor = self._converted_tensors[self._index]
+    self._index += 1
+    return new_tensor
 
+  def _collect_tensors(self, inputs):
+    if self._select_fn(inputs):
+      self._add(inputs)
+    elif isinstance(inputs, (list, tuple, set)):
+      for x in inputs:
+        self._collect_tensors(x)
+    elif isinstance(inputs, dict):
+      for k, v in inputs.items():
+        self._collect_tensors(k)
+        self._collect_tensors(v)
 
-def _collect_tensors(arena, collect_type, inputs, devices=None, device=''):
-  if type(inputs) == collect_type:
-    return arena.add(inputs, device=device)
-  if isinstance(inputs, (list, tuple)):
-    tensors = []
-    for i, input in enumerate(inputs):
-      if devices is not None:
-        # The first dimension, if devices is specified, is the replica
-        # dimension, and we assign every nested tensor to the proper
-        # replica device.
-        assert len(devices) > i
-        device = devices[i]
-      tensors.append(
-          _collect_tensors(arena, collect_type, input, device=device))
-    return tuple(tensors)
-  return inputs
+  def _replace_tensors(self, inputs):
+    if self._select_fn(inputs):
+      return self._get_converted_tensor()
+    elif isinstance(inputs, (list, tuple, set)):
+      outputs = []
+      for x in inputs:
+        outputs.append(self._replace_tensors(x))
+      return type(inputs)(outputs)
+    elif isinstance(inputs, dict):
+      outputs = {}
+      for k, v in inputs.items():
+        k = self._replace_tensors(k)
+        v = self._replace_tensors(v)
+        outputs[k] = v
+      return outputs
+    return inputs
 
-
-def _replace_tensors(arena, tensors):
-  if isinstance(tensors, LinearIndex):
-    return arena.get_converted_tensor(tensors)
-  if isinstance(tensors, (list, tuple)):
-    new_tensors = []
-    for tensor in tensors:
-      new_tensors.append(_replace_tensors(arena, tensor))
-    return tuple(new_tensors)
-  return tensors
+  def transform(self, inputs):
+    self._tensors = []
+    self._collect_tensors(inputs)
+    self._convert()
+    return self._replace_tensors(inputs)
 
 
 def _get_summary_writer(logdir=None):

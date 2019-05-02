@@ -50,12 +50,14 @@ def train_mnist():
 
   if FLAGS.fake_data:
     train_loader = xu.SampleGenerator(
-        data=torch.zeros(FLAGS.batch_size, 1, 28, 28),
-        target=torch.zeros(FLAGS.batch_size, dtype=torch.int64),
+        data=(torch.zeros(FLAGS.batch_size, 1, 28,
+                          28), torch.zeros(FLAGS.batch_size,
+                                           dtype=torch.int64)),
         sample_count=60000 // FLAGS.batch_size)
     test_loader = xu.SampleGenerator(
-        data=torch.zeros(FLAGS.batch_size, 1, 28, 28),
-        target=torch.zeros(FLAGS.batch_size, dtype=torch.int64),
+        data=(torch.zeros(FLAGS.batch_size, 1, 28,
+                          28), torch.zeros(FLAGS.batch_size,
+                                           dtype=torch.int64)),
         sample_count=10000 // FLAGS.batch_size)
   else:
     train_loader = torch.utils.data.DataLoader(
