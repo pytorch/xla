@@ -5,7 +5,9 @@
 #include <unordered_map>
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/types.h"
+#include "tensorflow/compiler/xla/xla_client/async_task.h"
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
@@ -102,10 +104,6 @@ class XLATensor {
   // attached the tensors.
   static std::string DumpHloComputation(const std::vector<XLATensor>& tensors);
 
-  // Returns the common device for "tensors". Throws if not all tensors have the
-  // same device.
-  static Device CommonDeviceForTensors(const std::vector<XLATensor>& tensors);
-
   // Retrieves the set of XLA tensors which are currently live in the system,
   // for the given device. If device is nullptr, the live tensors for all
   // devices will be returned. Returned tensors are sorted by device as primary
@@ -113,8 +111,9 @@ class XLATensor {
   static std::vector<XLATensor> GetLiveTensors(const Device* device);
 
   // Applies all the pending IR operations queued over the input tensors. All
-  // the tensors must be on the same device.
-  static void SyncTensorsGraph(std::vector<XLATensor>* tensors);
+  // the tensors must be on the same device. If wait is true, the sync operation
+  // will be run synchronously.
+  static void SyncTensorsGraph(std::vector<XLATensor>* tensors, bool wait);
 
   // Makes sure that any outstanding IR operation accumulated over live tensors,
   // gets turned into device data.
@@ -123,9 +122,6 @@ class XLATensor {
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
   static void MarkStep(const Device* device);
-
-  // Applies the queue of operations for a list of tensors.
-  static void ApplyPendingGraph(std::vector<XLATensor>* tensors);
 
   // Retrieves the PyTorch tensors behind the XLA tensors. If the writeable
   // vector is not nullptr, it must be the same size as tensors, and the
@@ -877,9 +873,6 @@ class XLATensor {
                          const XLATensor& other);
 
  private:
-  // Maps from ComputationClient Data unique ID to XLA tensor unique ID.
-  using DataUidMap = std::unordered_map<xla::int64, xla::int64>;
-
   struct SyncTensorCollection {
     std::vector<size_t> indices;
     size_t hash = 0;
@@ -919,34 +912,6 @@ class XLATensor {
     // the IR graph above them).
     bool force_xla_data = true;
   };
-
-  // The context used by the ApplyPendingGraph() API, in order to allow it speed
-  // up operations in case the new tensors graph apply matches the one stored
-  // within the apply context.
-  struct ApplyContext {
-    ApplyContext() = default;
-    ApplyContext(
-        std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-            computations,
-        std::vector<xla::int64> uid_order,
-        std::vector<std::vector<xla::int64>> input_mapping,
-        std::vector<std::vector<xla::int64>> index_mapping,
-        std::vector<std::string> devices)
-        : computations(std::move(computations)),
-          uid_order(std::move(uid_order)),
-          input_mapping(std::move(input_mapping)),
-          index_mapping(std::move(index_mapping)),
-          devices(std::move(devices)) {}
-
-    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-        computations;
-    std::vector<xla::int64> uid_order;
-    std::vector<std::vector<xla::int64>> input_mapping;
-    std::vector<std::vector<xla::int64>> index_mapping;
-    std::vector<std::string> devices;
-  };
-
-  using ApplyContextCache = xla::util::Cache<size_t, ApplyContext>;
 
   // This is the core XLA tensor data structure where all the tensor data is
   // held. The XLA tensor is nothing more than a shared pointer to a Data
@@ -1048,19 +1013,7 @@ class XLATensor {
   static ir::Value GetIrValueForTensor(const at::Tensor& tensor,
                                        const Device& device);
 
-  // Create the mapping from computation client Data pointers to the XLA tensors
-  // unique ID which are holding it.
-  static DataUidMap CreateDataUidMap(const std::vector<XLATensor>& tensors);
-
-  // Tries to run a cached ApplyPendingGraph() with the information in
-  // apply_context. Returns whether the cached run could be completed
-  // successfully.
-  static bool RunCachedApply(std::vector<XLATensor>* tensors,
-                             const ApplyContext& apply_context);
-
   static ComputationCache* GetComputationCache();
-
-  static ApplyContextCache* GetApplyContextCache();
 
   static SyncTensorCollection CollectSyncTensors(
       const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config);
@@ -1073,7 +1026,8 @@ class XLATensor {
       std::vector<XLATensor>* tensors, const std::vector<bool>* writeable);
 
   // Runs an asynchronous syn operation using the op-by-op executor.
-  static void SyncTensorsGraphOpByOp(std::vector<XLATensor>* tensors);
+  using OpByOpAsync = xla::util::AsyncTask<xla::Status>;
+  static OpByOpAsync SyncTensorsGraphOpByOp(std::vector<XLATensor>* tensors);
 
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.
@@ -1098,17 +1052,6 @@ class XLATensor {
 
   static std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensor>* tensors, const SyncTensorsConfig& config);
-
-  // Returns a permutation which represents an ordering by tensor device and
-  // unique ID, of all the tensors which needs sync (the ones which have a graph
-  // backing their value). The tensors which are already sync, will not be
-  // returned within the permutation. If a tensor has at::Tensor data only, the
-  // at::Tensor data will be uploaded to the device and the tensor will receive
-  // new XLA data. This API will perform a barrier on device locks, and will not
-  // hold locks of partecipating devices (as ApplyPendingGraph() is never
-  // asynchronous).
-  static SyncTensorCollection CollectApplyGraphTensors(
-      const std::vector<XLATensor>& tensors);
 
   static ir::Value CreateTensorNode(xla::ComputationClient::DataPtr data);
 

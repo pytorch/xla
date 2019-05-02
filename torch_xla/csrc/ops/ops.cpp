@@ -46,7 +46,7 @@ namespace ops {
         [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)            \
         -> xla::XlaOp {                                                        \
       auto promoted = XlaHelpers::Promote(operands[0], operands[1]);           \
-      return promoted.first;                                                   \
+      return xla_fn(promoted.first, promoted.second);                          \
     };                                                                         \
     auto lower_fn = [](const Node& node,                                       \
                        LoweringContext* loctx) -> XlaOpVector {                \
@@ -555,7 +555,7 @@ NodePtr MaxUnary(const Value& input) {
     xla::XlaOp result = xla::Reduce(
         xla_input, init_value, XlaHelpers::CreateMaxComputation(element_type),
         xla::util::Iota<xla::int64>(input_shape.rank()));
-    return node.ReturnOp(xla::Reshape(result, {1}), loctx);
+    return node.ReturnOp(xla::Reshape(result, {}), loctx);
   };
   return GenericOp(OpKind(at::aten::max), {input},
                    xla::ShapeUtil::MakeShape(input.shape().element_type(), {}),
@@ -573,7 +573,7 @@ NodePtr MinUnary(const Value& input) {
     xla::XlaOp result = xla::Reduce(
         xla_input, init_value, XlaHelpers::CreateMinComputation(element_type),
         xla::util::Iota<xla::int64>(input_shape.rank()));
-    return node.ReturnOp(xla::Reshape(result, {1}), loctx);
+    return node.ReturnOp(xla::Reshape(result, {}), loctx);
   };
   return GenericOp(OpKind(at::aten::min), {input},
                    xla::ShapeUtil::MakeShape(input.shape().element_type(), {}),

@@ -108,7 +108,7 @@ void SyncTensors(const std::vector<at::Tensor>& tensors) {
       xtensors.push_back(*xtensor);
     }
   }
-  XLATensor::SyncTensorsGraph(&xtensors);
+  XLATensor::SyncTensorsGraph(&xtensors, /*wait=*/false);
 }
 
 void SyncLiveTensors(const std::string& device_str) {

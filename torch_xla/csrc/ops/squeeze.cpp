@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/squeeze.h"
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -45,7 +46,7 @@ XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {
 
 std::string Squeeze::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << " dim=" << dim_;
+  ss << Node::ToString() << ", dim=" << dim_;
   return ss.str();
 }
 
