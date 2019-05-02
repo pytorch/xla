@@ -270,8 +270,8 @@ class TestParallelTensorMNIST(XlaTestCase):
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=8)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     train_loader = xu.SampleGenerator(
-        data=torch.zeros(batch_size, 1, 28, 28),
-        target=torch.zeros(batch_size, dtype=torch.int64),
+        data=(torch.zeros(batch_size, 1, 28,
+                          28), torch.zeros(batch_size, dtype=torch.int64)),
         sample_count=sample_count * len(devices))
 
     def loop_fn(model, loader):
@@ -303,8 +303,8 @@ class TestParallelTensorResnet18(XlaTestCase):
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     train_loader = xu.SampleGenerator(
-        data=torch.zeros(batch_size, 3, 224, 224),
-        target=torch.zeros(batch_size, dtype=torch.int64),
+        data=(torch.zeros(batch_size, 3, 224,
+                          224), torch.zeros(batch_size, dtype=torch.int64)),
         sample_count=sample_count * len(devices))
 
     def loop_fn(model, loader):
