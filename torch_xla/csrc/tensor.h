@@ -1069,6 +1069,9 @@ class XLATensor {
   static std::vector<at::Tensor> GetTensorsOpByOp(
       std::vector<XLATensor>* tensors, const std::vector<bool>* writeable);
 
+  static std::vector<at::Tensor> GetTensorsFused(
+      std::vector<XLATensor>* tensors, const std::vector<bool>* writeable);
+
   // Runs an asynchronous syn operation using the op-by-op executor.
   static void SyncTensorsGraphOpByOp(std::vector<XLATensor>* tensors);
 

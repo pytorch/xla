@@ -264,6 +264,17 @@ class XrtComputationClient : public ComputationClient {
 
   void InitSession(XrtSession* session) const;
 
+  // Implement the chained execution using the XRTExecuteChained op support.
+  std::vector<DataPtr> ExecuteChainedXrt(
+      tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
+      const string& device);
+
+  // Implement the chained execution using multiple XRTExecute in many RPC round
+  // trips.
+  std::vector<DataPtr> ExecuteChainedSplit(
+      tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
+      const string& device);
+
   // Creates an XRT graph with an XRTCompile operation:
   //
   //  XRTCompile(
