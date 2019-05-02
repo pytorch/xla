@@ -93,11 +93,12 @@ class Build(BuildExtension):
     # Run the original BuildExtension first. We need this before building
     # the tests.
     BuildExtension.run(self)
-    # Build the C++ tests
-    cmd = [os.path.join(base_dir, 'test/cpp/run_tests.sh'), '-B']
-    if subprocess.call(cmd) != 0:
-      print('Failed to build tests: {}'.format(cmd), file=sys.stderr)
-      sys.exit(1)
+    if _check_env_flag('BUILD_CPP_TESTS', default='1'):
+      # Build the C++ tests
+      cmd = [os.path.join(base_dir, 'test/cpp/run_tests.sh'), '-B']
+      if subprocess.call(cmd) != 0:
+        print('Failed to build tests: {}'.format(cmd), file=sys.stderr)
+        sys.exit(1)
 
 
 # Generate the code before globbing!
