@@ -802,6 +802,14 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
 
 std::vector<at::Tensor> XLATensor::GetTensors(
     std::vector<XLATensor>* tensors, const std::vector<bool>* writeable) {
+  static const xla::int64 op_by_op =
+      xla::sys_util::GetEnvInt("GET_TENSORS_OPBYOP", 0);
+  return op_by_op ? GetTensorsOpByOp(tensors, writeable)
+                  : GetTensorsFused(tensors, writeable);
+}
+
+std::vector<at::Tensor> XLATensor::GetTensorsFused(
+    std::vector<XLATensor>* tensors, const std::vector<bool>* writeable) {
   SyncTensorsConfig config;
   config.force_xla_data = false;
   auto async = SyncTensorsGraphInternal(tensors, config);
@@ -1107,8 +1115,14 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
 }
 
 void XLATensor::SyncTensorsGraph(std::vector<XLATensor>* tensors) {
-  SyncTensorsConfig config;
-  SyncTensorsGraphInternal(tensors, config);
+  static const xla::int64 op_by_op =
+      xla::sys_util::GetEnvInt("SYNC_TENSORS_OPBYOP", 0);
+  if (op_by_op) {
+    SyncTensorsGraphOpByOp(tensors);
+  } else {
+    SyncTensorsConfig config;
+    SyncTensorsGraphInternal(tensors, config);
+  }
 }
 
 void XLATensor::SyncLiveTensorsGraph(const Device* device) {

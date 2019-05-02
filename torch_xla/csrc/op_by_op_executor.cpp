@@ -30,28 +30,41 @@ absl::optional<size_t> GetOutputIndex(bool is_device_data, size_t index) {
   return index;
 }
 
-size_t ComputeNodeKey(const ir::Node* node) {
+const xla::Shape& GetParameterShape(const ir::Output& operand,
+                                    const xla::Shape& input_shape) {
+  // See comment in GetOutputIndex() about device data WRT computation outpout
+  // shape handling.
+  const ir::ops::DeviceData* device_data =
+      dynamic_cast<const ir::ops::DeviceData*>(operand.node);
+  return device_data != nullptr
+             ? input_shape
+             : xla::ShapeUtil::GetTupleElementShape(input_shape, operand.index);
+}
+
+size_t ComputeNodeKey(
+    const ir::Node* node,
+    tensorflow::gtl::ArraySlice<const xla::Shape*> input_shapes) {
   size_t key = 0x129b98d6968b7;
-  for (auto& operand : node->operands()) {
-    key =
-        xla::util::HashCombine(key, xla::util::ShapeHash(operand.node_shape()));
+  const auto& operands = node->operands();
+  for (size_t i = 0; i < operands.size(); ++i) {
+    key = xla::util::HashCombine(key, xla::util::ShapeHash(GetParameterShape(
+                                          operands[i], *input_shapes[i])));
   }
   key = xla::util::HashCombine(key, xla::util::ShapeHash(node->shape()));
   return xla::util::HashCombine(key, node->node_hash());
 }
 
-xla::XlaComputation BuildNodeComputation(const ir::Node* node,
-                                         const Device& device) {
+xla::XlaComputation BuildNodeComputation(
+    const ir::Node* node,
+    tensorflow::gtl::ArraySlice<const xla::Shape*> input_shapes,
+    const Device& device) {
   ir::LoweringContext loctx("BuildNodeComputation");
-  size_t param_no = 0;
-  for (auto& operand : node->operands()) {
-    xla::Shape parameter_shape =
-        MakeShapeWithDeviceLayout(operand.shape(), device.hw_type);
-    xla::XlaOp param =
-        xla::Parameter(loctx.builder(), param_no, parameter_shape,
-                       absl::StrCat("param_", param_no));
-    ++param_no;
-    loctx.AssignOutputOp(operand, param);
+  const auto& operands = node->operands();
+  for (size_t i = 0; i < operands.size(); ++i) {
+    xla::XlaOp param = xla::Parameter(
+        loctx.builder(), i, GetParameterShape(operands[i], *input_shapes[i]),
+        absl::StrCat("param_", i));
+    loctx.AssignOutputOp(operands[i], param);
   }
   for (auto& xla_op : loctx.LowerNode(node)) {
     loctx.AddResult(xla_op);
@@ -85,8 +98,10 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   Device exec_device(device);
   std::vector<size_t> cache_keys;
   std::unordered_map<size_t, std::vector<size_t>> compile_indices;
+  std::unordered_map<size_t, size_t> cache_keys_instance;
   std::list<xla::Shape> compile_shapes;
   std::vector<bool> device_data_ops(post_order.size());
+  std::vector<const xla::Shape*> ops_shapes(post_order.size());
   std::vector<xla::ComputationClient::CompileInstance> compile_instances;
   std::vector<xla::ComputationClient::ExecuteChainedOp> chained_exec_ops(
       post_order.size());
@@ -96,10 +111,20 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     const ir::ops::DeviceData* device_data =
         dynamic_cast<const ir::ops::DeviceData*>(node);
     if (device_data != nullptr) {
-      device_data_ops[i] = true;
       cxop.device_data = device_data->data();
+      ops_shapes[i] = &cxop.device_data->shape();
+      device_data_ops[i] = true;
     } else {
-      size_t cache_key = ComputeNodeKey(node);
+      std::vector<const xla::Shape*> op_input_shapes;
+      for (auto& operand : node->operands()) {
+        size_t op_index = node_to_index.at(operand.node);
+        cxop.inputs.push_back(
+            {op_index,
+             GetOutputIndex(device_data_ops[op_index], operand.index)});
+        op_input_shapes.push_back(ops_shapes[op_index]);
+      }
+
+      size_t cache_key = ComputeNodeKey(node, op_input_shapes);
       cxop.computation = compile_cache_.Get(cache_key);
       if (cxop.computation == nullptr) {
         XLA_COUNTER("OpByOpCompileCacheMiss", 1);
@@ -110,9 +135,10 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
         cache_key_indices.push_back(i);
         if (cache_key_indices.size() == 1) {
           cache_keys.push_back(cache_key);
+          cache_keys_instance[cache_key] = compile_instances.size();
 
           xla::XlaComputation computation =
-              BuildNodeComputation(node, exec_device);
+              BuildNodeComputation(node, op_input_shapes, exec_device);
           xla::ProgramShape program_shape =
               ConsumeValue(computation.GetProgramShape());
           compile_shapes.push_back(MakeShapeWithDeviceLayout(
@@ -121,13 +147,14 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
               {std::move(computation),
                xla::ComputationClient::Get()->GetCompilationDevices(device),
                &compile_shapes.back()});
+
+          ops_shapes[i] = &compile_shapes.back();
+        } else {
+          ops_shapes[i] =
+              compile_instances[cache_keys_instance.at(cache_key)].output_shape;
         }
-      }
-      for (auto& operand : node->operands()) {
-        size_t op_index = node_to_index.at(operand.node);
-        cxop.inputs.push_back(
-            {op_index,
-             GetOutputIndex(device_data_ops[op_index], operand.index)});
+      } else {
+        ops_shapes[i] = &cxop.computation->program_shape().result();
       }
     }
   }
