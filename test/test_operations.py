@@ -598,6 +598,13 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.rand(2, 3), test_fn)
 
+  def test_pred_and_u8(self):
+
+    def test_fn(a):
+      return torch.isfinite(a) & a.ne(0)
+
+    self.runAtenTest(torch.rand(4, 3), test_fn)
+
 
 class MNISTComparator(nn.Module):
 
