@@ -26,14 +26,13 @@ class TmpFolder(object):
 
 class SampleGenerator(object):
 
-  def __init__(self, data, target, sample_count):
+  def __init__(self, data, sample_count):
     self._data = data
-    self._target = target
     self._sample_count = sample_count
     self._count = 0
 
   def __iter__(self):
-    return SampleGenerator(self._data, self._target, self._sample_count)
+    return SampleGenerator(self._data, self._sample_count)
 
   def __len__(self):
     return self._sample_count
@@ -45,7 +44,7 @@ class SampleGenerator(object):
     if self._count >= self._sample_count:
       raise StopIteration
     self._count += 1
-    return self._data, self._target
+    return self._data
 
 
 class FnDataGenerator(object):
@@ -88,6 +87,18 @@ def as_list(t):
 def getenv_as(name, type, defval=None):
   env = os.environ.get(name, None)
   return defval if env is None else type(env)
+
+
+def for_each_instance(value, inst, fn):
+  if type(value) == inst:
+    fn(value)
+  elif isinstance(value, dict):
+    for k, v in value.items():
+      for_each_instance(k, inst, fn)
+      for_each_instance(v, inst, fn)
+  elif isinstance(value, (list, tuple, set)):
+    for x in value:
+      for_each_instance(x, inst, fn)
 
 
 def shape(inputs):

@@ -51,12 +51,14 @@ class ParallelLoader(object):
                loader,
                devices,
                batchdim=0,
+               drop_last=False,
                loader_prefetch_size=8,
                device_prefetch_size=4):
     self._loader = loader
     self._batch_size = None
     self._devices = list(devices)
     self._batchdim = batchdim
+    self._drop_last = drop_last
     self._done = False
     self._lock = threading.Lock()
     self._queues = dict()
@@ -84,9 +86,30 @@ class ParallelLoader(object):
       dqueue.queue.close()
       dqueue.loader_queue.close()
 
-  def _expand_sample_batch(self, data, target):
-    # TODO: Expand last sample,target to batch size
-    return data, target
+  def _get_batch_size(self, data, dim):
+    size = []
+
+    def fn(v):
+      csize = v.size()[dim]
+      if not size:
+        size.append(csize)
+      else:
+        assert csize == size[0]
+
+    xu.for_each_instance(data, torch.Tensor, fn)
+    return size[0] if size else None
+
+  def _send_data_to(self, data, device):
+
+    def convert_fn(tensors):
+      device_tensors = [x.to(device) for x in tensors]
+      torch_xla._XLAC._xla_sync_multi(device_tensors)
+      return device_tensors
+
+    def select_fn(v):
+      return type(v) == torch.Tensor
+
+    return xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
   def _loader_worker(self):
     # TODO: When _expand_sample_batch() is implemented, remove the -1 fixup.
@@ -94,20 +117,21 @@ class ParallelLoader(object):
     num_batches = (loader_batches // len(self._devices)) * len(self._devices)
     batch_number = 0
     queues = list(self._queues.values())
+    data_iter = enumerate(self._loader)
     while batch_number < num_batches and not self._done:
       try:
-        data, target = self._loader.next()
+        _, data = next(data_iter)
       except StopIteration:
         break
       # There is only one loader worker thread, so it is safe to write the
       # batch_size in this way. Also, the batch_size is only referenced
       # within this thread.
       if self._batch_size is None:
-        self._batch_size = data.size()[self._batchdim]
-      if data.size()[self._batchdim] != self._batch_size:
-        data, target = self._expand_sample_batch(data, target)
-      queues[batch_number % len(queues)].loader_queue.put((batch_number,
-                                                           (data, target)))
+        self._batch_size = self._get_batch_size(data, self._batchdim)
+      elif (self._drop_last and
+            self._batch_size != self._get_batch_size(data, self._batchdim)):
+        break
+      queues[batch_number % len(queues)].loader_queue.put((batch_number, data))
       batch_number += 1
     for dqueue in queues:
       dqueue.loader_queue.close_write()
@@ -118,28 +142,29 @@ class ParallelLoader(object):
       item = dqueue.loader_queue.get()
       if item is None:
         break
-      batch_number, (data, target) = item
-      data = data.to(device=device)
-      target = target.to(device=device)
-      torch_xla._XLAC._xla_sync_multi([data, target])
-      dqueue.queue.put((dqueue.batch_number, (data, target)))
+      batch_number, data = item
+      data = self._send_data_to(data, device)
+      dqueue.queue.put((dqueue.batch_number, data))
       dqueue.batch_number += 1
     dqueue.queue.close_write()
 
 
 class DataParallel(object):
 
-  def __init__(self, network, loader, loop_fn, device_ids=None, batchdim=0):
+  def __init__(self,
+               network,
+               loader,
+               loop_fn,
+               device_ids=None,
+               batchdim=0,
+               drop_last=False):
     if not device_ids:
       device_ids = xm.get_xla_supported_devices()
     self._loader = loader
     self._loop_fn = loop_fn
     self._batchdim = batchdim
+    self._drop_last = drop_last
     self._device_ids = list(device_ids)
-    self._para_loader = None
-    if self._device_ids:
-      self._para_loader = ParallelLoader(
-          self._loader, self._device_ids, batchdim=self._batchdim)
     self._modules = []
     for device in device_ids:
       module = network().to(device=torch.device(device))
@@ -157,11 +182,17 @@ class DataParallel(object):
     if not self._device_ids:
       ## This is called without XLA devices available. Run in normal mode.
       return self._loop_fn(self._modules[0], self._loader)
+
+    para_loader = ParallelLoader(
+        self._loader,
+        self._device_ids,
+        batchdim=self._batchdim,
+        drop_last=self._drop_last)
     threads = []
     results = []
     for module, device in zip(self._modules, self._device_ids):
       result = ThreadResult()
-      loader = self._para_loader.per_device_loader(device)
+      loader = para_loader.per_device_loader(device)
       thread = threading.Thread(
           target=self._module_runner, args=(device, module, loader, result))
       thread.daemon = True
@@ -170,4 +201,5 @@ class DataParallel(object):
       results.append(result)
     for thread in threads:
       thread.join()
+    para_loader.close()
     return [x.result for x in results]
