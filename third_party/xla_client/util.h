@@ -171,7 +171,7 @@ size_t Hash(const T& value) {
 }
 
 static inline size_t Hash(const std::string& value) {
-  return std::hash<std::string>()(value);
+  return DataHash(value.data(), value.size());
 }
 
 // Forward declare to allow hashes of vectors of vectors to work.

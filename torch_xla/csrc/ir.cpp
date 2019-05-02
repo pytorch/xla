@@ -182,8 +182,8 @@ XlaOpVector Node::Lower(LoweringContext* loctx) const {
 }
 
 size_t Node::GetOpHash(OpKind op, const xla::Shape& shape, size_t hash_seed) {
-  size_t h = xla::util::HashCombine(op.hash(),
-                                    std::hash<std::string>()(shape.ToString()));
+  size_t h =
+      xla::util::HashCombine(op.hash(), xla::util::Hash(shape.ToString()));
   return xla::util::HashCombine(h, hash_seed);
 }
 
