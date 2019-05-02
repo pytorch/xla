@@ -66,6 +66,8 @@ class XrtComputationClient : public ComputationClient {
 
     void Assign(const Data& data) override;
 
+    bool HasValue() const override { return handle_ptr != nullptr; }
+
     XrtHandlePtr handle_ptr;
   };
 

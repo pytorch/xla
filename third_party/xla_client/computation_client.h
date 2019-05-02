@@ -33,6 +33,8 @@ class ComputationClient {
 
     virtual void Assign(const Data& data) = 0;
 
+    virtual bool HasValue() const = 0;
+
    private:
     int64 unique_id_ = 0;
     string device_;
