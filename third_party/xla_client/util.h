@@ -2,6 +2,7 @@
 #define TENSORFLOW_COMPILER_XLA_RPC_UTIL_H_
 
 #include <cstring>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <numeric>
@@ -17,9 +18,13 @@
 namespace xla {
 namespace util {
 
+template <typename T>
 class Cleanup {
  public:
-  explicit Cleanup(std::function<void(Status)> func) : func_(std::move(func)) {}
+  using StatusType = T;
+
+  explicit Cleanup(std::function<void(StatusType)> func)
+      : func_(std::move(func)) {}
   Cleanup(Cleanup&& ref) : func_(std::move(ref.func_)) {}
   Cleanup(const Cleanup&) = delete;
 
@@ -40,14 +45,17 @@ class Cleanup {
 
   void Release() { func_ = nullptr; }
 
-  void SetStatus(Status status) { status_ = std::move(status); }
+  void SetStatus(StatusType status) { status_ = std::move(status); }
 
-  const Status& GetStatus() const { return status_; }
+  const StatusType& GetStatus() const { return status_; }
 
  private:
-  std::function<void(Status)> func_;
-  Status status_;
+  std::function<void(StatusType)> func_;
+  StatusType status_;
 };
+
+using ExceptionCleanup = Cleanup<std::exception_ptr>;
+using StatusCleanup = Cleanup<xla::Status>;
 
 // Allows APIs which might return const references and values, to not be forced
 // to return values in the signature.

@@ -876,7 +876,7 @@ class XLATensor {
   struct SyncTensorCollection {
     std::vector<size_t> indices;
     size_t hash = 0;
-    std::vector<xla::util::Cleanup> unlocker;
+    std::vector<xla::util::ExceptionCleanup> unlocker;
   };
 
   struct CachedComputation {
@@ -900,7 +900,7 @@ class XLATensor {
 
     xla::util::MultiWait mwait;
     std::vector<size_t> indices;
-    std::vector<xla::util::Cleanup> unlocker;
+    std::vector<xla::util::ExceptionCleanup> unlocker;
     std::vector<xla::ComputationClient::DataPtr> parameters_data;
     std::string device;
     ComputationCache::TypePtr cached_computation;

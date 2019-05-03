@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
+#include <exception>
 #include <functional>
 #include <mutex>
 #include <set>
@@ -58,29 +59,30 @@ class DeviceLocker {
   void Lock() {
     std::unique_lock<std::mutex> lock(mutex_);
     cv_.wait(lock, [this] { return !locked_; });
-    CheckResetStatus();
+    CheckResetException();
     locked_ = true;
   }
 
-  void Unlock(xla::Status status) {
+  void Unlock(std::exception_ptr exptr) {
     std::lock_guard<std::mutex> lock(mutex_);
     locked_ = false;
-    status_ = std::move(status);
-    cv_.notify_one();
+    exptr_ = std::move(exptr);
+    cv_.notify_all();
   }
 
   void Barrier() {
     std::unique_lock<std::mutex> lock(mutex_);
     cv_.wait(lock, [this] { return !locked_; });
-    CheckResetStatus();
+    cv_.notify_all();
+    CheckResetException();
   }
 
  private:
-  void CheckResetStatus() {
-    xla::Status status = std::move(status_);
-    status_ = xla::Status::OK();
-    if (!status.ok()) {
-      throw std::runtime_error(status.error_message());
+  void CheckResetException() {
+    std::exception_ptr exptr = std::move(exptr_);
+    exptr_ = nullptr;
+    if (exptr != nullptr) {
+      std::rethrow_exception(exptr);
     }
   }
 
@@ -88,7 +90,7 @@ class DeviceLocker {
   std::mutex mutex_;
   std::condition_variable cv_;
   bool locked_ = false;
-  xla::Status status_;
+  std::exception_ptr exptr_;
 };
 
 class DeviceLockerArena {
@@ -113,12 +115,14 @@ class DeviceLockerArena {
   std::map<Device, std::shared_ptr<DeviceLocker>> lockers_;
 };
 
-xla::util::Cleanup LockDevice(const Device& device) {
+xla::util::ExceptionCleanup LockDevice(const Device& device) {
   auto locker = DeviceLockerArena::Get()->GetLocker(device);
   locker->Lock();
-  return xla::util::Cleanup([locker = std::move(locker)](xla::Status status) {
-    locker->Unlock(std::move(status));
-  });
+  return xla::util::ExceptionCleanup(
+      [locker =
+           std::move(locker)](xla::util::ExceptionCleanup::StatusType status) {
+        locker->Unlock(std::move(status));
+      });
 }
 
 void DeviceBarrier(const Device& device) {
@@ -128,8 +132,9 @@ void DeviceBarrier(const Device& device) {
 
 // Use a set to impose an order on the device locking sequence (ABBA
 // prevention).
-std::vector<xla::util::Cleanup> LockDevices(const std::set<Device>& devices) {
-  std::vector<xla::util::Cleanup> unlocker;
+std::vector<xla::util::ExceptionCleanup> LockDevices(
+    const std::set<Device>& devices) {
+  std::vector<xla::util::ExceptionCleanup> unlocker;
   unlocker.reserve(devices.size());
   for (auto& device : devices) {
     unlocker.emplace_back(LockDevice(device));
@@ -341,19 +346,22 @@ void XLATensor::Async::Wait() {
   XLA_CHECK_OK(mwait.Wait());
   // Accessing other Async members is safe only after MultiWait::Wait()
   // completes.
-  xla::Status status;
+  xla::util::ExceptionCleanup::StatusType status;
   for (auto& cleanup : unlocker) {
-    const xla::Status& cleanup_status = cleanup.GetStatus();
-    if (!cleanup_status.ok()) {
-      if (status.ok()) {
+    const xla::util::ExceptionCleanup::StatusType& cleanup_status =
+        cleanup.GetStatus();
+    if (cleanup_status != nullptr) {
+      if (status == nullptr) {
         status = cleanup_status;
       }
       // If we observe the status here, no need to let it propagate to the next
       // device lock operation.
-      cleanup.SetStatus(xla::Status::OK());
+      cleanup.SetStatus(nullptr);
     }
   }
-  XLA_CHECK_OK(status);
+  if (status != nullptr) {
+    std::rethrow_exception(status);
+  }
 }
 
 XLATensor XLATensor::Create(const at::Tensor& tensor, const Device& device) {
@@ -1085,10 +1093,10 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
           async->tensors_data[i] = std::move(results[i]);
         }
       }
-    } catch (const std::exception& ex) {
-      xla::Status status = tensorflow::errors::Internal(ex.what());
+    } catch (...) {
+      std::exception_ptr exptr = std::current_exception();
       for (auto& unlocker : async->unlocker) {
-        unlocker.SetStatus(status);
+        unlocker.SetStatus(exptr);
       }
     }
   };
@@ -1167,10 +1175,10 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
           async->tensors_data[i]->Assign(*results[i]);
         }
       }
-    } catch (const std::exception& ex) {
-      status = tensorflow::errors::Internal(ex.what());
+    } catch (...) {
+      std::exception_ptr exptr = std::current_exception();
       for (auto& unlocker : async->coll.unlocker) {
-        unlocker.SetStatus(status);
+        unlocker.SetStatus(exptr);
       }
     }
     return status;
