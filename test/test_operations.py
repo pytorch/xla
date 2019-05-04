@@ -274,7 +274,7 @@ class TestParallelTensorMNIST(XlaTestCase):
                           28), torch.zeros(batch_size, dtype=torch.int64)),
         sample_count=sample_count * len(devices))
 
-    def loop_fn(model, loader):
+    def loop_fn(model, loader, device, context):
       loss_fn = nn.NLLLoss()
       optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
@@ -289,9 +289,8 @@ class TestParallelTensorMNIST(XlaTestCase):
               lambda: xm.optimizer_step(optimizer), msg='Step: ', printfn=None)
           self.assertLess(loss.cpu().item(), 3.0)
 
-    model_parallel = dp.DataParallel(
-        XlaMNIST, train_loader, loop_fn, device_ids=devices)
-    model_parallel()
+    model_parallel = dp.DataParallel(XlaMNIST, device_ids=devices)
+    model_parallel(loop_fn, train_loader)
     if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
       print(torch_xla._XLAC._xla_metrics_report())
 
@@ -307,7 +306,7 @@ class TestParallelTensorResnet18(XlaTestCase):
                           224), torch.zeros(batch_size, dtype=torch.int64)),
         sample_count=sample_count * len(devices))
 
-    def loop_fn(model, loader):
+    def loop_fn(model, loader, device, context):
       loss_fn = nn.NLLLoss()
       optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
@@ -323,8 +322,8 @@ class TestParallelTensorResnet18(XlaTestCase):
           self.assertLess(loss.cpu().item(), 3.0)
 
     model_parallel = dp.DataParallel(
-        torchvision.models.resnet18, train_loader, loop_fn, device_ids=devices)
-    model_parallel()
+        torchvision.models.resnet18, device_ids=devices)
+    model_parallel(loop_fn, train_loader)
     if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
       print(torch_xla._XLAC._xla_metrics_report())
 

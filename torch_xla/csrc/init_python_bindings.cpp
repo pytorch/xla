@@ -20,6 +20,7 @@
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/python_util.h"
 #include "torch_xla/csrc/tensor_impl.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
@@ -100,7 +101,7 @@ void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
   }
 }
 
-void SyncTensors(const std::vector<at::Tensor>& tensors) {
+void SyncTensors(const std::vector<at::Tensor>& tensors, bool wait) {
   std::vector<XLATensor> xtensors;
   for (auto& tensor : tensors) {
     auto xtensor = bridge::TryGetXlaTensor(ToTensor(tensor));
@@ -108,7 +109,7 @@ void SyncTensors(const std::vector<at::Tensor>& tensors) {
       xtensors.push_back(*xtensor);
     }
   }
-  XLATensor::SyncTensorsGraph(&xtensors, /*wait=*/false);
+  XLATensor::SyncTensorsGraph(&xtensors, wait);
 }
 
 void SyncLiveTensors(const std::string& device_str) {
@@ -163,6 +164,32 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
   return ss.str();
 }
 
+std::vector<at::Tensor> GetXlaTensorsFromAten(
+    const std::vector<at::Tensor>& aten_tensors,
+    const std::vector<std::string>& devices) {
+  std::vector<std::string> xla_devices;
+  xla_devices.reserve(devices.size());
+  for (auto& device_str : devices) {
+    Device device = bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
+    xla_devices.emplace_back(device.ToString());
+  }
+  std::vector<at::Tensor> tensors;
+  tensors.reserve(aten_tensors.size());
+  for (auto& aten_tensor : aten_tensors) {
+    tensors.push_back(ToTensor(aten_tensor));
+  }
+
+  auto data_handles = CreateTensorsData(tensors, xla_devices);
+
+  std::vector<at::Tensor> xla_tensors;
+  xla_tensors.reserve(data_handles.size());
+  for (auto& data_handle : data_handles) {
+    XLATensor xla_tensor = XLATensor::Create(std::move(data_handle));
+    xla_tensors.push_back(bridge::AtenFromXlaTensor(std::move(xla_tensor)));
+  }
+  return xla_tensors;
+}
+
 void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
@@ -189,6 +216,20 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<at::Tensor>& tensors) -> std::string {
           return GetTensorsHloGraph(tensors);
         });
+  m.def("_xla_tensors_from_aten", [](const std::vector<at::Tensor>& tensors,
+                                     const std::vector<std::string>& devices) {
+    std::vector<at::Tensor> result;
+    {
+      NoGilSection nogil;
+      std::vector<at::Tensor> xla_tensors =
+          GetXlaTensorsFromAten(tensors, devices);
+      result.reserve(xla_tensors.size());
+      for (auto& tensor : xla_tensors) {
+        result.push_back(torch::autograd::make_variable(tensor));
+      }
+    }
+    return result;
+  });
   m.def("_xla_get_devices",
         []() { return xla::ComputationClient::Get()->GetAvailableDevices(); });
   m.def("_xla_set_replication_devices",
@@ -211,10 +252,13 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_set_default_device",
         [](const std::string& device) { return SetCurrentDevice(device); });
   m.def("_xla_get_default_device", []() { return GetCurrentDevice(); });
-  m.def("_xla_sync_multi", [](const std::vector<at::Tensor>& tensors) {
-    NoGilSection nogil;
-    SyncTensors(tensors);
-  });
+  m.def(
+      "_xla_sync_multi",
+      [](const std::vector<at::Tensor>& tensors, bool wait) {
+        NoGilSection nogil;
+        SyncTensors(tensors, wait);
+      },
+      py::arg("tensors"), py::arg("wait") = true);
   m.def(
       "_xla_sync_live_tensors",
       [](const std::string& device) {
