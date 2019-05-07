@@ -79,7 +79,8 @@ OpByOpExecutor::OpByOpExecutor(size_t compile_cache_size)
 
 std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     tensorflow::gtl::ArraySlice<const ir::Value> roots,
-    const std::string& device) {
+    const std::string& device,
+    tensorflow::gtl::ArraySlice<const std::string> devices) {
   std::vector<const ir::Node*> root_nodes;
   root_nodes.reserve(roots.size());
   for (auto& root : roots) {
@@ -144,8 +145,9 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
           compile_shapes.push_back(MakeShapeWithDeviceLayout(
               program_shape.result(), exec_device.hw_type));
           compile_instances.push_back(
-              {std::move(computation),
-               xla::ComputationClient::Get()->GetCompilationDevices(device),
+              {std::move(computation), device,
+               xla::ComputationClient::Get()->GetCompilationDevices(device,
+                                                                    devices),
                &compile_shapes.back()});
 
           ops_shapes[i] = &compile_shapes.back();
@@ -182,18 +184,23 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
 
 std::vector<xla::ComputationClient::DataPtr> OpByOpExecutor::Execute(
     tensorflow::gtl::ArraySlice<const ir::Value> roots,
-    const std::string& device) {
-  auto chained_exec_ops = BuildOps(roots, device);
+    const std::string& device,
+    tensorflow::gtl::ArraySlice<const std::string> devices) {
+  auto chained_exec_ops = BuildOps(roots, device, devices);
   return xla::ComputationClient::Get()->ExecuteChained(chained_exec_ops,
                                                        device);
 }
 
 OpByOpExecutor::AsyncTask OpByOpExecutor::ExecuteAsync(
     tensorflow::gtl::ArraySlice<const ir::Value> roots,
-    const std::string& device) {
+    const std::string& device,
+    tensorflow::gtl::ArraySlice<const std::string> devices) {
   std::vector<ir::Value> roots_vector(roots.begin(), roots.end());
+  std::vector<std::string> devices_vector(devices.begin(), devices.end());
   auto taskfn = [this, roots = std::move(roots_vector),
-                 device]() -> AsyncResult { return Execute(roots, device); };
+                 devices = std::move(devices_vector), device]() -> AsyncResult {
+    return Execute(roots, device, devices);
+  };
 
   AsyncTask async = AsyncTask(std::move(taskfn));
   return async.Schedule();

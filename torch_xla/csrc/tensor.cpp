@@ -758,7 +758,7 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
       unique_device.set((*tensors)[index].GetDevice());
     }
     async_tensors_data =
-        OpByOpExecutor::Get()->Execute(roots, unique_device->ToString());
+        OpByOpExecutor::Get()->Execute(roots, unique_device->ToString(), {});
   }
 
   std::vector<xla::ComputationClient::DataPtr> tensors_data =
@@ -808,7 +808,7 @@ std::vector<at::Tensor> XLATensor::GetTensorsFused(
     std::vector<XLATensor>* tensors, const std::vector<bool>* writeable) {
   SyncTensorsConfig config;
   config.force_xla_data = false;
-  auto async = SyncTensorsGraphInternal(tensors, config);
+  auto async = SyncTensorsGraphInternal(tensors, {}, config);
   if (async != nullptr) {
     XLA_CHECK_OK(async->mwait.Wait());
   }
@@ -938,9 +938,7 @@ void XLATensor::ApplyPendingGraph() {
       }
       std::string device = GetDevice().ToString();
       auto compiled_computation = xla::ComputationClient::Get()->Compile(
-          std::move(computation),
-          xla::ComputationClient::Get()->GetCompilationDevices(device),
-          &output_shape);
+          std::move(computation), device, {device}, &output_shape);
       xla::ComputationClient::ExecuteComputationOptions options;
       options.explode_tuple = false;
       auto results = xla::ComputationClient::Get()->ExecuteComputation(
@@ -1105,26 +1103,30 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
   return async;
 }
 
-void XLATensor::SyncTensorsGraph(std::vector<XLATensor>* tensors, bool wait) {
+void XLATensor::SyncTensorsGraph(
+    std::vector<XLATensor>* tensors,
+    tensorflow::gtl::ArraySlice<const std::string> devices, bool wait) {
   static const bool op_by_op =
       xla::sys_util::GetEnvBool("SYNC_TENSORS_OPBYOP", false);
   if (op_by_op) {
-    OpByOpAsync async = SyncTensorsGraphOpByOp(tensors);
+    OpByOpAsync async = SyncTensorsGraphOpByOp(tensors, devices);
     if (wait) {
       async.Wait();
     }
   } else {
     SyncTensorsConfig config;
-    auto async = SyncTensorsGraphInternal(tensors, config);
+    auto async = SyncTensorsGraphInternal(tensors, devices, config);
     if (wait && async != nullptr) {
       XLA_CHECK_OK(async->mwait.Wait());
     }
   }
 }
 
-void XLATensor::SyncLiveTensorsGraph(const Device* device) {
+void XLATensor::SyncLiveTensorsGraph(
+    const Device* device,
+    tensorflow::gtl::ArraySlice<const std::string> devices, bool wait) {
   auto tensors = GetLiveTensors(device);
-  SyncTensorsGraph(&tensors, /*wait=*/false);
+  SyncTensorsGraph(&tensors, devices, wait);
 }
 
 void XLATensor::MarkStep(const Device* device) {
@@ -1132,13 +1134,17 @@ void XLATensor::MarkStep(const Device* device) {
 }
 
 XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
-    std::vector<XLATensor>* tensors) {
+    std::vector<XLATensor>* tensors,
+    tensorflow::gtl::ArraySlice<const std::string> devices) {
   struct Async {
-    explicit Async(SyncTensorCollection coll) : coll(std::move(coll)) {}
+    explicit Async(SyncTensorCollection coll,
+                   tensorflow::gtl::ArraySlice<const std::string> devices)
+        : coll(std::move(coll)), devices(devices.begin(), devices.end()) {}
 
     SyncTensorCollection coll;
     std::vector<xla::ComputationClient::DataPtr> tensors_data;
     xla::util::Unique<Device> unique_device;
+    std::vector<std::string> devices;
     std::vector<ir::Value> roots;
   };
 
@@ -1147,7 +1153,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   DebugUtil::SaveTensorsGraphInfo("SyncTensorsGraphOpByOp", *tensors,
                                   &coll.indices);
 
-  auto async = std::make_shared<Async>(std::move(coll));
+  auto async = std::make_shared<Async>(std::move(coll), devices);
   for (auto index : async->coll.indices) {
     XLATensor& tensor = (*tensors)[index];
     async->roots.push_back(tensor.CurrentIrValue());
@@ -1169,7 +1175,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
                                ? async->unique_device->ToString()
                                : std::string();
       std::vector<xla::ComputationClient::DataPtr> results =
-          OpByOpExecutor::Get()->Execute(async->roots, device);
+          OpByOpExecutor::Get()->Execute(async->roots, device, async->devices);
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
           async->tensors_data[i]->Assign(*results[i]);
@@ -1188,7 +1194,9 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
 }
 
 std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
-    std::vector<XLATensor>* tensors, const SyncTensorsConfig& config) {
+    std::vector<XLATensor>* tensors,
+    tensorflow::gtl::ArraySlice<const std::string> devices,
+    const SyncTensorsConfig& config) {
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
     return nullptr;
@@ -1214,9 +1222,9 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
       MakeShapeWithDeviceLayout(program_shape.result(), unique_device->hw_type);
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
-  instances.push_back({std::move(computation),
+  instances.push_back({std::move(computation), unique_device->ToString(),
                        xla::ComputationClient::Get()->GetCompilationDevices(
-                           unique_device->ToString()),
+                           unique_device->ToString(), devices),
                        &shape});
 
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>

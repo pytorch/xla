@@ -112,12 +112,19 @@ class XLATensor {
 
   // Applies all the pending IR operations queued over the input tensors. All
   // the tensors must be on the same device. If wait is true, the sync operation
-  // will be run synchronously.
-  static void SyncTensorsGraph(std::vector<XLATensor>* tensors, bool wait);
+  // will be run synchronously. The devices argument, if not empty, tells the
+  // devices which should be partecipating into the replicated computation.
+  static void SyncTensorsGraph(
+      std::vector<XLATensor>* tensors,
+      tensorflow::gtl::ArraySlice<const std::string> devices, bool wait);
 
   // Makes sure that any outstanding IR operation accumulated over live tensors,
-  // gets turned into device data.
-  static void SyncLiveTensorsGraph(const Device* device);
+  // gets turned into device data. If wait is true, the sync operation will be
+  // run synchronously. The devices argument, if not empty, tells the devices
+  // which should be partecipating into the replicated computation.
+  static void SyncLiveTensorsGraph(
+      const Device* device,
+      tensorflow::gtl::ArraySlice<const std::string> devices, bool wait);
 
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
@@ -1027,7 +1034,9 @@ class XLATensor {
 
   // Runs an asynchronous syn operation using the op-by-op executor.
   using OpByOpAsync = xla::util::AsyncTask<xla::Status>;
-  static OpByOpAsync SyncTensorsGraphOpByOp(std::vector<XLATensor>* tensors);
+  static OpByOpAsync SyncTensorsGraphOpByOp(
+      std::vector<XLATensor>* tensors,
+      tensorflow::gtl::ArraySlice<const std::string> devices);
 
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.
@@ -1051,7 +1060,9 @@ class XLATensor {
       SyncTensorCollection* coll);
 
   static std::shared_ptr<Async> SyncTensorsGraphInternal(
-      std::vector<XLATensor>* tensors, const SyncTensorsConfig& config);
+      std::vector<XLATensor>* tensors,
+      tensorflow::gtl::ArraySlice<const std::string> devices,
+      const SyncTensorsConfig& config);
 
   static ir::Value CreateTensorNode(xla::ComputationClient::DataPtr data);
 

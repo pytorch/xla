@@ -16,6 +16,39 @@ import torch_xla_py.keyd_queue as kq
 
 _XLA_DEVICES = torch_xla._XLAC._xla_get_devices()
 
+_TLS = threading.local()
+
+
+class Replication(object):
+
+  def __init__(self, devices):
+    self._devices = list(devices)
+    self._lock = threading.Lock()
+    self._ready_cv = threading.Condition(self._lock)
+    self._join_count = 0
+    self._ready = False
+
+  def devices(self):
+    return self._devices
+
+  def enter(self):
+    with self._lock:
+      self._join_count += 1
+      if self._join_count == len(self._devices):
+        self._ready = True
+        self._ready_cv.notify_all()
+      else:
+        while not self._ready:
+          self._ready_cv.wait()
+      self._join_count -= 1
+      if self._join_count == 0:
+        self._ready = False
+
+
+def set_replication(replication):
+  assert replication is None or isinstance(replication, Replication)
+  _TLS.replication = replication
+
 
 def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
@@ -249,19 +282,25 @@ def _fetch_optimizer_state(optimizer):
   return state
 
 
-def _mark_step(state):
+def _mark_step(state, replication):
   save_dir = os.environ.get('SAVE_GRAPH_DIR', None)
   if save_dir:
     gs.save_tensors_graph(save_dir, 'optimizer_step',
                           state.gradients + state.tensors)
-  torch_xla._XLAC._xla_step_marker(torch_xla._XLAC._xla_get_default_device())
+  devices = []
+  if replication:
+    replication.enter()
+    devices = replication.devices()
+  torch_xla._XLAC._xla_step_marker(
+      torch_xla._XLAC._xla_get_default_device(), devices, wait=False)
 
 
 def optimizer_step(optimizer, closure=None):
+  replication = getattr(_TLS, 'replication', None)
   state = _fetch_optimizer_state(optimizer)
-  count = torch_xla._XLAC._xla_replication_device_count()
+  count = len(replication.devices()) if replication else 1
   if count > 1:
     torch_xla._XLAC._xla_cross_replica_sum(state.gradients, 1.0 / count, [])
   loss = optimizer.step(closure=closure)
-  _mark_step(state)
+  _mark_step(state, replication)
   return loss

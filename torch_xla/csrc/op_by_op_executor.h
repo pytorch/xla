@@ -25,14 +25,18 @@ class OpByOpExecutor {
 
   std::vector<xla::ComputationClient::ExecuteChainedOp> BuildOps(
       tensorflow::gtl::ArraySlice<const ir::Value> roots,
-      const std::string& device);
+      const std::string& device,
+      tensorflow::gtl::ArraySlice<const std::string> devices);
 
   std::vector<xla::ComputationClient::DataPtr> Execute(
       tensorflow::gtl::ArraySlice<const ir::Value> roots,
-      const std::string& device);
+      const std::string& device,
+      tensorflow::gtl::ArraySlice<const std::string> devices);
 
-  AsyncTask ExecuteAsync(tensorflow::gtl::ArraySlice<const ir::Value> roots,
-                         const std::string& device);
+  AsyncTask ExecuteAsync(
+      tensorflow::gtl::ArraySlice<const ir::Value> roots,
+      const std::string& device,
+      tensorflow::gtl::ArraySlice<const std::string> devices);
 
  private:
   using CompileCache =
