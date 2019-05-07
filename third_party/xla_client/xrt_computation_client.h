@@ -162,10 +162,6 @@ class XrtComputationClient : public ComputationClient {
 
   std::vector<string> GetAvailableDevices() const override;
 
-  void SetReplicationDevices(std::vector<string> devices) override;
-
-  const std::vector<string>& GetReplicationDevices() const override;
-
   void SetRngSeed(size_t seed) override;
 
  private:
@@ -189,9 +185,6 @@ class XrtComputationClient : public ComputationClient {
   string GetEffectiveDevice(const string& device) const;
 
   const string& TorchDeviceToXrtDevice(const string& device) const;
-
-  string GetCompilationDevice(
-      tensorflow::gtl::ArraySlice<const string> devices) const;
 
   std::unique_ptr<xrt::XLAComputation> CreateXrtComputation(
       const XlaComputation& computation,

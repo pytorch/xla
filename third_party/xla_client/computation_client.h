@@ -88,13 +88,15 @@ class ComputationClient {
 
   struct CompileInstance {
     CompileInstance() = default;
-    CompileInstance(XlaComputation computation, std::vector<string> devices,
-                    const Shape* output_shape)
+    CompileInstance(XlaComputation computation, string compilation_device,
+                    std::vector<string> devices, const Shape* output_shape)
         : computation(std::move(computation)),
+          compilation_device(std::move(compilation_device)),
           devices(std::move(devices)),
           output_shape(output_shape) {}
 
     XlaComputation computation;
+    string compilation_device;
     std::vector<string> devices;
     const Shape* output_shape = nullptr;
   };
@@ -215,22 +217,21 @@ class ComputationClient {
 
   virtual std::vector<string> GetAvailableDevices() const = 0;
 
-  virtual void SetReplicationDevices(std::vector<string> devices) = 0;
-
-  virtual const std::vector<string>& GetReplicationDevices() const = 0;
-
   virtual void SetRngSeed(size_t seed) = 0;
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.
-  ComputationPtr Compile(XlaComputation computation,
+  ComputationPtr Compile(XlaComputation computation, string compilation_device,
                          std::vector<string> devices,
                          const Shape* output_shape);
 
   // Retrieves the set of devices to be passed to the computation client
-  // Compile() API. This can return a vector with device itself, or the set of
-  // replication devices set into the computation client.
-  std::vector<string> GetCompilationDevices(string device) const;
+  // Compile() API. If the devices array is empty, a vector with the single
+  // device will be returned. Otherwise a vector with the devices content will
+  // be returned.
+  std::vector<std::string> GetCompilationDevices(
+      const std::string& device,
+      tensorflow::gtl::ArraySlice<const std::string> devices) const;
 
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.

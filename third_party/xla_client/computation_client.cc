@@ -152,26 +152,25 @@ StatusOr<std::unique_ptr<ComputationClient>> ComputationClient::Create() {
 }
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
-    XlaComputation computation, std::vector<string> devices,
-    const Shape* output_shape) {
+    XlaComputation computation, string compilation_device,
+    std::vector<string> devices, const Shape* output_shape) {
   std::vector<CompileInstance> instances;
-  instances.emplace_back(std::move(computation), std::move(devices),
-                         output_shape);
+  instances.emplace_back(std::move(computation), std::move(compilation_device),
+                         std::move(devices), output_shape);
   std::vector<std::shared_ptr<Computation>> results =
       Compile(std::move(instances));
   return std::move(results[0]);
 }
 
-std::vector<string> ComputationClient::GetCompilationDevices(
-    string device) const {
-  auto& replication_devices = GetReplicationDevices();
-  std::vector<string> compilation_devices;
-  if (replication_devices.empty()) {
-    compilation_devices.emplace_back(std::move(device));
+std::vector<std::string> ComputationClient::GetCompilationDevices(
+    const std::string& device,
+    tensorflow::gtl::ArraySlice<const std::string> devices) const {
+  std::vector<std::string> compilation_devices;
+  if (devices.empty()) {
+    compilation_devices.push_back(device);
   } else {
-    compilation_devices.insert(compilation_devices.end(),
-                               replication_devices.begin(),
-                               replication_devices.end());
+    compilation_devices.insert(compilation_devices.end(), devices.begin(),
+                               devices.end());
   }
   return compilation_devices;
 }

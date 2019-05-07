@@ -157,6 +157,8 @@ class DataParallel(object):
     self._batchdim = batchdim
     self._drop_last = drop_last
     self._device_ids = list(device_ids)
+    self._replication = (
+        xm.Replication(self._device_ids) if self._device_ids else None)
     self._models = []
     for device in device_ids:
       module = network().to(device=torch.device(device))
@@ -183,7 +185,7 @@ class DataParallel(object):
 
   def _module_runner(self, loop_fn, device, module, loader, context, result):
     torch_xla._XLAC._xla_set_default_device(device)
-    torch_xla._XLAC._xla_set_replication_devices(self._device_ids)
+    xm.set_replication(self._replication)
     try:
       result.result = loop_fn(module, loader, torch.device(device), context)
     except Exception as e:
