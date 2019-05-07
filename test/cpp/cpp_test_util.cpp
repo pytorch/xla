@@ -131,10 +131,10 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
       MakeShapeWithDeviceLayout(program_shape.result(), device.hw_type);
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
-  instances.push_back(
-      {std::move(computation),
-       xla::ComputationClient::Get()->GetCompilationDevices(device.ToString()),
-       &shape});
+  instances.push_back({std::move(computation), device.ToString(),
+                       xla::ComputationClient::Get()->GetCompilationDevices(
+                           device.ToString(), {}),
+                       &shape});
 
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
       computations =

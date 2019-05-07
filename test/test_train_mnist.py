@@ -111,7 +111,8 @@ def train_mnist():
       correct += pred.eq(target.view_as(pred)).sum().item()
       total_samples += data.size()[0]
 
-    print('[{}] Accuracy={}'.format(device, correct / total_samples))
+    print('[{}] Accuracy={:.2f}%'.format(device,
+                                         100.0 * correct / total_samples))
     return correct / total_samples
 
   accuracy = 0.0

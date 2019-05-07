@@ -22,7 +22,7 @@ TEST(OpByOpExecutorTest, TestSimpleAdd) {
     ir::Value v_c = v_a + v_b;
 
     auto results_data =
-        OpByOpExecutor::Get()->Execute({v_c}, device.ToString());
+        OpByOpExecutor::Get()->Execute({v_c}, device.ToString(), {});
     auto results = Fetch(results_data);
 
     AllClose(results.front(), c);
@@ -41,7 +41,7 @@ TEST(OpByOpExecutorTest, TestStack) {
         ir::MakeNode<ir::ops::Stack>(std::vector<ir::Value>({v_a, v_b}), 1);
 
     auto results_data =
-        OpByOpExecutor::Get()->Execute({v_c}, device.ToString());
+        OpByOpExecutor::Get()->Execute({v_c}, device.ToString(), {});
     auto results = Fetch(results_data);
 
     AllClose(results.front(), c);
@@ -59,7 +59,8 @@ TEST(OpByOpExecutorTest, TestAsyncStack) {
     ir::Value v_c =
         ir::MakeNode<ir::ops::Stack>(std::vector<ir::Value>({v_a, v_b}), 1);
 
-    auto async = OpByOpExecutor::Get()->ExecuteAsync({v_c}, device.ToString());
+    auto async =
+        OpByOpExecutor::Get()->ExecuteAsync({v_c}, device.ToString(), {});
     async.Wait();
     auto results = Fetch(async.ConsumeValue());
 

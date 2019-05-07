@@ -67,23 +67,15 @@ std::string GetCurrentDevice() {
   return ss.str();
 }
 
-void SetReplicationDevices(const std::vector<std::string>& devices) {
-  std::vector<std::string> replication_devices;
+std::vector<std::string> GetXlaDevices(
+    const std::vector<std::string>& devices) {
+  std::vector<std::string> xla_devices;
+  xla_devices.reserve(devices.size());
   for (auto& device_str : devices) {
     Device device = bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
-    replication_devices.emplace_back(device.ToString());
+    xla_devices.emplace_back(device.ToString());
   }
-  xla::ComputationClient::Get()->SetReplicationDevices(replication_devices);
-}
-
-std::vector<std::string> GetReplicationDevices() {
-  std::vector<std::string> replication_devices;
-  for (auto& device_str :
-       xla::ComputationClient::Get()->GetReplicationDevices()) {
-    c10::Device device = bridge::XlaDeviceToAtenDevice(Device(device_str));
-    replication_devices.emplace_back(bridge::ToXlaString(device));
-  }
-  return replication_devices;
+  return xla_devices;
 }
 
 void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
@@ -101,7 +93,8 @@ void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
   }
 }
 
-void SyncTensors(const std::vector<at::Tensor>& tensors, bool wait) {
+void SyncTensors(const std::vector<at::Tensor>& tensors,
+                 const std::vector<std::string>& devices, bool wait) {
   std::vector<XLATensor> xtensors;
   for (auto& tensor : tensors) {
     auto xtensor = bridge::TryGetXlaTensor(ToTensor(tensor));
@@ -109,18 +102,21 @@ void SyncTensors(const std::vector<at::Tensor>& tensors, bool wait) {
       xtensors.push_back(*xtensor);
     }
   }
-  XLATensor::SyncTensorsGraph(&xtensors, wait);
+  XLATensor::SyncTensorsGraph(&xtensors, GetXlaDevices(devices), wait);
 }
 
-void SyncLiveTensors(const std::string& device_str) {
+void SyncLiveTensors(const std::string& device_str,
+                     const std::vector<std::string>& devices, bool wait) {
   auto opt_device = GetOptionalDevice(device_str);
-  XLATensor::SyncLiveTensorsGraph(opt_device ? &opt_device.value() : nullptr);
+  XLATensor::SyncLiveTensorsGraph(opt_device ? &opt_device.value() : nullptr,
+                                  GetXlaDevices(devices), wait);
 }
 
-void StepMarker(const std::string& device_str) {
+void StepMarker(const std::string& device_str,
+                const std::vector<std::string>& devices, bool wait) {
   auto opt_device = GetOptionalDevice(device_str);
   const Device* device = opt_device ? &opt_device.value() : nullptr;
-  XLATensor::SyncLiveTensorsGraph(device);
+  XLATensor::SyncLiveTensorsGraph(device, GetXlaDevices(devices), wait);
   XLATensor::MarkStep(device);
 }
 
@@ -167,19 +163,13 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
 std::vector<at::Tensor> GetXlaTensorsFromAten(
     const std::vector<at::Tensor>& aten_tensors,
     const std::vector<std::string>& devices) {
-  std::vector<std::string> xla_devices;
-  xla_devices.reserve(devices.size());
-  for (auto& device_str : devices) {
-    Device device = bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
-    xla_devices.emplace_back(device.ToString());
-  }
   std::vector<at::Tensor> tensors;
   tensors.reserve(aten_tensors.size());
   for (auto& aten_tensor : aten_tensors) {
     tensors.push_back(ToTensor(aten_tensor));
   }
 
-  auto data_handles = CreateTensorsData(tensors, xla_devices);
+  auto data_handles = CreateTensorsData(tensors, GetXlaDevices(devices));
 
   std::vector<at::Tensor> xla_tensors;
   xla_tensors.reserve(data_handles.size());
@@ -232,18 +222,6 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_get_devices",
         []() { return xla::ComputationClient::Get()->GetAvailableDevices(); });
-  m.def("_xla_set_replication_devices",
-        [](const std::vector<std::string>& devices) {
-          NoGilSection nogil;
-          SetReplicationDevices(devices);
-        });
-  m.def("_xla_get_replication_devices", []() {
-    NoGilSection nogil;
-    return GetReplicationDevices();
-  });
-  m.def("_xla_replication_device_count", []() {
-    return xla::ComputationClient::Get()->GetReplicationDevices().size();
-  });
   m.def("_xla_cross_replica_sum", [](const std::vector<at::Tensor>& tensors,
                                      double scale, const py::list& groups) {
     NoGilSection nogil;
@@ -254,25 +232,28 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_default_device", []() { return GetCurrentDevice(); });
   m.def(
       "_xla_sync_multi",
-      [](const std::vector<at::Tensor>& tensors, bool wait) {
+      [](const std::vector<at::Tensor>& tensors,
+         const std::vector<std::string>& devices, bool wait) {
         NoGilSection nogil;
-        SyncTensors(tensors, wait);
+        SyncTensors(tensors, devices, wait);
       },
-      py::arg("tensors"), py::arg("wait") = true);
+      py::arg("tensors"), py::arg("devices"), py::arg("wait") = true);
   m.def(
       "_xla_sync_live_tensors",
-      [](const std::string& device) {
+      [](const std::string& device, const std::vector<std::string>& devices,
+         bool wait) {
         NoGilSection nogil;
-        SyncLiveTensors(device);
+        SyncLiveTensors(device, devices, wait);
       },
-      py::arg("device") = "");
+      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
   m.def(
       "_xla_step_marker",
-      [](const std::string& device) {
+      [](const std::string& device, const std::vector<std::string>& devices,
+         bool wait) {
         NoGilSection nogil;
-        StepMarker(device);
+        StepMarker(device, devices, wait);
       },
-      py::arg("device") = "");
+      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
   m.def("_xla_counter_value", [](const std::string& name) -> py::object {
     xla::metrics::CounterData* data = xla::metrics::GetCounter(name);
     return data != nullptr ? py::cast<int64_t>(data->Value()) : py::none();
