@@ -1889,11 +1889,15 @@ XLATensor XLATensor::sum(const XLATensor& input,
                          std::vector<xla::int64> dimensions,
                          bool keep_reduced_dimensions,
                          c10::optional<at::ScalarType> dtype) {
+  if (at::isIntegralType(input.dtype()) && !dtype) {
+    dtype = at::ScalarType::Long;
+  }
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Sum>(input.GetIrValue(),
                                  XlaHelpers::GetCanonicalDimensionIndices(
                                      dimensions, input.shape().get().rank()),
-                                 keep_reduced_dimensions, dtype));
+                                 keep_reduced_dimensions, dtype),
+      dtype);
 }
 
 void XLATensor::sub_(XLATensor& input, const XLATensor& other,

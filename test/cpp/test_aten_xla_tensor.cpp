@@ -1023,6 +1023,16 @@ TEST_F(AtenXlaTensorTest, TestSum) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSumU8) {
+  at::Tensor a = at::ones({256}, at::TensorOptions(at::kByte));
+  at::Tensor b = at::sum(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::sum(xla_a);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSumInDim) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   int rank = a.dim();
