@@ -2,21 +2,152 @@
 
 #include <cstdlib>
 #include <functional>
+#include <list>
 #include <sstream>
+#include <unordered_map>
 
 #include "absl/strings/str_cat.h"
 #include "absl/types/optional.h"
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/unique.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/compiler/xla/xla_client/xrt_local_service.h"
+#include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/util/device_name_utils.h"
 
 namespace xla {
+namespace {
+
+// A simple Tensorflow Allocator which caches Tensor allocations in order to
+// avoid paying the kernel's clear_page_c() price.
+class TensorAllocator : public tensorflow::Allocator {
+  struct AllocKey {
+    struct Hash {
+      size_t operator()(const AllocKey& hk) const {
+        return util::HashCombine(hk.alignment, hk.num_bytes);
+      }
+    };
+
+    bool operator==(const AllocKey& rhs) const {
+      return num_bytes == rhs.num_bytes && alignment == rhs.alignment;
+    }
+
+    size_t alignment = 0;
+    size_t num_bytes = 0;
+  };
+
+  struct AllocBlocks {
+    AllocBlocks(const AllocKey& alloc_key) : alloc_key(alloc_key) {}
+
+    AllocKey alloc_key;
+    std::vector<void*> blocks;
+  };
+
+  using AllocList = std::list<AllocBlocks>;
+
+ public:
+  static TensorAllocator* Get() {
+    static size_t max_size =
+        sys_util::GetEnvInt("XLA_TENSOR_ALLOCATOR_MAXSIZE", 1000000000);
+    static TensorAllocator* allocator = new TensorAllocator(max_size);
+    return allocator;
+  }
+
+  string Name() override { return "XLA_TensorAllocator"; }
+
+  void* AllocateRaw(size_t alignment, size_t num_bytes) override {
+    // We use an alignment-sized area before the memory returned to the caller,
+    // to store a pointer to its AllocBlocks.
+    alignment = std::max<size_t>(alignment, sizeof(void*));
+    // To call aligned_alloc(), num_bytes must be multiple of alignment.
+    num_bytes = RoundUpToNearest(num_bytes, alignment);
+
+    AllocKey alloc_key = {alignment, num_bytes};
+    void* block = nullptr;
+    AllocBlocks* alloc_blocks = nullptr;
+    std::lock_guard<std::mutex> lock(lock_);
+    auto it = allocs_.find(alloc_key);
+    if (it != allocs_.end()) {
+      alloc_blocks = &*it->second;
+      if (!alloc_blocks->blocks.empty()) {
+        block = alloc_blocks->blocks.back();
+        alloc_blocks->blocks.pop_back();
+      }
+      // LRU
+      alloc_list_.splice(alloc_list_.begin(), alloc_list_, it->second);
+    } else {
+      allocs_.emplace(alloc_key,
+                      alloc_list_.insert(alloc_list_.begin(), alloc_key));
+      alloc_blocks = &alloc_list_.front();
+    }
+    if (block == nullptr) {
+      TrimCache(alloc_key.num_bytes);
+      block = NewBlock(alloc_blocks);
+    }
+    return block;
+  }
+
+  void DeallocateRaw(void* ptr) override {
+    if (ptr != nullptr) {
+      // The pointer to AllocBlocks is right before the user memory.
+      AllocBlocks* alloc_blocks = reinterpret_cast<AllocBlocks**>(ptr)[-1];
+      std::lock_guard<std::mutex> lock(lock_);
+      if (alloc_blocks->alloc_key.num_bytes < max_size_) {
+        alloc_blocks->blocks.push_back(ptr);
+      } else {
+        // We do not cache blocks whose size is bigger than the max cache size.
+        FreeBlock(ptr, alloc_blocks);
+      }
+    }
+  }
+
+ private:
+  explicit TensorAllocator(size_t max_size) : max_size_(max_size) {}
+
+  void* NewBlock(AllocBlocks* alloc_blocks) {
+    // We allocate an extra alignment sized area to store the AllocBlocks
+    // pointer.
+    void* ptr = ::aligned_alloc(
+        alloc_blocks->alloc_key.alignment,
+        alloc_blocks->alloc_key.alignment + alloc_blocks->alloc_key.num_bytes);
+    XLA_CHECK(ptr != nullptr);
+    ptr = reinterpret_cast<char*>(ptr) + alloc_blocks->alloc_key.alignment;
+    // Store the pointer to AllocBlocks right before the user memory.
+    reinterpret_cast<AllocBlocks**>(ptr)[-1] = alloc_blocks;
+    size_ += alloc_blocks->alloc_key.num_bytes;
+    return ptr;
+  }
+
+  void FreeBlock(void* ptr, AllocBlocks* alloc_blocks) {
+    size_ -= alloc_blocks->alloc_key.num_bytes;
+    std::free(reinterpret_cast<char*>(ptr) - alloc_blocks->alloc_key.alignment);
+  }
+
+  void TrimCache(size_t num_bytes) {
+    auto it = alloc_list_.rbegin();
+    for (; size_ + num_bytes > max_size_ && it != alloc_list_.rend(); ++it) {
+      AllocBlocks* alloc_blocks = &*it;
+      while (!alloc_blocks->blocks.empty() && size_ + num_bytes > max_size_) {
+        FreeBlock(alloc_blocks->blocks.back(), alloc_blocks);
+        alloc_blocks->blocks.pop_back();
+      }
+    }
+  }
+
+  size_t max_size_ = 0;
+  std::mutex lock_;
+  size_t size_ = 0;
+  AllocList alloc_list_;
+  std::unordered_map<AllocKey, AllocList::iterator, AllocKey::Hash> allocs_;
+};
+
+}  // namespace
 
 void XrtComputationClient::XrtData::Assign(const Data& data) {
   const XrtData& xrt_data = dynamic_cast<const XrtData&>(data);
@@ -64,6 +195,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
       string device = GetEffectiveDevice(tensors[i].device);
       const string& xrt_device = TorchDeviceToXrtDevice(device);
       tensorflow::Tensor tensor(
+          TensorAllocator::Get(),
           XlaTypeToDataType(tensors[i].shape.element_type()),
           MakeEquivalentTensorShape(tensors[i].shape));
       auto tdata = tensor.tensor_data();
