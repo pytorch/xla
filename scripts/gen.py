@@ -132,10 +132,18 @@ _FN_REMAP = {
         FuncOpts(outfn_name='gt'),
     '_th_gt(Tensor, Tensor) -> Tensor':
         FuncOpts(outfn_name='gt'),
+    '_th_le(Tensor, Scalar) -> Tensor':
+        FuncOpts(outfn_name='le'),
+    '_th_le(Tensor, Tensor) -> Tensor':
+        FuncOpts(outfn_name='le'),
     '_th_lt(Tensor, Scalar) -> Tensor':
         FuncOpts(outfn_name='lt'),
     '_th_lt(Tensor, Tensor) -> Tensor':
         FuncOpts(outfn_name='lt'),
+    '_th_ne(Tensor, Scalar) -> Tensor':
+        FuncOpts(outfn_name='ne'),
+    '_th_ne(Tensor, Tensor) -> Tensor':
+        FuncOpts(outfn_name='ne'),
     's__th_and(Tensor, Tensor) -> Tensor':
         FuncOpts(outfn_name='__and__', shape_check_indices=((0, 1),)),
     's__th_or(Tensor, Tensor) -> Tensor':
