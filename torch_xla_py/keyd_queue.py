@@ -14,6 +14,9 @@ class QueueBase(object):
     self._close_read = False
     self._close_write = False
 
+  def max_size(self):
+    return self._maxsize
+
   def close(self):
     with self._lock:
       self._close_read = True
