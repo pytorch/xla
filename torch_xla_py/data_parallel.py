@@ -136,16 +136,25 @@ class ParallelLoader(object):
     for dqueue in queues:
       dqueue.loader_queue.close_write()
 
-  def _worker(self, dqueue):
-    device = torch.device(dqueue.device)
-    while True:
+  def _get_batch(self, dqueue):
+    batch = []
+    while dqueue.queue.max_size() > len(batch):
       item = dqueue.loader_queue.get()
       if item is None:
         break
-      batch_number, data = item
-      data = self._send_data_to(data, device)
-      dqueue.queue.put((dqueue.batch_number, data))
-      dqueue.batch_number += 1
+      batch.append(item[1])
+    return batch
+
+  def _worker(self, dqueue):
+    device = torch.device(dqueue.device)
+    while True:
+      batch = self._get_batch(dqueue)
+      if not batch:
+        break
+      batch = self._send_data_to(batch, device)
+      for data in batch:
+        dqueue.queue.put((dqueue.batch_number, data))
+        dqueue.batch_number += 1
     dqueue.queue.close_write()
 
 
