@@ -328,41 +328,6 @@ class TestParallelTensorResnet18(XlaTestCase):
       print(torch_xla._XLAC._xla_metrics_report())
 
 
-class AxPlusB(nn.Module):
-
-  def __init__(self, dims=None):
-    super(AxPlusB, self).__init__()
-    self.ones = torch.ones(*dims)
-    self.a = nn.Parameter(_gen_tensor(1, 1))
-    self.b = nn.Parameter(_gen_tensor(1, 1))
-
-  def forward(self, x):
-    return x.mm(self.a) + self.ones.mm(self.b)
-
-
-class SquareLoss(nn.Module):
-
-  def __init__(self):
-    super(SquareLoss, self).__init__()
-
-  def forward(self, x, y):
-    x.requires_grad = True
-    y.requires_grad = True
-    diff = x - y
-    loss = diff.t().mm(diff)[0][0]
-    return loss / x.size()[0]
-
-
-class XlaNllLoss(nn.Module):
-
-  def __init__(self):
-    super(XlaNllLoss, self).__init__()
-    self.nll_loss = nn.NLLLoss()
-
-  def forward(self, x, labels):
-    return self.nll_loss(x, labels)
-
-
 class TestLongGraphChain(XlaTestCase):
 
   def test(self):
