@@ -35,9 +35,10 @@ inline NodePtr DeviceDataOp(
 inline NodePtr GenericOp(OpKind op,
                          tensorflow::gtl::ArraySlice<const Value> operands,
                          xla::Shape shape, Generic::LowerFn lower_fn,
-                         size_t num_outputs = 1) {
+                         size_t num_outputs = 1,
+                         size_t hash_seed = 0x5a2d296e9) {
   return MakeNode<Generic>(std::move(op), operands, std::move(shape),
-                           std::move(lower_fn), num_outputs);
+                           std::move(lower_fn), num_outputs, hash_seed);
 }
 
 inline NodePtr GenericOp(OpKind op,
@@ -47,6 +48,12 @@ inline NodePtr GenericOp(OpKind op,
                          size_t hash_seed = 0x5a2d296e9) {
   return MakeNode<Generic>(std::move(op), operands, shape_fn,
                            std::move(lower_fn), num_outputs, hash_seed);
+}
+
+inline NodePtr GenericOp(OpKind op, xla::Shape shape, Generic::LowerFn lower_fn,
+                         size_t num_outputs, size_t hash_seed) {
+  return MakeNode<Generic>(std::move(op), std::move(shape), std::move(lower_fn),
+                           num_outputs, hash_seed);
 }
 
 inline NodePtr CrossReplicaSumOp(const Value& operand, double scale,

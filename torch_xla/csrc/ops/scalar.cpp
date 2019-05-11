@@ -13,12 +13,13 @@ namespace ir {
 namespace ops {
 
 Scalar::Scalar(at::Scalar value, xla::Shape shape)
-    : Node(OpKind(at::prim::Constant), shape, ScalarHash(value)),
+    : Node(OpKind(at::prim::Constant), shape, /*num_outputs=*/1,
+           ScalarHash(value)),
       value_(std::move(value)) {}
 
 Scalar::Scalar(at::Scalar value, xla::PrimitiveType type)
     : Node(OpKind(at::prim::Constant), xla::ShapeUtil::MakeShape(type, {}),
-           ScalarHash(value)),
+           /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
 
 std::string Scalar::ToString() const {

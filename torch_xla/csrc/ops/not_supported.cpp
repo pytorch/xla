@@ -10,7 +10,8 @@ namespace ir {
 namespace ops {
 
 NotSupported::NotSupported(std::string description, xla::Shape shape)
-    : Node(xla_not_supported, std::move(shape), xla::util::MHash(description)),
+    : Node(xla_not_supported, std::move(shape), /*num_outputs=*/1,
+           xla::util::MHash(description)),
       description_(std::move(description)) {}
 
 XlaOpVector NotSupported::Lower(LoweringContext* /* loctx */) const {

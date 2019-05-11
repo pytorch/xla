@@ -81,6 +81,8 @@ struct Output {
   const xla::Shape& shape() const;
   const xla::Shape& node_shape() const;
 
+  size_t hash() const;
+
   bool operator==(const Output& rhs) const {
     return node == rhs.node && index == rhs.index;
   }
@@ -115,6 +117,8 @@ struct Value {
   // To retrieve the full tuple shape in that case, use the node_shape() API.
   const xla::Shape& shape() const;
   const xla::Shape& node_shape() const;
+
+  size_t hash() const;
 
   operator bool() const { return node != nullptr; }
 
@@ -176,7 +180,7 @@ class Node {
        size_t num_outputs = 1, size_t hash_seed = 0x5a2d296e9);
 
   // Contructor used to create leaf nodes.
-  Node(OpKind op, xla::Shape shape, size_t hash_seed);
+  Node(OpKind op, xla::Shape shape, size_t num_outputs, size_t hash_seed);
 
   virtual ~Node();
 

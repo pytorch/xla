@@ -163,7 +163,7 @@ ir::NodePtr IndexFillOp(const ir::Value& buffer, xla::int64 dim,
         return ir::ops::InferOutputShape(
             {buffer.shape(), index.shape(), value.shape()}, lower_for_shape_fn);
       },
-      std::move(lower_fn));
+      std::move(lower_fn), /*num_outputs=*/1, xla::util::MHash(dim));
 }
 
 ir::NodePtr IndexAddOp(const ir::Value& buffer, xla::int64 dim,
