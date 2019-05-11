@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -56,7 +57,8 @@ AvgPoolNdBackward::AvgPoolNdBackward(
                                    count_include_pad);
           },
           /*num_outputs=*/1,
-          xla::util::MHash(spatial_dim_count, kernel_size, stride, padding)),
+          xla::util::MHash(spatial_dim_count, kernel_size, stride, padding,
+                           count_include_pad)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),

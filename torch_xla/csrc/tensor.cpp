@@ -918,40 +918,8 @@ void XLATensor::ApplyPendingGraph() {
   // This method is called to ensure that the tensor data is available on
   // device, so that a call to CurrentXlaData() returns a valid pointer.
   if (CurrentXlaData() == nullptr) {
-    ir::Value ir_value = CurrentIrValue();
-    if (ir_value) {
-      DebugUtil::SaveTensorsGraphInfo("ApplyPendingGraphSingle", {*this},
-                                      /*indices=*/nullptr);
-
-      ir::LoweringContext lowering_ctx("ApplyPendingGraph");
-      xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
-      xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build(root));
-      xla::Shape output_shape = shape().get();
-      xla::Shape computation_shape =
-          ConsumeValue(computation.GetProgramShape()).result();
-      // Some in-place operations (e.g. squeeze) can change the shape.
-      if (!xla::ShapeUtil::Compatible(computation_shape, output_shape)) {
-        TF_VLOG(2) << computation_shape << " vs. " << output_shape << " @ "
-                   << ir_value->ToString();
-        output_shape =
-            MakeShapeWithDeviceLayout(computation_shape, GetDevice().hw_type);
-      }
-      std::string device = GetDevice().ToString();
-      auto compiled_computation = xla::ComputationClient::Get()->Compile(
-          std::move(computation), device, {device}, &output_shape);
-      xla::ComputationClient::ExecuteComputationOptions options;
-      options.explode_tuple = false;
-      auto results = xla::ComputationClient::Get()->ExecuteComputation(
-          *compiled_computation, lowering_ctx.GetParametersData(), device,
-          options);
-      XLA_CHECK_EQ(results.size(), 1);
-      SetXlaData(results.front());
-    } else {
-      // Otherwise it better be having at::Tensor data otherwise it will throw
-      // an exception.
-      XLA_CHECK(data()->tensor_data);
-      data()->xla_data = TensorToXlaData(*data()->tensor_data, GetDevice());
-    }
+    std::vector<XLATensor> tensors({*this});
+    SyncTensorsGraph(&tensors, {}, /*wait=*/true);
   }
 }
 
@@ -973,7 +941,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       ir::Value ir_value = tensors[i].CurrentIrValue();
       if (ir_value) {
         // Add only tensors which need to be synced.
-        coll.hash = xla::util::HashCombine(coll.hash, ir_value->hash());
+        coll.hash = xla::util::HashCombine(coll.hash, ir_value.hash());
         coll.indices.push_back(i);
       } else if (config.force_xla_data) {
         // The tensor only has at::Tensor data. We need to queue it for a
@@ -1071,8 +1039,10 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     xla::ComputationClient::DataPtr xla_data =
         (*tensors)[index].CurrentXlaData();
     if (xla_data == nullptr && config.force_xla_data) {
+      xla::Shape shape = MakeShapeWithDeviceLayout((*tensors)[index].shape(),
+                                                   Device(device).hw_type);
       xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
-          device, (*tensors)[index].shape());
+          device, std::move(shape));
       (*tensors)[index].SetXlaData(xla_data);
     }
     async->tensors_data.emplace_back(std::move(xla_data));
@@ -1161,8 +1131,10 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
 
     xla::ComputationClient::DataPtr xla_data = tensor.CurrentXlaData();
     if (xla_data == nullptr && config.force_xla_data) {
+      xla::Shape shape = MakeShapeWithDeviceLayout(
+          tensor.shape(), async->unique_device->hw_type);
       xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
-          async->unique_device->ToString(), tensor.shape());
+          async->unique_device->ToString(), std::move(shape));
       tensor.SetXlaData(xla_data);
     }
     async->tensors_data.emplace_back(std::move(xla_data));

@@ -113,7 +113,8 @@ NodePtr LogBase(const Value& input, OpKind op, double base) {
         1.0 / std::log(base), node.shape().element_type(), xla_input.builder());
     return node.ReturnOp(result * ln_base, loctx);
   };
-  return GenericOp(op, OpList{input}, input.shape(), std::move(lower_fn));
+  return GenericOp(op, OpList{input}, input.shape(), std::move(lower_fn),
+                   /*num_outputs=*/1, xla::util::MHash(base));
 }
 
 NodePtr ReciprocalOp(const Value& input) {
@@ -492,9 +493,10 @@ NodePtr Identity(xla::int64 lines, xla::int64 cols,
         xla::IdentityMatrix(loctx->builder(), element_type, lines, cols),
         loctx);
   };
-  return GenericOp(OpKind(at::aten::eye), {},
+  return GenericOp(OpKind(at::aten::eye),
                    xla::ShapeUtil::MakeShape(element_type, {lines, cols}),
-                   std::move(lower_fn));
+                   std::move(lower_fn), /*num_outputs=*/1,
+                   xla::util::MHash(lines, cols));
 }
 
 NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
