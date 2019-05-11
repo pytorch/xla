@@ -64,6 +64,10 @@ const xla::Shape& Output::shape() const { return node->shape(index); }
 
 const xla::Shape& Output::node_shape() const { return node->shape(); }
 
+size_t Output::hash() const {
+  return xla::util::HashCombine(node->hash(), index);
+}
+
 std::string Output::ToString() const {
   std::stringstream ss;
   ss << node->ToString() << ", index=" << index;
@@ -73,6 +77,10 @@ std::string Output::ToString() const {
 const xla::Shape& Value::shape() const { return node->shape(index); }
 
 const xla::Shape& Value::node_shape() const { return node->shape(); }
+
+size_t Value::hash() const {
+  return xla::util::HashCombine(node->hash(), index);
+}
 
 OpKind OpKind::Get(const std::string& name) {
   return OpKind(c10::Symbol::fromQualString(name));
@@ -90,7 +98,7 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
   metadata_.frame_info = GetFrameInfo();
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
-    hash_ = xla::util::HashCombine(hash_, operand->hash());
+    hash_ = xla::util::HashCombine(hash_, operand.hash());
   }
 }
 
@@ -103,8 +111,9 @@ Node::Node(OpKind op, OpList operands,
   shape_ = GetOpShape(shape_fn);
 }
 
-Node::Node(OpKind op, xla::Shape shape, size_t hash_seed)
+Node::Node(OpKind op, xla::Shape shape, size_t num_outputs, size_t hash_seed)
     : op_(std::move(op)),
+      num_outputs_(num_outputs),
       shape_(std::move(shape)),
       node_hash_(GetOpHash(op_, shape_, hash_seed)),
       hash_(node_hash_) {
