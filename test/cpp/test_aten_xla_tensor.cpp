@@ -1116,6 +1116,40 @@ TEST_F(AtenXlaTensorTest, TestSumInDimsKeep) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestMaxInDim) {
+  at::Tensor input = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  int rank = input.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    for (bool keepdim : {false, true}) {
+      auto values_indices = at::max(input, dim, /*keepdim=*/keepdim);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+        auto xla_values_indices = at::max(xla_input, dim, /*keepdim=*/keepdim);
+        AllClose(std::get<0>(values_indices), std::get<0>(xla_values_indices));
+        EXPECT_TRUE(EqualValues(std::get<1>(values_indices),
+                                std::get<1>(xla_values_indices)));
+      });
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMinInDim) {
+  at::Tensor input = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  int rank = input.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    for (bool keepdim : {false, true}) {
+      auto values_indices = at::min(input, dim, /*keepdim=*/keepdim);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+        auto xla_values_indices = at::min(xla_input, dim, /*keepdim=*/keepdim);
+        AllClose(std::get<0>(values_indices), std::get<0>(xla_values_indices));
+        EXPECT_TRUE(EqualValues(std::get<1>(values_indices),
+                                std::get<1>(xla_values_indices)));
+      });
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestNorm) {
   at::Tensor a = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::norm(a);

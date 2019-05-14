@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/reduction.h"
 
+#include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
@@ -134,6 +135,72 @@ xla::XlaOp BuildProd(const xla::XlaOp& input,
                      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                      bool keep_reduced_dimensions) {
   return CreateProduct(input, dimensions, keep_reduced_dimensions);
+}
+
+xla::XlaOp BuildMaxInDim(const xla::XlaOp& input, xla::int64 dim,
+                         bool keep_reduced_dimensions) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
+  xla::XlaOp init_value = XlaHelpers::ScalarValue(
+      min_max.min, shape.element_type(), input.builder());
+  ReductionInfo rinfo = GetReductionInfo(shape, {dim}, keep_reduced_dimensions);
+  xla::XlaOp result = xla::Reduce(
+      input, init_value, XlaHelpers::CreateMaxComputation(shape.element_type()),
+      {dim});
+  if (keep_reduced_dimensions) {
+    result = xla::Reshape(result, rinfo.new_dimensions);
+  }
+  return result;
+}
+
+xla::XlaOp BuildMinInDim(const xla::XlaOp& input, xla::int64 dim,
+                         bool keep_reduced_dimensions) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
+  xla::XlaOp init_value = XlaHelpers::ScalarValue(
+      min_max.max, shape.element_type(), input.builder());
+  ReductionInfo rinfo = GetReductionInfo(shape, {dim}, keep_reduced_dimensions);
+  xla::XlaOp result = xla::Reduce(
+      input, init_value, XlaHelpers::CreateMinComputation(shape.element_type()),
+      {dim});
+  if (keep_reduced_dimensions) {
+    result = xla::Reshape(result, rinfo.new_dimensions);
+  }
+  return result;
+}
+
+xla::XlaOp BuildArgMax(const xla::XlaOp& input, xla::int64 dim, bool keepdim) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp operand = input;
+  if (dim < 0) {
+    dim = 0;
+    operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(shape)});
+    shape = XlaHelpers::ShapeOfXlaOp(operand);
+  }
+  xla::XlaOp result = xla::ArgMaxTwoPass(operand, xla::PrimitiveType::S64, dim);
+  if (keepdim) {
+    auto dimensions = xla::util::ToVector<xla::int64>(shape.dimensions());
+    dimensions[dim] = 1;
+    result = xla::Reshape(result, dimensions);
+  }
+  return result;
+}
+
+xla::XlaOp BuildArgMin(const xla::XlaOp& input, xla::int64 dim, bool keepdim) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp operand = input;
+  if (dim < 0) {
+    dim = 0;
+    operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(shape)});
+    shape = XlaHelpers::ShapeOfXlaOp(operand);
+  }
+  xla::XlaOp result = xla::ArgMinTwoPass(operand, xla::PrimitiveType::S64, dim);
+  if (keepdim) {
+    auto dimensions = xla::util::ToVector<xla::int64>(shape.dimensions());
+    dimensions[dim] = 1;
+    result = xla::Reshape(result, dimensions);
+  }
+  return result;
 }
 
 xla::XlaOp BuildAll(const xla::XlaOp& input,
