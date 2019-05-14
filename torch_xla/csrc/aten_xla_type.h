@@ -695,6 +695,9 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor max(const at::Tensor& self) const override;
 
+  std::tuple<at::Tensor, at::Tensor> max(const at::Tensor& self, int64_t dim,
+                                         bool keepdim) const override;
+
   at::Tensor max_pool1d(const at::Tensor& self, at::IntArrayRef kernel_size,
                         at::IntArrayRef stride, at::IntArrayRef padding,
                         at::IntArrayRef dilation,
@@ -751,6 +754,9 @@ class AtenXlaType : public AtenXlaTypeBase {
                  const at::Tensor& other) const override;
 
   at::Tensor min(const at::Tensor& self) const override;
+
+  std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self, int64_t dim,
+                                         bool keepdim) const override;
 
   at::Tensor mm(const at::Tensor& self, const at::Tensor& mat2) const override;
 
