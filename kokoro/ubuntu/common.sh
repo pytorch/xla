@@ -45,7 +45,7 @@ sudo apt-get -y --purge autoremove mpi-default-dev
 sudo apt-get -y --purge autoremove openmpi-bin
 
 ## Install required packages for build
-sudo apt-get -y install python-pip git
+sudo apt-get -y install python-pip git libopenblas-dev
 sudo pip install --upgrade google-api-python-client
 sudo pip install --upgrade oauth2client
 
