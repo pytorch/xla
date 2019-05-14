@@ -54,9 +54,11 @@
 #include "torch_xla/csrc/ops/leaky_relu_backward.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
+#include "torch_xla/csrc/ops/max_in_dim.h"
 #include "torch_xla/csrc/ops/max_pool_nd.h"
 #include "torch_xla/csrc/ops/max_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/mean.h"
+#include "torch_xla/csrc/ops/min_in_dim.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/not_supported.h"
@@ -1328,6 +1330,17 @@ XLATensor XLATensor::max(const XLATensor& input) {
   return input.CreateFrom(ir::ops::MaxUnary(input.GetIrValue()), input.dtype());
 }
 
+std::tuple<XLATensor, XLATensor> XLATensor::max(const XLATensor& input,
+                                                xla::int64 dim, bool keepdim) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  ir::NodePtr node = ir::MakeNode<ir::ops::MaxInDim>(input.GetIrValue(),
+                                                     canonical_dim, keepdim);
+  return std::make_tuple(
+      input.CreateFrom(ir::Value(node, 0)),
+      input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long));
+}
+
 XLATensor XLATensor::max_pool_nd(const XLATensor& input,
                                  xla::int64 spatial_dim_count,
                                  std::vector<xla::int64> kernel_size,
@@ -1372,6 +1385,17 @@ XLATensor XLATensor::min(const XLATensor& input, const XLATensor& other) {
 
 XLATensor XLATensor::min(const XLATensor& input) {
   return input.CreateFrom(ir::ops::MinUnary(input.GetIrValue()), input.dtype());
+}
+
+std::tuple<XLATensor, XLATensor> XLATensor::min(const XLATensor& input,
+                                                xla::int64 dim, bool keepdim) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  ir::NodePtr node = ir::MakeNode<ir::ops::MinInDim>(input.GetIrValue(),
+                                                     canonical_dim, keepdim);
+  return std::make_tuple(
+      input.CreateFrom(ir::Value(node, 0)),
+      input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long));
 }
 
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight) {

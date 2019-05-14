@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/ops/arg_max.h"
+#include "torch_xla/csrc/ops/max_in_dim.h"
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -13,26 +13,32 @@ namespace {
 xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp { return BuildArgMax(operands[0], dim, keepdim); };
+      -> xla::XlaOp {
+    xla::XlaOp values = BuildMaxInDim(operands[0], dim, keepdim);
+    xla::XlaOp indices = BuildArgMax(operands[0], dim, keepdim);
+    return xla::Tuple(values.builder(), {values, indices});
+  };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-ArgMax::ArgMax(const Value& input, xla::int64 dim, bool keepdim)
+MaxInDim::MaxInDim(const Value& input, xla::int64 dim, bool keepdim)
     : Node(
-          ir::OpKind(at::aten::argmax), {input},
+          ir::OpKind(at::aten::max), {input},
           [&]() { return NodeOutputShape(input, dim, keepdim); },
-          /*num_outputs=*/1, xla::util::MHash(dim, keepdim)),
+          /*num_outputs=*/2, xla::util::MHash(dim, keepdim)),
       dim_(dim),
       keepdim_(keepdim) {}
 
-XlaOpVector ArgMax::Lower(LoweringContext* loctx) const {
+XlaOpVector MaxInDim::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(BuildArgMax(input, dim_, keepdim_), loctx);
+  xla::XlaOp values = BuildMaxInDim(input, dim_, keepdim_);
+  xla::XlaOp indices = BuildArgMax(input, dim_, keepdim_);
+  return ReturnOps({values, indices}, loctx);
 }
 
-std::string ArgMax::ToString() const {
+std::string MaxInDim::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", dim=" << dim_ << ", keepdim=" << keepdim_;
   return ss.str();
