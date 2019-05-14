@@ -25,7 +25,7 @@ export TRIM_GRAPH_SIZE=$MAX_GRAPH_SIZE
 export TRIM_GRAPH_CHECK_FREQUENCY=$GRAPH_CHECK_FREQUENCY
 
 if [ "$LOGFILE" != "" ]; then
-  python "$CDIR/test_operations.py" "$@" 2>&1 | tee $LOGFILE
+  python3 "$CDIR/test_operations.py" "$@" 2>&1 | tee $LOGFILE
 else
-  python "$CDIR/test_operations.py" "$@"
+  python3 "$CDIR/test_operations.py" "$@"
 fi
