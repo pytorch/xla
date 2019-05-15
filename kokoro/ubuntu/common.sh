@@ -89,9 +89,12 @@ xla/scripts/apply_patches.sh
 export NO_CUDA=1 NO_MKLDNN=1
 python setup.py bdist_wheel
 pip install dist/*.whl
-#pip install dist/torch-1.1.0a0+$(head -c 7 xla/.torch_commit_id)-cp35-cp35m-linux_x86_64.whl
+mkdir build_artifacts
+cp dist/* build_artifacts
 cd dist && rename "s/\+\w{7}/\+stable/" *.whl && cd ..
-mv dist/* ../../
+cd build_artifacts && rename "s/^torch/torch-$(date -d "yesterday" +%Y%m%d)/" *.whl && cd ..
+mv dist/* build_artifacts
+mv build_artifacts/* ../../
 
 # Execute torch_xla build
 cd xla
