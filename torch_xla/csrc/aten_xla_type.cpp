@@ -821,7 +821,8 @@ at::Tensor AtenXlaType::constant_pad_nd(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(pad), value));
 }
 
-at::Tensor AtenXlaType::contiguous(const at::Tensor& self) const {
+at::Tensor AtenXlaType::contiguous(const at::Tensor& self,
+                                   at::MemoryFormat memory_format) const {
   return self;
 }
 
