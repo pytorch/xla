@@ -56,11 +56,14 @@ XLATensorImpl::XLATensorImpl(XLATensor tensor)
   SetupSizeProperties();
 }
 
-c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach()
-    const {
+c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach(
+    const c10::VariableVersion& version_counter,
+    bool allow_tensor_metadata_change) const {
   auto impl = c10::make_intrusive<XLATensorImpl>(tensor_);
   impl->is_wrapped_number_ = is_wrapped_number_;
   impl->reserved_ = reserved_;
+  impl->set_version_counter(version_counter);
+  impl->set_allow_tensor_metadata_change(allow_tensor_metadata_change);
   return impl;
 }
 
