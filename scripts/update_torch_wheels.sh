@@ -4,22 +4,25 @@ set -e
 DATE=$1
 
 DIST_BUCKET="gs://pytorch-tpu-releases/wheels"
-
 TORCH_WHEEL="torch-1.1.0a0+stable-cp35-cp35m-linux_x86_64.whl"
 TORCH_XLA_WHEEL="torch_xla-0.1+nightly-cp35-cp35m-linux_x86_64.whl"
-if [ ! -z "$DATE" ]; then
-  printf 'Which of the following torch wheels would you link to install?\n'
-  gsutil ls "gs://pytorch-tpu-releases/wheels/torch-${DATE}-*"
-  printf '\n(copy paste and enter one of above): '
-  read TORCH_WHEEL
-  TORCH_WHEEL="$(basename $TORCH_WHEEL)"
+STABLE_TORCH_WHEEL="torch-20190513-1.1.0a0+358fb51-cp35-cp35m-linux_x86_64.whl"
+STABLE_TORCH_XLA_WHEEL="torch_xla-20190513-0.1+6c24e5b-cp35-cp35m-linux_x86_64.whl"
 
-  printf '\nWhich of the following torch_xla wheels would you link to install?\n'
-  gsutil ls "gs://pytorch-tpu-releases/wheels/torch_xla-${DATE}-*"
-  printf '\n(copy paste and enter one of above): '
-  read TORCH_XLA_WHEEL
-  TORCH_XLA_WHEEL="$(basename $TORCH_XLA_WHEEL)"
-fi
+while getopts 's' OPTION
+do
+  case $OPTION in
+    s)
+      echo 'Installing stable build'
+      TORCH_WHEEL=$STABLE_TORCH_WHEEL
+      TORCH_XLA_WHEEL=$STABLE_TORCH_XLA_WHEEL
+      ;;
+    *)
+      echo 'Usage: ./update_torch_wheel -s (optional)'
+      exit 1
+      ;;
+  esac
+done
 
 gsutil cp "$DIST_BUCKET/$TORCH_WHEEL" /tmp/
 gsutil cp "$DIST_BUCKET/$TORCH_XLA_WHEEL" /tmp/
