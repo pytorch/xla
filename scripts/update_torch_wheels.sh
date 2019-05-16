@@ -26,7 +26,7 @@ done
 
 gsutil cp "$DIST_BUCKET/$TORCH_WHEEL" /tmp/
 gsutil cp "$DIST_BUCKET/$TORCH_XLA_WHEEL" /tmp/
-pip3 install /tmp/"$TORCH_WHEEL"
-pip3 install /tmp/"$TORCH_XLA_WHEEL"
+pip3 install "/tmp/$TORCH_WHEEL"
+pip3 install "/tmp/$TORCH_XLA_WHEEL"
 
-rm /tmp/"$TORCH_WHEEL" /tmp/"$TORCH_XLA_WHEEL"
+rm -f "/tmp/$TORCH_WHEEL" "/tmp/$TORCH_XLA_WHEEL"
