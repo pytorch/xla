@@ -310,7 +310,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor constant_pad_nd(const at::Tensor& self, at::IntArrayRef pad,
                              at::Scalar value) const override;
 
-  at::Tensor contiguous(const at::Tensor& self) const override;
+  at::Tensor contiguous(const at::Tensor& self,
+                        at::MemoryFormat memory_format) const override;
 
   at::Tensor conv2d(const at::Tensor& input, const at::Tensor& weight,
                     const at::Tensor& bias, at::IntArrayRef stride,

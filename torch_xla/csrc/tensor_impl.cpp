@@ -82,7 +82,7 @@ int64_t XLATensorImpl::numel() const {
   return c10::TensorImpl::numel();
 }
 
-bool XLATensorImpl::is_contiguous() const {
+bool XLATensorImpl::is_contiguous(at::MemoryFormat memory_format) const {
   // Only check that the storage is already contiguous.
   XLA_CHECK(is_contiguous_) << "Non-contiguous storage for XLA tensor";
   return true;

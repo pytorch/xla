@@ -27,7 +27,7 @@ class XLATensorImpl : public c10::TensorImpl {
 
   int64_t numel() const override;
 
-  bool is_contiguous() const override;
+  bool is_contiguous(at::MemoryFormat memory_format) const override;
 
   int64_t size(int64_t d) const override;
 
