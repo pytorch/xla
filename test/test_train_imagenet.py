@@ -1,7 +1,12 @@
 import test_utils
 
 FLAGS = test_utils.parse_common_options(
-    datadir='/tmp/imagenet', batch_size=128, num_epochs=15, target_accuracy=0.0)
+    datadir='/tmp/imagenet',
+    batch_size=128,
+    num_epochs=18,
+    momentum=0.9,
+    lr=0.1,
+    target_accuracy=0.0)
 
 from common_utils import TestCase, run_tests
 import os
@@ -62,9 +67,7 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  momentum = 0.9
-  lr = 0.1
-  devices = xm.get_xla_supported_devices()
+  devices = xm.get_xla_supported_devices(max_devices=FLAGS.num_cores)
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
   model_parallel = dp.DataParallel(
       torchvision.models.resnet50, device_ids=devices)
@@ -72,7 +75,10 @@ def train_imagenet():
   def train_loop_fn(model, loader, device, context):
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.SGD(
-        model.parameters(), lr=lr, momentum=momentum, weight_decay=5e-4)
+        model.parameters(),
+        lr=FLAGS.lr,
+        momentum=FLAGS.momentum,
+        weight_decay=5e-4)
     tracker = xm.RateTracker()
 
     for x, (data, target) in loader:
