@@ -54,7 +54,7 @@ def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
 
 
-def get_xla_supported_devices(devkind=None):
+def get_xla_supported_devices(devkind=None, max_devices=None):
   devkind = devkind or ['TPU', 'GPU', 'CPU']
   for kind in devkind:
     kind_devices = []
@@ -62,7 +62,7 @@ def get_xla_supported_devices(devkind=None):
       if re.match(kind + r':\d+$', device):
         kind_devices.append('xla:{}'.format(i))
     if kind_devices:
-      return kind_devices
+      return kind_devices[:max_devices] if max_devices else kind_devices
 
 
 def xla_device(n=None, devkind=None):
