@@ -4,12 +4,15 @@
 #include <functional>
 #include <list>
 #include <numeric>
+#include <thread>
 
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
+#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "torch_xla/csrc/helpers.h"
@@ -139,6 +142,67 @@ std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
   return iter_dims;
 }
 
+struct CopyPartition {
+  explicit CopyPartition(
+      tensorflow::gtl::ArraySlice<const xla::int64> dimensions)
+      : base(dimensions.size()), limit(dimensions.begin(), dimensions.end()) {}
+
+  std::vector<xla::int64> base;
+  std::vector<xla::int64> limit;
+};
+
+std::vector<CopyPartition> CreateCopyPartitions(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions) {
+  static const xla::int64 kMinPartSize = 16;
+  // Use at most 50% of the available cores.
+  xla::int64 max_parts =
+      std::max<xla::int64>(std::thread::hardware_concurrency() / 2, 1);
+  xla::int64 max_dim = std::max_element(dimensions.begin(), dimensions.end()) -
+                       dimensions.begin();
+  xla::int64 max_dim_size = dimensions[max_dim];
+  xla::int64 part_size =
+      std::max<xla::int64>(max_dim_size / max_parts, kMinPartSize);
+  std::vector<CopyPartition> parts;
+  xla::int64 csize = 0;
+  while (csize < max_dim_size) {
+    xla::int64 n = std::min<xla::int64>(part_size, max_dim_size - csize);
+    CopyPartition p(dimensions);
+    p.base[max_dim] = csize;
+    p.limit[max_dim] = csize + n;
+    csize += n;
+    parts.emplace_back(std::move(p));
+  }
+  return parts;
+}
+
+template <typename SType, typename DType>
+void SlicedCopy(tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+                const SType* src_data,
+                tensorflow::gtl::ArraySlice<const xla::int64> src_strides,
+                DType* dest_data,
+                tensorflow::gtl::ArraySlice<const xla::int64> dest_strides,
+                tensorflow::gtl::ArraySlice<const xla::int64> iter_dims,
+                const CopyPartition& part) {
+  std::vector<xla::int64> indices(part.base);
+  xla::int64 inner_src_stride = src_strides[iter_dims.front()];
+  xla::int64 inner_dest_stride = dest_strides[iter_dims.front()];
+  xla::int64 n = 0;
+  while (n < indices.size()) {
+    StridedCopy(dest_data + GetFlatTensorOffset(dest_strides, indices),
+                inner_dest_stride,
+                src_data + GetFlatTensorOffset(src_strides, indices),
+                inner_src_stride, dimensions[iter_dims.front()]);
+    for (n = 1; n < indices.size(); ++n) {
+      xla::int64 dim = iter_dims[n];
+      indices[dim] += 1;
+      if (indices[dim] < part.limit[dim]) {
+        break;
+      }
+      indices[dim] = part.base[dim];
+    }
+  }
+}
+
 template <typename SType, typename DType>
 void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
                  void* dest_buffer, size_t dest_buffer_size,
@@ -157,29 +221,22 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
                            typename CopyType < NeedCast<SType>::value ||
                                NeedCast<DType>::value > ::type());
   } else {
+    // We issue a multi-threaded copy by slicing the bigger dimension and
+    // assigning its copy to different threads.
     std::vector<xla::int64> src_strides = ComputeShapeStrides(src_shape);
     std::vector<xla::int64> dest_strides = ComputeShapeStrides(dest_shape);
-    std::vector<xla::int64> indices(src_strides.size());
     std::vector<xla::int64> iter_dims = GetIterationDimensions(dest_shape);
-    xla::int64 inner_src_stride = src_strides[iter_dims.front()];
-    xla::int64 inner_dest_stride = dest_strides[iter_dims.front()];
-    xla::int64 n = 0;
-    while (n < iter_dims.size()) {
-      StridedCopy(dest_data + GetFlatTensorOffset(dest_strides, indices),
-                  inner_dest_stride,
-                  src_data + GetFlatTensorOffset(src_strides, indices),
-                  inner_src_stride, dest_shape.dimensions(iter_dims.front()));
-      // Compute the next index. Skip the lower iteration dimension, as we loop
-      // over it using the StridedCopy() call above.
-      for (n = 1; n < iter_dims.size(); ++n) {
-        xla::int64 dim = iter_dims[n];
-        indices[dim] += 1;
-        if (indices[dim] < dest_shape.dimensions(dim)) {
-          break;
-        }
-        indices[dim] = 0;
-      }
+    std::vector<CopyPartition> parts =
+        CreateCopyPartitions(dest_shape.dimensions());
+    xla::util::MultiWait mwait(parts.size());
+    for (size_t i = 0; i < parts.size(); ++i) {
+      auto copy_fn = [&, i]() {
+        SlicedCopy<SType, DType>(dest_shape.dimensions(), src_data, src_strides,
+                                 dest_data, dest_strides, iter_dims, parts[i]);
+      };
+      xla::env::ScheduleClosure(mwait.Completer(std::move(copy_fn)));
     }
+    XLA_CHECK_OK(mwait.Wait());
   }
 }
 
