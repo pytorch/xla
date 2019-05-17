@@ -1,7 +1,12 @@
 import test_utils
 
 FLAGS = test_utils.parse_common_options(
-    datadir='/tmp/mnist-data', batch_size=128, target_accuracy=98.0)
+    datadir='/tmp/mnist-data',
+    batch_size=128,
+    momentum=0.5,
+    lr=0.01,
+    target_accuracy=98.0,
+    num_epochs=18)
 
 from common_utils import TestCase, run_tests
 import os
@@ -43,9 +48,6 @@ class MNIST(nn.Module):
 
 def train_mnist():
   torch.manual_seed(1)
-  # Training settings
-  lr = 0.01
-  momentum = 0.5
 
   if FLAGS.fake_data:
     train_loader = xu.SampleGenerator(
@@ -83,13 +85,15 @@ def train_mnist():
         shuffle=True,
         num_workers=FLAGS.num_workers)
 
-  devices = xm.get_xla_supported_devices()
+  devices = xm.get_xla_supported_devices(max_devices=FLAGS.num_cores)
+  # Scale learning rate to num cores
+  lr = FLAGS.lr * len(devices)
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
   model_parallel = dp.DataParallel(MNIST, device_ids=devices)
 
   def train_loop_fn(model, loader, device, context):
     loss_fn = nn.NLLLoss()
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=FLAGS.momentum)
     tracker = xm.RateTracker()
 
     for x, (data, target) in loader:
