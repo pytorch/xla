@@ -3,9 +3,9 @@ import test_utils
 FLAGS = test_utils.parse_common_options(
     datadir='/tmp/cifar-data',
     batch_size=128,
-    num_epochs=18,
+    num_epochs=20,
     momentum=0.9,
-    lr=0.1,
+    lr=0.2,
     target_accuracy=80.0)
 
 from common_utils import TestCase, run_tests
