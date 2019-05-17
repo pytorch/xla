@@ -152,16 +152,27 @@ struct CopyPartition {
 };
 
 std::vector<CopyPartition> CreateCopyPartitions(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions) {
-  static const xla::int64 kMinPartSize = 16;
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    xla::int64 strided_copy_dimension) {
+  // The minimum number of elements copy that can be assigned to a thread.
+  static const xla::int64 kMinThreadElements = 100000;
   // Use at most 50% of the available cores.
   xla::int64 max_parts =
       std::max<xla::int64>(std::thread::hardware_concurrency() / 2, 1);
-  xla::int64 max_dim = std::max_element(dimensions.begin(), dimensions.end()) -
-                       dimensions.begin();
+  // Find the maximum dimension which is not the strided copy dimension.
+  xla::int64 max_dim = -1;
+  for (xla::int64 i = 0; i < dimensions.size(); ++i) {
+    if (i != strided_copy_dimension &&
+        (max_dim < 0 || dimensions[i] > dimensions[max_dim])) {
+      max_dim = i;
+    }
+  }
+
+  xla::int64 num_elements = xla::util::Multiply<xla::int64>(dimensions);
+  xla::int64 max_dim_unit_elements = num_elements / dimensions[max_dim];
   xla::int64 max_dim_size = dimensions[max_dim];
-  xla::int64 part_size =
-      std::max<xla::int64>(max_dim_size / max_parts, kMinPartSize);
+  xla::int64 part_size = std::max<xla::int64>(
+      max_dim_size / max_parts, kMinThreadElements / max_dim_unit_elements);
   std::vector<CopyPartition> parts;
   xla::int64 csize = 0;
   while (csize < max_dim_size) {
@@ -222,12 +233,13 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
                                NeedCast<DType>::value > ::type());
   } else {
     // We issue a multi-threaded copy by slicing the bigger dimension and
-    // assigning its copy to different threads.
+    // assigning its copy to different threads. This code is only valid for
+    // ranks >= 2, but the layout check above covers the case.
     std::vector<xla::int64> src_strides = ComputeShapeStrides(src_shape);
     std::vector<xla::int64> dest_strides = ComputeShapeStrides(dest_shape);
     std::vector<xla::int64> iter_dims = GetIterationDimensions(dest_shape);
     std::vector<CopyPartition> parts =
-        CreateCopyPartitions(dest_shape.dimensions());
+        CreateCopyPartitions(dest_shape.dimensions(), iter_dims.front());
     xla::util::MultiWait mwait(parts.size());
     for (size_t i = 0; i < parts.size(); ++i) {
       auto copy_fn = [&, i]() {
