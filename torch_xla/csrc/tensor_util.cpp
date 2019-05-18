@@ -171,8 +171,9 @@ std::vector<CopyPartition> CreateCopyPartitions(
   xla::int64 num_elements = xla::util::Multiply<xla::int64>(dimensions);
   xla::int64 max_dim_unit_elements = num_elements / dimensions[max_dim];
   xla::int64 max_dim_size = dimensions[max_dim];
-  xla::int64 part_size = std::max<xla::int64>(
-      max_dim_size / max_parts, kMinThreadElements / max_dim_unit_elements);
+  xla::int64 part_size =
+      std::max<xla::int64>(std::max<xla::int64>(max_dim_size / max_parts, 1),
+                           kMinThreadElements / max_dim_unit_elements);
   std::vector<CopyPartition> parts;
   xla::int64 csize = 0;
   while (csize < max_dim_size) {
