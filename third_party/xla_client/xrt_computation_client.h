@@ -376,6 +376,12 @@ class XrtComputationClient : public ComputationClient {
                                                 const tensorflow::Scope& scope,
                                                 const string& device) const;
 
+  // Checks the result of a compile operation, and dumps the XLA computation
+  // graphs in case of error.
+  static void CheckCompileStatus(const Status& status,
+                                 const std::vector<CompileInstance>& instances,
+                                 const SessionWork& session_work);
+
   // Converts an XLA data type to a tensorflow data type.
   static tensorflow::DataType XlaTypeToDataType(PrimitiveType dtype);
 
