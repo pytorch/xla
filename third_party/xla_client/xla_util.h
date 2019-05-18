@@ -20,6 +20,10 @@ StatusOr<std::unique_ptr<HloModule>> CreateModuleFromProto(
 // Returns a textual representation of the input XLA computation.
 StatusOr<string> GetComputationHloText(const XlaComputation& computation);
 
+void ReportComputationError(
+    const Status& status,
+    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations);
+
 // Checks whether an action on the given computation generated an error, and if
 // that was the case, emit error and computations HLO text.
 void CheckComputationStatus(

@@ -341,8 +341,10 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
 
     auto session_runner = [&, this, session]() {
       std::vector<tensorflow::Tensor> outputs;
-      XLA_CHECK_OK(session->session()->Run(
-          session_work.feed_inputs, session_work.outputs_handles, &outputs));
+      CheckCompileStatus(
+          session->session()->Run(session_work.feed_inputs,
+                                  session_work.outputs_handles, &outputs),
+          instances, session_work);
       XLA_CHECK_EQ(outputs.size(), session_work.outputs_handles.size());
 
       size_t output_index = 0;
@@ -364,6 +366,18 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
   }
   XLA_CHECK_OK(mwait.Wait());
   return results;
+}
+
+void XrtComputationClient::CheckCompileStatus(
+    const Status& status, const std::vector<CompileInstance>& instances,
+    const SessionWork& session_work) {
+  if (!status.ok()) {
+    std::vector<const XlaComputation*> computations;
+    for (auto li : session_work.index_mapping) {
+      computations.push_back(&instances[li].computation);
+    }
+    util::ReportComputationError(status, computations);
+  }
 }
 
 std::vector<ComputationClient::DataPtr>
