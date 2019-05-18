@@ -39,18 +39,24 @@ StatusOr<string> GetComputationHloText(const XlaComputation& computation) {
   return hlo_module->ToString();
 }
 
+void ReportComputationError(
+    const Status& status,
+    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations) {
+  for (size_t i = 0; i < computations.size(); ++i) {
+    string hlo_text = GetComputationHloText(*computations[i]).ValueOrDie();
+    TF_LOG(ERROR) << ">>> Dumping Computation " << i;
+    XLA_LOG_LINES(tensorflow::ERROR, hlo_text);
+  }
+  TF_LOG(ERROR) << "StackTrace:\n" << tensorflow::CurrentStackTrace();
+  TF_LOG(ERROR) << "Status: " << status;
+  throw std::runtime_error(status.ToString());
+}
+
 void CheckComputationStatus(
     const Status& status,
     tensorflow::gtl::ArraySlice<const XlaComputation* const> computations) {
   if (!status.ok()) {
-    for (size_t i = 0; i < computations.size(); ++i) {
-      string hlo_text = GetComputationHloText(*computations[i]).ValueOrDie();
-      TF_LOG(ERROR) << ">>> Dumping Computation " << i;
-      XLA_LOG_LINES(tensorflow::ERROR, hlo_text);
-    }
-    TF_LOG(ERROR) << "StackTrace:\n" << tensorflow::CurrentStackTrace();
-    TF_LOG(ERROR) << "Status: " << status;
-    throw std::runtime_error(status.ToString());
+    ReportComputationError(status, computations);
   }
 }
 
