@@ -103,8 +103,9 @@ def train_mnist():
       loss.backward()
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
-      print('[{}]({}) Loss={:.5f} Rate={:.2f}'.format(device, x, loss.item(),
-                                                      tracker.rate()))
+      if x % FLAGS.log_steps == 0:
+        print('[{}]({}) Loss={:.5f} Rate={:.2f}'.format(device, x, loss.item(),
+                                                        tracker.rate()))
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
