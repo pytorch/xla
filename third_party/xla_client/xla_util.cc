@@ -1,9 +1,14 @@
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 
+#include <fstream>
+#include <mutex>
+#include <sstream>
 #include <stdexcept>
+#include <thread>
 
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/core/errors.h"
@@ -21,6 +26,19 @@ size_t SingleShapeHash(const Shape& shape, size_t seed) {
     seed = HashCombine(seed, dim);
   }
   return HashCombine(seed, static_cast<int>(shape.element_type()));
+}
+
+void MaybeSaveHloGraph(const string& hlo_text, size_t index) {
+  static const std::string save_file =
+      sys_util::GetEnvString("XLA_SAVE_HLO_FILE", "");
+  if (!save_file.empty()) {
+    static std::mutex lock;
+    std::lock_guard<std::mutex> guard(lock);
+    std::ofstream graph_file(save_file, std::ios_base::app);
+    graph_file << "[HLO Graph " << index << " From Thread "
+               << std::this_thread::get_id() << "]\n"
+               << hlo_text << "\n";
+  }
 }
 
 }  // namespace
@@ -42,13 +60,16 @@ StatusOr<string> GetComputationHloText(const XlaComputation& computation) {
 void ReportComputationError(
     const Status& status,
     tensorflow::gtl::ArraySlice<const XlaComputation* const> computations) {
+  std::stringstream ss;
   for (size_t i = 0; i < computations.size(); ++i) {
     string hlo_text = GetComputationHloText(*computations[i]).ValueOrDie();
-    TF_LOG(ERROR) << ">>> Dumping Computation " << i;
-    XLA_LOG_LINES(tensorflow::ERROR, hlo_text);
+    MaybeSaveHloGraph(hlo_text, i);
+    ss << ">>> Dumping Computation " << i << "\n";
+    ss << hlo_text << "\n";
   }
-  TF_LOG(ERROR) << "StackTrace:\n" << tensorflow::CurrentStackTrace();
-  TF_LOG(ERROR) << "Status: " << status;
+  ss << "StackTrace:\n" << tensorflow::CurrentStackTrace() << "\n";
+  ss << "Status: " << status << "\n";
+  XLA_LOG_LINES(tensorflow::ERROR, ss.str());
   throw std::runtime_error(status.ToString());
 }
 
