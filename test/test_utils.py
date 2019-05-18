@@ -10,6 +10,7 @@ def parse_common_options(datadir=None,
                          batch_size=128,
                          num_epochs=10,
                          num_workers=4,
+                         log_steps=20,
                          lr=None,
                          momentum=None,
                          target_accuracy=None,
@@ -21,6 +22,7 @@ def parse_common_options(datadir=None,
   parser.add_argument('--batch_size', type=int, default=batch_size)
   parser.add_argument('--num_epochs', type=int, default=num_epochs)
   parser.add_argument('--num_workers', type=int, default=num_workers)
+  parser.add_argument('--log_steps', type=int, default=log_steps)
   parser.add_argument('--lr', type=float, default=lr)
   parser.add_argument('--momentum', type=float, default=momentum)
   parser.add_argument('--target_accuracy', type=float, default=target_accuracy)
