@@ -266,9 +266,6 @@ def _fetch_optimizer_state(optimizer):
       state.tensors.append(p.data)
       if p.grad is not None:
         state.gradients.append(p.grad.data)
-      pstate = optimizer.state.get(p, None)
-      if pstate:
-        add(pstate, state)
     elif isinstance(p, dict):
       for k, v in p.items():
         add(k, state)
