@@ -70,6 +70,7 @@
 #include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
+#include "torch_xla/csrc/ops/scatter_add.h"
 #include "torch_xla/csrc/ops/shrink_backward.h"
 #include "torch_xla/csrc/ops/softmax.h"
 #include "torch_xla/csrc/ops/softshrink.h"
@@ -1683,17 +1684,29 @@ void XLATensor::s_copy_(XLATensor& input, XLATensor& src) {
 void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
                          const XLATensor& index, const XLATensor& src) {
   input.SetIrValue(ir::MakeNode<ir::ops::Scatter>(
-      input.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
-      index.GetIrValue(), src.GetIrValue()));
+      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
+}
+
+void XLATensor::scatter_add_(XLATensor& input, xla::int64 dim,
+                             const XLATensor& index, const XLATensor& src) {
+  input.SetIrValue(ir::MakeNode<ir::ops::ScatterAdd>(
+      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
 XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
                              const XLATensor& index, const XLATensor& src) {
   return input.CreateFrom(ir::MakeNode<ir::ops::Scatter>(
-      input.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
-      index.GetIrValue(), src.GetIrValue()));
+      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
+}
+
+XLATensor XLATensor::scatter_add(const XLATensor& input, xla::int64 dim,
+                                 const XLATensor& index, const XLATensor& src) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::ScatterAdd>(
+      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
 void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
@@ -1701,9 +1714,8 @@ void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
   ir::Value constant =
       GetIrValueForScalar(value, input.shape(), input.GetDevice());
   input.SetIrValue(ir::MakeNode<ir::ops::Scatter>(
-      input.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
-      index.GetIrValue(), constant));
+      input.GetIrValue(), index.GetIrValue(), constant,
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
 XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
@@ -1711,9 +1723,8 @@ XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
   ir::Value constant =
       GetIrValueForScalar(value, input.shape(), input.GetDevice());
   return input.CreateFrom(ir::MakeNode<ir::ops::Scatter>(
-      input.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
-      index.GetIrValue(), constant));
+      input.GetIrValue(), index.GetIrValue(), constant,
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
 XLATensor XLATensor::select(const XLATensor& input, xla::int64 dim,
