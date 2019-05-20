@@ -2391,6 +2391,23 @@ at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
   return self;
 }
 
+at::Tensor AtenXlaType::scatter_add(const at::Tensor& self, int64_t dim,
+                                    const at::Tensor& index,
+                                    const at::Tensor& src) const {
+  return bridge::AtenFromXlaTensor(XLATensor::scatter_add(
+      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
+      bridge::GetXlaTensor(src)));
+}
+
+at::Tensor& AtenXlaType::scatter_add_(at::Tensor& self, int64_t dim,
+                                      const at::Tensor& index,
+                                      const at::Tensor& src) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::scatter_add_(self_tensor, dim, bridge::GetXlaTensor(index),
+                          bridge::GetXlaTensor(src));
+  return self;
+}
+
 at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,
                                int64_t index) const {
   return bridge::AtenFromXlaTensor(

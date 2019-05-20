@@ -929,6 +929,14 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor& scatter_(at::Tensor& self, int64_t dim, const at::Tensor& index,
                        at::Scalar value) const override;
 
+  at::Tensor& scatter_add_(at::Tensor& self, int64_t dim,
+                           const at::Tensor& index,
+                           const at::Tensor& src) const override;
+
+  at::Tensor scatter_add(const at::Tensor& self, int64_t dim,
+                         const at::Tensor& index,
+                         const at::Tensor& src) const override;
+
   at::Tensor select(const at::Tensor& self, int64_t dim,
                     int64_t index) const override;
 

@@ -717,8 +717,14 @@ class XLATensor {
 
   static void scatter_(XLATensor& input, xla::int64 dim, const XLATensor& index,
                        const XLATensor& src);
+  static void scatter_add_(XLATensor& input, xla::int64 dim,
+                           const XLATensor& index, const XLATensor& src);
+
   static XLATensor scatter(const XLATensor& input, xla::int64 dim,
                            const XLATensor& index, const XLATensor& src);
+  static XLATensor scatter_add(const XLATensor& input, xla::int64 dim,
+                               const XLATensor& index, const XLATensor& src);
+
   static void scatter_(XLATensor& input, xla::int64 dim, const XLATensor& index,
                        at::Scalar value);
   static XLATensor scatter(const XLATensor& input, xla::int64 dim,
