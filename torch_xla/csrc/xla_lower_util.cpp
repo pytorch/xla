@@ -418,4 +418,42 @@ xla::XlaOp CreateIndexFill(const xla::XlaOp& buffer, xla::int64 dim,
                              /*broadcast_value_to_index=*/true, nullptr);
 }
 
+xla::XlaOp CreateScatter(
+    const xla::XlaOp& input, const xla::XlaOp& index, const xla::XlaOp& src,
+    xla::int64 dim,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+        combiner) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
+  xla::Shape src_shape = XlaHelpers::ShapeOfXlaOp(src);
+  XLA_CHECK_EQ(src_shape.rank(), index_shape.rank());
+  xla::XlaOp src_op = src;
+  if (src_shape.dimensions() != index_shape.dimensions()) {
+    std::vector<xla::int64> base_indices(src_shape.rank(), 0);
+    src_op = BuildSlice(src_op, base_indices, index_shape.dimensions());
+  }
+  xla::ShapeUtil::AppendMajorDimension(1, &index_shape);
+  std::vector<xla::XlaOp> to_concat;
+  to_concat.reserve(input_shape.rank());
+  for (xla::int64 i = 0; i < input_shape.rank(); ++i) {
+    if (i == dim) {
+      to_concat.push_back(xla::Reshape(index, index_shape.dimensions()));
+    } else {
+      to_concat.push_back(xla::Iota(input.builder(), index_shape, i));
+    }
+  }
+  xla::XlaOp scatter_indices =
+      xla::ConcatInDim(input.builder(), to_concat, input_shape.rank());
+  xla::ScatterDimensionNumbers scatter_dnums;
+  scatter_dnums.set_index_vector_dim(input_shape.rank());
+  for (xla::int64 i = 0; i < input_shape.rank(); ++i) {
+    scatter_dnums.add_inserted_window_dims(i);
+    scatter_dnums.add_scatter_dims_to_operand_dims(i);
+  }
+  return xla::Scatter(
+      input, scatter_indices, src_op,
+      MakeScatterComputation(combiner, input_shape.element_type()),
+      scatter_dnums);
+}
+
 }  // namespace torch_xla

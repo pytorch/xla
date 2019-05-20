@@ -2585,6 +2585,49 @@ TEST_F(AtenXlaTensorTest, TestScatterScalar) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestScatterAdd) {
+  at::Tensor a = at::rand({4, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::rand({4, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::empty({4, 4}, at::TensorOptions(at::kLong));
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      c[i][j] = (i + j) % 4;
+    }
+  }
+  for (int dim = 0; dim < 2; ++dim) {
+    at::Tensor d = at::scatter_add(a, dim, c, b);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+      at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+      at::Tensor xla_c = bridge::CreateXlaTensor(c, device);
+      at::Tensor xla_d = at::scatter_add(xla_a, dim, xla_c, xla_b);
+      AllClose(d, xla_d);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestScatterAddInPlace) {
+  at::Tensor b = at::rand({4, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor c = at::empty({4, 4}, at::TensorOptions(at::kLong));
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      c[i][j] = (i + j) % 4;
+    }
+  }
+  for (int dim = 0; dim < 2; ++dim) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor a = at::rand({4, 4}, at::TensorOptions(at::kFloat));
+      at::Tensor xla_a = bridge::CreateXlaTensor(a.clone(), device);
+      at::Tensor d = a.scatter_add_(dim, c, b);
+      at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+      at::Tensor xla_c = bridge::CreateXlaTensor(c, device);
+      at::Tensor xla_d = xla_a.scatter_add_(dim, xla_c, xla_b);
+      AllClose(d, xla_d);
+      AllClose(a, xla_a);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestIndexSelect) {
   for (at::ScalarType scalar_type :
        {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {

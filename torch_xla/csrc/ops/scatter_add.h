@@ -6,10 +6,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Scatter : public Node {
+class ScatterAdd : public Node {
  public:
-  Scatter(const Value& input, const Value& index, const Value& src,
-          xla::int64 dim);
+  ScatterAdd(const Value& input, const Value& index, const Value& src,
+             xla::int64 dim);
 
   std::string ToString() const override;
 
