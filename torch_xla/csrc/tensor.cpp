@@ -706,6 +706,7 @@ at::Tensor XLATensor::ToMutableTensor() {
 
 void XLATensor::SetTensor(at::Tensor tensor) {
   SetTensorData(tensor);
+  data()->logical_element_type = c10::nullopt;
   if (data()->view != nullptr) {
     ir::Value ir_value = GetIrValueForTensor(tensor, GetDevice());
     data()->view = UpdateView(data()->view, ir_value);

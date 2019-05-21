@@ -1662,7 +1662,7 @@ XLATensor XLATensor::rsub(const XLATensor& input, at::Scalar other,
   return input.CreateFrom(other_xla - alpha_xla * input.GetIrValue());
 }
 
-void XLATensor::s_copy_(XLATensor& input, XLATensor& src) {
+void XLATensor::copy_(XLATensor& input, XLATensor& src) {
   if (input.GetDevice() == src.GetDevice()) {
     if (input.dtype() == src.dtype()) {
       input.SetIrValue(src.GetIrValue());

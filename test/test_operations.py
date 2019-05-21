@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--replicated', action='store_true')
 parser.add_argument('--long_test', action='store_true')
 parser.add_argument('--max_diff_count', type=int, default=25)
+parser.add_argument('--verbosity', type=int, default=0)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
 # Setup import folders.
@@ -633,4 +634,4 @@ if __name__ == '__main__':
   torch.manual_seed(42)
   torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
       use_full_mat_mul_precision=True)
-  run_tests()
+  unittest.main(verbosity=FLAGS.verbosity)
