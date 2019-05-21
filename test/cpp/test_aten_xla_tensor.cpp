@@ -4516,6 +4516,69 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNonSquare) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestMaxPool2DNoBatch) {
+  at::Tensor input = at::rand({64, 112, 112}, at::TensorOptions(at::kFloat));
+  int kernel_size = 3;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      // Test ceil_mode=true through the CPU interop.
+      for (bool ceil_mode : {false, true}) {
+        // Test dilation through the CPU interop.
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          at::Tensor output = at::max_pool2d(
+              input, /*kernel_size=*/{kernel_size, kernel_size},
+              /*stride=*/{stride, stride},
+              /*padding=*/{padding, padding}, /*dilation=*/{dilation, dilation},
+              /*ceil_mode=*/ceil_mode);
+          ForEachDevice([&](const Device& device) {
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+            at::Tensor xla_output =
+                at::max_pool2d(xla_input,
+                               /*kernel_size=*/{kernel_size, kernel_size},
+                               /*stride=*/{stride, stride},
+                               /*padding=*/{padding, padding},
+                               /*dilation=*/{dilation, dilation},
+                               /*ceil_mode=*/ceil_mode);
+            AllClose(output, xla_output);
+          });
+        }
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatch) {
+  at::Tensor input = at::rand({64, 16, 16, 16}, at::TensorOptions(at::kFloat));
+  int kernel_size = 3;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      // Test ceil_mode=true through the CPU interop.
+      for (bool ceil_mode : {false, true}) {
+        // Test dilation through the CPU interop.
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          at::Tensor output = at::max_pool3d(
+              input, /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+              /*stride=*/{stride, stride, stride},
+              /*padding=*/{padding, padding, padding},
+              /*dilation=*/{dilation, dilation, dilation},
+              /*ceil_mode=*/ceil_mode);
+          ForEachDevice([&](const Device& device) {
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+            at::Tensor xla_output = at::max_pool3d(
+                xla_input,
+                /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+                /*stride=*/{stride, stride, stride},
+                /*padding=*/{padding, padding, padding},
+                /*dilation=*/{dilation, dilation, dilation},
+                /*ceil_mode=*/ceil_mode);
+            AllClose(output, xla_output);
+          });
+        }
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool1D) {
   at::Tensor input = at::rand({4, 1, 28}, at::TensorOptions(at::kFloat));
   int kernel_size = 2;
@@ -4701,8 +4764,82 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DNonSquare) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestAvgPool2DNoBatch) {
+  at::Tensor input = at::rand({1, 28, 28}, at::TensorOptions(at::kFloat));
+  int kernel_size = 2;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      for (bool count_include_pad : {true, false}) {
+        // Test ceil_mode=true through the CPU interop.
+        for (bool ceil_mode : {false, true}) {
+          at::Tensor output = at::avg_pool2d(
+              input, /*kernel_size=*/{kernel_size, kernel_size},
+              /*stride=*/{stride, stride},
+              /*padding=*/{padding, padding}, /*ceil_mode=*/ceil_mode,
+              /*count_include_pad=*/count_include_pad);
+          ForEachDevice([&](const Device& device) {
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+            at::Tensor xla_output =
+                at::avg_pool2d(xla_input,
+                               /*kernel_size=*/{kernel_size, kernel_size},
+                               /*stride=*/{stride, stride},
+                               /*padding=*/{padding, padding},
+                               /*ceil_mode=*/ceil_mode,
+                               /*count_include_pad=*/count_include_pad);
+            AllClose(output, xla_output);
+          });
+        }
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatch) {
+  at::Tensor input = at::rand({1, 28, 28, 28}, at::TensorOptions(at::kFloat));
+  int kernel_size = 2;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      for (bool count_include_pad : {true, false}) {
+        // Test ceil_mode=true through the CPU interop.
+        for (bool ceil_mode : {false, true}) {
+          at::Tensor output = at::avg_pool3d(
+              input, /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+              /*stride=*/{stride, stride, stride},
+              /*padding=*/{padding, padding, padding}, /*ceil_mode=*/ceil_mode,
+              /*count_include_pad=*/count_include_pad);
+          ForEachDevice([&](const Device& device) {
+            at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+            at::Tensor xla_output = at::avg_pool3d(
+                xla_input,
+                /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+                /*stride=*/{stride, stride, stride},
+                /*padding=*/{padding, padding, padding},
+                /*ceil_mode=*/ceil_mode,
+                /*count_include_pad=*/count_include_pad);
+            AllClose(output, xla_output);
+          });
+        }
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2D) {
   at::Tensor input = at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat));
+  for (int64_t output_size : {7, 8}) {
+    at::Tensor output =
+        at::adaptive_avg_pool2d(input, {output_size, output_size});
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_output =
+          at::adaptive_avg_pool2d(xla_input, {output_size, output_size});
+      AllClose(output, xla_output);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DNoBatch) {
+  at::Tensor input = at::rand({1, 28, 28}, at::TensorOptions(at::kFloat));
   for (int64_t output_size : {7, 8}) {
     at::Tensor output =
         at::adaptive_avg_pool2d(input, {output_size, output_size});
@@ -6077,6 +6214,62 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestAvgPool2DNoBatchBackward) {
+  int kernel_size = 2;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      for (bool count_include_pad : {true, false}) {
+        // Test ceil_mode=true through the CPU interop.
+        for (bool ceil_mode : {false, true}) {
+          auto testfn =
+              [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+            return at::avg_pool2d(inputs[0],
+                                  /*kernel_size=*/{kernel_size, kernel_size},
+                                  /*stride=*/{stride, stride},
+                                  /*padding=*/{padding, padding},
+                                  /*ceil_mode=*/ceil_mode,
+                                  /*count_include_pad=*/count_include_pad);
+          };
+
+          ForEachDevice([&](const Device& device) {
+            TestBackward({at::rand({1, 28, 28}, at::TensorOptions(at::kFloat))},
+                         device, testfn);
+          });
+        }
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatchBackward) {
+  int kernel_size = 2;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      for (bool count_include_pad : {true, false}) {
+        // Test ceil_mode=true through the CPU interop.
+        for (bool ceil_mode : {false, true}) {
+          auto testfn =
+              [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+            return at::avg_pool3d(
+                inputs[0],
+                /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+                /*stride=*/{stride, stride, stride},
+                /*padding=*/{padding, padding, padding},
+                /*ceil_mode=*/ceil_mode,
+                /*count_include_pad=*/count_include_pad);
+          };
+
+          ForEachDevice([&](const Device& device) {
+            TestBackward(
+                {at::rand({1, 28, 28, 28}, at::TensorOptions(at::kFloat))},
+                device, testfn);
+          });
+        }
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DBackward) {
   for (int64_t output_size : {7, 8}) {
     auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
@@ -6084,6 +6277,18 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DBackward) {
     };
     ForEachDevice([&](const Device& device) {
       TestBackward({at::rand({4, 1, 28, 28}, at::TensorOptions(at::kFloat))},
+                   device, testfn);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DNoBatchBackward) {
+  for (int64_t output_size : {7, 8}) {
+    auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+      return at::adaptive_avg_pool2d(inputs[0], {output_size, output_size});
+    };
+    ForEachDevice([&](const Device& device) {
+      TestBackward({at::rand({1, 28, 28}, at::TensorOptions(at::kFloat))},
                    device, testfn);
     });
   }
@@ -6206,6 +6411,55 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DBackward) {
         ForEachDevice([&](const Device& device) {
           TestBackward(
               {at::rand({1, 64, 16, 16, 16}, at::TensorOptions(at::kFloat))},
+              device, testfn);
+        });
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMaxPool2DNoBatchBackward) {
+  int kernel_size = 3;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      // Test ceil_mode=true through the CPU interop.
+      for (bool ceil_mode : {false, true}) {
+        auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+          return at::max_pool2d(
+              inputs[0], /*kernel_size=*/{kernel_size, kernel_size},
+              /*stride=*/{stride, stride},
+              /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
+              /*ceil_mode=*/ceil_mode);
+        };
+
+        ForEachDevice([&](const Device& device) {
+          TestBackward(
+              {at::rand({64, 112, 112}, at::TensorOptions(at::kFloat))}, device,
+              testfn);
+        });
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
+  int kernel_size = 3;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      // Test ceil_mode=true through the CPU interop.
+      for (bool ceil_mode : {false, true}) {
+        auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+          return at::max_pool3d(
+              inputs[0],
+              /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+              /*stride=*/{stride, stride, stride},
+              /*padding=*/{padding, padding, padding}, /*dilation=*/{1, 1, 1},
+              /*ceil_mode=*/ceil_mode);
+        };
+
+        ForEachDevice([&](const Device& device) {
+          TestBackward(
+              {at::rand({64, 16, 16, 16}, at::TensorOptions(at::kFloat))},
               device, testfn);
         });
       }
