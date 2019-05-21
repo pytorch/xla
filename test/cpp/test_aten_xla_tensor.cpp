@@ -58,6 +58,16 @@ void TestBackward(
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestScalarTensor) {
+  at::Tensor scalar_tensor =
+      at::scalar_tensor(1., at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_scalar_tensor = at::scalar_tensor(
+        1., at::TensorOptions(at::kFloat).device(at::DeviceType::XLA));
+    AllClose(scalar_tensor, xla_scalar_tensor);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestClone) {
   ForEachDevice([&](const Device& device) {
     at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
