@@ -2683,50 +2683,6 @@ TEST_F(AtenXlaTensorTest, TestBroadcastTensors) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestSCopy) {
-  int size = 5;
-  at::Tensor source = at::randint(100, {size}, at::TensorOptions(at::kInt));
-  at::Tensor destination = at::empty({size}, at::TensorOptions(at::kFloat));
-  at::s_copy_(destination, source);
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_source = bridge::CreateXlaTensor(source, device);
-    at::Tensor xla_destination =
-        at::empty({size}, at::TensorOptions(at::kFloat)
-                              .device(bridge::XlaDeviceToAtenDevice(device)));
-    at::s_copy_(xla_destination, xla_source);
-    EXPECT_TRUE(EqualValues(destination, xla_destination));
-  });
-}
-
-TEST_F(AtenXlaTensorTest, TestSCopyTransfer) {
-  int size = 5;
-  at::Tensor source = at::randint(100, {size}, at::TensorOptions(at::kInt));
-  at::Tensor destination = at::empty({size}, at::TensorOptions(at::kFloat));
-  at::s_copy_(destination, source);
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_destination =
-        at::empty({size}, at::TensorOptions(at::kFloat)
-                              .device(bridge::XlaDeviceToAtenDevice(device)));
-    at::s_copy_(xla_destination, source);
-    EXPECT_TRUE(EqualValues(destination, xla_destination));
-  });
-}
-
-TEST_F(AtenXlaTensorTest, TestSCopyFrom) {
-  int size = 5;
-  at::Tensor source = at::randint(100, {size}, at::TensorOptions(at::kInt));
-  at::Tensor destination = at::empty({size}, at::TensorOptions(at::kFloat));
-  at::s_copy_(destination, source);
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_source = bridge::CreateXlaTensor(source, device);
-    at::Tensor xla_destination =
-        at::empty({size}, at::TensorOptions(at::kFloat)
-                              .device(bridge::XlaDeviceToAtenDevice(device)));
-    at::_s_copy_from(xla_source, xla_destination);
-    EXPECT_TRUE(EqualValues(destination, xla_destination));
-  });
-}
-
 TEST_F(AtenXlaTensorTest, TestOneIndex) {
   for (at::ScalarType scalar_type :
        {at::kFloat, at::kByte, at::kChar, at::kShort, at::kInt, at::kLong}) {

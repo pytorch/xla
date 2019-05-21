@@ -96,9 +96,6 @@ class AtenXlaType : public AtenXlaTypeBase {
                                         const at::Tensor& output, int64_t dim,
                                         const at::Tensor& self) const override;
 
-  at::Tensor _s_copy_from(const at::Tensor& self, const at::Tensor& dst,
-                          bool non_blocking) const override;
-
   at::Tensor _softmax(const at::Tensor& self, int64_t dim,
                       bool half_to_float) const override;
 
@@ -915,9 +912,6 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor rsub(const at::Tensor& self, at::Scalar other,
                   at::Scalar alpha) const override;
-
-  at::Tensor& s_copy_(at::Tensor& self, const at::Tensor& src,
-                      bool non_blocking) const override;
 
   at::Tensor scatter(const at::Tensor& self, int64_t dim,
                      const at::Tensor& index,

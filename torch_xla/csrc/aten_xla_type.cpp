@@ -278,20 +278,6 @@ at::Tensor AtenXlaType::_log_softmax_backward_data(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
 }
 
-at::Tensor AtenXlaType::_s_copy_from(const at::Tensor& self,
-                                     const at::Tensor& dst,
-                                     bool /* non_blocking */) const {
-  // Do not mark the tensor creation as writeable to not discard the XLA tensor
-  // device context, but make a copy to avoid core data to be shared.
-  std::vector<at::Tensor> tensors = {self};
-  auto xla_tensors =
-      bridge::XlaCreateTensorList(tensors, /*writeable=*/nullptr);
-  // Hack in an overwrite of a const tensor.
-  const_cast<at::Tensor&>(dst) =
-      CopyTensor(xla_tensors.front(), dst.scalar_type());
-  return dst;
-}
-
 at::Tensor AtenXlaType::_softmax(const at::Tensor& self, int64_t dim,
                                  bool /* half_to_float */) const {
   return softmax(self, dim);
@@ -2364,18 +2350,6 @@ at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
                              at::Scalar alpha) const {
   return bridge::AtenFromXlaTensor(
       XLATensor::rsub(bridge::GetXlaTensor(self), other, alpha));
-}
-
-at::Tensor& AtenXlaType::s_copy_(at::Tensor& self, const at::Tensor& src,
-                                 bool /* non_blocking */) const {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  auto xsrc_tensor = bridge::TryGetXlaTensor(src);
-  if (xsrc_tensor) {
-    XLATensor::s_copy_(self_tensor, *xsrc_tensor);
-  } else {
-    self_tensor.SetTensor(CopyTensor(src, self.scalar_type()));
-  }
-  return self;
 }
 
 at::Tensor AtenXlaType::scatter(const at::Tensor& self, int64_t dim,
