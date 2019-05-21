@@ -713,7 +713,7 @@ class XLATensor {
   static XLATensor rsub(const XLATensor& input, at::Scalar other,
                         at::Scalar alpha);
 
-  static void s_copy_(XLATensor& input, XLATensor& src);
+  static void copy_(XLATensor& input, XLATensor& src);
 
   static void scatter_(XLATensor& input, xla::int64 dim, const XLATensor& index,
                        const XLATensor& src);
