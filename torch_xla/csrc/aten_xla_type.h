@@ -87,6 +87,9 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor _cast_Short(const at::Tensor& self,
                          bool non_blocking) const override;
 
+  at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
+                        bool non_blocking) const override;
+
   at::Tensor _dim_arange(const at::Tensor& like, int64_t dim) const override;
 
   at::Tensor _log_softmax(const at::Tensor& self, int64_t dim,

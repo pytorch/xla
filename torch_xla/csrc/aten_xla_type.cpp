@@ -261,6 +261,20 @@ at::Tensor AtenXlaType::_cast_Short(const at::Tensor& self,
       XLATensor::cast(bridge::GetXlaTensor(self), at::ScalarType::Short));
 }
 
+at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
+                                   const at::Tensor& dst,
+                                   bool non_blocking) const {
+  // Do not mark the tensor creation as writeable to not discard the XLA tensor
+  // device context, but make a copy to avoid core data to be shared.
+  std::vector<at::Tensor> tensors = {self};
+  auto xla_tensors =
+      bridge::XlaCreateTensorList(tensors, /*writeable=*/nullptr);
+  // Hack in an overwrite of a const tensor.
+  const_cast<at::Tensor&>(dst) =
+      CopyTensor(xla_tensors.front(), dst.scalar_type());
+  return dst;
+}
+
 at::Tensor AtenXlaType::_dim_arange(const at::Tensor& like, int64_t dim) const {
   return arange(like.size(dim), like.options().dtype(at::kLong));
 }
