@@ -5,10 +5,55 @@
 
 #include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/python_util.h"
 
 namespace torch_xla {
 namespace ir {
+namespace {
+
+class HloMetadataSetter {
+ public:
+  HloMetadataSetter(LoweringContext* loctx, const Node* node) {
+    if (ShouldPopulateXlaOpMetadata()) {
+      PopulateXlaOpMetadata(loctx, node);
+      loctx_ = loctx;
+    }
+  }
+
+  ~HloMetadataSetter() {
+    if (loctx_ != nullptr) {
+      loctx_->builder()->ClearOpMetadata();
+    }
+  }
+
+ private:
+  static bool ShouldPopulateXlaOpMetadata() {
+    static bool op_metadata = xla::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
+    return op_metadata;
+  }
+
+  static void PopulateXlaOpMetadata(LoweringContext* loctx, const Node* node) {
+    xla::OpMetadata metadata;
+    metadata.set_op_type(node->op().ToString());
+    if (!node->metadata().frame_info.empty()) {
+      const SourceLocation& frame = node->metadata().frame_info.front();
+      std::string::size_type pos = frame.file.find_last_of('/');
+      if (pos == std::string::npos) {
+        pos = 0;
+      } else {
+        ++pos;
+      }
+      metadata.set_source_file(frame.function + "@" + frame.file.substr(pos));
+      metadata.set_source_line(frame.line);
+    }
+    loctx->builder()->SetOpMetadata(std::move(metadata));
+  }
+
+  LoweringContext* loctx_ = nullptr;
+};
+
+}  // namespace
 
 xla::XlaOp LoweringContext::GetParameter(
     const std::shared_ptr<xla::ComputationClient::Data>& data) {
@@ -65,6 +110,8 @@ xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {
 XlaOpVector LoweringContext::LowerNode(const Node* node) {
   XlaOpVector result_ops;
   try {
+    HloMetadataSetter meta_setter(this, node);
+
     result_ops = node->Lower(this);
   } catch (const std::exception& ex) {
     ReportBuilderError(node, ex.what());
