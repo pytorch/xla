@@ -21,6 +21,8 @@ class DumpUtil {
 
   static std::string PostOrderToText(
       tensorflow::gtl::ArraySlice<const Node* const> post_order);
+
+  static std::string ToHlo(tensorflow::gtl::ArraySlice<const Value> values);
 };
 
 }  // namespace ir
