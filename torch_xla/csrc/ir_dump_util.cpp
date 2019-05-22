@@ -6,7 +6,9 @@
 
 #include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "torch_xla/csrc/ir_util.h"
+#include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
 namespace ir {
@@ -203,6 +205,16 @@ std::string DumpUtil::PostOrderToText(
   }
   ss << "}\n";
   return ss.str();
+}
+
+std::string DumpUtil::ToHlo(tensorflow::gtl::ArraySlice<const Value> values) {
+  ir::LoweringContext lowering_ctx("IrToHlo");
+  for (auto& ir_value : values) {
+    xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
+    lowering_ctx.AddResult(root);
+  }
+  xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
+  return ConsumeValue(xla::util::GetComputationHloText(computation));
 }
 
 }  // namespace ir

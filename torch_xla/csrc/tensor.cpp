@@ -21,6 +21,7 @@
 #include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/op_by_op_executor.h"
@@ -493,16 +494,14 @@ xla::ComputationClient::DataPtr XLATensor::CurrentXlaData() const {
 
 std::string XLATensor::DumpHloComputation(
     const std::vector<XLATensor>& tensors) {
-  ir::LoweringContext lowering_ctx("DumpHloComputation");
+  std::vector<ir::Value> ir_values;
   for (auto& tensor : tensors) {
     ir::Value ir_value = tensor.CurrentIrValue();
     if (ir_value) {
-      xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
-      lowering_ctx.AddResult(root);
+      ir_values.push_back(std::move(ir_value));
     }
   }
-  xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
-  return ConsumeValue(xla::util::GetComputationHloText(computation));
+  return ir::DumpUtil::ToHlo(ir_values);
 }
 
 void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data) {
