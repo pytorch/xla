@@ -93,6 +93,8 @@ Note that the IP of the TPU node can change if the TPU node is reset. If _PyTorc
 seem to hang at startup, verify that the IP of your TPU node is still the same of
 the one you have configured.
 
+If you are planning to be building from source and hence using the latest _PyTorch/TPU_ code base,
+it is suggested for you to select the _Nightly_ builds when you create a Cloud TPU instance.
 
 Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is working.
 
