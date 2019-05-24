@@ -115,7 +115,7 @@ class XrtComputationClient : public ComputationClient {
     // (ie, /job:tpu_worker/replica:0/task:0/device:TPU:0), of the worker
     // exposing that device.
     std::map<string, string> device_map;
-    // Maps a TPU Worker with an HOST:PORT string.
+    // Maps a TPU Worker with an EndPoint.
     std::map<Worker, string> workers_map;
   };
 
@@ -155,6 +155,8 @@ class XrtComputationClient : public ComputationClient {
 
   std::vector<std::vector<DataPtr>> DeconstructTuple(
       tensorflow::gtl::ArraySlice<const DataPtr> tuples) override;
+
+  string GetResourceDomain(const string& device) const override;
 
   string GetDefaultDevice() const override;
 
@@ -249,7 +251,7 @@ class XrtComputationClient : public ComputationClient {
   const std::vector<int>& GetDeviceMeshCoords(const string& xrt_device) const;
 
   tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
-      const string& xrt_device);
+      const string& job, int task_no, const string& worker_host_port);
 
   void InitializeDevices();
 
@@ -397,6 +399,8 @@ class XrtComputationClient : public ComputationClient {
   static std::vector<const XlaComputation*> GetXlaComputations(
       tensorflow::gtl::ArraySlice<const Computation* const> computations);
 
+  static tensorflow::ConfigProto CreateConfigProto(const Options& options);
+
   // Checks whether a local GRPC service is required, and starts it if need it.
   static void MaybeCreateLocalService(
       const XrtComputationClient::Options& options);
@@ -404,8 +408,8 @@ class XrtComputationClient : public ComputationClient {
   Options options_;
   std::mutex lock_;
   std::map<string, std::vector<int>> device_mesh_coords_;
-  XrtSessionCache session_cache_;
-  XrtSessionCache alloc_session_cache_;
+  std::unique_ptr<XrtSessionCache> session_cache_;
+  std::unique_ptr<XrtSessionCache> alloc_session_cache_;
   std::unique_ptr<util::TriggeredTask> triggered_task_;
   util::Cache<string, Computation, util::PartialHasher<string, 4096>>
       compilation_cache_;

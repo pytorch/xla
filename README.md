@@ -133,3 +133,92 @@ scripts/update_torch_wheels.sh
 ```
 
 The same script can be run again when you want to update the _PyTorch/TPU_ wheels.
+
+
+
+# Debugging
+
+Sometimes bad things happen and a deeper look into the _PyTorch/TPU_ stack is necessary.
+In order to do that, _PyTorch/TPU_ has a series of environment variables and function calls
+which can help understading its internal behavior.
+
+Note that the infromation in this section is subject to be removed in future releases of
+the _PyTorch/TPU_ software, since many of them are peculiar to a given internal implementation
+which might change.
+
+The _PyTorch/TPU_ stack keeps a series of metrics and counters during its execution, and
+the following API returns a string representation of them:
+
+```Python
+torch_xla._XLAC._xla_metrics_report()
+```
+
+Printing out that information can help during the debug phases and while reporting issues.
+
+The information included within the metrics report include things like how many time we
+issue _XLA_ compilations, how long they take, how many times we execute, for how long,
+how many device data handles we create/destroy, etc...
+These information is reported in terms of percentiles of the samples.
+An example is:
+
+```
+Metric: CompileTime
+  TotalSamples: 202
+  Counter: 06m09s401ms746.001us
+  ValueRate: 778ms572.062us / second
+  Rate: 0.425201 / second
+  Percentiles: 1%=001ms32.778us; 5%=001ms61.283us; 10%=001ms79.236us; 20%=001ms110.973us; 50%=001ms228.773us; 80%=001ms339.183us; 90%=001ms434.305us; 95%=002ms921.063us; 99%=21s102ms853.173us
+```
+
+The _PyTorch/TPU_ stack also has counters, which are named integer variables tracks
+internal software status.
+Example:
+
+```
+Counter: CachedSyncTensors
+  Value: 395
+```
+
+Counters are also useful to understand which operations the _PyTorch/TPU_ stack is routing
+back to the CPU engine of _PyTorch_.
+Things which looks like a _C++_ namespace are part of this category:
+
+```
+Counter: aten::nonzero
+  Value: 33
+```
+
+There are also a number of environment variables which control the behavior of the _PyTorch/TPU_
+software stack.
+Setting such variables will cause different degrees of performance degradation, so they should
+only be enabled for debugging.
+
+* ```XLA_IR_DEBUG```: Enables the _Python_ stack trace to be catpured where creating IR nodes,
+  hence allowing to understand which _PyTorch_ operation was responsible of generating such IR.
+
+* ```XLA_HLO_DEBUG```: Enables the _Python_ stack frame captured when _XLA_IR_DEBUG_ is active,
+  to be propagated to the _XLA_ _HLO_ metadata.
+
+* ```XLA_SAVE_TENSORS_FILE```: The path to a file which will be used to dump the IR graphs during
+  execution. Note that the file can become really big if the option is left enabled and the
+  _PyTorch_ program let run for long time. The graphs are appended to the file, so to have a clean
+  sheet from run to run, the file should be explicitly removed.
+
+* ```XLA_SAVE_TENSORS_FMT```: The format of the graphs stored within the _XLA_SAVE_TENSORS_FILE_
+  file. Can be ```text``` (the default), ```dot``` (the _Graphviz_ format) or ```hlo```.
+
+* ```GET_TENSORS_OPBYOP```: Enables pure _OpByOp_ dispatch. The _PyTorch/TPU_ software tries to
+  fuse together many _PyTorch_ operations into a single computation graph, but sometimes, either
+  for debugging, or in case the _PyTorch_ code have a very dynamic nature (in shapes or graph
+  terms), it is better to force the execution in _OpByOp_ mode (every IR node is lowered into
+  a separate _XLA_ computation, and chain-executed). This environment variable, if set to 1,
+  enables _OpByOp_ during the "get tensors" operation (the operation used by _PyTorch/TPU_ to
+  fetch intermediate values back from the _TPU_ device into _PyTorch_ CPU tensors).
+
+* ```SYNC_TENSORS_OPBYOP```: The same as _GET_TENSORS_OPBYOP_ but for "sync tensors" operation
+  (the operation used at the end of a step, to flush pending IR computations and materialize
+  them into _TPU_ device data).
+
+* ```XLA_USE_BF16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _BiFloat16_
+  when sending to the _TPU_ device.
+

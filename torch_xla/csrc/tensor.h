@@ -45,10 +45,6 @@ class XLATensor {
 
   at::Tensor ToTensor();
 
-  // This API should be called instead of ToTensor() when the tensor is passed
-  // to other ATEN APIs which will modify its value.
-  at::Tensor ToMutableTensor();
-
   // Assigns the tensor value to the XLA tensor.
   void SetTensor(at::Tensor tensor);
 
@@ -116,7 +112,8 @@ class XLATensor {
   // devices which should be partecipating into the replicated computation.
   static void SyncTensorsGraph(
       std::vector<XLATensor>* tensors,
-      tensorflow::gtl::ArraySlice<const std::string> devices, bool wait);
+      tensorflow::gtl::ArraySlice<const std::string> devices, bool wait,
+      bool sync_xla_data);
 
   // Makes sure that any outstanding IR operation accumulated over live tensors,
   // gets turned into device data. If wait is true, the sync operation will be
@@ -930,6 +927,9 @@ class XLATensor {
     // Whether we want to force XLA data on the target tensors (hence trimming
     // the IR graph above them).
     bool force_xla_data = true;
+    // Whether when setting the XLA data, the other properties of the tensor
+    // state should be reset.
+    bool sync_xla_data = true;
   };
 
   // This is the core XLA tensor data structure where all the tensor data is
@@ -987,6 +987,8 @@ class XLATensor {
   Data* data() const;
 
   std::shared_ptr<Data> data_ptr() const { return data_; }
+
+  void SetXlaData(xla::ComputationClient::DataPtr xla_data, bool sync);
 
   void SetIrValue(ir::Value ir_value);
 
@@ -1048,7 +1050,8 @@ class XLATensor {
   using OpByOpAsync = xla::util::AsyncTask<xla::Status>;
   static OpByOpAsync SyncTensorsGraphOpByOp(
       std::vector<XLATensor>* tensors,
-      tensorflow::gtl::ArraySlice<const std::string> devices);
+      tensorflow::gtl::ArraySlice<const std::string> devices,
+      const SyncTensorsConfig& config);
 
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.

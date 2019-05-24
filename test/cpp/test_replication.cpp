@@ -37,7 +37,7 @@ void TestSingleReplication(const std::vector<Device>& devices) {
   xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {8, 8});
   std::vector<xla::ComputationClient::CompileInstance> instances;
   for (auto& device_str : device_strings) {
-    instances.emplace_back(CreateCrsComputation(shape), device_strings.front(),
+    instances.emplace_back(CreateCrsComputation(shape), device_str,
                            device_strings, &shape);
   }
   auto compiled_computations =
