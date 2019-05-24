@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string>
 
+#include "tensorflow/compiler/xla/xla_client/util.h"
+
 namespace torch_xla {
 
 enum class DeviceType { CPU, GPU, TPU };
@@ -31,6 +33,10 @@ struct Device {
   friend std::ostream& operator<<(std::ostream& os, const Device& device) {
     os << device.ToString();
     return os;
+  }
+
+  size_t hash() const {
+    return xla::util::HashCombine(static_cast<int>(hw_type), ordinal + 1);
   }
 
   DeviceType hw_type = DeviceType::CPU;

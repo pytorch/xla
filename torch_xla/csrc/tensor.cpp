@@ -465,19 +465,30 @@ const Device& XLATensor::GetDevice() const { return data()->device; }
 xla::int64 XLATensor::GetUniqueId() const { return data()->unique_id; }
 
 xla::ComputationClient::DataPtr XLATensor::GetXlaData() {
+  // XLA data can coexist with a view, but we need to check that the view did
+  // not receive any updates before calling the current XLA valid.
   bool up_to_date = true;
+  ir::Value ir_value;
   if (data()->view != nullptr) {
     View::IrNode ir_value_updated = GetViewUpdate(data()->view);
-    if (ir_value_updated.updated || !data()->ir_value) {
-      up_to_date = false;
-      AssignIrValue(std::move(ir_value_updated.ir_value));
-    }
+    up_to_date = !ir_value_updated.updated;
+    ir_value = std::move(ir_value_updated.ir_value);
   }
   if (up_to_date) {
     xla::ComputationClient::DataPtr xla_data = CurrentXlaData();
-    if (xla_data != nullptr && xla_data->HasValue()) {
+    if (xla_data != nullptr) {
+      XLA_CHECK(xla_data->HasValue())
+          << "Trying to access XLA data while an async operation is in flight: "
+          << xla_data->shape();
       return xla_data;
     }
+  }
+  if (ir_value) {
+    // The view gave us an updated IR value. We usually do not have a valid IR
+    // value field together with a view, but to allow code reuse in
+    // ApplyPendingGraph() we temporarily set it here. The following call to
+    // ApplyPendingGraph() will clear it.
+    AssignIrValue(std::move(ir_value));
   }
   if (data()->ir_value) {
     ApplyPendingGraph();
@@ -505,23 +516,31 @@ std::string XLATensor::DumpHloComputation(
 }
 
 void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data) {
-  data()->view = nullptr;
+  SetXlaData(std::move(xla_data), /*sync=*/true);
+}
+
+void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data,
+                           bool sync) {
   data()->xla_data = std::move(xla_data);
-  AssignIrValue(ir::Value());
-  data()->tensor_data = c10::nullopt;
+  if (sync) {
+    data()->view = nullptr;
+    AssignIrValue(ir::Value());
+    data()->tensor_data = c10::nullopt;
+  }
 }
 
 void XLATensor::SetIrValue(ir::Value ir_value) {
+  data()->xla_data = nullptr;
+  data()->tensor_data = c10::nullopt;
   if (data()->view != nullptr) {
     // If we have an active view, and a SetIrValue() happens, it means we are
     // within an in-place execution context, and we need to update the view's
     // alias as well.
-    data()->view = UpdateView(data()->view, ir_value);
+    data()->view = UpdateView(data()->view, std::move(ir_value));
+  } else {
+    AssignIrValue(std::move(ir_value));
+    TryLimitGraphSize();
   }
-  AssignIrValue(std::move(ir_value));
-  data()->xla_data = nullptr;
-  data()->tensor_data = c10::nullopt;
-  TryLimitGraphSize();
 }
 
 void XLATensor::AssignIrValue(ir::Value ir_value) const {
@@ -642,7 +661,7 @@ std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
     ViewInfo view_info(ir_value.shape(), view->shape().dimensions());
     view = view->CreateSubView(view_info.shape, view_info);
   }
-  view->Update(ir_value);
+  view->Update(std::move(ir_value));
   return view;
 }
 
@@ -659,6 +678,7 @@ XLATensor XLATensor::CreateView(ViewInfo view_info) const {
   ViewInfo this_view_info(ir_value.shape(), ir_value.shape().dimensions());
   data()->view = std::make_shared<View>(ir_value.shape(), alias,
                                         std::move(this_view_info));
+  AssignIrValue(ir::Value());
   return Create(std::make_shared<View>(view_info.shape, alias, view_info),
                 GetDevice(), dtype());
 }
@@ -685,31 +705,17 @@ void XLATensor::MakeWriteableTensorDataSource() {
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
   if (data()->view != nullptr) {
-    // We are handing out an at::Tensor which the callers might write into it.
-    // If this is a view, we need to push a TensorData update to the view. A
-    // TensorData node will fetch the status of the at::Tensor at lowering time,
-    // so that all the changes done by the caller, will become visible only when
-    // a value from the view is requested.
     ir::Value ir_value = GetIrValueForTensor(*tensor_data, GetDevice());
-    data()->view = UpdateView(data()->view, ir_value);
+    data()->view = UpdateView(data()->view, std::move(ir_value));
   }
   data()->xla_data = nullptr;
   AssignIrValue(ir::Value());
 }
 
-at::Tensor XLATensor::ToMutableTensor() {
-  at::Tensor tensor_data = ToTensor();
-  MakeWriteableTensorDataSource();
-  return tensor_data;
-}
-
 void XLATensor::SetTensor(at::Tensor tensor) {
   SetTensorData(tensor);
   data()->logical_element_type = c10::nullopt;
-  if (data()->view != nullptr) {
-    ir::Value ir_value = GetIrValueForTensor(tensor, GetDevice());
-    data()->view = UpdateView(data()->view, ir_value);
-  }
+  data()->view = nullptr;
   data()->xla_data = nullptr;
   AssignIrValue(ir::Value());
 }
@@ -919,15 +925,16 @@ void XLATensor::ApplyPendingGraph() {
   // device, so that a call to CurrentXlaData() returns a valid pointer.
   if (CurrentXlaData() == nullptr) {
     std::vector<XLATensor> tensors({*this});
-    SyncTensorsGraph(&tensors, {}, /*wait=*/true);
+    SyncTensorsGraph(&tensors, {}, /*wait=*/true, /*sync_xla_data=*/false);
   }
 }
 
 XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
     const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config) {
+  xla::util::Unique<Device> unique_device;
   std::set<Device> device_set;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    device_set.insert(tensors[i].GetDevice());
+    unique_device.set(tensors[i].GetDevice());
   }
 
   std::vector<at::Tensor> at_tensors;
@@ -935,7 +942,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   std::vector<size_t> at_tensor_index;
   SyncTensorCollection coll;
   coll.indices.reserve(tensors.size());
-  coll.unlocker = LockDevices(device_set);
+  coll.unlocker = LockDevices(unique_device.AsSet());
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensors[i].CurrentXlaData() == nullptr) {
       ir::Value ir_value = tensors[i].CurrentIrValue();
@@ -953,6 +960,13 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
         at_tensor_index.push_back(i);
       }
     }
+  }
+  if (unique_device) {
+    // Mix the hash with the resource domain hashes as compile handles are only
+    // valid within a domain (usually a single host).
+    coll.hash = xla::util::MHash(
+        coll.hash, xla::ComputationClient::Get()->GetResourceDomain(
+                       unique_device->ToString()));
   }
   if (!at_tensors.empty()) {
     XLA_COUNTER("SyncTensorsToData", at_tensors.size());
@@ -1043,7 +1057,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
                                                    Device(device).hw_type);
       xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
           device, std::move(shape));
-      (*tensors)[index].SetXlaData(xla_data);
+      (*tensors)[index].SetXlaData(xla_data, config.sync_xla_data);
     }
     async->tensors_data.emplace_back(std::move(xla_data));
   }
@@ -1075,16 +1089,18 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
 
 void XLATensor::SyncTensorsGraph(
     std::vector<XLATensor>* tensors,
-    tensorflow::gtl::ArraySlice<const std::string> devices, bool wait) {
+    tensorflow::gtl::ArraySlice<const std::string> devices, bool wait,
+    bool sync_xla_data) {
   static const bool op_by_op =
       xla::sys_util::GetEnvBool("SYNC_TENSORS_OPBYOP", false);
+  SyncTensorsConfig config;
+  config.sync_xla_data = sync_xla_data;
   if (op_by_op) {
-    OpByOpAsync async = SyncTensorsGraphOpByOp(tensors, devices);
+    OpByOpAsync async = SyncTensorsGraphOpByOp(tensors, devices, config);
     if (wait) {
       async.Wait();
     }
   } else {
-    SyncTensorsConfig config;
     auto async = SyncTensorsGraphInternal(tensors, devices, config);
     if (wait && async != nullptr) {
       XLA_CHECK_OK(async->mwait.Wait());
@@ -1096,7 +1112,7 @@ void XLATensor::SyncLiveTensorsGraph(
     const Device* device,
     tensorflow::gtl::ArraySlice<const std::string> devices, bool wait) {
   auto tensors = GetLiveTensors(device);
-  SyncTensorsGraph(&tensors, devices, wait);
+  SyncTensorsGraph(&tensors, devices, wait, /*sync_xla_data=*/true);
 }
 
 void XLATensor::MarkStep(const Device* device) {
@@ -1105,7 +1121,8 @@ void XLATensor::MarkStep(const Device* device) {
 
 XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
     std::vector<XLATensor>* tensors,
-    tensorflow::gtl::ArraySlice<const std::string> devices) {
+    tensorflow::gtl::ArraySlice<const std::string> devices,
+    const SyncTensorsConfig& config) {
   struct Async {
     explicit Async(SyncTensorCollection coll,
                    tensorflow::gtl::ArraySlice<const std::string> devices)
@@ -1118,7 +1135,6 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
     std::vector<ir::Value> roots;
   };
 
-  SyncTensorsConfig config;
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   DebugUtil::SaveTensorsGraphInfo("SyncTensorsGraphOpByOp", *tensors,
                                   &coll.indices);
@@ -1135,7 +1151,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
           tensor.shape(), async->unique_device->hw_type);
       xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
           async->unique_device->ToString(), std::move(shape));
-      tensor.SetXlaData(xla_data);
+      tensor.SetXlaData(xla_data, config.sync_xla_data);
     }
     async->tensors_data.emplace_back(std::move(xla_data));
   }

@@ -14,7 +14,10 @@ class DebugUtil {
   enum GraphFormat {
     kText,
     kDot,
+    kHlo,
   };
+
+  static GraphFormat GetDefaultGraphFormat();
 
   // Dumps the current Python frame and the IR Graph whose roots are the IR
   // values held at the tensors. If indices is not nullptr, it selects the
@@ -22,7 +25,7 @@ class DebugUtil {
   static std::string GetTensorsGraphInfo(
       tensorflow::gtl::ArraySlice<const XLATensor> tensors,
       const std::vector<size_t>* indices,
-      GraphFormat format = GraphFormat::kText);
+      GraphFormat format = GetDefaultGraphFormat());
 
   // If the environment variable XLA_SAVE_TENSORS_FILE is set to the proper
   // output path, an instance of the report returned by GetTensorsGraphInfo() is
@@ -30,7 +33,7 @@ class DebugUtil {
   static void SaveTensorsGraphInfo(
       const char* name, tensorflow::gtl::ArraySlice<const XLATensor> tensors,
       const std::vector<size_t>* indices,
-      GraphFormat format = GraphFormat::kText);
+      GraphFormat format = GetDefaultGraphFormat());
 };
 
 }  // namespace torch_xla

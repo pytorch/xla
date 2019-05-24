@@ -2,6 +2,7 @@
 #define TENSORFLOW_COMPILER_XLA_XLA_CLIENT_UNIQUE_H_
 
 #include <functional>
+#include <set>
 
 #include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -28,6 +29,14 @@ class Unique {
   operator const T&() const { return *value_; }
   const T& operator*() const { return *value_; }
   const T* operator->() const { return value_.operator->(); }
+
+  std::set<T> AsSet() const {
+    std::set<T> vset;
+    if (value_.has_value()) {
+      vset.insert(*value_);
+    }
+    return vset;
+  }
 
  private:
   absl::optional<T> value_;

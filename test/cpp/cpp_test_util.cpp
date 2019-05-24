@@ -22,7 +22,7 @@ at::Tensor ToTensor(XLATensor& xla_tensor) {
 at::Tensor ToCpuTensor(const at::Tensor& t) {
   at::Tensor tensor = torch_xla::ToTensor(t);
   c10::optional<XLATensor> xtensor = bridge::TryGetXlaTensor(tensor);
-  return xtensor ? ToTensor(*xtensor) : tensor;
+  return xtensor ? xtensor->ToTensor() : tensor;
 }
 
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {

@@ -5,8 +5,9 @@
 
 namespace xla {
 
-XrtSessionCache::XrtSessionCache(std::function<void(XrtSession*)> initfn)
-    : initfn_(std::move(initfn)) {}
+XrtSessionCache::XrtSessionCache(tensorflow::ConfigProto config,
+                                 std::function<void(XrtSession*)> initfn)
+    : config_(std::move(config)), initfn_(std::move(initfn)) {}
 
 XrtSessionCache::Ref XrtSessionCache::GetSession(const string& target) {
   std::lock_guard<std::mutex> lock(lock_);
@@ -40,6 +41,7 @@ std::shared_ptr<XrtSession> XrtSessionCache::CreateSession(
   tensorflow::SessionOptions session_options;
   session_options.env = tensorflow::Env::Default();
   session_options.target = target;
+  session_options.config = config_;
 
   string compression = sys_util::GetEnvString("XRT_GRPC_COMPRESSION", "");
   if (!compression.empty()) {

@@ -211,6 +211,11 @@ class ComputationClient {
   virtual std::vector<std::vector<DataPtr>> DeconstructTuple(
       tensorflow::gtl::ArraySlice<const DataPtr> tuples) = 0;
 
+  // Returns a unique string which identifies the resource domain of a given
+  // device. Within a resource domain, handles to device memory or compiled
+  // computations can be used for all devices part of such domain.
+  virtual string GetResourceDomain(const string& device) const = 0;
+
   virtual string GetDefaultDevice() const = 0;
 
   virtual size_t GetNumDevices() const = 0;

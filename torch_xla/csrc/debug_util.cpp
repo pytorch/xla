@@ -12,23 +12,47 @@
 #include "torch_xla/csrc/python_util.h"
 
 namespace torch_xla {
+namespace {
+
+DebugUtil::GraphFormat DefaultGraphFormat() {
+  std::string fmt_str =
+      xla::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
+  if (fmt_str == "text") {
+    return DebugUtil::GraphFormat::kText;
+  } else if (fmt_str == "hlo") {
+    return DebugUtil::GraphFormat::kHlo;
+  } else if (fmt_str == "dot") {
+    return DebugUtil::GraphFormat::kDot;
+  }
+  XLA_ERROR() << "Invalid save graph format: " << fmt_str;
+}
+
+}  // namespace
+
+DebugUtil::GraphFormat DebugUtil::GetDefaultGraphFormat() {
+  static GraphFormat format = DefaultGraphFormat();
+  return format;
+}
 
 std::string DebugUtil::GetTensorsGraphInfo(
     tensorflow::gtl::ArraySlice<const XLATensor> tensors,
     const std::vector<size_t>* indices, GraphFormat format) {
-  std::vector<const ir::Node*> roots;
+  std::vector<const ir::Node*> root_nodes;
+  std::vector<ir::Value> root_values;
   if (indices != nullptr) {
     for (auto index : *indices) {
       ir::Value ir_value = tensors[index].CurrentIrValue();
       if (ir_value) {
-        roots.push_back(ir_value.node.get());
+        root_nodes.push_back(ir_value.node.get());
+        root_values.push_back(std::move(ir_value));
       }
     }
   } else {
     for (auto& tensor : tensors) {
       ir::Value ir_value = tensor.CurrentIrValue();
       if (ir_value) {
-        roots.push_back(ir_value.node.get());
+        root_nodes.push_back(ir_value.node.get());
+        root_values.push_back(std::move(ir_value));
       }
     }
   }
@@ -40,9 +64,11 @@ std::string DebugUtil::GetTensorsGraphInfo(
        << location.line << ")\n";
   }
   if (format == GraphFormat::kText) {
-    ss << "\n" << ir::DumpUtil::ToText(roots) << "\n";
+    ss << "\n" << ir::DumpUtil::ToText(root_nodes) << "\n";
   } else if (format == GraphFormat::kDot) {
-    ss << "\n" << ir::DumpUtil::ToText(roots) << "\n";
+    ss << "\n" << ir::DumpUtil::ToText(root_nodes) << "\n";
+  } else if (format == GraphFormat::kHlo) {
+    ss << "\n" << ir::DumpUtil::ToHlo(root_values) << "\n";
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
   }

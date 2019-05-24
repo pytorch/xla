@@ -46,6 +46,11 @@ XrtComputationClient::Worker ParseWorker(const string& worker) {
              : XrtComputationClient::Worker(parts[0], std::stoi(parts[1]));
 }
 
+string MakeGrpcEndPoint(const string& server) {
+  return server.compare(0, 7, "grpc://") == 0 ? server
+                                              : absl::StrCat("grpc://", server);
+}
+
 void AddXrtHostDevices(const string& worker_name, int task_no,
                        const string& server,
                        std::map<string, int>* device_ordinals,
@@ -58,11 +63,9 @@ void AddXrtHostDevices(const string& worker_name, int task_no,
       {"TPU", "TPU", sys_util::GetEnvInt("TPU_NUM_DEVICES", 8)},
       {"CPU", "XLA_CPU", sys_util::GetEnvInt("CPU_NUM_DEVICES", 1)},
   };
-  string host_port = server.compare(0, 7, "grpc://") == 0
-                         ? server
-                         : absl::StrCat("grpc://", server);
   options->workers_map.emplace(
-      XrtComputationClient::Worker(worker_name, task_no), host_port);
+      XrtComputationClient::Worker(worker_name, task_no),
+      MakeGrpcEndPoint(server));
   for (auto& device : devices) {
     int& device_ordinal = (*device_ordinals)[device.name];
     for (int j = 0; j < device.count; ++j, ++device_ordinal) {
@@ -144,7 +147,8 @@ StatusOr<std::unique_ptr<ComputationClient>> ComputationClient::Create() {
       for (const auto& name_target : absl::StrSplit(workers_spec, '|')) {
         std::vector<string> parts = absl::StrSplit(name_target, ';');
         TF_RET_CHECK(parts.size() == 2);
-        options.workers_map.emplace(ParseWorker(parts[0]), parts[1]);
+        options.workers_map.emplace(ParseWorker(parts[0]),
+                                    MakeGrpcEndPoint(parts[1]));
       }
     }
   }
