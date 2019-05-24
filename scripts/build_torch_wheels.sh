@@ -9,7 +9,7 @@ export DEBIAN_FRONTEND=noninteractive
 function install_bazel() {
   local BAZEL_VERSION="0.24.1"
   local BAZEL_FILE="bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh"
-  sudo apt-get install pkg-config zip zlib1g-dev unzip
+  sudo apt-get install -y pkg-config zip zlib1g-dev unzip
   curl -L -O "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_FILE}"
   chmod 755 "$BAZEL_FILE"
   ./"$BAZEL_FILE" --user
@@ -27,21 +27,29 @@ function install_clang() {
 
 function install_req_packages() {
   sudo apt-get -y install python-pip git libopenblas-dev
-  sudo pip install --upgrade google-api-python-client
-  sudo pip install --upgrade oauth2client
+  /usr/bin/yes | sudo pip install --upgrade google-api-python-client
+  /usr/bin/yes | sudo pip install --upgrade oauth2client
   install_bazel
 }
 
 function install_and_setup_conda() {
-  curl -O https://repo.anaconda.com/archive/Anaconda3-5.2.0-Linux-x86_64.sh
-  sh Anaconda3-5.2.0-Linux-x86_64.sh -b
+  # Install conda if dne already.
+  if ! test -d "$HOME/anaconda3"; then
+    curl -O https://repo.anaconda.com/archive/Anaconda3-5.2.0-Linux-x86_64.sh
+    sh Anaconda3-5.2.0-Linux-x86_64.sh -b
+    rm Anaconda3-5.2.0-Linux-x86_64.sh
+  fi
   export PATH="$HOME/anaconda3/bin:$PATH"
-  conda create --name pytorch python=3.5 anaconda
-  source activate pytorch
+  ENVNAME="pytorch"
+  if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
+    conda remove --name "$ENVNAME" --all
+  fi
+  conda create -y --name "$ENVNAME" python=3.5 anaconda
+  source activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
   conda install -y numpy pyyaml setuptools cmake cffi typing
   sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
-  pip install lark-parser
+  /usr/bin/yes | pip install lark-parser
 }
 
 function build_and_install_torch() {

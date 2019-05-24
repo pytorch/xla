@@ -15,6 +15,16 @@ To build:
   git clone --recursive https://github.com/pytorch/xla.git
   ```
 
+## Building with script:
+
+* To build and install `torch` and `torch_xla`:
+
+  ```Shell
+  xla/scripts/build_torch_wheels.sh
+  ```
+
+## Building manually:
+
 * If a file named xla/.torch_commit_id exists, use its content to checkout the PyTorch commit ID:
 
   ```Shell
@@ -45,9 +55,9 @@ To build:
   ```Shell
   deb http://deb.debian.org/debian/ testing main
   ```
-  
+
   And run the following command before trying again to install _CLANG_:
-  
+
   ```Shell
   sudo apt-get update
   ```
