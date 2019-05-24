@@ -94,7 +94,8 @@ void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
 }
 
 void SyncTensors(const std::vector<at::Tensor>& tensors,
-                 const std::vector<std::string>& devices, bool wait) {
+                 const std::vector<std::string>& devices, bool wait,
+                 bool sync_xla_data) {
   std::vector<XLATensor> xtensors;
   for (auto& tensor : tensors) {
     auto xtensor = bridge::TryGetXlaTensor(ToTensor(tensor));
@@ -102,7 +103,8 @@ void SyncTensors(const std::vector<at::Tensor>& tensors,
       xtensors.push_back(*xtensor);
     }
   }
-  XLATensor::SyncTensorsGraph(&xtensors, GetXlaDevices(devices), wait);
+  XLATensor::SyncTensorsGraph(&xtensors, GetXlaDevices(devices), wait,
+                              sync_xla_data);
 }
 
 void SyncLiveTensors(const std::string& device_str,
@@ -233,11 +235,13 @@ void InitXlaModuleBindings(py::module m) {
   m.def(
       "_xla_sync_multi",
       [](const std::vector<at::Tensor>& tensors,
-         const std::vector<std::string>& devices, bool wait) {
+         const std::vector<std::string>& devices, bool wait,
+         bool sync_xla_data) {
         NoGilSection nogil;
-        SyncTensors(tensors, devices, wait);
+        SyncTensors(tensors, devices, wait, sync_xla_data);
       },
-      py::arg("tensors"), py::arg("devices"), py::arg("wait") = true);
+      py::arg("tensors"), py::arg("devices"), py::arg("wait") = true,
+      py::arg("sync_xla_data") = true);
   m.def(
       "_xla_sync_live_tensors",
       [](const std::string& device, const std::vector<std::string>& devices,

@@ -65,7 +65,8 @@ class XrtSessionCache {
   // Map from session target to XrtSession reference.
   using SessionMap = std::map<string, Ref>;
 
-  explicit XrtSessionCache(std::function<void(XrtSession*)> initfn);
+  XrtSessionCache(tensorflow::ConfigProto config,
+                  std::function<void(XrtSession*)> initfn);
 
   // Retrieves a new session reference, for which the caller will have exclusive
   // access. Once the reference object is destroyed, the session will be
@@ -82,6 +83,7 @@ class XrtSessionCache {
  private:
   std::shared_ptr<XrtSession> CreateSession(const string& target) const;
 
+  tensorflow::ConfigProto config_;
   std::function<void(XrtSession*)> initfn_;
   std::mutex lock_;
   std::map<string, std::deque<std::shared_ptr<XrtSession>>> session_map_;
