@@ -17,7 +17,9 @@ function install_bazel() {
 }
 
 function install_clang() {
-  sudo bash -c 'echo "deb http://deb.debian.org/debian/ testing main" >> /etc/apt/sources.list'
+  if ! grep -Fxq "deb http://deb.debian.org/debian/ testing main" /etc/apt/sources.list; then
+    sudo bash -c 'echo "deb http://deb.debian.org/debian/ testing main" >> /etc/apt/sources.list'
+  fi
   sudo apt-get update
   sudo apt-get install -y clang-7 clang++-7
   export CC=clang-7 CXX=clang++-7
