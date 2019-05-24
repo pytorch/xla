@@ -20,6 +20,7 @@ function install_clang() {
   sudo bash -c 'echo "deb http://deb.debian.org/debian/ testing main" >> /etc/apt/sources.list'
   sudo apt-get update
   sudo apt-get install -y clang-7 clang++-7
+  export CC=clang-7 CXX=clang++-7
 }
 
 function install_req_packages() {
