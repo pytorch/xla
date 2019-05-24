@@ -15,7 +15,7 @@ To build:
   git clone --recursive https://github.com/pytorch/xla.git
   ```
 
-## Building with script:
+## Building with script
 
 * To build and install `torch` and `torch_xla`:
 
@@ -23,7 +23,7 @@ To build:
   xla/scripts/build_torch_wheels.sh
   ```
 
-## Building manually:
+## Building manually
 
 * If a file named xla/.torch_commit_id exists, use its content to checkout the PyTorch commit ID:
 
