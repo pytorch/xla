@@ -3,7 +3,6 @@
 set -e  # Fail on any error.
 set -x  # Display commands being run.
 
-# Disable prompts.
 export DEBIAN_FRONTEND=noninteractive
 
 function install_bazel() {
@@ -61,7 +60,6 @@ function build_and_install_torch() {
   fi
   # Apply patches to PT which are required by the XLA support.
   xla/scripts/apply_patches.sh
-  # Build and install torch wheel and collect artifact
   export NO_CUDA=1 NO_MKLDNN=1
   python setup.py bdist_wheel
   pip install dist/*.whl
