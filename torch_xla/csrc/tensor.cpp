@@ -522,9 +522,11 @@ void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data) {
 void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data,
                            bool sync) {
   data()->xla_data = std::move(xla_data);
+  // Assigning a device data should always clear the IR node, to allow graph
+  // trimming. A view cannot be rest though, unless we are at a step-end sync.
+  AssignIrValue(ir::Value());
   if (sync) {
     data()->view = nullptr;
-    AssignIrValue(ir::Value());
     data()->tensor_data = c10::nullopt;
   }
 }
