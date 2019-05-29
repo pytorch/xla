@@ -1,0 +1,29 @@
+# Cloud Build Configuration which:
+# (1) Builds and pushes gcr.io/tpu-pytorch/xla image
+# (2) Builds and stores torch and torch_xla wheels
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [
+          'build',
+          '--build-arg', 'python_version=${_PYTHON_VERSION}',
+          '--build-arg', 'cloud_build=true',
+          '-t', 'gcr.io/tpu-pytorch/xla',
+          '-f', 'docker/Dockerfile', '.'
+        ]
+  timeout: 14400s
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/tpu-pytorch/xla']
+  timeout: 1200s
+- name: 'gcr.io/tpu-pytorch/xla'
+  entrypoint: 'bash'
+  args: ['-c', 'cp /pytorch/dist/*.whl ./ && cp /pytorch/xla/dist/*.whl ./']
+
+substitutions:
+    _PYTHON_VERSION: '3.6' # default value
+options:
+    machineType: 'N1_HIGHCPU_32'
+timeout: 15000s
+artifacts:
+  objects:
+    location: 'gs://tpu-pytorch/wheels'
+    paths: ['/**/*.whl']
