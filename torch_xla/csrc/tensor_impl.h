@@ -21,6 +21,8 @@ class XLATensorImpl : public c10::TensorImpl {
       const c10::VariableVersion& version_counter,
       bool allow_tensor_metadata_change) const override;
 
+  void shallow_copy_from(const c10::intrusive_ptr<TensorImpl>& impl) override;
+
   at::IntArrayRef sizes() const override;
 
   int64_t dim() const override;
@@ -47,6 +49,7 @@ class XLATensorImpl : public c10::TensorImpl {
   static caffe2::TypeMeta GetTypeMeta(const XLATensor& tensor);
 
   XLATensor tensor_;
+  size_t generation_ = 0;
 };
 
 }  // namespace torch_xla

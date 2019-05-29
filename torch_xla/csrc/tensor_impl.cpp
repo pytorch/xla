@@ -52,9 +52,7 @@ C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
 XLATensorImpl::XLATensorImpl(XLATensor tensor)
     : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
-      tensor_(std::move(tensor)) {
-  SetupSizeProperties();
-}
+      tensor_(std::move(tensor)) {}
 
 c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach(
     const c10::VariableVersion& version_counter,
@@ -65,6 +63,13 @@ c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach(
   impl->set_version_counter(version_counter);
   impl->set_allow_tensor_metadata_change(allow_tensor_metadata_change);
   return impl;
+}
+
+void XLATensorImpl::shallow_copy_from(
+    const c10::intrusive_ptr<TensorImpl>& impl) {
+  XLATensorImpl* xla_impl = dynamic_cast<XLATensorImpl*>(impl.get());
+  tensor_ = XLATensor::clone(xla_impl->tensor_);
+  generation_ = 0;
 }
 
 at::IntArrayRef XLATensorImpl::sizes() const {
@@ -94,18 +99,22 @@ int64_t XLATensorImpl::size(int64_t d) const {
 }
 
 void XLATensorImpl::SetupSizeProperties() {
-  // Fill up the basic dimension data members which the base class
-  // implementation uses in its APIs.
-  auto shape = tensor_.shape();
-  sizes_.clear();
-  numel_ = 1;
-  for (auto dim : shape.get().dimensions()) {
-    sizes_.push_back(dim);
-    numel_ *= dim;
-  }
-  strides_.clear();
-  for (auto stride : ComputeShapeStrides(shape.get())) {
-    strides_.push_back(stride);
+  size_t generation = tensor_.generation();
+  if (generation != generation_) {
+    // Fill up the basic dimension data members which the base class
+    // implementation uses in its APIs.
+    auto shape = tensor_.shape();
+    sizes_.clear();
+    numel_ = 1;
+    for (auto dim : shape.get().dimensions()) {
+      sizes_.push_back(dim);
+      numel_ *= dim;
+    }
+    strides_.clear();
+    for (auto stride : ComputeShapeStrides(shape.get())) {
+      strides_.push_back(stride);
+    }
+    generation_ = generation;
   }
 }
 

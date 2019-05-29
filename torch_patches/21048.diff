@@ -1,0 +1,204 @@
+diff --git a/test/test_nn.py b/test/test_nn.py
+index 5105dabb69d1..92e245f9e000 100644
+--- a/test/test_nn.py
++++ b/test/test_nn.py
+@@ -7811,6 +7811,37 @@ def test_adaptive_log_softmax(self):
+         out = asfm.predict(x)
+         self.assertEqual(out, asfm.log_prob(x).argmax(dim=1))
+ 
++    def test_module_apply_tensorimpl_type(self):
++        class TestModule(nn.Module):
++            def __init__(self):
++                super(TestModule, self).__init__()
++                self.fc1 = nn.Linear(20, 10)
++
++        m = TestModule()
++        m.fc1.weight.grad = torch.randn(10, 20)
++
++        param_ref = m.fc1.weight
++        param_grad_ref = m.fc1.weight.grad
++
++        sparse_tensor = torch.sparse_coo_tensor(torch.zeros([1, 1]), torch.ones([1]))
++
++        self.assertNotEqual(m.fc1.weight.type(), sparse_tensor.type())
++        self.assertFalse(m.fc1.weight._is_same_impl_type(sparse_tensor))
++        self.assertNotEqual(m.fc1.weight._grad.type(), sparse_tensor.type())
++        self.assertFalse(m.fc1.weight._grad._is_same_impl_type(sparse_tensor))
++
++        m = m._apply(lambda t: torch.sparse_coo_tensor(torch.zeros([1, 1]), torch.ones([1])))
++
++        self.assertEqual(m.fc1.weight, sparse_tensor)
++        self.assertEqual(m.fc1.weight.type(), sparse_tensor.type())
++        self.assertTrue(m.fc1.weight._is_same_impl_type(sparse_tensor))
++        self.assertEqual(m.fc1.weight._grad, sparse_tensor)
++        self.assertEqual(m.fc1.weight._grad.type(), sparse_tensor.type())
++        self.assertTrue(m.fc1.weight._grad._is_same_impl_type(sparse_tensor))
++
++        self.assertEqual(id(param_ref), id(m.fc1.weight))
++        self.assertNotEqual(id(param_grad_ref), id(m.fc1.weight._grad))  # yf225 TODO: comment why this doesn't work
++
+ 
+ class TestNNInit(TestCase):
+     def setUp(self):
+diff --git a/tools/autograd/templates/python_variable_methods.cpp b/tools/autograd/templates/python_variable_methods.cpp
+index f9b9d0b4306d..fbfaeb4b49fd 100644
+--- a/tools/autograd/templates/python_variable_methods.cpp
++++ b/tools/autograd/templates/python_variable_methods.cpp
+@@ -58,6 +58,26 @@ static PyObject * THPVariable__is_view(PyObject *self, PyObject* args)
+   END_HANDLE_TH_ERRORS
+ }
+ 
++static PyObject * THPVariable__is_same_impl_type(PyObject* self, PyObject* arg)
++{
++  HANDLE_TH_ERRORS
++  auto& self_ = reinterpret_cast<THPVariable*>(self)->cdata;
++  auto& tensor = reinterpret_cast<THPVariable*>(arg)->cdata;
++  return PyBool_FromLong(self_.is_same_impl_type(tensor));
++  END_HANDLE_TH_ERRORS
++}
++
++static PyObject * THPVariable__set_data_change_impl(PyObject* self, PyObject* arg)
++{
++  HANDLE_TH_ERRORS
++  auto& self_ = reinterpret_cast<THPVariable*>(self)->cdata;
++  auto& tensor = reinterpret_cast<THPVariable*>(arg)->cdata;
++  self_._set_data_change_impl(tensor);
++  Py_INCREF(self);
++  return self;
++  END_HANDLE_TH_ERRORS
++}
++
+ static PyObject * THPVariable_apply_(PyObject* self, PyObject* arg)
+ {
+   HANDLE_TH_ERRORS
+@@ -697,6 +717,8 @@ PyMethodDef variable_methods[] = {
+   {"__invert__", (PyCFunction)THPVariable_invert, METH_NOARGS, NULL},
+   {"__matmul__", (PyCFunction)THPVariable_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
+   {"_is_view", (PyCFunction)THPVariable__is_view, METH_NOARGS, NULL},
++  {"_is_same_impl_type", (PyCFunction)THPVariable__is_same_impl_type, METH_O, NULL},
++  {"_set_data_change_impl", (PyCFunction)THPVariable__set_data_change_impl, METH_O, NULL},
+   {"apply_", (PyCFunction)THPVariable_apply_, METH_O, NULL},
+   {"byte", (PyCFunction)THPVariable_byte, METH_NOARGS, NULL},
+   {"char", (PyCFunction)THPVariable_char, METH_NOARGS, NULL},
+diff --git a/torch/csrc/autograd/variable.cpp b/torch/csrc/autograd/variable.cpp
+index 2624321eb71a..318f2ad5d590 100644
+--- a/torch/csrc/autograd/variable.cpp
++++ b/torch/csrc/autograd/variable.cpp
+@@ -83,26 +83,34 @@ void Variable::backward(
+   Engine::get_default_engine().execute(edges, inputs, keep_graph, create_graph);
+ }
+ 
+-void Variable::set_data(const at::Tensor &new_data) {
+-  // `var.set_data(new_data)` shallow-copies all non-autograd TensorImpl fields
+-  // from `new_data` to `var`. It requires that `new_data` has the same derived
+-  // type of TensorImpl as `var`.
+-  TORCH_CHECK(
+-    typeid(*(this->unsafeGetTensorImpl())) == typeid(*(new_data.unsafeGetTensorImpl())),
+-    "Attempted to call `variable.set_data(tensor)`, but `variable` and `tensor` have different types of TensorImpl.");
++bool Variable::is_same_impl_type(const at::Tensor &tensor) {
++  return typeid(*unsafeGetTensorImpl()) == typeid(*(tensor.unsafeGetTensorImpl()));
++}
+ 
++void Variable::reset_grad_accumulator(
++    const c10::Device& new_device, const at::DeprecatedTypeProperties& new_type) {
+   // Resets gradient accumulator if metadata is out of date
+   Variable::AutogradMeta* autograd_meta = get_autograd_meta();
+   std::lock_guard<std::mutex> lock(autograd_meta->mutex_);
+   auto prior_accumulator = autograd_meta->grad_accumulator_.lock();
+   if (prior_accumulator) {
+     const auto prior_device = prior_accumulator->input_metadata(0).device();
+-    const auto new_device = new_data.device();
+-
+-    if (new_data.type() != type() || prior_device != new_device) {
++    if (new_type != type() || prior_device != new_device) {
+       autograd_meta->grad_accumulator_.reset();
+     }
+   }
++}
++
++void Variable::set_data(const at::Tensor &new_data) {
++  // `var.set_data(new_data)` shallow-copies all non-autograd TensorImpl fields
++  // from `new_data` to `var`. It requires that `new_data` has the same derived
++  // type of TensorImpl as `var`.
++  TORCH_CHECK(
++    is_same_impl_type(new_data),
++    "Attempted to call `variable.set_data(tensor)`, but `variable` and `tensor` have different types of TensorImpl.");
++
++  // yf225 TODO: add comment here?
++  reset_grad_accumulator(new_data.device(), new_data.type());
+ 
+   // Version counter is not shared when we replace a `Variable`'s tensor data
+   // by calling `set_data(...)`. The original version of the `Variable` is always preserved.
+@@ -115,6 +123,19 @@ void Variable::set_data(const at::Tensor &new_data) {
+   get()->shallow_copy_from(new_data.getIntrusivePtr());
+ }
+ 
++void Variable::_set_data_change_impl(const at::Tensor &new_data) {
++  // yf225 TODO: add comment here?
++  reset_grad_accumulator(new_data.device(), new_data.type());
++
++  // yf225 TODO: explain what's going on here!
++  auto new_impl = new_data.unsafeGetTensorImpl()->shallow_copy_and_detach(
++    /*version_counter=*/get()->version_counter(),
++    /*allow_tensor_metadata_change=*/get()->allow_tensor_metadata_change());
++  new_impl->set_autograd_meta(std::move(get()->detach_autograd_meta()));
++  new_impl->set_pyobj(get()->pyobj());
++  impl_ = std::move(new_impl);
++}
++
+ Variable::DifferentiableViewMeta::DifferentiableViewMeta(at::TensorImpl* self_impl, Variable base, Edge gradient_edge)
+     : Variable::AutogradMeta(self_impl, false, std::move(gradient_edge)) {
+   base_ = std::move(base);
+diff --git a/torch/csrc/autograd/variable.h b/torch/csrc/autograd/variable.h
+index 052d4c25a643..d6aebeba986f 100644
+--- a/torch/csrc/autograd/variable.h
++++ b/torch/csrc/autograd/variable.h
+@@ -254,6 +254,12 @@ struct TORCH_API Variable : public at::Tensor {
+   /// the type of the gradient `Variable` to become non-sparse.
+   void set_data(const at::Tensor &new_data);
+ 
++  // yf225 TODO: add comment!
++  void _set_data_change_impl(const at::Tensor &new_data);
++
++  /// True if this `Variable` has the same derived type of TensorImpl as `tensor`.
++  bool is_same_impl_type(const at::Tensor &tensor);
++
+   /// Set the gradient edge -- i.e. `grad_fn` and `input_nr` -- of the
+   /// `Variable`.
+   /// NOTE: This will always set the `grad_fn`, even if this is a leaf variable,
+@@ -332,6 +338,10 @@ struct TORCH_API Variable : public at::Tensor {
+ 
+   Variable(c10::intrusive_ptr<at::TensorImpl> self);
+   at::TensorImpl* get() const;
++
++  // yf225 TODO: add comment for this function
++  void reset_grad_accumulator(
++    const c10::Device& new_device, const at::DeprecatedTypeProperties& new_type);
+ };
+ 
+ //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+diff --git a/torch/nn/modules/module.py b/torch/nn/modules/module.py
+index d065b65bdc7b..02cdd003f064 100644
+--- a/torch/nn/modules/module.py
++++ b/torch/nn/modules/module.py
+@@ -197,9 +197,18 @@ def _apply(self, fn):
+             if param is not None:
+                 # Tensors stored in modules are graph leaves, and we don't
+                 # want to create copy nodes, so we have to unpack the data.
+-                param.data = fn(param.data)
++                param_applied = fn(param.data)
++                if param._is_same_impl_type(param_applied):
++                    param.data = param_applied
++                else:
++                    param._set_data_change_impl(param_applied)
+                 if param._grad is not None:
+-                    param._grad.data = fn(param._grad.data)
++                    grad_applied = fn(param._grad.data)
++                    if param._grad._is_same_impl_type(grad_applied):
++                        param._grad.data = grad_applied
++                    else:
++                        # yf225 TODO: comment why we don't use _set_data_change_impl here
++                        param._grad = grad_applied
+ 
+         for key, buf in self._buffers.items():
+             if buf is not None:

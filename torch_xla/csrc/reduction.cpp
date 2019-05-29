@@ -4,6 +4,7 @@
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
@@ -177,7 +178,9 @@ xla::XlaOp BuildArgMax(const xla::XlaOp& input, xla::int64 dim, bool keepdim) {
     operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(shape)});
     shape = XlaHelpers::ShapeOfXlaOp(operand);
   }
-  xla::XlaOp result = xla::ArgMaxTwoPass(operand, xla::PrimitiveType::S64, dim);
+  xla::XlaOp result = xla::ArgMaxTwoPass(
+      operand,
+      GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
   if (keepdim) {
     auto dimensions = xla::util::ToVector<xla::int64>(shape.dimensions());
     dimensions[dim] = 1;
@@ -194,7 +197,9 @@ xla::XlaOp BuildArgMin(const xla::XlaOp& input, xla::int64 dim, bool keepdim) {
     operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(shape)});
     shape = XlaHelpers::ShapeOfXlaOp(operand);
   }
-  xla::XlaOp result = xla::ArgMinTwoPass(operand, xla::PrimitiveType::S64, dim);
+  xla::XlaOp result = xla::ArgMinTwoPass(
+      operand,
+      GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
   if (keepdim) {
     auto dimensions = xla::util::ToVector<xla::int64>(shape.dimensions());
     dimensions[dim] = 1;

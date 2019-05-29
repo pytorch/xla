@@ -14,6 +14,7 @@
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
@@ -269,8 +270,9 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   auto xla_tensors =
       bridge::XlaCreateTensorList(tensors, /*writeable=*/nullptr);
   // Hack in an overwrite of a const tensor.
-  const_cast<at::Tensor&>(dst) =
-      CopyTensor(xla_tensors.front(), dst.scalar_type());
+  at::Tensor t = CopyTensor(xla_tensors.front(), dst.scalar_type());
+  const_cast<at::Tensor&>(dst).unsafeGetTensorImpl()->shallow_copy_from(
+      t.getIntrusivePtr());
   return dst;
 }
 
@@ -286,7 +288,7 @@ at::Tensor AtenXlaType::_log_softmax(const at::Tensor& self, int64_t dim,
 
 at::Tensor AtenXlaType::_log_softmax_backward_data(
     const at::Tensor& grad_output, const at::Tensor& output, int64_t dim,
-    const at::Tensor& /* self*/) const {
+    const at::Tensor& /* self */) const {
   return bridge::AtenFromXlaTensor(XLATensor::log_softmax_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
 }
@@ -1829,7 +1831,8 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding));
   xla::Shape indices_shape = result.shape();
-  indices_shape.set_element_type(xla::PrimitiveType::S64);
+  indices_shape.set_element_type(
+      GetDevicePrimitiveType(xla::PrimitiveType::S64, &result.GetDevice()));
   XLATensor indices_not_supported = XLATensor::not_supported(
       "aten::max_pool2d_with_indices.indices", indices_shape,
       bridge::GetXlaTensor(self).GetDevice());
@@ -1903,7 +1906,8 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool3d_with_indices(
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding));
   xla::Shape indices_shape = result.shape();
-  indices_shape.set_element_type(xla::PrimitiveType::S64);
+  indices_shape.set_element_type(
+      GetDevicePrimitiveType(xla::PrimitiveType::S64, &result.GetDevice()));
   XLATensor indices_not_supported = XLATensor::not_supported(
       "aten::max_pool3d_with_indices.indices", indices_shape,
       bridge::GetXlaTensor(self).GetDevice());
@@ -2267,11 +2271,9 @@ at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim,
                       /*keep_reduced_dimensions=*/false, dtype));
 }
 
-std::tuple<at::Tensor, at::Tensor> AtenXlaType::qr(
-    const at::Tensor& self) const {
-  // Currently, ATen doesn't have a full_matrices option. Once this
-  // is added, this API will have to be changed.
-  auto results = XLATensor::qr(bridge::GetXlaTensor(self), false);
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::qr(const at::Tensor& self,
+                                                   bool some) const {
+  auto results = XLATensor::qr(bridge::GetXlaTensor(self), some);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }

@@ -878,7 +878,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor prod(const at::Tensor& self, int64_t dim,
                   at::ScalarType dtype) const override;
 
-  std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self) const override;
+  std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self,
+                                        bool some) const override;
 
   at::Tensor randperm(int64_t n,
                       const at::TensorOptions& options) const override;
