@@ -8,16 +8,16 @@ namespace ops {
 
 class QR : public Node {
  public:
-  QR(const Value& input, bool full_matrices);
+  QR(const Value& input, bool some);
 
   std::string ToString() const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  bool full_matrices() const { return full_matrices_; }
+  bool some() const { return some_; }
 
  private:
-  bool full_matrices_;
+  bool some_;
 };
 
 }  // namespace ops

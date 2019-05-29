@@ -10,6 +10,7 @@
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
@@ -160,7 +161,9 @@ std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
     indices = xla::Reshape(indices, reshape_sizes);
   }
   // aten::kthvalue() wants Long tensors as indices.
-  return {values, xla::ConvertElementType(indices, xla::PrimitiveType::S64)};
+  return {values, xla::ConvertElementType(
+                      indices, GetDevicePrimitiveType(xla::PrimitiveType::S64,
+                                                      /*device=*/nullptr))};
 }
 
 std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
@@ -194,7 +197,9 @@ std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
   xla::XlaOp indices = xla::Slice(xla::GetTupleElement(sort_result, 1),
                                   start_indices, limit_indices, strides);
   // aten::topk() wants Long tensors as indices.
-  return {values, xla::ConvertElementType(indices, xla::PrimitiveType::S64)};
+  return {values, xla::ConvertElementType(
+                      indices, GetDevicePrimitiveType(xla::PrimitiveType::S64,
+                                                      /*device=*/nullptr))};
 }
 
 xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs) {

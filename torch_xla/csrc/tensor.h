@@ -39,6 +39,8 @@ class XLATensor {
 
   bool is_null() const { return data_ptr() == nullptr; }
 
+  size_t generation() const { return data()->generation; }
+
   XLATensor alias() const { return XLATensor(data_ptr()); }
 
   xla::int64 size(xla::int64 dim) const;
@@ -674,8 +676,7 @@ class XLATensor {
                         bool keep_reduced_dimensions,
                         c10::optional<at::ScalarType> dtype);
 
-  static std::tuple<XLATensor, XLATensor> qr(const XLATensor& input,
-                                             bool full_matrices);
+  static std::tuple<XLATensor, XLATensor> qr(const XLATensor& input, bool some);
 
   static XLATensor randperm(xla::int64 n, const Device& device,
                             at::ScalarType scalar_type);
@@ -969,6 +970,7 @@ class XLATensor {
     c10::optional<at::Tensor> tensor_data;
     const Device device;
     const xla::int64 unique_id = 0;
+    size_t generation = 1;
   };
 
   XLATensor(const at::Tensor& tensor, const Device& device);

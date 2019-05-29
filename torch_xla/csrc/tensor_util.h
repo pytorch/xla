@@ -12,13 +12,6 @@
 #include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
-namespace detail {
-
-// Checks whether BF16 should be used as default floating point type for XLA
-// computations.
-bool UseBF16();
-
-}  // namespace detail
 
 std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape);
 
