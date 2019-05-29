@@ -1575,9 +1575,8 @@ XLATensor XLATensor::prod(const XLATensor& input,
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::qr(const XLATensor& input,
-                                               bool full_matrices) {
-  ir::NodePtr node =
-      ir::MakeNode<ir::ops::QR>(input.GetIrValue(), full_matrices);
+                                               bool some) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::QR>(input.GetIrValue(), some);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
 }

@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/nll_loss.h"
+
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
@@ -9,11 +11,11 @@ namespace {
 // "on_value" and "off_value" represent the values to use for the on and off
 // positions, respectively.
 xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
-                          const xla::XlaOp indices, const xla::XlaOp on_value,
-                          const xla::XlaOp off_value) {
-  const auto indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
-  const int indices_dims = indices_shape.rank();
-  const int output_dims = indices_dims + 1;
+                          const xla::XlaOp& indices, const xla::XlaOp& on_value,
+                          const xla::XlaOp& off_value) {
+  xla::Shape indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
+  int indices_dims = indices_shape.rank();
+  int output_dims = indices_dims + 1;
 
   // Expand the labels with a depth dimension for the classes.
   std::vector<xla::int64> output_dimensions(indices_shape.dimensions().begin(),
@@ -21,23 +23,18 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
   output_dimensions.insert(output_dimensions.begin() + axis, depth);
 
   // Build a iota tensor populated with values 0 through depth - 1.
-  std::vector<int64_t> linspace_data(depth);
-  std::iota(linspace_data.begin(), linspace_data.end(), 0);
   std::vector<xla::int64> linspace_dims(output_dims, 1);
   linspace_dims[axis] = depth;
   xla::Shape linspace_xla_shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(
-      xla::PrimitiveType::S64, linspace_dims);
-  xla::BorrowingLiteral linspace_literal(
-      reinterpret_cast<const char*>(linspace_data.data()), linspace_xla_shape);
+      indices_shape.element_type(), linspace_dims);
+  xla::XlaOp iota = xla::Iota(builder, linspace_xla_shape, axis);
 
   // Now compare the labels in index form to the iota tensor to get the one hot
   // format.
   std::vector<xla::int64> broadcast_dims(indices_shape.rank());
   std::iota(broadcast_dims.begin(), broadcast_dims.begin() + axis, 0);
   std::iota(broadcast_dims.begin() + axis, broadcast_dims.end(), axis + 1);
-  xla::XlaOp linspace_xla;
-  xla::XlaOp one_hot_bool = xla::Eq(
-      indices, xla::ConstantLiteral(builder, linspace_literal), broadcast_dims);
+  xla::XlaOp one_hot_bool = xla::Eq(indices, iota, broadcast_dims);
 
   // Selects the user-provided off_value and on_value values.
   return xla::Select(one_hot_bool, xla::Broadcast(on_value, output_dimensions),

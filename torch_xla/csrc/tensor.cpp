@@ -534,6 +534,7 @@ void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data,
 void XLATensor::SetIrValue(ir::Value ir_value) {
   data()->xla_data = nullptr;
   data()->tensor_data = c10::nullopt;
+  data()->generation += 1;
   if (data()->view != nullptr) {
     // If we have an active view, and a SetIrValue() happens, it means we are
     // within an in-place execution context, and we need to update the view's
@@ -720,6 +721,7 @@ void XLATensor::SetTensor(at::Tensor tensor) {
   data()->view = nullptr;
   data()->xla_data = nullptr;
   AssignIrValue(ir::Value());
+  data()->generation += 1;
 }
 
 std::vector<XLATensor> XLATensor::GetLiveTensors(const Device* device) {

@@ -13,9 +13,9 @@ namespace ir {
 namespace ops {
 namespace {
 
-std::vector<xla::XlaOp> LowerQR(const xla::XlaOp& input, bool full_matrices) {
+std::vector<xla::XlaOp> LowerQR(const xla::XlaOp& input, bool some) {
   xla::QRDecompositionResult qr_result =
-      xla::QRDecomposition(input, /*full_matrices=*/full_matrices,
+      xla::QRDecomposition(input, /*full_matrices=*/!some,
                            /*block_size=*/128, XlaHelpers::mat_mul_precision())
           .ValueOrDie();
   xla::XlaOp q = qr_result.q;
@@ -23,7 +23,7 @@ std::vector<xla::XlaOp> LowerQR(const xla::XlaOp& input, bool full_matrices) {
   return {q, r};
 }
 
-xla::Shape NodeOutputShape(const Value& input, bool full_matrices) {
+xla::Shape NodeOutputShape(const Value& input, bool some) {
   const xla::Shape& input_shape = input.shape();
   XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
   // The input tensor is ..., M, N
@@ -31,7 +31,7 @@ xla::Shape NodeOutputShape(const Value& input, bool full_matrices) {
   xla::int64 n_dim = input_shape.dimensions(input_shape.rank() - 1);
   xla::Shape qshape(input_shape);
   xla::Shape rshape(input_shape);
-  if (full_matrices) {
+  if (!some) {
     // Q is M x M
     qshape.set_dimensions(input_shape.rank() - 1, m_dim);
     // R is M x N, so left unchanged
@@ -46,21 +46,21 @@ xla::Shape NodeOutputShape(const Value& input, bool full_matrices) {
 
 }  // namespace
 
-QR::QR(const Value& input, bool full_matrices)
+QR::QR(const Value& input, bool some)
     : Node(
           ir::OpKind(at::aten::qr), {input},
-          [&]() { return NodeOutputShape(input, full_matrices); },
-          /*num_outputs=*/2, xla::util::MHash(full_matrices)),
-      full_matrices_(full_matrices) {}
+          [&]() { return NodeOutputShape(input, some); },
+          /*num_outputs=*/2, xla::util::MHash(some)),
+      some_(some) {}
 
 XlaOpVector QR::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOps(LowerQR(input, full_matrices_), loctx);
+  return ReturnOps(LowerQR(input, some_), loctx);
 }
 
 std::string QR::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", full_matrices=" << full_matrices_;
+  ss << Node::ToString() << ", some=" << some_;
   return ss.str();
 }
 

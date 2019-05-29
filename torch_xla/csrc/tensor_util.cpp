@@ -21,11 +21,29 @@ namespace torch_xla {
 namespace {
 
 bool ShouldUseBF16() {
-  int use_fp16 = xla::sys_util::GetEnvInt("XLA_USE_BF16", 0);
-  if (use_fp16 != 0) {
+  bool use_fp16 = xla::sys_util::GetEnvBool("XLA_USE_BF16", false);
+  if (use_fp16) {
     TF_LOG(INFO) << "Using BF16 data type for floating point values";
   }
-  return use_fp16 != 0;
+  return use_fp16;
+}
+
+bool ShouldUse32BitLong() {
+  bool use_32bit_long = xla::sys_util::GetEnvBool("XLA_USE_32BIT_LONG", false);
+  if (use_32bit_long) {
+    TF_LOG(INFO) << "Using 32bit integers for kLong values";
+  }
+  return use_32bit_long;
+}
+
+bool UseBF16() {
+  static bool use_fp16 = ShouldUseBF16();
+  return use_fp16;
+}
+
+bool Use32BitLong() {
+  static bool use_32bit_long = ShouldUse32BitLong();
+  return use_32bit_long;
 }
 
 xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type,
@@ -415,15 +433,6 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
 
 }  // namespace
 
-namespace detail {
-
-bool UseBF16() {
-  static bool use_fp16 = ShouldUseBF16();
-  return use_fp16;
-}
-
-}  // namespace detail
-
 std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
   std::vector<xla::int64> strides(shape.rank());
   xla::int64 stride = 1;
@@ -615,7 +624,7 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
   }
   switch (type) {
     case xla::PrimitiveType::F64:
-      if (detail::UseBF16()) {
+      if (UseBF16()) {
         return xla::PrimitiveType::BF16;
       }
       return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::F64
@@ -623,8 +632,7 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
     case xla::PrimitiveType::F32:
       // When PyTorch will support native BF16 type, the global configuration
       // can be replaced (or augmented) with the proper mapping.
-      return detail::UseBF16() ? xla::PrimitiveType::BF16
-                               : xla::PrimitiveType::F32;
+      return UseBF16() ? xla::PrimitiveType::BF16 : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U8:
       return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::U8
                                                 : xla::PrimitiveType::S32;
@@ -637,6 +645,8 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
     case xla::PrimitiveType::S16:
       return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S16
                                                 : xla::PrimitiveType::S32;
+    case xla::PrimitiveType::S64:
+      return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
     default:
       return type;
   }
