@@ -3,7 +3,9 @@
 set -e  # Fail on any error.
 set -x  # Display commands being run.
 
-export DEBIAN_FRONTEND=noninteractive
+PYTHON_VERSION=$1
+DEFAULT_PYTHON_VERSION=3.6
+DEBIAN_FRONTEND=noninteractive
 
 function install_bazel() {
   local BAZEL_VERSION="0.24.1"
@@ -25,7 +27,7 @@ function install_clang() {
 }
 
 function install_req_packages() {
-  sudo apt-get -y install python-pip git libopenblas-dev
+  sudo apt-get -y install python-pip git curl libopenblas-dev
   /usr/bin/yes | sudo pip install --upgrade google-api-python-client
   /usr/bin/yes | sudo pip install --upgrade oauth2client
   install_bazel
@@ -38,15 +40,19 @@ function install_and_setup_conda() {
     sh Anaconda3-5.2.0-Linux-x86_64.sh -b
     rm Anaconda3-5.2.0-Linux-x86_64.sh
   fi
-  export PATH="$HOME/anaconda3/bin:$PATH"
+  echo 'export PATH="$HOME/anaconda3/bin:$PATH"' >> ~/.bashrc
+  source ~/.bashrc
   ENVNAME="pytorch"
   if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
     conda remove --name "$ENVNAME" --all
   fi
-  conda create -y --name "$ENVNAME" python=3.5 anaconda
+  if [ -z "$PYTHON_VERSION" ]; then
+    PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
+  fi
+  conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
   source activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
-  conda install -y numpy pyyaml setuptools cmake cffi typing
+  conda install -y numpy pyyaml setuptools cmake cffi typing torchvision
   sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
   /usr/bin/yes | pip install lark-parser
 }

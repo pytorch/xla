@@ -15,6 +15,15 @@ To build:
   git clone --recursive https://github.com/pytorch/xla.git
   ```
 
+## Building docker image
+
+* We provide a Dockerfile in `docker/` that you can use to build images as the
+  following:
+
+  ```Shell
+  docker build -t torch-xla -f docker/Dockerfile .
+  ```
+
 ## Building with script
 
 * To build and install `torch` and `torch_xla`:
