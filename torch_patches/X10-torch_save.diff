@@ -1,0 +1,13 @@
+diff --git a/torch/serialization.py b/torch/serialization.py
+index 43be96d70..0cd8aaae5 100644
+--- a/torch/serialization.py
++++ b/torch/serialization.py
+@@ -221,6 +221,8 @@ def save(obj, f, pickle_module=pickle, pickle_protocol=DEFAULT_PROTOCOL):
+         >>> buffer = io.BytesIO()
+         >>> torch.save(x, buffer)
+     """
++    if torch.is_tensor(obj) and obj.device.type == 'xla':
++        obj = obj.cpu()
+     return _with_file_like(f, "wb", lambda f: _save(obj, f, pickle_module, pickle_protocol))
+ 
+ 
