@@ -12,6 +12,7 @@
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_util.h"
+#include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adaptive_avg_pool2d.h"
 #include "torch_xla/csrc/ops/all.h"

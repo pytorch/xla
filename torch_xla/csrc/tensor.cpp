@@ -24,6 +24,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ir_util.h"
+#include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/op_by_op_executor.h"
 #include "torch_xla/csrc/ops/expand.h"
@@ -470,7 +471,7 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   }
   XLA_CHECK(data()->tensor_data);
   return MakeArrayShapeFromDimensions(
-      data()->tensor_data->sizes(),
+      XlaHelpers::I64List(data()->tensor_data->sizes()),
       MakeXlaPrimitiveType(data()->tensor_data->type().scalarType(), &device),
       device.hw_type);
 }

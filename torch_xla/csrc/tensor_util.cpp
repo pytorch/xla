@@ -16,6 +16,7 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/layout_manager.h"
 
 namespace torch_xla {
 namespace {
@@ -69,13 +70,6 @@ xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type,
     default:
       XLA_ERROR() << "Type not supported: " << scalar_type;
   }
-}
-
-// Creates a minor-to-major layout from given dimensions.
-xla::Shape MakeTorchTensorLayout(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    xla::PrimitiveType type) {
-  return xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
 }
 
 // Copies n bytes from source to dest, with different stride values for source
@@ -250,7 +244,7 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
     CopyData<DType, SType>(dest_data, src_data, total_elements,
                            typename CopyType < NeedCast<SType>::value ||
                                NeedCast<DType>::value > ::type());
-  } else {
+  } else if (total_elements > 0) {
     // We issue a multi-threaded copy by slicing the bigger dimension and
     // assigning its copy to different threads. This code is only valid for
     // ranks >= 2, but the layout check above covers the case.
@@ -470,24 +464,6 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
   }
 }
 
-xla::Shape MakeArrayShapeFromDimensions(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    xla::PrimitiveType type, DeviceType device_type) {
-  if (dimensions.size() == 4 && device_type == DeviceType::TPU) {
-    // Use a TPU-compatible layout for 4D tensors -- batch and feature in minor
-    // dimensions (HWCN).
-    return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, {0, 1, 3, 2});
-  }
-  return MakeTorchTensorLayout(dimensions, type);
-}
-
-xla::Shape MakeArrayShapeFromDimensions(const at::IntList& dimensions,
-                                        xla::PrimitiveType type,
-                                        DeviceType device_type) {
-  return MakeArrayShapeFromDimensions(XlaHelpers::I64List(dimensions), type,
-                                      device_type);
-}
-
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
                                                 const Device& device) {
   return TensorToXlaData(
@@ -589,7 +565,8 @@ xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
     device = GetDefaultDevice();
   }
   return MakeArrayShapeFromDimensions(
-      tensor.sizes(), MakeXlaPrimitiveType(tensor.type().scalarType(), device),
+      XlaHelpers::I64List(tensor.sizes()),
+      MakeXlaPrimitiveType(tensor.type().scalarType(), device),
       device->hw_type);
 }
 
