@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <condition_variable>
 #include <exception>
 #include <functional>
@@ -205,6 +206,20 @@ xla::ComputationClient::DataPtr GetDeviceData(at::Scalar value,
                                               const Device& device) {
   return GetDeviceData(at::scalar_tensor(value, at::TensorOptions(scalar_type)),
                        device);
+}
+
+// Routing values to device data maximizes the changes for compilation cache
+// hits, but it can prevent the compiler to perform optimizations. So tensor
+// values which are within a given set, are routed to constant scalars if this
+// API returns true.
+bool IsSpecialScalar(at::Scalar value) {
+  static bool no_scalars =
+      xla::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
+  if (!no_scalars && (value.isIntegral() || value.isFloatingPoint())) {
+    double scalar_value = value.toDouble();
+    return scalar_value == 0.0 || std::fabs(scalar_value) == 1.0;
+  }
+  return false;
 }
 
 }  // namespace
@@ -620,7 +635,12 @@ ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
                                          const Device& device) {
   xla::ComputationClient::DataPtr data;
   if (tensor.numel() == 1) {
-    // For now only route scalars to the cache.
+    at::Scalar value = tensor.item();
+    if (IsSpecialScalar(value)) {
+      return ir::ops::ScalarOp(
+          std::move(value),
+          MakeXlaPrimitiveType(tensor.scalar_type(), &device));
+    }
     data = GetDeviceData(tensor, device);
   } else {
     data = TensorToXlaData(tensor, device);
@@ -631,6 +651,9 @@ ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
 ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
                                          xla::PrimitiveType type,
                                          const Device& device) {
+  if (IsSpecialScalar(value)) {
+    return ir::ops::ScalarOp(std::move(value), type);
+  }
   xla::ComputationClient::DataPtr data =
       GetDeviceData(value, TensorTypeFromXlaType(type), device);
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
