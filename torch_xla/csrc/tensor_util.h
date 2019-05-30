@@ -15,17 +15,6 @@ namespace torch_xla {
 
 std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape);
 
-// Create an XLA shape with the given dimensions and type, suitable to be used
-// in the specified device type. The type of device can affect the choice of the
-// XLA layout.
-xla::Shape MakeArrayShapeFromDimensions(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    xla::PrimitiveType type, DeviceType device_type);
-
-xla::Shape MakeArrayShapeFromDimensions(const at::IntList& dimensions,
-                                        xla::PrimitiveType type,
-                                        DeviceType device_type);
-
 // Converts an XLA literal to an at::Tensor of the given element type.
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type);
