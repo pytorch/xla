@@ -127,9 +127,12 @@ std::vector<typename C::value_type::element_type*> GetSharedPointers(
 }
 
 template <typename T>
-std::vector<T> Iota(size_t size, T init = 0) {
+std::vector<T> Iota(size_t size, T init = 0, T incr = 1) {
   std::vector<T> result(size);
-  std::iota(result.begin(), result.end(), init);
+  T value = init;
+  for (size_t i = 0; i < size; ++i, value += incr) {
+    result[i] = value;
+  }
   return result;
 }
 
