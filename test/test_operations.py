@@ -4,6 +4,7 @@
 import argparse
 import os
 import sys
+import tempfile
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--replicated', action='store_true')
@@ -569,6 +570,17 @@ class TestAtenXlaTensor(XlaTestCase):
       return torch.isfinite(a) & a.ne(0)
 
     self.runAtenTest(torch.rand(4, 3), test_fn)
+
+  def test_save(self):
+    xla_device = xm.xla_device()
+    x = torch.randn(5, device=xla_device)
+    x_file = tempfile.mktemp()
+    try:
+      torch.save(x, x_file)
+      x_loaded = torch.load(x_file)
+      self.assertEqual(x, x_loaded)
+    finally:
+      os.remove(x_file)
 
 
 class MNISTComparator(nn.Module):
