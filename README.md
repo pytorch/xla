@@ -138,8 +138,22 @@ With these images, for example, you can train mnist on TPUs with the following c
 
 ```Shell
 docker pull gcr.io/tpu-pytorch/xla:nightly
+```
+
+After pulling the image you can either:
+
+* Run the container with a command:
+```Shell
 docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;<IP of the TPU node>:8470" gcr.io/tpu-pytorch/xla:nightly python pytorch/xla/test/test_train_mnist.py
 ```
+
+* Run the script in an interactive shell:
+```Shell
+docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:nightly
+(pytorch) root@CONTAINERID:/# export XRT_TPU_CONFIG="tpu_worker;0;<IP of the TPU node>:8470"
+(pytorch) root@CONTAINERID:/# python pytorch/xla/test/test_train_mnist.py
+```
+
 
 ## Pre Built PyTorch TPU Wheels
 
