@@ -7,10 +7,13 @@ steps:
           'build',
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
           '--build-arg', 'cloud_build=true',
-          '-t', 'gcr.io/tpu-pytorch/xla',
+          '-t', 'gcr.io/tpu-pytorch/xla:nightly',
           '-f', 'docker/Dockerfile', '.'
         ]
   timeout: 14400s
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: bash
+  args: ['-c', 'docker tag gcr.io/tpu-pytorch/xla:nightly gcr.io/tpu-pytorch/xla:$(date -u +nightly_%Y%m%d)']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/tpu-pytorch/xla']
   timeout: 1200s

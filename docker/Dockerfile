@@ -16,3 +16,7 @@ RUN if [ "${cloud_build}" = true ]; then cd /pytorch && rm -rf xla && \
 	git clone --recursive https://github.com/pytorch/xla; fi
 
 RUN cd pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version}
+
+# Use conda environment on startup or when running scripts.
+RUN echo "source activate pytorch" >> ~/.bashrc
+ENV PATH /root/anaconda3/envs/pytorch/bin/:$PATH
