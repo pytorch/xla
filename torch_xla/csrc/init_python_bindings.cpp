@@ -224,6 +224,14 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_get_devices",
         []() { return xla::ComputationClient::Get()->GetAvailableDevices(); });
+  m.def("_xla_real_devices", [](const std::vector<std::string>& devices) {
+    std::vector<std::string> xla_devices;
+    {
+      NoGilSection nogil;
+      xla_devices = GetXlaDevices(devices);
+    }
+    return xla_devices;
+  });
   m.def("_xla_cross_replica_sum", [](const std::vector<at::Tensor>& tensors,
                                      double scale, const py::list& groups) {
     NoGilSection nogil;
