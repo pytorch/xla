@@ -23,6 +23,7 @@ import collections
 from common_utils import TestCase, run_tests, iter_indices
 import itertools
 import numpy
+import re
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -357,6 +358,12 @@ class TestSelect(XlaTestCase):
 
 
 class TestAtenXlaTensor(XlaTestCase):
+
+  def test_get_real_xla_devices(self):
+    devices = xm.get_xla_supported_devices()
+    xla_devices = torch_xla._XLAC._xla_real_devices(devices)
+    for device, xdevice in zip(devices, xla_devices):
+      self.assertTrue(re.match(r'(CPU|GPU|TPU):\d+$', xdevice) is not None)
 
   def test_negative_slice(self):
     t = _gen_tensor(32, 24, 32)
