@@ -1,6 +1,8 @@
 # How To Build And Run PyTorch For TPU
 
-To build:
+We also provide pre-build docker images and wheels so if you'd like to directly consume those refer to the `Using Pre Built Releases` section.
+
+To build from source:
 
 * Clone the _PyTorch_ repo as per [instructions](https://github.com/pytorch/pytorch#from-source).
 
@@ -122,7 +124,38 @@ Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is 
 
 
 
-# How To Install Pre Built PyTorch TPU Wheels
+# Using Pre Built Releases 
+
+## Pre Built Docker Images (recommended)
+
+Docker images with `torch` and `torch_xla` preinstalled in the `pytorch` conda
+environment are distributed under: `gcr.io/tpu-pytorch/xla`. This image has two type of tags which take the forms of:
+
+* gcr.io/tpu-pytorch/xla:nightly
+* gcr.io/tpu-pytorch/xla:YYYYMMDD (ex. gcr.io/tpu-pytorch/xla:nightly_20190531)
+
+With these images, for example, you can train mnist on TPUs by following these steps. First pull the distributed docker image:
+
+```Shell
+docker pull gcr.io/tpu-pytorch/xla:nightly
+```
+
+After pulling the image you can either:
+
+* Run the container with a command:
+```Shell
+docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;<IP of the TPU node>:8470" gcr.io/tpu-pytorch/xla:nightly python pytorch/xla/test/test_train_mnist.py
+```
+
+* Run the script in an interactive shell:
+```Shell
+docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:nightly
+(pytorch) root@CONTAINERID:/# export XRT_TPU_CONFIG="tpu_worker;0;<IP of the TPU node>:8470"
+(pytorch) root@CONTAINERID:/# python pytorch/xla/test/test_train_mnist.py
+```
+
+
+## Pre Built PyTorch TPU Wheels
 
 It is recommended to use Conda environments to isolate _PyTorch/TPU_ packages from the others.
 To install Anaconda follow the [instructions](https://docs.anaconda.com/anaconda/install/).
