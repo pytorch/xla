@@ -561,6 +561,13 @@ class TestAtenXlaTensor(XlaTestCase):
     z = y[:, 1:1, :]
     self.assertEqual(z.size()[1], 0)
 
+  def test_byte_dtype(self):
+    xla_device = xm.xla_device()
+    x = torch.ByteTensor([0, 1]).to(xla_device)
+    y = torch.ByteTensor([0, 1]).to(xla_device)
+    z = x + y
+    self.assertEqual(z.dtype, torch.uint8)
+
   def test_index_bool(self):
 
     def test_fn(a):
