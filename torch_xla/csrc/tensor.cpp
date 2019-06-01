@@ -741,7 +741,6 @@ void XLATensor::MakeWriteableTensorDataSource() {
 
 void XLATensor::SetTensor(at::Tensor tensor) {
   SetTensorData(tensor);
-  data()->logical_element_type = c10::nullopt;
   data()->view = nullptr;
   data()->xla_data = nullptr;
   AssignIrValue(ir::Value());
