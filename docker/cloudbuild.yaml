@@ -1,6 +1,6 @@
 # Cloud Build Configuration which:
-# (1) Builds and pushes gcr.io/tpu-pytorch/xla image
-# (2) Builds and stores torch and torch_xla wheels
+# (1) Builds, tests, and pushes gcr.io/tpu-pytorch/xla image
+# (2) Collects and stores torch and torch_xla wheels
 steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [
@@ -14,6 +14,9 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: bash
   args: ['-c', 'docker tag gcr.io/tpu-pytorch/xla:nightly gcr.io/tpu-pytorch/xla:$(date -u +nightly_%Y%m%d)']
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: 'bash'
+  args: ['-c', 'docker run gcr.io/tpu-pytorch/xla:nightly /bin/bash pytorch/xla/docker/run_deployment_tests.sh']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/tpu-pytorch/xla']
   timeout: 1200s
