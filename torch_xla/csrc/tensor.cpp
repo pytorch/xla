@@ -960,7 +960,6 @@ void XLATensor::ApplyPendingGraph() {
 XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
     const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config) {
   xla::util::Unique<Device> unique_device;
-  std::set<Device> device_set;
   for (size_t i = 0; i < tensors.size(); ++i) {
     unique_device.set(tensors[i].GetDevice());
   }
