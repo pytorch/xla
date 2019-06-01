@@ -103,22 +103,21 @@ void SyncTensors(const std::vector<at::Tensor>& tensors,
       xtensors.push_back(*xtensor);
     }
   }
-  XLATensor::SyncTensorsGraph(&xtensors, GetXlaDevices(devices), wait,
-                              sync_xla_data);
+  XLATensor::SyncTensorsGraph(&xtensors, devices, wait, sync_xla_data);
 }
 
 void SyncLiveTensors(const std::string& device_str,
                      const std::vector<std::string>& devices, bool wait) {
   auto opt_device = GetOptionalDevice(device_str);
   XLATensor::SyncLiveTensorsGraph(opt_device ? &opt_device.value() : nullptr,
-                                  GetXlaDevices(devices), wait);
+                                  devices, wait);
 }
 
 void StepMarker(const std::string& device_str,
                 const std::vector<std::string>& devices, bool wait) {
   auto opt_device = GetOptionalDevice(device_str);
   const Device* device = opt_device ? &opt_device.value() : nullptr;
-  XLATensor::SyncLiveTensorsGraph(device, GetXlaDevices(devices), wait);
+  XLATensor::SyncLiveTensorsGraph(device, devices, wait);
   XLATensor::MarkStep(device);
 }
 
@@ -223,7 +222,9 @@ void InitXlaModuleBindings(py::module m) {
     return result;
   });
   m.def("_xla_get_devices",
-        []() { return xla::ComputationClient::Get()->GetAvailableDevices(); });
+        []() { return xla::ComputationClient::Get()->GetLocalDevices(); });
+  m.def("_xla_get_all_devices",
+        []() { return xla::ComputationClient::Get()->GetAllDevices(); });
   m.def("_xla_real_devices", [](const std::vector<std::string>& devices) {
     std::vector<std::string> xla_devices;
     {

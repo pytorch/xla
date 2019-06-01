@@ -162,11 +162,15 @@ class DataParallel(object):
   def __init__(self, network, device_ids=None, batchdim=0, drop_last=False):
     if device_ids is None:
       device_ids = xm.get_xla_supported_devices()
+    self._device_ids = list(device_ids)
     self._batchdim = batchdim
     self._drop_last = drop_last
-    self._device_ids = list(device_ids)
+    replication_devices = (
+        xm.xla_replication_devices(self._device_ids)
+        if self._device_ids else None)
     self._replication = (
-        xm.Replication(self._device_ids) if self._device_ids else None)
+        xm.Replication(self._device_ids, replication_devices)
+        if replication_devices else None)
     self._models = []
     for device in device_ids:
       module = network().to(device=torch.device(device))

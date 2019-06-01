@@ -113,8 +113,13 @@ class XrtComputationClient : public ComputationClient {
     // Maps a PyTorch device ID (example, "GPU:0", "TPU:0") to the full
     // coordinates in TF device format
     // (ie, /job:tpu_worker/replica:0/task:0/device:TPU:0), of the worker
-    // exposing that device.
-    std::map<string, string> device_map;
+    // exposing that device. These devices are all the devices present within
+    // the TPU mesh.
+    std::map<string, string> global_device_map;
+    // These are the devices that this instance of PyTorch is handling. These
+    // devices are in the form of "CPU:0", "TPU:3", ... For each of these
+    // devices, there is an entry within the global_device_map.
+    std::set<string> devices;
     // Maps a TPU Worker with an EndPoint.
     std::map<Worker, string> workers_map;
   };
@@ -162,11 +167,40 @@ class XrtComputationClient : public ComputationClient {
 
   size_t GetNumDevices() const override;
 
-  std::vector<string> GetAvailableDevices() const override;
+  std::vector<string> GetLocalDevices() const override;
+
+  std::vector<string> GetAllDevices() const override;
 
   void SetRngSeed(size_t seed) override;
 
  private:
+  // The data structure used for the key in the compilation cache. Compilations
+  // handles are valid within given domain (essentially the host+port worker
+  // endpoints), so the key must include the domain.
+  struct CompilationCacheKey {
+    struct Hash {
+      size_t operator()(const CompilationCacheKey& entry) const {
+        util::PartialHasher<string, 4096> hasher;
+        return tensorflow::Hash64(entry.domain.data(), entry.domain.size(),
+                                  hasher(entry.serialized_computation));
+      }
+    };
+
+    CompilationCacheKey(string domain, string serialized_computation)
+        : domain(std::move(domain)),
+          serialized_computation(std::move(serialized_computation)) {}
+    CompilationCacheKey() = default;
+    CompilationCacheKey(CompilationCacheKey&&) = default;
+    CompilationCacheKey& operator=(CompilationCacheKey&&) = default;
+    bool operator==(const CompilationCacheKey& rhs) const {
+      return domain == rhs.domain &&
+             serialized_computation == rhs.serialized_computation;
+    }
+
+    string domain;
+    string serialized_computation;
+  };
+
   // When we split a batch operation into per-session batches, we use this data
   // structure to collect the per-session work.
   struct SessionWork {
@@ -411,7 +445,7 @@ class XrtComputationClient : public ComputationClient {
   std::unique_ptr<XrtSessionCache> session_cache_;
   std::unique_ptr<XrtSessionCache> alloc_session_cache_;
   std::unique_ptr<util::TriggeredTask> triggered_task_;
-  util::Cache<string, Computation, util::PartialHasher<string, 4096>>
+  util::Cache<CompilationCacheKey, Computation, CompilationCacheKey::Hash>
       compilation_cache_;
   std::atomic<size_t> rng_seed_;
   // Access to the following members must be done while holding lock_.

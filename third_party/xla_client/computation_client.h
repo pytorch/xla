@@ -138,7 +138,7 @@ class ComputationClient {
     std::vector<Input> inputs;
   };
 
-  static StatusOr<std::unique_ptr<ComputationClient>> Create();
+  static std::unique_ptr<ComputationClient> Create();
 
   virtual ~ComputationClient() {}
 
@@ -220,7 +220,9 @@ class ComputationClient {
 
   virtual size_t GetNumDevices() const = 0;
 
-  virtual std::vector<string> GetAvailableDevices() const = 0;
+  virtual std::vector<string> GetLocalDevices() const = 0;
+
+  virtual std::vector<string> GetAllDevices() const = 0;
 
   virtual void SetRngSeed(size_t seed) = 0;
 

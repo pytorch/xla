@@ -15,14 +15,16 @@ import torch_xla_py.utils as xu
 import torch_xla_py.keyd_queue as kq
 
 _XLA_DEVICES = torch_xla._XLAC._xla_get_devices()
+_XLA_ALL_DEVICES = torch_xla._XLAC._xla_get_all_devices()
 
 _TLS = threading.local()
 
 
 class Replication(object):
 
-  def __init__(self, devices):
+  def __init__(self, devices, replication_devices):
     self._devices = list(devices)
+    self._replication_devices = list(replication_devices)
     self._lock = threading.Lock()
     self._ready_cv = threading.Condition(self._lock)
     self._join_count = 0
@@ -30,6 +32,9 @@ class Replication(object):
 
   def devices(self):
     return self._devices
+
+  def replication_devices(self):
+    return self._replication_devices
 
   def enter(self):
     with self._lock:
@@ -54,6 +59,12 @@ def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
 
 
+def parse_xla_device(device):
+  m = re.match(r'(CPU|TPU|GPU):(\d+)$', device)
+  if m:
+    return (m.group(1), int(m.group(2)))
+
+
 def get_xla_supported_devices(devkind=None, max_devices=None):
   devkind = devkind or ['TPU', 'GPU', 'CPU']
   for kind in devkind:
@@ -71,6 +82,44 @@ def xla_device(n=None, devkind=None):
     assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
     return torch.device(devices[0])
   return torch.device('xla:{}'.format(n))
+
+
+def xla_real_devices(devices):
+  real_devices = []
+  for device in devices:
+    m = re.match(r'xla:(\d+)$', device)
+    if m:
+      real_devices.append(_XLA_DEVICES[int(m.group(1))])
+      continue
+    xdev = parse_xla_device(device)
+    if not xdev:
+      raise RuntimeError('Invalid device format: {}'.format(device))
+    real_devices.append(device)
+  return real_devices
+
+
+def xla_replication_devices(local_devices):
+  real_devices = xla_real_devices(local_devices)
+  device_types = set()
+  for device in real_devices:
+    xdev = parse_xla_device(device)
+    device_types.add(xdev[0])
+  if len(device_types) != 1:
+    # No replication if the device set spawns multiple device types.
+    return None
+  device_type = device_types.pop()
+  kind_devices = get_xla_supported_devices(devkind=[device_type])
+  if len(kind_devices) != len(local_devices):
+    # Replication can only happen among all devices of one kind.
+    return None
+  replication_devices = []
+  for device in _XLA_ALL_DEVICES:
+    xdev = parse_xla_device(device)
+    if not xdev:
+      raise RuntimeError('Invalid device format: {}'.format(device))
+    if xdev[0] == device_type:
+      replication_devices.append(device)
+  return replication_devices
 
 
 class OptimizerState(object):
@@ -287,7 +336,7 @@ def _mark_step(state, replication):
   devices = []
   if replication:
     replication.enter()
-    devices = replication.devices()
+    devices = replication.replication_devices()
   torch_xla._XLAC._xla_step_marker(
       torch_xla._XLAC._xla_get_default_device(), devices, wait=False)
 
@@ -295,7 +344,7 @@ def _mark_step(state, replication):
 def optimizer_step(optimizer, closure=None):
   replication = getattr(_TLS, 'replication', None)
   state = _fetch_optimizer_state(optimizer)
-  count = len(replication.devices()) if replication else 1
+  count = len(replication.replication_devices()) if replication else 1
   if count > 1:
     torch_xla._XLAC._xla_cross_replica_sum(state.gradients, 1.0 / count, [])
   loss = optimizer.step(closure=closure)

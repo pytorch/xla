@@ -91,7 +91,7 @@ void WithAllDevices(
     const std::function<void(const std::vector<Device>&)>& devfn) {
   std::vector<Device> devices;
   for (const auto& device_str :
-       xla::ComputationClient::Get()->GetAvailableDevices()) {
+       xla::ComputationClient::Get()->GetLocalDevices()) {
     Device device(device_str);
     if (device.hw_type == device_type) {
       devices.push_back(device);

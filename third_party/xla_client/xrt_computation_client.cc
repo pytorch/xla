@@ -172,13 +172,25 @@ XrtComputationClient::XrtComputationClient(
   alloc_session_cache_ = absl::make_unique<XrtSessionCache>(config, nullptr);
 
   auto default_device_target =
-      options_.device_map.find(options_.default_device);
-  XLA_CHECK(default_device_target != options_.device_map.end());
-  for (const auto& dev_target : options_.device_map) {
-    TF_LOG(INFO) << "XRT device " << dev_target.first << " -> "
+      options_.global_device_map.find(options_.default_device);
+  XLA_CHECK(default_device_target != options_.global_device_map.end());
+  for (auto& device : options_.devices) {
+    XLA_CHECK(options_.global_device_map.find(device) !=
+              options_.global_device_map.end())
+        << "Missing device in global map: " << device;
+  }
+  for (const auto& dev_target : options_.global_device_map) {
+    const char* tag =
+        options_.devices.count(dev_target.first) > 0 ? "LOCAL" : "REMOTE";
+    TF_LOG(INFO) << "XRT device (" << tag << ") " << dev_target.first << " -> "
                  << dev_target.second;
   }
   TF_LOG(INFO) << "XRT default device: " << default_device_target->first;
+  for (auto& worker_target : options_.workers_map) {
+    TF_LOG(INFO) << "Worker " << worker_target.second
+                 << " for /job:" << worker_target.first.name
+                 << "/replica:0/task:" << worker_target.first.task_no;
+  }
   MaybeCreateLocalService(options_);
   InitializeDevices();
   StartHandleReleaser();
@@ -301,7 +313,7 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
   util::MultiWait mwait(instances.size());
   std::vector<ProgramShape> program_shapes(instances.size());
   std::vector<ComputationPtr> results(instances.size());
-  std::vector<string> serialized_computations(instances.size());
+  std::vector<CompilationCacheKey> cache_keys(instances.size());
   XrtSessionCache::SessionMap session_map;
   std::map<XrtSession*, SessionWork> session_work_map;
   for (size_t i = 0; i < instances.size(); ++i) {
@@ -310,11 +322,12 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
       std::unique_ptr<xrt::XLAComputation> xrt_computation =
           CreateXrtComputation(instance.computation, instance.devices,
                                instance.output_shape);
-      string serialized_computation = xrt_computation->SerializeAsString();
-
-      auto computation_ptr = compilation_cache_.Get(serialized_computation);
+      CompilationCacheKey cache_key(
+          GetResourceDomain(instance.compilation_device),
+          xrt_computation->SerializeAsString());
+      auto computation_ptr = compilation_cache_.Get(cache_key);
       if (computation_ptr == nullptr) {
-        serialized_computations[i] = std::move(serialized_computation);
+        cache_keys[i] = std::move(cache_key);
         program_shapes[i] =
             ProgramShape(xrt_computation->config().program_shape());
 
@@ -330,7 +343,7 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
           const XrtSession::CachedNode& cached_node = GetCompileNode(
               session, device_scope, instance.compilation_device);
           session_work->feed_inputs.insert(
-              {cached_node.holders[0], serialized_computations[i]});
+              {cached_node.holders[0], cache_keys[i].serialized_computation});
           session_work->outputs_handles.push_back(cached_node.outputs[0]);
           session_work->index_mapping.push_back(i);
         }
@@ -365,8 +378,7 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
             instance->compilation_device);
         ++output_index;
 
-        compilation_cache_.Add(std::move(serialized_computations[li]),
-                               results[li]);
+        compilation_cache_.Add(std::move(cache_keys[li]), results[li]);
         CreateCompileHandlesCounter()->AddValue(1);
       }
     };
@@ -768,8 +780,9 @@ string XrtComputationClient::GetEffectiveDevice(const string& device) const {
 
 const string& XrtComputationClient::TorchDeviceToXrtDevice(
     const string& device) const {
-  auto device_target = options_.device_map.find(GetEffectiveDevice(device));
-  XLA_CHECK(device_target != options_.device_map.end())
+  auto device_target =
+      options_.global_device_map.find(GetEffectiveDevice(device));
+  XLA_CHECK(device_target != options_.global_device_map.end())
       << "Unable to find device: " << device;
   return device_target->second;
 }
@@ -933,7 +946,7 @@ void XrtComputationClient::ReleaseHandles(
 
 void XrtComputationClient::StartHandleReleaser() {
   int64 num_threads = sys_util::GetEnvInt("XLA_HANDLE_RELEASE_THREADS",
-                                          options_.device_map.size());
+                                          options_.devices.size());
   triggered_task_.reset(
       new util::TriggeredTask([this]() { HandleReleaser(); }, num_threads));
 }
@@ -1045,13 +1058,14 @@ tensorflow::tpu::TopologyProto XrtComputationClient::InitializeAndFetchTopology(
 
 void XrtComputationClient::InitializeDevices() {
   std::set<Worker> tpu_workers;
-  for (const auto& dev_target : options_.device_map) {
+  for (const auto& device : options_.devices) {
+    const string& xrt_device = TorchDeviceToXrtDevice(device);
     tensorflow::DeviceNameUtils::ParsedName parsed_device;
-    XLA_CHECK(tensorflow::DeviceNameUtils::ParseFullName(dev_target.second,
+    XLA_CHECK(tensorflow::DeviceNameUtils::ParseFullName(xrt_device,
                                                          &parsed_device) &&
               parsed_device.has_job && parsed_device.has_task &&
               parsed_device.has_id && parsed_device.has_type)
-        << dev_target.second;
+        << xrt_device;
     if (parsed_device.type == "TPU") {
       tpu_workers.emplace(parsed_device.job, parsed_device.task);
     }
@@ -1070,7 +1084,7 @@ void XrtComputationClient::InitializeDevices() {
     }
   }
 
-  for (const auto& dev_target : options_.device_map) {
+  for (const auto& dev_target : options_.global_device_map) {
     tensorflow::DeviceNameUtils::ParsedName parsed_device;
     XLA_CHECK(tensorflow::DeviceNameUtils::ParseFullName(dev_target.second,
                                                          &parsed_device) &&
@@ -1129,12 +1143,16 @@ string XrtComputationClient::GetDefaultDevice() const {
 }
 
 size_t XrtComputationClient::GetNumDevices() const {
-  return options_.device_map.size();
+  return options_.devices.size();
 }
 
-std::vector<string> XrtComputationClient::GetAvailableDevices() const {
+std::vector<string> XrtComputationClient::GetLocalDevices() const {
+  return std::vector<string>(options_.devices.begin(), options_.devices.end());
+}
+
+std::vector<string> XrtComputationClient::GetAllDevices() const {
   std::vector<string> devices;
-  for (const auto& dev_target : options_.device_map) {
+  for (const auto& dev_target : options_.global_device_map) {
     devices.push_back(dev_target.first);
   }
   return devices;
@@ -1156,7 +1174,7 @@ void XrtComputationClient::InitSession(XrtSession* session) const {
       {16, &XrtComputationClient::GetReleaseCompileHandleNode},
       {16, &XrtComputationClient::GetSubTupleNode},
   };
-  auto devices = GetAvailableDevices();
+  auto devices = GetLocalDevices();
   for (auto& device : devices) {
     // HACK: The XRT ops on the remote GRPC service has only recently been
     // enabled, so until TF 1.14 is out, we cannot add XRT ops on CPU.
