@@ -2,14 +2,36 @@ licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//tensorflow:internal"])
 
-load("//tensorflow:tensorflow.bzl", "tf_cc_test")
-load("//tensorflow:tensorflow.bzl", "tf_cc_binary")
-load("//tensorflow:tensorflow.bzl", "tf_cc_shared_object")
+load(
+    "//tensorflow:tensorflow.bzl",
+    "tf_cc_test",
+    "tf_cc_binary",
+    "tf_cc_shared_object",
+)
+load(
+    "//tensorflow/core:platform/default/build_config.bzl",
+    "tf_additional_all_protos",
+    "tf_proto_library",
+    "tf_proto_library_cc",
+    "tf_proto_library_py",
+)
+load("//tensorflow/compiler/xla:xla.bzl", "xla_proto_library")
 
 exports_files(
     [
         "tf_version_script.lds",
         "tf_exported_symbols.lds",
+    ],
+)
+
+tf_proto_library_cc(
+    name = "mesh_service_proto",
+    srcs = ["mesh_service.proto"],
+    has_services = 1,
+    cc_api_version = 2,
+    cc_grpc_version = 1,
+    protodeps = [
+        "//tensorflow/core/protobuf/tpu:topology_proto",
     ],
 )
 
@@ -45,6 +67,7 @@ cc_library(
     name = "computation_client_impl",
     srcs = [
         "computation_client.cc",
+        "mesh_service.cc",
         "metrics.cc",
         "multi_wait.cc",
         "sys_util.cc",
@@ -61,6 +84,7 @@ cc_library(
         "cache.h",
         "computation_client.h",
         "debug_macros.h",
+        "mesh_service.h",
         "metrics.h",
         "multi_wait.h",
         "sys_util.h",
@@ -76,6 +100,9 @@ cc_library(
         "xrt_session_cache.h",
     ],
     deps = [
+        ":mesh_service_proto_cc",
+        "//tensorflow:grpc",
+        "//tensorflow:grpc++",
         "//tensorflow/cc:cc_ops",
         "//tensorflow/cc:client_session",
         "//tensorflow/cc:ops",

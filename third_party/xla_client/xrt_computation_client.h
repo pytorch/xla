@@ -17,6 +17,7 @@
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/mesh_service.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/triggered_task.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -104,6 +105,10 @@ class XrtComputationClient : public ComputationClient {
       return name.compare(rhs.name) < 0;
     }
 
+    bool operator==(const Worker& rhs) const {
+      return task_no == rhs.task_no && name == rhs.name;
+    }
+
     string name;
     int task_no;
   };
@@ -124,7 +129,9 @@ class XrtComputationClient : public ComputationClient {
     std::map<Worker, string> workers_map;
   };
 
-  XrtComputationClient(Options options);
+  XrtComputationClient(
+      Options options,
+      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto);
 
   DataPtr CreateDataPlaceholder(string device, Shape shape) override;
 
@@ -287,7 +294,10 @@ class XrtComputationClient : public ComputationClient {
   tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
       const string& job, int task_no, const string& worker_host_port);
 
-  void InitializeDevices();
+  void InitializeDevices(
+      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto);
+
+  void CreateMeshService(const tensorflow::tpu::TopologyProto& topology_proto);
 
   std::vector<DataPtr> GetComputationResults(
       const tensorflow::Tensor& xrt_result, const Shape& result_shape,
@@ -452,6 +462,9 @@ class XrtComputationClient : public ComputationClient {
   // XRT thread safety semantics.
   std::vector<DeviceHandle> released_data_handles_;
   std::vector<DeviceHandle> released_compile_handles_;
+  // The mesh service which is used to coordinate all the client hosts which are
+  // feeding different TPU devices in a POD (or slice) training.
+  std::unique_ptr<service::MeshService> mesh_service_;
 };
 
 }  // namespace xla

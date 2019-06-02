@@ -2,10 +2,10 @@
 
 #include <vector>
 
+#include "absl/strings/str_join.h"
+#include "absl/strings/str_split.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/lib/core/status.h"
-#include "tensorflow/core/lib/strings/str_util.h"
-#include "tensorflow/core/lib/strings/strcat.h"
 #include "tensorflow/core/protobuf/cluster.pb.h"
 #include "tensorflow/core/protobuf/tensorflow_server.pb.h"
 #include "tensorflow/core/public/session_options.h"
@@ -21,15 +21,15 @@ void FillServerDef(const string& cluster_spec, const string& job_name,
 
   size_t my_num_tasks = 0;
   tensorflow::ClusterDef* cluster = options->mutable_cluster();
-  for (const string& job_str : tensorflow::str_util::Split(cluster_spec, ',')) {
+  for (auto& job_str : absl::StrSplit(cluster_spec, ',')) {
     tensorflow::JobDef* job_def = cluster->add_job();
     // Split each entry in the flag into 2 pieces, separated by "|".
-    std::vector<string> job_pieces = tensorflow::str_util::Split(job_str, '|');
+    std::vector<string> job_pieces = absl::StrSplit(job_str, '|');
     XLA_CHECK_EQ(2, job_pieces.size()) << job_str;
     const string& cjob_name = job_pieces[0];
     const string& spec = job_pieces[1];
     job_def->set_name(cjob_name);
-    std::vector<string> host_ports = tensorflow::str_util::Split(spec, ';');
+    std::vector<string> host_ports = absl::StrSplit(spec, ';');
     for (size_t i = 0; i < host_ports.size(); ++i) {
       (*job_def->mutable_tasks())[i] = host_ports[i];
     }
@@ -38,7 +38,7 @@ void FillServerDef(const string& cluster_spec, const string& job_name,
       my_num_tasks = num_tasks;
     }
     LOG(INFO) << "Peer " << cjob_name << " " << num_tasks << " {"
-              << tensorflow::str_util::Join(host_ports, ", ") << "}";
+              << absl::StrJoin(host_ports, ", ") << "}";
   }
   XLA_CHECK_NE(my_num_tasks, 0) << "Job '" << options->job_name()
                                 << "' does not appear in the cluster spec";

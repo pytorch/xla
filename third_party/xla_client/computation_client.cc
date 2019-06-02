@@ -8,16 +8,29 @@
 #include <string>
 #include <vector>
 
+#include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/status_macros.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/mesh_service.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 #include "tensorflow/core/util/device_name_utils.h"
 
 namespace xla {
 namespace {
+
+struct Device {
+  string kind;
+  int ordinal = 0;
+};
+
+Device ParseDevice(const string& device) {
+  std::vector<string> parts = absl::StrSplit(device, ':');
+  XLA_CHECK_EQ(parts.size(), 2) << device;
+  return {parts[0], std::stoi(parts[1])};
+}
 
 ComputationClient* CreateClient() {
   return ComputationClient::Create().release();
@@ -52,25 +65,28 @@ string MakeGrpcEndPoint(const string& server) {
                                               : absl::StrCat("grpc://", server);
 }
 
+string GetXrtDevicePath(const string& worker, int task_no,
+                        const string& device_type, int ordinal) {
+  return absl::StrCat("/job:", worker, "/replica:0/task:", task_no,
+                      "/device:", device_type, ":", ordinal);
+}
+
 void PopulateLocalDevices(XrtComputationClient::Options* options) {
   string local_worker = sys_util::GetEnvString("XRT_LOCAL_WORKER", "");
-  string worker_name;
-  int task_no = -1;
+  XrtComputationClient::Worker worker("", -1);
   if (!local_worker.empty()) {
-    std::vector<string> parts = absl::StrSplit(local_worker, ':');
-    XLA_CHECK_EQ(parts.size(), 2) << local_worker;
-    worker_name = std::move(parts[0]);
-    task_no = std::stoi(parts[1]);
+    worker = ParseWorker(local_worker);
   }
   for (auto& device_xrt_device : options->global_device_map) {
-    if (!worker_name.empty()) {
+    if (worker.task_no >= 0) {
       tensorflow::DeviceNameUtils::ParsedName parsed_device;
       XLA_CHECK(tensorflow::DeviceNameUtils::ParseFullName(
                     device_xrt_device.second, &parsed_device) &&
                 parsed_device.has_job && parsed_device.has_task &&
                 parsed_device.has_id && parsed_device.has_type)
           << device_xrt_device.second;
-      if (worker_name != parsed_device.job || task_no != parsed_device.task) {
+      if (worker.name != parsed_device.job ||
+          worker.task_no != parsed_device.task) {
         continue;
       }
     }
@@ -99,8 +115,7 @@ void AddXrtHostDevices(const string& worker_name, int task_no,
       string device_name = absl::StrCat(device.name, ":", device_ordinal);
       string tf_device_name = absl::StrCat(device.tf_name, ":", device_ordinal);
       string xrt_device_name =
-          absl::StrCat("/job:", worker_name, "/replica:0/task:", task_no,
-                       "/device:", tf_device_name);
+          GetXrtDevicePath(worker_name, task_no, device.tf_name, j);
       options->global_device_map.emplace(device_name, xrt_device_name);
     }
   }
@@ -146,16 +161,65 @@ void ParseTpuClusterConfig(const string& xrt_config_path,
   options->default_device = "TPU:0";
 }
 
+bool ParseMeshConfig(
+    XrtComputationClient::Options* options,
+    std::unique_ptr<tensorflow::tpu::TopologyProto>* topology_proto) {
+  service::MeshClient* client = service::MeshClient::Get();
+  if (client == nullptr) {
+    return false;
+  }
+  string local_worker_env = sys_util::GetEnvString("XRT_LOCAL_WORKER", "");
+  XLA_CHECK(!local_worker_env.empty())
+      << "In a mesh client setup the XRT_LOCAL_WORKER must be specified";
+
+  XrtComputationClient::Worker local_worker = ParseWorker(local_worker_env);
+
+  TF_LOG(INFO) << "Fetching mesh configuration for worker " << local_worker.name
+               << ":" << local_worker.task_no << " from mesh service at "
+               << client->address();
+  service::grpc::Config config = client->GetConfig();
+
+  int min_ordinal = -1;
+  for (auto& config_worker : config.workers()) {
+    XrtComputationClient::Worker worker(config_worker.name(),
+                                        config_worker.task_no());
+    options->workers_map.emplace(worker, config_worker.address());
+
+    for (auto& device : config_worker.devices()) {
+      Device local_device = ParseDevice(device.local_name());
+      options->global_device_map.emplace(
+          device.global_name(),
+          GetXrtDevicePath(worker.name, worker.task_no, local_device.kind,
+                           local_device.ordinal));
+      if (local_worker == worker) {
+        Device global_device = ParseDevice(device.global_name());
+        options->devices.insert(device.global_name());
+        if (global_device.kind == "TPU" &&
+            (min_ordinal < 0 || min_ordinal > global_device.ordinal)) {
+          min_ordinal = global_device.ordinal;
+        }
+      }
+    }
+  }
+  options->default_device = absl::StrCat("TPU:", min_ordinal);
+
+  (*topology_proto) = absl::make_unique<tensorflow::tpu::TopologyProto>(
+      std::move(*config.mutable_proto()));
+  return true;
+}
+
 }  // namespace
 
 std::unique_ptr<ComputationClient> ComputationClient::Create() {
   XrtComputationClient::Options options;
+  std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
   string xrt_config_path;
   if (HasXrtConfigFile(&xrt_config_path)) {
     TF_LOG(INFO) << "Loading XRT configuration from " << xrt_config_path;
     ParseTpuClusterConfig(xrt_config_path, &options);
   } else {
-    if (!ParseEnvBasedTpuClusterConfig(&options)) {
+    if (!ParseEnvBasedTpuClusterConfig(&options) &&
+        !ParseMeshConfig(&options, &topology_proto)) {
       string device_spec = sys_util::GetEnvString(
           "XRT_DEVICE_MAP",
           "TPU:0;/job:tpu_worker/replica:0/task:0/device:TPU:0");
@@ -178,7 +242,8 @@ std::unique_ptr<ComputationClient> ComputationClient::Create() {
       PopulateLocalDevices(&options);
     }
   }
-  return std::unique_ptr<ComputationClient>(new XrtComputationClient(options));
+  return std::unique_ptr<ComputationClient>(
+      new XrtComputationClient(options, std::move(topology_proto)));
 }
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(

@@ -8,7 +8,6 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
-#include "absl/types/optional.h"
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
@@ -152,6 +151,17 @@ string StripPrefix(const string& value, const string& prefix) {
   return value.find(prefix) == 0 ? value.substr(prefix.size()) : value;
 }
 
+tensorflow::DeviceNameUtils::ParsedName ParseFullXrtDevice(
+    const string& device) {
+  tensorflow::DeviceNameUtils::ParsedName parsed_device;
+  XLA_CHECK(
+      tensorflow::DeviceNameUtils::ParseFullName(device, &parsed_device) &&
+      parsed_device.has_job && parsed_device.has_task && parsed_device.has_id &&
+      parsed_device.has_type)
+      << device;
+  return parsed_device;
+}
+
 }  // namespace
 
 void XrtComputationClient::XrtData::Assign(const Data& data) {
@@ -162,7 +172,8 @@ void XrtComputationClient::XrtData::Assign(const Data& data) {
 }
 
 XrtComputationClient::XrtComputationClient(
-    XrtComputationClient::Options options)
+    Options options,
+    std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto)
     : options_(std::move(options)),
       compilation_cache_(sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 64)),
       rng_seed_(0x5a2d296e9) {
@@ -185,14 +196,14 @@ XrtComputationClient::XrtComputationClient(
     TF_LOG(INFO) << "XRT device (" << tag << ") " << dev_target.first << " -> "
                  << dev_target.second;
   }
-  TF_LOG(INFO) << "XRT default device: " << default_device_target->first;
   for (auto& worker_target : options_.workers_map) {
     TF_LOG(INFO) << "Worker " << worker_target.second
                  << " for /job:" << worker_target.first.name
                  << "/replica:0/task:" << worker_target.first.task_no;
   }
+  TF_LOG(INFO) << "XRT default device: " << options_.default_device;
   MaybeCreateLocalService(options_);
-  InitializeDevices();
+  InitializeDevices(std::move(topology_proto));
   StartHandleReleaser();
 }
 
@@ -995,12 +1006,8 @@ void XrtComputationClient::ReleaseXrtComputation(
 
 std::pair<XrtComputationClient::Worker, string>
 XrtComputationClient::GetWorkerForXrtDevice(const string& xrt_device) const {
-  tensorflow::DeviceNameUtils::ParsedName parsed_device;
-  XLA_CHECK(
-      tensorflow::DeviceNameUtils::ParseFullName(xrt_device, &parsed_device) &&
-      parsed_device.has_job && parsed_device.has_task)
-      << xrt_device;
-
+  tensorflow::DeviceNameUtils::ParsedName parsed_device =
+      ParseFullXrtDevice(xrt_device);
   auto worker_hostport =
       options_.workers_map.find(Worker(parsed_device.job, parsed_device.task));
   XLA_CHECK(worker_hostport != options_.workers_map.end()) << xrt_device;
@@ -1056,41 +1063,38 @@ tensorflow::tpu::TopologyProto XrtComputationClient::InitializeAndFetchTopology(
   return topology_proto;
 }
 
-void XrtComputationClient::InitializeDevices() {
-  std::set<Worker> tpu_workers;
-  for (const auto& device : options_.devices) {
-    const string& xrt_device = TorchDeviceToXrtDevice(device);
-    tensorflow::DeviceNameUtils::ParsedName parsed_device;
-    XLA_CHECK(tensorflow::DeviceNameUtils::ParseFullName(xrt_device,
-                                                         &parsed_device) &&
-              parsed_device.has_job && parsed_device.has_task &&
-              parsed_device.has_id && parsed_device.has_type)
-        << xrt_device;
-    if (parsed_device.type == "TPU") {
-      tpu_workers.emplace(parsed_device.job, parsed_device.task);
+void XrtComputationClient::InitializeDevices(
+    std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto) {
+  bool is_master = topology_proto == nullptr;
+  if (is_master) {
+    std::set<Worker> tpu_workers;
+    for (const auto& dev_target : options_.global_device_map) {
+      tensorflow::DeviceNameUtils::ParsedName parsed_device =
+          ParseFullXrtDevice(dev_target.second);
+      if (parsed_device.type == "TPU") {
+        tpu_workers.emplace(parsed_device.job, parsed_device.task);
+      }
+    }
+    for (auto& worker : tpu_workers) {
+      auto it = options_.workers_map.find(worker);
+      XLA_CHECK(it != options_.workers_map.end());
+
+      TF_LOG(INFO) << "Configuring TPU for worker " << worker.name << ":"
+                   << worker.task_no << " at " << it->second;
+      tensorflow::tpu::TopologyProto worker_topology_proto =
+          InitializeAndFetchTopology(worker.name, worker.task_no, it->second);
+      if (topology_proto == nullptr) {
+        topology_proto = absl::make_unique<tensorflow::tpu::TopologyProto>(
+            std::move(worker_topology_proto));
+      }
     }
   }
-  std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
-  for (auto& worker : tpu_workers) {
-    auto it = options_.workers_map.find(worker);
-    XLA_CHECK(it != options_.workers_map.end());
-
-    tensorflow::tpu::TopologyProto worker_topology_proto =
-        InitializeAndFetchTopology(worker.name, worker.task_no, it->second);
-    if (topology_proto == nullptr) {
-      topology_proto = absl::make_unique<tensorflow::tpu::TopologyProto>(
-          std::move(worker_topology_proto));
-      TF_LOG(INFO) << "TPU topology: " << topology_proto->DebugString();
-    }
+  if (topology_proto != nullptr) {
+    TF_LOG(INFO) << "TPU topology: " << topology_proto->DebugString();
   }
-
   for (const auto& dev_target : options_.global_device_map) {
-    tensorflow::DeviceNameUtils::ParsedName parsed_device;
-    XLA_CHECK(tensorflow::DeviceNameUtils::ParseFullName(dev_target.second,
-                                                         &parsed_device) &&
-              parsed_device.has_job && parsed_device.has_task &&
-              parsed_device.has_id && parsed_device.has_type)
-        << dev_target.second;
+    tensorflow::DeviceNameUtils::ParsedName parsed_device =
+        ParseFullXrtDevice(dev_target.second);
     if (parsed_device.type != "TPU") {
       continue;
     }
@@ -1112,6 +1116,47 @@ void XrtComputationClient::InitializeDevices() {
     device_mesh_coords_.insert(
         {dev_target.second, std::move(device_mesh_coords)});
   }
+  if (is_master && topology_proto != nullptr &&
+      options_.workers_map.size() > 1) {
+    CreateMeshService(*topology_proto);
+  }
+}
+
+void XrtComputationClient::CreateMeshService(
+    const tensorflow::tpu::TopologyProto& topology_proto) {
+  struct Device {
+    string local_name;
+    string global_name;
+  };
+
+  service::grpc::Config config;
+  config.mutable_proto()->CopyFrom(topology_proto);
+
+  std::map<Worker, std::vector<Device>> workers_devices;
+  for (const auto& dev_target : options_.global_device_map) {
+    tensorflow::DeviceNameUtils::ParsedName parsed_device =
+        ParseFullXrtDevice(dev_target.second);
+    string local_name = absl::StrCat(parsed_device.type, ":", parsed_device.id);
+    workers_devices[Worker(parsed_device.job, parsed_device.task)].push_back(
+        {local_name, dev_target.first});
+  }
+  for (auto& worker_address : options_.workers_map) {
+    service::grpc::Worker* worker = config.add_workers();
+    worker->set_name(worker_address.first.name);
+    worker->set_task_no(worker_address.first.task_no);
+    worker->set_address(worker_address.second);
+    for (auto& worker_device : workers_devices[worker_address.first]) {
+      service::grpc::Device* device = worker->add_devices();
+      device->set_local_name(worker_device.local_name);
+      device->set_global_name(worker_device.global_name);
+    }
+  }
+
+  string mesh_service_address =
+      sys_util::GetEnvString("XRT_MESH_SERVICE_ADDRESS", "localhost:53010");
+  TF_LOG(INFO) << "Creating mesh service bound to " << mesh_service_address;
+  mesh_service_ = absl::make_unique<service::MeshService>(mesh_service_address,
+                                                          std::move(config));
 }
 
 std::vector<ComputationClient::DataPtr>
