@@ -88,8 +88,10 @@ bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
 
 void WithAllDevices(
     DeviceType device_type,
-    const std::function<void(const std::vector<Device>&)>& devfn) {
+    const std::function<void(const std::vector<Device>&,
+                             const std::vector<Device>&)>& devfn) {
   std::vector<Device> devices;
+  std::vector<Device> all_devices;
   for (const auto& device_str :
        xla::ComputationClient::Get()->GetLocalDevices()) {
     Device device(device_str);
@@ -97,8 +99,15 @@ void WithAllDevices(
       devices.push_back(device);
     }
   }
+  for (const auto& device_str :
+       xla::ComputationClient::Get()->GetAllDevices()) {
+    Device device(device_str);
+    if (device.hw_type == device_type) {
+      all_devices.push_back(device);
+    }
+  }
   if (!devices.empty()) {
-    devfn(devices);
+    devfn(devices, all_devices);
   }
 }
 

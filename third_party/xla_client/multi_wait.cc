@@ -1,5 +1,6 @@
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 
+#include <chrono>
 #include <exception>
 
 #include "tensorflow/core/lib/core/errors.h"
@@ -25,6 +26,15 @@ void MultiWait::Done(Status status) {
 Status MultiWait::Wait() {
   std::unique_lock<std::mutex> lock(mutex_);
   cv_.wait(lock, [this] { return completed_count_ >= count_; });
+  return status_;
+}
+
+Status MultiWait::Wait(double wait_seconds) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (!cv_.wait_for(lock, std::chrono::duration<double>(wait_seconds),
+                    [this] { return completed_count_ >= count_; })) {
+    return tensorflow::errors::DeadlineExceeded("Timeout");
+  }
   return status_;
 }
 
