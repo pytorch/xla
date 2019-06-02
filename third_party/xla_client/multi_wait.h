@@ -24,6 +24,9 @@ class MultiWait {
   // happened.
   Status Wait();
 
+  // Same as above, but waits up to wait_seconds.
+  Status Wait(double wait_seconds);
+
   // Resets the threshold counter for the MultiWait object. The completed count
   // is also reset to zero.
   void Reset(size_t count);

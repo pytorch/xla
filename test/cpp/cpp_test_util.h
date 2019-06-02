@@ -45,7 +45,8 @@ void ForEachDevice(const std::function<void(const Device&)>& devfn);
 
 void WithAllDevices(
     DeviceType device_type,
-    const std::function<void(const std::vector<Device>&)>& devfn);
+    const std::function<void(const std::vector<Device>&,
+                             const std::vector<Device>&)>& devfn);
 
 std::string GetTensorTextGraph(at::Tensor tensor);
 

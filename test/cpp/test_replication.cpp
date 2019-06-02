@@ -27,18 +27,23 @@ xla::XlaComputation CreateCrsComputation(const xla::Shape& shape) {
   return ConsumeValue(builder.Build());
 }
 
-void TestSingleReplication(const std::vector<Device>& devices) {
+void TestSingleReplication(const std::vector<Device>& devices,
+                           const std::vector<Device>& all_devices) {
   // Simulates N threads executing the same computation, using separated XRT
   // executions, and issuing CRS operations.
   std::vector<xla::string> device_strings;
+  std::vector<xla::string> all_device_strings;
   for (auto& device : devices) {
     device_strings.push_back(device.ToString());
+  }
+  for (auto& device : all_devices) {
+    all_device_strings.push_back(device.ToString());
   }
   xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {8, 8});
   std::vector<xla::ComputationClient::CompileInstance> instances;
   for (auto& device_str : device_strings) {
     instances.emplace_back(CreateCrsComputation(shape), device_str,
-                           device_strings, &shape);
+                           all_device_strings, &shape);
   }
   auto compiled_computations =
       xla::ComputationClient::Get()->Compile(std::move(instances));
@@ -72,7 +77,7 @@ void TestSingleReplication(const std::vector<Device>& devices) {
     // devices into which we replicated.
     at::Tensor result =
         MakeTensorFromXlaLiteral(literals.front(), tensors[i].scalar_type());
-    AllClose(result, tensors[i] * static_cast<float>(results.size()));
+    AllClose(result, tensors[i] * static_cast<float>(all_devices.size()));
   }
 }
 
@@ -81,8 +86,9 @@ void TestSingleReplication(const std::vector<Device>& devices) {
 class ReplicationTest : public AtenXlaTensorTestBase {};
 
 TEST_F(ReplicationTest, TestNSingleReplication) {
-  WithAllDevices(DeviceType::TPU, [&](const std::vector<Device>& devices) {
-    TestSingleReplication(devices);
+  WithAllDevices(DeviceType::TPU, [&](const std::vector<Device>& devices,
+                                      const std::vector<Device>& all_devices) {
+    TestSingleReplication(devices, all_devices);
   });
 }
 
