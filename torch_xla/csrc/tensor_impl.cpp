@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -111,7 +112,9 @@ void XLATensorImpl::SetupSizeProperties() {
       numel_ *= dim;
     }
     strides_.clear();
-    for (auto stride : ComputeShapeStrides(shape.get())) {
+    xla::Shape torch_shape = MakeTorchTensorLayout(shape.get().dimensions(),
+                                                   shape.get().element_type());
+    for (auto stride : ComputeShapeStrides(torch_shape)) {
       strides_.push_back(stride);
     }
     generation_ = generation;
