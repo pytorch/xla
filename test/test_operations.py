@@ -294,8 +294,6 @@ class TestParallelTensorMNIST(XlaTestCase):
 
     model_parallel = dp.DataParallel(XlaMNIST, device_ids=devices)
     model_parallel(loop_fn, train_loader)
-    if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
-      print(torch_xla._XLAC._xla_metrics_report())
 
 
 class TestParallelTensorResnet18(XlaTestCase):
@@ -327,8 +325,6 @@ class TestParallelTensorResnet18(XlaTestCase):
     model_parallel = dp.DataParallel(
         torchvision.models.resnet18, device_ids=devices)
     model_parallel(loop_fn, train_loader)
-    if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
-      print(torch_xla._XLAC._xla_metrics_report())
 
 
 class TestLongGraphChain(XlaTestCase):
@@ -660,4 +656,7 @@ if __name__ == '__main__':
   torch.manual_seed(42)
   torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
       use_full_mat_mul_precision=True)
-  unittest.main(verbosity=FLAGS.verbosity)
+  test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
+  if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
+    print(torch_xla._XLAC._xla_metrics_report())
+  sys.exit(0 if test.result.wasSuccessful() else 1)
