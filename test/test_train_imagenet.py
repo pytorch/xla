@@ -1,12 +1,23 @@
 import test_utils
 
+
+SUPPORTED_MODELS = ['resnet50']
+MODEL_OPTS = {
+    '--model': {
+        'choices': SUPPORTED_MODELS,
+        'default': 'resnet50',
+    }
+}
 FLAGS = test_utils.parse_common_options(
     datadir='/tmp/imagenet',
     batch_size=128,
     num_epochs=18,
     momentum=0.9,
     lr=0.1,
-    target_accuracy=0.0)
+    target_accuracy=0.0,
+    opts=MODEL_OPTS.items(),
+)
+
 
 from common_utils import TestCase, run_tests
 import os
@@ -69,8 +80,10 @@ def train_imagenet():
 
   devices = xm.get_xla_supported_devices(max_devices=FLAGS.num_cores)
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
+  torchvision_model = getattr(torchvision.models, FLAGS.model)
   model_parallel = dp.DataParallel(
-      torchvision.models.resnet50, device_ids=devices)
+      torchvision_model, device_ids=devices
+  )
 
   def train_loop_fn(model, loader, device, context):
     loss_fn = nn.CrossEntropyLoss()
