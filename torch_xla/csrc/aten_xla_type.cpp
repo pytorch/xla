@@ -280,6 +280,14 @@ at::Tensor AtenXlaType::_dim_arange(const at::Tensor& like, int64_t dim) const {
   return arange(like.size(dim), like.options().dtype(at::kLong));
 }
 
+at::Tensor& AtenXlaType::_index_put_impl_(at::Tensor& self,
+                                          at::TensorList indices,
+                                          const at::Tensor& values,
+                                          bool accumulate,
+                                          bool /* unsafe */) const {
+  return index_put_(self, indices, values, accumulate);
+}
+
 at::Tensor AtenXlaType::_log_softmax(const at::Tensor& self, int64_t dim,
                                      bool /* half_to_float */) const {
   return bridge::AtenFromXlaTensor(

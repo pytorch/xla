@@ -92,6 +92,10 @@ class AtenXlaType : public AtenXlaTypeBase {
 
   at::Tensor _dim_arange(const at::Tensor& like, int64_t dim) const override;
 
+  at::Tensor& _index_put_impl_(at::Tensor& self, at::TensorList indices,
+                               const at::Tensor& values, bool accumulate,
+                               bool unsafe) const override;
+
   at::Tensor _log_softmax(const at::Tensor& self, int64_t dim,
                           bool half_to_float) const override;
 
