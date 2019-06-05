@@ -33,7 +33,6 @@ import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
 import unittest
 
-
 DEFAULT_KWARGS = dict(
     batch_size=128,
     num_epochs=18,
@@ -45,11 +44,10 @@ MODEL_SPECIFIC_DEFAULTS = {
     RESNET50: DEFAULT_KWARGS,
 }
 
-
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
-    if getattr(FLAGS, arg) is None:
-        setattr(FLAGS, arg, value)
+  if getattr(FLAGS, arg) is None:
+    setattr(FLAGS, arg, value)
 
 
 def train_imagenet():
@@ -98,9 +96,7 @@ def train_imagenet():
   devices = xm.get_xla_supported_devices(max_devices=FLAGS.num_cores)
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
   torchvision_model = getattr(torchvision.models, FLAGS.model)
-  model_parallel = dp.DataParallel(
-      torchvision_model, device_ids=devices
-  )
+  model_parallel = dp.DataParallel(torchvision_model, device_ids=devices)
 
   def train_loop_fn(model, loader, device, context):
     loss_fn = nn.CrossEntropyLoss()
