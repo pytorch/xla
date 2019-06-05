@@ -1,23 +1,22 @@
 import test_utils
 
-
-SUPPORTED_MODELS = ['resnet50']
+RESNET50 = 'resnet50'
+SUPPORTED_MODELS = [RESNET50]
 MODEL_OPTS = {
     '--model': {
         'choices': SUPPORTED_MODELS,
-        'default': 'resnet50',
+        'default': RESNET50,
     }
 }
 FLAGS = test_utils.parse_common_options(
     datadir='/tmp/imagenet',
-    batch_size=128,
-    num_epochs=18,
-    momentum=0.9,
-    lr=0.1,
-    target_accuracy=0.0,
+    batch_size=None,
+    num_epochs=None,
+    momentum=None,
+    lr=None,
+    target_accuracy=None,
     opts=MODEL_OPTS.items(),
 )
-
 
 from common_utils import TestCase, run_tests
 import os
@@ -33,6 +32,24 @@ import torch_xla_py.data_parallel as dp
 import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
 import unittest
+
+
+DEFAULT_KWARGS = dict(
+    batch_size=128,
+    num_epochs=18,
+    momentum=0.9,
+    lr=0.1,
+    target_accuracy=0.0,
+)
+MODEL_SPECIFIC_DEFAULTS = {
+    RESNET50: DEFAULT_KWARGS,
+}
+
+
+default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
+for arg, value in default_value_dict.items():
+    if getattr(FLAGS, arg) is None:
+        setattr(FLAGS, arg, value)
 
 
 def train_imagenet():
