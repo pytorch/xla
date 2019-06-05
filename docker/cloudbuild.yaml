@@ -20,7 +20,7 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/tpu-pytorch/xla']
   timeout: 1200s
-- name: 'gcr.io/tpu-pytorch/xla'
+- name: 'gcr.io/tpu-pytorch/xla:nightly'
   entrypoint: 'bash'
   args: ['-c', 'cp /pytorch/dist/*.whl ./ && cp /pytorch/xla/dist/*.whl ./']
 
