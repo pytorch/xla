@@ -506,8 +506,8 @@ NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
   NodePtr zero = ScalarOp(0, shape);
   NodePtr one = ScalarOp(1, shape);
   NodePtr alpha_scalar = ScalarOp(alpha, shape);
-  return (Max(zero, scaled_input) +
-          Min(zero, alpha_scalar * (Exp(scaled_input) - one))) *
+  return Where(ir::ops::ComparisonOp(at::aten::le, input, zero),
+               alpha_scalar * (Exp(scaled_input) - one), input) *
          ScalarOp(scale, shape);
 }
 
@@ -518,9 +518,9 @@ NodePtr EluBackward(const Value& grad_output, const Value& output,
   NodePtr negative_output_branch =
       ScalarOp(input_scale, shape) *
       (output + ScalarOp(alpha, shape) * ScalarOp(scale, shape));
-  NodePtr positive_output_branch =
-      ScalarOp(scale, shape) * ScalarOp(input_scale, shape);
-  return Where(ComparisonOp(at::aten::gt, output, ScalarOp(0, shape)),
+  NodePtr positive_output_branch = ScalarOp(scale, shape);
+  return grad_output *
+         Where(ComparisonOp(at::aten::gt, output, ScalarOp(0, shape)),
                positive_output_branch, negative_output_branch);
 }
 
