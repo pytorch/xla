@@ -1,13 +1,13 @@
-diff --git a/torch/serialization.py b/torch/serialization.py
-index 43be96d70..0cd8aaae5 100644
---- a/torch/serialization.py
-+++ b/torch/serialization.py
-@@ -221,6 +221,8 @@ def save(obj, f, pickle_module=pickle, pickle_protocol=DEFAULT_PROTOCOL):
-         >>> buffer = io.BytesIO()
-         >>> torch.save(x, buffer)
-     """
-+    if torch.is_tensor(obj) and obj.device.type == 'xla':
-+        obj = obj.cpu()
-     return _with_file_like(f, "wb", lambda f: _save(obj, f, pickle_module, pickle_protocol))
- 
- 
+diff --git a/torch/tensor.py b/torch/tensor.py
+index 0c3286078b..cf0752c89a 100644
+--- a/torch/tensor.py
++++ b/torch/tensor.py
+@@ -38,6 +38,8 @@ class Tensor(torch._C._TensorBase):
+     def __reduce_ex__(self, proto):
+         # See Note [Don't serialize hooks]
+         torch.utils.hooks.warn_if_has_hooks(self)
++        if self.device.type == 'xla':
++            self = self.cpu()
+         if self.is_quantized:
+             args = (self.storage(),
+                     self.storage_offset(),
