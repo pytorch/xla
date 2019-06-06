@@ -1,7 +1,50 @@
 import test_utils
 
+ALEXNET = 'alexnet'
+DENSENET121 = 'densenet121'
+DENSENET161 = 'densenet161'
+DENSENET169 = 'densenet169'
+DENSENET201 = 'densenet201'
+INCEPTION_V3 = 'inception_v3'
+RESNET101 = 'resnet101'
+RESNET152 = 'resnet152'
+RESNET18 = 'resnet18'
+RESNET34 = 'resnet34'
 RESNET50 = 'resnet50'
-SUPPORTED_MODELS = [RESNET50]
+SQUEEZENET1_0 = 'squeezenet1_0'
+SQUEEZENET1_1 = 'squeezenet1_1'
+VGG11 = 'vgg11'
+VGG11_BN = 'vgg11_bn'
+VGG13 = 'vgg13'
+VGG13_BN = 'vgg13_bn'
+VGG16 = 'vgg16'
+VGG16_BN = 'vgg16_bn'
+VGG19 = 'vgg19'
+VGG19_BN = 'vgg19_bn'
+SUPPORTED_MODELS = [
+    ALEXNET,
+    DENSENET121,
+    DENSENET161,
+    DENSENET169,
+    DENSENET201,
+    INCEPTION_V3,
+    RESNET101,
+    RESNET152,
+    RESNET18,
+    RESNET34,
+    RESNET50,
+    #SQUEEZENET1_0,
+    #SQUEEZENET1_1,
+    VGG11,
+    VGG11_BN,
+    VGG13,
+    VGG13_BN,
+    VGG16,
+    VGG16_BN,
+    VGG19,
+    VGG19_BN
+]
+
 MODEL_OPTS = {
     '--model': {
         'choices': SUPPORTED_MODELS,
@@ -42,6 +85,7 @@ DEFAULT_KWARGS = dict(
 )
 MODEL_SPECIFIC_DEFAULTS = {
     RESNET50: DEFAULT_KWARGS,
+    INCEPTION_V3: DEFAULT_KWARGS,
 }
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
@@ -50,15 +94,25 @@ for arg, value in default_value_dict.items():
     setattr(FLAGS, arg, value)
 
 
+def load_torchvision_model(model_name):
+  # inception requires special treatment since it outputs a tuple by default
+  if model_name.startswith('inception'):
+    model = lambda: torchvision.models.inception_v3(aux_logits=False)
+  else:
+    model = getattr(torchvision.models, FLAGS.model)
+  return model
+
+
 def train_imagenet():
   print('==> Preparing data..')
+  img_dim = 299 if FLAGS.model.startswith('inception') else 224
   if FLAGS.fake_data:
     train_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.batch_size, 3, 224, 224),
+        data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
         sample_count=1200000 // FLAGS.batch_size)
     test_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.batch_size, 3, 224, 224),
+        data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
         sample_count=50000 // FLAGS.batch_size)
   else:
@@ -67,7 +121,7 @@ def train_imagenet():
     train_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'train'),
         transforms.Compose([
-            transforms.RandomResizedCrop(224),
+            transforms.RandomResizedCrop(img_dim),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
@@ -80,7 +134,7 @@ def train_imagenet():
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
         transforms.Compose([
-            transforms.RandomResizedCrop(224),
+            transforms.RandomResizedCrop(img_dim),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
@@ -95,7 +149,7 @@ def train_imagenet():
 
   devices = xm.get_xla_supported_devices(max_devices=FLAGS.num_cores)
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
-  torchvision_model = getattr(torchvision.models, FLAGS.model)
+  torchvision_model = load_torchvision_model(FLAGS.model)
   model_parallel = dp.DataParallel(torchvision_model, device_ids=devices)
 
   def train_loop_fn(model, loader, device, context):
@@ -106,7 +160,6 @@ def train_imagenet():
         momentum=FLAGS.momentum,
         weight_decay=5e-4)
     tracker = xm.RateTracker()
-
     for x, (data, target) in loader:
       optimizer.zero_grad()
       output = model(data)
