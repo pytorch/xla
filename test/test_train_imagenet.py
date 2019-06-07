@@ -21,7 +21,7 @@ SUPPORTED_MODELS = [
     'vgg16',
     'vgg16_bn',
     'vgg19',
-    'vgg19_bn',
+    'vgg19_bn'
 ]
 
 MODEL_OPTS = {
@@ -70,14 +70,14 @@ for arg, value in default_value_dict.items():
     setattr(FLAGS, arg, value)
 
 MODEL_PROPERTIES = {
-  'inception_v3': {
-    'img_dim': 299,
-    'model_fn': lambda: torchvision.models.inception_v3(aux_logits=False)
-  },
-  'DEFAULT': {
-    'img_dim': 299,
-    'model_fn': getattr(torchvision.models, FLAGS.model)
-  }
+    'inception_v3': {
+        'img_dim': 299,
+        'model_fn': lambda: torchvision.models.inception_v3(aux_logits=False)
+    },
+    'DEFAULT': {
+        'img_dim': 299,
+        'model_fn': getattr(torchvision.models, FLAGS.model)
+    }
 }
 
 
