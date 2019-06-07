@@ -75,7 +75,7 @@ MODEL_PROPERTIES = {
         'model_fn': lambda: torchvision.models.inception_v3(aux_logits=False)
     },
     'DEFAULT': {
-        'img_dim': 299,
+        'img_dim': 224,
         'model_fn': getattr(torchvision.models, FLAGS.model)
     }
 }
