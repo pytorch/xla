@@ -21,7 +21,7 @@ SUPPORTED_MODELS = [
     'vgg16',
     'vgg16_bn',
     'vgg19',
-    'vgg19_bn,
+    'vgg19_bn',
 ]
 
 MODEL_OPTS = {
