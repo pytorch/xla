@@ -1,54 +1,33 @@
 import test_utils
 
-ALEXNET = 'alexnet'
-DENSENET121 = 'densenet121'
-DENSENET161 = 'densenet161'
-DENSENET169 = 'densenet169'
-DENSENET201 = 'densenet201'
-INCEPTION_V3 = 'inception_v3'
-RESNET101 = 'resnet101'
-RESNET152 = 'resnet152'
-RESNET18 = 'resnet18'
-RESNET34 = 'resnet34'
-RESNET50 = 'resnet50'
-SQUEEZENET1_0 = 'squeezenet1_0'
-SQUEEZENET1_1 = 'squeezenet1_1'
-VGG11 = 'vgg11'
-VGG11_BN = 'vgg11_bn'
-VGG13 = 'vgg13'
-VGG13_BN = 'vgg13_bn'
-VGG16 = 'vgg16'
-VGG16_BN = 'vgg16_bn'
-VGG19 = 'vgg19'
-VGG19_BN = 'vgg19_bn'
 SUPPORTED_MODELS = [
-    ALEXNET,
-    DENSENET121,
-    DENSENET161,
-    DENSENET169,
-    DENSENET201,
-    INCEPTION_V3,
-    RESNET101,
-    RESNET152,
-    RESNET18,
-    RESNET34,
-    RESNET50,
-    #SQUEEZENET1_0,
-    #SQUEEZENET1_1,
-    VGG11,
-    VGG11_BN,
-    VGG13,
-    VGG13_BN,
-    VGG16,
-    VGG16_BN,
-    VGG19,
-    VGG19_BN
+    'alexnet',
+    'densenet121',
+    'densenet161',
+    'densenet169',
+    'densenet201',
+    'inception_v3',
+    'resnet101',
+    'resnet152',
+    'resnet18',
+    'resnet34',
+    'resnet50',
+    # 'squeezenet1_0',
+    # 'squeezenet1_1',
+    'vgg11',
+    'vgg11_bn',
+    'vgg13',
+    'vgg13_bn',
+    'vgg16',
+    'vgg16_bn',
+    'vgg19',
+    'vgg19_bn,
 ]
 
 MODEL_OPTS = {
     '--model': {
         'choices': SUPPORTED_MODELS,
-        'default': RESNET50,
+        'default': 'resnet50',
     }
 }
 FLAGS = test_utils.parse_common_options(
@@ -83,29 +62,32 @@ DEFAULT_KWARGS = dict(
     lr=0.1,
     target_accuracy=0.0,
 )
-MODEL_SPECIFIC_DEFAULTS = {
-    RESNET50: DEFAULT_KWARGS,
-    INCEPTION_V3: DEFAULT_KWARGS,
-}
+MODEL_SPECIFIC_DEFAULTS = {}
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
   if getattr(FLAGS, arg) is None:
     setattr(FLAGS, arg, value)
 
+MODEL_PROPERTIES = {
+  'inception_v3': {
+    'img_dim': 299,
+    'model_fn': lambda: torchvision.models.inception_v3(aux_logits=False)
+  },
+  'DEFAULT': {
+    'img_dim': 299,
+    'model_fn': getattr(torchvision.models, FLAGS.model)
+  }
+}
 
-def load_torchvision_model(model_name):
-  # inception requires special treatment since it outputs a tuple by default
-  if model_name.startswith('inception'):
-    model = lambda: torchvision.models.inception_v3(aux_logits=False)
-  else:
-    model = getattr(torchvision.models, FLAGS.model)
-  return model
+
+def get_model_property(key):
+  return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
 
 
 def train_imagenet():
   print('==> Preparing data..')
-  img_dim = 299 if FLAGS.model.startswith('inception') else 224
+  img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
@@ -149,7 +131,7 @@ def train_imagenet():
 
   devices = xm.get_xla_supported_devices(max_devices=FLAGS.num_cores)
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
-  torchvision_model = load_torchvision_model(FLAGS.model)
+  torchvision_model = get_model_property('model_fn')
   model_parallel = dp.DataParallel(torchvision_model, device_ids=devices)
 
   def train_loop_fn(model, loader, device, context):
