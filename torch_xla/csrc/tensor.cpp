@@ -382,6 +382,7 @@ void XLATensor::Async::Wait() {
 }
 
 XLATensor XLATensor::Create(const at::Tensor& tensor, const Device& device) {
+  XLA_CHECK_EQ(tensor.device().type(), at::kCPU);
   XLATensor xtensor(tensor, device);
   DeviceContextArena::Get()->RegisterTensor(xtensor.data_ptr());
   return xtensor;
