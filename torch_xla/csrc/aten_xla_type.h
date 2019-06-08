@@ -1,1182 +1,1126 @@
 #pragma once
 
-#include "torch_xla/csrc/aten_xla_type_base.h"
+#include <ATen/Tensor.h>
 
 namespace torch_xla {
 
 // Base ATEN Type class where the XLA specific overrides should be defined.
-class AtenXlaType : public AtenXlaTypeBase {
+class AtenXlaType {
  public:
-  AtenXlaType(at::TensorTypeId type_id, bool is_variable, bool is_undefined);
+  static void InitializeAtenBindings();
 
   //////////////////////////////////////////////////////////////////////////////
   // ATEN API ovverrides in alphabetical order.
+  // Note: The C++ signatures must match the ones listed within the following
+  // pytorch folder file:
+  //   build/aten/src/ATen/RegistrationDeclarations.h
   /////////////////////////////////////////////////////////////////////////////
-  at::Tensor __and__(const at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor __and__(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor __and__(const at::Tensor& self,
-                     const at::Tensor& other) const override;
+  static at::Tensor __and__(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& __iand__(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& __iand__(at::Tensor& self, at::Scalar other);
 
-  at::Tensor& __iand__(at::Tensor& self,
-                       const at::Tensor& other) const override;
+  static at::Tensor& __iand__(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& __ilshift__(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& __ilshift__(at::Tensor& self, at::Scalar other);
 
-  at::Tensor& __ilshift__(at::Tensor& self,
-                          const at::Tensor& other) const override;
+  static at::Tensor& __ilshift__(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& __ior__(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& __ior__(at::Tensor& self, at::Scalar other);
 
-  at::Tensor& __ior__(at::Tensor& self, const at::Tensor& other) const override;
+  static at::Tensor& __ior__(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& __irshift__(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& __irshift__(at::Tensor& self, at::Scalar other);
 
-  at::Tensor& __irshift__(at::Tensor& self,
-                          const at::Tensor& other) const override;
+  static at::Tensor& __irshift__(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& __ixor__(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& __ixor__(at::Tensor& self, at::Scalar other);
 
-  at::Tensor& __ixor__(at::Tensor& self,
-                       const at::Tensor& other) const override;
+  static at::Tensor& __ixor__(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor __lshift__(const at::Tensor& self,
-                        at::Scalar other) const override;
+  static at::Tensor __lshift__(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor __lshift__(const at::Tensor& self,
-                        const at::Tensor& other) const override;
+  static at::Tensor __lshift__(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor __or__(const at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor __or__(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor __or__(const at::Tensor& self,
-                    const at::Tensor& other) const override;
+  static at::Tensor __or__(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor __rshift__(const at::Tensor& self,
-                        at::Scalar other) const override;
+  static at::Tensor __rshift__(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor __rshift__(const at::Tensor& self,
-                        const at::Tensor& other) const override;
+  static at::Tensor __rshift__(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor __xor__(const at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor __xor__(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor __xor__(const at::Tensor& self,
-                     const at::Tensor& other) const override;
+  static at::Tensor __xor__(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor _adaptive_avg_pool2d(const at::Tensor& self,
-                                  at::IntArrayRef output_size) const override;
+  static at::Tensor _adaptive_avg_pool2d(const at::Tensor& self,
+                                         at::IntArrayRef output_size);
 
-  at::Tensor _adaptive_avg_pool2d_backward(
-      const at::Tensor& grad_output, const at::Tensor& self) const override;
+  static at::Tensor _adaptive_avg_pool2d_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self);
 
-  at::Tensor _cast_Byte(const at::Tensor& self,
-                        bool non_blocking) const override;
+  static at::Tensor _cast_Byte(const at::Tensor& self, bool non_blocking);
 
-  at::Tensor _cast_Char(const at::Tensor& self,
-                        bool non_blocking) const override;
+  static at::Tensor _cast_Char(const at::Tensor& self, bool non_blocking);
 
-  at::Tensor _cast_Float(const at::Tensor& self,
-                         bool non_blocking) const override;
+  static at::Tensor _cast_Float(const at::Tensor& self, bool non_blocking);
 
-  at::Tensor _cast_Int(const at::Tensor& self,
-                       bool non_blocking) const override;
+  static at::Tensor _cast_Int(const at::Tensor& self, bool non_blocking);
 
-  at::Tensor _cast_Long(const at::Tensor& self,
-                        bool non_blocking) const override;
+  static at::Tensor _cast_Long(const at::Tensor& self, bool non_blocking);
 
-  at::Tensor _cast_Short(const at::Tensor& self,
-                         bool non_blocking) const override;
+  static at::Tensor _cast_Short(const at::Tensor& self, bool non_blocking);
 
-  at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
-                        bool non_blocking) const override;
+  static at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
+                               bool non_blocking);
 
-  at::Tensor _dim_arange(const at::Tensor& like, int64_t dim) const override;
+  static at::Tensor _dim_arange(const at::Tensor& like, int64_t dim);
 
-  at::Tensor& _index_put_impl_(at::Tensor& self, at::TensorList indices,
-                               const at::Tensor& values, bool accumulate,
-                               bool unsafe) const override;
+  static at::Tensor& _index_put_impl_(at::Tensor& self, at::TensorList indices,
+                                      const at::Tensor& values, bool accumulate,
+                                      bool unsafe);
 
-  at::Tensor _log_softmax(const at::Tensor& self, int64_t dim,
-                          bool half_to_float) const override;
+  static at::Tensor _log_softmax(const at::Tensor& self, int64_t dim,
+                                 bool half_to_float);
 
-  at::Tensor _log_softmax_backward_data(const at::Tensor& grad_output,
-                                        const at::Tensor& output, int64_t dim,
-                                        const at::Tensor& self) const override;
+  static at::Tensor _log_softmax_backward_data(const at::Tensor& grad_output,
+                                               const at::Tensor& output,
+                                               int64_t dim,
+                                               const at::Tensor& self);
 
-  at::Tensor _softmax(const at::Tensor& self, int64_t dim,
-                      bool half_to_float) const override;
+  static at::Tensor _softmax(const at::Tensor& self, int64_t dim,
+                             bool half_to_float);
 
-  at::Tensor _softmax_backward_data(const at::Tensor& grad_output,
-                                    const at::Tensor& output, int64_t dim,
-                                    const at::Tensor& self) const override;
+  static at::Tensor _softmax_backward_data(const at::Tensor& grad_output,
+                                           const at::Tensor& output,
+                                           int64_t dim, const at::Tensor& self);
 
-  at::Tensor _trilinear(const at::Tensor& i1, const at::Tensor& i2,
-                        const at::Tensor& i3, at::IntArrayRef expand1,
-                        at::IntArrayRef expand2, at::IntArrayRef expand3,
-                        at::IntArrayRef sumdim,
-                        int64_t unroll_dim) const override;
+  static at::Tensor _trilinear(const at::Tensor& i1, const at::Tensor& i2,
+                               const at::Tensor& i3, at::IntArrayRef expand1,
+                               at::IntArrayRef expand2, at::IntArrayRef expand3,
+                               at::IntArrayRef sumdim, int64_t unroll_dim);
 
-  at::Tensor _unsafe_view(const at::Tensor& self,
-                          at::IntArrayRef size) const override;
+  static at::Tensor _unsafe_view(const at::Tensor& self, at::IntArrayRef size);
 
-  at::Tensor abs(const at::Tensor& self) const override;
+  static at::Tensor abs(const at::Tensor& self);
 
-  at::Tensor& abs_(at::Tensor& self) const override;
+  static at::Tensor& abs_(at::Tensor& self);
 
-  at::Tensor acos(const at::Tensor& self) const override;
+  static at::Tensor acos(const at::Tensor& self);
 
-  at::Tensor& acos_(at::Tensor& self) const override;
+  static at::Tensor& acos_(at::Tensor& self);
 
-  at::Tensor add(const at::Tensor& self, const at::Tensor& other,
-                 at::Scalar alpha) const override;
+  static at::Tensor add(const at::Tensor& self, const at::Tensor& other,
+                        at::Scalar alpha);
 
-  at::Tensor add(const at::Tensor& self, at::Scalar other,
-                 at::Scalar alpha) const override;
+  static at::Tensor add(const at::Tensor& self, at::Scalar other,
+                        at::Scalar alpha);
 
-  at::Tensor& add_(at::Tensor& self, const at::Tensor& other,
-                   at::Scalar alpha) const override;
+  static at::Tensor& add_(at::Tensor& self, const at::Tensor& other,
+                          at::Scalar alpha);
 
-  at::Tensor& add_(at::Tensor& self, at::Scalar other,
-                   at::Scalar alpha) const override;
+  static at::Tensor& add_(at::Tensor& self, at::Scalar other, at::Scalar alpha);
 
-  at::Tensor addcdiv(const at::Tensor& self, const at::Tensor& tensor1,
-                     const at::Tensor& tensor2,
-                     at::Scalar value) const override;
+  static at::Tensor addcdiv(const at::Tensor& self, const at::Tensor& tensor1,
+                            const at::Tensor& tensor2, at::Scalar value);
 
-  at::Tensor& addcdiv_(at::Tensor& self, const at::Tensor& tensor1,
-                       const at::Tensor& tensor2,
-                       at::Scalar value) const override;
+  static at::Tensor& addcdiv_(at::Tensor& self, const at::Tensor& tensor1,
+                              const at::Tensor& tensor2, at::Scalar value);
 
-  at::Tensor addcmul(const at::Tensor& self, const at::Tensor& tensor1,
-                     const at::Tensor& tensor2,
-                     at::Scalar value) const override;
+  static at::Tensor addcmul(const at::Tensor& self, const at::Tensor& tensor1,
+                            const at::Tensor& tensor2, at::Scalar value);
 
-  at::Tensor& addcmul_(at::Tensor& self, const at::Tensor& tensor1,
-                       const at::Tensor& tensor2,
-                       at::Scalar value) const override;
+  static at::Tensor& addcmul_(at::Tensor& self, const at::Tensor& tensor1,
+                              const at::Tensor& tensor2, at::Scalar value);
 
-  at::Tensor addmm(const at::Tensor& self, const at::Tensor& mat1,
-                   const at::Tensor& mat2, at::Scalar beta,
-                   at::Scalar alpha) const override;
+  static at::Tensor addmm(const at::Tensor& self, const at::Tensor& mat1,
+                          const at::Tensor& mat2, at::Scalar beta,
+                          at::Scalar alpha);
 
-  at::Tensor alias(const at::Tensor& self) const override;
+  static at::Tensor alias(const at::Tensor& self);
 
-  at::Tensor all(const at::Tensor& self) const override;
+  static at::Tensor all(const at::Tensor& self);
 
-  at::Tensor all(const at::Tensor& self, int64_t dim,
-                 bool keepdim) const override;
+  static at::Tensor all(const at::Tensor& self, int64_t dim, bool keepdim);
 
-  at::Tensor any(const at::Tensor& self) const override;
+  static at::Tensor any(const at::Tensor& self);
 
-  at::Tensor any(const at::Tensor& self, int64_t dim,
-                 bool keepdim) const override;
+  static at::Tensor any(const at::Tensor& self, int64_t dim, bool keepdim);
 
-  at::Tensor arange(at::Scalar end,
-                    const at::TensorOptions& options) const override;
+  static at::Tensor arange(at::Scalar end, const at::TensorOptions& options);
 
-  at::Tensor arange(at::Scalar start, at::Scalar end,
-                    const at::TensorOptions& options) const override;
+  static at::Tensor arange(at::Scalar start, at::Scalar end,
+                           const at::TensorOptions& options);
 
-  at::Tensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
-                    const at::TensorOptions& options) const override;
+  static at::Tensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
+                           const at::TensorOptions& options);
 
-  at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
-                    bool keepdim) const override;
+  static at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
+                           bool keepdim);
 
-  at::Tensor argmin(const at::Tensor& self, c10::optional<int64_t> dim,
-                    bool keepdim) const override;
+  static at::Tensor argmin(const at::Tensor& self, c10::optional<int64_t> dim,
+                           bool keepdim);
 
-  at::Tensor argsort(const at::Tensor& self, int64_t dim,
-                     bool descending) const override;
+  static at::Tensor argsort(const at::Tensor& self, int64_t dim,
+                            bool descending);
 
-  at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size,
-                        at::IntArrayRef stride,
-                        c10::optional<int64_t> storage_offset) const override;
+  static at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size,
+                               at::IntArrayRef stride,
+                               c10::optional<int64_t> storage_offset);
 
-  at::Tensor& as_strided_(at::Tensor& self, at::IntArrayRef size,
-                          at::IntArrayRef stride,
-                          c10::optional<int64_t> storage_offset) const override;
-
-  at::Tensor asin(const at::Tensor& self) const override;
-
-  at::Tensor& asin_(at::Tensor& self) const override;
-
-  at::Tensor atan(const at::Tensor& self) const override;
-
-  at::Tensor atan2(const at::Tensor& self,
-                   const at::Tensor& other) const override;
-
-  at::Tensor& atan2_(at::Tensor& self, const at::Tensor& other) const override;
-
-  at::Tensor& atan_(at::Tensor& self) const override;
-
-  at::Tensor avg_pool1d(const at::Tensor& self, at::IntArrayRef kernel_size,
-                        at::IntArrayRef stride, at::IntArrayRef padding,
-                        bool ceil_mode, bool count_include_pad) const override;
-
-  at::Tensor avg_pool2d(const at::Tensor& self, at::IntArrayRef kernel_size,
-                        at::IntArrayRef stride, at::IntArrayRef padding,
-                        bool ceil_mode, bool count_include_pad) const override;
-
-  at::Tensor avg_pool2d_backward(const at::Tensor& grad_output,
-                                 const at::Tensor& self,
-                                 at::IntArrayRef kernel_size,
+  static at::Tensor& as_strided_(at::Tensor& self, at::IntArrayRef size,
                                  at::IntArrayRef stride,
-                                 at::IntArrayRef padding, bool ceil_mode,
-                                 bool count_include_pad) const override;
+                                 c10::optional<int64_t> storage_offset);
 
-  at::Tensor avg_pool3d(const at::Tensor& self, at::IntArrayRef kernel_size,
-                        at::IntArrayRef stride, at::IntArrayRef padding,
-                        bool ceil_mode, bool count_include_pad) const override;
+  static at::Tensor asin(const at::Tensor& self);
 
-  at::Tensor avg_pool3d_backward(const at::Tensor& grad_output,
-                                 const at::Tensor& self,
-                                 at::IntArrayRef kernel_size,
-                                 at::IntArrayRef stride,
-                                 at::IntArrayRef padding, bool ceil_mode,
-                                 bool count_include_pad) const override;
+  static at::Tensor& asin_(at::Tensor& self);
 
-  at::Tensor bartlett_window(int64_t window_length,
-                             const at::TensorOptions& options) const override;
-  at::Tensor bartlett_window(int64_t window_length, bool periodic,
-                             const at::TensorOptions& options) const override;
+  static at::Tensor atan(const at::Tensor& self);
 
-  at::Tensor batch_norm(const at::Tensor& input, const at::Tensor& weight,
-                        const at::Tensor& bias, const at::Tensor& running_mean,
-                        const at::Tensor& running_var, bool training,
-                        double momentum, double eps,
-                        bool cudnn_enabled) const override;
+  static at::Tensor atan2(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor bernoulli(const at::Tensor& self, double p,
-                       at::Generator* generator) const override;
-  at::Tensor bernoulli(const at::Tensor& self,
-                       at::Generator* generator) const override;
-  at::Tensor& bernoulli_(at::Tensor& self, double p,
-                         at::Generator* generator) const override;
-  at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p,
-                         at::Generator* generator) const override;
+  static at::Tensor& atan2_(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor bilinear(const at::Tensor& input1, const at::Tensor& input2,
-                      const at::Tensor& weight,
-                      const at::Tensor& bias) const override;
+  static at::Tensor& atan_(at::Tensor& self);
 
-  at::Tensor binary_cross_entropy_with_logits(const at::Tensor& self,
-                                              const at::Tensor& target,
-                                              const at::Tensor& weight,
-                                              const at::Tensor& pos_weight,
-                                              int64_t reduction) const override;
+  static at::Tensor avg_pool1d(const at::Tensor& self,
+                               at::IntArrayRef kernel_size,
+                               at::IntArrayRef stride, at::IntArrayRef padding,
+                               bool ceil_mode, bool count_include_pad);
 
-  at::Tensor binary_cross_entropy_with_logits_backward(
+  static at::Tensor avg_pool2d(const at::Tensor& self,
+                               at::IntArrayRef kernel_size,
+                               at::IntArrayRef stride, at::IntArrayRef padding,
+                               bool ceil_mode, bool count_include_pad);
+
+  static at::Tensor avg_pool2d_backward(const at::Tensor& grad_output,
+                                        const at::Tensor& self,
+                                        at::IntArrayRef kernel_size,
+                                        at::IntArrayRef stride,
+                                        at::IntArrayRef padding, bool ceil_mode,
+                                        bool count_include_pad);
+
+  static at::Tensor avg_pool3d(const at::Tensor& self,
+                               at::IntArrayRef kernel_size,
+                               at::IntArrayRef stride, at::IntArrayRef padding,
+                               bool ceil_mode, bool count_include_pad);
+
+  static at::Tensor avg_pool3d_backward(const at::Tensor& grad_output,
+                                        const at::Tensor& self,
+                                        at::IntArrayRef kernel_size,
+                                        at::IntArrayRef stride,
+                                        at::IntArrayRef padding, bool ceil_mode,
+                                        bool count_include_pad);
+
+  static at::Tensor bartlett_window(int64_t window_length,
+                                    const at::TensorOptions& options);
+  static at::Tensor bartlett_window(int64_t window_length, bool periodic,
+                                    const at::TensorOptions& options);
+
+  static at::Tensor batch_norm(const at::Tensor& input,
+                               const at::Tensor& weight, const at::Tensor& bias,
+                               const at::Tensor& running_mean,
+                               const at::Tensor& running_var, bool training,
+                               double momentum, double eps, bool cudnn_enabled);
+
+  static at::Tensor bernoulli(const at::Tensor& self, double p,
+                              at::Generator* generator);
+  static at::Tensor bernoulli(const at::Tensor& self, at::Generator* generator);
+  static at::Tensor& bernoulli_(at::Tensor& self, double p,
+                                at::Generator* generator);
+  static at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p,
+                                at::Generator* generator);
+
+  static at::Tensor bilinear(const at::Tensor& input1, const at::Tensor& input2,
+                             const at::Tensor& weight, const at::Tensor& bias);
+
+  static at::Tensor binary_cross_entropy_with_logits(
+      const at::Tensor& self, const at::Tensor& target,
+      const at::Tensor& weight, const at::Tensor& pos_weight,
+      int64_t reduction);
+
+  static at::Tensor binary_cross_entropy_with_logits_backward(
       const at::Tensor& grad_output, const at::Tensor& self,
       const at::Tensor& target, const at::Tensor& weight,
-      const at::Tensor& pos_weight, int64_t reduction) const override;
+      const at::Tensor& pos_weight, int64_t reduction);
 
-  at::Tensor blackman_window(int64_t window_length,
-                             const at::TensorOptions& options) const override;
-  at::Tensor blackman_window(int64_t window_length, bool periodic,
-                             const at::TensorOptions& options) const override;
+  static at::Tensor blackman_window(int64_t window_length,
+                                    const at::TensorOptions& options);
+  static at::Tensor blackman_window(int64_t window_length, bool periodic,
+                                    const at::TensorOptions& options);
 
-  at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2) const override;
+  static at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2);
 
-  std::vector<at::Tensor> broadcast_tensors(
-      at::TensorList tensors) const override;
+  static std::vector<at::Tensor> broadcast_tensors(at::TensorList tensors);
 
-  at::Tensor cat(at::TensorList tensors, int64_t dim) const override;
+  static at::Tensor cat(at::TensorList tensors, int64_t dim);
 
-  at::Tensor ceil(const at::Tensor& self) const override;
+  static at::Tensor ceil(const at::Tensor& self);
 
-  at::Tensor& ceil_(at::Tensor& self) const override;
+  static at::Tensor& ceil_(at::Tensor& self);
 
-  at::Tensor celu(const at::Tensor& self, at::Scalar alpha) const override;
+  static at::Tensor celu(const at::Tensor& self, at::Scalar alpha);
 
-  at::Tensor& celu_(at::Tensor& self, at::Scalar alpha) const override;
+  static at::Tensor& celu_(at::Tensor& self, at::Scalar alpha);
 
-  at::Tensor chain_matmul(at::TensorList matrices) const override;
+  static at::Tensor chain_matmul(at::TensorList matrices);
 
-  at::Tensor cholesky(const at::Tensor& self, bool upper) const override;
+  static at::Tensor cholesky(const at::Tensor& self, bool upper);
 
-  at::Tensor clamp(const at::Tensor& self, c10::optional<at::Scalar> min,
-                   c10::optional<at::Scalar> max) const override;
+  static at::Tensor clamp(const at::Tensor& self, c10::optional<at::Scalar> min,
+                          c10::optional<at::Scalar> max);
 
-  at::Tensor& clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
-                     c10::optional<at::Scalar> max) const override;
+  static at::Tensor& clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
+                            c10::optional<at::Scalar> max);
 
-  at::Tensor clamp_max(const at::Tensor& self, at::Scalar max) const override;
+  static at::Tensor clamp_max(const at::Tensor& self, at::Scalar max);
 
-  at::Tensor& clamp_max_(at::Tensor& self, at::Scalar max) const override;
+  static at::Tensor& clamp_max_(at::Tensor& self, at::Scalar max);
 
-  at::Tensor clamp_min(const at::Tensor& self, at::Scalar min) const override;
+  static at::Tensor clamp_min(const at::Tensor& self, at::Scalar min);
 
-  at::Tensor& clamp_min_(at::Tensor& self, at::Scalar min) const override;
+  static at::Tensor& clamp_min_(at::Tensor& self, at::Scalar min);
 
-  at::Tensor clone(const at::Tensor& self) const override;
+  static at::Tensor clone(const at::Tensor& self);
 
-  at::Tensor constant_pad_nd(const at::Tensor& self, at::IntArrayRef pad,
-                             at::Scalar value) const override;
+  static at::Tensor constant_pad_nd(const at::Tensor& self, at::IntArrayRef pad,
+                                    at::Scalar value);
 
-  at::Tensor contiguous(const at::Tensor& self,
-                        at::MemoryFormat memory_format) const override;
+  static at::Tensor contiguous(const at::Tensor& self,
+                               at::MemoryFormat memory_format);
 
-  at::Tensor conv2d(const at::Tensor& input, const at::Tensor& weight,
-                    const at::Tensor& bias, at::IntArrayRef stride,
-                    at::IntArrayRef padding, at::IntArrayRef dilation,
-                    int64_t groups) const override;
+  static at::Tensor conv2d(const at::Tensor& input, const at::Tensor& weight,
+                           const at::Tensor& bias, at::IntArrayRef stride,
+                           at::IntArrayRef padding, at::IntArrayRef dilation,
+                           int64_t groups);
 
-  at::Tensor conv_transpose2d(const at::Tensor& input, const at::Tensor& weight,
-                              const at::Tensor& bias, at::IntArrayRef stride,
-                              at::IntArrayRef padding,
-                              at::IntArrayRef output_padding, int64_t groups,
-                              at::IntArrayRef dilation) const override;
+  static at::Tensor conv_transpose2d(
+      const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
+      at::IntArrayRef stride, at::IntArrayRef padding,
+      at::IntArrayRef output_padding, int64_t groups, at::IntArrayRef dilation);
 
-  at::Tensor& copy_(at::Tensor& self, const at::Tensor& src,
-                    bool non_blocking) const override;
+  static at::Tensor& copy_(at::Tensor& self, const at::Tensor& src,
+                           bool non_blocking);
 
-  at::Tensor cos(const at::Tensor& self) const override;
+  static at::Tensor cos(const at::Tensor& self);
 
-  at::Tensor& cos_(at::Tensor& self) const override;
+  static at::Tensor& cos_(at::Tensor& self);
 
-  at::Tensor cosh(const at::Tensor& self) const override;
+  static at::Tensor cosh(const at::Tensor& self);
 
-  at::Tensor& cosh_(at::Tensor& self) const override;
+  static at::Tensor& cosh_(at::Tensor& self);
 
-  at::Tensor cosine_embedding_loss(const at::Tensor& input1,
-                                   const at::Tensor& input2,
-                                   const at::Tensor& target, double margin,
-                                   int64_t reduction) const override;
+  static at::Tensor cosine_embedding_loss(const at::Tensor& input1,
+                                          const at::Tensor& input2,
+                                          const at::Tensor& target,
+                                          double margin, int64_t reduction);
 
-  at::Tensor cosine_similarity(const at::Tensor& x1, const at::Tensor& x2,
-                               int64_t dim, double eps) const override;
+  static at::Tensor cosine_similarity(const at::Tensor& x1,
+                                      const at::Tensor& x2, int64_t dim,
+                                      double eps);
 
-  at::Tensor cross(const at::Tensor& self, const at::Tensor& other,
-                   c10::optional<int64_t> dim) const override;
+  static at::Tensor cross(const at::Tensor& self, const at::Tensor& other,
+                          c10::optional<int64_t> dim);
 
-  at::Tensor cumprod(const at::Tensor& self, int64_t dim,
-                     at::ScalarType dtype) const override;
+  static at::Tensor cumprod(const at::Tensor& self, int64_t dim,
+                            at::ScalarType dtype);
 
-  at::Tensor cumprod(const at::Tensor& self, int64_t dim) const override;
+  static at::Tensor cumprod(const at::Tensor& self, int64_t dim);
 
-  at::Tensor cumsum(const at::Tensor& self, int64_t dim,
-                    at::ScalarType dtype) const override;
+  static at::Tensor cumsum(const at::Tensor& self, int64_t dim,
+                           at::ScalarType dtype);
 
-  at::Tensor cumsum(const at::Tensor& self, int64_t dim) const override;
+  static at::Tensor cumsum(const at::Tensor& self, int64_t dim);
 
-  at::Tensor diag(const at::Tensor& self, int64_t diagonal) const override;
+  static at::Tensor diag(const at::Tensor& self, int64_t diagonal);
 
-  at::Tensor diagflat(const at::Tensor& self, int64_t offset) const override;
+  static at::Tensor diagflat(const at::Tensor& self, int64_t offset);
 
-  at::Tensor diagonal(const at::Tensor& self, int64_t offset, int64_t dim1,
-                      int64_t dim2) const override;
+  static at::Tensor diagonal(const at::Tensor& self, int64_t offset,
+                             int64_t dim1, int64_t dim2);
 
-  at::Tensor div(const at::Tensor& self,
-                 const at::Tensor& other) const override;
+  static at::Tensor div(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor div(const at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor div(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor& div_(at::Tensor& self, const at::Tensor& other) const override;
+  static at::Tensor& div_(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& div_(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& div_(at::Tensor& self, at::Scalar other);
 
-  at::Tensor dot(const at::Tensor& self,
-                 const at::Tensor& tensor) const override;
+  static at::Tensor dot(const at::Tensor& self, const at::Tensor& tensor);
 
-  at::Tensor dropout(const at::Tensor& input, double p,
-                     bool train) const override;
+  static at::Tensor dropout(const at::Tensor& input, double p, bool train);
 
-  at::Tensor& dropout_(at::Tensor& self, double p, bool train) const override;
+  static at::Tensor& dropout_(at::Tensor& self, double p, bool train);
 
-  at::Tensor einsum(std::string equation,
-                    at::TensorList tensors) const override;
+  static at::Tensor einsum(std::string equation, at::TensorList tensors);
 
-  at::Tensor elu(const at::Tensor& self, at::Scalar alpha, at::Scalar scale,
-                 at::Scalar input_scale) const override;
+  static at::Tensor elu(const at::Tensor& self, at::Scalar alpha,
+                        at::Scalar scale, at::Scalar input_scale);
 
-  at::Tensor& elu_(at::Tensor& self, at::Scalar alpha, at::Scalar scale,
-                   at::Scalar input_scale) const override;
+  static at::Tensor& elu_(at::Tensor& self, at::Scalar alpha, at::Scalar scale,
+                          at::Scalar input_scale);
 
-  at::Tensor elu_backward(const at::Tensor& grad_output, at::Scalar alpha,
-                          at::Scalar scale, at::Scalar input_scale,
-                          const at::Tensor& output) const override;
+  static at::Tensor elu_backward(const at::Tensor& grad_output,
+                                 at::Scalar alpha, at::Scalar scale,
+                                 at::Scalar input_scale,
+                                 const at::Tensor& output);
 
-  at::Tensor embedding(const at::Tensor& weight, const at::Tensor& indices,
-                       int64_t padding_idx, bool scale_grad_by_freq,
-                       bool sparse) const override;
+  static at::Tensor embedding(const at::Tensor& weight,
+                              const at::Tensor& indices, int64_t padding_idx,
+                              bool scale_grad_by_freq, bool sparse);
 
-  at::Tensor embedding_dense_backward(const at::Tensor& grad_output,
-                                      const at::Tensor& indices,
-                                      int64_t num_weights, int64_t padding_idx,
-                                      bool scale_grad_by_freq) const override;
+  static at::Tensor embedding_dense_backward(const at::Tensor& grad_output,
+                                             const at::Tensor& indices,
+                                             int64_t num_weights,
+                                             int64_t padding_idx,
+                                             bool scale_grad_by_freq);
 
-  at::Tensor empty(at::IntArrayRef size,
-                   const at::TensorOptions& options) const override;
+  static at::Tensor empty(at::IntArrayRef size,
+                          const at::TensorOptions& options);
 
-  at::Tensor empty_like(const at::Tensor& self) const override;
+  static at::Tensor empty_like(const at::Tensor& self);
 
-  at::Tensor empty_like(const at::Tensor& self,
-                        const at::TensorOptions& options) const override;
+  static at::Tensor empty_like(const at::Tensor& self,
+                               const at::TensorOptions& options);
 
-  at::Tensor eq(const at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor eq(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor eq(const at::Tensor& self, const at::Tensor& other) const override;
+  static at::Tensor eq(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& eq_(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& eq_(at::Tensor& self, at::Scalar other);
 
-  at::Tensor& eq_(at::Tensor& self, const at::Tensor& other) const override;
+  static at::Tensor& eq_(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor erf(const at::Tensor& self) const override;
+  static at::Tensor erf(const at::Tensor& self);
 
-  at::Tensor& erf_(at::Tensor& self) const override;
+  static at::Tensor& erf_(at::Tensor& self);
 
-  at::Tensor erfc(const at::Tensor& self) const override;
+  static at::Tensor erfc(const at::Tensor& self);
 
-  at::Tensor& erfc_(at::Tensor& self) const override;
+  static at::Tensor& erfc_(at::Tensor& self);
 
-  at::Tensor erfinv(const at::Tensor& self) const override;
+  static at::Tensor erfinv(const at::Tensor& self);
 
-  at::Tensor& erfinv_(at::Tensor& self) const override;
+  static at::Tensor& erfinv_(at::Tensor& self);
 
-  at::Tensor exp(const at::Tensor& self) const override;
+  static at::Tensor exp(const at::Tensor& self);
 
-  at::Tensor& exp_(at::Tensor& self) const override;
+  static at::Tensor& exp_(at::Tensor& self);
 
-  at::Tensor expand(const at::Tensor& self, at::IntArrayRef size,
-                    bool implicit) const override;
+  static at::Tensor expand(const at::Tensor& self, at::IntArrayRef size,
+                           bool implicit);
 
-  at::Tensor expand_as(const at::Tensor& self,
-                       const at::Tensor& other) const override;
+  static at::Tensor expand_as(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor expm1(const at::Tensor& self) const override;
+  static at::Tensor expm1(const at::Tensor& self);
 
-  at::Tensor& expm1_(at::Tensor& self) const override;
+  static at::Tensor& expm1_(at::Tensor& self);
 
-  at::Tensor eye(int64_t n, const at::TensorOptions& options) const override;
+  static at::Tensor eye(int64_t n, const at::TensorOptions& options);
 
-  at::Tensor eye(int64_t n, int64_t m,
-                 const at::TensorOptions& options) const override;
+  static at::Tensor eye(int64_t n, int64_t m, const at::TensorOptions& options);
 
-  at::Tensor& fill_(at::Tensor& self, at::Scalar value) const override;
+  static at::Tensor& fill_(at::Tensor& self, at::Scalar value);
 
-  at::Tensor& fill_(at::Tensor& self, const at::Tensor& value) const override;
+  static at::Tensor& fill_(at::Tensor& self, const at::Tensor& value);
 
-  at::Tensor flatten(const at::Tensor& self, int64_t start_dim,
-                     int64_t end_dim) const override;
+  static at::Tensor flatten(const at::Tensor& self, int64_t start_dim,
+                            int64_t end_dim);
 
-  at::Tensor flip(const at::Tensor& self, at::IntArrayRef dims) const override;
+  static at::Tensor flip(const at::Tensor& self, at::IntArrayRef dims);
 
-  at::Tensor floor(const at::Tensor& self) const override;
+  static at::Tensor floor(const at::Tensor& self);
 
-  at::Tensor& floor_(at::Tensor& self) const override;
+  static at::Tensor& floor_(at::Tensor& self);
 
-  at::Tensor fmod(const at::Tensor& self,
-                  const at::Tensor& other) const override;
+  static at::Tensor fmod(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor fmod(const at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor fmod(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor& fmod_(at::Tensor& self, const at::Tensor& other) const override;
+  static at::Tensor& fmod_(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& fmod_(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& fmod_(at::Tensor& self, at::Scalar other);
 
-  at::Tensor frac(const at::Tensor& self) const override;
+  static at::Tensor frac(const at::Tensor& self);
 
-  at::Tensor& frac_(at::Tensor& self) const override;
+  static at::Tensor& frac_(at::Tensor& self);
 
-  at::Tensor frobenius_norm(const at::Tensor& self) const override;
+  static at::Tensor frobenius_norm(const at::Tensor& self);
 
-  at::Tensor frobenius_norm(const at::Tensor& self, at::IntArrayRef dim,
-                            bool keepdim) const override;
+  static at::Tensor frobenius_norm(const at::Tensor& self, at::IntArrayRef dim,
+                                   bool keepdim);
 
-  at::Tensor full(at::IntArrayRef size, at::Scalar fill_value,
-                  const at::TensorOptions& options) const override;
+  static at::Tensor full(at::IntArrayRef size, at::Scalar fill_value,
+                         const at::TensorOptions& options);
 
-  at::Tensor full_like(const at::Tensor& self,
-                       at::Scalar fill_value) const override;
+  static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value);
 
-  at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
-                       const at::TensorOptions& options) const override;
+  static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
+                              const at::TensorOptions& options);
 
-  at::Tensor gather(const at::Tensor& self, int64_t dim,
-                    const at::Tensor& index, bool sparse_grad) const override;
+  static at::Tensor gather(const at::Tensor& self, int64_t dim,
+                           const at::Tensor& index, bool sparse_grad);
 
-  at::Tensor ge(const at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor ge(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor ge(const at::Tensor& self, const at::Tensor& other) const override;
+  static at::Tensor ge(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& ge_(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& ge_(at::Tensor& self, at::Scalar other);
 
-  at::Tensor& ge_(at::Tensor& self, const at::Tensor& other) const override;
+  static at::Tensor& ge_(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor group_norm(const at::Tensor& input, int64_t num_groups,
-                        const at::Tensor& weight, const at::Tensor& bias,
-                        double eps, bool cudnn_enabled) const override;
+  static at::Tensor group_norm(const at::Tensor& input, int64_t num_groups,
+                               const at::Tensor& weight, const at::Tensor& bias,
+                               double eps, bool cudnn_enabled);
 
-  at::Tensor gt(const at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor gt(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor gt(const at::Tensor& self, const at::Tensor& other) const override;
+  static at::Tensor gt(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& gt_(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& gt_(at::Tensor& self, at::Scalar other);
 
-  at::Tensor& gt_(at::Tensor& self, const at::Tensor& other) const override;
+  static at::Tensor& gt_(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor hamming_window(int64_t window_length,
-                            const at::TensorOptions& options) const override;
-  at::Tensor hamming_window(int64_t window_length, bool periodic,
-                            const at::TensorOptions& options) const override;
-  at::Tensor hamming_window(int64_t window_length, bool periodic, double alpha,
-                            const at::TensorOptions& options) const override;
-  at::Tensor hamming_window(int64_t window_length, bool periodic, double alpha,
-                            double beta,
-                            const at::TensorOptions& options) const override;
-  at::Tensor hann_window(int64_t window_length,
-                         const at::TensorOptions& options) const override;
-  at::Tensor hann_window(int64_t window_length, bool periodic,
-                         const at::TensorOptions& options) const override;
+  static at::Tensor hamming_window(int64_t window_length,
+                                   const at::TensorOptions& options);
+  static at::Tensor hamming_window(int64_t window_length, bool periodic,
+                                   const at::TensorOptions& options);
+  static at::Tensor hamming_window(int64_t window_length, bool periodic,
+                                   double alpha,
+                                   const at::TensorOptions& options);
+  static at::Tensor hamming_window(int64_t window_length, bool periodic,
+                                   double alpha, double beta,
+                                   const at::TensorOptions& options);
+  static at::Tensor hann_window(int64_t window_length,
+                                const at::TensorOptions& options);
+  static at::Tensor hann_window(int64_t window_length, bool periodic,
+                                const at::TensorOptions& options);
 
-  at::Tensor hardshrink(const at::Tensor& self,
-                        at::Scalar lambda) const override;
+  static at::Tensor hardshrink(const at::Tensor& self, at::Scalar lambda);
 
-  at::Tensor hardshrink_backward(const at::Tensor& grad_out,
-                                 const at::Tensor& self,
-                                 at::Scalar lambda) const override;
+  static at::Tensor hardshrink_backward(const at::Tensor& grad_out,
+                                        const at::Tensor& self,
+                                        at::Scalar lambda);
 
-  at::Tensor hardtanh(const at::Tensor& self, at::Scalar min_val,
-                      at::Scalar max_val) const override;
+  static at::Tensor hardtanh(const at::Tensor& self, at::Scalar min_val,
+                             at::Scalar max_val);
 
-  at::Tensor& hardtanh_(at::Tensor& self, at::Scalar min_val,
-                        at::Scalar max_val) const override;
+  static at::Tensor& hardtanh_(at::Tensor& self, at::Scalar min_val,
+                               at::Scalar max_val);
 
-  at::Tensor hardtanh_backward(const at::Tensor& grad_output,
-                               const at::Tensor& self, at::Scalar min_val,
-                               at::Scalar max_val) const override;
+  static at::Tensor hardtanh_backward(const at::Tensor& grad_output,
+                                      const at::Tensor& self,
+                                      at::Scalar min_val, at::Scalar max_val);
 
-  at::Tensor hinge_embedding_loss(const at::Tensor& self,
-                                  const at::Tensor& target, double margin,
-                                  int64_t reduction) const override;
+  static at::Tensor hinge_embedding_loss(const at::Tensor& self,
+                                         const at::Tensor& target,
+                                         double margin, int64_t reduction);
 
-  at::Tensor index(const at::Tensor& self,
-                   at::TensorList indices) const override;
+  static at::Tensor index(const at::Tensor& self, at::TensorList indices);
 
-  at::Tensor index_add(const at::Tensor& self, int64_t dim,
-                       const at::Tensor& index,
-                       const at::Tensor& source) const override;
+  static at::Tensor index_add(const at::Tensor& self, int64_t dim,
+                              const at::Tensor& index,
+                              const at::Tensor& source);
 
-  at::Tensor& index_add_(at::Tensor& self, int64_t dim, const at::Tensor& index,
-                         const at::Tensor& source) const override;
+  static at::Tensor& index_add_(at::Tensor& self, int64_t dim,
+                                const at::Tensor& index,
+                                const at::Tensor& source);
 
-  at::Tensor index_copy(const at::Tensor& self, int64_t dim,
-                        const at::Tensor& index,
-                        const at::Tensor& source) const override;
+  static at::Tensor index_copy(const at::Tensor& self, int64_t dim,
+                               const at::Tensor& index,
+                               const at::Tensor& source);
 
-  at::Tensor& index_copy_(at::Tensor& self, int64_t dim,
-                          const at::Tensor& index,
-                          const at::Tensor& source) const override;
+  static at::Tensor& index_copy_(at::Tensor& self, int64_t dim,
+                                 const at::Tensor& index,
+                                 const at::Tensor& source);
 
-  at::Tensor index_fill(const at::Tensor& self, int64_t dim,
-                        const at::Tensor& index,
-                        at::Scalar value) const override;
+  static at::Tensor index_fill(const at::Tensor& self, int64_t dim,
+                               const at::Tensor& index, at::Scalar value);
 
-  at::Tensor index_fill(const at::Tensor& self, int64_t dim,
-                        const at::Tensor& index,
-                        const at::Tensor& value) const override;
+  static at::Tensor index_fill(const at::Tensor& self, int64_t dim,
+                               const at::Tensor& index,
+                               const at::Tensor& value);
 
-  at::Tensor& index_fill_(at::Tensor& self, int64_t dim,
-                          const at::Tensor& index,
-                          at::Scalar value) const override;
+  static at::Tensor& index_fill_(at::Tensor& self, int64_t dim,
+                                 const at::Tensor& index, at::Scalar value);
 
-  at::Tensor& index_fill_(at::Tensor& self, int64_t dim,
-                          const at::Tensor& index,
-                          const at::Tensor& value) const override;
+  static at::Tensor& index_fill_(at::Tensor& self, int64_t dim,
+                                 const at::Tensor& index,
+                                 const at::Tensor& value);
 
-  at::Tensor index_put(const at::Tensor& self, at::TensorList indices,
-                       const at::Tensor& values,
-                       bool accumulate) const override;
+  static at::Tensor index_put(const at::Tensor& self, at::TensorList indices,
+                              const at::Tensor& values, bool accumulate);
 
-  at::Tensor& index_put_(at::Tensor& self, at::TensorList indices,
-                         const at::Tensor& values,
-                         bool accumulate) const override;
+  static at::Tensor& index_put_(at::Tensor& self, at::TensorList indices,
+                                const at::Tensor& values, bool accumulate);
 
-  at::Tensor index_select(const at::Tensor& self, int64_t dim,
-                          const at::Tensor& index) const override;
+  static at::Tensor index_select(const at::Tensor& self, int64_t dim,
+                                 const at::Tensor& index);
 
-  at::Tensor instance_norm(const at::Tensor& input, const at::Tensor& weight,
-                           const at::Tensor& bias,
-                           const at::Tensor& running_mean,
-                           const at::Tensor& running_var, bool use_input_stats,
-                           double momentum, double eps,
-                           bool cudnn_enabled) const override;
-
-  at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
-                    int64_t reduction) const override;
-
-  at::Tensor kl_div_backward(const at::Tensor& grad_output,
-                             const at::Tensor& self, const at::Tensor& target,
-                             int64_t reduction) const override;
-
-  std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self, int64_t k,
-                                              int64_t dim,
-                                              bool keepdim) const override;
-
-  at::Tensor layer_norm(const at::Tensor& input,
-                        at::IntArrayRef normalized_shape,
-                        const at::Tensor& weight, const at::Tensor& bias,
-                        double eps, bool cudnn_enable) const override;
-
-  at::Tensor le(const at::Tensor& self, at::Scalar other) const override;
-
-  at::Tensor le(const at::Tensor& self, const at::Tensor& other) const override;
-
-  at::Tensor& le_(at::Tensor& self, at::Scalar other) const override;
-
-  at::Tensor& le_(at::Tensor& self, const at::Tensor& other) const override;
-
-  at::Tensor leaky_relu(const at::Tensor& self,
-                        at::Scalar negative_slope) const override;
-
-  at::Tensor& leaky_relu_(at::Tensor& self,
-                          at::Scalar negative_slope) const override;
-
-  at::Tensor leaky_relu_backward(const at::Tensor& grad_output,
-                                 const at::Tensor& self,
-                                 at::Scalar negative_slope) const override;
-
-  at::Tensor linear(const at::Tensor& input, const at::Tensor& weight,
-                    const at::Tensor& bias) const override;
-
-  at::Tensor log(const at::Tensor& self) const override;
-
-  at::Tensor log10(const at::Tensor& self) const override;
-
-  at::Tensor& log10_(at::Tensor& self) const override;
-
-  at::Tensor log1p(const at::Tensor& self) const override;
-
-  at::Tensor& log1p_(at::Tensor& self) const override;
-
-  at::Tensor log2(const at::Tensor& self) const override;
-
-  at::Tensor& log2_(at::Tensor& self) const override;
-
-  at::Tensor& log_(at::Tensor& self) const override;
-
-  at::Tensor log_sigmoid(const at::Tensor& self) const override;
-
-  at::Tensor log_sigmoid_backward(const at::Tensor& grad_output,
-                                  const at::Tensor& self,
-                                  const at::Tensor& buffer) const override;
-
-  std::tuple<at::Tensor, at::Tensor> log_sigmoid_forward(
-      const at::Tensor& self) const override;
-
-  at::Tensor log_softmax(const at::Tensor& self, int64_t dim) const override;
-
-  at::Tensor lt(const at::Tensor& self, at::Scalar other) const override;
-
-  at::Tensor lt(const at::Tensor& self, const at::Tensor& other) const override;
-
-  at::Tensor& lt_(at::Tensor& self, at::Scalar other) const override;
-
-  at::Tensor& lt_(at::Tensor& self, const at::Tensor& other) const override;
-
-  at::Tensor margin_ranking_loss(const at::Tensor& input1,
-                                 const at::Tensor& input2,
-                                 const at::Tensor& target, double margin,
-                                 int64_t reduction) const override;
-
-  at::Tensor masked_fill(const at::Tensor& self, const at::Tensor& mask,
-                         at::Scalar value) const override;
-
-  at::Tensor masked_fill(const at::Tensor& self, const at::Tensor& mask,
-                         const at::Tensor& value) const override;
-
-  at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
-                           at::Scalar value) const override;
-
-  at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
-                           const at::Tensor& value) const override;
-
-  at::Tensor matmul(const at::Tensor& self,
-                    const at::Tensor& other) const override;
-
-  at::Tensor max(const at::Tensor& self,
-                 const at::Tensor& other) const override;
-
-  at::Tensor max(const at::Tensor& self) const override;
-
-  std::tuple<at::Tensor, at::Tensor> max(const at::Tensor& self, int64_t dim,
-                                         bool keepdim) const override;
-
-  at::Tensor max_pool1d(const at::Tensor& self, at::IntArrayRef kernel_size,
-                        at::IntArrayRef stride, at::IntArrayRef padding,
-                        at::IntArrayRef dilation,
-                        bool ceil_mode) const override;
-
-  at::Tensor max_pool2d(const at::Tensor& self, at::IntArrayRef kernel_size,
-                        at::IntArrayRef stride, at::IntArrayRef padding,
-                        at::IntArrayRef dilation,
-                        bool ceil_mode) const override;
-
-  std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
-      const at::Tensor& self, at::IntArrayRef kernel_size,
-      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
-      bool ceil_mode) const override;
-
-  at::Tensor max_pool3d(const at::Tensor& self, at::IntArrayRef kernel_size,
-                        at::IntArrayRef stride, at::IntArrayRef padding,
-                        at::IntArrayRef dilation,
-                        bool ceil_mode) const override;
-
-  std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(
-      const at::Tensor& self, at::IntArrayRef kernel_size,
-      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
-      bool ceil_mode) const override;
-
-  at::Tensor max_pool2d_with_indices_backward(
-      const at::Tensor& grad_output, const at::Tensor& self,
-      at::IntArrayRef kernel_size, at::IntArrayRef stride,
-      at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
-      const at::Tensor& indices) const override;
-
-  at::Tensor max_pool3d_with_indices_backward(
-      const at::Tensor& grad_output, const at::Tensor& self,
-      at::IntArrayRef kernel_size, at::IntArrayRef stride,
-      at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
-      const at::Tensor& indices) const override;
-
-  at::Tensor mean(const at::Tensor& self, at::ScalarType dtype) const override;
-
-  at::Tensor mean(const at::Tensor& self) const override;
-
-  at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim, bool keepdim,
-                  at::ScalarType dtype) const override;
-
-  at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim,
-                  bool keepdim) const override;
-
-  at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim,
-                  at::ScalarType dtype) const override;
-
-  std::vector<at::Tensor> meshgrid(at::TensorList tensors) const override;
-
-  at::Tensor min(const at::Tensor& self,
-                 const at::Tensor& other) const override;
-
-  at::Tensor min(const at::Tensor& self) const override;
-
-  std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self, int64_t dim,
-                                         bool keepdim) const override;
-
-  at::Tensor mm(const at::Tensor& self, const at::Tensor& mat2) const override;
-
-  at::Tensor mul(const at::Tensor& self,
-                 const at::Tensor& other) const override;
-
-  at::Tensor mul(const at::Tensor& self, at::Scalar other) const override;
-
-  at::Tensor& mul_(at::Tensor& self, const at::Tensor& other) const override;
-
-  at::Tensor& mul_(at::Tensor& self, at::Scalar other) const override;
-
-  at::Tensor narrow(const at::Tensor& self, int64_t dim, int64_t start,
-                    int64_t length) const override;
-
-  at::Tensor narrow_copy(const at::Tensor& self, int64_t dim, int64_t start,
-                         int64_t length) const override;
-
-  std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm(
+  static at::Tensor instance_norm(
       const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
       const at::Tensor& running_mean, const at::Tensor& running_var,
-      bool training, double momentum, double eps) const override;
+      bool use_input_stats, double momentum, double eps, bool cudnn_enabled);
 
-  std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm_backward(
-      const at::Tensor& grad_out, const at::Tensor& input,
-      const at::Tensor& weight, const at::Tensor& running_mean,
-      const at::Tensor& running_var, const at::Tensor& save_mean,
-      const at::Tensor& save_invstd, bool train, double eps,
-      std::array<bool, 3> output_mask) const override;
+  static at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
+                           int64_t reduction);
 
-  at::Tensor ne(const at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor kl_div_backward(const at::Tensor& grad_output,
+                                    const at::Tensor& self,
+                                    const at::Tensor& target,
+                                    int64_t reduction);
 
-  at::Tensor ne(const at::Tensor& self, const at::Tensor& other) const override;
+  static std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self,
+                                                     int64_t k, int64_t dim,
+                                                     bool keepdim);
 
-  at::Tensor& ne_(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor layer_norm(const at::Tensor& input,
+                               at::IntArrayRef normalized_shape,
+                               const at::Tensor& weight, const at::Tensor& bias,
+                               double eps, bool cudnn_enable);
 
-  at::Tensor& ne_(at::Tensor& self, const at::Tensor& other) const override;
+  static at::Tensor le(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor neg(const at::Tensor& self) const override;
+  static at::Tensor le(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& neg_(at::Tensor& self) const override;
+  static at::Tensor& le_(at::Tensor& self, at::Scalar other);
 
-  at::Tensor nll_loss(const at::Tensor& self, const at::Tensor& target,
-                      const at::Tensor& weight, int64_t reduction,
-                      int64_t ignore_index) const override;
+  static at::Tensor& le_(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor nll_loss_backward(const at::Tensor& grad_output,
-                               const at::Tensor& self, const at::Tensor& target,
-                               const at::Tensor& weight, int64_t reduction,
-                               int64_t ignore_index,
-                               const at::Tensor& total_weight) const override;
+  static at::Tensor leaky_relu(const at::Tensor& self,
+                               at::Scalar negative_slope);
 
-  std::tuple<at::Tensor, at::Tensor> nll_loss_forward(
+  static at::Tensor& leaky_relu_(at::Tensor& self, at::Scalar negative_slope);
+
+  static at::Tensor leaky_relu_backward(const at::Tensor& grad_output,
+                                        const at::Tensor& self,
+                                        at::Scalar negative_slope);
+
+  static at::Tensor linear(const at::Tensor& input, const at::Tensor& weight,
+                           const at::Tensor& bias);
+
+  static at::Tensor log(const at::Tensor& self);
+
+  static at::Tensor log10(const at::Tensor& self);
+
+  static at::Tensor& log10_(at::Tensor& self);
+
+  static at::Tensor log1p(const at::Tensor& self);
+
+  static at::Tensor& log1p_(at::Tensor& self);
+
+  static at::Tensor log2(const at::Tensor& self);
+
+  static at::Tensor& log2_(at::Tensor& self);
+
+  static at::Tensor& log_(at::Tensor& self);
+
+  static at::Tensor log_sigmoid(const at::Tensor& self);
+
+  static at::Tensor log_sigmoid_backward(const at::Tensor& grad_output,
+                                         const at::Tensor& self,
+                                         const at::Tensor& buffer);
+
+  static std::tuple<at::Tensor, at::Tensor> log_sigmoid_forward(
+      const at::Tensor& self);
+
+  static at::Tensor log_softmax(const at::Tensor& self, int64_t dim);
+
+  static at::Tensor lt(const at::Tensor& self, at::Scalar other);
+
+  static at::Tensor lt(const at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor& lt_(at::Tensor& self, at::Scalar other);
+
+  static at::Tensor& lt_(at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor margin_ranking_loss(const at::Tensor& input1,
+                                        const at::Tensor& input2,
+                                        const at::Tensor& target, double margin,
+                                        int64_t reduction);
+
+  static at::Tensor masked_fill(const at::Tensor& self, const at::Tensor& mask,
+                                at::Scalar value);
+
+  static at::Tensor masked_fill(const at::Tensor& self, const at::Tensor& mask,
+                                const at::Tensor& value);
+
+  static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
+                                  at::Scalar value);
+
+  static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
+                                  const at::Tensor& value);
+
+  static at::Tensor matmul(const at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor max(const at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor max(const at::Tensor& self);
+
+  static std::tuple<at::Tensor, at::Tensor> max(const at::Tensor& self,
+                                                int64_t dim, bool keepdim);
+
+  static at::Tensor max_pool1d(const at::Tensor& self,
+                               at::IntArrayRef kernel_size,
+                               at::IntArrayRef stride, at::IntArrayRef padding,
+                               at::IntArrayRef dilation, bool ceil_mode);
+
+  static at::Tensor max_pool2d(const at::Tensor& self,
+                               at::IntArrayRef kernel_size,
+                               at::IntArrayRef stride, at::IntArrayRef padding,
+                               at::IntArrayRef dilation, bool ceil_mode);
+
+  static std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
+      const at::Tensor& self, at::IntArrayRef kernel_size,
+      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+      bool ceil_mode);
+
+  static at::Tensor max_pool3d(const at::Tensor& self,
+                               at::IntArrayRef kernel_size,
+                               at::IntArrayRef stride, at::IntArrayRef padding,
+                               at::IntArrayRef dilation, bool ceil_mode);
+
+  static std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(
+      const at::Tensor& self, at::IntArrayRef kernel_size,
+      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+      bool ceil_mode);
+
+  static at::Tensor max_pool2d_with_indices_backward(
+      const at::Tensor& grad_output, const at::Tensor& self,
+      at::IntArrayRef kernel_size, at::IntArrayRef stride,
+      at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
+      const at::Tensor& indices);
+
+  static at::Tensor max_pool3d_with_indices_backward(
+      const at::Tensor& grad_output, const at::Tensor& self,
+      at::IntArrayRef kernel_size, at::IntArrayRef stride,
+      at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
+      const at::Tensor& indices);
+
+  static at::Tensor mean(const at::Tensor& self, at::ScalarType dtype);
+
+  static at::Tensor mean(const at::Tensor& self);
+
+  static at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim,
+                         bool keepdim, at::ScalarType dtype);
+
+  static at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim,
+                         bool keepdim);
+
+  static at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim,
+                         at::ScalarType dtype);
+
+  static std::vector<at::Tensor> meshgrid(at::TensorList tensors);
+
+  static at::Tensor min(const at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor min(const at::Tensor& self);
+
+  static std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self,
+                                                int64_t dim, bool keepdim);
+
+  static at::Tensor mm(const at::Tensor& self, const at::Tensor& mat2);
+
+  static at::Tensor mul(const at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor mul(const at::Tensor& self, at::Scalar other);
+
+  static at::Tensor& mul_(at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor& mul_(at::Tensor& self, at::Scalar other);
+
+  static at::Tensor narrow(const at::Tensor& self, int64_t dim, int64_t start,
+                           int64_t length);
+
+  static at::Tensor narrow_copy(const at::Tensor& self, int64_t dim,
+                                int64_t start, int64_t length);
+
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm(
+      const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
+      const at::Tensor& running_mean, const at::Tensor& running_var,
+      bool training, double momentum, double eps);
+
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor>
+  native_batch_norm_backward(const at::Tensor& grad_out,
+                             const at::Tensor& input, const at::Tensor& weight,
+                             const at::Tensor& running_mean,
+                             const at::Tensor& running_var,
+                             const at::Tensor& save_mean,
+                             const at::Tensor& save_invstd, bool train,
+                             double eps, std::array<bool, 3> output_mask);
+
+  static at::Tensor ne(const at::Tensor& self, at::Scalar other);
+
+  static at::Tensor ne(const at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor& ne_(at::Tensor& self, at::Scalar other);
+
+  static at::Tensor& ne_(at::Tensor& self, const at::Tensor& other);
+
+  static at::Tensor neg(const at::Tensor& self);
+
+  static at::Tensor& neg_(at::Tensor& self);
+
+  static at::Tensor nll_loss(const at::Tensor& self, const at::Tensor& target,
+                             const at::Tensor& weight, int64_t reduction,
+                             int64_t ignore_index);
+
+  static at::Tensor nll_loss_backward(const at::Tensor& grad_output,
+                                      const at::Tensor& self,
+                                      const at::Tensor& target,
+                                      const at::Tensor& weight,
+                                      int64_t reduction, int64_t ignore_index,
+                                      const at::Tensor& total_weight);
+
+  static std::tuple<at::Tensor, at::Tensor> nll_loss_forward(
       const at::Tensor& self, const at::Tensor& target,
-      const at::Tensor& weight, int64_t reduction,
-      int64_t ignore_index) const override;
+      const at::Tensor& weight, int64_t reduction, int64_t ignore_index);
 
-  at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
-                  at::ScalarType dtype) const override;
+  static at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
+                         at::ScalarType dtype);
 
-  at::Tensor norm(const at::Tensor& self, at::Scalar p) const override;
+  static at::Tensor norm(const at::Tensor& self, at::Scalar p);
 
-  at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
-                  at::IntArrayRef dim, bool keepdim,
-                  at::ScalarType dtype) const override;
+  static at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
+                         at::IntArrayRef dim, bool keepdim,
+                         at::ScalarType dtype);
 
-  at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
-                  at::IntArrayRef dim, bool keepdim) const override;
+  static at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
+                         at::IntArrayRef dim, bool keepdim);
 
-  at::Tensor nuclear_norm(const at::Tensor& self, bool keepdim) const override;
+  static at::Tensor nuclear_norm(const at::Tensor& self, bool keepdim);
 
-  int64_t numel(const at::Tensor& self) const override;
+  static int64_t numel(const at::Tensor& self);
 
-  at::Tensor one_hot(const at::Tensor& self,
-                     int64_t num_classes) const override;
+  static at::Tensor one_hot(const at::Tensor& self, int64_t num_classes);
 
-  at::Tensor ones(at::IntArrayRef size,
-                  const at::TensorOptions& options) const override;
+  static at::Tensor ones(at::IntArrayRef size,
+                         const at::TensorOptions& options);
 
-  at::Tensor ones_like(const at::Tensor& self) const override;
+  static at::Tensor ones_like(const at::Tensor& self);
 
-  at::Tensor ones_like(const at::Tensor& self,
-                       const at::TensorOptions& options) const override;
+  static at::Tensor ones_like(const at::Tensor& self,
+                              const at::TensorOptions& options);
 
-  at::Tensor pairwise_distance(const at::Tensor& x1, const at::Tensor& x2,
-                               double p, double eps,
-                               bool keepdim) const override;
+  static at::Tensor pairwise_distance(const at::Tensor& x1,
+                                      const at::Tensor& x2, double p,
+                                      double eps, bool keepdim);
 
-  at::Tensor permute(const at::Tensor& self,
-                     at::IntArrayRef dims) const override;
+  static at::Tensor permute(const at::Tensor& self, at::IntArrayRef dims);
 
-  at::Tensor pixel_shuffle(const at::Tensor& self,
-                           int64_t upscale_factor) const override;
+  static at::Tensor pixel_shuffle(const at::Tensor& self,
+                                  int64_t upscale_factor);
 
-  at::Tensor pinverse(const at::Tensor& self, double rcond) const override;
+  static at::Tensor pinverse(const at::Tensor& self, double rcond);
 
-  at::Tensor pow(const at::Tensor& self, at::Scalar exponent) const override;
+  static at::Tensor pow(const at::Tensor& self, at::Scalar exponent);
 
-  at::Tensor pow(const at::Tensor& self,
-                 const at::Tensor& exponent) const override;
+  static at::Tensor pow(const at::Tensor& self, const at::Tensor& exponent);
 
-  at::Tensor pow(at::Scalar self, const at::Tensor& exponent) const override;
+  static at::Tensor pow(at::Scalar self, const at::Tensor& exponent);
 
-  at::Tensor& pow_(at::Tensor& self, at::Scalar exponent) const override;
+  static at::Tensor& pow_(at::Tensor& self, at::Scalar exponent);
 
-  at::Tensor& pow_(at::Tensor& self, const at::Tensor& exponent) const override;
+  static at::Tensor& pow_(at::Tensor& self, const at::Tensor& exponent);
 
-  at::Tensor prod(const at::Tensor& self, at::ScalarType dtype) const override;
+  static at::Tensor prod(const at::Tensor& self, at::ScalarType dtype);
 
-  at::Tensor prod(const at::Tensor& self) const override;
+  static at::Tensor prod(const at::Tensor& self);
 
-  at::Tensor prod(const at::Tensor& self, int64_t dim, bool keepdim,
-                  at::ScalarType dtype) const override;
+  static at::Tensor prod(const at::Tensor& self, int64_t dim, bool keepdim,
+                         at::ScalarType dtype);
 
-  at::Tensor prod(const at::Tensor& self, int64_t dim,
-                  bool keepdim) const override;
+  static at::Tensor prod(const at::Tensor& self, int64_t dim, bool keepdim);
 
-  at::Tensor prod(const at::Tensor& self, int64_t dim,
-                  at::ScalarType dtype) const override;
+  static at::Tensor prod(const at::Tensor& self, int64_t dim,
+                         at::ScalarType dtype);
 
-  std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self,
-                                        bool some) const override;
+  static std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self,
+                                               bool some);
 
-  at::Tensor randperm(int64_t n,
-                      const at::TensorOptions& options) const override;
-  at::Tensor randperm(int64_t n, at::Generator* generator,
-                      const at::TensorOptions& options) const override;
+  static at::Tensor randperm(int64_t n, const at::TensorOptions& options);
+  static at::Tensor randperm(int64_t n, at::Generator* generator,
+                             const at::TensorOptions& options);
 
-  at::Tensor reciprocal(const at::Tensor& self) const override;
+  static at::Tensor reciprocal(const at::Tensor& self);
 
-  at::Tensor& reciprocal_(at::Tensor& self) const override;
+  static at::Tensor& reciprocal_(at::Tensor& self);
 
-  at::Tensor relu(const at::Tensor& self) const override;
+  static at::Tensor relu(const at::Tensor& self);
 
-  at::Tensor& relu_(at::Tensor& self) const override;
+  static at::Tensor& relu_(at::Tensor& self);
 
-  at::Tensor remainder(const at::Tensor& self,
-                       const at::Tensor& other) const override;
+  static at::Tensor remainder(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor remainder(const at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor remainder(const at::Tensor& self, at::Scalar other);
 
-  at::Tensor& remainder_(at::Tensor& self,
-                         const at::Tensor& other) const override;
+  static at::Tensor& remainder_(at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor& remainder_(at::Tensor& self, at::Scalar other) const override;
+  static at::Tensor& remainder_(at::Tensor& self, at::Scalar other);
 
-  at::Tensor repeat(const at::Tensor& self,
-                    at::IntArrayRef repeats) const override;
+  static at::Tensor repeat(const at::Tensor& self, at::IntArrayRef repeats);
 
-  at::Tensor reshape(const at::Tensor& self,
-                     at::IntArrayRef shape) const override;
+  static at::Tensor reshape(const at::Tensor& self, at::IntArrayRef shape);
 
-  at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size) const override;
+  static at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size);
 
-  at::Tensor rsqrt(const at::Tensor& self) const override;
+  static at::Tensor rsqrt(const at::Tensor& self);
 
-  at::Tensor& rsqrt_(at::Tensor& self) const override;
+  static at::Tensor& rsqrt_(at::Tensor& self);
 
-  at::Tensor rsub(const at::Tensor& self, const at::Tensor& other,
-                  at::Scalar alpha) const override;
+  static at::Tensor rsub(const at::Tensor& self, const at::Tensor& other,
+                         at::Scalar alpha);
 
-  at::Tensor rsub(const at::Tensor& self, at::Scalar other,
-                  at::Scalar alpha) const override;
+  static at::Tensor rsub(const at::Tensor& self, at::Scalar other,
+                         at::Scalar alpha);
 
-  at::Tensor scatter(const at::Tensor& self, int64_t dim,
-                     const at::Tensor& index,
-                     const at::Tensor& src) const override;
+  static at::Tensor scatter(const at::Tensor& self, int64_t dim,
+                            const at::Tensor& index, const at::Tensor& src);
 
-  at::Tensor scatter(const at::Tensor& self, int64_t dim,
-                     const at::Tensor& index, at::Scalar value) const override;
+  static at::Tensor scatter(const at::Tensor& self, int64_t dim,
+                            const at::Tensor& index, at::Scalar value);
 
-  at::Tensor& scatter_(at::Tensor& self, int64_t dim, const at::Tensor& index,
-                       const at::Tensor& src) const override;
+  static at::Tensor& scatter_(at::Tensor& self, int64_t dim,
+                              const at::Tensor& index, const at::Tensor& src);
 
-  at::Tensor& scatter_(at::Tensor& self, int64_t dim, const at::Tensor& index,
-                       at::Scalar value) const override;
+  static at::Tensor& scatter_(at::Tensor& self, int64_t dim,
+                              const at::Tensor& index, at::Scalar value);
 
-  at::Tensor& scatter_add_(at::Tensor& self, int64_t dim,
-                           const at::Tensor& index,
-                           const at::Tensor& src) const override;
+  static at::Tensor& scatter_add_(at::Tensor& self, int64_t dim,
+                                  const at::Tensor& index,
+                                  const at::Tensor& src);
 
-  at::Tensor scatter_add(const at::Tensor& self, int64_t dim,
-                         const at::Tensor& index,
-                         const at::Tensor& src) const override;
+  static at::Tensor scatter_add(const at::Tensor& self, int64_t dim,
+                                const at::Tensor& index, const at::Tensor& src);
 
-  at::Tensor select(const at::Tensor& self, int64_t dim,
-                    int64_t index) const override;
+  static at::Tensor select(const at::Tensor& self, int64_t dim, int64_t index);
 
-  at::Tensor selu(const at::Tensor& self) const override;
+  static at::Tensor selu(const at::Tensor& self);
 
-  at::Tensor& selu_(at::Tensor& self) const override;
+  static at::Tensor& selu_(at::Tensor& self);
 
-  at::Tensor sigmoid(const at::Tensor& self) const override;
+  static at::Tensor sigmoid(const at::Tensor& self);
 
-  at::Tensor& sigmoid_(at::Tensor& self) const override;
+  static at::Tensor& sigmoid_(at::Tensor& self);
 
-  at::Tensor sigmoid_backward(const at::Tensor& grad_output,
-                              const at::Tensor& output) const override;
+  static at::Tensor sigmoid_backward(const at::Tensor& grad_output,
+                                     const at::Tensor& output);
 
-  at::Tensor sign(const at::Tensor& self) const override;
+  static at::Tensor sign(const at::Tensor& self);
 
-  at::Tensor& sign_(at::Tensor& self) const override;
+  static at::Tensor& sign_(at::Tensor& self);
 
-  at::Tensor sin(const at::Tensor& self) const override;
+  static at::Tensor sin(const at::Tensor& self);
 
-  at::Tensor& sin_(at::Tensor& self) const override;
+  static at::Tensor& sin_(at::Tensor& self);
 
-  at::Tensor sinh(const at::Tensor& self) const override;
+  static at::Tensor sinh(const at::Tensor& self);
 
-  at::Tensor& sinh_(at::Tensor& self) const override;
+  static at::Tensor& sinh_(at::Tensor& self);
 
-  int64_t size(const at::Tensor& self, int64_t dim) const override;
+  static int64_t size(const at::Tensor& self, int64_t dim);
 
-  at::Tensor slice(const at::Tensor& self, int64_t dim, int64_t start,
-                   int64_t end, int64_t step) const override;
+  static at::Tensor slice(const at::Tensor& self, int64_t dim, int64_t start,
+                          int64_t end, int64_t step);
 
-  at::Tensor smooth_l1_loss(const at::Tensor& self, const at::Tensor& target,
-                            int64_t reduction) const override;
+  static at::Tensor smooth_l1_loss(const at::Tensor& self,
+                                   const at::Tensor& target, int64_t reduction);
 
-  at::Tensor smooth_l1_loss_backward(const at::Tensor& grad_output,
-                                     const at::Tensor& self,
-                                     const at::Tensor& target,
-                                     int64_t reduction) const override;
+  static at::Tensor smooth_l1_loss_backward(const at::Tensor& grad_output,
+                                            const at::Tensor& self,
+                                            const at::Tensor& target,
+                                            int64_t reduction);
 
-  at::Tensor softmax(const at::Tensor& self, int64_t dim) const override;
+  static at::Tensor softmax(const at::Tensor& self, int64_t dim);
 
-  at::Tensor softplus(const at::Tensor& self, at::Scalar beta,
-                      at::Scalar threshold) const override;
+  static at::Tensor softplus(const at::Tensor& self, at::Scalar beta,
+                             at::Scalar threshold);
 
-  at::Tensor softplus_backward(const at::Tensor& grad_output,
-                               const at::Tensor& self, at::Scalar beta,
-                               at::Scalar threshold,
-                               const at::Tensor& output) const override;
+  static at::Tensor softplus_backward(const at::Tensor& grad_output,
+                                      const at::Tensor& self, at::Scalar beta,
+                                      at::Scalar threshold,
+                                      const at::Tensor& output);
 
-  at::Tensor softshrink(const at::Tensor& self,
-                        at::Scalar lambda) const override;
+  static at::Tensor softshrink(const at::Tensor& self, at::Scalar lambda);
 
-  at::Tensor softshrink_backward(const at::Tensor& grad_output,
-                                 const at::Tensor& self,
-                                 at::Scalar lambda) const override;
+  static at::Tensor softshrink_backward(const at::Tensor& grad_output,
+                                        const at::Tensor& self,
+                                        at::Scalar lambda);
 
-  std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor& self, int64_t dim,
-                                          bool descending) const override;
+  static std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor& self,
+                                                 int64_t dim, bool descending);
 
-  std::vector<at::Tensor> split(const at::Tensor& self, int64_t split_size,
-                                int64_t dim) const override;
+  static std::vector<at::Tensor> split(const at::Tensor& self,
+                                       int64_t split_size, int64_t dim);
 
-  std::vector<at::Tensor> split_with_sizes(const at::Tensor& self,
-                                           at::IntArrayRef split_sizes,
-                                           int64_t dim) const override;
+  static std::vector<at::Tensor> split_with_sizes(const at::Tensor& self,
+                                                  at::IntArrayRef split_sizes,
+                                                  int64_t dim);
 
-  at::Tensor sqrt(const at::Tensor& self) const override;
+  static at::Tensor sqrt(const at::Tensor& self);
 
-  at::Tensor& sqrt_(at::Tensor& self) const override;
+  static at::Tensor& sqrt_(at::Tensor& self);
 
-  at::Tensor squeeze(const at::Tensor& self) const override;
+  static at::Tensor squeeze(const at::Tensor& self);
 
-  at::Tensor squeeze(const at::Tensor& self, int64_t dim) const override;
+  static at::Tensor squeeze(const at::Tensor& self, int64_t dim);
 
-  at::Tensor& squeeze_(at::Tensor& self) const override;
+  static at::Tensor& squeeze_(at::Tensor& self);
 
-  at::Tensor& squeeze_(at::Tensor& self, int64_t dim) const override;
+  static at::Tensor& squeeze_(at::Tensor& self, int64_t dim);
 
-  at::Tensor stack(at::TensorList tensors, int64_t dim) const override;
+  static at::Tensor stack(at::TensorList tensors, int64_t dim);
 
-  at::Tensor sub(const at::Tensor& self, const at::Tensor& other,
-                 at::Scalar alpha) const override;
+  static at::Tensor sub(const at::Tensor& self, const at::Tensor& other,
+                        at::Scalar alpha);
 
-  at::Tensor sub(const at::Tensor& self, at::Scalar other,
-                 at::Scalar alpha) const override;
+  static at::Tensor sub(const at::Tensor& self, at::Scalar other,
+                        at::Scalar alpha);
 
-  at::Tensor& sub_(at::Tensor& self, const at::Tensor& other,
-                   at::Scalar alpha) const override;
+  static at::Tensor& sub_(at::Tensor& self, const at::Tensor& other,
+                          at::Scalar alpha);
 
-  at::Tensor& sub_(at::Tensor& self, at::Scalar other,
-                   at::Scalar alpha) const override;
+  static at::Tensor& sub_(at::Tensor& self, at::Scalar other, at::Scalar alpha);
 
-  at::Tensor sum(const at::Tensor& self, at::ScalarType dtype) const override;
+  static at::Tensor sum(const at::Tensor& self, at::ScalarType dtype);
 
-  at::Tensor sum(const at::Tensor& self) const override;
+  static at::Tensor sum(const at::Tensor& self);
 
-  at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim, bool keepdim,
-                 at::ScalarType dtype) const override;
+  static at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
+                        bool keepdim, at::ScalarType dtype);
 
-  at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
-                 bool keepdim) const override;
+  static at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
+                        bool keepdim);
 
-  at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
-                 at::ScalarType dtype) const override;
+  static at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
+                        at::ScalarType dtype);
 
-  at::Tensor sum_to_size(const at::Tensor& self,
-                         at::IntArrayRef size) const override;
+  static at::Tensor sum_to_size(const at::Tensor& self, at::IntArrayRef size);
 
-  std::tuple<at::Tensor, at::Tensor, at::Tensor> svd(
-      const at::Tensor& self, bool some, bool compute_uv) const override;
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor> svd(
+      const at::Tensor& self, bool some, bool compute_uv);
 
-  std::tuple<at::Tensor, at::Tensor> symeig(const at::Tensor& self,
-                                            bool eigenvectors,
-                                            bool upper) const override;
+  static std::tuple<at::Tensor, at::Tensor> symeig(const at::Tensor& self,
+                                                   bool eigenvectors,
+                                                   bool upper);
 
-  at::Tensor t(const at::Tensor& self) const override;
+  static at::Tensor t(const at::Tensor& self);
 
-  at::Tensor& t_(at::Tensor& self) const override;
+  static at::Tensor& t_(at::Tensor& self);
 
-  at::Tensor tan(const at::Tensor& self) const override;
+  static at::Tensor tan(const at::Tensor& self);
 
-  at::Tensor& tan_(at::Tensor& self) const override;
+  static at::Tensor& tan_(at::Tensor& self);
 
-  at::Tensor tanh(const at::Tensor& self) const override;
+  static at::Tensor tanh(const at::Tensor& self);
 
-  at::Tensor& tanh_(at::Tensor& self) const override;
+  static at::Tensor& tanh_(at::Tensor& self);
 
-  at::Tensor tanh_backward(const at::Tensor& grad_output,
-                           const at::Tensor& output) const override;
+  static at::Tensor tanh_backward(const at::Tensor& grad_output,
+                                  const at::Tensor& output);
 
-  at::Tensor tensordot(const at::Tensor& self, const at::Tensor& other,
-                       at::IntArrayRef dims_self,
-                       at::IntArrayRef dims_other) const override;
+  static at::Tensor tensordot(const at::Tensor& self, const at::Tensor& other,
+                              at::IntArrayRef dims_self,
+                              at::IntArrayRef dims_other);
 
-  std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv2d_backward(
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv2d_backward(
       const at::Tensor& grad_output, const at::Tensor& self,
       const at::Tensor& weight, at::IntArrayRef kernel_size,
       at::IntArrayRef stride, at::IntArrayRef padding, const at::Tensor& finput,
-      const at::Tensor& fgrad_input,
-      std::array<bool, 3> output_mask) const override;
+      const at::Tensor& fgrad_input, std::array<bool, 3> output_mask);
 
-  std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv2d_forward(
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv2d_forward(
       const at::Tensor& self, const at::Tensor& weight,
       at::IntArrayRef kernel_size, const at::Tensor& bias,
-      at::IntArrayRef stride, at::IntArrayRef padding) const override;
+      at::IntArrayRef stride, at::IntArrayRef padding);
 
-  std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv_transpose2d_backward(
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor>
+  thnn_conv_transpose2d_backward(
       const at::Tensor& grad_output, const at::Tensor& self,
       const at::Tensor& weight, at::IntArrayRef kernel_size,
       at::IntArrayRef stride, at::IntArrayRef padding,
       at::IntArrayRef output_padding, at::IntArrayRef dilation,
       const at::Tensor& columns, const at::Tensor& ones,
-      std::array<bool, 3> output_mask) const override;
+      std::array<bool, 3> output_mask);
 
-  std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv_transpose2d_forward(
-      const at::Tensor& self, const at::Tensor& weight,
-      at::IntArrayRef kernel_size, const at::Tensor& bias,
-      at::IntArrayRef stride, at::IntArrayRef padding,
-      at::IntArrayRef output_padding, at::IntArrayRef dilation) const override;
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor>
+  thnn_conv_transpose2d_forward(const at::Tensor& self,
+                                const at::Tensor& weight,
+                                at::IntArrayRef kernel_size,
+                                const at::Tensor& bias, at::IntArrayRef stride,
+                                at::IntArrayRef padding,
+                                at::IntArrayRef output_padding,
+                                at::IntArrayRef dilation);
 
-  at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
-                       at::Scalar value) const override;
+  static at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
+                              at::Scalar value);
 
-  at::Tensor& threshold_(at::Tensor& self, at::Scalar threshold,
-                         at::Scalar value) const override;
+  static at::Tensor& threshold_(at::Tensor& self, at::Scalar threshold,
+                                at::Scalar value);
 
-  at::Tensor threshold_backward(const at::Tensor& grad_output,
-                                const at::Tensor& self,
-                                at::Scalar threshold) const override;
+  static at::Tensor threshold_backward(const at::Tensor& grad_output,
+                                       const at::Tensor& self,
+                                       at::Scalar threshold);
 
-  std::tuple<at::Tensor, at::Tensor> topk(const at::Tensor& self, int64_t k,
-                                          int64_t dim, bool largest,
-                                          bool sorted) const override;
+  static std::tuple<at::Tensor, at::Tensor> topk(const at::Tensor& self,
+                                                 int64_t k, int64_t dim,
+                                                 bool largest, bool sorted);
 
-  at::Tensor trace(const at::Tensor& self) const override;
+  static at::Tensor trace(const at::Tensor& self);
 
-  std::tuple<at::Tensor, at::Tensor> triangular_solve(
+  static std::tuple<at::Tensor, at::Tensor> triangular_solve(
       const at::Tensor& b, const at::Tensor& A, bool upper, bool transpose,
-      bool unitriangular) const override;
+      bool unitriangular);
 
-  at::Tensor transpose(const at::Tensor& self, int64_t dim0,
-                       int64_t dim1) const override;
+  static at::Tensor transpose(const at::Tensor& self, int64_t dim0,
+                              int64_t dim1);
 
-  at::Tensor& transpose_(at::Tensor& self, int64_t dim0,
-                         int64_t dim1) const override;
+  static at::Tensor& transpose_(at::Tensor& self, int64_t dim0, int64_t dim1);
 
-  at::Tensor tril(const at::Tensor& self, int64_t diagonal) const override;
+  static at::Tensor tril(const at::Tensor& self, int64_t diagonal);
 
-  at::Tensor& tril_(at::Tensor& self, int64_t diagonal) const override;
+  static at::Tensor& tril_(at::Tensor& self, int64_t diagonal);
 
-  at::Tensor triplet_margin_loss(const at::Tensor& anchor,
-                                 const at::Tensor& positive,
-                                 const at::Tensor& negative, double margin,
-                                 double p, double eps, bool swap,
-                                 int64_t reduction) const override;
+  static at::Tensor triplet_margin_loss(const at::Tensor& anchor,
+                                        const at::Tensor& positive,
+                                        const at::Tensor& negative,
+                                        double margin, double p, double eps,
+                                        bool swap, int64_t reduction);
 
-  at::Tensor triu(const at::Tensor& self, int64_t diagonal) const override;
+  static at::Tensor triu(const at::Tensor& self, int64_t diagonal);
 
-  at::Tensor& triu_(at::Tensor& self, int64_t diagonal) const override;
+  static at::Tensor& triu_(at::Tensor& self, int64_t diagonal);
 
-  at::Tensor trunc(const at::Tensor& self) const override;
+  static at::Tensor trunc(const at::Tensor& self);
 
-  at::Tensor& trunc_(at::Tensor& self) const override;
+  static at::Tensor& trunc_(at::Tensor& self);
 
-  std::vector<at::Tensor> unbind(const at::Tensor& self,
-                                 int64_t dim) const override;
+  static std::vector<at::Tensor> unbind(const at::Tensor& self, int64_t dim);
 
-  at::Tensor unsqueeze(const at::Tensor& self, int64_t dim) const override;
+  static at::Tensor unsqueeze(const at::Tensor& self, int64_t dim);
 
-  at::Tensor& unsqueeze_(at::Tensor& self, int64_t dim) const override;
+  static at::Tensor& unsqueeze_(at::Tensor& self, int64_t dim);
 
-  at::Tensor view(const at::Tensor& self, at::IntArrayRef size) const override;
+  static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 
-  at::Tensor view_as(const at::Tensor& self,
-                     const at::Tensor& other) const override;
+  static at::Tensor view_as(const at::Tensor& self, const at::Tensor& other);
 
-  at::Tensor where(const at::Tensor& condition, const at::Tensor& self,
-                   const at::Tensor& other) const override;
+  static at::Tensor where(const at::Tensor& condition, const at::Tensor& self,
+                          const at::Tensor& other);
 
-  at::Tensor& zero_(at::Tensor& self) const override;
+  static at::Tensor& zero_(at::Tensor& self);
 
-  at::Tensor zeros(at::IntArrayRef size,
-                   const at::TensorOptions& options) const override;
+  static at::Tensor zeros(at::IntArrayRef size,
+                          const at::TensorOptions& options);
 
-  at::Tensor zeros_like(const at::Tensor& self) const override;
+  static at::Tensor zeros_like(const at::Tensor& self);
 
-  at::Tensor zeros_like(const at::Tensor& self,
-                        const at::TensorOptions& options) const override;
-
-  static void InitializeAtenBindings();
+  static at::Tensor zeros_like(const at::Tensor& self,
+                               const at::TensorOptions& options);
 };
 
 }  // namespace torch_xla
