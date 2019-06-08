@@ -17,12 +17,13 @@ function install_bazel() {
   export PATH="$PATH:$HOME/bin"
 }
 
-function install_clang() {
-  if ! grep -Fxq "deb http://deb.debian.org/debian/ testing main" /etc/apt/sources.list; then
-    sudo bash -c 'echo "deb http://deb.debian.org/debian/ testing main" >> /etc/apt/sources.list'
-  fi
+function install_llvm_clang() {
+  sudo apt-get -y install wget
+  sudo bash -c 'echo "deb http://apt.llvm.org/stretch/ llvm-toolchain-stretch-7 main" >> /etc/apt/sources.list'
+  sudo bash -c 'echo "deb-src http://apt.llvm.org/stretch/ llvm-toolchain-stretch-7 main" >> /etc/apt/sources.list'
+  wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
   sudo apt-get update
-  sudo apt-get install -y clang-7 clang++-7
+  sudo apt-get -y install clang-7 clang++-7
   export CC=clang-7 CXX=clang++-7
 }
 
@@ -79,7 +80,7 @@ function build_and_install_torch_xla() {
 }
 
 function main() {
-  install_clang
+  install_llvm_clang
   install_req_packages
   install_and_setup_conda
   build_and_install_torch
