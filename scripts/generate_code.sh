@@ -10,6 +10,7 @@ fi
 python "$CDIR/gen.py" \
   --gen_class_mode \
   --output_folder="$XDIR/torch_xla/csrc" \
-  "$PT_INC_DIR/TypeDefault.h" \
+  "$XDIR/torch_xla/csrc/aten_xla_type.h" \
+  "$PT_INC_DIR/RegistrationDeclarations.h" \
   "$PT_INC_DIR/Functions.h" \
   "$PT_INC_DIR/NativeFunctions.h"
