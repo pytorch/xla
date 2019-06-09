@@ -53,6 +53,11 @@ Mean::Mean(const Value& input, std::vector<xla::int64> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
 
+NodePtr Mean::Clone(OpList operands) const {
+  return MakeNode<Mean>(operands.at(0), dimensions_, keep_reduced_dimensions_,
+                        dtype_);
+}
+
 XlaOpVector Mean::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(

@@ -12,6 +12,8 @@ class Constant : public Node {
 
   std::string ToString() const override;
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   const xla::Literal& value() const { return value_; }

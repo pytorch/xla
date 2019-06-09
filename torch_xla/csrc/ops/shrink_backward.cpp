@@ -21,6 +21,11 @@ std::string ShrinkBackward::ToString() const {
   return ss.str();
 }
 
+NodePtr ShrinkBackward::Clone(OpList operands) const {
+  return MakeNode<ShrinkBackward>(op(), operands.at(0), operands.at(1),
+                                  lambda_);
+}
+
 XlaOpVector ShrinkBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
   xla::XlaOp input = loctx->GetOutputOp(operand(1));

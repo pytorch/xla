@@ -186,6 +186,10 @@ std::string Node::ToString() const {
   return ss.str();
 }
 
+NodePtr Node::Clone(OpList operands) const {
+  XLA_ERROR() << "Cloning not implemented for node: " << *this;
+}
+
 XlaOpVector Node::Lower(LoweringContext* loctx) const {
   XLA_ERROR() << "Lowering not implemented for node: " << *this;
 }

@@ -12,6 +12,8 @@ class KthValue : public Node {
 
   std::string ToString() const override;
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   xla::int64 k() const { return k_; };

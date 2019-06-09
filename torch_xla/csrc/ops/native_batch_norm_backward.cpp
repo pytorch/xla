@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/batch_norm.h"
@@ -41,6 +42,12 @@ NativeBatchNormBackward::NativeBatchNormBackward(
           },
           /*num_outputs=*/3, xla::util::MHash(eps)),
       eps_(eps) {}
+
+NodePtr NativeBatchNormBackward::Clone(OpList operands) const {
+  return MakeNode<NativeBatchNormBackward>(operands.at(0), operands.at(1),
+                                           operands.at(2), operands.at(3),
+                                           operands.at(4), eps_);
+}
 
 XlaOpVector NativeBatchNormBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_out = loctx->GetOutputOp(operand(0));

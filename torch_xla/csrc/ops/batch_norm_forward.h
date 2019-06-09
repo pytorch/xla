@@ -11,6 +11,8 @@ class BatchNormForward : public Node {
   BatchNormForward(const Value& input, const Value& weight, const Value& bias,
                    double momentum, double eps);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

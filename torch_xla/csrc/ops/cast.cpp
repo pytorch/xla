@@ -27,6 +27,10 @@ Cast::Cast(const Value& input, at::ScalarType dtype)
            /*num_outputs=*/1, xla::util::MHash(static_cast<int>(dtype))),
       dtype_(dtype) {}
 
+NodePtr Cast::Clone(OpList operands) const {
+  return MakeNode<Cast>(operands.at(0), dtype_);
+}
+
 XlaOpVector Cast::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output =

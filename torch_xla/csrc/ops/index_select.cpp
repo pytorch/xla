@@ -30,6 +30,10 @@ IndexSelect::IndexSelect(const Value& input, xla::int64 dim, const Value& index)
           /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
+NodePtr IndexSelect::Clone(OpList operands) const {
+  return MakeNode<IndexSelect>(operands.at(0), dim_, operands.at(1));
+}
+
 XlaOpVector IndexSelect::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp index = loctx->GetOutputOp(operand(1));

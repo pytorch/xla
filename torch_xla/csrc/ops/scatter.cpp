@@ -14,6 +14,11 @@ Scatter::Scatter(const Value& input, const Value& index, const Value& src,
            /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
+NodePtr Scatter::Clone(OpList operands) const {
+  return MakeNode<Scatter>(operands.at(0), operands.at(1), operands.at(2),
+                           dim_);
+}
+
 XlaOpVector Scatter::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp index = loctx->GetOutputOp(operand(1));

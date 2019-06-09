@@ -66,6 +66,11 @@ Unselect::Unselect(const Value& target, const Value& source, xla::int64 dim,
       end_(end),
       stride_(stride) {}
 
+NodePtr Unselect::Clone(OpList operands) const {
+  return MakeNode<Unselect>(operands.at(0), operands.at(1), dim_, start_, end_,
+                            stride_);
+}
+
 XlaOpVector Unselect::Lower(LoweringContext* loctx) const {
   xla::XlaOp target = loctx->GetOutputOp(operand(0));
   xla::XlaOp source = loctx->GetOutputOp(operand(1));

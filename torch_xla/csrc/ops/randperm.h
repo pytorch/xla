@@ -12,6 +12,8 @@ class Randperm : public Node {
 
   std::string ToString() const override;
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   xla::int64 upper_bound() const { return upper_bound_; }

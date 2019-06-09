@@ -88,6 +88,11 @@ TriangularSolve::TriangularSolve(const Value& rhs, const Value& lhs,
       transpose_(transpose),
       unit_diagonal_(unit_diagonal) {}
 
+NodePtr TriangularSolve::Clone(OpList operands) const {
+  return MakeNode<TriangularSolve>(operands.at(0), operands.at(1), left_side_,
+                                   lower_, transpose_, unit_diagonal_);
+}
+
 XlaOpVector TriangularSolve::Lower(LoweringContext* loctx) const {
   xla::XlaOp rhs = loctx->GetOutputOp(operand(0));
   xla::XlaOp lhs = loctx->GetOutputOp(operand(1));

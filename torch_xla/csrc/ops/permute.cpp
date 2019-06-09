@@ -30,6 +30,10 @@ Permute::Permute(const Value& input, std::vector<xla::int64> dims)
           /*num_outputs=*/1, xla::util::MHash(dims)),
       dims_(std::move(dims)) {}
 
+NodePtr Permute::Clone(OpList operands) const {
+  return MakeNode<Permute>(operands.at(0), dims_);
+}
+
 XlaOpVector Permute::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = xla::Transpose(input, dims_);
