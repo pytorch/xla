@@ -64,6 +64,11 @@ AvgPoolNd::AvgPoolNd(const Value& input, xla::int64 spatial_dim_count,
       padding_(std::move(padding)),
       count_include_pad_(count_include_pad) {}
 
+NodePtr AvgPoolNd::Clone(OpList operands) const {
+  return MakeNode<AvgPoolNd>(operands.at(0), spatial_dim_count_, kernel_size_,
+                             stride_, padding_, count_include_pad_);
+}
+
 XlaOpVector AvgPoolNd::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildAvgPoolNd(input, spatial_dim_count_, kernel_size_,

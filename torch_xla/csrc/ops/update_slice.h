@@ -12,6 +12,8 @@ class UpdateSlice : public Node {
   UpdateSlice(const Value& input, const Value& source,
               tensorflow::gtl::ArraySlice<const xla::int64> base_indices);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

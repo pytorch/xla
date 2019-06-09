@@ -15,6 +15,11 @@ ScatterAdd::ScatterAdd(const Value& input, const Value& index, const Value& src,
            /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
+NodePtr ScatterAdd::Clone(OpList operands) const {
+  return MakeNode<ScatterAdd>(operands.at(0), operands.at(1), operands.at(2),
+                              dim_);
+}
+
 XlaOpVector ScatterAdd::Lower(LoweringContext* loctx) const {
   std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>
       add_scatter_combiner =

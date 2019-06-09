@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/batch_norm_forward.h"
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/batch_norm.h"
@@ -17,6 +18,11 @@ BatchNormForward::BatchNormForward(const Value& input, const Value& weight,
            /*num_outputs=*/1, xla::util::MHash(momentum, eps)),
       momentum_(momentum),
       eps_(eps) {}
+
+NodePtr BatchNormForward::Clone(OpList operands) const {
+  return MakeNode<BatchNormForward>(operands.at(0), operands.at(1),
+                                    operands.at(2), momentum_, eps_);
+}
 
 XlaOpVector BatchNormForward::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

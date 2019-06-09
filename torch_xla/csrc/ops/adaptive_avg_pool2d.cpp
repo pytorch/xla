@@ -32,6 +32,10 @@ AdaptiveAvgPool2d::AdaptiveAvgPool2d(const Value& input,
           /*num_outputs=*/1, xla::util::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
+NodePtr AdaptiveAvgPool2d::Clone(OpList operands) const {
+  return MakeNode<AdaptiveAvgPool2d>(operands.at(0), output_size_);
+}
+
 XlaOpVector AdaptiveAvgPool2d::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildAdaptiveAvgPool2d(input, output_size_);

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vector>
-
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
+
+#include <vector>
 
 #include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/ir.h"
@@ -18,6 +18,8 @@ class Mean : public Node {
        bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;
+
+  NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

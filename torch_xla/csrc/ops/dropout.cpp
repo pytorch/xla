@@ -13,6 +13,10 @@ Dropout::Dropout(const Value& input, double probability)
            /*num_outputs=*/1, xla::util::MHash(probability)),
       probability_(probability) {}
 
+NodePtr Dropout::Clone(OpList operands) const {
+  return MakeNode<Dropout>(operands.at(0), probability_);
+}
+
 XlaOpVector Dropout::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildDropout(input, probability_), loctx);

@@ -17,6 +17,8 @@ class Sum : public Node {
 
   std::string ToString() const override;
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   const std::vector<xla::int64>& dimensions() const { return dimensions_; }

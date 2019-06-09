@@ -14,6 +14,10 @@ NotSupported::NotSupported(std::string description, xla::Shape shape)
            xla::util::MHash(description)),
       description_(std::move(description)) {}
 
+NodePtr NotSupported::Clone(OpList operands) const {
+  return MakeNode<NotSupported>(description_, shape());
+}
+
 XlaOpVector NotSupported::Lower(LoweringContext* /* loctx */) const {
   XLA_ERROR() << "Node not supported: " << ToString();
 }

@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/threshold.h"
+
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -12,6 +13,10 @@ Threshold::Threshold(const Value& input, float threshold, float value)
            /*num_outputs=*/1, xla::util::MHash(threshold, value)),
       threshold_(threshold),
       value_(value) {}
+
+NodePtr Threshold::Clone(OpList operands) const {
+  return MakeNode<Threshold>(operands.at(0), threshold_, value_);
+}
 
 XlaOpVector Threshold::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

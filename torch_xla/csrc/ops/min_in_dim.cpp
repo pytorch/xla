@@ -31,6 +31,10 @@ MinInDim::MinInDim(const Value& input, xla::int64 dim, bool keepdim)
       dim_(dim),
       keepdim_(keepdim) {}
 
+NodePtr MinInDim::Clone(OpList operands) const {
+  return MakeNode<MinInDim>(operands.at(0), dim_, keepdim_);
+}
+
 XlaOpVector MinInDim::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp values = BuildMinInDim(input, dim_, keepdim_);

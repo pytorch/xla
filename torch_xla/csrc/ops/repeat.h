@@ -11,6 +11,8 @@ class Repeat : public Node {
  public:
   Repeat(const Value& input, std::vector<xla::int64> repeats);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

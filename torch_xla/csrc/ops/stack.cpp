@@ -34,6 +34,10 @@ Stack::Stack(tensorflow::gtl::ArraySlice<const ir::Value> values,
           /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
+NodePtr Stack::Clone(OpList operands) const {
+  return MakeNode<Stack>(operands, dim_);
+}
+
 XlaOpVector Stack::Lower(LoweringContext* loctx) const {
   std::vector<xla::XlaOp> inputs;
   for (auto& operand : operands()) {

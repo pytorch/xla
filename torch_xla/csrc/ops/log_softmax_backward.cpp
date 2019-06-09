@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/log_softmax_backward.h"
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -15,6 +16,10 @@ LogSoftmaxBackward::LogSoftmaxBackward(const Value& grad_output,
            {grad_output, output}, grad_output.shape(),
            /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
+
+NodePtr LogSoftmaxBackward::Clone(OpList operands) const {
+  return MakeNode<LogSoftmaxBackward>(operands.at(0), operands.at(1), dim_);
+}
 
 XlaOpVector LogSoftmaxBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));

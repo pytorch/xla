@@ -23,6 +23,11 @@ std::string IndexPut::ToString() const {
   return ss.str();
 }
 
+NodePtr IndexPut::Clone(OpList operands) const {
+  return MakeNode<IndexPut>(operands.at(0), operands.at(1), start_dim_,
+                            operands.at(2), accumulate_);
+}
+
 XlaOpVector IndexPut::Lower(LoweringContext* loctx) const {
   std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>
       add_scatter_combiner =

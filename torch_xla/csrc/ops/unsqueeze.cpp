@@ -24,6 +24,10 @@ Unsqueeze::Unsqueeze(const Value& input, int dim)
           /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
+NodePtr Unsqueeze::Clone(OpList operands) const {
+  return MakeNode<Unsqueeze>(operands.at(0), dim_);
+}
+
 XlaOpVector Unsqueeze::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildUnsqueeze(input, dim_);

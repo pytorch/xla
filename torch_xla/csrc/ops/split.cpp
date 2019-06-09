@@ -36,6 +36,10 @@ Split::Split(const Value& input, std::vector<xla::int64> split_sizes,
       split_sizes_(std::move(split_sizes)),
       dim_(dim) {}
 
+NodePtr Split::Clone(OpList operands) const {
+  return MakeNode<Split>(operands.at(0), split_sizes_, dim_);
+}
+
 XlaOpVector Split::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   const auto outputs = BuildSplit(input, split_sizes_, dim_);

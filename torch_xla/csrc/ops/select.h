@@ -11,6 +11,8 @@ class Select : public Node {
   Select(const Value& input, xla::int64 dim, xla::int64 start, xla::int64 end,
          xla::int64 stride);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;
