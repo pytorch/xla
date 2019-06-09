@@ -33,6 +33,10 @@ Select::Select(const Value& input, xla::int64 dim, xla::int64 start,
       end_(end),
       stride_(stride) {}
 
+NodePtr Select::Clone(OpList operands) const {
+  return MakeNode<Select>(operands.at(0), dim_, start_, end_, stride_);
+}
+
 XlaOpVector Select::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = xla::SliceInDim(input, start_, end_,

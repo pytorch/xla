@@ -18,6 +18,8 @@ class AsStrided : public Node {
 
   std::string ToString() const override;
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   const std::vector<xla::int64>& size() const { return size_; }

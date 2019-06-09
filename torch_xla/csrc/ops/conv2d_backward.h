@@ -14,6 +14,8 @@ class Conv2dBackward : public Node {
                  const Value& weight, std::vector<xla::int64> stride,
                  std::vector<xla::int64> padding);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

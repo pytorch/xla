@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/tril.h"
+
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
@@ -11,6 +12,10 @@ Tril::Tril(const Value& input, xla::int64 diagonal)
     : Node(ir::OpKind(at::aten::tril), {input}, input.shape(),
            /*num_outputs=*/1, xla::util::MHash(diagonal)),
       diagonal_(diagonal) {}
+
+NodePtr Tril::Clone(OpList operands) const {
+  return MakeNode<Tril>(operands.at(0), diagonal_);
+}
 
 XlaOpVector Tril::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

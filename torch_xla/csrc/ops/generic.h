@@ -26,10 +26,13 @@ class Generic : public Node {
   Generic(OpKind op, xla::Shape shape, LowerFn lower_fn, size_t num_outputs,
           size_t hash_seed);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
  private:
   LowerFn lower_fn_;
+  size_t hash_seed_;
 };
 
 }  // namespace ops

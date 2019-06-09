@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/repeat.h"
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -29,6 +30,10 @@ Repeat::Repeat(const Value& input, std::vector<xla::int64> repeats)
           [&]() { return NodeOutputShape(input, repeats); },
           /*num_outputs=*/1, xla::util::MHash(repeats)),
       repeats_(std::move(repeats)) {}
+
+NodePtr Repeat::Clone(OpList operands) const {
+  return MakeNode<Repeat>(operands.at(0), repeats_);
+}
 
 XlaOpVector Repeat::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

@@ -11,6 +11,8 @@ class SoftmaxBackward : public Node {
   SoftmaxBackward(const Value& grad_output, const Value& output,
                   xla::int64 dim);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

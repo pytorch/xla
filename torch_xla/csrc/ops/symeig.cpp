@@ -46,6 +46,10 @@ SymEig::SymEig(const Value& input, bool eigenvectors, bool lower)
       eigenvectors_(eigenvectors),
       lower_(lower) {}
 
+NodePtr SymEig::Clone(OpList operands) const {
+  return MakeNode<SymEig>(operands.at(0), eigenvectors_, lower_);
+}
+
 XlaOpVector SymEig::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOps(LowerSymEig(input, eigenvectors_, lower_), loctx);

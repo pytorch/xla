@@ -20,6 +20,10 @@ std::string DeviceData::ToString() const {
   return ss.str();
 }
 
+NodePtr DeviceData::Clone(OpList operands) const {
+  return MakeNode<DeviceData>(data_);
+}
+
 XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {
   return ReturnOp(loctx->GetParameter(data_), loctx);
 }

@@ -38,6 +38,10 @@ Squeeze::Squeeze(const Value& input, int dim)
           /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
+NodePtr Squeeze::Clone(OpList operands) const {
+  return MakeNode<Squeeze>(operands.at(0), dim_);
+}
+
 XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = LowerSqueeze(input, dim_);

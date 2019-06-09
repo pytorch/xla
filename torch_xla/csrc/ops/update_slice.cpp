@@ -34,6 +34,10 @@ UpdateSlice::UpdateSlice(
           /*num_outputs=*/1, xla::util::MHash(base_indices)),
       base_indices_(base_indices.begin(), base_indices.end()) {}
 
+NodePtr UpdateSlice::Clone(OpList operands) const {
+  return MakeNode<UpdateSlice>(operands.at(0), operands.at(1), base_indices_);
+}
+
 XlaOpVector UpdateSlice::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp source = loctx->GetOutputOp(operand(1));

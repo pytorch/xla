@@ -47,6 +47,11 @@ Conv2dBackward::Conv2dBackward(const Value& grad_output, const Value& input,
       stride_(std::move(stride)),
       padding_(std::move(padding)) {}
 
+NodePtr Conv2dBackward::Clone(OpList operands) const {
+  return MakeNode<Conv2dBackward>(operands.at(0), operands.at(1),
+                                  operands.at(2), stride_, padding_);
+}
+
 XlaOpVector Conv2dBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
   xla::XlaOp input = loctx->GetOutputOp(operand(1));

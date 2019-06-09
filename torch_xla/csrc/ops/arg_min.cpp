@@ -27,6 +27,10 @@ ArgMin::ArgMin(const Value& input, xla::int64 dim, bool keepdim)
       dim_(dim),
       keepdim_(keepdim) {}
 
+NodePtr ArgMin::Clone(OpList operands) const {
+  return MakeNode<ArgMin>(operands.at(0), dim_, keepdim_);
+}
+
 XlaOpVector ArgMin::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildArgMin(input, dim_, keepdim_), loctx);

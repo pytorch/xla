@@ -11,6 +11,8 @@ class Threshold : public Node {
  public:
   Threshold(const Value& input, float threshold, float value);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

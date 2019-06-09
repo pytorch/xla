@@ -24,6 +24,11 @@ std::string HardtanhBackward::ToString() const {
   return ss.str();
 }
 
+NodePtr HardtanhBackward::Clone(OpList operands) const {
+  return MakeNode<HardtanhBackward>(operands.at(0), operands.at(1), min_val_,
+                                    max_val_);
+}
+
 XlaOpVector HardtanhBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
   xla::XlaOp input = loctx->GetOutputOp(operand(1));

@@ -36,6 +36,10 @@ Any::Any(const Value& input, std::vector<xla::int64> dimensions,
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
+NodePtr Any::Clone(OpList operands) const {
+  return MakeNode<Any>(operands.at(0), dimensions_, keep_reduced_dimensions_);
+}
+
 XlaOpVector Any::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildAny(input, dimensions_, keep_reduced_dimensions_),

@@ -11,6 +11,8 @@ class LogSoftmax : public Node {
  public:
   LogSoftmax(const Value& input, xla::int64 dim);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

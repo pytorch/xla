@@ -52,6 +52,11 @@ Sum::Sum(const Value& input, std::vector<xla::int64> dimensions,
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}
 
+NodePtr Sum::Clone(OpList operands) const {
+  return MakeNode<Sum>(operands.at(0), dimensions_, keep_reduced_dimensions_,
+                       dtype_);
+}
+
 XlaOpVector Sum::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(

@@ -11,6 +11,8 @@ class Unsqueeze : public Node {
   // Insert a dimension of size one at the specified position.
   Unsqueeze(const Value& input, int dim);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

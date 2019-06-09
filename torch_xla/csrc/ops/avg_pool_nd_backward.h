@@ -14,6 +14,8 @@ class AvgPoolNdBackward : public Node {
                     std::vector<xla::int64> stride,
                     std::vector<xla::int64> padding, bool count_include_pad);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

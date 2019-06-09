@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/max_pool_nd.h"
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -59,6 +60,11 @@ MaxPoolNd::MaxPoolNd(const Value& input, xla::int64 spatial_dim_count,
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
       padding_(std::move(padding)) {}
+
+NodePtr MaxPoolNd::Clone(OpList operands) const {
+  return MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_, kernel_size_,
+                             stride_, padding_);
+}
 
 XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

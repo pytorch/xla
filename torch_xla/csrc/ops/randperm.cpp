@@ -16,6 +16,10 @@ Randperm::Randperm(xla::int64 upper_bound, xla::PrimitiveType element_type)
       upper_bound_(upper_bound),
       element_type_(element_type) {}
 
+NodePtr Randperm::Clone(OpList operands) const {
+  return MakeNode<Randperm>(upper_bound_, element_type_);
+}
+
 XlaOpVector Randperm::Lower(LoweringContext* loctx) const {
   return ReturnOp(BuildRandperm(upper_bound_, element_type_, loctx->builder()),
                   loctx);

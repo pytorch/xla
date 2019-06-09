@@ -28,6 +28,10 @@ std::string CrossReplicaSum::ToString() const {
   return ss.str();
 }
 
+NodePtr CrossReplicaSum::Clone(OpList operands) const {
+  return MakeNode<CrossReplicaSum>(operands.at(0), scale_, groups_);
+}
+
 XlaOpVector CrossReplicaSum::Lower(LoweringContext* loctx) const {
   xla::XlaOp op = loctx->GetOutputOp(operand(0));
   xla::XlaOp crs = BuildCrossReplicaSum(op, scale_, groups_);

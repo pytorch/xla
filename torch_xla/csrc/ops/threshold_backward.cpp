@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/threshold_backward.h"
+
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -12,6 +13,11 @@ ThresholdBackward::ThresholdBackward(const Value& grad_output,
     : Node(ir::OpKind(at::aten::threshold_backward), {grad_output, input},
            input.shape(), /*num_outputs=*/1, xla::util::MHash(threshold)),
       threshold_(threshold) {}
+
+NodePtr ThresholdBackward::Clone(OpList operands) const {
+  return MakeNode<ThresholdBackward>(operands.at(0), operands.at(1),
+                                     threshold_);
+}
 
 XlaOpVector ThresholdBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));

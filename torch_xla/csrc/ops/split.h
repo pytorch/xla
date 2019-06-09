@@ -14,6 +14,8 @@ class Split : public Node {
   Split(const Value& input, std::vector<xla::int64> split_sizes,
         xla::int64 dim);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

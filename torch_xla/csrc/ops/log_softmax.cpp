@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/log_softmax.h"
+
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/softmax_builder.h"
@@ -11,6 +12,10 @@ LogSoftmax::LogSoftmax(const Value& input, xla::int64 dim)
     : Node(ir::OpKind(at::aten::log_softmax), {input}, input.shape(),
            /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
+
+NodePtr LogSoftmax::Clone(OpList operands) const {
+  return MakeNode<LogSoftmax>(operands.at(0), dim_);
+}
 
 XlaOpVector LogSoftmax::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

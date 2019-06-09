@@ -34,6 +34,10 @@ TopK::TopK(const Value& input, xla::int64 k, xla::int64 dim, bool largest,
       largest_(largest),
       sorted_(sorted) {}
 
+NodePtr TopK::Clone(OpList operands) const {
+  return MakeNode<TopK>(operands.at(0), k_, dim_, largest_, sorted_);
+}
+
 XlaOpVector TopK::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOps(CreateTopK(input, k_, dim_, largest_, sorted_), loctx);

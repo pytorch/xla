@@ -65,6 +65,12 @@ AvgPoolNdBackward::AvgPoolNdBackward(
       padding_(std::move(padding)),
       count_include_pad_(count_include_pad) {}
 
+NodePtr AvgPoolNdBackward::Clone(OpList operands) const {
+  return MakeNode<AvgPoolNdBackward>(operands.at(0), operands.at(1),
+                                     spatial_dim_count_, kernel_size_, stride_,
+                                     padding_, count_include_pad_);
+}
+
 XlaOpVector AvgPoolNdBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
   xla::XlaOp input = loctx->GetOutputOp(operand(1));

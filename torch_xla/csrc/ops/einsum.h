@@ -14,6 +14,8 @@ class Einsum : public Node {
 
   std::string ToString() const override;
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   const std::string& equation() const { return equation_; }
@@ -21,7 +23,7 @@ class Einsum : public Node {
   static bool SupportsEquation(const std::string& equation);
 
  private:
-  const std::string equation_;
+  std::string equation_;
 };
 
 }  // namespace ops

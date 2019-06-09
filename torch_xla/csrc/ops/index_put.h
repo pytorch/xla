@@ -13,6 +13,8 @@ class IndexPut : public Node {
 
   std::string ToString() const override;
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   xla::int64 start_dim() const { return start_dim_; }

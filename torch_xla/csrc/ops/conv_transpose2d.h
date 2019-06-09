@@ -18,6 +18,8 @@ class ConvTranspose2d : public Node {
                   std::vector<xla::int64> stride,
                   std::vector<xla::int64> padding);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

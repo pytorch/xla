@@ -28,6 +28,10 @@ std::string Scalar::ToString() const {
   return ss.str();
 }
 
+NodePtr Scalar::Clone(OpList operands) const {
+  return MakeNode<Scalar>(value_, shape());
+}
+
 XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
   xla::Literal literal(xla::ShapeUtil::MakeShape(shape().element_type(), {}));
   switch (shape().element_type()) {

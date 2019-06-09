@@ -53,6 +53,10 @@ QR::QR(const Value& input, bool some)
           /*num_outputs=*/2, xla::util::MHash(some)),
       some_(some) {}
 
+NodePtr QR::Clone(OpList operands) const {
+  return MakeNode<QR>(operands.at(0), some_);
+}
+
 XlaOpVector QR::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOps(LowerQR(input, some_), loctx);

@@ -14,6 +14,10 @@ Cholesky::Cholesky(const Value& input, bool lower)
            /*num_outputs=*/1, xla::util::MHash(lower)),
       lower_(lower) {}
 
+NodePtr Cholesky::Clone(OpList operands) const {
+  return MakeNode<Cholesky>(operands.at(0), lower_);
+}
+
 XlaOpVector Cholesky::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output =

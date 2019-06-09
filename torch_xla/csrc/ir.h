@@ -227,6 +227,8 @@ class Node {
 
   virtual std::string ToString() const;
 
+  virtual NodePtr Clone(OpList operands) const;
+
   virtual XlaOpVector Lower(LoweringContext* loctx) const;
 
   XlaOpVector ReturnOp(xla::XlaOp op, LoweringContext* loctx) const;

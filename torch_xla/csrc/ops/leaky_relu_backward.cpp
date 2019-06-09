@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/leaky_relu_backward.h"
+
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -13,6 +14,11 @@ LeakyReluBackward::LeakyReluBackward(const Value& grad_output,
            input.shape(),
            /*num_outputs=*/1, xla::util::MHash(negative_slope)),
       negative_slope_(negative_slope) {}
+
+NodePtr LeakyReluBackward::Clone(OpList operands) const {
+  return MakeNode<LeakyReluBackward>(operands.at(0), operands.at(1),
+                                     negative_slope_);
+}
 
 XlaOpVector LeakyReluBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));

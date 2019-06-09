@@ -33,6 +33,10 @@ Cat::Cat(tensorflow::gtl::ArraySlice<const ir::Value> values, xla::int64 dim)
           /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
+NodePtr Cat::Clone(OpList operands) const {
+  return MakeNode<Cat>(operands, dim_);
+}
+
 XlaOpVector Cat::Lower(LoweringContext* loctx) const {
   std::vector<xla::XlaOp> inputs;
   for (auto& operand : operands()) {

@@ -13,6 +13,8 @@ class TriangularSolve : public Node {
 
   std::string ToString() const override;
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   bool left_side() const { return left_side_; }

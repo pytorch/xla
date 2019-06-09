@@ -1,4 +1,5 @@
 #include "torch_xla/csrc/ops/max_pool_nd_backward.h"
+
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -60,6 +61,12 @@ MaxPoolNdBackward::MaxPoolNdBackward(const Value& grad_output,
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
       padding_(std::move(padding)) {}
+
+NodePtr MaxPoolNdBackward::Clone(OpList operands) const {
+  return MakeNode<MaxPoolNdBackward>(operands.at(0), operands.at(1),
+                                     spatial_dim_count_, kernel_size_, stride_,
+                                     padding_);
+}
 
 XlaOpVector MaxPoolNdBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));

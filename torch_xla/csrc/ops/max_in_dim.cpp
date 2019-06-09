@@ -31,6 +31,10 @@ MaxInDim::MaxInDim(const Value& input, xla::int64 dim, bool keepdim)
       dim_(dim),
       keepdim_(keepdim) {}
 
+NodePtr MaxInDim::Clone(OpList operands) const {
+  return MakeNode<MaxInDim>(operands.at(0), dim_, keepdim_);
+}
+
 XlaOpVector MaxInDim::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp values = BuildMaxInDim(input, dim_, keepdim_);

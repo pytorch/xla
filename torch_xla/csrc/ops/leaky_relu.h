@@ -12,6 +12,8 @@ class LeakyRelu : public Node {
  public:
   LeakyRelu(const Value& input, double negative_slope);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

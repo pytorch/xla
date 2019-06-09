@@ -13,6 +13,8 @@ class NativeBatchNormBackward : public Node {
                           const Value& weight, const Value& save_mean,
                           const Value& save_invstd, double eps);
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   std::string ToString() const override;

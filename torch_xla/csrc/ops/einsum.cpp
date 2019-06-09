@@ -40,6 +40,10 @@ Einsum::Einsum(const std::string& equation,
           /*num_outputs=*/1, xla::util::MHash(equation)),
       equation_(equation) {}
 
+NodePtr Einsum::Clone(OpList operands) const {
+  return MakeNode<Einsum>(equation_, operands);
+}
+
 XlaOpVector Einsum::Lower(LoweringContext* loctx) const {
   xla::XlaOp output = xla::Einsum(loctx->GetOutputOp(operand(0)),
                                   loctx->GetOutputOp(operand(1)), equation_,

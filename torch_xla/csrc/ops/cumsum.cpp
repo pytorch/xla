@@ -44,6 +44,10 @@ CumSum::CumSum(const Value& input, xla::int64 dim,
       dim_(dim),
       dtype_(dtype) {}
 
+NodePtr CumSum::Clone(OpList operands) const {
+  return MakeNode<CumSum>(operands.at(0), dim_, dtype_);
+}
+
 XlaOpVector CumSum::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(LowerCumSum(input, dim_, dtype_), loctx);

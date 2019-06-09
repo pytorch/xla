@@ -51,6 +51,14 @@ ConvTranspose2d::ConvTranspose2d(const Value& input, const Value& weight,
       stride_(std::move(stride)),
       padding_(std::move(padding)) {}
 
+NodePtr ConvTranspose2d::Clone(OpList operands) const {
+  return operands.size() == 3
+             ? MakeNode<ConvTranspose2d>(operands.at(0), operands.at(1),
+                                         operands.at(2), stride_, padding_)
+             : MakeNode<ConvTranspose2d>(operands.at(0), operands.at(1),
+                                         stride_, padding_);
+}
+
 XlaOpVector ConvTranspose2d::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp kernel = loctx->GetOutputOp(operand(1));

@@ -12,6 +12,8 @@ class SymEig : public Node {
 
   std::string ToString() const override;
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   bool eigenvectors() const { return eigenvectors_; }

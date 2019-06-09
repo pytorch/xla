@@ -14,6 +14,8 @@ class NotSupported : public Node {
 
   std::string ToString() const override;
 
+  NodePtr Clone(OpList operands) const override;
+
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
   const std::string& description() const { return description_; }
