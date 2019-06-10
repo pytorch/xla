@@ -1,11 +1,33 @@
 import test_utils
 
-RESNET50 = 'resnet50'
-SUPPORTED_MODELS = [RESNET50]
+SUPPORTED_MODELS = [
+    'alexnet',
+    'densenet121',
+    'densenet161',
+    'densenet169',
+    'densenet201',
+    'inception_v3',
+    'resnet101',
+    'resnet152',
+    'resnet18',
+    'resnet34',
+    'resnet50',
+    # 'squeezenet1_0',
+    # 'squeezenet1_1',
+    'vgg11',
+    'vgg11_bn',
+    'vgg13',
+    'vgg13_bn',
+    'vgg16',
+    'vgg16_bn',
+    'vgg19',
+    'vgg19_bn'
+]
+
 MODEL_OPTS = {
     '--model': {
         'choices': SUPPORTED_MODELS,
-        'default': RESNET50,
+        'default': 'resnet50',
     }
 }
 FLAGS = test_utils.parse_common_options(
@@ -40,25 +62,39 @@ DEFAULT_KWARGS = dict(
     lr=0.1,
     target_accuracy=0.0,
 )
-MODEL_SPECIFIC_DEFAULTS = {
-    RESNET50: DEFAULT_KWARGS,
-}
+MODEL_SPECIFIC_DEFAULTS = {}
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
   if getattr(FLAGS, arg) is None:
     setattr(FLAGS, arg, value)
 
+MODEL_PROPERTIES = {
+    'inception_v3': {
+        'img_dim': 299,
+        'model_fn': lambda: torchvision.models.inception_v3(aux_logits=False)
+    },
+    'DEFAULT': {
+        'img_dim': 224,
+        'model_fn': getattr(torchvision.models, FLAGS.model)
+    }
+}
+
+
+def get_model_property(key):
+  return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
+
 
 def train_imagenet():
   print('==> Preparing data..')
+  img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
     train_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.batch_size, 3, 224, 224),
+        data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
         sample_count=1200000 // FLAGS.batch_size)
     test_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.batch_size, 3, 224, 224),
+        data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
         sample_count=50000 // FLAGS.batch_size)
   else:
@@ -67,7 +103,7 @@ def train_imagenet():
     train_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'train'),
         transforms.Compose([
-            transforms.RandomResizedCrop(224),
+            transforms.RandomResizedCrop(img_dim),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
@@ -80,7 +116,7 @@ def train_imagenet():
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
         transforms.Compose([
-            transforms.RandomResizedCrop(224),
+            transforms.RandomResizedCrop(img_dim),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
@@ -95,7 +131,7 @@ def train_imagenet():
 
   devices = xm.get_xla_supported_devices(max_devices=FLAGS.num_cores)
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
-  torchvision_model = getattr(torchvision.models, FLAGS.model)
+  torchvision_model = get_model_property('model_fn')
   model_parallel = dp.DataParallel(torchvision_model, device_ids=devices)
 
   def train_loop_fn(model, loader, device, context):
@@ -106,7 +142,6 @@ def train_imagenet():
         momentum=FLAGS.momentum,
         weight_decay=5e-4)
     tracker = xm.RateTracker()
-
     for x, (data, target) in loader:
       optimizer.zero_grad()
       output = model(data)
