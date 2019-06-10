@@ -15,14 +15,14 @@ xla::Shape NodeOutputShape(
     const Value& grad_output, const Value& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode) {
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2);
     return BuildMaxPoolNdBackward(/*out_backprop=*/operands[0],
                                   /*input=*/operands[1], spatial_dim_count,
-                                  kernel_size, stride, padding);
+                                  kernel_size, stride, padding, ceil_mode);
   };
   return InferOutputShape({grad_output.shape(), input.shape()},
                           lower_for_shape_fn);
@@ -42,30 +42,30 @@ c10::Symbol MaxPoolNdBackwardSymbol(xla::int64 spatial_dim_count) {
 
 }  // namespace
 
-MaxPoolNdBackward::MaxPoolNdBackward(const Value& grad_output,
-                                     const Value& input,
-                                     xla::int64 spatial_dim_count,
-                                     std::vector<xla::int64> kernel_size,
-                                     std::vector<xla::int64> stride,
-                                     std::vector<xla::int64> padding)
+MaxPoolNdBackward::MaxPoolNdBackward(
+    const Value& grad_output, const Value& input, xla::int64 spatial_dim_count,
+    std::vector<xla::int64> kernel_size, std::vector<xla::int64> stride,
+    std::vector<xla::int64> padding, bool ceil_mode)
     : Node(
           ir::OpKind(MaxPoolNdBackwardSymbol(spatial_dim_count)),
           {grad_output, input},
           [&]() {
             return NodeOutputShape(grad_output, input, spatial_dim_count,
-                                   kernel_size, stride, padding);
+                                   kernel_size, stride, padding, ceil_mode);
           },
           /*num_outputs=*/1,
-          xla::util::MHash(spatial_dim_count, kernel_size, stride, padding)),
+          xla::util::MHash(spatial_dim_count, kernel_size, stride, padding,
+                           ceil_mode)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
-      padding_(std::move(padding)) {}
+      padding_(std::move(padding)),
+      ceil_mode_(ceil_mode) {}
 
 NodePtr MaxPoolNdBackward::Clone(OpList operands) const {
   return MakeNode<MaxPoolNdBackward>(operands.at(0), operands.at(1),
                                      spatial_dim_count_, kernel_size_, stride_,
-                                     padding_);
+                                     padding_, ceil_mode_);
 }
 
 XlaOpVector MaxPoolNdBackward::Lower(LoweringContext* loctx) const {
@@ -73,7 +73,7 @@ XlaOpVector MaxPoolNdBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(1));
   xla::XlaOp output = BuildMaxPoolNdBackward(
       /*out_backprop=*/grad_output, /*input=*/input, spatial_dim_count_,
-      kernel_size_, stride_, padding_);
+      kernel_size_, stride_, padding_, ceil_mode_);
   return ReturnOp(output, loctx);
 }
 

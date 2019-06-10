@@ -506,28 +506,26 @@ XLATensor XLATensor::avg_pool_nd(const XLATensor& input,
                                  std::vector<xla::int64> kernel_size,
                                  std::vector<xla::int64> stride,
                                  std::vector<xla::int64> padding,
-                                 bool count_include_pad) {
+                                 bool ceil_mode, bool count_include_pad) {
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
   return input.CreateFrom(ir::MakeNode<ir::ops::AvgPoolNd>(
       input.GetIrValue(), spatial_dim_count, std::move(kernel_size),
-      std::move(stride), std::move(padding), count_include_pad));
+      std::move(stride), std::move(padding), ceil_mode, count_include_pad));
 }
 
-XLATensor XLATensor::avg_pool_nd_backward(const XLATensor& out_backprop,
-                                          const XLATensor& input,
-                                          xla::int64 spatial_dim_count,
-                                          std::vector<xla::int64> kernel_size,
-                                          std::vector<xla::int64> stride,
-                                          std::vector<xla::int64> padding,
-                                          bool count_include_pad) {
+XLATensor XLATensor::avg_pool_nd_backward(
+    const XLATensor& out_backprop, const XLATensor& input,
+    xla::int64 spatial_dim_count, std::vector<xla::int64> kernel_size,
+    std::vector<xla::int64> stride, std::vector<xla::int64> padding,
+    bool ceil_mode, bool count_include_pad) {
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
   return out_backprop.CreateFrom(ir::MakeNode<ir::ops::AvgPoolNdBackward>(
       out_backprop.GetIrValue(), input.GetIrValue(), spatial_dim_count,
-      std::move(kernel_size), std::move(stride), std::move(padding),
+      std::move(kernel_size), std::move(stride), std::move(padding), ceil_mode,
       count_include_pad));
 }
 
@@ -1347,13 +1345,14 @@ XLATensor XLATensor::max_pool_nd(const XLATensor& input,
                                  xla::int64 spatial_dim_count,
                                  std::vector<xla::int64> kernel_size,
                                  std::vector<xla::int64> stride,
-                                 std::vector<xla::int64> padding) {
+                                 std::vector<xla::int64> padding,
+                                 bool ceil_mode) {
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
   return input.CreateFrom(ir::MakeNode<ir::ops::MaxPoolNd>(
       input.GetIrValue(), spatial_dim_count, std::move(kernel_size),
-      std::move(stride), std::move(padding)));
+      std::move(stride), std::move(padding), ceil_mode));
 }
 
 XLATensor XLATensor::max_pool_nd_backward(const XLATensor& out_backprop,
@@ -1361,13 +1360,15 @@ XLATensor XLATensor::max_pool_nd_backward(const XLATensor& out_backprop,
                                           xla::int64 spatial_dim_count,
                                           std::vector<xla::int64> kernel_size,
                                           std::vector<xla::int64> stride,
-                                          std::vector<xla::int64> padding) {
+                                          std::vector<xla::int64> padding,
+                                          bool ceil_mode) {
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
   return out_backprop.CreateFrom(ir::MakeNode<ir::ops::MaxPoolNdBackward>(
       out_backprop.GetIrValue(), input.GetIrValue(), spatial_dim_count,
-      std::move(kernel_size), std::move(stride), std::move(padding)));
+      std::move(kernel_size), std::move(stride), std::move(padding),
+      ceil_mode));
 }
 
 XLATensor XLATensor::mean(const XLATensor& input,

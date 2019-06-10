@@ -10,7 +10,8 @@ class AvgPoolNd : public Node {
  public:
   AvgPoolNd(const Value& input, xla::int64 spatial_dim_count,
             std::vector<xla::int64> kernel_size, std::vector<xla::int64> stride,
-            std::vector<xla::int64> padding, bool count_include_pad);
+            std::vector<xla::int64> padding, bool ceil_mode,
+            bool count_include_pad);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -26,14 +27,17 @@ class AvgPoolNd : public Node {
 
   const std::vector<xla::int64>& padding() const { return padding_; }
 
+  bool ceil_mode() const { return ceil_mode_; }
+
   bool count_include_pad() const { return count_include_pad_; }
 
  private:
   xla::int64 spatial_dim_count_;
-  // The parameters of the pooling. Ceil mode not supported yet.
+  // The parameters of the pooling.
   std::vector<xla::int64> kernel_size_;
   std::vector<xla::int64> stride_;
   std::vector<xla::int64> padding_;
+  bool ceil_mode_;
   // Whether the counts used to compute the average should include the added
   // padding.
   bool count_include_pad_;

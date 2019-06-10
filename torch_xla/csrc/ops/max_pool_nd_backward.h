@@ -12,7 +12,7 @@ class MaxPoolNdBackward : public Node {
                     xla::int64 spatial_dim_count,
                     std::vector<xla::int64> kernel_size,
                     std::vector<xla::int64> stride,
-                    std::vector<xla::int64> padding);
+                    std::vector<xla::int64> padding, bool ceil_mode);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -28,12 +28,14 @@ class MaxPoolNdBackward : public Node {
 
   const std::vector<xla::int64>& padding() const { return padding_; }
 
+  bool ceil_mode() const { return ceil_mode_; }
+
  private:
   xla::int64 spatial_dim_count_;
-  // The parameters of the pooling. Ceil mode not supported yet.
   std::vector<xla::int64> kernel_size_;
   std::vector<xla::int64> stride_;
   std::vector<xla::int64> padding_;
+  bool ceil_mode_;
 };
 
 }  // namespace ops
