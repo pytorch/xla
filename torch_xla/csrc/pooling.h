@@ -10,7 +10,7 @@ xla::XlaOp BuildMaxPoolNd(
     const xla::XlaOp& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode);
 
 // Computes the gradient for max pooling.
 xla::XlaOp BuildMaxPoolNdBackward(
@@ -18,14 +18,14 @@ xla::XlaOp BuildMaxPoolNdBackward(
     xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode);
 
 // Computes average pooling for the given input.
 xla::XlaOp BuildAvgPoolNd(
     const xla::XlaOp& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode,
     bool count_include_pad);
 
 // Computes the gradient for average pooling.
@@ -34,7 +34,7 @@ xla::XlaOp BuildAvgPoolNdBackward(
     xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode,
     bool count_include_pad);
 
 // Computes adaptive average pooling for the given input and output size.

@@ -21,7 +21,6 @@ xla::TensorFormat MakeNCHWFormat(xla::int64 spatial_dim_count) {
 struct PoolingOpAttributes {
   std::vector<xla::int64> kernel_size;
   std::vector<xla::int64> stride;
-  std::vector<std::pair<xla::int64, xla::int64>> padding;
 };
 
 xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
@@ -38,9 +37,7 @@ xla::XlaComputation CreateGeComputation(xla::PrimitiveType type) {
 // padding.
 PoolingOpAttributes MakePoolingOpAttributes(
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size_attr,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride_attr,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding_attr,
-    xla::int64 spatial_dim_count) {
+    tensorflow::gtl::ArraySlice<const xla::int64> stride_attr) {
   // Create a NCHW kernel size with 1 for batch size and feature.
   std::vector<xla::int64> kernel_size(2, 1);
   kernel_size.insert(kernel_size.end(), kernel_size_attr.begin(),
@@ -54,12 +51,7 @@ PoolingOpAttributes MakePoolingOpAttributes(
     stride.resize(2, 1);
     stride.insert(stride.end(), stride_attr.begin(), stride_attr.end());
   }
-  XLA_CHECK_EQ(padding_attr.size(), spatial_dim_count);
-  std::vector<std::pair<xla::int64, xla::int64>> padding;
-  for (const xla::int64 dim_pad : padding_attr) {
-    padding.push_back(std::make_pair(dim_pad, dim_pad));
-  }
-  return {kernel_size, stride, padding};
+  return {kernel_size, stride};
 }
 
 // Compute the average pool kernel size required for the specified output_size
@@ -110,6 +102,51 @@ xla::XlaOp RemoveTrivialBatch(const xla::XlaOp& batch, xla::int64 original_rank,
   return batch;
 }
 
+// Creates low and high padding specification for the given padding (which is
+// symmetric) and ceil mode. Additional high padding could be required when ceil
+// mode is set.
+std::vector<std::pair<xla::int64, xla::int64>> CeilModePadding(
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    const xla::Shape& input_shape,
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride, bool ceil_mode) {
+  std::vector<std::pair<xla::int64, xla::int64>> ceil_mode_padding;
+  for (int i = 0; i < padding.size(); ++i) {
+    xla::int64 left_padding = padding[i];
+    xla::int64 input_size = input_shape.dimensions(2 + i);
+    xla::int64 output_size_rem =
+        (input_size + 2 * left_padding - kernel_size[i]) % stride[i];
+    xla::int64 right_padding = left_padding;
+    if (ceil_mode && output_size_rem != 0) {
+      right_padding += stride[i] - output_size_rem;
+    }
+    ceil_mode_padding.emplace_back(left_padding, right_padding);
+  }
+  return ceil_mode_padding;
+}
+
+// Creates an XLA padding configuration from a padding attribute value.
+xla::PaddingConfig MakeXlaPaddingConfig(
+    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    const xla::Shape& input_shape,
+    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
+    tensorflow::gtl::ArraySlice<const xla::int64> stride, bool ceil_mode) {
+  xla::PaddingConfig padding_config;
+  for (int i = 0; i < 2; ++i) {
+    padding_config.add_dimensions();
+  }
+  const auto ceil_mode_padding =
+      CeilModePadding(padding, input_shape, kernel_size, stride, ceil_mode);
+  for (int i = 0; i < padding.size(); ++i) {
+    xla::PaddingConfig::PaddingConfigDimension* dims =
+        padding_config.add_dimensions();
+    const auto dim_padding = ceil_mode_padding[i];
+    dims->set_edge_padding_low(dim_padding.first);
+    dims->set_edge_padding_high(dim_padding.second);
+  }
+  return padding_config;
+}
+
 }  // namespace
 
 bool IsSupportedAdaptiveAvgPool2d(
@@ -128,7 +165,7 @@ xla::XlaOp BuildMaxPoolNd(
     const xla::XlaOp& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode) {
   xla::XlaBuilder* builder = input.builder();
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
   xla::Shape input_shape =
@@ -136,13 +173,13 @@ xla::XlaOp BuildMaxPoolNd(
   xla::Literal init_value =
       xla::LiteralUtil::MinValue(input_shape.element_type());
   xla::XlaOp xla_init_value = xla::ConstantLiteral(builder, init_value);
-  xla::PaddingConfig padding_config = XlaHelpers::MakeXlaPaddingConfig(padding);
+  xla::PaddingConfig padding_config = MakeXlaPaddingConfig(
+      padding, input_shape, kernel_size, stride, ceil_mode);
   xla::XlaOp padded_input =
       xla::Pad(batch_input_info.batch_input, xla_init_value, padding_config);
   PoolingOpAttributes pooling_op_attributes =
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
-                              /*stride_attr=*/stride, /*padding_attr=*/padding,
-                              /*spatial_dim_count=*/spatial_dim_count);
+                              /*stride_attr=*/stride);
   xla::XlaOp batch_result = xla::MaxPool(
       /*operand=*/padded_input,
       /*kernel_size=*/pooling_op_attributes.kernel_size,
@@ -159,7 +196,7 @@ xla::XlaOp BuildMaxPoolNdBackward(
     xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode) {
   xla::XlaBuilder* builder = out_backprop.builder();
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
   xla::Shape input_shape =
@@ -171,13 +208,13 @@ xla::XlaOp BuildMaxPoolNdBackward(
       XlaHelpers::CreateAddComputation(input_shape.element_type());
   PoolingOpAttributes pooling_op_attributes =
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
-                              /*stride_attr=*/stride, /*padding_attr=*/padding,
-                              /*spatial_dim_count=*/spatial_dim_count);
+                              /*stride_attr=*/stride);
   std::vector<std::pair<xla::int64, xla::int64>> window_padding;
+  const auto ceil_mode_padding =
+      CeilModePadding(padding, input_shape, kernel_size, stride, ceil_mode);
   window_padding.resize(2);
-  window_padding.insert(window_padding.end(),
-                        pooling_op_attributes.padding.begin(),
-                        pooling_op_attributes.padding.end());
+  window_padding.insert(window_padding.end(), ceil_mode_padding.begin(),
+                        ceil_mode_padding.end());
   BatchInput batch_out_backprop_info =
       CreateBatchInput(out_backprop, spatial_dim_count);
   xla::XlaOp batch_result = xla::SelectAndScatterWithGeneralPadding(
@@ -198,18 +235,21 @@ xla::XlaOp BuildAvgPoolNd(
     const xla::XlaOp& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode,
     bool count_include_pad) {
   PoolingOpAttributes pooling_op_attributes =
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
-                              /*stride_attr=*/stride, /*padding_attr=*/padding,
-                              /*spatial_dim_count=*/spatial_dim_count);
+                              /*stride_attr=*/stride);
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
+  xla::Shape input_shape =
+      XlaHelpers::ShapeOfXlaOp(batch_input_info.batch_input);
+  const auto ceil_mode_padding =
+      CeilModePadding(padding, input_shape, kernel_size, stride, ceil_mode);
   xla::XlaOp batch_result = xla::AvgPool(
       /*operand=*/batch_input_info.batch_input,
       /*kernel_size=*/pooling_op_attributes.kernel_size,
       /*stride=*/pooling_op_attributes.stride,
-      /*padding=*/pooling_op_attributes.padding,
+      /*padding=*/ceil_mode_padding,
       /*data_format=*/MakeNCHWFormat(spatial_dim_count),
       /*counts_include_padding=*/count_include_pad);
   return RemoveTrivialBatch(/*batch=*/batch_result,
@@ -222,22 +262,24 @@ xla::XlaOp BuildAvgPoolNdBackward(
     xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode,
     bool count_include_pad) {
   PoolingOpAttributes pooling_op_attributes =
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
-                              /*stride_attr=*/stride, /*padding_attr=*/padding,
-                              /*spatial_dim_count=*/spatial_dim_count);
+                              /*stride_attr=*/stride);
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
+  xla::Shape gradients_shape =
+      XlaHelpers::ShapeOfXlaOp(batch_input_info.batch_input);
+  const auto ceil_mode_padding =
+      CeilModePadding(padding, gradients_shape, kernel_size, stride, ceil_mode);
   BatchInput batch_out_backprop_info =
       CreateBatchInput(out_backprop, spatial_dim_count);
-  auto gradients_size = XlaHelpers::SizesOfXlaOp(batch_input_info.batch_input);
   xla::XlaOp batch_result = xla::AvgPoolGrad(
       /*out_backprop=*/batch_out_backprop_info.batch_input,
-      /*gradients_size=*/gradients_size,
+      /*gradients_size=*/gradients_shape.dimensions(),
       /*kernel_size=*/pooling_op_attributes.kernel_size,
       /*stride=*/pooling_op_attributes.stride,
-      /*spatial_padding=*/pooling_op_attributes.padding,
+      /*spatial_padding=*/ceil_mode_padding,
       /*data_format=*/MakeNCHWFormat(spatial_dim_count),
       /*counts_include_padding=*/count_include_pad);
   return RemoveTrivialBatch(/*batch=*/batch_result,

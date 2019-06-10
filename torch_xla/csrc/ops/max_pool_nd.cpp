@@ -16,14 +16,14 @@ xla::Shape NodeOutputShape(
     const Value& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode) {
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1)
         << "Unexpected number of operands: " << operands.size();
     return BuildMaxPoolNd(operands[0], spatial_dim_count, kernel_size, stride,
-                          padding);
+                          padding, ceil_mode);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
@@ -47,29 +47,31 @@ c10::Symbol MaxPoolNdSymbol(xla::int64 spatial_dim_count) {
 MaxPoolNd::MaxPoolNd(const Value& input, xla::int64 spatial_dim_count,
                      std::vector<xla::int64> kernel_size,
                      std::vector<xla::int64> stride,
-                     std::vector<xla::int64> padding)
+                     std::vector<xla::int64> padding, bool ceil_mode)
     : Node(
           ir::OpKind(MaxPoolNdSymbol(spatial_dim_count)), {input},
           [&]() {
             return NodeOutputShape(input, spatial_dim_count, kernel_size,
-                                   stride, padding);
+                                   stride, padding, ceil_mode);
           },
           /*num_outputs=*/1,
-          xla::util::MHash(spatial_dim_count, kernel_size, stride, padding)),
+          xla::util::MHash(spatial_dim_count, kernel_size, stride, padding,
+                           ceil_mode)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
-      padding_(std::move(padding)) {}
+      padding_(std::move(padding)),
+      ceil_mode_(ceil_mode) {}
 
 NodePtr MaxPoolNd::Clone(OpList operands) const {
   return MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_, kernel_size_,
-                             stride_, padding_);
+                             stride_, padding_, ceil_mode_);
 }
 
 XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildMaxPoolNd(input, spatial_dim_count_, kernel_size_,
-                                     stride_, padding_);
+                                     stride_, padding_, ceil_mode_);
   return ReturnOp(output, loctx);
 }
 

@@ -562,15 +562,16 @@ at::Tensor AtenXlaType::avg_pool1d(const at::Tensor& self,
                                    at::IntArrayRef stride,
                                    at::IntArrayRef padding, bool ceil_mode,
                                    bool count_include_pad) const {
-  // Lowering when ceil_mode is set not supported yet.
-  if (ceil_mode) {
+  // Lowering when both ceil_mode and count_include_pad are set not supported
+  // yet.
+  if (ceil_mode && count_include_pad) {
     return AtenXlaTypeBase::avg_pool1d(self, kernel_size, stride, padding,
                                        ceil_mode, count_include_pad);
   }
   return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/1,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), count_include_pad));
+      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
 }
 
 at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
@@ -578,23 +579,25 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
                                    at::IntArrayRef stride,
                                    at::IntArrayRef padding, bool ceil_mode,
                                    bool count_include_pad) const {
-  // Lowering when ceil_mode is set not supported yet.
-  if (ceil_mode) {
+  // Lowering when both ceil_mode and count_include_pad are set not supported
+  // yet.
+  if (ceil_mode && count_include_pad) {
     return AtenXlaTypeBase::avg_pool2d(self, kernel_size, stride, padding,
                                        ceil_mode, count_include_pad);
   }
   return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), count_include_pad));
+      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
 }
 
 at::Tensor AtenXlaType::avg_pool2d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad) const {
-  // Lowering when ceil_mode is set not supported yet.
-  if (ceil_mode) {
+  // Lowering when both ceil_mode and count_include_pad are set not supported
+  // yet.
+  if (ceil_mode && count_include_pad) {
     return AtenXlaTypeBase::avg_pool2d_backward(grad_output, self, kernel_size,
                                                 stride, padding, ceil_mode,
                                                 count_include_pad);
@@ -602,7 +605,7 @@ at::Tensor AtenXlaType::avg_pool2d_backward(
   return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode,
       count_include_pad));
 }
 
@@ -611,22 +614,25 @@ at::Tensor AtenXlaType::avg_pool3d(const at::Tensor& self,
                                    at::IntArrayRef stride,
                                    at::IntArrayRef padding, bool ceil_mode,
                                    bool count_include_pad) const {
-  // Lowering when ceil_mode is set not supported yet.
-  if (ceil_mode) {
+  // Lowering when both ceil_mode and count_include_pad are set not supported
+  // yet.
+  if (ceil_mode && count_include_pad) {
     return AtenXlaTypeBase::avg_pool3d(self, kernel_size, stride, padding,
                                        ceil_mode, count_include_pad);
   }
   return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), count_include_pad));
+      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
 }
 
 at::Tensor AtenXlaType::avg_pool3d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad) const {
-  if (ceil_mode) {
+  // Lowering when both ceil_mode and count_include_pad are set not supported
+  // yet.
+  if (ceil_mode && count_include_pad) {
     return AtenXlaTypeBase::avg_pool3d_backward(grad_output, self, kernel_size,
                                                 stride, padding, ceil_mode,
                                                 count_include_pad);
@@ -634,7 +640,7 @@ at::Tensor AtenXlaType::avg_pool3d_backward(
   return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       /*spatial_dim_count=*/3, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding),
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode,
       count_include_pad));
 }
 
@@ -1796,36 +1802,36 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max(const at::Tensor& self,
 at::Tensor AtenXlaType::max_pool1d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
-  // Lowering when dilation is non-trivial or ceil_mode is set not supported.
-  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+  // Lowering when dilation is non-trivial is not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool1d(self, kernel_size, stride, padding,
                                        dilation, ceil_mode);
   }
   return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/1,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding)));
+      XlaHelpers::I64List(padding), ceil_mode));
 }
 
 at::Tensor AtenXlaType::max_pool2d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
-  // Lowering when dilation is non-trivial or ceil_mode is set not supported.
-  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+  // Lowering when dilation is non-trivial is not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool2d(self, kernel_size, stride, padding,
                                        dilation, ceil_mode);
   }
   return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding)));
+      XlaHelpers::I64List(padding), ceil_mode));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
-  // Lowering when ceil_mode or dilation is set not supported yet.
-  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+  // Lowering when dilation is non-trivial is not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool2d_with_indices(
         self, kernel_size, stride, padding, dilation, ceil_mode);
   }
@@ -1837,7 +1843,7 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
   XLATensor result = XLATensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding));
+      XlaHelpers::I64List(padding), ceil_mode);
   xla::Shape indices_shape = result.shape();
   indices_shape.set_element_type(
       GetDevicePrimitiveType(xla::PrimitiveType::S64, &result.GetDevice()));
@@ -1853,8 +1859,8 @@ at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
     at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
     const at::Tensor& indices) const {
-  // Lowering when ceil_mode or dilation is set not supported yet.
-  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+  // Lowering when dilation is non-trivial is not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool2d_with_indices_backward(
         grad_output, self, kernel_size, stride, padding, dilation, ceil_mode,
         indices);
@@ -1862,21 +1868,21 @@ at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
   return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
 }
 
 at::Tensor AtenXlaType::max_pool3d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
-  // Lowering when dilation is non-trivial or ceil_mode is set not supported.
-  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+  // Lowering when dilation is non-trivial is not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool3d(self, kernel_size, stride, padding,
                                        dilation, ceil_mode);
   }
   return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding)));
+      XlaHelpers::I64List(padding), ceil_mode));
 }
 
 at::Tensor AtenXlaType::max_pool3d_with_indices_backward(
@@ -1884,8 +1890,8 @@ at::Tensor AtenXlaType::max_pool3d_with_indices_backward(
     at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
     const at::Tensor& indices) const {
-  // Lowering when ceil_mode or dilation is set not supported yet.
-  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+  // Lowering when dilation is non-trivial is not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool3d_with_indices_backward(
         grad_output, self, kernel_size, stride, padding, dilation, ceil_mode,
         indices);
@@ -1893,14 +1899,14 @@ at::Tensor AtenXlaType::max_pool3d_with_indices_backward(
   return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       /*spatial_dim_count=*/3, XlaHelpers::I64List(kernel_size),
-      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding)));
+      XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool3d_with_indices(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) const {
-  // Lowering when ceil_mode or dilation is set not supported yet.
-  if (ceil_mode || IsNonTrivialDilation(dilation)) {
+  // Lowering when dilation is non-trivial is not supported yet.
+  if (IsNonTrivialDilation(dilation)) {
     return AtenXlaTypeBase::max_pool3d_with_indices(
         self, kernel_size, stride, padding, dilation, ceil_mode);
   }
@@ -1912,7 +1918,7 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool3d_with_indices(
   XLATensor result = XLATensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding));
+      XlaHelpers::I64List(padding), ceil_mode);
   xla::Shape indices_shape = result.shape();
   indices_shape.set_element_type(
       GetDevicePrimitiveType(xla::PrimitiveType::S64, &result.GetDevice()));

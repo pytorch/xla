@@ -1,10 +1,10 @@
 #pragma once
 
-#include <functional>
-#include <vector>
-
 #include <c10/core/Scalar.h>
 #include <c10/util/Optional.h>
+
+#include <functional>
+#include <vector>
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/literal_util.h"
@@ -117,10 +117,6 @@ class XlaHelpers {
   static c10::optional<xla::int64> I64Optional(c10::optional<int64_t> opt) {
     return opt ? c10::optional<xla::int64>(*opt) : c10::nullopt;
   }
-
-  // Creates an XLA padding configuration from a padding attribute value.
-  static xla::PaddingConfig MakeXlaPaddingConfig(
-      tensorflow::gtl::ArraySlice<const xla::int64> padding);
 
   // Creates an XLA padding configuration from a n-dimensional padding list.
   static xla::PaddingConfig MakeXlaPaddingConfigFromNdPadding(
