@@ -247,7 +247,7 @@ class XLATensor {
                                xla::int64 spatial_dim_count,
                                std::vector<xla::int64> kernel_size,
                                std::vector<xla::int64> stride,
-                               std::vector<xla::int64> padding,
+                               std::vector<xla::int64> padding, bool ceil_mode,
                                bool count_include_pad);
 
   static XLATensor avg_pool_nd_backward(const XLATensor& out_backprop,
@@ -256,7 +256,7 @@ class XLATensor {
                                         std::vector<xla::int64> kernel_size,
                                         std::vector<xla::int64> stride,
                                         std::vector<xla::int64> padding,
-                                        bool count_include_pad);
+                                        bool ceil_mode, bool count_include_pad);
 
   static XLATensor batch_norm(const XLATensor& input, const XLATensor& weight,
                               const XLATensor& bias, double momentum,
@@ -595,14 +595,15 @@ class XLATensor {
                                xla::int64 spatial_dim_count,
                                std::vector<xla::int64> kernel_size,
                                std::vector<xla::int64> stride,
-                               std::vector<xla::int64> padding);
+                               std::vector<xla::int64> padding, bool ceil_mode);
 
   static XLATensor max_pool_nd_backward(const XLATensor& out_backprop,
                                         const XLATensor& input,
                                         xla::int64 spatial_dim_count,
                                         std::vector<xla::int64> kernel_size,
                                         std::vector<xla::int64> stride,
-                                        std::vector<xla::int64> padding);
+                                        std::vector<xla::int64> padding,
+                                        bool ceil_mode);
 
   static XLATensor mean(const XLATensor& input,
                         std::vector<xla::int64> dimensions,

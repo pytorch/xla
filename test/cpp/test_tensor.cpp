@@ -261,12 +261,12 @@ TEST_F(TensorTest, TestMaxPool2D) {
                          /*ceil_mode=*/false);
       ForEachDevice([&](const Device& device) {
         auto dev_input = XLATensor::Create(input, device);
-        auto dev_output =
-            XLATensor::max_pool_nd(dev_input,
-                                   /*spatial_dim_count=*/2,
-                                   /*kernel_size=*/{kernel_size, kernel_size},
-                                   /*stride=*/{stride, stride},
-                                   /*padding=*/{padding, padding});
+        auto dev_output = XLATensor::max_pool_nd(
+            dev_input,
+            /*spatial_dim_count=*/2,
+            /*kernel_size=*/{kernel_size, kernel_size},
+            /*stride=*/{stride, stride},
+            /*padding=*/{padding, padding}, /*ceil_mode=*/false);
         AllClose(output, dev_output);
       });
     }
@@ -290,7 +290,8 @@ TEST_F(TensorTest, TestMaxPool2DNonSquare) {
             /*spatial_dim_count=*/2,
             /*kernel_size=*/{kernel_size, kernel_size + 1},
             /*stride=*/{stride, stride + 1},
-            /*padding=*/{padding, padding + 1});
+            /*padding=*/{padding, padding + 1},
+            /*ceil_mode=*/false);
         AllClose(output, dev_output);
       });
     }
@@ -310,12 +311,13 @@ TEST_F(TensorTest, TestAvgPool2D) {
                                      /*ceil_mode=*/false, count_include_pad);
         ForEachDevice([&](const Device& device) {
           auto dev_input = XLATensor::Create(input, device);
-          auto dev_output = XLATensor::avg_pool_nd(
-              dev_input,
-              /*spatial_dim_count=*/2,
-              /*kernel_size=*/{kernel_size, kernel_size},
-              /*stride=*/{stride, stride},
-              /*padding=*/{padding, padding}, count_include_pad);
+          auto dev_output =
+              XLATensor::avg_pool_nd(dev_input,
+                                     /*spatial_dim_count=*/2,
+                                     /*kernel_size=*/{kernel_size, kernel_size},
+                                     /*stride=*/{stride, stride},
+                                     /*padding=*/{padding, padding},
+                                     /*ceil_mode=*/false, count_include_pad);
           AllClose(output, dev_output);
         });
       }
@@ -343,6 +345,7 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
               /*kernel_size=*/{kernel_size, kernel_size + 1},
               /*stride=*/{stride, stride + 1},
               /*padding=*/{padding, padding + 1},
+              /*ceil_mode=*/false,
               /*count_include_pad=*/count_include_pad);
           AllClose(output, dev_output);
         });

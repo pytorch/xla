@@ -124,21 +124,6 @@ XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
   }
 }
 
-xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfig(
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
-  xla::PaddingConfig padding_config;
-  for (int i = 0; i < 2; ++i) {
-    padding_config.add_dimensions();
-  }
-  for (int i = 0; i < padding.size(); ++i) {
-    xla::PaddingConfig::PaddingConfigDimension* dims =
-        padding_config.add_dimensions();
-    dims->set_edge_padding_low(padding[i]);
-    dims->set_edge_padding_high(padding[i]);
-  }
-  return padding_config;
-}
-
 xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfigFromNdPadding(
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   xla::PaddingConfig padding_config;

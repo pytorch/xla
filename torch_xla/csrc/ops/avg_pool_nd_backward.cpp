@@ -15,7 +15,7 @@ xla::Shape NodeOutputShape(
     const Value& grad_output, const Value& input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode,
     bool count_include_pad) {
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
@@ -24,7 +24,7 @@ xla::Shape NodeOutputShape(
         << "Unexpected number of operands: " << operands.size();
     return BuildAvgPoolNdBackward(/*out_backprop=*/operands[0],
                                   /*input=*/operands[1], spatial_dim_count,
-                                  kernel_size, stride, padding,
+                                  kernel_size, stride, padding, ceil_mode,
                                   count_include_pad);
   };
   return InferOutputShape({grad_output.shape(), input.shape()},
@@ -48,27 +48,28 @@ c10::Symbol AvgNdBackwardSymbol(xla::int64 spatial_dim_count) {
 AvgPoolNdBackward::AvgPoolNdBackward(
     const Value& grad_output, const Value& input, xla::int64 spatial_dim_count,
     std::vector<xla::int64> kernel_size, std::vector<xla::int64> stride,
-    std::vector<xla::int64> padding, bool count_include_pad)
+    std::vector<xla::int64> padding, bool ceil_mode, bool count_include_pad)
     : Node(
           OpKind(AvgNdBackwardSymbol(spatial_dim_count)), {grad_output, input},
           [&]() {
             return NodeOutputShape(grad_output, input, spatial_dim_count,
-                                   kernel_size, stride, padding,
+                                   kernel_size, stride, padding, ceil_mode,
                                    count_include_pad);
           },
           /*num_outputs=*/1,
           xla::util::MHash(spatial_dim_count, kernel_size, stride, padding,
-                           count_include_pad)),
+                           ceil_mode, count_include_pad)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
+      ceil_mode_(ceil_mode),
       count_include_pad_(count_include_pad) {}
 
 NodePtr AvgPoolNdBackward::Clone(OpList operands) const {
   return MakeNode<AvgPoolNdBackward>(operands.at(0), operands.at(1),
                                      spatial_dim_count_, kernel_size_, stride_,
-                                     padding_, count_include_pad_);
+                                     padding_, ceil_mode_, count_include_pad_);
 }
 
 XlaOpVector AvgPoolNdBackward::Lower(LoweringContext* loctx) const {
@@ -76,7 +77,7 @@ XlaOpVector AvgPoolNdBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(1));
   xla::XlaOp output = BuildAvgPoolNdBackward(
       /*out_backprop=*/grad_output, /*input=*/input, spatial_dim_count_,
-      kernel_size_, stride_, padding_, count_include_pad_);
+      kernel_size_, stride_, padding_, ceil_mode_, count_include_pad_);
   return ReturnOp(output, loctx);
 }
 
