@@ -1,6 +1,7 @@
 # This module cannot import any other PyTorch/XLA module. Only Python core modules.
 import argparse
 import os
+import pprint
 import sys
 
 
@@ -14,7 +15,8 @@ def parse_common_options(datadir=None,
                          lr=None,
                          momentum=None,
                          target_accuracy=None,
-                         opts=None):
+                         opts=None,
+                         log_args=True):
   parser = argparse.ArgumentParser(add_help=False)
   parser.add_argument('--datadir', type=str, default=datadir)
   parser.add_argument('--logdir', type=str, default=logdir)
@@ -38,4 +40,8 @@ def parse_common_options(datadir=None,
   xla_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
   sys.path.append(os.path.join(os.path.dirname(xla_folder), 'test'))
   sys.path.insert(0, xla_folder)
+  if log_args:
+    pp = pprint.PrettyPrinter()
+    args_str = pp.pformat(vars(args))
+    print('Model Arguments: {}'.format(args_str))
   return args
