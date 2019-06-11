@@ -132,7 +132,7 @@ Docker images with `torch` and `torch_xla` preinstalled in the `pytorch` conda
 environment are distributed under: `gcr.io/tpu-pytorch/xla`. This image has two type of tags which take the forms of:
 
 * gcr.io/tpu-pytorch/xla:nightly
-* gcr.io/tpu-pytorch/xla:YYYYMMDD (ex. gcr.io/tpu-pytorch/xla:nightly_20190531)
+* gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (ex. gcr.io/tpu-pytorch/xla:nightly_20190531)
 
 With these images, for example, you can train mnist on TPUs by following these steps. First pull the distributed docker image:
 
