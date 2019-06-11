@@ -265,6 +265,7 @@ _CTOR_FUNCTIONS = {
     'randint': '.device(at::DeviceType::CPU)',
     'randperm': '.device(at::DeviceType::CPU)',
     'scalar_tensor': '.device(at::DeviceType::CPU)',
+    'to': '.device(at::DeviceType::CPU)',
 }
 
 _FUNCTION_OPTIONS = {
