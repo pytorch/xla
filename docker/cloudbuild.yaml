@@ -14,15 +14,15 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: bash
   args: ['-c', 'docker tag gcr.io/tpu-pytorch/xla:nightly gcr.io/tpu-pytorch/xla:$(date -u +nightly_%Y%m%d)']
-- name: 'gcr.io/cloud-builders/docker'
+- name: 'gcr.io/tpu-pytorch/xla:nightly'
   entrypoint: 'bash'
-  args: ['-c', 'docker run gcr.io/tpu-pytorch/xla:nightly /bin/bash pytorch/xla/docker/run_deployment_tests.sh']
+  args: ['-c', 'source /pytorch/xla/docker/common.sh && run_deployment_tests']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/tpu-pytorch/xla']
   timeout: 1200s
 - name: 'gcr.io/tpu-pytorch/xla:nightly'
   entrypoint: 'bash'
-  args: ['-c', 'cp /pytorch/dist/*.whl ./ && cp /pytorch/xla/dist/*.whl ./']
+  args: ['-c', 'source /pytorch/xla/docker/common.sh && collect_wheels']
 
 substitutions:
     _PYTHON_VERSION: '3.6' # default value
