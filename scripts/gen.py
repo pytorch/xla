@@ -213,8 +213,6 @@ class AtenXlaTypeBase : public at::TypeDefault {{
 
   c10::Device getDeviceFromPtr(void* data) const override;
 
-  std::unique_ptr<at::Generator> generator() const override;
-
 {hfuncs}
 }};
 
@@ -248,10 +246,6 @@ at::Allocator* AtenXlaTypeBase::allocator() const {{
 
 c10::Device AtenXlaTypeBase::getDeviceFromPtr(void* data) const {{
   return {device_type};
-}}
-
-std::unique_ptr<at::Generator> AtenXlaTypeBase::generator() const {{
-  return std::unique_ptr<at::Generator>(new at::CPUGenerator(&at::globalContext()));
 }}
 
 {funcs}
