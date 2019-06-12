@@ -945,24 +945,38 @@ at::Tensor AtenXlaType::cross(const at::Tensor& self, const at::Tensor& other,
 
 at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim,
                                 at::ScalarType dtype) const {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::cumprod(bridge::GetXlaTensor(self), dim, dtype));
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  if (!HasNativeSupport(dtype, self_tensor.GetDevice())) {
+    return AtenXlaTypeBase::cumprod(self, dim, dtype);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::cumprod(self_tensor, dim, dtype));
 }
 
 at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  if (!HasNativeSupport(self_tensor.dtype(), self_tensor.GetDevice())) {
+    return AtenXlaTypeBase::cumprod(self, dim);
+  }
   return bridge::AtenFromXlaTensor(
-      XLATensor::cumprod(bridge::GetXlaTensor(self), dim, c10::nullopt));
+      XLATensor::cumprod(self_tensor, dim, c10::nullopt));
 }
 
 at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim,
                                at::ScalarType dtype) const {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::cumsum(bridge::GetXlaTensor(self), dim, dtype));
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  if (!HasNativeSupport(dtype, self_tensor.GetDevice())) {
+    return AtenXlaTypeBase::cumsum(self, dim, dtype);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::cumsum(self_tensor, dim, dtype));
 }
 
 at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim) const {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  if (!HasNativeSupport(self_tensor.dtype(), self_tensor.GetDevice())) {
+    return AtenXlaTypeBase::cumsum(self, dim);
+  }
   return bridge::AtenFromXlaTensor(
-      XLATensor::cumsum(bridge::GetXlaTensor(self), dim, c10::nullopt));
+      XLATensor::cumsum(self_tensor, dim, c10::nullopt));
 }
 
 at::Tensor AtenXlaType::diag(const at::Tensor& self, int64_t diagonal) const {
