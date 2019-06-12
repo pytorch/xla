@@ -63,4 +63,9 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
 xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
                                         const Device* device);
 
+// Returns true iff the device supports the given type natively.
+inline bool HasNativeSupport(at::ScalarType type, const Device& device) {
+  return TensorTypeFromXlaType(MakeXlaPrimitiveType(type, &device)) == type;
+}
+
 }  // namespace torch_xla

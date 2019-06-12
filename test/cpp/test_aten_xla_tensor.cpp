@@ -1487,6 +1487,32 @@ TEST_F(AtenXlaTensorTest, TestCumSumCast) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestCumSumLong) {
+  at::Tensor input = at::randint(1000, {4, 3, 4}, at::TensorOptions(at::kLong));
+  int rank = input.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    at::Tensor result = at::cumsum(input, dim);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_result = at::cumsum(xla_input, dim);
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestCumSumCastLong) {
+  at::Tensor input = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
+  int rank = input.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    at::Tensor result = at::cumsum(input, dim, at::kLong);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_result = at::cumsum(xla_input, dim, at::kLong);
+      EXPECT_TRUE(EqualValues(result, xla_result));
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestCumProd) {
   at::Tensor input = at::rand({4, 3, 4}, at::TensorOptions(at::kFloat));
   int rank = input.dim();
@@ -1509,6 +1535,32 @@ TEST_F(AtenXlaTensorTest, TestCumProdCast) {
     ForEachDevice([&](const Device& device) {
       at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
       at::Tensor xla_result = at::cumprod(xla_input, dim, at::ScalarType::Int);
+      EXPECT_TRUE(EqualValues(result, xla_result));
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestCumProdLong) {
+  at::Tensor input = at::randint(7, {2, 3}, at::TensorOptions(at::kLong));
+  int rank = input.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    at::Tensor result = at::cumsum(input, dim);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_result = at::cumsum(xla_input, dim);
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestCumProdCastLong) {
+  at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat)) * 7;
+  int rank = input.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    at::Tensor result = at::cumsum(input, dim, at::kLong);
+    ForEachDevice([&](const Device& device) {
+      at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
+      at::Tensor xla_result = at::cumsum(xla_input, dim, at::kLong);
       EXPECT_TRUE(EqualValues(result, xla_result));
     });
   }
