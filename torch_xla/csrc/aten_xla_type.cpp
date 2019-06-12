@@ -664,7 +664,7 @@ at::Tensor AtenXlaType::batch_norm(
                                        running_var, training, momentum, eps,
                                        cudnn_enabled);
   }
-  XLATensor input_tensor = bridge::GetXlaTensorUnwrap(input);
+  XLATensor input_tensor = bridge::GetXlaTensor(input);
   const Device& device = input_tensor.GetDevice();
   return bridge::AtenFromXlaTensor(XLATensor::batch_norm(
       bridge::GetXlaTensor(input), bridge::GetOrCreateXlaTensor(weight, device),
@@ -2042,7 +2042,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_batch_norm(
                                               running_var, training, momentum,
                                               eps);
   }
-  XLATensor input_tensor = bridge::GetXlaTensorUnwrap(input);
+  XLATensor input_tensor = bridge::GetXlaTensor(input);
   const Device& device = input_tensor.GetDevice();
   auto outputs = XLATensor::native_batch_norm(
       bridge::GetXlaTensor(input), bridge::GetOrCreateXlaTensor(weight, device),
@@ -2065,7 +2065,7 @@ AtenXlaType::native_batch_norm_backward(
         save_invstd, train, eps, output_mask);
   }
   at::Tensor undefined;
-  XLATensor grad_out_tensor = bridge::GetXlaTensorUnwrap(grad_out);
+  XLATensor grad_out_tensor = bridge::GetXlaTensor(grad_out);
   const Device& device = grad_out_tensor.GetDevice();
   auto gradients = XLATensor::native_batch_norm_backward(
       /*grad_out=*/bridge::GetXlaTensor(grad_out),
