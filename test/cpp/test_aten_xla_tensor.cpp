@@ -6655,6 +6655,42 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2DBackward) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestBatchNorm3DBackward) {
+  double momentum = 0.1;
+  double eps = 0.5;
+  auto testfn = [&](const std::vector<at::Tensor>& inputs) -> at::Tensor {
+    return at::batch_norm(
+        /*input=*/inputs[0], /*weight=*/inputs[1], /*bias=*/inputs[2],
+        /*running_mean=*/inputs[3], /*running_var=*/inputs[4],
+        /*training=*/true, /*momentum=*/momentum, /*eps=*/eps,
+        /*cudnn_enabled=*/false);
+  };
+  int num_features = 3;
+  at::Tensor undef;
+  for (bool undef_weight_bias : {false, true}) {
+    ForEachDevice([&](const Device& device) {
+      at::Tensor input =
+          at::rand({14, num_features, 5, 7, 3}, at::TensorOptions(at::kFloat));
+      at::Tensor weight =
+          undef_weight_bias
+              ? undef
+              : at::rand({num_features}, at::TensorOptions(at::kFloat));
+      at::Tensor bias =
+          undef_weight_bias
+              ? undef
+              : at::rand({num_features}, at::TensorOptions(at::kFloat));
+      at::Tensor running_mean =
+          at::zeros({num_features}, at::TensorOptions(at::kFloat));
+      at::Tensor running_var =
+          at::ones({num_features}, at::TensorOptions(at::kFloat));
+      TestBackward({input, weight, bias, running_mean, running_var}, device,
+                   testfn,
+                   /*rtol=*/1e-3, /*atol=*/1e-3,
+                   /*inputs_require_grad=*/{true, true, true, false, false});
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
   int batch = 10;
   int classes = 5;
