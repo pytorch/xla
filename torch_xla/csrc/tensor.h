@@ -703,6 +703,8 @@ class XLATensor {
   static XLATensor reshape(const XLATensor& input,
                            std::vector<xla::int64> output_size);
 
+  static void resize_(XLATensor& input, std::vector<xla::int64> size);
+
   static XLATensor rsqrt(const XLATensor& input);
   static void rsqrt_(XLATensor& input);
 

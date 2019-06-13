@@ -69,6 +69,7 @@
 #include "torch_xla/csrc/ops/qr.h"
 #include "torch_xla/csrc/ops/randperm.h"
 #include "torch_xla/csrc/ops/repeat.h"
+#include "torch_xla/csrc/ops/resize.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
@@ -1638,6 +1639,11 @@ XLATensor XLATensor::reshape(const XLATensor& input,
                              std::vector<xla::int64> output_size) {
   return input.CreateFrom(
       ir::MakeNode<ir::ops::View>(input.GetIrValue(), std::move(output_size)));
+}
+
+void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
+  input.SetIrValue(
+      ir::MakeNode<ir::ops::Resize>(input.GetIrValue(), std::move(size)));
 }
 
 XLATensor XLATensor::rsqrt(const XLATensor& input) {
