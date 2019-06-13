@@ -101,7 +101,11 @@ find_library(PTPY_LIB "libtorch_python.so"
   HINTS "${PT_DIR}/build/lib")
 find_library(C10_LIB "libc10.so"
   HINTS "${PT_DIR}/build/lib")
-find_library(CAFFE_LIB "libcaffe2.so"
+find_library(CAFFE_LIB_DET "libcaffe2_detectron_ops.so"
+  HINTS "${PT_DIR}/build/lib")
+find_library(CAFFE_LIB_TDYN "libcaffe2_module_test_dynamic.so"
+  HINTS "${PT_DIR}/build/lib")
+find_library(CAFFE_LIB_OBS "libcaffe2_observers.so"
   HINTS "${PT_DIR}/build/lib")
 
 # Use --unresolved-symbols=ignore-all to get around the c10::Half::from_bits
@@ -113,7 +117,9 @@ target_link_libraries(
   "${PTXLA_LIBDIR}/torch_xla/lib/libxla_computation_client.so"
   "${PTPY_LIB}"
   "${PT_LIB}"
-  "${CAFFE_LIB}"
+  "${CAFFE_LIB_DET}"
+  "${CAFFE_LIB_TDYN}"
+  "${CAFFE_LIB_OBS}"
   "${C10_LIB}"
   "${BINARY_DIR}/lib/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a"
   "${PYTHON_LIBRARY}"
