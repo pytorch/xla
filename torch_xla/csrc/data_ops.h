@@ -77,4 +77,7 @@ xla::XlaOp BuildSlice(
     tensorflow::gtl::ArraySlice<const xla::int64> base_indices,
     tensorflow::gtl::ArraySlice<const xla::int64> sizes);
 
+xla::XlaOp BuildResize(const xla::XlaOp& input,
+                       tensorflow::gtl::ArraySlice<const xla::int64> size);
+
 }  // namespace torch_xla

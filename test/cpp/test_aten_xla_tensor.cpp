@@ -4013,6 +4013,19 @@ TEST_F(AtenXlaTensorTest, TestReshape) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestResize) {
+  // Testing a resize_() with target size bigger than original size is not
+  // possible, as we fill with zeros, while pytorch fills with random garbage.
+  at::Tensor input = at::rand({2, 2, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor saved_input = input.clone();
+  input.resize_({3, 3});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(saved_input, device);
+    xla_input.resize_({3, 3});
+    AllClose(input, xla_input);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestView) {
   at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor output = input.view({-1, 320});

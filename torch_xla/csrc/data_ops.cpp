@@ -200,4 +200,26 @@ xla::XlaOp BuildSlice(
   return xla::Slice(input, base_indices, limit_indices, strides);
 }
 
+xla::XlaOp BuildResize(const xla::XlaOp& input,
+                       tensorflow::gtl::ArraySlice<const xla::int64> size) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
+  xla::XlaOp r1_input = xla::Reshape(input, {num_elements});
+  xla::int64 new_num_elements = xla::util::Multiply<xla::int64>(size);
+  xla::XlaOp resized_input = input;
+  if (num_elements > new_num_elements) {
+    resized_input = xla::SliceInDim(r1_input, 0, new_num_elements, 1, 0);
+  } else if (new_num_elements > num_elements) {
+    xla::XlaOp zero =
+        XlaHelpers::ScalarValue(0, input_shape.element_type(), input.builder());
+    xla::PaddingConfig padding_config;
+    auto* dims = padding_config.add_dimensions();
+    dims->set_edge_padding_low(0);
+    dims->set_interior_padding(0);
+    dims->set_edge_padding_high(new_num_elements - num_elements);
+    resized_input = xla::Pad(r1_input, zero, padding_config);
+  }
+  return xla::Reshape(resized_input, size);
+}
+
 }  // namespace torch_xla
