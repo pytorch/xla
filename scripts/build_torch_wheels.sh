@@ -53,7 +53,7 @@ function install_and_setup_conda() {
   conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
   source activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
-  conda install -y numpy pyyaml setuptools cmake cffi typing torchvision
+  conda install -y numpy pyyaml setuptools cmake cffi typing tqdm
   sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
   /usr/bin/yes | pip install lark-parser
 }
@@ -79,13 +79,21 @@ function build_and_install_torch_xla() {
   pip install dist/*.whl
 }
 
+function install_torchvision_from_source() {
+  torchvision_repo_version="v0.3.0"
+  # Cannot install torchvision package with PyTorch installation from source.
+  # https://github.com/pytorch/vision/issues/967
+  git clone -b "${torchvision_repo_version}" https://github.com/pytorch/vision.git
+  cd vision && python setup.py install
+}
+
 function main() {
   install_llvm_clang
   install_req_packages
   install_and_setup_conda
   build_and_install_torch
-  cd xla
-  build_and_install_torch_xla
+  pushd xla && build_and_install_torch_xla && popd
+  install_torchvision_from_source
 }
 
 main
