@@ -914,6 +914,8 @@ class AtenXlaType : public AtenXlaTypeBase {
   at::Tensor reshape(const at::Tensor& self,
                      at::IntArrayRef shape) const override;
 
+  at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size) const override;
+
   at::Tensor rsqrt(const at::Tensor& self) const override;
 
   at::Tensor& rsqrt_(at::Tensor& self) const override;
