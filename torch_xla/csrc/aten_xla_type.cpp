@@ -2073,7 +2073,7 @@ AtenXlaType::native_batch_norm_backward(
     const at::Tensor& running_var, const at::Tensor& save_mean,
     const at::Tensor& save_invstd, bool train, double eps,
     std::array<bool, 3> output_mask) const {
-  if (input.dim() != 4 || !train) {
+  if (!train) {
     return AtenXlaTypeBase::native_batch_norm_backward(
         grad_out, input, weight, running_mean, running_var, save_mean,
         save_invstd, train, eps, output_mask);
