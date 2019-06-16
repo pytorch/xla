@@ -14,13 +14,15 @@ class DumpUtil {
       tensorflow::gtl::ArraySlice<const Node* const> nodes);
 
   static std::string PostOrderToDot(
-      tensorflow::gtl::ArraySlice<const Node* const> post_order);
+      tensorflow::gtl::ArraySlice<const Node* const> post_order,
+      tensorflow::gtl::ArraySlice<const Node* const> roots);
 
   static std::string ToText(
       tensorflow::gtl::ArraySlice<const Node* const> nodes);
 
   static std::string PostOrderToText(
-      tensorflow::gtl::ArraySlice<const Node* const> post_order);
+      tensorflow::gtl::ArraySlice<const Node* const> post_order,
+      tensorflow::gtl::ArraySlice<const Node* const> roots);
 
   static std::string ToHlo(tensorflow::gtl::ArraySlice<const Value> values);
 };

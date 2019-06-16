@@ -141,7 +141,8 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
   for (auto& tensor : tensors) {
     ir::Value ir_value = tensor.CurrentIrValue();
     if (ir_value) {
-      auto post_order = ir::Util::ComputePostOrder({ir_value.node.get()});
+      std::vector<const ir::Node*> roots({ir_value.node.get()});
+      auto post_order = ir::Util::ComputePostOrder(roots);
       if (post_order.size() > nodes_threshold) {
         ss << "Tensor: id=" << tensor.GetUniqueId()
            << ", shape=" << tensor.shape().get()
@@ -153,7 +154,7 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
             break;
           }
         }
-        ss << ir::DumpUtil::PostOrderToText(post_order);
+        ss << ir::DumpUtil::PostOrderToText(post_order, roots);
         ss << "\n\n";
       }
     }
