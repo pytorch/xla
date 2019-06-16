@@ -85,6 +85,25 @@ NodeIdMap GenerateIdMap(
   return id_map;
 }
 
+std::unordered_map<const Node*, size_t> GetRootsIds(
+    tensorflow::gtl::ArraySlice<const Node* const> roots) {
+  std::unordered_map<const Node*, size_t> roots_ids;
+  for (size_t i = 0; i < roots.size(); ++i) {
+    roots_ids[roots[i]] = i;
+  }
+  return roots_ids;
+}
+
+absl::optional<size_t> GetRootNodeId(
+    const Node* node,
+    const std::unordered_map<const Node*, size_t>& roots_ids) {
+  auto it = roots_ids.find(node);
+  if (it == roots_ids.end()) {
+    return absl::nullopt;
+  }
+  return it->second;
+}
+
 std::vector<AttrTag> GetNodeTags(const Node* node) {
   std::string node_string = node->ToString();
   std::string op_string = node->op().ToString();
@@ -104,7 +123,9 @@ std::vector<AttrTag> GetNodeTags(const Node* node) {
   return tags;
 }
 
-std::string GenerateDotNodeLabel(const Node* node) {
+std::string GenerateDotNodeLabel(
+    const Node* node,
+    const std::unordered_map<const Node*, size_t>& roots_ids) {
   static const size_t kMaxValueSize = 64;
   std::stringstream ss;
   ss << node->op() << "\\n" << node->shape();
@@ -116,12 +137,18 @@ std::string GenerateDotNodeLabel(const Node* node) {
       ss << tag.value.substr(0, kMaxValueSize) << "...";
     }
   }
+  auto opt_root_id = GetRootNodeId(node, roots_ids);
+  if (opt_root_id) {
+    ss << "\\nROOT=" << *opt_root_id;
+  }
   return ss.str();
 }
 
-std::string GenerateDotNodeSpec(const Node* node) {
+std::string GenerateDotNodeSpec(
+    const Node* node,
+    const std::unordered_map<const Node*, size_t>& roots_ids) {
   std::stringstream ss;
-  ss << "label=\"" << GenerateDotNodeLabel(node) << "\"";
+  ss << "label=\"" << GenerateDotNodeLabel(node, roots_ids) << "\"";
   return ss.str();
 }
 
@@ -151,22 +178,23 @@ std::string GenerateTextNodeSpec(const Node* node, const NodeIdMap& id_map) {
 std::string DumpUtil::ToDot(
     tensorflow::gtl::ArraySlice<const Node* const> nodes) {
   auto post_order = Util::ComputePostOrder(nodes);
-  return PostOrderToDot(post_order);
+  return PostOrderToDot(post_order, nodes);
 }
 
 std::string DumpUtil::PostOrderToDot(
-    tensorflow::gtl::ArraySlice<const Node* const> post_order) {
+    tensorflow::gtl::ArraySlice<const Node* const> post_order,
+    tensorflow::gtl::ArraySlice<const Node* const> roots) {
+  std::unordered_map<const Node*, size_t> roots_ids = GetRootsIds(roots);
   NodeIdMap id_map = GenerateIdMap(post_order);
   std::stringstream ss;
   ss << "digraph G {\n";
   for (auto node : post_order) {
-    ss << "  node" << id_map.at(node) << " [" << GenerateDotNodeSpec(node)
-       << "]\n";
+    ss << "  node" << id_map.at(node) << " ["
+       << GenerateDotNodeSpec(node, roots_ids) << "]\n";
   }
   for (auto it = post_order.rbegin(); it != post_order.rend(); ++it) {
     const Node* node = *it;
     size_t id = id_map.at(node);
-
     for (size_t i = 0; i < node->operands().size(); ++i) {
       const ir::Output& output = node->operand(i);
       ss << "  node" << id_map.at(output.node) << " -> node" << id;
@@ -191,17 +219,24 @@ std::string DumpUtil::PostOrderToDot(
 std::string DumpUtil::ToText(
     tensorflow::gtl::ArraySlice<const Node* const> nodes) {
   auto post_order = Util::ComputePostOrder(nodes);
-  return PostOrderToText(post_order);
+  return PostOrderToText(post_order, nodes);
 }
 
 std::string DumpUtil::PostOrderToText(
-    tensorflow::gtl::ArraySlice<const Node* const> post_order) {
+    tensorflow::gtl::ArraySlice<const Node* const> post_order,
+    tensorflow::gtl::ArraySlice<const Node* const> roots) {
+  std::unordered_map<const Node*, size_t> roots_ids = GetRootsIds(roots);
   NodeIdMap id_map = GenerateIdMap(post_order);
   std::stringstream ss;
   ss << "IR {\n";
   for (auto node : post_order) {
+    auto opt_root_id = GetRootNodeId(node, roots_ids);
     ss << "  %" << id_map.at(node) << " = "
-       << GenerateTextNodeSpec(node, id_map) << "\n";
+       << GenerateTextNodeSpec(node, id_map);
+    if (opt_root_id) {
+      ss << ", ROOT=" << *opt_root_id;
+    }
+    ss << "\n";
   }
   ss << "}\n";
   return ss.str();
