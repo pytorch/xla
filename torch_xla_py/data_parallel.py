@@ -2,7 +2,6 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-from copy import deepcopy
 from six import iteritems, itervalues
 import sys
 import threading
@@ -173,10 +172,10 @@ class DataParallel(object):
         xm.Replication(self._device_ids, replication_devices)
         if replication_devices else None)
     self._models = []
-    netw = network()
+    module = network if isinstance(network, torch.nn.Module) else network()
     for device in device_ids:
-      module = deepcopy(netw).to(device=torch.device(device))
-      self._models.append(module)
+      device_module = module.to(device=torch.device(device))
+      self._models.append(device_module)
     if not self._models:
       # No XLA device, push a vanilla network in.
       self._models.append(network())
