@@ -12,7 +12,7 @@ import re
 import shutil
 import sys
 
-GraphInfo = collections.namedtuple('GraphInfo', 'id, graph, ngraph, frame')
+GraphInfo = collections.namedtuple('GraphInfo', 'id, graph, ngraph, frame, key')
 
 
 def save_graph(graph, path):
@@ -60,7 +60,8 @@ def prase_graphs(gfile, dest_dir, graphs=None):
                 id=len(graphs),
                 graph=graph,
                 ngraph=normalize(graph),
-                frame=last_frame))
+                frame=last_frame,
+                key='\n'.join(graph)))
         graph = None
         last_frame = None
     else:
@@ -81,10 +82,13 @@ def group_by_frame(graphs):
   return fgroup
 
 
-def set_add(s, i):
-  plen = len(s)
-  s.add(i)
-  return len(s) > plen
+def dict_add_instance(gmap, i):
+  if i in gmap:
+    gmap[i] += 1
+    return False
+  else:
+    gmap[i] = 1
+    return True
 
 
 def diff_graphs(g1, g2, name1, name2, prefix=''):
@@ -111,16 +115,19 @@ def process_graphs(args):
   print('{} frame group(s)'.format(len(fgroup)))
   for f in fgroup.keys():
     fgraphs = fgroup[f]
-    uniq = set()
+    gmap = dict()
     uniq_graphs = []
     for graph in fgraphs:
-      if set_add(uniq, '\n'.join(graph.graph)):
+      if dict_add_instance(gmap, graph.key):
         uniq_graphs.append(graph)
     print('Frame has {} graph(s) ({} unique):\n{}\n'.format(
-        len(fgraphs), len(uniq), f))
+        len(fgraphs), len(gmap), f))
     for i in range(len(uniq_graphs) - 1, 0, -1):
-      print('  Frame {} (len={}) vs {} (len={})'.format(
-          i - 1, len(uniq_graphs[i - 1].graph), i, len(uniq_graphs[i].graph)))
+      count = gmap[uniq_graphs[i].key]
+      prev_count = gmap[uniq_graphs[i - 1].key]
+      print('  Frame {} (len={}, count={}) vs {} (len={}, count={})'.format(
+          i - 1, len(uniq_graphs[i - 1].graph), prev_count, i,
+          len(uniq_graphs[i].graph), count))
       print(
           diff_graphs(
               uniq_graphs[i - 1],
