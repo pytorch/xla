@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import os
 from six import iteritems, itervalues
+from copy import deepcopy
 import sys
 import threading
 import torch
@@ -174,7 +175,7 @@ class DataParallel(object):
     self._models = []
     module = network if isinstance(network, torch.nn.Module) else network()
     for device in device_ids:
-      device_module = module.to(device=torch.device(device))
+      device_module = deepcopy(module).to(device=torch.device(device))
       self._models.append(device_module)
     if not self._models:
       # No XLA device, push a vanilla network in.
