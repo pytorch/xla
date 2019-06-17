@@ -946,7 +946,9 @@ at::Tensor AtenXlaType::cross(const at::Tensor& self, const at::Tensor& other,
 at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim,
                                 at::ScalarType dtype) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  if (!HasNativeSupport(dtype, self_tensor.GetDevice())) {
+  if (dtype == at::ScalarType::Long &&
+      self_tensor.GetDevice().hw_type == DeviceType::TPU) {
+    // XLA reduce-window does not support S64 mode.
     return AtenXlaTypeBase::cumprod(self, dim, dtype);
   }
   return bridge::AtenFromXlaTensor(XLATensor::cumprod(self_tensor, dim, dtype));
@@ -954,7 +956,9 @@ at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim,
 
 at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  if (!HasNativeSupport(self_tensor.dtype(), self_tensor.GetDevice())) {
+  if (self_tensor.dtype() == at::ScalarType::Long &&
+      self_tensor.GetDevice().hw_type == DeviceType::TPU) {
+    // XLA reduce-window does not support S64 mode.
     return AtenXlaTypeBase::cumprod(self, dim);
   }
   return bridge::AtenFromXlaTensor(
@@ -964,7 +968,9 @@ at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim) const {
 at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim,
                                at::ScalarType dtype) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  if (!HasNativeSupport(dtype, self_tensor.GetDevice())) {
+  if (dtype == at::ScalarType::Long &&
+      self_tensor.GetDevice().hw_type == DeviceType::TPU) {
+    // XLA reduce-window does not support S64 mode.
     return AtenXlaTypeBase::cumsum(self, dim, dtype);
   }
   return bridge::AtenFromXlaTensor(XLATensor::cumsum(self_tensor, dim, dtype));
@@ -972,7 +978,9 @@ at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim,
 
 at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim) const {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  if (!HasNativeSupport(self_tensor.dtype(), self_tensor.GetDevice())) {
+  if (self_tensor.dtype() == at::ScalarType::Long &&
+      self_tensor.GetDevice().hw_type == DeviceType::TPU) {
+    // XLA reduce-window does not support S64 mode.
     return AtenXlaTypeBase::cumsum(self, dim);
   }
   return bridge::AtenFromXlaTensor(
