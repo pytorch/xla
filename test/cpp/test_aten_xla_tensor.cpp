@@ -4026,6 +4026,20 @@ TEST_F(AtenXlaTensorTest, TestResize) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestViewResize) {
+  at::Tensor input = at::zeros({8, 2}, at::TensorOptions(at::kFloat));
+  at::Tensor saved_input = input.clone();
+  at::Tensor output = input.view({4, 4});
+  output.resize_({3, 3});
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_input = bridge::CreateXlaTensor(saved_input, device);
+    at::Tensor xla_output = xla_input.view({4, 4});
+    xla_output.resize_({3, 3});
+    AllClose(input, xla_input);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestView) {
   at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor output = input.view({-1, 320});
@@ -4717,20 +4731,20 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DIncompleteAttributes) {
       for (bool count_include_pad : {true, false}) {
         // Test ceil_mode=true through the CPU interop.
         for (bool ceil_mode : {false, true}) {
-          at::Tensor output =
-              at::avg_pool3d(input, /*kernel_size=*/{kernel_size},
-                             /*stride=*/{},
-                             /*padding=*/{padding}, /*ceil_mode=*/ceil_mode,
-                             /*count_include_pad=*/count_include_pad);
+          at::Tensor output = at::avg_pool3d(
+              input, /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+              /*stride=*/{},
+              /*padding=*/{padding, padding, padding}, /*ceil_mode=*/ceil_mode,
+              /*count_include_pad=*/count_include_pad);
           ForEachDevice([&](const Device& device) {
             at::Tensor xla_input = bridge::CreateXlaTensor(input, device);
-            at::Tensor xla_output =
-                at::avg_pool3d(xla_input,
-                               /*kernel_size=*/{kernel_size},
-                               /*stride=*/{},
-                               /*padding=*/{padding},
-                               /*ceil_mode=*/ceil_mode,
-                               /*count_include_pad=*/count_include_pad);
+            at::Tensor xla_output = at::avg_pool3d(
+                xla_input,
+                /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+                /*stride=*/{},
+                /*padding=*/{padding, padding, padding},
+                /*ceil_mode=*/ceil_mode,
+                /*count_include_pad=*/count_include_pad);
             AllClose(output, xla_output);
           });
         }

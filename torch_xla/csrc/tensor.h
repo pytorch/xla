@@ -1006,7 +1006,8 @@ class XLATensor {
   std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,
                                    ir::Value ir_value) const;
 
-  XLATensor CreateView(ViewInfo view_info) const;
+  std::shared_ptr<View> CreateView(ViewInfo view_info) const;
+  XLATensor CreateViewTensor(ViewInfo view_info) const;
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
