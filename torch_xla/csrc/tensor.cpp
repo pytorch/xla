@@ -685,29 +685,33 @@ std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
     XLA_CHECK_EQ(xla::util::Multiply<xla::int64>(ir_value.shape().dimensions()),
                  xla::util::Multiply<xla::int64>(view->shape().dimensions()))
         << ir_value.shape() << " vs. " << view->shape();
-    ViewInfo view_info(ir_value.shape(), view->shape().dimensions());
+    ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.shape(),
+                       view->shape().dimensions());
     view = view->CreateSubView(view_info.shape, view_info);
   }
   view->Update(std::move(ir_value));
   return view;
 }
 
-XLATensor XLATensor::CreateView(ViewInfo view_info) const {
+std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
   if (data()->view != nullptr) {
-    return Create(data()->view->CreateSubView(view_info.shape, view_info),
-                  GetDevice(), dtype());
+    return data()->view->CreateSubView(view_info.shape, view_info);
   }
   // This node is not a view, and creating a view forks the current node into
   // becoming one itself. This means creating an alias with the current IR
   // Node, and using the same alias for the created IR Node.
   ir::Value ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
-  ViewInfo this_view_info(ir_value.shape(), ir_value.shape().dimensions());
+  ViewInfo this_view_info(ViewInfo::Type::kNoOp, ir_value.shape(),
+                          ir_value.shape().dimensions());
   data()->view = std::make_shared<View>(ir_value.shape(), alias,
                                         std::move(this_view_info));
   AssignIrValue(ir::Value());
-  return Create(std::make_shared<View>(view_info.shape, alias, view_info),
-                GetDevice(), dtype());
+  return std::make_shared<View>(view_info.shape, alias, view_info);
+}
+
+XLATensor XLATensor::CreateViewTensor(ViewInfo view_info) const {
+  return Create(CreateView(std::move(view_info)), GetDevice(), dtype());
 }
 
 at::Tensor XLATensor::ToTensor() {

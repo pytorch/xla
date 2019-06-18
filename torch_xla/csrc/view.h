@@ -23,17 +23,29 @@ struct SelectInfo {
 };
 
 struct ViewInfo {
+  enum class Type {
+    kInvalid,
+    kNarrow,
+    kNoOp,
+    kPermute,
+    kReshape,
+    kResize,
+    kSelect,
+  };
+
   ViewInfo() = default;
-  ViewInfo(xla::Shape shape, std::vector<xla::int64> sizes);
-  ViewInfo(std::vector<xla::int64> sizes, std::vector<xla::int64> permutation,
-           xla::PrimitiveType type);
-  ViewInfo(const xla::Shape& source_shape, SelectInfo select);
+  ViewInfo(Type view_type, xla::Shape shape, std::vector<xla::int64> sizes);
+  ViewInfo(Type view_type, std::vector<xla::int64> sizes,
+           std::vector<xla::int64> permutation, xla::PrimitiveType type);
+  ViewInfo(Type view_type, const xla::Shape& source_shape, SelectInfo select);
 
   bool operator==(const ViewInfo& ref) const {
-    return shape == ref.shape && indices == ref.indices && sizes == ref.sizes &&
+    return view_type == ref.view_type && shape == ref.shape &&
+           indices == ref.indices && sizes == ref.sizes &&
            permutation == ref.permutation && select == ref.select;
   }
 
+  Type view_type = Type::kInvalid;
   // The shape of the result of a view. In case of narrowing, this represents
   // the size of the narrow slice.
   xla::Shape shape;
