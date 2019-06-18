@@ -11,6 +11,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/generic_slice.h"
 #include "torch_xla/csrc/ops/permute.h"
+#include "torch_xla/csrc/ops/resize.h"
 #include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/unselect.h"
 #include "torch_xla/csrc/ops/update_slice.h"
@@ -19,23 +20,28 @@
 namespace torch_xla {
 namespace {
 
-bool IsNarrow(const ViewInfo& view_info) {
-  return xla::util::Multiply<xla::int64>(view_info.sizes) !=
-         xla::util::Multiply<xla::int64>(view_info.shape.dimensions());
-}
-
 ir::Value ApplyViewInfo(ir::Value ir_value, const ViewInfo& view_info) {
-  if (view_info.select) {
-    return ir::MakeNode<ir::ops::Select>(
-        ir_value, view_info.select->dim, view_info.select->start,
-        view_info.select->end, view_info.select->stride);
-  } else if (IsNarrow(view_info)) {
-    return ir::MakeNode<ir::ops::GenericSlice>(ir_value, view_info.indices,
-                                               view_info.shape.dimensions());
-  } else if (!view_info.permutation.empty()) {
-    return ir::MakeNode<ir::ops::Permute>(ir_value, view_info.permutation);
-  } else {
-    return ir::MakeNode<ir::ops::View>(ir_value, view_info.shape.dimensions());
+  switch (view_info.view_type) {
+    case ViewInfo::Type::kSelect:
+      return ir::MakeNode<ir::ops::Select>(
+          ir_value, view_info.select->dim, view_info.select->start,
+          view_info.select->end, view_info.select->stride);
+    case ViewInfo::Type::kNarrow:
+      return ir::MakeNode<ir::ops::GenericSlice>(ir_value, view_info.indices,
+                                                 view_info.shape.dimensions());
+    case ViewInfo::Type::kNoOp:
+      return ir_value;
+    case ViewInfo::Type::kPermute:
+      return ir::MakeNode<ir::ops::Permute>(ir_value, view_info.permutation);
+    case ViewInfo::Type::kReshape:
+      return ir::MakeNode<ir::ops::View>(ir_value,
+                                         view_info.shape.dimensions());
+    case ViewInfo::Type::kResize:
+      return ir::MakeNode<ir::ops::Resize>(ir_value,
+                                           view_info.shape.dimensions());
+    default:
+      XLA_ERROR() << "Invalid view type: "
+                  << xla::util::GetEnumValue(view_info.view_type);
   }
 }
 
@@ -52,19 +58,32 @@ ir::Value ApplyUpdate(ir::Value ir_value,
   ir::Value result = update_data.ir_value;
   for (size_t i = update_data.view_infos.size(); i > 0; --i) {
     const ViewInfo& view_info = update_data.view_infos[i - 1];
-    if (view_info.select) {
-      result = ir::MakeNode<ir::ops::Unselect>(
-          tmp_values[i - 1], result, view_info.select->dim,
-          view_info.select->start, view_info.select->end,
-          view_info.select->stride);
-    } else if (IsNarrow(view_info)) {
-      result = ir::MakeNode<ir::ops::UpdateSlice>(tmp_values[i - 1], result,
-                                                  view_info.indices);
-    } else if (!view_info.permutation.empty()) {
-      result = ir::MakeNode<ir::ops::Permute>(
-          result, xla::InversePermutation(view_info.permutation));
-    } else {
-      result = ir::MakeNode<ir::ops::View>(result, view_info.sizes);
+    switch (view_info.view_type) {
+      case ViewInfo::Type::kSelect:
+        result = ir::MakeNode<ir::ops::Unselect>(
+            tmp_values[i - 1], result, view_info.select->dim,
+            view_info.select->start, view_info.select->end,
+            view_info.select->stride);
+        break;
+      case ViewInfo::Type::kNarrow:
+        result = ir::MakeNode<ir::ops::UpdateSlice>(tmp_values[i - 1], result,
+                                                    view_info.indices);
+        break;
+      case ViewInfo::Type::kNoOp:
+        break;
+      case ViewInfo::Type::kPermute:
+        result = ir::MakeNode<ir::ops::Permute>(
+            result, xla::InversePermutation(view_info.permutation));
+        break;
+      case ViewInfo::Type::kReshape:
+        result = ir::MakeNode<ir::ops::View>(result, view_info.sizes);
+        break;
+      case ViewInfo::Type::kResize:
+        result = ir::MakeNode<ir::ops::Resize>(result, view_info.sizes);
+        break;
+      default:
+        XLA_ERROR() << "Invalid view type: "
+                    << xla::util::GetEnumValue(view_info.view_type);
     }
   }
   return result;
@@ -72,23 +91,32 @@ ir::Value ApplyUpdate(ir::Value ir_value,
 
 }  // namespace
 
-ViewInfo::ViewInfo(xla::Shape shape, std::vector<xla::int64> sizes)
-    : shape(std::move(shape)),
+ViewInfo::ViewInfo(Type view_type, xla::Shape shape,
+                   std::vector<xla::int64> sizes)
+    : view_type(view_type),
+      shape(std::move(shape)),
       indices(sizes.size(), 0),
       sizes(std::move(sizes)) {}
 
-ViewInfo::ViewInfo(std::vector<xla::int64> sizes,
+ViewInfo::ViewInfo(Type view_type, std::vector<xla::int64> sizes,
                    std::vector<xla::int64> permutation, xla::PrimitiveType type)
-    : shape(xla::ShapeUtil::MakeShape(type,
+    : view_type(view_type),
+      shape(xla::ShapeUtil::MakeShape(type,
                                       XlaHelpers::Permute(permutation, sizes))),
       sizes(std::move(sizes)),
-      permutation(std::move(permutation)) {}
+      permutation(std::move(permutation)) {
+  XLA_CHECK(view_type == Type::kPermute);
+}
 
-ViewInfo::ViewInfo(const xla::Shape& source_shape, SelectInfo select)
-    : shape(ir::ops::Select::MakeSelectShape(
+ViewInfo::ViewInfo(Type view_type, const xla::Shape& source_shape,
+                   SelectInfo select)
+    : view_type(view_type),
+      shape(ir::ops::Select::MakeSelectShape(
           source_shape, select.dim, select.start, select.end, select.stride)),
       sizes(source_shape.dimensions()),
-      select(std::move(select)) {}
+      select(std::move(select)) {
+  XLA_CHECK(view_type == Type::kSelect);
+}
 
 void Alias::Update(ir::Value ir_value, std::vector<ViewInfo> view_infos) {
   if (!updates_.empty() && updates_.back().view_infos == view_infos) {
