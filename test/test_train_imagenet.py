@@ -42,7 +42,6 @@ FLAGS = test_utils.parse_common_options(
 
 from common_utils import TestCase, run_tests
 import os
-import shutil
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
