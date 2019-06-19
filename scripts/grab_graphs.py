@@ -121,13 +121,15 @@ def process_graphs(args):
       if dict_add_instance(gmap, graph.key):
         uniq_graphs.append(graph)
     print('Frame has {} graph(s) ({} unique):\n{}\n'.format(
-        len(fgraphs), len(gmap), f))
+        len(fgraphs), len(uniq_graphs), f))
     for i in range(len(uniq_graphs) - 1, 0, -1):
       count = gmap[uniq_graphs[i].key]
       prev_count = gmap[uniq_graphs[i - 1].key]
-      print('  Frame {} (len={}, count={}) vs {} (len={}, count={})'.format(
-          i - 1, len(uniq_graphs[i - 1].graph), prev_count, i,
-          len(uniq_graphs[i].graph), count))
+      print(
+          '  Frame {} (len={}, count={}, id={}) vs {} (len={}, count={}, id={})'
+          .format(i - 1, len(uniq_graphs[i - 1].graph), prev_count,
+                  uniq_graphs[i - 1].id, i, len(uniq_graphs[i].graph), count,
+                  uniq_graphs[i].id))
       print(
           diff_graphs(
               uniq_graphs[i - 1],
