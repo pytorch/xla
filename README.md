@@ -1,6 +1,81 @@
-# How To Build And Run PyTorch For TPU
+# How to Run PyTorch with TPUs
 
-We also provide pre-build docker images and wheels so if you'd like to directly consume those refer to the `Using Pre Built Releases` section.
+First, create your [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: `pytorch-0.1`): 
+
+Once you've created a Cloud TPU node, you can train your PyTorch models by either:
+
+* [Consume pre-built docker images (*recommended*)](#consume-prebuilt-docker-images)
+* [Consume pre-built Compute VM Images](#consume-prebuilt-compute-vm-images)
+
+## Consume Prebuilt Docker Images
+
+Follow these steps to train PyTorch model with Docker on a TPU:
+
+1. Create a Compute VM and install docker (or use COS VM image)
+* *Note: make sure the compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores to not be VM compute/network bound.*
+
+Docker images with `torch` and `torch_xla` preinstalled in the `pytorch` conda
+environment are distributed under: `gcr.io/tpu-pytorch/xla`.
+
+2. SHH into the VM and pull the stable docker image into the VM:
+
+  ```Shell
+  (vm)$ docker pull gcr.io/tpu-pytorch/xla:r0.1
+  ```
+
+  Note we do also expose the following nightly docker image versions, but we recommend you use a stable version (`r0.1`):
+  * gcr.io/tpu-pytorch/xla:nightly
+  * gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (ex. gcr.io/tpu-pytorch/xla:nightly_20190531)
+
+  If you decide to consume this, be sure to create a TPU with `nightly` version.
+
+3. Where $TPU_IP_ADDRESS (ex. 10.1.1.2) is your TPU Internal IP displayed in GCP UI, after pulling the docker image you can either:
+
+* Run the container with a single command:
+  ```Shell
+  (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r0.1 python /pytorch/xla/test/test_train_mnist.py
+  ```
+
+* Run the script in an interactive shell:
+  ```Shell
+  (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r0.1
+  (pytorch) root@CONTAINERID:/$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
+  (pytorch) root@CONTAINERID:/$ python pytorch/xla/test/test_train_mnist.py
+  ```
+
+## Consume Prebuilt Compute VM Images
+
+1. Create a Compute VM with PyTorch/XLA Image.
+
+* In the GCP Console, go to the [**VM Instances**](https://console.cloud.google.com/compute/instances) page.
+* Click **Create Instance**.
+* Make sure the compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores to not be VM compute/network bound.
+* In the **Boot disk** section, click **Change** to chose our PyTorch/XLA image.
+* At the bottom of the **OS Images** tab select the **Debian GNU/Linux 9 Stretch
+  + PyTorch/XLA** image.
+* Chose an appropriate dist size based on your dataset and click **Select**.
+* Click **Create** to create the instance.
+
+
+2. SSH into VM and activate the conda environment you wish to use. Each release (ex. 0.1, nightly) is a seperate conda environment.
+
+  ```Shell
+  (vm)$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
+  (vm)$ conda env list
+  # conda environments:
+  #
+  base                  *  /anaconda3
+  pytorch-0.1              /anaconda3/envs/pytorch-0.1
+  pytorch-nightly          /anaconda3/envs/pytorch-nightly
+
+  (vm)$ source activate pytorch-0.1
+  (pytorch-0.1)$ cd /usr/share/torch-xla-0.1/pytorch/xla
+  (pytorch-0.1)$ python test/test_train_mnist.py
+  ```
+
+---
+
+# How To Build And Run PyTorch For TPU
 
 To build from source:
 
@@ -122,62 +197,6 @@ Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is 
 
 [![CircleCI](https://circleci.com/gh/pytorch/xla.svg?style=svg)](https://circleci.com/gh/pytorch/xla)
 
-
-
-# Using Pre Built Releases 
-
-## Pre Built Docker Images (recommended)
-
-Docker images with `torch` and `torch_xla` preinstalled in the `pytorch` conda
-environment are distributed under: `gcr.io/tpu-pytorch/xla`. This image has two type of tags which take the forms of:
-
-* gcr.io/tpu-pytorch/xla:nightly
-* gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (ex. gcr.io/tpu-pytorch/xla:nightly_20190531)
-
-With these images, for example, you can train mnist on TPUs by following these steps. First pull the distributed docker image:
-
-```Shell
-docker pull gcr.io/tpu-pytorch/xla:nightly
-```
-
-After pulling the image you can either:
-
-* Run the container with a command:
-```Shell
-docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;<IP of the TPU node>:8470" gcr.io/tpu-pytorch/xla:nightly python pytorch/xla/test/test_train_mnist.py
-```
-
-* Run the script in an interactive shell:
-```Shell
-docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:nightly
-(pytorch) root@CONTAINERID:/# export XRT_TPU_CONFIG="tpu_worker;0;<IP of the TPU node>:8470"
-(pytorch) root@CONTAINERID:/# python pytorch/xla/test/test_train_mnist.py
-```
-
-
-## Pre Built PyTorch TPU Wheels
-
-It is recommended to use Conda environments to isolate _PyTorch/TPU_ packages from the others.
-To install Anaconda follow the [instructions](https://docs.anaconda.com/anaconda/install/).
-Then create an environment dedicated to _PyTorch/TPU_ and activate it (activation should happen every time you want to work in such environment):
-
-```Shell
-conda create --name pytorch_tpu --clone base
-source activate pytorch_tpu
-```
-
-Install the _gsutil_ package to allow access to _GCS_ (Google Cloud Storage) following the [instructions](https://cloud.google.com/storage/docs/gsutil_install).
-
-Then run:
-
-```Shell
-scripts/update_torch_wheels.sh
-```
-
-The same script can be run again when you want to update the _PyTorch/TPU_ wheels.
-
-
-
 # Debugging
 
 Sometimes bad things happen and a deeper look into the _PyTorch/TPU_ stack is necessary.
@@ -268,4 +287,5 @@ only be enabled for debugging.
   On the versions of the TPU HW at the time of writing, 64bit integer computations are
   expensive, so setting this flag might help. It should be verified by the user that truncating
   to 32bit values is a valid operation according to the use of _PyTorch_ _Long_ values in it.
+
 
