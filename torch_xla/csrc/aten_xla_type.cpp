@@ -2743,7 +2743,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::thnn_conv2d_forward(
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
-AtenXlaType::thnn_conv_transpose2d_backward(
+AtenXlaType::conv_transpose2d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Tensor& weight, at::IntArrayRef kernel_size,
     at::IntArrayRef stride, at::IntArrayRef padding,
@@ -2752,7 +2752,7 @@ AtenXlaType::thnn_conv_transpose2d_backward(
     std::array<bool, 3> output_mask) {
   // Dilated or grouped transposed convolutions aren't lowered to XLA yet.
   if (IsNonTrivialPadding(output_padding) || IsNonTrivialDilation(dilation)) {
-    return AtenXlaTypeDefault::thnn_conv_transpose2d_backward(
+    return AtenXlaTypeDefault::conv_transpose2d_backward(
         grad_output, self, weight, kernel_size, stride, padding, output_padding,
         dilation, columns, ones, output_mask);
   }
@@ -2768,31 +2768,6 @@ AtenXlaType::thnn_conv_transpose2d_backward(
                      : undefined,
       output_mask[2] ? bridge::AtenFromXlaTensor(std::get<2>(gradients))
                      : undefined);
-}
-
-std::tuple<at::Tensor, at::Tensor, at::Tensor>
-AtenXlaType::thnn_conv_transpose2d_forward(
-    const at::Tensor& self, const at::Tensor& weight,
-    at::IntArrayRef kernel_size, const at::Tensor& bias, at::IntArrayRef stride,
-    at::IntArrayRef padding, at::IntArrayRef output_padding,
-    at::IntArrayRef dilation) {
-  // When there's dilation or output padding, PyTorch requires the result of
-  // im2col to be returned as well, which is why we can't let this fall through.
-  if (IsNonTrivialPadding(output_padding) || IsNonTrivialDilation(dilation)) {
-    return AtenXlaTypeDefault::thnn_conv_transpose2d_forward(
-        self, weight, kernel_size, bias, stride, padding, output_padding,
-        dilation);
-  }
-  at::Tensor undefined = at::empty({});
-  // TODO(asuhan): double check it's ok to return undefined for finput and
-  // fgrad_input.
-  return std::make_tuple(
-      conv_transpose2d(
-          /*input=*/self, /*weight=*/weight, /*bias=*/bias, /*stride=*/stride,
-          /*padding=*/padding,
-          /*output_padding=*/output_padding, /*groups=*/1,
-          /*dilation=*/dilation),
-      undefined, undefined);
 }
 
 at::Tensor AtenXlaType::threshold(const at::Tensor& self, at::Scalar threshold,
