@@ -1695,10 +1695,9 @@ void XLATensor::copy_(XLATensor& input, XLATensor& src) {
           ir::MakeNode<ir::ops::Cast>(src.GetIrValue(), input.dtype()));
     }
   } else {
-    // TODO: This can be optimized via proper XRT/XLA computation.
-    XLATensor new_tensor = XLATensor::Create(src.ToTensor(), input.GetDevice());
+    XLATensor new_tensor = src.CopyTensorToDevice(input.GetDevice());
     if (input.dtype() != src.dtype()) {
-      new_tensor = XLATensor::cast(new_tensor, input.dtype());
+      new_tensor.SetScalarType(input.dtype());
     }
     std::swap(input, new_tensor);
   }
@@ -2039,6 +2038,26 @@ XLATensor XLATensor::threshold_backward(const XLATensor& grad_output,
                                         float threshold) {
   return grad_output.CreateFrom(ir::MakeNode<ir::ops::ThresholdBackward>(
       grad_output.GetIrValue(), input.GetIrValue(), threshold));
+}
+
+XLATensor XLATensor::to(XLATensor& input, c10::optional<Device> device,
+                        c10::optional<at::ScalarType> scalar_type) {
+  if (!device) {
+    device = input.GetDevice();
+  }
+  if (!scalar_type) {
+    scalar_type = input.dtype();
+  }
+  if (input.GetDevice() == *device) {
+    return input.dtype() == *scalar_type
+               ? input.CreateFrom(input.GetIrValue())
+               : input.CreateFrom(input.GetIrValue(), *scalar_type);
+  }
+  XLATensor new_tensor = input.CopyTensorToDevice(*device);
+  if (input.dtype() != *scalar_type) {
+    new_tensor.SetScalarType(*scalar_type);
+  }
+  return new_tensor;
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::topk(const XLATensor& input,

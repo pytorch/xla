@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector>
-
 #include <ATen/Device.h>
 #include <ATen/Functions.h>
 #include <ATen/Tensor.h>
 #include <ATen/Type.h>
+
+#include <vector>
 
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/device.h"
@@ -56,6 +56,9 @@ c10::Device XlaDeviceToAtenDevice(const Device& device);
 std::string ToXlaString(const c10::Device& device);
 
 c10::Device AtenDefaultDevice();
+
+at::Tensor XlaToAtenTensor(XLATensor xla_tensor,
+                           const at::TensorOptions& tensor_options);
 
 // Creates an ATen tensor with XLA type id from an XLATensor.
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor);
