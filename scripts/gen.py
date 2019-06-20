@@ -161,7 +161,7 @@ _TYPE_NSMAP = {
     'TensorOptions': 'at::TensorOptions',
     'SparseTensorRef': 'at::SparseTensorRef',
     'Device': 'c10::Device',
-    'optional': 'at::optional',
+    'optional': 'c10::optional',
     'MemoryFormat': 'at::MemoryFormat',
     'QScheme': 'at::QScheme',
     'ConstQuantizerPtr': 'at::ConstQuantizerPtr',
@@ -215,7 +215,6 @@ _CTOR_FUNCTIONS = {
     'randint': '.device(at::DeviceType::CPU)',
     'randperm': '.device(at::DeviceType::CPU)',
     'scalar_tensor': '.device(at::DeviceType::CPU)',
-    'to': '.device(at::DeviceType::CPU)',
 }
 
 _FUNCTION_OPTIONS = {
@@ -865,6 +864,7 @@ def get_xla_wrapper(fndef, ctx):
 
 def is_tensor_api(fndef):
   fndef = fndef.replace('at::', '')
+  fndef = fndef.replace('c10::Device', 'Device')
   m = re.search(r'\bTensor\b', fndef)
   return m is not None, fndef
 
