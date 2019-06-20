@@ -837,6 +837,9 @@ class XLATensor {
   static XLATensor threshold_backward(const XLATensor& grad_output,
                                       const XLATensor& input, float threshold);
 
+  static XLATensor to(XLATensor& input, c10::optional<Device> device,
+                      c10::optional<at::ScalarType> scalar_type);
+
   static std::tuple<XLATensor, XLATensor> topk(const XLATensor& input,
                                                xla::int64 k, xla::int64 dim,
                                                bool largest, bool sorted);
@@ -1008,6 +1011,8 @@ class XLATensor {
 
   std::shared_ptr<View> CreateView(ViewInfo view_info) const;
   XLATensor CreateViewTensor(ViewInfo view_info) const;
+
+  XLATensor CopyTensorToDevice(const Device& device);
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.

@@ -1058,6 +1058,15 @@ class AtenXlaType {
                                        const at::Tensor& self,
                                        at::Scalar threshold);
 
+  static at::Tensor to(const at::Tensor& self, const at::TensorOptions& options,
+                       bool non_blocking, bool copy);
+  static at::Tensor to(const at::Tensor& self, c10::Device device,
+                       at::ScalarType dtype, bool non_blocking, bool copy);
+  static at::Tensor to(const at::Tensor& self, at::ScalarType dtype,
+                       bool non_blocking, bool copy);
+  static at::Tensor to(const at::Tensor& self, const at::Tensor& other,
+                       bool non_blocking, bool copy);
+
   static std::tuple<at::Tensor, at::Tensor> topk(const at::Tensor& self,
                                                  int64_t k, int64_t dim,
                                                  bool largest, bool sorted);

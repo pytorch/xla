@@ -23,8 +23,9 @@ namespace {
 
 struct XlaOptions {
   XlaOptions(const at::TensorOptions& options,
-             c10::optional<Device> device_opt = c10::nullopt)
-      : device(std::move(device_opt)) {
+             c10::optional<Device> device_opt = c10::nullopt,
+             c10::optional<at::ScalarType> scalar_type_opt = c10::nullopt)
+      : device(std::move(device_opt)), scalar_type(std::move(scalar_type_opt)) {
     if (options.has_device()) {
       device = bridge::AtenDeviceToXlaDevice(options.device());
     }
@@ -2790,6 +2791,34 @@ at::Tensor AtenXlaType::threshold_backward(const at::Tensor& grad_output,
   return bridge::AtenFromXlaTensor(XLATensor::threshold_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       threshold.to<double>()));
+}
+
+at::Tensor AtenXlaType::to(const at::Tensor& self,
+                           const at::TensorOptions& options,
+                           bool /* non_blocking */, bool /* copy */) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  if (options.has_device() && options.device().type() != at::kXLA) {
+    return bridge::XlaToAtenTensor(self_tensor, options);
+  }
+  XlaOptions xla_options(options, self_tensor.GetDevice(), self_tensor.dtype());
+  return bridge::AtenFromXlaTensor(
+      XLATensor::to(self_tensor, xla_options.device, xla_options.scalar_type));
+}
+
+at::Tensor AtenXlaType::to(const at::Tensor& self, c10::Device device,
+                           at::ScalarType dtype, bool non_blocking, bool copy) {
+  return to(self, self.options().device(device).dtype(dtype), non_blocking,
+            copy);
+}
+
+at::Tensor AtenXlaType::to(const at::Tensor& self, at::ScalarType dtype,
+                           bool non_blocking, bool copy) {
+  return to(self, self.options().dtype(dtype), non_blocking, copy);
+}
+
+at::Tensor AtenXlaType::to(const at::Tensor& self, const at::Tensor& other,
+                           bool non_blocking, bool copy) {
+  return to(self, other.options(), non_blocking, copy);
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::topk(const at::Tensor& self,

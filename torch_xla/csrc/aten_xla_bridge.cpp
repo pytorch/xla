@@ -181,6 +181,18 @@ c10::Device AtenDefaultDevice() {
   return XlaDeviceToAtenDevice(*GetDefaultDevice());
 }
 
+at::Tensor XlaToAtenTensor(XLATensor xla_tensor,
+                           const at::TensorOptions& tensor_options) {
+  if (tensor_options.has_device()) {
+    XLA_CHECK_NE(tensor_options.device().type(), at::kXLA);
+  }
+  at::Tensor tensor = xla_tensor.ToTensor();
+  // We need to copy the tensor since it is cached within the XLATensor, and
+  // returning it directly might expose it to in place changes. Which there was
+  // COW option :)
+  return tensor.to(tensor_options, /*non_blocking=*/false, /*copy=*/true);
+}
+
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor) {
   return at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
 }

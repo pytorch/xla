@@ -922,6 +922,11 @@ std::vector<XLATensor> XLATensor::MakeOutputTensors(ir::NodePtr node) const {
   return tensors;
 }
 
+XLATensor XLATensor::CopyTensorToDevice(const Device& device) {
+  // TODO: This can be optimized via proper XRT/XLA computation.
+  return Create(ToTensor(), device);
+}
+
 XLATensor XLATensor::CreateFrom(ir::Value ir_value) const {
   return Create(std::move(ir_value), GetDevice(), dtype());
 }
