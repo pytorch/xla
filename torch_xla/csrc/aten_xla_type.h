@@ -1039,13 +1039,14 @@ class AtenXlaType {
       at::IntArrayRef stride, at::IntArrayRef padding);
 
   static std::tuple<at::Tensor, at::Tensor, at::Tensor>
-  conv_transpose2d_backward(
-      const at::Tensor& grad_output, const at::Tensor& self,
-      const at::Tensor& weight, at::IntArrayRef kernel_size,
-      at::IntArrayRef stride, at::IntArrayRef padding,
-      at::IntArrayRef output_padding, at::IntArrayRef dilation,
-      const at::Tensor& columns, const at::Tensor& ones,
-      std::array<bool, 3> output_mask);
+  conv_transpose2d_backward(const at::Tensor& grad_output,
+                            const at::Tensor& self, const at::Tensor& weight,
+                            at::IntArrayRef kernel_size, at::IntArrayRef stride,
+                            at::IntArrayRef padding,
+                            at::IntArrayRef output_padding,
+                            at::IntArrayRef dilation, const at::Tensor& columns,
+                            const at::Tensor& ones,
+                            std::array<bool, 3> output_mask);
 
   static at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
                               at::Scalar value);
