@@ -73,6 +73,13 @@ environment are distributed under: `gcr.io/tpu-pytorch/xla`.
   (pytorch-0.1)$ python test/test_train_mnist.py
   ```
 
+  To update the wheels `torch` and `torch_xla` to the latest nightly
+  distribution (only updates your pytorch-nightly conda env), run:
+  ```Shell
+  (vm)$ cd /usr/share/torch-xla-nightly/pytorch/xla
+  (vm)$ ./scripts/update_nightly_torch_wheels.sh
+  ```
+
 ---
 
 # How To Build And Run PyTorch For TPU
