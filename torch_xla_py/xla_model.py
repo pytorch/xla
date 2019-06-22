@@ -80,7 +80,12 @@ def xla_device(n=None, devkind=None):
   if n is None:
     devices = get_xla_supported_devices(devkind=devkind)
     assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
-    return torch.device(devices[0])
+    # This is a utility API mainly called from tests or simple code which wants
+    # to just have a single device to run on. Set the default device so that
+    # the tensor barrier can work correctly and avoid growing graphs surprises.
+    device = devices[0]
+    torch_xla._XLAC._xla_set_default_device(device)
+    return torch.device(device)
   return torch.device('xla:{}'.format(n))
 
 
