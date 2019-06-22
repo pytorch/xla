@@ -59,12 +59,13 @@ function install_and_setup_conda() {
 }
 
 function build_and_install_torch() {
-  git submodule update --init --recursive
   # Checkout the PT commit ID if we have one.
   COMMITID_FILE="xla/.torch_commit_id"
   if [ -e "$COMMITID_FILE" ]; then
     git checkout $(cat "$COMMITID_FILE")
   fi
+  # Only checkout dependencies once PT commit ID checked out.
+  git submodule update --init --recursive
   # Apply patches to PT which are required by the XLA support.
   xla/scripts/apply_patches.sh
   export NO_CUDA=1 NO_MKLDNN=1

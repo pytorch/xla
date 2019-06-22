@@ -10,25 +10,31 @@ function run_deployment_tests() {
 }
 
 function collect_wheels() {
+  release_version=$1
+  wheel_version="${release_version}"
+  if [ "${release_version}" != "nightly" ]; then
+    wheel_version=$( echo "${release_version}" | grep -oP '\d+.\d+' )
+  fi
+
   mkdir /tmp/staging-wheels
 
   pushd /tmp/staging-wheels
   cp /pytorch/dist/*.whl .
-  rename -v "s/torch-.*\+\w{7}/torch-nightly/" *.whl
+  rename -v "s/torch-.*\+\w{7}/torch-${wheel_version}/" *.whl
   popd
   mv /tmp/staging-wheels/* .
   pushd /tmp/staging-wheels
   cp /pytorch/xla/dist/*.whl .
-  rename -v "s/torch_xla-.*\+\w{7}/torch_xla-nightly/" *.whl
+  rename -v "s/torch_xla-.*\+\w{7}/torch_xla-${wheel_version}/" *.whl
   popd
   mv /tmp/staging-wheels/* .
   rm -rf /tmp/staging-wheels
 
   pushd /pytorch/dist
-  rename -v "s/^torch/torch-$(date -u +%Y%m%d)/" *.whl
+  rename -v "s/^torch/torch-${wheel_version}+$(date -u +%Y%m%d)/" *.whl
   popd
   pushd /pytorch/xla/dist
-  rename -v "s/^torch_xla/torch_xla-$(date -u +%Y%m%d)/" *.whl
+  rename -v "s/^torch_xla/torch_xla-${wheel_version}+$(date -u +%Y%m%d)/" *.whl
   popd
   cp /pytorch/dist/*.whl ./ && cp /pytorch/xla/dist/*.whl ./
 }
