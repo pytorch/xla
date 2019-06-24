@@ -4,81 +4,80 @@ First, create your [TPU](https://pantheon.corp.google.com/compute/tpus) node wit
 
 Once you've created a Cloud TPU node, you can train your PyTorch models by either:
 
-* [Consume pre-built docker images (*recommended*)](#consume-prebuilt-docker-images)
-* [Consume pre-built Compute VM Images](#consume-prebuilt-compute-vm-images)
+* [Consuming prebuilt docker images (*recommended*)](#consume-prebuilt-docker-images)
+* [Consuming prebuilt Compute VM Images](#consume-prebuilt-compute-vm-images)
 
 ## Consume Prebuilt Docker Images
 
-Follow these steps to train PyTorch model with Docker on a TPU:
+Follow these steps to train a PyTorch model with Docker on a TPU:
 
 1. Create a Compute VM and install docker (or use COS VM image)
-* *Note: make sure the compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores to not be VM compute/network bound.*
+    * *Note: make sure the Compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores to not be VM compute/network bound.*
 
-Docker images with `torch` and `torch_xla` preinstalled in the `pytorch` conda
-environment are distributed under: `gcr.io/tpu-pytorch/xla`.
+    Docker images with `torch` and `torch_xla` preinstalled in the `pytorch` conda
+    environment are distributed under: `gcr.io/tpu-pytorch/xla`.
 
-2. SHH into the VM and pull the stable docker image into the VM:
+2. SSH into the VM and pull the stable docker image into the VM:
 
-  ```Shell
-  (vm)$ docker pull gcr.io/tpu-pytorch/xla:r0.1
-  ```
+    ```Shell
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r0.1
+    ```
 
-  Note we do also expose the following nightly docker image versions, but we recommend you use a stable version (`r0.1`):
-  * gcr.io/tpu-pytorch/xla:nightly
-  * gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (ex. gcr.io/tpu-pytorch/xla:nightly_20190531)
+    Note we do also expose the following nightly Docker image versions, but we recommend you use a stable version (`r0.1`):
+    * `gcr.io/tpu-pytorch/xla:nightly`
+    * `gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_20190531)`
 
-  If you decide to consume this, be sure to create a TPU with `nightly` version.
+    If you decide to consume this, be sure to create a TPU with `nightly` version.
 
-3. Where $TPU_IP_ADDRESS (ex. 10.1.1.2) is your TPU Internal IP displayed in GCP UI, after pulling the docker image you can either:
+3. Where `$TPU_IP_ADDRESS` (e.g.: `10.1.1.2`) is your TPU Internal IP displayed in GCP UI, after pulling the docker image you can either:
 
-* Run the container with a single command:
-  ```Shell
-  (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r0.1 python /pytorch/xla/test/test_train_mnist.py
-  ```
+    * Run the container with a single command:
+      ```Shell
+      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r0.1 python /pytorch/xla/test/test_train_mnist.py
+      ```
 
-* Run the script in an interactive shell:
-  ```Shell
-  (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r0.1
-  (pytorch) root@CONTAINERID:/$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
-  (pytorch) root@CONTAINERID:/$ python pytorch/xla/test/test_train_mnist.py
-  ```
+    * Run the script in an interactive shell:
+      ```Shell
+      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r0.1
+      (pytorch) root@CONTAINERID:/$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
+      (pytorch) root@CONTAINERID:/$ python pytorch/xla/test/test_train_mnist.py
+      ```
 
 ## Consume Prebuilt Compute VM Images
 
 1. Create a Compute VM with PyTorch/XLA Image.
 
-* In the GCP Console, go to the [**VM Instances**](https://console.cloud.google.com/compute/instances) page.
-* Click **Create Instance**.
-* Make sure the compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores to not be VM compute/network bound.
-* In the **Boot disk** section, click **Change** to chose our PyTorch/XLA image.
-* At the bottom of the **OS Images** tab select the **Debian GNU/Linux 9 Stretch
-  + PyTorch/XLA** image.
-* Chose an appropriate dist size based on your dataset and click **Select**.
-* Click **Create** to create the instance.
+    * In the GCP Console, go to the [**VM Instances**](https://console.cloud.google.com/compute/instances) page.
+    * Click **Create Instance**.
+    * Make sure the compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores to not be VM compute/network bound.
+    * In the **Boot disk** section, click **Change** to choose our PyTorch/XLA image.
+    * At the bottom of the **OS Images** tab select the **Debian GNU/Linux 9 Stretch + PyTorch/XLA** image.
+    * Chose an appropriate dist size based on your dataset and click **Select**.
+    * Click **Create** to create the instance.
 
 
-2. SSH into VM and activate the conda environment you wish to use. Each release (ex. 0.1, nightly) is a seperate conda environment.
+2. SSH into VM and activate the conda environment you wish to use. Each release (e.g.: `0.1`, `nightly`) is a separate conda environment.
 
-  ```Shell
-  (vm)$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
-  (vm)$ conda env list
-  # conda environments:
-  #
-  base                  *  /anaconda3
-  pytorch-0.1              /anaconda3/envs/pytorch-0.1
-  pytorch-nightly          /anaconda3/envs/pytorch-nightly
+    ```Shell
+    (vm)$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
+    (vm)$ conda env list
+    # conda environments:
+    #
+    base                  *  /anaconda3
+    pytorch-0.1              /anaconda3/envs/pytorch-0.1
+    pytorch-nightly          /anaconda3/envs/pytorch-nightly
 
-  (vm)$ source activate pytorch-0.1
-  (pytorch-0.1)$ cd /usr/share/torch-xla-0.1/pytorch/xla
-  (pytorch-0.1)$ python test/test_train_mnist.py
-  ```
+    (vm)$ source activate pytorch-0.1
+    (pytorch-0.1)$ cd /usr/share/torch-xla-0.1/pytorch/xla
+    (pytorch-0.1)$ python test/test_train_mnist.py
+    ```
 
-  To update the wheels `torch` and `torch_xla` to the latest nightly
-  distribution (only updates your pytorch-nightly conda env), run:
-  ```Shell
-  (vm)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-  (vm)$ ./scripts/update_nightly_torch_wheels.sh
-  ```
+    To update the wheels `torch` and `torch_xla` to the latest nightly
+    distribution (only updates your pytorch-nightly conda env), run:
+    ```Shell
+    (vm)$ cd /usr/share/torch-xla-nightly/pytorch/xla
+    (vm)$ ./scripts/update_nightly_torch_wheels.sh
+    ```
 
 ---
 
