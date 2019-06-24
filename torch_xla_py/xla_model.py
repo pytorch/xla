@@ -127,13 +127,6 @@ def xla_replication_devices(local_devices):
   return replication_devices
 
 
-class OptimizerState(object):
-
-  def __init__(self):
-    self.tensors = []
-    self.gradients = []
-
-
 class RateTracker(object):
 
   def __init__(self, smooth_factor=0.8):
@@ -313,31 +306,18 @@ def get_log_fn(logdir=None, custom_log_fn=print):
   return log_fn
 
 
-def _fetch_optimizer_state(optimizer):
-
-  def add(p, state):
-    if isinstance(p, torch.Tensor):
-      state.tensors.append(p.data)
-      if p.grad is not None:
-        state.gradients.append(p.grad.data)
-    elif isinstance(p, dict):
-      for k, v in p.items():
-        add(k, state)
-        add(v, state)
-    elif isinstance(p, (list, tuple, set)):
-      for x in p:
-        add(x, state)
-
-  state = OptimizerState()
-  add(optimizer.__getstate__(), state)
-  return state
+def _fetch_gradients(optimizer):
+  gradients = []
+  for param_group in optimizer.__getstate__()['param_groups']:
+    for group, params in param_group.items():
+      if group == 'params':
+        for p in params:
+          if isinstance(p, torch.Tensor) and p.grad is not None:
+            gradients.append(p.grad.data)
+  return gradients
 
 
-def _mark_step(state, replication):
-  save_dir = os.environ.get('SAVE_GRAPH_DIR', None)
-  if save_dir:
-    gs.save_tensors_graph(save_dir, 'optimizer_step',
-                          state.gradients + state.tensors)
+def _mark_step(replication):
   devices = []
   if replication:
     replication.enter()
@@ -348,10 +328,10 @@ def _mark_step(state, replication):
 
 def optimizer_step(optimizer, closure=None):
   replication = getattr(_TLS, 'replication', None)
-  state = _fetch_optimizer_state(optimizer)
+  gradients = _fetch_gradients(optimizer)
   count = len(replication.replication_devices()) if replication else 1
   if count > 1:
-    torch_xla._XLAC._xla_cross_replica_sum(state.gradients, 1.0 / count, [])
+    torch_xla._XLAC._xla_cross_replica_sum(gradients, 1.0 / count, [])
   loss = optimizer.step(closure=closure)
-  _mark_step(state, replication)
+  _mark_step(replication)
   return loss
