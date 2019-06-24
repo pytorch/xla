@@ -162,6 +162,11 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
   return ss.str();
 }
 
+xla::int64 GetTensorId(const at::Tensor& tensor) {
+  XLATensor xtensor = bridge::GetXlaTensor(ToTensor(tensor));
+  return xtensor.GetUniqueId();
+}
+
 std::vector<at::Tensor> GetXlaTensorsFromAten(
     const std::vector<at::Tensor>& aten_tensors,
     const std::vector<std::string>& devices) {
@@ -234,6 +239,8 @@ void InitXlaModuleBindings(py::module m) {
     }
     return xla_devices;
   });
+  m.def("_xla_get_tensor_id",
+        [](const at::Tensor& tensor) { return GetTensorId(tensor); });
   m.def("_xla_cross_replica_sum", [](const std::vector<at::Tensor>& tensors,
                                      double scale, const py::list& groups) {
     NoGilSection nogil;

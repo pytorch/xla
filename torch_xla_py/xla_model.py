@@ -130,8 +130,26 @@ def xla_replication_devices(local_devices):
 class OptimizerState(object):
 
   def __init__(self):
+    self.tensors_set = set()
     self.tensors = []
+    self.gradients_set = set()
     self.gradients = []
+
+  def add_tensor(self, t):
+    uid = torch_xla._XLAC._xla_get_tensor_id(t)
+    if uid in self.tensors_set:
+      return False
+    self.tensors_set.add(uid)
+    self.tensors.append(t)
+    return True
+
+  def add_gradient(self, t):
+    uid = torch_xla._XLAC._xla_get_tensor_id(t)
+    if uid in self.gradients_set:
+      return False
+    self.gradients_set.add(uid)
+    self.gradients.append(t)
+    return True
 
 
 class RateTracker(object):
@@ -317,9 +335,9 @@ def _fetch_optimizer_state(optimizer):
 
   def add(p, state):
     if isinstance(p, torch.Tensor):
-      state.tensors.append(p.data)
+      state.add_tensor(p.data)
       if p.grad is not None:
-        state.gradients.append(p.grad.data)
+        state.add_gradient(p.grad.data)
     elif isinstance(p, dict):
       for k, v in p.items():
         add(k, state)
