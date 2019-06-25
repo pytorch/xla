@@ -14,7 +14,7 @@ at::Tensor CopyTensor(const at::Tensor& ref, at::ScalarType dest_type) {
 
 at::Tensor ToTensor(const at::Tensor& tensor) {
   return tensor.is_variable()
-             ? torch::autograd::as_variable_ref(tensor).tensor_data()
+             ? torch::autograd::as_variable_ref(tensor).variable_data()
              : tensor;
 }
 
