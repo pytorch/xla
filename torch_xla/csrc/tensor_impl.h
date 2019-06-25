@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ATen/Tensor.h>
-#include <ATen/Type.h>
 #include <c10/core/Storage.h>
 #include <c10/core/TensorImpl.h>
 
