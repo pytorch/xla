@@ -3,7 +3,6 @@
 #include <ATen/Device.h>
 #include <ATen/Functions.h>
 #include <ATen/Tensor.h>
-#include <ATen/Type.h>
 
 #include <vector>
 
