@@ -179,12 +179,17 @@ class DataParallel(object):
       self._models.append(device_module)
     if not self._models:
       # No XLA device, push a vanilla network in.
-      self._models.append(network())
+      self._models.append(network)
+      self._device_ids.append(self._get_model_device(network))
 
   def _get_model_device(self, model):
+    devices = set()
     for p in model.parameters():
-      return p.device
-    return torch.device('cpu')
+      return devices.add(str(p.device))
+    if len(devices) > 1:
+      raise RuntimeError('Model uses more than one device: {}'.format(
+          list(devices)))
+    return devices.pop() if devices else 'cpu'
 
   def _handle_runner_exception(self, device, e):
     print(
@@ -208,11 +213,11 @@ class DataParallel(object):
 
   def __call__(self, loop_fn, loader):
     context = dict()
-    if not self._device_ids:
+    if self._replication is None:
       ## This is called without XLA devices available. Run in normal mode.
       return [
           loop_fn(self._models[0], enumerate(loader),
-                  self._get_model_device(self._models[0]), context)
+                  torch.device(self._device_ids[0]), context)
       ]
 
     para_loader = ParallelLoader(
