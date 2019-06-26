@@ -183,9 +183,7 @@ class DataParallel(object):
       self._device_ids.append(self._get_model_device(network))
 
   def _get_model_device(self, model):
-    devices = set()
-    for p in model.parameters():
-      return devices.add(str(p.device))
+    devices = {str(p.device) for p in model.parameters()}
     if len(devices) > 1:
       raise RuntimeError('Model uses more than one device: {}'.format(
           list(devices)))
