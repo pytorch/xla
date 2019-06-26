@@ -182,15 +182,6 @@ class XlaTestCase(TestCase):
           max_diff_count=FLAGS.max_diff_count)
       raise
 
-  def compareReplicated(self, model, inputs, xla_outputs):
-    self.assertEqual(len(inputs), len(xla_outputs))
-    for i, input in enumerate(inputs):
-      expected = xu.as_list(model(*input))
-      xla_output = xu.as_list(xla_outputs[i])
-      self.assertEqual(len(expected), len(xla_output))
-      for j, expected_tensor in enumerate(expected):
-        self.assertEqualDbg(xla_output[j], expected_tensor)
-
   def makeComparable(self, value):
     if isinstance(value, torch.Tensor):
       if xm.is_xla_tensor(value.data):
