@@ -166,6 +166,7 @@ class DataParallel(object):
     self._device_ids = list(device_ids)
     self._batchdim = batchdim
     self._drop_last = drop_last
+    self._native_run = False
     replication_devices = (
         xm.xla_replication_devices(self._device_ids)
         if self._device_ids else None)
@@ -181,6 +182,7 @@ class DataParallel(object):
       # No XLA device, push a vanilla network in.
       self._models.append(network)
       self._device_ids.append(self._get_model_device(network))
+      self._native_run = True
 
   def _get_model_device(self, model):
     devices = {str(p.device) for p in model.parameters()}
@@ -211,7 +213,7 @@ class DataParallel(object):
 
   def __call__(self, loop_fn, loader):
     context = dict()
-    if self._replication is None:
+    if self._native_run:
       ## This is called without XLA devices available. Run in normal mode.
       return [
           loop_fn(self._models[0], enumerate(loader),
