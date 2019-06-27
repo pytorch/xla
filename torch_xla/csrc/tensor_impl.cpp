@@ -59,7 +59,7 @@ c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach(
     const c10::VariableVersion& version_counter,
     bool allow_tensor_metadata_change) const {
   auto impl = c10::make_intrusive<XLATensorImpl>(tensor_);
-  copy_tensor_data(
+  copy_tensor_metadata(
       /*src_impl=*/this,
       /*dest_impl=*/impl.get(),
       /*version_counter=*/version_counter,
@@ -70,7 +70,7 @@ c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach(
 void XLATensorImpl::shallow_copy_from(
     const c10::intrusive_ptr<TensorImpl>& impl) {
   XLATensorImpl* xla_impl = dynamic_cast<XLATensorImpl*>(impl.get());
-  copy_tensor_data(
+  copy_tensor_metadata(
       /*src_impl=*/xla_impl,
       /*dest_impl=*/this,
       /*version_counter=*/version_counter(),

@@ -557,7 +557,8 @@ class XLATensor {
                                         const XLATensor& input,
                                         const XLATensor& buffer);
 
-  static XLATensor log_softmax(const XLATensor& input, xla::int64 dim);
+  static XLATensor log_softmax(const XLATensor& input, xla::int64 dim,
+                               c10::optional<at::ScalarType> dtype);
 
   static XLATensor log_softmax_backward(const XLATensor& grad_output,
                                         const XLATensor& output,
@@ -763,7 +764,8 @@ class XLATensor {
                                            const XLATensor& target,
                                            xla::int64 reduction);
 
-  static XLATensor softmax(const XLATensor& input, xla::int64 dim);
+  static XLATensor softmax(const XLATensor& input, xla::int64 dim,
+                           c10::optional<at::ScalarType> dtype);
   static XLATensor softmax_backward(const XLATensor& grad_output,
                                     const XLATensor& output, xla::int64 dim);
 
