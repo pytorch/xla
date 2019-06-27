@@ -1259,10 +1259,13 @@ XLATensor XLATensor::log_sigmoid_backward(const XLATensor& grad_output,
       grad_output.GetIrValue(), input.GetIrValue(), buffer.GetIrValue()));
 }
 
-XLATensor XLATensor::log_softmax(const XLATensor& input, xla::int64 dim, c10::optional<at::ScalarType> dtype) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::LogSoftmax>(
-      input.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank()), dtype),
+XLATensor XLATensor::log_softmax(const XLATensor& input, xla::int64 dim,
+                                 c10::optional<at::ScalarType> dtype) {
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::LogSoftmax>(input.GetIrValue(),
+                                        XlaHelpers::GetCanonicalDimensionIndex(
+                                            dim, input.shape().get().rank()),
+                                        dtype),
       dtype);
 }
 
@@ -1822,10 +1825,13 @@ XLATensor XLATensor::smooth_l1_loss_backward(const XLATensor& grad_output,
                                           reduction);
 }
 
-XLATensor XLATensor::softmax(const XLATensor& input, xla::int64 dim, c10::optional<at::ScalarType> dtype) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::Softmax>(
-      input.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank()), dtype),
+XLATensor XLATensor::softmax(const XLATensor& input, xla::int64 dim,
+                             c10::optional<at::ScalarType> dtype) {
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::Softmax>(input.GetIrValue(),
+                                     XlaHelpers::GetCanonicalDimensionIndex(
+                                         dim, input.shape().get().rank()),
+                                     dtype),
       dtype);
 }
 
