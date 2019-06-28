@@ -583,6 +583,11 @@ class TestAtenXlaTensor(XlaTestCase):
     finally:
       os.remove(x_file)
 
+  def test_print(self):
+    xla_device = xm.xla_device()
+    x = torch.tensor([5], device=xla_device)
+    expected_str = 'tensor([5], device=\'' + str(xla_device) + '\')'
+    self.assertExpectedInline(str(x), expected_str)
 
 class MNISTComparator(nn.Module):
 
