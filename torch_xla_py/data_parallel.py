@@ -202,9 +202,8 @@ class DataParallel(object):
     xm.set_replication(self._replication)
     try:
       result.result = loop_fn(module, loader, torch.device(device), context)
-    except Exception as e:
-      result.result = e
-      self._handle_runner_exception(device, e)
+    except:
+      self._handle_runner_exception(device, traceback.format_exc())
 
   def __call__(self, loop_fn, loader):
     context = dict()
