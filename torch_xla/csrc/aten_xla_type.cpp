@@ -978,16 +978,17 @@ at::Tensor AtenXlaType::dot(const at::Tensor& self, const at::Tensor& tensor) {
   return matmul(self, tensor);
 }
 
-at::Tensor AtenXlaType::dropout(const at::Tensor& input, double p,
-                                bool /* train */) {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::dropout(bridge::GetXlaTensor(input), p));
+at::Tensor AtenXlaType::dropout(const at::Tensor& input, double p, bool train) {
+  return train ? bridge::AtenFromXlaTensor(
+                     XLATensor::dropout(bridge::GetXlaTensor(input), p))
+               : input;
 }
 
-at::Tensor& AtenXlaType::dropout_(at::Tensor& self, double p,
-                                  bool /* train */) {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::dropout_(self_tensor, p);
+at::Tensor& AtenXlaType::dropout_(at::Tensor& self, double p, bool train) {
+  if (train) {
+    XLATensor self_tensor = bridge::GetXlaTensor(self);
+    XLATensor::dropout_(self_tensor, p);
+  }
   return self;
 }
 
