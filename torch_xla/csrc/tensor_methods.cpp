@@ -23,7 +23,6 @@
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
-#include "torch_xla/csrc/ops/batch_norm_forward.h"
 #include "torch_xla/csrc/ops/bitwise_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/cat.h"
@@ -53,6 +52,7 @@
 #include "torch_xla/csrc/ops/kth_value.h"
 #include "torch_xla/csrc/ops/leaky_relu.h"
 #include "torch_xla/csrc/ops/leaky_relu_backward.h"
+#include "torch_xla/csrc/ops/linear_interpolation.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
 #include "torch_xla/csrc/ops/max_in_dim.h"
@@ -540,18 +540,6 @@ XLATensor XLATensor::avg_pool_nd_backward(
       out_backprop.GetIrValue(), input.GetIrValue(), spatial_dim_count,
       std::move(kernel_size), std::move(stride), std::move(padding), ceil_mode,
       count_include_pad));
-}
-
-XLATensor XLATensor::batch_norm(const XLATensor& input, const XLATensor& weight,
-                                const XLATensor& bias, double momentum,
-                                double eps) {
-  xla::Shape features_shape = BatchNormFeaturesShape(input);
-  ir::Value weight_value =
-      GetIrValueOrDefault(weight, 1, features_shape, input.GetDevice());
-  ir::Value bias_value =
-      GetIrValueOrDefault(bias, 0, features_shape, input.GetDevice());
-  return input.CreateFrom(ir::MakeNode<ir::ops::BatchNormForward>(
-      input.GetIrValue(), weight_value, bias_value, momentum, eps));
 }
 
 XLATensor XLATensor::bernoulli(const XLATensor& input, double probability) {
@@ -1466,31 +1454,51 @@ XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
 
 std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
     const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
+    XLATensor& running_mean, XLATensor& running_var, bool training,
     double momentum, double eps) {
   xla::Shape features_shape = BatchNormFeaturesShape(input);
   ir::Value weight_value =
       GetIrValueOrDefault(weight, 1, features_shape, input.GetDevice());
   ir::Value bias_value =
       GetIrValueOrDefault(bias, 0, features_shape, input.GetDevice());
+  ir::Value running_mean_value =
+      GetIrValueOrDefault(running_mean, 0, features_shape, input.GetDevice());
+  ir::Value running_var_value =
+      GetIrValueOrDefault(running_var, 1, features_shape, input.GetDevice());
   ir::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormForward>(
-      input.GetIrValue(), weight_value, bias_value, momentum, eps);
+      input.GetIrValue(), weight_value, bias_value, running_mean_value,
+      running_var_value, training, eps);
   XLATensor output = input.CreateFrom(ir::Value(node, 0));
-  XLATensor save_mean = input.CreateFrom(ir::Value(node, 1));
-  XLATensor save_invstd = input.CreateFrom(ir::Value(node, 2));
-  return std::make_tuple(std::move(output), std::move(save_mean),
-                         std::move(save_invstd));
+  XLATensor mean = input.CreateFrom(ir::Value(node, 1));
+  if (training) {
+    XLATensor variance = input.CreateFrom(ir::Value(node, 2));
+    if (!running_mean.is_null()) {
+      running_mean.SetIrValue(ir::MakeNode<ir::ops::LinearInterpolation>(
+          mean.GetIrValue(), running_mean.GetIrValue(), momentum));
+    }
+    if (!running_var.is_null()) {
+      running_var.SetIrValue(ir::MakeNode<ir::ops::LinearInterpolation>(
+          variance.GetIrValue(), running_var.GetIrValue(), momentum));
+    }
+  }
+  XLATensor variance_inverse = input.CreateFrom(ir::Value(node, 3));
+  return std::make_tuple(std::move(output), std::move(mean),
+                         std::move(variance_inverse));
 }
 
 std::tuple<XLATensor, XLATensor, XLATensor>
 XLATensor::native_batch_norm_backward(
     const XLATensor& grad_out, const XLATensor& input, const XLATensor& weight,
-    const XLATensor& save_mean, const XLATensor& save_invstd, double eps) {
+    const XLATensor& running_mean, const XLATensor& running_var,
+    const XLATensor& save_mean, const XLATensor& save_invstd, bool training,
+    double eps) {
   xla::Shape features_shape = BatchNormFeaturesShape(input);
   ir::Value weight_value =
       GetIrValueOrDefault(weight, 1, features_shape, input.GetDevice());
   ir::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormBackward>(
       grad_out.GetIrValue(), input.GetIrValue(), weight_value,
-      save_mean.GetIrValue(), save_invstd.GetIrValue(), eps);
+      running_mean.GetIrValue(), running_var.GetIrValue(),
+      save_mean.GetIrValue(), save_invstd.GetIrValue(), training, eps);
   XLATensor grad_input = input.CreateFrom(ir::Value(node, 0));
   XLATensor grad_weight = input.CreateFrom(ir::Value(node, 1));
   XLATensor grad_bias = input.CreateFrom(ir::Value(node, 2));

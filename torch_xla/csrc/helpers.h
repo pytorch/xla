@@ -75,6 +75,11 @@ class XlaHelpers {
                        builder);
   }
 
+  // Performa a linear interpolation between value0 and value1, by calculating:
+  //   result = value0 * alpha + value1 * (1 - alpha)
+  static xla::XlaOp LinearInterpolation(const xla::XlaOp& value0,
+                                        const xla::XlaOp& value1, double alpha);
+
   // Returns the shape of the given XLA operation.
   static xla::Shape ShapeOfXlaOp(const xla::XlaOp& op);
 
