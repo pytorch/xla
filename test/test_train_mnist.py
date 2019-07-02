@@ -85,9 +85,11 @@ def train_mnist():
         shuffle=True,
         num_workers=FLAGS.num_workers)
 
-  devices = xm.get_xla_supported_devices(max_devices=FLAGS.num_cores)
+  devices = (
+      xm.get_xla_supported_devices(
+          max_devices=FLAGS.num_cores) if FLAGS.num_cores != 0 else [])
   # Scale learning rate to num cores
-  lr = FLAGS.lr * len(devices)
+  lr = FLAGS.lr * max(len(devices), 1)
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
   model_parallel = dp.DataParallel(MNIST, device_ids=devices)
 
@@ -124,7 +126,7 @@ def train_mnist():
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
-    accuracy = sum(accuracies) / len(devices)
+    accuracy = sum(accuracies) / len(accuracies)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
