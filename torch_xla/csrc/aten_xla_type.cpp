@@ -276,7 +276,7 @@ at::Tensor& AtenXlaType::_index_put_impl_(at::Tensor& self,
 at::Tensor AtenXlaType::_log_softmax(const at::Tensor& self, int64_t dim,
                                      bool /* half_to_float */) {
   return bridge::AtenFromXlaTensor(
-      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim, c10::nullopt));
+      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim));
 }
 
 at::Tensor AtenXlaType::_log_softmax_backward_data(
@@ -288,7 +288,7 @@ at::Tensor AtenXlaType::_log_softmax_backward_data(
 
 at::Tensor AtenXlaType::_softmax(const at::Tensor& self, int64_t dim,
                                  bool /* half_to_float */) {
-  return softmax(self, dim, c10::nullopt);
+  return softmax(self, dim);
 }
 
 at::Tensor AtenXlaType::_softmax_backward_data(const at::Tensor& grad_output,
@@ -909,7 +909,7 @@ at::Tensor AtenXlaType::cross(const at::Tensor& self, const at::Tensor& other,
 }
 
 at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim,
-                                c10::optional<at::ScalarType> dtype) {
+                                at::ScalarType dtype) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   if (dtype == at::ScalarType::Long &&
       self_tensor.GetDevice().hw_type == DeviceType::TPU) {
@@ -919,8 +919,18 @@ at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim,
   return bridge::AtenFromXlaTensor(XLATensor::cumprod(self_tensor, dim, dtype));
 }
 
+at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  if (self_tensor.dtype() == at::ScalarType::Long &&
+      self_tensor.GetDevice().hw_type == DeviceType::TPU) {
+    return AtenXlaTypeDefault::cumprod(self, dim);
+  }
+  return bridge::AtenFromXlaTensor(
+      XLATensor::cumprod(self_tensor, dim, c10::nullopt));
+}
+
 at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim,
-                               c10::optional<at::ScalarType> dtype) {
+                               at::ScalarType dtype) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   if (dtype == at::ScalarType::Long &&
       self_tensor.GetDevice().hw_type == DeviceType::TPU) {
@@ -928,6 +938,17 @@ at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim,
     return AtenXlaTypeDefault::cumsum(self, dim, dtype);
   }
   return bridge::AtenFromXlaTensor(XLATensor::cumsum(self_tensor, dim, dtype));
+}
+
+at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  if (self_tensor.dtype() == at::ScalarType::Long &&
+      self_tensor.GetDevice().hw_type == DeviceType::TPU) {
+    // XLA reduce-window does not support S64 mode.
+    return AtenXlaTypeDefault::cumsum(self, dim);
+  }
+  return bridge::AtenFromXlaTensor(
+      XLATensor::cumsum(self_tensor, dim, c10::nullopt));
 }
 
 at::Tensor AtenXlaType::diag(const at::Tensor& self, int64_t diagonal) {
@@ -1656,10 +1677,9 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::log_sigmoid_forward(
                          bridge::AtenFromXlaTensor(std::get<1>(result_tuple)));
 }
 
-at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim,
-                                    c10::optional<at::ScalarType> dtype) {
+at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim) {
   return bridge::AtenFromXlaTensor(
-      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim, dtype));
+      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim));
 }
 
 at::Tensor AtenXlaType::lt(const at::Tensor& self, at::Scalar other) {
@@ -1880,8 +1900,7 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool3d_with_indices(
                          bridge::AtenFromXlaTensor(indices_not_supported));
 }
 
-at::Tensor AtenXlaType::mean(const at::Tensor& self,
-                             c10::optional<at::ScalarType> dtype) {
+at::Tensor AtenXlaType::mean(const at::Tensor& self, at::ScalarType dtype) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::mean(
       self_tensor,
@@ -1889,12 +1908,33 @@ at::Tensor AtenXlaType::mean(const at::Tensor& self,
       /*keep_reduced_dimensions*/ false, dtype));
 }
 
+at::Tensor AtenXlaType::mean(const at::Tensor& self) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::mean(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions*/ false, c10::nullopt));
+}
+
 at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
-                             bool keepdim,
-                             c10::optional<at::ScalarType> dtype) {
+                             bool keepdim, at::ScalarType dtype) {
   return bridge::AtenFromXlaTensor(XLATensor::mean(
       bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
       /*keep_reduced_dimensions*/ keepdim, dtype));
+}
+
+at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
+                             bool keepdim) {
+  return bridge::AtenFromXlaTensor(XLATensor::mean(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions*/ keepdim, c10::nullopt));
+}
+
+at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
+                             at::ScalarType dtype) {
+  return bridge::AtenFromXlaTensor(XLATensor::mean(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions*/ false, dtype));
 }
 
 std::vector<at::Tensor> AtenXlaType::meshgrid(at::TensorList tensors) {
@@ -2171,8 +2211,7 @@ at::Tensor& AtenXlaType::pow_(at::Tensor& self, const at::Tensor& exponent) {
   return self;
 }
 
-at::Tensor AtenXlaType::prod(const at::Tensor& self,
-                             c10::optional<at::ScalarType> dtype) {
+at::Tensor AtenXlaType::prod(const at::Tensor& self, at::ScalarType dtype) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::prod(
       self_tensor,
@@ -2180,10 +2219,31 @@ at::Tensor AtenXlaType::prod(const at::Tensor& self,
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
+at::Tensor AtenXlaType::prod(const at::Tensor& self) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::prod(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false, c10::nullopt));
+}
+
 at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim, bool keepdim,
-                             c10::optional<at::ScalarType> dtype) {
+                             at::ScalarType dtype) {
   return bridge::AtenFromXlaTensor(
       XLATensor::prod(bridge::GetXlaTensor(self), {dim}, keepdim, dtype));
+}
+
+at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim,
+                             bool keepdim) {
+  return bridge::AtenFromXlaTensor(XLATensor::prod(
+      bridge::GetXlaTensor(self), {dim}, keepdim, c10::nullopt));
+}
+
+at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim,
+                             at::ScalarType dtype) {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::prod(bridge::GetXlaTensor(self), {dim},
+                      /*keep_reduced_dimensions=*/false, dtype));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::qr(const at::Tensor& self,
@@ -2425,10 +2485,9 @@ at::Tensor AtenXlaType::smooth_l1_loss_backward(const at::Tensor& grad_output,
       bridge::GetXlaTensor(target), reduction));
 }
 
-at::Tensor AtenXlaType::softmax(const at::Tensor& self, int64_t dim,
-                                c10::optional<at::ScalarType> dtype) {
+at::Tensor AtenXlaType::softmax(const at::Tensor& self, int64_t dim) {
   return bridge::AtenFromXlaTensor(
-      XLATensor::softmax(bridge::GetXlaTensor(self), dim, dtype));
+      XLATensor::softmax(bridge::GetXlaTensor(self), dim));
 }
 
 at::Tensor AtenXlaType::softplus(const at::Tensor& self, at::Scalar beta,
@@ -2548,8 +2607,7 @@ at::Tensor& AtenXlaType::sub_(at::Tensor& self, at::Scalar other,
   return self;
 }
 
-at::Tensor AtenXlaType::sum(const at::Tensor& self,
-                            c10::optional<at::ScalarType> dtype) {
+at::Tensor AtenXlaType::sum(const at::Tensor& self, at::ScalarType dtype) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::sum(
       self_tensor,
@@ -2557,11 +2615,33 @@ at::Tensor AtenXlaType::sum(const at::Tensor& self,
       /*keep_reduced_dimensions=*/false, dtype));
 }
 
+at::Tensor AtenXlaType::sum(const at::Tensor& self) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::sum(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions=*/false, c10::nullopt));
+}
+
 at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
-                            bool keepdim, c10::optional<at::ScalarType> dtype) {
+                            bool keepdim, at::ScalarType dtype) {
   return bridge::AtenFromXlaTensor(
       XLATensor::sum(bridge::GetXlaTensor(self),
                      xla::util::ToVector<xla::int64>(dim), keepdim, dtype));
+}
+
+at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
+                            bool keepdim) {
+  return bridge::AtenFromXlaTensor(XLATensor::sum(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim), keepdim,
+      c10::nullopt));
+}
+
+at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
+                            at::ScalarType dtype) {
+  return bridge::AtenFromXlaTensor(XLATensor::sum(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions=*/false, dtype));
 }
 
 at::Tensor AtenXlaType::sum_to_size(const at::Tensor& self,

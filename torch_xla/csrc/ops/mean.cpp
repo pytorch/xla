@@ -17,7 +17,7 @@ namespace {
 xla::XlaOp LowerMean(const xla::XlaOp& input,
                      const std::vector<xla::int64>& dimensions,
                      bool keep_reduced_dimensions,
-                     const c10::optional<at::ScalarType>& dtype) {
+                     c10::optional<at::ScalarType> dtype) {
   xla::XlaOp result = BuildMean(input, dimensions, keep_reduced_dimensions);
   return dtype ? xla::ConvertElementType(
                      result, MakeXlaPrimitiveType(*dtype, /*device=*/nullptr))
@@ -27,7 +27,7 @@ xla::XlaOp LowerMean(const xla::XlaOp& input,
 xla::Shape NodeOutputShape(const Value& input,
                            std::vector<xla::int64>& dimensions,
                            bool keep_reduced_dimensions,
-                           const c10::optional<at::ScalarType>& dtype) {
+                           c10::optional<at::ScalarType> dtype) {
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
