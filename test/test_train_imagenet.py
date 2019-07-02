@@ -1,27 +1,10 @@
 import test_utils
 
 SUPPORTED_MODELS = [
-    'alexnet',
-    'densenet121',
-    'densenet161',
-    'densenet169',
-    'densenet201',
-    'inception_v3',
-    'resnet101',
-    'resnet152',
-    'resnet18',
-    'resnet34',
-    'resnet50',
-    'squeezenet1_0',
-    'squeezenet1_1',
-    'vgg11',
-    'vgg11_bn',
-    'vgg13',
-    'vgg13_bn',
-    'vgg16',
-    'vgg16_bn',
-    'vgg19',
-    'vgg19_bn'
+    'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
+    'inception_v3', 'resnet101', 'resnet152', 'resnet18', 'resnet34',
+    'resnet50', 'squeezenet1_0', 'squeezenet1_1', 'vgg11', 'vgg11_bn', 'vgg13',
+    'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn'
 ]
 
 MODEL_OPTS = {
@@ -128,7 +111,9 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  devices = xm.get_xla_supported_devices(max_devices=FLAGS.num_cores)
+  devices = (
+      xm.get_xla_supported_devices(
+          max_devices=FLAGS.num_cores) if FLAGS.num_cores != 0 else [])
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
   torchvision_model = get_model_property('model_fn')
   model_parallel = dp.DataParallel(torchvision_model, device_ids=devices)
@@ -169,7 +154,7 @@ def train_imagenet():
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
-    accuracy = sum(accuracies) / len(devices)
+    accuracy = sum(accuracies) / len(accuracies)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 

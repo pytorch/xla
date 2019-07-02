@@ -180,8 +180,8 @@ class DataParallel(object):
       self._models.append(device_module)
     if not self._models:
       # No XLA device, push a vanilla network in.
-      self._models.append(network)
-      self._device_ids.append(self._get_model_device(network))
+      self._models.append(module)
+      self._device_ids.append(self._get_model_device(module))
       self._native_run = True
 
   def _get_model_device(self, model):
