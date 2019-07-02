@@ -162,6 +162,7 @@ def train_cifar():
             weight_decay=5e-4))
     tracker = xm.RateTracker()
 
+    model.train()
     for x, (data, target) in loader:
       optimizer.zero_grad()
       output = model(data)
@@ -176,6 +177,7 @@ def train_cifar():
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
     correct = 0
+    model.eval()
     for x, (data, target) in loader:
       output = model(data)
       pred = output.max(1, keepdim=True)[1]

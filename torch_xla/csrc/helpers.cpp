@@ -218,6 +218,16 @@ std::vector<xla::int64> XlaHelpers::MakeTransposePermutation(xla::int64 dim0,
   return permute_dims;
 }
 
+xla::XlaOp XlaHelpers::LinearInterpolation(const xla::XlaOp& value0,
+                                           const xla::XlaOp& value1,
+                                           double alpha) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(value0);
+  xla::XlaOp one = ScalarValue(1.0, shape.element_type(), value0.builder());
+  xla::XlaOp alpha_value =
+      ScalarValue(alpha, shape.element_type(), value0.builder());
+  return value0 * alpha_value + value1 * (one - alpha_value);
+}
+
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
     const xla::XlaOp& op1, const xla::XlaOp& op2) {
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);

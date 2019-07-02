@@ -3,44 +3,58 @@
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
+namespace {
 
-BatchNormOutput BuildBatchNorm(const xla::XlaOp& input,
-                               const xla::XlaOp& weight, const xla::XlaOp& bias,
-                               float eps_value) {
-  xla::XlaBuilder* builder = input.builder();
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+xla::XlaOp VarianceRecover(const xla::XlaOp& invstd, float eps_value) {
+  xla::XlaBuilder* builder = invstd.builder();
+  xla::Shape invstd_shape = XlaHelpers::ShapeOfXlaOp(invstd);
   xla::XlaOp eps =
-      XlaHelpers::ScalarValue(eps_value, input_shape.element_type(), builder);
+      XlaHelpers::ScalarValue(eps_value, invstd_shape.element_type(), builder);
   xla::XlaOp one =
-      XlaHelpers::ScalarValue<float>(1, input_shape.element_type(), builder);
-  xla::XlaOp half =
-      XlaHelpers::ScalarValue<float>(0.5f, input_shape.element_type(), builder);
+      XlaHelpers::ScalarValue<float>(1, invstd_shape.element_type(), builder);
+  xla::XlaOp one_over_invstd = one / invstd;
+  return one_over_invstd * one_over_invstd - eps;
+}
 
+}  // namespace
+
+xla::XlaOp BatchNormVarianceInvert(const xla::XlaOp& variance,
+                                   float eps_value) {
+  xla::XlaBuilder* builder = variance.builder();
+  xla::Shape variance_shape = XlaHelpers::ShapeOfXlaOp(variance);
+  xla::XlaOp eps = XlaHelpers::ScalarValue(
+      eps_value, variance_shape.element_type(), builder);
+  xla::XlaOp one =
+      XlaHelpers::ScalarValue<float>(1, variance_shape.element_type(), builder);
+  return one / xla::Sqrt(variance + eps);
+}
+
+BatchNormOutput BuildBatchNormTraining(const xla::XlaOp& input,
+                                       const xla::XlaOp& weight,
+                                       const xla::XlaOp& bias,
+                                       float eps_value) {
   xla::XlaOp outputs =
       xla::BatchNormTraining(input, weight, bias, eps_value, 1);
   xla::XlaOp output = xla::GetTupleElement(outputs, 0);
-  xla::XlaOp save_mean = xla::GetTupleElement(outputs, 1);
-  xla::XlaOp save_var = xla::GetTupleElement(outputs, 2);
-  xla::XlaOp save_invstd_eps = one / xla::Pow(save_var + eps, half);
-  return {output, save_mean, save_invstd_eps};
+  xla::XlaOp batch_mean = xla::GetTupleElement(outputs, 1);
+  xla::XlaOp batch_variance = xla::GetTupleElement(outputs, 2);
+  return {output, batch_mean, batch_variance};
 }
 
-BatchNormGrads BuildBatchNormBackward(const xla::XlaOp& grad,
-                                      const xla::XlaOp& input,
-                                      const xla::XlaOp& weight,
-                                      const xla::XlaOp& save_mean,
-                                      const xla::XlaOp& save_invstd_eps,
-                                      float eps_value) {
-  xla::XlaBuilder* builder = grad.builder();
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp eps =
-      XlaHelpers::ScalarValue(eps_value, input_shape.element_type(), builder);
-  xla::XlaOp one =
-      XlaHelpers::ScalarValue<float>(1, input_shape.element_type(), builder);
-  xla::XlaOp two =
-      XlaHelpers::ScalarValue<float>(2, input_shape.element_type(), builder);
-  xla::XlaOp save_var = xla::Pow(one / save_invstd_eps, two) - eps;
-  xla::XlaOp grads = xla::BatchNormGrad(input, weight, save_mean, save_var,
+xla::XlaOp BuildBatchNormInference(
+    const xla::XlaOp& input, const xla::XlaOp& weight, const xla::XlaOp& bias,
+    const xla::XlaOp& mean, const xla::XlaOp& variance, float eps_value) {
+  return xla::BatchNormInference(input, weight, bias, mean, variance, eps_value,
+                                 1);
+}
+
+BatchNormGrads BuildBatchNormBackward(
+    const xla::XlaOp& grad, const xla::XlaOp& input, const xla::XlaOp& weight,
+    const xla::XlaOp& running_mean, const xla::XlaOp& running_var,
+    const xla::XlaOp& save_mean, const xla::XlaOp& save_invstd, bool training,
+    float eps_value) {
+  xla::XlaOp grads = xla::BatchNormGrad(input, weight, save_mean,
+                                        VarianceRecover(save_invstd, eps_value),
                                         grad, eps_value, 1);
   xla::XlaOp grad_input = xla::GetTupleElement(grads, 0);
   xla::XlaOp grad_weight = xla::GetTupleElement(grads, 1);

@@ -5408,7 +5408,7 @@ TEST_F(AtenXlaTensorTest, TestSmoothL1Loss) {
 TEST_F(AtenXlaTensorTest, TestBatchNorm1D) {
   int num_features = 3;
   torch::Tensor input =
-      torch::rand({14, num_features, 7}, torch::TensorOptions(torch::kFloat));
+      torch::rand({2, num_features, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor weight =
       torch::rand({num_features}, torch::TensorOptions(torch::kFloat));
   torch::Tensor bias =
@@ -5449,7 +5449,7 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm1D) {
 
 TEST_F(AtenXlaTensorTest, TestBatchNorm2D) {
   int num_features = 3;
-  torch::Tensor input = torch::rand({14, num_features, 5, 7},
+  torch::Tensor input = torch::rand({2, num_features, 4, 4},
                                     torch::TensorOptions(torch::kFloat));
   torch::Tensor weight =
       torch::rand({num_features}, torch::TensorOptions(torch::kFloat));
@@ -7171,7 +7171,7 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2DBackward) {
   for (bool undef_weight_bias : {false, true}) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor input =
-          torch::rand({14, num_features, 5, 7},
+          torch::rand({2, num_features, 4, 4},
                       torch::TensorOptions(torch::kFloat).requires_grad(true));
       torch::Tensor weight =
           undef_weight_bias
@@ -7211,7 +7211,7 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm3DBackward) {
   for (bool undef_weight_bias : {false, true}) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor input =
-          torch::rand({14, num_features, 5, 7, 3},
+          torch::rand({2, num_features, 4, 4, 2},
                       torch::TensorOptions(torch::kFloat).requires_grad(true));
       torch::Tensor weight =
           undef_weight_bias

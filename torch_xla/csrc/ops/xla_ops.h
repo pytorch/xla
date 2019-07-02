@@ -28,15 +28,16 @@ class OpKindWrapper {
   mutable std::once_flag once_;
 };
 
-extern const OpKindWrapper xla_device_data;
-extern const OpKindWrapper xla_tensor_data;
-extern const OpKindWrapper xla_cross_replica_sum;
 extern const OpKindWrapper xla_cast;
-extern const OpKindWrapper xla_not_supported;
-extern const OpKindWrapper xla_update_slice;
+extern const OpKindWrapper xla_cross_replica_sum;
+extern const OpKindWrapper xla_device_data;
 extern const OpKindWrapper xla_generic_slice;
+extern const OpKindWrapper xla_moving_average;
+extern const OpKindWrapper xla_not_supported;
 extern const OpKindWrapper xla_select;
+extern const OpKindWrapper xla_tensor_data;
 extern const OpKindWrapper xla_unselect;
+extern const OpKindWrapper xla_update_slice;
 
 }  // namespace ops
 }  // namespace ir

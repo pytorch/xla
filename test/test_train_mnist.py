@@ -100,6 +100,7 @@ def train_mnist():
         lambda: optim.SGD(model.parameters(), lr=lr, momentum=FLAGS.momentum))
     tracker = xm.RateTracker()
 
+    model.train()
     for x, (data, target) in loader:
       optimizer.zero_grad()
       output = model(data)
@@ -114,6 +115,7 @@ def train_mnist():
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
     correct = 0
+    model.eval()
     for x, (data, target) in loader:
       output = model(data)
       pred = output.max(1, keepdim=True)[1]

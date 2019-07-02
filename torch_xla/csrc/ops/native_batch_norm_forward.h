@@ -6,12 +6,11 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-// Node for batch norm which returns the additional save_mean and save_invstd
-// outputs to be used by the backward batch norm operator.
 class NativeBatchNormForward : public Node {
  public:
   NativeBatchNormForward(const Value& input, const Value& weight,
-                         const Value& bias, double momentum, double eps);
+                         const Value& bias, const Value& running_mean,
+                         const Value& running_var, bool training, double eps);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -19,12 +18,12 @@ class NativeBatchNormForward : public Node {
 
   std::string ToString() const override;
 
+  bool training() const { return training_; }
+
   double eps() const { return eps_; }
 
-  double momentum() const { return momentum_; }
-
  private:
-  double momentum_;
+  bool training_;
   double eps_;
 };
 

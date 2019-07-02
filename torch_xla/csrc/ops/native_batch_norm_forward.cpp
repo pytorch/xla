@@ -11,18 +11,44 @@ namespace ir {
 namespace ops {
 namespace {
 
+std::vector<xla::XlaOp> LowerBatchNorm(const xla::XlaOp& input,
+                                       const xla::XlaOp& weight,
+                                       const xla::XlaOp& bias,
+                                       const xla::XlaOp& running_mean,
+                                       const xla::XlaOp& running_var,
+                                       bool training, double eps) {
+  std::vector<xla::XlaOp> values;
+  if (training) {
+    BatchNormOutput batch_norm_output =
+        BuildBatchNormTraining(input, weight, bias, eps);
+    values.push_back(std::move(batch_norm_output.output));
+    values.push_back(std::move(batch_norm_output.batch_mean));
+    values.push_back(std::move(batch_norm_output.batch_variance));
+    values.push_back(
+        BatchNormVarianceInvert(batch_norm_output.batch_variance, eps));
+  } else {
+    values.push_back(BuildBatchNormInference(input, weight, bias, running_mean,
+                                             running_var, eps));
+    values.push_back(running_mean);
+    values.push_back(running_var);
+    values.push_back(BatchNormVarianceInvert(running_var, eps));
+  }
+  return values;
+}
+
 xla::Shape NodeOutputShape(const Value& input, const Value& weight,
-                           const Value& bias) {
+                           const Value& bias, const Value& running_mean,
+                           const Value& running_var, bool training) {
   auto lower_for_shape_fn =
-      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 3);
-    BatchNormOutput xla_outputs =
-        BuildBatchNorm(operands[0], operands[1], operands[2], 0);
-    return xla::Tuple(operands[0].builder(),
-                      {xla_outputs.output, xla_outputs.save_mean,
-                       xla_outputs.save_invstd_eps});
+      [training](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      -> xla::XlaOp {
+    std::vector<xla::XlaOp> values =
+        LowerBatchNorm(operands[0], operands[1], operands[2], operands[3],
+                       operands[4], training, 0.5);
+    return xla::Tuple(operands[0].builder(), values);
   };
-  return InferOutputShape({input->shape(), weight->shape(), bias->shape()},
+  return InferOutputShape({input->shape(), weight->shape(), bias->shape(),
+                           running_mean->shape(), running_var->shape()},
                           lower_for_shape_fn);
 }
 
@@ -31,32 +57,40 @@ xla::Shape NodeOutputShape(const Value& input, const Value& weight,
 NativeBatchNormForward::NativeBatchNormForward(const Value& input,
                                                const Value& weight,
                                                const Value& bias,
-                                               double momentum, double eps)
-    : Node(ir::OpKind(at::aten::native_batch_norm), {input, weight, bias},
-           [&]() { return NodeOutputShape(input, weight, bias); },
-           /*num_outputs=*/3, xla::util::MHash(momentum, eps)),
-      momentum_(momentum),
+                                               const Value& running_mean,
+                                               const Value& running_var,
+                                               bool training, double eps)
+    : Node(ir::OpKind(at::aten::native_batch_norm),
+           {input, weight, bias, running_mean, running_var},
+           [&]() {
+             return NodeOutputShape(input, weight, bias, running_mean,
+                                    running_var, training);
+           },
+           /*num_outputs=*/4, xla::util::MHash(training, eps)),
+      training_(training),
       eps_(eps) {}
 
 NodePtr NativeBatchNormForward::Clone(OpList operands) const {
   return MakeNode<NativeBatchNormForward>(operands.at(0), operands.at(1),
-                                          operands.at(2), momentum_, eps_);
+                                          operands.at(2), operands.at(3),
+                                          operands.at(4), training_, eps_);
 }
 
 XlaOpVector NativeBatchNormForward::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp weight = loctx->GetOutputOp(operand(1));
   xla::XlaOp bias = loctx->GetOutputOp(operand(2));
-  BatchNormOutput batch_norm_output = BuildBatchNorm(input, weight, bias, eps_);
-  return ReturnOps({std::move(batch_norm_output.output),
-                    std::move(batch_norm_output.save_mean),
-                    std::move(batch_norm_output.save_invstd_eps)},
+  xla::XlaOp running_mean = loctx->GetOutputOp(operand(3));
+  xla::XlaOp running_var = loctx->GetOutputOp(operand(4));
+
+  return ReturnOps(LowerBatchNorm(input, weight, bias, running_mean,
+                                  running_var, training_, eps_),
                    loctx);
 }
 
 std::string NativeBatchNormForward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", momentum=" << momentum_ << ", eps=" << eps_;
+  ss << Node::ToString() << ", training=" << training_ << ", eps=" << eps_;
   return ss.str();
 }
 
