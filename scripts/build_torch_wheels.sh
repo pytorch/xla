@@ -42,7 +42,7 @@ function install_and_setup_conda() {
     rm Anaconda3-5.2.0-Linux-x86_64.sh
   fi
   echo 'export PATH="$HOME/anaconda3/bin:$PATH"' >> ~/.bashrc
-  source ~/.bashrc
+  export PATH="$HOME/anaconda3/bin:$PATH"
   ENVNAME="pytorch"
   if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
     conda remove --name "$ENVNAME" --all
@@ -67,7 +67,8 @@ function build_and_install_torch() {
   # Only checkout dependencies once PT commit ID checked out.
   git submodule update --init --recursive
   # Apply patches to PT which are required by the XLA support.
-  xla/scripts/apply_patches.sh
+  # xla/scripts/apply_patches.sh
+  $(echo $0 | sed s/build_torch_wheels/apply_patches/)
   export NO_CUDA=1 NO_MKLDNN=1
   python setup.py bdist_wheel
   pip install dist/*.whl
