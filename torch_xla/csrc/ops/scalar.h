@@ -34,7 +34,7 @@ class Scalar : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  at::Scalar value() const { return value_; }
+  const at::Scalar& value() const { return value_; }
 
  private:
   at::Scalar value_;
