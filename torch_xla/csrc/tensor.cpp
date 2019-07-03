@@ -636,7 +636,7 @@ c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
 ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
                                          const Device& device) {
   xla::ComputationClient::DataPtr data;
-  if (tensor.numel() == 1) {
+  if (tensor.dim() == 0 && tensor.numel() == 1) {
     at::Scalar value = tensor.item();
     if (IsSpecialScalar(value)) {
       return ir::ops::ScalarOp(

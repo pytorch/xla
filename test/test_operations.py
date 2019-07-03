@@ -572,6 +572,14 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.rand(4, 3), test_fn)
 
+  def test_squeeze_nonzero(self):
+
+    def test_fn(a):
+      level = 1
+      return torch.nonzero(a == level).squeeze(1)
+
+    self.runAtenTest(torch.tensor([3, 1]), test_fn)
+
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
