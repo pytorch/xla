@@ -13,7 +13,7 @@ namespace ir {
 namespace ops {
 
 Scalar::Scalar(at::Scalar value, xla::Shape shape)
-    : Node(OpKind(at::prim::Constant), shape, /*num_outputs=*/1,
+    : Node(OpKind(at::prim::Constant), std::move(shape), /*num_outputs=*/1,
            ScalarHash(value)),
       value_(std::move(value)) {}
 
