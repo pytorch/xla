@@ -15,6 +15,19 @@ import torch_xla_py.xla_model as xm
 import traceback
 
 
+class Context(object):
+
+  def __init__(self, device):
+    self.device = device
+
+  def getattr_or(self, name, defval):
+    value = getattr(self, name, None)
+    if value is None:
+      value = defval() if callable(defval) else defval
+      setattr(self, name, value)
+    return value
+
+
 class ThreadResult(object):
 
   def __init__(self):
@@ -174,14 +187,18 @@ class DataParallel(object):
         xm.Replication(self._device_ids, replication_devices)
         if replication_devices else None)
     self._models = []
+    self._contexts = []
     module = network if isinstance(network, torch.nn.Module) else network()
     for device in device_ids:
       device_module = deepcopy(module).to(device=torch.device(device))
       self._models.append(device_module)
+      self._contexts.append(Context(torch.device(device)))
     if not self._models:
       # No XLA device, push a vanilla network in.
+      device = self._get_model_device(module)
       self._models.append(module)
-      self._device_ids.append(self._get_model_device(module))
+      self._device_ids.append(device)
+      self._contexts.append(Context(torch.device(device)))
       self._native_run = True
 
   def _get_model_device(self, model):
@@ -212,12 +229,11 @@ class DataParallel(object):
       self._handle_runner_exception(device, e)
 
   def __call__(self, loop_fn, loader):
-    context = dict()
     if self._native_run:
       ## This is called without XLA devices available. Run in normal mode.
       return [
           loop_fn(self._models[0], enumerate(loader),
-                  torch.device(self._device_ids[0]), context)
+                  torch.device(self._device_ids[0]), self._contexts[0])
       ]
 
     para_loader = ParallelLoader(
@@ -227,7 +243,8 @@ class DataParallel(object):
         drop_last=self._drop_last)
     threads = []
     results = []
-    for module, device in zip(self._models, self._device_ids):
+    for module, device, context in zip(self._models, self._device_ids,
+                                       self._contexts):
       result = ThreadResult()
       loader = para_loader.per_device_loader(device)
       thread = threading.Thread(
