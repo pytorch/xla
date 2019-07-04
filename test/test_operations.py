@@ -580,6 +580,13 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.tensor([3, 1]), test_fn)
 
+  def test_expand_default(self):
+
+    def test_fn(a):
+      return a.expand((1, 1, -1, -1))
+
+    self.runAtenTest(torch.zeros([4, 4]), test_fn)
+
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
@@ -596,6 +603,7 @@ class TestAtenXlaTensor(XlaTestCase):
     x = torch.tensor([5], device=xla_device)
     expected_str = 'tensor([5], device=\'' + str(xla_device) + '\')'
     self.assertExpectedInline(str(x), expected_str)
+
 
 class MNISTComparator(nn.Module):
 

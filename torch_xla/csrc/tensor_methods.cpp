@@ -142,6 +142,18 @@ void CheckDimensionSize(const XLATensor& t, xla::int64 dim,
       << " (while checking arguments for " << tag << ")";
 }
 
+std::vector<xla::int64> GetExpandDimanesions(
+    const xla::Shape& shape, std::vector<xla::int64> dimensions) {
+  XLA_CHECK_GE(dimensions.size(), shape.rank()) << shape;
+  xla::int64 base = dimensions.size() - shape.rank();
+  for (size_t i = 0; i < shape.rank(); ++i) {
+    if (dimensions[base + i] == -1) {
+      dimensions[base + i] = shape.dimensions(i);
+    }
+  }
+  return dimensions;
+}
+
 // Resizes and / or checks whether a list is of the given size. The list is only
 // resized if its size is 1. If it's empty, it's replaced with the provided
 // default first.
@@ -916,8 +928,10 @@ void XLATensor::exp_(XLATensor& input) {
 
 XLATensor XLATensor::expand(const XLATensor& input,
                             std::vector<xla::int64> size) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Expand>(input.GetIrValue(), std::move(size)));
+  auto input_shape = input.shape();
+  return input.CreateFrom(ir::MakeNode<ir::ops::Expand>(
+      input.GetIrValue(),
+      GetExpandDimanesions(input_shape.get(), std::move(size))));
 }
 
 XLATensor XLATensor::expm1(const XLATensor& input) {
