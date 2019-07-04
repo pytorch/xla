@@ -95,7 +95,9 @@ def train_mnist():
 
   def train_loop_fn(model, loader, device, context):
     loss_fn = nn.NLLLoss()
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=FLAGS.momentum)
+    optimizer = context.getattr_or(
+        'optimizer',
+        lambda: optim.SGD(model.parameters(), lr=lr, momentum=FLAGS.momentum))
     tracker = xm.RateTracker()
 
     for x, (data, target) in loader:
