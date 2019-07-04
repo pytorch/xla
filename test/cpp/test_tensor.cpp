@@ -243,7 +243,7 @@ TEST_F(TensorTest, TestLogSoftmax) {
     auto dev_input = XLATensor::Create(input, device);
     for (int dim = 0; dim < input.dim(); ++dim) {
       auto output = input.log_softmax(dim);
-      auto dev_output = XLATensor::log_softmax(dev_input, dim);
+      auto dev_output = XLATensor::log_softmax(dev_input, dim, c10::nullopt);
       AllClose(output, dev_output, /*rtol=*/1e-3);
     }
   });
