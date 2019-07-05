@@ -75,7 +75,7 @@ std::vector<XLATensor> GetXlaTensors(
 }
 
 XLATensor GetXlaTensorUnwrap(const at::Tensor& tensor) {
-  return GetXlaTensor(ToTensor(tensor));
+  return GetXlaTensor(tensor);
 }
 
 XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device) {
@@ -100,7 +100,7 @@ std::vector<at::Tensor> XlaCreateTensorList(
       XLA_CHECK(writeable == nullptr || !(*writeable)[i])
           << "Trying to write to an undefined tensor";
     } else if (tensor.device().is_cpu()) {
-      aten_xla_tensors[i] = ToTensor(tensor);
+      aten_xla_tensors[i] = tensor;
     } else {
       to_translate[i] = true;
       xla_tensors.push_back(GetXlaTensorUnwrap(tensor));
@@ -122,7 +122,7 @@ std::vector<at::Tensor> XlaCreateTensorList(
 }
 
 c10::optional<Device> GetXlaDevice(const at::Tensor& tensor) {
-  auto xtensor = TryGetXlaTensor(ToTensor(tensor));
+  auto xtensor = TryGetXlaTensor(tensor);
   if (!xtensor) {
     return c10::nullopt;
   }
