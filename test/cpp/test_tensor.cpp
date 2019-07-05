@@ -99,7 +99,7 @@ TEST_F(TensorTest, TestIntegerAdd) {
       auto dev_b = XLATensor::Create(b, device);
       auto dev_c = XLATensor::add(dev_a, dev_b, 1.0);
 
-      EXPECT_TRUE(EqualValues(c, ToTensor(dev_c)));
+      EXPECT_TRUE(EqualValues(c, dev_c.ToTensor()));
     }
   });
 }
@@ -245,6 +245,20 @@ TEST_F(TensorTest, TestLogSoftmax) {
       auto output = input.log_softmax(dim);
       auto dev_output = XLATensor::log_softmax(dev_input, dim, c10::nullopt);
       AllClose(output, dev_output, /*rtol=*/1e-3);
+    }
+  });
+}
+
+TEST_F(TensorTest, TestDropout) {
+  at::Tensor input = at::rand({17, 21}, at::TensorOptions(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    auto dev_input = XLATensor::Create(input, device);
+    for (int dim = 0; dim < input.dim(); ++dim) {
+      auto dev_output = XLATensor::dropout(dev_input, 0.1);
+      double prob =
+          static_cast<double>(dev_output.ToTensor().ne(0.0f).sum().item().toDouble()) / input.numel();
+      EXPECT_GT(prob, 0.06);
+      EXPECT_LT(prob, 0.14);
     }
   });
 }

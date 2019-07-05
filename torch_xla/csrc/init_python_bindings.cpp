@@ -46,7 +46,7 @@ std::string GetTensorsDump(
   std::vector<const ir::Node*> nodes;
   std::vector<ir::Value> values;
   for (auto& tensor : tensors) {
-    XLATensor xtensor = bridge::GetXlaTensor(ToTensor(tensor));
+    XLATensor xtensor = bridge::GetXlaTensor(tensor);
     values.push_back(xtensor.GetIrValue());
     nodes.push_back(values.back().node.get());
   }
@@ -88,7 +88,7 @@ void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
     }
   }
   for (auto& tensor : tensors) {
-    XLATensor xtensor = bridge::GetXlaTensor(ToTensor(tensor));
+    XLATensor xtensor = bridge::GetXlaTensor(tensor);
     XLATensor::cross_replica_sum_(xtensor, scale, crs_groups);
   }
 }
@@ -98,7 +98,7 @@ void SyncTensors(const std::vector<at::Tensor>& tensors,
                  bool sync_xla_data) {
   std::vector<XLATensor> xtensors;
   for (auto& tensor : tensors) {
-    auto xtensor = bridge::TryGetXlaTensor(ToTensor(tensor));
+    auto xtensor = bridge::TryGetXlaTensor(tensor);
     if (xtensor) {
       xtensors.push_back(*xtensor);
     }
@@ -124,7 +124,7 @@ void StepMarker(const std::string& device_str,
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
   std::vector<XLATensor> xtensors;
   for (auto& tensor : tensors) {
-    auto xtensor = bridge::TryGetXlaTensor(ToTensor(tensor));
+    auto xtensor = bridge::TryGetXlaTensor(tensor);
     if (xtensor) {
       xtensors.push_back(*xtensor);
     }
@@ -168,7 +168,7 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
   std::vector<at::Tensor> tensors;
   tensors.reserve(aten_tensors.size());
   for (auto& aten_tensor : aten_tensors) {
-    tensors.push_back(ToTensor(aten_tensor));
+    tensors.push_back(aten_tensor);
   }
 
   auto data_handles = CreateTensorsData(tensors, GetXlaDevices(devices));
@@ -186,7 +186,7 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
   m.def("_get_xla_tensor", [](const at::Tensor& tensor) -> XLATensor {
-    return bridge::GetXlaTensor(ToTensor(tensor));
+    return bridge::GetXlaTensor(tensor);
   });
   m.def("_get_xla_tensors_dot",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
