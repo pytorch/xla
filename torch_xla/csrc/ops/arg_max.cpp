@@ -20,10 +20,9 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
 }  // namespace
 
 ArgMax::ArgMax(const Value& input, xla::int64 dim, bool keepdim)
-    : Node(
-          ir::OpKind(at::aten::argmax), {input},
-          [&]() { return NodeOutputShape(input, dim, keepdim); },
-          /*num_outputs=*/1, xla::util::MHash(dim, keepdim)),
+    : Node(ir::OpKind(at::aten::argmax), {input},
+           [&]() { return NodeOutputShape(input, dim, keepdim); },
+           /*num_outputs=*/1, xla::util::MHash(dim, keepdim)),
       dim_(dim),
       keepdim_(keepdim) {}
 

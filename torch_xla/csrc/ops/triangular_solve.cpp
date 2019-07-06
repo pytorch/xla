@@ -78,11 +78,10 @@ xla::Shape NodeOutputShape(const Value& rhs, const Value& lhs) {
 TriangularSolve::TriangularSolve(const Value& rhs, const Value& lhs,
                                  bool left_side, bool lower, bool transpose,
                                  bool unit_diagonal)
-    : Node(
-          ir::OpKind(at::aten::triangular_solve), {rhs, lhs},
-          [&]() { return NodeOutputShape(rhs, lhs); },
-          /*num_outputs=*/2,
-          xla::util::MHash(left_side, lower, transpose, unit_diagonal)),
+    : Node(ir::OpKind(at::aten::triangular_solve), {rhs, lhs},
+           [&]() { return NodeOutputShape(rhs, lhs); },
+           /*num_outputs=*/2,
+           xla::util::MHash(left_side, lower, transpose, unit_diagonal)),
       left_side_(left_side),
       lower_(lower),
       transpose_(transpose),
