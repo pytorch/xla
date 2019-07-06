@@ -37,10 +37,10 @@ xla::Shape NodeOutputShape(const Value& input,
 
 CumSum::CumSum(const Value& input, xla::int64 dim,
                c10::optional<at::ScalarType> dtype)
-    : Node(
-          ir::OpKind(at::aten::cumsum), {input},
-          [&]() { return NodeOutputShape(input, dtype); },
-          /*num_outputs=*/1, xla::util::MHash(dim, OptionalOr<int>(dtype, -1))),
+    : Node(ir::OpKind(at::aten::cumsum), {input},
+           [&]() { return NodeOutputShape(input, dtype); },
+           /*num_outputs=*/1,
+           xla::util::MHash(dim, OptionalOr<int>(dtype, -1))),
       dim_(dim),
       dtype_(dtype) {}
 
