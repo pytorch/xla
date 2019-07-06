@@ -28,10 +28,9 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 offset,
 
 Diagonal::Diagonal(const Value& input, xla::int64 offset, xla::int64 dim1,
                    xla::int64 dim2)
-    : Node(
-          ir::OpKind(at::aten::diagonal), {input},
-          [&]() { return NodeOutputShape(input, offset, dim1, dim2); },
-          /*num_outputs=*/1, xla::util::MHash(offset, dim1, dim2)),
+    : Node(ir::OpKind(at::aten::diagonal), {input},
+           [&]() { return NodeOutputShape(input, offset, dim1, dim2); },
+           /*num_outputs=*/1, xla::util::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),
       dim2_(dim2) {}

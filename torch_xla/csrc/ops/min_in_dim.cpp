@@ -24,10 +24,9 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
 }  // namespace
 
 MinInDim::MinInDim(const Value& input, xla::int64 dim, bool keepdim)
-    : Node(
-          ir::OpKind(at::aten::min), {input},
-          [&]() { return NodeOutputShape(input, dim, keepdim); },
-          /*num_outputs=*/2, xla::util::MHash(dim, keepdim)),
+    : Node(ir::OpKind(at::aten::min), {input},
+           [&]() { return NodeOutputShape(input, dim, keepdim); },
+           /*num_outputs=*/2, xla::util::MHash(dim, keepdim)),
       dim_(dim),
       keepdim_(keepdim) {}
 

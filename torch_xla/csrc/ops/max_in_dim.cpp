@@ -24,10 +24,9 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
 }  // namespace
 
 MaxInDim::MaxInDim(const Value& input, xla::int64 dim, bool keepdim)
-    : Node(
-          ir::OpKind(at::aten::max), {input},
-          [&]() { return NodeOutputShape(input, dim, keepdim); },
-          /*num_outputs=*/2, xla::util::MHash(dim, keepdim)),
+    : Node(ir::OpKind(at::aten::max), {input},
+           [&]() { return NodeOutputShape(input, dim, keepdim); },
+           /*num_outputs=*/2, xla::util::MHash(dim, keepdim)),
       dim_(dim),
       keepdim_(keepdim) {}
 

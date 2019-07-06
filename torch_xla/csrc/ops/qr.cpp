@@ -47,10 +47,9 @@ xla::Shape NodeOutputShape(const Value& input, bool some) {
 }  // namespace
 
 QR::QR(const Value& input, bool some)
-    : Node(
-          ir::OpKind(at::aten::qr), {input},
-          [&]() { return NodeOutputShape(input, some); },
-          /*num_outputs=*/2, xla::util::MHash(some)),
+    : Node(ir::OpKind(at::aten::qr), {input},
+           [&]() { return NodeOutputShape(input, some); },
+           /*num_outputs=*/2, xla::util::MHash(some)),
       some_(some) {}
 
 NodePtr QR::Clone(OpList operands) const {

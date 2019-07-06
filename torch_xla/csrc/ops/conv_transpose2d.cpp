@@ -34,20 +34,18 @@ ConvTranspose2d::ConvTranspose2d(const Value& input, const Value& weight,
                                  const Value& bias,
                                  std::vector<xla::int64> stride,
                                  std::vector<xla::int64> padding)
-    : Node(
-          ir::OpKind(at::aten::conv_transpose2d), {input, weight, bias},
-          [&]() { return NodeOutputShape(input, weight, stride, padding); },
-          /*num_outputs=*/1, xla::util::MHash(stride, padding)),
+    : Node(ir::OpKind(at::aten::conv_transpose2d), {input, weight, bias},
+           [&]() { return NodeOutputShape(input, weight, stride, padding); },
+           /*num_outputs=*/1, xla::util::MHash(stride, padding)),
       stride_(std::move(stride)),
       padding_(std::move(padding)) {}
 
 ConvTranspose2d::ConvTranspose2d(const Value& input, const Value& weight,
                                  std::vector<xla::int64> stride,
                                  std::vector<xla::int64> padding)
-    : Node(
-          ir::OpKind(at::aten::convolution), {input, weight},
-          [&]() { return NodeOutputShape(input, weight, stride, padding); },
-          /*num_outputs=*/1, xla::util::MHash(stride, padding)),
+    : Node(ir::OpKind(at::aten::convolution), {input, weight},
+           [&]() { return NodeOutputShape(input, weight, stride, padding); },
+           /*num_outputs=*/1, xla::util::MHash(stride, padding)),
       stride_(std::move(stride)),
       padding_(std::move(padding)) {}
 

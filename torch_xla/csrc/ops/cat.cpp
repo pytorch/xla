@@ -27,10 +27,9 @@ xla::Shape NodeOutputShape(tensorflow::gtl::ArraySlice<const ir::Value> values,
 }  // namespace
 
 Cat::Cat(tensorflow::gtl::ArraySlice<const ir::Value> values, xla::int64 dim)
-    : Node(
-          ir::OpKind(at::aten::cat), values,
-          [&]() { return NodeOutputShape(values, dim); },
-          /*num_outputs=*/1, xla::util::MHash(dim)),
+    : Node(ir::OpKind(at::aten::cat), values,
+           [&]() { return NodeOutputShape(values, dim); },
+           /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
 NodePtr Cat::Clone(OpList operands) const {

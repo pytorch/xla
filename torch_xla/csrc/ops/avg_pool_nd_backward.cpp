@@ -49,16 +49,15 @@ AvgPoolNdBackward::AvgPoolNdBackward(
     const Value& grad_output, const Value& input, xla::int64 spatial_dim_count,
     std::vector<xla::int64> kernel_size, std::vector<xla::int64> stride,
     std::vector<xla::int64> padding, bool ceil_mode, bool count_include_pad)
-    : Node(
-          OpKind(AvgNdBackwardSymbol(spatial_dim_count)), {grad_output, input},
-          [&]() {
-            return NodeOutputShape(grad_output, input, spatial_dim_count,
-                                   kernel_size, stride, padding, ceil_mode,
-                                   count_include_pad);
-          },
-          /*num_outputs=*/1,
-          xla::util::MHash(spatial_dim_count, kernel_size, stride, padding,
-                           ceil_mode, count_include_pad)),
+    : Node(OpKind(AvgNdBackwardSymbol(spatial_dim_count)), {grad_output, input},
+           [&]() {
+             return NodeOutputShape(grad_output, input, spatial_dim_count,
+                                    kernel_size, stride, padding, ceil_mode,
+                                    count_include_pad);
+           },
+           /*num_outputs=*/1,
+           xla::util::MHash(spatial_dim_count, kernel_size, stride, padding,
+                            ceil_mode, count_include_pad)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),

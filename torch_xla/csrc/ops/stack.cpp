@@ -28,10 +28,9 @@ xla::Shape NodeOutputShape(tensorflow::gtl::ArraySlice<const ir::Value> values,
 
 Stack::Stack(tensorflow::gtl::ArraySlice<const ir::Value> values,
              xla::int64 dim)
-    : Node(
-          ir::OpKind(at::aten::stack), values,
-          [&]() { return NodeOutputShape(values, dim); },
-          /*num_outputs=*/1, xla::util::MHash(dim)),
+    : Node(ir::OpKind(at::aten::stack), values,
+           [&]() { return NodeOutputShape(values, dim); },
+           /*num_outputs=*/1, xla::util::MHash(dim)),
       dim_(dim) {}
 
 NodePtr Stack::Clone(OpList operands) const {

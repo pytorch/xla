@@ -1,10 +1,10 @@
 #pragma once
 
+#include <c10/util/Optional.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
-
-#include <c10/util/Optional.h>
 
 namespace torch_xla {
 

@@ -28,10 +28,9 @@ GenericSlice::GenericSlice(
     const Value& input,
     tensorflow::gtl::ArraySlice<const xla::int64> base_indices,
     tensorflow::gtl::ArraySlice<const xla::int64> sizes)
-    : Node(
-          xla_generic_slice, {input},
-          [&]() { return NodeOutputShape(input, base_indices, sizes); },
-          /*num_outputs=*/1, xla::util::MHash(base_indices, sizes)),
+    : Node(xla_generic_slice, {input},
+           [&]() { return NodeOutputShape(input, base_indices, sizes); },
+           /*num_outputs=*/1, xla::util::MHash(base_indices, sizes)),
       base_indices_(base_indices.begin(), base_indices.end()),
       sizes_(sizes.begin(), sizes.end()) {}
 
