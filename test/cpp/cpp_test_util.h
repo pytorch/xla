@@ -42,7 +42,7 @@ static inline void AllClose(at::Tensor tensor, XLATensor& xla_tensor,
 
 void ForEachDevice(const std::function<void(const Device&)>& devfn);
 
-void ForEachTorchXLADevice(const std::function<void(const torch::Device&)>& devfn);
+void ForEachDevice(const std::function<void(const torch::Device&)>& devfn);
 
 void WithAllDevices(
     DeviceType device_type,
