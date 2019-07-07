@@ -62,7 +62,7 @@ void ForEachDevice(const std::function<void(const Device&)>& devfn) {
   devfn(Device(default_device));
 }
 
-void ForEachTorchXLADevice(const std::function<void(const torch::Device&)>& devfn) {
+void ForEachDevice(const std::function<void(const torch::Device&)>& devfn) {
   std::string default_device =
       xla::ComputationClient::Get()->GetDefaultDevice();
   int device_ord = std::stoi(default_device.substr(default_device.find(":")+1));
