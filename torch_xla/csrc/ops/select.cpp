@@ -22,12 +22,11 @@ xla::int64 GetStride(xla::int64 start, xla::int64 end, xla::int64 stride) {
 
 Select::Select(const Value& input, xla::int64 dim, xla::int64 start,
                xla::int64 end, xla::int64 stride)
-    : Node(
-          xla_select, {input},
-          [&]() {
-            return MakeSelectShape(input.shape(), dim, start, end, stride);
-          },
-          /*num_outputs=*/1, xla::util::MHash(dim, start, end, stride)),
+    : Node(xla_select, {input},
+           [&]() {
+             return MakeSelectShape(input.shape(), dim, start, end, stride);
+           },
+           /*num_outputs=*/1, xla::util::MHash(dim, start, end, stride)),
       dim_(dim),
       start_(start),
       end_(end),

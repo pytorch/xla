@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
-
 #include <c10/util/Optional.h>
+
+#include <vector>
 
 #include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/ir.h"
