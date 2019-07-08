@@ -4,7 +4,6 @@
 #include <string>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -15,14 +14,9 @@
 namespace torch_xla {
 namespace cpp_test {
 
-at::Tensor ToTensor(XLATensor& xla_tensor) {
-  return torch_xla::ToTensor(xla_tensor.ToTensor());
-}
-
 at::Tensor ToCpuTensor(const at::Tensor& t) {
-  at::Tensor tensor = torch_xla::ToTensor(t);
-  c10::optional<XLATensor> xtensor = bridge::TryGetXlaTensor(tensor);
-  return xtensor ? xtensor->ToTensor() : tensor;
+  // t.to() implicitly triggers a sync if t.device=torch::kXLA.
+  return t.to(torch::kCPU);
 }
 
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
@@ -66,6 +60,11 @@ void ForEachDevice(const std::function<void(const Device&)>& devfn) {
   std::string default_device =
       xla::ComputationClient::Get()->GetDefaultDevice();
   devfn(Device(default_device));
+}
+
+void ForEachDevice(const std::function<void(const torch::Device&)>& devfn) {
+  torch::Device torch_device = bridge::AtenDefaultDevice();
+  devfn(torch_device);
 }
 
 bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,

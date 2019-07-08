@@ -1,7 +1,7 @@
 #pragma once
 
-#include <ATen/ATen.h>
 #include <gtest/gtest.h>
+#include <torch/torch.h>
 
 #include <cmath>
 #include <functional>
@@ -16,13 +16,12 @@
 namespace torch_xla {
 namespace cpp_test {
 
-// Converts an XLA ATen tensor to a CPU backend tensor. Extracts it first from
-// an autograd variable, if needed. Needed because EqualValues and AllClose
-// require CPU tensors on both sides. If the input tensor is already a CPU
-// tensor, it will be returned.
+// Converts an at::Tensor(device=torch::kXLA) to at::Tensor(device=torch::kCPU)
+// This at::Tensor can be torch::Tensor which is a Variable, or at::Tensor which
+// know nothing about autograd. If the input tensor is already a CPU tensor, it
+// will be returned. Needed because EqualValues and AllClose require CPU tensors
+// on both sides.
 at::Tensor ToCpuTensor(const at::Tensor& t);
-
-at::Tensor ToTensor(XLATensor& xla_tensor);
 
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2);
 
@@ -38,10 +37,12 @@ static inline void AllClose(at::Tensor tensor, at::Tensor xla_tensor,
 
 static inline void AllClose(at::Tensor tensor, XLATensor& xla_tensor,
                             double rtol = 1e-5, double atol = 1e-8) {
-  EXPECT_TRUE(CloseValues(tensor, ToTensor(xla_tensor), rtol, atol));
+  EXPECT_TRUE(CloseValues(tensor, xla_tensor.ToTensor(), rtol, atol));
 }
 
 void ForEachDevice(const std::function<void(const Device&)>& devfn);
+
+void ForEachDevice(const std::function<void(const torch::Device&)>& devfn);
 
 void WithAllDevices(
     DeviceType device_type,

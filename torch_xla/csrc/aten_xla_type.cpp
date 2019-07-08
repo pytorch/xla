@@ -869,7 +869,7 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
   if (src_tensor) {
     XLATensor::copy_(self_tensor, *src_tensor);
   } else {
-    self_tensor.SetTensor(CopyTensor(ToTensor(src), self.scalar_type()));
+    self_tensor.SetTensor(CopyTensor(src, self.scalar_type()));
   }
   return self;
 }
