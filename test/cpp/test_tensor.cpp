@@ -256,7 +256,9 @@ TEST_F(TensorTest, TestDropout) {
     for (int dim = 0; dim < input.dim(); ++dim) {
       auto dev_output = XLATensor::dropout(dev_input, 0.1);
       double prob =
-          static_cast<double>(dev_output.ToTensor().ne(0.0f).sum().item().toDouble()) / input.numel();
+          static_cast<double>(
+              dev_output.ToTensor().ne(0.0f).sum().item().toDouble()) /
+          input.numel();
       EXPECT_GT(prob, 0.06);
       EXPECT_LT(prob, 0.14);
     }
