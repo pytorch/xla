@@ -33,18 +33,6 @@ ExternalProject_Add(
 
 ExternalProject_Get_Property(googletest SOURCE_DIR)
 
-include_directories(
-  "${SOURCE_DIR}/googletest/include"
-  "${PTXLA_DIR}"
-  "${PTXLA_DIR}/torch_xla/csrc"
-  "${TFDIR}/bazel-tensorflow"
-  "${TFDIR}/bazel-genfiles"
-  "${TFDIR}/bazel-tensorflow/external/protobuf_archive/src"
-  "${TFDIR}/bazel-tensorflow/external/eigen_archive"
-  "${TFDIR}/bazel-tensorflow/external/com_google_absl"
-  "${PYTHON_INCLUDE_DIR}"
-)
-
 set(TORCH_XLA_TEST_SOURCES
   main.cpp
   cpp_test_util.cpp
@@ -77,6 +65,24 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 target_compile_options(test_ptxla PRIVATE ${TGT_OPTS})
+
+target_include_directories(
+  test_ptxla
+  PRIVATE
+  "${PTXLA_DIR}"
+  "${PTXLA_DIR}/torch_xla/csrc"
+)
+target_include_directories(
+  test_ptxla
+  SYSTEM PUBLIC  
+  "${SOURCE_DIR}/googletest/include"
+  "${TFDIR}/bazel-tensorflow"
+  "${TFDIR}/bazel-genfiles"
+  "${TFDIR}/bazel-tensorflow/external/protobuf_archive/src"
+  "${TFDIR}/bazel-tensorflow/external/eigen_archive"
+  "${TFDIR}/bazel-tensorflow/external/com_google_absl"
+  "${PYTHON_INCLUDE_DIR}"
+)
 
 add_dependencies(test_ptxla googletest)
 
