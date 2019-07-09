@@ -10,7 +10,7 @@ namespace torch_xla {
 namespace cpp_test {
 
 TEST(XlaUtilCacheTest, BasicTest) {
-  static const size_t kMaxSize = 64;
+  static const int kMaxSize = 64;
   xla::util::Cache<int, std::string> cache(kMaxSize);
 
   for (int i = 0; i < 2 * kMaxSize; ++i) {
