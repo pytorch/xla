@@ -1337,13 +1337,11 @@ TEST_F(AtenXlaTensorTest, TestLayerNorm) {
 TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
   torch::Tensor a = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::nuclear_norm(a);
-  for (bool keepdim : {false, true}) {
-    ForEachDevice([&](const torch::Device& device) {
-      torch::Tensor xla_a = CopyToDevice(a, device);
-      torch::Tensor xla_b = torch::nuclear_norm(xla_a);
-      AllClose(b, xla_b);
-    });
-  }
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::nuclear_norm(xla_a);
+    AllClose(b, xla_b);
+  });
 }
 
 TEST_F(AtenXlaTensorTest, TestPairwiseDistance) {
@@ -2609,7 +2607,6 @@ TEST_F(AtenXlaTensorTest, TestCat) {
   torch::Tensor a = torch::rand({2, 1, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({2, 2, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor c = torch::rand({2, 3, 3}, torch::TensorOptions(torch::kFloat));
-  int rank = a.dim();
   for (int dim : {1, -2}) {
     torch::Tensor d = torch::cat({a, b, c}, dim);
     ForEachDevice([&](const torch::Device& device) {
@@ -4156,7 +4153,6 @@ TEST_F(AtenXlaTensorTest, TestElu) {
   torch::Scalar alpha = 0.5;
   torch::Scalar scale = 2.5;
   torch::Scalar input_scale = 1.5;
-  float value = 20;
   torch::Tensor output = torch::elu(input, alpha, scale, input_scale);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
@@ -4171,7 +4167,6 @@ TEST_F(AtenXlaTensorTest, TestEluInPlace) {
   torch::Scalar alpha = 0.5;
   torch::Scalar scale = 2.5;
   torch::Scalar input_scale = 1.5;
-  float value = 20;
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
     torch::Tensor output = torch::elu_(input, alpha, scale, input_scale);
@@ -6116,7 +6111,6 @@ TEST_F(AtenXlaTensorTest, TestDiagRank2) {
 TEST_F(AtenXlaTensorTest, TestDiagFlat) {
   torch::Tensor input =
       torch::rand({4, 3, 6, 7}, torch::TensorOptions(torch::kFloat));
-  int rank = input.dim();
   for (int diagonal = -10; diagonal < 10; ++diagonal) {
     torch::Tensor output = torch::diagflat(input, diagonal);
     ForEachDevice([&](const torch::Device& device) {
