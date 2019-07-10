@@ -152,11 +152,12 @@ class XlaTestCase(TestCase):
 
   def assertEqualRel(self, out, expected, rel_err=1e-2, abs_err=1e-5):
     try:
-      diff_tensor = (out - expected).abs()
-      max_rel_err = torch.max(out.abs(), expected.abs()) * rel_err
+      diff_tensor = (out - expected).abs().float()
+      max_rel_err = torch.max(out.abs(), expected.abs()).float() * rel_err
       # Allow higher relative differences as long as we're still below the
       # absolute error.
-      max_abs_err = torch.max(max_rel_err, torch.ones_like(out) * abs_err)
+      max_abs_err = torch.max(max_rel_err,
+                              torch.ones_like(out).float() * abs_err)
       super(XlaTestCase, self).assertEqual(diff_tensor.size(),
                                            max_abs_err.size())
       if torch.le(diff_tensor, max_abs_err).min().item() == 0:
