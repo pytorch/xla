@@ -66,7 +66,7 @@ void TestSingleReplication(const std::vector<Device>& devices,
     };
     xla::env::ScheduleIoClosure(mwait.Completer(std::move(executor)));
   }
-  ASSERT_EQ(mwait.Wait(), xla::Status::OK());
+  mwait.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
     auto literals =

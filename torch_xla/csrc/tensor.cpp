@@ -360,7 +360,7 @@ XLATensor::Async::Async(
 }
 
 void XLATensor::Async::Wait() {
-  XLA_CHECK_OK(mwait.Wait());
+  mwait.Wait();
   // Accessing other Async members is safe only after MultiWait::Wait()
   // completes.
   xla::util::ExceptionCleanup::StatusType status;
@@ -848,7 +848,7 @@ std::vector<at::Tensor> XLATensor::GetTensorsFused(
   config.force_xla_data = false;
   auto async = SyncTensorsGraphInternal(tensors, {}, config);
   if (async != nullptr) {
-    XLA_CHECK_OK(async->mwait.Wait());
+    async->mwait.Wait();
   }
   std::vector<xla::ComputationClient::DataPtr> tensors_data =
       GatherTensorsXlaData(
@@ -1139,7 +1139,7 @@ void XLATensor::SyncTensorsGraph(
   } else {
     auto async = SyncTensorsGraphInternal(tensors, devices, config);
     if (wait && async != nullptr) {
-      XLA_CHECK_OK(async->mwait.Wait());
+      async->mwait.Wait();
     }
   }
 }

@@ -261,7 +261,7 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
       };
       xla::env::ScheduleClosure(mwait.Completer(std::move(copy_fn)));
     }
-    XLA_CHECK_OK(mwait.Wait());
+    mwait.Wait();
   }
 }
 
