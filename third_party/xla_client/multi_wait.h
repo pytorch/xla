@@ -5,7 +5,6 @@
 #include <functional>
 #include <mutex>
 
-#include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/types.h"
 
 namespace xla {
@@ -17,15 +16,14 @@ class MultiWait {
   explicit MultiWait(size_t count) : count_(count) {}
 
   // Signal the completion of a single task.
-  void Done() { Done(Status::OK()); }
-  void Done(Status status);
+  void Done();
 
   // Waits until at least count (passed as constructor value) completions
   // happened.
-  Status Wait();
+  void Wait();
 
   // Same as above, but waits up to wait_seconds.
-  Status Wait(double wait_seconds);
+  void Wait(double wait_seconds);
 
   // Resets the threshold counter for the MultiWait object. The completed count
   // is also reset to zero.
@@ -41,7 +39,7 @@ class MultiWait {
   std::condition_variable cv_;
   size_t count_ = 0;
   size_t completed_count_ = 0;
-  Status status_;
+  std::exception_ptr exptr_;
 };
 
 }  // namespace util

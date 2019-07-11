@@ -12,11 +12,22 @@
 
 #include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/status.h"
+#include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/lib/hash/hash.h"
 
 namespace xla {
 namespace util {
+
+template <typename F>
+Status CheckedCall(const F& fn) {
+  try {
+    fn();
+  } catch (const std::exception& ex) {
+    return tensorflow::errors::Internal(ex.what());
+  }
+  return Status::OK();
+}
 
 template <typename T>
 class Cleanup {

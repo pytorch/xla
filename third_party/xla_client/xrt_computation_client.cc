@@ -251,7 +251,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
     };
     env::ScheduleClosure(mwait.Completer(std::move(converter)));
   }
-  XLA_CHECK_OK(mwait.Wait());
+  mwait.Wait();
 
   OutboundDataMetric()->AddSample(total_size);
 
@@ -364,7 +364,7 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
     };
     env::ScheduleClosure(mwait.Completer(std::move(builder)));
   }
-  XLA_CHECK_OK(mwait.Wait());
+  mwait.Wait();
   mwait.Reset(session_work_map.size());
 
   for (auto& session_and_work : session_work_map) {
@@ -395,7 +395,7 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
     };
     env::ScheduleIoClosure(mwait.Completer(std::move(session_runner)));
   }
-  XLA_CHECK_OK(mwait.Wait());
+  mwait.Wait();
   return results;
 }
 
@@ -514,7 +514,7 @@ XrtComputationClient::RunComputations(
     };
     env::ScheduleIoClosure(mwait.Completer(std::move(session_runner)));
   }
-  XLA_CHECK_OK(mwait.Wait());
+  mwait.Wait();
   return results;
 }
 
