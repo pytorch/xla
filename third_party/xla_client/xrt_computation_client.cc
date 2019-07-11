@@ -1075,19 +1075,29 @@ void XrtComputationClient::InitializeDevices(
         tpu_workers.emplace(parsed_device.job, parsed_device.task);
       }
     }
-    for (auto& worker : tpu_workers) {
-      auto it = options_.workers_map.find(worker);
-      XLA_CHECK(it != options_.workers_map.end());
 
-      TF_LOG(INFO) << "Configuring TPU for worker " << worker.name << ":"
-                   << worker.task_no << " at " << it->second;
-      tensorflow::tpu::TopologyProto worker_topology_proto =
-          InitializeAndFetchTopology(worker.name, worker.task_no, it->second);
-      if (topology_proto == nullptr) {
-        topology_proto = absl::make_unique<tensorflow::tpu::TopologyProto>(
-            std::move(worker_topology_proto));
-      }
+    util::MultiWait mwait(tpu_workers.size());
+    size_t worker_index = 0;
+    for (auto& worker : tpu_workers) {
+      auto init_fn = [&, worker_index]() {
+        auto it = options_.workers_map.find(worker);
+        XLA_CHECK(it != options_.workers_map.end());
+
+        TF_LOG(INFO) << "Configuring TPU for worker " << worker.name << ":"
+                     << worker.task_no << " at " << it->second;
+        tensorflow::tpu::TopologyProto worker_topology_proto =
+            InitializeAndFetchTopology(worker.name, worker.task_no, it->second);
+        if (worker_index == 0 && topology_proto == nullptr) {
+          topology_proto = absl::make_unique<tensorflow::tpu::TopologyProto>(
+              std::move(worker_topology_proto));
+        }
+      };
+
+      env::ScheduleIoClosure(mwait.Completer(std::move(init_fn)));
+      ++worker_index;
     }
+
+    XLA_CHECK_OK(mwait.Wait());
   }
   if (topology_proto != nullptr) {
     TF_LOG(INFO) << "TPU topology: " << topology_proto->DebugString();
