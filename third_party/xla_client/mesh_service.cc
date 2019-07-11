@@ -20,6 +20,7 @@
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 
 namespace xla {
 namespace service {
@@ -110,7 +111,8 @@ class MeshServiceImpl : public grpc::MeshService::Service {
   rendezvous->mwait.Done();
   TF_VLOG(3) << "Entering rendezvous: tag=" << request->tag()
              << " peer=" << context->peer();
-  ::grpc::Status status = ToGrpcStatus(rendezvous->mwait.Wait());
+  ::grpc::Status status =
+      ToGrpcStatus(xla::util::CheckedCall([&]() { rendezvous->mwait.Wait(); }));
   TF_VLOG(3) << "Exiting rendezvous: tag=" << request->tag()
              << " peer=" << context->peer() << " status=" << status;
   ReleaseRendezvous(request->tag(), rendezvous);
