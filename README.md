@@ -12,7 +12,7 @@ Once you've created a Cloud TPU node, you can train your PyTorch models by eithe
 Follow these steps to train a PyTorch model with Docker on a TPU:
 
 1. Create a Compute VM and install docker (or use COS VM image)
-    * *Note: make sure the Compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores to not be VM compute/network bound.*
+    * *Note: make sure the Compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores (`n1-standard-16`) to not be VM compute/network bound.*
 
     Docker images with `torch` and `torch_xla` preinstalled in the `pytorch` conda
     environment are distributed under: `gcr.io/tpu-pytorch/xla`.
@@ -49,7 +49,7 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
 
     * In the GCP Console, go to the [**VM Instances**](https://console.cloud.google.com/compute/instances) page.
     * Click **Create Instance**.
-    * Make sure the compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores to not be VM compute/network bound.
+    * Make sure the compute VM is within the **same** zone as the TPU node you created or else performance will suffer, also ideally create a VM that has at least 16 cores (`n1-standard-16`) to not be VM compute/network bound.
     * In the **Boot disk** section, click **Change** to choose our PyTorch/XLA image.
     * At the bottom of the **OS Images** tab select the **Debian GNU/Linux 9 Stretch + PyTorch/XLA** image.
     * Chose an appropriate dist size based on your dataset and click **Select**.
