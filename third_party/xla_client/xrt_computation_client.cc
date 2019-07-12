@@ -1096,8 +1096,7 @@ void XrtComputationClient::InitializeDevices(
       env::ScheduleIoClosure(mwait.Completer(std::move(init_fn)));
       ++worker_index;
     }
-
-    XLA_CHECK_OK(mwait.Wait());
+    mwait.Wait();
   }
   if (topology_proto != nullptr) {
     TF_LOG(INFO) << "TPU topology: " << topology_proto->DebugString();
