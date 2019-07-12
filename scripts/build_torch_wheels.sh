@@ -28,7 +28,7 @@ function install_llvm_clang() {
 }
 
 function install_req_packages() {
-  sudo apt-get -y install python-pip git curl libopenblas-dev
+  sudo apt-get -y install python-pip git curl libopenblas-dev vim
   /usr/bin/yes | sudo pip install --upgrade google-api-python-client
   /usr/bin/yes | sudo pip install --upgrade oauth2client
   install_bazel
