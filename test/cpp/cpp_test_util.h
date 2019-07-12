@@ -40,6 +40,11 @@ static inline void AllClose(at::Tensor tensor, XLATensor& xla_tensor,
   EXPECT_TRUE(CloseValues(tensor, xla_tensor.ToTensor(), rtol, atol));
 }
 
+static inline void AllEqualIntegrals(at::Tensor tensor, at::Tensor xla_tensor) {
+  ASSERT_TRUE(at::isIntegralType(tensor.scalar_type()));
+  EXPECT_TRUE(EqualValues(tensor, xla_tensor));
+}
+
 void ForEachDevice(const std::function<void(const Device&)>& devfn);
 
 void ForEachDevice(const std::function<void(const torch::Device&)>& devfn);
