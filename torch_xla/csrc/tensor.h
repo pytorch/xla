@@ -636,8 +636,7 @@ class XLATensor {
   // Returns the input, weight and bias gradients.
   static std::tuple<XLATensor, XLATensor, XLATensor> native_batch_norm_backward(
       const XLATensor& grad_out, const XLATensor& input,
-      const XLATensor& weight, const XLATensor& running_mean,
-      const XLATensor& running_var, const XLATensor& save_mean,
+      const XLATensor& weight, const XLATensor& save_mean,
       const XLATensor& save_invstd, bool training, double eps);
 
   static XLATensor ne(const XLATensor& input, at::Scalar other);

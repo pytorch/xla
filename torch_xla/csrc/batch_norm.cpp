@@ -48,11 +48,12 @@ xla::XlaOp BuildBatchNormInference(
                                  1);
 }
 
-BatchNormGrads BuildBatchNormBackward(
-    const xla::XlaOp& grad, const xla::XlaOp& input, const xla::XlaOp& weight,
-    const xla::XlaOp& running_mean, const xla::XlaOp& running_var,
-    const xla::XlaOp& save_mean, const xla::XlaOp& save_invstd, bool training,
-    float eps_value) {
+BatchNormGrads BuildBatchNormBackward(const xla::XlaOp& grad,
+                                      const xla::XlaOp& input,
+                                      const xla::XlaOp& weight,
+                                      const xla::XlaOp& save_mean,
+                                      const xla::XlaOp& save_invstd,
+                                      bool training, float eps_value) {
   xla::XlaOp grads = xla::BatchNormGrad(input, weight, save_mean,
                                         VarianceRecover(save_invstd, eps_value),
                                         grad, eps_value, 1);
