@@ -1487,17 +1487,17 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
 }
 
 std::tuple<XLATensor, XLATensor, XLATensor>
-XLATensor::native_batch_norm_backward(
-    const XLATensor& grad_out, const XLATensor& input, const XLATensor& weight,
-    const XLATensor& running_mean, const XLATensor& running_var,
-    const XLATensor& save_mean, const XLATensor& save_invstd, bool training,
-    double eps) {
+XLATensor::native_batch_norm_backward(const XLATensor& grad_out,
+                                      const XLATensor& input,
+                                      const XLATensor& weight,
+                                      const XLATensor& save_mean,
+                                      const XLATensor& save_invstd,
+                                      bool training, double eps) {
   xla::Shape features_shape = BatchNormFeaturesShape(input);
   ir::Value weight_value =
       GetIrValueOrDefault(weight, 1, features_shape, input.GetDevice());
   ir::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormBackward>(
       grad_out.GetIrValue(), input.GetIrValue(), weight_value,
-      running_mean.GetIrValue(), running_var.GetIrValue(),
       save_mean.GetIrValue(), save_invstd.GetIrValue(), training, eps);
   XLATensor grad_input = input.CreateFrom(ir::Value(node, 0));
   XLATensor grad_weight = input.CreateFrom(ir::Value(node, 1));

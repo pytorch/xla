@@ -2002,7 +2002,6 @@ AtenXlaType::native_batch_norm_backward(
   auto gradients = XLATensor::native_batch_norm_backward(
       bridge::GetXlaTensor(grad_out), bridge::GetXlaTensor(input),
       bridge::GetOrCreateXlaTensor(weight, device),
-      bridge::GetXlaTensor(running_mean), bridge::GetXlaTensor(running_var),
       bridge::GetXlaTensor(save_mean), bridge::GetXlaTensor(save_invstd), train,
       eps);
   at::Tensor undefined;
