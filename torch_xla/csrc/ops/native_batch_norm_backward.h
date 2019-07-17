@@ -10,8 +10,7 @@ namespace ops {
 class NativeBatchNormBackward : public Node {
  public:
   NativeBatchNormBackward(const Value& grad_out, const Value& input,
-                          const Value& weight, const Value& running_mean,
-                          const Value& running_var, const Value& save_mean,
+                          const Value& weight, const Value& save_mean,
                           const Value& save_invstd, bool training, double eps);
 
   NodePtr Clone(OpList operands) const override;

@@ -28,10 +28,11 @@ xla::XlaOp BuildBatchNormInference(const xla::XlaOp& input,
                                    const xla::XlaOp& mean,
                                    const xla::XlaOp& variance, float eps_value);
 
-BatchNormGrads BuildBatchNormBackward(
-    const xla::XlaOp& grad, const xla::XlaOp& input, const xla::XlaOp& weight,
-    const xla::XlaOp& running_mean, const xla::XlaOp& running_var,
-    const xla::XlaOp& save_mean, const xla::XlaOp& save_invstd,
-    bool training, float eps_value);
+BatchNormGrads BuildBatchNormBackward(const xla::XlaOp& grad,
+                                      const xla::XlaOp& input,
+                                      const xla::XlaOp& weight,
+                                      const xla::XlaOp& save_mean,
+                                      const xla::XlaOp& save_invstd,
+                                      bool training, float eps_value);
 
 }  // namespace torch_xla
