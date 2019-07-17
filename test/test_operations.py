@@ -185,6 +185,8 @@ class XlaTestCase(TestCase):
 
   def makeComparable(self, value):
     if isinstance(value, torch.Tensor):
+      if value.dtype == torch.bool:
+        value = value.to(dtype=torch.uint8)
       if xm.is_xla_tensor(value.data):
         return value.data.cpu()
       return value.data
@@ -199,7 +201,10 @@ class XlaTestCase(TestCase):
     xla_results = xu.as_list(fn(*xla_tensors))
     for at, xt in zip(results, xla_results):
       self.assertEqualRel(
-          self.makeComparable(xt), at, rel_err=rel_err, abs_err=abs_err)
+          self.makeComparable(xt),
+          self.makeComparable(at),
+          rel_err=rel_err,
+          abs_err=abs_err)
 
 
 class TestParallelLoader(XlaTestCase):
