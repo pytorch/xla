@@ -24,6 +24,7 @@ function install_llvm_clang() {
   wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
   sudo apt-get update
   sudo apt-get -y install clang-7 clang++-7
+  echo 'export CC=clang-7 CXX=clang++-7' >> ~/.bashrc
   export CC=clang-7 CXX=clang++-7
 }
 
