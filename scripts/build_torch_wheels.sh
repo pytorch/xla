@@ -53,11 +53,11 @@ function install_and_setup_conda() {
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
   
   conda install -y numpy pyyaml setuptools cmake cffi typing tqdm
-  /usr/bin/yes | sudo pip install --upgrade google-api-python-client
-  /usr/bin/yes | sudo pip install --upgrade oauth2client
+  /usr/bin/yes | pip install --upgrade google-api-python-client
+  /usr/bin/yes | pip install --upgrade oauth2client
+  /usr/bin/yes | pip install lark-parser
   
   sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
-  /usr/bin/yes | pip install lark-parser
 }
 
 function build_and_install_torch() {
