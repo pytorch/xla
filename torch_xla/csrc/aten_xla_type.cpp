@@ -564,7 +564,8 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
                                    at::IntArrayRef kernel_size,
                                    at::IntArrayRef stride,
                                    at::IntArrayRef padding, bool ceil_mode,
-                                   bool count_include_pad) {
+                                   bool count_include_pad, c10::optional<int64_t> divisor_override) {
+  // devisor_override is set not supported yet.
   // Lowering when ceil_mode is set not supported yet.
   if (ceil_mode && count_include_pad) {
     return AtenXlaTypeDefault::avg_pool2d(self, kernel_size, stride, padding,
@@ -579,7 +580,8 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
 at::Tensor AtenXlaType::avg_pool2d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef kernel_size, at::IntArrayRef stride,
-    at::IntArrayRef padding, bool ceil_mode, bool count_include_pad) {
+    at::IntArrayRef padding, bool ceil_mode, bool count_include_pad, c10::optional<int64_t> divisor_override) {
+  // devisor_override is set not supported yet.
   // Lowering when ceil_mode is set not supported yet.
   if (ceil_mode && count_include_pad) {
     return AtenXlaTypeDefault::avg_pool2d_backward(
@@ -597,7 +599,8 @@ at::Tensor AtenXlaType::avg_pool3d(const at::Tensor& self,
                                    at::IntArrayRef kernel_size,
                                    at::IntArrayRef stride,
                                    at::IntArrayRef padding, bool ceil_mode,
-                                   bool count_include_pad) {
+                                   bool count_include_pad, c10::optional<int64_t> divisor_override) {
+  // devisor_override is set not supported yet.
   // Lowering when ceil_mode is set not supported yet.
   if (ceil_mode && count_include_pad) {
     return AtenXlaTypeDefault::avg_pool3d(self, kernel_size, stride, padding,
@@ -612,7 +615,8 @@ at::Tensor AtenXlaType::avg_pool3d(const at::Tensor& self,
 at::Tensor AtenXlaType::avg_pool3d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef kernel_size, at::IntArrayRef stride,
-    at::IntArrayRef padding, bool ceil_mode, bool count_include_pad) {
+    at::IntArrayRef padding, bool ceil_mode, bool count_include_pad, c10::optional<int64_t> divisor_override) {
+  // devisor_override is set not supported yet.
   if (ceil_mode && count_include_pad) {
     return AtenXlaTypeDefault::avg_pool3d_backward(
         grad_output, self, kernel_size, stride, padding, ceil_mode,
