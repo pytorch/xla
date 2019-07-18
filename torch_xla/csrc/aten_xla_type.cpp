@@ -566,8 +566,6 @@ at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
                                    at::IntArrayRef padding, bool ceil_mode,
                                    bool count_include_pad,
                                    c10::optional<int64_t> divisor_override) {
-  // devisor_override is set not supported yet.
-  // Lowering when ceil_mode is set not supported yet.
   if ((ceil_mode && count_include_pad) || divisor_override) {
     return AtenXlaTypeDefault::avg_pool2d(self, kernel_size, stride, padding,
                                           ceil_mode, count_include_pad,
@@ -584,8 +582,6 @@ at::Tensor AtenXlaType::avg_pool2d_backward(
     at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
     c10::optional<int64_t> divisor_override) {
-  // divisor_override is set not supported yet.
-  // Lowering when ceil_mode is set not supported yet.
   if ((ceil_mode && count_include_pad) || divisor_override) {
     return AtenXlaTypeDefault::avg_pool2d_backward(
         grad_output, self, kernel_size, stride, padding, ceil_mode,
@@ -604,8 +600,6 @@ at::Tensor AtenXlaType::avg_pool3d(const at::Tensor& self,
                                    at::IntArrayRef padding, bool ceil_mode,
                                    bool count_include_pad,
                                    c10::optional<int64_t> divisor_override) {
-  // divisor_override is set not supported yet.
-  // Lowering when ceil_mode is set not supported yet.
   if ((ceil_mode && count_include_pad) || divisor_override) {
     return AtenXlaTypeDefault::avg_pool3d(self, kernel_size, stride, padding,
                                           ceil_mode, count_include_pad,
@@ -622,7 +616,6 @@ at::Tensor AtenXlaType::avg_pool3d_backward(
     at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
     c10::optional<int64_t> divisor_override) {
-  // divisor_override is set not supported yet.
   if ((ceil_mode && count_include_pad) || divisor_override) {
     return AtenXlaTypeDefault::avg_pool3d_backward(
         grad_output, self, kernel_size, stride, padding, ceil_mode,
