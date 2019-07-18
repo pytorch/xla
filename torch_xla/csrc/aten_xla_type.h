@@ -194,26 +194,26 @@ class AtenXlaType {
   static at::Tensor avg_pool2d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,
                                at::IntArrayRef stride, at::IntArrayRef padding,
-                               bool ceil_mode, bool count_include_pad, c10::optional<int64_t> divisor_override);
+                               bool ceil_mode, bool count_include_pad,
+                               c10::optional<int64_t> divisor_override);
 
-  static at::Tensor avg_pool2d_backward(const at::Tensor& grad_output,
-                                        const at::Tensor& self,
-                                        at::IntArrayRef kernel_size,
-                                        at::IntArrayRef stride,
-                                        at::IntArrayRef padding, bool ceil_mode,
-                                        bool count_include_pad, c10::optional<int64_t> divisor_override);
+  static at::Tensor avg_pool2d_backward(
+      const at::Tensor& grad_output, const at::Tensor& self,
+      at::IntArrayRef kernel_size, at::IntArrayRef stride,
+      at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
+      c10::optional<int64_t> divisor_override);
 
   static at::Tensor avg_pool3d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,
                                at::IntArrayRef stride, at::IntArrayRef padding,
-                               bool ceil_mode, bool count_include_pad, c10::optional<int64_t> divisor_override);
+                               bool ceil_mode, bool count_include_pad,
+                               c10::optional<int64_t> divisor_override);
 
-  static at::Tensor avg_pool3d_backward(const at::Tensor& grad_output,
-                                        const at::Tensor& self,
-                                        at::IntArrayRef kernel_size,
-                                        at::IntArrayRef stride,
-                                        at::IntArrayRef padding, bool ceil_mode,
-                                        bool count_include_pad, c10::optional<int64_t> divisor_override);
+  static at::Tensor avg_pool3d_backward(
+      const at::Tensor& grad_output, const at::Tensor& self,
+      at::IntArrayRef kernel_size, at::IntArrayRef stride,
+      at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
+      c10::optional<int64_t> divisor_override);
 
   static at::Tensor bartlett_window(int64_t window_length,
                                     const at::TensorOptions& options);
