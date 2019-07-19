@@ -40,8 +40,8 @@ function install_and_setup_conda() {
     sh Anaconda3-5.2.0-Linux-x86_64.sh -b
     rm Anaconda3-5.2.0-Linux-x86_64.sh
   fi
-  echo 'export PATH="$HOME/anaconda3/bin:$PATH"' >> ~/.bashrc
-  export PATH="$HOME/anaconda3/bin:$PATH"
+  echo ". $HOME/anaconda3/etc/profile.d/conda.sh" >> ~/.bashrc
+  source "$HOME/anaconda3/etc/profile.d/conda.sh"
   ENVNAME="pytorch"
   if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
     conda remove --name "$ENVNAME" --all
@@ -50,7 +50,7 @@ function install_and_setup_conda() {
     PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
   fi
   conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
-  source activate "$ENVNAME"
+  conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
   
   conda install -y numpy pyyaml setuptools cmake cffi typing tqdm
