@@ -8,7 +8,7 @@ TORCH_XLA_WHEEL="torch_xla-nightly-cp36-cp36m-linux_x86_64.whl"
 
 # Activate pytorch-nightly conda env if not already in it
 if [ "$CONDA_DEFAULT_ENV" != "pytorch-nightly" ]; then
-  source activate pytorch-nightly
+  conda activate pytorch-nightly
 fi
 
 gsutil cp "$DIST_BUCKET/$TORCH_WHEEL" /tmp/

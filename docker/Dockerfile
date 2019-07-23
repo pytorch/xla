@@ -20,5 +20,10 @@ RUN if [ "${cloud_build}" = true ]; then github_branch="${release_version}" && \
 RUN cd pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version}
 
 # Use conda environment on startup or when running scripts.
-RUN echo "source activate pytorch" >> ~/.bashrc
+RUN echo "conda activate pytorch" >> ~/.bashrc
 ENV PATH /root/anaconda3/envs/pytorch/bin/:$PATH
+
+# Define entrypoint and cmd
+COPY docker/docker-entrypoint.sh /usr/local/bin
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["bash"]

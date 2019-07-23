@@ -67,7 +67,7 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
     pytorch-0.1              /anaconda3/envs/pytorch-0.1
     pytorch-nightly          /anaconda3/envs/pytorch-nightly
 
-    (vm)$ source activate pytorch-0.1
+    (vm)$ conda activate pytorch-0.1
     (pytorch-0.1)$ cd /usr/share/torch-xla-0.1/pytorch/xla
     (pytorch-0.1)$ python test/test_train_mnist.py
     ```
