@@ -220,8 +220,7 @@ class DataParallel(object):
     os._exit(17)
 
   def _module_runner(self, loop_fn, device, module, loader, context, result):
-    torch_xla._XLAC._xla_set_default_device(device)
-    xm.set_replication(self._replication)
+    xm.set_replication(device, self._replication)
     try:
       result.result = loop_fn(module, loader, torch.device(device), context)
     except Exception as e:
