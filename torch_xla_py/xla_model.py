@@ -10,7 +10,7 @@ import time
 import torch
 import torch.nn as nn
 import torch_xla
-import torch_xla_py.graph_saver as gs
+import torch_xla_py.metrics_saver as ms
 import torch_xla_py.utils as xu
 import torch_xla_py.keyd_queue as kq
 
@@ -50,8 +50,12 @@ class Replication(object):
         self._ready = False
 
 
-def set_replication(replication):
+def set_replication(device, replication):
   assert replication is None or isinstance(replication, Replication)
+  torch_xla._XLAC._xla_set_default_device(device)
+  _TLS.device = device
+  _TLS.device_index = (
+      replication.devices().index(device) if replication else 0)
   _TLS.replication = replication
 
 
@@ -324,6 +328,10 @@ def _mark_step(replication):
     devices = replication.replication_devices()
   torch_xla._XLAC._xla_step_marker(
       torch_xla._XLAC._xla_get_default_device(), devices, wait=False)
+  # Only emit metrics from the first local device index, to avoid emitting the
+  # same values from different threads.
+  if getattr(_TLS, 'device_index', 0) == 0:
+    ms.save_metrics()
 
 
 def optimizer_step(optimizer, closure=None):
