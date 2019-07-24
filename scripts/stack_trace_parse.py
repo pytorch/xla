@@ -17,6 +17,9 @@ def parse_stack_name(line):
   m = re.match(r'Thread (\d+) \(Thread (0x[^\s]+) \(LWP (\d+)\)\):', line)
   if m:
     return m.group(2)
+  m = re.match(r'Thread (\d+) \(LWP (\d+)\):', line)
+  if m:
+    return m.group(2)
 
 
 def parse_stack_location(line):
