@@ -1,13 +1,16 @@
 diff --git a/torch/nn/utils/clip_grad.py b/torch/nn/utils/clip_grad.py
-index d088c4b37..685182206 100644
+index d088c4b37e..6d3a1e90af 100644
 --- a/torch/nn/utils/clip_grad.py
 +++ b/torch/nn/utils/clip_grad.py
-@@ -27,15 +27,15 @@ def clip_grad_norm_(parameters, max_norm, norm_type=2):
+@@ -24,18 +24,18 @@ def clip_grad_norm_(parameters, max_norm, norm_type=2):
+     parameters = list(filter(lambda p: p.grad is not None, parameters))
+     max_norm = float(max_norm)
+     norm_type = float(norm_type)
++    device = parameters[0].device if parameters else torch.device('cpu')
      if norm_type == inf:
          total_norm = max(p.grad.data.abs().max() for p in parameters)
      else:
 -        total_norm = 0
-+        device = parameters[0].device
 +        total_norm = torch.zeros([], device=device if parameters else None)
          for p in parameters:
 -            param_norm = p.grad.data.norm(norm_type)
