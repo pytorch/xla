@@ -98,8 +98,8 @@ def train_imagenet():
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
         # Matches Torchvision's eval transforms except Torchvision uses size
-        # 256 resize for all models and just crashes for 299x299 images, e.g.
-        # inception_v3.
+        # 256 resize for all models both here and in the train loader. Their
+        # version crashes during training on 299x299 images, e.g. inception.
         transforms.Compose([
             transforms.Resize(max(img_dim, 256)),
             transforms.CenterCrop(img_dim),
