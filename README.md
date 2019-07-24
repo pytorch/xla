@@ -180,16 +180,11 @@ To run the tests, follow __one__ of the options below:
 
   Select any free TCP port you prefer instead of 40934 (totally arbitrary).
 
-* Run on Cloud TPU using the XRT client, use one of the following:
+* Run on Cloud TPU using the XRT client, set the XRT_TPU_CONFIG environment variable:
 
-  - Set the XRT_TPU_CONFIG environment variable:
-
-    ```Shell
-    export XRT_TPU_CONFIG="tpu_worker;0;<IP of the TPU node>:8470"
-    ```
-
-  - Create a `$HOME/.pytorch_tpu.conf` file with the following content: `worker: tpu_worker <IP of the TPU node>:8470`
-
+  ```Shell
+  export XRT_TPU_CONFIG="tpu_worker;0;<IP of the TPU node>:8470"
+  ```
 
 Note that the IP of the TPU node can change if the TPU node is reset. If _PyTorch_
 seem to hang at startup, verify that the IP of your TPU node is still the same of
