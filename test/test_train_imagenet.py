@@ -97,16 +97,19 @@ def train_imagenet():
         num_workers=FLAGS.num_workers)
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
+        # Matches Torchvision's eval transforms except Torchvision uses size
+        # 256 resize for all models and just crashes for 299x299 images, e.g.
+        # inception_v3.
         transforms.Compose([
-            transforms.RandomResizedCrop(img_dim),
-            transforms.RandomHorizontalFlip(),
+            transforms.Resize(max(img_dim, 256)),
+            transforms.CenterCrop(img_dim),
             transforms.ToTensor(),
             normalize,
         ]))
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.batch_size,
-        shuffle=True,
+        shuffle=False,
         num_workers=FLAGS.num_workers)
 
   torch.manual_seed(42)
