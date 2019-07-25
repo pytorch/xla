@@ -283,6 +283,9 @@ only be enabled for debugging.
 * ```SYNC_TENSORS_OPBYOP```: The same as _GET_TENSORS_OPBYOP_ but for "sync tensors" operation
   (the operation used at the end of a step, to flush pending IR computations and materialize
   them into _TPU_ device data).
+  
+* ```XLA_SYNC_WAIT```: Forces the XLA tensor sync operation to wait for its completion, before
+  moving to the next step.
 
 * ```XLA_USE_BF16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _BiFloat16_
   when sending to the _TPU_ device.
