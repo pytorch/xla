@@ -69,6 +69,7 @@ class ParallelLoader(object):
                devices,
                batchdim=0,
                drop_last=False,
+               drop_bad_batch=True,
                loader_prefetch_size=8,
                device_prefetch_size=4):
     self._loader = loader
@@ -76,6 +77,7 @@ class ParallelLoader(object):
     self._devices = list(devices)
     self._batchdim = batchdim
     self._drop_last = drop_last
+    self._drop_bad_batch = drop_bad_batch
     self._done = False
     self._queues = dict()
     for device in self._devices:
@@ -141,9 +143,11 @@ class ParallelLoader(object):
       # within this thread.
       if self._batch_size is None:
         self._batch_size = self._get_batch_size(data, self._batchdim)
-      elif (self._drop_last and
-            self._batch_size != self._get_batch_size(data, self._batchdim)):
-        break
+      bad_batch = self._batch_size != self._get_batch_size(data, self._batchdim))
+      if bad_batch and self._drop_last:
+        break  # is this the desired behavior?
+      elif bad_batch and self._drop_bad_batch:
+        continue
       queues[batch_number % len(queues)].loader_queue.put((batch_number, data))
       batch_number += 1
     for dqueue in queues:
