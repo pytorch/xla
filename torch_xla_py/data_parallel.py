@@ -143,7 +143,7 @@ class ParallelLoader(object):
       # within this thread.
       if self._batch_size is None:
         self._batch_size = self._get_batch_size(data, self._batchdim)
-      bad_batch = self._batch_size != self._get_batch_size(data, self._batchdim))
+      bad_batch = self._batch_size != self._get_batch_size(data, self._batchdim)
       if bad_batch and self._drop_last:
         break  # is this the desired behavior?
       elif bad_batch and self._drop_bad_batch:
@@ -177,12 +177,18 @@ class ParallelLoader(object):
 
 class DataParallel(object):
 
-  def __init__(self, network, device_ids=None, batchdim=0, drop_last=False):
+  def __init__(self,
+               network,
+               device_ids=None,
+               batchdim=0,
+               drop_last=False,
+               drop_bad_batch=True):
     if device_ids is None:
       device_ids = xm.get_xla_supported_devices()
     self._device_ids = list(device_ids)
     self._batchdim = batchdim
     self._drop_last = drop_last
+    self._drop_bad_batch = drop_bad_batch
     self._native_run = False
     if self._device_ids:
       replication_devices = xm.xla_replication_devices(self._device_ids)
@@ -242,6 +248,7 @@ class DataParallel(object):
         loader,
         self._device_ids,
         batchdim=self._batchdim,
+        drop_bad_batch=self._drop_bad_batch,
         drop_last=self._drop_last)
     threads = []
     results = []
