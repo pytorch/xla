@@ -1,7 +1,5 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 
-#include <unistd.h>
-
 #include <atomic>
 #include <cstdlib>
 #include <fstream>
@@ -34,22 +32,6 @@ Device ParseDevice(const string& device) {
 
 ComputationClient* CreateClient() {
   return ComputationClient::Create().release();
-}
-
-string GetTpuClusterConfigPath() {
-  string home_folder = sys_util::GetEnvString("HOME", ".");
-  return absl::StrCat(home_folder, "/", ".pytorch_tpu.conf");
-}
-
-bool HasXrtConfigFile(string* config_path) {
-  *config_path = GetTpuClusterConfigPath();
-  if (access(config_path->c_str(), F_OK) != -1) {
-    // If we have a TPU cluster config file, we are in Cloud TPU world, so steer
-    // towards config file based XRT client.
-    return true;
-  }
-  config_path->clear();
-  return false;
 }
 
 XrtComputationClient::Worker ParseWorker(const string& worker) {
@@ -140,27 +122,6 @@ bool ParseEnvBasedTpuClusterConfig(XrtComputationClient::Options* options) {
   return true;
 }
 
-void ParseTpuClusterConfig(const string& xrt_config_path,
-                           XrtComputationClient::Options* options) {
-  std::map<string, int> device_ordinals;
-  std::ifstream config_file(xrt_config_path);
-  string line;
-  while (std::getline(config_file, line)) {
-    if (line.compare(0, 7, "worker:") == 0) {
-      std::vector<string> parts =
-          absl::StrSplit(line.substr(7), ' ', absl::SkipWhitespace());
-      XLA_CHECK_GE(parts.size(), 2) << line;
-      const string& worker_name = parts[0];
-      for (std::size_t i = 1; i < parts.size(); ++i) {
-        AddXrtHostDevices(worker_name, i - 1, parts[i], &device_ordinals,
-                          options);
-      }
-    }
-  }
-  PopulateLocalDevices(options);
-  options->default_device = "TPU:0";
-}
-
 bool ParseMeshConfig(
     XrtComputationClient::Options* options,
     std::unique_ptr<tensorflow::tpu::TopologyProto>* topology_proto) {
@@ -213,34 +174,28 @@ bool ParseMeshConfig(
 std::unique_ptr<ComputationClient> ComputationClient::Create() {
   XrtComputationClient::Options options;
   std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
-  string xrt_config_path;
-  if (HasXrtConfigFile(&xrt_config_path)) {
-    TF_LOG(INFO) << "Loading XRT configuration from " << xrt_config_path;
-    ParseTpuClusterConfig(xrt_config_path, &options);
-  } else {
-    if (!ParseEnvBasedTpuClusterConfig(&options) &&
-        !ParseMeshConfig(&options, &topology_proto)) {
-      string device_spec = sys_util::GetEnvString(
-          "XRT_DEVICE_MAP",
-          "TPU:0;/job:tpu_worker/replica:0/task:0/device:TPU:0");
-      for (const auto& device_target : absl::StrSplit(device_spec, '|')) {
-        std::vector<string> parts = absl::StrSplit(device_target, ';');
-        XLA_CHECK_EQ(parts.size(), 2) << device_target;
-        if (options.default_device.empty()) {
-          options.default_device = parts[0];
-        }
-        options.global_device_map.emplace(parts[0], parts[1]);
+  if (!ParseEnvBasedTpuClusterConfig(&options) &&
+      !ParseMeshConfig(&options, &topology_proto)) {
+    string device_spec = sys_util::GetEnvString(
+        "XRT_DEVICE_MAP",
+        "TPU:0;/job:tpu_worker/replica:0/task:0/device:TPU:0");
+    for (const auto& device_target : absl::StrSplit(device_spec, '|')) {
+      std::vector<string> parts = absl::StrSplit(device_target, ';');
+      XLA_CHECK_EQ(parts.size(), 2) << device_target;
+      if (options.default_device.empty()) {
+        options.default_device = parts[0];
       }
-      string workers_spec = sys_util::GetEnvString(
-          "XRT_WORKERS", "tpu_worker:0;grpc://localhost:51000");
-      for (const auto& name_target : absl::StrSplit(workers_spec, '|')) {
-        std::vector<string> parts = absl::StrSplit(name_target, ';');
-        XLA_CHECK_EQ(parts.size(), 2) << name_target;
-        options.workers_map.emplace(ParseWorker(parts[0]),
-                                    MakeGrpcEndPoint(parts[1]));
-      }
-      PopulateLocalDevices(&options);
+      options.global_device_map.emplace(parts[0], parts[1]);
     }
+    string workers_spec = sys_util::GetEnvString(
+        "XRT_WORKERS", "tpu_worker:0;grpc://localhost:51000");
+    for (const auto& name_target : absl::StrSplit(workers_spec, '|')) {
+      std::vector<string> parts = absl::StrSplit(name_target, ';');
+      XLA_CHECK_EQ(parts.size(), 2) << name_target;
+      options.workers_map.emplace(ParseWorker(parts[0]),
+                                  MakeGrpcEndPoint(parts[1]));
+    }
+    PopulateLocalDevices(&options);
   }
   return std::unique_ptr<ComputationClient>(
       new XrtComputationClient(options, std::move(topology_proto)));

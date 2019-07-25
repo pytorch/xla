@@ -86,6 +86,8 @@ def as_list(t):
 
 def getenv_as(name, type, defval=None):
   env = os.environ.get(name, None)
+  if type == bool:
+    return defval if env is None else type(int(env))
   return defval if env is None else type(env)
 
 

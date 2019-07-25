@@ -117,12 +117,16 @@ def xla_replication_devices(local_devices):
     device_types.add(xdev[0])
   if len(device_types) != 1:
     # No replication if the device set spawns multiple device types.
-    return None
+    raise RuntimeError(
+        'Cannot replicate across different device types: devices={}/{}'.format(
+            local_devices, real_devices))
   device_type = device_types.pop()
   kind_devices = get_xla_supported_devices(devkind=[device_type])
   if len(kind_devices) != len(local_devices):
     # Replication can only happen among all devices of one kind.
-    return None
+    raise RuntimeError(
+        'Cannot replicate if number of devices ({}) is different from {}'
+        .format(len(local_devices), len(kind_devices)))
   replication_devices = []
   for device in _XLA_ALL_DEVICES:
     xdev = parse_xla_device(device)
@@ -329,7 +333,9 @@ def _mark_step(replication):
     replication.enter()
     devices = replication.replication_devices()
   torch_xla._XLAC._xla_step_marker(
-      torch_xla._XLAC._xla_get_default_device(), devices, wait=False)
+      torch_xla._XLAC._xla_get_default_device(),
+      devices,
+      wait=xu.getenv_as('XLA_SYNC_WAIT', bool, False))
   # Only emit metrics from the first local device index, to avoid emitting the
   # same values from different threads.
   if getattr(_TLS, 'device_index', 0) == 0:

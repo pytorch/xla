@@ -75,4 +75,9 @@ PyTorch / XLA behaves semantically like regular PyTorch and XLA tensors, impleme
 
 3.  Loops with a different number of iterations between steps are subject to similar observations as tensor shapes. PyTorch / XLA automatically handles them, but they are seen as different execution graphs and require recompilations.
 
-`print(torch_xla._XLAC._xla_metrics_report())` can be used to print metrics at the end of each step to collect information regarding the number of compilations and operators that are part of the model but don’t have native XLA implementations.
+    `print(torch_xla._XLAC._xla_metrics_report())` can be used to print metrics at the end of each step to collect information regarding the number of compilations and operators that are part of the model but don’t have native XLA implementations. The `XLA_METRICS_FILE=1` environment setting can also be used to export per step metrics to a file.
+
+4. Sometimes model writers, when knowing that a PyTorch tensor is a scalar, they trigger `tensor.item()` (or equivalent PyTorch APIs which results to the same effects) calls, and they perform operations in Python scalar context, when similar operations can be performed using Pytorch tensor APIs. Following the latter approach will likely result in those operations behind fully fused within an XLA graph, without the need of issuing separate TPU computations.
+
+   This can dramatically improve performance of the model, up to an N factor, where N is the number of `tensor.item()` calls per step.
+
