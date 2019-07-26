@@ -180,11 +180,11 @@ class DataParallel(object):
     self._batchdim = batchdim
     self._drop_last = drop_last
     self._native_run = False
-    if self._device_ids:
+    if not self._device_ids or len(self._device_ids) == 1:
+      self._replication = None
+    else:
       replication_devices = xm.xla_replication_devices(self._device_ids)
       self._replication = xm.Replication(self._device_ids, replication_devices)
-    else:
-      self._replication = None
     self._models = []
     self._contexts = []
     module = network if isinstance(network, torch.nn.Module) else network()
