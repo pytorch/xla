@@ -30,6 +30,7 @@
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
+#include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
@@ -221,6 +222,10 @@ bool IsSpecialScalar(at::Scalar value) {
     return scalar_value == 0.0 || std::fabs(scalar_value) == 1.0;
   }
   return false;
+}
+
+bool ShouldSyncIrValue(const ir::Value& ir_value) {
+  return ir_value->op() != ir::ops::xla_not_supported;
 }
 
 }  // namespace
@@ -983,9 +988,11 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
     if (tensors[i].CurrentXlaData() == nullptr) {
       ir::Value ir_value = tensors[i].CurrentIrValue();
       if (ir_value) {
-        // Add only tensors which need to be synced.
-        coll.hash = xla::util::HashCombine(coll.hash, ir_value.hash());
-        coll.indices.push_back(i);
+        if (ShouldSyncIrValue(ir_value)) {
+          // Add only tensors which need to be synced.
+          coll.hash = xla::util::HashCombine(coll.hash, ir_value.hash());
+          coll.indices.push_back(i);
+        }
       } else if (config.force_xla_data) {
         // The tensor only has at::Tensor data. We need to queue it for a
         // device upload.
