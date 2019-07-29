@@ -56,6 +56,7 @@ class PerDeviceLoader(object):
     return self.next()
 
   def next(self):
+    xm.mark_step()
     item = self._loader.next_item(self._device)
     if item is None:
       raise StopIteration
