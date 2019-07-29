@@ -201,8 +201,12 @@ class DataParallel(object):
       self._native_run = True
 
   @property
-  def models_dict(self):
-    return dict(zip(self._device_ids, self._models))
+  def devices(self):
+    return self._device_ids
+
+  @property
+  def models(self):
+    return self._models
 
   def _get_model_device(self, model):
     devices = {str(p.device) for p in model.parameters()}
