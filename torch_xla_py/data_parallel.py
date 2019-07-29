@@ -200,6 +200,14 @@ class DataParallel(object):
       self._contexts.append(Context(torch.device(device)))
       self._native_run = True
 
+  @property
+  def devices(self):
+    return self._device_ids
+
+  @property
+  def models(self):
+    return self._models
+
   def _get_model_device(self, model):
     devices = {str(p.device) for p in model.parameters()}
     if len(devices) > 1:
