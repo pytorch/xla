@@ -108,8 +108,6 @@ def xla_real_devices(devices):
 
 
 def xla_replication_devices(local_devices):
-  if len(local_devices) == 1:
-    return local_devices
   real_devices = xla_real_devices(local_devices)
   device_types = set()
   for device in real_devices:
