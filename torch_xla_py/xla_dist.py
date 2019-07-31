@@ -21,16 +21,35 @@ _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 class Worker(object):
 
   def __init__(self, internal_ip, machine_type, zone):
-    self._internal_ip = internal_ip
-    self._machine_type = machine_type
-    self._zone = zone
+    self._internal_ip = str(internal_ip)
+    self._machine_type = str(machine_type)
+    self._zone = str(zone)
 
 
 class ClientWorker(Worker):
 
   def __init__(self, internal_ip, machine_type, zone, hostname=None):
     super(ClientWorker, self).__init__(internal_ip, machine_type, zone)
-    self._hostname = hostname
+    self._hostname = str(hostname)
+
+  def __repr__(self):
+    return ('{{{internal_ip}, {machine_type}, {zone},'
+            ' {hostname}}}').format(
+                internal_ip=self._internal_ip,
+                machine_type=self._machine_type,
+                zone=self._zone,
+                hostname=self._hostname)
+
+  def __eq__(self, other):
+    return (self._internal_ip == other._internal_ip and
+            self._machine_type == other._machine_type and
+            self._zone == other._zone and self._hostname == other._hostname)
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
+
+  def __hash__(self):
+    return hash(repr(self))
 
   def __repr__(self):
     return ('{{{internal_ip}, {machine_type}, {zone},'
@@ -53,8 +72,34 @@ class ClientWorker(Worker):
 
 
 class ServiceWorker(Worker):
-  # Same as base Worker ATM.
-  pass
+
+  def __init__(self, internal_ip, port, machine_type, zone, sw_version):
+    super(ServiceWorker, self).__init__(internal_ip, machine_type, zone)
+    self._port = str(port)
+    self._sw_version = str(sw_version)
+
+  def __repr__(self):
+    return ('{{{internal_ip}, {port}, {machine_type}, {zone},'
+            ' {sw_version}}}').format(
+                internal_ip=self._internal_ip,
+                port=self._port,
+                machine_type=self._machine_type,
+                zone=self._zone,
+                sw_version=self._sw_version)
+
+  def __eq__(self, other):
+    return (self._internal_ip == other._internal_ip and
+            self._port == other._port and
+            self._machine_type == other._machine_type and
+            self._zone == other._zone and
+            self._sw_version == other._sw_version)
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
+
+  def __hash__(self):
+    return hash(repr(self))
+
 
 
 class Cluster(object):
@@ -128,6 +173,25 @@ class Cluster(object):
         raise RuntimeError(
             'All service_workers must have the same machine_type, got: {}'
             .format(server_machine_types))
+
+    sw_versions = {worker._sw_version for worker in self._service_workers}
+    if len(sw_versions) != 1:
+      raise RuntimeError(
+          'All service workers must have the same sw_version, got: {}'
+          .format(zones))
+
+  def __eq__(self, other):
+    return (self._client_workers == other._client_workers and
+            self._service_workers == other._service_workers)
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
+
+  def __repr__(self):
+    return ('{{client_workers: {client_workers}, '
+            'service_workers: {service_workers}}}').format(
+        client_workers=self._client_workers,
+        service_workers=self._service_workers)
 
 
 class ClusterResolver(object):
@@ -206,7 +270,7 @@ class ClusterResolver(object):
 
     return instances
 
-  def _get_client_workers(self):
+  def get_client_workers(self):
     """Gets client workers.
 
     The instance group that the current VM belongs to is picked up from
@@ -229,7 +293,7 @@ class ClusterResolver(object):
     workers = []
     batch = self._compute_service.new_batch_http_request()
 
-    def add_worker(request_id, resp, exception):
+    def add_client_worker(request_id, resp, exception):
       """Callback for each request in BatchHttpRequest."""
       if exception is not None:
         raise exception
@@ -251,12 +315,12 @@ class ClusterResolver(object):
           project=self._project, zone=self._zone, instance=vm,
           fields=('machineType,metadata,selfLink,'
                   'networkInterfaces/networkIP,status,zone'))
-      batch.add(req, add_worker)
+      batch.add(req, add_client_worker)
     batch.execute()
 
     return workers
 
-  def _get_service_workers(self):
+  def get_service_workers(self):
     """Gets TPU VM cluster info.
 
     Calls the TPU CLH to get TPU node data and returns list of TPU worker
@@ -269,7 +333,45 @@ class ClusterResolver(object):
     Raises:
       RuntimeError: If the TPU DNE or the TPU is in not in HEALTHY state.
     """
-    raise NotImplementedError()
+    workers = []
+    batch = self._tpu_service.new_batch_http_request()
+
+    def add_service_worker(request_id, resp, exception):
+      """Callback for each request in BatchHttpRequest."""
+      if exception is not None:
+        raise exception
+      tpu_name = self._parse_resource_url(resp['name'], 'nodes')
+      zone = self._parse_resource_url(resp['name'], 'locations')
+      if resp['state'] != 'READY':
+        raise RuntimeError(
+            ('TPU {tpu_name} is not READY yet. '
+             'Re-run when all TPUs are READY').format(tpu_name=tpu_name))
+      if 'health' not in resp or resp['health'] != 'HEALTHY':
+        raise RuntimeError(
+            ('TPU {tpu_name} is not HEALTHY yet. '
+             'Re-run when all TPUs are HEALTHY').format(tpu_name=tpu_name))
+      sw_version = resp['tensorflowVersion']
+      machine_type = resp['acceleratorType']
+      for endpoint in resp['networkEndpoints']:
+        worker = ServiceWorker(
+            internal_ip=endpoint['ipAddress'],
+            port=endpoint['port'],
+            machine_type=machine_type,
+            zone=zone,
+            sw_version=sw_version)
+        workers.append(worker)
+
+    for tpu in self._tpus:
+      tpu_fq_name = 'projects/{project}/locations/{location}/nodes/{node}'.format(
+          project=self._project, location=self._zone, node=tpu)
+      req = self._tpu_service.projects().locations().nodes().get(
+          name=tpu_fq_name,
+          fields=('acceleratorType,health,ipAddress,name,'
+                  'networkEndpoints,state,tensorflowVersion'))
+      batch.add(req, add_service_worker)
+    batch.execute()
+
+    return workers
 
   def get_cluster(self):
     """Gets client and server side cluster info.
@@ -284,5 +386,9 @@ class ClusterResolver(object):
       RuntimeError: If the VM cluster is not healthy. Also if the TPU
         cluster is not healthy.
     """
-    raise NotImplementedError()
+    client_workers = self.get_client_workers()
+    service_workers = self.get_service_workers()
+    cluster = Cluster(client_workers, service_workers)
+    cluster.validate()
+    return cluster
 
