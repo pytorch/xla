@@ -23,7 +23,7 @@ class Cluster(object):
 
     Raises:
       RuntimeError: If the cluster is misconfigured, this validation will
-      raise a error.
+      raise an error.
     """
     raise NotImplementedError()
 
