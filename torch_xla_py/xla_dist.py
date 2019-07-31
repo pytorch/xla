@@ -3,7 +3,13 @@
 from __future__ import division
 from __future__ import print_function
 
+import argparse
+import logging
+import os
 import requests
+import subprocess
+import sys
+import threading
 
 try:
   from googleapiclient import discovery
@@ -16,6 +22,8 @@ except ImportError:
                     'install with pip')
 
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
+
+FLAGS = None
 
 
 class Worker(object):
@@ -109,7 +117,6 @@ class ServiceWorker(Worker):
 
   def __hash__(self):
     return hash(repr(self))
-
 
 
 class Cluster(object):
@@ -401,4 +408,244 @@ class ClusterResolver(object):
     cluster = Cluster(client_workers, service_workers)
     cluster.validate()
     return cluster
+
+
+class DistributedExecutor(object):
+
+  SCRIPT_PATH_TMPL = '/tmp/dist_training_ptxla_{worker}.sh'
+  MASTER_IDX = 0
+  MESH_SERVICE_PORT = 8477  # Use single port to disallow concurrent runs
+  DOCKER_RUN = 'docker run'
+  DIST_ENV_VARS = [
+      'XRT_TPU_CONFIG', 'XRT_LOCAL_WORKER', 'XRT_MESH_SERVICE_ADDRESS'
+  ]
+
+  @staticmethod
+  def _parse_container_name(cmd):
+    for key in ['--name=', '--name']:
+      if key in cmd:
+        # ex. "docker run --name=pytorch image"
+        idx = cmd.index(key)
+        post_name = cmd[idx:].split(key)[1]  # ex. "pytorch image"
+        return post_name.split()[0]  # ex. "pytorch"
+
+    return None
+
+  def __init__(self, cluster):
+    self._cluster = cluster
+    logging.basicConfig(
+        format='%(asctime)-12s %(clientip)s [%(ordinal)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        level=logging.DEBUG)
+    self.logger = logging.getLogger('DistributedExecutor')
+    self.container_name = None
+    self.is_docker = False
+
+  def _stream_logs(self, process, client_worker):
+    client_ip = client_worker._internal_ip
+    ordinal = self._cluster._client_workers.index(client_worker)
+
+    def _stream_stdout():
+      for stdout in iter(process.stdout.readline, b''):
+        self.logger.info(stdout.decode('utf-8').rstrip('\n'),
+                         extra={'clientip': client_ip, 'ordinal': ordinal})
+
+    def _stream_stderr():
+      for stderr in iter(process.stderr.readline, b''):
+        self.logger.error(stderr.decode('utf-8').rstrip('\n'),
+                         extra={'clientip': client_ip, 'ordinal': ordinal})
+
+    stdout = threading.Thread(target=_stream_stdout)
+    stdout.daemon = True
+    stdout.start()
+    stderr = threading.Thread(target=_stream_stderr)
+    stderr.daemon = True
+    stderr.start()
+    stdout.join()
+    stderr.join()
+
+  def _add_docker_vars(self, cmd):
+    # Get or set container name to explicitly kill at main thread ctrl+c
+    self.container_name = self._parse_container_name(cmd)
+    container_name_cmd = ''
+    if self.container_name is None:
+      # Name not set by user
+      self.container_name = 'pytorchtpudistrunner'
+      container_name_cmd = '--name={}'.format(self.container_name)
+
+    docker_export_cmd = ' -e '.join([''] + DistributedExecutor.DIST_ENV_VARS)
+    idx = cmd.index(DistributedExecutor.DOCKER_RUN) \
+        + len(DistributedExecutor.DOCKER_RUN)
+    return '{} {} {} {}'.format(cmd[:idx], container_name_cmd,
+                                docker_export_cmd, cmd[idx:])
+
+  def _export_env_vars(self, cmd, i):
+    client_master = self._cluster._client_workers[self.MASTER_IDX]
+    env_vars = {
+        'XRT_LOCAL_WORKER': 'c_tpu_worker:{}'.format(i),
+        'XRT_MESH_SERVICE_ADDRESS': '{}:{}'.format(client_master._internal_ip,
+                                                   self.MESH_SERVICE_PORT)
+    }
+    # Only for master
+    if i == self.MASTER_IDX:
+      xrt_server_config = [
+          'c_tpu_worker;{worker_idx};{worker_ip}:{worker_port}'.format(
+              worker_idx=i, worker_ip=service_worker._internal_ip,
+              worker_port=service_worker._port )
+          for i, service_worker in enumerate(self._cluster._service_workers)
+      ]
+      xrt_tpu_config = '|'.join(xrt_server_config)
+      env_vars['XRT_TPU_CONFIG'] = '"{}"'.format(xrt_tpu_config)
+
+    export_cmd = ''
+    for k in env_vars:
+      export_cmd += 'export {}={}; '.format(k, env_vars[k])
+
+    return '{}{}'.format(export_cmd, cmd)
+
+  def _prepare_scripts(self, cmd):
+    for var in self.DIST_ENV_VARS:
+      if var in cmd:
+        raise ValueError((
+            '{} should not be in the training command provided as they'
+            ' will interfere with the values set for distributed'
+            ' training'.format(var)))
+
+    worker_script_map = {}
+    for i in range(len(self._cluster._client_workers)):
+      script_path = self.SCRIPT_PATH_TMPL.format(worker=i)
+      script = self._export_env_vars(cmd, i)
+      if self.is_docker:
+        script = self._add_docker_vars(script)
+      # Setup environment for non-interactive non-login shell over ssh
+      script = '{}; {}'.format('. /etc/profile', script)
+
+      with open(script_path, 'w') as f:
+        f.write(script)
+        f.close()
+      subprocess.call(['chmod', '+x', script_path])
+      worker_script_map[self._cluster._client_workers[i]] = script_path
+
+    return worker_script_map
+
+  def _scp_scripts(self, script_map):
+
+    def _gcloud_scp(script_path, client_worker):
+      scp_cmd = [
+          'gcloud', '-q', 'compute', 'scp', '--internal-ip',
+          '--zone={}'.format(client_worker._zone),
+          script_path, 'pytorchtpudistrunner@{}:~/{}'.format(
+              client_worker._hostname, os.path.basename(script_path)),
+      ]
+      proc = subprocess.Popen(scp_cmd, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
+      self._stream_logs(proc, client_worker)
+
+    threads = []
+    for i, client_worker in enumerate(script_map):
+      if i == 0:
+        # ssh keygen single time
+        _gcloud_scp(script_map[client_worker], client_worker)
+        continue
+      thread = threading.Thread(
+          target=_gcloud_scp,
+          args=(script_map[client_worker], client_worker,))
+      thread.daemon = True
+      thread.start()
+      threads.append(thread)
+
+    for thread in threads:
+      thread.join()
+
+  def _rm_docker_container(self, client_worker):
+    rm_cmd = ('gcloud -q compute ssh --internal-ip --zone={}'
+              ' pytorchtpudistrunner@{} --command="docker rm -f {}"').format(
+                  client_worker._zone, client_worker._hostname,
+                  self.container_name)
+    proc = subprocess.Popen(rm_cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, shell=True)
+    self._stream_logs(proc, client_worker)
+
+  def _start_run(self, script_map):
+
+    def _gcloud_ssh(script_path, client_worker, event):
+      while event.is_set():
+        ssh_cmd = [
+            'gcloud', '-q', 'compute', 'ssh', '--internal-ip',
+            '--zone={}'.format(client_worker._zone),
+            'pytorchtpudistrunner@{}'.format(client_worker._hostname),
+            '--command=~/{}'.format(os.path.basename(script_path))
+        ]
+        proc = subprocess.Popen(ssh_cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        self._stream_logs(proc, client_worker)
+      proc.kill()
+      if self.is_docker:
+        self._rm_docker_container(client_worker)
+
+    event = threading.Event()
+    event.set()
+    threads = []
+    for i, client_worker in enumerate(script_map):
+      thread = threading.Thread(
+          target=_gcloud_ssh,
+          args=(script_map[client_worker], client_worker, event,))
+      thread.daemon = True
+      thread.start()
+      threads.append(thread)
+
+    try:
+      for thread in threads:
+        thread.join()
+    except KeyboardInterrupt:
+      event.clear()
+
+    for thread in threads:
+      thread.join()
+
+  def run(self, cmd):
+    self.logger.info('Command to distribute: {}'.format(cmd),
+                     extra={'clientip': '', 'ordinal': ''})
+    self.logger.info('Cluster configuration: {}'.format(self._cluster),
+                     extra={'clientip': '', 'ordinal': ''})
+    self.is_docker = DistributedExecutor.DOCKER_RUN in cmd
+    script_map = self._prepare_scripts(cmd)
+    self._scp_scripts(script_map)
+    self._start_run(script_map)
+
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser(
+      description="PyTorch on TPU distrubuted training",
+      epilog=("Usage example: xla_dist.py --tpus=[TPU_NAME] -- "
+              "conda activate pytorch-nightly && python train.py"))
+  parser.add_argument(
+      "positional",
+      nargs="+",
+      default="",
+      type=str,
+      help="The python command to launch training including model parameters.")
+  parser.add_argument(
+      "--tpus",
+      nargs="+",
+      default="",
+      type=str,
+      help="Name of the TPU pod, or list of single Cloud TPU devices (v*-8).")
+  parser.add_argument(
+      "--vms",
+      nargs="+",
+      default="",
+      type=str,
+      help=("(optional) List of single Compute VM instance names. "
+            "If not provided we assume usage of instance groups."))
+  FLAGS = parser.parse_args()
+  train_cmd = FLAGS.positional
+
+  # Resolve VM and TPU clusters.
+  vms = None if not FLAGS.vms else FLAGS.vms
+  cluster_resolver = ClusterResolver(FLAGS.tpus, vms=vms)
+  cluster = cluster_resolver.get_cluster()
+  train_cmd = ' '.join(FLAGS.positional)
+  executor = DistributedExecutor(cluster)
+  executor.run(train_cmd)
 
