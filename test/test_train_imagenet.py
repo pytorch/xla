@@ -80,11 +80,11 @@ def train_imagenet():
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=1200000 // FLAGS.batch_size)
+        sample_count=1200000 // FLAGS.batch_size // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
-              torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=50000 // FLAGS.batch_size)
+        data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
+              torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
+        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
   else:
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -96,11 +96,6 @@ def train_imagenet():
             transforms.ToTensor(),
             normalize,
         ]))
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=FLAGS.batch_size,
-        shuffle=True,
-        num_workers=FLAGS.num_workers)
     resize_dim = max(img_dim, 256)
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
@@ -113,10 +108,22 @@ def train_imagenet():
             transforms.ToTensor(),
             normalize,
         ]))
+    train_sampler = torch.utils.data.distributed.DistributedSampler(
+        train_dataset, num_replicas=xm.xrt_world_size(),
+        rank=xm.get_ordinal(), shuffle=True)
+    test_sampler = torch.utils.data.distributed.DistributedSampler(
+        test_dataset, num_replicas=xm.xrt_world_size(),
+        rank=xm.get_ordinal(), shuffle=False)
+
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=FLAGS.batch_size,
+        sampler=train_sampler,
+        num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
-        shuffle=False,
+        sampler=test_sampler,
         num_workers=FLAGS.num_workers)
 
   torch.manual_seed(42)

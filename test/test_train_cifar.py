@@ -101,12 +101,12 @@ def train_cifar():
         data=(torch.zeros(FLAGS.batch_size, 3, 32,
                           32), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=50000 // FLAGS.batch_size)
+        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, 32,
                           32), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=10000 // FLAGS.batch_size)
+        sample_count=10000 // FLAGS.batch_size // xm.xrt_world_size())
   else:
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
@@ -122,26 +122,31 @@ def train_cifar():
                              (0.2023, 0.1994, 0.2010)),
     ])
 
-    trainset = torchvision.datasets.CIFAR10(
+    train_dataset = torchvision.datasets.CIFAR10(
         root=FLAGS.datadir,
         train=True,
         download=True,
         transform=transform_train)
-    train_loader = torch.utils.data.DataLoader(
-        trainset,
-        batch_size=FLAGS.batch_size,
-        shuffle=True,
-        num_workers=FLAGS.num_workers)
-
-    testset = torchvision.datasets.CIFAR10(
+    test_dataset = torchvision.datasets.CIFAR10(
         root=FLAGS.datadir,
         train=False,
         download=True,
         transform=transform_test)
-    test_loader = torch.utils.data.DataLoader(
-        testset,
+    train_sampler = torch.utils.data.distributed.DistributedSampler(
+        train_dataset, num_replicas=xm.xrt_world_size(),
+        rank=xm.get_ordinal(), shuffle=True)
+    test_sampler = torch.utils.data.distributed.DistributedSampler(
+        test_dataset, num_replicas=xm.xrt_world_size(),
+        rank=xm.get_ordinal(), shuffle=False)
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
         batch_size=FLAGS.batch_size,
-        shuffle=False,
+        sampler=train_sampler,
+        num_workers=FLAGS.num_workers)
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=FLAGS.batch_size,
+        sampler=test_sampler,
         num_workers=FLAGS.num_workers)
 
   torch.manual_seed(42)

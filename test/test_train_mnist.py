@@ -54,35 +54,43 @@ def train_mnist():
         data=(torch.zeros(FLAGS.batch_size, 1, 28,
                           28), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=60000 // FLAGS.batch_size)
+        sample_count=60000 // FLAGS.batch_size // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 1, 28,
                           28), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=10000 // FLAGS.batch_size)
+        sample_count=10000 // FLAGS.batch_size // xm.xrt_world_size())
   else:
+    train_dataset = datasets.MNIST(
+        FLAGS.datadir,
+        train=True,
+        download=True,
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,))
+        ]))
+    test_dataset = datasets.MNIST(
+        FLAGS.datadir,
+        train=False,
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,))
+        ]))
+    train_sampler = torch.utils.data.distributed.DistributedSampler(
+        train_dataset, num_replicas=xm.xrt_world_size(),
+        rank=xm.get_ordinal(), shuffle=True)
+    test_sampler = torch.utils.data.distributed.DistributedSampler(
+        test_dataset, num_replicas=xm.xrt_world_size(),
+        rank=xm.get_ordinal(), shuffle=False)
     train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(
-            FLAGS.datadir,
-            train=True,
-            download=True,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
-            ])),
+        train_dataset,
         batch_size=FLAGS.batch_size,
-        shuffle=True,
+        sampler=train_sampler,
         num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(
-            FLAGS.datadir,
-            train=False,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
-            ])),
+        test_dataset,
         batch_size=FLAGS.batch_size,
-        shuffle=True,
+        sampler=test_sampler,
         num_workers=FLAGS.num_workers)
 
   devices = (
