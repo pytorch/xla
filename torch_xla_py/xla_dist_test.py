@@ -5,13 +5,13 @@ from __future__ import print_function
 import unittest
 import xla_dist
 
-class CpuWorkerTest(unittest.TestCase):
+class ClientClusterTest(unittest.TestCase):
 
   def test_validate_cluster(self):
     pass
 
 
-class TpuWorkerTests(unittest.TestCase):
+class ServiceClusterTests(unittest.TestCase):
 
   def test_validate_cluster(self):
     pass
