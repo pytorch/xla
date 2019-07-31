@@ -5,15 +5,12 @@ from __future__ import print_function
 import unittest
 import xla_dist
 
-class ClientClusterTest(unittest.TestCase):
+class ClusterTest(unittest.TestCase):
 
-  def test_validate_cluster(self):
+  def test_validate_service_cluster(self):
     pass
 
-
-class ServiceClusterTests(unittest.TestCase):
-
-  def test_validate_cluster(self):
+  def test_validate_client_cluster(self):
     pass
 
 

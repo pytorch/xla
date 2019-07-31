@@ -3,81 +3,27 @@
 from __future__ import division
 from __future__ import print_function
 
-import abc
 
+class Worker(object):
 
-class ClientWorker(object):
-
-  def __init__(self,
-               internal_ip,
-               machine_type,
-               zone,
-               hostname=None):
+  def __init__(self, internal_ip, mach_type, zone, hostname=None):
     self._internal_ip = internal_ip
-    self._machine_type = machine_type
+    self._mach_type = mach_type
     self._zone = zone
     self._hostname = hostname
 
 
-class ServiceWorker(object):
+class Cluster(object):
 
-  def __init__(self,
-               internal_ip,
-               accelerator_type,
-               zone):
-    self._internal_ip = internal_ip
-    self._accelerator_type = accelerator_type
-    self._zone = zone
+  def __init__(self, workers):
+    self._workers = workers
 
-
-class BaseCluster(abc.ABC):
-
-  @abc.abstractmethod
-  def validate(cls, workers):
+  def validate(self):
     """Validates the current cluster configuration.
 
     Raises:
       RuntimeError: If the cluster is misconfigured, this validation will
       raise a error.
-    """
-    raise NotImplementedError()
-
-
-class ClientCluster(BaseCluster):
-
-  def __init__(self, workers):
-    for worker in workers:
-      if not isinstance(worker, ClientWorker):
-        raise ValueError('ClientCluster workers must be ClientWorker.')
-    self._workers = workers
-
-  def validate(self):
-    """Validates the client workers configuration.
-
-    Raises:
-      RuntimeError: If the client cluster is misconfigured. For example, if
-        the VMs are in different zones, or not all of the CPU workers have
-        the same size (number of CPU cores, RAM size) we raise an exception
-        as this would negatively and significantly affect performance.
-    """
-    raise NotImplementedError()
-
-
-class ServiceCluster(BaseCluster):
-
-  def __init__(self, workers):
-    for worker in workers:
-      if not isinstance(worker, ServiceWorker):
-        raise ValueError('ServiceCluster workers must be ServiceWorker.')
-    self._workers = workers
-
-  def validate(self):
-    """Validates the service cluster configuration.
-
-    Raises:
-      RuntimeError: If the service cluster is misconfigured. For example, if the
-        TPUs are in different zones, or the TPUs are different versions we
-        raise an exception as this silently impacts performance.
     """
     raise NotImplementedError()
 
@@ -107,7 +53,7 @@ class ClusterResolver(object):
     initializing cluster resolver, we use that instead.
 
     Returns:
-      A ClientCluster object with the client vm workers information.
+      A Cluster object with the client vm workers information.
 
     Raises:
       RuntimeError: If the red VM cluster is not healthy or the red VM was
@@ -124,7 +70,7 @@ class ClusterResolver(object):
     ClusterResolver init time, we infer these bits from GCE metadata.
 
     Returns:
-      A ServiceCluster object with the tpu workers information.
+      A Cluster object with the tpu workers information.
 
     Raises:
       RuntimeError: If the TPU DNE or the TPU is in not in HEALTHY state. In the
