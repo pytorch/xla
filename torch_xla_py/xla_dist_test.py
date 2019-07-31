@@ -3,15 +3,113 @@ from __future__ import division
 from __future__ import print_function
 
 import unittest
-import xla_dist
+from xla_dist import ClientWorker
+from xla_dist import ServiceWorker
+from xla_dist import Cluster
+
 
 class ClusterTest(unittest.TestCase):
 
-  def test_validate_service_cluster(self):
-    pass
+  def test_validate_good_cluster(self):
+    client_workers = [
+        ClientWorker('10.0.0.0', 'n1-standard-16', 'europe-west4-a'),
+        ClientWorker('10.0.0.1', 'n1-standard-16', 'europe-west4-a'),
+        ClientWorker('10.0.0.2', 'n1-standard-16', 'europe-west4-a'),
+        ClientWorker('10.0.0.3', 'n1-standard-16', 'europe-west4-a',
+                     hostname='test'),
+    ]
+    service_workers = [
+        ServiceWorker('10.0.0.0', 'v3-32', 'europe-west4-a'),
+        ServiceWorker('10.0.0.1', 'v3-32', 'europe-west4-a'),
+        ServiceWorker('10.0.0.2', 'v3-32', 'europe-west4-a'),
+        ServiceWorker('10.0.0.3', 'v3-32', 'europe-west4-a'),
+    ]
+    cluster = Cluster(client_workers, service_workers)
+    cluster.validate()  # Does not raise exception
 
-  def test_validate_client_cluster(self):
-    pass
+  def test_create_bad_client_workers(self):
+    service_workers = [
+        ServiceWorker('10.0.0.1', 'v3-8', 'europe-west4-a'),
+    ]
+    self.assertRaisesRegex(
+        ValueError,
+        'client_workers argument must be a list of ClientWorker',
+        Cluster,
+        service_workers, service_workers)
+
+  def test_create_bad_service_workers(self):
+    client_workers = [
+        ClientWorker('10.0.0.1', 'n1-standard-16', 'europe-west4-a',
+                     hostname='test'),
+    ]
+    self.assertRaisesRegex(
+        ValueError,
+        'service_workers argument must be a list of ServiceWorker',
+        Cluster,
+        client_workers, client_workers)
+
+  def test_validate_bad_machine_client_cluster(self):
+    client_workers = [
+        ClientWorker('10.0.0.0', 'n1-standard-16', 'europe-west4-a'),
+        ClientWorker('10.0.0.1', 'n1-standard-1', 'europe-west4-a'),
+    ]
+    service_workers = [
+        ServiceWorker('10.0.0.0', 'v3-8', 'europe-west4-a'),
+        ServiceWorker('10.0.0.1', 'v3-8', 'europe-west4-a'),
+    ]
+    cluster = Cluster(client_workers, service_workers)
+    self.assertRaisesRegex(
+        RuntimeError,
+        'All client_workers must have the same machine_type',
+        cluster.validate)
+
+  def test_validate_bad_machine_service_cluster(self):
+    client_workers = [
+        ClientWorker('10.0.0.0', 'n1-standard-16', 'europe-west4-a'),
+        ClientWorker('10.0.0.1', 'n1-standard-16', 'europe-west4-a'),
+    ]
+    service_workers = [
+        ServiceWorker('10.0.0.0', 'v3-8', 'europe-west4-a'),
+        ServiceWorker('10.0.0.1', 'v2-8', 'europe-west4-a'),
+    ]
+    cluster = Cluster(client_workers, service_workers)
+    self.assertRaisesRegex(
+        RuntimeError,
+        'All service_workers must have the same machine_type',
+        cluster.validate)
+
+  def test_validate_bad_zone_cluster(self):
+    client_workers = [
+        ClientWorker('10.0.0.0', 'n1-standard-16', 'europe-west4-a'),
+        ClientWorker('10.0.0.1', 'n1-standard-16', 'us-central1-b'),
+    ]
+    service_workers = [
+        ServiceWorker('10.0.0.0', 'v3-8', 'europe-west4-a'),
+        ServiceWorker('10.0.0.1', 'v3-8', 'europe-west4-a'),
+    ]
+    cluster = Cluster(client_workers, service_workers)
+    self.assertRaisesRegex(
+        RuntimeError,
+        'All workers must be in the same zone',
+        cluster.validate)
+
+  def test_validate_diff_num_workers(self):
+    client_workers = [
+        ClientWorker('10.0.0.0', 'n1-standard-16', 'europe-west4-a'),
+        ClientWorker('10.0.0.1', 'n1-standard-16', 'europe-west4-a'),
+        ClientWorker('10.0.0.2', 'n1-standard-16', 'europe-west4-a'),
+    ]
+    service_workers = [
+        ServiceWorker('10.0.0.0', 'v3-32', 'europe-west4-a'),
+        ServiceWorker('10.0.0.1', 'v3-32', 'europe-west4-a'),
+        ServiceWorker('10.0.0.2', 'v3-32', 'europe-west4-a'),
+        ServiceWorker('10.0.0.3', 'v3-32', 'europe-west4-a'),
+    ]
+    cluster = Cluster(client_workers, service_workers)
+    self.assertRaisesRegex(
+        RuntimeError,
+        'The client_workers and service_workers must have a 1:1 mapping',
+        cluster.validate)
 
 
 class ClusterResolverTest(unittest.TestCase):
