@@ -64,7 +64,7 @@ class Cluster(object):
           'The client_workers and service_workers must have a 1:1 mapping')
 
     zones = {worker._zone for worker in self._client_workers}
-    zones.update({worker._zone for worker in self._service_workers})
+    zones.update(worker._zone for worker in self._service_workers)
     if len(zones) != 1:
       raise RuntimeError(
           'All workers must be in the same zone, got: {}'.format(zones))
