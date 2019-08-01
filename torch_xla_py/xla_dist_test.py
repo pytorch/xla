@@ -31,11 +31,15 @@ class ClusterTest(unittest.TestCase):
     service_workers = [
         ServiceWorker('10.0.0.1', 'v3-8', 'europe-west4-a'),
     ]
+    client_workers = [
+        ClientWorker('10.0.0.1', 'v3-8', 'europe-west4-a'),
+        ServiceWorker('10.0.0.1', 'v3-8', 'europe-west4-a'),
+    ]
     self.assertRaisesRegex(
         ValueError,
         'client_workers argument must be a list of ClientWorker',
         Cluster,
-        service_workers, service_workers)
+        client_workers, service_workers)
 
   def test_create_bad_service_workers(self):
     client_workers = [
@@ -110,6 +114,13 @@ class ClusterTest(unittest.TestCase):
         RuntimeError,
         'The client_workers and service_workers must have a 1:1 mapping',
         cluster.validate)
+
+  def test_validate_empty_workers(self):
+    cluster = Cluster([], [])
+    self.assertRaisesRegex(
+      RuntimeError,
+      'Both client_workers and service_workers should not be empty',
+      cluster.validate)
 
 
 class ClusterResolverTest(unittest.TestCase):

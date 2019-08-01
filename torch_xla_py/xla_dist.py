@@ -33,10 +33,11 @@ class Cluster(object):
       client_workers: a list of ClientWorker objects.
       service_workers: a list of ServiceWorker objects.
     """
-    for client_worker, service_worker in zip(client_workers, service_workers):
+    for client_worker in client_workers:
       if not isinstance(client_worker, ClientWorker):
         raise ValueError(
             'client_workers argument must be a list of ClientWorker')
+    for service_worker in service_workers:
       if not isinstance(service_worker, ServiceWorker):
         raise ValueError(
             'service_workers argument must be a list of ServiceWorker')
@@ -54,30 +55,33 @@ class Cluster(object):
         cores, RAM size) we raise an exception. For TPUs we similarly
         raise an exception if different zones or machine/accelerator_type.
     """
-    zones = set()
-    zones.update([worker._zone for worker in self._client_workers])
-    zones.update([worker._zone for worker in self._service_workers])
+    if len(self._client_workers) == 0 or len(self._service_workers) == 0:
+      raise RuntimeError(
+        'Both client_workers and service_workers should not be empty')
+
+    if len(self._client_workers) != len(self._service_workers):
+      raise RuntimeError(
+          'The client_workers and service_workers must have a 1:1 mapping')
+
+    zones = {worker._zone for worker in self._client_workers}
+    zones.update({worker._zone for worker in self._service_workers})
     if len(zones) != 1:
       raise RuntimeError(
           'All workers must be in the same zone, got: {}'.format(zones))
 
-    client_machine_types = set(
-        [worker._machine_type for worker in self._client_workers])
+    client_machine_types = {
+        worker._machine_type for worker in self._client_workers}
     if len(client_machine_types) != 1:
       raise RuntimeError(
           'All client_workers must have the same machine_type, got: {}'.format(
               client_machine_types))
 
-    server_machine_types = set(
-        [worker._machine_type for worker in self._service_workers])
+    server_machine_types = {
+        worker._machine_type for worker in self._service_workers}
     if len(server_machine_types) != 1:
       raise RuntimeError(
           'All service_workers must have the same machine_type, got: {}'.format(
               server_machine_types))
-
-    if len(self._client_workers) != len(self._service_workers):
-      raise RuntimeError(
-          'The client_workers and service_workers must have a 1:1 mapping')
 
 
 class ClusterResolver(object):
