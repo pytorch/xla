@@ -24,9 +24,10 @@ void CheckIndexTensorTypes(at::TensorList indices) {
   for (auto& tensor : indices) {
     if (tensor.defined()) {
       at::ScalarType scalar_type = tensor.scalar_type();
-      if (scalar_type != at::kLong && scalar_type != at::kByte) {
-        XLA_ERROR() << "Tensors used as indices must be long or byte tensors, "
-                       "found scalar type: "
+      if (scalar_type != at::kLong && scalar_type != at::kByte &&
+          scalar_type != at::kBool) {
+        XLA_ERROR() << "Tensors used as indices must be long, byte or boolean "
+                       "tensors, found scalar type: "
                     << scalar_type;
       }
     }
@@ -39,7 +40,8 @@ std::vector<at::Tensor> ExpandByteTensors(const at::Tensor& self,
                                           at::TensorList indices) {
   std::vector<at::Tensor> result;
   for (auto& index : indices) {
-    if (index.type().scalarType() == at::kByte) {
+    if (index.type().scalarType() == at::kByte ||
+        index.type().scalarType() == at::kBool) {
       // The sizes of the ByteTensor mask must match the sizes of the
       // corresponding dimensions in self.
       for (int64_t j = 0; j < index.dim(); j++) {

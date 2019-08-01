@@ -1978,7 +1978,8 @@ XLATensor XLATensor::sum(const XLATensor& input,
                          std::vector<xla::int64> dimensions,
                          bool keep_reduced_dimensions,
                          c10::optional<at::ScalarType> dtype) {
-  if (at::isIntegralType(input.dtype()) && !dtype) {
+  if ((at::isIntegralType(input.dtype()) || input.dtype() == at::kBool) &&
+      !dtype) {
     dtype = at::ScalarType::Long;
   }
   return input.CreateFrom(
@@ -2226,7 +2227,7 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& input,
                                           at::Scalar other) {
   ir::NodePtr node = ir::ops::ComparisonOp(kind, input.GetIrValue(), other);
-  return Create(node, input.GetDevice(), at::ScalarType::Byte);
+  return Create(node, input.GetDevice(), at::ScalarType::Bool);
 }
 
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
@@ -2234,7 +2235,7 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& other) {
   ir::NodePtr node =
       ir::ops::ComparisonOp(kind, input.GetIrValue(), other.GetIrValue());
-  return Create(node, input.GetDevice(), at::ScalarType::Byte);
+  return Create(node, input.GetDevice(), at::ScalarType::Bool);
 }
 
 }  // namespace torch_xla
