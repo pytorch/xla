@@ -33,8 +33,8 @@ class Cluster(object):
       client_workers: a list of ClientWorker objects.
       service_workers: a list of ServiceWorker objects.
     """
-    self._client_workers = client_workers
-    self._service_workers = service_workers
+    self._client_workers = list(client_workers)
+    self._service_workers = list(service_workers)
 
   def validate(self):
     """Validates the current cluster configuration.
