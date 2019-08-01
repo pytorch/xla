@@ -16,10 +16,7 @@ class ClusterTest(unittest.TestCase):
 
 class ClusterResolverTest(unittest.TestCase):
 
-  def test_vm_cluster(self):
-    pass
-
-  def test_tpu_cluster(self):
+  def test_cluster(self):
     pass
 
 
