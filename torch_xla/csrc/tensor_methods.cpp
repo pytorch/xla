@@ -61,6 +61,8 @@
 #include "torch_xla/csrc/ops/min_in_dim.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
+#include "torch_xla/csrc/ops/nll_loss.h"
+#include "torch_xla/csrc/ops/nll_loss_backward.h"
 #include "torch_xla/csrc/ops/not_supported.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
@@ -1508,15 +1510,17 @@ void XLATensor::neg_(XLATensor& input) {
   input.SetIrValue(ir::ops::Neg(input.GetIrValue()));
 }
 
-XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target) {
-  return input.CreateFrom(
-      ir::ops::NllLossOp(input.GetIrValue(), target.GetIrValue()));
+XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target,
+                              int ignore_index) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::NllLoss>(
+      input.GetIrValue(), target.GetIrValue(), ignore_index));
 }
 
 XLATensor XLATensor::nll_loss_backward(const XLATensor& input,
-                                       const XLATensor& target) {
-  return input.CreateFrom(
-      ir::ops::NllLossBackwardOp(input.GetIrValue(), target.GetIrValue()));
+                                       const XLATensor& target,
+                                       int ignore_index) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::NllLossBackward>(
+      input.GetIrValue(), target.GetIrValue(), ignore_index));
 }
 
 XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
