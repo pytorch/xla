@@ -638,10 +638,11 @@ class XLATensor {
   static XLATensor neg(const XLATensor& input);
   static void neg_(XLATensor& input);
 
-  static XLATensor nll_loss(const XLATensor& input, const XLATensor& target);
+  static XLATensor nll_loss(const XLATensor& input, const XLATensor& target,
+                            int ignore_index);
 
   static XLATensor nll_loss_backward(const XLATensor& input,
-                                     const XLATensor& target);
+                                     const XLATensor& target, int ignore_index);
 
   static XLATensor norm(const XLATensor& input, c10::optional<at::Scalar> p,
                         c10::optional<at::ScalarType> dtype,

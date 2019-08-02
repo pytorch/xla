@@ -5365,25 +5365,29 @@ TEST_F(AtenXlaTensorTest, TestConv2DNonSquare) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNllLoss) {
-  int batch = 3;
-  int classes = 5;
-  torch::Tensor input =
-      torch::rand({batch, classes}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor target =
-      torch::randint(0, classes, {batch}, torch::TensorOptions(torch::kLong));
-  torch::Tensor undef_weight;
-  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
-    torch::Tensor output = torch::nll_loss(/*self=*/input, /*target=*/target,
-                                           /*weight=*/undef_weight,
-                                           /*reduction=*/reduction);
-    ForEachDevice([&](const torch::Device& device) {
-      torch::Tensor xla_input = CopyToDevice(input, device);
-      torch::Tensor xla_target = CopyToDevice(target, device);
-      torch::Tensor xla_output = torch::nll_loss(
-          /*self=*/xla_input, /*target=*/xla_target, /*weight=*/undef_weight,
-          /*reduction=*/reduction);
-      AllClose(output, xla_output);
-    });
+  int batch = 6;
+  int classes = 2;
+  for (int ignore_index : {-1, 1}) {
+    torch::Tensor input =
+        torch::rand({batch, classes}, torch::TensorOptions(torch::kFloat));
+    torch::Tensor target =
+        torch::randint(std::min(ignore_index, 0), classes, {batch},
+                       torch::TensorOptions(torch::kLong));
+    torch::Tensor undef_weight;
+    for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+      torch::Tensor output = torch::nll_loss(/*self=*/input, /*target=*/target,
+                                             /*weight=*/undef_weight,
+                                             /*reduction=*/reduction,
+                                             /*ignore_index=*/ignore_index);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        torch::Tensor xla_target = CopyToDevice(target, device);
+        torch::Tensor xla_output = torch::nll_loss(
+            /*self=*/xla_input, /*target=*/xla_target, /*weight=*/undef_weight,
+            /*reduction=*/reduction, /*ignore_index=*/ignore_index);
+        AllClose(output, xla_output);
+      });
+    }
   }
 }
 
@@ -7103,25 +7107,28 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
 }
 
 TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
-  int batch = 3;
-  int classes = 5;
-  torch::Tensor input =
-      torch::rand({batch, classes},
-                  torch::TensorOptions(torch::kFloat).requires_grad(true));
-  torch::Tensor target =
-      torch::randint(0, classes, {batch}, torch::TensorOptions(torch::kLong));
-  torch::Tensor undef_weight;
-  for (Reduction::Reduction reduction : {Reduction::Sum, Reduction::Sum}) {
-    auto testfn =
-        [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-      return torch::nll_loss(
-          /*self=*/inputs[0], /*target=*/inputs[1], /*weight=*/undef_weight,
-          /*reduction=*/reduction);
-    };
-    ForEachDevice([&](const torch::Device& device) {
-      TestBackward({input, target}, device, testfn, /*rtol=*/1e-5,
-                   /*atol=*/1e-8);
-    });
+  int batch = 6;
+  int classes = 2;
+  for (int ignore_index : {-1, 1}) {
+    torch::Tensor input =
+        torch::rand({batch, classes},
+                    torch::TensorOptions(torch::kFloat).requires_grad(true));
+    torch::Tensor target =
+        torch::randint(std::min(ignore_index, 0), classes, {batch},
+                       torch::TensorOptions(torch::kLong));
+    torch::Tensor undef_weight;
+    for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+      auto testfn =
+          [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+        return torch::nll_loss(
+            /*self=*/inputs[0], /*target=*/inputs[1], /*weight=*/undef_weight,
+            /*reduction=*/reduction, /*ignore_index=*/ignore_index);
+      };
+      ForEachDevice([&](const torch::Device& device) {
+        TestBackward({input, target}, device, testfn, /*rtol=*/1e-5,
+                     /*atol=*/1e-8);
+      });
+    }
   }
 }
 

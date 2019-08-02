@@ -2053,25 +2053,25 @@ at::Tensor AtenXlaType::nll_loss(const at::Tensor& self,
                                  const at::Tensor& target,
                                  const at::Tensor& weight, int64_t reduction,
                                  int64_t ignore_index) {
-  if (reduction != Reduction::Mean || ignore_index >= 0 || weight.defined()) {
+  if (reduction != Reduction::Mean || weight.defined()) {
     return AtenXlaTypeDefault::nll_loss(self, target, weight, reduction,
                                         ignore_index);
   }
   return bridge::AtenFromXlaTensor(XLATensor::nll_loss(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target)));
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), ignore_index));
 }
 
 at::Tensor AtenXlaType::nll_loss_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Tensor& target, const at::Tensor& weight, int64_t reduction,
     int64_t ignore_index, const at::Tensor& total_weight) {
-  if (reduction != Reduction::Mean || ignore_index >= 0 || weight.defined()) {
+  if (reduction != Reduction::Mean || weight.defined()) {
     return AtenXlaTypeDefault::nll_loss_backward(grad_output, self, target,
                                                  weight, reduction,
                                                  ignore_index, total_weight);
   }
   return bridge::AtenFromXlaTensor(XLATensor::nll_loss_backward(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target)));
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), ignore_index));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
