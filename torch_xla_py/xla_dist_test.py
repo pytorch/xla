@@ -63,7 +63,7 @@ class ClusterTest(unittest.TestCase):
     ]
 
     no_check_cluster = Cluster(client_workers, service_workers,
-                      check_machine_type=False)
+                               check_client_machine_type=False)
     no_check_cluster.validate()  # Does not raise exception
 
     check_cluster = Cluster(client_workers, service_workers)
@@ -72,7 +72,7 @@ class ClusterTest(unittest.TestCase):
         'All client_workers must have the same machine_type',
         check_cluster.validate)
 
-  def test_validate_machine_type_client_cluster(self):
+  def test_validate_machine_type_service_cluster(self):
     client_workers = [
         ClientWorker('10.0.0.0', 'n1-standard-16', 'europe-west4-a'),
         ClientWorker('10.0.0.1', 'n1-standard-16', 'europe-west4-a'),
@@ -83,7 +83,7 @@ class ClusterTest(unittest.TestCase):
     ]
 
     no_check_cluster = Cluster(client_workers, service_workers,
-                              check_machine_type=False)
+                               check_service_machine_type=False)
     no_check_cluster.validate()  # Does not raise exception
 
     check_cluster = Cluster(client_workers, service_workers)

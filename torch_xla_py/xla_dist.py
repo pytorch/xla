@@ -26,13 +26,17 @@ class ServiceWorker(Worker):
 
 class Cluster(object):
 
-  def __init__(self, client_workers, service_workers, check_machine_type=True):
+  def __init__(self, client_workers, service_workers,
+               check_client_machine_type=True,
+               check_service_machine_type=True):
     """Creates a cluster object.
 
     Args:
       client_workers: a list of ClientWorker objects.
       service_workers: a list of ServiceWorker objects.
-      check_machine_type: whether to check if client/service workers all have
+      check_client_machine_type: whether to check if client workers all have
+        the same machine type.
+      check_service_machine_type: whether to check if service workers all have
         the same machine type.
     """
     for client_worker in client_workers:
@@ -45,8 +49,8 @@ class Cluster(object):
             'service_workers argument must be a list of ServiceWorker')
     self._client_workers = list(client_workers)
     self._service_workers = list(service_workers)
-    self._check_machine_type = check_machine_type
-
+    self._check_client_machine_type = check_client_machine_type
+    self._check_service_machine_type = check_service_machine_type
 
   def validate(self):
     """Validates the current cluster configuration.
@@ -72,7 +76,7 @@ class Cluster(object):
       raise RuntimeError(
           'All workers must be in the same zone, got: {}'.format(zones))
 
-    if self._check_machine_type:
+    if self._check_client_machine_type:
       client_machine_types = {
           worker._machine_type for worker in self._client_workers}
       if len(client_machine_types) != 1:
@@ -80,6 +84,7 @@ class Cluster(object):
             'All client_workers must have the same machine_type, got: {}'.format(
                 client_machine_types))
 
+    if self._check_service_machine_type:
       server_machine_types = {
           worker._machine_type for worker in self._service_workers}
       if len(server_machine_types) != 1:
