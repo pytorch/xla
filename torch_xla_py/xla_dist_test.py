@@ -52,7 +52,7 @@ class ClusterTest(unittest.TestCase):
         Cluster,
         client_workers, client_workers)
 
-  def test_validate_diff_machine_client_cluster(self):
+  def test_validate_machine_type_client_cluster(self):
     client_workers = [
         ClientWorker('10.0.0.0', 'n1-standard-16', 'europe-west4-a'),
         ClientWorker('10.0.0.1', 'n1-standard-8', 'europe-west4-a'),
@@ -61,10 +61,18 @@ class ClusterTest(unittest.TestCase):
         ServiceWorker('10.0.0.0', 'v3-8', 'europe-west4-a'),
         ServiceWorker('10.0.0.1', 'v3-8', 'europe-west4-a'),
     ]
-    cluster = Cluster(client_workers, service_workers)
-    cluster.validate()  # Does not raise exception
 
-  def test_validate_bad_machine_service_cluster(self):
+    no_check_cluster = Cluster(client_workers, service_workers,
+                      check_machine_type=False)
+    no_check_cluster.validate()  # Does not raise exception
+
+    check_cluster = Cluster(client_workers, service_workers)
+    self.assertRaisesRegex(
+        RuntimeError,
+        'All client_workers must have the same machine_type',
+        check_cluster.validate)
+
+  def test_validate_machine_type_client_cluster(self):
     client_workers = [
         ClientWorker('10.0.0.0', 'n1-standard-16', 'europe-west4-a'),
         ClientWorker('10.0.0.1', 'n1-standard-16', 'europe-west4-a'),
@@ -73,11 +81,16 @@ class ClusterTest(unittest.TestCase):
         ServiceWorker('10.0.0.0', 'v3-8', 'europe-west4-a'),
         ServiceWorker('10.0.0.1', 'v2-8', 'europe-west4-a'),
     ]
-    cluster = Cluster(client_workers, service_workers)
+
+    no_check_cluster = Cluster(client_workers, service_workers,
+                              check_machine_type=False)
+    no_check_cluster.validate()  # Does not raise exception
+
+    check_cluster = Cluster(client_workers, service_workers)
     self.assertRaisesRegex(
         RuntimeError,
         'All service_workers must have the same machine_type',
-        cluster.validate)
+        check_cluster.validate)
 
   def test_validate_bad_zone_cluster(self):
     client_workers = [
