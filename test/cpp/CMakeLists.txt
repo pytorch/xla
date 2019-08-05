@@ -79,6 +79,7 @@ target_include_directories(
   "${TFDIR}/bazel-tensorflow"
   "${TFDIR}/bazel-genfiles"
   "${TFDIR}/bazel-tensorflow/external/protobuf_archive/src"
+  "${TFDIR}/bazel-tensorflow/external/com_google_protobuf/src"
   "${TFDIR}/bazel-tensorflow/external/eigen_archive"
   "${TFDIR}/bazel-tensorflow/external/com_google_absl"
   "${PYTHON_INCLUDE_DIR}"

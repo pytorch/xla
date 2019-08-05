@@ -288,7 +288,9 @@ xla::XlaOp BuildRandperm(xla::int64 n, xla::PrimitiveType element_type,
   xla::XlaOp curr = input;
   for (int i = 0; i < rounds; ++i) {
     xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
-    xla::XlaOp sorted = xla::Sort(keys, {curr});
+    xla::XlaOp sorted = xla::Sort(
+        {keys, curr},
+        xla::CreateScalarLtComputation({xla::U32, element_type}, builder));
     curr = xla::GetTupleElement(sorted, 1);
   }
   return curr;
