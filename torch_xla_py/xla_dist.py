@@ -69,13 +69,6 @@ class Cluster(object):
       raise RuntimeError(
           'All workers must be in the same zone, got: {}'.format(zones))
 
-    client_machine_types = {
-        worker._machine_type for worker in self._client_workers}
-    if len(client_machine_types) != 1:
-      raise RuntimeError(
-          'All client_workers must have the same machine_type, got: {}'.format(
-              client_machine_types))
-
     server_machine_types = {
         worker._machine_type for worker in self._service_workers}
     if len(server_machine_types) != 1:

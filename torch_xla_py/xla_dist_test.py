@@ -52,20 +52,17 @@ class ClusterTest(unittest.TestCase):
         Cluster,
         client_workers, client_workers)
 
-  def test_validate_bad_machine_client_cluster(self):
+  def test_validate_diff_machine_client_cluster(self):
     client_workers = [
         ClientWorker('10.0.0.0', 'n1-standard-16', 'europe-west4-a'),
-        ClientWorker('10.0.0.1', 'n1-standard-1', 'europe-west4-a'),
+        ClientWorker('10.0.0.1', 'n1-standard-8', 'europe-west4-a'),
     ]
     service_workers = [
         ServiceWorker('10.0.0.0', 'v3-8', 'europe-west4-a'),
         ServiceWorker('10.0.0.1', 'v3-8', 'europe-west4-a'),
     ]
     cluster = Cluster(client_workers, service_workers)
-    self.assertRaisesRegex(
-        RuntimeError,
-        'All client_workers must have the same machine_type',
-        cluster.validate)
+    cluster.validate()  # Does not raise exception
 
   def test_validate_bad_machine_service_cluster(self):
     client_workers = [
