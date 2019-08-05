@@ -132,6 +132,8 @@ include_dirs += [
     third_party_path + '/tensorflow/bazel-genfiles',
     third_party_path +
     '/tensorflow/bazel-tensorflow/external/protobuf_archive/src',
+    third_party_path +
+    '/tensorflow/bazel-tensorflow/external/com_google_protobuf/src',
     third_party_path + '/tensorflow/bazel-tensorflow/external/eigen_archive',
     third_party_path + '/tensorflow/bazel-tensorflow/external/com_google_absl',
 ]
