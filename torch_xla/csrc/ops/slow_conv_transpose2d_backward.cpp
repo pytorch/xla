@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/ops/conv_transpose2d_backward.h"
+#include "torch_xla/csrc/ops/slow_conv_transpose2d_backward.h"
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -34,7 +34,7 @@ xla::Shape NodeOutputShape(
 ConvTranspose2dBackward::ConvTranspose2dBackward(
     const Value& grad_output, const Value& input, const Value& weight,
     std::vector<xla::int64> stride, std::vector<xla::int64> padding)
-    : Node(ir::OpKind(at::aten::conv_transpose2d_backward),
+    : Node(ir::OpKind(at::aten::slow_conv_transpose2d_backward),
            {grad_output, input, weight},
            [&]() {
              return NodeOutputShape(grad_output, input, weight, stride,
