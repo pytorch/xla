@@ -315,14 +315,16 @@ class XLATensor {
                                     std::vector<xla::int64> padding);
 
   static XLATensor slow_conv_transpose2d(const XLATensor& input,
-                                    const XLATensor& weight,
-                                    std::vector<xla::int64> stride,
-                                    std::vector<xla::int64> padding);
+                                         const XLATensor& weight,
+                                         std::vector<xla::int64> stride,
+                                         std::vector<xla::int64> padding);
 
-  static std::tuple<XLATensor, XLATensor, XLATensor> slow_conv_transpose2d_backward(
-      const XLATensor& out_backprop, const XLATensor& input,
-      const XLATensor& weight, std::vector<xla::int64> stride,
-      std::vector<xla::int64> padding);
+  static std::tuple<XLATensor, XLATensor, XLATensor>
+  slow_conv_transpose2d_backward(const XLATensor& out_backprop,
+                                 const XLATensor& input,
+                                 const XLATensor& weight,
+                                 std::vector<xla::int64> stride,
+                                 std::vector<xla::int64> padding);
 
   static XLATensor cos(const XLATensor& input);
   static void cos_(XLATensor& input);
