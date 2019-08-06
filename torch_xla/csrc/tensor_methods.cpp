@@ -692,32 +692,6 @@ XLATensor XLATensor::conv_transpose2d(const XLATensor& input,
   return input.CreateFrom(node);
 }
 
-XLATensor XLATensor::slow_conv_transpose2d(const XLATensor& input,
-                                           const XLATensor& weight,
-                                           std::vector<xla::int64> stride,
-                                           std::vector<xla::int64> padding) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::ConvTranspose2d>(
-      input.GetIrValue(), weight.GetIrValue(), std::move(stride),
-      std::move(padding));
-  return input.CreateFrom(node);
-}
-
-std::tuple<XLATensor, XLATensor, XLATensor>
-XLATensor::slow_conv_transpose2d_backward(const XLATensor& out_backprop,
-                                          const XLATensor& input,
-                                          const XLATensor& weight,
-                                          std::vector<xla::int64> stride,
-                                          std::vector<xla::int64> padding) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::ConvTranspose2dBackward>(
-      out_backprop.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
-      std::move(stride), std::move(padding));
-  XLATensor grad_input = out_backprop.CreateFrom(ir::Value(node, 0));
-  XLATensor grad_weight = out_backprop.CreateFrom(ir::Value(node, 1));
-  XLATensor grad_bias = out_backprop.CreateFrom(ir::Value(node, 2));
-  return std::make_tuple(std::move(grad_input), std::move(grad_weight),
-                         std::move(grad_bias));
-}
-
 XLATensor XLATensor::cos(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Cos(input.GetIrValue()));
 }
@@ -1833,6 +1807,32 @@ XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
   SelectInfo select = {dim, start, end, step};
   ViewInfo view_info(ViewInfo::Type::kSelect, input_shape, std::move(select));
   return input.CreateViewTensor(std::move(view_info));
+}
+
+XLATensor XLATensor::slow_conv_transpose2d(const XLATensor& input,
+                                           const XLATensor& weight,
+                                           std::vector<xla::int64> stride,
+                                           std::vector<xla::int64> padding) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::ConvTranspose2d>(
+      input.GetIrValue(), weight.GetIrValue(), std::move(stride),
+      std::move(padding));
+  return input.CreateFrom(node);
+}
+
+std::tuple<XLATensor, XLATensor, XLATensor>
+XLATensor::slow_conv_transpose2d_backward(const XLATensor& out_backprop,
+                                          const XLATensor& input,
+                                          const XLATensor& weight,
+                                          std::vector<xla::int64> stride,
+                                          std::vector<xla::int64> padding) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::ConvTranspose2dBackward>(
+      out_backprop.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
+      std::move(stride), std::move(padding));
+  XLATensor grad_input = out_backprop.CreateFrom(ir::Value(node, 0));
+  XLATensor grad_weight = out_backprop.CreateFrom(ir::Value(node, 1));
+  XLATensor grad_bias = out_backprop.CreateFrom(ir::Value(node, 2));
+  return std::make_tuple(std::move(grad_input), std::move(grad_weight),
+                         std::move(grad_bias));
 }
 
 XLATensor XLATensor::smooth_l1_loss(const XLATensor& input,
