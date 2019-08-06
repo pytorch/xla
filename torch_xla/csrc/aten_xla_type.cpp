@@ -863,7 +863,7 @@ at::Tensor AtenXlaType::conv_transpose2d(
         /*stride=*/XlaHelpers::I64List(stride),
         /*padding=*/XlaHelpers::I64List(padding)));
   } else {
-    return bridge::AtenFromXlaTensor(XLATensor::conv_transpose2d(
+    return bridge::AtenFromXlaTensor(XLATensor::slow_conv_transpose2d(
         /*input=*/bridge::GetXlaTensor(input),
         /*weight=*/bridge::GetXlaTensor(weight),
         /*stride=*/XlaHelpers::I64List(stride),
@@ -2417,6 +2417,34 @@ at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
       XLATensor::slice(bridge::GetXlaTensor(self), dim, start, end, step));
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor>
+AtenXlaType::slow_conv_transpose2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& weight, at::IntArrayRef kernel_size,
+    at::IntArrayRef stride, at::IntArrayRef padding,
+    at::IntArrayRef output_padding, at::IntArrayRef dilation,
+    const at::Tensor& columns, const at::Tensor& ones,
+    std::array<bool, 3> output_mask) {
+  // Dilated or grouped transposed convolutions aren't lowered to XLA yet.
+  if (IsNonTrivialPadding(output_padding) || IsNonTrivialDilation(dilation)) {
+    return AtenXlaTypeDefault::slow_conv_transpose2d_backward(
+        grad_output, self, weight, kernel_size, stride, padding, output_padding,
+        dilation, columns, ones, output_mask);
+  }
+  at::Tensor undefined;
+  auto gradients = XLATensor::slow_conv_transpose2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(weight), XlaHelpers::I64List(stride),
+      XlaHelpers::I64List(padding));
+  return std::make_tuple(
+      output_mask[0] ? bridge::AtenFromXlaTensor(std::get<0>(gradients))
+                     : undefined,
+      output_mask[1] ? bridge::AtenFromXlaTensor(std::get<1>(gradients))
+                     : undefined,
+      output_mask[2] ? bridge::AtenFromXlaTensor(std::get<2>(gradients))
+                     : undefined);
+}
+
 at::Tensor AtenXlaType::smooth_l1_loss(const at::Tensor& self,
                                        const at::Tensor& target,
                                        int64_t reduction) {
@@ -2672,34 +2700,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::thnn_conv2d_forward(
              /*stride=*/stride, /*padding=*/padding, /*dilation=*/{1, 1},
              /*groups=*/1),
       undefined, undefined);
-}
-
-std::tuple<at::Tensor, at::Tensor, at::Tensor>
-AtenXlaType::conv_transpose2d_backward(
-    const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& weight, at::IntArrayRef kernel_size,
-    at::IntArrayRef stride, at::IntArrayRef padding,
-    at::IntArrayRef output_padding, at::IntArrayRef dilation,
-    const at::Tensor& columns, const at::Tensor& ones,
-    std::array<bool, 3> output_mask) {
-  // Dilated or grouped transposed convolutions aren't lowered to XLA yet.
-  if (IsNonTrivialPadding(output_padding) || IsNonTrivialDilation(dilation)) {
-    return AtenXlaTypeDefault::conv_transpose2d_backward(
-        grad_output, self, weight, kernel_size, stride, padding, output_padding,
-        dilation, columns, ones, output_mask);
-  }
-  at::Tensor undefined;
-  auto gradients = XLATensor::conv_transpose2d_backward(
-      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(weight), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding));
-  return std::make_tuple(
-      output_mask[0] ? bridge::AtenFromXlaTensor(std::get<0>(gradients))
-                     : undefined,
-      output_mask[1] ? bridge::AtenFromXlaTensor(std::get<1>(gradients))
-                     : undefined,
-      output_mask[2] ? bridge::AtenFromXlaTensor(std::get<2>(gradients))
-                     : undefined);
 }
 
 at::Tensor AtenXlaType::threshold(const at::Tensor& self, at::Scalar threshold,
