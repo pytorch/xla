@@ -32,7 +32,7 @@
 #include "torch_xla/csrc/ops/conv2d.h"
 #include "torch_xla/csrc/ops/conv2d_backward.h"
 #include "torch_xla/csrc/ops/conv_transpose2d.h"
-#include "torch_xla/csrc/ops/conv_transpose2d_backward.h"
+#include "torch_xla/csrc/ops/slow_conv_transpose2d_backward.h"
 #include "torch_xla/csrc/ops/cross_replica_sum.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
@@ -692,7 +692,7 @@ XLATensor XLATensor::conv_transpose2d(const XLATensor& input,
   return input.CreateFrom(node);
 }
 
-XLATensor XLATensor::conv_transpose2d(const XLATensor& input,
+XLATensor XLATensor::slow_conv_transpose2d(const XLATensor& input,
                                       const XLATensor& weight,
                                       std::vector<xla::int64> stride,
                                       std::vector<xla::int64> padding) {
@@ -703,7 +703,7 @@ XLATensor XLATensor::conv_transpose2d(const XLATensor& input,
 }
 
 std::tuple<XLATensor, XLATensor, XLATensor>
-XLATensor::conv_transpose2d_backward(const XLATensor& out_backprop,
+XLATensor::slow_conv_transpose2d_backward(const XLATensor& out_backprop,
                                      const XLATensor& input,
                                      const XLATensor& weight,
                                      std::vector<xla::int64> stride,
