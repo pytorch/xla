@@ -134,8 +134,8 @@ class Cluster(object):
 class ClusterResolver(object):
   """Cluster Resolver for Client VM and Cloud TPU mesh."""
 
-  @classmethod
-  def _get_instance_metadata(cls, metadata):
+  @staticmethod
+  def _get_instance_metadata(metadata):
     response = requests.get(
         '{}/computeMetadata/v1/{}'.format(_GCE_METADATA_ENDPOINT, metadata),
         headers={'Metadata-Flavor': 'Google'})
