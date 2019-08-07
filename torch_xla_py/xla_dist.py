@@ -218,6 +218,8 @@ class ClusterResolver(object):
       # Using an instance group
       instance_group = self._get_instance_group()
       self._vms = self._get_member_instance_names(instance_group)
+      if len(self._vms) == 0:
+        raise RuntimeError('Client worker vms is empty in instance group.')
 
     workers = []
     batch = BatchHttpRequest()

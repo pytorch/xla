@@ -420,6 +420,34 @@ class ClusterResolverTest(unittest.TestCase):
     ]
     self.assertCountEqual(expected, vm_cluster)
 
+  def test_empty_instance_group_client_cluster(self):
+    list_instances_map = {
+        'fake-ig': {
+            'kind':
+                'compute#instanceGroupsListInstances',
+            'items': [],
+        },
+    }
+    instance_resp_map = {
+        'fake-ig-a':
+            gen_fake_instances_get_entry('fake-ig-a', 'n1-standard-16',
+                                         '10.0.0.0', 'RUNNING'),
+    }
+    compute_service = build_mock_compute_service(instance_resp_map,
+                                                 list_instances_map)
+    noop_tpu_service = build_mock_tpu_service({})
+    self.mock_discovery.side_effect = build_mock_services_fn(
+        compute_service, noop_tpu_service)
+
+    # Act
+    cr = ClusterResolver(['fake-tpu'])
+
+    # Assert
+    self.assertRaisesRegex(RuntimeError,
+                           '.*vms is empty in instance group.*',
+                           cr._get_client_workers)
+
+
   def test_unhealthy_client_cluster(self):
     # Arrange
     list_instances_map = {
