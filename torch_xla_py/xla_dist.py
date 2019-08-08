@@ -3,7 +3,6 @@
 from __future__ import division
 from __future__ import print_function
 
-import os
 import requests
 
 try:
@@ -165,7 +164,7 @@ class ClusterResolver(object):
       self._project = self._get_instance_metadata('project/project-id')
     if zone is None:
       zone_path = self._get_instance_metadata('instance/zone')
-      self._zone = os.path.split(zone_path)[1]
+      self._zone = zone_path.split('/')[-1]
     self._vm_master = self._get_instance_metadata('instance/name')
 
   def _get_instance_group(self):
@@ -180,7 +179,7 @@ class ClusterResolver(object):
       for item in resp['metadata']['items']:
         if (item['key'] == 'created-by' and
             'instanceGroupManagers' in item['value']):
-          return os.path.split(item['value'])[1]
+          return item['value'].split('/')[-1]
 
     raise RuntimeError(('A vm list must be passed to ClusterResolver '
                         'if not using an instance group'))
@@ -196,7 +195,7 @@ class ClusterResolver(object):
       if 'instance' not in item or 'status' not in item:
         continue
       instance_path = item['instance']
-      instances.append(os.path.split(instance_path)[1])
+      instances.append(instance_path.split('/')[-1])
 
     return instances
 
@@ -227,15 +226,15 @@ class ClusterResolver(object):
       """Callback for each request in BatchHttpRequest."""
       if exception is not None:
         raise exception
-      hostname = os.path.split(resp['selfLink'])[1]
+      hostname = resp['selfLink'].split('/')[-1]
       if resp['status'] != 'RUNNING':
         raise RuntimeError(
             ('Instance {hostname} is not running yet. '
              'Re-run when all VMs are running.').format(hostname=hostname))
       worker = ClientWorker(
           internal_ip=resp['networkInterfaces'][0]['networkIP'],
-          machine_type=os.path.split(resp['machineType'])[1],
-          zone=os.path.split(resp['zone'])[1],
+          machine_type=resp['machineType'].split('/')[-1],
+          zone=resp['zone'].split('/')[-1],
           hostname=hostname)
       workers.append(worker)
 
