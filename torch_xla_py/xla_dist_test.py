@@ -2,19 +2,20 @@
 from __future__ import division
 from __future__ import print_function
 
-import unittest
 import uuid
 import unittest
 from unittest import mock
 
 from googleapiclient import discovery
-from googleapiclient.http import BatchHttpRequest
 from oauth2client.client import GoogleCredentials
 from xla_dist import Cluster
 from xla_dist import ClusterResolver
 from xla_dist import ClientWorker
 from xla_dist import ServiceWorker
 
+
+PROJECT_ZONE_PREFIX = ('https://www.googleapis.com/compute/v1/'
+                       'projects/fake-project/zones/fake-zone')
 
 class ClusterTest(unittest.TestCase):
 
@@ -195,7 +196,6 @@ def build_mock_compute_service(get_instance_map, list_instances_map):
 def build_mock_services_fn(mock_compute_service, mock_tpu_service):
 
   def mock_google_services(serviceName, version, **kwargs):
-    del version  # not used
     if serviceName == 'compute':
       return mock_compute_service
     elif serviceName == 'tpu':
@@ -232,11 +232,9 @@ def build_mock_batch_call():
 
 def gen_fake_instances_get_entry(instance_name, machine_type, internal_ip,
                                  status):
-  project_zone_prefix = ('https://www.googleapis.com/compute/v1/'
-                         'projects/fake-project/zones/fake-zone')
   return {
       'machineType':
-          '{}/machineTypes/{}'.format(project_zone_prefix, machine_type),
+          '{}/machineTypes/{}'.format(PROJECT_ZONE_PREFIX, machine_type),
       'metadata': {
           'fingerprint': 'abc',
           'items': [{
@@ -253,22 +251,20 @@ def gen_fake_instances_get_entry(instance_name, machine_type, internal_ip,
           'kind': 'compute#metadata',
       },
       'selfLink':
-          '{}/instances/{}'.format(project_zone_prefix, instance_name),
+          '{}/instances/{}'.format(PROJECT_ZONE_PREFIX, instance_name),
       'networkInterfaces': [{
           'networkIP': internal_ip,
       }],
       'status':
           status,
       'zone':
-          project_zone_prefix,
+          PROJECT_ZONE_PREFIX,
   }
 
 
 def gen_fake_ig_list_instances_entry(instance_name, status):
-  project_zone_prefix = ('https://www.googleapis.com/compute/v1/'
-                         'projects/fake-project/zones/fake-zone')
   return {
-      'instance': '{}/instances/{}'.format(project_zone_prefix, instance_name),
+      'instance': '{}/instances/{}'.format(PROJECT_ZONE_PREFIX, instance_name),
       'status': status,
   }
 
@@ -309,26 +305,15 @@ class ClusterResolverTest(unittest.TestCase):
             'kind':
                 'compute#instanceGroupsListInstances',
             'items': [
-                gen_fake_ig_list_instances_entry('fake-ig-a', 'RUNNING'),
-                gen_fake_ig_list_instances_entry('fake-ig-b', 'RUNNING'),
-                gen_fake_ig_list_instances_entry('fake-ig-c', 'RUNNING'),
-                gen_fake_ig_list_instances_entry('fake-ig-d', 'RUNNING'),
+                gen_fake_ig_list_instances_entry('fake-ig-'+c, 'RUNNING')
+                for c in 'abcd'
             ],
         },
     }
     instance_resp_map = {
-        'fake-ig-a':
-            gen_fake_instances_get_entry('fake-ig-a', 'n1-standard-16',
-                                         '10.0.0.0', 'RUNNING'),
-        'fake-ig-b':
-            gen_fake_instances_get_entry('fake-ig-b', 'n1-standard-16',
-                                         '10.0.0.1', 'RUNNING'),
-        'fake-ig-c':
-            gen_fake_instances_get_entry('fake-ig-c', 'n1-standard-16',
-                                         '10.0.0.2', 'RUNNING'),
-        'fake-ig-d':
-            gen_fake_instances_get_entry('fake-ig-d', 'n1-standard-16',
-                                         '10.0.0.3', 'RUNNING'),
+        'fake-ig-'+c: gen_fake_instances_get_entry(
+            'fake-ig-'+c, 'n1-standard-16', '10.0.0.'+ip, 'RUNNING')
+        for c, ip in zip('abcd', '0123')
     }
     compute_service = build_mock_compute_service(instance_resp_map,
                                                  list_instances_map)
@@ -342,26 +327,11 @@ class ClusterResolverTest(unittest.TestCase):
 
     # Assert
     expected = [
-        ClientWorker(
-            internal_ip='10.0.0.0',
-            machine_type='n1-standard-16',
-            zone='fake-zone',
-            hostname='fake-ig-a'),
-        ClientWorker(
-            internal_ip='10.0.0.1',
-            machine_type='n1-standard-16',
-            zone='fake-zone',
-            hostname='fake-ig-b'),
-        ClientWorker(
-            internal_ip='10.0.0.2',
-            machine_type='n1-standard-16',
-            zone='fake-zone',
-            hostname='fake-ig-c'),
-        ClientWorker(
-            internal_ip='10.0.0.3',
-            machine_type='n1-standard-16',
-            zone='fake-zone',
-            hostname='fake-ig-d'),
+        ClientWorker(internal_ip='10.0.0.'+ip,
+                     machine_type='n1-standard-16',
+                     zone='fake-zone',
+                     hostname='fake-ig-'+c)
+        for c, ip in zip('abcd', '0123')
     ]
     self.assertCountEqual(expected, vm_cluster)
 
@@ -369,18 +339,9 @@ class ClusterResolverTest(unittest.TestCase):
     # Arrange
     list_instances_map = {}
     instance_resp_map = {
-        'fake-ig-a':
-            gen_fake_instances_get_entry('fake-ig-a', 'n1-standard-16',
-                                         '10.0.0.0', 'RUNNING'),
-        'fake-ig-b':
-            gen_fake_instances_get_entry('fake-ig-b', 'n1-standard-16',
-                                         '10.0.0.1', 'RUNNING'),
-        'fake-ig-c':
-            gen_fake_instances_get_entry('fake-ig-c', 'n1-standard-16',
-                                         '10.0.0.2', 'RUNNING'),
-        'fake-ig-d':
-            gen_fake_instances_get_entry('fake-ig-d', 'n1-standard-16',
-                                         '10.0.0.3', 'RUNNING'),
+        'fake-ig-'+c: gen_fake_instances_get_entry(
+            'fake-ig-'+c, 'n1-standard-16', '10.0.0.'+ip, 'RUNNING')
+        for c, ip in zip('abcd', '0123')
     }
     compute_service = build_mock_compute_service(instance_resp_map,
                                                  list_instances_map)
@@ -395,26 +356,11 @@ class ClusterResolverTest(unittest.TestCase):
 
     # Assert
     expected = [
-        ClientWorker(
-            internal_ip='10.0.0.0',
-            machine_type='n1-standard-16',
-            zone='fake-zone',
-            hostname='fake-ig-a'),
-        ClientWorker(
-            internal_ip='10.0.0.1',
-            machine_type='n1-standard-16',
-            zone='fake-zone',
-            hostname='fake-ig-b'),
-        ClientWorker(
-            internal_ip='10.0.0.2',
-            machine_type='n1-standard-16',
-            zone='fake-zone',
-            hostname='fake-ig-c'),
-        ClientWorker(
-            internal_ip='10.0.0.3',
-            machine_type='n1-standard-16',
-            zone='fake-zone',
-            hostname='fake-ig-d'),
+        ClientWorker(internal_ip='10.0.0.'+ip,
+                     machine_type='n1-standard-16',
+                     zone='fake-zone',
+                     hostname='fake-ig-'+c)
+        for c, ip in zip('abcd', '0123')
     ]
     self.assertCountEqual(expected, vm_cluster)
 
