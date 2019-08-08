@@ -187,6 +187,7 @@ def build_mock_compute_service(get_instance_map, list_instances_map):
   compute_service = mock.MagicMock()
   compute_service.instances.return_value = instances
   compute_service.instanceGroups.return_value = instance_groups
+  compute_service.new_batch_http_request.return_value = build_mock_batch_call()
 
   return compute_service
 
@@ -205,18 +206,15 @@ def build_mock_services_fn(mock_compute_service, mock_tpu_service):
   return mock_google_services
 
 
-def mock_batch_call():
-  batch_http_request_add = mock.patch.object(
-      BatchHttpRequest, 'add', autospec=True).start()
-  batch_http_request_execute = mock.patch.object(
-      BatchHttpRequest, 'execute', autospec=True).start()
+def build_mock_batch_call():
+  batcher = mock.MagicMock()
 
   def build_execute_requests_fn(call_list):
 
     def execute_requests(*args):
       del args
       for args, _ in call_list:
-        _, req, callback = args
+        req, callback = args
         resp = None
         exception = None
         try:
@@ -227,8 +225,9 @@ def mock_batch_call():
 
     return execute_requests
 
-  batch_http_request_execute.side_effect = build_execute_requests_fn(
-      batch_http_request_add.call_args_list)
+  batcher.execute.side_effect = build_execute_requests_fn(
+      batcher.add.call_args_list)
+  return batcher
 
 
 def gen_fake_instances_get_entry(instance_name, machine_type, internal_ip,
@@ -283,7 +282,6 @@ class ClusterResolverTest(unittest.TestCase):
                       mock_request_metadata).start()
     mock.patch.object(GoogleCredentials, 'get_application_default',
                       lambda *args, **kwargs: None).start()
-    mock_batch_call()
     self.mock_discovery = mock.patch.object(
         discovery, 'build', autospec=True).start()
 
@@ -423,8 +421,7 @@ class ClusterResolverTest(unittest.TestCase):
   def test_empty_instance_group_client_cluster(self):
     list_instances_map = {
         'fake-ig': {
-            'kind':
-                'compute#instanceGroupsListInstances',
+            'kind': 'compute#instanceGroupsListInstances',
             'items': [],
         },
     }
@@ -443,10 +440,8 @@ class ClusterResolverTest(unittest.TestCase):
     cr = ClusterResolver(['fake-tpu'])
 
     # Assert
-    self.assertRaisesRegex(RuntimeError,
-                           '.*vms is empty in instance group.*',
+    self.assertRaisesRegex(RuntimeError, '.*vms is empty in instance group.*',
                            cr._get_client_workers)
-
 
   def test_unhealthy_client_cluster(self):
     # Arrange

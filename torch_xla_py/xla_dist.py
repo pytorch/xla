@@ -7,7 +7,6 @@ import requests
 
 try:
   from googleapiclient import discovery
-  from googleapiclient.http import BatchHttpRequest
   from oauth2client.client import GoogleCredentials
 except ImportError:
   raise ImportError('googleapiclient and oauth2client must be installed '
@@ -222,8 +221,8 @@ class ClusterResolver(object):
         raise RuntimeError('Client worker vms is empty in instance group.')
 
     workers = []
-    batch = BatchHttpRequest()
-    
+    batch = self._compute_service.new_batch_http_request()
+
     def add_worker(request_id, resp, exception):
       """Callback for each request in BatchHttpRequest."""
       if exception is not None:
