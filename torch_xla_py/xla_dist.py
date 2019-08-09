@@ -13,7 +13,7 @@ except ImportError:
                     'before using the xla_dist. Execute: '
                     '`pip install --upgrade google-api-python-client` '
                     'and `pip install --upgrade oauth2client` to '
-                    'install with pip.')
+                    'install with pip')
 
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 
@@ -33,8 +33,8 @@ class ClientWorker(Worker):
     self._hostname = hostname
 
   def __repr__(self):
-    return ('ClientWorker({internal_ip}, {machine_type}, {zone},'
-            ' {hostname})').format(
+    return ('{{{internal_ip}, {machine_type}, {zone},'
+            ' {hostname}}}').format(
                 internal_ip=self._internal_ip,
                 machine_type=self._machine_type,
                 zone=self._zone,
@@ -140,6 +140,12 @@ class ClusterResolver(object):
         headers={'Metadata-Flavor': 'Google'})
     return response.content.decode('utf-8')
 
+  @staticmethod
+  def _parse_resource_url(url, name):
+    parts = url.split('/')
+    idx = parts.index(name)
+    return parts[idx + 1]
+
   def __init__(self, tpus, vms=None, zone=None, project=None):
     """Creates a new ClusterResolver object."""
 
@@ -164,7 +170,7 @@ class ClusterResolver(object):
       self._project = self._get_instance_metadata('project/project-id')
     if zone is None:
       zone_path = self._get_instance_metadata('instance/zone')
-      self._zone = zone_path.split('/')[-1]
+      self._zone = self._parse_resource_url(zone_path, 'zones')
     self._vm_master = self._get_instance_metadata('instance/name')
 
   def _get_instance_group(self):
@@ -179,7 +185,8 @@ class ClusterResolver(object):
       for item in resp['metadata']['items']:
         if (item['key'] == 'created-by' and
             'instanceGroupManagers' in item['value']):
-          return item['value'].split('/')[-1]
+          return self._parse_resource_url(item['value'],
+                                          'instanceGroupManagers')
 
     raise RuntimeError(('A vm list must be passed to ClusterResolver '
                         'if not using an instance group'))
@@ -195,7 +202,7 @@ class ClusterResolver(object):
       if 'instance' not in item or 'status' not in item:
         continue
       instance_path = item['instance']
-      instances.append(instance_path.split('/')[-1])
+      instances.append(self._parse_resource_url(instance_path, 'instances'))
 
     return instances
 
@@ -217,7 +224,7 @@ class ClusterResolver(object):
       instance_group = self._get_instance_group()
       self._vms = self._get_member_instance_names(instance_group)
       if len(self._vms) == 0:
-        raise RuntimeError('Client worker vms is empty in instance group.')
+        raise RuntimeError('Client worker vms is empty in instance group')
 
     workers = []
     batch = self._compute_service.new_batch_http_request()
@@ -226,23 +233,22 @@ class ClusterResolver(object):
       """Callback for each request in BatchHttpRequest."""
       if exception is not None:
         raise exception
-      hostname = resp['selfLink'].split('/')[-1]
+      hostname = self._parse_resource_url(resp['selfLink'], 'instances')
       if resp['status'] != 'RUNNING':
         raise RuntimeError(
             ('Instance {hostname} is not running yet. '
-             'Re-run when all VMs are running.').format(hostname=hostname))
+             'Re-run when all VMs are running').format(hostname=hostname))
       worker = ClientWorker(
           internal_ip=resp['networkInterfaces'][0]['networkIP'],
-          machine_type=resp['machineType'].split('/')[-1],
-          zone=resp['zone'].split('/')[-1],
+          machine_type=self._parse_resource_url(resp['machineType'],
+                                                'machineTypes'),
+          zone=self._parse_resource_url(resp['zone'], 'zones'),
           hostname=hostname)
       workers.append(worker)
 
     for vm in self._vms:
       req = self._compute_service.instances().get(
-          project=self._project,
-          zone=self._zone,
-          instance=vm,
+          project=self._project, zone=self._zone, instance=vm,
           fields=('machineType,metadata,selfLink,'
                   'networkInterfaces/networkIP,status,zone'))
       batch.add(req, add_worker)

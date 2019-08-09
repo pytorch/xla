@@ -137,7 +137,7 @@ class ClusterTest(unittest.TestCase):
 def mock_request_metadata(cls, metadata):
   fake_metadata = {
       'project/project-id': 'fake-project',
-      'instance/zone': 'project/fake-project/zone/fake-zone',
+      'instance/zone': 'project/fake-project/zones/fake-zone',
       'instance/name': 'fake-ig-a',
   }
   return fake_metadata[metadata]
