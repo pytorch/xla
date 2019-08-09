@@ -2804,22 +2804,20 @@ TEST_F(AtenXlaTensorTest, TestIndexSelect) {
 
 TEST_F(AtenXlaTensorTest, TestExpand) {
   torch::Tensor a = torch::rand({3, 4}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b = torch::native::expand(a, {2, 3, 4}, /*implicit=*/false);
+  torch::Tensor b = a.expand({2, 3, 4}, /*implicit=*/false);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b =
-        torch::native::expand(xla_a, {2, 3, 4}, /*implicit=*/false);
+    torch::Tensor xla_b = xla_a.expand({2, 3, 4}, /*implicit=*/false);
     AllClose(b, xla_b);
   });
 }
 
 TEST_F(AtenXlaTensorTest, TestExpandBack) {
   torch::Tensor a = torch::rand({3, 1}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b = torch::native::expand(a, {3, 4}, /*implicit=*/false);
+  torch::Tensor b = a.expand({3, 4}, /*implicit=*/false);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b =
-        torch::native::expand(xla_a, {3, 4}, /*implicit=*/false);
+    torch::Tensor xla_b = xla_a.expand({3, 4}, /*implicit=*/false);
     AllClose(b, xla_b);
   });
 }
@@ -6567,6 +6565,20 @@ TEST_F(AtenXlaTensorTest, TestAsStridedWithOffset) {
     torch::Tensor xla_output =
         torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride,
                           /*storage_offset=*/storage_offset);
+    AllClose(output, xla_output);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestAsStridedWithInplaceCopy) {
+  torch::Tensor grad = torch::ones({4}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> size = {4};
+  std::vector<int64_t> stride = {1};
+  torch::Tensor output = torch::zeros({4}, grad.options());
+  output.as_strided(size, stride).copy_(grad);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_grad = CopyToDevice(grad, device);
+    torch::Tensor xla_output = torch::zeros({4}, xla_grad.options());
+    xla_output.as_strided(size, stride).copy_(xla_grad);
     AllClose(output, xla_output);
   });
 }

@@ -80,4 +80,8 @@ xla::XlaOp BuildSlice(
 xla::XlaOp BuildResize(const xla::XlaOp& input,
                        tensorflow::gtl::ArraySlice<const xla::int64> size);
 
+xla::XlaOp BuildUnselect(const xla::XlaOp& target, const xla::XlaOp& source,
+                         xla::int64 dim, xla::int64 start, xla::int64 end,
+                         xla::int64 stride);
+
 }  // namespace torch_xla

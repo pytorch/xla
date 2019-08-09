@@ -699,6 +699,11 @@ std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
   return view;
 }
 
+void XLATensor::SetSubView(ViewInfo view_info) const {
+  data()->view = data()->view->CreateSubView(view_info.shape, view_info);
+  data()->generation += 1;
+}
+
 std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
   if (data()->view != nullptr) {
     return data()->view->CreateSubView(view_info.shape, view_info);

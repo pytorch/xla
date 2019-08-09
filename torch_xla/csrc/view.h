@@ -22,6 +22,14 @@ struct SelectInfo {
   xla::int64 stride = 0;
 };
 
+struct AsStridedInfo {
+  bool operator==(const AsStridedInfo& ref) const {
+    return offset == ref.offset;
+  }
+
+  xla::int64 offset = 0;
+};
+
 struct ViewInfo {
   enum class Type {
     kInvalid,
@@ -31,6 +39,7 @@ struct ViewInfo {
     kReshape,
     kResize,
     kSelect,
+    kAsStrided,
   };
 
   ViewInfo() = default;
@@ -38,6 +47,8 @@ struct ViewInfo {
   ViewInfo(Type view_type, std::vector<xla::int64> sizes,
            std::vector<xla::int64> permutation, xla::PrimitiveType type);
   ViewInfo(Type view_type, const xla::Shape& source_shape, SelectInfo select);
+  ViewInfo(Type view_type, xla::Shape shape, std::vector<xla::int64> sizes,
+           AsStridedInfo as_strided);
 
   bool operator==(const ViewInfo& ref) const {
     return view_type == ref.view_type && shape == ref.shape &&
@@ -58,6 +69,8 @@ struct ViewInfo {
   std::vector<xla::int64> permutation;
   // Information used for sliced views.
   absl::optional<SelectInfo> select;
+  // Information used for as_strided views.
+  absl::optional<AsStridedInfo> as_strided;
 };
 
 // When a "view" (capture by reference) is taken on a node, an Alias object is

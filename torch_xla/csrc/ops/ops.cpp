@@ -153,9 +153,9 @@ NodePtr ReluOp(const Value& input) {
 }
 
 NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1) {
-  return ir::MakeNode<Permute>(input, XlaHelpers::MakeTransposePermutation(
-                                          /*dim0=*/dim0, /*dim1=*/dim1,
-                                          /*rank=*/input.shape().rank()));
+  return MakeNode<Permute>(input, XlaHelpers::MakeTransposePermutation(
+                                      /*dim0=*/dim0, /*dim1=*/dim1,
+                                      /*rank=*/input.shape().rank()));
 }
 
 std::tuple<NodePtr, NodePtr> LogSigmoid(const Value& input) {
@@ -193,14 +193,14 @@ NodePtr SigmoidBackward(const Value& grad_output, const Value& output) {
 
 NodePtr LogSoftmaxBackwardOp(const Value& grad_output, const Value& output,
                              xla::int64 dim) {
-  return ir::MakeNode<LogSoftmaxBackward>(
+  return MakeNode<LogSoftmaxBackward>(
       grad_output, output,
       XlaHelpers::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
 }
 
 NodePtr SoftmaxBackwardOp(const Value& grad_output, const Value& output,
                           xla::int64 dim) {
-  return ir::MakeNode<SoftmaxBackward>(
+  return MakeNode<SoftmaxBackward>(
       grad_output, output,
       XlaHelpers::GetCanonicalDimensionIndex(dim, grad_output.shape().rank()));
 }
@@ -470,7 +470,7 @@ NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
   NodePtr zero = ScalarOp(0, shape);
   NodePtr one = ScalarOp(1, shape);
   NodePtr alpha_scalar = ScalarOp(alpha, shape);
-  return Where(ir::ops::ComparisonOp(at::aten::le, input, zero),
+  return Where(ComparisonOp(at::aten::le, input, zero),
                alpha_scalar * (Exp(scaled_input) - one), input) *
          ScalarOp(scale, shape);
 }
@@ -555,7 +555,7 @@ NodePtr Bernoulli(const Value& input, const Value& probability) {
     return node.ReturnOp(result, loctx);
   };
   NodePtr probability_expanded =
-      ir::MakeNode<ir::ops::Expand>(probability, input.shape().dimensions());
+      MakeNode<Expand>(probability, input.shape().dimensions());
   return GenericOp(OpKind(at::aten::bernoulli), {input, probability_expanded},
                    input.shape(), std::move(lower_fn));
 }

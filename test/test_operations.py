@@ -334,7 +334,7 @@ class TestLongGraphChain(XlaTestCase):
     y = orig_y
     xla_x = orig_x.to(device)
     xla_y = orig_y.to(device)
-    for i in range(0, 10000):
+    for i in range(0, 2000):
       x = x + 2 * y
       xla_x = xla_x + 2 * xla_y
     self.assertEqualRel(x, xla_x.cpu(), rel_err=1e-3, abs_err=5)
@@ -626,7 +626,7 @@ class MNISTComparator(nn.Module):
     mc.save('layer1', x)
     x = F.relu(F.max_pool2d(self.conv2(x), 2))
     mc.save('layer2', x)
-    x = x.view(-1, 320)
+    x = torch.flatten(x, 1)
     x = F.relu(self.fc1(x))
     mc.save('relu', x)
     x = self.fc2(x)

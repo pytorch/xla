@@ -2,7 +2,7 @@
 set -exo pipefail
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 LOGFILE=/tmp/pytorch_py_test.log
-MAX_GRAPH_SIZE=1000
+MAX_GRAPH_SIZE=500
 GRAPH_CHECK_FREQUENCY=100
 VERBOSITY=2
 

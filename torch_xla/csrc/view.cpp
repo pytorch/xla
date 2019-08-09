@@ -9,7 +9,10 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ops/as_strided.h"
+#include "torch_xla/csrc/ops/as_strided_view_update.h"
 #include "torch_xla/csrc/ops/generic_slice.h"
+#include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/resize.h"
 #include "torch_xla/csrc/ops/select.h"
@@ -39,6 +42,9 @@ ir::Value ApplyViewInfo(ir::Value ir_value, const ViewInfo& view_info) {
     case ViewInfo::Type::kResize:
       return ir::MakeNode<ir::ops::Resize>(ir_value,
                                            view_info.shape.dimensions());
+    case ViewInfo::Type::kAsStrided:
+      return ir::MakeNode<ir::ops::AsStrided>(
+          ir_value, view_info.shape.dimensions(), view_info.as_strided->offset);
     default:
       XLA_ERROR() << "Invalid view type: "
                   << xla::util::GetEnumValue(view_info.view_type);
@@ -81,6 +87,11 @@ ir::Value ApplyUpdate(ir::Value ir_value,
       case ViewInfo::Type::kResize:
         result = ir::MakeNode<ir::ops::Resize>(result, view_info.sizes);
         break;
+      case ViewInfo::Type::kAsStrided:
+        result = ir::MakeNode<ir::ops::AsStridedViewUpdate>(
+            tmp_values[i - 1], result, view_info.sizes,
+            view_info.as_strided->offset);
+        break;
       default:
         XLA_ERROR() << "Invalid view type: "
                     << xla::util::GetEnumValue(view_info.view_type);
@@ -116,6 +127,15 @@ ViewInfo::ViewInfo(Type view_type, const xla::Shape& source_shape,
       sizes(source_shape.dimensions()),
       select(std::move(select)) {
   XLA_CHECK(view_type == Type::kSelect);
+}
+
+ViewInfo::ViewInfo(Type view_type, xla::Shape shape,
+                   std::vector<xla::int64> sizes, AsStridedInfo as_strided)
+    : view_type(view_type),
+      shape(std::move(shape)),
+      sizes(std::move(sizes)),
+      as_strided(std::move(as_strided)) {
+  XLA_CHECK(view_type == Type::kAsStrided);
 }
 
 void Alias::Update(ir::Value ir_value, std::vector<ViewInfo> view_infos) {

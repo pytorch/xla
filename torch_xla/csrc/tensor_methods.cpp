@@ -203,6 +203,20 @@ void CheckIsIntegralOrPred(const xla::Shape& shape,
       << shape;
 }
 
+ViewInfo CreateAsStridedViewInfo(
+    const xla::Shape& input_shape,
+    tensorflow::gtl::ArraySlice<const xla::int64> size,
+    c10::optional<xla::int64> storage_offset) {
+  xla::Shape result_shape =
+      xla::ShapeUtil::MakeShape(input_shape.element_type(), size);
+  AsStridedInfo as_strided_info;
+  if (storage_offset) {
+    as_strided_info.offset = *storage_offset;
+  }
+  return ViewInfo(ViewInfo::Type::kAsStrided, std::move(result_shape),
+                  input_shape.dimensions(), std::move(as_strided_info));
+}
+
 }  // namespace
 
 XLATensor XLATensor::__and__(const XLATensor& input, at::Scalar other) {
@@ -481,14 +495,21 @@ XLATensor XLATensor::argmin(const XLATensor& input) {
 XLATensor XLATensor::as_strided(const XLATensor& input,
                                 std::vector<xla::int64> size,
                                 c10::optional<xla::int64> storage_offset) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::AsStrided>(
-      input.GetIrValue(), size, storage_offset));
+  auto input_shape = input.shape();
+  return input.CreateViewTensor(
+      CreateAsStridedViewInfo(input_shape, size, storage_offset));
 }
 
 void XLATensor::as_strided_(XLATensor& input, std::vector<xla::int64> size,
                             c10::optional<xla::int64> storage_offset) {
-  input.SetIrValue(ir::MakeNode<ir::ops::AsStrided>(input.GetIrValue(), size,
-                                                    storage_offset));
+  if (input.data()->view == nullptr) {
+    input.SetIrValue(ir::MakeNode<ir::ops::AsStrided>(
+        input.GetIrValue(), std::move(size), storage_offset.value_or(0)));
+  } else {
+    auto input_shape = input.shape();
+    input.SetSubView(
+        CreateAsStridedViewInfo(input_shape, size, storage_offset));
+  }
 }
 
 XLATensor XLATensor::asin(const XLATensor& input) {
@@ -1664,7 +1685,7 @@ void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
         xla::ShapeUtil::MakeShape(input_shape.get().element_type(), size);
     ViewInfo view_info(ViewInfo::Type::kResize, std::move(resize_shape),
                        input_shape.get().dimensions());
-    input.data()->view = input.CreateView(std::move(view_info));
+    input.SetSubView(std::move(view_info));
   }
 }
 

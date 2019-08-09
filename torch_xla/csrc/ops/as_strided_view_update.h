@@ -9,10 +9,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class AsStrided : public Node {
+class AsStridedViewUpdate : public Node {
  public:
-  AsStrided(const Value& input, std::vector<xla::int64> size,
-            xla::int64 storage_offset);
+  AsStridedViewUpdate(const Value& target, const Value& input,
+                      std::vector<xla::int64> size, xla::int64 storage_offset);
 
   std::string ToString() const override;
 
@@ -23,10 +23,6 @@ class AsStrided : public Node {
   const std::vector<xla::int64>& size() const { return size_; }
 
   xla::int64 storage_offset() const { return storage_offset_; }
-
-  // We only support strides which are already consistent with the size.
-  static bool StrideIsSupported(tensorflow::gtl::ArraySlice<xla::int64> size,
-                                tensorflow::gtl::ArraySlice<xla::int64> stride);
 
  private:
   std::vector<xla::int64> size_;
