@@ -13,26 +13,23 @@ namespace {
 
 xla::XlaOp LowerAsStrided(const xla::XlaOp& input,
                           tensorflow::gtl::ArraySlice<xla::int64> size,
-                          c10::optional<xla::int64> storage_offset) {
+                          xla::int64 storage_offset) {
   xla::int64 input_element_count =
       xla::ShapeUtil::ElementsIn(XlaHelpers::ShapeOfXlaOp(input));
   xla::int64 slice_size = xla::util::Multiply<xla::int64>(size);
   if (input_element_count == slice_size) {
-    XLA_CHECK(!storage_offset || *storage_offset == 0)
-        << "For same number of elements, storage offset must be 0 or null";
+    XLA_CHECK_EQ(storage_offset, 0);
     return xla::Reshape(input, size);
   }
   xla::XlaOp r1_slice = xla::Reshape(input, {input_element_count});
-  if (storage_offset) {
-    r1_slice = xla::SliceInDim(r1_slice, *storage_offset,
-                               *storage_offset + slice_size, 1, 0);
-  }
-  return xla::Reshape(r1_slice, size);
+  xla::XlaOp r1_result = xla::SliceInDim(r1_slice, storage_offset,
+                                         storage_offset + slice_size, 1, 0);
+  return xla::Reshape(r1_result, size);
 }
 
 xla::Shape NodeOutputShape(const Value& input,
                            tensorflow::gtl::ArraySlice<xla::int64> size,
-                           c10::optional<xla::int64> storage_offset) {
+                           xla::int64 storage_offset) {
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
@@ -44,20 +41,17 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 AsStrided::AsStrided(const Value& input, std::vector<xla::int64> size,
-                     c10::optional<xla::int64> storage_offset)
+                     xla::int64 storage_offset)
     : Node(ir::OpKind(at::aten::as_strided), {input},
            [&]() { return NodeOutputShape(input, size, storage_offset); },
-           /*num_outputs=*/1,
-           xla::util::MHash(size,
-                            OptionalOr<xla::int64>(storage_offset, 0x311bd6))),
+           /*num_outputs=*/1, xla::util::MHash(size, storage_offset)),
       size_(std::move(size)),
       storage_offset_(storage_offset) {}
 
 std::string AsStrided::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", size=[" << absl::StrJoin(size_, ", ")
-     << "], storage_offset="
-     << (storage_offset_ ? std::to_string(*storage_offset_) : "null");
+     << "], storage_offset=" << storage_offset_;
   return ss.str();
 }
 

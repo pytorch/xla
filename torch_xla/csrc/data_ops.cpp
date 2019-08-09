@@ -10,6 +10,7 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 
@@ -220,6 +221,50 @@ xla::XlaOp BuildResize(const xla::XlaOp& input,
     resized_input = xla::Pad(r1_input, zero, padding_config);
   }
   return xla::Reshape(resized_input, size);
+}
+
+xla::XlaOp BuildUnselect(const xla::XlaOp& target, const xla::XlaOp& source,
+                         xla::int64 dim, xla::int64 start, xla::int64 end,
+                         xla::int64 stride) {
+  xla::Shape target_shape = XlaHelpers::ShapeOfXlaOp(target);
+  xla::Shape source_shape = XlaHelpers::ShapeOfXlaOp(source);
+  if (target_shape.dimensions(dim) == source_shape.dimensions(dim)) {
+    // Shortcut for unselects which are fully covering selects.
+    XLA_CHECK_EQ(start, 0);
+    XLA_CHECK_EQ(stride, 1);
+    XLA_CHECK_EQ(end, target_shape.dimensions(dim));
+    return source;
+  }
+
+  xla::PrimitiveType pred_type =
+      GetDevicePrimitiveType(xla::PrimitiveType::PRED, /*device=*/nullptr);
+  xla::XlaOp source_true = XlaHelpers::ScalarBroadcast(
+      1, pred_type, source_shape.dimensions(), source.builder());
+  xla::XlaOp pred_zero =
+      XlaHelpers::ScalarValue(0, pred_type, target.builder());
+  xla::XlaOp zero =
+      XlaHelpers::ScalarValue(0, target_shape.element_type(), target.builder());
+  xla::PaddingConfig padding_config;
+  for (xla::int64 i = 0; i < target_shape.rank(); ++i) {
+    auto* dims = padding_config.add_dimensions();
+    if (i == dim) {
+      dims->set_edge_padding_low(start);
+      dims->set_interior_padding(stride - 1);
+
+      xla::int64 size = start + source_shape.dimensions(i) +
+                        (source_shape.dimensions(i) - 1) * (stride - 1);
+      dims->set_edge_padding_high(target_shape.dimensions(i) - size);
+    } else {
+      XLA_CHECK_EQ(target_shape.dimensions(i), source_shape.dimensions(i))
+          << target_shape << " vs. " << source_shape;
+      dims->set_edge_padding_low(0);
+      dims->set_interior_padding(0);
+      dims->set_edge_padding_high(0);
+    }
+  }
+  xla::XlaOp padded_source = xla::Pad(source, zero, padding_config);
+  xla::XlaOp mask = xla::Pad(source_true, pred_zero, padding_config);
+  return xla::Select(mask, padded_source, target);
 }
 
 }  // namespace torch_xla

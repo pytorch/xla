@@ -40,7 +40,7 @@ class MNIST(nn.Module):
     x = self.bn1(x)
     x = F.relu(F.max_pool2d(self.conv2(x), 2))
     x = self.bn2(x)
-    x = x.view(-1, 320)
+    x = torch.flatten(x, 1)
     x = F.relu(self.fc1(x))
     x = self.fc2(x)
     return F.log_softmax(x, dim=1)
