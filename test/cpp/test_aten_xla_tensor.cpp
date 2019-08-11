@@ -7109,25 +7109,27 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
 TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
   int batch = 6;
   int classes = 2;
-  for (int ignore_index : {-1, 1}) {
-    torch::Tensor input =
-        torch::rand({batch, classes},
-                    torch::TensorOptions(torch::kFloat).requires_grad(true));
-    torch::Tensor target =
-        torch::randint(std::min(ignore_index, 0), classes, {batch},
-                       torch::TensorOptions(torch::kLong));
-    torch::Tensor undef_weight;
-    for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
-      auto testfn =
-          [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-        return torch::nll_loss(
-            /*self=*/inputs[0], /*target=*/inputs[1], /*weight=*/undef_weight,
-            /*reduction=*/reduction, /*ignore_index=*/ignore_index);
-      };
-      ForEachDevice([&](const torch::Device& device) {
-        TestBackward({input, target}, device, testfn, /*rtol=*/1e-5,
-                     /*atol=*/1e-8);
-      });
+  for (torch::ScalarType dtype: {torch::kFloat, torch.kDouble}){
+    for (int ignore_index : {-1, 1}) {
+      torch::Tensor input =
+          torch::rand({batch, classes},
+                      torch::TensorOptions(dtype).requires_grad(true));
+      torch::Tensor target =
+          torch::randint(std::min(ignore_index, 0), classes, {batch},
+                         torch::TensorOptions(torch::kLong));
+      torch::Tensor undef_weight;
+      for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+        auto testfn =
+            [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+          return torch::nll_loss(
+              /*self=*/inputs[0], /*target=*/inputs[1], /*weight=*/undef_weight,
+              /*reduction=*/reduction, /*ignore_index=*/ignore_index);
+        };
+        ForEachDevice([&](const torch::Device& device) {
+          TestBackward({input, target}, device, testfn, /*rtol=*/1e-5,
+                       /*atol=*/1e-8);
+        });
+      }
     }
   }
 }
