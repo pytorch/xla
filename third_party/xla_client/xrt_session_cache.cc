@@ -43,14 +43,19 @@ std::shared_ptr<XrtSession> XrtSessionCache::CreateSession(
   session_options.target = target;
   session_options.config = config_;
 
+  tensorflow::RPCOptions* rpc_options =
+      session_options.config.mutable_rpc_options();
+
   string compression = sys_util::GetEnvString("XRT_GRPC_COMPRESSION", "");
   if (!compression.empty()) {
-    tensorflow::RPCOptions* rpc_options =
-        session_options.config.mutable_rpc_options();
     rpc_options->set_compression_algorithm(compression);
     rpc_options->set_compression_level(
         sys_util::GetEnvInt("XRT_GRPC_COMPRESSION_LEVEL", 3));
   }
+
+  bool multi_stream = sys_util::GetEnvBool("XRT_GRPC_MULTISTREAM", true);
+  rpc_options->set_disable_session_connection_sharing(multi_stream);
+
   std::shared_ptr<XrtSession> session =
       std::make_shared<XrtSession>(session_options);
   if (initfn_ != nullptr) {
