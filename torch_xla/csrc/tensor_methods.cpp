@@ -32,7 +32,6 @@
 #include "torch_xla/csrc/ops/conv2d.h"
 #include "torch_xla/csrc/ops/conv2d_backward.h"
 #include "torch_xla/csrc/ops/conv_transpose2d.h"
-#include "torch_xla/csrc/ops/conv_transpose2d_backward.h"
 #include "torch_xla/csrc/ops/cross_replica_sum.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
@@ -62,6 +61,8 @@
 #include "torch_xla/csrc/ops/min_in_dim.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
+#include "torch_xla/csrc/ops/nll_loss.h"
+#include "torch_xla/csrc/ops/nll_loss_backward.h"
 #include "torch_xla/csrc/ops/not_supported.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
@@ -74,6 +75,7 @@
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
 #include "torch_xla/csrc/ops/shrink_backward.h"
+#include "torch_xla/csrc/ops/slow_conv_transpose2d_backward.h"
 #include "torch_xla/csrc/ops/softmax.h"
 #include "torch_xla/csrc/ops/softshrink.h"
 #include "torch_xla/csrc/ops/split.h"
@@ -690,32 +692,6 @@ XLATensor XLATensor::conv_transpose2d(const XLATensor& input,
       input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue(),
       std::move(stride), std::move(padding));
   return input.CreateFrom(node);
-}
-
-XLATensor XLATensor::conv_transpose2d(const XLATensor& input,
-                                      const XLATensor& weight,
-                                      std::vector<xla::int64> stride,
-                                      std::vector<xla::int64> padding) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::ConvTranspose2d>(
-      input.GetIrValue(), weight.GetIrValue(), std::move(stride),
-      std::move(padding));
-  return input.CreateFrom(node);
-}
-
-std::tuple<XLATensor, XLATensor, XLATensor>
-XLATensor::conv_transpose2d_backward(const XLATensor& out_backprop,
-                                     const XLATensor& input,
-                                     const XLATensor& weight,
-                                     std::vector<xla::int64> stride,
-                                     std::vector<xla::int64> padding) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::ConvTranspose2dBackward>(
-      out_backprop.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
-      std::move(stride), std::move(padding));
-  XLATensor grad_input = out_backprop.CreateFrom(ir::Value(node, 0));
-  XLATensor grad_weight = out_backprop.CreateFrom(ir::Value(node, 1));
-  XLATensor grad_bias = out_backprop.CreateFrom(ir::Value(node, 2));
-  return std::make_tuple(std::move(grad_input), std::move(grad_weight),
-                         std::move(grad_bias));
 }
 
 XLATensor XLATensor::cos(const XLATensor& input) {
@@ -1534,15 +1510,17 @@ void XLATensor::neg_(XLATensor& input) {
   input.SetIrValue(ir::ops::Neg(input.GetIrValue()));
 }
 
-XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target) {
-  return input.CreateFrom(
-      ir::ops::NllLossOp(input.GetIrValue(), target.GetIrValue()));
+XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target,
+                              int ignore_index) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::NllLoss>(
+      input.GetIrValue(), target.GetIrValue(), ignore_index));
 }
 
 XLATensor XLATensor::nll_loss_backward(const XLATensor& input,
-                                       const XLATensor& target) {
-  return input.CreateFrom(
-      ir::ops::NllLossBackwardOp(input.GetIrValue(), target.GetIrValue()));
+                                       const XLATensor& target,
+                                       int ignore_index) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::NllLossBackward>(
+      input.GetIrValue(), target.GetIrValue(), ignore_index));
 }
 
 XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
@@ -1835,6 +1813,32 @@ XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
   return input.CreateViewTensor(std::move(view_info));
 }
 
+XLATensor XLATensor::slow_conv_transpose2d(const XLATensor& input,
+                                           const XLATensor& weight,
+                                           std::vector<xla::int64> stride,
+                                           std::vector<xla::int64> padding) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::ConvTranspose2d>(
+      input.GetIrValue(), weight.GetIrValue(), std::move(stride),
+      std::move(padding));
+  return input.CreateFrom(node);
+}
+
+std::tuple<XLATensor, XLATensor, XLATensor>
+XLATensor::slow_conv_transpose2d_backward(const XLATensor& out_backprop,
+                                          const XLATensor& input,
+                                          const XLATensor& weight,
+                                          std::vector<xla::int64> stride,
+                                          std::vector<xla::int64> padding) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::ConvTranspose2dBackward>(
+      out_backprop.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
+      std::move(stride), std::move(padding));
+  XLATensor grad_input = out_backprop.CreateFrom(ir::Value(node, 0));
+  XLATensor grad_weight = out_backprop.CreateFrom(ir::Value(node, 1));
+  XLATensor grad_bias = out_backprop.CreateFrom(ir::Value(node, 2));
+  return std::make_tuple(std::move(grad_input), std::move(grad_weight),
+                         std::move(grad_bias));
+}
+
 XLATensor XLATensor::smooth_l1_loss(const XLATensor& input,
                                     const XLATensor& target,
                                     xla::int64 reduction) {
@@ -1978,7 +1982,8 @@ XLATensor XLATensor::sum(const XLATensor& input,
                          std::vector<xla::int64> dimensions,
                          bool keep_reduced_dimensions,
                          c10::optional<at::ScalarType> dtype) {
-  if (at::isIntegralType(input.dtype()) && !dtype) {
+  if ((at::isIntegralType(input.dtype()) || input.dtype() == at::kBool) &&
+      !dtype) {
     dtype = at::ScalarType::Long;
   }
   return input.CreateFrom(
@@ -2226,7 +2231,7 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& input,
                                           at::Scalar other) {
   ir::NodePtr node = ir::ops::ComparisonOp(kind, input.GetIrValue(), other);
-  return Create(node, input.GetDevice(), at::ScalarType::Byte);
+  return Create(node, input.GetDevice(), at::ScalarType::Bool);
 }
 
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
@@ -2234,7 +2239,7 @@ XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& other) {
   ir::NodePtr node =
       ir::ops::ComparisonOp(kind, input.GetIrValue(), other.GetIrValue());
-  return Create(node, input.GetDevice(), at::ScalarType::Byte);
+  return Create(node, input.GetDevice(), at::ScalarType::Bool);
 }
 
 }  // namespace torch_xla

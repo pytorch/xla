@@ -288,42 +288,6 @@ NodePtr MatMul(const Value& lhs, const Value& rhs) {
                    std::move(lower_fn));
 }
 
-NodePtr NllLossOp(const Value& logits, const Value& labels) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp logits = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp labels = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_output = BuildNllLoss(logits, labels);
-    return node.ReturnOp(xla_output, loctx);
-  };
-  auto lower_for_shape_fn =
-      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
-    return BuildNllLoss(/*logits=*/operands[0], /*labels=*/operands[1]);
-  };
-  xla::Shape output_shape =
-      InferOutputShape({logits.shape(), labels.shape()}, lower_for_shape_fn);
-  return GenericOp(OpKind(at::aten::nll_loss), OpList{logits, labels},
-                   output_shape, std::move(lower_fn));
-}
-
-NodePtr NllLossBackwardOp(const Value& logits, const Value& labels) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp logits = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp labels = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp xla_output = BuildNllLossBackward(logits, labels);
-    return node.ReturnOp(xla_output, loctx);
-  };
-  auto lower_for_shape_fn =
-      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
-    return BuildNllLossBackward(/*logits=*/operands[0], /*labels=*/operands[1]);
-  };
-  xla::Shape output_shape =
-      InferOutputShape({logits.shape(), labels.shape()}, lower_for_shape_fn);
-  return GenericOp(OpKind(at::aten::nll_loss_backward), OpList{logits, labels},
-                   output_shape, std::move(lower_fn));
-}
-
 NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
                                   const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {

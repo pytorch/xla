@@ -152,10 +152,6 @@ NodePtr Dot(const Value& input, const Value& weight);
 
 NodePtr MatMul(const Value& lhs, const Value& rhs);
 
-NodePtr NllLossOp(const Value& logits, const Value& labels);
-
-NodePtr NllLossBackwardOp(const Value& logits, const Value& labels);
-
 NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output, const Value& input);
 
 NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other);

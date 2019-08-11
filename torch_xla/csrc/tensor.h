@@ -314,16 +314,6 @@ class XLATensor {
                                     std::vector<xla::int64> stride,
                                     std::vector<xla::int64> padding);
 
-  static XLATensor conv_transpose2d(const XLATensor& input,
-                                    const XLATensor& weight,
-                                    std::vector<xla::int64> stride,
-                                    std::vector<xla::int64> padding);
-
-  static std::tuple<XLATensor, XLATensor, XLATensor> conv_transpose2d_backward(
-      const XLATensor& out_backprop, const XLATensor& input,
-      const XLATensor& weight, std::vector<xla::int64> stride,
-      std::vector<xla::int64> padding);
-
   static XLATensor cos(const XLATensor& input);
   static void cos_(XLATensor& input);
 
@@ -648,10 +638,11 @@ class XLATensor {
   static XLATensor neg(const XLATensor& input);
   static void neg_(XLATensor& input);
 
-  static XLATensor nll_loss(const XLATensor& input, const XLATensor& target);
+  static XLATensor nll_loss(const XLATensor& input, const XLATensor& target,
+                            int ignore_index);
 
   static XLATensor nll_loss_backward(const XLATensor& input,
-                                     const XLATensor& target);
+                                     const XLATensor& target, int ignore_index);
 
   static XLATensor norm(const XLATensor& input, c10::optional<at::Scalar> p,
                         c10::optional<at::ScalarType> dtype,
@@ -748,6 +739,18 @@ class XLATensor {
 
   static XLATensor slice(const XLATensor& input, xla::int64 dim,
                          xla::int64 start, xla::int64 end, xla::int64 step);
+
+  static XLATensor slow_conv_transpose2d(const XLATensor& input,
+                                         const XLATensor& weight,
+                                         std::vector<xla::int64> stride,
+                                         std::vector<xla::int64> padding);
+
+  static std::tuple<XLATensor, XLATensor, XLATensor>
+  slow_conv_transpose2d_backward(const XLATensor& out_backprop,
+                                 const XLATensor& input,
+                                 const XLATensor& weight,
+                                 std::vector<xla::int64> stride,
+                                 std::vector<xla::int64> padding);
 
   // Computes a loss that uses a squared term if the absolute element-wise error
   // falls below 1 and an L1 term otherwise.

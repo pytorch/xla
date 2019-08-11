@@ -56,6 +56,7 @@ class PerDeviceLoader(object):
     return self.next()
 
   def next(self):
+    xm.mark_step()
     item = self._loader.next_item(self._device)
     if item is None:
       raise StopIteration
@@ -180,7 +181,7 @@ class DataParallel(object):
     self._batchdim = batchdim
     self._drop_last = drop_last
     self._native_run = False
-    if self._device_ids:
+    if len(self._device_ids) > 1:
       replication_devices = xm.xla_replication_devices(self._device_ids)
       self._replication = xm.Replication(self._device_ids, replication_devices)
     else:
@@ -199,6 +200,14 @@ class DataParallel(object):
       self._device_ids.append(device)
       self._contexts.append(Context(torch.device(device)))
       self._native_run = True
+
+  @property
+  def devices(self):
+    return self._device_ids
+
+  @property
+  def models(self):
+    return self._models
 
   def _get_model_device(self, model):
     devices = {str(p.device) for p in model.parameters()}
