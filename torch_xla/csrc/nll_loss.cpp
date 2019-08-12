@@ -103,9 +103,10 @@ xla::XlaOp BuildNllLoss(const xla::XlaOp& logits, const xla::XlaOp& labels,
       ValidLabelsCount(labels, ignore_index), logits_shape.element_type());
   xla::XlaComputation add_func =
       XlaHelpers::CreateAddComputation(logits_shape.element_type());
-  return xla::Select(xla::Ne(batch, zero),
-                     xla::ReduceAll(mul, zero, add_func) / batch,
-                     xla::ReduceAll(mul, zero, add_func));
+  xla::XlaOp one =
+      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder);
+  batch = xla::Select(xla::Ne(batch, zero), batch, one);
+  return xla::ReduceAll(mul, zero, add_func) / batch;
 }
 
 // Builds the NLLLoss gradient for log-probabilities "logits" and class indices
@@ -129,8 +130,10 @@ xla::XlaOp BuildNllLossBackward(const xla::XlaOp& logits,
   // Compute -one_hot_labels / batch.
   xla::XlaOp zero =
       XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder);
-  return xla::Select(xla::Ne(batch, zero), xla::Neg(one_hot_labels) / batch,
-                     xla::Neg(one_hot_labels));
+  xla::XlaOp one =
+      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder);
+  batch = xla::Select(xla::Ne(batch, zero), batch, one);
+  return xla::Neg(one_hot_labels) / batch;
 }
 
 }  // namespace torch_xla
