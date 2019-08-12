@@ -141,28 +141,41 @@ class RateTracker(object):
     self._smooth_factor = smooth_factor
     self._start_time = time.time()
     self._partial_time = self._start_time
+    self._partial_count = 0
+    self._partial_rate = None
     self._count = 0
-    self._rate = 0.0
 
-  def update(self, count):
-    now = time.time()
-    delta = now - self._partial_time
-    if delta > 0:
-      rate = (count - self._count) / delta
-      self._rate = (
-          self._rate * self._smooth_factor + rate * (1.0 - self._smooth_factor))
+  def _update(self, now, rate):
+    self._partial_count += self._count
+    self._count = 0
     self._partial_time = now
-    self._count = count
-    return self._rate
+    self._partial_rate = rate
 
   def add(self, count):
-    return self.update(self._count + count)
+    self._count += count
+
+  def smooth(self, current_rate):
+    if self._partial_rate is None:
+      smoothed_rate = current_rate
+    else:
+      smoothed_rate = (1 - self._smooth_factor) * current_rate
+      smoothed_rate += self._smooth_factor * self._partial_rate
+    return smoothed_rate
 
   def rate(self):
-    return self._rate
+    now = time.time()
+    delta = now - self._partial_time
+    report_rate = 0.0
+    if delta > 0
+      current_rate = self._count / delta
+      report_rate = self.smooth(current_rate)
+      self._update(now, report_rate)
+    return report_rate
 
   def global_rate(self):
-    return self._count / (self._partial_time - self._start_time)
+    delta = self._partial_time - self._start_time
+    count = self._partial_count + self._count
+    return count / delta if delta > 0 else 0.0
 
 
 class TrainStepMetrics(object):
