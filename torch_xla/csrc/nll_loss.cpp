@@ -129,8 +129,7 @@ xla::XlaOp BuildNllLossBackward(const xla::XlaOp& logits,
   // Compute -one_hot_labels / batch.
   xla::XlaOp zero =
       XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder);
-  return xla::Select(xla::Ne(batch, zero),
-                     xla::Neg(one_hot_labels) / batch,
+  return xla::Select(xla::Ne(batch, zero), xla::Neg(one_hot_labels) / batch,
                      xla::Neg(one_hot_labels));
 }
 
