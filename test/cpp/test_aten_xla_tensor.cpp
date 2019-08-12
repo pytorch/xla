@@ -5365,7 +5365,7 @@ TEST_F(AtenXlaTensorTest, TestConv2DNonSquare) {
 TEST_F(AtenXlaTensorTest, TestNllLoss) {
   int batch = 6;
   int classes = 2;
-  for (auto dtype: {torch::kFloat, torch::kDouble}) {
+  for (auto dtype : {torch::kFloat, torch::kDouble}) {
     for (int ignore_index : {-1, 1}) {
       torch::Tensor input =
           torch::rand({batch, classes}, torch::TensorOptions(dtype));
@@ -5374,16 +5374,18 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
                          torch::TensorOptions(torch::kLong));
       torch::Tensor undef_weight;
       for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
-        torch::Tensor output = torch::nll_loss(/*self=*/input, /*target=*/target,
-                                               /*weight=*/undef_weight,
-                                               /*reduction=*/reduction,
-                                               /*ignore_index=*/ignore_index);
+        torch::Tensor output =
+            torch::nll_loss(/*self=*/input, /*target=*/target,
+                            /*weight=*/undef_weight,
+                            /*reduction=*/reduction,
+                            /*ignore_index=*/ignore_index);
 
         ForEachDevice([&](const torch::Device& device) {
           torch::Tensor xla_input = CopyToDevice(input, device);
           torch::Tensor xla_target = CopyToDevice(target, device);
           torch::Tensor xla_output = torch::nll_loss(
-              /*self=*/xla_input, /*target=*/xla_target, /*weight=*/undef_weight,
+              /*self=*/xla_input, /*target=*/xla_target,
+              /*weight=*/undef_weight,
               /*reduction=*/reduction, /*ignore_index=*/ignore_index);
           AllClose(output, xla_output);
         });
@@ -7124,11 +7126,10 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
 TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
   int batch = 6;
   int classes = 2;
-  for (auto dtype: {torch::kFloat, torch::kDouble}){
+  for (auto dtype : {torch::kFloat, torch::kDouble}) {
     for (int ignore_index : {-1, 1}) {
-      torch::Tensor input =
-          torch::rand({batch, classes},
-                      torch::TensorOptions(dtype).requires_grad(true));
+      torch::Tensor input = torch::rand(
+          {batch, classes}, torch::TensorOptions(dtype).requires_grad(true));
       torch::Tensor target =
           torch::randint(std::min(ignore_index, 0), classes, {batch},
                          torch::TensorOptions(torch::kLong));
