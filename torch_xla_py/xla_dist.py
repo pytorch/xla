@@ -21,16 +21,24 @@ _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 class Worker(object):
 
   def __init__(self, internal_ip, machine_type, zone):
-    self._internal_ip = str(internal_ip)
-    self._machine_type = str(machine_type)
-    self._zone = str(zone)
+    if not isinstance(internal_ip, str):
+      raise ValueError('internal_ip must be of type str')
+    self._internal_ip = internal_ip
+    if not isinstance(machine_type, str):
+      raise ValueError('machine_type must be of type str')
+    self._machine_type = machine_type
+    if not isinstance(zone, str):
+      raise ValueError('zone must be of type str')
+    self._zone = zone
 
 
 class ClientWorker(Worker):
 
   def __init__(self, internal_ip, machine_type, zone, hostname=None):
     super(ClientWorker, self).__init__(internal_ip, machine_type, zone)
-    self._hostname = str(hostname)
+    if hostname is not None and not isinstance(hostname, str):
+      raise ValueError('hostname must be of type str')
+    self._hostname = hostname
 
   def __repr__(self):
     return ('{{{internal_ip}, {machine_type}, {zone},'
@@ -75,8 +83,10 @@ class ServiceWorker(Worker):
 
   def __init__(self, internal_ip, port, machine_type, zone, sw_version):
     super(ServiceWorker, self).__init__(internal_ip, machine_type, zone)
-    self._port = str(port)
-    self._sw_version = str(sw_version)
+    self._port = int(port)
+    if not isinstance(sw_version, str):
+      raise ValueError('sw_version must be of type str')
+    self._sw_version = sw_version
 
   def __repr__(self):
     return ('{{{internal_ip}, {port}, {machine_type}, {zone},'
