@@ -16,22 +16,21 @@ xla::XlaOp OneHotIota(xla::XlaBuilder* builder, xla::int64 depth, int axis,
   int output_dims = indices_dims + 1;
   std::vector<xla::int64> linspace_dims(output_dims, 1);
   linspace_dims[axis] = depth;
-  // Fast path, the ignored index is not a valid class. The one-hot conversion
-  // will work correctly since it'll be different from all iota values.
-  if (ignore_index < 0 || ignore_index >= depth) {
-    xla::Shape linspace_xla_shape =
-        xla::ShapeUtil::MakeShapeWithDescendingLayout(
-            indices_shape.element_type(), linspace_dims);
-    return xla::Iota(builder, linspace_xla_shape, axis);
+  xla::Shape linspace_xla_shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(
+      indices_shape.element_type(), linspace_dims);
+  xla::XlaOp iota = xla::Iota(builder, linspace_xla_shape, axis);
+  if (ignore_index >= 0 && ignore_index < depth) {
+    xla::XlaOp ignore_index_op =
+        xla::Broadcast(XlaHelpers::ScalarValue<xla::int64>(
+                           ignore_index, indices_shape.element_type(), builder),
+                       linspace_dims);
+    xla::XlaOp invalid_index =
+        xla::Broadcast(XlaHelpers::ScalarValue<xla::int64>(
+                           -1, indices_shape.element_type(), builder),
+                       linspace_dims);
+    iota = xla::Select(xla::Eq(iota, ignore_index_op), invalid_index, iota);
   }
-  // Slow path, need to materialize the iota values and poke a hole at the
-  // ignored index position.
-  auto iota_values = xla::util::Iota<xla::int64>(depth);
-  iota_values[ignore_index] = -1;
-  xla::XlaOp iota_rank1 = xla::ConstantR1(builder, xla::AsSlice(iota_values));
-  iota_rank1 =
-      xla::ConvertElementType(iota_rank1, indices_shape.element_type());
-  return BuildExpand(iota_rank1, linspace_dims);
+  return iota;
 }
 
 // Converts "indices" into a one-hot representation. "depth" is the size of the

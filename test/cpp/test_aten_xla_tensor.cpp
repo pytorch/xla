@@ -5366,7 +5366,7 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
   int batch = 6;
   int classes = 2;
   for (auto dtype : {torch::kFloat, torch::kDouble}) {
-    for (int ignore_index : {-1, 1}) {
+    for (int ignore_index : {-1, 1, 5}) {
       torch::Tensor input =
           torch::rand({batch, classes}, torch::TensorOptions(dtype));
       torch::Tensor target =
@@ -7127,7 +7127,7 @@ TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
   int batch = 6;
   int classes = 2;
   for (auto dtype : {torch::kFloat, torch::kDouble}) {
-    for (int ignore_index : {-1, 1}) {
+    for (int ignore_index : {-1, 1, 5}) {
       torch::Tensor input = torch::rand(
           {batch, classes}, torch::TensorOptions(dtype).requires_grad(true));
       torch::Tensor target =
