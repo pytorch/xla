@@ -248,6 +248,8 @@ class DataParallel(object):
         self._device_ids,
         batchdim=self._batchdim,
         drop_last=self._drop_last)
+    if self._replication is not None:
+      self._replication.reset()
     threads = []
     results = []
     for module, device, context in zip(self._models, self._device_ids,
