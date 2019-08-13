@@ -103,6 +103,9 @@ xla::XlaOp BuildNllLoss(const xla::XlaOp& logits, const xla::XlaOp& labels,
       ValidLabelsCount(labels, ignore_index), logits_shape.element_type());
   xla::XlaComputation add_func =
       XlaHelpers::CreateAddComputation(logits_shape.element_type());
+  xla::XlaOp one =
+      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder);
+  batch = xla::Select(xla::Ne(batch, zero), batch, one);
   return xla::ReduceAll(mul, zero, add_func) / batch;
 }
 
@@ -125,6 +128,11 @@ xla::XlaOp BuildNllLossBackward(const xla::XlaOp& logits,
   xla::XlaOp batch = xla::ConvertElementType(
       ValidLabelsCount(labels, ignore_index), logits_shape.element_type());
   // Compute -one_hot_labels / batch.
+  xla::XlaOp zero =
+      XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder);
+  xla::XlaOp one =
+      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder);
+  batch = xla::Select(xla::Ne(batch, zero), batch, one);
   return xla::Neg(one_hot_labels) / batch;
 }
 

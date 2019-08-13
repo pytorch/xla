@@ -2081,8 +2081,7 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
     return AtenXlaTypeDefault::nll_loss_forward(self, target, weight, reduction,
                                                 ignore_index);
   }
-  at::Tensor total_weight =
-      at::ones({}, at::TensorOptions(at::ScalarType::Float));
+  at::Tensor total_weight = at::ones({}, at::TensorOptions(self.dtype()));
   return std::make_tuple(
       nll_loss(self, target, weight, reduction, ignore_index), total_weight);
 }
