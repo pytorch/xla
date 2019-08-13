@@ -141,13 +141,13 @@ class RateTracker(object):
     self._smooth_factor = smooth_factor
     self._start_time = time.time()
     self._partial_time = self._start_time
-    self._partial_count = 0
+    self._partial_count = 0.0
     self._partial_rate = None
     self._count = 0.0
 
   def _update(self, now, rate):
     self._partial_count += self._count
-    self._count = 0
+    self._count = 0.0
     self._partial_time = now
     self._partial_rate = rate
 
@@ -173,7 +173,7 @@ class RateTracker(object):
     return report_rate
 
   def global_rate(self):
-    delta = self._partial_time - self._start_time
+    delta = time.time() - self._start_time
     count = self._partial_count + self._count
     return count / delta if delta > 0 else 0.0
 
