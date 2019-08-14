@@ -370,6 +370,54 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
   }
 }
 
+TEST_F(TensorTest, TestBatchNorm1D) {
+  int num_features = 3;
+  at::Tensor input =
+      at::rand({2, num_features, 4}, at::TensorOptions(at::kFloat));
+  at::Tensor weight = at::rand({num_features}, at::TensorOptions(at::kFloat));
+  at::Tensor bias = at::rand({num_features}, at::TensorOptions(at::kFloat));
+  at::Tensor running_mean =
+      at::zeros({num_features}, at::TensorOptions(at::kFloat));
+  at::Tensor running_var =
+      at::ones({num_features}, at::TensorOptions(at::kFloat));
+  double momentum = 0.1;
+  double eps = 0.5;
+  at::Tensor undef;
+  for (bool training : {true, false}) {
+    for (bool undef_weight_bias : {false}) {
+      auto output = at::native_batch_norm(
+          /*input=*/input, /*weight=*/undef_weight_bias ? undef : weight,
+          /*bias=*/undef_weight_bias ? undef : bias,
+          /*running_mean=*/running_mean, /*running_var=*/running_var,
+          /*training=*/training, /*momentum=*/momentum, /*eps=*/eps);
+      ForEachDevice([&](const Device& device) {
+        auto xla_input = XLATensor::Create(input, device);
+        auto xla_weight =
+            XLATensor::Create(undef_weight_bias ? undef : weight, device);
+        auto xla_bias =
+            XLATensor::Create(undef_weight_bias ? undef : bias, device);
+        auto xla_running_mean = XLATensor::Create(running_mean, device);
+        auto xla_running_var = XLATensor::Create(running_var, device);
+        auto xla_output = XLATensor::native_batch_norm(
+            /*input=*/xla_input, /*weight=*/xla_weight, /*bias=*/xla_bias,
+            /*running_mean=*/xla_running_mean, /*running_var=*/xla_running_var,
+            /*training=*/training, /*momentum=*/momentum, /*eps=*/eps);
+        AllClose(std::get<0>(output), std::get<0>(xla_output));
+        // native_batch_norm return undefined for save_mean & save_invstd when
+        // training=false.
+        EXPECT_EQ(std::get<1>(output).defined(),
+                  !std::get<1>(xla_output).is_null());
+        EXPECT_EQ(std::get<2>(output).defined(),
+                  !std::get<2>(xla_output).is_null());
+        if (training) {
+          AllClose(std::get<1>(output), std::get<1>(xla_output));
+          AllClose(std::get<2>(output), std::get<2>(xla_output));
+        }
+      });
+    }
+  }
+}
+
 TEST_F(TensorTest, TestConv2D) {
   int in_channels = 3;
   int out_channels = 7;
