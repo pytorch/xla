@@ -1466,7 +1466,8 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
       input.GetIrValue(), weight_value, bias_value, running_mean_value,
       running_var_value, training, eps);
   XLATensor output = input.CreateFrom(ir::Value(node, 0));
-  XLATensor mean = input.CreateFrom(ir::Value(node, 1));
+  XLATensor mean =
+      training ? input.CreateFrom(ir::Value(node, 1)) : XLATensor();
   if (training) {
     XLATensor variance = input.CreateFrom(ir::Value(node, 2));
     if (!running_mean.is_null()) {
@@ -1478,7 +1479,8 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
           variance.GetIrValue(), running_var.GetIrValue(), momentum));
     }
   }
-  XLATensor variance_inverse = input.CreateFrom(ir::Value(node, 3));
+  XLATensor variance_inverse =
+      training ? input.CreateFrom(ir::Value(node, 3)) : XLATensor();
   return std::make_tuple(std::move(output), std::move(mean),
                          std::move(variance_inverse));
 }
