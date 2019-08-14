@@ -1608,7 +1608,7 @@ TEST_F(AtenXlaTensorTest, TestCumSumCast) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_result = torch::cumsum(xla_input, dim, torch::kDouble);
-      AllEqual(result, xla_result);
+      AllClose(result, xla_result);
     });
   }
 }
@@ -1664,7 +1664,7 @@ TEST_F(AtenXlaTensorTest, TestCumProdCast) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_result = torch::cumprod(xla_input, dim, torch::kDouble);
-      AllEqual(result, xla_result);
+      AllClose(result, xla_result);
     });
   }
 }
