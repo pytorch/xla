@@ -157,7 +157,7 @@ class RateTracker(object):
   def add(self, count):
     self._count += count
 
-  def smooth(self, current_rate):
+  def _smooth(self, current_rate):
     if self._partial_rate is None:
       smoothed_rate = current_rate
     else:
@@ -170,8 +170,7 @@ class RateTracker(object):
     delta = now - self._partial_time
     report_rate = 0.0
     if delta > 0:
-      current_rate = self._count / delta
-      report_rate = self.smooth(current_rate)
+      report_rate = self._smooth(self._count / delta)
       self._update(now, report_rate)
     return report_rate
 
