@@ -25,10 +25,9 @@ class Replication(object):
   def __init__(self, devices, replication_devices):
     self._devices = list(devices)
     self._replication_devices = list(replication_devices)
-    self._lock = threading.Lock()
-    self._ready_cv = threading.Condition(self._lock)
+    self._cv = threading.Condition(threading.Lock())
     self._join_count = 0
-    self._ready = False
+    self._ticket = 0
 
   def devices(self):
     return self._devices
@@ -36,18 +35,22 @@ class Replication(object):
   def replication_devices(self):
     return self._replication_devices
 
+  def reset(self):
+    with self._cv:
+      assert self._join_count % len(self._devices) == 0
+      self._join_count = 0
+      self._ticket = 0
+
   def enter(self):
-    with self._lock:
+    with self._cv:
       self._join_count += 1
-      if self._join_count == len(self._devices):
-        self._ready = True
-        self._ready_cv.notify_all()
+      if self._join_count % len(self._devices) == 0:
+        self._ticket += 1
+        self._cv.notify_all()
       else:
-        while not self._ready:
-          self._ready_cv.wait()
-      self._join_count -= 1
-      if self._join_count == 0:
-        self._ready = False
+        ticket = self._ticket
+        while ticket == self._ticket:
+          self._cv.wait()
 
 
 def set_replication(device, replication):
