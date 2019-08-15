@@ -11,19 +11,26 @@ if [ "$CONDA_DEFAULT_ENV" != "pytorch-nightly" ]; then
   conda activate pytorch-nightly
 fi
 
-gsutil cp "$DIST_BUCKET/$TORCH_WHEEL" /tmp/
-gsutil cp "$DIST_BUCKET/$TORCH_XLA_WHEEL" /tmp/
-pip install "/tmp/$TORCH_WHEEL"
-pip install "/tmp/$TORCH_XLA_WHEEL"
+function update_wheels() {
+  gsutil cp "$DIST_BUCKET/$TORCH_WHEEL" /tmp/
+  gsutil cp "$DIST_BUCKET/$TORCH_XLA_WHEEL" /tmp/
+  pip install "/tmp/$TORCH_WHEEL"
+  pip install "/tmp/$TORCH_XLA_WHEEL"
 
-rm -f "/tmp/$TORCH_WHEEL" "/tmp/$TORCH_XLA_WHEEL"
+  rm -f "/tmp/$TORCH_WHEEL" "/tmp/$TORCH_XLA_WHEEL"
+}
 
-# Need to update torchvision too
-# https://github.com/pytorch/vision/issues/967
-torchvision_version=$(pip freeze | grep torchvision | awk -F "==" '{print $2}')
-cd /tmp && \
-  git clone -b "v${torchvision_version}" https://github.com/pytorch/vision.git && \
-  cd vision && \
-  python setup.py install && \
-  cd .. && \
-  rm -rf /tmp/vision
+function update_torchvision() {
+  # Need to update torchvision too
+  # https://github.com/pytorch/vision/issues/967
+  torchvision_version=$(pip freeze | grep torchvision | awk -F "==" '{print $2}')
+  cd /tmp && \
+    git clone -b "v${torchvision_version}" https://github.com/pytorch/vision.git && \
+    cd vision && \
+    python setup.py install && \
+    cd .. && \
+    rm -rf /tmp/vision
+}
+
+update_wheels
+update_torchvision
