@@ -1466,12 +1466,12 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
       input.GetIrValue(), weight_value, bias_value, running_mean_value,
       running_var_value, training, eps);
   XLATensor output = input.CreateFrom(ir::Value(node, 0));
-  XLATensor mean, variance_inverse;
+  XLATensor mean;
+  XLATensor variance_inverse;
   if (training) {
     mean = input.CreateFrom(ir::Value(node, 1));
     XLATensor variance = input.CreateFrom(ir::Value(node, 2));
     variance_inverse = input.CreateFrom(ir::Value(node, 3));
-
     if (!running_mean.is_null()) {
       running_mean.SetIrValue(ir::MakeNode<ir::ops::LinearInterpolation>(
           mean.GetIrValue(), running_mean.GetIrValue(), momentum));
