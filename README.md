@@ -76,7 +76,7 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
     distribution (only updates your pytorch-nightly conda env), run:
     ```Shell
     (vm)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-    (vm)$ ./scripts/update_nightly_torch_wheels.sh
+    (vm)$ . ./scripts/update_nightly_torch_wheels.sh
     ```
 
 ---
