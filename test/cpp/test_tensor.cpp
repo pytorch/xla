@@ -391,13 +391,13 @@ TEST_F(TensorTest, TestBatchNorm1D) {
           /*running_mean=*/running_mean, /*running_var=*/running_var,
           /*training=*/training, /*momentum=*/momentum, /*eps=*/eps);
       ForEachDevice([&](const Device& device) {
-        auto xla_input = XLATensor::Create(input, device);
-        auto xla_weight =
-            XLATensor::Create(undef_weight_bias ? undef : weight, device);
-        auto xla_bias =
-            XLATensor::Create(undef_weight_bias ? undef : bias, device);
-        auto xla_running_mean = XLATensor::Create(running_mean, device);
-        auto xla_running_var = XLATensor::Create(running_var, device);
+        XLATensor xla_input = XLATensor::Create(input, device);
+        XLATensor xla_weight =
+            undef_weight_bias ? XLATensor() : XLATensor::Create(weight, device);
+        XLATensor xla_bias =
+            undef_weight_bias ? XLATensor() : XLATensor::Create(bias, device);
+        XLATensor xla_running_mean = XLATensor::Create(running_mean, device);
+        XLATensor xla_running_var = XLATensor::Create(running_var, device);
         auto xla_output = XLATensor::native_batch_norm(
             /*input=*/xla_input, /*weight=*/xla_weight, /*bias=*/xla_bias,
             /*running_mean=*/xla_running_mean, /*running_var=*/xla_running_var,
