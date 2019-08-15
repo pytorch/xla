@@ -74,12 +74,12 @@ TEST_F(TensorTest, TestConversions) {
 TEST_F(TensorTest, TestAdd) {
   at::Tensor a = at::rand({2, 2}, at::TensorOptions(at::kFloat));
   at::Tensor b = at::rand({2, 2}, at::TensorOptions(at::kFloat));
-  auto c = a.add(b, 1.0);
+  at::Tensor c = a.add(b, 1.0);
 
   ForEachDevice([&](const Device& device) {
-    auto dev_a = XLATensor::Create(a, device);
-    auto dev_b = XLATensor::Create(b, device);
-    auto dev_c = XLATensor::add(dev_a, dev_b, 1.0);
+    XLATensor dev_a = XLATensor::Create(a, device);
+    XLATensor dev_b = XLATensor::Create(b, device);
+    XLATensor dev_c = XLATensor::add(dev_a, dev_b, 1.0);
 
     AllClose(c, dev_c);
   });
@@ -93,11 +93,11 @@ TEST_F(TensorTest, TestIntegerAdd) {
     for (auto type : types) {
       at::Tensor a = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
       at::Tensor b = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
-      auto c = a.add(b, 1.0);
+      at::Tensor c = a.add(b, 1.0);
 
-      auto dev_a = XLATensor::Create(a, device);
-      auto dev_b = XLATensor::Create(b, device);
-      auto dev_c = XLATensor::add(dev_a, dev_b, 1.0);
+      XLATensor dev_a = XLATensor::Create(a, device);
+      XLATensor dev_b = XLATensor::Create(b, device);
+      XLATensor dev_c = XLATensor::add(dev_a, dev_b, 1.0);
 
       EXPECT_TRUE(EqualValues(c, dev_c.ToTensor()));
     }
@@ -108,7 +108,7 @@ TEST_F(TensorTest, TestSize) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   int rank = input.dim();
   ForEachDevice([&](const Device& device) {
-    auto dev_input = XLATensor::Create(input, device);
+    XLATensor dev_input = XLATensor::Create(input, device);
     for (int dim = -rank; dim < rank; ++dim) {
       EXPECT_EQ(input.size(dim), dev_input.size(dim));
     }
@@ -117,10 +117,10 @@ TEST_F(TensorTest, TestSize) {
 
 TEST_F(TensorTest, TestRelu) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
-  auto output = input.relu();
+  at::Tensor output = input.relu();
   ForEachDevice([&](const Device& device) {
-    auto dev_input = XLATensor::Create(input, device);
-    auto dev_output = XLATensor::relu(dev_input);
+    XLATensor dev_input = XLATensor::Create(input, device);
+    XLATensor dev_output = XLATensor::relu(dev_input);
     AllClose(output, dev_output);
   });
 }
@@ -129,10 +129,10 @@ TEST_F(TensorTest, TestThreshold) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   float threshold = 0.4;
   float value = 20;
-  auto output = at::threshold(input, threshold, value);
+  at::Tensor output = at::threshold(input, threshold, value);
   ForEachDevice([&](const Device& device) {
-    auto dev_input = XLATensor::Create(input, device);
-    auto dev_output = XLATensor::threshold(dev_input, threshold, value);
+    XLATensor dev_input = XLATensor::Create(input, device);
+    XLATensor dev_output = XLATensor::threshold(dev_input, threshold, value);
     AllClose(output, dev_output);
   });
 }
@@ -146,32 +146,32 @@ TEST_F(TensorTest, TestAddMatMul) {
   at::Tensor weight =
       at::rand({out_channels, labels}, at::TensorOptions(at::kFloat));
   at::Tensor bias = at::rand({labels}, at::TensorOptions(at::kFloat));
-  auto output = at::addmm(bias, input, weight);
+  at::Tensor output = at::addmm(bias, input, weight);
   ForEachDevice([&](const Device& device) {
-    auto dev_input = XLATensor::Create(input, device);
-    auto dev_weight = XLATensor::Create(weight, device);
-    auto dev_bias = XLATensor::Create(bias, device);
-    auto dev_output = XLATensor::addmm(dev_input, dev_weight, dev_bias);
+    XLATensor dev_input = XLATensor::Create(input, device);
+    XLATensor dev_weight = XLATensor::Create(weight, device);
+    XLATensor dev_bias = XLATensor::Create(bias, device);
+    XLATensor dev_output = XLATensor::addmm(dev_input, dev_weight, dev_bias);
     AllClose(output, dev_output);
   });
 }
 
 TEST_F(TensorTest, TestTranspose) {
   at::Tensor input = at::rand({2, 3}, at::TensorOptions(at::kFloat));
-  auto output = at::transpose(input, 0, 1);
+  at::Tensor output = at::transpose(input, 0, 1);
   ForEachDevice([&](const Device& device) {
-    auto dev_input = XLATensor::Create(input, device);
-    auto dev_output = XLATensor::transpose(dev_input, 0, 1);
+    XLATensor dev_input = XLATensor::Create(input, device);
+    XLATensor dev_output = XLATensor::transpose(dev_input, 0, 1);
     AllClose(output, dev_output);
   });
 }
 
 TEST_F(TensorTest, TestView) {
   at::Tensor input = at::rand({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
-  auto output = input.view({-1, 320});
+  at::Tensor output = input.view({-1, 320});
   ForEachDevice([&](const Device& device) {
-    auto dev_input = XLATensor::Create(input, device);
-    auto dev_output = XLATensor::view(dev_input, {-1, 320});
+    XLATensor dev_input = XLATensor::Create(input, device);
+    XLATensor dev_output = XLATensor::view(dev_input, {-1, 320});
     AllClose(output, dev_output);
   });
 }
@@ -179,15 +179,15 @@ TEST_F(TensorTest, TestView) {
 TEST_F(TensorTest, TestViewMod) {
   at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
-  auto output = input.view({-1, 320});
+  at::Tensor output = input.view({-1, 320});
   output.add_(one, 1.0);
   input.add_(one, 1.0);
   ForEachDevice([&](const Device& device) {
     at::Tensor xinput =
         at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
-    auto dev_input = XLATensor::Create(xinput, device);
-    auto dev_one = XLATensor::Create(one, device);
-    auto dev_output = XLATensor::view(dev_input, {-1, 320});
+    XLATensor dev_input = XLATensor::Create(xinput, device);
+    XLATensor dev_one = XLATensor::Create(one, device);
+    XLATensor dev_output = XLATensor::view(dev_input, {-1, 320});
     XLATensor::add_(dev_output, dev_one, 1.0);
     XLATensor::add_(dev_input, dev_one, 1.0);
     AllClose(output, dev_output);
@@ -198,18 +198,18 @@ TEST_F(TensorTest, TestViewMod) {
 TEST_F(TensorTest, TestViewModComplex) {
   at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
-  auto output1 = input.view({-1, 320});
+  at::Tensor output1 = input.view({-1, 320});
   output1.add_(one, 1.0);
-  auto output2 = input.view({-1, 160});
+  at::Tensor output2 = input.view({-1, 160});
   output2.add_(one, 1.0);
   ForEachDevice([&](const Device& device) {
     at::Tensor xinput =
         at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
-    auto dev_input = XLATensor::Create(xinput, device);
-    auto dev_one = XLATensor::Create(one, device);
-    auto dev_output1 = XLATensor::view(dev_input, {-1, 320});
+    XLATensor dev_input = XLATensor::Create(xinput, device);
+    XLATensor dev_one = XLATensor::Create(one, device);
+    XLATensor dev_output1 = XLATensor::view(dev_input, {-1, 320});
     XLATensor::add_(dev_output1, dev_one, 1.0);
-    auto dev_output2 = XLATensor::view(dev_input, {-1, 160});
+    XLATensor dev_output2 = XLATensor::view(dev_input, {-1, 160});
     XLATensor::add_(dev_output2, dev_one, 1.0);
     AllClose(output1, dev_output1);
     AllClose(output2, dev_output2);
@@ -219,18 +219,18 @@ TEST_F(TensorTest, TestViewModComplex) {
 TEST_F(TensorTest, TestViewOfViewMod) {
   at::Tensor input = at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
   at::Tensor one = at::tensor(1.0, at::TensorOptions(at::kFloat));
-  auto output1 = input.view({-1, 320});
+  at::Tensor output1 = input.view({-1, 320});
   output1.add_(one, 1.0);
-  auto output2 = output1.view({-1, 160});
+  at::Tensor output2 = output1.view({-1, 160});
   output2.add_(one, 1.0);
   ForEachDevice([&](const Device& device) {
     at::Tensor xinput =
         at::zeros({32, 20, 4, 4}, at::TensorOptions(at::kFloat));
-    auto dev_input = XLATensor::Create(xinput, device);
-    auto dev_one = XLATensor::Create(one, device);
-    auto dev_output1 = XLATensor::view(dev_input, {-1, 320});
+    XLATensor dev_input = XLATensor::Create(xinput, device);
+    XLATensor dev_one = XLATensor::Create(one, device);
+    XLATensor dev_output1 = XLATensor::view(dev_input, {-1, 320});
     XLATensor::add_(dev_output1, dev_one, 1.0);
-    auto dev_output2 = XLATensor::view(dev_output1, {-1, 160});
+    XLATensor dev_output2 = XLATensor::view(dev_output1, {-1, 160});
     XLATensor::add_(dev_output2, dev_one, 1.0);
     AllClose(output1, dev_output1);
     AllClose(output2, dev_output2);
@@ -240,10 +240,11 @@ TEST_F(TensorTest, TestViewOfViewMod) {
 TEST_F(TensorTest, TestLogSoftmax) {
   at::Tensor input = at::rand({5, 3, 4, 2}, at::TensorOptions(at::kFloat));
   ForEachDevice([&](const Device& device) {
-    auto dev_input = XLATensor::Create(input, device);
+    XLATensor dev_input = XLATensor::Create(input, device);
     for (int dim = 0; dim < input.dim(); ++dim) {
-      auto output = input.log_softmax(dim);
-      auto dev_output = XLATensor::log_softmax(dev_input, dim, c10::nullopt);
+      at::Tensor output = input.log_softmax(dim);
+      XLATensor dev_output =
+          XLATensor::log_softmax(dev_input, dim, c10::nullopt);
       AllClose(output, dev_output, /*rtol=*/1e-3);
     }
   });
@@ -252,9 +253,9 @@ TEST_F(TensorTest, TestLogSoftmax) {
 TEST_F(TensorTest, TestDropout) {
   at::Tensor input = at::rand({17, 21}, at::TensorOptions(at::kFloat));
   ForEachDevice([&](const Device& device) {
-    auto dev_input = XLATensor::Create(input, device);
+    XLATensor dev_input = XLATensor::Create(input, device);
     for (int dim = 0; dim < input.dim(); ++dim) {
-      auto dev_output = XLATensor::dropout(dev_input, 0.1);
+      XLATensor dev_output = XLATensor::dropout(dev_input, 0.1);
       double prob =
           static_cast<double>(
               dev_output.ToTensor().ne(0.0f).sum().item().toDouble()) /
@@ -270,14 +271,14 @@ TEST_F(TensorTest, TestMaxPool2D) {
   int kernel_size = 3;
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
-      auto output =
+      at::Tensor output =
           at::max_pool2d(input, /*kernel_size=*/{kernel_size, kernel_size},
                          /*stride=*/{stride, stride},
                          /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
                          /*ceil_mode=*/false);
       ForEachDevice([&](const Device& device) {
-        auto dev_input = XLATensor::Create(input, device);
-        auto dev_output = XLATensor::max_pool_nd(
+        XLATensor dev_input = XLATensor::Create(input, device);
+        XLATensor dev_output = XLATensor::max_pool_nd(
             dev_input,
             /*spatial_dim_count=*/2,
             /*kernel_size=*/{kernel_size, kernel_size},
@@ -294,14 +295,14 @@ TEST_F(TensorTest, TestMaxPool2DNonSquare) {
   int kernel_size = 4;
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
-      auto output = at::max_pool2d(
+      at::Tensor output = at::max_pool2d(
           input, /*kernel_size=*/{kernel_size, kernel_size + 1},
           /*stride=*/{stride, stride + 1},
           /*padding=*/{padding, padding + 1}, /*dilation=*/{1, 1},
           /*ceil_mode=*/false);
       ForEachDevice([&](const Device& device) {
-        auto dev_input = XLATensor::Create(input, device);
-        auto dev_output = XLATensor::max_pool_nd(
+        XLATensor dev_input = XLATensor::Create(input, device);
+        XLATensor dev_output = XLATensor::max_pool_nd(
             dev_input,
             /*spatial_dim_count=*/2,
             /*kernel_size=*/{kernel_size, kernel_size + 1},
@@ -320,14 +321,15 @@ TEST_F(TensorTest, TestAvgPool2D) {
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
       for (bool count_include_pad : {true, false}) {
-        auto output = at::avg_pool2d(input,
-                                     /*kernel_size=*/{kernel_size, kernel_size},
-                                     /*stride=*/{stride, stride},
-                                     /*padding=*/{padding, padding},
-                                     /*ceil_mode=*/false, count_include_pad);
+        at::Tensor output =
+            at::avg_pool2d(input,
+                           /*kernel_size=*/{kernel_size, kernel_size},
+                           /*stride=*/{stride, stride},
+                           /*padding=*/{padding, padding},
+                           /*ceil_mode=*/false, count_include_pad);
         ForEachDevice([&](const Device& device) {
-          auto dev_input = XLATensor::Create(input, device);
-          auto dev_output =
+          XLATensor dev_input = XLATensor::Create(input, device);
+          XLATensor dev_output =
               XLATensor::avg_pool_nd(dev_input,
                                      /*spatial_dim_count=*/2,
                                      /*kernel_size=*/{kernel_size, kernel_size},
@@ -347,15 +349,15 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
   for (int stride = 1; stride <= 2; ++stride) {
     for (int padding = 0; padding <= 1; ++padding) {
       for (bool count_include_pad : {true, false}) {
-        auto output = at::avg_pool2d(
+        at::Tensor output = at::avg_pool2d(
             input,
             /*kernel_size=*/{kernel_size, kernel_size + 1},
             /*stride=*/{stride, stride + 1},
             /*padding=*/{padding, padding + 1}, /*ceil_mode=*/false,
             /*count_include_pad=*/count_include_pad);
         ForEachDevice([&](const Device& device) {
-          auto dev_input = XLATensor::Create(input, device);
-          auto dev_output = XLATensor::avg_pool_nd(
+          XLATensor dev_input = XLATensor::Create(input, device);
+          XLATensor dev_output = XLATensor::avg_pool_nd(
               dev_input,
               /*spatial_dim_count=*/2,
               /*kernel_size=*/{kernel_size, kernel_size + 1},
@@ -432,16 +434,16 @@ TEST_F(TensorTest, TestConv2D) {
   for (int stride = 1; stride <= 3; ++stride) {
     for (int padding = 0; padding <= 2; ++padding) {
       for (bool with_bias : {true, false}) {
-        auto output =
+        at::Tensor output =
             at::native::conv2d(input, weight, with_bias ? bias : no_bias,
                                /*stride=*/{stride, stride},
                                /*padding=*/{padding, padding});
         ForEachDevice([&](const Device& device) {
-          auto dev_input = XLATensor::Create(input, device);
-          auto dev_weight = XLATensor::Create(weight, device);
+          XLATensor dev_input = XLATensor::Create(input, device);
+          XLATensor dev_weight = XLATensor::Create(weight, device);
           XLATensor dev_output;
           if (with_bias) {
-            auto dev_bias = XLATensor::Create(bias, device);
+            XLATensor dev_bias = XLATensor::Create(bias, device);
             dev_output = XLATensor::conv2d(dev_input, dev_weight, dev_bias,
                                            /*stride=*/{stride, stride},
                                            /*padding=*/{padding, padding});
@@ -471,16 +473,16 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
   for (int stride = 1; stride <= 3; ++stride) {
     for (int padding = 0; padding <= 2; ++padding) {
       for (bool with_bias : {true, false}) {
-        auto output =
+        at::Tensor output =
             at::native::conv2d(input, weight, with_bias ? bias : no_bias,
                                /*stride=*/{stride, stride + 1},
                                /*padding=*/{padding, padding + 1});
         ForEachDevice([&](const Device& device) {
-          auto dev_input = XLATensor::Create(input, device);
-          auto dev_weight = XLATensor::Create(weight, device);
+          XLATensor dev_input = XLATensor::Create(input, device);
+          XLATensor dev_weight = XLATensor::Create(weight, device);
           XLATensor dev_output;
           if (with_bias) {
-            auto dev_bias = XLATensor::Create(bias, device);
+            XLATensor dev_bias = XLATensor::Create(bias, device);
             dev_output = XLATensor::conv2d(dev_input, dev_weight, dev_bias,
                                            /*stride=*/{stride, stride + 1},
                                            /*padding=*/{padding, padding + 1});
