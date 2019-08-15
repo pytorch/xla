@@ -194,10 +194,9 @@ at::Tensor XlaToAtenTensor(XLATensor xla_tensor,
 }
 
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor) {
-  if (xla_tensor.is_null()) {
-    return at::Tensor();
-  }
-  return at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
+  return xla_tensor.is_null() ? at::Tensor()
+                              : at::Tensor(c10::make_intrusive<XLATensorImpl>(
+                                    std::move(xla_tensor)));
 }
 
 std::vector<at::Tensor> AtenFromXlaTensors(

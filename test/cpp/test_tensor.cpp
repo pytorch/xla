@@ -384,7 +384,7 @@ TEST_F(TensorTest, TestBatchNorm1D) {
   double eps = 0.5;
   at::Tensor undef;
   for (bool training : {true, false}) {
-    for (bool undef_weight_bias : {false}) {
+    for (bool undef_weight_bias : {true, false}) {
       auto output = at::native_batch_norm(
           /*input=*/input, /*weight=*/undef_weight_bias ? undef : weight,
           /*bias=*/undef_weight_bias ? undef : bias,
