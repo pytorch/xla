@@ -1078,6 +1078,13 @@ at::Tensor AtenXlaType::empty_like(
   return full_like(self, 0, options);
 }
 
+at::Tensor AtenXlaType::empty_strided(at::IntArrayRef size,
+                                      at::IntArrayRef stride,
+                                      const at::TensorOptions& options) {
+  at::Tensor t = full(size, 0, options);
+  return as_strided(t, size, stride, /*storage_offset=*/0);
+}
+
 at::Tensor AtenXlaType::eq(const at::Tensor& self, at::Scalar other) {
   return bridge::AtenFromXlaTensor(
       XLATensor::eq(bridge::GetXlaTensor(self), other));

@@ -385,6 +385,9 @@ class AtenXlaType {
                                const at::TensorOptions& options,
                                c10::optional<at::MemoryFormat> memory_format);
 
+  static at::Tensor empty_strided(at::IntArrayRef size, at::IntArrayRef stride,
+                                  const at::TensorOptions& options);
+
   static at::Tensor eq(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor eq(const at::Tensor& self, const at::Tensor& other);
