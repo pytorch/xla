@@ -21,6 +21,7 @@ sys.path.insert(0, _XLA_FOLDER)
 # Normal imports section starts here.
 import collections
 from common_utils import TestCase, run_tests, iter_indices
+import copy
 import itertools
 import numpy
 import re
@@ -499,6 +500,35 @@ class TestAtenXlaTensor(XlaTestCase):
     result = base[:, torch.empty(0, 6, dtype=torch.int64)]
     xla_result = xla_base[:, torch.empty(0, 6, dtype=torch.int64)]
     self.assertEqual(result, xla_result)
+
+  def test_empty_strided(self):
+    xla_device = xm.xla_device()
+    m = nn.Conv1d(4, 6, kernel_size=3, groups=2)
+    a = torch.rand(2, 4, 6, requires_grad=True)
+    xla_m = copy.deepcopy(m).to(xla_device)
+    xla_a = a.clone().to(xla_device).detach()
+    xla_a.requires_grad = True
+    output = m(a)
+    grad_input = torch.autograd.grad(
+            output,
+            (a, ) + tuple(m.parameters()),
+            output,
+            create_graph=True)
+    grad_grad_input = torch.autograd.grad(
+            output.sum() + sum(map(lambda x: x.sum(), grad_input)),
+            (a, output) + tuple(m.parameters()),
+            retain_graph=True)
+    xla_output = xla_m(xla_a)
+    xla_grad_input = torch.autograd.grad(
+            xla_output,
+            (xla_a, ) + tuple(xla_m.parameters()),
+            xla_output,
+            create_graph=True)
+    xla_grad_grad_input = torch.autograd.grad(
+            xla_output.sum() + sum(map(lambda x: x.sum(), xla_grad_input)),
+            (xla_a, xla_output) + tuple(xla_m.parameters()),
+            retain_graph=True)
+    self.assertEqual(grad_grad_input, xla_grad_grad_input)
 
   def test_clamp(self):
     a = torch.randn(3, 3)

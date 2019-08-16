@@ -6588,6 +6588,18 @@ TEST_F(AtenXlaTensorTest, TestAsStridedWithInplaceCopy) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestEmptyStrided) {
+  std::vector<int64_t> size = {4, 4, 2};
+  std::vector<int64_t> stride = {8, 2, 1};
+  torch::Tensor output = torch::empty_strided(/*size=*/size, /*stride=*/stride);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_output =
+        torch::empty_strided(/*size=*/size, /*stride=*/stride);
+    EXPECT_EQ(output.sizes(), xla_output.sizes());
+    EXPECT_EQ(output.strides(), xla_output.strides());
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {
   int kernel_size = 2;
   for (int stride = 1; stride <= 2; ++stride) {
