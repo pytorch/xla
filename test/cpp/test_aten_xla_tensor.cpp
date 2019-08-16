@@ -6595,7 +6595,6 @@ TEST_F(AtenXlaTensorTest, TestEmptyStrided) {
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_output =
         torch::empty_strided(/*size=*/size, /*stride=*/stride);
-    AllClose(output, xla_output);
     EXPECT_EQ(output.sizes(), xla_output.sizes());
     EXPECT_EQ(output.strides(), xla_output.strides());
   });
