@@ -48,6 +48,9 @@ struct CanonicalIndexInfo {
 CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
                                          at::TensorList orig_indices);
 
+// Expands a rank <= 1 tensor to rank 1, if necessary.
+ir::Value EnsureRank1(const ir::Value& index);
+
 // Implements indexing by tensors of long according to the top-level
 // description.
 XLATensor IndexByTensors(const XLATensor& base,
