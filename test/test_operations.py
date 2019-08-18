@@ -208,6 +208,42 @@ class XlaTestCase(TestCase):
           abs_err=abs_err)
 
 
+class TestToXlaTensorArena(XlaTestCase):
+
+  def test(self):
+    xla_device = xm.xla_device()
+
+    kdata = [_gen_tensor(2, 3), _gen_tensor(3, 4)]
+    kdata.append([_gen_tensor(2, 5), _gen_tensor(3, 6)])
+    data = dict()
+    data[_gen_tensor(2, 2)] = tuple(kdata)
+    data[_gen_tensor(2, 4)] = set([12.0, _gen_tensor(3, 7)])
+    data['ABC'] = _gen_tensor(4, 3)
+
+    def select_fn(v):
+      return type(v) == torch.Tensor
+
+    def convert_fn(tensors):
+      devices = [str(xla_device)] * len(tensors)
+      return torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+
+    def check_fn(v):
+      if select_fn(v):
+        return xm.is_xla_tensor(v)
+      elif isinstance(v, (list, tuple, set)):
+        for x in v:
+          if not check_fn(x):
+            return False
+      elif isinstance(v, dict):
+        for k, x in v.items():
+          if not check_fn(k) or not check_fn(x):
+            return False
+      return True
+
+    xla_data = xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
+    self.assertTrue(check_fn(xla_data))
+
+
 class TestParallelLoader(XlaTestCase):
 
   def test(self):
@@ -510,24 +546,20 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_a.requires_grad = True
     output = m(a)
     grad_input = torch.autograd.grad(
-            output,
-            (a, ) + tuple(m.parameters()),
-            output,
-            create_graph=True)
+        output, (a,) + tuple(m.parameters()), output, create_graph=True)
     grad_grad_input = torch.autograd.grad(
-            output.sum() + sum(map(lambda x: x.sum(), grad_input)),
-            (a, output) + tuple(m.parameters()),
-            retain_graph=True)
+        output.sum() + sum(map(lambda x: x.sum(), grad_input)),
+        (a, output) + tuple(m.parameters()),
+        retain_graph=True)
     xla_output = xla_m(xla_a)
     xla_grad_input = torch.autograd.grad(
-            xla_output,
-            (xla_a, ) + tuple(xla_m.parameters()),
-            xla_output,
-            create_graph=True)
+        xla_output, (xla_a,) + tuple(xla_m.parameters()),
+        xla_output,
+        create_graph=True)
     xla_grad_grad_input = torch.autograd.grad(
-            xla_output.sum() + sum(map(lambda x: x.sum(), xla_grad_input)),
-            (xla_a, xla_output) + tuple(xla_m.parameters()),
-            retain_graph=True)
+        xla_output.sum() + sum(map(lambda x: x.sum(), xla_grad_input)),
+        (xla_a, xla_output) + tuple(xla_m.parameters()),
+        retain_graph=True)
     self.assertEqual(grad_grad_input, xla_grad_grad_input)
 
   def test_clamp(self):
