@@ -5731,7 +5731,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedFill) {
   torch::Tensor input =
       torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor mask =
-      torch::randint(0, 2, {2, 3}, torch::TensorOptions(torch::kByte));
+      torch::randint(0, 2, {2, 3}, torch::TensorOptions(torch::kBool));
   torch::Scalar value(42);
   torch::Tensor result = torch::masked_fill(input, mask, value);
   ForEachDevice([&](const torch::Device& device) {
@@ -5745,7 +5745,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedFill) {
 TEST_F(AtenXlaTensorTest, TestMaskedFillInPlace) {
   torch::Scalar value(42);
   torch::Tensor mask =
-      torch::randint(0, 2, {2, 3}, torch::TensorOptions(torch::kByte));
+      torch::randint(0, 2, {2, 3}, torch::TensorOptions(torch::kBool));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor input =
         torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
@@ -5762,7 +5762,7 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {
   torch::Tensor input =
       torch::rand({2, 5, 4, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor mask =
-      torch::randint(0, 2, {4, 1}, torch::TensorOptions(torch::kByte));
+      torch::randint(0, 2, {4, 1}, torch::TensorOptions(torch::kBool));
   torch::Scalar value(42);
   torch::Tensor result = torch::masked_fill(input, mask, value);
   ForEachDevice([&](const torch::Device& device) {
