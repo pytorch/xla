@@ -420,7 +420,7 @@ class TestAtenXlaTensor(XlaTestCase):
 
   def test_masked_fill_with_tensor(self):
     input = _gen_tensor(2, 5, 4, 3)
-    mask = torch.randint(0, 2, input.size(), dtype=torch.uint8)
+    mask = torch.randint(0, 2, input.size(), dtype=torch.bool)
     value = torch.tensor(42)
     xla_input = input.to(xm.xla_device())
     xla_mask = mask.to(xm.xla_device())
