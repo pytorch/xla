@@ -33,6 +33,14 @@ function install_req_packages() {
   install_bazel
 }
 
+function install_gcloud() {
+  # Following: https://cloud.google.com/sdk/docs/downloads-apt-get
+  echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+  sudo apt-get install -y apt-transport-https ca-certificates
+  curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+  sudo apt-get update && sudo apt-get install -y google-cloud-sdk
+}
+
 function install_and_setup_conda() {
   # Install conda if dne already.
   if ! test -d "$HOME/anaconda3"; then
@@ -98,6 +106,7 @@ function main() {
   build_and_install_torch
   pushd xla && build_and_install_torch_xla && popd
   install_torchvision_from_source
+  install_gcloud
 }
 
 main
