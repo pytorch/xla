@@ -3087,7 +3087,7 @@ TEST_F(AtenXlaTensorTest, TestMaskIndex) {
             ? torch::rand({2, 2}, torch::TensorOptions(scalar_type))
             : torch::randint(100, {2, 2}, torch::TensorOptions(scalar_type));
     torch::Tensor indices =
-        torch::randint(0, 2, {2, 2}, torch::TensorOptions(torch::kByte));
+        torch::randint(0, 2, {2, 2}, torch::TensorOptions(torch::kBool));
     torch::Tensor result = torch::index(params, {indices});
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_params = CopyToDevice(params, device);
@@ -3380,7 +3380,8 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutTailBroadcast) {
 
 TEST_F(AtenXlaTensorTest, TestMaskIndexPut) {
   torch::Tensor indices =
-      torch::tensor({0, 1}, torch::TensorOptions(torch::kByte));
+      torch::tensor({0, 1}, torch::TensorOptions(torch::kByte))
+          .to(torch::kBool);
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
         torch::kLong}) {
