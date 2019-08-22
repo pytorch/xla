@@ -295,24 +295,25 @@ class XLATensor {
       const XLATensor& input, tensorflow::gtl::ArraySlice<const xla::int64> pad,
       at::Scalar value);
 
-  static XLATensor conv2d(const XLATensor& input, const XLATensor& weight,
-                          const XLATensor& bias, std::vector<xla::int64> stride,
-                          std::vector<xla::int64> padding);
+  static XLATensor convolution_overrideable(
+      const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
+      std::vector<xla::int64> stride, std::vector<xla::int64> padding,
+      std::vector<xla::int64> dilation, bool transposed,
+      std::vector<xla::int64> output_padding, const xla::int64 groups);
 
-  static XLATensor conv2d(const XLATensor& input, const XLATensor& weight,
-                          std::vector<xla::int64> stride,
-                          std::vector<xla::int64> padding);
+  static XLATensor convolution_overrideable(
+      const XLATensor& input, const XLATensor& weight,
+      std::vector<xla::int64> stride, std::vector<xla::int64> padding,
+      std::vector<xla::int64> dilation, bool transposed,
+      std::vector<xla::int64> output_padding, const xla::int64 groups);
 
-  static std::tuple<XLATensor, XLATensor, XLATensor> conv2d_backward(
+  static std::tuple<XLATensor, XLATensor, XLATensor>
+  convolution_backward_overrideable(
       const XLATensor& out_backprop, const XLATensor& input,
       const XLATensor& weight, std::vector<xla::int64> stride,
-      std::vector<xla::int64> padding);
-
-  static XLATensor conv_transpose2d(const XLATensor& input,
-                                    const XLATensor& weight,
-                                    const XLATensor& bias,
-                                    std::vector<xla::int64> stride,
-                                    std::vector<xla::int64> padding);
+      std::vector<xla::int64> padding, std::vector<xla::int64> dilation,
+      bool transposed, std::vector<xla::int64> output_padding,
+      const xla::int64 groups);
 
   static XLATensor cos(const XLATensor& input);
   static void cos_(XLATensor& input);
@@ -739,18 +740,6 @@ class XLATensor {
 
   static XLATensor slice(const XLATensor& input, xla::int64 dim,
                          xla::int64 start, xla::int64 end, xla::int64 step);
-
-  static XLATensor slow_conv_transpose2d(const XLATensor& input,
-                                         const XLATensor& weight,
-                                         std::vector<xla::int64> stride,
-                                         std::vector<xla::int64> padding);
-
-  static std::tuple<XLATensor, XLATensor, XLATensor>
-  slow_conv_transpose2d_backward(const XLATensor& out_backprop,
-                                 const XLATensor& input,
-                                 const XLATensor& weight,
-                                 std::vector<xla::int64> stride,
-                                 std::vector<xla::int64> padding);
 
   // Computes a loss that uses a squared term if the absolute element-wise error
   // falls below 1 and an L1 term otherwise.
