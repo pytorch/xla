@@ -36,9 +36,10 @@ pip install lark-parser
 # Install Pytorch
 xla/scripts/apply_patches.sh
 python setup.py build develop
+sccache --show-stats
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
-sudo add-apt-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main"
+sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main"
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
 sudo apt-get -qq update
 
@@ -81,7 +82,7 @@ pushd vision
 pip install -q --user .
 popd
 
-bazels3cache --bucket=${XLA_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
+bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
 
 # install XLA
 pushd "$XLA_DIR"
