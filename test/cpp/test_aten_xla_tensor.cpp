@@ -2570,8 +2570,8 @@ TEST_F(AtenXlaTensorTest, TestRandperm) {
   torch::Tensor shuffle =
       torch::randperm(n, torch::TensorOptions().device(torch::kXLA));
   torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
-  std::vector<xla::int64> shuffle_data(shuffle_cpu.data<int64_t>(),
-                                       shuffle_cpu.data<int64_t>() + n);
+  std::vector<xla::int64> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
+                                       shuffle_cpu.data_ptr<int64_t>() + n);
   EXPECT_TRUE(xla::IsPermutation(shuffle_data, n));
 }
 
