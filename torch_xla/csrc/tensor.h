@@ -299,13 +299,7 @@ class XLATensor {
       const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
       std::vector<xla::int64> stride, std::vector<xla::int64> padding,
       std::vector<xla::int64> dilation, bool transposed,
-      std::vector<xla::int64> output_padding, const xla::int64 groups);
-
-  static XLATensor convolution_overrideable(
-      const XLATensor& input, const XLATensor& weight,
-      std::vector<xla::int64> stride, std::vector<xla::int64> padding,
-      std::vector<xla::int64> dilation, bool transposed,
-      std::vector<xla::int64> output_padding, const xla::int64 groups);
+      std::vector<xla::int64> output_padding, xla::int64 groups);
 
   static std::tuple<XLATensor, XLATensor, XLATensor>
   convolution_backward_overrideable(
@@ -314,6 +308,12 @@ class XLATensor {
       std::vector<xla::int64> padding, std::vector<xla::int64> dilation,
       bool transposed, std::vector<xla::int64> output_padding,
       const xla::int64 groups);
+
+  static XLATensor convolution_overrideable(
+      const XLATensor& input, const XLATensor& weight,
+      std::vector<xla::int64> stride, std::vector<xla::int64> padding,
+      std::vector<xla::int64> dilation, bool transposed,
+      std::vector<xla::int64> output_padding, xla::int64 groups);
 
   static XLATensor cos(const XLATensor& input);
   static void cos_(XLATensor& input);

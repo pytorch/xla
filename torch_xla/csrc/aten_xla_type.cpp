@@ -856,14 +856,13 @@ AtenXlaType::convolution_backward_overrideable(
       bridge::GetXlaTensor(weight), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), XlaHelpers::I64List(dilation), transposed,
       XlaHelpers::I64List(output_padding), groups);
-  at::Tensor undefined;
   return std::make_tuple(
       output_mask[0] ? bridge::AtenFromXlaTensor(std::get<0>(gradients))
-                     : undefined,
+                     : at::Tensor(),
       output_mask[1] ? bridge::AtenFromXlaTensor(std::get<1>(gradients))
-                     : undefined,
+                     : at::Tensor(),
       output_mask[2] ? bridge::AtenFromXlaTensor(std::get<2>(gradients))
-                     : undefined);
+                     : at::Tensor());
 }
 
 at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,

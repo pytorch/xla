@@ -292,17 +292,17 @@ class AtenXlaType {
   static at::Tensor contiguous(const at::Tensor& self,
                                at::MemoryFormat memory_format);
 
-  static at::Tensor convolution_overrideable(
-      const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
-      bool transposed, at::IntArrayRef output_padding, int64_t groups);
-
   static std::tuple<at::Tensor, at::Tensor, at::Tensor>
   convolution_backward_overrideable(
       const at::Tensor& grad_output, const at::Tensor& input,
       const at::Tensor& weight, at::IntArrayRef stride, at::IntArrayRef padding,
       at::IntArrayRef dilation, bool transposed, at::IntArrayRef output_padding,
       int64_t groups, std::array<bool, 3> output_mask);
+
+  static at::Tensor convolution_overrideable(
+      const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
+      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+      bool transposed, at::IntArrayRef output_padding, int64_t groups);
 
   static at::Tensor& copy_(at::Tensor& self, const at::Tensor& src,
                            bool non_blocking);

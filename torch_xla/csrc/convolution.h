@@ -13,7 +13,7 @@ xla::XlaOp BuildConvolutionOverrideable(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     tensorflow::gtl::ArraySlice<const xla::int64> dilation, bool transposed,
     tensorflow::gtl::ArraySlice<const xla::int64> output_padding,
-    const xla::int64 groups);
+    xla::int64 groups);
 
 // Same as above, then broadcasts the bias and adds it to the result.
 xla::XlaOp BuildConvolutionOverrideableBias(
@@ -22,7 +22,7 @@ xla::XlaOp BuildConvolutionOverrideableBias(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     tensorflow::gtl::ArraySlice<const xla::int64> dilation, bool transposed,
     tensorflow::gtl::ArraySlice<const xla::int64> output_padding,
-    const xla::int64 groups);
+    xla::int64 groups);
 
 struct ConvGrads {
   xla::XlaOp grad_input;
@@ -38,6 +38,6 @@ ConvGrads BuildConvolutionBackwardOverrideable(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     tensorflow::gtl::ArraySlice<const xla::int64> dilation, bool transposed,
     tensorflow::gtl::ArraySlice<const xla::int64> output_padding,
-    const xla::int64 groups);
+    xla::int64 groups);
 
 }  // namespace torch_xla
