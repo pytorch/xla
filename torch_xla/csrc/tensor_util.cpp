@@ -273,7 +273,7 @@ void TensorToBuffer(const at::Tensor& tensor, const xla::Shape& dest_shape,
   xla::Shape src_shape = MakeTorchTensorLayout(
       XlaHelpers::I64List(contiguous_tensor.sizes()),
       XlaTypeFromTensorType(contiguous_tensor.type().scalarType(), device));
-  CopyTensors<SType, DType>(contiguous_tensor.data<SType>(), src_shape,
+  CopyTensors<SType, DType>(contiguous_tensor.data_ptr<SType>(), src_shape,
                             dest_buffer, dest_buffer_size, dest_shape);
 }
 
@@ -395,7 +395,7 @@ at::Tensor XlaLiteralToTensor(const xla::Literal& literal,
   const auto literal_data = literal.data<SType>();
   at::Tensor tensor = at::empty(dimensions, at::TensorOptions(atype));
   CopyTensors<SType, DType>(literal_data.data(), literal.shape(),
-                            tensor.data<DType>(),
+                            tensor.data_ptr<DType>(),
                             total_elements * sizeof(DType), torch_shape);
   return tensor;
 }
@@ -513,21 +513,21 @@ size_t TensorHash(const at::Tensor& tensor) {
   int64_t size = ctensor.numel() * ctensor.element_size();
   switch (ctensor.scalar_type()) {
     case at::ScalarType::Bool:
-      return xla::util::DataHash(ctensor.data<bool>(), size);
+      return xla::util::DataHash(ctensor.data_ptr<bool>(), size);
     case at::ScalarType::Byte:
-      return xla::util::DataHash(ctensor.data<uint8_t>(), size);
+      return xla::util::DataHash(ctensor.data_ptr<uint8_t>(), size);
     case at::ScalarType::Char:
-      return xla::util::DataHash(ctensor.data<int8_t>(), size);
+      return xla::util::DataHash(ctensor.data_ptr<int8_t>(), size);
     case at::ScalarType::Short:
-      return xla::util::DataHash(ctensor.data<int16_t>(), size);
+      return xla::util::DataHash(ctensor.data_ptr<int16_t>(), size);
     case at::ScalarType::Int:
-      return xla::util::DataHash(ctensor.data<int32_t>(), size);
+      return xla::util::DataHash(ctensor.data_ptr<int32_t>(), size);
     case at::ScalarType::Long:
-      return xla::util::DataHash(ctensor.data<int64_t>(), size);
+      return xla::util::DataHash(ctensor.data_ptr<int64_t>(), size);
     case at::ScalarType::Float:
-      return xla::util::DataHash(ctensor.data<float>(), size);
+      return xla::util::DataHash(ctensor.data_ptr<float>(), size);
     case at::ScalarType::Double:
-      return xla::util::DataHash(ctensor.data<double>(), size);
+      return xla::util::DataHash(ctensor.data_ptr<double>(), size);
     default:
       XLA_ERROR() << "Unsupported scalar type: " << ctensor.scalar_type();
   }
