@@ -19,13 +19,12 @@ xla::Shape NodeOutputShape(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     tensorflow::gtl::ArraySlice<const xla::int64> dilation, bool transposed,
     tensorflow::gtl::ArraySlice<const xla::int64> output_padding,
-    const xla::int64 groups) {
+    xla::int64 groups) {
   auto lower_for_shape_fn =
       [stride, padding, dilation, output_padding, transposed,
        groups](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
-    XLA_CHECK(operands.size() == 2 || operands.size() == 3)
-        << "Unexpected number of operands: " << operands.size();
+    XLA_CHECK(operands.size() == 2 || operands.size() == 3);
     return BuildConvolutionOverrideable(operands[0], operands[1], stride,
                                         padding, dilation, transposed,
                                         output_padding, groups);

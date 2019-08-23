@@ -37,22 +37,21 @@ class ConvolutionOverrideable : public Node {
 
   const std::vector<xla::int64>& dilation() const { return dilation_; }
 
-  const bool transposed() const { return transposed_; }
+  bool transposed() const { return transposed_; }
 
   const std::vector<xla::int64>& output_padding() const {
     return output_padding_;
   }
 
-  const int64_t groups() const { return groups_; }
+  xla::int64 groups() const { return groups_; }
 
  private:
-  // The parameters of the convolution.
   std::vector<xla::int64> stride_;
   std::vector<xla::int64> padding_;
   std::vector<xla::int64> dilation_;
   std::vector<xla::int64> output_padding_;
   bool transposed_;
-  int64_t groups_;
+  xla::int64 groups_;
 };
 
 }  // namespace ops

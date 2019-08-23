@@ -6771,7 +6771,7 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
                             : torch::Tensor();
               TestBackward(
                   {torch::rand(
-                       {4, in_channels, 28, 28},
+                       {4, in_channels, 14, 14},
                        torch::TensorOptions(torch::kFloat).requires_grad(true)),
                    torch::rand(
                        {out_channels, in_channels / groups, kernel_size,
@@ -6810,7 +6810,7 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
               };
               ForEachDevice([&](const torch::Device& device) {
                 torch::Tensor input = torch::rand(
-                    {4, out_channels, 28, 28},
+                    {4, out_channels, 14, 14},
                     torch::TensorOptions(torch::kFloat).requires_grad(true));
                 torch::Tensor weight = torch::rand(
                     {out_channels, in_channels / groups, kernel_size,
@@ -6854,7 +6854,7 @@ TEST_F(AtenXlaTensorTest, TestConv3DBackward) {
                   with_bias ? torch::rand({out_channels},
                                           torch::TensorOptions(torch::kDouble))
                             : torch::Tensor();
-              TestBackward({torch::rand({4, in_channels, 28, 28, 28},
+              TestBackward({torch::rand({4, in_channels, 14, 14, 14},
                                         torch::TensorOptions(torch::kDouble)
                                             .requires_grad(true)),
                             torch::rand({out_channels, in_channels / groups,
@@ -6894,7 +6894,7 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv3DBackward) {
               };
               ForEachDevice([&](const torch::Device& device) {
                 torch::Tensor input = torch::rand(
-                    {4, out_channels, 28, 28, 28},
+                    {4, out_channels, 14, 14, 14},
                     torch::TensorOptions(torch::kDouble).requires_grad(true));
                 torch::Tensor weight = torch::rand(
                     {out_channels, in_channels / groups, kernel_size,

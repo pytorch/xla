@@ -18,13 +18,12 @@ xla::Shape NodeOutputShape(
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     tensorflow::gtl::ArraySlice<const xla::int64> dilation, bool transposed,
     tensorflow::gtl::ArraySlice<const xla::int64> output_padding,
-    const xla::int64 groups) {
+    xla::int64 groups) {
   auto lower_for_shape_fn =
       [stride, padding, dilation, transposed, output_padding,
        groups](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 3)
-        << "Unexpected number of operands: " << operands.size();
+    XLA_CHECK_EQ(operands.size(), 3);
     // The precision doesn't matter for shape inference.
     ConvGrads grads = BuildConvolutionBackwardOverrideable(
         operands[0], operands[1], operands[2], stride, padding, dilation,
@@ -43,7 +42,7 @@ ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
     std::vector<xla::int64> stride, std::vector<xla::int64> padding,
     std::vector<xla::int64> dilation, bool transposed,
     std::vector<xla::int64> output_padding, const xla::int64 groups)
-    : Node(ir::OpKind(at::aten::thnn_conv2d_backward),
+    : Node(ir::OpKind(at::aten::convolution_backward_overrideable),
            {grad_output, input, weight},
            [&]() {
              return NodeOutputShape(grad_output, input, weight, stride, padding,
