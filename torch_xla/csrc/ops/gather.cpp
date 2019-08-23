@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -14,12 +15,14 @@ namespace {
 
 bool IsSparseGather(const xla::XlaOp& input, const xla::XlaOp& index,
                     xla::int64 dim) {
+  static int dense_gather_factor =
+      xla::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 100);
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
   xla::int64 input_elements = xla::ShapeUtil::ElementsIn(input_shape);
   xla::int64 index_elements = xla::ShapeUtil::ElementsIn(index_shape);
   // Simple heuristic. Might need fine tuning.
-  return index_elements < input_elements / 3;
+  return index_elements < input_elements / dense_gather_factor;
 }
 
 xla::Shape NodeOutputShape(const Value& input, const Value& index,

@@ -9,6 +9,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
+#include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/index_get.h"
 #include "torch_xla/csrc/ops/index_put.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -159,11 +160,13 @@ ir::NodePtr IndexFillOp(const ir::Value& buffer, xla::int64 dim,
       -> xla::XlaOp {
     return CreateIndexFill(operands[0], dim, operands[1], operands[2]);
   };
+  ir::Value index_rank1 = EnsureRank1(index);
   return ir::ops::GenericOp(
-      ir::OpKind(at::aten::index_fill), {buffer, index, value},
+      ir::OpKind(at::aten::index_fill), {buffer, index_rank1, value},
       [&]() {
         return ir::ops::InferOutputShape(
-            {buffer.shape(), index.shape(), value.shape()}, lower_for_shape_fn);
+            {buffer.shape(), index_rank1.shape(), value.shape()},
+            lower_for_shape_fn);
       },
       std::move(lower_fn), /*num_outputs=*/1, xla::util::MHash(dim));
 }
@@ -183,11 +186,12 @@ ir::NodePtr IndexAddOp(const ir::Value& buffer, xla::int64 dim,
       -> xla::XlaOp {
     return CreateIndexAdd(operands[0], dim, operands[1], operands[2]);
   };
+  ir::Value index_rank1 = EnsureRank1(index);
   return ir::ops::GenericOp(
-      ir::OpKind(at::aten::index_add), {buffer, index, source},
+      ir::OpKind(at::aten::index_add), {buffer, index_rank1, source},
       [&]() {
         return ir::ops::InferOutputShape(
-            {buffer.shape(), index.shape(), source.shape()},
+            {buffer.shape(), index_rank1.shape(), source.shape()},
             lower_for_shape_fn);
       },
       std::move(lower_fn));
@@ -208,11 +212,12 @@ ir::NodePtr IndexCopyOp(const ir::Value& buffer, xla::int64 dim,
       -> xla::XlaOp {
     return CreateIndexCopy(operands[0], dim, operands[1], operands[2]);
   };
+  ir::Value index_rank1 = EnsureRank1(index);
   return ir::ops::GenericOp(
-      ir::OpKind(at::aten::index_copy), {buffer, index, source},
+      ir::OpKind(at::aten::index_copy), {buffer, index_rank1, source},
       [&]() {
         return ir::ops::InferOutputShape(
-            {buffer.shape(), index.shape(), source.shape()},
+            {buffer.shape(), index_rank1.shape(), source.shape()},
             lower_for_shape_fn);
       },
       std::move(lower_fn));
@@ -237,6 +242,13 @@ CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
     }
   }
   return canonical_index_info;
+}
+
+ir::Value EnsureRank1(const ir::Value& index) {
+  XLA_CHECK_LE(index->shape().rank(), 1);
+  return index->shape().rank() == 0
+             ? ir::MakeNode<ir::ops::Expand>(index, std::vector<xla::int64>{1})
+             : index;
 }
 
 XLATensor IndexByTensors(const XLATensor& base,
@@ -279,7 +291,7 @@ ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
                       const XLATensor& index, at::Scalar value) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Fill index is expected to be of scalar type Long";
-  XLA_CHECK_EQ(index.shape().get().rank(), 1)
+  XLA_CHECK_LE(index.shape().get().rank(), 1)
       << "Fill index is supposed to be a vector";
   return IndexFillOp(
       base.GetIrValue(), dim, index.GetIrValue(),
@@ -291,7 +303,7 @@ ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
                       const XLATensor& index, const XLATensor& value) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Fill index is expected to be of scalar type Long";
-  XLA_CHECK_EQ(index.shape().get().rank(), 1)
+  XLA_CHECK_LE(index.shape().get().rank(), 1)
       << "Fill index is supposed to be a vector";
   XLA_CHECK_EQ(value.shape().get().rank(), 0)
       << "Fill only supports a 0-dimensional value tensor";
@@ -303,7 +315,7 @@ ir::Value IndexAdd(const XLATensor& base, xla::int64 dim,
                    const XLATensor& index, const XLATensor& source) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Add index is expected to be of scalar type Long";
-  XLA_CHECK_EQ(index.shape().get().rank(), 1)
+  XLA_CHECK_LE(index.shape().get().rank(), 1)
       << "Add index is supposed to be a vector";
   return IndexAddOp(base.GetIrValue(), dim, index.GetIrValue(),
                     source.GetIrValue());
@@ -313,7 +325,7 @@ ir::Value IndexCopy(const XLATensor& base, xla::int64 dim,
                     const XLATensor& index, const XLATensor& source) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Copy index is expected to be of scalar type Long";
-  XLA_CHECK_EQ(index.shape().get().rank(), 1)
+  XLA_CHECK_LE(index.shape().get().rank(), 1)
       << "Copy index is supposed to be a vector";
   return IndexCopyOp(base.GetIrValue(), dim, index.GetIrValue(),
                      source.GetIrValue());

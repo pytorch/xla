@@ -27,7 +27,7 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
     * `gcr.io/tpu-pytorch/xla:nightly`
     * `gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_20190531)`
 
-    If you decide to consume this, be sure to create a TPU with `nightly` version.
+    If you decide to consume this, be sure to create a TPU with `pytorch-nightly` version.
 
 3. Where `$TPU_IP_ADDRESS` (e.g.: `10.1.1.2`) is your TPU Internal IP displayed in GCP UI, after pulling the docker image you can either:
 
@@ -76,7 +76,7 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
     distribution (only updates your pytorch-nightly conda env), run:
     ```Shell
     (vm)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-    (vm)$ ./scripts/update_nightly_torch_wheels.sh
+    (vm)$ . ./scripts/update_nightly_torch_wheels.sh
     ```
 
 ---

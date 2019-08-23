@@ -1136,10 +1136,11 @@ void XLATensor::index_put_(
 
 XLATensor XLATensor::index_select(const XLATensor& input, xla::int64 dim,
                                   const XLATensor& index) {
+  ir::Value index_value = EnsureRank1(index.GetIrValue());
   return input.CreateFrom(ir::MakeNode<ir::ops::IndexSelect>(
       input.GetIrValue(),
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank()),
-      index.GetIrValue()));
+      index_value));
 }
 
 XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,

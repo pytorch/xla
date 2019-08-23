@@ -506,7 +506,7 @@ class ClusterResolverTest(unittest.TestCase):
                 'v3-2048', ['10.0.0.{}'.format(ip) for ip in range(256)],
                 'fake-pod',
                 'READY',
-                'nightly',
+                'pytorch-nightly',
                 health='HEALTHY'),
     }
     noop_compute_service = build_mock_compute_service({}, {})
@@ -524,7 +524,7 @@ class ClusterResolverTest(unittest.TestCase):
             port='8470',
             machine_type='v3-2048',
             zone='fake-zone',
-            sw_version='nightly') for ip in range(256)
+            sw_version='pytorch-nightly') for ip in range(256)
     ]
     self.assertCountEqual(expected, service_workers)
 
@@ -534,7 +534,7 @@ class ClusterResolverTest(unittest.TestCase):
             'v3-8', ['10.0.0.{}'.format(ip)],
             'fake-tpu-{}'.format(ip),
             'READY',
-            'nightly',
+            'pytorch-nightly',
             health='HEALTHY') for ip in range(256)
     }
     noop_compute_service = build_mock_compute_service({}, {})
@@ -552,7 +552,7 @@ class ClusterResolverTest(unittest.TestCase):
             port='8470',
             machine_type='v3-8',
             zone='fake-zone',
-            sw_version='nightly') for ip in range(256)
+            sw_version='pytorch-nightly') for ip in range(256)
     ]
     self.assertCountEqual(expected, service_workers)
 
@@ -563,7 +563,7 @@ class ClusterResolverTest(unittest.TestCase):
                 'v3-128', ['10.0.0.{}'.format(ip) for ip in range(16)],
                 'fake-pod',
                 'READY',
-                'nightly',
+                'pytorch-nightly',
                 health='UNHEALTHY_TENSORFLOW'),
     }
     noop_compute_service = build_mock_compute_service({}, {})
@@ -583,24 +583,24 @@ class ClusterResolverTest(unittest.TestCase):
                 'v3-8', ['10.0.0.0'],
                 'fake-tpu-0',
                 'READY',
-                'nightly',
+                'pytorch-nightly',
                 health='HEALTHY'),
         'fake-tpu-1':
             gen_fake_tpu_entry(
                 'v3-8', ['10.0.0.1'],
                 'fake-tpu-1',
                 'READY',
-                'nightly',
+                'pytorch-nightly',
                 health='HEALTHY'),
         'fake-tpu-2':
             gen_fake_tpu_entry('v3-8', ['10.0.0.2'], 'fake-tpu-2', 'CREATING',
-                               'nightly'),
+                               'pytorch-nightly'),
         'fake-tpu-3':
             gen_fake_tpu_entry(
                 'v3-8', ['10.0.0.3'],
                 'fake-tpu-3',
                 'READY',
-                'nightly',
+                'pytorch-nightly',
                 health='HEALTHY'),
     }
     noop_compute_service = build_mock_compute_service({}, {})
@@ -620,7 +620,7 @@ class ClusterResolverTest(unittest.TestCase):
                 'v3-32', ['10.0.0.{}'.format(ip) for ip in range(4)],
                 'fake-pod',
                 'READY',
-                'nightly'),
+                'pytorch-nightly'),
     }
     noop_compute_service = build_mock_compute_service({}, {})
     tpu_service = build_mock_tpu_service(tpu_resp_map)
@@ -658,7 +658,7 @@ class ClusterResolverTest(unittest.TestCase):
                 'v3-32', ['10.0.0.{}'.format(ip) for ip in range(4)],
                 'fake-pod',
                 'READY',
-                'nightly',
+                'pytorch-nightly',
                 health='HEALTHY'),
     }
     tpu_service = build_mock_tpu_service(tpu_resp_map)
@@ -682,7 +682,7 @@ class ClusterResolverTest(unittest.TestCase):
             port='8470',
             machine_type='v3-32',
             zone='fake-zone',
-            sw_version='nightly') for ip in range(4)
+            sw_version='pytorch-nightly') for ip in range(4)
     ]
     expected = Cluster(expected_client_workers, expected_service_workers)
     self.assertEqual(expected, cluster)
@@ -713,7 +713,7 @@ class ClusterResolverTest(unittest.TestCase):
                 'v3-32', ['10.0.0.{}'.format(ip) for ip in range(4)],
                 'fake-pod',
                 'READY',
-                'nightly',
+                'pytorch-nightly',
                 health='HEALTHY'),
     }
     tpu_service = build_mock_tpu_service(tpu_resp_map)
