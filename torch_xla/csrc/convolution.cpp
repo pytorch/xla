@@ -152,6 +152,7 @@ xla::XlaOp BuildTransposedConvolution(
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape kernel_shape = XlaHelpers::ShapeOfXlaOp(kernel);
   xla::int64 num_spatial = input_shape.rank() - 2;
+  // Fold group into input_size feature dimension
   xla::int64 sz = kernel_shape.dimensions(1) * groups;
   std::vector<xla::int64> input_size{input_shape.dimensions(0), sz};
   for (int spatial_dim = 0; spatial_dim < num_spatial; ++spatial_dim) {
@@ -164,7 +165,7 @@ xla::XlaOp BuildTransposedConvolution(
   return BuildConvBackwardInput(
       input, kernel,
       xla::ShapeUtil::MakeShape(input_shape.element_type(), input_size), stride,
-      padding, dilation, groups);
+      padding, dilation, /*groups=*/1);
 }
 
 xla::XlaOp BuildTransposedConvolutionBias(
