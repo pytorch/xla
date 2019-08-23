@@ -45,8 +45,6 @@ void TestBackward(
 
   torch::Tensor output = testfn(input_vars);
   torch::Tensor xoutput = testfn(xinput_vars);
-  std::cout << output.sizes() << std::endl;
-  std::cout << xoutput.sizes() << std::endl;
   output.backward();
   xoutput.backward();
   for (size_t i = 0; i < inputs.size(); ++i) {
@@ -6622,11 +6620,11 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
   int in_channels = 9;
   int out_channels = 3;
   int kernel_size = 5;
-  for (int stride = 3; stride <= 3; ++stride) {
-    for (int padding = 1; padding <= 1; ++padding) {
-      for (bool with_bias : {/*true,*/ false}) {
-        for (int dilation = 1; dilation <= 1; ++dilation) {
-          for (int groups : {1 /*, 3*/}) {
+  for (int stride = 1; stride <= 3; ++stride) {
+    for (int padding = 0; padding <= 2; ++padding) {
+      for (bool with_bias : {true, false}) {
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          for (int groups : {1, 3}) {
             auto testfn =
                 [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
               return torch::conv2d(inputs[0], inputs[1], inputs[2],
@@ -6642,7 +6640,7 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
                             : torch::Tensor();
               TestBackward(
                   {torch::rand(
-                       {1, in_channels, 32, 32},
+                       {4, in_channels, 28, 28},
                        torch::TensorOptions(torch::kFloat).requires_grad(true)),
                    torch::rand(
                        {out_channels, in_channels / groups, kernel_size,
@@ -6690,6 +6688,90 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
                 torch::Tensor bias =
                     with_bias ? torch::rand({in_channels},
                                             torch::TensorOptions(torch::kFloat)
+                                                .requires_grad(true))
+                              : torch::Tensor();
+                TestBackward({input, weight, bias}, device, testfn);
+              });
+            }
+          };
+        }
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestConv3DBackward) {
+  int in_channels = 9;
+  int out_channels = 3;
+  int kernel_size = 5;
+  for (int stride = 1; stride <= 3; ++stride) {
+    for (int padding = 1; padding <= 2; ++padding) {
+      for (bool with_bias : {true, false}) {
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          for (int groups : {1, 3}) {
+            auto testfn =
+                [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+              return torch::conv3d(inputs[0], inputs[1], inputs[2],
+                                   /*stride=*/{stride, stride, stride},
+                                   /*padding=*/{padding, padding, padding},
+                                   /*dilation=*/{dilation, dilation, dilation},
+                                   groups);
+            };
+
+            ForEachDevice([&](const torch::Device& device) {
+              torch::Tensor bias =
+                  with_bias ? torch::rand({out_channels},
+                                          torch::TensorOptions(torch::kDouble))
+                            : torch::Tensor();
+              TestBackward({torch::rand({4, in_channels, 28, 28, 28},
+                                        torch::TensorOptions(torch::kDouble)
+                                            .requires_grad(true)),
+                            torch::rand({out_channels, in_channels / groups,
+                                         kernel_size, kernel_size, kernel_size},
+                                        torch::TensorOptions(torch::kDouble)
+                                            .requires_grad(true)),
+                            bias},
+                           device, testfn);
+            });
+          }
+        };
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestTransposedConv3DBackward) {
+  int in_channels = 9;
+  int out_channels = 3;
+  int kernel_size = 5;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      for (int dilation = 1; dilation <= 2; ++dilation) {
+        for (int output_padding = 0;
+             output_padding < std::min(stride, dilation); ++output_padding) {
+          for (bool with_bias : {true, false}) {
+            for (int groups : {1, 3}) {
+              auto testfn = [&](const std::vector<torch::Tensor>& inputs)
+                  -> torch::Tensor {
+                return torch::conv_transpose3d(
+                    inputs[0], inputs[1], inputs[2],
+                    /*stride=*/{stride, stride + 1, stride},
+                    /*padding=*/{padding, padding + 1, stride},
+                    /*output_padding=*/output_padding,
+                    /*groups=*/groups,
+                    /*dilation=*/{dilation, dilation + 1, dilation});
+              };
+              ForEachDevice([&](const torch::Device& device) {
+                torch::Tensor input = torch::rand(
+                    {4, out_channels, 28, 28, 28},
+                    torch::TensorOptions(torch::kDouble).requires_grad(true));
+                torch::Tensor weight = torch::rand(
+                    {out_channels, in_channels / groups, kernel_size,
+                     kernel_size, kernel_size},
+                    torch::TensorOptions(torch::kDouble).requires_grad(true));
+                torch::Tensor bias =
+                    with_bias ? torch::rand({in_channels},
+                                            torch::TensorOptions(torch::kDouble)
                                                 .requires_grad(true))
                               : torch::Tensor();
                 TestBackward({input, weight, bias}, device, testfn);

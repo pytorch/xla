@@ -63,39 +63,45 @@ std::vector<xla::int64> BiasTransposePermutation(const xla::int64 k) {
   }
 }
 
+std::vector<xla::int64> BiasReduceDimensions(const xla::int64 k) {
+  if (k == 4) {
+    return {0, 2, 3};
+  } else {
+    return {0, 2, 3, 4};
+  }
+}
+
 // Computes the input gradient for a convolution.
-xla::XlaOp BuildThnnConv2dBackwardInput(
+xla::XlaOp BuildConvBackwardInput(
     const xla::XlaOp& grad_output, const xla::XlaOp& kernel,
     const xla::Shape& input_shape,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_stride,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_padding,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_dilation,
     const xla::int64 groups) {
-  // FIXME
-  // bool depthwise = groups == input_shape.dimensions(3);
-  tensorflow::ConvOpAttrs conv_op_attrs =
-      MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
+  bool depthwise = groups == input_shape.dimensions(1);
+  tensorflow::ConvOpAttrs conv_op_attrs = MakeConvOpAttrs(
+      spatial_stride, spatial_padding, spatial_dilation, depthwise);
   xla::XlaOp kernel_transposed =
       xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   return ConsumeValue(tensorflow::MakeXlaBackpropInputConvOp(
-      "thnn_conv2d_backward", input_shape, kernel_transposed, grad_output,
+      "conv_backward", input_shape, kernel_transposed, grad_output,
       conv_op_attrs, &precision_config));
 }
 
 // Computes the kernel gradient for a convolution.
-xla::XlaOp BuildThnnConv2dBackwardWeight(
+xla::XlaOp BuildConv2dBackwardWeight(
     const xla::XlaOp& grad_output, const xla::XlaOp& input,
     const xla::Shape& kernel_shape,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_stride,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_padding,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_dilation,
     const xla::int64 groups) {
-  // FIXME
-  bool depthwise = groups == kernel_shape.dimensions(3);
-  tensorflow::ConvOpAttrs conv_op_attrs =
-      MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
+  bool depthwise = groups == XlaHelpers::ShapeOfXlaOp(input).dimensions(1);
+  tensorflow::ConvOpAttrs conv_op_attrs = MakeConvOpAttrs(
+      spatial_stride, spatial_padding, spatial_dilation, depthwise);
   auto inv_transpose_permutation =
       xla::InversePermutation(FilterTransposePermutation(kernel_shape.rank()));
   xla::Shape transposed_weight_shape = xla::ShapeUtil::PermuteDimensions(
@@ -103,7 +109,7 @@ xla::XlaOp BuildThnnConv2dBackwardWeight(
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   xla::XlaOp conv = ConsumeValue(tensorflow::MakeXlaBackpropFilterConvOp(
-      "thnn_conv2d_backward", input, transposed_weight_shape, grad_output,
+      "conv2d_backward", input, transposed_weight_shape, grad_output,
       conv_op_attrs, &precision_config));
 
   // Reorder the dimensions of the filter gradient to match the NCHW convention
@@ -122,7 +128,7 @@ xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {
       XlaHelpers::ScalarValue<float>(0, grad_output_shape.element_type(),
                                      grad_output.builder()),
       XlaHelpers::CreateAddComputation(grad_output_shape.element_type()),
-      {0, 2, 3});
+      BiasReduceDimensions(grad_output_shape.rank()));
 }
 
 std::vector<std::pair<xla::int64, xla::int64>> MakePadding(
@@ -155,7 +161,7 @@ xla::XlaOp BuildTransposedConvolution(
         dilation[spatial_dim] * (kernel_shape.dimensions(2 + spatial_dim) - 1) +
         output_padding[spatial_dim] + 1);
   }
-  return BuildThnnConv2dBackwardInput(
+  return BuildConvBackwardInput(
       input, kernel,
       xla::ShapeUtil::MakeShape(input_shape.element_type(), input_size), stride,
       padding, dilation, groups);
@@ -171,13 +177,12 @@ xla::XlaOp BuildTransposedConvolutionBias(
   xla::XlaOp conv = BuildTransposedConvolution(
       input, kernel, stride, padding, dilation, output_padding, groups);
   auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
-  // XLA_CHECK_EQ(broadcast_sizes.size(), 4);
   // Remove the channels dimension.
   broadcast_sizes.erase(broadcast_sizes.begin() + 1);
   // Make the bias match the output dimensions.
-  // FIXME
   xla::XlaOp bias_broadcast =
-      xla::Transpose(xla::Broadcast(bias, broadcast_sizes), {0, 3, 1, 2});
+      xla::Transpose(xla::Broadcast(bias, broadcast_sizes),
+                     BiasTransposePermutation(broadcast_sizes.size() + 1));
   return conv + bias_broadcast;
 }
 
@@ -192,12 +197,9 @@ ConvGrads BuildTransposedConvolutionBackward(
   xla::XlaOp grad_input =
       BuildConvolutionOverrideable(grad_output, kernel, stride, padding,
                                    dilation, false, output_padding, groups);
-  std::cout << "DONE INPUT" << std::endl;
-  xla::XlaOp grad_weight = BuildThnnConv2dBackwardWeight(
+  xla::XlaOp grad_weight = BuildConv2dBackwardWeight(
       input, grad_output, XlaHelpers::ShapeOfXlaOp(kernel), stride, padding,
       dilation, groups);
-
-  std::cout << "DONE WEIGHT" << std::endl;
   xla::XlaOp grad_bias = BuildGradBias(grad_output);
   return {grad_input, grad_weight, grad_bias};
 }
@@ -222,9 +224,7 @@ xla::XlaOp BuildConvolutionOverrideable(
         /*rhs_dilation*/ dilation,
         /*dimension_numbers*/
         xla::XlaBuilder::CreateDefaultConvDimensionNumbers(stride.size()),
-        /*feature_group_count*/ groups,  // depthwise: groups = input.size(1),
-                                         // grouped: input.size(1) % groups = 0
-                                         // && output.size(0)
+        /*feature_group_count*/ groups,
         /*batch_group_count=*/1, &precision_config);
   }
 }
@@ -240,7 +240,6 @@ xla::XlaOp BuildConvolutionOverrideableBias(
       BuildConvolutionOverrideable(input, kernel, stride, padding, dilation,
                                    transposed, output_padding, groups);
   auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
-  // XLA_CHECK_EQ(broadcast_sizes.size(), 4);
   // Remove the channels dimension.
   broadcast_sizes.erase(broadcast_sizes.begin() + 1);
   // Make the bias match the output dimensions.
@@ -263,15 +262,14 @@ ConvGrads BuildConvolutionBackwardOverrideable(
                                               stride, padding, dilation,
                                               output_padding, groups);
   } else {
-    xla::XlaOp grad_input = BuildThnnConv2dBackwardInput(
+    xla::XlaOp grad_input = BuildConvBackwardInput(
         grad_output, kernel, XlaHelpers::ShapeOfXlaOp(input), stride, padding,
         dilation, groups);
-    xla::XlaOp grad_weight = BuildThnnConv2dBackwardWeight(
+    xla::XlaOp grad_weight = BuildConv2dBackwardWeight(
         grad_output, input, XlaHelpers::ShapeOfXlaOp(kernel), stride, padding,
         dilation, groups);
     xla::XlaOp grad_bias = BuildGradBias(grad_output);
     return {grad_input, grad_weight, grad_bias};
   }
 }
-
 }  // namespace torch_xla
