@@ -452,7 +452,6 @@ TEST_F(TensorTest, TestConv2D) {
                     /*transposed=*/transposed,
                     /*output_padding=*/{output_padding, output_padding},
                     /*groups=*/groups, false, false, false);
-                std::cout << output.sizes() << std::endl;
                 ForEachDevice([&](const Device& device) {
                   XLATensor dev_input = XLATensor::Create(input, device);
                   XLATensor dev_weight = XLATensor::Create(weight, device);
@@ -477,7 +476,6 @@ TEST_F(TensorTest, TestConv2D) {
                         /*output_padding=*/{output_padding, output_padding},
                         /*groups=*/groups);
                   }
-                  std::cout << dev_output.shape() << std::endl;
                   AllClose(output, dev_output);
                 });
               };
@@ -507,8 +505,6 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
               for (int output_padding = 0;
                    output_padding < std::min(stride, dilation);
                    ++output_padding) {
-                std::cout << stride << " " << padding << " " << dilation << " "
-                          << groups << " " << output_padding << std::endl;
                 at::Tensor weight =
                     transposed ? at::rand({in_channels, out_channels / groups,
                                            kernel_size, kernel_size})
@@ -595,7 +591,6 @@ TEST_F(TensorTest, TestConv3D) {
                     /*output_padding=*/
                     {output_padding, output_padding, output_padding},
                     /*groups=*/groups, false, false, false);
-                std::cout << output.sizes() << std::endl;
                 ForEachDevice([&](const Device& device) {
                   XLATensor dev_input = XLATensor::Create(input, device);
                   XLATensor dev_weight = XLATensor::Create(weight, device);
@@ -622,7 +617,6 @@ TEST_F(TensorTest, TestConv3D) {
                         {output_padding, output_padding, output_padding},
                         /*groups=*/groups);
                   }
-                  std::cout << dev_output.shape() << std::endl;
                   AllClose(output, dev_output);
                 });
               };
@@ -668,7 +662,6 @@ TEST_F(TensorTest, TestConv3DNonSquare) {
                     /*output_padding=*/
                     {output_padding, output_padding + 1, output_padding},
                     /*groups=*/groups, false, false, false);
-                std::cout << output.sizes() << std::endl;
                 ForEachDevice([&](const Device& device) {
                   XLATensor dev_input = XLATensor::Create(input, device);
                   XLATensor dev_weight = XLATensor::Create(weight, device);
@@ -695,7 +688,6 @@ TEST_F(TensorTest, TestConv3DNonSquare) {
                         {output_padding, output_padding + 1, output_padding},
                         /*groups=*/groups);
                   }
-                  std::cout << dev_output.shape() << std::endl;
                   AllClose(output, dev_output);
                 });
               };
