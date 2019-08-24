@@ -23,8 +23,6 @@ except ImportError:
 
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 
-FLAGS = None
-
 
 class Worker(object):
 
@@ -422,14 +420,13 @@ class DistributedExecutor(object):
 
   @staticmethod
   def _parse_container_name(cmd):
-    for key in ['--name=', '--name']:
-      if key in cmd:
-        # ex. "docker run --name=pytorch image"
-        idx = cmd.index(key)
-        post_name = cmd[idx:].split(key)[1]  # ex. "pytorch image"
-        return post_name.split()[0]  # ex. "pytorch"
-
-    return None
+    name_key = '--name'
+    parts = cmd.split(name_key)
+    # ex. "docker run --name=pytorch image"
+    if len(parts) > 1:
+      post_name = parts[1].lstrip()  # ex. "=pytorch image"
+      post_name = post_name[1:] if post_name[0] == '=' else post_name
+      return post_name.split()[0]
 
   def __init__(self, cluster):
     self._cluster = cluster
@@ -473,26 +470,26 @@ class DistributedExecutor(object):
       self.container_name = 'pytorchtpudistrunner'
       container_name_cmd = '--name={}'.format(self.container_name)
 
-    docker_export_cmd = ' -e '.join([''] + DistributedExecutor.DIST_ENV_VARS)
-    idx = cmd.index(DistributedExecutor.DOCKER_RUN) \
-        + len(DistributedExecutor.DOCKER_RUN)
-    return '{} {} {} {}'.format(cmd[:idx], container_name_cmd,
-                                docker_export_cmd, cmd[idx:])
+    docker_export_cmd = ' -e '.join([''] + self.DIST_ENV_VARS)
+    idx = cmd.index(self.DOCKER_RUN) \
+        + len(self.DOCKER_RUN)
+    return ' '.join([cmd[:idx], container_name_cmd,
+                     docker_export_cmd, cmd[idx:]])
 
-  def _export_env_vars(self, cmd, i):
+  def _export_env_vars(self, cmd, worker_idx):
     client_master = self._cluster._client_workers[self.MASTER_IDX]
     env_vars = {
-        'XRT_LOCAL_WORKER': 'c_tpu_worker:{}'.format(i),
+        'XRT_LOCAL_WORKER': 'c_tpu_worker:{}'.format(worker_idx),
         'XRT_MESH_SERVICE_ADDRESS': '{}:{}'.format(client_master._internal_ip,
                                                    self.MESH_SERVICE_PORT)
     }
     # Only for master
-    if i == self.MASTER_IDX:
+    if worker_idx == self.MASTER_IDX:
       xrt_server_config = [
           'c_tpu_worker;{worker_idx};{worker_ip}:{worker_port}'.format(
-              worker_idx=i, worker_ip=service_worker._internal_ip,
+              worker_idx=idx, worker_ip=service_worker._internal_ip,
               worker_port=service_worker._port )
-          for i, service_worker in enumerate(self._cluster._service_workers)
+          for idx, service_worker in enumerate(self._cluster._service_workers)
       ]
       xrt_tpu_config = '|'.join(xrt_server_config)
       env_vars['XRT_TPU_CONFIG'] = '"{}"'.format(xrt_tpu_config)
@@ -501,7 +498,7 @@ class DistributedExecutor(object):
     for k in env_vars:
       export_cmd += 'export {}={}; '.format(k, env_vars[k])
 
-    return '{}{}'.format(export_cmd, cmd)
+    return ''.join([export_cmd, cmd])
 
   def _prepare_scripts(self, cmd):
     for var in self.DIST_ENV_VARS:
@@ -522,7 +519,6 @@ class DistributedExecutor(object):
 
       with open(script_path, 'w') as f:
         f.write(script)
-        f.close()
       subprocess.call(['chmod', '+x', script_path])
       worker_script_map[self._cluster._client_workers[i]] = script_path
 
@@ -608,7 +604,7 @@ class DistributedExecutor(object):
                      extra={'clientip': '', 'ordinal': ''})
     self.logger.info('Cluster configuration: {}'.format(self._cluster),
                      extra={'clientip': '', 'ordinal': ''})
-    self.is_docker = DistributedExecutor.DOCKER_RUN in cmd
+    self.is_docker = self.DOCKER_RUN in cmd
     script_map = self._prepare_scripts(cmd)
     self._scp_scripts(script_map)
     self._start_run(script_map)
@@ -618,7 +614,7 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser(
       description="PyTorch on TPU distrubuted training",
       epilog=("Usage example: xla_dist.py --tpus=[TPU_NAME] -- "
-              "conda activate pytorch-nightly && python train.py"))
+              "\'conda activate pytorch-nightly && python train.py\'"))
   parser.add_argument(
       "positional",
       nargs="+",
