@@ -431,9 +431,9 @@ TEST_F(TensorTest, TestConv2D) {
   for (int stride = 1; stride <= 3; ++stride) {
     for (int padding = 0; padding <= 2; ++padding) {
       for (bool with_bias : {true, false}) {
-        for (int dilation = 1; dilation <= 2; ++dilation) {  // dilated conv
-          for (int groups : {1, 3}) {                        // depthwise conv
-            for (bool transposed : {true, false}) {          // transposed conv
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          for (int groups : {1, 3}) {
+            for (bool transposed : {true, false}) {
               for (int output_padding = 0;
                    output_padding < std::min(stride, dilation);
                    ++output_padding) {
@@ -499,9 +499,9 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
   for (int stride = 1; stride <= 3; ++stride) {
     for (int padding = 0; padding <= 0; ++padding) {
       for (bool with_bias : {true, false}) {
-        for (int dilation = 1; dilation <= 2; ++dilation) {  // dilated conv
-          for (int groups : {1, 3}) {                        // depthwise conv
-            for (bool transposed : {true, false}) {          // transposed conv
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          for (int groups : {1, 3}) {
+            for (bool transposed : {true, false}) {
               for (int output_padding = 0;
                    output_padding < std::min(stride, dilation);
                    ++output_padding) {
@@ -568,9 +568,9 @@ TEST_F(TensorTest, TestConv3D) {
   for (int stride = 1; stride <= 3; ++stride) {
     for (int padding = 0; padding <= 2; ++padding) {
       for (bool with_bias : {true, false}) {
-        for (int dilation = 1; dilation <= 1; ++dilation) {  // dilated conv
-          for (int groups : {1, 3}) {                        // depthwise conv
-            for (bool transposed : {true, false}) {          // transposed conv
+        for (int dilation = 1; dilation <= 1; ++dilation) {
+          for (int groups : {1, 3}) {
+            for (bool transposed : {true, false}) {
               for (int output_padding = 0;
                    output_padding < std::min(stride, dilation);
                    ++output_padding) {
@@ -639,9 +639,9 @@ TEST_F(TensorTest, TestConv3DNonSquare) {
   for (int stride = 1; stride <= 3; ++stride) {
     for (int padding = 0; padding <= 2; ++padding) {
       for (bool with_bias : {true, false}) {
-        for (int dilation = 1; dilation <= 1; ++dilation) {  // dilated conv
-          for (int groups : {1, 3}) {                        // depthwise conv
-            for (bool transposed : {true, false}) {          // transposed conv
+        for (int dilation = 1; dilation <= 1; ++dilation) {
+          for (int groups : {1, 3}) {
+            for (bool transposed : {true, false}) {
               for (int output_padding = 0;
                    output_padding < std::min(stride, dilation);
                    ++output_padding) {
