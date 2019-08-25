@@ -48,7 +48,7 @@ tensorflow::ConvOpAttrs MakeConvOpAttrs(
 // Transpose filter shape to have [channel, batch] as last two dimensions.
 // 4D case: (N, C, H, W) -> (H, W, C, N)
 const std::vector<xla::int64>& FilterTransposePermutation(const xla::int64 k) {
-  XLA_CHECK(k == 4 || k == 5);
+  XLA_CHECK(k == 4 || k == 5) << k;
   if (k == 4) {
     static std::vector<xla::int64>* permutation =
         new std::vector<xla::int64>({2, 3, 1, 0});
@@ -64,7 +64,7 @@ const std::vector<xla::int64>& FilterTransposePermutation(const xla::int64 k) {
 // (N, H, W) + (C,) = (N, H, W, C)
 // This permutation does (N, H, W, C) -> (N, C, H, W)
 const std::vector<xla::int64>& BiasTransposePermutation(const xla::int64 k) {
-  XLA_CHECK(k == 4 || k == 5);
+  XLA_CHECK(k == 4 || k == 5) << k;
   if (k == 4) {
     static std::vector<xla::int64>* permutation =
         new std::vector<xla::int64>({0, 3, 1, 2});
@@ -78,7 +78,7 @@ const std::vector<xla::int64>& BiasTransposePermutation(const xla::int64 k) {
 
 // Reduce bias from (N, C, H, W) to (C,)
 const std::vector<xla::int64>& BiasReduceDimensions(const xla::int64 k) {
-  XLA_CHECK(k == 4 || k == 5);
+  XLA_CHECK(k == 4 || k == 5) << k;
   if (k == 4) {
     static std::vector<xla::int64>* reduce_dim =
         new std::vector<xla::int64>({0, 2, 3});
@@ -121,7 +121,7 @@ xla::XlaOp BuildConv2dBackwardWeight(
   bool depthwise = groups == XlaHelpers::ShapeOfXlaOp(input).dimensions(1);
   tensorflow::ConvOpAttrs conv_op_attrs = MakeConvOpAttrs(
       spatial_stride, spatial_padding, spatial_dilation, depthwise);
-  const auto inv_transpose_permutation =
+  auto inv_transpose_permutation =
       xla::InversePermutation(FilterTransposePermutation(kernel_shape.rank()));
   xla::Shape transposed_weight_shape = xla::ShapeUtil::PermuteDimensions(
       inv_transpose_permutation, kernel_shape);
@@ -172,7 +172,7 @@ xla::XlaOp BuildTransposedConvolution(
   xla::Shape kernel_shape = XlaHelpers::ShapeOfXlaOp(kernel);
   xla::int64 num_spatial = input_shape.rank() - 2;
   // We only support 2D or 3D convolution.
-  XLA_CHECK(num_spatial == 2 || num_spatial == 3);
+  XLA_CHECK(num_spatial == 2 || num_spatial == 3) << num_spatial;
   // Fold group into input_size feature dimension
   xla::int64 feature_dim = kernel_shape.dimensions(1) * groups;
   std::vector<xla::int64> input_size{input_shape.dimensions(0), feature_dim};
