@@ -6,6 +6,7 @@ from __future__ import print_function
 import argparse
 import logging
 import os
+import re
 import requests
 import subprocess
 import sys
@@ -230,7 +231,7 @@ class ClusterResolver(object):
 
     if not isinstance(tpus, list) or len(tpus) == 0:
       raise ValueError('tpus must be a non-empty list')
-    if vms is not None:
+    if vms:
       if not isinstance(vms, list) or len(vms) == 0:
         raise ValueError('vms must be a non-empty list if provided')
 
@@ -298,7 +299,7 @@ class ClusterResolver(object):
     Raises:
       RuntimeError: If the red VM cluster is not healthy.
     """
-    if self._vms is None:
+    if not self._vms:
       # Using an instance group
       instance_group = self._get_instance_group()
       self._vms = self._get_member_instance_names(instance_group)
@@ -410,23 +411,20 @@ class ClusterResolver(object):
 
 class DistributedExecutor(object):
 
-  SCRIPT_PATH_TMPL = '/tmp/dist_training_ptxla_{worker}.sh'
+  SCRIPT_PATH_TMPL = '/tmp/{pid}/dist_training_ptxla_{worker}.sh'
   MASTER_IDX = 0
   MESH_SERVICE_PORT = 8477  # Use single port to disallow concurrent runs
-  DOCKER_RUN = 'docker run'
   DIST_ENV_VARS = [
       'XRT_TPU_CONFIG', 'XRT_LOCAL_WORKER', 'XRT_MESH_SERVICE_ADDRESS'
   ]
 
   @staticmethod
   def _parse_container_name(cmd):
-    name_key = '--name'
-    parts = cmd.split(name_key)
-    # ex. "docker run --name=pytorch image"
-    if len(parts) > 1:
-      post_name = parts[1].lstrip()  # ex. "=pytorch image"
-      post_name = post_name[1:] if post_name[0] == '=' else post_name
-      return post_name.split()[0]
+    cmd_str = ' '.join(cmd)
+    name_regex = re.compile('^.*--name(=|\s)(\w*)')
+    matches = name_regex.findall(cmd_str)
+    if len(matches) > 0:
+      return matches[0][1]
 
   def __init__(self, cluster):
     self._cluster = cluster
@@ -442,41 +440,38 @@ class DistributedExecutor(object):
     client_ip = client_worker._internal_ip
     ordinal = self._cluster._client_workers.index(client_worker)
 
-    def _stream_stdout():
-      for stdout in iter(process.stdout.readline, b''):
-        self.logger.info(stdout.decode('utf-8').rstrip('\n'),
-                         extra={'clientip': client_ip, 'ordinal': ordinal})
+    def _stream_output(stream, log_fn):
+      for std in iter(stream.readline, b''):
+        log_fn(std.decode('utf-8').rstrip('\n'),
+               extra={'clientip': client_ip, 'ordinal': ordinal})
 
-    def _stream_stderr():
-      for stderr in iter(process.stderr.readline, b''):
-        self.logger.error(stderr.decode('utf-8').rstrip('\n'),
-                         extra={'clientip': client_ip, 'ordinal': ordinal})
-
-    stdout = threading.Thread(target=_stream_stdout)
+    stdout = threading.Thread(target=_stream_output,
+                              args=(process.stdout, self.logger.info,))
     stdout.daemon = True
     stdout.start()
-    stderr = threading.Thread(target=_stream_stderr)
+    stderr = threading.Thread(target=_stream_output,
+                              args=(process.stderr, self.logger.error,))
     stderr.daemon = True
     stderr.start()
     stdout.join()
     stderr.join()
 
-  def _add_docker_vars(self, cmd):
+  def _docker_vars_cmd(self, cmd):
     # Get or set container name to explicitly kill at main thread ctrl+c
     self.container_name = self._parse_container_name(cmd)
-    container_name_cmd = ''
+    container_name_cmd = []
     if self.container_name is None:
       # Name not set by user
       self.container_name = 'pytorchtpudistrunner'
-      container_name_cmd = '--name={}'.format(self.container_name)
+      container_name_cmd.append('--name={}'.format(self.container_name))
 
-    docker_export_cmd = ' -e '.join([''] + self.DIST_ENV_VARS)
-    idx = cmd.index(self.DOCKER_RUN) \
-        + len(self.DOCKER_RUN)
-    return ' '.join([cmd[:idx], container_name_cmd,
-                     docker_export_cmd, cmd[idx:]])
+    docker_env_var_cmd = []
+    for env_var in self.DIST_ENV_VARS:
+      docker_env_var_cmd.extend(['-e', env_var])
 
-  def _export_env_vars(self, cmd, worker_idx):
+    return container_name_cmd + docker_env_var_cmd
+
+  def _env_vars_cmd(self, worker_idx):
     client_master = self._cluster._client_workers[self.MASTER_IDX]
     env_vars = {
         'XRT_LOCAL_WORKER': 'c_tpu_worker:{}'.format(worker_idx),
@@ -494,15 +489,16 @@ class DistributedExecutor(object):
       xrt_tpu_config = '|'.join(xrt_server_config)
       env_vars['XRT_TPU_CONFIG'] = '"{}"'.format(xrt_tpu_config)
 
-    export_cmd = ''
+    export_cmd = []
     for k in env_vars:
-      export_cmd += 'export {}={}; '.format(k, env_vars[k])
+      export_cmd.append('export {}={}; '.format(k, env_vars[k]))
 
-    return ''.join([export_cmd, cmd])
+    return export_cmd
 
   def _prepare_scripts(self, cmd):
+    cmd_str = ' '.join(cmd)
     for var in self.DIST_ENV_VARS:
-      if var in cmd:
+      if var in cmd_str:
         raise ValueError((
             '{} should not be in the training command provided as they'
             ' will interfere with the values set for distributed'
@@ -510,14 +506,23 @@ class DistributedExecutor(object):
 
     worker_script_map = {}
     for i in range(len(self._cluster._client_workers)):
-      script_path = self.SCRIPT_PATH_TMPL.format(worker=i)
-      script = self._export_env_vars(cmd, i)
-      if self.is_docker:
-        script = self._add_docker_vars(script)
-      # Setup environment for non-interactive non-login shell over ssh
-      script = '{}; {}'.format('. /etc/profile', script)
+      script_path = self.SCRIPT_PATH_TMPL.format(pid=os.getpid(), worker=i)
 
+      export_env_cmd = self._env_vars_cmd(i)
+      # Setup environment for non-interactive non-login shell over ssh
+      export_env_cmd.append('. /etc/profile;')
+      worker_cmd = cmd
+      if self.is_docker:
+        docker_vars_cmd = self._docker_vars_cmd(cmd)
+        docker_idx = cmd.index('docker')
+        run_idx = cmd.index('run')
+        assert run_idx == docker_idx+1
+        worker_cmd = cmd[:run_idx+1] + docker_vars_cmd + cmd[run_idx+1:]
+
+      script_cmd = export_env_cmd + worker_cmd
+      os.makedirs(os.path.dirname(script_path), exist_ok=True)
       with open(script_path, 'w') as f:
+        script = ' '.join(script_cmd)
         f.write(script)
       subprocess.call(['chmod', '+x', script_path])
       worker_script_map[self._cluster._client_workers[i]] = script_path
@@ -553,14 +558,21 @@ class DistributedExecutor(object):
     for thread in threads:
       thread.join()
 
-  def _rm_docker_container(self, client_worker):
-    rm_cmd = ('gcloud -q compute ssh --internal-ip --zone={}'
-              ' pytorchtpudistrunner@{} --command="docker rm -f {}"').format(
-                  client_worker._zone, client_worker._hostname,
-                  self.container_name)
-    proc = subprocess.Popen(rm_cmd, stdout=subprocess.PIPE,
+  def _cleanup(self, script_path, client_worker):
+    cleanup_cmd = ['rm', '~/{}'.format(os.path.basename(script_path))]
+    if self.is_docker:
+      cleanup_cmd.extend(['&&', 'docker', 'rm', '-f', self.container_name])
+    cleanup_cmd.extend(['&&', 'pkill', '-u', 'pytorchtpudistrunner'])
+    docker_rm_cmd = [
+        'gcloud', '-q', 'compute', 'ssh', '--internal-ip',
+        '--zone={}'.format(client_worker._zone),
+        ' pytorchtpudistrunner@{}'.format(client_worker._hostname),
+        ' --command="{}"'.format(' '.join(cleanup_cmd)),
+    ]
+    proc = subprocess.Popen(' '.join(docker_rm_cmd), stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, shell=True)
     self._stream_logs(proc, client_worker)
+    subprocess.call(['rm', script_path])
 
   def _start_run(self, script_map):
 
@@ -576,8 +588,7 @@ class DistributedExecutor(object):
                                 stderr=subprocess.PIPE)
         self._stream_logs(proc, client_worker)
       proc.kill()
-      if self.is_docker:
-        self._rm_docker_container(client_worker)
+      self._cleanup(script_path, client_worker)
 
     event = threading.Event()
     event.set()
@@ -600,11 +611,12 @@ class DistributedExecutor(object):
       thread.join()
 
   def run(self, cmd):
-    self.logger.info('Command to distribute: {}'.format(cmd),
+    cmd_str = ' '.join(cmd)
+    self.logger.info('Command to distribute: {}'.format(cmd_str),
                      extra={'clientip': '', 'ordinal': ''})
     self.logger.info('Cluster configuration: {}'.format(self._cluster),
                      extra={'clientip': '', 'ordinal': ''})
-    self.is_docker = self.DOCKER_RUN in cmd
+    self.is_docker = 'docker run' in cmd_str
     script_map = self._prepare_scripts(cmd)
     self._scp_scripts(script_map)
     self._start_run(script_map)
@@ -635,13 +647,10 @@ if __name__ == "__main__":
       help=("(optional) List of single Compute VM instance names. "
             "If not provided we assume usage of instance groups."))
   FLAGS = parser.parse_args()
-  train_cmd = FLAGS.positional
 
   # Resolve VM and TPU clusters.
-  vms = None if not FLAGS.vms else FLAGS.vms
-  cluster_resolver = ClusterResolver(FLAGS.tpus, vms=vms)
+  cluster_resolver = ClusterResolver(FLAGS.tpus, vms=FLAGS.vms)
   cluster = cluster_resolver.get_cluster()
-  train_cmd = ' '.join(FLAGS.positional)
   executor = DistributedExecutor(cluster)
-  executor.run(train_cmd)
+  executor.run(FLAGS.positional)
 
