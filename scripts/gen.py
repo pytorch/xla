@@ -622,7 +622,7 @@ def generate_entry_debug_code(t, fname, params):
   code = ''
   code += '  XLA_COUNTER("aten::{}", 1);\n'.format(fname)
   # VLOG info. Use the following to see debug output:
-  #  export TF_CPP_VMODULE=aten_xla_type_base=3
+  #  export TF_CPP_VMODULE=aten_xla_type_default=3
   code += '  TF_VLOG(3) << "XLA {} :"'.format(fname)
   for p in params:
     ptype = param_type(p)
