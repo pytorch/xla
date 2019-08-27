@@ -2293,13 +2293,21 @@ at::Tensor AtenXlaType::rrelu_with_noise(const at::Tensor& self,
     return AtenXlaTypeDefault::rrelu_with_noise(self, noise, lower, upper,
                                                 training, generator);
   }
+  XLATensor noise_tensor = bridge::GetXlaTensor(noise);
+  return bridge::AtenFromXlaTensor(XLATensor::rrelu_with_noise(
+      bridge::GetXlaTensor(self), noise_tensor, lower, upper, training));
+}
 
-  auto results = XLATensor::rrelu_with_noise(bridge::GetXlaTensor(self), lower,
-                                             upper, training);
-
-  const_cast<at::Tensor&>(noise) =
-      bridge::AtenFromXlaTensor(std::get<1>(results));
-  return bridge::AtenFromXlaTensor(std::get<0>(results));
+at::Tensor AtenXlaType::rrelu_with_noise_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self,
+                                                  const at::Tensor& noise,
+                                                  at::Scalar lower,
+                                                  at::Scalar upper,
+                                                  bool training) {
+  const XLATensor& noise_tensor = bridge::GetXlaTensor(noise);
+  return bridge::AtenFromXlaTensor(XLATensor::rrelu_with_noise_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      noise_tensor, lower, upper, training));
 }
 
 at::Tensor AtenXlaType::rsqrt(const at::Tensor& self) {

@@ -130,6 +130,26 @@ std::vector<xla::XlaOp> BuildRrelu(const xla::XlaOp& input, at::Scalar lower,
   return {output, noise};
 }
 
+xla::XlaOp BuildRreluBackward(const xla::XlaOp& grad_output,
+                              const xla::XlaOp& input, const xla::XlaOp& noise,
+                              at::Scalar lower, at::Scalar upper,
+                              bool training) {
+  xla::XlaOp grad_input;
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero = XlaHelpers::ScalarValue<double>(
+      0, input_shape.element_type(), input.builder());
+  if (training) {
+    grad_input = noise * grad_output;
+  } else {
+    double negative_slope_value = (lower.to<double>() + upper.to<double>()) / 2;
+    xla::XlaOp negative_slope = XlaHelpers::ScalarValue(
+        negative_slope_value, input_shape.element_type(), input.builder());
+    grad_input = xla::Select(xla::Gt(input, zero), grad_output,
+                             grad_output * negative_slope);
+  }
+  return grad_input;
+}
+
 xla::XlaOp BuildLeakyReluBackward(const xla::XlaOp& grad_output,
                                   const xla::XlaOp& input,
                                   double negative_slope_value) {

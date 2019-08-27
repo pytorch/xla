@@ -7154,7 +7154,7 @@ TEST_F(AtenXlaTensorTest, TestReluBackward) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestRReluBackward) {
+TEST_F(AtenXlaTensorTest, TestRreluBackward) {
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::rrelu(inputs[0]);
   };

@@ -72,6 +72,7 @@
 #include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/resize.h"
 #include "torch_xla/csrc/ops/rrelu_with_noise.h"
+#include "torch_xla/csrc/ops/rrelu_with_noise_backward.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
@@ -1693,13 +1694,22 @@ void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
   }
 }
 
-std::tuple<XLATensor, XLATensor> XLATensor::rrelu_with_noise(
-    const XLATensor& input, at::Scalar lower, at::Scalar upper, bool training) {
+XLATensor XLATensor::rrelu_with_noise(const XLATensor& input, XLATensor& noise,
+                                      at::Scalar lower, at::Scalar upper,
+                                      bool training) {
   ir::NodePtr node = ir::MakeNode<ir::ops::RreluWithNoise>(
       input.GetIrValue(), lower, upper, training);
   XLATensor output = input.CreateFrom(ir::Value(node, 0));
-  XLATensor noise = input.CreateFrom(ir::Value(node, 1));
-  return std::tuple<XLATensor, XLATensor>(output, noise);
+  noise.SetIrValue(ir::Value(node, 1));
+  return output;
+}
+
+XLATensor XLATensor::rrelu_with_noise_backward(
+    const XLATensor& grad_output, const XLATensor& input,
+    const XLATensor& noise, at::Scalar lower, at::Scalar upper, bool training) {
+  return grad_output.CreateFrom(ir::MakeNode<ir::ops::RreluWithNoiseBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), noise.GetIrValue(), lower,
+      upper, training));
 }
 
 XLATensor XLATensor::rsqrt(const XLATensor& input) {
