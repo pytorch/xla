@@ -857,6 +857,11 @@ class AtenXlaType {
 
   static at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size);
 
+  static at::Tensor rrelu_with_noise(const at::Tensor& self,
+                                     const at::Tensor& noise, at::Scalar lower,
+                                     at::Scalar upper, bool training,
+                                     at::Generator* generator);
+
   static at::Tensor rsqrt(const at::Tensor& self);
 
   static at::Tensor& rsqrt_(at::Tensor& self);

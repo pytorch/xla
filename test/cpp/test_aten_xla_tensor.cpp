@@ -7154,6 +7154,18 @@ TEST_F(AtenXlaTensorTest, TestReluBackward) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestRReluBackward) {
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::rrelu(inputs[0]);
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::rand({2, 1, 4, 6},
+                     torch::TensorOptions(torch::kFloat).requires_grad(true))},
+        device, testfn);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestHardshrinkBackward) {
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::hardshrink(inputs[0]);

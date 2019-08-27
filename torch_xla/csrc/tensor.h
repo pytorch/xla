@@ -694,6 +694,10 @@ class XLATensor {
 
   static void resize_(XLATensor& input, std::vector<xla::int64> size);
 
+  static std::tuple<XLATensor, XLATensor> rrelu_with_noise(
+      const XLATensor& input, at::Scalar lower, at::Scalar upper,
+      bool training);
+
   static XLATensor rsqrt(const XLATensor& input);
   static void rsqrt_(XLATensor& input);
 

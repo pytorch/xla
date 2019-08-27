@@ -2282,6 +2282,26 @@ at::Tensor& AtenXlaType::resize_(at::Tensor& self, at::IntArrayRef size) {
   return self;
 }
 
+at::Tensor AtenXlaType::rrelu_with_noise(const at::Tensor& self,
+                                         const at::Tensor& noise,
+                                         at::Scalar lower, at::Scalar upper,
+                                         bool training,
+                                         at::Generator* generator) {
+  if (generator != nullptr) {
+    // The fallback path for rrelu_with_noise when training=true is wrong
+    XLA_CHECK_EQ(training, false);
+    return AtenXlaTypeDefault::rrelu_with_noise(self, noise, lower, upper,
+                                                training, generator);
+  }
+
+  auto results = XLATensor::rrelu_with_noise(bridge::GetXlaTensor(self), lower,
+                                             upper, training);
+
+  const_cast<at::Tensor&>(noise) =
+      bridge::AtenFromXlaTensor(std::get<1>(results));
+  return bridge::AtenFromXlaTensor(std::get<0>(results));
+}
+
 at::Tensor AtenXlaType::rsqrt(const at::Tensor& self) {
   return bridge::AtenFromXlaTensor(
       XLATensor::rsqrt(bridge::GetXlaTensor(self)));
