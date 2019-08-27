@@ -307,7 +307,7 @@ class XLATensor {
       const XLATensor& weight, std::vector<xla::int64> stride,
       std::vector<xla::int64> padding, std::vector<xla::int64> dilation,
       bool transposed, std::vector<xla::int64> output_padding,
-      const xla::int64 groups);
+      xla::int64 groups);
 
   static XLATensor convolution_overrideable(
       const XLATensor& input, const XLATensor& weight,
