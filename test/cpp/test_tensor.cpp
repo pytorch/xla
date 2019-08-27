@@ -131,17 +131,15 @@ TEST_F(TensorTest, TestRrelu) {
   float upper = 0.5;
   ForEachDevice([&](const Device& device) {
     for (bool training : {true, false}) {
-      // rrelu_with_noise is special since Pytorch impl changes const Tensor&
-      // noise To match the result, XLATensor::rrelu_with_noise need to return
-      // additional noise reseult.
       at::Tensor noise = at::zeros_like(input);
       at::Tensor output =
           at::rrelu_with_noise(input, noise, lower, upper, training);
       XLATensor dev_input = XLATensor::Create(input, device);
-      auto dev_outputs =
-          XLATensor::rrelu_with_noise(dev_input, lower, upper, training);
-      AllClose(output, std::get<0>(dev_outputs));
-      AllClose(noise, std::get<1>(dev_outputs));
+      XLATensor dev_noise = XLATensor::Create(noise, device);
+      XLATensor dev_outputs = XLATensor::rrelu_with_noise(
+          dev_input, dev_noise, lower, upper, training);
+      AllClose(output, dev_outputs);
+      AllClose(noise, dev_noise);
     }
   });
 }

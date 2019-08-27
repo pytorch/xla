@@ -22,6 +22,11 @@ xla::XlaOp BuildRelu(const xla::XlaOp& input);
 std::vector<xla::XlaOp> BuildRrelu(const xla::XlaOp& input, at::Scalar lower,
                                    at::Scalar upper, bool training);
 
+xla::XlaOp BuildRreluBackward(const xla::XlaOp& grad_output,
+                              const xla::XlaOp& input, const xla::XlaOp& noise,
+                              at::Scalar lower, at::Scalar upper,
+                              bool training);
+
 xla::XlaOp BuildHardshrink(const xla::XlaOp& input, at::Scalar lambda);
 xla::XlaOp BuildSoftshrink(const xla::XlaOp& input, at::Scalar lambda);
 xla::XlaOp BuildShrinkBackward(const xla::XlaOp& grad_output,

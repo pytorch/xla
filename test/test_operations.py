@@ -569,6 +569,23 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b = torch.clamp(xla_a, max=3.4)
     self.assertEqual(b.data, xla_b.data.cpu())
 
+  def test_rrelu_module(self):
+    xla_device = xm.xla_device()
+    a = torch.rand(1, 2, 2, requires_grad=True)
+    xla_a = a.to(xla_device).detach()
+    xla_a.requires_grad = True
+
+    m = nn.RReLU()
+    xla_m = m.to(xla_device)
+
+    output = m(a)
+    xla_output = xla_m(xla_a)
+    self.assertEqual(output, xla_output.cpu())
+
+    output.sum().backward()
+    xla_output.sum().backward()
+    self.assertEqual(a.grad, xla_a.grad.cpu())
+
   def test_max_broadcast(self):
     xla_device = xm.xla_device()
     a = torch.rand(3, 1, 2)
