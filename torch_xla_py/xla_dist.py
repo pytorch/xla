@@ -577,21 +577,20 @@ class DistributedExecutor(object):
   def _start_run(self, script_map):
 
     def _gcloud_ssh(script_path, client_worker, event):
-      while event.is_set():
-        ssh_cmd = [
-            'gcloud', '-q', 'compute', 'ssh', '--internal-ip',
-            '--zone={}'.format(client_worker._zone),
-            'pytorchtpudistrunner@{}'.format(client_worker._hostname),
-            '--command=~/{}'.format(os.path.basename(script_path))
-        ]
-        proc = subprocess.Popen(ssh_cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
-        self._stream_logs(proc, client_worker)
+      ssh_cmd = [
+          'gcloud', '-q', 'compute', 'ssh', '--internal-ip',
+          '--zone={}'.format(client_worker._zone),
+          'pytorchtpudistrunner@{}'.format(client_worker._hostname),
+          '--command=~/{}'.format(os.path.basename(script_path))
+      ]
+      proc = subprocess.Popen(ssh_cmd, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
+      self._stream_logs(proc, client_worker)
+      event.wait()
       proc.kill()
       self._cleanup(script_path, client_worker)
 
     event = threading.Event()
-    event.set()
     threads = []
     for i, client_worker in enumerate(script_map):
       thread = threading.Thread(
@@ -605,7 +604,7 @@ class DistributedExecutor(object):
       for thread in threads:
         thread.join()
     except KeyboardInterrupt:
-      event.clear()
+      event.set()
 
     for thread in threads:
       thread.join()
