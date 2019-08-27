@@ -419,12 +419,15 @@ class DistributedExecutor(object):
   ]
 
   @staticmethod
-  def _parse_container_name(cmd):
-    cmd_str = ' '.join(cmd)
-    name_regex = re.compile('^.*--name(=|\s)(\w*)')
-    matches = name_regex.findall(cmd_str)
-    if len(matches) > 0:
-      return matches[0][1]
+  def _parse_flag_value(cmd, key):
+    flag = '--' + key
+    for i, part in enumerate(cmd):
+      if flag == part:
+        # ex. 'docker run --name value image'
+        return cmd[i+1]
+      if flag in part:
+        # ex. 'docker run --name=value image'
+        return part.split(flag+'=')[1]
 
   def __init__(self, cluster):
     self._cluster = cluster
@@ -458,7 +461,7 @@ class DistributedExecutor(object):
 
   def _docker_vars_cmd(self, cmd):
     # Get or set container name to explicitly kill at main thread ctrl+c
-    self.container_name = self._parse_container_name(cmd)
+    self.container_name = self._parse_flag_value(cmd, 'name')
     container_name_cmd = []
     if self.container_name is None:
       # Name not set by user
@@ -558,21 +561,29 @@ class DistributedExecutor(object):
     for thread in threads:
       thread.join()
 
-  def _cleanup(self, script_path, client_worker):
-    cleanup_cmd = ['rm', '~/{}'.format(os.path.basename(script_path))]
-    if self.is_docker:
-      cleanup_cmd.extend(['&&', 'docker', 'rm', '-f', self.container_name])
-    cleanup_cmd.extend(['&&', 'pkill', '-u', 'pytorchtpudistrunner'])
-    docker_rm_cmd = [
+  def _run_remote_cmd(self, remote_cmd, client_worker, shell=True):
+    cmd = [
         'gcloud', '-q', 'compute', 'ssh', '--internal-ip',
         '--zone={}'.format(client_worker._zone),
-        ' pytorchtpudistrunner@{}'.format(client_worker._hostname),
-        ' --command="{}"'.format(' '.join(cleanup_cmd)),
+        'pytorchtpudistrunner@{}'.format(client_worker._hostname),
+        '--command="{}"'.format(' '.join(remote_cmd)),
     ]
-    proc = subprocess.Popen(' '.join(docker_rm_cmd), stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, shell=True)
+    cmd = ' '.join(cmd) if shell else cmd
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, shell=shell)
     self._stream_logs(proc, client_worker)
+
+  def _cleanup(self, script_path, client_worker):
+    rm_script = ['rm', '~/{}'.format(os.path.basename(script_path))]
+    self._run_remote_cmd(rm_script, client_worker)
     subprocess.call(['rm', script_path])
+
+    if self.is_docker:
+      rm_container = ['docker', 'rm', '-f', self.container_name]
+      self._run_remote_cmd(rm_container, client_worker)
+
+    rm_proc = ['pkill', '-u', 'pytorchtpudistrunner']
+    self._run_remote_cmd(rm_proc, client_worker)
 
   def _start_run(self, script_map):
 
