@@ -41,7 +41,7 @@ ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
     const Value& grad_output, const Value& input, const Value& weight,
     std::vector<xla::int64> stride, std::vector<xla::int64> padding,
     std::vector<xla::int64> dilation, bool transposed,
-    std::vector<xla::int64> output_padding, const xla::int64 groups)
+    std::vector<xla::int64> output_padding, xla::int64 groups)
     : Node(ir::OpKind(at::aten::convolution_backward_overrideable),
            {grad_output, input, weight},
            [&]() {

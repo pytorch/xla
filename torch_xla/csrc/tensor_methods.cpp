@@ -673,7 +673,7 @@ XLATensor XLATensor::convolution_overrideable(
     const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
     std::vector<xla::int64> stride, std::vector<xla::int64> padding,
     std::vector<xla::int64> dilation, bool transposed,
-    std::vector<xla::int64> output_padding, const xla::int64 groups) {
+    std::vector<xla::int64> output_padding, xla::int64 groups) {
   ir::NodePtr ir_value = ir::MakeNode<ir::ops::ConvolutionOverrideable>(
       input.GetIrValue(), weight.GetIrValue(), bias.GetIrValue(),
       std::move(stride), std::move(padding), std::move(dilation), transposed,
@@ -685,7 +685,7 @@ XLATensor XLATensor::convolution_overrideable(
     const XLATensor& input, const XLATensor& weight,
     std::vector<xla::int64> stride, std::vector<xla::int64> padding,
     std::vector<xla::int64> dilation, bool transposed,
-    std::vector<xla::int64> output_padding, const xla::int64 groups) {
+    std::vector<xla::int64> output_padding, xla::int64 groups) {
   ir::NodePtr ir_value = ir::MakeNode<ir::ops::ConvolutionOverrideable>(
       input.GetIrValue(), weight.GetIrValue(), std::move(stride),
       std::move(padding), std::move(dilation), transposed,
@@ -699,7 +699,7 @@ XLATensor::convolution_backward_overrideable(
     const XLATensor& weight, std::vector<xla::int64> stride,
     std::vector<xla::int64> padding, std::vector<xla::int64> dilation,
     bool transposed, std::vector<xla::int64> output_padding,
-    const xla::int64 groups) {
+    xla::int64 groups) {
   ir::NodePtr node = ir::MakeNode<ir::ops::ConvolutionBackwardOverrideable>(
       out_backprop.GetIrValue(), input.GetIrValue(), weight.GetIrValue(),
       std::move(stride), std::move(padding), std::move(dilation), transposed,
