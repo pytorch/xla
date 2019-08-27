@@ -48,15 +48,16 @@ tensorflow::ConvOpAttrs MakeConvOpAttrs(
 // Transpose filter shape to have [channel, batch] as last two dimensions.
 // 4D case: (N, C, H, W) -> (H, W, C, N)
 const std::vector<xla::int64>& FilterTransposePermutation(const xla::int64 k) {
-  XLA_CHECK(k == 4 || k == 5) << k;
   if (k == 4) {
     static std::vector<xla::int64>* permutation =
         new std::vector<xla::int64>({2, 3, 1, 0});
     return *permutation;
-  } else {
+  } else if (k == 5) {
     static std::vector<xla::int64>* permutation =
         new std::vector<xla::int64>({2, 3, 4, 1, 0});
     return *permutation;
+  } else {
+    XLA_ERROR() << "Invalid rank: " << k;
   }
 }
 
@@ -64,29 +65,31 @@ const std::vector<xla::int64>& FilterTransposePermutation(const xla::int64 k) {
 // (N, H, W) + (C,) = (N, H, W, C)
 // This permutation does (N, H, W, C) -> (N, C, H, W)
 const std::vector<xla::int64>& BiasTransposePermutation(const xla::int64 k) {
-  XLA_CHECK(k == 4 || k == 5) << k;
   if (k == 4) {
     static std::vector<xla::int64>* permutation =
         new std::vector<xla::int64>({0, 3, 1, 2});
     return *permutation;
-  } else {
+  } else if (k == 5) {
     static std::vector<xla::int64>* permutation =
         new std::vector<xla::int64>({0, 4, 1, 2, 3});
     return *permutation;
+  } else {
+    XLA_ERROR() << "Invalid rank: " << k;
   }
 }
 
 // Reduce bias from (N, C, H, W) to (C,)
 const std::vector<xla::int64>& BiasReduceDimensions(const xla::int64 k) {
-  XLA_CHECK(k == 4 || k == 5) << k;
   if (k == 4) {
     static std::vector<xla::int64>* reduce_dim =
         new std::vector<xla::int64>({0, 2, 3});
     return *reduce_dim;
-  } else {
+  } else if (k == 5) {
     static std::vector<xla::int64>* reduce_dim =
         new std::vector<xla::int64>({0, 2, 3, 4});
     return *reduce_dim;
+  } else {
+    XLA_ERROR() << "Invalid rank: " << k;
   }
 }
 
@@ -237,7 +240,7 @@ xla::XlaOp BuildConvolutionOverrideable(
     return BuildTransposedConvolution(input, kernel, stride, padding, dilation,
                                       output_padding, groups);
   } else {
-    const auto dims_padding = MakePadding(padding);
+    auto dims_padding = MakePadding(padding);
     xla::PrecisionConfig precision_config =
         XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
     return xla::ConvGeneralDilated(
