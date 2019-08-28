@@ -108,8 +108,7 @@ class ServiceWorker(Worker):
     return (self._internal_ip == other._internal_ip and
             self._port == other._port and
             self._machine_type == other._machine_type and
-            self._zone == other._zone and
-            self._sw_version == other._sw_version)
+            self._zone == other._zone and self._sw_version == other._sw_version)
 
   def __ne__(self, other):
     return not self.__eq__(other)
@@ -193,8 +192,8 @@ class Cluster(object):
     sw_versions = {worker._sw_version for worker in self._service_workers}
     if len(sw_versions) != 1:
       raise RuntimeError(
-          'All service workers must have the same sw_version, got: {}'
-          .format(zones))
+          'All service workers must have the same sw_version, got: {}'.format(
+              zones))
 
   def __eq__(self, other):
     return (self._client_workers == other._client_workers and
@@ -206,8 +205,8 @@ class Cluster(object):
   def __repr__(self):
     return ('{{client_workers: {client_workers}, '
             'service_workers: {service_workers}}}').format(
-        client_workers=self._client_workers,
-        service_workers=self._service_workers)
+                client_workers=self._client_workers,
+                service_workers=self._service_workers)
 
 
 class ClusterResolver(object):
@@ -328,7 +327,9 @@ class ClusterResolver(object):
 
     for vm in self._vms:
       req = self._compute_service.instances().get(
-          project=self._project, zone=self._zone, instance=vm,
+          project=self._project,
+          zone=self._zone,
+          instance=vm,
           fields=('machineType,metadata,selfLink,'
                   'networkInterfaces/networkIP,status,zone'))
       batch.add(req, add_client_worker)
@@ -419,15 +420,18 @@ class DistributedExecutor(object):
   ]
 
   @staticmethod
-  def _parse_flag_value(cmd, key):
-    flag = '--' + key
+  def _parse_cmd_value(cmd, key, flag=True):
+    key = '--' + key if flag else key
     for i, part in enumerate(cmd):
-      if flag == part:
+      if key == part:
         # ex. 'docker run --name value image'
-        return cmd[i+1]
-      if flag in part:
-        # ex. 'docker run --name=value image'
-        return part.split(flag+'=')[1]
+        return cmd[i + 1]
+      key_regex = re.compile('^.*{}(=|\s)(\w*)'.format(key))
+      matches = key_regex.findall(part)
+      if len(matches) > 0:
+        # ex. If args passed in as a single string or if 'docker run
+        # --name=value image'
+        return matches[0][1]
 
   def __init__(self, cluster):
     self._cluster = cluster
@@ -445,15 +449,25 @@ class DistributedExecutor(object):
 
     def _stream_output(stream, log_fn):
       for std in iter(stream.readline, b''):
-        log_fn(std.decode('utf-8').rstrip('\n'),
-               extra={'clientip': client_ip, 'ordinal': ordinal})
+        log_fn(
+            std.decode('utf-8').rstrip('\n'),
+            extra={
+                'clientip': client_ip,
+                'ordinal': ordinal
+            })
 
-    stdout = threading.Thread(target=_stream_output,
-                              args=(process.stdout, self.logger.info,))
+    stdout = threading.Thread(
+        target=_stream_output, args=(
+            process.stdout,
+            self.logger.info,
+        ))
     stdout.daemon = True
     stdout.start()
-    stderr = threading.Thread(target=_stream_output,
-                              args=(process.stderr, self.logger.error,))
+    stderr = threading.Thread(
+        target=_stream_output, args=(
+            process.stderr,
+            self.logger.error,
+        ))
     stderr.daemon = True
     stderr.start()
     stdout.join()
@@ -461,7 +475,7 @@ class DistributedExecutor(object):
 
   def _docker_vars_cmd(self, cmd):
     # Get or set container name to explicitly kill at main thread ctrl+c
-    self.container_name = self._parse_flag_value(cmd, 'name')
+    self.container_name = self._parse_cmd_value(cmd, 'name')
     container_name_cmd = []
     if self.container_name is None:
       # Name not set by user
@@ -477,16 +491,18 @@ class DistributedExecutor(object):
   def _env_vars_cmd(self, worker_idx):
     client_master = self._cluster._client_workers[self.MASTER_IDX]
     env_vars = {
-        'XRT_LOCAL_WORKER': 'c_tpu_worker:{}'.format(worker_idx),
-        'XRT_MESH_SERVICE_ADDRESS': '{}:{}'.format(client_master._internal_ip,
-                                                   self.MESH_SERVICE_PORT)
+        'XRT_LOCAL_WORKER':
+            'c_tpu_worker:{}'.format(worker_idx),
+        'XRT_MESH_SERVICE_ADDRESS':
+            '{}:{}'.format(client_master._internal_ip, self.MESH_SERVICE_PORT)
     }
     # Only for master
     if worker_idx == self.MASTER_IDX:
       xrt_server_config = [
           'c_tpu_worker;{worker_idx};{worker_ip}:{worker_port}'.format(
-              worker_idx=idx, worker_ip=service_worker._internal_ip,
-              worker_port=service_worker._port )
+              worker_idx=idx,
+              worker_ip=service_worker._internal_ip,
+              worker_port=service_worker._port)
           for idx, service_worker in enumerate(self._cluster._service_workers)
       ]
       xrt_tpu_config = '|'.join(xrt_server_config)
@@ -499,13 +515,12 @@ class DistributedExecutor(object):
     return export_cmd
 
   def _prepare_scripts(self, cmd):
-    cmd_str = ' '.join(cmd)
     for var in self.DIST_ENV_VARS:
-      if var in cmd_str:
-        raise ValueError((
-            '{} should not be in the training command provided as they'
-            ' will interfere with the values set for distributed'
-            ' training'.format(var)))
+      if self._parse_cmd_value(cmd, var, flag=False) is not None:
+        raise ValueError(
+            ('{} should not be in the training command provided as they'
+             ' will interfere with the values set for distributed'
+             ' training'.format(var)))
 
     worker_script_map = {}
     for i in range(len(self._cluster._client_workers)):
@@ -519,8 +534,8 @@ class DistributedExecutor(object):
         docker_vars_cmd = self._docker_vars_cmd(cmd)
         docker_idx = cmd.index('docker')
         run_idx = cmd.index('run')
-        assert run_idx == docker_idx+1
-        worker_cmd = cmd[:run_idx+1] + docker_vars_cmd + cmd[run_idx+1:]
+        assert run_idx == docker_idx + 1
+        worker_cmd = cmd[:run_idx + 1] + docker_vars_cmd + cmd[run_idx + 1:]
 
       script_cmd = export_env_cmd + worker_cmd
       os.makedirs(os.path.dirname(script_path), exist_ok=True)
@@ -536,13 +551,18 @@ class DistributedExecutor(object):
 
     def _gcloud_scp(script_path, client_worker):
       scp_cmd = [
-          'gcloud', '-q', 'compute', 'scp', '--internal-ip',
+          'gcloud',
+          '-q',
+          'compute',
+          'scp',
+          '--internal-ip',
           '--zone={}'.format(client_worker._zone),
-          script_path, 'pytorchtpudistrunner@{}:~/{}'.format(
-              client_worker._hostname, os.path.basename(script_path)),
+          script_path,
+          'pytorchtpudistrunner@{}:~/{}'.format(client_worker._hostname,
+                                                os.path.basename(script_path)),
       ]
-      proc = subprocess.Popen(scp_cmd, stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
+      proc = subprocess.Popen(
+          scp_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       self._stream_logs(proc, client_worker)
 
     threads = []
@@ -552,8 +572,10 @@ class DistributedExecutor(object):
         _gcloud_scp(script_map[client_worker], client_worker)
         continue
       thread = threading.Thread(
-          target=_gcloud_scp,
-          args=(script_map[client_worker], client_worker,))
+          target=_gcloud_scp, args=(
+              script_map[client_worker],
+              client_worker,
+          ))
       thread.daemon = True
       thread.start()
       threads.append(thread)
@@ -563,14 +585,18 @@ class DistributedExecutor(object):
 
   def _run_remote_cmd(self, remote_cmd, client_worker, shell=True):
     cmd = [
-        'gcloud', '-q', 'compute', 'ssh', '--internal-ip',
+        'gcloud',
+        '-q',
+        'compute',
+        'ssh',
+        '--internal-ip',
         '--zone={}'.format(client_worker._zone),
         'pytorchtpudistrunner@{}'.format(client_worker._hostname),
         '--command="{}"'.format(' '.join(remote_cmd)),
     ]
     cmd = ' '.join(cmd) if shell else cmd
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, shell=shell)
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     self._stream_logs(proc, client_worker)
 
   def _cleanup(self, script_path, client_worker):
@@ -588,17 +614,9 @@ class DistributedExecutor(object):
   def _start_run(self, script_map):
 
     def _gcloud_ssh(script_path, client_worker, event):
-      ssh_cmd = [
-          'gcloud', '-q', 'compute', 'ssh', '--internal-ip',
-          '--zone={}'.format(client_worker._zone),
-          'pytorchtpudistrunner@{}'.format(client_worker._hostname),
-          '--command=~/{}'.format(os.path.basename(script_path))
-      ]
-      proc = subprocess.Popen(ssh_cmd, stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
-      self._stream_logs(proc, client_worker)
+      self._run_remote_cmd(['~/{}'.format(os.path.basename(script_path))],
+                           client_worker)
       event.wait()
-      proc.kill()
       self._cleanup(script_path, client_worker)
 
     event = threading.Event()
@@ -606,7 +624,11 @@ class DistributedExecutor(object):
     for i, client_worker in enumerate(script_map):
       thread = threading.Thread(
           target=_gcloud_ssh,
-          args=(script_map[client_worker], client_worker, event,))
+          args=(
+              script_map[client_worker],
+              client_worker,
+              event,
+          ))
       thread.daemon = True
       thread.start()
       threads.append(thread)
@@ -622,40 +644,48 @@ class DistributedExecutor(object):
 
   def run(self, cmd):
     cmd_str = ' '.join(cmd)
-    self.logger.info('Command to distribute: {}'.format(cmd_str),
-                     extra={'clientip': '', 'ordinal': ''})
-    self.logger.info('Cluster configuration: {}'.format(self._cluster),
-                     extra={'clientip': '', 'ordinal': ''})
+    self.logger.info(
+        'Command to distribute: {}'.format(cmd_str),
+        extra={
+            'clientip': '',
+            'ordinal': ''
+        })
+    self.logger.info(
+        'Cluster configuration: {}'.format(self._cluster),
+        extra={
+            'clientip': '',
+            'ordinal': ''
+        })
     self.is_docker = 'docker run' in cmd_str
     script_map = self._prepare_scripts(cmd)
     self._scp_scripts(script_map)
     self._start_run(script_map)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   parser = argparse.ArgumentParser(
-      description="PyTorch on TPU distrubuted training",
-      epilog=("Usage example: xla_dist.py --tpus=[TPU_NAME] -- "
+      description='PyTorch on TPU distrubuted training',
+      epilog=('Usage example: xla_dist.py --tpus=[TPU_NAME] -- '
               "\'conda activate pytorch-nightly && python train.py\'"))
   parser.add_argument(
-      "positional",
-      nargs="+",
-      default="",
+      'positional',
+      nargs='+',
+      default='',
       type=str,
-      help="The python command to launch training including model parameters.")
+      help='The python command to launch training including model parameters.')
   parser.add_argument(
-      "--tpus",
-      nargs="+",
-      default="",
+      '--tpus',
+      nargs='+',
+      default='',
       type=str,
-      help="Name of the TPU pod, or list of single Cloud TPU devices (v*-8).")
+      help='Name of the TPU pod, or list of single Cloud TPU devices (v*-8).')
   parser.add_argument(
-      "--vms",
-      nargs="+",
-      default="",
+      '--vms',
+      nargs='+',
+      default='',
       type=str,
-      help=("(optional) List of single Compute VM instance names. "
-            "If not provided we assume usage of instance groups."))
+      help=('(optional) List of single Compute VM instance names. '
+            'If not provided we assume usage of instance groups.'))
   FLAGS = parser.parse_args()
 
   # Resolve VM and TPU clusters.
@@ -663,4 +693,3 @@ if __name__ == "__main__":
   cluster = cluster_resolver.get_cluster()
   executor = DistributedExecutor(cluster)
   executor.run(FLAGS.positional)
-
