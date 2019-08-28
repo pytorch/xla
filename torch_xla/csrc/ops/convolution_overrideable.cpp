@@ -51,8 +51,8 @@ ConvolutionOverrideable::ConvolutionOverrideable(
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       dilation_(std::move(dilation)),
-      transposed_(transposed),
       output_padding_(std::move(output_padding)),
+      transposed_(transposed),
       groups_(groups) {}
 
 ConvolutionOverrideable::ConvolutionOverrideable(
@@ -70,8 +70,8 @@ ConvolutionOverrideable::ConvolutionOverrideable(
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       dilation_(std::move(dilation)),
-      transposed_(transposed),
       output_padding_(std::move(output_padding)),
+      transposed_(transposed),
       groups_(groups) {}
 
 NodePtr ConvolutionOverrideable::Clone(OpList operands) const {
