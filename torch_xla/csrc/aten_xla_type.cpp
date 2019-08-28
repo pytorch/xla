@@ -52,13 +52,6 @@ bool IsNonTrivialDilation(at::IntArrayRef dilation) {
       [](const int64_t dim_dilation) { return dim_dilation != 1; });
 }
 
-// Returns true if padding is non-trivial (not 0) in at least one dimension.
-bool IsNonTrivialPadding(at::IntArrayRef padding) {
-  return std::any_of(
-      padding.begin(), padding.end(),
-      [](const int64_t dim_padding) { return dim_padding != 0; });
-}
-
 bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,
                        at::ScalarType tensor_type, at::ScalarType type) {
   if (opt_dtype && *opt_dtype == type) {
