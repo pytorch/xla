@@ -666,9 +666,8 @@ class DistributedExecutor(object):
       thread.join()
 
   def run(self, cmd):
-    cmd_str = ' '.join(cmd)
     self.logger.info(
-        'Command to distribute: {}'.format(cmd_str),
+        'Command to distribute: {}'.format(' '.join(cmd)),
         extra={
             'clientip': '',
             'ordinal': ''
@@ -679,7 +678,8 @@ class DistributedExecutor(object):
             'clientip': '',
             'ordinal': ''
         })
-    self.is_docker = 'docker run' in cmd_str
+    matches = self._parse_cmd_argument(cmd, 'docker', flag=False)
+    self.is_docker = len(matches) > 0 and matches[0] == 'run'
     script_map = self._prepare_scripts(cmd)
     self._scp_scripts(script_map)
     self._start_run(script_map)
@@ -689,7 +689,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(
       description='PyTorch on TPU distrubuted training',
       epilog=('Usage example: xla_dist.py --tpus=[TPU_NAME] -- '
-              "\'conda activate pytorch-nightly && python train.py\'"))
+              '\'conda activate pytorch-nightly && python train.py\''))
   parser.add_argument(
       'positional',
       nargs='+',
