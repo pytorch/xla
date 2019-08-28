@@ -13,7 +13,7 @@ RreluWithNoise::RreluWithNoise(const Value& input, at::Scalar lower,
                                at::Scalar upper, bool training)
     : Node(ir::OpKind(at::aten::rrelu_with_noise), {input},
            xla::ShapeUtil::MakeTupleShape({input.shape(), input.shape()}),
-           /*num)outputs=*/2,
+           /*num_outputs=*/2,
            xla::util::MHash(ScalarHash(lower), ScalarHash(upper), training)),
       lower_(std::move(lower)),
       upper_(std::move(upper)),
