@@ -134,10 +134,10 @@ xla::XlaOp BuildRreluBackward(const xla::XlaOp& grad_output,
                               const xla::XlaOp& input, const xla::XlaOp& noise,
                               at::Scalar lower, at::Scalar upper,
                               bool training) {
-  xla::XlaOp grad_input;
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero =
       XlaHelpers::ScalarValue(0, input_shape.element_type(), input.builder());
+  xla::XlaOp grad_input;
   if (training) {
     grad_input = noise * grad_output;
   } else {
