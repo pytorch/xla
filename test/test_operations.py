@@ -640,6 +640,14 @@ class TestAtenXlaTensor(XlaTestCase):
     z = x + y
     self.assertEqual(z.dtype, torch.uint8)
 
+  def test_frac_negative(self):
+    xla_device = xm.xla_device()
+    a = torch.tensor(-3.2)
+    b = a.frac()
+    xla_a = a.to(xla_device)
+    xla_b = xla_a.frac()
+    self.assertEqual(b, xla_b)
+
   def test_index_bool(self):
 
     def test_fn(a):
