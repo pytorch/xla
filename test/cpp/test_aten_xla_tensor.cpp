@@ -6771,7 +6771,7 @@ TEST_F(AtenXlaTensorTest, TestConv2DBackward) {
                             : torch::Tensor();
               TestBackward(
                   {torch::rand(
-                       {4, in_channels, 14, 14},
+                       {4, in_channels, 16, 16},
                        torch::TensorOptions(torch::kFloat).requires_grad(true)),
                    torch::rand(
                        {out_channels, in_channels / groups, kernel_size,
