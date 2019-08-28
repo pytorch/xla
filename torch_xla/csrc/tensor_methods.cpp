@@ -1697,10 +1697,10 @@ void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
 XLATensor XLATensor::rrelu_with_noise(const XLATensor& input, XLATensor& noise,
                                       at::Scalar lower, at::Scalar upper,
                                       bool training) {
-  ir::NodePtr node = ir::MakeNode<ir::ops::RreluWithNoise>(
+  ir::NodePtr output_node = ir::MakeNode<ir::ops::RreluWithNoise>(
       input.GetIrValue(), lower, upper, training);
-  XLATensor output = input.CreateFrom(ir::Value(node, 0));
-  noise.SetIrValue(ir::Value(node, 1));
+  noise.SetIrValue(ir::Value(output_node, 1));
+  XLATensor output = input.CreateFrom(ir::Value(output_node, 0));
   return output;
 }
 

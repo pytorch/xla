@@ -19,9 +19,9 @@ class RreluWithNoise : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  at::Scalar lower() const { return lower_; }
+  const at::Scalar& lower() const { return lower_; }
 
-  at::Scalar upper() const { return upper_; }
+  const at::Scalar& upper() const { return upper_; }
 
   bool training() const { return training_; }
 

@@ -2304,7 +2304,7 @@ at::Tensor AtenXlaType::rrelu_with_noise_backward(const at::Tensor& grad_output,
                                                   at::Scalar lower,
                                                   at::Scalar upper,
                                                   bool training) {
-  const XLATensor& noise_tensor = bridge::GetXlaTensor(noise);
+  XLATensor noise_tensor = bridge::GetXlaTensor(noise);
   return bridge::AtenFromXlaTensor(XLATensor::rrelu_with_noise_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       noise_tensor, lower, upper, training));
