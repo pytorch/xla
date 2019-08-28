@@ -420,18 +420,20 @@ class DistributedExecutor(object):
   ]
 
   @staticmethod
-  def _parse_cmd_value(cmd, key, flag=True):
+  def _parse_cmd_argument(cmd, key, flag=True):
+    args = []
     key = '--' + key if flag else key
     for i, part in enumerate(cmd):
       if key == part:
         # ex. 'docker run --name value image'
-        return cmd[i + 1]
-      key_regex = re.compile('^.*{}(=|\s)(\w*)'.format(key))
+        args.append(cmd[i + 1])
+      key_regex = re.compile('{}(=|\s)(\w*)'.format(key))
       matches = key_regex.findall(part)
       if len(matches) > 0:
         # ex. If args passed in as a single string or if 'docker run
         # --name=value image'
-        return matches[0][1]
+        args.extend([match[1] for match in matches])
+    return args
 
   def __init__(self, cluster):
     self._cluster = cluster
@@ -473,9 +475,33 @@ class DistributedExecutor(object):
     stdout.join()
     stderr.join()
 
+  def _build_scp_cmd(self, local_path, remote_path, client_worker):
+    return [
+        'gcloud', '-q', 'compute', 'scp', '--internal-ip',
+        '--zone={}'.format(client_worker._zone), local_path,
+        'pytorchtpudistrunner@{}:~/{}'.format(client_worker._hostname,
+                                              os.path.basename(remote_path)),
+    ]
+
+  def _build_ssh_cmd(self, remote_cmd, client_worker):
+    if isinstance(remote_cmd, list):
+      remote_cmd = ' '.join(remote_cmd)
+    return [
+        'gcloud', '-q', 'compute', 'ssh', '--internal-ip',
+        '--zone={}'.format(client_worker._zone),
+        'pytorchtpudistrunner@{}'.format(client_worker._hostname),
+        '--command="{}"'.format(remote_cmd),
+    ]
+
+  def _run_remote_cmd(self, cmd, client_worker, shell=True):
+    cmd = ' '.join(cmd) if shell else cmd
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
+    self._stream_logs(proc, client_worker)
+
   def _docker_vars_cmd(self, cmd):
     # Get or set container name to explicitly kill at main thread ctrl+c
-    self.container_name = self._parse_cmd_value(cmd, 'name')
+    self.container_name = self._parse_cmd_argument(cmd, 'name')[0]
     container_name_cmd = []
     if self.container_name is None:
       # Name not set by user
@@ -511,12 +537,11 @@ class DistributedExecutor(object):
     export_cmd = []
     for k in env_vars:
       export_cmd.append('export {}={}; '.format(k, env_vars[k]))
-
     return export_cmd
 
   def _prepare_scripts(self, cmd):
     for var in self.DIST_ENV_VARS:
-      if self._parse_cmd_value(cmd, var, flag=False) is not None:
+      if len(self._parse_cmd_argument(cmd, var, flag=False)) > 0:
         raise ValueError(
             ('{} should not be in the training command provided as they'
              ' will interfere with the values set for distributed'
@@ -550,17 +575,8 @@ class DistributedExecutor(object):
   def _scp_scripts(self, script_map):
 
     def _gcloud_scp(script_path, client_worker):
-      scp_cmd = [
-          'gcloud',
-          '-q',
-          'compute',
-          'scp',
-          '--internal-ip',
-          '--zone={}'.format(client_worker._zone),
-          script_path,
-          'pytorchtpudistrunner@{}:~/{}'.format(client_worker._hostname,
-                                                os.path.basename(script_path)),
-      ]
+      scp_cmd = self._build_scp_cmd(
+          script_path, os.path.basename(script_path), client_worker)
       proc = subprocess.Popen(
           scp_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       self._stream_logs(proc, client_worker)
@@ -583,39 +599,27 @@ class DistributedExecutor(object):
     for thread in threads:
       thread.join()
 
-  def _run_remote_cmd(self, remote_cmd, client_worker, shell=True):
-    cmd = [
-        'gcloud',
-        '-q',
-        'compute',
-        'ssh',
-        '--internal-ip',
-        '--zone={}'.format(client_worker._zone),
-        'pytorchtpudistrunner@{}'.format(client_worker._hostname),
-        '--command="{}"'.format(' '.join(remote_cmd)),
-    ]
-    cmd = ' '.join(cmd) if shell else cmd
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
-    self._stream_logs(proc, client_worker)
-
   def _cleanup(self, script_path, client_worker):
     rm_script = ['rm', '~/{}'.format(os.path.basename(script_path))]
-    self._run_remote_cmd(rm_script, client_worker)
+    rm_script_cmd = self._build_ssh_cmd(rm_script, client_worker)
+    self._run_remote_cmd(rm_script_cmd, client_worker)
     subprocess.call(['rm', script_path])
 
     if self.is_docker:
       rm_container = ['docker', 'rm', '-f', self.container_name]
-      self._run_remote_cmd(rm_container, client_worker)
+      rm_container_cmd = self._build_ssh_cmd(rm_container, client_worker)
+      self._run_remote_cmd(rm_container_cmd, client_worker)
 
     rm_proc = ['pkill', '-u', 'pytorchtpudistrunner']
-    self._run_remote_cmd(rm_proc, client_worker)
+    rm_proc_cmd = self._build_ssh_cmd(rm_proc, client_worker)
+    self._run_remote_cmd(rm_proc_cmd, client_worker)
 
   def _start_run(self, script_map):
 
     def _gcloud_ssh(script_path, client_worker, event):
-      self._run_remote_cmd(['~/{}'.format(os.path.basename(script_path))],
-                           client_worker)
+      run_cmd = self._build_ssh_cmd(
+          ['~/{}'.format(os.path.basename(script_path))], client_worker)
+      self._run_remote_cmd(run_cmd, client_worker)
       event.wait()
       self._cleanup(script_path, client_worker)
 
@@ -644,18 +648,10 @@ class DistributedExecutor(object):
 
   def run(self, cmd):
     cmd_str = ' '.join(cmd)
-    self.logger.info(
-        'Command to distribute: {}'.format(cmd_str),
-        extra={
-            'clientip': '',
-            'ordinal': ''
-        })
-    self.logger.info(
-        'Cluster configuration: {}'.format(self._cluster),
-        extra={
-            'clientip': '',
-            'ordinal': ''
-        })
+    self.logger.info('Command to distribute: {}'.format(cmd_str),
+                     extra={'clientip': '', 'ordinal': ''})
+    self.logger.info('Cluster configuration: {}'.format(self._cluster),
+                     extra={'clientip': '', 'ordinal': ''})
     self.is_docker = 'docker run' in cmd_str
     script_map = self._prepare_scripts(cmd)
     self._scp_scripts(script_map)
