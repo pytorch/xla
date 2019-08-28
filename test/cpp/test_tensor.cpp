@@ -421,78 +421,279 @@ TEST_F(TensorTest, TestBatchNorm1D) {
 }
 
 TEST_F(TensorTest, TestConv2D) {
-  int in_channels = 3;
-  int out_channels = 7;
+  int in_channels = 9;
+  int out_channels = 3;
   int kernel_size = 5;
   at::Tensor input =
-      at::rand({4, in_channels, 28, 28}, at::TensorOptions(at::kFloat));
-  at::Tensor weight =
-      at::rand({out_channels, in_channels, kernel_size, kernel_size},
-               at::TensorOptions(at::kFloat));
+      at::rand({4, in_channels, 32, 32}, at::TensorOptions(at::kFloat));
   at::Tensor bias = at::rand({out_channels}, at::TensorOptions(at::kFloat));
   at::Tensor no_bias;
   for (int stride = 1; stride <= 3; ++stride) {
     for (int padding = 0; padding <= 2; ++padding) {
       for (bool with_bias : {true, false}) {
-        at::Tensor output =
-            at::native::conv2d(input, weight, with_bias ? bias : no_bias,
-                               /*stride=*/{stride, stride},
-                               /*padding=*/{padding, padding});
-        ForEachDevice([&](const Device& device) {
-          XLATensor dev_input = XLATensor::Create(input, device);
-          XLATensor dev_weight = XLATensor::Create(weight, device);
-          XLATensor dev_output;
-          if (with_bias) {
-            XLATensor dev_bias = XLATensor::Create(bias, device);
-            dev_output = XLATensor::conv2d(dev_input, dev_weight, dev_bias,
-                                           /*stride=*/{stride, stride},
-                                           /*padding=*/{padding, padding});
-          } else {
-            dev_output = XLATensor::conv2d(dev_input, dev_weight,
-                                           /*stride=*/{stride, stride},
-                                           /*padding=*/{padding, padding});
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          for (int groups : {1, 3}) {
+            for (bool transposed : {true, false}) {
+              for (int output_padding = 0;
+                   output_padding < std::min(stride, dilation);
+                   ++output_padding) {
+                at::Tensor weight =
+                    transposed ? at::rand({in_channels, out_channels / groups,
+                                           kernel_size, kernel_size})
+                               : at::rand({out_channels, in_channels / groups,
+                                           kernel_size, kernel_size},
+                                          at::TensorOptions(at::kFloat));
+
+                at::Tensor output = at::native::_convolution(
+                    input, weight, with_bias ? bias : no_bias,
+                    /*stride=*/{stride, stride},
+                    /*padding=*/{padding, padding},
+                    /*dilation=*/{dilation, dilation},
+                    /*transposed=*/transposed,
+                    /*output_padding=*/{output_padding, output_padding},
+                    /*groups=*/groups, false, false, false);
+                ForEachDevice([&](const Device& device) {
+                  XLATensor dev_input = XLATensor::Create(input, device);
+                  XLATensor dev_weight = XLATensor::Create(weight, device);
+                  XLATensor dev_output;
+                  if (with_bias) {
+                    XLATensor dev_bias = XLATensor::Create(bias, device);
+                    dev_output = XLATensor::convolution_overrideable(
+                        dev_input, dev_weight, dev_bias,
+                        /*stride=*/{stride, stride},
+                        /*padding=*/{padding, padding},
+                        /*dilation=*/{dilation, dilation},
+                        /*transposed=*/transposed,
+                        /*output_padding=*/{output_padding, output_padding},
+                        /*groups=*/groups);
+                  } else {
+                    dev_output = XLATensor::convolution_overrideable(
+                        dev_input, dev_weight,
+                        /*stride=*/{stride, stride},
+                        /*padding=*/{padding, padding},
+                        /*dilation=*/{dilation, dilation},
+                        /*transposed=*/transposed,
+                        /*output_padding=*/{output_padding, output_padding},
+                        /*groups=*/groups);
+                  }
+                  AllClose(output, dev_output);
+                });
+              };
+            }
           }
-          AllClose(output, dev_output);
-        });
-      };
+        }
+      }
     }
   }
 }
 
 TEST_F(TensorTest, TestConv2DNonSquare) {
   int in_channels = 3;
-  int out_channels = 7;
+  int out_channels = 6;
   int kernel_size = 5;
   at::Tensor input =
-      at::rand({4, in_channels, 28, 28}, at::TensorOptions(at::kFloat));
-  at::Tensor weight =
-      at::rand({out_channels, in_channels, kernel_size, kernel_size},
-               at::TensorOptions(at::kFloat));
+      at::rand({4, in_channels, 26, 26}, at::TensorOptions(at::kFloat));
+  at::Tensor bias = at::rand({out_channels}, at::TensorOptions(at::kFloat));
+  at::Tensor no_bias;
+
+  for (int stride = 1; stride <= 3; ++stride) {
+    for (int padding = 0; padding <= 0; ++padding) {
+      for (bool with_bias : {true, false}) {
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          for (int groups : {1, 3}) {
+            for (bool transposed : {true, false}) {
+              for (int output_padding = 0;
+                   output_padding < std::min(stride, dilation);
+                   ++output_padding) {
+                at::Tensor weight =
+                    transposed ? at::rand({in_channels, out_channels / groups,
+                                           kernel_size, kernel_size})
+                               : at::rand({out_channels, in_channels / groups,
+                                           kernel_size, kernel_size},
+                                          at::TensorOptions(at::kFloat));
+
+                at::Tensor output = at::native::_convolution(
+                    input, weight, with_bias ? bias : no_bias,
+                    /*stride=*/{stride, stride + 1},
+                    /*padding=*/{padding, padding + 1},
+                    /*dilation=*/{dilation, dilation + 1},
+                    /*transposed=*/transposed,
+                    /*output_padding=*/{output_padding, output_padding + 1},
+                    /*groups=*/groups, false, false, false);
+
+                ForEachDevice([&](const Device& device) {
+                  XLATensor dev_input = XLATensor::Create(input, device);
+                  XLATensor dev_weight = XLATensor::Create(weight, device);
+                  XLATensor dev_output;
+                  if (with_bias) {
+                    XLATensor dev_bias = XLATensor::Create(bias, device);
+                    dev_output = XLATensor::convolution_overrideable(
+                        dev_input, dev_weight, dev_bias,
+                        /*stride=*/{stride, stride + 1},
+                        /*padding=*/{padding, padding + 1},
+                        /*dilation=*/{dilation, dilation + 1},
+                        /*transposed=*/transposed,
+                        /*output_padding=*/{output_padding, output_padding + 1},
+                        /*groups=*/groups);
+
+                  } else {
+                    dev_output = XLATensor::convolution_overrideable(
+                        dev_input, dev_weight,
+                        /*stride=*/{stride, stride + 1},
+                        /*padding=*/{padding, padding + 1},
+                        /*dilation=*/{dilation, dilation + 1},
+                        /*transposed=*/transposed,
+                        /*output_padding=*/{output_padding, output_padding + 1},
+                        /*groups=*/groups);
+                  }
+                  AllClose(output, dev_output);
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+TEST_F(TensorTest, TestConv3D) {
+  int in_channels = 9;
+  int out_channels = 3;
+  int kernel_size = 5;
+  at::Tensor input =
+      at::rand({4, in_channels, 28, 28, 28}, at::TensorOptions(at::kFloat));
   at::Tensor bias = at::rand({out_channels}, at::TensorOptions(at::kFloat));
   at::Tensor no_bias;
   for (int stride = 1; stride <= 3; ++stride) {
     for (int padding = 0; padding <= 2; ++padding) {
       for (bool with_bias : {true, false}) {
-        at::Tensor output =
-            at::native::conv2d(input, weight, with_bias ? bias : no_bias,
-                               /*stride=*/{stride, stride + 1},
-                               /*padding=*/{padding, padding + 1});
-        ForEachDevice([&](const Device& device) {
-          XLATensor dev_input = XLATensor::Create(input, device);
-          XLATensor dev_weight = XLATensor::Create(weight, device);
-          XLATensor dev_output;
-          if (with_bias) {
-            XLATensor dev_bias = XLATensor::Create(bias, device);
-            dev_output = XLATensor::conv2d(dev_input, dev_weight, dev_bias,
-                                           /*stride=*/{stride, stride + 1},
-                                           /*padding=*/{padding, padding + 1});
-          } else {
-            dev_output = XLATensor::conv2d(dev_input, dev_weight,
-                                           /*stride=*/{stride, stride + 1},
-                                           /*padding=*/{padding, padding + 1});
+        for (int dilation = 1; dilation <= 1; ++dilation) {
+          for (int groups : {1, 3}) {
+            for (bool transposed : {true, false}) {
+              for (int output_padding = 0;
+                   output_padding < std::min(stride, dilation);
+                   ++output_padding) {
+                at::Tensor weight =
+                    transposed
+                        ? at::rand({in_channels, out_channels / groups,
+                                    kernel_size, kernel_size, kernel_size})
+                        : at::rand({out_channels, in_channels / groups,
+                                    kernel_size, kernel_size, kernel_size},
+                                   at::TensorOptions(at::kFloat));
+
+                at::Tensor output = at::native::_convolution(
+                    input, weight, with_bias ? bias : no_bias,
+                    /*stride=*/{stride, stride, stride},
+                    /*padding=*/{padding, padding, padding},
+                    /*dilation=*/{dilation, dilation, dilation},
+                    /*transposed=*/transposed,
+                    /*output_padding=*/
+                    {output_padding, output_padding, output_padding},
+                    /*groups=*/groups, false, false, false);
+                ForEachDevice([&](const Device& device) {
+                  XLATensor dev_input = XLATensor::Create(input, device);
+                  XLATensor dev_weight = XLATensor::Create(weight, device);
+                  XLATensor dev_output;
+                  if (with_bias) {
+                    XLATensor dev_bias = XLATensor::Create(bias, device);
+                    dev_output = XLATensor::convolution_overrideable(
+                        dev_input, dev_weight, dev_bias,
+                        /*stride=*/{stride, stride, stride},
+                        /*padding=*/{padding, padding, padding},
+                        /*dilation=*/{dilation, dilation, dilation},
+                        /*transposed=*/transposed,
+                        /*output_padding=*/
+                        {output_padding, output_padding, output_padding},
+                        /*groups=*/groups);
+                  } else {
+                    dev_output = XLATensor::convolution_overrideable(
+                        dev_input, dev_weight,
+                        /*stride=*/{stride, stride, stride},
+                        /*padding=*/{padding, padding, padding},
+                        /*dilation=*/{dilation, dilation, dilation},
+                        /*transposed=*/transposed,
+                        /*output_padding=*/
+                        {output_padding, output_padding, output_padding},
+                        /*groups=*/groups);
+                  }
+                  AllClose(output, dev_output);
+                });
+              };
+            }
           }
-          AllClose(output, dev_output);
-        });
+        }
+      }
+    }
+  }
+}
+
+TEST_F(TensorTest, TestConv3DNonSquare) {
+  int in_channels = 9;
+  int out_channels = 3;
+  int kernel_size = 5;
+  at::Tensor input =
+      at::rand({4, in_channels, 28, 28, 28}, at::TensorOptions(at::kFloat));
+  at::Tensor bias = at::rand({out_channels}, at::TensorOptions(at::kFloat));
+  at::Tensor no_bias;
+  for (int stride = 1; stride <= 3; ++stride) {
+    for (int padding = 0; padding <= 2; ++padding) {
+      for (bool with_bias : {true, false}) {
+        for (int dilation = 1; dilation <= 1; ++dilation) {
+          for (int groups : {1, 3}) {
+            for (bool transposed : {true, false}) {
+              for (int output_padding = 0;
+                   output_padding < std::min(stride, dilation);
+                   ++output_padding) {
+                at::Tensor weight =
+                    transposed
+                        ? at::rand({in_channels, out_channels / groups,
+                                    kernel_size, kernel_size, kernel_size})
+                        : at::rand({out_channels, in_channels / groups,
+                                    kernel_size, kernel_size, kernel_size},
+                                   at::TensorOptions(at::kFloat));
+
+                at::Tensor output = at::native::_convolution(
+                    input, weight, with_bias ? bias : no_bias,
+                    /*stride=*/{stride, stride + 1, stride + 1},
+                    /*padding=*/{padding, padding + 1, padding + 1},
+                    /*dilation=*/{dilation, dilation + 1, dilation + 1},
+                    /*transposed=*/transposed,
+                    /*output_padding=*/
+                    {output_padding, output_padding + 1, output_padding},
+                    /*groups=*/groups, false, false, false);
+                ForEachDevice([&](const Device& device) {
+                  XLATensor dev_input = XLATensor::Create(input, device);
+                  XLATensor dev_weight = XLATensor::Create(weight, device);
+                  XLATensor dev_output;
+                  if (with_bias) {
+                    XLATensor dev_bias = XLATensor::Create(bias, device);
+                    dev_output = XLATensor::convolution_overrideable(
+                        dev_input, dev_weight, dev_bias,
+                        /*stride=*/{stride, stride + 1, stride + 1},
+                        /*padding=*/{padding, padding + 1, padding + 1},
+                        /*dilation=*/{dilation, dilation + 1, dilation + 1},
+                        /*transposed=*/transposed,
+                        /*output_padding=*/
+                        {output_padding, output_padding + 1, output_padding},
+                        /*groups=*/groups);
+                  } else {
+                    dev_output = XLATensor::convolution_overrideable(
+                        dev_input, dev_weight,
+                        /*stride=*/{stride, stride + 1, stride + 1},
+                        /*padding=*/{padding, padding + 1, padding + 1},
+                        /*dilation=*/{dilation, dilation + 1, dilation + 1},
+                        /*transposed=*/transposed,
+                        /*output_padding=*/
+                        {output_padding, output_padding + 1, output_padding},
+                        /*groups=*/groups);
+                  }
+                  AllClose(output, dev_output);
+                });
+              };
+            }
+          }
+        }
       }
     }
   }
