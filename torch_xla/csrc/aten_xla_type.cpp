@@ -2269,6 +2269,34 @@ at::Tensor& AtenXlaType::resize_(at::Tensor& self, at::IntArrayRef size) {
   return self;
 }
 
+at::Tensor AtenXlaType::rrelu_with_noise(const at::Tensor& self,
+                                         const at::Tensor& noise,
+                                         at::Scalar lower, at::Scalar upper,
+                                         bool training,
+                                         at::Generator* generator) {
+  if (generator != nullptr) {
+    // The fallback path for rrelu_with_noise when training=true is wrong
+    XLA_CHECK_EQ(training, false);
+    return AtenXlaTypeDefault::rrelu_with_noise(self, noise, lower, upper,
+                                                training, generator);
+  }
+  XLATensor noise_tensor = bridge::GetXlaTensor(noise);
+  return bridge::AtenFromXlaTensor(XLATensor::rrelu_with_noise(
+      bridge::GetXlaTensor(self), noise_tensor, lower, upper, training));
+}
+
+at::Tensor AtenXlaType::rrelu_with_noise_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self,
+                                                  const at::Tensor& noise,
+                                                  at::Scalar lower,
+                                                  at::Scalar upper,
+                                                  bool training) {
+  XLATensor noise_tensor = bridge::GetXlaTensor(noise);
+  return bridge::AtenFromXlaTensor(XLATensor::rrelu_with_noise_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      noise_tensor, lower, upper, training));
+}
+
 at::Tensor AtenXlaType::rsqrt(const at::Tensor& self) {
   return bridge::AtenFromXlaTensor(
       XLATensor::rsqrt(bridge::GetXlaTensor(self)));

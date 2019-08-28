@@ -125,6 +125,25 @@ TEST_F(TensorTest, TestRelu) {
   });
 }
 
+TEST_F(TensorTest, TestRrelu) {
+  at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
+  float lower = 0.125;
+  float upper = 0.5;
+  ForEachDevice([&](const Device& device) {
+    for (bool training : {true, false}) {
+      at::Tensor noise = at::zeros_like(input);
+      at::Tensor output =
+          at::rrelu_with_noise(input, noise, lower, upper, training);
+      XLATensor dev_input = XLATensor::Create(input, device);
+      XLATensor dev_noise = XLATensor::Create(noise, device);
+      XLATensor dev_outputs = XLATensor::rrelu_with_noise(
+          dev_input, dev_noise, lower, upper, training);
+      AllClose(output, dev_outputs);
+      AllClose(noise, dev_noise);
+    }
+  });
+}
+
 TEST_F(TensorTest, TestThreshold) {
   at::Tensor input = at::rand({2, 1, 4, 6}, at::TensorOptions(at::kFloat));
   float threshold = 0.4;
