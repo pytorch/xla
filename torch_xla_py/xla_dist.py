@@ -477,17 +477,26 @@ class DistributedExecutor(object):
 
   def _build_scp_cmd(self, local_path, remote_path, client_worker):
     return [
-        'gcloud', '-q', 'compute', 'scp', '--internal-ip',
-        '--zone={}'.format(client_worker._zone), local_path,
+        'gcloud',
+        '-q',
+        'compute',
+        'scp',
+        '--internal-ip',
+        '--zone={}'.format(client_worker._zone),
+        local_path,
         'pytorchtpudistrunner@{}:~/{}'.format(client_worker._hostname,
                                               os.path.basename(remote_path)),
     ]
 
   def _build_ssh_cmd(self, remote_cmd, client_worker):
     if isinstance(remote_cmd, list):
-      remote_cmd = ' '.join(remote_cmd)
+      remote_cmd = ' '.join('"{}"'.format(c) for c in remote_cmd)
     return [
-        'gcloud', '-q', 'compute', 'ssh', '--internal-ip',
+        'gcloud',
+        '-q',
+        'compute',
+        'ssh',
+        '--internal-ip',
         '--zone={}'.format(client_worker._zone),
         'pytorchtpudistrunner@{}'.format(client_worker._hostname),
         '--command="{}"'.format(remote_cmd),
@@ -575,8 +584,8 @@ class DistributedExecutor(object):
   def _scp_scripts(self, script_map):
 
     def _gcloud_scp(script_path, client_worker):
-      scp_cmd = self._build_scp_cmd(
-          script_path, os.path.basename(script_path), client_worker)
+      scp_cmd = self._build_scp_cmd(script_path, os.path.basename(script_path),
+                                    client_worker)
       proc = subprocess.Popen(
           scp_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       self._stream_logs(proc, client_worker)
@@ -599,39 +608,47 @@ class DistributedExecutor(object):
     for thread in threads:
       thread.join()
 
-  def _cleanup(self, script_path, client_worker):
-    rm_script = ['rm', '~/{}'.format(os.path.basename(script_path))]
-    rm_script_cmd = self._build_ssh_cmd(rm_script, client_worker)
-    self._run_remote_cmd(rm_script_cmd, client_worker)
-    subprocess.call(['rm', script_path])
+  def _cleanup(self, script_map):
 
-    if self.is_docker:
-      rm_container = ['docker', 'rm', '-f', self.container_name]
-      rm_container_cmd = self._build_ssh_cmd(rm_container, client_worker)
-      self._run_remote_cmd(rm_container_cmd, client_worker)
+    def _cleanup_worker(script_path, client_worker):
+      rm_script = ['rm', '~/{}'.format(os.path.basename(script_path))]
+      rm_script_cmd = self._build_ssh_cmd(rm_script, client_worker)
+      self._run_remote_cmd(rm_script_cmd, client_worker)
+      subprocess.call(['rm', script_path])
+      if self.is_docker:
+        rm_container = ['docker', 'rm', '-f', self.container_name]
+        rm_container_cmd = self._build_ssh_cmd(rm_container, client_worker)
+        self._run_remote_cmd(rm_container_cmd, client_worker)
+      rm_proc = ['pkill', '-u', 'pytorchtpudistrunner']
+      rm_proc_cmd = self._build_ssh_cmd(rm_proc, client_worker)
+      self._run_remote_cmd(rm_proc_cmd, client_worker)
 
-    rm_proc = ['pkill', '-u', 'pytorchtpudistrunner']
-    rm_proc_cmd = self._build_ssh_cmd(rm_proc, client_worker)
-    self._run_remote_cmd(rm_proc_cmd, client_worker)
-
-  def _start_run(self, script_map):
-
-    def _gcloud_ssh(script_path, client_worker, event):
-      run_cmd = self._build_ssh_cmd(
-          ['~/{}'.format(os.path.basename(script_path))], client_worker)
-      self._run_remote_cmd(run_cmd, client_worker)
-      event.wait()
-      self._cleanup(script_path, client_worker)
-
-    event = threading.Event()
     threads = []
-    for i, client_worker in enumerate(script_map):
+    for client_worker in script_map:
       thread = threading.Thread(
-          target=_gcloud_ssh,
+          target=_cleanup_worker,
           args=(
               script_map[client_worker],
               client_worker,
-              event,
+          ))
+      thread.start()
+      threads.append(thread)
+    for thread in threads:
+      thread.join()
+
+  def _start_run(self, script_map):
+
+    def _run_script(script_path, client_worker):
+      run_cmd = self._build_ssh_cmd(
+          ['~/{}'.format(os.path.basename(script_path))], client_worker)
+      self._run_remote_cmd(run_cmd, client_worker)
+
+    threads = []
+    for client_worker in script_map:
+      thread = threading.Thread(
+          target=_run_script, args=(
+              script_map[client_worker],
+              client_worker,
           ))
       thread.daemon = True
       thread.start()
@@ -641,17 +658,27 @@ class DistributedExecutor(object):
       for thread in threads:
         thread.join()
     except KeyboardInterrupt:
-      event.set()
+      pass
+    finally:
+      self._cleanup(script_map)
 
     for thread in threads:
       thread.join()
 
   def run(self, cmd):
     cmd_str = ' '.join(cmd)
-    self.logger.info('Command to distribute: {}'.format(cmd_str),
-                     extra={'clientip': '', 'ordinal': ''})
-    self.logger.info('Cluster configuration: {}'.format(self._cluster),
-                     extra={'clientip': '', 'ordinal': ''})
+    self.logger.info(
+        'Command to distribute: {}'.format(cmd_str),
+        extra={
+            'clientip': '',
+            'ordinal': ''
+        })
+    self.logger.info(
+        'Cluster configuration: {}'.format(self._cluster),
+        extra={
+            'clientip': '',
+            'ordinal': ''
+        })
     self.is_docker = 'docker run' in cmd_str
     script_map = self._prepare_scripts(cmd)
     self._scp_scripts(script_map)
