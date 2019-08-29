@@ -443,7 +443,8 @@ class DistributedExecutor(object):
     for env_var in env_vars:
       if re.match('\w*=\w*', env_var) is None:
         raise ValueError(
-            'Environment variable to distribute should follow the form: X=Y')
+            ('Environment variable to distribute ({}) should follow '
+             'the form: X=Y').format(env_var))
       for dist_var in self.DIST_ENV_VARS:
         if re.match('{}=.*'.format(dist_var), env_var):
           raise ValueError(
@@ -514,8 +515,7 @@ class DistributedExecutor(object):
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     if log:
       self._stream_logs(proc, client_worker)
-    else:
-      proc.wait()
+    proc.wait()
 
   def _docker_run_cmd(self, cmd):
     docker_cmd = [
