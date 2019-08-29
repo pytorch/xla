@@ -153,15 +153,6 @@ xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {
       BiasReduceDimensions(grad_output_shape.rank()));
 }
 
-std::vector<std::pair<xla::int64, xla::int64>> MakePadding(
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
-  std::vector<std::pair<xla::int64, xla::int64>> dims_padding;
-  for (const auto dim_padding : padding) {
-    dims_padding.emplace_back(dim_padding, dim_padding);
-  }
-  return dims_padding;
-}
-
 }  // namespace
 
 xla::XlaOp BuildTransposedConvolution(
@@ -240,17 +231,27 @@ xla::XlaOp BuildConvolutionOverrideable(
     return BuildTransposedConvolution(input, kernel, stride, padding, dilation,
                                       output_padding, groups);
   } else {
-    auto dims_padding = MakePadding(padding);
     xla::PrecisionConfig precision_config =
         XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
-    return xla::ConvGeneralDilated(
-        input, kernel, stride, dims_padding,
-        /*lhs_dilation*/ {},
-        /*rhs_dilation*/ dilation,
-        /*dimension_numbers*/
-        xla::XlaBuilder::CreateDefaultConvDimensionNumbers(stride.size()),
-        /*feature_group_count*/ groups,
-        /*batch_group_count=*/1, &precision_config);
+
+    xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+    xla::Shape kernel_shape = XlaHelpers::ShapeOfXlaOp(kernel);
+    auto Cin = input_shape.dimensions(1);
+    auto Cout = kernel_shape.dimensions(0);
+    bool depthwise = groups == Cin && Cout % Cin == 0;
+    tensorflow::ConvOpAttrs conv_op_attrs = MakeConvOpAttrs(
+        stride, padding, dilation, depthwise);
+      xla::XlaOp kernel_transposed =
+        xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
+    xla::XlaOp depth_kernel;
+    if (depthwise) {
+      std::cout << "DEBUG " << std::endl;
+      // FIXME: 3D
+      depth_kernel = xla::Reshape(kernel_transposed, {kernel_shape.dimensions(2), kernel_shape.dimensions(3), Cin, Cout/Cin});
+    }
+    return ConsumeValue(tensorflow::MakeXlaForwardConvOp(
+        "conv_forward", input, depthwise ? depth_kernel : kernel_transposed,
+        conv_op_attrs, &precision_config));
   }
 }
 
