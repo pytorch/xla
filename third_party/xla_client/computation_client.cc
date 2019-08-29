@@ -95,7 +95,6 @@ void AddXrtHostDevices(const string& worker_name, int task_no,
     int& device_ordinal = (*device_ordinals)[device.name];
     for (int j = 0; j < device.count; ++j, ++device_ordinal) {
       string device_name = absl::StrCat(device.name, ":", device_ordinal);
-      string tf_device_name = absl::StrCat(device.tf_name, ":", device_ordinal);
       string xrt_device_name =
           GetXrtDevicePath(worker_name, task_no, device.tf_name, j);
       options->global_device_map.emplace(device_name, xrt_device_name);
