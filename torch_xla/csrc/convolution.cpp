@@ -114,7 +114,7 @@ xla::XlaOp BuildConvBackwardInput(
 }
 
 // Computes the kernel gradient for a convolution.
-xla::XlaOp BuildConv2dBackwardWeight(
+xla::XlaOp BuildConvBackwardWeight(
     const xla::XlaOp& grad_output, const xla::XlaOp& input,
     const xla::Shape& kernel_shape,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_stride,
@@ -222,7 +222,7 @@ ConvGrads BuildTransposedConvolutionBackward(
   xla::XlaOp grad_input =
       BuildConvolutionOverrideable(grad_output, kernel, stride, padding,
                                    dilation, false, output_padding, groups);
-  xla::XlaOp grad_weight = BuildConv2dBackwardWeight(
+  xla::XlaOp grad_weight = BuildConvBackwardWeight(
       input, grad_output, XlaHelpers::ShapeOfXlaOp(kernel), stride, padding,
       dilation, groups);
   xla::XlaOp grad_bias = BuildGradBias(grad_output);
@@ -290,7 +290,7 @@ ConvGrads BuildConvolutionBackwardOverrideable(
     xla::XlaOp grad_input = BuildConvBackwardInput(
         grad_output, kernel, XlaHelpers::ShapeOfXlaOp(input), stride, padding,
         dilation, groups);
-    xla::XlaOp grad_weight = BuildConv2dBackwardWeight(
+    xla::XlaOp grad_weight = BuildConvBackwardWeight(
         grad_output, input, XlaHelpers::ShapeOfXlaOp(kernel), stride, padding,
         dilation, groups);
     xla::XlaOp grad_bias = BuildGradBias(grad_output);
