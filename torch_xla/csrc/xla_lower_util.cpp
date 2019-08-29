@@ -76,15 +76,14 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(const xla::XlaOp& lhs,
 
 // Builds the computation for the given combiner.
 xla::XlaComputation MakeScatterComputation(
-    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
-        combiner,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner,
     xla::PrimitiveType element_type) {
   xla::XlaBuilder cb("ScatterCombiner");
   xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
   xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
   xla::XlaOp p1 = xla::Parameter(&cb, 1, xla_scalar_shape, "p1");
   if (combiner) {
-    combiner(p0, p1, &cb);
+    combiner(p0, p1);
   }
   return cb.Build().ConsumeValueOrDie();
 }
@@ -92,7 +91,7 @@ xla::XlaComputation MakeScatterComputation(
 xla::XlaOp CreateIndexAlongDim(
     const xla::XlaOp& buffer, xla::int64 dim, const xla::XlaOp& index,
     const xla::XlaOp& value, bool broadcast_value_to_index,
-    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
         combiner) {
   xla::Shape buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
   xla::ScatterDimensionNumbers dim_numbers;
@@ -347,7 +346,7 @@ xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices,
 xla::XlaOp CreateIndexUpdate(
     const xla::XlaOp& buffer, const xla::XlaOp& indices, xla::int64 start_dim,
     const xla::XlaOp& values,
-    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
         combiner) {
   xla::Shape buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
   xla::Shape indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
@@ -404,10 +403,10 @@ xla::XlaOp CreateIndexUpdate(
 
 xla::XlaOp CreateIndexAdd(const xla::XlaOp& buffer, xla::int64 dim,
                           const xla::XlaOp& index, const xla::XlaOp& value) {
-  static std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>
-      add_scatter_combiner =
-          [](const xla::XlaOp& x, const xla::XlaOp& y,
-             xla::XlaBuilder* builder) -> xla::XlaOp { return x + y; };
+  auto add_scatter_combiner = [](const xla::XlaOp& x,
+                                 const xla::XlaOp& y) -> xla::XlaOp {
+    return x + y;
+  };
   return CreateIndexAlongDim(buffer, dim, index, value,
                              /*broadcast_value_to_index=*/false,
                              add_scatter_combiner);
@@ -428,7 +427,7 @@ xla::XlaOp CreateIndexFill(const xla::XlaOp& buffer, xla::int64 dim,
 xla::XlaOp CreateScatter(
     const xla::XlaOp& input, const xla::XlaOp& index, const xla::XlaOp& src,
     xla::int64 dim,
-    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
         combiner) {
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);

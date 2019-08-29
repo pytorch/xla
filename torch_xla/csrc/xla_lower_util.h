@@ -32,7 +32,7 @@ xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices,
 xla::XlaOp CreateIndexUpdate(
     const xla::XlaOp& buffer, const xla::XlaOp& indices, xla::int64 start_dim,
     const xla::XlaOp& updates,
-    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
         combiner);
 
 xla::XlaOp CreateIndexAdd(const xla::XlaOp& buffer, xla::int64 dim,
@@ -48,7 +48,7 @@ xla::XlaOp CreateIndexFill(const xla::XlaOp& buffer, xla::int64 dim,
 xla::XlaOp CreateScatter(
     const xla::XlaOp& input, const xla::XlaOp& index, const xla::XlaOp& src,
     xla::int64 dim,
-    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
         combiner);
 
 }  // namespace torch_xla
