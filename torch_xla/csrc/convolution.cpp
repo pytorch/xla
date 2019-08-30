@@ -25,7 +25,7 @@ namespace {
  * ConvGeneralDilated (the most general conv op in XLA).
  * PyTorch input format & shape:
  *   - input: [N, Cin, Hin, Win]
- *   - weight: [Cout, Cin / groups, KH, KW]
+ *   - weight: [Cout, Cin / groups, Hker, Wker]
  *   - output: [N, Cout, Hout, Wout]
  *
  * Output, grad_input and grad_weight can all be calculated as
@@ -36,25 +36,28 @@ namespace {
  *
  * XLA provides the following wrappers instead of calling into raw
  * ConvGeneralDilated.
- * tensorflow/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc
+ * https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc
  *   - MakeXlaForwardConvOp (not used in our lowering, see below)
  *   - MakeXlaBackpropInputConvOp
  *   - MakeXlaBackpropFilterConvOp
  *
- * Shapes below use format in XLA implementation.
- * For group(non-depthwise) convolutions(G > 1, Cout = M * G):
+ * Lowering for non group convolution is straightforward, in this note
+ * we focus on grouped conv and depthwise conv which need a bit special handling.
+ * Shapes in the section below use format in XLA implementation [N, H, W, C]
+ * instead of PyTorch convention [N, C, H, W].
  * Here are the shapes that feed into ConvGeneralDilated ops, note these
  * are different from input of wrappers like MakeXlaBackpropInputConvOp.
  * We try to use these shapes to explain what happens from a PyTorch tensor
  * to call into conv op.
  *
+ * For group(non-depthwise) convolutions(G > 1, Cout = M * G, M = channel_multiplier):
  * forward: (conv with groups = G)
  *   - input: [N, Hin, Win, Cin]
- *   - filter: [KH, KW, Cin / G, Cout]
+ *   - filter: [Hker, Wker, Cin / G, Cout]
  * grad_input: (conv with groups = G)
  *   - input: [N, Hout, Wout, Cout]
- *   - filter: [KH, KW, Cout, Cin / G] // func: TransposeFilterForGroupConvolutionBackpropInput
- *          => [KH, KW, Cout / G, Cin]
+ *   - filter: [Hker, Wker, Cout, Cin / G] // func: TransposeFilterForGroupConvolutionBackpropInput
+ *          => [Hker, Wker, Cout / G, Cin]
  * grad_weight: (conv with groups = G)
  *   - input: [N, Hin, Win, Cin] // func: TransposeInputForGroupConvolutionBackpropFilter
  *         => [G * N, Hin, Win, Cin / G] // swap batch & channel dimension
@@ -63,27 +66,27 @@ namespace {
  *          => [Hout, Wout, Cout, N] // swap batch & channel dimension
  *          => [Hout, Wout, N, Cout]
  *
- * For depthwise conv (Cin = G, Cout = M * G):
- * This case is special since XLA was expect a filter of shape [KH, KW, Cin, M]
- * and it reshapes it to [KH, KW, 1, Cout] back and forth inside the wrapper
+ * For depthwise conv (Cin = G, Cout = M * G, M = channel_multiplier):
+ * This case is special since XLA expects a filter of shape [Hker, Wker, Cin, M]
+ * and it reshapes it to [Hker, Wker, 1, Cout] back and forth inside the wrapper
  * functions.
  *
- * Since PyTorch already gives the weight in shape [KH, KW, 1, Cout] in
+ * Since PyTorch already gives the weight in shape [Hker, Wker, 1, Cout] in
  * depthwise convolution, there's no need to do additional reshapes to match to
  * XLA expected format. This is also why we use raw ConvGeneralDilated instead
  * of MakeXlaForwardConvOp in forward graph. For code simplicity we still want
  * to use the MakeXlaBackpropInputConvOp and MakeXlaBackpropFilterConvOp given
  * they have many useful steps that we don't want to duplicate here, we simply
  * enforce depthwise = false inside those functions, so that we skip the reshape
- * steps XLA has with a [KH, KW, Cin, M] input.
+ * steps XLA has with a [Hker, Wker, Cin, M] input.
  *
  * forward: (conv with groups = G)
  *   - input: [N, Hin, Win, Cin]
- *   - filter: [KH, KW, 1, Cout]
+ *   - filter: [Hker, Wker, 1, Cout]
  * grad_input: (conv with groups = G)
  *   - input: [N, Hout, Wout, Cout]
- *   - filter: [KH, KW, Cout, 1] // func: TransposeFilterForGroupConvolutionBackpropInput
- *          => [KH, KW, Cout / Cin, Cin]
+ *   - filter: [Hker, Wker, Cout, 1] // func: TransposeFilterForGroupConvolutionBackpropInput
+ *          => [Hker, Wker, Cout / Cin, Cin]
  * grad_weight: (conv with groups = G)
  *   - input: [N, Hin, Win, Cin]
  *         => [G * N, Hin, Win, 1] // swap batch & channel dimension
