@@ -93,6 +93,15 @@ const std::vector<xla::int64>& BiasReduceDimensions(const xla::int64 k) {
   }
 }
 
+std::vector<std::pair<xla::int64, xla::int64>> MakePadding(
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  std::vector<std::pair<xla::int64, xla::int64>> dims_padding;
+  for (const auto dim_padding : padding) {
+    dims_padding.emplace_back(dim_padding, dim_padding);
+  }
+  return dims_padding;
+}
+
 // Computes the input gradient for a convolution.
 xla::XlaOp BuildConvBackwardInput(
     const xla::XlaOp& grad_output, const xla::XlaOp& kernel,
@@ -101,15 +110,14 @@ xla::XlaOp BuildConvBackwardInput(
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_padding,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_dilation,
     xla::int64 groups) {
-  bool depthwise = groups == input_shape.dimensions(1);
-  tensorflow::ConvOpAttrs conv_op_attrs = MakeConvOpAttrs(
-      spatial_stride, spatial_padding, spatial_dilation, depthwise);
+  tensorflow::ConvOpAttrs conv_op_attrs =
+      MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed =
       xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   return ConsumeValue(tensorflow::MakeXlaBackpropInputConvOp(
-      "conv_backward", input_shape, kernel_transposed, grad_output,
+      "conv_backward_input", input_shape, kernel_transposed, grad_output,
       conv_op_attrs, &precision_config));
 }
 
@@ -121,9 +129,8 @@ xla::XlaOp BuildConvBackwardWeight(
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_padding,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_dilation,
     xla::int64 groups) {
-  bool depthwise = groups == XlaHelpers::ShapeOfXlaOp(input).dimensions(1);
-  tensorflow::ConvOpAttrs conv_op_attrs = MakeConvOpAttrs(
-      spatial_stride, spatial_padding, spatial_dilation, depthwise);
+  tensorflow::ConvOpAttrs conv_op_attrs =
+      MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   auto inv_transpose_permutation =
       xla::InversePermutation(FilterTransposePermutation(kernel_shape.rank()));
   xla::Shape transposed_weight_shape = xla::ShapeUtil::PermuteDimensions(
@@ -131,7 +138,7 @@ xla::XlaOp BuildConvBackwardWeight(
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   xla::XlaOp conv = ConsumeValue(tensorflow::MakeXlaBackpropFilterConvOp(
-      "conv2d_backward", input, transposed_weight_shape, grad_output,
+      "conv_backward_weight", input, transposed_weight_shape, grad_output,
       conv_op_attrs, &precision_config));
 
   // Reorder the dimensions of the filter gradient to match the NCHW convention
@@ -231,27 +238,17 @@ xla::XlaOp BuildConvolutionOverrideable(
     return BuildTransposedConvolution(input, kernel, stride, padding, dilation,
                                       output_padding, groups);
   } else {
+    auto dims_padding = MakePadding(padding);
     xla::PrecisionConfig precision_config =
         XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
-
-    xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-    xla::Shape kernel_shape = XlaHelpers::ShapeOfXlaOp(kernel);
-    auto Cin = input_shape.dimensions(1);
-    auto Cout = kernel_shape.dimensions(0);
-    bool depthwise = groups == Cin && Cout % Cin == 0;
-    tensorflow::ConvOpAttrs conv_op_attrs = MakeConvOpAttrs(
-        stride, padding, dilation, depthwise);
-      xla::XlaOp kernel_transposed =
-        xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
-    xla::XlaOp depth_kernel;
-    if (depthwise) {
-      std::cout << "DEBUG " << std::endl;
-      // FIXME: 3D
-      depth_kernel = xla::Reshape(kernel_transposed, {kernel_shape.dimensions(2), kernel_shape.dimensions(3), Cin, Cout/Cin});
-    }
-    return ConsumeValue(tensorflow::MakeXlaForwardConvOp(
-        "conv_forward", input, depthwise ? depth_kernel : kernel_transposed,
-        conv_op_attrs, &precision_config));
+    return xla::ConvGeneralDilated(
+        input, kernel, stride, dims_padding,
+        /*lhs_dilation*/ {},
+        /*rhs_dilation*/ dilation,
+        /*dimension_numbers*/
+        xla::XlaBuilder::CreateDefaultConvDimensionNumbers(stride.size()),
+        /*feature_group_count*/ groups,
+        /*batch_group_count=*/1, &precision_config);
   }
 }
 
