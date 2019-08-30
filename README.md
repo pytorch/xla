@@ -91,7 +91,8 @@ so using an instance group ensures each of the Compute VMs use the identical
 base image.
 
 Training on pods can be broken down to largely 3 different steps:
-1. [Create your instance group](#create-your-instance-group)
+1. [Create your instance group (*recommended*)](#create-your-instance-group) or [Use a list of
+   VM instances](#list-of-vms)
 2. [Create your TPU Pod](#create-your-tpu-pod)
 3. [Start distributed training](#start-distributed-training)
 
@@ -123,6 +124,13 @@ Training on pods can be broken down to largely 3 different steps:
 ```
 (pytorch-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
 (pytorch-nightly)$ python torch_xla_py/xla_dist.py --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:nightly --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+```
+
+## List of VMs
+If you up to not use an [instance group](#create-your-instance-group), you can decide to use a list of VM instances that you may have already created (or can create individually). Make sure that you create all the VM instances in the same zone as the TPU node, and also make sure that the VMs have the same configuration (datasets, VM size, disk size, etc.). Then you can [start distributed training](#start-distributed-training) after creating your TPU pod. The difference is in the `python torch_xla_py/xla_dist.py` command. For example, to use a list of VMs run the following command (ex. conda with v3-32):
+```
+(pytorch-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
+(pytorch-nightly)$ python torch_xla_py/xla_dist.py --tpu=$TPU_POD_NAME --vm $VM1 --vm $VM2 --vm $VM3 --vm $VM4 --conda-env=pytorch-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
 ```
 
 To learn more about TPU Pods check out this [blog

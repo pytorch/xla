@@ -421,6 +421,10 @@ class DistributedExecutor(object):
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   DEFAULT_USER_NAME = 'pytorchtpudistrunner'
 
+  @staticmethod
+  def _concat_cmd_lst(cmd_lst, delimiter=' '):
+    return delimiter.join(cmd_lst)
+
   def __init__(self,
                cluster,
                docker_container=None,
@@ -436,9 +440,9 @@ class DistributedExecutor(object):
     self.logger = logging.getLogger('DistributedExecutor')
     self.docker_container = docker_container or self.DEFAULT_CONTAINER_NAME
     self.docker_image = docker_image
-    self.docker_run_flags = docker_run_flags
+    self.docker_run_flags = list(docker_run_flags) if docker_run_flags else None
     self.conda_env = conda_env
-    self.env_vars = env_vars
+    self.env_vars = list(env_vars) if env_vars else None
 
     for env_var in env_vars:
       if re.match('\w*=\w*', env_var) is None:
@@ -497,7 +501,7 @@ class DistributedExecutor(object):
 
   def _build_ssh_cmd(self, remote_cmd, client_worker):
     if isinstance(remote_cmd, list):
-      remote_cmd = ' '.join('"{}"'.format(c) for c in remote_cmd)
+      remote_cmd = self._concat_cmd_lst(remote_cmd)
     return [
         'gcloud',
         '-q',
@@ -584,7 +588,8 @@ class DistributedExecutor(object):
         script.append(cmd)
 
       # ex. script_body = 'conda activate pytorch; python train.py'
-      script_body = '; '.join([' '.join(command) for command in script])
+      script_cmd_lst = [self._concat_cmd_lst(command) for command in script]
+      script_body = self._concat_cmd_lst(script_cmd_lst, delimiter='; ')
       os.makedirs(os.path.dirname(script_path), exist_ok=True)
       with open(script_path, 'w') as f:
         f.write(script_body)
@@ -675,7 +680,7 @@ class DistributedExecutor(object):
 
   def run(self, cmd):
     self.logger.info(
-        'Command to distribute: {}'.format(' '.join(cmd)),
+        'Command to distribute: {}'.format(self._concat_cmd_lst(cmd)),
         extra={
             'clientip': '',
             'ordinal': ''
@@ -699,16 +704,15 @@ if __name__ == '__main__':
 
   cluster_group = parser.add_argument_group('Cluster Setup')
   cluster_group.add_argument(
-      '--tpus',
-      nargs='+',
+      '--tpu',
+      action='append',
       type=str,
+      required=True,
       help='Name of the TPU pod, or list of single Cloud TPU devices (v*-8).')
   cluster_group.add_argument(
-      '--vms',
-      nargs='+',
-      default='',
+      '--vm',
+      action='append',
       type=str,
-      required=False,
       help=('List of single Compute VM instance names. '
             'If not provided we assume usage of instance groups.'))
 
@@ -717,18 +721,15 @@ if __name__ == '__main__':
       '--docker-container',
       default='',
       type=str,
-      required=False,
       help='Name of docker container if running in docker.')
   docker_group.add_argument(
       '--docker-image',
       default='',
       type=str,
-      required=False,
       help='Name of docker image if running in container.')
   docker_group.add_argument(
       '--docker-run-flag',
-      nargs='+',
-      default='',
+      action='append',
       type=str,
       help='Docker run flags to run container with (ex. --shm-size, ...).')
 
@@ -737,18 +738,16 @@ if __name__ == '__main__':
       '--conda-env',
       default='',
       type=str,
-      required=False,
       help='Name of the conda environment if running with conda.')
 
   parser.add_argument(
       '--env',
-      nargs='+',
+      action='append',
       type=str,
       help='List of environment variables to distribute.')
   parser.add_argument(
       'positional',
       nargs='+',
-      default='',
       type=str,
       help='The python command to launch training including model parameters.')
 
@@ -760,7 +759,7 @@ if __name__ == '__main__':
                      ' arguments are mutually exclusive.')
 
   # Resolve VM and TPU clusters.
-  cluster_resolver = ClusterResolver(FLAGS.tpus, vms=FLAGS.vms)
+  cluster_resolver = ClusterResolver(FLAGS.tpu, vms=FLAGS.vm)
   cluster = cluster_resolver.get_cluster()
   executor = DistributedExecutor(
       cluster,
