@@ -25,6 +25,16 @@ except ImportError:
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 
 
+def concat_cmd_lst(cmd_lst, delimiter=' '):
+  concat = ''
+  for i, cmd in enumerate(cmd_lst):
+    concat += cmd
+    if delimiter != cmd[-len(delimiter):] and i != len(cmd_lst) - 1:
+      # If not already delimited and not last cmd
+      concat += delimiter
+  return concat
+
+
 class Worker(object):
 
   def __init__(self, internal_ip, machine_type, zone):
@@ -421,10 +431,6 @@ class DistributedExecutor(object):
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   DEFAULT_USER_NAME = 'pytorchtpudistrunner'
 
-  @staticmethod
-  def _concat_cmd_lst(cmd_lst, delimiter=' '):
-    return delimiter.join(cmd_lst)
-
   def __init__(self,
                cluster,
                docker_container=None,
@@ -501,7 +507,7 @@ class DistributedExecutor(object):
 
   def _build_ssh_cmd(self, remote_cmd, client_worker):
     if isinstance(remote_cmd, list):
-      remote_cmd = self._concat_cmd_lst(remote_cmd)
+      remote_cmd = concat_cmd_lst(remote_cmd)
     return [
         'gcloud',
         '-q',
@@ -588,8 +594,8 @@ class DistributedExecutor(object):
         script.append(cmd)
 
       # ex. script_body = 'conda activate pytorch; python train.py'
-      script_cmd_lst = [self._concat_cmd_lst(command) for command in script]
-      script_body = self._concat_cmd_lst(script_cmd_lst, delimiter='; ')
+      script_cmd_lst = [concat_cmd_lst(command) for command in script]
+      script_body = concat_cmd_lst(script_cmd_lst, delimiter='; ')
       os.makedirs(os.path.dirname(script_path), exist_ok=True)
       with open(script_path, 'w') as f:
         f.write(script_body)
@@ -680,7 +686,7 @@ class DistributedExecutor(object):
 
   def run(self, cmd):
     self.logger.info(
-        'Command to distribute: {}'.format(self._concat_cmd_lst(cmd)),
+        'Command to distribute: {}'.format(concat_cmd_lst(cmd)),
         extra={
             'clientip': '',
             'ordinal': ''
