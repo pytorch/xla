@@ -10,6 +10,89 @@
 
 namespace torch_xla {
 namespace {
+// clang-format off
+/* Lower PyTorch Conv & its backward to XLA
+ * This file covers lowerings of both forward and backward of conv op.
+ *   - BuildConvolutionOverrideable
+ *     - BuildTransposedConvolution
+ *     - Normal(non-transpose) convolution
+ *   - BuildConvolutionBackwardOverrideable
+ *     - BuildConvBackwardInput
+ *     - BuildConvBackwardWeight
+ *     - BuildGradBias
+ *
+ * Here're detailed steps from a 4D PyTorch inputs to inputs calling into
+ * ConvGeneralDilated (the most general conv op in XLA).
+ * PyTorch input format & shape:
+ *   - input: [N, Cin, Hin, Win]
+ *   - weight: [Cout, Cin / groups, KH, KW]
+ *   - output: [N, Cout, Hout, Wout]
+ *
+ * Output, grad_input and grad_weight can all be calculated as
+ * ConvGeneralDilated with proper transpose/padding etc.
+ *   - output: conv(input, weight)
+ *   - grad_input: conv(grad_output, weight^T) (with padding etc)
+ *   - grad_weight: conv(input^T, grad_output)
+ *
+ * XLA provides the following wrappers instead of calling into raw
+ * ConvGeneralDilated.
+ * tensorflow/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc
+ *   - MakeXlaForwardConvOp (not used in our lowering, see below)
+ *   - MakeXlaBackpropInputConvOp
+ *   - MakeXlaBackpropFilterConvOp
+ *
+ * Shapes below use format in XLA implementation.
+ * For group(non-depthwise) convolutions(G > 1, Cout = M * G):
+ * Here are the shapes that feed into ConvGeneralDilated ops, note these
+ * are different from input of wrappers like MakeXlaBackpropInputConvOp.
+ * We try to use these shapes to explain what happens from a PyTorch tensor
+ * to call into conv op.
+ *
+ * forward: (conv with groups = G)
+ *   - input: [N, Hin, Win, Cin]
+ *   - filter: [KH, KW, Cin / G, Cout]
+ * grad_input: (conv with groups = G)
+ *   - input: [N, Hout, Wout, Cout]
+ *   - filter: [KH, KW, Cout, Cin / G] // func: TransposeFilterForGroupConvolutionBackpropInput
+ *          => [KH, KW, Cout / G, Cin]
+ * grad_weight: (conv with groups = G)
+ *   - input: [N, Hin, Win, Cin] // func: TransposeInputForGroupConvolutionBackpropFilter
+ *         => [G * N, Hin, Win, Cin / G] // swap batch & channel dimension
+ *         => [Cin / G, Hin, Win, G * N]
+ *   - filter: [N, Hout, Wout, Cout] // func: FilterTransposePermutation
+ *          => [Hout, Wout, Cout, N] // swap batch & channel dimension
+ *          => [Hout, Wout, N, Cout]
+ *
+ * For depthwise conv (Cin = G, Cout = M * G):
+ * This case is special since XLA was expect a filter of shape [KH, KW, Cin, M]
+ * and it reshapes it to [KH, KW, 1, Cout] back and forth inside the wrapper
+ * functions.
+ *
+ * Since PyTorch already gives the weight in shape [KH, KW, 1, Cout] in
+ * depthwise convolution, there's no need to do additional reshapes to match to
+ * XLA expected format. This is also why we use raw ConvGeneralDilated instead
+ * of MakeXlaForwardConvOp in forward graph. For code simplicity we still want
+ * to use the MakeXlaBackpropInputConvOp and MakeXlaBackpropFilterConvOp given
+ * they have many useful steps that we don't want to duplicate here, we simply
+ * enforce depthwise = false inside those functions, so that we skip the reshape
+ * steps XLA has with a [KH, KW, Cin, M] input.
+ *
+ * forward: (conv with groups = G)
+ *   - input: [N, Hin, Win, Cin]
+ *   - filter: [KH, KW, 1, Cout]
+ * grad_input: (conv with groups = G)
+ *   - input: [N, Hout, Wout, Cout]
+ *   - filter: [KH, KW, Cout, 1] // func: TransposeFilterForGroupConvolutionBackpropInput
+ *          => [KH, KW, Cout / Cin, Cin]
+ * grad_weight: (conv with groups = G)
+ *   - input: [N, Hin, Win, Cin]
+ *         => [G * N, Hin, Win, 1] // swap batch & channel dimension
+ *         => [1, Hin, Win, G * N]
+ *   - filter: [N, Hout, Wout, Cout] // func: FilterTransposePermutation
+ *          => [Hout, Wout, Cout, N] // swap batch & channel dimension
+ *          => [Hout, Wout, N, Cout]
+ */
+// clang-format on
 
 // Create a TF convolution metadata structure out of PyTorch convolution
 // attributes.
