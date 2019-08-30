@@ -81,6 +81,55 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
 
 ---
 
+# How to Run on TPU Pods (distributed training)
+
+The recommended setup for running distributed training on TPU Pods uses the
+pairing of Compute VM [Instance
+Groups](https://cloud.google.com/compute/docs/instance-groups/) and TPU Pods.
+Each of the Compute VM in the instance group drives 8 cores on the TPU Pod and
+so using an instance group ensures each of the Compute VMs use the identical
+base image.
+
+Training on pods can be broken down to largely 3 different steps:
+1. [Create your instance group](#create-your-instance-group)
+2. [Create your TPU Pod](#create-your-tpu-pod)
+3. [Start distributed training](#start-distributed-training)
+
+## Create your instance group
+1. Create an instance template.
+* If you have already have a VM instance running that you used to train PyTorch/TPU workloads and want to use that exact setup for distributed training: [instructions](https://cloud.google.com/compute/docs/instance-templates/create-instance-templates#based-on-existing-instance).
+* Or, you can create an instance template using the PyTorch/XLA VM image we provide: [instructions](https://cloud.google.com/compute/docs/instance-templates/create-instance-templates#creating_a_new_instance_template).
+2. Create an instance group to drive the TPU pod.
+* This instance group is where all the input pipeline happens and where we feed all the tensors into the TPUs for training.
+* Use the instance template created in step (1) to create your instance group.
+* Make sure to (a) create the instance group in a single zone (same zone as the TPU Pod you'll create), (b) no autoscaling or health-checks, (c) number of instances (size of instance group) should be number of cores / 8 (ex. for a v3-32 you'd create an instance group of size 32/8 = 4).
+* Here are the instructions for creating an instance group: [instructions](https://cloud.google.com/compute/docs/instance-groups/creating-groups-of-managed-instances#create_managed_group).
+
+## Create your TPU Pod
+1. [Create](https://pantheon.corp.google.com/compute/tpus) a TPU pod (same as creating regular TPUs, just select more cores when selecting TPU type).
+* Make sure that the TPU is in the same zone as the instance group.
+* Make sure that the size of your instance group follows: # instances in group = number of TPU cores / 8.
+
+## Start distributed training
+1. SSH into any of the VMs in the instance group and get in an environment where you have `torch` and `torch_xla` installed (whether that's a [conda environment](#consume-prebuilt-compute-vm-images) or [docker container](#consume-prebuilt-docker-images)).
+2. Let's say the command you ran to run a v3-8 was: `XLA_USE_BF16=1 python test/test_train_imagenet.py --fake_data`.
+* To distribute training as a conda environment process:
+```
+(pytorch-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
+(pytorch-nightly)$ python torch_xla_py/xla_dist.py --tpu=$TPU_POD_NAME --conda-env=pytorch-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+```
+
+* Or, to distribute training as a docker container:
+```
+(pytorch-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
+(pytorch-nightly)$ python torch_xla_py/xla_dist.py --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:nightly --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+```
+
+To learn more about TPU Pods check out this [blog
+post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalable-supercomputers-for-machine-learning-cloud-tpu-pods-are-now-publicly-available-in-beta).
+
+---
+
 # How To Build And Run PyTorch For TPU
 
 To build from source:

@@ -517,6 +517,10 @@ class DistributedExecutor(object):
       self._stream_logs(proc, client_worker)
     proc.wait()
 
+  def _build_and_run_ssh(self, remote_cmd, client_worker, shell=True, log=True):
+    cmd = self._build_ssh_cmd(remote_cmd, client_worker)
+    self._run_remote_cmd(cmd, client_worker, shell=shell, log=log)
+
   def _docker_run_cmd(self, cmd):
     docker_cmd = [
         'docker',
@@ -620,16 +624,13 @@ class DistributedExecutor(object):
 
     def _cleanup_worker(script_path, client_worker):
       rm_script = ['rm', '~/{}'.format(os.path.basename(script_path))]
-      rm_script_cmd = self._build_ssh_cmd(rm_script, client_worker)
-      self._run_remote_cmd(rm_script_cmd, client_worker)
+      self._build_and_run_ssh(rm_script, client_worker)
       subprocess.call(['rm', script_path])
       if self.docker_image:
         rm_container = ['docker', 'rm', '-f', self.docker_container]
-        rm_container_cmd = self._build_ssh_cmd(rm_container, client_worker)
-        self._run_remote_cmd(rm_container_cmd, client_worker)
+        self._build_and_run_ssh(rm_container, client_worker)
       rm_proc = ['pkill', '-u', self.DEFAULT_USER_NAME]
-      rm_proc_cmd = self._build_ssh_cmd(rm_proc, client_worker)
-      self._run_remote_cmd(rm_proc_cmd, client_worker, log=False)
+      self._build_and_run_ssh(rm_proc, client_worker, log=False)
 
     threads = []
     for client_worker in script_map:
@@ -647,9 +648,8 @@ class DistributedExecutor(object):
   def _start_run(self, script_map):
 
     def _run_script(script_path, client_worker):
-      run_cmd = self._build_ssh_cmd(
+      self._build_and_run_ssh(
           ['~/{}'.format(os.path.basename(script_path))], client_worker)
-      self._run_remote_cmd(run_cmd, client_worker)
 
     threads = []
     for client_worker in script_map:
