@@ -357,9 +357,9 @@ class ClusterResolverTest(unittest.TestCase):
     self.assertRaisesRegex(ValueError, 'tpus must be a non-empty list',
                            ClusterResolver, tpus)
 
-  def test_bad_empty_vm_constructor(self):
+  def test_bad_vm_constructor(self):
     tpus = ['fake-tpu']
-    vms = []
+    vms = {'abc'}
     self.assertRaisesRegex(ValueError,
                            'vms must be a non-empty list if provided',
                            ClusterResolver, tpus, vms)
