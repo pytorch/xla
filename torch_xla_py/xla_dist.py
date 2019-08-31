@@ -24,14 +24,16 @@ except ImportError:
 
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 
-
-def concat_cmd_lst(cmd_lst, delimiter=' '):
+def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
   concat = ''
-  for i, cmd in enumerate(cmd_lst):
-    concat += cmd
-    if delimiter != cmd[-len(delimiter):] and i != len(cmd_lst) - 1:
-      # If not already delimited and not last cmd
+  for cmd in cmd_list:
+    if re.match('^{}.*{}$'.format(quote, quote), cmd):
+      token = cmd
+    else:
+      token = quote + cmd + quote
+    if concat:
       concat += delimiter
+    concat += token
   return concat
 
 
@@ -501,13 +503,14 @@ class DistributedExecutor(object):
         '--internal-ip',
         '--zone={}'.format(client_worker._zone),
         local_path,
-        '{}@{}:~/{}'.format(self.DEFAULT_USER_NAME, client_worker._hostname,
-                            os.path.basename(remote_path)),
+        '{}@{}:/home/{}/{}'.format(self.DEFAULT_USER_NAME, client_worker._hostname,
+                                   self.DEFAULT_USER_NAME,
+                                   os.path.basename(remote_path)),
     ]
 
   def _build_ssh_cmd(self, remote_cmd, client_worker):
     if isinstance(remote_cmd, list):
-      remote_cmd = concat_cmd_lst(remote_cmd)
+      remote_cmd = concat_cmd_list(remote_cmd)
     return [
         'gcloud',
         '-q',
@@ -516,11 +519,12 @@ class DistributedExecutor(object):
         '--internal-ip',
         '--zone={}'.format(client_worker._zone),
         '{}@{}'.format(self.DEFAULT_USER_NAME, client_worker._hostname),
-        '--command="{}"'.format(remote_cmd),
+        '--command', '\'{}\''.format(remote_cmd),
     ]
 
   def _run_remote_cmd(self, cmd, client_worker, shell=True, log=True):
-    cmd = ' '.join(cmd) if shell else cmd
+    cmd = concat_cmd_list(cmd, quote='') if shell else cmd
+    print('{}: {}'.format(client_worker, cmd))
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     if log:
@@ -567,7 +571,7 @@ class DistributedExecutor(object):
           for idx, service_worker in enumerate(self._cluster._service_workers)
       ]
       xrt_tpu_config = '|'.join(xrt_server_config)
-      env_vars['XRT_TPU_CONFIG'] = '"{}"'.format(xrt_tpu_config)
+      env_vars['XRT_TPU_CONFIG'] = '{}'.format(xrt_tpu_config)
 
     export_cmd = []
     for k in env_vars:
@@ -594,8 +598,8 @@ class DistributedExecutor(object):
         script.append(cmd)
 
       # ex. script_body = 'conda activate pytorch; python train.py'
-      script_cmd_lst = [concat_cmd_lst(command) for command in script]
-      script_body = concat_cmd_lst(script_cmd_lst, delimiter='; ')
+      script_cmd_list = [concat_cmd_list(command) for command in script]
+      script_body = concat_cmd_list(script_cmd_list, delimiter='; ')
       os.makedirs(os.path.dirname(script_path), exist_ok=True)
       with open(script_path, 'w') as f:
         f.write(script_body)
@@ -634,7 +638,8 @@ class DistributedExecutor(object):
   def _cleanup(self, script_map):
 
     def _cleanup_worker(script_path, client_worker):
-      rm_script = ['rm', '~/{}'.format(os.path.basename(script_path))]
+      rm_script = ['rm', '/home/{}/{}'.format(self.DEFAULT_USER_NAME,
+                                              os.path.basename(script_path))]
       self._build_and_run_ssh(rm_script, client_worker)
       subprocess.call(['rm', script_path])
       if self.docker_image:
@@ -660,7 +665,8 @@ class DistributedExecutor(object):
 
     def _run_script(script_path, client_worker):
       self._build_and_run_ssh(
-          ['~/{}'.format(os.path.basename(script_path))], client_worker)
+          ['/home/{}/{}'.format(self.DEFAULT_USER_NAME,
+                                os.path.basename(script_path))], client_worker)
 
     threads = []
     for client_worker in script_map:
@@ -686,7 +692,7 @@ class DistributedExecutor(object):
 
   def run(self, cmd):
     self.logger.info(
-        'Command to distribute: {}'.format(concat_cmd_lst(cmd)),
+        'Command to distribute: {}'.format(concat_cmd_list(cmd)),
         extra={
             'clientip': '',
             'ordinal': ''
