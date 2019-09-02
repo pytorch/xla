@@ -33,9 +33,9 @@ pip install ninja
 # Install the Lark parser required for the XLA->ATEN Type code generation.
 pip install lark-parser
 
-# Install Pytorch
+# Install Pytorch without MKLDNN
 xla/scripts/apply_patches.sh
-python setup.py build develop
+USE_MKLDNN=0 python setup.py build develop
 sccache --show-stats
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642

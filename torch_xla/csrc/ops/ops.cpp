@@ -94,15 +94,7 @@ PTXLA_BINARY_OP(Atan2, at::aten::atan2, xla::Atan2);
 
 NodePtr Trunc(const Value& input) { return Floor(Abs(input)) * SignOp(input); }
 
-NodePtr FracOp(const Value& input) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_input_floor = xla::Floor(xla_input);
-    return node.ReturnOp(xla_input - xla_input_floor, loctx);
-  };
-  return GenericOp(OpKind(at::aten::frac), OpList{input}, input.shape(),
-                   std::move(lower_fn));
-}
+NodePtr FracOp(const Value& input) { return input - Trunc(input); }
 
 NodePtr LogBase(const Value& input, OpKind op, double base) {
   auto lower_fn = [base](const Node& node,

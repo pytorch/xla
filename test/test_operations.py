@@ -586,6 +586,23 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b = torch.clamp(xla_a, max=3.4)
     self.assertEqual(b.data, xla_b.data.cpu())
 
+  def test_rrelu_module(self):
+    xla_device = xm.xla_device()
+    a = torch.rand(1, 2, 2, requires_grad=True)
+    xla_a = a.to(xla_device).detach()
+    xla_a.requires_grad = True
+
+    m = nn.RReLU()
+    xla_m = m.to(xla_device)
+
+    output = m(a)
+    xla_output = xla_m(xla_a)
+    self.assertEqual(output, xla_output.cpu())
+
+    output.sum().backward()
+    xla_output.sum().backward()
+    self.assertEqual(a.grad, xla_a.grad.cpu())
+
   def test_max_broadcast(self):
     xla_device = xm.xla_device()
     a = torch.rand(3, 1, 2)
@@ -639,6 +656,14 @@ class TestAtenXlaTensor(XlaTestCase):
     y = torch.ByteTensor([0, 1]).to(xla_device)
     z = x + y
     self.assertEqual(z.dtype, torch.uint8)
+
+  def test_frac_negative(self):
+    xla_device = xm.xla_device()
+    a = torch.tensor(-3.2)
+    b = a.frac()
+    xla_a = a.to(xla_device)
+    xla_b = xla_a.frac()
+    self.assertEqual(b, xla_b)
 
   def test_index_bool(self):
 

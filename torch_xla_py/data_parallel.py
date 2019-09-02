@@ -69,14 +69,13 @@ class ParallelLoader(object):
                loader,
                devices,
                batchdim=0,
-               drop_last=False,
+               fixed_batch_size=False,
                loader_prefetch_size=8,
                device_prefetch_size=4):
     self._loader = loader
-    self._batch_size = None
     self._devices = list(devices)
     self._batchdim = batchdim
-    self._drop_last = drop_last
+    self._fixed_batch_size = fixed_batch_size
     self._done = False
     self._queues = dict()
     for device in self._devices:
@@ -128,25 +127,27 @@ class ParallelLoader(object):
     return xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
   def _loader_worker(self):
-    num_batches = (len(self._loader) // len(self._devices)) * len(self._devices)
     batch_number = 0
     queues = list(self._queues.values())
     data_iter = enumerate(self._loader)
-    while batch_number < num_batches and not self._done:
+    batch_size = None
+    batch = []
+    while not self._done:
       try:
         _, data = next(data_iter)
       except StopIteration:
         break
-      # There is only one loader worker thread, so it is safe to write the
-      # batch_size in this way. Also, the batch_size is only referenced
-      # within this thread.
-      if self._batch_size is None:
-        self._batch_size = self._get_batch_size(data, self._batchdim)
-      elif (self._drop_last and
-            self._batch_size != self._get_batch_size(data, self._batchdim)):
-        break
-      queues[batch_number % len(queues)].loader_queue.put((batch_number, data))
+      if self._fixed_batch_size:
+        if batch_size is None:
+          batch_size = self._get_batch_size(data, self._batchdim)
+        elif batch_size != self._get_batch_size(data, self._batchdim):
+          break
+      batch.append((batch_number, data))
       batch_number += 1
+      if len(batch) == len(self._devices):
+        for queue_no, device_batch in enumerate(batch):
+          queues[queue_no].loader_queue.put(device_batch)
+        batch = []
     for dqueue in queues:
       dqueue.loader_queue.close_write()
 
@@ -174,12 +175,11 @@ class ParallelLoader(object):
 
 class DataParallel(object):
 
-  def __init__(self, network, device_ids=None, batchdim=0, drop_last=False):
+  def __init__(self, network, device_ids=None, batchdim=0):
     if device_ids is None:
       device_ids = xm.get_xla_supported_devices()
     self._device_ids = list(device_ids)
     self._batchdim = batchdim
-    self._drop_last = drop_last
     self._native_run = False
     if len(self._device_ids) > 1:
       replication_devices = xm.xla_replication_devices(self._device_ids)
@@ -235,7 +235,7 @@ class DataParallel(object):
       result.result = e
       self._handle_runner_exception(device, e)
 
-  def __call__(self, loop_fn, loader):
+  def __call__(self, loop_fn, loader, fixed_batch_size=False):
     if self._native_run:
       ## This is called without XLA devices available. Run in normal mode.
       return [
@@ -247,7 +247,7 @@ class DataParallel(object):
         loader,
         self._device_ids,
         batchdim=self._batchdim,
-        drop_last=self._drop_last)
+        fixed_batch_size=fixed_batch_size)
     if self._replication is not None:
       self._replication.reset()
     threads = []

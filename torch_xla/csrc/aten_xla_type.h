@@ -292,15 +292,17 @@ class AtenXlaType {
   static at::Tensor contiguous(const at::Tensor& self,
                                at::MemoryFormat memory_format);
 
-  static at::Tensor conv2d(const at::Tensor& input, const at::Tensor& weight,
-                           const at::Tensor& bias, at::IntArrayRef stride,
-                           at::IntArrayRef padding, at::IntArrayRef dilation,
-                           int64_t groups);
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor>
+  convolution_backward_overrideable(
+      const at::Tensor& grad_output, const at::Tensor& input,
+      const at::Tensor& weight, at::IntArrayRef stride, at::IntArrayRef padding,
+      at::IntArrayRef dilation, bool transposed, at::IntArrayRef output_padding,
+      int64_t groups, std::array<bool, 3> output_mask);
 
-  static at::Tensor conv_transpose2d(
+  static at::Tensor convolution_overrideable(
       const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-      at::IntArrayRef stride, at::IntArrayRef padding,
-      at::IntArrayRef output_padding, int64_t groups, at::IntArrayRef dilation);
+      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+      bool transposed, at::IntArrayRef output_padding, int64_t groups);
 
   static at::Tensor& copy_(at::Tensor& self, const at::Tensor& src,
                            bool non_blocking);
@@ -857,6 +859,17 @@ class AtenXlaType {
 
   static at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size);
 
+  static at::Tensor rrelu_with_noise(const at::Tensor& self,
+                                     const at::Tensor& noise, at::Scalar lower,
+                                     at::Scalar upper, bool training,
+                                     at::Generator* generator);
+
+  static at::Tensor rrelu_with_noise_backward(const at::Tensor& grad_output,
+                                              const at::Tensor& self,
+                                              const at::Tensor& noise,
+                                              at::Scalar lower,
+                                              at::Scalar upper, bool training);
+
   static at::Tensor rsqrt(const at::Tensor& self);
 
   static at::Tensor& rsqrt_(at::Tensor& self);
@@ -915,15 +928,6 @@ class AtenXlaType {
 
   static at::Tensor slice(const at::Tensor& self, int64_t dim, int64_t start,
                           int64_t end, int64_t step);
-
-  static std::tuple<at::Tensor, at::Tensor, at::Tensor>
-  slow_conv_transpose2d_backward(
-      const at::Tensor& grad_output, const at::Tensor& self,
-      const at::Tensor& weight, at::IntArrayRef kernel_size,
-      at::IntArrayRef stride, at::IntArrayRef padding,
-      at::IntArrayRef output_padding, at::IntArrayRef dilation,
-      const at::Tensor& columns, const at::Tensor& ones,
-      std::array<bool, 3> output_mask);
 
   static at::Tensor smooth_l1_loss(const at::Tensor& self,
                                    const at::Tensor& target, int64_t reduction);
@@ -1018,17 +1022,6 @@ class AtenXlaType {
   static at::Tensor tensordot(const at::Tensor& self, const at::Tensor& other,
                               at::IntArrayRef dims_self,
                               at::IntArrayRef dims_other);
-
-  static std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv2d_backward(
-      const at::Tensor& grad_output, const at::Tensor& self,
-      const at::Tensor& weight, at::IntArrayRef kernel_size,
-      at::IntArrayRef stride, at::IntArrayRef padding, const at::Tensor& finput,
-      const at::Tensor& fgrad_input, std::array<bool, 3> output_mask);
-
-  static std::tuple<at::Tensor, at::Tensor, at::Tensor> thnn_conv2d_forward(
-      const at::Tensor& self, const at::Tensor& weight,
-      at::IntArrayRef kernel_size, const at::Tensor& bias,
-      at::IntArrayRef stride, at::IntArrayRef padding);
 
   static at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
                               at::Scalar value);

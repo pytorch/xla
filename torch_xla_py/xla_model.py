@@ -143,7 +143,7 @@ class RateTracker(object):
   def __init__(self, smooth_factor=None):
     self._smooth_factor = xu.getenv_as(
         'RATE_TRACKER_SMOOTHING', float,
-        0.8) if smooth_factor is None else smooth_factor
+        0.4) if smooth_factor is None else smooth_factor
     self._start_time = time.time()
     self._partial_time = self._start_time
     self._partial_count = 0.0

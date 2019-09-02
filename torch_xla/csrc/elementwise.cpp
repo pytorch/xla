@@ -105,6 +105,51 @@ xla::XlaOp BuildLeakyRelu(const xla::XlaOp& input,
   return BuildLeakyReluBackward(input, input, negative_slope_value);
 }
 
+std::vector<xla::XlaOp> BuildRrelu(const xla::XlaOp& input, at::Scalar lower,
+                                   at::Scalar upper, bool training) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero =
+      XlaHelpers::ScalarValue(0, shape.element_type(), input.builder());
+  xla::XlaOp one =
+      XlaHelpers::ScalarValue(1, shape.element_type(), input.builder());
+  xla::XlaOp noise;
+  xla::XlaOp output;
+  if (training) {
+    xla::XlaOp low =
+        XlaHelpers::ScalarValue(lower, shape.element_type(), input.builder());
+    xla::XlaOp high =
+        XlaHelpers::ScalarValue(upper, shape.element_type(), input.builder());
+    xla::XlaOp slope = xla::RngUniform(low, high, shape);
+    noise = xla::Select(xla::Gt(input, zero), one, slope);
+    output = input * noise;
+  } else {
+    double negative_slope = (lower.to<double>() + upper.to<double>()) / 2;
+    noise = xla::Broadcast(zero, shape.dimensions());
+    output = BuildLeakyRelu(input, negative_slope);
+  }
+  return {output, noise};
+}
+
+xla::XlaOp BuildRreluBackward(const xla::XlaOp& grad_output,
+                              const xla::XlaOp& input, const xla::XlaOp& noise,
+                              at::Scalar lower, at::Scalar upper,
+                              bool training) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero =
+      XlaHelpers::ScalarValue(0, input_shape.element_type(), input.builder());
+  xla::XlaOp grad_input;
+  if (training) {
+    grad_input = noise * grad_output;
+  } else {
+    double negative_slope_value = (lower.to<double>() + upper.to<double>()) / 2;
+    xla::XlaOp negative_slope = XlaHelpers::ScalarValue(
+        negative_slope_value, input_shape.element_type(), input.builder());
+    grad_input = xla::Select(xla::Gt(input, zero), grad_output,
+                             grad_output * negative_slope);
+  }
+  return grad_input;
+}
+
 xla::XlaOp BuildLeakyReluBackward(const xla::XlaOp& grad_output,
                                   const xla::XlaOp& input,
                                   double negative_slope_value) {
