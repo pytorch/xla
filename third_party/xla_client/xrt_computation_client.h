@@ -291,9 +291,6 @@ class XrtComputationClient : public ComputationClient {
   // Retrieves the mesh coordinates of a given XRT device.
   const std::vector<int>& GetDeviceMeshCoords(const string& xrt_device) const;
 
-  tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
-      const string& job, int task_no, const string& worker_host_port);
-
   void InitializeDevices(
       std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto);
 
@@ -444,6 +441,10 @@ class XrtComputationClient : public ComputationClient {
       tensorflow::gtl::ArraySlice<const Computation* const> computations);
 
   static tensorflow::ConfigProto CreateConfigProto(const Options& options);
+
+  static tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
+      const string& job, int task_no, const string& worker_host_port,
+      const tensorflow::ConfigProto& config);
 
   // Checks whether a local GRPC service is required, and starts it if need it.
   static void MaybeCreateLocalService(
