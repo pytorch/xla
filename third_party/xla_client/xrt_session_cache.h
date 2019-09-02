@@ -68,6 +68,8 @@ class XrtSessionCache {
   XrtSessionCache(tensorflow::ConfigProto config,
                   std::function<void(XrtSession*)> initfn);
 
+  const tensorflow::ConfigProto& GetConfig() const { return config_; }
+
   // Retrieves a new session reference, for which the caller will have exclusive
   // access. Once the reference object is destroyed, the session will be
   // returned to the cache.
