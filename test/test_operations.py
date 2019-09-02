@@ -466,6 +466,23 @@ class TestAtenXlaTensor(XlaTestCase):
     x = torch.randperm(3, device=xm.xla_device())
     self.assertEqual(x.device.type, 'xla')
 
+  def test_randn_like(self):
+    shape = (5, 1, 1)
+    x = torch.randn_like(torch.zeros(shape, device=xm.xla_device()))
+    self.assertEqual(x.device.type, 'xla')
+
+  def test_rand_like(self):
+    shape = (5, 1, 1)
+    x = torch.rand_like(torch.zeros(shape, device=xm.xla_device()))
+    self.assertEqual(x.device.type, 'xla')
+
+  def test_randint_like(self):
+    shape = (5, 1, 1)
+    x = torch.randint_like(
+            torch.zeros(shape, device=xm.xla_device(), dtype=torch.uint8),
+            6, 10)
+    self.assertEqual(x.device.type, 'xla')
+
   def test_no_storage(self):
     x = torch.randn(5, device=xm.xla_device())
     self.assertRaises(Exception, x.device)
