@@ -737,6 +737,12 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.randint(3, (7, 3)), test_fn)
 
+  def test_max_throw(self):
+    xla_device = xm.xla_device()
+    xla_a = torch.randn(2, 0, 4, device=xla_device)
+    self.assertRaises(RuntimeError, lambda: torch.max(xla_a, dim=1))
+    self.assertRaises(RuntimeError, lambda: torch.max(xla_a))
+
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
