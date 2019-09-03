@@ -348,13 +348,13 @@ class ClusterResolverTest(unittest.TestCase):
         discovery, 'build', autospec=True).start()
 
   def test_bad_empty_tpu_constructor(self):
-    tpus = []
-    self.assertRaisesRegex(ValueError, 'tpus must be a non-empty list',
+    tpus = ''
+    self.assertRaisesRegex(ValueError, 'tpu must be a non-empty string',
                            ClusterResolver, tpus)
 
   def test_bad_none_tpu_constructor(self):
     tpus = None
-    self.assertRaisesRegex(ValueError, 'tpus must be a non-empty list',
+    self.assertRaisesRegex(ValueError, 'tpu must be a non-empty string',
                            ClusterResolver, tpus)
 
   def test_bad_vm_constructor(self):
