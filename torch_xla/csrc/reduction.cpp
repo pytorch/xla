@@ -31,6 +31,7 @@ ReductionInfo GetReductionInfo(
       rinfo.new_dimensions.push_back(shape.dimensions(i));
     }
   }
+  XLA_CHECK_GT(rinfo.element_count, 0);
   return rinfo;
 }
 
