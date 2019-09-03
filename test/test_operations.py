@@ -665,6 +665,15 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b = xla_a.frac()
     self.assertEqual(b, xla_b)
 
+  def test_norm_p0(self):
+    # p = 0 is equivalent to nonzero
+    xla_device = xm.xla_device()
+    a = torch.randn(3, 2)
+    xla_a = a.to(xla_device)
+    norm = a.norm(p = 0)
+    xla_norm = xla_a.norm(p = 0)
+    self.assertEqual(norm, xla_norm)
+
   def test_index_bool(self):
 
     def test_fn(a):
