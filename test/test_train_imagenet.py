@@ -11,8 +11,13 @@ MODEL_OPTS = {
     '--model': {
         'choices': SUPPORTED_MODELS,
         'default': 'resnet50',
-    }
+    },
+    '--test_set_batch_size': {
+        'default': 64,
+        'type': int,
+    },
 }
+
 FLAGS = test_utils.parse_common_options(
     datadir='/tmp/imagenet',
     batch_size=None,
@@ -39,6 +44,7 @@ import unittest
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
+    test_set_batch_size=64,
     num_epochs=18,
     momentum=0.9,
     lr=0.1,
@@ -109,7 +115,7 @@ def train_imagenet():
         ]))
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
-        batch_size=FLAGS.batch_size,
+        batch_size=FLAGS.test_set_batch_size,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
