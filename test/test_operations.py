@@ -691,6 +691,18 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.rand(4, 3), test_fn)
 
+  def test_scatter_add_bool(self):
+    xla_device = xm.xla_device()
+    a = torch.tensor([[True, True, True, True, True], [True, True, True, True, True]])
+    b = torch.zeros(3, 5, dtype=torch.bool)
+    index = torch.tensor([[0, 1, 2, 0, 0], [2, 0, 0, 1, 2]])
+    b.scatter_add_(0, index, a)
+    xla_a = a.to(xla_device)
+    xla_b = b.to(xla_device)
+    xla_index = index.to(xla_device)
+    xla_b.scatter_add_(0, xla_index, xla_a)
+    self.assertEqual(b, xla_b)
+
   def test_squeeze_nonzero(self):
 
     def test_fn(a):
