@@ -1845,6 +1845,10 @@ XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
                                            start);
   end = XlaHelpers::GetCanonicalPosition(input_shape.get().dimensions(), dim,
                                          end);
+  // PyTorch allows tensor[-1:0] to return a 0-dim tensor.
+  if (start > end) {
+    end = start;
+  }
   step = std::min(step, end - start);
 
   SelectInfo select = {dim, start, end, step};
