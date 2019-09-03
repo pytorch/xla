@@ -1,6 +1,8 @@
 #include "torch_xla/csrc/ops/scatter_add.h"
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
@@ -23,7 +25,12 @@ NodePtr ScatterAdd::Clone(OpList operands) const {
 XlaOpVector ScatterAdd::Lower(LoweringContext* loctx) const {
   auto add_scatter_combiner = [](const xla::XlaOp& x,
                                  const xla::XlaOp& y) -> xla::XlaOp {
-    return x + y;
+    xla::XlaOp numeric_x = ConvertToNumeric(x);
+    xla::XlaOp numeric_y = ConvertToNumeric(y);
+    xla::XlaOp numeric_sum = numeric_x + numeric_y;
+    return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
+                     XlaHelpers::TypeOfXlaOp(x),
+                     /*device=*/nullptr);
   };
 
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
