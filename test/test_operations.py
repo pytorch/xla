@@ -161,8 +161,8 @@ class XlaTestCase(TestCase):
                               torch.ones_like(out).float() * abs_err)
       super(XlaTestCase, self).assertEqual(diff_tensor.size(),
                                            max_abs_err.size())
-      if diff_tensor.numel() > 0\
-          and torch.le(diff_tensor, max_abs_err).min().item() == 0:
+      if (diff_tensor.numel() > 0 and
+          torch.le(diff_tensor, max_abs_err).min().item() == 0):
         self.fail('Relative error higher than the maximum tolerance')
     except:
       _dump_differences(
