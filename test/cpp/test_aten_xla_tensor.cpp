@@ -5919,6 +5919,17 @@ TEST_F(AtenXlaTensorTest, TestCrossExplicitDim) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestCrossZeroDim) {
+  torch::Tensor input =
+      torch::rand({0, 1, 3, 0}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor result = torch::cross(input, input);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_result = torch::cross(xla_input, xla_input);
+    AllClose(result, xla_result);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestTriu) {
   int size = 5;
   torch::Tensor input =

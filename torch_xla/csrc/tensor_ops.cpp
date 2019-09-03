@@ -14,7 +14,8 @@ namespace {
 // squeezed out.
 XLATensor IndexAcrossDims(const XLATensor& input, xla::int64 dim,
                           xla::int64 index) {
-  return XLATensor::squeeze(XLATensor::slice(input, dim, index, index + 1, 1));
+  return XLATensor::squeeze(XLATensor::slice(input, dim, index, index + 1, 1),
+                            dim);
 }
 
 }  // namespace
