@@ -170,8 +170,8 @@ def train_imagenet():
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
-    print("Epoch: {}".format(epoch))
     accuracy = mean(accuracies)
+    print("Epoch: {}, Accuracy:{:.2f}".format(epoch, accuracy))
     writer.add_scalar('Accuracy/test', accuracy, epoch)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
