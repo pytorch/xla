@@ -30,10 +30,12 @@ FLAGS = test_utils.parse_common_options(
 
 from common_utils import TestCase, run_tests
 import os
+from statistics import mean
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
@@ -164,10 +166,13 @@ def train_imagenet():
     return correct / total_samples
 
   accuracy = 0.0
+  writer = SummaryWriter(log_dir='/tmp/imagenet_tensorboard')
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
-    accuracy = sum(accuracies) / len(accuracies)
+    print("Epoch: {}".format(epoch))
+    accuracy = mean(accuracies)
+    writer.add_scalar('Accuracy/test', accuracy, epoch)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
