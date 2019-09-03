@@ -2083,7 +2083,8 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
                              c10::optional<at::Scalar> p,
                              at::ScalarType dtype) {
-  // p = 0 is nonzero, which is not lowered to XLA
+  // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
+  // shapes issue.
   if (p.has_value() && p->toDouble() == 0) {
     return AtenXlaTypeDefault::norm(self, p, dtype);
   }
@@ -2092,7 +2093,8 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
 }
 
 at::Tensor AtenXlaType::norm(const at::Tensor& self, at::Scalar p) {
-  // p = 0 is nonzero, which is not lowered to XLA
+  // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
+  // shapes issue.
   if (p.toDouble() == 0) {
     return AtenXlaTypeDefault::norm(self, p);
   }
@@ -2103,7 +2105,8 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self, at::Scalar p) {
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
                              c10::optional<at::Scalar> p, at::IntArrayRef dim,
                              bool keepdim, at::ScalarType dtype) {
-  // p = 0 is nonzero, which is not lowered to XLA
+  // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
+  // shapes issue.
   if (p.has_value() && p->toDouble() == 0) {
     return AtenXlaTypeDefault::norm(self, p, dim, keepdim, dtype);
   }
@@ -2114,7 +2117,8 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
                              c10::optional<at::Scalar> p, at::IntArrayRef dim,
                              bool keepdim) {
-  // p = 0 is nonzero, which is not lowered to XLA
+  // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
+  // shapes issue.
   if (p.has_value() && p->toDouble() == 0) {
     return AtenXlaTypeDefault::norm(self, p, dim, keepdim);
   }
