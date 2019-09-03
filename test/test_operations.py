@@ -726,6 +726,13 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.zeros([4, 4]), test_fn)
 
+  def test_split_zero_throw(self):
+    xla_device = xm.xla_device()
+    xla_a = torch.rand(1, 3, device=xla_device)
+    with self.assertRaisesRegex(RuntimeError,
+            'split_size can only be 0 if dimension size is 0'):
+      xla_b = torch.split(xla_a, 0, dim=0)
+
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
