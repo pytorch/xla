@@ -726,6 +726,17 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.zeros([4, 4]), test_fn)
 
+  def test_stack_pred(self):
+
+    def test_fn(a):
+      i0, j0, k0 = a[:-1].t()
+      i1, j1, k1 = a[1:].t()
+      i_ok = i1 >= i0
+      j_ok = (j1 >= j0) | (i1 > i0)
+      return torch.stack([i_ok, j_ok], dim=1)
+
+    self.runAtenTest(torch.randint(3, (7, 3)), test_fn)
+
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
