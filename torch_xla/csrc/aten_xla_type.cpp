@@ -2083,11 +2083,21 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
                              c10::optional<at::Scalar> p,
                              at::ScalarType dtype) {
+  // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
+  // shapes issue.
+  if (p.has_value() && p->toDouble() == 0) {
+    return AtenXlaTypeDefault::norm(self, p, dtype);
+  }
   return bridge::AtenFromXlaTensor(XLATensor::norm(
       bridge::GetXlaTensor(self), p, dtype, {}, /*keepdim=*/false));
 }
 
 at::Tensor AtenXlaType::norm(const at::Tensor& self, at::Scalar p) {
+  // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
+  // shapes issue.
+  if (p.toDouble() == 0) {
+    return AtenXlaTypeDefault::norm(self, p);
+  }
   return bridge::AtenFromXlaTensor(XLATensor::norm(
       bridge::GetXlaTensor(self), p, c10::nullopt, {}, /*keepdim=*/false));
 }
@@ -2095,6 +2105,11 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self, at::Scalar p) {
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
                              c10::optional<at::Scalar> p, at::IntArrayRef dim,
                              bool keepdim, at::ScalarType dtype) {
+  // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
+  // shapes issue.
+  if (p.has_value() && p->toDouble() == 0) {
+    return AtenXlaTypeDefault::norm(self, p, dim, keepdim, dtype);
+  }
   return bridge::AtenFromXlaTensor(
       XLATensor::norm(bridge::GetXlaTensor(self), p, dtype, dim, keepdim));
 }
@@ -2102,6 +2117,11 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
                              c10::optional<at::Scalar> p, at::IntArrayRef dim,
                              bool keepdim) {
+  // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
+  // shapes issue.
+  if (p.has_value() && p->toDouble() == 0) {
+    return AtenXlaTypeDefault::norm(self, p, dim, keepdim);
+  }
   return bridge::AtenFromXlaTensor(XLATensor::norm(
       bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
 }
