@@ -1921,7 +1921,9 @@ std::vector<XLATensor> XLATensor::split(const XLATensor& input,
   if (split_size == 0) {
     // Deal with 0 split size, it's a corner case which is only allowed when the
     // dimension size is 0 as well.
-    XLA_CHECK_EQ(dim_size, 0);
+    XLA_CHECK_EQ(dim_size, 0) << "split_size can only be 0 if dimension size "
+                                 "is 0, but got dimension size of "
+                              << dim_size;
     xla::Literal literal(input_shape.get());
     return {
         input.CreateFrom(ir::MakeNode<ir::ops::Constant>(std::move(literal)))};
