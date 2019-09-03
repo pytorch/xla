@@ -166,12 +166,12 @@ def train_imagenet():
     return correct / total_samples
 
   accuracy = 0.0
-  writer = SummaryWriter(log_dir='/tmp/imagenet_tensorboard')
+  writer = SummaryWriter(log_dir=FLAGS.logdir)
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = mean(accuracies)
-    print("Epoch: {}, Mean Accuracy:{:.2f}%".format(epoch, accuracy))
+    print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
     writer.add_scalar('Accuracy/test', accuracy, epoch)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
