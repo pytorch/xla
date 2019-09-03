@@ -515,6 +515,7 @@ NodePtr MaxUnary(const Value& input) {
         xla::util::Iota<xla::int64>(input_shape.rank()));
     return node.ReturnOp(xla::Reshape(result, {}), loctx);
   };
+  XLA_CHECK_GT(xla::ShapeUtil::ElementsIn(input.shape()), 0);
   return GenericOp(OpKind(at::aten::max), {input},
                    xla::ShapeUtil::MakeShape(input.shape().element_type(), {}),
                    std::move(lower_fn));
@@ -533,6 +534,7 @@ NodePtr MinUnary(const Value& input) {
         xla::util::Iota<xla::int64>(input_shape.rank()));
     return node.ReturnOp(xla::Reshape(result, {}), loctx);
   };
+  XLA_CHECK_GT(xla::ShapeUtil::ElementsIn(input.shape()), 0);
   return GenericOp(OpKind(at::aten::min), {input},
                    xla::ShapeUtil::MakeShape(input.shape().element_type(), {}),
                    std::move(lower_fn));
