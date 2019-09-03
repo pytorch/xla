@@ -237,16 +237,16 @@ class ClusterResolver(object):
     idx = parts.index(name)
     return parts[idx + 1]
 
-  def __init__(self, tpus, vms=None, zone=None, project=None):
+  def __init__(self, tpu, vms=None, zone=None, project=None):
     """Creates a new ClusterResolver object."""
 
-    if not isinstance(tpus, list) or len(tpus) == 0:
-      raise ValueError('tpus must be a non-empty list')
+    if not tpu:
+      raise ValueError('tpu must be a non-empty string')
     if vms:
       if not isinstance(vms, list) or len(vms) == 0:
         raise ValueError('vms must be a non-empty list if provided')
 
-    self._tpus = tpus
+    self._tpus = [tpu]
     self._vms = vms
     self._zone = zone
     self._project = project
@@ -524,7 +524,6 @@ class DistributedExecutor(object):
 
   def _run_remote_cmd(self, cmd, client_worker, shell=True, log=True):
     cmd = concat_cmd_list(cmd, quote='') if shell else cmd
-    print('{}: {}'.format(client_worker, cmd))
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
     if log:
@@ -711,13 +710,12 @@ class DistributedExecutor(object):
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(
       description='PyTorch on TPU distrubuted training',
-      epilog=('Usage example: xla_dist.py --tpus=[TPU_NAME]'
+      epilog=('Usage example: xla_dist.py --tpu=[TPU_NAME]'
               ' --conda-env pytorch-nightly -- python train'))
 
   cluster_group = parser.add_argument_group('Cluster Setup')
   cluster_group.add_argument(
       '--tpu',
-      action='append',
       type=str,
       required=True,
       help='Name of the TPU pod, or list of single Cloud TPU devices (v*-8).')
