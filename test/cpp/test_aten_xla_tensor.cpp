@@ -851,6 +851,19 @@ TEST_F(AtenXlaTensorTest, TestSort) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSortDescWithMinValue) {
+  std::vector<int8_t> values{-128, 100};
+  torch::Tensor input =
+      torch::tensor(values, torch::TensorOptions(torch::kChar));
+  auto output = torch::sort(input, /*dim=*/0, /*descending=*/true);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    auto xla_output = torch::sort(xla_input, /*dim=*/0, /*descending=*/true);
+    AllEqual(std::get<0>(output), std::get<0>(xla_output));
+    AllEqual(std::get<1>(output), std::get<1>(xla_output));
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestArgSort) {
   torch::Tensor a = torch::rand({4, 5, 3}, torch::TensorOptions(torch::kFloat));
   for (int k = 1; k <= 3; ++k) {
