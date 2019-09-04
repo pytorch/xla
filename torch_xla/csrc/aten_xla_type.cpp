@@ -2164,28 +2164,48 @@ at::Tensor AtenXlaType::pinverse(const at::Tensor& self, double rcond) {
 }
 
 at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) {
+  // xla::pow doesn't support integer types.
+  if (!self.is_floating_point()) {
+    return AtenXlaTypeDefault::pow(self, exponent);
+  }
   return bridge::AtenFromXlaTensor(
       XLATensor::pow(bridge::GetXlaTensor(self), exponent));
 }
 
 at::Tensor AtenXlaType::pow(const at::Tensor& self,
                             const at::Tensor& exponent) {
+  // xla::pow doesn't support integer types.
+  if (!self.is_floating_point() || !exponent.is_floating_point()) {
+    return AtenXlaTypeDefault::pow(self, exponent);
+  }
   return bridge::AtenFromXlaTensor(XLATensor::pow(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(exponent)));
 }
 
 at::Tensor AtenXlaType::pow(at::Scalar self, const at::Tensor& exponent) {
+  // xla::pow doesn't support integer types.
+  if (!exponent.is_floating_point()) {
+    return AtenXlaTypeDefault::pow(self, exponent);
+  }
   return bridge::AtenFromXlaTensor(
       XLATensor::pow(self, bridge::GetXlaTensor(exponent)));
 }
 
 at::Tensor& AtenXlaType::pow_(at::Tensor& self, at::Scalar exponent) {
+  // xla::pow doesn't support integer types.
+  if (!self.is_floating_point()) {
+    return AtenXlaTypeDefault::pow_(self, exponent);
+  }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::pow_(self_tensor, exponent);
   return self;
 }
 
 at::Tensor& AtenXlaType::pow_(at::Tensor& self, const at::Tensor& exponent) {
+  // xla::pow doesn't support integer types.
+  if (!self.is_floating_point() || !exponent.is_floating_point()) {
+    return AtenXlaTypeDefault::pow_(self, exponent);
+  }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::pow_(self_tensor, bridge::GetXlaTensor(exponent));
   return self;
