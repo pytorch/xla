@@ -1918,10 +1918,9 @@ std::vector<XLATensor> XLATensor::split(const XLATensor& input,
   int split_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   xla::int64 dim_size = input_shape.get().dimensions(split_dim);
-  if (split_size == 0) {
-    // Deal with 0 split size, it's a corner case which is only allowed when the
-    // dimension size is 0 as well.
-    XLA_CHECK_EQ(dim_size, 0);
+  if (dim_size == 0) {
+    // Deal with dim_size=0, it's a corner case which only return 1 0-dim tensor
+    // no matter what split_size is.
     xla::Literal literal(input_shape.get());
     return {
         input.CreateFrom(ir::MakeNode<ir::ops::Constant>(std::move(literal)))};
