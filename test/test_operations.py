@@ -621,6 +621,13 @@ class TestAtenXlaTensor(XlaTestCase):
     vset = b.sum().item()
     self.assertEqual(a.sum().item(), 10.0 * vset + (4.0 - vset))
 
+  def test_pow_integer_types(self):
+    self.runAtenTest(torch.randint(10, (2, 2)), lambda x: torch.pow(x, 2))
+    self.runAtenTest(torch.randint(10, (2, 2)), lambda x: torch.pow(2, x))
+    self.runAtenTest(torch.randint(10, (2, 2)), lambda x: torch.pow(x, x))
+    self.runAtenTest(torch.randint(10, (2, 2)), lambda x: x.pow_(2))
+    self.runAtenTest(torch.randint(10, (2, 2)), lambda x: x.pow_(x))
+
   def test_pred_type(self):
     xla_device = xm.xla_device()
     a = torch.rand(4)
