@@ -290,24 +290,31 @@ class TensorFetcher(object):
   def __init__(self, var_name):
     self.var_name = var_name
     self.tvar_name = '{}_tensors'.format(self.var_name)
-    self.wvar_name = '{}_writeables'.format(self.var_name)
     self.tensors = []
     self.writeable = []
 
   def add(self, name, writeable):
+    if writeable:
+      self.writeable.append(len(self.tensors))
     self.tensors.append(name)
-    self.writeable.append(writeable)
     return '{}[{}]'.format(self.var_name, len(self.tensors) - 1)
 
-  def generate(self):
+  def generate_fetches(self):
     code = ''
     code += '  std::vector<at::Tensor> {} = {{{}}};\n'.format(
         self.tvar_name, ', '.join(self.tensors))
-    writeable_strings = ['true' if w else 'false' for w in self.writeable]
-    code += '  std::vector<bool> {} = {{{}}};\n'.format(
-        self.wvar_name, ', '.join(writeable_strings))
-    code += ('  auto {} = bridge::XlaCreateTensorList({}, &{});\n').format(
-        self.var_name, self.tvar_name, self.wvar_name)
+    code += ('  auto {} = bridge::XlaCreateTensorList({});\n').format(
+        self.var_name, self.tvar_name)
+    return code
+
+  def generate_updates(self):
+    code = ''
+    if self.writeable:
+      ivar_name = '{}_update_indices'.format(self.var_name)
+      code += '  std::vector<size_t> {} = {{{}}};\n'.format(
+          ivar_name, ', '.join(str(x) for x in self.writeable))
+      code += '  bridge::XlaUpdateTensors({}, {}, {});\n'.format(
+          self.tvar_name, self.var_name, ivar_name)
     return code
 
 
@@ -795,9 +802,8 @@ def generate_aten_to_xla(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
     pname = param_name(p)
     if cptype == 'TensorList':
       xname = 'l_{}'.format(pname)
-      code += (
-          '  auto {} = bridge::XlaCreateTensorList({}, /*writeable=*/nullptr);\n'
-      ).format(xname, pname)
+      code += ('  auto {} = bridge::XlaCreateTensorList({});\n').format(
+          xname, pname)
       param_vars.append(xname)
     elif cptype == 'TensorOptions':
       gcode, xname = rewrite_tensor_options(fname, pname)
@@ -813,11 +819,12 @@ def generate_aten_to_xla(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
       param_vars.append(xname)
     if p == ref_param and not get_optional(fnopts, 'ref_param'):
       xla_ref_param = param_vars[-1]
-  code += tfetcher.generate()
+  code += tfetcher.generate_fetches()
   result_assign = generate_result_assignment(tree, _RESULT_NAME)
   code += '  {}{};\n'.format(
       result_assign, get_handling_function(ctx, fname, xla_ref_param,
                                            param_vars))
+  code += tfetcher.generate_updates()
   if result_assign:
     code += ('  static_cast<void>({}); // Avoid warnings in case not '
              'used\n'.format(_RESULT_NAME))

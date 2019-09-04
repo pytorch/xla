@@ -86,31 +86,24 @@ XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device) {
   return xtensor ? *xtensor : XLATensor::Create(tensor, device);
 }
 
-std::vector<at::Tensor> XlaCreateTensorList(
-    const at::TensorList& tensors, const std::vector<bool>* writeable) {
+std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors) {
   std::vector<at::Tensor> aten_xla_tensors(tensors.size());
   std::vector<XLATensor> xla_tensors;
   // We need to separate out the defined tensors first, GetXlaTensor() doesn't
   // work with undefined tensors.
-  std::vector<bool> defined_writeable;
   std::vector<bool> to_translate(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
     const at::Tensor& tensor = tensors[i];
-    if (!tensor.defined()) {
-      XLA_CHECK(writeable == nullptr || !(*writeable)[i])
-          << "Trying to write to an undefined tensor";
-    } else if (tensor.device().is_cpu()) {
-      aten_xla_tensors[i] = tensor;
-    } else {
-      to_translate[i] = true;
-      xla_tensors.push_back(GetXlaTensorUnwrap(tensor));
-      if (writeable != nullptr) {
-        defined_writeable.push_back((*writeable)[i]);
+    if (tensor.defined()) {
+      if (tensor.device().is_cpu()) {
+        aten_xla_tensors[i] = tensor;
+      } else {
+        to_translate[i] = true;
+        xla_tensors.push_back(GetXlaTensorUnwrap(tensor));
       }
     }
   }
-  auto defined_aten_xla_tensors = XLATensor::GetTensors(
-      &xla_tensors, writeable ? &defined_writeable : nullptr);
+  auto defined_aten_xla_tensors = XLATensor::GetTensors(&xla_tensors);
   // Insert undefined tensors into the result, back into the original undefined
   // positions.
   for (size_t i = 0, defined_pos = 0; i < tensors.size(); ++i) {
@@ -119,6 +112,16 @@ std::vector<at::Tensor> XlaCreateTensorList(
     }
   }
   return aten_xla_tensors;
+}
+
+void XlaUpdateTensors(
+    tensorflow::gtl::ArraySlice<const at::Tensor> dest_xla_tensors,
+    tensorflow::gtl::ArraySlice<const at::Tensor> source_cpu_tensors,
+    tensorflow::gtl::ArraySlice<const size_t> indices) {
+  for (auto index : indices) {
+    XLATensor xtensor = GetXlaTensorUnwrap(dest_xla_tensors.at(index));
+    xtensor.UpdateFromTensor(source_cpu_tensors.at(index));
+  }
 }
 
 c10::optional<Device> GetXlaDevice(const at::Tensor& tensor) {

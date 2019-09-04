@@ -32,11 +32,12 @@ XLATensor GetXlaTensorUnwrap(const at::Tensor& tensor);
 XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device);
 
 // Creates a vector of at::Tensor objects extracted from a list of XLA tensors.
-// If the writeable vector is not nullptr, it must be the same size as tensors,
-// and the corresponding bool tells whether the ATEN tensor to be retrieved
-// should the a writeable copy.
-std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors,
-                                            const std::vector<bool>* writeable);
+std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors);
+
+void XlaUpdateTensors(
+    tensorflow::gtl::ArraySlice<const at::Tensor> dest_xla_tensors,
+    tensorflow::gtl::ArraySlice<const at::Tensor> source_cpu_tensors,
+    tensorflow::gtl::ArraySlice<const size_t> indices);
 
 // Tries to extract the device out of the XLA tensor. Returns nullopt if the
 // input is not an XLA tensor.
