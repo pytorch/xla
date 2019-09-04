@@ -743,23 +743,22 @@ void XLATensor::SetScalarType(
   data()->logical_element_type = logical_element_type;
 }
 
-void XLATensor::MakeWriteableTensorDataSource() {
-  c10::optional<at::Tensor> tensor_data = CurrentTensorData();
-  XLA_CHECK(tensor_data);
-  if (data()->view != nullptr) {
-    ir::Value ir_value = GetIrValueForTensor(*tensor_data, GetDevice());
-    data()->view = UpdateView(data()->view, std::move(ir_value));
-  }
-  data()->xla_data = nullptr;
-  AssignIrValue(ir::Value());
-}
-
 void XLATensor::SetTensor(at::Tensor tensor) {
   SetTensorData(tensor);
   data()->view = nullptr;
   data()->xla_data = nullptr;
   AssignIrValue(ir::Value());
   data()->generation += 1;
+}
+
+void XLATensor::UpdateFromTensor(at::Tensor tensor) {
+  SetTensorData(tensor);
+  if (data()->view != nullptr) {
+    ir::Value ir_value = GetIrValueForTensor(tensor, GetDevice());
+    data()->view = UpdateView(data()->view, std::move(ir_value));
+  }
+  data()->xla_data = nullptr;
+  AssignIrValue(ir::Value());
 }
 
 std::vector<XLATensor> XLATensor::GetLiveTensors(const Device* device) {
@@ -790,7 +789,7 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
 }
 
 std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
-    std::vector<XLATensor>* tensors, const std::vector<bool>* writeable) {
+    std::vector<XLATensor>* tensors) {
   SyncTensorsConfig config;
   config.force_xla_data = false;
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
@@ -827,33 +826,17 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
       ++literals_index;
     }
   }
-  if (writeable != nullptr) {
-    XLA_CHECK_EQ(tensors->size(), writeable->size());
-    for (size_t i = 0; i < tensors->size(); ++i) {
-      if ((*writeable)[i]) {
-        // If all we have for this tensor is ATEN tensor data, we need to set it
-        // before calling MakeWriteableTensorDataSource(), which will otherwise
-        // error out.
-        if (!(*tensors)[i].CurrentTensorData()) {
-          (*tensors)[i].SetTensorData(results[i]);
-        }
-        (*tensors)[i].MakeWriteableTensorDataSource();
-      }
-    }
-  }
   return results;
 }
 
-std::vector<at::Tensor> XLATensor::GetTensors(
-    std::vector<XLATensor>* tensors, const std::vector<bool>* writeable) {
+std::vector<at::Tensor> XLATensor::GetTensors(std::vector<XLATensor>* tensors) {
   static const bool op_by_op =
       xla::sys_util::GetEnvBool("GET_TENSORS_OPBYOP", false);
-  return op_by_op ? GetTensorsOpByOp(tensors, writeable)
-                  : GetTensorsFused(tensors, writeable);
+  return op_by_op ? GetTensorsOpByOp(tensors) : GetTensorsFused(tensors);
 }
 
 std::vector<at::Tensor> XLATensor::GetTensorsFused(
-    std::vector<XLATensor>* tensors, const std::vector<bool>* writeable) {
+    std::vector<XLATensor>* tensors) {
   SyncTensorsConfig config;
   config.force_xla_data = false;
   auto async = SyncTensorsGraphInternal(tensors, {}, config);
@@ -882,20 +865,6 @@ std::vector<at::Tensor> XLATensor::GetTensorsFused(
       results.push_back(MakeTensorFromXlaLiteral(literals[literals_index],
                                                  (*tensors)[i].dtype()));
       ++literals_index;
-    }
-  }
-  if (writeable != nullptr) {
-    XLA_CHECK_EQ(tensors->size(), writeable->size());
-    for (size_t i = 0; i < tensors->size(); ++i) {
-      if ((*writeable)[i]) {
-        // If all we have for this tensor is ATEN tensor data, we need to set it
-        // before calling MakeWriteableTensorDataSource(), which will otherwise
-        // error out.
-        if (!(*tensors)[i].CurrentTensorData()) {
-          (*tensors)[i].SetTensorData(results[i]);
-        }
-        (*tensors)[i].MakeWriteableTensorDataSource();
-      }
     }
   }
   return results;

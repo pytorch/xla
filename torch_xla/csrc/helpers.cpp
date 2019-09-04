@@ -307,7 +307,11 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
     xla::int64 dim2 = shape2_dims[shape2_dims.size() - min_size + i];
     XLA_CHECK(dim1 == dim2 || dim1 == 1 || dim2 == 1)
         << shape1 << " and " << shape2;
-    dimensions.push_back(std::max<xla::int64>(dim1, dim2));
+    if (dim1 == 0 || dim2 == 0) {
+      dimensions.push_back(0);
+    } else {
+      dimensions.push_back(std::max<xla::int64>(dim1, dim2));
+    }
   }
   return xla::ShapeUtil::MakeShape(shape1.element_type(), dimensions);
 }
