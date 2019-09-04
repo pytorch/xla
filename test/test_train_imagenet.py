@@ -75,6 +75,11 @@ def get_model_property(key):
   return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
 
 
+def add_scalar_to_summary(summary_writer, metric_name, y_value, x_value):
+  if summary_writer is not None:
+    summary_writer.add_scalar(metric_name, y_value, x_value)
+
+
 def train_imagenet():
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
@@ -166,13 +171,13 @@ def train_imagenet():
     return correct / total_samples
 
   accuracy = 0.0
-  writer = SummaryWriter(log_dir=FLAGS.logdir)
+  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = mean(accuracies)
     print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
-    writer.add_scalar('Accuracy/test', accuracy, epoch)
+    add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
