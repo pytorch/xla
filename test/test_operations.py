@@ -480,8 +480,7 @@ class TestAtenXlaTensor(XlaTestCase):
   def test_randint_like(self):
     shape = (5, 1, 1)
     x = torch.randint_like(
-            torch.zeros(shape, device=xm.xla_device(), dtype=torch.uint8),
-            6, 10)
+        torch.zeros(shape, device=xm.xla_device(), dtype=torch.uint8), 6, 10)
     self.assertEqual(x.device.type, 'xla')
 
   def test_no_storage(self):
@@ -671,8 +670,8 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_device = xm.xla_device()
     a = torch.randn(3, 2)
     xla_a = a.to(xla_device)
-    norm = a.norm(p = 0)
-    xla_norm = xla_a.norm(p = 0)
+    norm = a.norm(p=0)
+    xla_norm = xla_a.norm(p=0)
     self.assertEqual(norm, xla_norm)
 
   def test_slice_start_end(self):
@@ -701,7 +700,8 @@ class TestAtenXlaTensor(XlaTestCase):
 
   def test_scatter_add_bool(self):
     xla_device = xm.xla_device()
-    a = torch.tensor([[True, True, True, True, True], [True, True, True, True, True]])
+    a = torch.tensor([[True, True, True, True, True],
+                      [True, True, True, True, True]])
     b = torch.zeros(3, 5, dtype=torch.bool)
     index = torch.tensor([[0, 1, 2, 0, 0], [2, 0, 0, 1, 2]])
     b.scatter_add_(0, index, a)
@@ -725,6 +725,22 @@ class TestAtenXlaTensor(XlaTestCase):
       return a.expand((1, 1, -1, -1))
 
     self.runAtenTest(torch.zeros([4, 4]), test_fn)
+
+  def test_max_throw(self):
+    xla_device = xm.xla_device()
+    xla_a = torch.randn(2, 0, 4, device=xla_device)
+    self.assertRaises(RuntimeError, lambda: torch.max(xla_a, dim=1))
+    self.assertRaises(RuntimeError, lambda: torch.max(xla_a))
+
+  def test_writeable_tensors_updates(self):
+
+    def test_fn(s, i):
+      out = torch.zeros(2, 4, device=s.device)
+      return torch.index_select(s, 0, i, out=out)
+
+    self.runAtenTest(
+        [torch.randn(3, 4),
+         torch.tensor([2, 1], dtype=torch.long)], test_fn)
 
   def test_save(self):
     xla_device = xm.xla_device()
