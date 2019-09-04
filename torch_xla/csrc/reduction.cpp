@@ -76,7 +76,7 @@ xla::XlaOp CreateSummation(
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateAddComputation(shape.element_type()),
       dimensions);
-  if (scale && rinfo.element_count > 1) {
+  if (scale) {
     xla::XlaOp scale = XlaHelpers::ScalarValue<float>(
         1.0f / static_cast<float>(rinfo.element_count), shape.element_type(),
         input.builder());
