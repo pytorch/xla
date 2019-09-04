@@ -153,6 +153,8 @@ class XlaTestCase(TestCase):
 
   def assertEqualRel(self, out, expected, rel_err=1e-2, abs_err=1e-5):
     try:
+      if torch.isnan(expected):
+        return torch.isnan(out)
       diff_tensor = (out - expected).abs().float()
       max_rel_err = torch.max(out.abs(), expected.abs()).float() * rel_err
       # Allow higher relative differences as long as we're still below the
@@ -733,29 +735,23 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.zeros([4, 4]), test_fn)
 
-  def test_max_throw(self):
-    xla_device = xm.xla_device()
-    xla_a = torch.randn(2, 0, 4, device=xla_device)
-    self.assertRaises(RuntimeError, lambda: torch.max(xla_a, dim=1))
-    self.assertRaises(RuntimeError, lambda: torch.max(xla_a))
-
   def test_reduction_zero_dim(self):
     self.runAtenTest(torch.rand(2, 0, 4).bool(), lambda x : torch.all(x))
     self.runAtenTest(torch.rand(2, 0, 4).bool(), lambda x : torch.any(x))
     self.runAtenTest(torch.rand(2, 0, 4), lambda x : torch.sum(x))
-    # self.runAtenTest(torch.rand(2, 0, 4), lambda x : torch.mean(x))
+    self.runAtenTest(torch.rand(2, 0, 4), lambda x : torch.mean(x))
     self.runAtenTest(torch.rand(2, 0, 4), lambda x : torch.prod(x))
     # min & max throws
     xla_device = xm.xla_device()
     a = torch.rand(2, 0, 4)
     xla_a = a.to(xla_device)
     self.assertRaises(RuntimeError, lambda: torch.max(a, dim=1))
-    self.assertRaises(RuntimeError, lambda: torch.max(xla_a, dim=1))
     self.assertRaises(RuntimeError, lambda: torch.max(a))
-    self.assertRaises(RuntimeError, lambda: torch.max(xla_a))
     self.assertRaises(RuntimeError, lambda: torch.min(a, dim=1))
-    self.assertRaises(RuntimeError, lambda: torch.min(xla_a, dim=1))
     self.assertRaises(RuntimeError, lambda: torch.min(a))
+    self.assertRaises(RuntimeError, lambda: torch.max(xla_a, dim=1))
+    self.assertRaises(RuntimeError, lambda: torch.max(xla_a))
+    self.assertRaises(RuntimeError, lambda: torch.min(xla_a, dim=1))
     self.assertRaises(RuntimeError, lambda: torch.min(xla_a))
 
   def test_writeable_tensors_updates(self):
