@@ -644,7 +644,7 @@ class TestAtenXlaTensor(XlaTestCase):
     self.assertRaises(RuntimeError, lambda: c & c.byte())
     self.assertRaises(RuntimeError, lambda: c + c.byte())
     self.assertRaises(RuntimeError, lambda: xla_c & xla_c.byte())
-    # RuntimeError is trigger in execution instead of lowering,
+    # RuntimeError is triggered in execution instead of lowering,
     # thus print is required.
     self.assertRaises(RuntimeError, lambda: print(xla_c + xla_c.byte()))
 
