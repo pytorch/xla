@@ -713,6 +713,13 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.rand(2, 3), test_fn)
 
+  def test_split_empty_dim(self):
+
+    def test_fn(a):
+      return torch.split(a, 2, dim=0)
+
+    self.runAtenTest(torch.rand(0, 1, 3, 0), test_fn)
+
   def test_pred_and_u8(self):
 
     def test_fn(a):
