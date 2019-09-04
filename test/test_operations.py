@@ -648,6 +648,18 @@ class TestAtenXlaTensor(XlaTestCase):
     # thus print is required.
     self.assertRaises(RuntimeError, lambda: print(xla_c + xla_c.byte()))
 
+  def test_bitwise_type(self):
+    xla_device = xm.xla_device()
+    a = torch.randint(255, (4,), dtype=torch.long)
+    xla_a = a.to(xla_device)
+    self.assertRaises(RuntimeError, lambda: a & a.byte())
+    self.assertRaises(RuntimeError, lambda: xla_a & xla_a.byte())
+
+    def test_fn(a):
+      return a & (~a)
+
+    self.runAtenTest(a, test_fn)
+
   def test_s_copy_dtype(self):
     xla_device = xm.xla_device()
     a = torch.rand(10).to(xla_device).to(dtype=torch.uint8)
