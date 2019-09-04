@@ -14,7 +14,7 @@ print(x.device)
 print(x)
 ```
 
-The XLA device is not a physical device but instead stands in for either a Cloud TPU or CPU.
+The XLA device is not a physical device but instead stands in for either a Cloud TPU or CPU. The underlying storage for XLA tensors is a contiguous buffer in device memory and the code in the model shouldn't assume any stride.
 
 The [XLA readme](https://github.com/pytorch/xla/blob/master/README.md) describes all the options available to run on TPU or CPU.
 
