@@ -17,6 +17,7 @@ Value BitwiseAnd(const Value& node1, const Value& node2) {
     };
     return node.ReturnOp(kernel(op0, op1), loctx);
   };
+  XLA_CHECK_EQ(node1.shape().element_type(), node2.shape().element_type());
   return GenericOp(OpKind(at::aten::__and__), OpList{node1, node2},
                    node1.shape(), std::move(lower_fn));
 }
@@ -30,6 +31,7 @@ Value BitwiseOr(const Value& node1, const Value& node2) {
     };
     return node.ReturnOp(kernel(op0, op1), loctx);
   };
+  XLA_CHECK_EQ(node1.shape().element_type(), node2.shape().element_type());
   return GenericOp(OpKind(at::aten::__or__), OpList{node1, node2},
                    node1.shape(), std::move(lower_fn));
 }
@@ -43,6 +45,7 @@ Value BitwiseXor(const Value& node1, const Value& node2) {
     };
     return node.ReturnOp(kernel(op0, op1), loctx);
   };
+  XLA_CHECK_EQ(node1.shape().element_type(), node2.shape().element_type());
   return GenericOp(OpKind(at::aten::__xor__), OpList{node1, node2},
                    node1.shape(), std::move(lower_fn));
 }

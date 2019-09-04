@@ -638,6 +638,16 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_f = xla_e.sum().item()
     self.assertEqual(f, xla_f)
 
+    # PRED cannot be automatically promoted to other dtypes.
+    # Test both cpu and xla here to make sure we get notified
+    # once PyTorch changes its behavior.
+    self.assertRaises(RuntimeError, lambda: c & c.byte())
+    self.assertRaises(RuntimeError, lambda: c + c.byte())
+    self.assertRaises(RuntimeError, lambda: xla_c & xla_c.byte())
+    # RuntimeError is trigger in execution instead of lowering,
+    # thus print is required.
+    self.assertRaises(RuntimeError, lambda: print(xla_c + xla_c.byte()))
+
   def test_s_copy_dtype(self):
     xla_device = xm.xla_device()
     a = torch.rand(10).to(xla_device).to(dtype=torch.uint8)
