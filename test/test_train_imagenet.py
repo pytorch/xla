@@ -30,6 +30,7 @@ FLAGS = test_utils.parse_common_options(
 
 from common_utils import TestCase, run_tests
 import os
+import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -146,8 +147,10 @@ def train_imagenet():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        print('[{}]({}) Loss={:.5f} Rate={:.2f}'.format(device, x, loss.item(),
-                                                        tracker.rate()))
+        print('[{}]({}) Loss={:.5f} Rate={:.2f}, GlobalRate={:.2f}, Time={}'
+            .format(device, x, loss.item(), tracker.rate(),
+                    tracker.global_rate(), time.asctime()))
+
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
