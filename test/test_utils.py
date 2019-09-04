@@ -4,6 +4,8 @@ import os
 import sys
 
 
+# summary_writer should be an instance of torch.utils.tensorborad.SummaryWriter
+# or None. If None, no summary files will be written.
 def add_scalar_to_summary(summary_writer, metric_name, metric_value,
                           global_step):
   if summary_writer is not None:
