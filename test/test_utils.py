@@ -4,6 +4,12 @@ import os
 import sys
 
 
+def add_scalar_to_summary(summary_writer, metric_name, metric_value,
+                          global_step):
+  if summary_writer is not None:
+    summary_writer.add_scalar(metric_name, metric_value, global_step)
+
+
 def parse_common_options(datadir=None,
                          logdir=None,
                          num_cores=None,
