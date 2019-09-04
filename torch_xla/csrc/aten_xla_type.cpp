@@ -254,8 +254,7 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   // Do not mark the tensor creation as writeable to not discard the XLA tensor
   // device context, but make a copy to avoid core data to be shared.
   std::vector<at::Tensor> tensors = {self};
-  auto xla_tensors =
-      bridge::XlaCreateTensorList(tensors, /*writeable=*/nullptr);
+  auto xla_tensors = bridge::XlaCreateTensorList(tensors);
   // Hack in an overwrite of a const tensor.
   at::Tensor t = CopyTensor(xla_tensors.front(), dst.scalar_type());
   const_cast<at::Tensor&>(dst).unsafeGetTensorImpl()->shallow_copy_from(
