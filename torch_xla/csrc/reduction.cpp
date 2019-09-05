@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/reduction.h"
 
+#include <cmath>
+
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
