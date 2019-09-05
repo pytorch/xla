@@ -74,8 +74,9 @@ xla::XlaOp CreateSummation(
       dimensions);
   if (scale) {
     xla::XlaOp scale = XlaHelpers::ScalarValue<float>(
-        1.0f / static_cast<float>(rinfo.element_count), shape.element_type(),
-        input.builder());
+        rinfo.element_count > 0 ? 1.0f / static_cast<float>(rinfo.element_count)
+                                : NAN,
+        shape.element_type(), input.builder());
     result = xla::Mul(result, scale);
   }
   if (keep_reduced_dimensions) {
