@@ -84,11 +84,11 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
 
 
 def xrt_world_size():
-  return int(os.getenv('XRT_NUM_WORKERS', 1))
+  return int(os.getenv('XRT_SHARD_WORLD_SIZE', 1))
 
 
 def get_ordinal():
-  return int(os.getenv('XRT_LOCAL_WORKER', ':0').split(':')[1])
+  return int(os.getenv('XRT_SHARD_ORDINAL', 0))
 
 
 def xla_device(n=None, devkind=None):
