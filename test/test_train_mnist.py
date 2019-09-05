@@ -65,32 +65,39 @@ def train_mnist():
         FLAGS.datadir,
         train=True,
         download=True,
-        transform=transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-        ]))
+        transform=transforms.Compose(
+            [transforms.ToTensor(),
+             transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
         FLAGS.datadir,
         train=False,
-        transform=transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-        ]))
-    train_sampler = torch.utils.data.distributed.DistributedSampler(
-        train_dataset, num_replicas=xm.xrt_world_size(),
-        rank=xm.get_ordinal(), shuffle=True)
-    test_sampler = torch.utils.data.distributed.DistributedSampler(
-        test_dataset, num_replicas=xm.xrt_world_size(),
-        rank=xm.get_ordinal(), shuffle=False)
+        transform=transforms.Compose(
+            [transforms.ToTensor(),
+             transforms.Normalize((0.1307,), (0.3081,))]))
+    train_sampler = None
+    test_sampler = None
+    if xm.xrt_world_size() > 1:
+      train_sampler = torch.utils.data.distributed.DistributedSampler(
+          train_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=True)
+      test_sampler = torch.utils.data.distributed.DistributedSampler(
+          test_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
         sampler=train_sampler,
+        shuffle=False if train_sampler else True,
         num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.batch_size,
         sampler=test_sampler,
+        shuffle=False,
         num_workers=FLAGS.num_workers)
 
   devices = (
