@@ -101,12 +101,12 @@ def train_cifar():
         data=(torch.zeros(FLAGS.batch_size, 3, 32,
                           32), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=50000 // FLAGS.batch_size)
+        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, 32,
                           32), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=10000 // FLAGS.batch_size)
+        sample_count=10000 // FLAGS.batch_size // xm.xrt_world_size())
   else:
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
@@ -122,25 +122,35 @@ def train_cifar():
                              (0.2023, 0.1994, 0.2010)),
     ])
 
-    trainset = torchvision.datasets.CIFAR10(
+    train_dataset = torchvision.datasets.CIFAR10(
         root=FLAGS.datadir,
         train=True,
         download=True,
         transform=transform_train)
-    train_loader = torch.utils.data.DataLoader(
-        trainset,
-        batch_size=FLAGS.batch_size,
-        shuffle=True,
-        num_workers=FLAGS.num_workers)
-
-    testset = torchvision.datasets.CIFAR10(
+    test_dataset = torchvision.datasets.CIFAR10(
         root=FLAGS.datadir,
         train=False,
         download=True,
         transform=transform_test)
-    test_loader = torch.utils.data.DataLoader(
-        testset,
+    train_sampler = None
+    test_sampler = None
+    if xm.xrt_world_size() > 1:
+      train_sampler = torch.utils.data.distributed.DistributedSampler(
+          train_dataset, num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(), shuffle=True)
+      test_sampler = torch.utils.data.distributed.DistributedSampler(
+          test_dataset, num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(), shuffle=False)
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
         batch_size=FLAGS.batch_size,
+        sampler=train_sampler,
+        shuffle=False if train_sampler else True,
+        num_workers=FLAGS.num_workers)
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=FLAGS.batch_size,
+        sampler=test_sampler,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
@@ -171,8 +181,9 @@ def train_cifar():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        print('[{}]({}) Loss={:.5f} Rate={:.2f}'.format(device, x, loss.item(),
-                                                        tracker.rate()))
+        test_utils.print_training_update(device, x, loss.item(),
+                                         tracker.rate(),
+                                         tracker.global_rate())
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
@@ -184,9 +195,9 @@ def train_cifar():
       correct += pred.eq(target.view_as(pred)).sum().item()
       total_samples += data.size()[0]
 
-    print('[{}] Accuracy={:.2f}%'.format(device,
-                                         100.0 * correct / total_samples))
-    return correct / total_samples
+    accuracy = 100.0 * correct / total_samples
+    test_utils.print_test_update(device, accuracy)
+    return accuracy
 
   accuracy = 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
@@ -196,7 +207,7 @@ def train_cifar():
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
-  return accuracy * 100.0
+  return accuracy
 
 
 class TrainCIFAR10(TestCase):

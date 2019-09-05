@@ -168,21 +168,20 @@ std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
 std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
                                    xla::int64 dim, bool largest,
                                    bool /* sorted */) {
-  auto identity = [](const xla::XlaOp& op) -> xla::XlaOp { return op; };
-  auto neg = [](const xla::XlaOp& op) -> xla::XlaOp { return xla::Neg(op); };
-  auto input_transform = largest ? neg : identity;
-
   // Here 'k' is 1 based (1...).
   xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK_LE(k, shape.dimensions(dim));
   xla::Shape iota_shape =
       xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, shape.dimensions());
   xla::XlaOp iota = xla::Iota(input.builder(), iota_shape, dim);
-  xla::XlaOp sort_result = xla::Sort(
-      {input_transform(input), iota},
-      xla::CreateScalarLtComputation(
-          {shape.element_type(), xla::PrimitiveType::S32}, input.builder()),
-      dim);
+  xla::XlaComputation comparator =
+      largest ? xla::CreateScalarGtComputation(
+                    {shape.element_type(), xla::PrimitiveType::S32},
+                    input.builder())
+              : xla::CreateScalarLtComputation(
+                    {shape.element_type(), xla::PrimitiveType::S32},
+                    input.builder());
+  xla::XlaOp sort_result = xla::Sort({input, iota}, comparator, dim);
 
   std::vector<xla::int64> start_indices(shape.rank(), 0);
   std::vector<xla::int64> limit_indices(shape.dimensions().begin(),
@@ -190,9 +189,8 @@ std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
   limit_indices[dim] = k;
   std::vector<xla::int64> strides(shape.rank(), 1);
 
-  xla::XlaOp values =
-      input_transform(xla::Slice(xla::GetTupleElement(sort_result, 0),
-                                 start_indices, limit_indices, strides));
+  xla::XlaOp values = xla::Slice(xla::GetTupleElement(sort_result, 0),
+                                 start_indices, limit_indices, strides);
   xla::XlaOp indices = xla::Slice(xla::GetTupleElement(sort_result, 1),
                                   start_indices, limit_indices, strides);
   // aten::topk() wants Long tensors as indices.

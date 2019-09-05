@@ -54,35 +54,50 @@ def train_mnist():
         data=(torch.zeros(FLAGS.batch_size, 1, 28,
                           28), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=60000 // FLAGS.batch_size)
+        sample_count=60000 // FLAGS.batch_size // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 1, 28,
                           28), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=10000 // FLAGS.batch_size)
+        sample_count=10000 // FLAGS.batch_size // xm.xrt_world_size())
   else:
+    train_dataset = datasets.MNIST(
+        FLAGS.datadir,
+        train=True,
+        download=True,
+        transform=transforms.Compose(
+            [transforms.ToTensor(),
+             transforms.Normalize((0.1307,), (0.3081,))]))
+    test_dataset = datasets.MNIST(
+        FLAGS.datadir,
+        train=False,
+        transform=transforms.Compose(
+            [transforms.ToTensor(),
+             transforms.Normalize((0.1307,), (0.3081,))]))
+    train_sampler = None
+    test_sampler = None
+    if xm.xrt_world_size() > 1:
+      train_sampler = torch.utils.data.distributed.DistributedSampler(
+          train_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=True)
+      test_sampler = torch.utils.data.distributed.DistributedSampler(
+          test_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=False)
     train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(
-            FLAGS.datadir,
-            train=True,
-            download=True,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
-            ])),
+        train_dataset,
         batch_size=FLAGS.batch_size,
-        shuffle=True,
+        sampler=train_sampler,
+        shuffle=False if train_sampler else True,
         num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST(
-            FLAGS.datadir,
-            train=False,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
-            ])),
+        test_dataset,
         batch_size=FLAGS.batch_size,
-        shuffle=True,
+        sampler=test_sampler,
+        shuffle=False,
         num_workers=FLAGS.num_workers)
 
   devices = (
@@ -109,8 +124,9 @@ def train_mnist():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        print('[{}]({}) Loss={:.5f} Rate={:.2f}'.format(device, x, loss.item(),
-                                                        tracker.rate()))
+        test_utils.print_training_update(device, x, loss.item(),
+                                         tracker.rate(),
+                                         tracker.global_rate())
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
@@ -122,9 +138,9 @@ def train_mnist():
       correct += pred.eq(target.view_as(pred)).sum().item()
       total_samples += data.size()[0]
 
-    print('[{}] Accuracy={:.2f}%'.format(device,
-                                         100.0 * correct / total_samples))
-    return correct / total_samples
+    accuracy = 100.0 * correct / total_samples
+    test_utils.print_test_update(device, accuracy)
+    return accuracy
 
   accuracy = 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
@@ -134,7 +150,7 @@ def train_mnist():
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
-  return accuracy * 100.0
+  return accuracy
 
 
 class TrainMnist(TestCase):

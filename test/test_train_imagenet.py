@@ -30,10 +30,12 @@ FLAGS = test_utils.parse_common_options(
 
 from common_utils import TestCase, run_tests
 import os
+from statistics import mean
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
@@ -80,11 +82,11 @@ def train_imagenet():
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=1200000 // FLAGS.batch_size)
+        sample_count=1200000 // FLAGS.batch_size // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
-              torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=50000 // FLAGS.batch_size)
+        data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
+              torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
+        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
   else:
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -96,11 +98,6 @@ def train_imagenet():
             transforms.ToTensor(),
             normalize,
         ]))
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=FLAGS.batch_size,
-        shuffle=True,
-        num_workers=FLAGS.num_workers)
     resize_dim = max(img_dim, 256)
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
@@ -113,9 +110,26 @@ def train_imagenet():
             transforms.ToTensor(),
             normalize,
         ]))
+
+    train_sampler = None
+    test_sampler = None
+    if xm.xrt_world_size() > 1:
+      train_sampler = torch.utils.data.distributed.DistributedSampler(
+          train_dataset, num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(), shuffle=True)
+      test_sampler = torch.utils.data.distributed.DistributedSampler(
+          test_dataset, num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(), shuffle=False)
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=FLAGS.batch_size,
+        sampler=train_sampler,
+        shuffle=False if train_sampler else True,
+        num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
+        sampler=test_sampler,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
@@ -146,8 +160,9 @@ def train_imagenet():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        print('[{}]({}) Loss={:.5f} Rate={:.2f}'.format(device, x, loss.item(),
-                                                        tracker.rate()))
+        test_utils.print_training_update(device, x, loss.item(),
+                                         tracker.rate(),
+                                         tracker.global_rate())
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
@@ -159,19 +174,22 @@ def train_imagenet():
       correct += pred.eq(target.view_as(pred)).sum().item()
       total_samples += data.size()[0]
 
-    print('[{}] Accuracy={:.2f}%'.format(device,
-                                         100.0 * correct / total_samples))
-    return correct / total_samples
+    accuracy = 100.0 * correct / total_samples
+    test_utils.print_test_update(device, accuracy)
+    return accuracy
 
   accuracy = 0.0
+  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
-    accuracy = sum(accuracies) / len(accuracies)
+    accuracy = mean(accuracies)
+    print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
-  return accuracy * 100.0
+  return accuracy
 
 
 class TrainImageNet(TestCase):

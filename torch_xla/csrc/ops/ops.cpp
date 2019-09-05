@@ -73,7 +73,6 @@ PTXLA_UNARY_OP(Atan, at::aten::atan, xla::Atan);
 PTXLA_UNARY_OP(Tan, at::aten::tan, xla::Tan);
 PTXLA_UNARY_OP(Tanh, at::aten::tanh, xla::Tanh);
 PTXLA_UNARY_OP(Neg, at::aten::neg, xla::Neg);
-PTXLA_UNARY_OP(Abs, at::aten::abs, xla::Abs);
 PTXLA_UNARY_OP(Exp, at::aten::exp, xla::Exp);
 PTXLA_UNARY_OP(Expm1, at::aten::expm1, xla::Expm1);
 PTXLA_UNARY_OP(Log, at::aten::log, xla::Log);
@@ -124,6 +123,15 @@ NodePtr SignOp(const Value& input) {
     return node.ReturnOp(BuildSign(xla_input), loctx);
   };
   return GenericOp(OpKind(at::aten::sign), OpList{input}, input.shape(),
+                   std::move(lower_fn));
+}
+
+NodePtr Abs(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildAbs(xla_input), loctx);
+  };
+  return GenericOp(OpKind(at::aten::abs), OpList{input}, input.shape(),
                    std::move(lower_fn));
 }
 
@@ -341,6 +349,8 @@ NodePtr ARange(at::Scalar start, at::Scalar end, at::Scalar step,
                at::ScalarType scalar_type) {
   xla::PrimitiveType type = MakeXlaPrimitiveType(scalar_type,
                                                  /*device=*/nullptr);
+  XLA_CHECK(!std::isnan(start.toDouble()) && !std::isnan(end.toDouble()))
+      << "unsupported range: " << start.toDouble() << " -> " << end.toDouble();
   xla::Literal values;
   switch (type) {
     case xla::PrimitiveType::BF16:
