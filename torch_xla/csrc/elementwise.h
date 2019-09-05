@@ -56,4 +56,7 @@ xla::XlaOp BuildReciprocal(const xla::XlaOp& input);
 // If x is NaN then 0, otherwise the actual sign
 xla::XlaOp BuildSign(const xla::XlaOp& input);
 
+// Computes the absolute value of the input.
+xla::XlaOp BuildAbs(const xla::XlaOp& input);
+
 }  // namespace torch_xla
