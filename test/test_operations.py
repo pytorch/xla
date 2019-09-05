@@ -637,6 +637,29 @@ class TestAtenXlaTensor(XlaTestCase):
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: x.pow_(2))
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: x.pow_(x))
 
+  def test_matmul_integer_types(self):
+    # all variance of matmul: dot/mv/mm/bmm
+    self.runAtenTest(
+        (torch.randint(10, (2,)), torch.randint(10, (2,))),
+        lambda x, y: torch.matmul(x, y))
+    self.runAtenTest(
+        (torch.randint(10, (3, 4)), torch.randint(10, (4,))),
+        lambda x, y: torch.matmul(x, y))
+    self.runAtenTest(
+        (torch.randint(10, (10, 3, 4)), torch.randint(10, (4,))),
+        lambda x, y: torch.matmul(x, y))
+    self.runAtenTest(
+        (torch.randint(10, (10, 3, 4)), torch.randint(10, (10, 4, 5))),
+        lambda x, y: torch.matmul(x, y))
+    self.runAtenTest(
+        (torch.randint(10, (10, 3, 4)), torch.randint(10, (4, 5))),
+        lambda x, y: torch.matmul(x, y))
+
+  def test_addmm_integer_types(self):
+    self.runAtenTest(
+        (torch.randint(10, (2, 3)), torch.randint(10, (2, 3)), torch.randint(10, (3, 3))),
+        lambda x, y, z: torch.addmm(x, y, z))
+
   def test_pred_type(self):
     xla_device = xm.xla_device()
     a = torch.rand(4)
