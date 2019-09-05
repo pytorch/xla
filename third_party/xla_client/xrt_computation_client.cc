@@ -1088,9 +1088,9 @@ void XrtComputationClient::InitializeDevices(
             std::move(worker_topology_proto));
       }
     }
-  }
-  if (topology_proto != nullptr) {
-    TF_LOG(INFO) << "TPU topology: " << topology_proto->DebugString();
+    if (topology_proto != nullptr) {
+      TF_LOG(INFO) << "TPU topology: " << topology_proto->DebugString();
+    }
   }
   for (const auto& dev_target : options_.global_device_map) {
     tensorflow::DeviceNameUtils::ParsedName parsed_device =
