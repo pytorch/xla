@@ -399,7 +399,10 @@ at::Tensor& AtenXlaType::addcmul_(at::Tensor& self, const at::Tensor& tensor1,
 at::Tensor AtenXlaType::addmm(const at::Tensor& self, const at::Tensor& mat1,
                               const at::Tensor& mat2, at::Scalar beta,
                               at::Scalar alpha) {
-  if (beta.to<double>() != 1 || alpha.to<double>() != 1) {
+  // xla::dot doesn't support integer types.
+  if (beta.to<double>() != 1 || alpha.to<double>() != 1 ||
+      !self.is_floating_point() || !mat1.is_floating_point() ||
+      !mat2.is_floating_point()) {
     return AtenXlaTypeDefault::addmm(self, mat1, mat2, beta, alpha);
   }
   return bridge::AtenFromXlaTensor(
@@ -723,6 +726,10 @@ at::Tensor AtenXlaType::blackman_window(int64_t window_length, bool periodic,
 }
 
 at::Tensor AtenXlaType::bmm(const at::Tensor& self, const at::Tensor& mat2) {
+  // xla::dot doesn't support integer types.
+  if (!self.is_floating_point() || !mat2.is_floating_point()) {
+    return AtenXlaTypeDefault::bmm(self, mat2);
+  }
   return bridge::AtenFromXlaTensor(
       XLATensor::bmm(bridge::GetXlaTensor(self), bridge::GetXlaTensor(mat2)));
 }
@@ -1732,6 +1739,10 @@ at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
 
 at::Tensor AtenXlaType::matmul(const at::Tensor& self,
                                const at::Tensor& other) {
+  // xla::dot doesn't support integer types.
+  if (!self.is_floating_point() || !other.is_floating_point()) {
+    return AtenXlaTypeDefault::matmul(self, other);
+  }
   return bridge::AtenFromXlaTensor(XLATensor::matmul(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
@@ -1926,6 +1937,10 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::min(const at::Tensor& self,
 }
 
 at::Tensor AtenXlaType::mm(const at::Tensor& self, const at::Tensor& mat2) {
+  // xla::dot doesn't support integer types.
+  if (!self.is_floating_point() || !mat2.is_floating_point()) {
+    return AtenXlaTypeDefault::mm(self, mat2);
+  }
   return bridge::AtenFromXlaTensor(
       XLATensor::mm(/*input=*/bridge::GetXlaTensor(self),
                     /*weight=*/bridge::GetXlaTensor(mat2)));
