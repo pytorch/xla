@@ -369,13 +369,13 @@ def mark_step():
   _mark_step(getattr(_TLS, 'replication', None))
 
 
-def optimizer_step(optimizer, closure=None, barrier=False):
+def optimizer_step(optimizer, barrier=False, optimizer_args={}):
   replication = getattr(_TLS, 'replication', None)
   gradients = _fetch_gradients(optimizer)
   count = len(replication.replication_devices()) if replication else 1
   if count > 1:
     torch_xla._XLAC._xla_cross_replica_sum(gradients, 1.0 / count, [])
-  loss = optimizer.step(closure=closure)
+  loss = optimizer.step(**optimizer_args)
   if barrier:
     _mark_step(replication)
   return loss
