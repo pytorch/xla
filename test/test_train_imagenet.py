@@ -70,10 +70,30 @@ MODEL_PROPERTIES = {
     }
 }
 
+NUM_WARMUP_EPOCHS = 1
+
 
 def get_model_property(key):
   return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
 
+
+def update_lr(optimizer, epoch, step=None, total_steps=None):
+  current_lr = FLAGS.lr * (0.2 ** ((epoch-1) // 20))
+  if epoch <= NUM_WARMUP_EPOCHS:
+    if step is None or total_steps is None:
+      raise ValueError("step and total_steps args required for warmup epochs.")
+    current_lr = min(FLAGS.lr,
+                     FLAGS.lr * ((step + 1.0) / total_steps))
+  for param_group in optimizer.param_groups:
+    param_group['lr'] = current_lr
+  return current_lr
+
+
+def should_report_lr(current_device, devices):
+  is_first_device = not devices or str(current_device) == devices[0]
+  is_first_machine = xm.get_ordinal() == 0
+  return is_first_device and is_first_machine
+ 
 
 def train_imagenet():
   print('==> Preparing data..')
@@ -140,7 +160,17 @@ def train_imagenet():
             weight_decay=5e-4))
     tracker = xm.RateTracker()
     model.train()
+
+    # After the warmup epoch, use the same learning rate for the entire epoch.
+    if epoch > NUM_WARMUP_EPOCHS:
+      update_lr(optimizer, epoch)
+
     for x, (data, target) in loader:
+      # During the warmup epoch, the learning rate depends on the step number.
+      if epoch <= NUM_WARMUP_EPOCHS:
+        update_lr(optimizer, epoch, step=x,
+                  total_steps=num_training_steps_per_epoch)
+
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
@@ -151,6 +181,14 @@ def train_imagenet():
         test_utils.print_training_update(device, x, loss.item(),
                                          tracker.rate(),
                                          tracker.global_rate())
+
+        # Learning rate is the same across devices. Add 1 data point per
+        # update instead of FLAGS.num_cores * number of machines.
+        if should_report_lr(device, devices):
+          step_num = x + ((epoch - 1) * num_training_steps_per_epoch)
+          test_utils.add_scalar_to_summary(writer, 'LearningRate',
+                                           optimizer.param_groups[0]['lr'],
+                                           step_num)
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
@@ -168,6 +206,8 @@ def train_imagenet():
 
   accuracy = 0.0
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  num_training_steps_per_epoch = len(train_dataset.imgs) // (
+      FLAGS.batch_size * (len(devices) or 1))
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
