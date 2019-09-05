@@ -30,11 +30,12 @@ FLAGS = test_utils.parse_common_options(
 
 from common_utils import TestCase, run_tests
 import os
-import time
+from statistics import mean
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
@@ -147,10 +148,9 @@ def train_imagenet():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        print('[{}]({}) Loss={:.5f} Rate={:.2f}, GlobalRate={:.2f}, Time={}'
-            .format(device, x, loss.item(), tracker.rate(),
-                    tracker.global_rate(), time.asctime()))
-
+        test_utils.print_training_update(str(device), x, loss.item(),
+                                         tracker.rate(),
+                                         tracker.global_rate())
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
@@ -162,19 +162,22 @@ def train_imagenet():
       correct += pred.eq(target.view_as(pred)).sum().item()
       total_samples += data.size()[0]
 
-    print('[{}] Accuracy={:.2f}%'.format(device,
-                                         100.0 * correct / total_samples))
-    return correct / total_samples
+    accuracy = 100.0 * correct / total_samples
+    test_utils.print_test_update(str(device), accuracy)
+    return accuracy
 
   accuracy = 0.0
+  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
-    accuracy = sum(accuracies) / len(accuracies)
+    accuracy = mean(accuracies)
+    print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
-  return accuracy * 100.0
+  return accuracy
 
 
 class TrainImageNet(TestCase):

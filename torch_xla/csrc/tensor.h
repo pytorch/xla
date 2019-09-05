@@ -50,6 +50,8 @@ class XLATensor {
   // Assigns the tensor value to the XLA tensor.
   void SetTensor(at::Tensor tensor);
 
+  void UpdateFromTensor(at::Tensor tensor);
+
   at::ScalarType dtype() const;
   xla::util::MaybeRef<xla::Shape> shape() const;
 
@@ -129,12 +131,9 @@ class XLATensor {
   // the computation boundaries.
   static void MarkStep(const Device* device);
 
-  // Retrieves the PyTorch tensors behind the XLA tensors. If the writeable
-  // vector is not nullptr, it must be the same size as tensors, and the
-  // corresponding bool tells whether the ATEN tensor to be retrieved should the
-  // a writeable copy. All the tensors must be on the same device.
-  static std::vector<at::Tensor> GetTensors(std::vector<XLATensor>* tensors,
-                                            const std::vector<bool>* writeable);
+  // Retrieves the PyTorch tensors behind the XLA tensors. All the tensors must
+  // be on the same device.
+  static std::vector<at::Tensor> GetTensors(std::vector<XLATensor>* tensors);
 
   // Operation which creates XLA tensors out of autograd variable by batching
   // the requests to the computation servers.
@@ -1030,11 +1029,6 @@ class XLATensor {
 
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
-  // Discards all the XLA and IR data, by making the ATEN tensor one the only
-  // source for this XLA tensor. An error is generated if the XLA tensor does
-  // not have ATEN tensors data.
-  void MakeWriteableTensorDataSource();
-
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.
   // Think:
@@ -1054,10 +1048,10 @@ class XLATensor {
 
   // Implementation of the GetTensors() API using the op-by-op executor.
   static std::vector<at::Tensor> GetTensorsOpByOp(
-      std::vector<XLATensor>* tensors, const std::vector<bool>* writeable);
+      std::vector<XLATensor>* tensors);
 
   static std::vector<at::Tensor> GetTensorsFused(
-      std::vector<XLATensor>* tensors, const std::vector<bool>* writeable);
+      std::vector<XLATensor>* tensors);
 
   // Runs an asynchronous syn operation using the op-by-op executor.
   using OpByOpAsync = xla::util::AsyncTask<xla::Status>;
