@@ -16,7 +16,7 @@ print(x)
 
 The XLA device is not a physical device but instead stands in for either a Cloud TPU or CPU. The underlying storage for XLA tensors is a contiguous buffer in device memory and the code in the model shouldn't assume any stride.
 
-XLA Tensor doesn't support converting single tensor to half precision using `tensor.half()`, instead environment variable `XLA_USE_BF16` is available to tranforms **all** the PyTorch Float values into BiFloat16 when sending to the TPU device.
+XLA Tensor doesn't support converting single tensor to half precision using `tensor.half()`. Instead, environment variable `XLA_USE_BF16` is available, which converts **all** PyTorch float values to bfloat16 when sending them to the TPU device.
 
 The [XLA readme](https://github.com/pytorch/xla/blob/master/README.md) describes all the options available to run on TPU or CPU.
 
