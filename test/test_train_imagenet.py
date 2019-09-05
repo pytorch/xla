@@ -148,8 +148,9 @@ def train_imagenet():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        print('[{}]({}) Loss={:.5f} Rate={:.2f}'.format(device, x, loss.item(),
-                                                        tracker.rate()))
+        test_utils.print_training_update(device, x, loss.item(),
+                                         tracker.rate(),
+                                         tracker.global_rate())
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
@@ -161,9 +162,9 @@ def train_imagenet():
       correct += pred.eq(target.view_as(pred)).sum().item()
       total_samples += data.size()[0]
 
-    print('[{}] Accuracy={:.2f}%'.format(device,
-                                         100.0 * correct / total_samples))
-    return correct / total_samples
+    accuracy = 100.0 * correct / total_samples
+    test_utils.print_test_update(device, accuracy)
+    return accuracy
 
   accuracy = 0.0
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
@@ -176,7 +177,7 @@ def train_imagenet():
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
-  return accuracy * 100.0
+  return accuracy
 
 
 class TrainImageNet(TestCase):
