@@ -17,7 +17,7 @@ struct ReductionInfo {
 ReductionInfo GetReductionInfo(
     const xla::Shape& shape,
     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    bool keep_reduced_dimensions, bool check_positive_numel) {
+    bool keep_reduced_dimensions) {
   ReductionInfo rinfo;
   size_t idim = 0;
   for (xla::int64 i = 0; i < shape.rank(); ++i) {
@@ -31,9 +31,6 @@ ReductionInfo GetReductionInfo(
       rinfo.new_dimensions.push_back(shape.dimensions(i));
     }
   }
-  if (check_positive_numel) {
-    XLA_CHECK_GT(rinfo.element_count, 0);
-  };
   return rinfo;
 }
 
@@ -71,8 +68,7 @@ xla::XlaOp CreateSummation(
   xla::XlaOp init_value =
       XlaHelpers::ScalarValue<float>(0, shape.element_type(), input.builder());
   ReductionInfo rinfo =
-      GetReductionInfo(shape, dimensions, keep_reduced_dimensions,
-                       /*check_positive_numel=*/false);
+      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateAddComputation(shape.element_type()),
       dimensions);
@@ -96,8 +92,7 @@ xla::XlaOp CreateProduct(
   xla::XlaOp init_value =
       XlaHelpers::ScalarValue<float>(1, shape.element_type(), input.builder());
   ReductionInfo rinfo =
-      GetReductionInfo(shape, dimensions, keep_reduced_dimensions,
-                       /*check_positive_numel=*/false);
+      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMulComputation(shape.element_type()),
       dimensions);
@@ -149,8 +144,8 @@ xla::XlaOp BuildMaxInDim(const xla::XlaOp& input, xla::int64 dim,
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.min, shape.element_type(), input.builder());
-  ReductionInfo rinfo = GetReductionInfo(shape, {dim}, keep_reduced_dimensions,
-                                         /*check_positive_numel=*/true);
+  ReductionInfo rinfo = GetReductionInfo(shape, {dim}, keep_reduced_dimensions);
+  XLA_CHECK_GT(rinfo.element_count, 0);
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMaxComputation(shape.element_type()),
       {dim});
@@ -166,8 +161,8 @@ xla::XlaOp BuildMinInDim(const xla::XlaOp& input, xla::int64 dim,
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.max, shape.element_type(), input.builder());
-  ReductionInfo rinfo = GetReductionInfo(shape, {dim}, keep_reduced_dimensions,
-                                         /*check_positive_numel=*/true);
+  ReductionInfo rinfo = GetReductionInfo(shape, {dim}, keep_reduced_dimensions);
+  XLA_CHECK_GT(rinfo.element_count, 0);
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMinComputation(shape.element_type()),
       {dim});
@@ -220,8 +215,7 @@ xla::XlaOp BuildAll(const xla::XlaOp& input,
                     bool keep_reduced_dimensions) {
   xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
   ReductionInfo rinfo =
-      GetReductionInfo(shape, dimensions, keep_reduced_dimensions,
-                       /*check_positive_numel=*/false);
+      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
       input.builder(), xla::LiteralUtil::One(shape.element_type()));
   xla::XlaOp result =
@@ -238,8 +232,7 @@ xla::XlaOp BuildAny(const xla::XlaOp& input,
                     bool keep_reduced_dimensions) {
   xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
   ReductionInfo rinfo =
-      GetReductionInfo(shape, dimensions, keep_reduced_dimensions,
-                       /*check_positive_numel=*/false);
+      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
       input.builder(), xla::LiteralUtil::Zero(shape.element_type()));
   xla::XlaOp result =
