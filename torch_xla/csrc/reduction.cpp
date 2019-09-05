@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/reduction.h"
 
+#include <cmath>
+
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -31,7 +33,6 @@ ReductionInfo GetReductionInfo(
       rinfo.new_dimensions.push_back(shape.dimensions(i));
     }
   }
-  XLA_CHECK_GT(rinfo.element_count, 0);
   return rinfo;
 }
 
@@ -73,10 +74,11 @@ xla::XlaOp CreateSummation(
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateAddComputation(shape.element_type()),
       dimensions);
-  if (scale && rinfo.element_count > 1) {
+  if (scale) {
     xla::XlaOp scale = XlaHelpers::ScalarValue<float>(
-        1.0f / static_cast<float>(rinfo.element_count), shape.element_type(),
-        input.builder());
+        rinfo.element_count > 0 ? 1.0f / static_cast<float>(rinfo.element_count)
+                                : NAN,
+        shape.element_type(), input.builder());
     result = xla::Mul(result, scale);
   }
   if (keep_reduced_dimensions) {
@@ -146,6 +148,7 @@ xla::XlaOp BuildMaxInDim(const xla::XlaOp& input, xla::int64 dim,
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.min, shape.element_type(), input.builder());
   ReductionInfo rinfo = GetReductionInfo(shape, {dim}, keep_reduced_dimensions);
+  XLA_CHECK_GT(rinfo.element_count, 0);
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMaxComputation(shape.element_type()),
       {dim});
@@ -162,6 +165,7 @@ xla::XlaOp BuildMinInDim(const xla::XlaOp& input, xla::int64 dim,
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.max, shape.element_type(), input.builder());
   ReductionInfo rinfo = GetReductionInfo(shape, {dim}, keep_reduced_dimensions);
+  XLA_CHECK_GT(rinfo.element_count, 0);
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMinComputation(shape.element_type()),
       {dim});
