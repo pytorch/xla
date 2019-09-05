@@ -153,9 +153,10 @@ class XlaTestCase(TestCase):
 
   def assertEqualRel(self, out, expected, rel_err=1e-2, abs_err=1e-5):
     try:
-      if torch.isnan(expected):
-        return torch.isnan(out)
+      nan_mask = torch.isnan(expected)
+      self.assertTrue(torch.equal(nan_mask, torch.isnan(out)))
       diff_tensor = (out - expected).abs().float()
+      diff_tensor[nan_mask] = 0
       max_rel_err = torch.max(out.abs(), expected.abs()).float() * rel_err
       # Allow higher relative differences as long as we're still below the
       # absolute error.
