@@ -50,25 +50,25 @@ def parse_common_options(datadir=None,
   return args
 
 
-def print_training_update(device_str, step_num, loss, rate, global_rate):
+def print_training_update(device, step_num, loss, rate, global_rate):
   """Prints the training metrics at a given step.
 
   Args:
-    device_str: String representation of the current device.
+    device: Instance of `torch.device`.
     step_num: Integer. Current step number.
     loss: Float. Current loss.
     rate: Float. The examples/sec rate for the current batch.
     global_rate: Float. The average examples/sec rate since training began.
   """
-  print('[{}]({}) Loss={:.5f} Rate={:.2f}, GlobalRate={:.2f}, Time={}'.format(
-      device_str, step_num, loss, rate, global_rate, time.asctime()))
+  print('[{}]({}) Loss={:.5f} Rate={:.2f} GlobalRate={:.2f} Time={}'.format(
+      device, step_num, loss, rate, global_rate, time.asctime()))
 
 
-def print_test_update(device_str, accuracy):
+def print_test_update(device, accuracy):
   """Prints single-core test metrics.
 
   Args:
-    device_str: String representation of the current device.
+    device: Instance of `torch.device`.
     accuracy: Float.
   """
-  print('[{}] Accuracy={:.2f}%'.format(device_str, accuracy))
+  print('[{}] Accuracy={:.2f}%'.format(device, accuracy))

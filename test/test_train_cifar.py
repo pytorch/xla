@@ -171,7 +171,7 @@ def train_cifar():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        test_utils.print_training_update(str(device), x, loss.item(),
+        test_utils.print_training_update(device, x, loss.item(),
                                          tracker.rate(),
                                          tracker.global_rate())
 
@@ -186,7 +186,7 @@ def train_cifar():
       total_samples += data.size()[0]
 
     accuracy = 100.0 * correct / total_samples
-    test_utils.print_test_update(str(device), accuracy)
+    test_utils.print_test_update(device, accuracy)
     return accuracy
 
   accuracy = 0.0
