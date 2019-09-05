@@ -2082,6 +2082,17 @@ TEST_F(AtenXlaTensorTest, TestSign) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSignByte) {
+  torch::Tensor a =
+      torch::randint(256, {2, 2}, torch::TensorOptions(torch::kByte));
+  torch::Tensor b = torch::sign(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::sign(xla_a);
+    AllEqual(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAbs) {
   torch::Tensor a = torch::randn({2, 2}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::abs(a);
@@ -2089,6 +2100,17 @@ TEST_F(AtenXlaTensorTest, TestAbs) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = torch::abs(xla_a);
     AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestAbsByte) {
+  torch::Tensor a =
+      torch::randint(256, {2, 2}, torch::TensorOptions(torch::kByte));
+  torch::Tensor b = torch::abs(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::abs(xla_a);
+    AllEqual(b, xla_b);
   });
 }
 

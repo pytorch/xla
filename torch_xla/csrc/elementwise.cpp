@@ -180,9 +180,20 @@ xla::XlaOp BuildSign(const xla::XlaOp& input) {
   xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero =
       XlaHelpers::ScalarValue<float>(0., shape.element_type(), input.builder());
+  xla::XlaOp sign =
+      xla::primitive_util::IsUnsignedIntegralType(shape.element_type())
+          ? xla::ConvertElementType(xla::Gt(input, zero), shape.element_type())
+          : xla::Sign(input);
   return xla::Select(xla::Ne(input, input),
-                     xla::Broadcast(zero, shape.dimensions()),
-                     xla::Sign(input));
+                     xla::Broadcast(zero, shape.dimensions()), sign);
+}
+
+xla::XlaOp BuildAbs(const xla::XlaOp& input) {
+  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  if (xla::primitive_util::IsUnsignedIntegralType(shape.element_type())) {
+    return input;
+  }
+  return xla::Abs(input);
 }
 
 }  // namespace torch_xla
