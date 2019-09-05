@@ -341,7 +341,7 @@ NodePtr ARange(at::Scalar start, at::Scalar end, at::Scalar step,
                at::ScalarType scalar_type) {
   xla::PrimitiveType type = MakeXlaPrimitiveType(scalar_type,
                                                  /*device=*/nullptr);
-  XLA_CHECK(!isnan(start.toDouble()) && !isnan(end.toDouble()))
+  XLA_CHECK(!std::isnan(start.toDouble()) && !std::isnan(end.toDouble()))
       << "unsupported range: " << start.toDouble() << " -> " << end.toDouble();
   xla::Literal values;
   switch (type) {
