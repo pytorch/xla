@@ -546,6 +546,12 @@ class TestAtenXlaTensor(XlaTestCase):
         xla_a[:, s::e] = 2
         self.assertEqual(a.data, xla_a.data.cpu())
 
+  def test_arange_nan(self):
+    with self.assertRaisesRegex(RuntimeError, r"unsupported range"):
+      a = torch.arange(-5, float('nan'), device=xm.xla_device())
+    with self.assertRaisesRegex(RuntimeError, r"unsupported range"):
+      a = torch.arange(float('nan'), 5, device=xm.xla_device())
+
   def test_empty_advanced_indexing(self):
     xla_device = xm.xla_device()
     base = torch.randn(2, 3, 4, 5)
