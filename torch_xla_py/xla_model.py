@@ -83,6 +83,14 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
       return kind_devices[:max_devices] if max_devices else kind_devices
 
 
+def xrt_world_size():
+  return int(os.getenv('XRT_SHARD_WORLD_SIZE', 1))
+
+
+def get_ordinal():
+  return int(os.getenv('XRT_SHARD_ORDINAL', 0))
+
+
 def xla_device(n=None, devkind=None):
   if n is None:
     devices = get_xla_supported_devices(devkind=devkind)

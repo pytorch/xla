@@ -428,7 +428,8 @@ class DistributedExecutor(object):
   MASTER_IDX = 0
   MESH_SERVICE_PORT = 8477  # Use single port to disallow concurrent runs
   DIST_ENV_VARS = [
-      'XRT_TPU_CONFIG', 'XRT_LOCAL_WORKER', 'XRT_MESH_SERVICE_ADDRESS'
+      'XRT_TPU_CONFIG', 'XRT_LOCAL_WORKER', 'XRT_MESH_SERVICE_ADDRESS',
+      'XRT_SHARD_WORLD_SIZE', 'XRT_SHARD_ORDINAL',
   ]
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   DEFAULT_USER_NAME = 'pytorchtpudistrunner'
@@ -558,7 +559,9 @@ class DistributedExecutor(object):
         'XRT_LOCAL_WORKER':
             'c_tpu_worker:{}'.format(worker_idx),
         'XRT_MESH_SERVICE_ADDRESS':
-            '{}:{}'.format(client_master._internal_ip, self.MESH_SERVICE_PORT)
+            '{}:{}'.format(client_master._internal_ip, self.MESH_SERVICE_PORT),
+        'XRT_SHARD_WORLD_SIZE': len(self._cluster._client_workers),
+        'XRT_SHARD_ORDINAL': worker_idx,
     }
     # Only for master
     if worker_idx == self.MASTER_IDX:
