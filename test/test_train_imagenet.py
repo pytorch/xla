@@ -78,6 +78,20 @@ def get_model_property(key):
 
 
 def update_lr(optimizer, epoch, step=None, total_steps=None):
+  """Updates the learning rate of the supplied optimizer.
+
+  Follows this schedule:
+  1. Warmup period where learning rate ramps up linearly from 0 to FLAGS.lr.
+  2. Decay expontentially every 20 epochs.
+
+  Args:
+    optimizer: Instance of `torch.optim.Optimizer`. Will be modified.
+    epoch: Int.
+    step: Int for step number within current epoch. Only needed during warmup.
+    total_steps: Int, number of steps in an epoch. Only needed during warmup.
+  Raises:
+    ValueError if step or total_steps is None during warmup epochs.
+  """
   current_lr = FLAGS.lr * (0.2 ** ((epoch-1) // 20))
   if epoch <= NUM_WARMUP_EPOCHS:
     if step is None or total_steps is None:
@@ -86,7 +100,6 @@ def update_lr(optimizer, epoch, step=None, total_steps=None):
                      FLAGS.lr * ((step + 1.0) / total_steps))
   for param_group in optimizer.param_groups:
     param_group['lr'] = current_lr
-  return current_lr
 
 
 def should_report_lr(current_device, devices):
@@ -225,7 +238,9 @@ def train_imagenet():
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = mean(accuracies)
     print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
-    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
+    global_step_num = (epoch - 1) * num_training_steps_per_epoch
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
+                                     global_step_num)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
