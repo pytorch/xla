@@ -621,12 +621,35 @@ class TestAtenXlaTensor(XlaTestCase):
     vset = b.sum().item()
     self.assertEqual(a.sum().item(), 10.0 * vset + (4.0 - vset))
 
-  def test_pow_integer_types(self):
+  def test_fall_back_integer_types(self):
+    # pow
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: torch.pow(x, 2))
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: torch.pow(2, x))
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: torch.pow(x, x))
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: x.pow_(2))
     self.runAtenTest(torch.randint(10, (2, 2)), lambda x: x.pow_(x))
+
+    # all variance of matmul: dot/mv/mm/bmm
+    self.runAtenTest(
+        (torch.randint(10, (2,)), torch.randint(10, (2,))),
+        lambda x, y: torch.matmul(x, y))
+    self.runAtenTest(
+        (torch.randint(10, (3, 4)), torch.randint(10, (4,))),
+        lambda x, y: torch.matmul(x, y))
+    self.runAtenTest(
+        (torch.randint(10, (10, 3, 4)), torch.randint(10, (4,))),
+        lambda x, y: torch.matmul(x, y))
+    self.runAtenTest(
+        (torch.randint(10, (10, 3, 4)), torch.randint(10, (10, 4, 5))),
+        lambda x, y: torch.matmul(x, y))
+    self.runAtenTest(
+        (torch.randint(10, (10, 3, 4)), torch.randint(10, (4, 5))),
+        lambda x, y: torch.matmul(x, y))
+
+    # addmm
+    self.runAtenTest(
+        (torch.randint(10, (2, 3)), torch.randint(10, (2, 3)), torch.randint(10, (3, 3))),
+        lambda x, y, z: torch.addmm(x, y, z))
 
   def test_pred_type(self):
     xla_device = xm.xla_device()
