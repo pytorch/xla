@@ -676,6 +676,28 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_f = xla_e.sum().item()
     self.assertEqual(f, xla_f)
 
+    # PRED cannot be automatically promoted to other dtypes.
+    # Test both cpu and xla here to make sure we get notified
+    # once PyTorch changes its behavior.
+    self.assertRaises(RuntimeError, lambda: c & c.byte())
+    self.assertRaises(RuntimeError, lambda: c + c.byte())
+    self.assertRaises(RuntimeError, lambda: xla_c & xla_c.byte())
+    # RuntimeError is triggered in execution instead of lowering,
+    # thus print is required.
+    self.assertRaises(RuntimeError, lambda: print(xla_c + xla_c.byte()))
+
+  def test_bitwise_type(self):
+    xla_device = xm.xla_device()
+    a = torch.randint(255, (4,), dtype=torch.long)
+    xla_a = a.to(xla_device)
+    self.assertRaises(RuntimeError, lambda: a & a.byte())
+    self.assertRaises(RuntimeError, lambda: xla_a & xla_a.byte())
+
+    def test_fn(a):
+      return a & (~a)
+
+    self.runAtenTest(a, test_fn)
+
   def test_s_copy_dtype(self):
     xla_device = xm.xla_device()
     a = torch.rand(10).to(xla_device).to(dtype=torch.uint8)
@@ -771,6 +793,17 @@ class TestAtenXlaTensor(XlaTestCase):
       return a.expand((1, 1, -1, -1))
 
     self.runAtenTest(torch.zeros([4, 4]), test_fn)
+
+  def test_stack_pred(self):
+
+    def test_fn(a):
+      i0, j0, k0 = a[:-1].t()
+      i1, j1, k1 = a[1:].t()
+      i_ok = i1 >= i0
+      j_ok = (j1 >= j0) | (i1 > i0)
+      return torch.stack([i_ok, j_ok], dim=1)
+
+    self.runAtenTest(torch.randint(3, (7, 3)), test_fn)
 
   def test_reduction_zero_dim(self):
     self.runAtenTest(torch.rand(2, 0, 4).bool(), lambda x : torch.all(x))

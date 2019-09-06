@@ -387,10 +387,7 @@ xla::XlaOp XlaHelpers::PromotedBinaryOp(
     const xla::XlaOp& op1, const xla::XlaOp& op2,
     const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
         bin_op) {
-  xla::XlaOp numeric_op1 = ConvertToNumeric(op1);
-  xla::XlaOp numeric_op2 = ConvertToNumeric(op2);
-  std::pair<xla::XlaOp, xla::XlaOp> vops =
-      PromoteSecond(numeric_op1, numeric_op2);
+  std::pair<xla::XlaOp, xla::XlaOp> vops = PromoteSecond(op1, op2);
   return bin_op(vops.first, vops.second);
 }
 
