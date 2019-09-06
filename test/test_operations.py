@@ -550,9 +550,9 @@ class TestAtenXlaTensor(XlaTestCase):
         self.assertEqual(a.data, xla_a.data.cpu())
 
   def test_arange_nan(self):
-    with self.assertRaisesRegex(RuntimeError, r"unsupported range"):
+    with self.assertRaisesRegex(RuntimeError, r'unsupported range'):
       a = torch.arange(-5, float('nan'), device=xm.xla_device())
-    with self.assertRaisesRegex(RuntimeError, r"unsupported range"):
+    with self.assertRaisesRegex(RuntimeError, r'unsupported range'):
       a = torch.arange(float('nan'), 5, device=xm.xla_device())
 
   def test_empty_advanced_indexing(self):
@@ -639,26 +639,22 @@ class TestAtenXlaTensor(XlaTestCase):
 
   def test_matmul_integer_types(self):
     # all variance of matmul: dot/mv/mm/bmm
-    self.runAtenTest(
-        (torch.randint(10, (2,)), torch.randint(10, (2,))),
-        lambda x, y: torch.matmul(x, y))
-    self.runAtenTest(
-        (torch.randint(10, (3, 4)), torch.randint(10, (4,))),
-        lambda x, y: torch.matmul(x, y))
-    self.runAtenTest(
-        (torch.randint(10, (10, 3, 4)), torch.randint(10, (4,))),
-        lambda x, y: torch.matmul(x, y))
-    self.runAtenTest(
-        (torch.randint(10, (10, 3, 4)), torch.randint(10, (10, 4, 5))),
-        lambda x, y: torch.matmul(x, y))
-    self.runAtenTest(
-        (torch.randint(10, (10, 3, 4)), torch.randint(10, (4, 5))),
-        lambda x, y: torch.matmul(x, y))
+    self.runAtenTest((torch.randint(10, (2,)), torch.randint(10, (2,))),
+                     lambda x, y: torch.matmul(x, y))
+    self.runAtenTest((torch.randint(10, (3, 4)), torch.randint(10, (4,))),
+                     lambda x, y: torch.matmul(x, y))
+    self.runAtenTest((torch.randint(10, (10, 3, 4)), torch.randint(10, (4,))),
+                     lambda x, y: torch.matmul(x, y))
+    self.runAtenTest((torch.randint(10,
+                                    (10, 3, 4)), torch.randint(10, (10, 4, 5))),
+                     lambda x, y: torch.matmul(x, y))
+    self.runAtenTest((torch.randint(10, (10, 3, 4)), torch.randint(10, (4, 5))),
+                     lambda x, y: torch.matmul(x, y))
 
   def test_addmm_integer_types(self):
-    self.runAtenTest(
-        (torch.randint(10, (2, 3)), torch.randint(10, (2, 3)), torch.randint(10, (3, 3))),
-        lambda x, y, z: torch.addmm(x, y, z))
+    self.runAtenTest((torch.randint(10, (2, 3)), torch.randint(
+        10, (2, 3)), torch.randint(10, (3, 3))),
+                     lambda x, y, z: torch.addmm(x, y, z))
 
   def test_pred_type(self):
     xla_device = xm.xla_device()
@@ -803,12 +799,12 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.randint(3, (7, 3)), test_fn)
 
-  def test_reduction_zero_dim(self):
-    self.runAtenTest(torch.rand(2, 0, 4).bool(), lambda x : torch.all(x))
-    self.runAtenTest(torch.rand(2, 0, 4).bool(), lambda x : torch.any(x))
-    self.runAtenTest(torch.rand(2, 0, 4), lambda x : torch.sum(x))
-    self.runAtenTest(torch.rand(2, 0, 4), lambda x : torch.mean(x))
-    self.runAtenTest(torch.rand(2, 0, 4), lambda x : torch.prod(x))
+  def test_reduction_0dim(self):
+    self.runAtenTest(torch.rand(2, 0, 4).bool(), lambda x: torch.all(x))
+    self.runAtenTest(torch.rand(2, 0, 4).bool(), lambda x: torch.any(x))
+    self.runAtenTest(torch.rand(2, 0, 4), lambda x: torch.sum(x))
+    self.runAtenTest(torch.rand(2, 0, 4), lambda x: torch.mean(x))
+    self.runAtenTest(torch.rand(2, 0, 4), lambda x: torch.prod(x))
     # min & max throws
     xla_device = xm.xla_device()
     a = torch.rand(2, 0, 4)
@@ -821,6 +817,15 @@ class TestAtenXlaTensor(XlaTestCase):
     self.assertRaises(RuntimeError, lambda: torch.max(xla_a))
     self.assertRaises(RuntimeError, lambda: torch.min(xla_a, dim=1))
     self.assertRaises(RuntimeError, lambda: torch.min(xla_a))
+
+  def test_index_select_0dim(self):
+
+    def test_fn(s, i):
+      return torch.index_select(s, 0, i)
+
+    self.runAtenTest(
+        [torch.randn(0, 1, 2, 0),
+         torch.tensor([], dtype=torch.long)], test_fn)
 
   def test_writeable_tensors_updates(self):
 

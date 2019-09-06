@@ -42,8 +42,8 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(const xla::XlaOp& lhs,
                                                const xla::Shape& lhs_shape,
                                                const xla::XlaOp& rhs,
                                                const xla::Shape& rhs_shape) {
-  auto lhs_dimensions = lhs_shape.dimensions();
-  auto rhs_dimensions = rhs_shape.dimensions();
+  auto lhs_dimensions = xla::util::ToVector<xla::int64>(lhs_shape.dimensions());
+  auto rhs_dimensions = xla::util::ToVector<xla::int64>(rhs_shape.dimensions());
   XLA_CHECK_EQ(lhs_dimensions.size(), rhs_dimensions.size());
   for (xla::int64 i = 0; i < lhs_dimensions.size() - 2; ++i) {
     if (lhs_dimensions[i] == rhs_dimensions[i]) {

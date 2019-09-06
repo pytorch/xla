@@ -3,6 +3,7 @@
 #include <ATen/core/Reduction.h>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
@@ -62,8 +63,9 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
 XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
                         const XLATensor& target, xla::int64 reduction) {
   auto input_shape_ref = input.shape();
-  XLATensor expanded_grad_output =
-      XLATensor::expand(grad_output, input_shape_ref.get().dimensions());
+  XLATensor expanded_grad_output = XLATensor::expand(
+      grad_output,
+      xla::util::ToVector<xla::int64>(input_shape_ref.get().dimensions()));
   XLATensor grad_input = XLATensor::where(
       XLATensor::gt(target, 0),
       XLATensor::neg(XLATensor::mul(target, expanded_grad_output)),
@@ -210,8 +212,9 @@ XLATensor EmbeddingDenseBackward(const XLATensor& grad_output,
   // padding_idx.
   XLATensor skip_padding = XLATensor::unsqueeze(
       XLATensor::ne(indices_rank1, static_cast<double>(padding_idx)), 1);
-  skip_padding =
-      XLATensor::expand(skip_padding, grad.shape().get().dimensions());
+  skip_padding = XLATensor::expand(
+      skip_padding,
+      xla::util::ToVector<xla::int64>(grad.shape().get().dimensions()));
   XLATensor zero_grad =
       XLATensor::full_like(grad, 0, grad.GetDevice(), grad.dtype());
   return XLATensor::index_put(
