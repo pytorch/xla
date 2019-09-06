@@ -558,8 +558,8 @@ NodePtr Bernoulli(const Value& input, const Value& probability) {
         BuildBernoulli(xla_probability, XlaHelpers::ShapeOfXlaOp(xla_input));
     return node.ReturnOp(result, loctx);
   };
-  NodePtr probability_expanded =
-      MakeNode<Expand>(probability, input.shape().dimensions());
+  NodePtr probability_expanded = MakeNode<Expand>(
+      probability, xla::util::ToVector<xla::int64>(input.shape().dimensions()));
   return GenericOp(OpKind(at::aten::bernoulli), {input, probability_expanded},
                    input.shape(), std::move(lower_fn));
 }

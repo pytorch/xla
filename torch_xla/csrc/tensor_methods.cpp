@@ -214,7 +214,8 @@ ViewInfo CreateAsStridedViewInfo(
     as_strided_info.offset = *storage_offset;
   }
   return ViewInfo(ViewInfo::Type::kAsStrided, std::move(result_shape),
-                  input_shape.dimensions(), std::move(as_strided_info));
+                  xla::util::ToVector<xla::int64>(input_shape.dimensions()),
+                  std::move(as_strided_info));
 }
 
 }  // namespace
@@ -1306,7 +1307,8 @@ XLATensor XLATensor::masked_fill(const XLATensor& input, const XLATensor& mask,
                                  at::Scalar value) {
   // Expand mask to be the same size as input.
   ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
-      mask.GetIrValue(), input.shape().get().dimensions());
+      mask.GetIrValue(),
+      xla::util::ToVector<xla::int64>(input.shape().get().dimensions()));
   return input.CreateFrom(ir::MakeNode<ir::ops::MaskedFill>(
       input.GetIrValue(), expanded_mask, value));
 }
@@ -1315,7 +1317,8 @@ void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                              at::Scalar value) {
   // Expand mask to be the same size as input.
   ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
-      mask.GetIrValue(), input.shape().get().dimensions());
+      mask.GetIrValue(),
+      xla::util::ToVector<xla::int64>(input.shape().get().dimensions()));
   input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(input.GetIrValue(),
                                                      expanded_mask, value));
 }
@@ -1441,8 +1444,9 @@ XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
                               xla::ShapeUtil::ElementsIn(narrow_shape))
                                  ? ViewInfo::Type::kReshape
                                  : ViewInfo::Type::kNarrow;
-  ViewInfo view_info(view_type, std::move(narrow_shape),
-                     input_shape.get().dimensions());
+  ViewInfo view_info(
+      view_type, std::move(narrow_shape),
+      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
   view_info.indices[dim] = XlaHelpers::GetCanonicalPosition(
       input_shape.get().dimensions(), dim, start);
   return input.CreateViewTensor(std::move(view_info));
@@ -1684,8 +1688,9 @@ void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
     auto input_shape = input.shape();
     xla::Shape resize_shape =
         xla::ShapeUtil::MakeShape(input_shape.get().element_type(), size);
-    ViewInfo view_info(ViewInfo::Type::kResize, std::move(resize_shape),
-                       input_shape.get().dimensions());
+    ViewInfo view_info(
+        ViewInfo::Type::kResize, std::move(resize_shape),
+        xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
     input.SetSubView(std::move(view_info));
   }
 }
@@ -2226,8 +2231,9 @@ XLATensor XLATensor::view(
   xla::Shape shape = MakeArrayShapeFromDimensions(
       complete_dimensions, input_shape.get().element_type(),
       input.GetDevice().hw_type);
-  ViewInfo view_info(ViewInfo::Type::kReshape, std::move(shape),
-                     input_shape.get().dimensions());
+  ViewInfo view_info(
+      ViewInfo::Type::kReshape, std::move(shape),
+      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
   return input.CreateViewTensor(std::move(view_info));
 }
 

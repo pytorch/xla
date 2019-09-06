@@ -37,14 +37,18 @@ ir::Value ApplyViewInfo(ir::Value ir_value, const ViewInfo& view_info) {
     case ViewInfo::Type::kPermute:
       return ir::MakeNode<ir::ops::Permute>(ir_value, view_info.permutation);
     case ViewInfo::Type::kReshape:
-      return ir::MakeNode<ir::ops::View>(ir_value,
-                                         view_info.shape.dimensions());
+      return ir::MakeNode<ir::ops::View>(
+          ir_value,
+          xla::util::ToVector<xla::int64>(view_info.shape.dimensions()));
     case ViewInfo::Type::kResize:
-      return ir::MakeNode<ir::ops::Resize>(ir_value,
-                                           view_info.shape.dimensions());
+      return ir::MakeNode<ir::ops::Resize>(
+          ir_value,
+          xla::util::ToVector<xla::int64>(view_info.shape.dimensions()));
     case ViewInfo::Type::kAsStrided:
       return ir::MakeNode<ir::ops::AsStrided>(
-          ir_value, view_info.shape.dimensions(), view_info.as_strided->offset);
+          ir_value,
+          xla::util::ToVector<xla::int64>(view_info.shape.dimensions()),
+          view_info.as_strided->offset);
     default:
       XLA_ERROR() << "Invalid view type: "
                   << xla::util::GetEnumValue(view_info.view_type);
@@ -124,7 +128,7 @@ ViewInfo::ViewInfo(Type view_type, const xla::Shape& source_shape,
     : view_type(view_type),
       shape(ir::ops::Select::MakeSelectShape(
           source_shape, select.dim, select.start, select.end, select.stride)),
-      sizes(source_shape.dimensions()),
+      sizes(xla::util::ToVector<xla::int64>(source_shape.dimensions())),
       select(std::move(select)) {
   XLA_CHECK(view_type == Type::kSelect);
 }
