@@ -93,11 +93,13 @@ TEST_F(TensorTest, TestIntegerAdd) {
     for (auto type : types) {
       at::Tensor a = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
       at::Tensor b = at::randint(0, 63, {2, 2}, at::TensorOptions(type));
-      at::Tensor c = a.add(b, 1.0);
+      at::Scalar one =
+          at::isIntegralType(type) ? at::Scalar(int64_t(1)) : at::Scalar(1.0);
+      at::Tensor c = a.add(b, one);
 
       XLATensor dev_a = XLATensor::Create(a, device);
       XLATensor dev_b = XLATensor::Create(b, device);
-      XLATensor dev_c = XLATensor::add(dev_a, dev_b, 1.0);
+      XLATensor dev_c = XLATensor::add(dev_a, dev_b, one);
 
       EXPECT_TRUE(EqualValues(c, dev_c.ToTensor()));
     }
