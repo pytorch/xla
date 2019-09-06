@@ -676,15 +676,13 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_f = xla_e.sum().item()
     self.assertEqual(f, xla_f)
 
-    # PRED cannot be automatically promoted to other dtypes.
-    # Test both cpu and xla here to make sure we get notified
-    # once PyTorch changes its behavior.
+    # PRED can be automatically promoted in arithmetic ops.
+    self.runAtenTest(c, lambda x: x + x.byte())
+    # PRED cannot be automatically promoted to other dtypes in bitwise ops.
+    # This is not aligned with numpy behavior which means it might change
+    # in the future.
     self.assertRaises(RuntimeError, lambda: c & c.byte())
-    self.assertRaises(RuntimeError, lambda: c + c.byte())
     self.assertRaises(RuntimeError, lambda: xla_c & xla_c.byte())
-    # RuntimeError is triggered in execution instead of lowering,
-    # thus print is required.
-    self.assertRaises(RuntimeError, lambda: print(xla_c + xla_c.byte()))
 
   def test_bitwise_type(self):
     xla_device = xm.xla_device()
