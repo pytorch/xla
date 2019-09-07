@@ -1,3 +1,4 @@
+from optimizers import WarmupAndExponentialDecaySGD
 import test_utils
 
 SUPPORTED_MODELS = [
@@ -71,8 +72,52 @@ MODEL_PROPERTIES = {
 }
 
 
+# Most optimizers don't need any args for their .step() method and will break
+# if we try to pass in args.
+def default_step_args_fn(*args, **kwargs):
+  return {}
+
+
+# Optimizers that use warmup will need to know which epoch and step the model
+# is currently on in order to set the learning rate for that step.
+def warmup_optimizer_step_args_fn(*args, **kwargs):
+  optimizer_args = {
+    'epoch': kwargs['epoch'],
+    'step': kwargs['step'],
+  }
+  # Learning rate is the same across cores and machines for a given
+  # step+epoch combination. Don't bother writing num_cores * num_machines
+  # copies of the same learning rate; just write 1 copy.
+  if should_report_lr(kwargs['device'], kwargs['devices']):
+    optimizer_args['summary_writer'] = kwargs['summary_writer']
+  return optimizer_args
+
+
+def get_optimizer_for_model(model_name, num_training_steps_per_epoch):
+  if model_name == 'resnet50':
+    return (WarmupAndExponentialDecaySGD, {
+        'lr': FLAGS.lr,
+        'momentum': FLAGS.momentum,
+        'num_steps_per_epoch': num_training_steps_per_epoch,
+        'divide_every_n_epochs': 20,
+        'divisor': 0.2},
+        warmup_optimizer_step_args_fn)
+  else:
+    return (optim.SGD, {
+        'lr': FLAGS.lr,
+        'momentum': FLAGS.momentum,
+        'weight_decay': 5e-4},
+        default_step_args_fn)
+
+
 def get_model_property(key):
   return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
+
+
+def should_report_lr(current_device, devices):
+  is_first_device = not devices or str(current_device) == devices[0]
+  is_first_machine = xm.get_ordinal() == 0
+  return is_first_device and is_first_machine
 
 
 def train_imagenet():
@@ -145,11 +190,8 @@ def train_imagenet():
   def train_loop_fn(model, loader, device, context):
     loss_fn = nn.CrossEntropyLoss()
     optimizer = context.getattr_or(
-        'optimizer', lambda: optim.SGD(
-            model.parameters(),
-            lr=FLAGS.lr,
-            momentum=FLAGS.momentum,
-            weight_decay=5e-4))
+        'optimizer', lambda: optimizer_class(
+            model.parameters(), **optimizer_init_args))
     tracker = xm.RateTracker()
     model.train()
     for x, (data, target) in loader:
@@ -157,7 +199,9 @@ def train_imagenet():
       output = model(data)
       loss = loss_fn(output, target)
       loss.backward()
-      xm.optimizer_step(optimizer)
+      xm.optimizer_step(optimizer, optimizer_args=optimizer_step_args_fn(
+          device=device, devices=devices, epoch=epoch, step=x,
+          summary_writer=writer))
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
         test_utils.print_training_update(device, x, loss.item(),
@@ -180,12 +224,18 @@ def train_imagenet():
 
   accuracy = 0.0
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  num_training_steps_per_epoch = len(train_dataset.imgs) // (
+      FLAGS.batch_size * (len(devices) or 1))
+  optimizer_class, optimizer_init_args, optimizer_step_args_fn = \
+      get_optimizer_for_model(FLAGS.model, num_training_steps_per_epoch)
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = mean(accuracies)
     print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
-    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
+    global_step = (epoch - 1) * num_training_steps_per_epoch
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
+                                     global_step)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
