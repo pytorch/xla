@@ -1,4 +1,5 @@
 import test_utils
+from schedulers import WarmupAndExponentialDecayScheduler
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -71,8 +72,22 @@ MODEL_PROPERTIES = {
 }
 
 
+def get_scheduler_for_model(model_name, optimizer, num_steps_per_epoch):
+  if model_name == 'resnet50':
+    return WarmupAndExponentialDecayScheduler(
+      optimizer, num_steps_per_epoch, divide_every_n_epochs=20, divisor=5)
+  else:
+    return None
+
+
 def get_model_property(key):
   return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
+
+
+def should_report_lr(current_device, devices):
+  is_first_device = not devices or str(current_device) == devices[0]
+  is_first_machine = xm.get_ordinal() == 0
+  return is_first_device and is_first_machine
 
 
 def train_imagenet():
@@ -150,9 +165,17 @@ def train_imagenet():
             lr=FLAGS.lr,
             momentum=FLAGS.momentum,
             weight_decay=5e-4))
+
+    scheduler = get_scheduler_for_model(
+        FLAGS.model, optimizer, num_training_steps_per_epoch)
     tracker = xm.RateTracker()
     model.train()
     for x, (data, target) in loader:
+      # TODO BEFORE SUBMIT(zcain): Should we call scheduler.step() before or
+      # after optimizer.step() ?
+      if scheduler:
+        scheduler.step(epoch, x, summary_writer=writer if should_report_lr(
+            device, devices) else None)
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
@@ -180,12 +203,16 @@ def train_imagenet():
 
   accuracy = 0.0
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  num_training_steps_per_epoch = len(train_dataset.imgs) // (
+      FLAGS.batch_size * (len(devices) or 1))
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = mean(accuracies)
     print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
-    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
+    global_step = (epoch - 1) * num_training_steps_per_epoch
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
+                                     global_step)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
