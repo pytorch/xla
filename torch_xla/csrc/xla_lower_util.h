@@ -5,6 +5,9 @@
 
 namespace torch_xla {
 
+xla::XlaOp PadToSize(const xla::XlaOp& input, const xla::XlaOp& pad_value,
+                     tensorflow::gtl::ArraySlice<const xla::int64> size);
+
 std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
                                        xla::int64 dim, bool keepdim);
 
