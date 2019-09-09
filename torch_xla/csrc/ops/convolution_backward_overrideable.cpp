@@ -50,8 +50,8 @@ ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
                                     groups);
            },
            /*num_outputs=*/3,
-           xla::util::MHash(stride, padding, transposed, output_padding,
-                            groups)),
+           xla::util::MHash(stride, padding, dilation, transposed,
+                            output_padding, groups)),
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       dilation_(std::move(dilation)),
@@ -84,7 +84,7 @@ std::string ConvolutionBackwardOverrideable::ToString() const {
      << "], padding=[" << absl::StrJoin(padding_, ", ") << "], dilation=["
      << absl::StrJoin(dilation_, ", ") << "], transpose=" << transposed_
      << ", output_padding=[" << absl::StrJoin(output_padding_, ", ")
-     << ", groups=" << groups_;
+     << "], groups=" << groups_;
   return ss.str();
 }
 
