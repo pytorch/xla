@@ -16,17 +16,27 @@ index 657102ed1..a246f23aa 100644
      tensor = torch._empty_affine_quantized(size, scale=scale, zero_point=zero_point, dtype=storage.dtype)
      tensor.set_(storage, storage_offset, size, stride)
 diff --git a/torch/serialization.py b/torch/serialization.py
-index 8b168b694..4ccfb93c1 100644
+index 8b168b694..4213d4b0a 100644
 --- a/torch/serialization.py
 +++ b/torch/serialization.py
-@@ -257,6 +257,8 @@ def save(obj, f, pickle_module=pickle, pickle_protocol=DEFAULT_PROTOCOL):
-         >>> buffer = io.BytesIO()
-         >>> torch.save(x, buffer)
-     """
-+    if obj.device.type == 'xla':
-+        obj = obj.cpu()
-     return _with_file_like(f, "wb", lambda f: _save(obj, f, pickle_module, pickle_protocol))
+@@ -312,6 +312,8 @@ def _save(obj, f, pickle_module, pickle_protocol):
+                     location,
+                     obj.size(),
+                     view_metadata)
++        elif isinstance(obj, torch.device) and obj.type == 'xla':
++               return ('OpaqueDevice', 'cpu')
+         return None
  
+     sys_info = dict(
+@@ -578,6 +580,9 @@ def _load(f, map_location, pickle_module, **pickle_load_args):
+                 return deserialized_objects[view_key]
+             else:
+                 return storage
++        elif typename == 'OpaqueDevice':
++            device_name = data[0]
++            return torch.device(device_name)
+         else:
+             raise RuntimeError("Unknown saved id type: %s" % saved_id[0])
  
 diff --git a/torch/tensor.py b/torch/tensor.py
 index a7724a4a3..7e31988ec 100644
