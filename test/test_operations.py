@@ -848,6 +848,25 @@ class TestAtenXlaTensor(XlaTestCase):
     finally:
       os.remove(x_file)
 
+  def test_save_tuple(self):
+    xla_device = xm.xla_device()
+    x = torch.randn(5, device=xla_device)
+    number = 3
+    x_file = tempfile.mktemp()
+    try:
+      torch.save((x, number), x_file)
+      x_loaded, number_loaded = torch.load(x_file)
+      self.assertEqual(x, x_loaded)
+      self.assertEqual(number, number_loaded)
+    finally:
+      os.remove(x_file)
+
+  def test_copy(self):
+    xla_device = xm.xla_device()
+    x = torch.rand(5, device=xla_device)
+    y = copy.copy(x)
+    self.assertEqual(x, y)
+
   def test_print(self):
     xla_device = xm.xla_device()
     x = torch.tensor([5], device=xla_device)
