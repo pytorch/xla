@@ -108,7 +108,7 @@ std::string ConvolutionOverrideable::ToString() const {
      << "], padding=[" << absl::StrJoin(padding_, ", ") << "], dilation=["
      << absl::StrJoin(dilation_, ", ") << "], transpose=" << transposed_
      << ", output_padding=[" << absl::StrJoin(output_padding_, ", ")
-     << ", groups=" << groups_;
+     << "], groups=" << groups_;
   return ss.str();
 }
 
