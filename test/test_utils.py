@@ -27,11 +27,14 @@ def parse_common_options(datadir=None,
   parser = argparse.ArgumentParser(add_help=False)
   parser.add_argument('--datadir', type=str, default=datadir)
   parser.add_argument('--logdir', type=str, default=logdir)
+  parser.add_argument('--lr_scheduler_type', type=str, default=None)
   parser.add_argument('--num_cores', type=int, default=num_cores)
   parser.add_argument('--batch_size', type=int, default=batch_size)
   parser.add_argument('--num_epochs', type=int, default=num_epochs)
   parser.add_argument('--num_workers', type=int, default=num_workers)
   parser.add_argument('--log_steps', type=int, default=log_steps)
+  parser.add_argument('--lr_scheduler_divide_every_n_epochs', type=int)
+  parser.add_argument('--lr_scheduler_divisor', type=int)
   parser.add_argument('--lr', type=float, default=lr)
   parser.add_argument('--momentum', type=float, default=momentum)
   parser.add_argument('--target_accuracy', type=float, default=target_accuracy)
@@ -72,3 +75,23 @@ def print_test_update(device, accuracy):
     accuracy: Float.
   """
   print('[{}] Accuracy={:.2f}%'.format(device, accuracy))
+
+
+def should_report_lr(current_device, devices, machine_ordinal_num):
+  """Returns true if this device should log the learning rate.
+
+  In order to avoid many duplicate copies of the same learning rate in the
+  Tensorboard metrics, we only log the learning rate of a single representative
+  device. Use the device and machine number to uniquely identify this
+  representative.
+
+  Args:
+    current_device: instance of `torch.device`.
+    devices: list of device names (strings), e.g. output of
+        torch_xla_py.xla_model.get_xla_supported_devices().
+    machine_ordinal_num: int, output of torch_xla_py.xla_model.get_ordinal().
+  """
+  is_first_device = not devices or str(current_device) == devices[0]
+  is_first_machine = machine_ordinal_num == 0
+  return is_first_device and is_first_machine
+

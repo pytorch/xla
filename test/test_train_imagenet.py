@@ -1,5 +1,5 @@
 import test_utils
-from schedulers import WarmupAndExponentialDecayScheduler
+import schedulers
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -53,7 +53,13 @@ DEFAULT_KWARGS = dict(
     lr=0.1,
     target_accuracy=0.0,
 )
-MODEL_SPECIFIC_DEFAULTS = {}
+MODEL_SPECIFIC_DEFAULTS = {
+    'resnet50': dict({
+        'lr_scheduler_divide_every_n_epochs': 20,
+        'lr_scheduler_divisor': 5,
+        'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
+      }, **DEFAULT_KWARGS)
+}
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
@@ -72,22 +78,8 @@ MODEL_PROPERTIES = {
 }
 
 
-def get_scheduler_for_model(model_name, optimizer, num_steps_per_epoch):
-  if model_name == 'resnet50':
-    return WarmupAndExponentialDecayScheduler(
-      optimizer, num_steps_per_epoch, divide_every_n_epochs=20, divisor=5)
-  else:
-    return None
-
-
 def get_model_property(key):
   return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
-
-
-def should_report_lr(current_device, devices):
-  is_first_device = not devices or str(current_device) == devices[0]
-  is_first_machine = xm.get_ordinal() == 0
-  return is_first_device and is_first_machine
 
 
 def train_imagenet():
@@ -165,17 +157,14 @@ def train_imagenet():
             lr=FLAGS.lr,
             momentum=FLAGS.momentum,
             weight_decay=5e-4))
-
-    scheduler = get_scheduler_for_model(
-        FLAGS.model, optimizer, num_training_steps_per_epoch)
+    lr_scheduler = context.getattr_or(
+        'lr_scheduler', lambda: schedulers.wrap_optimizer_with_scheduler(
+            optimizer, FLAGS, num_steps_per_epoch=num_training_steps_per_epoch,
+            summary_writer=writer if test_utils.should_report_lr(
+                device, devices, xm.get_ordinal()) else None))
     tracker = xm.RateTracker()
     model.train()
     for x, (data, target) in loader:
-      # TODO BEFORE SUBMIT(zcain): Should we call scheduler.step() before or
-      # after optimizer.step() ?
-      if scheduler:
-        scheduler.step(epoch, x, summary_writer=writer if should_report_lr(
-            device, devices) else None)
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
@@ -186,6 +175,8 @@ def train_imagenet():
         test_utils.print_training_update(device, x, loss.item(),
                                          tracker.rate(),
                                          tracker.global_rate())
+      if lr_scheduler:
+        lr_scheduler.step()
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
@@ -203,6 +194,7 @@ def train_imagenet():
 
   accuracy = 0.0
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  # TODO BEFORE SUBMIT: Fix this for distributed training case.
   num_training_steps_per_epoch = len(train_dataset.imgs) // (
       FLAGS.batch_size * (len(devices) or 1))
   for epoch in range(1, FLAGS.num_epochs + 1):
