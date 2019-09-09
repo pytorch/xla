@@ -3,7 +3,11 @@
 #include <algorithm>
 #include <vector>
 
+#include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/client/lib/comparators.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/math.h"
+#include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -42,8 +46,8 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(const xla::XlaOp& lhs,
                                                const xla::Shape& lhs_shape,
                                                const xla::XlaOp& rhs,
                                                const xla::Shape& rhs_shape) {
-  auto lhs_dimensions = lhs_shape.dimensions();
-  auto rhs_dimensions = rhs_shape.dimensions();
+  auto lhs_dimensions = xla::util::ToVector<xla::int64>(lhs_shape.dimensions());
+  auto rhs_dimensions = xla::util::ToVector<xla::int64>(rhs_shape.dimensions());
   XLA_CHECK_EQ(lhs_dimensions.size(), rhs_dimensions.size());
   for (xla::int64 i = 0; i < lhs_dimensions.size() - 2; ++i) {
     if (lhs_dimensions[i] == rhs_dimensions[i]) {
@@ -81,11 +85,11 @@ xla::XlaComputation MakeScatterComputation(
   xla::XlaBuilder cb("ScatterCombiner");
   xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
   xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
-  xla::XlaOp p1 = xla::Parameter(&cb, 1, xla_scalar_shape, "p1");
-  if (combiner) {
-    combiner(p0, p1);
+  xla::XlaOp result = xla::Parameter(&cb, 1, xla_scalar_shape, "p1");
+  if (combiner != nullptr) {
+    result = combiner(p0, result);
   }
-  return cb.Build().ConsumeValueOrDie();
+  return ConsumeValue(cb.Build(result));
 }
 
 xla::XlaOp CreateIndexAlongDim(
@@ -127,7 +131,103 @@ xla::XlaOp CreateIndexAlongDim(
                       dim_numbers);
 }
 
+bool ScatterRequiresPadding(const xla::Shape& input_shape,
+                            const xla::Shape& index_shape) {
+  bool requires_padding = false;
+  for (size_t i = 0; i < input_shape.rank(); ++i) {
+    if (input_shape.dimensions(i) > index_shape.dimensions(i)) {
+      requires_padding = true;
+    } else {
+      XLA_CHECK_EQ(input_shape.dimensions(i), index_shape.dimensions(i));
+    }
+  }
+  return requires_padding;
+}
+
+xla::XlaOp XlaDenseScatter(
+    const xla::XlaOp& input, const xla::XlaOp& index, const xla::XlaOp& src,
+    xla::int64 dim,
+    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
+        combiner) {
+  // Contribute back this code to xla::TorchScatterDense() once this has reached
+  // a stable implementation.
+  xla::XlaBuilder* builder = input.builder();
+  return builder->ReportErrorOrReturn([&]() -> xla::StatusOr<xla::XlaOp> {
+    TF_ASSIGN_OR_RETURN(xla::Shape index_shape, builder->GetShape(index));
+    TF_ASSIGN_OR_RETURN(xla::Shape input_shape, builder->GetShape(input));
+    std::vector<xla::int64> index_broacast_dims;
+    std::vector<xla::int64> sizes;
+    for (xla::int64 i = 0; i < index_shape.rank(); ++i) {
+      if (i < dim) {
+        index_broacast_dims.push_back(i);
+      } else {
+        if (i == dim) {
+          sizes.push_back(input_shape.dimensions(i));
+        }
+        index_broacast_dims.push_back(i + 1);
+      }
+      sizes.push_back(index_shape.dimensions(i));
+    }
+
+    xla::XlaOp mask = xla::Eq(
+        xla::BroadcastInDim(index, sizes, index_broacast_dims),
+        xla::Iota(builder,
+                  xla::ShapeUtil::MakeShape(index_shape.element_type(), sizes),
+                  dim));
+    xla::XlaOp selected_src = xla::Select(
+        mask, xla::BroadcastInDim(src, sizes, index_broacast_dims),
+        xla::Zeros(builder, xla::ShapeUtil::MakeShape(
+                                input_shape.element_type(), sizes)));
+    xla::XlaOp masked_src = xla::Reduce(
+        selected_src, xla::Zero(builder, input_shape.element_type()),
+        xla::CreateScalarIdentityWithZeroComputation(input_shape.element_type(),
+                                                     builder),
+        {dim + 1});
+    if (index_shape.dimensions() == input_shape.dimensions()) {
+      // If the index shape is the same as the input shape, the input shape will
+      // be fully covered (since scatter indices must be unique), so there is no
+      // need for masking.
+      return combiner != nullptr ? combiner(input, masked_src) : masked_src;
+    }
+    xla::XlaOp reduced_mask = xla::Reduce(
+        mask, xla::ConstantR0<bool>(builder, false),
+        xla::CreateScalarOrComputation(xla::PrimitiveType::PRED, builder),
+        {dim + 1});
+    if (ScatterRequiresPadding(input_shape, index_shape)) {
+      masked_src =
+          PadToSize(masked_src, xla::Zero(builder, input_shape.element_type()),
+                    input_shape.dimensions());
+      reduced_mask =
+          PadToSize(reduced_mask, xla::ConstantR0<bool>(builder, false),
+                    input_shape.dimensions());
+    }
+    xla::XlaOp result;
+    if (combiner != nullptr) {
+      result = xla::Select(reduced_mask, combiner(input, masked_src), input);
+    } else {
+      result = xla::Select(reduced_mask, masked_src, input);
+    }
+    return result;
+  });
+}
+
 }  // namespace
+
+xla::XlaOp PadToSize(const xla::XlaOp& input, const xla::XlaOp& pad_value,
+                     tensorflow::gtl::ArraySlice<const xla::int64> size) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  XLA_CHECK_EQ(input_shape.rank(), size.size());
+
+  xla::PaddingConfig padding_config;
+  for (size_t i = 0; i < size.size(); i++) {
+    auto* dims = padding_config.add_dimensions();
+    dims->set_edge_padding_low(0);
+    dims->set_interior_padding(0);
+    XLA_CHECK_GE(size[i], input_shape.dimensions(i));
+    dims->set_edge_padding_high(size[i] - input_shape.dimensions(i));
+  }
+  return xla::Pad(input, pad_value, padding_config);
+}
 
 std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
                                        xla::int64 dim, bool keepdim) {
@@ -427,6 +527,8 @@ xla::XlaOp CreateScatter(
     xla::int64 dim,
     const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
         combiner) {
+  static int dense_scatter_factor =
+      xla::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
   xla::Shape src_shape = XlaHelpers::ShapeOfXlaOp(src);
@@ -436,6 +538,13 @@ xla::XlaOp CreateScatter(
     std::vector<xla::int64> base_indices(src_shape.rank(), 0);
     src_op = BuildSlice(src_op, base_indices, index_shape.dimensions());
   }
+
+  xla::int64 input_elements = xla::ShapeUtil::ElementsIn(input_shape);
+  xla::int64 index_elements = xla::ShapeUtil::ElementsIn(index_shape);
+  if (index_elements >= input_elements / dense_scatter_factor) {
+    return XlaDenseScatter(input, index, src_op, dim, combiner);
+  }
+
   xla::ShapeUtil::AppendMajorDimension(1, &index_shape);
   std::vector<xla::XlaOp> to_concat;
   to_concat.reserve(input_shape.rank());

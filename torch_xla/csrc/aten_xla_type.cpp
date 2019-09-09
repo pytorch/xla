@@ -1150,8 +1150,10 @@ at::Tensor AtenXlaType::expand(const at::Tensor& self, at::IntArrayRef size,
 at::Tensor AtenXlaType::expand_as(const at::Tensor& self,
                                   const at::Tensor& other) {
   XLATensor other_tensor = bridge::GetXlaTensor(other);
-  return bridge::AtenFromXlaTensor(XLATensor::expand(
-      bridge::GetXlaTensor(self), other_tensor.shape().get().dimensions()));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::expand(bridge::GetXlaTensor(self),
+                        xla::util::ToVector<xla::int64>(
+                            other_tensor.shape().get().dimensions())));
 }
 
 at::Tensor AtenXlaType::expm1(const at::Tensor& self) {
@@ -1524,6 +1526,14 @@ at::Tensor AtenXlaType::instance_norm(
   return at::native::instance_norm(input, weight, bias, running_mean,
                                    running_var, use_input_stats, momentum, eps,
                                    cudnn_enabled);
+}
+
+bool AtenXlaType::is_floating_point(const at::Tensor& self) {
+  return at::isFloatingType(self.scalar_type());
+}
+
+bool AtenXlaType::is_signed(const at::Tensor& self) {
+  return at::isSignedType(self.scalar_type());
 }
 
 at::Tensor AtenXlaType::kl_div(const at::Tensor& self, const at::Tensor& target,
