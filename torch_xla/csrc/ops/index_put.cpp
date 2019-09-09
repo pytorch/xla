@@ -29,8 +29,8 @@ NodePtr IndexPut::Clone(OpList operands) const {
 }
 
 XlaOpVector IndexPut::Lower(LoweringContext* loctx) const {
-  auto add_scatter_combiner = [](const xla::XlaOp& x,
-                                 const xla::XlaOp& y) -> xla::XlaOp {
+  std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)> add_scatter_combiner =
+      [](const xla::XlaOp& x, const xla::XlaOp& y) -> xla::XlaOp {
     return x + y;
   };
 
