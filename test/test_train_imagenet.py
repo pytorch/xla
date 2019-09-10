@@ -203,10 +203,10 @@ def train_imagenet():
 
   accuracy = 0.0
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
-  num_distributed_machines = len(
+  num_devices = len(
       xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
   num_training_steps_per_epoch = len(train_dataset.imgs) // (
-      FLAGS.batch_size * (len(devices) or 1) * num_distributed_machines)
+      FLAGS.batch_size * num_devices)
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
