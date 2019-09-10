@@ -57,8 +57,15 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
     return [lr for _ in self.base_lrs]
 
   def step(self, epoch=None):
-    epoch = self._epoch()
     current_lr = self.get_lr()[0]
+
+    # Outside of warmup epochs, we use the same learning rate for every step
+    # in an epoch. Don't bother updating learning rate if it hasn't changed. 
+    if abs(current_lr - self._previous_lr) >= self._min_delta_to_update_lr:
+      super(WarmupAndExponentialDecayScheduler, self).step()
+      self._previous_lr = current_lr
+    else:
+      self._step_count += 1  # This normally happens in super().step().
 
     # Add current learning rate to Tensorboard metrics. For warmup epochs,
     # log the learning rate at every step. For non-warmup epochs, log only
@@ -68,16 +75,8 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
           self._step_count % self._num_steps_per_epoch == 0):
         test_utils.add_scalar_to_summary(self._summary_writer,
                                          'LearningRate',
-                                         current_lr,
+                                         self.optimizer.param_groups[0]['lr'],
                                          self._step_count)
-
-    # Outside of warmup epochs, we use the same learning rate for every step
-    # in an epoch. Don't bother updating learning rate if it hasn't changed. 
-    if abs(current_lr - self._previous_lr) < self._min_delta_to_update_lr:
-      self._step_count += 1  # This normally happens in super().step().
-      return
-    self._previous_lr = current_lr
-    super(WarmupAndExponentialDecayScheduler, self).step()
 
 
 def wrap_optimizer_with_scheduler(optimizer,
