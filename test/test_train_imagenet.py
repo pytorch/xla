@@ -17,6 +17,15 @@ MODEL_OPTS = {
         'default': 64,
         'type': int,
     },
+    '--lr_scheduler_type': {
+        'type': str,
+    },
+    '--lr_scheduler_divide_every_n_epochs': {
+        'type': int,
+    },
+    '--lr_scheduler_divisor': {
+        'type': int,
+    },
 }
 
 FLAGS = test_utils.parse_common_options(
@@ -160,7 +169,7 @@ def train_imagenet():
     lr_scheduler = context.getattr_or(
         'lr_scheduler', lambda: schedulers.wrap_optimizer_with_scheduler(
             optimizer, FLAGS, num_steps_per_epoch=num_training_steps_per_epoch,
-            summary_writer=writer if test_utils.should_report_lr(
+            summary_writer=writer if test_utils.is_first_device(
                 device, devices, xm.get_ordinal()) else None))
     tracker = xm.RateTracker()
     model.train()
@@ -194,9 +203,9 @@ def train_imagenet():
 
   accuracy = 0.0
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
-  # TODO BEFORE SUBMIT: Fix this for distributed training case.
+  num_distributed_machines = len(xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
   num_training_steps_per_epoch = len(train_dataset.imgs) // (
-      FLAGS.batch_size * (len(devices) or 1))
+      FLAGS.batch_size * (len(devices) or 1) * num_distributed_machines)
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
