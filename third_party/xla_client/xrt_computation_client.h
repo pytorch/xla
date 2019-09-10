@@ -180,6 +180,8 @@ class XrtComputationClient : public ComputationClient {
 
   void SetRngSeed(size_t seed) override;
 
+  static string GetMultiProcessingDevice();
+
  private:
   // The data structure used for the key in the compilation cache. Compilations
   // handles are valid within given domain (essentially the host+port worker
