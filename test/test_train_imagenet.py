@@ -168,7 +168,12 @@ def train_imagenet():
             weight_decay=5e-4))
     lr_scheduler = context.getattr_or(
         'lr_scheduler', lambda: schedulers.wrap_optimizer_with_scheduler(
-            optimizer, FLAGS, num_steps_per_epoch=num_training_steps_per_epoch,
+            optimizer,
+            scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
+            scheduler_divisor=getattr(FLAGS, 'lr_scheduler_divisor', None),
+            scheduler_divide_every_n_epochs=getattr(
+                FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
+            num_steps_per_epoch=num_training_steps_per_epoch,
             summary_writer=writer if test_utils.is_first_device(
                 device, devices, xm.get_ordinal()) else None))
     tracker = xm.RateTracker()
