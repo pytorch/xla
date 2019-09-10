@@ -10,12 +10,10 @@ import time
 import torch
 import torch.nn as nn
 import torch_xla
+import torch_xla_py.xla_env_vars as xenv
 import torch_xla_py.metrics_saver as ms
 import torch_xla_py.utils as xu
 import torch_xla_py.keyd_queue as kq
-
-_XLA_DEVICES = torch_xla._XLAC._xla_get_devices()
-_XLA_ALL_DEVICES = torch_xla._XLAC._xla_get_all_devices()
 
 _TLS = threading.local()
 
@@ -73,10 +71,11 @@ def parse_xla_device(device):
 
 
 def get_xla_supported_devices(devkind=None, max_devices=None):
+  xla_devices = torch_xla._XLAC._xla_get_devices()
   devkind = devkind or ['TPU', 'GPU', 'CPU']
   for kind in devkind:
     kind_devices = []
-    for i, device in enumerate(_XLA_DEVICES):
+    for i, device in enumerate(xla_devices):
       if re.match(kind + r':\d+$', device):
         kind_devices.append('xla:{}'.format(i))
     if kind_devices:
@@ -84,11 +83,11 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
 
 
 def xrt_world_size():
-  return int(os.getenv('XRT_SHARD_WORLD_SIZE', 1))
+  return int(os.getenv(xenv.WORLD_SIZE, 1))
 
 
 def get_ordinal():
-  return int(os.getenv('XRT_SHARD_ORDINAL', 0))
+  return int(os.getenv(xenv.ORDINAL, 0))
 
 
 def xla_device(n=None, devkind=None):
@@ -105,11 +104,12 @@ def xla_device(n=None, devkind=None):
 
 
 def xla_real_devices(devices):
+  xla_devices = torch_xla._XLAC._xla_get_devices()
   real_devices = []
   for device in devices:
     m = re.match(r'xla:(\d+)$', device)
     if m:
-      real_devices.append(_XLA_DEVICES[int(m.group(1))])
+      real_devices.append(xla_devices[int(m.group(1))])
       continue
     xdev = parse_xla_device(device)
     if not xdev:
@@ -137,7 +137,7 @@ def xla_replication_devices(local_devices):
         'Cannot replicate if number of devices ({}) is different from {}'
         .format(len(local_devices), len(kind_devices)))
   replication_devices = []
-  for device in _XLA_ALL_DEVICES:
+  for device in torch_xla._XLAC._xla_get_all_devices():
     xdev = parse_xla_device(device)
     if not xdev:
       raise RuntimeError('Invalid device format: {}'.format(device))

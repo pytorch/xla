@@ -1,0 +1,200 @@
+import test_utils
+
+SUPPORTED_MODELS = [
+    'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
+    'inception_v3', 'resnet101', 'resnet152', 'resnet18', 'resnet34',
+    'resnet50', 'squeezenet1_0', 'squeezenet1_1', 'vgg11', 'vgg11_bn', 'vgg13',
+    'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn'
+]
+
+MODEL_OPTS = {
+    '--model': {
+        'choices': SUPPORTED_MODELS,
+        'default': 'resnet50',
+    },
+    '--test_set_batch_size': {
+        'default': 64,
+        'type': int,
+    },
+}
+
+FLAGS = test_utils.parse_common_options(
+    datadir='/tmp/imagenet',
+    batch_size=None,
+    num_epochs=None,
+    momentum=None,
+    lr=None,
+    target_accuracy=None,
+    opts=MODEL_OPTS.items(),
+)
+
+import os
+from statistics import mean
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
+import torchvision
+import torchvision.transforms as transforms
+import torch_xla
+import torch_xla_py.data_parallel as dp
+import torch_xla_py.utils as xu
+import torch_xla_py.xla_model as xm
+import torch_xla_py.xla_multiprocessing as xmp
+
+DEFAULT_KWARGS = dict(
+    batch_size=128,
+    test_set_batch_size=64,
+    num_epochs=18,
+    momentum=0.9,
+    lr=0.1,
+    target_accuracy=0.0,
+)
+MODEL_SPECIFIC_DEFAULTS = {}
+
+default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
+for arg, value in default_value_dict.items():
+  if getattr(FLAGS, arg) is None:
+    setattr(FLAGS, arg, value)
+
+MODEL_PROPERTIES = {
+    'inception_v3': {
+        'img_dim': 299,
+        'model_fn': lambda: torchvision.models.inception_v3(aux_logits=False)
+    },
+    'DEFAULT': {
+        'img_dim': 224,
+        'model_fn': getattr(torchvision.models, FLAGS.model)
+    }
+}
+
+
+def get_model_property(key):
+  return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
+
+
+def train_imagenet():
+  print('==> Preparing data..')
+  img_dim = get_model_property('img_dim')
+  if FLAGS.fake_data:
+    train_loader = xu.SampleGenerator(
+        data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
+              torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
+        sample_count=1200000 // FLAGS.batch_size // xm.xrt_world_size())
+    test_loader = xu.SampleGenerator(
+        data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
+              torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
+        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
+  else:
+    normalize = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    train_dataset = torchvision.datasets.ImageFolder(
+        os.path.join(FLAGS.datadir, 'train'),
+        transforms.Compose([
+            transforms.RandomResizedCrop(img_dim),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ]))
+    resize_dim = max(img_dim, 256)
+    test_dataset = torchvision.datasets.ImageFolder(
+        os.path.join(FLAGS.datadir, 'val'),
+        # Matches Torchvision's eval transforms except Torchvision uses size
+        # 256 resize for all models both here and in the train loader. Their
+        # version crashes during training on 299x299 images, e.g. inception.
+        transforms.Compose([
+            transforms.Resize(resize_dim),
+            transforms.CenterCrop(img_dim),
+            transforms.ToTensor(),
+            normalize,
+        ]))
+
+    train_sampler = None
+    if xm.xrt_world_size() > 1:
+      train_sampler = torch.utils.data.distributed.DistributedSampler(
+          train_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=True)
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=FLAGS.batch_size,
+        sampler=train_sampler,
+        shuffle=False if train_sampler else True,
+        num_workers=FLAGS.num_workers)
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=FLAGS.test_set_batch_size,
+        shuffle=False,
+        num_workers=FLAGS.num_workers)
+
+  torch.manual_seed(42)
+
+  device = xm.xla_device()
+  model = get_model_property('model_fn')().to(device)
+  optimizer = optim.SGD(
+      model.parameters(),
+      lr=FLAGS.lr,
+      momentum=FLAGS.momentum,
+      weight_decay=5e-4)
+  loss_fn = nn.CrossEntropyLoss()
+
+  def train_loop_fn(loader):
+    tracker = xm.RateTracker()
+    model.train()
+    for x, (data, target) in loader:
+      optimizer.zero_grad()
+      output = model(data)
+      loss = loss_fn(output, target)
+      loss.backward()
+      xm.optimizer_step(optimizer)
+      tracker.add(FLAGS.batch_size)
+      if x % FLAGS.log_steps == 0:
+        test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
+                                         tracker.global_rate())
+
+  def test_loop_fn(loader):
+    total_samples = 0
+    correct = 0
+    model.eval()
+    for x, (data, target) in loader:
+      output = model(data)
+      pred = output.max(1, keepdim=True)[1]
+      correct += pred.eq(target.view_as(pred)).sum().item()
+      total_samples += data.size()[0]
+
+    accuracy = 100.0 * correct / total_samples
+    test_utils.print_test_update(device, accuracy)
+    return accuracy
+
+  accuracy = 0.0
+  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  for epoch in range(1, FLAGS.num_epochs + 1):
+    para_loader = dp.ParallelLoader(train_loader, [device])
+    train_loop_fn(para_loader.per_device_loader(device))
+
+    para_loader = dp.ParallelLoader(test_loader, [device])
+    accuracy = test_loop_fn(para_loader.per_device_loader(device))
+    print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
+
+    if FLAGS.metrics_debug:
+      print(torch_xla._XLAC._xla_metrics_report())
+
+  return accuracy
+
+
+def _mp_fn(index, flags):
+  global FLAGS
+  FLAGS = flags
+  torch.set_default_tensor_type('torch.FloatTensor')
+  accuracy = train_imagenet()
+  if accuracy < FLAGS.target_accuracy:
+    print('Accuracy {} is below target {}'.format(accuracy,
+                                                  FLAGS.target_accuracy))
+    sys.exit(21)
+
+
+if __name__ == '__main__':
+  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
