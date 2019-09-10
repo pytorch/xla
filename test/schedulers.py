@@ -1,8 +1,6 @@
 import test_utils
 from torch.optim.lr_scheduler import _LRScheduler
 
-MIN_DELTA_TO_UPDATE_LR = 0.000001
-
 
 class WarmupAndExponentialDecayScheduler(_LRScheduler):
   """Update the learning rate of wrapped optimizer based on epoch and step.
