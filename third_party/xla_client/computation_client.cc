@@ -241,7 +241,12 @@ std::vector<std::string> ComputationClient::GetCompilationDevices(
     tensorflow::gtl::ArraySlice<const std::string> devices) const {
   std::vector<std::string> compilation_devices;
   if (devices.empty()) {
-    compilation_devices.push_back(device);
+    auto& replication_devices = GetReplicationDevices();
+    if (replication_devices.empty()) {
+      compilation_devices.push_back(device);
+    } else {
+      compilation_devices = replication_devices;
+    }
   } else {
     compilation_devices.insert(compilation_devices.end(), devices.begin(),
                                devices.end());
