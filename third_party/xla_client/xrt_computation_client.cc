@@ -24,6 +24,8 @@
 namespace xla {
 namespace {
 
+thread_local std::vector<string> g_replication_devices;
+
 // A simple Tensorflow Allocator which caches Tensor allocations in order to
 // avoid paying the kernel's clear_page_c() price.
 class TensorAllocator : public tensorflow::Allocator {
@@ -1210,6 +1212,14 @@ std::vector<string> XrtComputationClient::GetAllDevices() const {
     devices.push_back(dev_target.first);
   }
   return devices;
+}
+
+void XrtComputationClient::SetReplicationDevices(std::vector<string> devices) {
+  g_replication_devices = std::move(devices);
+}
+
+const std::vector<string>& XrtComputationClient::GetReplicationDevices() const {
+  return g_replication_devices;
 }
 
 void XrtComputationClient::SetRngSeed(size_t seed) { rng_seed_ = seed; }

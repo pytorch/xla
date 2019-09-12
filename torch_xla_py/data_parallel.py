@@ -181,11 +181,6 @@ class DataParallel(object):
     self._device_ids = list(device_ids)
     self._batchdim = batchdim
     self._native_run = False
-    if len(self._device_ids) > 1:
-      replication_devices = xm.xla_replication_devices(self._device_ids)
-      self._replication = xm.Replication(self._device_ids, replication_devices)
-    else:
-      self._replication = None
     self._models = []
     self._contexts = []
     module = network if isinstance(network, torch.nn.Module) else network()
@@ -228,7 +223,8 @@ class DataParallel(object):
     os._exit(17)
 
   def _module_runner(self, loop_fn, device, module, loader, context, result):
-    xm.set_replication(device, self._replication)
+    if len(self._device_ids) > 1:
+      xm.set_replication(device, self._device_ids)
     try:
       result.result = loop_fn(module, loader, torch.device(device), context)
     except Exception as e:
@@ -248,8 +244,6 @@ class DataParallel(object):
         self._device_ids,
         batchdim=self._batchdim,
         fixed_batch_size=fixed_batch_size)
-    if self._replication is not None:
-      self._replication.reset()
     threads = []
     results = []
     for module, device, context in zip(self._models, self._device_ids,

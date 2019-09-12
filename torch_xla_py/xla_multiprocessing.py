@@ -94,9 +94,7 @@ def _prepare_env_for_index(index):
 def _setup_replication():
   if xm.xrt_world_size() > 1:
     device = xm.xla_device()
-    replication_devices = xm.xla_replication_devices([str(device)])
-    replication = xm.Replication([str(device)], replication_devices)
-    xm.set_replication(str(device), replication)
+    xm.set_replication(str(device), [str(device)])
 
 
 def _start_fn(index, fn, args):
