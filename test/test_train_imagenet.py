@@ -1,4 +1,5 @@
 import test_utils
+import time
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -25,10 +26,12 @@ FLAGS = test_utils.parse_common_options(
 
 from common_utils import TestCase, run_tests
 import os
+from statistics import mean
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
@@ -61,7 +64,6 @@ MODEL_PROPERTIES = {
         'model_fn': getattr(torchvision.models, FLAGS.model)
     }
 }
-
 
 def get_model_property(key):
   return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
@@ -109,7 +111,8 @@ def train_imagenet():
         ]))
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
-        batch_size=FLAGS.batch_size,
+        #batch_size=FLAGS.batch_size,
+        batch_size=64,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
@@ -124,15 +127,32 @@ def train_imagenet():
 
   def train_loop_fn(model, loader, device, context):
     loss_fn = nn.CrossEntropyLoss()
+
     optimizer = context.getattr_or(
         'optimizer', lambda: optim.SGD(
             model.parameters(),
             lr=FLAGS.lr,
             momentum=FLAGS.momentum,
-            weight_decay=5e-4))
+            weight_decay=1e-4))
+    # Subtract 1 since epoch is 1-indexed.
+    custom_lr = FLAGS.lr * (0.2 ** ((epoch-1) // 20))
+    for param_group in optimizer.param_groups:
+      param_group['lr'] = custom_lr
+
+    if device.__str__() == 'xla:1':
+      print("Epoch = {}. Using learning rate of: {}".format(epoch, custom_lr))
+      print(context.optimizer)
+      writer.add_scalar('LearningRate', custom_lr)
+
     tracker = xm.RateTracker()
     model.train()
     for x, (data, target) in loader:
+      # warm up to the initial learning rate gradually.
+      if epoch == 1:
+        custom_lr = min(FLAGS.lr, FLAGS.lr * ((x+1.0) / 1200.0))  # linear
+        for param_group in optimizer.param_groups:
+          param_group['lr'] = custom_lr
+
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
@@ -140,8 +160,11 @@ def train_imagenet():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        print('[{}]({}) Loss={:.5f} Rate={:.2f}'.format(device, x, loss.item(),
-                                                        tracker.rate()))
+        if epoch == 1 and device.__str__() == 'xla:1':
+          print('WARM UP:')
+          print(context.optimizer)
+        print('[{}]({}) Loss={:.5f} Rate={:.2f}, Time={}, GlobalRate={:.2f}'.format(device, x, loss.item(),
+                            tracker.rate(), time.asctime(), tracker.global_rate()))
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
@@ -158,10 +181,13 @@ def train_imagenet():
     return correct / total_samples
 
   accuracy = 0.0
+  writer = SummaryWriter(log_dir='/tmp/tb_data')
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
+    print("EPOCH: " + str(epoch))
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = sum(accuracies) / len(accuracies)
+    writer.add_scalar('Accuracy/test', accuracy, epoch)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
