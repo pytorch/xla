@@ -870,14 +870,11 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
   c10::optional<XLATensor> src_tensor = bridge::TryGetXlaTensor(src);
 
   if (!src_tensor) {
-    TORCH_ASSERT(self_tensor);
+    XLA_CHECK(self_tensor);
     self_tensor.SetTensor(CopyTensor(src, self_tensor->scalar_type()));
   } else if (!self_tensor) {
     // TODO: Is self_tensor good enough?  I don't think so... therefore
     // the hack below:
-    //
-    // Do not mark the tensor creation as writeable to not discard the XLA tensor
-    // device context, but make a copy to avoid core data to be shared.
     std::vector<at::Tensor> tensors = {src};
     auto xla_tensors = bridge::XlaCreateTensorList(tensors);
     // Hack in an overwrite of a const tensor.
