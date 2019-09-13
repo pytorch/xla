@@ -866,12 +866,26 @@ AtenXlaType::convolution_backward_overrideable(
 
 at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
                                bool non_blocking) {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  c10::optional<XLATensor> self_tensor = bridge::TryGetXlaTensor(self);
   c10::optional<XLATensor> src_tensor = bridge::TryGetXlaTensor(src);
-  if (src_tensor) {
-    XLATensor::copy_(self_tensor, *src_tensor);
+
+  if (!src_tensor) {
+    TORCH_ASSERT(self_tensor);
+    self_tensor.SetTensor(CopyTensor(src, self_tensor->scalar_type()));
+  } else if (!self_tensor) {
+    // TODO: Is self_tensor good enough?  I don't think so... therefore
+    // the hack below:
+    //
+    // Do not mark the tensor creation as writeable to not discard the XLA tensor
+    // device context, but make a copy to avoid core data to be shared.
+    std::vector<at::Tensor> tensors = {src};
+    auto xla_tensors = bridge::XlaCreateTensorList(tensors);
+    // Hack in an overwrite of a const tensor.
+    at::Tensor t = CopyTensor(xla_tensors.front(), self.scalar_type());
+    const_cast<at::Tensor&>(self).unsafeGetTensorImpl()->shallow_copy_from(
+        t.getIntrusivePtr());
   } else {
-    self_tensor.SetTensor(CopyTensor(src, self.scalar_type()));
+    XLATensor::copy_(self_tensor, *src_tensor);
   }
   return self;
 }
