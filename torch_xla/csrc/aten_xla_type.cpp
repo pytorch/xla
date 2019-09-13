@@ -871,7 +871,7 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
 
   if (!src_tensor) {
     XLA_CHECK(self_tensor);
-    self_tensor.SetTensor(CopyTensor(src, self_tensor->scalar_type()));
+    self_tensor->SetTensor(CopyTensor(src, self.scalar_type()));
   } else if (!self_tensor) {
     // TODO: Is self_tensor good enough?  I don't think so... therefore
     // the hack below:
@@ -882,7 +882,7 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
     const_cast<at::Tensor&>(self).unsafeGetTensorImpl()->shallow_copy_from(
         t.getIntrusivePtr());
   } else {
-    XLATensor::copy_(self_tensor, *src_tensor);
+    XLATensor::copy_(*self_tensor, *src_tensor);
   }
   return self;
 }
