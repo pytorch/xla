@@ -34,6 +34,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
@@ -168,7 +169,7 @@ def train_imagenet(flags):
     return accuracy
 
   accuracy = 0.0
-  writer = None
+  writer = SummaryWriter(log_dir=flags.logdir) if flags.logdir else None
   for epoch in range(1, flags.num_epochs + 1):
     para_loader = dp.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
