@@ -354,8 +354,7 @@ only be enabled for debugging.
 
 ## Communication
 
-* GitHub issues: bug reports, feature requests, install issues, RFCs, thoughts, etc.
-* Slack: The [PyTorch Slack](https://pytorch.slack.com/) hosts a primary audience of moderate to experienced PyTorch users and developers for general chat, online discussions, collaboration etc. We check `#xla` channel regularly for questions/discussions. If you need a slack invite, please fill this form: https://goo.gl/forms/PP1AGvNHpSaJP8to1
+We use github issues to communicate with users and open source contributors. Please file an issue for questions, bug reports, feature requests, install issues, RFCs, thoughts, etc.
 
 ## Contributing
 
