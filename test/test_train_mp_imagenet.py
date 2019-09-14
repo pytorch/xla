@@ -1,4 +1,4 @@
-import test_utils
+import args_parse
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -18,7 +18,7 @@ MODEL_OPTS = {
     },
 }
 
-FLAGS = test_utils.parse_common_options(
+FLAGS = args_parse.parse_common_options(
     datadir='/tmp/imagenet',
     batch_size=None,
     num_epochs=None,
@@ -30,6 +30,7 @@ FLAGS = test_utils.parse_common_options(
 
 import os
 from statistics import mean
+import test_utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
