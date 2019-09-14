@@ -95,13 +95,23 @@ _FN_BLACKLIST_REGEX = [
 ]
 
 _FN_OUT = {
+    'add_out':
+        FuncOpts(),
     'arange_out(Tensor, Scalar, Scalar, Scalar) -> Tensor':
         FuncOpts(
             outfn_template=ArgTemplate(
                 'AtenXlaType::arange($1, $2, $3, $0.options())')),
+    'div_out':
+        FuncOpts(),
+    'gather_out':
+        FuncOpts(),
     'kthvalue_out':
         FuncOpts(),
+    'index_select_out':
+        FuncOpts(),
     'log_out':
+        FuncOpts(),
+    'topk_out':
         FuncOpts(),
 }
 
@@ -628,11 +638,11 @@ def get_return_type_str(t, orig_sig):
   return orig_sig[0:token.column - 2]
 
 
-def generate_entry_debug_code(t, fname, params):
+def generate_entry_debug_code(t, fname, params, fname_ns='aten'):
   # Emits debug code for a given intercepted ATEN type function. For now we use
   # a counter which will show up in the metrics reports.
   code = ''
-  code += '  XLA_COUNTER("aten::{}", 1);\n'.format(fname)
+  code += '  XLA_COUNTER("{}::{}", 1);\n'.format(fname_ns, fname)
   # VLOG info. Use the following to see debug output:
   #  export TF_CPP_VMODULE=aten_xla_type_default=3
   code += '  TF_VLOG(3) << "XLA {} :"'.format(fname)
@@ -746,6 +756,11 @@ def generate_aten_remap(ctx, fname, sig, params, fnopts):
   return code
 
 
+def generate_outfn_result_copy(dest, src):
+  return '  {}.unsafeGetTensorImpl()->shallow_copy_from({}.getIntrusivePtr());\n'.format(
+      dest, src)
+
+
 def generate_aten_out(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
   rtype = tree.children[0]
   num_outputs = None
@@ -753,7 +768,7 @@ def generate_aten_out(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
     num_outputs = len(tuple_type_list(rtype))
 
   code = '{} {{\n'.format(sig)
-  code += generate_entry_debug_code(tree, fname, params)
+  code += generate_entry_debug_code(tree, fname, params, fname_ns='xla')
 
   param_vars = get_param_names(params)
   if fnopts.outfn_template is not None:
@@ -762,20 +777,20 @@ def generate_aten_out(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
     m = re.match(r'(.*)_out$', fname)
     assert m is not None, fname
     out_count = num_outputs if num_outputs is not None else 1
-    fcall = create_call(m.group(1), param_vars[out_count:])
+    fcall = create_call('AtenXlaType::{}'.format(m.group(1)),
+                        param_vars[out_count:])
 
+  tmp_result = '{}_tmp'.format(fname)
+  code += '  auto {} = {};\n'.format(tmp_result, fcall)
   if num_outputs is None:
-    code += '  {} = {};\n'.format(param_vars[0], fcall)
+    code += generate_outfn_result_copy(param_vars[0], tmp_result)
     code += generate_exit_debug_code(tree, fname, param_vars[0], params,
                                      param_vars)
     code += '  return {};\n'.format(param_vars[0])
   else:
-    code += '  std::tie('
     for i in range(0, num_outputs):
-      if i > 0:
-        code += ', '
-      code += param_vars[i]
-    code += ') = {};\n'.format(fcall)
+      code += generate_outfn_result_copy(
+          param_vars[i], 'std::get<{}>({})'.format(i, tmp_result))
     code += generate_exit_debug_code(tree, fname, param_vars[0:num_outputs],
                                      params, param_vars)
     code += '  return {}('.format(get_return_type_str(rwxtree, rwsig))
@@ -955,10 +970,11 @@ def generate_registrations(fgens, overrides):
       override_fn = fgen.xfunc if fgen.code else None
     if override_fn:
       code += (
-              '  .op(torch::RegisterOperators::options().schema("{}")\n'
-              '      .impl_unboxedOnlyKernel<{}, &{}>(at::TensorTypeId::XLATensorId)\n'
-              '      .aliasAnalysis(c10::AliasAnalysisKind::FROM_SCHEMA))\n'.format(
-              fgen.aten_sig, fgen.funsig, override_fn, override_fn, fgen.aten_sig))
+          '  .op(torch::RegisterOperators::options().schema("{}")\n      '
+          '.impl_unboxedOnlyKernel<{}, &{}>(at::TensorTypeId::XLATensorId)\n'
+          '      .aliasAnalysis(c10::AliasAnalysisKind::FROM_SCHEMA))\n'.format(
+              fgen.aten_sig, fgen.funsig, override_fn, override_fn,
+              fgen.aten_sig))
   return code + ';\n}\n', overridden
 
 
