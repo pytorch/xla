@@ -13,4 +13,5 @@ Error messages and stack traces are also helpful.
 
 ## System Info
 
+- reproducible on XLA backend [CPU/TPU]:
 - torch_xla version:

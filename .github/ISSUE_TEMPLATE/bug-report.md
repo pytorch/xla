@@ -24,6 +24,7 @@ Steps to reproduce the behavior:
 
 ## Environment
 
+ - reproducible on XLA backend [CPU/TPU]:
  - torch_xla version:
  - Any other relevant information:
 
