@@ -40,12 +40,12 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
       return kind_devices[:max_devices] if max_devices else kind_devices
 
 
-def xrt_world_size():
-  return int(os.getenv(xenv.WORLD_SIZE, 1))
+def xrt_world_size(defval=1):
+  return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
 
-def get_ordinal():
-  return int(os.getenv(xenv.ORDINAL, 0))
+def get_ordinal(defval=0):
+  return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
 def xla_device(n=None, devkind=None):
