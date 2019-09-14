@@ -944,7 +944,7 @@ def parse_local_overrides(path):
 
 def generate_registrations(fgens, overrides):
   code = 'void RegisterAtenTypeFunctions() {\n'
-  code += '  static auto dispatch = torch::RegisterOperators()\n'
+  code += '  auto dispatch = torch::RegisterOperators()\n'
   overridden = set()
   for fgen in fgens:
     mapsig_key = get_mapsig_key(fgen.mapsig)
