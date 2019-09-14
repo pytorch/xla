@@ -1,6 +1,6 @@
-import test_utils
+import args_parse
 
-FLAGS = test_utils.parse_common_options(
+FLAGS = args_parse.parse_common_options(
     datadir='/tmp/mnist-data',
     batch_size=128,
     momentum=0.5,
@@ -11,6 +11,7 @@ FLAGS = test_utils.parse_common_options(
 from common_utils import TestCase, run_tests
 import os
 import shutil
+import test_utils
 import time
 import torch
 import torch.nn as nn
