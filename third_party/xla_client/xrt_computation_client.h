@@ -178,7 +178,13 @@ class XrtComputationClient : public ComputationClient {
 
   std::vector<string> GetAllDevices() const override;
 
+  void SetReplicationDevices(std::vector<string> devices) override;
+
+  const std::vector<string>& GetReplicationDevices() const override;
+
   void SetRngSeed(size_t seed) override;
+
+  static string GetMultiProcessingDevice();
 
  private:
   // The data structure used for the key in the compilation cache. Compilations

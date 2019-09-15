@@ -8,9 +8,9 @@ FLAGS = args_parse.parse_common_options(
     target_accuracy=98.0,
     num_epochs=18)
 
-from common_utils import TestCase, run_tests
 import os
 import shutil
+import sys
 import test_utils
 import time
 import torch
@@ -22,7 +22,7 @@ import torch_xla
 import torch_xla_py.data_parallel as dp
 import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
-import unittest
+import torch_xla_py.xla_multiprocessing as xmp
 
 
 class MNIST(nn.Module):
@@ -76,18 +76,12 @@ def train_mnist():
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     train_sampler = None
-    test_sampler = None
     if xm.xrt_world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
           num_replicas=xm.xrt_world_size(),
           rank=xm.get_ordinal(),
           shuffle=True)
-      test_sampler = torch.utils.data.distributed.DistributedSampler(
-          test_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
-          shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
@@ -97,23 +91,18 @@ def train_mnist():
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.batch_size,
-        sampler=test_sampler,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
-  devices = (
-      xm.get_xla_supported_devices(
-          max_devices=FLAGS.num_cores) if FLAGS.num_cores != 0 else [])
   # Scale learning rate to num cores
-  lr = FLAGS.lr * max(len(devices), 1)
-  # Pass [] as device_ids to run using the PyTorch/CPU engine.
-  model_parallel = dp.DataParallel(MNIST, device_ids=devices)
+  lr = FLAGS.lr * xm.xrt_world_size()
 
-  def train_loop_fn(model, loader, device, context):
-    loss_fn = nn.NLLLoss()
-    optimizer = context.getattr_or(
-        'optimizer',
-        lambda: optim.SGD(model.parameters(), lr=lr, momentum=FLAGS.momentum))
+  device = xm.xla_device()
+  model = MNIST().to(device)
+  optimizer = optim.SGD(model.parameters(), lr=lr, momentum=FLAGS.momentum)
+  loss_fn = nn.NLLLoss()
+
+  def train_loop_fn(loader):
     tracker = xm.RateTracker()
 
     model.train()
@@ -125,11 +114,10 @@ def train_mnist():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        test_utils.print_training_update(device, x, loss.item(),
-                                         tracker.rate(),
+        test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
                                          tracker.global_rate())
 
-  def test_loop_fn(model, loader, device, context):
+  def test_loop_fn(loader):
     total_samples = 0
     correct = 0
     model.eval()
@@ -145,26 +133,29 @@ def train_mnist():
 
   accuracy = 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
-    model_parallel(train_loop_fn, train_loader)
-    accuracies = model_parallel(test_loop_fn, test_loader)
-    accuracy = sum(accuracies) / len(accuracies)
+    para_loader = dp.ParallelLoader(train_loader, [device])
+    train_loop_fn(para_loader.per_device_loader(device))
+
+    para_loader = dp.ParallelLoader(test_loader, [device])
+    accuracy = test_loop_fn(para_loader.per_device_loader(device))
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
   return accuracy
 
 
-class TrainMnist(TestCase):
+def _mp_fn(index, flags):
+  global FLAGS
+  FLAGS = flags
+  torch.set_default_tensor_type('torch.FloatTensor')
+  accuracy = train_mnist()
+  if FLAGS.tidy and os.path.isdir(FLAGS.datadir):
+    shutil.rmtree(FLAGS.datadir)
+  if accuracy < FLAGS.target_accuracy:
+    print('Accuracy {} is below target {}'.format(accuracy,
+                                                  FLAGS.target_accuracy))
+    sys.exit(21)
 
-  def tearDown(self):
-    super(TrainMnist, self).tearDown()
-    if FLAGS.tidy and os.path.isdir(FLAGS.datadir):
-      shutil.rmtree(FLAGS.datadir)
 
-  def test_accurracy(self):
-    self.assertGreaterEqual(train_mnist(), FLAGS.target_accuracy)
-
-
-# Run the tests.
-torch.set_default_tensor_type('torch.FloatTensor')
-run_tests()
+if __name__ == '__main__':
+  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)

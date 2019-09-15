@@ -24,6 +24,8 @@
 namespace xla {
 namespace {
 
+thread_local std::vector<string> g_replication_devices;
+
 // A simple Tensorflow Allocator which caches Tensor allocations in order to
 // avoid paying the kernel's clear_page_c() price.
 class TensorAllocator : public tensorflow::Allocator {
@@ -184,7 +186,8 @@ XrtComputationClient::XrtComputationClient(
 
   auto default_device_target =
       options_.global_device_map.find(options_.default_device);
-  XLA_CHECK(default_device_target != options_.global_device_map.end());
+  XLA_CHECK(default_device_target != options_.global_device_map.end())
+      << options_.default_device;
   for (auto& device : options_.devices) {
     XLA_CHECK(options_.global_device_map.find(device) !=
               options_.global_device_map.end())
@@ -1120,8 +1123,12 @@ void XrtComputationClient::InitializeDevices(
     device_mesh_coords_.insert(
         {dev_target.second, std::move(device_mesh_coords)});
   }
+
+  // Create the mesh service only if we have more than one worker, or if
+  // multi-processing is active.
+  string mp_device = GetMultiProcessingDevice();
   if (is_master && topology_proto != nullptr &&
-      options_.workers_map.size() > 1) {
+      (options_.workers_map.size() > 1 || !mp_device.empty())) {
     CreateMeshService(*topology_proto);
   }
 }
@@ -1205,6 +1212,14 @@ std::vector<string> XrtComputationClient::GetAllDevices() const {
     devices.push_back(dev_target.first);
   }
   return devices;
+}
+
+void XrtComputationClient::SetReplicationDevices(std::vector<string> devices) {
+  g_replication_devices = std::move(devices);
+}
+
+const std::vector<string>& XrtComputationClient::GetReplicationDevices() const {
+  return g_replication_devices;
 }
 
 void XrtComputationClient::SetRngSeed(size_t seed) { rng_seed_ = seed; }
@@ -1495,6 +1510,10 @@ void XrtComputationClient::MaybeCreateLocalService(
         new XrtLocalService(cluster_spec, job_name, task_index);
     service->Start();
   }
+}
+
+string XrtComputationClient::GetMultiProcessingDevice() {
+  return sys_util::GetEnvString("XRT_MULTI_PROCESSING_DEVICE", "");
 }
 
 }  // namespace xla

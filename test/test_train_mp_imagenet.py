@@ -16,15 +16,6 @@ MODEL_OPTS = {
         'default': 64,
         'type': int,
     },
-    '--lr_scheduler_type': {
-        'type': str,
-    },
-    '--lr_scheduler_divide_every_n_epochs': {
-        'type': int,
-    },
-    '--lr_scheduler_divisor': {
-        'type': int,
-    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -37,9 +28,7 @@ FLAGS = args_parse.parse_common_options(
     opts=MODEL_OPTS.items(),
 )
 
-from common_utils import TestCase, run_tests
 import os
-import schedulers
 from statistics import mean
 import test_utils
 import torch
@@ -53,7 +42,7 @@ import torch_xla
 import torch_xla_py.data_parallel as dp
 import torch_xla_py.utils as xu
 import torch_xla_py.xla_model as xm
-import unittest
+import torch_xla_py.xla_multiprocessing as xmp
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -63,13 +52,7 @@ DEFAULT_KWARGS = dict(
     lr=0.1,
     target_accuracy=0.0,
 )
-MODEL_SPECIFIC_DEFAULTS = {
-    'resnet50': dict({
-        'lr_scheduler_divide_every_n_epochs': 20,
-        'lr_scheduler_divisor': 5,
-        'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
-      }, **DEFAULT_KWARGS)
-}
+MODEL_SPECIFIC_DEFAULTS = {}
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
@@ -129,14 +112,12 @@ def train_imagenet():
         ]))
 
     train_sampler = None
-    test_sampler = None
     if xm.xrt_world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
-          train_dataset, num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(), shuffle=True)
-      test_sampler = torch.utils.data.distributed.DistributedSampler(
-          test_dataset, num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(), shuffle=False)
+          train_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=True)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
@@ -146,37 +127,21 @@ def train_imagenet():
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
-        sampler=test_sampler,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
   torch.manual_seed(42)
 
-  devices = (
-      xm.get_xla_supported_devices(
-          max_devices=FLAGS.num_cores) if FLAGS.num_cores != 0 else [])
-  # Pass [] as device_ids to run using the PyTorch/CPU engine.
-  torchvision_model = get_model_property('model_fn')
-  model_parallel = dp.DataParallel(torchvision_model, device_ids=devices)
+  device = xm.xla_device()
+  model = get_model_property('model_fn')().to(device)
+  optimizer = optim.SGD(
+      model.parameters(),
+      lr=FLAGS.lr,
+      momentum=FLAGS.momentum,
+      weight_decay=5e-4)
+  loss_fn = nn.CrossEntropyLoss()
 
-  def train_loop_fn(model, loader, device, context):
-    loss_fn = nn.CrossEntropyLoss()
-    optimizer = context.getattr_or(
-        'optimizer', lambda: optim.SGD(
-            model.parameters(),
-            lr=FLAGS.lr,
-            momentum=FLAGS.momentum,
-            weight_decay=5e-4))
-    lr_scheduler = context.getattr_or(
-        'lr_scheduler', lambda: schedulers.wrap_optimizer_with_scheduler(
-            optimizer,
-            scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
-            scheduler_divisor=getattr(FLAGS, 'lr_scheduler_divisor', None),
-            scheduler_divide_every_n_epochs=getattr(
-                FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
-            num_steps_per_epoch=num_training_steps_per_epoch,
-            summary_writer=writer if test_utils.is_first_device(
-                device, devices) else None))
+  def train_loop_fn(loader):
     tracker = xm.RateTracker()
     model.train()
     for x, (data, target) in loader:
@@ -187,13 +152,10 @@ def train_imagenet():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        test_utils.print_training_update(device, x, loss.item(),
-                                         tracker.rate(),
+        test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
                                          tracker.global_rate())
-      if lr_scheduler:
-        lr_scheduler.step()
 
-  def test_loop_fn(model, loader, device, context):
+  def test_loop_fn(loader):
     total_samples = 0
     correct = 0
     model.eval()
@@ -209,33 +171,31 @@ def train_imagenet():
 
   accuracy = 0.0
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
-  num_devices = len(
-      xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
-  num_training_steps_per_epoch = len(train_dataset.imgs) // (
-      FLAGS.batch_size * num_devices)
   for epoch in range(1, FLAGS.num_epochs + 1):
-    model_parallel(train_loop_fn, train_loader)
-    accuracies = model_parallel(test_loop_fn, test_loader)
-    accuracy = mean(accuracies)
-    print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
-    global_step = (epoch - 1) * num_training_steps_per_epoch
-    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
-                                     global_step)
+    para_loader = dp.ParallelLoader(train_loader, [device])
+    train_loop_fn(para_loader.per_device_loader(device))
+
+    para_loader = dp.ParallelLoader(test_loader, [device])
+    accuracy = test_loop_fn(para_loader.per_device_loader(device))
+    print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
+
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 
   return accuracy
 
 
-class TrainImageNet(TestCase):
+def _mp_fn(index, flags):
+  global FLAGS
+  FLAGS = flags
+  torch.set_default_tensor_type('torch.FloatTensor')
+  accuracy = train_imagenet()
+  if accuracy < FLAGS.target_accuracy:
+    print('Accuracy {} is below target {}'.format(accuracy,
+                                                  FLAGS.target_accuracy))
+    sys.exit(21)
 
-  def tearDown(self):
-    super(TrainImageNet, self).tearDown()
 
-  def test_accurracy(self):
-    self.assertGreaterEqual(train_imagenet(), FLAGS.target_accuracy)
-
-
-# Run the tests.
-torch.set_default_tensor_type('torch.FloatTensor')
-run_tests()
+if __name__ == '__main__':
+  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)

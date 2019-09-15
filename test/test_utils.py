@@ -1,8 +1,13 @@
-# This module cannot import any other PyTorch/XLA module. Only Python core modules.
-import argparse
 import os
 import sys
 import time
+import torch_xla_py.xla_model as xm
+import torch_xla_py.utils as xu
+
+
+def _get_device_spec(device):
+  ordinal = xm.get_ordinal(defval=-1)
+  return str(device) if ordinal < 0 else '{}/{}'.format(device, ordinal)
 
 
 # summary_writer should be an instance of torch.utils.tensorborad.SummaryWriter
@@ -11,43 +16,6 @@ def add_scalar_to_summary(summary_writer, metric_name, metric_value,
                           global_step):
   if summary_writer is not None:
     summary_writer.add_scalar(metric_name, metric_value, global_step)
-
-
-def parse_common_options(datadir=None,
-                         logdir=None,
-                         num_cores=None,
-                         batch_size=128,
-                         num_epochs=10,
-                         num_workers=4,
-                         log_steps=20,
-                         lr=None,
-                         momentum=None,
-                         target_accuracy=None,
-                         opts=None):
-  parser = argparse.ArgumentParser(add_help=False)
-  parser.add_argument('--datadir', type=str, default=datadir)
-  parser.add_argument('--logdir', type=str, default=logdir)
-  parser.add_argument('--num_cores', type=int, default=num_cores)
-  parser.add_argument('--batch_size', type=int, default=batch_size)
-  parser.add_argument('--num_epochs', type=int, default=num_epochs)
-  parser.add_argument('--num_workers', type=int, default=num_workers)
-  parser.add_argument('--log_steps', type=int, default=log_steps)
-  parser.add_argument('--lr', type=float, default=lr)
-  parser.add_argument('--momentum', type=float, default=momentum)
-  parser.add_argument('--target_accuracy', type=float, default=target_accuracy)
-  parser.add_argument('--fake_data', action='store_true')
-  parser.add_argument('--tidy', action='store_true')
-  parser.add_argument('--metrics_debug', action='store_true')
-  if opts:
-    for name, aopts in opts:
-      parser.add_argument(name, **aopts)
-  args, leftovers = parser.parse_known_args()
-  sys.argv = [sys.argv[0]] + leftovers
-  # Setup import folders.
-  xla_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
-  sys.path.append(os.path.join(os.path.dirname(xla_folder), 'test'))
-  sys.path.insert(0, xla_folder)
-  return args
 
 
 def print_training_update(device, step_num, loss, rate, global_rate):
@@ -61,7 +29,8 @@ def print_training_update(device, step_num, loss, rate, global_rate):
     global_rate: Float. The average examples/sec rate since training began.
   """
   print('[{}]({}) Loss={:.5f} Rate={:.2f} GlobalRate={:.2f} Time={}'.format(
-      device, step_num, loss, rate, global_rate, time.asctime()))
+      _get_device_spec(device), step_num, loss, rate, global_rate,
+      time.asctime()))
 
 
 def print_test_update(device, accuracy):
@@ -71,10 +40,10 @@ def print_test_update(device, accuracy):
     device: Instance of `torch.device`.
     accuracy: Float.
   """
-  print('[{}] Accuracy={:.2f}%'.format(device, accuracy))
+  print('[{}] Accuracy={:.2f}%'.format(_get_device_spec(device), accuracy))
 
 
-def is_first_device(current_device, devices, machine_ordinal_num):
+def is_first_device(current_device, devices):
   """Returns true if this is the first device of the first distributed machine.
 
   This is useful to know in some cases, e.g. in order to log something that
@@ -84,9 +53,8 @@ def is_first_device(current_device, devices, machine_ordinal_num):
     current_device: instance of `torch.device`.
     devices: list of device names (strings), e.g. output of
         torch_xla_py.xla_model.get_xla_supported_devices().
-    machine_ordinal_num: int, output of torch_xla_py.xla_model.get_ordinal().
   """
   is_first_device = not devices or str(current_device) == devices[0]
-  is_first_machine = machine_ordinal_num == 0
+  is_first_machine = xm.get_ordinal() == 0
   return is_first_device and is_first_machine
 

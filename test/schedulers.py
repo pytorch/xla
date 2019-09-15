@@ -23,7 +23,7 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
         no logging happens.
   """
   def __init__(self, optimizer, num_steps_per_epoch, divide_every_n_epochs=20,
-               divisor=5, num_warmup_epochs=1, min_delta_to_update_lr=0.000001,
+               divisor=5, num_warmup_epochs=1, min_delta_to_update_lr=1e-6,
                summary_writer=None):
     self._num_steps_per_epoch = num_steps_per_epoch
     self._divide_every_n_epochs = divide_every_n_epochs
