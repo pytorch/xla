@@ -309,6 +309,27 @@ def get_log_fn(logdir=None, custom_log_fn=print):
   return log_fn
 
 
+def check_view_sharing(obj):
+  tensors = set()
+  aliases = dict()
+
+  def check_object(obj):
+    if is_xla_tensor(obj):
+      tid = torch_xla._XLAC._xla_get_tensor_id(obj)
+      if tid not in tensors:
+        tensors.add(tid)
+        aid = torch_xla._XLAC._xla_get_tensor_view_alias_id(obj)
+        if aid != 0:
+          if aid in aliases:
+            oobj = aliases[aid]
+            raise RuntimeError(
+                'Tensor ID {} is sharing a view with tensor ID {}'.format(
+                    tid, torch_xla._XLAC._xla_get_tensor_view_alias_id(oobj)))
+          aliases[aid] = obj
+
+  xu.for_each_instance(obj, torch.Tensor, check_object)
+
+
 def _fetch_gradients(optimizer):
   gradients = []
   for param_group in optimizer.__getstate__()['param_groups']:

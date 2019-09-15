@@ -486,6 +486,12 @@ const Device& XLATensor::GetDevice() const { return data()->device; }
 
 xla::int64 XLATensor::GetUniqueId() const { return data()->unique_id; }
 
+std::ptrdiff_t XLATensor::GetViewAliasId() const {
+  return data()->view != nullptr
+             ? reinterpret_cast<std::ptrdiff_t>(data()->view->alias().get())
+             : 0;
+}
+
 xla::ComputationClient::DataPtr XLATensor::GetXlaData() {
   // XLA data can coexist with a view, but we need to check that the view did
   // not receive any updates before calling the current XLA valid.
