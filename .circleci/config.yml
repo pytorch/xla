@@ -53,14 +53,12 @@ linux_default: &linux_default
         docker exec -u jenkins $(cat .docker_pid) .circleci/test.sh
 
 run_clang_format: &run_clang_format
-  name: Install clang-format-8
+  name: Run clang-format
   command: |
-    #wget https://apt.llvm.org/llvm.sh
-    #chmod +x llvm.sh
-    #sudo ./llvm.sh 8
-    #rm llvm.sh || true
-    #sudo apt-get install -y clang-format-8
-    # Assert repo is clean before running clang-format
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+    sudo add-apt-repository 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main'
+    sudo apt-get update
+    sudo apt install -y clang-format-7
     git_status=$(git status --porcelain)
     if [[ $git_status ]]; then
       echo "Checkout code is not clean"
@@ -68,12 +66,14 @@ run_clang_format: &run_clang_format
       exit 1
     fi
 
-    find -name '*.cpp' -o -name '*.h' | xargs clang-format-8 -i -style=file
+    find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
     git_status=$(git status --porcelain)
     if [[ $git_status ]]; then
-        echo "clang-format is not happy, please run `clang-format-8 -i -style /PATH/TO/foo.cpp` to the following files"
-        echo "${git_status}"
-        exit 1
+      echo "clang-format-7 is not happy, please run `clang-format-7 -i -style /PATH/TO/foo.cpp` to the following files"
+      echo "${git_status}"
+      exit 1
+    else
+      echo "PASSED"
     fi
 
 jobs:
