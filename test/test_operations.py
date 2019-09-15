@@ -837,6 +837,22 @@ class TestAtenXlaTensor(XlaTestCase):
         [torch.randn(3, 4),
          torch.tensor([2, 1], dtype=torch.long)], test_fn)
 
+  def test_save_view_alias_check(self):
+
+    class Nested(object):
+
+      def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    a = torch.rand(16, device=xm.xla_device())
+    b = a[:10]
+    c = a[6:]
+    self.assertRaises(RuntimeError, lambda: xm.check_view_sharing([b, c]))
+
+    nested = Nested(b, c)
+    self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
+
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)

@@ -101,6 +101,9 @@ def for_each_instance(value, inst, fn):
   elif isinstance(value, (list, tuple, set)):
     for x in value:
       for_each_instance(x, inst, fn)
+  elif hasattr(value, '__dict__'):
+    for v in value.__dict__.values():
+      for_each_instance(v, inst, fn)
 
 
 def shape(inputs):
