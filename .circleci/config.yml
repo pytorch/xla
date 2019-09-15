@@ -55,11 +55,11 @@ linux_default: &linux_default
 run_clang_format: &run_clang_format
   name: Install clang-format-8
   command: |
-    wget https://apt.llvm.org/llvm.sh
-    chmod +x llvm.sh
-    sudo ./llvm.sh 8
-    rm llvm.sh || true
-    sudo apt-get install -y clang-format-8
+    #wget https://apt.llvm.org/llvm.sh
+    #chmod +x llvm.sh
+    #sudo ./llvm.sh 8
+    #rm llvm.sh || true
+    #sudo apt-get install -y clang-format-8
     # Assert repo is clean before running clang-format
     git_status=$(git status --porcelain)
     if [[ $git_status ]]; then
