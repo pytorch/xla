@@ -16,6 +16,15 @@ MODEL_OPTS = {
         'default': 64,
         'type': int,
     },
+    '--lr_scheduler_type': {
+        'type': str,
+    },
+    '--lr_scheduler_divide_every_n_epochs': {
+        'type': int,
+    },
+    '--lr_scheduler_divisor': {
+        'type': int,
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -52,7 +61,13 @@ DEFAULT_KWARGS = dict(
     lr=0.1,
     target_accuracy=0.0,
 )
-MODEL_SPECIFIC_DEFAULTS = {}
+MODEL_SPECIFIC_DEFAULTS = {
+    'resnet50': dict({
+        'lr_scheduler_divide_every_n_epochs': 20,
+        'lr_scheduler_divisor': 5,
+        'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
+      }, **DEFAULT_KWARGS)
+}
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
@@ -134,11 +149,25 @@ def train_imagenet():
 
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
+  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
   optimizer = optim.SGD(
       model.parameters(),
       lr=FLAGS.lr,
       momentum=FLAGS.momentum,
       weight_decay=5e-4)
+  num_devices = len(
+      xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
+  num_training_steps_per_epoch = len(train_dataset.imgs) // (
+      FLAGS.batch_size * num_devices)
+  lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
+      optimizer,
+      scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
+      scheduler_divisor=getattr(FLAGS, 'lr_scheduler_divisor', None),
+      scheduler_divide_every_n_epochs=getattr(
+          FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
+      num_steps_per_epoch=num_training_steps_per_epoch,
+      summary_writer=writer if test_utils.is_first_device(
+          device) else None))
   loss_fn = nn.CrossEntropyLoss()
 
   def train_loop_fn(loader):
@@ -151,6 +180,8 @@ def train_imagenet():
       loss.backward()
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
+      if lr_scheduler:
+        lr_scheduler.step()
       if x % FLAGS.log_steps == 0:
         test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
                                          tracker.global_rate())
@@ -170,7 +201,6 @@ def train_imagenet():
     return accuracy
 
   accuracy = 0.0
-  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
   for epoch in range(1, FLAGS.num_epochs + 1):
     para_loader = dp.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
