@@ -43,7 +43,7 @@ def print_test_update(device, accuracy):
   print('[{}] Accuracy={:.2f}%'.format(_get_device_spec(device), accuracy))
 
 
-def is_first_device(current_device, devices, multiprocess=False):
+def is_first_device(current_device, devices):
   """Returns true if this is the first device of the first distributed machine.
 
   This is useful to know in some cases, e.g. in order to log something that
