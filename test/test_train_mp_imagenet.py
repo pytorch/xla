@@ -151,11 +151,7 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  devices = (
-      xm.get_xla_supported_devices(
-          max_devices=FLAGS.num_cores) if FLAGS.num_cores != 0 else [])
   device = xm.xla_device()
-  print("DEVICE: {}".format(device))
   model = get_model_property('model_fn')().to(device)
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
   optimizer = optim.SGD(
@@ -163,10 +159,8 @@ def train_imagenet():
       lr=FLAGS.lr,
       momentum=FLAGS.momentum,
       weight_decay=5e-4)
-  total_num_devices = len(
-      xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
   num_training_steps_per_epoch = train_dataset_len // (
-      FLAGS.batch_size * total_num_devices)
+      FLAGS.batch_size * xm.xrt_world_size())
   lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
       optimizer,
       scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
@@ -175,7 +169,7 @@ def train_imagenet():
           FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
       num_steps_per_epoch=num_training_steps_per_epoch,
       summary_writer=writer if test_utils.is_first_device(
-          device, devices) else None)
+          device, [device]) else None)
   loss_fn = nn.CrossEntropyLoss()
 
   def train_loop_fn(loader):
