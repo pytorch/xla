@@ -53,10 +53,8 @@ def is_first_device(current_device, devices, multiprocess=False):
     current_device: instance of `torch.device`.
     devices: list of device names (strings), e.g. output of
         torch_xla_py.xla_model.get_xla_supported_devices().
-    multiprocess: If true, device is ignored and only ordinal is considered.
   """
-  is_first_device = not devices or multiprocess or str(
-      current_device) == devices[0]
+  is_first_device = not devices or str(current_device) == devices[0]
   is_first_machine = xm.get_ordinal() == 0
   return is_first_device and is_first_machine
 
