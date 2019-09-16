@@ -27,10 +27,28 @@ class MetricsArena {
   void ForEachCounter(
       const std::function<void(const string&, CounterData*)>& counter_func);
 
+  std::vector<string> GetMetricNames() {
+    std::vector<string> names;
+    std::lock_guard<std::mutex> lock(lock_);
+    for (auto& name_data : metrics_) {
+      names.push_back(name_data.first);
+    }
+    return names;
+  }
+
   MetricData* GetMetric(const string& name) {
     std::lock_guard<std::mutex> lock(lock_);
     auto it = metrics_.find(name);
     return it != metrics_.end() ? it->second.get() : nullptr;
+  }
+
+  std::vector<string> GetCounterNames() {
+    std::vector<string> names;
+    std::lock_guard<std::mutex> lock(lock_);
+    for (auto& name_data : counters_) {
+      names.push_back(name_data.first);
+    }
+    return names;
   }
 
   CounterData* GetCounter(const string& name) {
@@ -90,11 +108,12 @@ void MetricsArena::ForEachCounter(
 
 void EmitMetricInfo(const string& name, MetricData* data,
                     std::stringstream* ss) {
-  double counter = 0.0;
-  std::vector<Sample> samples = data->Samples(&counter);
+  double accumulator = 0.0;
+  size_t total_samples = 0;
+  std::vector<Sample> samples = data->Samples(&accumulator, &total_samples);
   (*ss) << "Metric: " << name << std::endl;
-  (*ss) << "  TotalSamples: " << data->TotalSamples() << std::endl;
-  (*ss) << "  Counter: " << data->Repr(counter) << std::endl;
+  (*ss) << "  TotalSamples: " << total_samples << std::endl;
+  (*ss) << "  Accumulator: " << data->Repr(accumulator) << std::endl;
   if (!samples.empty()) {
     double total = 0.0;
     for (auto& sample : samples) {
@@ -145,13 +164,13 @@ void MetricData::AddSample(int64 timestamp_ns, double value) {
   std::lock_guard<std::mutex> lock(lock_);
   size_t position = count_ % samples_.size();
   ++count_;
-  counter_ += value;
+  accumulator_ += value;
   samples_[position] = Sample(timestamp_ns, value);
 }
 
-double MetricData::Counter() const {
+double MetricData::Accumulator() const {
   std::lock_guard<std::mutex> lock(lock_);
-  return counter_;
+  return accumulator_;
 }
 
 size_t MetricData::TotalSamples() const {
@@ -159,7 +178,8 @@ size_t MetricData::TotalSamples() const {
   return count_;
 }
 
-std::vector<Sample> MetricData::Samples(double* counter) const {
+std::vector<Sample> MetricData::Samples(double* accumulator,
+                                        size_t* total_samples) const {
   std::lock_guard<std::mutex> lock(lock_);
   std::vector<Sample> samples;
   if (count_ <= samples_.size()) {
@@ -170,8 +190,11 @@ std::vector<Sample> MetricData::Samples(double* counter) const {
     samples.insert(samples.end(), samples_.begin(),
                    samples_.begin() + position);
   }
-  if (counter != nullptr) {
-    *counter = counter_;
+  if (accumulator != nullptr) {
+    *accumulator = accumulator_;
+  }
+  if (total_samples != nullptr) {
+    *total_samples = count_;
   }
   return samples;
 }
@@ -182,7 +205,7 @@ Metric::Metric(string name, MetricReprFn repr_fn, size_t max_samples)
       max_samples_(max_samples),
       data_(nullptr) {}
 
-double Metric::Counter() const { return GetData()->Counter(); }
+double Metric::Accumulator() const { return GetData()->Accumulator(); }
 
 void Metric::AddSample(int64 timestamp_ns, double value) {
   GetData()->AddSample(timestamp_ns, value);
@@ -192,8 +215,9 @@ void Metric::AddSample(double value) {
   GetData()->AddSample(sys_util::NowNs(), value);
 }
 
-std::vector<Sample> Metric::Samples(double* counter) const {
-  return GetData()->Samples(counter);
+std::vector<Sample> Metric::Samples(double* accumulator,
+                                    size_t* total_samples) const {
+  return GetData()->Samples(accumulator, total_samples);
 }
 
 string Metric::Repr(double value) const { return GetData()->Repr(value); }
@@ -291,8 +315,16 @@ string CreateMetricReport() {
   return ss.str();
 }
 
+std::vector<string> GetMetricNames() {
+  return MetricsArena::Get()->GetMetricNames();
+}
+
 MetricData* GetMetric(const string& name) {
   return MetricsArena::Get()->GetMetric(name);
+}
+
+std::vector<string> GetCounterNames() {
+  return MetricsArena::Get()->GetCounterNames();
 }
 
 CounterData* GetCounter(const string& name) {
