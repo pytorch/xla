@@ -155,6 +155,7 @@ def train_imagenet():
       xm.get_xla_supported_devices(
           max_devices=FLAGS.num_cores) if FLAGS.num_cores != 0 else [])
   device = xm.xla_device()
+  print("DEVICE: {}".format(device))
   model = get_model_property('model_fn')().to(device)
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
   optimizer = optim.SGD(
