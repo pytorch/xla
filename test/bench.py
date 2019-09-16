@@ -46,7 +46,8 @@ class BaseBench(object):
       for v in results:
         v.cpu()
     else:
-      torch_xla._XLAC._xla_sync_multi(results)
+      devices = [str(t.device) for t in results]
+      torch_xla._XLAC._xla_sync_multi(results, devices)
 
   def run(self):
     bench_name = self._get_parent_class().__name__
