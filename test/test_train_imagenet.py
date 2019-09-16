@@ -16,6 +16,15 @@ MODEL_OPTS = {
         'default': 64,
         'type': int,
     },
+    '--lr_scheduler_type': {
+        'type': str,
+    },
+    '--lr_scheduler_divide_every_n_epochs': {
+        'type': int,
+    },
+    '--lr_scheduler_divisor': {
+        'type': int,
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -30,6 +39,7 @@ FLAGS = args_parse.parse_common_options(
 
 from common_utils import TestCase, run_tests
 import os
+import schedulers
 from statistics import mean
 import test_utils
 import torch
@@ -53,7 +63,13 @@ DEFAULT_KWARGS = dict(
     lr=0.1,
     target_accuracy=0.0,
 )
-MODEL_SPECIFIC_DEFAULTS = {}
+MODEL_SPECIFIC_DEFAULTS = {
+    'resnet50': dict({
+        'lr_scheduler_divide_every_n_epochs': 20,
+        'lr_scheduler_divisor': 5,
+        'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
+      }, **DEFAULT_KWARGS)
+}
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
@@ -151,6 +167,16 @@ def train_imagenet():
             lr=FLAGS.lr,
             momentum=FLAGS.momentum,
             weight_decay=5e-4))
+    lr_scheduler = context.getattr_or(
+        'lr_scheduler', lambda: schedulers.wrap_optimizer_with_scheduler(
+            optimizer,
+            scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
+            scheduler_divisor=getattr(FLAGS, 'lr_scheduler_divisor', None),
+            scheduler_divide_every_n_epochs=getattr(
+                FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
+            num_steps_per_epoch=num_training_steps_per_epoch,
+            summary_writer=writer if test_utils.is_first_device(
+                device, devices) else None))
     tracker = xm.RateTracker()
     model.train()
     for x, (data, target) in loader:
@@ -164,6 +190,8 @@ def train_imagenet():
         test_utils.print_training_update(device, x, loss.item(),
                                          tracker.rate(),
                                          tracker.global_rate())
+      if lr_scheduler:
+        lr_scheduler.step()
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
@@ -181,12 +209,18 @@ def train_imagenet():
 
   accuracy = 0.0
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  num_devices = len(
+      xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
+  num_training_steps_per_epoch = len(train_dataset.imgs) // (
+      FLAGS.batch_size * num_devices)
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = mean(accuracies)
     print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
-    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
+    global_step = (epoch - 1) * num_training_steps_per_epoch
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
+                                     global_step)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 

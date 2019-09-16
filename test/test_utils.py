@@ -41,3 +41,20 @@ def print_test_update(device, accuracy):
     accuracy: Float.
   """
   print('[{}] Accuracy={:.2f}%'.format(_get_device_spec(device), accuracy))
+
+
+def is_first_device(current_device, devices):
+  """Returns true if this is the first device of the first distributed machine.
+
+  This is useful to know in some cases, e.g. in order to log something that
+  does not vary between cores or machines such as learning rate.
+
+  Args:
+    current_device: instance of `torch.device`.
+    devices: list of device names (strings), e.g. output of
+        torch_xla_py.xla_model.get_xla_supported_devices().
+  """
+  is_first_device = not devices or str(current_device) == devices[0]
+  is_first_machine = xm.get_ordinal() == 0
+  return is_first_device and is_first_machine
+
