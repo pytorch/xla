@@ -96,10 +96,12 @@ def train_imagenet():
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
+    train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=1200000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size //
+            xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
@@ -115,6 +117,7 @@ def train_imagenet():
             transforms.ToTensor(),
             normalize,
         ]))
+    train_dataset_len = len(train_dataset.imgs)
     resize_dim = max(img_dim, 256)
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
@@ -211,7 +214,7 @@ def train_imagenet():
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
   num_devices = len(
       xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
-  num_training_steps_per_epoch = len(train_dataset.imgs) // (
+  num_training_steps_per_epoch = train_dataset_len // (
       FLAGS.batch_size * num_devices)
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
