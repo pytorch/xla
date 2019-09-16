@@ -16,6 +16,15 @@ MODEL_OPTS = {
         'default': 64,
         'type': int,
     },
+    '--lr_scheduler_type': {
+        'type': str,
+    },
+    '--lr_scheduler_divide_every_n_epochs': {
+        'type': int,
+    },
+    '--lr_scheduler_divisor': {
+        'type': int,
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -29,6 +38,7 @@ FLAGS = args_parse.parse_common_options(
 )
 
 import os
+import schedulers
 from statistics import mean
 import test_utils
 import torch
@@ -52,7 +62,13 @@ DEFAULT_KWARGS = dict(
     lr=0.1,
     target_accuracy=0.0,
 )
-MODEL_SPECIFIC_DEFAULTS = {}
+MODEL_SPECIFIC_DEFAULTS = {
+    'resnet50': dict({
+        'lr_scheduler_divide_every_n_epochs': 20,
+        'lr_scheduler_divisor': 5,
+        'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
+      }, **DEFAULT_KWARGS)
+}
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
@@ -79,10 +95,12 @@ def train_imagenet():
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
+    train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=1200000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size //
+            xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
@@ -98,6 +116,7 @@ def train_imagenet():
             transforms.ToTensor(),
             normalize,
         ]))
+    train_dataset_len = len(train_dataset.imgs)
     resize_dim = max(img_dim, 256)
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
@@ -134,11 +153,23 @@ def train_imagenet():
 
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
+  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
   optimizer = optim.SGD(
       model.parameters(),
       lr=FLAGS.lr,
       momentum=FLAGS.momentum,
       weight_decay=5e-4)
+  num_training_steps_per_epoch = train_dataset_len // (
+      FLAGS.batch_size * xm.xrt_world_size())
+  lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
+      optimizer,
+      scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
+      scheduler_divisor=getattr(FLAGS, 'lr_scheduler_divisor', None),
+      scheduler_divide_every_n_epochs=getattr(
+          FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
+      num_steps_per_epoch=num_training_steps_per_epoch,
+      summary_writer=writer if test_utils.is_first_device(
+          device, [str(device)]) else None)
   loss_fn = nn.CrossEntropyLoss()
 
   def train_loop_fn(loader):
@@ -151,6 +182,8 @@ def train_imagenet():
       loss.backward()
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
+      if lr_scheduler:
+        lr_scheduler.step()
       if x % FLAGS.log_steps == 0:
         test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
                                          tracker.global_rate())
@@ -170,7 +203,6 @@ def train_imagenet():
     return accuracy
 
   accuracy = 0.0
-  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
   for epoch in range(1, FLAGS.num_epochs + 1):
     para_loader = dp.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
