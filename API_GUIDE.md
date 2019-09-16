@@ -47,15 +47,15 @@ for data, target in train_loader:
   xm.optimizer_step(optimizer)
 ```
 
-The above in only running on one TPU core though, and the the time spent to send data to device in serial/inline with the TPU computation.
-For simple experiments, or for inference tasks which do not latency sensitive it might be still OK, but the following methods allows for better scalability.
+The above is only running on one TPU core though, and the time spent to send data to device is serial/inline with the TPU computation.
+For simple experiments, or for inference tasks which are not latency-sensitive it might be still OK, but the following methods allow for better scalability.
 
 Note the `xm.optimizer_step(optimizer)` line which replaces the usual `optimizer.step()`. This is required because of the way XLA tensors work: operations are not executed immediately, but rather added to a graph of pending operations which is only executed when its results are required. Using `xm.optimizer_step(optimizer)` acts as an execution barrier which forces the evaluation of the graph accumulated for a single step. Without this barrier, the graph would only be evaluated when evaluating the accuracy of the model, which is only done at the end of an epoch, for this example. Even for small models, the accumulated graph would be too big to evaluate at the end of an entire epoch.
 
 ### MultiCore
 
 There are two ways to drive multiple TPU cores using PyTorch/XLA. One is using the `torch.multiprocessing` module (which internally spawns multiple processes), and the other is using Python threading.
-The multiprocessing method should allow better performance as it gets aroung the Python GIL serialization, esepcially with model code which has an heavy Python side processing.
+The multiprocessing method should allow better performance as it gets around the Python GIL serialization, especially with model code which has a heavy Python side processing.
 
 #### MultiCore - MultiProcessing
 
