@@ -100,6 +100,21 @@ class Build(BuildExtension):
         print('Failed to build tests: {}'.format(cmd), file=sys.stderr)
         sys.exit(1)
 
+version = os.getenv('TORCH_XLA_VERSION', '0.1')
+if _check_env_flag('VERSIONED_XLA_BUILD', default='0'):
+  try:
+    sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+                                  cwd=base_dir).decode('ascii').strip()
+    version += '+' + sha[:7]
+  except Exception:
+    pass
+
+# Generate version info (torch_xla.__version__)
+print('Building torch_xla version: {}'.format(version))
+version_path = os.path.join(base_dir, 'torch_xla', 'version.py')
+with open(version_path, 'w') as f:
+  f.write("__version__ = '{}'\n".format(version))
+
 
 # Generate the code before globbing!
 generate_code_cmd = [os.path.join(base_dir, 'scripts', 'generate_code.sh')]
@@ -184,15 +199,6 @@ if DEBUG:
     extra_link_args += ['-O0', '-g']
 
 extra_link_args += ['-lxla_computation_client']
-
-version = os.getenv('TORCH_XLA_VERSION', '0.1')
-if _check_env_flag('VERSIONED_XLA_BUILD', default='0'):
-  try:
-    sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
-                                  cwd=base_dir).decode('ascii').strip()
-    version += '+' + sha[:7]
-  except Exception:
-    pass
 
 setup(
     name='torch_xla',
