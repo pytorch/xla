@@ -38,6 +38,7 @@ FLAGS = args_parse.parse_common_options(
 )
 
 import os
+import schedulers
 from statistics import mean
 import test_utils
 import torch
@@ -94,10 +95,12 @@ def train_imagenet():
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
+    train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=1200000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size //
+            xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
@@ -113,6 +116,7 @@ def train_imagenet():
             transforms.ToTensor(),
             normalize,
         ]))
+    train_dataset_len = len(train_dataset.imgs)
     resize_dim = max(img_dim, 256)
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
@@ -147,6 +151,9 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
+  devices = (
+      xm.get_xla_supported_devices(
+          max_devices=FLAGS.num_cores) if FLAGS.num_cores != 0 else [])
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
@@ -155,10 +162,10 @@ def train_imagenet():
       lr=FLAGS.lr,
       momentum=FLAGS.momentum,
       weight_decay=5e-4)
-  num_devices = len(
+  total_num_devices = len(
       xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
-  num_training_steps_per_epoch = len(train_dataset.imgs) // (
-      FLAGS.batch_size * num_devices)
+  num_training_steps_per_epoch = train_dataset_len // (
+      FLAGS.batch_size * total_num_devices)
   lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
       optimizer,
       scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
@@ -167,7 +174,7 @@ def train_imagenet():
           FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
       num_steps_per_epoch=num_training_steps_per_epoch,
       summary_writer=writer if test_utils.is_first_device(
-          device) else None))
+          device, devices) else None)
   loss_fn = nn.CrossEntropyLoss()
 
   def train_loop_fn(loader):
