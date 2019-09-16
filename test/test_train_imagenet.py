@@ -112,7 +112,7 @@ def train_imagenet():
     train_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'train'),
         transforms.Compose([
-            transfs.RandomResizedCrop(img_dim),
+            transforms.RandomResizedCrop(img_dim),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
