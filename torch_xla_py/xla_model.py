@@ -324,7 +324,7 @@ def check_view_sharing(obj):
             oobj = aliases[aid]
             raise RuntimeError(
                 'Tensor ID {} is sharing a view with tensor ID {}'.format(
-                    tid, torch_xla._XLAC._xla_get_tensor_view_alias_id(oobj)))
+                    tid, torch_xla._XLAC._xla_get_tensor_id(oobj)))
           aliases[aid] = obj
 
   xu.for_each_instance(obj, torch.Tensor, check_object)
