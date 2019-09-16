@@ -169,13 +169,14 @@ def train_imagenet():
           FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
       num_steps_per_epoch=num_training_steps_per_epoch,
       summary_writer=writer if test_utils.is_first_device(
-          device, [device]) else None)
+          device, [], multiprocess=True) else None)
   loss_fn = nn.CrossEntropyLoss()
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
     model.train()
     for x, (data, target) in loader:
+      print("LR:{}".format(optimizer.param_groups[0]['lr']))
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
