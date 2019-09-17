@@ -48,6 +48,15 @@ def get_ordinal(defval=0):
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
+def is_master_ordinal():
+  ordinal = get_ordinal(defval=-1)
+  if ordinal >= 0:
+    # We are either on multi-processing, or on BigSlice (or both).
+    return ordinal == 0
+  # We are in the multi-threaded DataParallel setup.
+  return getattr(_TLS, 'device_index', 0) == 0
+
+
 def xla_device(n=None, devkind=None):
   if n is None:
     devices = get_xla_supported_devices(devkind=devkind)
@@ -347,7 +356,7 @@ def mark_step():
       wait=xu.getenv_as('XLA_SYNC_WAIT', bool, False))
   # Only emit metrics from the first local device index, to avoid emitting the
   # same values from different threads.
-  if getattr(_TLS, 'device_index', 0) == 0:
+  if is_master_ordinal():
     ms.save_metrics()
 
 
