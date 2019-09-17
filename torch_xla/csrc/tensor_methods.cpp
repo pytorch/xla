@@ -107,6 +107,8 @@ struct MinMaxValues {
 MinMaxValues GetMinMaxValues(const XLATensor& tensor,
                              c10::optional<at::Scalar> min,
                              c10::optional<at::Scalar> max) {
+  XLA_CHECK(min || max)
+      << "At least one of \'min\' or \'max\' must not be None";
   auto shape = tensor.shape();
   XlaHelpers::MinMax min_max =
       XlaHelpers::MinMaxValues(shape.get().element_type());
