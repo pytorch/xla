@@ -28,7 +28,7 @@ There are different ways to run a model using the PyTorch/XLA framework.
 
 The simplest (but not good performing) one is to just run on one core and send the input tensors to the XLA devices manually:
 
-```
+```python
 import torch_xla_py.xla_model as xm
 
 device = xm.xla_device()
