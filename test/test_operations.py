@@ -827,6 +827,33 @@ class TestAtenXlaTensor(XlaTestCase):
         [torch.randn(0, 1, 2, 0),
          torch.tensor([], dtype=torch.long)], test_fn)
 
+  def test_diagonal_write(self):
+
+    def test_fn(t):
+      d = torch.diagonal(t, offset=1)
+      d[1] += 0.904
+      return t
+
+    self.runAtenTest([torch.randn(5, 8)], test_fn)
+
+  def test_diagonal_write_transposed(self):
+
+    def test_fn(t):
+      d = torch.diagonal(t, offset=-1, dim1=1, dim2=0)
+      d[1] += 0.904
+      return t
+
+    self.runAtenTest([torch.randn(5, 8)], test_fn)
+
+  def test_diagonal_write_transposed_r3(self):
+
+    def test_fn(t):
+      d = torch.diagonal(t, offset=1, dim1=2, dim2=0)
+      d[1] += 0.904
+      return t
+
+    self.runAtenTest([torch.randn(5, 8, 7)], test_fn)
+
   def test_writeable_tensors_updates(self):
 
     def test_fn(s, i):
