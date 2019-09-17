@@ -1047,10 +1047,17 @@ tensorflow::tpu::TopologyProto XrtComputationClient::InitializeAndFetchTopology(
   tensorflow::Scope tpu_system_scope = root.WithDevice(system_device);
   const auto unique_name =
       tpu_system_scope.GetUniqueNameForOp("ConfigureDistributedTPU");
-  auto builder = tensorflow::NodeBuilder(unique_name, "ConfigureDistributedTPU")
-                     .Attr("embedding_config", "")
-                     .Attr("tpu_embedding_config", "")
-                     .Attr("is_global_init", false);
+  tensorflow::NodeBuilder builder =
+      tensorflow::NodeBuilder(unique_name, "ConfigureDistributedTPU")
+          .Attr("embedding_config", "")
+          .Attr("tpu_embedding_config", "")
+          .Attr("is_global_init", false);
+  // TODO: Remove this once the new TF build can be relied upon, on the Cloud
+  // TPU side.
+  if (config.cluster_def().job_size() > 1) {
+    builder.Attr("enable_whole_mesh_compilations", true);
+  }
+
   tpu_system_scope.UpdateBuilder(&builder);
 
   tensorflow::Node* result;
