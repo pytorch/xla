@@ -3,6 +3,7 @@ from __future__ import print_function
 import collections
 import gc
 from six import itervalues
+import sys
 import os
 import re
 import threading
@@ -55,6 +56,11 @@ def is_master_ordinal():
     return ordinal == 0
   # We are in the multi-threaded DataParallel setup.
   return getattr(_TLS, 'device_index', 0) == 0
+
+
+def master_print(s, fd=sys.stdout):
+  if is_master_ordinal():
+    print(s, file=fd)
 
 
 def xla_device(n=None, devkind=None):
