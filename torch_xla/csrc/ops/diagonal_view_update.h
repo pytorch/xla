@@ -6,10 +6,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Diagonal : public Node {
+class DiagonalViewUpdate : public Node {
  public:
-  Diagonal(const Value& input, xla::int64 offset, xla::int64 dim1,
-           xla::int64 dim2);
+  DiagonalViewUpdate(const Value& target, const Value& input, xla::int64 offset,
+                     xla::int64 dim1, xla::int64 dim2);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -22,10 +22,6 @@ class Diagonal : public Node {
   xla::int64 dim1() const { return dim1_; }
 
   xla::int64 dim2() const { return dim2_; }
-
-  static xla::Shape MakeDiagonalShape(const xla::Shape& shape,
-                                      xla::int64 offset, xla::int64 dim1,
-                                      xla::int64 dim2);
 
  private:
   xla::int64 offset_;

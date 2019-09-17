@@ -30,6 +30,16 @@ struct AsStridedInfo {
   xla::int64 offset = 0;
 };
 
+struct DiagonalInfo {
+  bool operator==(const DiagonalInfo& ref) const {
+    return offset == ref.offset && dim1 == ref.dim1 && dim2 == ref.dim2;
+  }
+
+  xla::int64 offset = 0;
+  xla::int64 dim1 = 0;
+  xla::int64 dim2 = 1;
+};
+
 struct ViewInfo {
   enum class Type {
     kInvalid,
@@ -40,6 +50,7 @@ struct ViewInfo {
     kResize,
     kSelect,
     kAsStrided,
+    kDiagonal,
   };
 
   ViewInfo() = default;
@@ -49,11 +60,14 @@ struct ViewInfo {
   ViewInfo(Type view_type, const xla::Shape& source_shape, SelectInfo select);
   ViewInfo(Type view_type, xla::Shape shape, std::vector<xla::int64> sizes,
            AsStridedInfo as_strided);
+  ViewInfo(Type view_type, const xla::Shape& source_shape,
+           DiagonalInfo diagonal);
 
   bool operator==(const ViewInfo& ref) const {
     return view_type == ref.view_type && shape == ref.shape &&
            indices == ref.indices && sizes == ref.sizes &&
-           permutation == ref.permutation && select == ref.select;
+           permutation == ref.permutation && select == ref.select &&
+           as_strided == ref.as_strided && diagonal == ref.diagonal;
   }
 
   Type view_type = Type::kInvalid;
@@ -71,6 +85,8 @@ struct ViewInfo {
   absl::optional<SelectInfo> select;
   // Information used for as_strided views.
   absl::optional<AsStridedInfo> as_strided;
+  // Information used for diagonal views.
+  absl::optional<DiagonalInfo> diagonal;
 };
 
 // When a "view" (capture by reference) is taken on a node, an Alias object is

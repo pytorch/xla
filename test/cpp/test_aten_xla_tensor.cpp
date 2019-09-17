@@ -2356,7 +2356,7 @@ TEST_F(AtenXlaTensorTest, TestLinear) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, DISABLED_TestPinverse) {
+TEST_F(AtenXlaTensorTest, TestPinverse) {
   torch::Tensor input =
       torch::rand({4, 6}, torch::TensorOptions(torch::kFloat));
   torch::Tensor result = torch::pinverse(input);
