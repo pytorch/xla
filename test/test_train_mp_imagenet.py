@@ -155,7 +155,9 @@ def train_imagenet():
 
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
-  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  writer = None
+  if FLAGS.logdir and xm.is_master_ordinal():
+    writer = SummaryWriter(log_dir=FLAGS.logdir)
   optimizer = optim.SGD(
       model.parameters(),
       lr=FLAGS.lr,
@@ -170,7 +172,7 @@ def train_imagenet():
       scheduler_divide_every_n_epochs=getattr(
           FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
       num_steps_per_epoch=num_training_steps_per_epoch,
-      summary_writer=writer if xm.is_master_ordinal() else None)
+      summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
 
   def train_loop_fn(loader):
