@@ -18,48 +18,6 @@ import torch_xla_py.keyd_queue as kq
 _TLS = threading.local()
 
 
-class Replication(object):
-
-  def __init__(self, devices, replication_devices):
-    self._devices = list(devices)
-    self._replication_devices = list(replication_devices)
-    self._cv = threading.Condition(threading.Lock())
-    self._join_count = 0
-    self._ticket = 0
-
-  def devices(self):
-    return self._devices
-
-  def replication_devices(self):
-    return self._replication_devices
-
-  def reset(self):
-    with self._cv:
-      assert self._join_count % len(self._devices) == 0
-      self._join_count = 0
-      self._ticket = 0
-
-  def enter(self):
-    with self._cv:
-      self._join_count += 1
-      if self._join_count % len(self._devices) == 0:
-        self._ticket += 1
-        self._cv.notify_all()
-      else:
-        ticket = self._ticket
-        while ticket == self._ticket:
-          self._cv.wait()
-
-
-def set_replication(device, replication):
-  assert replication is None or isinstance(replication, Replication)
-  torch_xla._XLAC._xla_set_default_device(device)
-  _TLS.device = device
-  _TLS.device_index = (
-      replication.devices().index(device) if replication else 0)
-  _TLS.replication = replication
-
-
 def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
 
@@ -82,12 +40,21 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
       return kind_devices[:max_devices] if max_devices else kind_devices
 
 
-def xrt_world_size():
-  return int(os.getenv(xenv.WORLD_SIZE, 1))
+def xrt_world_size(defval=1):
+  return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
 
-def get_ordinal():
-  return int(os.getenv(xenv.ORDINAL, 0))
+def get_ordinal(defval=0):
+  return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
+
+
+def is_master_ordinal():
+  ordinal = get_ordinal(defval=-1)
+  if ordinal >= 0:
+    # We are either on multi-processing, or on BigSlice (or both).
+    return ordinal == 0
+  # We are in the multi-threaded DataParallel setup.
+  return getattr(_TLS, 'device_index', 0) == 0
 
 
 def xla_device(n=None, devkind=None):
@@ -144,6 +111,18 @@ def xla_replication_devices(local_devices):
     if xdev[0] == device_type:
       replication_devices.append(device)
   return replication_devices
+
+
+def set_replication(device, devices):
+  if devices:
+    replication_devices = xla_replication_devices(devices)
+    torch_xla._XLAC._xla_set_replication_devices(replication_devices)
+    _TLS.device_index = devices.index(device)
+  else:
+    torch_xla._XLAC._xla_set_replication_devices([])
+    _TLS.device_index = 0
+  _TLS.device = device
+  torch_xla._XLAC._xla_set_default_device(device)
 
 
 class RateTracker(object):
@@ -339,6 +318,27 @@ def get_log_fn(logdir=None, custom_log_fn=print):
   return log_fn
 
 
+def check_view_sharing(obj):
+  tensors = set()
+  aliases = dict()
+
+  def check_object(obj):
+    if is_xla_tensor(obj):
+      tid = torch_xla._XLAC._xla_get_tensor_id(obj)
+      if tid not in tensors:
+        tensors.add(tid)
+        aid = torch_xla._XLAC._xla_get_tensor_view_alias_id(obj)
+        if aid != 0:
+          if aid in aliases:
+            oobj = aliases[aid]
+            raise RuntimeError(
+                'Tensor ID {} is sharing a view with tensor ID {}'.format(
+                    tid, torch_xla._XLAC._xla_get_tensor_id(oobj)))
+          aliases[aid] = obj
+
+  xu.for_each_instance(obj, torch.Tensor, check_object)
+
+
 def _fetch_gradients(optimizer):
   gradients = []
   for param_group in optimizer.__getstate__()['param_groups']:
@@ -350,32 +350,22 @@ def _fetch_gradients(optimizer):
   return gradients
 
 
-def _mark_step(replication):
-  devices = []
-  if replication:
-    replication.enter()
-    devices = replication.replication_devices()
+def mark_step():
   torch_xla._XLAC._xla_step_marker(
-      torch_xla._XLAC._xla_get_default_device(),
-      devices,
+      torch_xla._XLAC._xla_get_default_device(), [],
       wait=xu.getenv_as('XLA_SYNC_WAIT', bool, False))
   # Only emit metrics from the first local device index, to avoid emitting the
   # same values from different threads.
-  if getattr(_TLS, 'device_index', 0) == 0:
+  if is_master_ordinal():
     ms.save_metrics()
 
 
-def mark_step():
-  _mark_step(getattr(_TLS, 'replication', None))
-
-
 def optimizer_step(optimizer, barrier=False, optimizer_args={}):
-  replication = getattr(_TLS, 'replication', None)
   gradients = _fetch_gradients(optimizer)
-  count = len(replication.replication_devices()) if replication else 1
+  count = torch_xla._XLAC._xla_get_replication_devices_count()
   if count > 1:
     torch_xla._XLAC._xla_cross_replica_sum(gradients, 1.0 / count, [])
   loss = optimizer.step(**optimizer_args)
   if barrier:
-    _mark_step(replication)
+    mark_step()
   return loss

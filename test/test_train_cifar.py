@@ -1,16 +1,24 @@
-import test_utils
+import args_parse
 
-FLAGS = test_utils.parse_common_options(
+MODEL_OPTS = {
+    '--use_torchvision': {
+        'default': False,
+        'type': bool,
+    },
+}
+FLAGS = args_parse.parse_common_options(
     datadir='/tmp/cifar-data',
     batch_size=128,
     num_epochs=20,
     momentum=0.9,
     lr=0.1,
-    target_accuracy=80.0)
+    target_accuracy=80.0,
+    opts=MODEL_OPTS.items())
 
 from common_utils import TestCase, run_tests
 import os
 import shutil
+import test_utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -160,7 +168,8 @@ def train_cifar():
       xm.get_xla_supported_devices(
           max_devices=FLAGS.num_cores) if FLAGS.num_cores != 0 else [])
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
-  model_parallel = dp.DataParallel(ResNet18, device_ids=devices)
+  model = torchvision.models.resnet18 if FLAGS.use_torchvision else ResNet18
+  model_parallel = dp.DataParallel(model, device_ids=devices)
 
   def train_loop_fn(model, loader, device, context):
     loss_fn = nn.CrossEntropyLoss()
@@ -204,6 +213,7 @@ def train_cifar():
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = sum(accuracies) / len(accuracies)
+    print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 

@@ -162,6 +162,16 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
   return ss.str();
 }
 
+std::ptrdiff_t GetTensorViewAliasId(const at::Tensor& tensor) {
+  XLATensor xtensor = bridge::GetXlaTensor(tensor);
+  return xtensor.GetViewAliasId();
+}
+
+std::ptrdiff_t GetTensorId(const at::Tensor& tensor) {
+  XLATensor xtensor = bridge::GetXlaTensor(tensor);
+  return xtensor.GetUniqueId();
+}
+
 std::vector<at::Tensor> GetXlaTensorsFromAten(
     const std::vector<at::Tensor>& aten_tensors,
     const std::vector<std::string>& devices) {
@@ -180,6 +190,30 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
     xla_tensors.push_back(bridge::AtenFromXlaTensor(std::move(xla_tensor)));
   }
   return xla_tensors;
+}
+
+py::object GetMetricData(const std::string& name) {
+  xla::metrics::MetricData* data = xla::metrics::GetMetric(name);
+  if (data == nullptr) {
+    return py::none();
+  }
+
+  double accumulator = 0.0;
+  size_t total_samples = 0;
+  auto samples = data->Samples(&accumulator, &total_samples);
+  auto py_samples = py::tuple(samples.size());
+  for (size_t i = 0; i < samples.size(); ++i) {
+    auto sample = py::tuple(2);
+    sample[0] = 1.0e-9 * samples[i].timestamp_ns;
+    sample[1] = samples[i].value;
+
+    py_samples[i] = sample;
+  }
+  auto result = py::tuple(3);
+  result[0] = total_samples;
+  result[1] = accumulator;
+  result[2] = py_samples;
+  return result;
 }
 
 void InitXlaModuleBindings(py::module m) {
@@ -222,6 +256,10 @@ void InitXlaModuleBindings(py::module m) {
     }
     return result;
   });
+  m.def("_xla_get_tensor_view_alias_id",
+        [](const at::Tensor& tensor) { return GetTensorViewAliasId(tensor); });
+  m.def("_xla_get_tensor_id",
+        [](const at::Tensor& tensor) { return GetTensorId(tensor); });
   m.def("_xla_get_devices",
         []() { return xla::ComputationClient::Get()->GetLocalDevices(); });
   m.def("_xla_get_all_devices",
@@ -233,6 +271,16 @@ void InitXlaModuleBindings(py::module m) {
       xla_devices = GetXlaDevices(devices);
     }
     return xla_devices;
+  });
+  m.def("_xla_set_replication_devices",
+        [](const std::vector<std::string>& devices) {
+          xla::ComputationClient::Get()->SetReplicationDevices(devices);
+        });
+  m.def("_xla_get_replication_devices", []() {
+    return xla::ComputationClient::Get()->GetReplicationDevices();
+  });
+  m.def("_xla_get_replication_devices_count", []() {
+    return xla::ComputationClient::Get()->GetReplicationDevices().size();
   });
   m.def("_xla_cross_replica_sum", [](const std::vector<at::Tensor>& tensors,
                                      double scale, const py::list& groups) {
@@ -265,9 +313,14 @@ void InitXlaModuleBindings(py::module m) {
           StepMarker(device, devices, wait);
         },
         py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+  m.def("_xla_counter_names", []() { return xla::metrics::GetCounterNames(); });
   m.def("_xla_counter_value", [](const std::string& name) -> py::object {
     xla::metrics::CounterData* data = xla::metrics::GetCounter(name);
     return data != nullptr ? py::cast<int64_t>(data->Value()) : py::none();
+  });
+  m.def("_xla_metric_names", []() { return xla::metrics::GetMetricNames(); });
+  m.def("_xla_metric_data", [](const std::string& name) -> py::object {
+    return GetMetricData(name);
   });
   m.def("_xla_metrics_report",
         []() { return xla::metrics::CreateMetricReport(); });
