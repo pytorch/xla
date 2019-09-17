@@ -64,11 +64,13 @@ DEFAULT_KWARGS = dict(
     target_accuracy=0.0,
 )
 MODEL_SPECIFIC_DEFAULTS = {
-    'resnet50': dict({
-        'lr_scheduler_divide_every_n_epochs': 20,
-        'lr_scheduler_divisor': 5,
-        'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
-      }, **DEFAULT_KWARGS)
+    'resnet50':
+        dict(
+            {
+                'lr_scheduler_divide_every_n_epochs': 20,
+                'lr_scheduler_divisor': 5,
+                'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
+            }, **DEFAULT_KWARGS)
 }
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
@@ -101,7 +103,7 @@ def train_imagenet():
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
         sample_count=train_dataset_len // FLAGS.batch_size //
-            xm.xrt_world_size())
+        xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
@@ -135,11 +137,15 @@ def train_imagenet():
     test_sampler = None
     if xm.xrt_world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
-          train_dataset, num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(), shuffle=True)
+          train_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=True)
       test_sampler = torch.utils.data.distributed.DistributedSampler(
-          test_dataset, num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(), shuffle=False)
+          test_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
@@ -178,8 +184,7 @@ def train_imagenet():
             scheduler_divide_every_n_epochs=getattr(
                 FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
             num_steps_per_epoch=num_training_steps_per_epoch,
-            summary_writer=writer if test_utils.is_first_device(
-                device, devices) else None))
+            summary_writer=writer if xm.is_master_ordinal() else None))
     tracker = xm.RateTracker()
     model.train()
     for x, (data, target) in loader:
@@ -190,8 +195,7 @@ def train_imagenet():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        test_utils.print_training_update(device, x, loss.item(),
-                                         tracker.rate(),
+        test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
                                          tracker.global_rate())
       if lr_scheduler:
         lr_scheduler.step()
@@ -220,7 +224,7 @@ def train_imagenet():
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = mean(accuracies)
-    print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
+    print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
     global_step = (epoch - 1) * num_training_steps_per_epoch
     test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
                                      global_step)

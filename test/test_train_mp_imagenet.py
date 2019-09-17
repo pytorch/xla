@@ -63,11 +63,13 @@ DEFAULT_KWARGS = dict(
     target_accuracy=0.0,
 )
 MODEL_SPECIFIC_DEFAULTS = {
-    'resnet50': dict({
-        'lr_scheduler_divide_every_n_epochs': 20,
-        'lr_scheduler_divisor': 5,
-        'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
-      }, **DEFAULT_KWARGS)
+    'resnet50':
+        dict(
+            {
+                'lr_scheduler_divide_every_n_epochs': 20,
+                'lr_scheduler_divisor': 5,
+                'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
+            }, **DEFAULT_KWARGS)
 }
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
@@ -100,7 +102,7 @@ def train_imagenet():
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
         sample_count=train_dataset_len // FLAGS.batch_size //
-            xm.xrt_world_size())
+        xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
@@ -168,8 +170,7 @@ def train_imagenet():
       scheduler_divide_every_n_epochs=getattr(
           FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
       num_steps_per_epoch=num_training_steps_per_epoch,
-      summary_writer=writer if test_utils.is_first_device(
-          device, [str(device)]) else None)
+      summary_writer=writer if xm.is_master_ordinal() else None)
   loss_fn = nn.CrossEntropyLoss()
 
   def train_loop_fn(loader):
