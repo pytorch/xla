@@ -2,6 +2,7 @@ build/
 dist/
 *.egg-info/
 torch_xla/lib/
+torch_xla/version.py
 */**/__pycache__
 *.swp
 *.pyc
