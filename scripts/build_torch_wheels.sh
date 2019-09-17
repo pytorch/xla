@@ -60,12 +60,12 @@ function install_and_setup_conda() {
   conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
   conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
-  
+
   conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard
   /usr/bin/yes | pip install --upgrade google-api-python-client
   /usr/bin/yes | pip install --upgrade oauth2client
   /usr/bin/yes | pip install lark-parser
-  
+
   sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
 }
 
@@ -79,7 +79,7 @@ function build_and_install_torch() {
   git submodule update --init --recursive
   # Apply patches to PT which are required by the XLA support.
   $(dirname $0)/apply_patches.sh
-  export NO_CUDA=1 NO_MKLDNN=1
+  export NO_CUDA=1
   python setup.py bdist_wheel
   pip install dist/*.whl
 }
