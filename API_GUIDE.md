@@ -50,11 +50,11 @@ for data, target in train_loader:
 The above is only running on one TPU core though, and the time spent to send data to device is serial/inline with the TPU computation.
 For simple experiments, or for inference tasks which are not latency-sensitive it might be still OK, but the following methods allow for better scalability.
 
-Note the `xm.optimizer_step(optimizer)` line which replaces the usual
+Note the `xm.optimizer_step(optimizer, barrier=True)` line which replaces the usual
 `optimizer.step()`. This is required because of the way XLA tensors work:
 operations are not executed immediately, but rather added to a graph of pending
 operations which is only executed when its results are required. Using
-`xm.optimizer_step(optimizer)` acts as an execution barrier which forces the
+`xm.optimizer_step(optimizer, barrier=True)` acts as an execution barrier which forces the
 evaluation of the graph accumulated for a single step. Without this barrier, the
 graph would only be evaluated when evaluating the accuracy of the model, which
 is only done at the end of an epoch, for this example. Even for small models,
