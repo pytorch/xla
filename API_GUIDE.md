@@ -4,7 +4,7 @@
 
 PyTorch/XLA adds a new device, similarly to CPU and GPU devices. The following snippet creates an XLA tensor filled with random values, then prints the device and the contents of the tensor:
 
-```
+```python
 import torch
 import torch_xla
 import torch_xla_py.xla_model as xm
@@ -45,23 +45,26 @@ for data, target in train_loader:
   loss = loss_fn(output, target)
   loss.backward()
   xm.optimizer_step(optimizer)
+  xm.mark_step()
 ```
 
 The above is only running on one TPU core though, and the time spent to send data to device is serial/inline with the TPU computation.
 For simple experiments, or for inference tasks which are not latency-sensitive it might be still OK, but the following methods allow for better scalability.
 
-Note the `xm.optimizer_step(optimizer)` line which replaces the usual `optimizer.step()`. This is required because of the way XLA tensors work: operations are not executed immediately, but rather added to a graph of pending operations which is only executed when its results are required. Using `xm.optimizer_step(optimizer)` acts as an execution barrier which forces the evaluation of the graph accumulated for a single step. Without this barrier, the graph would only be evaluated when evaluating the accuracy of the model, which is only done at the end of an epoch, for this example. Even for small models, the accumulated graph would be too big to evaluate at the end of an entire epoch.
+Note the `xm.mark_step()` line. This is required because of the way XLA tensors work: operations are not executed immediately, but rather added to a graph of pending operations which is only executed when its results are required. Using `xm.mark_step()` acts as an execution barrier which forces the evaluation of the graph accumulated for a single step. Without this barrier, the graph would only be evaluated when evaluating the accuracy of the model, which is only done at the end of an epoch, for this example. Even for small models, the accumulated graph would be too big to evaluate at the end of an entire epoch.
 
 ### MultiCore
 
 There are two ways to drive multiple TPU cores using PyTorch/XLA. One is using the `torch.multiprocessing` module (which internally spawns multiple processes), and the other is using Python threading.
 The multiprocessing method should allow better performance as it gets around the Python GIL serialization, especially with model code which has a heavy Python side processing.
+Note that in the MultiCore setting, `xm.mark_step()` is called inside the data
+iterators, so there is no explicit calls in the examples below.
 
 #### MultiCore - MultiProcessing
 
 Code for multiprocessing looks like:
 
-```
+```python
 import torch_xla_py.xla_model as xm
 import torch_xla_py.xla_multiprocessing as xmp
 
@@ -94,7 +97,7 @@ Check the [full example](https://github.com/pytorch/xla/blob/master/test/test_tr
 
 To run a model using the Python threading support (embedded within the `torch_xla_py.data_parallel.DataParallel` interface), use the following API:
 
-```
+```python
 import torch_xla_py.xla_model as xm
 import torch_xla_py.data_parallel as dp
 
@@ -126,9 +129,9 @@ Check the [full example](https://github.com/pytorch/xla/blob/master/test/test_tr
 PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors, implementing the full tensor interface. However, constraints in XLA and hardware, and the lazy evaluation model mean some patterns must be avoided:
 
 1.  Tensor shapes should be the same between iterations, or a low number of shape variations should be used. PyTorch/XLA automatically recompiles the graph every time new shapes are encountered. This means that, if the shapes don’t stabilize during training, more time will be spent compiling than running the model. Pad tensors to fixed sizes when possible. Direct or indirect uses of `nonzero` introduce dynamic shapes; for example, masked indexing `base[index]` where `index` is a mask tensor.
-2.  Certain operations don’t have native translations to XLA and therefore require transfer to the CPU memory, evaluation on CPU, and transfer of the result back to the XLA device. This is automatically handled by PyTorch/XLA, but doing too many such operations during the training step can lead to significant slowdowns. The `item()` operation is one such example and it is used in [clip_grad_norm_](https://github.com/pytorch/pytorch/blob/de19eeee99a2a282fc441f637b23d8e50c75ecd1/torch/nn/utils/clip_grad.py#L33). Below is an alternative implementation which avoids the need for `item()`:
+1.  Certain operations don’t have native translations to XLA and therefore require transfer to the CPU memory, evaluation on CPU, and transfer of the result back to the XLA device. This is automatically handled by PyTorch/XLA, but doing too many such operations during the training step can lead to significant slowdowns. The `item()` operation is one such example and it is used in [clip_grad_norm_](https://github.com/pytorch/pytorch/blob/de19eeee99a2a282fc441f637b23d8e50c75ecd1/torch/nn/utils/clip_grad.py#L33). Below is an alternative implementation which avoids the need for `item()`:
 
-    ```
+    ```python
     ...
     else:
       device = parameters[0].device
@@ -143,11 +146,20 @@ PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors, implement
     ```
 
 
-3.  Loops with a different number of iterations between steps are subject to similar observations as tensor shapes. PyTorch/XLA automatically handles them, but they are seen as different execution graphs and require recompilations.
+1.  Loops with a different number of iterations between steps are subject to similar observations as tensor shapes. PyTorch/XLA automatically handles them, but they are seen as different execution graphs and require recompilations. Therefore, to get the best performance, same computations should be run on all XLA devices in all hosts.
 
-    `print(torch_xla._XLAC._xla_metrics_report())` can be used to print metrics at the end of each step to collect information regarding the number of compilations and operators that are part of the model but don’t have native XLA implementations. The `XLA_METRICS_FILE=1` environment setting can also be used to export per step metrics to a file.
+One example of this is, iterators in `torch_xla_py.data_parallel` may drop the
+last few batches in the input iterator, in order to do the same amount of work
+on all XLA devices. In the extreme case where dataset is small, and there are
+too few steps, this may result in a no-op epoch.
 
-4. Sometimes model writers, when knowing that a PyTorch tensor is a scalar, they trigger `tensor.item()` (or equivalent PyTorch APIs which results to the same effects) calls, and they perform operations in Python scalar context, when similar operations can be performed using Pytorch tensor APIs. Following the latter approach will likely result in those operations behind fully fused within an XLA graph, without the need of issuing separate TPU computations.
+1. Sometimes model writers, when knowing that a PyTorch tensor is a scalar, they trigger `tensor.item()` (or equivalent PyTorch APIs which results to the same effects) calls, and they perform operations in Python scalar context, when similar operations can be performed using Pytorch tensor APIs. Following the latter approach will likely result in those operations behind fully fused within an XLA graph, without the need of issuing separate TPU computations.
 
    This can dramatically improve performance of the model, up to an N factor, where N is the number of `tensor.item()` calls per step.
+
+`print(torch_xla._XLAC._xla_metrics_report())` can be used to print metrics at the end of each step to collect information regarding the number of compilations and operators that are part of the model but don’t have native XLA implementations. The `XLA_METRICS_FILE=1` environment setting can also be used to export per step metrics to a file.
+
+One common pitfall is, in this report, any counter that starts with `aten::`
+indicates a context switch between the XLA device and CPU, which can be a
+potential performance optimization area in the model code.
 
