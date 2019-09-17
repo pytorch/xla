@@ -44,21 +44,29 @@ for data, target in train_loader:
   output = model(data)
   loss = loss_fn(output, target)
   loss.backward()
-  xm.optimizer_step(optimizer)
-  xm.mark_step()
+  xm.optimizer_step(optimizer, barrier=True)
 ```
 
 The above is only running on one TPU core though, and the time spent to send data to device is serial/inline with the TPU computation.
 For simple experiments, or for inference tasks which are not latency-sensitive it might be still OK, but the following methods allow for better scalability.
 
-Note the `xm.mark_step()` line. This is required because of the way XLA tensors work: operations are not executed immediately, but rather added to a graph of pending operations which is only executed when its results are required. Using `xm.mark_step()` acts as an execution barrier which forces the evaluation of the graph accumulated for a single step. Without this barrier, the graph would only be evaluated when evaluating the accuracy of the model, which is only done at the end of an epoch, for this example. Even for small models, the accumulated graph would be too big to evaluate at the end of an entire epoch.
+Note the `xm.optimizer_step(optimizer)` line which replaces the usual
+`optimizer.step()`. This is required because of the way XLA tensors work:
+operations are not executed immediately, but rather added to a graph of pending
+operations which is only executed when its results are required. Using
+`xm.optimizer_step(optimizer)` acts as an execution barrier which forces the
+evaluation of the graph accumulated for a single step. Without this barrier, the
+graph would only be evaluated when evaluating the accuracy of the model, which
+is only done at the end of an epoch, for this example. Even for small models,
+the accumulated graph would be too big to evaluate at the end of an entire
+epoch.
 
 ### MultiCore
 
 There are two ways to drive multiple TPU cores using PyTorch/XLA. One is using the `torch.multiprocessing` module (which internally spawns multiple processes), and the other is using Python threading.
 The multiprocessing method should allow better performance as it gets around the Python GIL serialization, especially with model code which has a heavy Python side processing.
-Note that in the MultiCore setting, `xm.mark_step()` is called inside the data
-iterators, so there is no explicit calls in the examples below.
+Note that in the MultiCore setting, a barrier is included inside the data
+iterators, so there is no explicit `barrier=True` in the examples below.
 
 #### MultiCore - MultiProcessing
 
