@@ -31,7 +31,9 @@ export TRIM_GRAPH_CHECK_FREQUENCY=$GRAPH_CHECK_FREQUENCY
 if [ "$LOGFILE" != "" ]; then
   python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
   python3 "$CDIR/test_mp_replication.py" "$@" 2>&1 | tee $LOGFILE
+  python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA 2>&1 | tee $LOGFILE
 else
   python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   python3 "$CDIR/test_mp_replication.py" "$@"
+  python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
 fi
