@@ -993,17 +993,14 @@ void XrtComputationClient::ReleaseHandle(int64 handle, const string& device,
   triggered_task_->Activate();
 }
 
-void XrtComputationClient::ReleaseXrtData(XrtData* xrt_data) {
-  ReleaseHandle(xrt_data->get_handle(), xrt_data->device(),
-                &released_data_handles_);
+void XrtComputationClient::ReleaseXrtData(const string& device, int64 handle) {
+  ReleaseHandle(handle, device, &released_data_handles_);
   ReleaseDataHandlesCounter()->AddValue(1);
 }
 
 void XrtComputationClient::ReleaseXrtComputation(
-    XrtComputation* xrt_computation) {
-  ReleaseHandle(xrt_computation->get_handle(),
-                xrt_computation->compilation_device,
-                &released_compile_handles_);
+    const string& compilation_device, int64 handle) {
+  ReleaseHandle(handle, compilation_device, &released_compile_handles_);
   ReleaseCompileHandlesCounter()->AddValue(1);
 }
 
