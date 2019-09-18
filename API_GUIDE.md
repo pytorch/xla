@@ -164,7 +164,7 @@ small batch sizes in those cases.
 
 1. Even when it's known that a PyTorch tensor is a scalar, avoid using
    `tensor.item()`. Prefer instead keeping it as a tensor and the use of tensor
-   operations on it, using control flow substitutes such as torch.where.
+   operations on it, using control flow substitutes such as `torch.where`.
    Following the latter approach will likely result in those operations behind
    fully fused within an XLA graph, without the need of issuing separate TPU
    computations. This can dramatically improve performance of the model, up to
