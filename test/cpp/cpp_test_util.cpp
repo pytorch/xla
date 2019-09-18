@@ -8,6 +8,7 @@
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
@@ -57,14 +58,15 @@ bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
 }
 
 void ForEachDevice(const std::function<void(const Device&)>& devfn) {
-  std::string default_device =
-      xla::ComputationClient::Get()->GetDefaultDevice();
-  devfn(Device(default_device));
+  const Device* device = GetDefaultDevice();
+  XLATensorImpl::SetCurrentAtenDevice(bridge::XlaDeviceToAtenDevice(*device));
+  devfn(*device);
 }
 
 void ForEachDevice(const std::function<void(const torch::Device&)>& devfn) {
-  torch::Device torch_device = bridge::AtenDefaultDevice();
-  devfn(torch_device);
+  torch::Device device = bridge::AtenDefaultDevice();
+  XLATensorImpl::SetCurrentAtenDevice(device);
+  devfn(device);
 }
 
 bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
