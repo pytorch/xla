@@ -1,5 +1,5 @@
 diff --git a/test/common_device_type.py b/test/common_device_type.py
-index 2b47282a5f..024863d8de 100644
+index 2b47282a5f..a00f80797c 100644
 --- a/test/common_device_type.py
 +++ b/test/common_device_type.py
 @@ -4,6 +4,8 @@ import unittest
@@ -8,13 +8,13 @@ index 2b47282a5f..024863d8de 100644
      skipCUDANonDefaultStreamIf
 +import torch_xla
 +assert torch_xla  # silences flake8
-
+ 
  # Note: Generic Device-Type Testing
  #
-@@ -113,10 +115,117 @@ class CUDATestBase(DeviceTypeTestBase):
+@@ -113,10 +115,118 @@ class CUDATestBase(DeviceTypeTestBase):
          cls.no_magma = not torch.cuda.has_magma
-
-
+ 
+ 
 +class XLATestBase(DeviceTypeTestBase):
 +    device_type = 'xla'
 +
@@ -23,6 +23,7 @@ index 2b47282a5f..024863d8de 100644
 +        'test_addcmul',
 +        'test_diagonal',
 +        'test_isinf',
++        'test_clamp',
 +        'test_inverse_many_batches',
 +        'test_matrix_power',
 +        'test_chain_matmul',
@@ -126,6 +127,6 @@ index 2b47282a5f..024863d8de 100644
  if torch.cuda.is_available():
      device_type_test_bases.append(CUDATestBase)
 +device_type_test_bases.append(XLATestBase)
-
-
+ 
+ 
  # Adds 'instantiated' device-specific test cases to the given scope.
