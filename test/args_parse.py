@@ -29,6 +29,7 @@ def parse_common_options(datadir=None,
   parser.add_argument('--fake_data', action='store_true')
   parser.add_argument('--tidy', action='store_true')
   parser.add_argument('--metrics_debug', action='store_true')
+  parser.add_argument('--local_torch_xla_changes', action='store_true')
   if opts:
     for name, aopts in opts:
       parser.add_argument(name, **aopts)
@@ -37,5 +38,6 @@ def parse_common_options(datadir=None,
   # Setup import folders.
   xla_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
   sys.path.append(os.path.join(os.path.dirname(xla_folder), 'test'))
-  sys.path.insert(0, xla_folder)
+  if args.local_torch_xla_changes:
+    sys.path.insert(0, xla_folder)
   return args
