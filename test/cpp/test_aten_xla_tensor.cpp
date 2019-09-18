@@ -46,8 +46,8 @@ void TestBackward(
   torch::Tensor output = testfn(input_vars);
   torch::Tensor xoutput = testfn(xinput_vars);
   AllClose(output, xoutput, rtol, atol);
-  output.backward();
-  xoutput.backward();
+  output.backward(torch::ones_like(output));
+  xoutput.backward(torch::ones_like(xoutput));
   for (size_t i = 0; i < inputs.size(); ++i) {
     if (inputs[i].defined() && inputs[i].requires_grad()) {
       ASSERT_TRUE(xinput_vars[i].grad().defined());
