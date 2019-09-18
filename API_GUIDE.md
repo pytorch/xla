@@ -154,18 +154,23 @@ PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors, implement
     ```
 
 
-1.  Loops with a different number of iterations between steps are subject to similar observations as tensor shapes. PyTorch/XLA automatically handles them, but they are seen as different execution graphs and require recompilations. Therefore, to get the best performance, same computations should be run on all XLA devices in all hosts.
-One example of this is, iterators in `torch_xla_py.data_parallel` may drop the
+1.  Loops with a different number of iterations between steps are subject to similar observations as tensor shapes. PyTorch/XLA automatically handles them, but they are seen as different execution graphs and require recompilations. Therefore, to get the best performance, same computations should run on all XLA devices in all hosts.
+One example of this is: iterators in `torch_xla_py.data_parallel` may drop the
 last few batches in the input iterator, in order to do the same amount of work
 on all XLA devices. In the extreme case where dataset is small, and there are
 too few steps, this may result in a no-op epoch.
 
-1. Sometimes model writers, when knowing that a PyTorch tensor is a scalar, they trigger `tensor.item()` (or equivalent PyTorch APIs which results to the same effects) calls, and they perform operations in Python scalar context, when similar operations can be performed using Pytorch tensor APIs. Following the latter approach will likely result in those operations behind fully fused within an XLA graph, without the need of issuing separate TPU computations.
-This can dramatically improve performance of the model, up to an N factor, where N is the number of `tensor.item()` calls per step.
+1. Even when it's known that a PyTorch tensor is a scalar, avoid using
+   `tensor.item()`. Prefer instead keeping it as a tensor and the use of tensor
+   operations on it, using control flow substitutes such as torch.where.
+   Following the latter approach will likely result in those operations behind
+   fully fused within an XLA graph, without the need of issuing separate TPU
+   computations. This can dramatically improve performance of the model, up to
+   an N factor, where N is the number of `tensor.item()` calls per step.
 
 `print(torch_xla._XLAC._xla_metrics_report())` can be used to print metrics at the end of each step to collect information regarding the number of compilations and operators that are part of the model but don’t have native XLA implementations. The `XLA_METRICS_FILE=1` environment setting can also be used to export per step metrics to a file.
 
-One common pitfall is, in this report, any counter that starts with `aten::`
+In this report, any counter that starts with `aten::`
 indicates a context switch between the XLA device and CPU, which can be a
 potential performance optimization area in the model code.
 
