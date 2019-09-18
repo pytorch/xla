@@ -154,11 +154,13 @@ PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors, implement
     ```
 
 
-1.  Loops with a different number of iterations between steps are subject to similar observations as tensor shapes. PyTorch/XLA automatically handles them, but they are seen as different execution graphs and require recompilations. Therefore, to get the best performance, same computations should run on all XLA devices in all hosts.
-One example of this is: iterators in `torch_xla_py.data_parallel` may drop the
+1. In order to avoid recompilations, not only shapes must be constant, but also computations accross XLA devices in all hosts. A special case of this is loops with a different number of iterations between steps. PyTorch/XLA automatically handles them, but they are seen as different execution graphs and require recompilations.
+
+1. Iterators in `torch_xla_py.data_parallel` may drop the
 last few batches in the input iterator, in order to do the same amount of work
 on all XLA devices. In the extreme case where dataset is small, and there are
-too few steps, this may result in a no-op epoch.
+too few steps, this may result in a no-op epoch. Therefore, it is better to use
+small batch sizes in those cases.
 
 1. Even when it's known that a PyTorch tensor is a scalar, avoid using
    `tensor.item()`. Prefer instead keeping it as a tensor and the use of tensor
@@ -168,7 +170,7 @@ too few steps, this may result in a no-op epoch.
    computations. This can dramatically improve performance of the model, up to
    an N factor, where N is the number of `tensor.item()` calls per step.
 
-`print(torch_xla._XLAC._xla_metrics_report())` can be used to print metrics at the end of each step to collect information regarding the number of compilations and operators that are part of the model but don’t have native XLA implementations. The `XLA_METRICS_FILE=1` environment setting can also be used to export per step metrics to a file.
+`print(torch_xla._XLAC._xla_metrics_report())` can be used to print metrics at the end of each step to collect information regarding the number of compilations and operators that are part of the model but don’t have native XLA implementations. The `XLA_METRICS_FILE=/PATH/TO/FILE` environment setting can also be used to export per step metrics to a file.
 
 In this report, any counter that starts with `aten::`
 indicates a context switch between the XLA device and CPU, which can be a
