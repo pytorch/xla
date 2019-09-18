@@ -66,7 +66,7 @@ epoch.
 There are two ways to drive multiple TPU cores using PyTorch/XLA. One is using the `torch.multiprocessing` module (which internally spawns multiple processes), and the other is using Python threading.
 The multiprocessing method should allow better performance as it gets around the Python GIL serialization, especially with model code which has a heavy Python side processing.
 Note that in the MultiCore setting, a barrier is included inside the data
-iterators, so there is no explicit `barrier=True` in the examples below.
+iterators, so there are no explicit `barrier=True` in the examples below.
 
 #### MultiCore - MultiProcessing
 
