@@ -34,9 +34,4 @@ def parse_common_options(datadir=None,
       parser.add_argument(name, **aopts)
   args, leftovers = parser.parse_known_args()
   sys.argv = [sys.argv[0]] + leftovers
-  # Setup import folders.
-  xla_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
-  sys.path.append(os.path.join(os.path.dirname(xla_folder), 'test'))
-  if os.path.isfile(os.path.join(xla_folder, 'torch_xla/version.py')):
-    sys.path.insert(0, xla_folder)
   return args
