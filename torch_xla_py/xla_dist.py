@@ -24,6 +24,7 @@ except ImportError:
 
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 
+
 def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
   concat = ''
   for cmd in cmd_list:
@@ -428,8 +429,11 @@ class DistributedExecutor(object):
   MASTER_IDX = 0
   MESH_SERVICE_PORT = 8477  # Use single port to disallow concurrent runs
   DIST_ENV_VARS = [
-      'XRT_TPU_CONFIG', 'XRT_LOCAL_WORKER', 'XRT_MESH_SERVICE_ADDRESS',
-      'XRT_SHARD_WORLD_SIZE', 'XRT_SHARD_ORDINAL',
+      'XRT_TPU_CONFIG',
+      'XRT_LOCAL_WORKER',
+      'XRT_MESH_SERVICE_ADDRESS',
+      'XRT_SHARD_WORLD_SIZE',
+      'XRT_SHARD_ORDINAL',
   ]
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   DEFAULT_USER_NAME = 'pytorchtpudistrunner'
@@ -504,9 +508,8 @@ class DistributedExecutor(object):
         '--internal-ip',
         '--zone={}'.format(client_worker._zone),
         local_path,
-        '{}@{}:/home/{}/{}'.format(self.DEFAULT_USER_NAME, client_worker._hostname,
-                                   self.DEFAULT_USER_NAME,
-                                   os.path.basename(remote_path)),
+        '{}@{}:{}'.format(self.DEFAULT_USER_NAME, client_worker._hostname,
+                          remote_path),
     ]
 
   def _build_ssh_cmd(self, remote_cmd, client_worker):
@@ -520,7 +523,8 @@ class DistributedExecutor(object):
         '--internal-ip',
         '--zone={}'.format(client_worker._zone),
         '{}@{}'.format(self.DEFAULT_USER_NAME, client_worker._hostname),
-        '--command', '\'{}\''.format(remote_cmd),
+        '--command',
+        '\'{}\''.format(remote_cmd),
     ]
 
   def _run_remote_cmd(self, cmd, client_worker, shell=True, log=True):
@@ -560,8 +564,10 @@ class DistributedExecutor(object):
             'c_tpu_worker:{}'.format(worker_idx),
         'XRT_MESH_SERVICE_ADDRESS':
             '{}:{}'.format(client_master._internal_ip, self.MESH_SERVICE_PORT),
-        'XRT_SHARD_WORLD_SIZE': len(self._cluster._client_workers),
-        'XRT_SHARD_ORDINAL': worker_idx,
+        'XRT_SHARD_WORLD_SIZE':
+            len(self._cluster._client_workers),
+        'XRT_SHARD_ORDINAL':
+            worker_idx,
     }
     # Only for master
     if worker_idx == self.MASTER_IDX:
@@ -606,28 +612,38 @@ class DistributedExecutor(object):
       with open(script_path, 'w') as f:
         f.write(script_body)
       subprocess.call(['chmod', '+x', script_path])
-      worker_script_map[self._cluster._client_workers[i]] = script_path
+      worker_script_map[self._cluster._client_workers[i]] = {
+          'local_path':
+              script_path,
+          'remote_path':
+              os.path.join('{}-remote'.format(os.path.dirname(script_path)),
+                           os.path.basename(script_path)),
+      }
 
     return worker_script_map
 
   def _scp_scripts(self, script_map):
 
-    def _gcloud_scp(script_path, client_worker):
-      scp_cmd = self._build_scp_cmd(script_path, os.path.basename(script_path),
-                                    client_worker)
+    def _gcloud_scp(local_path, remote_path, client_worker):
+      self._build_and_run_ssh(
+          ['mkdir', '-p', os.path.dirname(remote_path)], client_worker)
+      scp_cmd = self._build_scp_cmd(local_path, remote_path, client_worker)
       proc = subprocess.Popen(
           scp_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       self._stream_logs(proc, client_worker)
 
     threads = []
     for i, client_worker in enumerate(script_map):
+      local_path = script_map[client_worker]['local_path']
+      remote_path = script_map[client_worker]['remote_path']
       if i == 0:
         # ssh keygen single time
-        _gcloud_scp(script_map[client_worker], client_worker)
+        _gcloud_scp(local_path, remote_path, client_worker)
         continue
       thread = threading.Thread(
           target=_gcloud_scp, args=(
-              script_map[client_worker],
+              local_path,
+              remote_path,
               client_worker,
           ))
       thread.daemon = True
@@ -639,11 +655,10 @@ class DistributedExecutor(object):
 
   def _cleanup(self, script_map):
 
-    def _cleanup_worker(script_path, client_worker):
-      rm_script = ['rm', '/home/{}/{}'.format(self.DEFAULT_USER_NAME,
-                                              os.path.basename(script_path))]
+    def _cleanup_worker(local_script, remote_script, client_worker):
+      rm_script = ['rm', remote_script]
       self._build_and_run_ssh(rm_script, client_worker)
-      subprocess.call(['rm', script_path])
+      subprocess.call(['rm', local_script])
       if self.docker_image:
         rm_container = ['docker', 'rm', '-f', self.docker_container]
         self._build_and_run_ssh(rm_container, client_worker)
@@ -655,7 +670,8 @@ class DistributedExecutor(object):
       thread = threading.Thread(
           target=_cleanup_worker,
           args=(
-              script_map[client_worker],
+              script_map[client_worker]['local_path'],
+              script_map[client_worker]['remote_path'],
               client_worker,
           ))
       thread.start()
@@ -666,15 +682,14 @@ class DistributedExecutor(object):
   def _start_run(self, script_map):
 
     def _run_script(script_path, client_worker):
-      self._build_and_run_ssh(
-          ['/home/{}/{}'.format(self.DEFAULT_USER_NAME,
-                                os.path.basename(script_path))], client_worker)
+      self._build_and_run_ssh([script_path], client_worker)
 
     threads = []
     for client_worker in script_map:
       thread = threading.Thread(
-          target=_run_script, args=(
-              script_map[client_worker],
+          target=_run_script,
+          args=(
+              script_map[client_worker]['remote_path'],
               client_worker,
           ))
       thread.daemon = True
