@@ -853,6 +853,9 @@ class TestAtenXlaTensor(XlaTestCase):
     nested = Nested(b, c)
     self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
 
+    tmpfile = tempfile.mktemp()
+    self.assertRaises(RuntimeError, lambda: torch.save([b, c], tmpfile))
+
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
