@@ -1,117 +1,36 @@
 diff --git a/test/common_device_type.py b/test/common_device_type.py
-index 2b47282a5f..a00f80797c 100644
+index dda0b8d791..785c30fed7 100644
 --- a/test/common_device_type.py
 +++ b/test/common_device_type.py
-@@ -4,6 +4,8 @@ import unittest
- import torch
- from common_utils import TestCase, TEST_WITH_ROCM, TEST_MKL, \
-     skipCUDANonDefaultStreamIf
-+import torch_xla
-+assert torch_xla  # silences flake8
- 
- # Note: Generic Device-Type Testing
- #
-@@ -113,10 +115,118 @@ class CUDATestBase(DeviceTypeTestBase):
+@@ -156,10 +156,72 @@ class CUDATestBase(DeviceTypeTestBase):
          cls.no_magma = not torch.cuda.has_magma
- 
- 
+
+
++import torch_xla
++assert torch_xla  # Silences Flake (unused import)
++
++# Acquires XLA test metadata
++import os
++from runpy import run_path
++assert 'XLA_TEST_DIR' in os.environ, "XLA_TEST_DIR environment variable must be set"
++xla_test_path = os.environ['XLA_TEST_DIR']
++xla_meta_path = xla_test_path + "/torch_test_meta.py"
++xla_meta = run_path(xla_meta_path)
++assert xla_meta, "XLA metadata not found!"
++allowed_torch_tests = xla_meta.get('allowed_torch_tests', None)
++assert allowed_torch_tests is not None, "XLA tests not found!"
++
++
 +class XLATestBase(DeviceTypeTestBase):
 +    device_type = 'xla'
-+
-+    allowed_tests = {
-+        'test_addcdiv',
-+        'test_addcmul',
-+        'test_diagonal',
-+        'test_isinf',
-+        'test_clamp',
-+        'test_inverse_many_batches',
-+        'test_matrix_power',
-+        'test_chain_matmul',
-+        'test_solve',
-+        'test_solve_batched',
-+        'test_solve_batched_non_contiguous',
-+        'test_solve_batched_many_batches',
-+        'test_solve_batched_broadcasting',
-+        'test_cholesky_solve',
-+        'test_cholesky_solve_batched',
-+        'test_cholesky_solve_batched_many_batches',
-+        'test_cholesky_solve_batched_broadcasting',
-+        'test_cholesky_inverse',
-+        'test_cholesky_batched_many_batches',
-+        'test_cholesky',
-+        'test_rot90',
-+        'test_signal_window_functions',
-+        'test_broadcast_fused_matmul',
-+        'test_index',
-+        'test_advancedindex_big',
-+        'test_kthvalue',
-+        'test_lu_solve_batched_many_batches',
-+        'test_lu_solve_batched_broadcasting',
-+        'test_dim_reduction',
-+        'test_remainder_overflow',
-+        'test_rpow',
-+        'test_lerp',
-+        'test_nuclear_norm_exceptions',
-+        'test_geqrf',
-+        'test_triangular_solve',
-+        'test_random_neg_values',
-+        'test_multinomial_alias',
-+        'test_lapack_empty',
-+        'test_nonzero_empty',
-+        'test_normal',
-+        'test_logical_any',
-+        'test_logical_all',
-+        'test_log_normal',
-+        'test_geometric',
-+        'test_cdist_empty',
-+        'test_cdist_large',
-+        'test_cdist_large_batch',
-+        'test_multinomial_constraints',
-+        'test_mul',
-+        'test_cumprod',
-+        'test_std_mean',
-+        'test_std_mean_all_dims',
-+        'test_var_mean',
-+        'test_var_mean_all_dims',
-+        'test_std_mean_some_dims',
-+        'test_zeros_like',
-+        'test_histc',
-+        'test_bool_tensor_comparison_ops',
-+        'test_bool_tensor_value_change',
-+        'test_addcmul',
-+        'test_tensordot',
-+        'test_narrow_empty',
-+        'test_linspace',
-+        'test_index_fill',
-+        'test_take_empty',
-+        'test_put_empty',
-+        'test_scatter_to_large_input',
-+        'test_scatter_add_to_large_input',
-+        'test_scatter_bool',
-+        'test_scatter_add_bool',
-+        'test_masked_scatter_bool_tensor',
-+        'test_atan2',
-+        'test_atan2_edgecases',
-+        'test_trapz',
-+        'test_addcdiv',
-+        'test_unary_out_op_mem_overlap',
-+        'test_binary_op_mem_overlap',
-+        'test_ternary_op_mem_overlap',
-+        'test_int_pow',
-+        'test_int_tensor_pow_neg_ints',
-+        'test_long_tensor_pow_floats',
-+        'test_var_mean_some_dims'
-+    }
++    unsupported_dtypes = {torch.half}
 +
 +    # Overrides to instantiate tests that are known to run quickly
 +    # and correctly on XLA.
 +    @classmethod
 +    def instantiate_test(cls, test):
-+        if test.__name__ in cls.allowed_tests:
-+            super().instantiate_test(test)
-+        else:
-+            test_name = test.__name__ + "_" + cls.device_type
-+
++        test_name = test.__name__ + "_" + cls.device_type
++        if test.__name__ not in allowed_torch_tests:
 +            assert not hasattr(cls, test_name), "Redefinition of test {0}".format(test_name)
 +
 +            @wraps(test)
@@ -120,6 +39,32 @@ index 2b47282a5f..a00f80797c 100644
 +                return test(self, cls.device_type)
 +
 +            setattr(cls, test_name, disallowed_test)
++        else:  # Test is allowed
++            dtypes = cls._get_dtypes(test)
++            if dtypes is None:  # Tests without dtype variants are instantiated as usual
++                super().instantiate_test(test)
++            else:  # Tests with dtype variants have unsupported dtypes skipped
++                skipped_dtypes = [dtype for dtype in dtypes if dtype in cls.unsupported_dtypes]
++
++                # Skips unsupported dtypes
++                for dtype in skipped_dtypes:
++                    dtype_str = str(dtype).split('.')[1]
++                    dtype_test_name = test_name + "_" + dtype_str
++                    reason = "XLA does not support dtype {0}".format(str(dtype))
++
++                    @wraps(test)
++                    def skipped_test(self, test=test, reason=reason):
++                        raise unittest.SkipTest(reason)
++                        return test(self, cls.device_type)
++
++                    assert not hasattr(cls, dtype_test_name), "Redefinition of test {0}".format(dtype_test_name)
++                    setattr(cls, dtype_test_name, skipped_test)
++
++                # Instantiates supported dtypes as normal
++                xla_dtypes = [dtype for dtype in dtypes if dtype not in cls.unsupported_dtypes]
++                if len(xla_dtypes) != 0:
++                    test.dtypes[cls.device_type] = xla_dtypes
++                    super().instantiate_test(test)
 +
 +
  # Adds available device-type-specific test base classes
@@ -127,6 +72,6 @@ index 2b47282a5f..a00f80797c 100644
  if torch.cuda.is_available():
      device_type_test_bases.append(CUDATestBase)
 +device_type_test_bases.append(XLATestBase)
- 
- 
+
+
  # Adds 'instantiated' device-specific test cases to the given scope.
