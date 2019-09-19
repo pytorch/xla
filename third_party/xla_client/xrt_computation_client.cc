@@ -1051,7 +1051,9 @@ tensorflow::tpu::TopologyProto XrtComputationClient::InitializeAndFetchTopology(
           .Attr("is_global_init", false);
   // TODO: Remove this once the new TF build can be relied upon, on the Cloud
   // TPU side.
-  if (config.cluster_def().job_size() > 1) {
+  const tensorflow::ClusterDef cluster_def = config.cluster_def();
+  if (cluster_def.job_size() > 1 ||
+      (cluster_def.job_size() == 1 && cluster_def.job()[0].tasks_size() > 1)) {
     builder.Attr("enable_whole_mesh_compilations", true);
   }
 
