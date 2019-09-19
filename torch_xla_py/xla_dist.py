@@ -24,6 +24,7 @@ except ImportError:
 
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 
+
 def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
   concat = ''
   for cmd in cmd_list:
@@ -428,8 +429,11 @@ class DistributedExecutor(object):
   MASTER_IDX = 0
   MESH_SERVICE_PORT = 8477  # Use single port to disallow concurrent runs
   DIST_ENV_VARS = [
-      'XRT_TPU_CONFIG', 'XRT_LOCAL_WORKER', 'XRT_MESH_SERVICE_ADDRESS',
-      'XRT_SHARD_WORLD_SIZE', 'XRT_SHARD_ORDINAL',
+      'XRT_TPU_CONFIG',
+      'XRT_LOCAL_WORKER',
+      'XRT_MESH_SERVICE_ADDRESS',
+      'XRT_SHARD_WORLD_SIZE',
+      'XRT_SHARD_ORDINAL',
   ]
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   DEFAULT_USER_NAME = 'pytorchtpudistrunner'
@@ -519,7 +523,8 @@ class DistributedExecutor(object):
         '--internal-ip',
         '--zone={}'.format(client_worker._zone),
         '{}@{}'.format(self.DEFAULT_USER_NAME, client_worker._hostname),
-        '--command', '\'{}\''.format(remote_cmd),
+        '--command',
+        '\'{}\''.format(remote_cmd),
     ]
 
   def _run_remote_cmd(self, cmd, client_worker, shell=True, log=True):
@@ -559,8 +564,10 @@ class DistributedExecutor(object):
             'c_tpu_worker:{}'.format(worker_idx),
         'XRT_MESH_SERVICE_ADDRESS':
             '{}:{}'.format(client_master._internal_ip, self.MESH_SERVICE_PORT),
-        'XRT_SHARD_WORLD_SIZE': len(self._cluster._client_workers),
-        'XRT_SHARD_ORDINAL': worker_idx,
+        'XRT_SHARD_WORLD_SIZE':
+            len(self._cluster._client_workers),
+        'XRT_SHARD_ORDINAL':
+            worker_idx,
     }
     # Only for master
     if worker_idx == self.MASTER_IDX:
@@ -606,10 +613,11 @@ class DistributedExecutor(object):
         f.write(script_body)
       subprocess.call(['chmod', '+x', script_path])
       worker_script_map[self._cluster._client_workers[i]] = {
-          'local_path': script_path,
-          'remote_path': os.path.join(
-              '{}-remote'.format(os.path.dirname(script_path)),
-              os.path.basename(script_path)),
+          'local_path':
+              script_path,
+          'remote_path':
+              os.path.join('{}-remote'.format(os.path.dirname(script_path)),
+                           os.path.basename(script_path)),
       }
 
     return worker_script_map
@@ -633,7 +641,11 @@ class DistributedExecutor(object):
         _gcloud_scp(local_path, remote_path, client_worker)
         continue
       thread = threading.Thread(
-          target=_gcloud_scp, args=(local_path, remote_path, client_worker,))
+          target=_gcloud_scp, args=(
+              local_path,
+              remote_path,
+              client_worker,
+          ))
       thread.daemon = True
       thread.start()
       threads.append(thread)
@@ -675,7 +687,8 @@ class DistributedExecutor(object):
     threads = []
     for client_worker in script_map:
       thread = threading.Thread(
-          target=_run_script, args=(
+          target=_run_script,
+          args=(
               script_map[client_worker]['remote_path'],
               client_worker,
           ))
