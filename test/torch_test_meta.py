@@ -1,4 +1,4 @@
-allowed_xla_tests = {
+allowed_torch_tests = {
     'test_addcdiv',
     'test_addcmul',
     'test_diagonal',
@@ -80,4 +80,5 @@ allowed_xla_tests = {
     'test_int_tensor_pow_neg_ints',
     'test_long_tensor_pow_floats',
     'test_var_mean_some_dims',
+    'test_clamp'
 }
