@@ -27,6 +27,7 @@ shift $(($OPTIND - 1))
 
 export TRIM_GRAPH_SIZE=$MAX_GRAPH_SIZE
 export TRIM_GRAPH_CHECK_FREQUENCY=$GRAPH_CHECK_FREQUENCY
+export XLA_TEST_DIR=$CDIR
 
 if [ "$LOGFILE" != "" ]; then
   python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
