@@ -853,49 +853,40 @@ class TestAtenXlaTensor(XlaTestCase):
     nested = Nested(b, c)
     self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
 
-    tmpfile = tempfile.mktemp()
-    self.assertRaises(RuntimeError, lambda: torch.save([b, c], tmpfile))
+    with tempfile.TemporaryFile() as tf:
+        self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
 
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
-    x_file = tempfile.mktemp()
-    try:
-      torch.save(x, x_file)
-      x_loaded = torch.load(x_file)
+    with tempfile.NamedTemporaryFile() as tf:
+      torch.save(x, tf)
+      x_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
-      x_loaded_cpu = torch.load(x_file, map_location=torch.device('cpu'))
+      x_loaded_cpu = torch.load(tf.name, map_location=torch.device('cpu'))
       self.assertEqual(x, x_loaded_cpu)
       self.assertEqual(str(x_loaded_cpu.device), 'cpu')
-      x_loaded_cpu_2 = torch.load(x_file, map_location=torch.device('cpu'))
+      x_loaded_cpu_2 = torch.load(tf.name, map_location=torch.device('cpu'))
       self.assertEqual(x, x_loaded_cpu_2)
       self.assertEqual(str(x_loaded_cpu_2.device), 'cpu')
-    finally:
-      os.remove(x_file)
 
   def test_load_to_xla(self):
     xla_device = xm.xla_device()
     x = torch.randn(5)
-    x_file = tempfile.mktemp()
-    try:
-        torch.save(x, x_file)
+    with tempfile.TemporaryFile() as tf:
+        torch.save(x, tf)
         with self.assertRaisesRegex(RuntimeError, 'not supported'):
             x_loaded = torch.load(x_file, map_location=torch.device('xla:0'))
-    finally:
-        os.remove(x_file)
 
   def test_save_tuple(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
     number = 3
-    x_file = tempfile.mktemp()
-    try:
-      torch.save((x, number), x_file)
-      x_loaded, number_loaded = torch.load(x_file)
+    with tempfile.NamedTemporaryFile() as tf:
+      torch.save((x, number), tf)
+      x_loaded, number_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
       self.assertEqual(number, number_loaded)
-    finally:
-      os.remove(x_file)
 
   def test_copy(self):
     xla_device = xm.xla_device()
