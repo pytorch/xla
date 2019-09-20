@@ -736,7 +736,7 @@ if __name__ == '__main__':
       '--tpu',
       type=str,
       required=True,
-      help='Name of the TPU pod, or list of single Cloud TPU devices (v*-8).')
+      help='Name of the Cloud TPU pod.')
   cluster_group.add_argument(
       '--vm',
       action='append',
