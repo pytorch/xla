@@ -57,13 +57,14 @@ class HloMetadataSetter {
 
 xla::XlaOp LoweringContext::GetParameter(
     const std::shared_ptr<xla::ComputationClient::Data>& data) {
-  auto it = parameters_map_.find(data.get());
+  xla::ComputationClient::Data::OpaqueHandle handle = data->GetOpaqueHandle();
+  auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
     xla::XlaOp param =
         xla::Parameter(builder(), parameters_.size(), data->shape(),
                        absl::StrCat("param_", parameters_.size()));
     parameters_.push_back(data);
-    it = parameters_map_.emplace(data.get(), param).first;
+    it = parameters_map_.emplace(handle, param).first;
   }
   return it->second;
 }

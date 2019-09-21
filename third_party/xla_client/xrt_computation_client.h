@@ -64,6 +64,8 @@ class XrtComputationClient : public ComputationClient {
 
     int64 get_handle() const { return handle_ptr->handle; }
 
+    OpaqueHandle GetOpaqueHandle() override { return get_handle(); }
+
     void Assign(const Data& data) override;
 
     bool HasValue() const override { return handle_ptr != nullptr; }
