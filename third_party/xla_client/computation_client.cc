@@ -1,7 +1,6 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cstdlib>
 #include <fstream>
 #include <map>
@@ -263,11 +262,6 @@ int64 ComputationClient::GetDeviceOrdinal(const string& device) {
 ComputationClient* ComputationClient::Get() {
   static ComputationClient* computation_client = CreateClient();
   return computation_client;
-}
-
-int64 ComputationClient::GetNextDataId() {
-  static std::atomic<int64>* id_generator = new std::atomic<int64>(1);
-  return id_generator->fetch_add(1);
 }
 
 metrics::Metric* ComputationClient::TransferToServerMetric() {

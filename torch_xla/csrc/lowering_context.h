@@ -70,7 +70,8 @@ class LoweringContext {
 
   xla::XlaBuilder builder_;
   std::vector<xla::ComputationClient::DataPtr> parameters_;
-  std::unordered_map<xla::ComputationClient::Data*, xla::XlaOp> parameters_map_;
+  std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, xla::XlaOp>
+      parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
   Util::EmissionMap emit_status_;

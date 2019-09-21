@@ -1028,12 +1028,12 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
     unique_device.set((*tensors)[index].GetDevice());
   }
   std::vector<xla::ComputationClient::DataPtr> parameters_data;
-  std::unordered_set<xla::int64> data_uids;
+  std::unordered_set<xla::ComputationClient::Data::OpaqueHandle> data_handles;
   for (auto node : ir::Util::ComputePostOrder(roots)) {
     const ir::ops::DeviceData* device_data =
         dynamic_cast<const ir::ops::DeviceData*>(node);
     if (device_data != nullptr) {
-      if (data_uids.insert(device_data->data()->unique_id()).second) {
+      if (data_handles.insert(device_data->data()->GetOpaqueHandle()).second) {
         parameters_data.push_back(device_data->data());
       }
     }
@@ -1249,6 +1249,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
           xla::ComputationClient::Get()->Compile(std::move(instances));
   std::vector<xla::ComputationClient::DataPtr> parameters_data =
       lowering_ctx.GetParametersData();
+  XLA_CHECK_EQ(program_shape.parameters_size(), parameters_data.size());
   ComputationCache::TypePtr cached_computation = GetComputationCache()->Add(
       coll.hash, std::make_shared<CachedComputation>(
                      std::move(computations.front()), parameters_data.size()));
