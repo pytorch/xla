@@ -904,6 +904,7 @@ class XLATensor {
     std::vector<size_t> indices;
     size_t hash = 0;
     std::vector<xla::util::ExceptionCleanup> unlocker;
+    std::string device;
   };
 
   struct CachedComputation {

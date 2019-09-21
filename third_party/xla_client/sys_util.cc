@@ -17,6 +17,11 @@ int64 GetEnvInt(const char* name, int64 defval) {
   return env != nullptr ? std::atol(env) : defval;
 }
 
+double GetEnvDouble(const char* name, double defval) {
+  const char* env = std::getenv(name);
+  return env != nullptr ? std::atof(env) : defval;
+}
+
 bool GetEnvBool(const char* name, bool defval) {
   const char* env = std::getenv(name);
   if (env == nullptr) {

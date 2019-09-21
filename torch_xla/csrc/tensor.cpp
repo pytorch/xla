@@ -988,11 +988,12 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
     }
   }
   if (unique_device) {
+    coll.device = unique_device->ToString();
     // Mix the hash with the resource domain hashes as compile handles are only
     // valid within a domain (usually a single host).
     coll.hash = xla::util::MHash(
-        coll.hash, xla::ComputationClient::Get()->GetResourceDomain(
-                       unique_device->ToString()));
+        coll.hash,
+        xla::ComputationClient::Get()->GetResourceDomain(coll.device));
   }
   if (!at_tensors.empty()) {
     XLA_COUNTER("SyncTensorsToData", at_tensors.size());
@@ -1212,6 +1213,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     tensorflow::gtl::ArraySlice<const std::string> devices,
     const SyncTensorsConfig& config) {
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
+  TF_VLOG(4) << "Syncing graph hash " << coll.hash << " on device '"
+             << coll.device << "'";
   if (coll.indices.empty()) {
     return nullptr;
   }
