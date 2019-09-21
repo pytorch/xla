@@ -3012,7 +3012,7 @@ TEST_F(AtenXlaTensorTest, TestOneIndex) {
   }
 }
 
-TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
+TEST_F(AtenXlaTensorTest, DISABLED_TestOneIndexTransfer) {
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
         torch::kLong}) {
@@ -3244,7 +3244,7 @@ TEST_F(AtenXlaTensorTest, TestOneIndexPutInPlace) {
   }
 }
 
-TEST_F(AtenXlaTensorTest, TestOneIndexPutTransfer) {
+TEST_F(AtenXlaTensorTest, DISABLED_TestOneIndexPutTransfer) {
   torch::Tensor indices =
       torch::randint(-3, 3, {2, 4, 3}, torch::TensorOptions(torch::kLong));
   for (torch::ScalarType scalar_type :
