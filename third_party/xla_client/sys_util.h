@@ -10,6 +10,8 @@ string GetEnvString(const char* name, const string& defval);
 
 int64 GetEnvInt(const char* name, int64 defval);
 
+double GetEnvDouble(const char* name, double defval);
+
 bool GetEnvBool(const char* name, bool defval);
 
 // Retrieves the current EPOCH time in nanoseconds.
