@@ -1,6 +1,7 @@
 #include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 
 #include <cstdlib>
+#include <fstream>
 #include <functional>
 #include <list>
 #include <sstream>
@@ -162,6 +163,23 @@ tensorflow::DeviceNameUtils::ParsedName ParseFullXrtDevice(
       parsed_device.has_type)
       << device;
   return parsed_device;
+}
+
+void MaybeSaveLongCompileHlo(double compile_time,
+                             const XlaComputation& computation) {
+  static double compile_time_threshold = sys_util::GetEnvDouble(
+      "XLA_COMPILE_TIME_THRESHOLD", std::numeric_limits<double>::max());
+  static const std::string* hlo_folder = new std::string(
+      sys_util::GetEnvString("XLA_SLOW_COMPILE_HLO_FOLDER", ""));
+  if (compile_time > compile_time_threshold && !hlo_folder->empty()) {
+    static std::atomic<size_t> hlo_count(0);
+    std::stringstream ss;
+    ss << *hlo_folder << "/hlo_module-" << hlo_count.fetch_add(1) << "-"
+       << static_cast<int64>(compile_time) << "s.txt";
+    string hlo_text = ConsumeValue(util::GetComputationHloText(computation));
+    std::ofstream graph_file(ss.str());
+    graph_file << hlo_text << "\n";
+  }
 }
 
 }  // namespace
@@ -382,9 +400,11 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
           instances, session_work);
       XLA_CHECK_EQ(outputs.size(), session_work.outputs_handles.size());
 
+      double compile_time = timed.Elapsed();
       size_t output_index = 0;
       for (auto li : session_work.index_mapping) {
         CompileInstance* instance = &instances[li];
+        MaybeSaveLongCompileHlo(compile_time, instance->computation);
         results[li] = std::make_shared<XrtComputation>(
             this, std::move(instance->computation), program_shapes[li],
             std::move(instance->devices),
