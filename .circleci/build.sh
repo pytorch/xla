@@ -33,10 +33,6 @@ pip install ninja
 # Install the Lark parser required for the XLA->ATEN Type code generation.
 pip install lark-parser
 
-# For distributed
-pip install google-api-python-client
-pip install oauth2client
-
 # Install Pytorch without MKLDNN
 xla/scripts/apply_patches.sh
 python setup.py build develop
