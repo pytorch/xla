@@ -7,7 +7,7 @@ PyTorch/XLA adds a new device, similarly to CPU and GPU devices. The following s
 ```python
 import torch
 import torch_xla
-import torch_xla_py.xla_model as xm
+import torch_xla.core.xla_model as xm
 
 x = torch.randn(4, 2, device=xm.xla_device())
 print(x.device)
@@ -29,7 +29,7 @@ There are different ways to run a model using the PyTorch/XLA framework.
 The simplest (but not good performing) one is to just run on one core and send the input tensors to the XLA devices manually:
 
 ```python
-import torch_xla_py.xla_model as xm
+import torch_xla.core.xla_model as xm
 
 device = xm.xla_device()
 model = MNIST()
@@ -73,13 +73,13 @@ iterators, so there are no explicit `barrier=True` in the examples below.
 Code for multiprocessing looks like:
 
 ```python
-import torch_xla_py.xla_model as xm
-import torch_xla_py.xla_multiprocessing as xmp
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.xla_multiprocessing as xmp
 
 def _mp_fn(index):
   device = xm.xla_device()
   para_loader = dp.ParallelLoader(train_loader, [device])
-  
+
   model = MNIST()
   loss_fn = nn.NLLLoss()
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
@@ -91,7 +91,7 @@ def _mp_fn(index):
     loss = loss_fn(output, target)
     loss.backward()
     xm.optimizer_step(optimizer)
-  
+
 if __name__ == '__main__':
   xmp.spawn(_mp_fn, args=())
 ```
@@ -103,11 +103,11 @@ Check the [full example](https://github.com/pytorch/xla/blob/master/test/test_tr
 
 #### MultiCore - MultiThreading
 
-To run a model using the Python threading support (embedded within the `torch_xla_py.data_parallel.DataParallel` interface), use the following API:
+To run a model using the Python threading support (embedded within the `torch_xla.distributed.data_parallel.DataParallel` interface), use the following API:
 
 ```python
-import torch_xla_py.xla_model as xm
-import torch_xla_py.data_parallel as dp
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.data_parallel as dp
 
 devices = xm.get_xla_supported_devices()
 model_parallel = dp.DataParallel(MNIST, device_ids=devices)
@@ -130,7 +130,7 @@ for epoch in range(1, num_epochs + 1):
 
 The same multi-core API can be used to run on a single core as well by setting the device_ids argument to the selected core. Passing `[]` as `device_ids` causes the model to run using the PyTorch native CPU support.
 
-Check the [full example](https://github.com/pytorch/xla/blob/master/test/test_train_mnist.py) showing how to train MNIST on TPU using `torch_xla_py.data_parallel.DataParallel` (Python threading).
+Check the [full example](https://github.com/pytorch/xla/blob/master/test/test_train_mnist.py) showing how to train MNIST on TPU using `torch_xla.distributed.data_parallel.DataParallel` (Python threading).
 
 ## Performance caveats
 
@@ -156,7 +156,7 @@ PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors, implement
 
 1. In order to avoid recompilations, not only shapes must be constant, but also computations accross XLA devices in all hosts. A special case of this is loops with a different number of iterations between steps. PyTorch/XLA automatically handles them, but they are seen as different execution graphs and require recompilations.
 
-1. Iterators in `torch_xla_py.data_parallel` may drop the
+1. Iterators in `torch_xla.distributed.data_parallel` may drop the
 last few batches in the input iterator, in order to do the same amount of work
 on all XLA devices. In the extreme case where dataset is small, and there are
 too few steps, this may result in a no-op epoch. Therefore, it is better to use

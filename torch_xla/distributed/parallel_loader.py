@@ -5,8 +5,8 @@ import multiprocessing.dummy
 import threading
 import torch
 import torch_xla
-import torch_xla_py.utils as xu
-import torch_xla_py.keyd_queue as kq
+import torch_xla.utils.utils as xu
+import torch_xla.utils.keyd_queue as kq
 
 
 class ParallelLoader(object):
