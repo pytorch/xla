@@ -11,10 +11,10 @@ import time
 import torch
 import torch.nn as nn
 import torch_xla
-import torch_xla_py.xla_env_vars as xenv
-import torch_xla_py.metrics_saver as ms
-import torch_xla_py.utils as xu
-import torch_xla_py.keyd_queue as kq
+import torch_xla.core.xla_env_vars as xenv
+import torch_xla.debug.metrics_saver as ms
+import torch_xla.utils.utils as xu
+import torch_xla.utils.keyd_queue as kq
 
 _TLS = threading.local()
 
