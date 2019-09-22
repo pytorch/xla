@@ -6,8 +6,8 @@ import argparse
 import threading
 import torch
 import torch_xla
-import torch_xla_py.utils as xu
-import torch_xla_py.xla_model as xm
+import torch_xla.utils.utils as xu
+import torch_xla.core.xla_model as xm
 
 
 def run_benchmark(args, pos_args):

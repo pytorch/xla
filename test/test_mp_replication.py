@@ -1,8 +1,8 @@
 import sys
 import torch
 import torch_xla
-import torch_xla_py.xla_model as xm
-import torch_xla_py.xla_multiprocessing as xmp
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 def _mp_fn(index):

@@ -7,8 +7,8 @@ import socket
 import sys
 import torch.multiprocessing
 import torch_xla
-import torch_xla_py.xla_env_vars as xenv
-import torch_xla_py.xla_model as xm
+import torch_xla.core.xla_env_vars as xenv
+import torch_xla.core.xla_model as xm
 import traceback
 
 
