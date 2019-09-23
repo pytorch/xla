@@ -22,6 +22,7 @@
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/version.h"
 
 namespace torch_xla {
 namespace {
@@ -219,6 +220,7 @@ py::object GetMetricData(const std::string& name) {
 void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
+  m.def("_xla_git_rev", []() { return GITREV; });
   m.def("_get_xla_tensor", [](const at::Tensor& tensor) -> XLATensor {
     return bridge::GetXlaTensor(tensor);
   });
