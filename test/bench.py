@@ -17,11 +17,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch_xla
-import torch_xla_py.data_parallel as dp
-import torch_xla_py.model_comparator as mc
-import torch_xla_py.parallel_loader as pl
-import torch_xla_py.utils as xu
-import torch_xla_py.xla_model as xm
+import torch_xla.distributed.data_parallel as dp
+import torch_xla.debug.model_comparator as mc
+import torch_xla.distributed.parallel_loader as pl
+import torch_xla.utils.utils as xu
+import torch_xla.core.xla_model as xm
 
 
 class BaseBench(object):
@@ -46,7 +46,8 @@ class BaseBench(object):
       for v in results:
         v.cpu()
     else:
-      torch_xla._XLAC._xla_sync_multi(results)
+      devices = [str(t.device) for t in results]
+      torch_xla._XLAC._xla_sync_multi(results, devices)
 
   def run(self):
     bench_name = self._get_parent_class().__name__

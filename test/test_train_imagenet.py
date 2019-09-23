@@ -1,4 +1,4 @@
-import test_utils
+import args_parse
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -16,9 +16,18 @@ MODEL_OPTS = {
         'default': 64,
         'type': int,
     },
+    '--lr_scheduler_type': {
+        'type': str,
+    },
+    '--lr_scheduler_divide_every_n_epochs': {
+        'type': int,
+    },
+    '--lr_scheduler_divisor': {
+        'type': int,
+    },
 }
 
-FLAGS = test_utils.parse_common_options(
+FLAGS = args_parse.parse_common_options(
     datadir='/tmp/imagenet',
     batch_size=None,
     num_epochs=None,
@@ -30,7 +39,9 @@ FLAGS = test_utils.parse_common_options(
 
 from common_utils import TestCase, run_tests
 import os
+import schedulers
 from statistics import mean
+import test_utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -39,9 +50,9 @@ from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
-import torch_xla_py.data_parallel as dp
-import torch_xla_py.utils as xu
-import torch_xla_py.xla_model as xm
+import torch_xla.distributed.data_parallel as dp
+import torch_xla.utils.utils as xu
+import torch_xla.core.xla_model as xm
 import unittest
 
 DEFAULT_KWARGS = dict(
@@ -52,7 +63,15 @@ DEFAULT_KWARGS = dict(
     lr=0.1,
     target_accuracy=0.0,
 )
-MODEL_SPECIFIC_DEFAULTS = {}
+MODEL_SPECIFIC_DEFAULTS = {
+    'resnet50':
+        dict(
+            {
+                'lr_scheduler_divide_every_n_epochs': 20,
+                'lr_scheduler_divisor': 5,
+                'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
+            }, **DEFAULT_KWARGS)
+}
 
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
@@ -79,10 +98,12 @@ def train_imagenet():
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
+    train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=1200000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size //
+        xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
@@ -98,6 +119,7 @@ def train_imagenet():
             transforms.ToTensor(),
             normalize,
         ]))
+    train_dataset_len = len(train_dataset.imgs)
     resize_dim = max(img_dim, 256)
     test_dataset = torchvision.datasets.ImageFolder(
         os.path.join(FLAGS.datadir, 'val'),
@@ -115,11 +137,15 @@ def train_imagenet():
     test_sampler = None
     if xm.xrt_world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
-          train_dataset, num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(), shuffle=True)
+          train_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=True)
       test_sampler = torch.utils.data.distributed.DistributedSampler(
-          test_dataset, num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(), shuffle=False)
+          test_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
@@ -150,6 +176,15 @@ def train_imagenet():
             lr=FLAGS.lr,
             momentum=FLAGS.momentum,
             weight_decay=5e-4))
+    lr_scheduler = context.getattr_or(
+        'lr_scheduler', lambda: schedulers.wrap_optimizer_with_scheduler(
+            optimizer,
+            scheduler_type=getattr(FLAGS, 'lr_scheduler_type', None),
+            scheduler_divisor=getattr(FLAGS, 'lr_scheduler_divisor', None),
+            scheduler_divide_every_n_epochs=getattr(
+                FLAGS, 'lr_scheduler_divide_every_n_epochs', None),
+            num_steps_per_epoch=num_training_steps_per_epoch,
+            summary_writer=writer if xm.is_master_ordinal() else None))
     tracker = xm.RateTracker()
     model.train()
     for x, (data, target) in loader:
@@ -160,9 +195,10 @@ def train_imagenet():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        test_utils.print_training_update(device, x, loss.item(),
-                                         tracker.rate(),
+        test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
                                          tracker.global_rate())
+      if lr_scheduler:
+        lr_scheduler.step()
 
   def test_loop_fn(model, loader, device, context):
     total_samples = 0
@@ -180,12 +216,18 @@ def train_imagenet():
 
   accuracy = 0.0
   writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  num_devices = len(
+      xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
+  num_training_steps_per_epoch = train_dataset_len // (
+      FLAGS.batch_size * num_devices)
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = mean(accuracies)
-    print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
-    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
+    print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
+    global_step = (epoch - 1) * num_training_steps_per_epoch
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
+                                     global_step)
     if FLAGS.metrics_debug:
       print(torch_xla._XLAC._xla_metrics_report())
 

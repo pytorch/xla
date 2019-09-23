@@ -35,7 +35,7 @@ pip install lark-parser
 
 # Install Pytorch without MKLDNN
 xla/scripts/apply_patches.sh
-USE_MKLDNN=0 python setup.py build develop
+python setup.py build develop
 sccache --show-stats
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642

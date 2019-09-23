@@ -23,6 +23,10 @@ class Diagonal : public Node {
 
   xla::int64 dim2() const { return dim2_; }
 
+  static xla::Shape MakeDiagonalShape(const xla::Shape& shape,
+                                      xla::int64 offset, xla::int64 dim1,
+                                      xla::int64 dim2);
+
  private:
   xla::int64 offset_;
   xla::int64 dim1_;

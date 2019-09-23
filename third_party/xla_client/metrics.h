@@ -34,16 +34,17 @@ class MetricData {
   MetricData(MetricReprFn repr_fn, size_t max_samples);
 
   // Returns the total values of all the samples being posted to this metric.
-  double Counter() const;
+  double Accumulator() const;
 
   size_t TotalSamples() const;
 
   void AddSample(int64 timestamp_ns, double value);
 
   // Returns a vector with all the current samples, from the oldest to the
-  // newer. If counter is not nullptr, it will receive the current value of the
-  // metrics' counter.
-  std::vector<Sample> Samples(double* counter) const;
+  // newer. If accumulator is not nullptr, it will receive the current value of
+  // the metrics' accumulator (the sum of all posted values). If total_samples
+  // is not nullptr, it will receive the count of the posted values.
+  std::vector<Sample> Samples(double* accumulator, size_t* total_samples) const;
 
   string Repr(double value) const { return repr_fn_(value); }
 
@@ -52,7 +53,7 @@ class MetricData {
   MetricReprFn repr_fn_;
   size_t count_ = 0;
   std::vector<Sample> samples_;
-  double counter_ = 0.0;
+  double accumulator_ = 0.0;
 };
 
 // Counters are a very lightweight form of metrics which do not need to track
@@ -93,13 +94,13 @@ class Metric {
 
   const string& Name() const { return name_; }
 
-  double Counter() const;
+  double Accumulator() const;
 
   void AddSample(int64 timestamp_ns, double value);
 
   void AddSample(double value);
 
-  std::vector<Sample> Samples(double* counter) const;
+  std::vector<Sample> Samples(double* accumulator, size_t* total_samples) const;
 
   string Repr(double value) const;
 
@@ -152,9 +153,19 @@ class Counter {
 // Creates a report with the current metrics statistics.
 string CreateMetricReport();
 
+// Returns the currently registered metric names. Note that the list can grow
+// since metrics are usualy function intialized (they are static function
+// variables).
+std::vector<string> GetMetricNames();
+
 // Retrieves the metric data of a given metric, or nullptr if such metric does
 // not exist.
 MetricData* GetMetric(const string& name);
+
+// Returns the currently registered counter names. Note that the list can grow
+// since counters are usualy function intialized (they are static function
+// variables).
+std::vector<string> GetCounterNames();
 
 // Retrieves the counter data of a given counter, or nullptr if such counter
 // does not exist.
@@ -170,6 +181,10 @@ class TimedSection {
   ~TimedSection() {
     int64 now = sys_util::NowNs();
     metric_->AddSample(now, now - start_);
+  }
+
+  double Elapsed() const {
+    return 1e-9 * static_cast<double>(sys_util::NowNs() - start_);
   }
 
  private:

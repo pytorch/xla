@@ -58,6 +58,10 @@ class XLATensor {
   const Device& GetDevice() const;
   xla::int64 GetUniqueId() const;
 
+  // Retrieves an opaque ID of the alias object upon which the tensor's view is
+  // rooted, or 0 if this tensor is not a view.
+  std::ptrdiff_t GetViewAliasId() const;
+
   // Fetches the XLA data behind the tensor. If the tensor has a graph defining
   // its current value, executes the graph and fetches the XLA data result.
   xla::ComputationClient::DataPtr GetXlaData();
@@ -900,6 +904,7 @@ class XLATensor {
     std::vector<size_t> indices;
     size_t hash = 0;
     std::vector<xla::util::ExceptionCleanup> unlocker;
+    std::string device;
   };
 
   struct CachedComputation {

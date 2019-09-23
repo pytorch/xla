@@ -1,6 +1,6 @@
 # How to Run PyTorch with TPUs
 
-First, create your [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: `pytorch-0.1`): 
+First, create your [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: `pytorch-0.1`):
 
 Once you've created a Cloud TPU node, you can train your PyTorch models by either:
 
@@ -117,20 +117,20 @@ Training on pods can be broken down to largely 3 different steps:
 * To distribute training as a conda environment process:
 ```
 (pytorch-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-(pytorch-nightly)$ python torch_xla_py/xla_dist.py --tpu=$TPU_POD_NAME --conda-env=pytorch-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+(pytorch-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --conda-env=pytorch-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
 ```
 
 * Or, to distribute training as a docker container:
 ```
 (pytorch-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-(pytorch-nightly)$ python torch_xla_py/xla_dist.py --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:nightly --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+(pytorch-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:nightly --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
 ```
 
 ## List of VMs
-If you up to not use an [instance group](#create-your-instance-group), you can decide to use a list of VM instances that you may have already created (or can create individually). Make sure that you create all the VM instances in the same zone as the TPU node, and also make sure that the VMs have the same configuration (datasets, VM size, disk size, etc.). Then you can [start distributed training](#start-distributed-training) after creating your TPU pod. The difference is in the `python torch_xla_py/xla_dist.py` command. For example, to use a list of VMs run the following command (ex. conda with v3-32):
+If you up to not use an [instance group](#create-your-instance-group), you can decide to use a list of VM instances that you may have already created (or can create individually). Make sure that you create all the VM instances in the same zone as the TPU node, and also make sure that the VMs have the same configuration (datasets, VM size, disk size, etc.). Then you can [start distributed training](#start-distributed-training) after creating your TPU pod. The difference is in the `python -m torch_xla.distributed.xla_dist` command. For example, to use a list of VMs run the following command (ex. conda with v3-32):
 ```
 (pytorch-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-(pytorch-nightly)$ python torch_xla_py/xla_dist.py --tpu=$TPU_POD_NAME --vm $VM1 --vm $VM2 --vm $VM3 --vm $VM4 --conda-env=pytorch-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+(pytorch-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --vm $VM1 --vm $VM2 --vm $VM3 --vm $VM4 --conda-env=pytorch-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
 ```
 
 To learn more about TPU Pods check out this [blog
@@ -325,7 +325,7 @@ only be enabled for debugging.
 
 * ```XLA_SAVE_TENSORS_FMT```: The format of the graphs stored within the _XLA_SAVE_TENSORS_FILE_
   file. Can be ```text``` (the default), ```dot``` (the _Graphviz_ format) or ```hlo```.
-  
+
 * ```XLA_METRICS_FILE```: If set, the path to a local file where the internal metrics will be
   saved at every step. Metrics will be appended to the file, if already existing.
 
@@ -340,7 +340,7 @@ only be enabled for debugging.
 * ```SYNC_TENSORS_OPBYOP```: The same as _GET_TENSORS_OPBYOP_ but for "sync tensors" operation
   (the operation used at the end of a step, to flush pending IR computations and materialize
   them into _TPU_ device data).
-  
+
 * ```XLA_SYNC_WAIT```: Forces the XLA tensor sync operation to wait for its completion, before
   moving to the next step.
 
@@ -352,4 +352,15 @@ only be enabled for debugging.
   expensive, so setting this flag might help. It should be verified by the user that truncating
   to 32bit values is a valid operation according to the use of _PyTorch_ _Long_ values in it.
 
+## Communication
 
+We use github issues to communicate with users and open source contributors. Please file an issue for questions, bug reports, feature requests, install issues, RFCs, thoughts, etc.
+
+## Contributing
+
+We appreciate all contributions. If you are planning to contribute bug fix for an open issue, please comment on the thread and we're happy to provide any guidance. You are very welcome to pick issues from `good first issue` and `help wanted` labels.
+
+If you plan to contribute new features, utility functions or extensions to the core, please first open an issue and discuss the feature with us.
+Sending a PR without discussion might end up resulting in a rejected PR, because we might be taking the core in a different direction than you might be aware of.
+
+Please refer to [contribution guide](CONTRIBUTING.md) for detailed guidelines to submit PRs.

@@ -30,11 +30,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
-import torch_xla_py.data_parallel as dp
-import torch_xla_py.model_comparator as mc
-import torch_xla_py.parallel_loader as pl
-import torch_xla_py.utils as xu
-import torch_xla_py.xla_model as xm
+import torch_xla.distributed.data_parallel as dp
+import torch_xla.debug.model_comparator as mc
+import torch_xla.distributed.parallel_loader as pl
+import torch_xla.utils.utils as xu
+import torch_xla.core.xla_model as xm
 import torchvision
 import unittest
 
@@ -827,6 +827,33 @@ class TestAtenXlaTensor(XlaTestCase):
         [torch.randn(0, 1, 2, 0),
          torch.tensor([], dtype=torch.long)], test_fn)
 
+  def test_diagonal_write(self):
+
+    def test_fn(t):
+      d = torch.diagonal(t, offset=1)
+      d[1] += 0.904
+      return t
+
+    self.runAtenTest([torch.randn(5, 8)], test_fn)
+
+  def test_diagonal_write_transposed(self):
+
+    def test_fn(t):
+      d = torch.diagonal(t, offset=-1, dim1=1, dim2=0)
+      d[1] += 0.904
+      return t
+
+    self.runAtenTest([torch.randn(5, 8)], test_fn)
+
+  def test_diagonal_write_transposed_r3(self):
+
+    def test_fn(t):
+      d = torch.diagonal(t, offset=1, dim1=2, dim2=0)
+      d[1] += 0.904
+      return t
+
+    self.runAtenTest([torch.randn(5, 8, 7)], test_fn)
+
   def test_writeable_tensors_updates(self):
 
     def test_fn(s, i):
@@ -836,6 +863,22 @@ class TestAtenXlaTensor(XlaTestCase):
     self.runAtenTest(
         [torch.randn(3, 4),
          torch.tensor([2, 1], dtype=torch.long)], test_fn)
+
+  def test_save_view_alias_check(self):
+
+    class Nested(object):
+
+      def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    a = torch.rand(16, device=xm.xla_device())
+    b = a[:10]
+    c = a[6:]
+    self.assertRaises(RuntimeError, lambda: xm.check_view_sharing([b, c]))
+
+    nested = Nested(b, c)
+    self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
 
   def test_save(self):
     xla_device = xm.xla_device()
