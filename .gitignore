@@ -3,6 +3,7 @@ dist/
 *.egg-info/
 torch_xla/lib/
 torch_xla/version.py
+torch_xla/csrc/version.cpp
 */**/__pycache__
 *.swp
 *.pyc
