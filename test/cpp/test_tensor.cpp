@@ -497,7 +497,7 @@ TEST_F(TensorTest, TestConv2D) {
                         /*output_padding=*/{output_padding, output_padding},
                         /*groups=*/groups);
                   }
-                  AllClose(output, dev_output);
+                  AllClose(output, dev_output, /*rtol=*/5e-3, /*atol=*/1e-3);
                 });
               };
             }
@@ -567,7 +567,7 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
                         /*output_padding=*/{output_padding, output_padding + 1},
                         /*groups=*/groups);
                   }
-                  AllClose(output, dev_output);
+                  AllClose(output, dev_output, /*rtol=*/5e-3, /*atol=*/1e-3);
                 });
               }
             }
@@ -638,7 +638,7 @@ TEST_F(TensorTest, TestConv3D) {
                         {output_padding, output_padding, output_padding},
                         /*groups=*/groups);
                   }
-                  AllClose(output, dev_output);
+                  AllClose(output, dev_output, /*rtol=*/5e-3, /*atol=*/1e-3);
                 });
               };
             }
@@ -709,7 +709,7 @@ TEST_F(TensorTest, TestConv3DNonSquare) {
                         {output_padding, output_padding + 1, output_padding},
                         /*groups=*/groups);
                   }
-                  AllClose(output, dev_output);
+                  AllClose(output, dev_output, /*rtol=*/5e-3, /*atol=*/1e-3);
                 });
               };
             }
