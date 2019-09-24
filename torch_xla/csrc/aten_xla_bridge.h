@@ -23,10 +23,6 @@ XLATensor GetXlaTensor(const at::Tensor& tensor);
 std::vector<XLATensor> GetXlaTensors(
     tensorflow::gtl::ArraySlice<const at::Tensor> tensors);
 
-// Like GetXlaTensor(), but if tensor is a variable, unwraps it and access the
-// underline tensor.
-XLATensor GetXlaTensorUnwrap(const at::Tensor& tensor);
-
 // If tensor is an XLA tensor type, returns the XLATensor embedded within it,
 // otherwise creates a new XLA tensor type with tensor as data.
 XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device);
