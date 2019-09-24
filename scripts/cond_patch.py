@@ -45,7 +45,8 @@ def patch_repo(args):
       args.log_depth)
   for ppath in patches:
     print('Applying patch file: {}'.format(ppath), file=sys.stderr)
-    apply_patch(ppath, os.path.normpath(args.repo_folder), args.level)
+    if apply_patch(ppath, os.path.normpath(args.repo_folder), args.level):
+      raise RuntimeError('Failed to apply patch: {}'.format(ppath))
 
 
 if __name__ == '__main__':

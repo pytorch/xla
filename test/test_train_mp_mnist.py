@@ -19,10 +19,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 import torch_xla
-import torch_xla_py.data_parallel as dp
-import torch_xla_py.utils as xu
-import torch_xla_py.xla_model as xm
-import torch_xla_py.xla_multiprocessing as xmp
+import torch_xla.distributed.data_parallel as dp
+import torch_xla.utils.utils as xu
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 class MNIST(nn.Module):

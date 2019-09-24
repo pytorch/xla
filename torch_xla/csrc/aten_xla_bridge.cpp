@@ -74,10 +74,6 @@ std::vector<XLATensor> GetXlaTensors(
   return xla_tensors;
 }
 
-XLATensor GetXlaTensorUnwrap(const at::Tensor& tensor) {
-  return GetXlaTensor(tensor);
-}
-
 XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device) {
   if (!tensor.defined()) {
     return XLATensor();
@@ -95,11 +91,12 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors) {
   for (size_t i = 0; i < tensors.size(); ++i) {
     const at::Tensor& tensor = tensors[i];
     if (tensor.defined()) {
-      if (tensor.device().is_cpu()) {
-        aten_xla_tensors[i] = tensor;
-      } else {
+      auto xtensor = TryGetXlaTensor(tensor);
+      if (xtensor) {
         to_translate[i] = true;
-        xla_tensors.push_back(GetXlaTensorUnwrap(tensor));
+        xla_tensors.push_back(*xtensor);
+      } else {
+        aten_xla_tensors[i] = tensor;
       }
     }
   }
@@ -119,11 +116,11 @@ void XlaUpdateTensors(
     tensorflow::gtl::ArraySlice<const at::Tensor> source_cpu_tensors,
     tensorflow::gtl::ArraySlice<const size_t> indices) {
   for (auto index : indices) {
-    if (dest_xla_tensors.at(index).device().is_cpu()) {
-      dest_xla_tensors.at(index).copy_(source_cpu_tensors.at(index));
+    auto xtensor = TryGetXlaTensor(dest_xla_tensors.at(index));
+    if (xtensor) {
+      xtensor->UpdateFromTensor(source_cpu_tensors.at(index));
     } else {
-      XLATensor xtensor = GetXlaTensorUnwrap(dest_xla_tensors.at(index));
-      xtensor.UpdateFromTensor(source_cpu_tensors.at(index));
+      dest_xla_tensors.at(index).copy_(source_cpu_tensors.at(index));
     }
   }
 }
@@ -195,8 +192,8 @@ at::Tensor XlaToAtenTensor(XLATensor xla_tensor,
   }
   at::Tensor tensor = xla_tensor.ToTensor();
   // We need to copy the tensor since it is cached within the XLATensor, and
-  // returning it directly might expose it to in place changes. Which there
-  // was COW option :)
+  // returning it directly might expose it to in place changes. Which there was
+  // COW option :)
   return tensor.to(tensor_options, /*non_blocking=*/false, /*copy=*/true);
 }
 

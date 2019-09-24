@@ -183,6 +183,10 @@ class TimedSection {
     metric_->AddSample(now, now - start_);
   }
 
+  double Elapsed() const {
+    return 1e-9 * static_cast<double>(sys_util::NowNs() - start_);
+  }
+
  private:
   Metric* metric_;
   int64 start_;

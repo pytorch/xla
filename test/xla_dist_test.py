@@ -8,10 +8,10 @@ from unittest import mock
 
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
-from xla_dist import Cluster
-from xla_dist import ClusterResolver
-from xla_dist import ClientWorker
-from xla_dist import ServiceWorker
+from torch_xla.distributed.xla_dist import Cluster
+from torch_xla.distributed.xla_dist import ClusterResolver
+from torch_xla.distributed.xla_dist import ClientWorker
+from torch_xla.distributed.xla_dist import ServiceWorker
 
 PROJECT_ZONE_PREFIX = ('https://www.googleapis.com/compute/v1/'
                        'projects/fake-project/zones/fake-zone')
