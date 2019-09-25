@@ -2068,6 +2068,10 @@ at::Tensor& AtenXlaType::ne_(at::Tensor& self, const at::Tensor& other) {
 }
 
 at::Tensor AtenXlaType::neg(const at::Tensor& self) {
+  XLA_CHECK(self.scalar_type() != at::kBool)
+      << "Negation, the `-` operator, on a bool tensor is not supported. If "
+         "you are trying to invert a mask, use the `~` or `logical_not()` "
+         "operator instead.";
   return bridge::AtenFromXlaTensor(XLATensor::neg(bridge::GetXlaTensor(self)));
 }
 

@@ -30,6 +30,7 @@ allowed_torch_tests = {
     'test_remainder_overflow',
     'test_rpow',
     'test_lerp',
+    'test_neg',
     'test_nuclear_norm_exceptions',
     'test_geqrf',
     'test_triangular_solve',
