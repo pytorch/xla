@@ -352,6 +352,30 @@ only be enabled for debugging.
   expensive, so setting this flag might help. It should be verified by the user that truncating
   to 32bit values is a valid operation according to the use of _PyTorch_ _Long_ values in it.
 
+## Retrieving Stack Traces
+
+In the event that the _PyTorch_ process is hanging, it might be useful to include the stack
+traces together with the _Github_ issue.
+
+First thing is to find out which PID the _PyTorch_ process is associated with. Using the ```ps```
+command it is possible to find that information. It will be a _python_ process running your
+main _python_ file.
+
+In order to allow _GDB_ to attach a user process the following command should be run as root:
+
+```Shell
+echo 0 > /proc/sys/kernel/yama/ptrace_scope
+```
+
+The above command remains active until the machine is rebooted.
+
+The, given the PID, it is possible to grab the stack traces with the following command:
+
+```Shell
+./scripts/dump_stacks.py PID > /tmp/stack-traces.log
+```
+
+
 ## Communication
 
 We use github issues to communicate with users and open source contributors. Please file an issue for questions, bug reports, feature requests, install issues, RFCs, thoughts, etc.
