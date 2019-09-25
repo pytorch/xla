@@ -1250,9 +1250,10 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   std::vector<xla::ComputationClient::DataPtr> parameters_data =
       lowering_ctx.GetParametersData();
   XLA_CHECK_EQ(program_shape.parameters_size(), parameters_data.size());
-  ComputationCache::TypePtr cached_computation = GetComputationCache()->Add(
-      coll.hash, std::make_shared<CachedComputation>(
-                     std::move(computations.front()), parameters_data.size()));
+
+  auto cached_computation = std::make_shared<CachedComputation>(
+      std::move(computations.front()), parameters_data.size());
+  GetComputationCache()->Add(coll.hash, cached_computation);
 
   return ScheduleSyncTensorsGraph(
       tensors, config, &coll, std::move(parameters_data),
