@@ -140,42 +140,9 @@ post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalabl
 
 ---
 
-# How To Build And Run PyTorch For TPU
+# Build Manually
 
-To build from source:
-
-* Clone the _PyTorch_ repo as per [instructions](https://github.com/pytorch/pytorch#from-source).
-
-  ```Shell
-  git clone --recursive https://github.com/pytorch/pytorch
-  cd pytorch/
-  ```
-
-* Clone the _PyTorch/XLA_ repo:
-
-  ```Shell
-  git clone --recursive https://github.com/pytorch/xla.git
-  ```
-
-## Building docker image
-
-* We provide a Dockerfile in `docker/` that you can use to build images as the
-  following:
-
-  ```Shell
-  docker build -t torch-xla -f docker/Dockerfile .
-  ```
-
-## Building with script
-
-* To build and install `torch` and `torch_xla`:
-
-  ```Shell
-  xla/scripts/build_torch_wheels.sh
-  ```
-
-## Building Manually
-
+Please note that we have nightly releases available so users usually don't have to build manually. This is mainly for OSS contributors.
 Please refer to [contribution guide](CONTRIBUTING.md) for instructions to build from source.
 
 ## Tests
