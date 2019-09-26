@@ -206,6 +206,14 @@ it is suggested for you to select the _Nightly_ builds when you create a Cloud T
 
 Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is working.
 
+## Best Practice
+
+Please check out the [API Guideline](API_GUIDE.md) for the best practices to write models to run on TPU & TPU Pod devices.
+
+## Troubleshooting
+
+If you see bad performance when using Torch/XLA, please check out the [troubleshooting guide](TROUBLESHOOTING.md) for how to avoid common pitfalls and how to debug.
+
 ## Communication
 
 We use github issues to communicate with users and open source contributors. Please file an issue for questions, bug reports, feature requests, install issues, RFCs, thoughts, etc.
