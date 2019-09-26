@@ -1,4 +1,4 @@
-## C++ style guide
+## C++ Style Guide
 
 `pytorch/xla` uses `clang-format-7` with a customized style config.
 If your PR touches the C++ source files, please run the following command before submmiting a PR.
@@ -10,7 +10,7 @@ clang-format-7 -i -style /PATH/TO/foo.cpp
 find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
 ```
 
-## Python style guide
+## Python Style Guide
 
 `pytorch/xla` uses `yapf` with a customized style config.
 If your PR touches the Python source files, please run the following command before submmiting a PR.
@@ -19,7 +19,7 @@ If your PR touches the Python source files, please run the following command bef
 #TODO:
 ```
 
-## Build from source
+## Build From Source
 
 * Clone `pytorch/xla` into `pytorch/pytorch` in the following structure:
 

@@ -1,4 +1,4 @@
-# Performance caveats
+# Performance Caveats
 
 PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors share the full tensor interface with CPU & GPU tensors.
 However, constraints in XLA/hardware and the lazy evaluation model suggest certain patterns might result in bad performance:
@@ -66,7 +66,7 @@ Note that the infromation in this section is subject to be removed in future rel
 the _PyTorch/TPU_ software, since many of them are peculiar to a given internal implementation
 which might change.
 
-## Metrics report
+## Metrics Report
 
 The _PyTorch/TPU_ stack keeps a series of metrics and counters during its execution, and
 the following API returns a string representation of them:
@@ -119,7 +119,7 @@ Counter: aten::nonzero
 If you see `aten::` ops other than `nonzero` and `_local_scalar_dense`, that usually means a missing
 lowering in PyTorch/XLA, feel free to open a feature request for it on github issues.
 
-## Environment variables
+## Environment Variables
 
 There are also a number of environment variables which control the behavior of the _PyTorch/TPU_
 software stack.

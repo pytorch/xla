@@ -174,7 +174,7 @@ To build from source:
   xla/scripts/build_torch_wheels.sh
   ```
 
-## Building manually
+## Building Manually
 
 Please refer to [contribution guide](CONTRIBUTING.md) for instructions to build from source.
 
@@ -206,7 +206,7 @@ it is suggested for you to select the _Nightly_ builds when you create a Cloud T
 
 Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is working.
 
-## Best Practice
+## PyTorch/XLA API And Best Practice
 
 Please check out the [API Guideline](API_GUIDE.md) for the best practices to write models to run on TPU & TPU Pod devices.
 

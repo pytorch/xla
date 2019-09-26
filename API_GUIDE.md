@@ -1,6 +1,6 @@
-# PyTorch/XLA API and best practice
+# PyTorch/XLA API And Best Practice
 
-## XLA tensors
+## XLA Tensors
 
 PyTorch/XLA adds a new device, similarly to CPU and GPU devices. The following snippet creates an XLA tensor filled with random values, then prints the device and the contents of the tensor:
 
@@ -132,6 +132,6 @@ The same multi-core API can be used to run on a single core as well by setting t
 
 Check the [full example](https://github.com/pytorch/xla/blob/master/test/test_train_mnist.py) showing how to train MNIST on TPU using `torch_xla.distributed.data_parallel.DataParallel` (Python threading).
 
-## Performance and debugging
+## Performance And Debugging
 
 Model is still running slow after many iterations? Check out [troubleshooting guide](TROUBLESHOOTING.md) for tips about how to debug them!
