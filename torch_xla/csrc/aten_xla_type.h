@@ -284,7 +284,9 @@ class AtenXlaType {
 
   static at::Tensor& clamp_min_(at::Tensor& self, at::Scalar min);
 
-  static at::Tensor clone(const at::Tensor& self);
+  static at::Tensor clone(
+      const at::Tensor& self,
+      c10::optional<c10::MemoryFormat> optional_memory_format);
 
   static at::Tensor constant_pad_nd(const at::Tensor& self, at::IntArrayRef pad,
                                     at::Scalar value);
