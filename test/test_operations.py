@@ -974,6 +974,12 @@ class TestGeneric(XlaTestCase):
     self.assertEqual(b.dtype, torch.int8)
     self.assertEqual(b.sum().item(), 0)
 
+  def test_git_revisons(self):
+    revs = torch_xla._XLAC._get_git_revs()
+    self.assertTrue('xla' in revs)
+    self.assertTrue(revs['xla'])
+    self.assertTrue('torch' in revs)
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
