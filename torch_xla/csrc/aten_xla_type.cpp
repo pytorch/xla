@@ -2762,24 +2762,13 @@ at::Tensor AtenXlaType::threshold_backward(const at::Tensor& grad_output,
 at::Tensor AtenXlaType::to(const at::Tensor& self,
                            const at::TensorOptions& options,
                            bool /* non_blocking */, bool /* copy */) {
-  auto self_tensor = bridge::TryGetXlaTensor(self);
-  if (!self_tensor) {
-    XLA_CHECK(options.has_device());
-    at::ScalarType dtype = options.has_dtype()
-                               ? c10::typeMetaToScalarType(options.dtype())
-                               : self.scalar_type();
-    XLATensor xtensor =
-        XLATensor::Create(CopyTensor(self, dtype),
-                          bridge::AtenDeviceToXlaDevice(options.device()));
-    return bridge::AtenFromXlaTensor(xtensor);
-  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   if (options.has_device() && options.device().type() != at::kXLA) {
-    return bridge::XlaToAtenTensor(*self_tensor, options);
+    return bridge::XlaToAtenTensor(self_tensor, options);
   }
-  XlaOptions xla_options(options, self_tensor->GetDevice(),
-                         self_tensor->dtype());
+  XlaOptions xla_options(options, self_tensor.GetDevice(), self_tensor.dtype());
   return bridge::AtenFromXlaTensor(
-      XLATensor::to(*self_tensor, xla_options.device, xla_options.scalar_type));
+      XLATensor::to(self_tensor, xla_options.device, xla_options.scalar_type));
 }
 
 at::Tensor AtenXlaType::to(const at::Tensor& self, c10::Device device,
