@@ -217,10 +217,17 @@ py::object GetMetricData(const std::string& name) {
   return result;
 }
 
+py::object GetRevisions() {
+  auto py_dict = py::dict();
+  py_dict["xla"] = std::string(XLA_GITREV);
+  py_dict["torch"] = std::string(TORCH_GITREV);
+  return py_dict;
+}
+
 void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
-  m.def("_xla_git_rev", []() { return GITREV; });
+  m.def("_get_git_revs", []() { return GetRevisions(); });
   m.def("_get_xla_tensor", [](const at::Tensor& tensor) -> XLATensor {
     return bridge::GetXlaTensor(tensor);
   });

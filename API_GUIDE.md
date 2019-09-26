@@ -1,6 +1,6 @@
-# Performance guideline for running on TPUs
+# PyTorch/XLA API And Best Practice
 
-## XLA tensors
+## XLA Tensors
 
 PyTorch/XLA adds a new device, similarly to CPU and GPU devices. The following snippet creates an XLA tensor filled with random values, then prints the device and the contents of the tensor:
 
@@ -132,47 +132,6 @@ The same multi-core API can be used to run on a single core as well by setting t
 
 Check the [full example](https://github.com/pytorch/xla/blob/master/test/test_train_mnist.py) showing how to train MNIST on TPU using `torch_xla.distributed.data_parallel.DataParallel` (Python threading).
 
-## Performance caveats
+## Performance And Debugging
 
-PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors, implementing the full tensor interface. However, constraints in XLA and hardware, and the lazy evaluation model mean some patterns must be avoided:
-
-1.  Tensor shapes should be the same between iterations, or a low number of shape variations should be used. PyTorch/XLA automatically recompiles the graph every time new shapes are encountered. This means that, if the shapes don’t stabilize during training, more time will be spent compiling than running the model. Pad tensors to fixed sizes when possible. Direct or indirect uses of `nonzero` introduce dynamic shapes; for example, masked indexing `base[index]` where `index` is a mask tensor.
-1.  Certain operations don’t have native translations to XLA and therefore require transfer to the CPU memory, evaluation on CPU, and transfer of the result back to the XLA device. This is automatically handled by PyTorch/XLA, but doing too many such operations during the training step can lead to significant slowdowns. The `item()` operation is one such example and it is used in [clip_grad_norm_](https://github.com/pytorch/pytorch/blob/de19eeee99a2a282fc441f637b23d8e50c75ecd1/torch/nn/utils/clip_grad.py#L33). Below is an alternative implementation which avoids the need for `item()`:
-
-    ```python
-    ...
-    else:
-      device = parameters[0].device
-      total_norm = torch.zeros([], device=device if parameters else None)
-      for p in parameters:
-        param_norm = p.grad.data.norm(norm_type) ** norm_type
-        total_norm.add_(param_norm)
-      total_norm = (total_norm ** (1. / norm_type))
-    clip_coef = torch.tensor(max_norm, device=device) / (total_norm + 1e-6)
-    for p in parameters:
-      p.grad.data.mul_(torch.where(clip_coef < 1, clip_coef, torch.tensor(1., device=device)))
-    ```
-
-
-1. In order to avoid recompilations, not only shapes must be constant, but also computations accross XLA devices in all hosts. A special case of this is loops with a different number of iterations between steps. PyTorch/XLA automatically handles them, but they are seen as different execution graphs and require recompilations.
-
-1. Iterators in `torch_xla.distributed.data_parallel` may drop the
-last few batches in the input iterator, in order to do the same amount of work
-on all XLA devices. In the extreme case where dataset is small, and there are
-too few steps, this may result in a no-op epoch. Therefore, it is better to use
-small batch sizes in those cases.
-
-1. Even when it's known that a PyTorch tensor is a scalar, avoid using
-   `tensor.item()`. Prefer instead keeping it as a tensor and the use of tensor
-   operations on it, using control flow substitutes such as `torch.where`.
-   Following the latter approach will likely result in those operations behind
-   fully fused within an XLA graph, without the need of issuing separate TPU
-   computations. This can dramatically improve performance of the model, up to
-   an N factor, where N is the number of `tensor.item()` calls per step.
-
-`print(torch_xla._XLAC._xla_metrics_report())` can be used to print metrics at the end of each step to collect information regarding the number of compilations and operators that are part of the model but don’t have native XLA implementations. The `XLA_METRICS_FILE=/PATH/TO/FILE` environment setting can also be used to export per step metrics to a file.
-
-In this report, any counter that starts with `aten::`
-indicates a context switch between the XLA device and CPU, which can be a
-potential performance optimization area in the model code.
-
+Model is still running slow after many iterations? Check out [troubleshooting guide](TROUBLESHOOTING.md) for tips about how to debug them!
