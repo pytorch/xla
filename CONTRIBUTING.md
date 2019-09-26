@@ -1,23 +1,9 @@
-## C++ Style Guide
+# Contribute To PyTorch/XLA
 
-`pytorch/xla` uses `clang-format-7` with a customized style config.
-If your PR touches the C++ source files, please run the following command before submmiting a PR.
+We appreciate all contributions. If you are planning to contribute bug fix for an open issue, please comment on the thread and we're happy to provide any guidance. You are very welcome to pick issues from `good first issue` and `help wanted` labels.
 
-```Shell
-# If your PR only changes foo.cpp, run the following in xla/ folder
-clang-format-7 -i -style /PATH/TO/foo.cpp
-# To format all cpp files, run the follwoing in xla/ folder
-find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
-```
-
-## Python Style Guide
-
-`pytorch/xla` uses `yapf` with a customized style config.
-If your PR touches the Python source files, please run the following command before submmiting a PR.
-
-```Shell
-#TODO:
-```
+If you plan to contribute new features, utility functions or extensions to the core, please first open an issue and discuss the feature with us.
+Sending a PR without discussion might end up resulting in a rejected PR, because we might be taking the core in a different direction than you might be aware of.
 
 ## Building Manually
 
@@ -36,7 +22,7 @@ To build from source:
   git clone --recursive https://github.com/pytorch/xla.git
   ```
 
-## Building Docker Image
+### Building Docker Image
 
 * We provide a Dockerfile in `docker/` that you can use to build images as the
   following:
@@ -45,7 +31,7 @@ To build from source:
   docker build -t torch-xla -f docker/Dockerfile .
   ```
 
-## Building With Script
+### Building With Script
 
 * To build and install `torch` and `torch_xla`:
 
@@ -53,7 +39,7 @@ To build from source:
   xla/scripts/build_torch_wheels.sh
   ```
 
-## Build From Source
+### Build From Source
 
 * Apply PyTorch patches:
 
@@ -101,4 +87,29 @@ To build from source:
   python setup.py install
   ```
 
+## Before Submiting A Pull Request:
+
+In `pytorch/xla` repo we enforce coding style for both C++ and Python files. Please try to format
+your code before submitting a pull request.
+
+### C++ Style Guide
+
+`pytorch/xla` uses `clang-format-7` with a customized style config.
+If your PR touches the C++ source files, please run the following command before submmiting a PR.
+
+```Shell
+# If your PR only changes foo.cpp, run the following in xla/ folder
+clang-format-7 -i -style /PATH/TO/foo.cpp
+# To format all cpp files, run the follwoing in xla/ folder
+find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
+```
+
+### Python Style Guide
+
+`pytorch/xla` uses `yapf` with a customized style config.
+If your PR touches the Python source files, please run the following command before submmiting a PR.
+
+```Shell
+#TODO:
+```
 
