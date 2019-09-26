@@ -212,7 +212,7 @@ Please check out the [API Guideline](API_GUIDE.md) for the best practices to wri
 
 ## Troubleshooting
 
-If you see bad performance when using Torch/XLA, please check out the [troubleshooting guide](TROUBLESHOOTING.md) for how to avoid common pitfalls and how to debug.
+If you see bad performance when using PyTorch/XLA, please check out the [troubleshooting guide](TROUBLESHOOTING.md) for how to avoid common pitfalls and how to debug.
 
 ## Communication
 
