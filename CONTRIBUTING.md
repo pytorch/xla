@@ -19,16 +19,41 @@ If your PR touches the Python source files, please run the following command bef
 #TODO:
 ```
 
-## Build From Source
+## Building Manually
 
-* Clone `pytorch/xla` into `pytorch/pytorch` in the following structure:
+To build from source:
+
+* Clone the _PyTorch_ repo as per [instructions](https://github.com/pytorch/pytorch#from-source).
 
   ```Shell
-  pytorch/ # pytorch/pytorch repo
-    xla/   # pytorch/xla repo
-    torch/
-    ...
+  git clone --recursive https://github.com/pytorch/pytorch
+  cd pytorch/
   ```
+
+* Clone the _PyTorch/XLA_ repo:
+
+  ```Shell
+  git clone --recursive https://github.com/pytorch/xla.git
+  ```
+
+## Building Docker Image
+
+* We provide a Dockerfile in `docker/` that you can use to build images as the
+  following:
+
+  ```Shell
+  docker build -t torch-xla -f docker/Dockerfile .
+  ```
+
+## Building With Script
+
+* To build and install `torch` and `torch_xla`:
+
+  ```Shell
+  xla/scripts/build_torch_wheels.sh
+  ```
+
+## Build From Source
 
 * Apply PyTorch patches:
 
