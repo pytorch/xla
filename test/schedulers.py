@@ -1,9 +1,8 @@
 import math
 import test_utils
-from torch.optim.lr_scheduler import _LRScheduler
 
 
-class WarmupAndExponentialDecayScheduler(_LRScheduler):
+class WarmupAndExponentialDecayScheduler(object):
   """Update the learning rate of wrapped optimizer based on epoch and step.
   
   Args:
@@ -35,7 +34,9 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
     self._previous_lr = -1
     self._max_lr = optimizer.param_groups[0]['lr']
     self._summary_writer = summary_writer
-    super(WarmupAndExponentialDecayScheduler, self).__init__(optimizer)
+    self._optimizer = optimizer
+    self._step_count = 0
+    self.step()
 
   def _epoch(self):
     return self._step_count // self._num_steps_per_epoch
@@ -57,19 +58,18 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
       lr = self._max_lr / (
           self._divisor ** (epoch // self._divide_every_n_epochs))
 
-    # _LRScheduler expects a list of learning rates like this.
-    return [lr for _ in self.base_lrs]
+    return lr
 
-  def step(self, epoch=None):
-    current_lr = self.get_lr()[0]
+  def step(self):
+    current_lr = self.get_lr()
 
     # Outside of warmup epochs, we use the same learning rate for every step
     # in an epoch. Don't bother updating learning rate if it hasn't changed. 
     if abs(current_lr - self._previous_lr) >= self._min_delta_to_update_lr:
-      super(WarmupAndExponentialDecayScheduler, self).step()
+      for param_group in self._optimizer.param_groups:
+        param_group['lr'] = current_lr
       self._previous_lr = current_lr
-    else:
-      self._step_count += 1  # This normally happens in super().step().
+    self._step_count += 1
 
     # Add current learning rate to Tensorboard metrics. For warmup epochs,
     # log the learning rate at every step. For non-warmup epochs, log only
