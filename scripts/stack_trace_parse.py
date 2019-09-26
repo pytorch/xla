@@ -78,10 +78,14 @@ def create_report(args, stacks):
     print('')
 
 
+def process_stack_lines(ln_iter, args):
+  stacks = parse_stacks(ln_iter)
+  create_report(args, stacks)
+
+
 def process_stacks(args):
   fd = sys.stdin if args.input is None else open(args.input, 'r')
-  stacks = parse_stacks(fd)
-  create_report(args, stacks)
+  process_stack_lines(fd, args)
 
 
 if __name__ == '__main__':

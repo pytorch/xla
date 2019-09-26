@@ -240,14 +240,6 @@ _CTOR_FUNCTIONS = {
 }
 
 _FUNCTION_OPTIONS = {
-    'copy(Tensor, bool, optional<Device>) -> Tensor':
-        FuncOpts(device_param='*to_device'),
-    'to(Tensor, TensorOptions, bool, bool) -> Tensor':
-        FuncOpts(ref_param='options'),
-    'to(Tensor, Device, ScalarType, bool, bool) -> Tensor':
-        FuncOpts(ref_param='device'),
-    'to(Tensor, Tensor, bool, bool) -> Tensor':
-        FuncOpts(ref_param='other'),
     'slice(Tensor, int64_t, int64_t, int64_t, int64_t) -> Tensor':
         FuncOpts(wparams=['self']),
 }
@@ -257,17 +249,13 @@ _RESULT_NAME = 'x_result'
 
 class Context(object):
 
-  def __init__(self, functions, native_functions):
+  def __init__(self, functions):
     with open(functions, 'r') as ff:
       self.functions_data = ff.read()
-    with open(native_functions, 'r') as ff:
-      self.native_functions_data = ff.read()
 
   def get_function(self, name):
     if self.functions_data.find(' {}('.format(name)) >= 0:
       return 'at::{}'.format(name)
-    if self.native_functions_data.find(' {}('.format(name)) >= 0:
-      return 'at::native::{}'.format(name)
 
 
 class StringEmit(object):
@@ -1037,7 +1025,7 @@ def generate(args):
       file=sys.stderr)
 
   fgens = []
-  ctx = Context(args.functions, args.native_functions)
+  ctx = Context(args.functions)
   for ts in fndefs:
     try:
       fgen = get_xla_wrapper(ts, ctx)
@@ -1083,10 +1071,5 @@ if __name__ == '__main__':
       type=str,
       metavar='FUNCTIONS_FILE',
       help='The path to the Functions.h file')
-  arg_parser.add_argument(
-      'native_functions',
-      type=str,
-      metavar='NATIVE_FUNCTIONS_FILE',
-      help='The path to the NativeFunctions.h file')
   args, files = arg_parser.parse_known_args()
   generate(args)

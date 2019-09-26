@@ -1273,14 +1273,14 @@ at::Tensor AtenXlaType::full(at::IntArrayRef size, at::Scalar fill_value,
 
 at::Tensor AtenXlaType::full_like(const at::Tensor& self,
                                   at::Scalar fill_value) {
-  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::full_like(
       self_tensor, fill_value, self_tensor.GetDevice(), c10::nullopt));
 }
 
 at::Tensor AtenXlaType::full_like(const at::Tensor& self, at::Scalar fill_value,
                                   const at::TensorOptions& options) {
-  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   XlaOptions xla_options(options, self_tensor.GetDevice());
   return bridge::AtenFromXlaTensor(
       XLATensor::full_like(self_tensor, fill_value, xla_options.get_device(),
@@ -2068,6 +2068,10 @@ at::Tensor& AtenXlaType::ne_(at::Tensor& self, const at::Tensor& other) {
 }
 
 at::Tensor AtenXlaType::neg(const at::Tensor& self) {
+  XLA_CHECK(self.scalar_type() != at::kBool)
+      << "Negation, the `-` operator, on a bool tensor is not supported. If "
+         "you are trying to invert a mask, use the `~` or `logical_not()` "
+         "operator instead.";
   return bridge::AtenFromXlaTensor(XLATensor::neg(bridge::GetXlaTensor(self)));
 }
 
