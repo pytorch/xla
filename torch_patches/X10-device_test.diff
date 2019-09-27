@@ -1,13 +1,13 @@
 diff --git a/test/common_device_type.py b/test/common_device_type.py
-index dda0b8d791..785c30fed7 100644
+index 945882b0d7..e8232dee92 100644
 --- a/test/common_device_type.py
 +++ b/test/common_device_type.py
-@@ -156,10 +156,72 @@ class CUDATestBase(DeviceTypeTestBase):
-         cls.no_magma = not torch.cuda.has_magma
+@@ -209,10 +209,81 @@ class CUDATestBase(DeviceTypeTestBase):
+         cls.primary_device = 'cuda:{0}'.format(torch.cuda.current_device())
 
 
 +import torch_xla
-+assert torch_xla  # Silences Flake (unused import)
++import torch_xla.core.xla_model as xm
 +
 +# Acquires XLA test metadata
 +import os
@@ -65,6 +65,15 @@ index dda0b8d791..785c30fed7 100644
 +                if len(xla_dtypes) != 0:
 +                    test.dtypes[cls.device_type] = xla_dtypes
 +                    super().instantiate_test(test)
++
++    @classmethod
++    def get_primary_device(cls):
++        return cls.primary_device
++
++    @classmethod
++    def setUpClass(cls):
++        # Sets the primary test device to the xla_device (CPU or TPU)
++        cls.primary_device = str(xm.xla_device())
 +
 +
  # Adds available device-type-specific test base classes
