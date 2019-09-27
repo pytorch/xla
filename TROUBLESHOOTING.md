@@ -1,6 +1,7 @@
 # Troubleshooting
 
-> Note that the information in this section is subject to be removed in future releases of the _PyTorch/XLA_ software, since many of them are peculiar to a given internal implementation which might change.
+Note that the information in this section is subject to be removed in future releases of the _PyTorch/XLA_ software,
+since many of them are peculiar to a given internal implementation which might change.
 
 To diagnose issues, we can use the execution metrics and counters provided by _PyTorch/XLA_
 The **first thing** to check when model is slow is to generate a metrics report.
@@ -61,7 +62,7 @@ lowering in PyTorch/XLA. Feel free to open a feature request for it on [GitHub i
 PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors share the full tensor interface with CPU & GPU tensors.
 However, constraints in XLA/hardware and the lazy evaluation model suggest certain patterns might result in bad performance.
 
-If your model training shows bad performance, keep in mind the following caveats:
+If your model shows bad performance, keep in mind the following caveats:
 
 1.  **XLA/TPU yield degraded performance with too many recompilations.**
 
