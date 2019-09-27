@@ -1,4 +1,4 @@
-# PyTorch/XLA API And Best Practice
+# PyTorch/XLA API And Best Practices
 
 ## XLA Tensors
 

@@ -173,7 +173,7 @@ it is suggested for you to select the _Nightly_ builds when you create a Cloud T
 
 Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is working.
 
-# PyTorch/XLA API And Best Practice
+# PyTorch/XLA API And Best Practices
 
 Please check out the [API Guideline](API_GUIDE.md) for the best practices to write models to run on TPU & TPU Pod devices.
 
