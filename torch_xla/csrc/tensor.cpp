@@ -966,7 +966,11 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   std::vector<size_t> at_tensor_index;
   SyncTensorCollection coll;
   coll.indices.reserve(tensors.size());
+  TF_VLOG(4) << "Waiting on device barrier for device "
+             << unique_device->ToString() << " ...";
   coll.unlocker = LockDevices(unique_device.AsSet());
+  TF_VLOG(4) << "Waiting on device barrier for device "
+             << unique_device->ToString() << " done!";
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensors[i].CurrentXlaData() == nullptr) {
       ir::Value ir_value = tensors[i].CurrentIrValue();
