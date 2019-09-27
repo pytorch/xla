@@ -140,7 +140,7 @@ post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalabl
 
 ---
 
-# Build Manually
+## Build Manually
 
 Please note that we have nightly releases available so users usually don't have to build manually. This is mainly for OSS contributors.
 Please refer to [contribution guide](CONTRIBUTING.md) for instructions to build from source.
@@ -173,23 +173,18 @@ it is suggested for you to select the _Nightly_ builds when you create a Cloud T
 
 Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is working.
 
-## PyTorch/XLA API And Best Practice
+# PyTorch/XLA API And Best Practice
 
 Please check out the [API Guideline](API_GUIDE.md) for the best practices to write models to run on TPU & TPU Pod devices.
 
-## Troubleshooting
+# Troubleshooting
 
 If you see bad performance when using PyTorch/XLA, please check out the [troubleshooting guide](TROUBLESHOOTING.md) for how to avoid common pitfalls and how to debug.
 
-## Communication
+# Communication
 
 We use github issues to communicate with users and open source contributors. Please file an issue for questions, bug reports, feature requests, install issues, RFCs, thoughts, etc.
 
-## Contributing
+# Contributing
 
-We appreciate all contributions. If you are planning to contribute bug fix for an open issue, please comment on the thread and we're happy to provide any guidance. You are very welcome to pick issues from `good first issue` and `help wanted` labels.
-
-If you plan to contribute new features, utility functions or extensions to the core, please first open an issue and discuss the feature with us.
-Sending a PR without discussion might end up resulting in a rejected PR, because we might be taking the core in a different direction than you might be aware of.
-
-Please refer to [contribution guide](CONTRIBUTING.md) for detailed guidelines to submit PRs.
+Please refer to [contribution guide](CONTRIBUTING.md) for detailed instructions.
