@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/pytorch/xla.svg?style=svg)](https://circleci.com/gh/pytorch/xla)
+
 # How to Run PyTorch with TPUs
 
 First, create your [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: `pytorch-0.1`):
@@ -117,20 +119,20 @@ Training on pods can be broken down to largely 3 different steps:
 * To distribute training as a conda environment process:
 ```
 (pytorch-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-(pytorch-nightly)$ python torch_xla_py/xla_dist.py --tpu=$TPU_POD_NAME --conda-env=pytorch-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+(pytorch-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --conda-env=pytorch-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
 ```
 
 * Or, to distribute training as a docker container:
 ```
 (pytorch-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-(pytorch-nightly)$ python torch_xla_py/xla_dist.py --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:nightly --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+(pytorch-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:nightly --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
 ```
 
 ## List of VMs
-If you up to not use an [instance group](#create-your-instance-group), you can decide to use a list of VM instances that you may have already created (or can create individually). Make sure that you create all the VM instances in the same zone as the TPU node, and also make sure that the VMs have the same configuration (datasets, VM size, disk size, etc.). Then you can [start distributed training](#start-distributed-training) after creating your TPU pod. The difference is in the `python torch_xla_py/xla_dist.py` command. For example, to use a list of VMs run the following command (ex. conda with v3-32):
+If you up to not use an [instance group](#create-your-instance-group), you can decide to use a list of VM instances that you may have already created (or can create individually). Make sure that you create all the VM instances in the same zone as the TPU node, and also make sure that the VMs have the same configuration (datasets, VM size, disk size, etc.). Then you can [start distributed training](#start-distributed-training) after creating your TPU pod. The difference is in the `python -m torch_xla.distributed.xla_dist` command. For example, to use a list of VMs run the following command (ex. conda with v3-32):
 ```
 (pytorch-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-(pytorch-nightly)$ python torch_xla_py/xla_dist.py --tpu=$TPU_POD_NAME --vm $VM1 --vm $VM2 --vm $VM3 --vm $VM4 --conda-env=pytorch-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+(pytorch-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --vm $VM1 --vm $VM2 --vm $VM3 --vm $VM4 --conda-env=pytorch-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
 ```
 
 To learn more about TPU Pods check out this [blog
@@ -138,93 +140,12 @@ post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalabl
 
 ---
 
-# How To Build And Run PyTorch For TPU
+## Build Manually
 
-To build from source:
+Please note that we have nightly releases available so users usually don't have to build manually. This is mainly for OSS contributors.
+Please refer to [contribution guide](CONTRIBUTING.md) for instructions to build from source.
 
-* Clone the _PyTorch_ repo as per [instructions](https://github.com/pytorch/pytorch#from-source).
-
-  ```Shell
-  git clone --recursive https://github.com/pytorch/pytorch
-  cd pytorch/
-  ```
-
-* Clone the _PyTorch/XLA_ repo:
-
-  ```Shell
-  git clone --recursive https://github.com/pytorch/xla.git
-  ```
-
-## Building docker image
-
-* We provide a Dockerfile in `docker/` that you can use to build images as the
-  following:
-
-  ```Shell
-  docker build -t torch-xla -f docker/Dockerfile .
-  ```
-
-## Building with script
-
-* To build and install `torch` and `torch_xla`:
-
-  ```Shell
-  xla/scripts/build_torch_wheels.sh
-  ```
-
-## Building manually
-
-* If a file named xla/.torch_commit_id exists, use its content to checkout the PyTorch commit ID:
-
-  ```Shell
-  git checkout $(cat xla/.torch_commit_id)
-  ```
-
-* Apply PyTorch patches:
-
-  ```Shell
-  xla/scripts/apply_patches.sh
-  ```
-
-* Install the Lark parser used for automatic code generation:
-
-  ```Shell
-  pip install lark-parser
-  ```
-
-* Currently _PyTorch_ does not build with _GCC_ 6.x, 7.x, and 8.x (various kind of ICEs). _CLANG_ 7.x is known to be working, so install that in your VM:
-
-  ```Shell
-  sudo apt-get install clang-7 clang++-7
-  export CC=clang-7 CXX=clang++-7
-  ```
-
-  You may need to add the following line to your _/etc/apt/sources.list_ file:
-
-  ```Shell
-  deb http://deb.debian.org/debian/ testing main
-  ```
-
-  And run the following command before trying again to install _CLANG_:
-
-  ```Shell
-  sudo apt-get update
-  ```
-
-* Build _PyTorch_ from source following the regular [instructions](https://github.com/pytorch/pytorch#from-source).
-
-  ```Shell
-  python setup.py install
-  ```
-
-* Install Bazel following the [instructions](https://docs.bazel.build/versions/master/install.html). You should only install version 0.24.1, as no older nor newer releases will be able to build the required dependencies.
-
-* Build the _PyTorch/XLA_ source:
-
-  ```Shell
-  cd xla/
-  python setup.py install
-  ```
+## Tests
 
 To run the tests, follow __one__ of the options below:
 
@@ -252,115 +173,18 @@ it is suggested for you to select the _Nightly_ builds when you create a Cloud T
 
 Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is working.
 
+# PyTorch/XLA API And Best Practice
 
-[![CircleCI](https://circleci.com/gh/pytorch/xla.svg?style=svg)](https://circleci.com/gh/pytorch/xla)
+Please check out the [API Guideline](API_GUIDE.md) for the best practices to write models to run on TPU & TPU Pod devices.
 
-# Debugging
+# Troubleshooting
 
-Sometimes bad things happen and a deeper look into the _PyTorch/TPU_ stack is necessary.
-In order to do that, _PyTorch/TPU_ has a series of environment variables and function calls
-which can help understading its internal behavior.
+If you see bad performance when using PyTorch/XLA, please check out the [troubleshooting guide](TROUBLESHOOTING.md) for how to avoid common pitfalls and how to debug.
 
-Note that the infromation in this section is subject to be removed in future releases of
-the _PyTorch/TPU_ software, since many of them are peculiar to a given internal implementation
-which might change.
-
-The _PyTorch/TPU_ stack keeps a series of metrics and counters during its execution, and
-the following API returns a string representation of them:
-
-```Python
-torch_xla._XLAC._xla_metrics_report()
-```
-
-Printing out that information can help during the debug phases and while reporting issues.
-
-The information included within the metrics report include things like how many time we
-issue _XLA_ compilations, how long they take, how many times we execute, for how long,
-how many device data handles we create/destroy, etc...
-These information is reported in terms of percentiles of the samples.
-An example is:
-
-```
-Metric: CompileTime
-  TotalSamples: 202
-  Counter: 06m09s401ms746.001us
-  ValueRate: 778ms572.062us / second
-  Rate: 0.425201 / second
-  Percentiles: 1%=001ms32.778us; 5%=001ms61.283us; 10%=001ms79.236us; 20%=001ms110.973us; 50%=001ms228.773us; 80%=001ms339.183us; 90%=001ms434.305us; 95%=002ms921.063us; 99%=21s102ms853.173us
-```
-
-The _PyTorch/TPU_ stack also has counters, which are named integer variables tracks
-internal software status.
-Example:
-
-```
-Counter: CachedSyncTensors
-  Value: 395
-```
-
-Counters are also useful to understand which operations the _PyTorch/TPU_ stack is routing
-back to the CPU engine of _PyTorch_.
-Things which looks like a _C++_ namespace are part of this category:
-
-```
-Counter: aten::nonzero
-  Value: 33
-```
-
-There are also a number of environment variables which control the behavior of the _PyTorch/TPU_
-software stack.
-Setting such variables will cause different degrees of performance degradation, so they should
-only be enabled for debugging.
-
-* ```XLA_IR_DEBUG```: Enables the _Python_ stack trace to be catpured where creating IR nodes,
-  hence allowing to understand which _PyTorch_ operation was responsible of generating such IR.
-
-* ```XLA_HLO_DEBUG```: Enables the _Python_ stack frame captured when _XLA_IR_DEBUG_ is active,
-  to be propagated to the _XLA_ _HLO_ metadata.
-
-* ```XLA_SAVE_TENSORS_FILE```: The path to a file which will be used to dump the IR graphs during
-  execution. Note that the file can become really big if the option is left enabled and the
-  _PyTorch_ program let run for long time. The graphs are appended to the file, so to have a clean
-  sheet from run to run, the file should be explicitly removed.
-
-* ```XLA_SAVE_TENSORS_FMT```: The format of the graphs stored within the _XLA_SAVE_TENSORS_FILE_
-  file. Can be ```text``` (the default), ```dot``` (the _Graphviz_ format) or ```hlo```.
-
-* ```XLA_METRICS_FILE```: If set, the path to a local file where the internal metrics will be
-  saved at every step. Metrics will be appended to the file, if already existing.
-
-* ```GET_TENSORS_OPBYOP```: Enables pure _OpByOp_ dispatch. The _PyTorch/TPU_ software tries to
-  fuse together many _PyTorch_ operations into a single computation graph, but sometimes, either
-  for debugging, or in case the _PyTorch_ code have a very dynamic nature (in shapes or graph
-  terms), it is better to force the execution in _OpByOp_ mode (every IR node is lowered into
-  a separate _XLA_ computation, and chain-executed). This environment variable, if set to 1,
-  enables _OpByOp_ during the "get tensors" operation (the operation used by _PyTorch/TPU_ to
-  fetch intermediate values back from the _TPU_ device into _PyTorch_ CPU tensors).
-
-* ```SYNC_TENSORS_OPBYOP```: The same as _GET_TENSORS_OPBYOP_ but for "sync tensors" operation
-  (the operation used at the end of a step, to flush pending IR computations and materialize
-  them into _TPU_ device data).
-
-* ```XLA_SYNC_WAIT```: Forces the XLA tensor sync operation to wait for its completion, before
-  moving to the next step.
-
-* ```XLA_USE_BF16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _BiFloat16_
-  when sending to the _TPU_ device.
-
-* ```XLA_USE_32BIT_LONG```: If set to 1, maps _PyTorch_ _Long_ types to _XLA_ 32bit type.
-  On the versions of the TPU HW at the time of writing, 64bit integer computations are
-  expensive, so setting this flag might help. It should be verified by the user that truncating
-  to 32bit values is a valid operation according to the use of _PyTorch_ _Long_ values in it.
-
-## Communication
+# Communication
 
 We use github issues to communicate with users and open source contributors. Please file an issue for questions, bug reports, feature requests, install issues, RFCs, thoughts, etc.
 
-## Contributing
+# Contributing
 
-We appreciate all contributions. If you are planning to contribute bug fix for an open issue, please comment on the thread and we're happy to provide any guidance. You are very welcome to pick issues from `good first issue` and `help wanted` labels.
-
-If you plan to contribute new features, utility functions or extensions to the core, please first open an issue and discuss the feature with us.
-Sending a PR without discussion might end up resulting in a rejected PR, because we might be taking the core in a different direction than you might be aware of.
-
-Please refer to [contribution guide](CONTRIBUTING.md) for detailed guidelines to submit PRs.
+Please refer to [contribution guide](CONTRIBUTING.md) for detailed instructions.

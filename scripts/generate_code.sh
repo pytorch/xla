@@ -13,4 +13,3 @@ python "$CDIR/gen.py" \
   "$XDIR/torch_xla/csrc/aten_xla_type.h" \
   "$PT_INC_DIR/RegistrationDeclarations.h" \
   "$PT_INC_DIR/Functions.h" \
-  "$PT_INC_DIR/NativeFunctions.h"

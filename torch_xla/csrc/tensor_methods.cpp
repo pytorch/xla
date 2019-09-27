@@ -107,6 +107,8 @@ struct MinMaxValues {
 MinMaxValues GetMinMaxValues(const XLATensor& tensor,
                              c10::optional<at::Scalar> min,
                              c10::optional<at::Scalar> max) {
+  XLA_CHECK(min || max)
+      << "At least one of \'min\' or \'max\' must not be None";
   auto shape = tensor.shape();
   XlaHelpers::MinMax min_max =
       XlaHelpers::MinMaxValues(shape.get().element_type());
@@ -779,13 +781,18 @@ XLATensor XLATensor::diag(const XLATensor& input, xla::int64 offset) {
 
 XLATensor XLATensor::diagonal(const XLATensor& input, xla::int64 offset,
                               xla::int64 dim1, xla::int64 dim2) {
-  xla::int64 rank = input.shape().get().rank();
+  auto input_shape = input.shape();
   xla::int64 canonical_dim1 =
-      XlaHelpers::GetCanonicalDimensionIndex(dim1, rank);
+      XlaHelpers::GetCanonicalDimensionIndex(dim1, input.shape().get().rank());
   xla::int64 canonical_dim2 =
-      XlaHelpers::GetCanonicalDimensionIndex(dim2, rank);
-  return input.CreateFrom(ir::MakeNode<ir::ops::Diagonal>(
-      input.GetIrValue(), offset, canonical_dim1, canonical_dim2));
+      XlaHelpers::GetCanonicalDimensionIndex(dim2, input.shape().get().rank());
+  DiagonalInfo diagonal_info;
+  diagonal_info.offset = offset;
+  diagonal_info.dim1 = canonical_dim1;
+  diagonal_info.dim2 = canonical_dim2;
+  ViewInfo view_info(ViewInfo::Type::kDiagonal, input_shape,
+                     std::move(diagonal_info));
+  return input.CreateViewTensor(std::move(view_info));
 }
 
 XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other) {

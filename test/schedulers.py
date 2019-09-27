@@ -1,3 +1,4 @@
+import math
 import test_utils
 from torch.optim.lr_scheduler import _LRScheduler
 
@@ -12,8 +13,9 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
         divided by the `divisor` param.
     divisor: The learning rate will be divided by this amount when
         epoch % divide_every_n_epochs == 0 (epoch 0 is excluded).
-    num_warmup_epochs: Learning rate will ramp up from 0 to max learning rate
-        over this many epochs.
+    num_warmup_epochs: Float. Learning rate will ramp up from 0 to max learning
+        rate over this many epochs. Note that partial epochs are allowed,
+        e.g. 0.5 epochs.
     min_delta_to_update_lr: If the new learning rate does not differ much from
         the learning rate of the previous step, don't bother updating the
         optimizer's learning rate.
@@ -23,7 +25,7 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
         no logging happens.
   """
   def __init__(self, optimizer, num_steps_per_epoch, divide_every_n_epochs=20,
-               divisor=5, num_warmup_epochs=1, min_delta_to_update_lr=1e-6,
+               divisor=5, num_warmup_epochs=0.9, min_delta_to_update_lr=1e-6,
                summary_writer=None):
     self._num_steps_per_epoch = num_steps_per_epoch
     self._divide_every_n_epochs = divide_every_n_epochs
@@ -38,13 +40,15 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
   def _epoch(self):
     return self._step_count // self._num_steps_per_epoch
 
+  def _is_warmup_epoch(self):
+    return self._epoch() < math.ceil(self._num_warmup_epochs)
+
   def get_lr(self):
     epoch = self._epoch()
     lr = 0.0
 
-    if epoch < self._num_warmup_epochs:
-      # Warmup epoch. Ramp up learning rate from 0.0 to self._max_lr using
-      # a linear slope.
+    if self._is_warmup_epoch():
+      # Ramp up learning rate from 0.0 to self._max_lr using a linear slope.
       num_warmup_steps = self._num_warmup_epochs * self._num_steps_per_epoch
       lr = min(self._max_lr,
                self._max_lr * ((self._step_count + 1.0) / num_warmup_steps))
@@ -71,7 +75,7 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
     # log the learning rate at every step. For non-warmup epochs, log only
     # the first step since the entire epoch will use the same learning rate.
     if self._summary_writer:
-      if self._epoch() < self._num_warmup_epochs or (
+      if self._is_warmup_epoch() or (
           self._step_count % self._num_steps_per_epoch == 0):
         test_utils.add_scalar_to_summary(self._summary_writer,
                                          'LearningRate',

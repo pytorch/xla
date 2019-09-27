@@ -4,10 +4,12 @@
 #include <string>
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
@@ -57,14 +59,15 @@ bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
 }
 
 void ForEachDevice(const std::function<void(const Device&)>& devfn) {
-  std::string default_device =
-      xla::ComputationClient::Get()->GetDefaultDevice();
-  devfn(Device(default_device));
+  const Device* device = GetDefaultDevice();
+  XLATensorImpl::SetCurrentAtenDevice(bridge::XlaDeviceToAtenDevice(*device));
+  devfn(*device);
 }
 
 void ForEachDevice(const std::function<void(const torch::Device&)>& devfn) {
-  torch::Device torch_device = bridge::AtenDefaultDevice();
-  devfn(torch_device);
+  torch::Device device = bridge::AtenDefaultDevice();
+  XLATensorImpl::SetCurrentAtenDevice(device);
+  devfn(device);
 }
 
 bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
@@ -80,7 +83,15 @@ bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
   tensor2 = ToCpuTensor(tensor2);
   bool equal = tensor1.allclose(tensor2, rtol, atol);
   if (!equal) {
-    std::cerr << tensor1 << "\n-vs-\n" << tensor2 << "\n";
+    static bool dump_tensors =
+        xla::sys_util::GetEnvBool("XLA_TEST_DUMP_TENSORS", false);
+    at::Tensor diff = tensor1 - tensor2;
+    std::cerr << "Difference Tensor:\n" << diff << "\n";
+    if (dump_tensors) {
+      std::cerr << "Compared Tensors:\n"
+                << tensor1 << "\n-vs-\n"
+                << tensor2 << "\n";
+    }
   }
   return equal;
 }

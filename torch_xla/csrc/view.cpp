@@ -11,6 +11,8 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/as_strided_view_update.h"
+#include "torch_xla/csrc/ops/diagonal.h"
+#include "torch_xla/csrc/ops/diagonal_view_update.h"
 #include "torch_xla/csrc/ops/generic_slice.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
@@ -49,6 +51,10 @@ ir::Value ApplyViewInfo(ir::Value ir_value, const ViewInfo& view_info) {
           ir_value,
           xla::util::ToVector<xla::int64>(view_info.shape.dimensions()),
           view_info.as_strided->offset);
+    case ViewInfo::Type::kDiagonal:
+      return ir::MakeNode<ir::ops::Diagonal>(
+          ir_value, view_info.diagonal->offset, view_info.diagonal->dim1,
+          view_info.diagonal->dim2);
     default:
       XLA_ERROR() << "Invalid view type: "
                   << xla::util::GetEnumValue(view_info.view_type);
@@ -96,6 +102,11 @@ ir::Value ApplyUpdate(ir::Value ir_value,
             tmp_values[i - 1], result, view_info.sizes,
             view_info.as_strided->offset);
         break;
+      case ViewInfo::Type::kDiagonal:
+        result = ir::MakeNode<ir::ops::DiagonalViewUpdate>(
+            tmp_values[i - 1], result, view_info.diagonal->offset,
+            view_info.diagonal->dim1, view_info.diagonal->dim2);
+        break;
       default:
         XLA_ERROR() << "Invalid view type: "
                     << xla::util::GetEnumValue(view_info.view_type);
@@ -140,6 +151,16 @@ ViewInfo::ViewInfo(Type view_type, xla::Shape shape,
       sizes(std::move(sizes)),
       as_strided(std::move(as_strided)) {
   XLA_CHECK(view_type == Type::kAsStrided);
+}
+
+ViewInfo::ViewInfo(Type view_type, const xla::Shape& source_shape,
+                   DiagonalInfo diagonal)
+    : view_type(view_type),
+      shape(ir::ops::Diagonal::MakeDiagonalShape(source_shape, diagonal.offset,
+                                                 diagonal.dim1, diagonal.dim2)),
+      sizes(xla::util::ToVector<xla::int64>(source_shape.dimensions())),
+      diagonal(std::move(diagonal)) {
+  XLA_CHECK(view_type == Type::kDiagonal);
 }
 
 void Alias::Update(ir::Value ir_value, std::vector<ViewInfo> view_infos) {

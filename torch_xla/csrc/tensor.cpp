@@ -988,11 +988,12 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
     }
   }
   if (unique_device) {
+    coll.device = unique_device->ToString();
     // Mix the hash with the resource domain hashes as compile handles are only
     // valid within a domain (usually a single host).
     coll.hash = xla::util::MHash(
-        coll.hash, xla::ComputationClient::Get()->GetResourceDomain(
-                       unique_device->ToString()));
+        coll.hash,
+        xla::ComputationClient::Get()->GetResourceDomain(coll.device));
   }
   if (!at_tensors.empty()) {
     XLA_COUNTER("SyncTensorsToData", at_tensors.size());
@@ -1027,12 +1028,12 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
     unique_device.set((*tensors)[index].GetDevice());
   }
   std::vector<xla::ComputationClient::DataPtr> parameters_data;
-  std::unordered_set<xla::int64> data_uids;
+  std::unordered_set<xla::ComputationClient::Data::OpaqueHandle> data_handles;
   for (auto node : ir::Util::ComputePostOrder(roots)) {
     const ir::ops::DeviceData* device_data =
         dynamic_cast<const ir::ops::DeviceData*>(node);
     if (device_data != nullptr) {
-      if (data_uids.insert(device_data->data()->unique_id()).second) {
+      if (data_handles.insert(device_data->data()->GetOpaqueHandle()).second) {
         parameters_data.push_back(device_data->data());
       }
     }
@@ -1212,6 +1213,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     tensorflow::gtl::ArraySlice<const std::string> devices,
     const SyncTensorsConfig& config) {
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
+  TF_VLOG(4) << "Syncing graph hash " << coll.hash << " on device '"
+             << coll.device << "'";
   if (coll.indices.empty()) {
     return nullptr;
   }
@@ -1246,9 +1249,11 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
           xla::ComputationClient::Get()->Compile(std::move(instances));
   std::vector<xla::ComputationClient::DataPtr> parameters_data =
       lowering_ctx.GetParametersData();
-  ComputationCache::TypePtr cached_computation = GetComputationCache()->Add(
-      coll.hash, std::make_shared<CachedComputation>(
-                     std::move(computations.front()), parameters_data.size()));
+  XLA_CHECK_EQ(program_shape.parameters_size(), parameters_data.size());
+
+  auto cached_computation = std::make_shared<CachedComputation>(
+      std::move(computations.front()), parameters_data.size());
+  GetComputationCache()->Add(coll.hash, cached_computation);
 
   return ScheduleSyncTensorsGraph(
       tensors, config, &coll, std::move(parameters_data),

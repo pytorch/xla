@@ -40,11 +40,13 @@ class XrtComputationClient : public ComputationClient {
   };
 
   struct XrtHandle {
-    XrtHandle(XrtComputationClient* self, int64 handle)
-        : self(self), handle(handle) {}
+    XrtHandle(int64 handle, std::function<void()> releaser)
+        : handle(handle), releaser(std::move(releaser)) {}
 
-    XrtComputationClient* self;
+    ~XrtHandle() { releaser(); }
+
     int64 handle;
+    std::function<void()> releaser;
   };
 
   using XrtHandlePtr = std::shared_ptr<XrtHandle>;
@@ -55,15 +57,14 @@ class XrtComputationClient : public ComputationClient {
     XrtData(XrtComputationClient* self, string device, Shape device_shape,
             int64 handle)
         : Data(std::move(device), std::move(device_shape)),
-          handle_ptr(std::make_shared<XrtHandle>(self, handle)) {}
-
-    ~XrtData() override {
-      if (handle_ptr != nullptr && handle_ptr.use_count() == 1) {
-        handle_ptr->self->ReleaseXrtData(this);
-      }
-    }
+          handle_ptr(std::make_shared<XrtHandle>(
+              handle, [self, device = this->device(), handle]() {
+                self->ReleaseXrtData(device, handle);
+              })) {}
 
     int64 get_handle() const { return handle_ptr->handle; }
+
+    OpaqueHandle GetOpaqueHandle() override { return get_handle(); }
 
     void Assign(const Data& data) override;
 
@@ -78,19 +79,15 @@ class XrtComputationClient : public ComputationClient {
                    int64 handle, string compilation_device)
         : Computation(std::move(computation), std::move(program_shape),
                       std::move(devices)),
-          handle_ptr(std::make_shared<XrtHandle>(self, handle)),
-          compilation_device(std::move(compilation_device)) {}
-
-    ~XrtComputation() override {
-      if (handle_ptr.use_count() == 1) {
-        handle_ptr->self->ReleaseXrtComputation(this);
-      }
-    }
+          handle_ptr(std::make_shared<XrtHandle>(
+              handle, [self, compilation_device = std::move(compilation_device),
+                       handle]() {
+                self->ReleaseXrtComputation(compilation_device, handle);
+              })) {}
 
     int64 get_handle() const { return handle_ptr->handle; }
 
     XrtHandlePtr handle_ptr;
-    string compilation_device;
   };
 
  public:
@@ -283,9 +280,9 @@ class XrtComputationClient : public ComputationClient {
   void ReleaseHandle(int64 handle, const string& device,
                      std::vector<DeviceHandle>* handles);
 
-  void ReleaseXrtData(XrtData* xrt_data);
+  void ReleaseXrtData(const string& device, int64 handle);
 
-  void ReleaseXrtComputation(XrtComputation* xrt_computation);
+  void ReleaseXrtComputation(const string& compilation_device, int64 handle);
 
   // Starts the handle releaser thread (which runs the HandleReleaser() API).
   void StartHandleReleaser();

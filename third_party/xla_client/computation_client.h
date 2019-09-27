@@ -18,25 +18,24 @@ class ComputationClient {
  public:
   class Data {
    public:
+    using OpaqueHandle = int64;
+
     Data(string device, Shape shape)
-        : unique_id_(GetNextDataId()),
-          device_(std::move(device)),
-          shape_(std::move(shape)) {}
+        : device_(std::move(device)), shape_(std::move(shape)) {}
 
     virtual ~Data() {}
-
-    int64 unique_id() const { return unique_id_; }
 
     const string& device() const { return device_; }
 
     const Shape& shape() const { return shape_; }
+
+    virtual OpaqueHandle GetOpaqueHandle() = 0;
 
     virtual void Assign(const Data& data) = 0;
 
     virtual bool HasValue() const = 0;
 
    private:
-    int64 unique_id_ = 0;
     string device_;
     Shape shape_;
   };
@@ -252,9 +251,6 @@ class ComputationClient {
   static ComputationClient* Get();
 
  protected:
-  // Generates a new unique ID for a Data object.
-  static int64 GetNextDataId();
-
   // Metrics common to all client intrfaces.
   static metrics::Metric* TransferToServerMetric();
   static metrics::Metric* TransferFromServerMetric();

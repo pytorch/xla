@@ -37,5 +37,4 @@ def parse_common_options(datadir=None,
   # Setup import folders.
   xla_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
   sys.path.append(os.path.join(os.path.dirname(xla_folder), 'test'))
-  sys.path.insert(0, xla_folder)
   return args

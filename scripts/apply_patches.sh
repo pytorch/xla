@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -ex
+
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 XDIR=$CDIR/..
 PTDIR=$XDIR/..

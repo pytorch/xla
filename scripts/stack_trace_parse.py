@@ -34,7 +34,8 @@ def parse_stack_location(line):
   # #0  pthread_cond_wait@@GLIBC_2.3.2 () at ../sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
   m = re.match(r'#\d+\s+', line)
   if m:
-    return re.sub(r'([a-zA-Z_]+)=0x[a-fA-F0-9]+', '\\1=X', line)
+    return re.sub(r'([a-zA-Z_]+)=(0x[a-fA-F0-9]+|[+\-]?\d+(\.\d*)?)', '\\1=X',
+                  line)
 
 
 def is_same_stack(line):
@@ -77,10 +78,14 @@ def create_report(args, stacks):
     print('')
 
 
+def process_stack_lines(ln_iter, args):
+  stacks = parse_stacks(ln_iter)
+  create_report(args, stacks)
+
+
 def process_stacks(args):
   fd = sys.stdin if args.input is None else open(args.input, 'r')
-  stacks = parse_stacks(fd)
-  create_report(args, stacks)
+  process_stack_lines(fd, args)
 
 
 if __name__ == '__main__':
