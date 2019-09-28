@@ -966,7 +966,11 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   std::vector<size_t> at_tensor_index;
   SyncTensorCollection coll;
   coll.indices.reserve(tensors.size());
+  TF_VLOG(4) << "Waiting on device barrier for device "
+             << unique_device->ToString() << " ...";
   coll.unlocker = LockDevices(unique_device.AsSet());
+  TF_VLOG(4) << "Waiting on device barrier for device "
+             << unique_device->ToString() << " done!";
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensors[i].CurrentXlaData() == nullptr) {
       ir::Value ir_value = tensors[i].CurrentIrValue();
@@ -1089,12 +1093,17 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     async->tensors_data.emplace_back(std::move(xla_data));
   }
 
-  auto syncfn = [async]() {
+  auto syncfn = [async, hash = coll->hash]() {
     xla::ComputationClient::ExecuteComputationOptions options;
     try {
+      TF_VLOG(3) << "Executing IR graph hash " << hash << " on device "
+                 << async->device << " ...";
       auto results = xla::ComputationClient::Get()->ExecuteComputation(
           *async->cached_computation->computation, async->parameters_data,
           async->device, options);
+      TF_VLOG(3) << "Executing IR graph hash " << hash << " on device "
+                 << async->device << " done!";
+
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
           async->tensors_data[i]->Assign(*results[i]);
@@ -1189,8 +1198,13 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
       std::string device = async->unique_device
                                ? async->unique_device->ToString()
                                : std::string();
+      TF_VLOG(3) << "Executing (OpByOp) IR graph hash " << async->coll.hash
+                 << " on device " << device << " ...";
       std::vector<xla::ComputationClient::DataPtr> results =
           OpByOpExecutor::Get()->Execute(async->roots, device, async->devices);
+      TF_VLOG(3) << "Executing (OpByOp) IR graph hash " << async->coll.hash
+                 << " on device " << device << " done!";
+
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
           async->tensors_data[i]->Assign(*results[i]);
@@ -1244,9 +1258,14 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
                            unique_device->ToString(), devices),
                        &shape});
 
+  TF_VLOG(3) << "Compiling IR graph hash " << coll.hash << " on device "
+             << coll.device << " ...";
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
       computations =
           xla::ComputationClient::Get()->Compile(std::move(instances));
+  TF_VLOG(3) << "Compiling IR graph hash " << coll.hash << " on device "
+             << coll.device << " done!";
+
   std::vector<xla::ComputationClient::DataPtr> parameters_data =
       lowering_ctx.GetParametersData();
   XLA_CHECK_EQ(program_shape.parameters_size(), parameters_data.size());
