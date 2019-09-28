@@ -890,20 +890,6 @@ class TestAtenXlaTensor(XlaTestCase):
       torch.save(x, tf)
       x_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
-      x_loaded_cpu = torch.load(tf.name, map_location=torch.device('cpu'))
-      self.assertEqual(x, x_loaded_cpu)
-      self.assertEqual(str(x_loaded_cpu.device), 'cpu')
-      x_loaded_cpu_2 = torch.load(tf.name, map_location=torch.device('cpu'))
-      self.assertEqual(x, x_loaded_cpu_2)
-      self.assertEqual(str(x_loaded_cpu_2.device), 'cpu')
-
-  def test_load_to_xla(self):
-    xla_device = xm.xla_device()
-    x = torch.randn(5)
-    with tempfile.TemporaryFile() as tf:
-        torch.save(x, tf)
-        with self.assertRaisesRegex(RuntimeError, 'not supported'):
-            x_loaded = torch.load(x_file, map_location=torch.device('xla:0'))
 
   def test_save_tuple(self):
     xla_device = xm.xla_device()
@@ -914,13 +900,6 @@ class TestAtenXlaTensor(XlaTestCase):
       x_loaded, number_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
       self.assertEqual(number, number_loaded)
-
-  def test_copy(self):
-    xla_device = xm.xla_device()
-    x = torch.rand(5, device=xla_device)
-    y = copy.copy(x)
-    y[0] = 1
-    self.assertEqual(x, y)
 
   def test_deepcopy(self):
     xla_device = xm.xla_device()
