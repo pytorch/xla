@@ -8,11 +8,19 @@
 namespace torch_xla {
 namespace cpp_test {
 
-void TorchXlaTest::SetUp() { at::manual_seed(42); }
+void XlaTest::SetUp() { at::manual_seed(42); }
+
+void XlaTest::TearDown() {}
+
+void XlaTest::CommonSetup() {
+  XlaHelpers::set_mat_mul_precision(xla::PrecisionConfig::HIGHEST);
+}
+
+void TorchXlaTest::SetUpTestCase() { CommonSetup(); }
 
 void AtenXlaTensorTestBase::SetUpTestCase() {
+  CommonSetup();
   AtenXlaType::InitializeAtenBindings();
-  XlaHelpers::set_mat_mul_precision(xla::PrecisionConfig::HIGHEST);
 }
 
 }  // namespace cpp_test
