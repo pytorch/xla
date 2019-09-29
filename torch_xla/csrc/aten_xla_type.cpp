@@ -17,6 +17,7 @@
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/version.h"
 
 namespace torch_xla {
 namespace {
@@ -61,6 +62,9 @@ bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,
 }
 
 void AtenInitialize() {
+  TF_LOG(INFO) << "PyTorch GIT revision: " << TORCH_GITREV;
+  TF_LOG(INFO) << "XLA GIT revision: " << XLA_GITREV;
+
   RegisterAtenTypeFunctions();
   XLATensorImpl::AtenInitialize();
 }
