@@ -20,7 +20,8 @@ class Einsum : public Node {
 
   const std::string& equation() const { return equation_; }
 
-  static bool SupportsEquation(const std::string& equation, xla::int64 x_rank, xla::int64 y_rank);
+  static bool SupportsEquation(const std::string& equation, xla::int64 x_rank,
+                               xla::int64 y_rank);
 
  private:
   std::string equation_;

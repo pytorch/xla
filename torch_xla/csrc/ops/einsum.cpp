@@ -56,8 +56,10 @@ std::string Einsum::ToString() const {
   return ss.str();
 }
 
-bool Einsum::SupportsEquation(const std::string& equation, xla::int64 x_rank, xla::int64 y_rank) {
-  auto einsum_config_numeric_or_err = xla::ParseEinsumString(equation, x_rank, y_rank);
+bool Einsum::SupportsEquation(const std::string& equation, xla::int64 x_rank,
+                              xla::int64 y_rank) {
+  auto einsum_config_numeric_or_err =
+      xla::ParseEinsumString(equation, x_rank, y_rank);
   if (!einsum_config_numeric_or_err.ok()) {
     return false;
   }

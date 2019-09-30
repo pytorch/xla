@@ -1020,7 +1020,8 @@ at::Tensor AtenXlaType::einsum(std::string equation, at::TensorList tensors) {
   }
 
   xla::int64 first_rank = bridge::GetXlaTensor(tensors[0]).shape().get().rank();
-  xla::int64 second_rank = bridge::GetXlaTensor(tensors[1]).shape().get().rank();
+  xla::int64 second_rank =
+      bridge::GetXlaTensor(tensors[1]).shape().get().rank();
   if (!ir::ops::Einsum::SupportsEquation(equation, first_rank, second_rank)) {
     return at::native::einsum(equation, tensors);
   }
