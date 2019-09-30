@@ -949,9 +949,12 @@ void XLATensor::fill_(XLATensor& input, at::Scalar value) {
 
 XLATensor XLATensor::flip(const XLATensor& input,
                           tensorflow::gtl::ArraySlice<const xla::int64> dims) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::Flip>(
-      input.GetIrValue(), XlaHelpers::GetCanonicalDimensionIndices(
-                              dims, input.shape().get().rank())));
+  xla::int64 input_rank = input.shape().get().rank();
+  auto dimensions = XlaHelpers::GetCanonicalDimensionIndices(dims, input_rank);
+  std::set<xla::int64> unique_dims(dimensions.begin(), dimensions.end());
+  XLA_CHECK(unique_dims.size() == dimensions.size());
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::Flip>(input.GetIrValue(), dimensions));
 }
 
 XLATensor XLATensor::floor(const XLATensor& input) {

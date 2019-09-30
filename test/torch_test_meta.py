@@ -19,6 +19,7 @@ allowed_torch_tests = {
     'test_cholesky_batched_many_batches',
     'test_cholesky',
     'test_rot90',
+    'test_flip',
     'test_signal_window_functions',
     'test_broadcast_fused_matmul',
     'test_index',
