@@ -52,7 +52,7 @@ class XrtComputationClient : public ComputationClient {
   using XrtHandlePtr = std::shared_ptr<XrtHandle>;
 
   struct XrtData : public Data {
-    XrtData(XrtComputationClient* self, string device, Shape device_shape)
+    XrtData(string device, Shape device_shape)
         : Data(std::move(device), std::move(device_shape)) {}
     XrtData(XrtComputationClient* self, string device, Shape device_shape,
             int64 handle)
