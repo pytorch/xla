@@ -621,13 +621,24 @@ XLATensor XLATensor::cast(const XLATensor& input, at::ScalarType dtype) {
 XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                          xla::int64 dim) {
   XLA_CHECK_GT(tensors.size(), 0);
+  xla::Shape template_shape;
   std::vector<ir::Value> values;
-  for (auto& tensor : tensors) {
-    if (xla::ShapeUtil::ElementsIn(tensor.shape()) > 0) {
-      dim = XlaHelpers::GetCanonicalDimensionIndex(dim,
-                                                   tensor.shape().get().rank());
-      values.push_back(tensor.GetIrValue());
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    dim = XlaHelpers::GetCanonicalDimensionIndex(
+        dim, tensors[i].shape().get().rank());
+    if (i == 0) {
+      template_shape = tensors[i].shape();
+      template_shape.DeleteDimension(dim);
     }
+    if (xla::ShapeUtil::ElementsIn(tensors[i].shape()) > 0) {
+      values.push_back(tensors[i].GetIrValue());
+    }
+    xla::Shape tensor_shape = tensors[i].shape();
+    tensor_shape.DeleteDimension(dim);
+    XLA_CHECK(xla::ShapeUtil::Equal(template_shape, tensor_shape));
+  }
+  if (values.size() == 0) {
+    return tensors[0];
   }
   return tensors[0].CreateFrom(ir::MakeNode<ir::ops::Cat>(values, dim));
 }
