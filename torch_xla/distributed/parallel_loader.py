@@ -10,6 +10,9 @@ import torch_xla.utils.keyd_queue as kq
 
 
 class ParallelLoader(object):
+  """
+  Multi-threaded data loader.
+  """
 
   def __init__(self, loader, batch_size, devices, prefetch_size=4, batchdim=0):
     self._loader = loader

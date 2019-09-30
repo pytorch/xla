@@ -1015,9 +1015,16 @@ at::Tensor& AtenXlaType::dropout_(at::Tensor& self, double p, bool train) {
 }
 
 at::Tensor AtenXlaType::einsum(std::string equation, at::TensorList tensors) {
-  if (tensors.size() != 2 || !ir::ops::Einsum::SupportsEquation(equation)) {
+  if (tensors.size() != 2) {
     return at::native::einsum(equation, tensors);
   }
+
+  xla::int64 first_rank = bridge::GetXlaTensor(tensors[0]).shape().get().rank();
+  xla::int64 second_rank = bridge::GetXlaTensor(tensors[1]).shape().get().rank();
+  if (!ir::ops::Einsum::SupportsEquation(equation, first_rank, second_rank)) {
+    return at::native::einsum(equation, tensors);
+  }
+
   return bridge::AtenFromXlaTensor(
       XLATensor::einsum(equation, bridge::GetXlaTensors(tensors)));
 }

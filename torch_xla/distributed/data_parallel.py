@@ -64,6 +64,9 @@ class PerDeviceLoader(object):
 
 
 class ParallelLoader(object):
+  """
+  Data loader for running multiple devices in a single process.
+  """
 
   def __init__(self,
                loader,
@@ -174,6 +177,9 @@ class ParallelLoader(object):
 
 
 class DataParallel(object):
+  """
+  Runs a model on multiple devices in a single process.
+  """
 
   def __init__(self, network, device_ids=None, batchdim=0):
     if device_ids is None:

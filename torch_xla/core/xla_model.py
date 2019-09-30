@@ -20,6 +20,8 @@ _TLS = threading.local()
 
 
 def is_xla_tensor(tensor):
+  """Returns true if tensor is on a XLA device, false otherwise."""
+
   return tensor.device.type == 'xla'
 
 
@@ -30,6 +32,12 @@ def parse_xla_device(device):
 
 
 def get_xla_supported_devices(devkind=None, max_devices=None):
+  """
+  Returns a list of all XLA devices.
+  If devkind is specified the list is filtered to XLA devices in devkind.
+  If max_devices is specified the list is truncated to max_devices.
+  """
+
   xla_devices = torch_xla._XLAC._xla_get_devices()
   devkind = devkind or ['TPU', 'GPU', 'CPU']
   for kind in devkind:
@@ -42,14 +50,29 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
 
 
 def xrt_world_size(defval=1):
+  """
+  Returns the WORLD_SIZE environment variable, if defined, and defval
+  otherwise.
+  """
+
   return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
 
 def get_ordinal(defval=0):
+  """
+  Returns the ORDINAL environment variable, if defined, and defval
+  otherwise.
+  """
+
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
 def is_master_ordinal():
+  """
+  Returns true if this process or thread is the 'master' process or thread,
+  false otherwise.
+  """
+
   ordinal = get_ordinal(defval=-1)
   if ordinal >= 0:
     # We are either on multi-processing, or on BigSlice (or both).
@@ -59,11 +82,22 @@ def is_master_ordinal():
 
 
 def master_print(s, fd=sys.stdout):
+  """
+  Prints s to fd on the master process or thread.
+  """
+
   if is_master_ordinal():
     print(s, file=fd)
 
 
 def xla_device(n=None, devkind=None):
+  """
+  If n is specified returns torch.device('xla:<n>') and ignores devkind.
+  If neither n nor devkind is specified returns torch.device('xla:0').
+  If n is not specified and devkind is specified, returns the lowest index
+  xla device that is of the specified kind.
+  """
+
   if n is None:
     devices = get_xla_supported_devices(devkind=devkind)
     assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
@@ -77,6 +111,11 @@ def xla_device(n=None, devkind=None):
 
 
 def xla_real_devices(devices):
+  """
+  Given a list of strings like ['xla:0', 'xla:1', ...], returns a list
+  mapping each string to its corresponding hardware, e.g. ['CPU:0', 'TPU:0', ...].
+  """
+
   xla_devices = torch_xla._XLAC._xla_get_devices()
   real_devices = []
   for device in devices:
@@ -92,6 +131,12 @@ def xla_real_devices(devices):
 
 
 def xla_replication_devices(local_devices):
+  """
+  Returns a list of all XLA devices with the same hardware as the devices in
+  'local_devices.'
+  Note: all devices in 'local_devices' must use the same hardware.
+  """
+
   real_devices = xla_real_devices(local_devices)
   device_types = set()
   for device in real_devices:
@@ -120,6 +165,11 @@ def xla_replication_devices(local_devices):
 
 
 def set_replication(device, devices):
+  """
+    Sets the current thread's device to device and sets replication devices
+    to all XLA devices with the same hardware as those in 'devices.'
+  """
+
   if devices:
     replication_devices = xla_replication_devices(devices)
     torch_xla._XLAC._xla_set_replication_devices(replication_devices)
@@ -132,6 +182,9 @@ def set_replication(device, devices):
 
 
 class RateTracker(object):
+  """
+  Tracks progress. Use with test_utils.print_training_update.
+  """
 
   def __init__(self, smooth_factor=None):
     self._smooth_factor = xu.getenv_as(
@@ -367,6 +420,12 @@ def mark_step():
 
 
 def optimizer_step(optimizer, barrier=False, optimizer_args={}):
+  """
+  Performs an optimizer step.
+  If barrier is true the step occurs immediately. If false it is lazily evaluated.
+  See the TorchXLA API Guide for additional context.
+  """
+
   gradients = _fetch_gradients(optimizer)
   count = torch_xla._XLAC._xla_get_replication_devices_count()
   if count > 1:

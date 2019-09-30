@@ -25,6 +25,10 @@ class TmpFolder(object):
 
 
 class SampleGenerator(object):
+  """
+  A helper class for consuming 'sample' or 'fake' data.
+  Useful for validating model scripts.
+  """
 
   def __init__(self, data, sample_count):
     self._data = data

@@ -116,6 +116,12 @@ def _start_fn(index, fn, args):
 
 
 def spawn(fn, args=(), nprocs=None, join=True, daemon=False):
+  """
+  Spawns new processes for distributed training.
+  Wraps torch.multiprocessing.spawn().
+  See the API guide for additional context.
+  """
+
   if not _is_tpu_config():
     # If this is not an TPU setup, jump to normal multi-processing.
     nprocs = nprocs or 1
