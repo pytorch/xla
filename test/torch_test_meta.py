@@ -57,6 +57,7 @@ allowed_torch_tests = {
     'test_std_mean_some_dims',
     'test_zeros_like',
     'test_histc',
+    'test_bool_sub',
     'test_bool_tensor_comparison_ops',
     'test_bool_tensor_value_change',
     'test_addcmul',
