@@ -3,6 +3,7 @@ from __future__ import print_function
 import os
 import threading
 import torch_xla
+import torch_xla.debug.metrics as met
 
 _STEP_METRICS_FILE = os.environ.get('XLA_METRICS_FILE', None)
 _STEP_METRICS_FILE_LOCK = threading.Lock()
@@ -12,7 +13,7 @@ def save_metrics(metrics_file=None):
   if metrics_file is None:
     metrics_file = _STEP_METRICS_FILE
   if metrics_file is not None:
-    metrics_data = torch_xla._XLAC._xla_metrics_report()
+    metrics_data = met.metrics_report()
     if metrics_file == 'STDERR':
       print(metrics_data, file=sys.stderr)
     elif metrics_file == 'STDOUT':
