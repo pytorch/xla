@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/torch_util.h"
 
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+
 namespace torch_xla {
 
 at::Tensor CopyTensor(const at::Tensor& ref) {
@@ -15,13 +17,14 @@ at::Tensor CopyTensor(const at::Tensor& ref, at::ScalarType dest_type) {
 at::ScalarType GetScalarType(at::Scalar scalar) {
   if (scalar.isFloatingPoint()) {
     return at::kDouble;
+  } else if (scalar.isIntegral(/*includeBool=*/false)) {
+    return at::kLong;
   } else if (scalar.isBoolean()) {
     return at::kBool;
   } else if (scalar.isComplex()) {
     return at::kComplexDouble;
-  } else {
-    XLA_CHECK(scalar.isIntegral(/*includeBool=*/false));
-    return at::kLong;
   }
+  XLA_ERROR() << "Unknown type for scalar";
 }
+
 }  // namespace torch_xla
