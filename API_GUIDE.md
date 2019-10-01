@@ -74,11 +74,12 @@ Code for multiprocessing looks like:
 
 ```python
 import torch_xla.core.xla_model as xm
+import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.xla_multiprocessing as xmp
 
 def _mp_fn(index):
   device = xm.xla_device()
-  para_loader = dp.ParallelLoader(train_loader, [device])
+  para_loader = pl.ParallelLoader(train_loader, [device])
 
   model = MNIST()
   loss_fn = nn.NLLLoss()

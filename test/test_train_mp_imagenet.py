@@ -49,7 +49,9 @@ from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
+import torch_xla.debug.metrics as met
 import torch_xla.distributed.data_parallel as dp
+import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -207,16 +209,16 @@ def train_imagenet():
 
   accuracy = 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
-    para_loader = dp.ParallelLoader(train_loader, [device])
+    para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
 
-    para_loader = dp.ParallelLoader(test_loader, [device])
+    para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
     print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
     test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
 
     if FLAGS.metrics_debug:
-      print(torch_xla._XLAC._xla_metrics_report())
+      print(met.metrics_report())
 
   return accuracy
 

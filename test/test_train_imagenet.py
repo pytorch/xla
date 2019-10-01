@@ -49,6 +49,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
+import torch_xla.debug.metrics as met
 import torch_xla.distributed.data_parallel as dp
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
@@ -232,7 +233,7 @@ def train_imagenet():
     test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
                                      global_step)
     if FLAGS.metrics_debug:
-      print(torch_xla._XLAC._xla_metrics_report())
+      print(met.metrics_report())
 
   return accuracy
 
