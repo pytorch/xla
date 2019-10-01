@@ -14,7 +14,9 @@ report sent to us if you have it.
 Put the following line in your program to generate a report:
 
 ```Python
-print(torch_xla._XLAC._xla_metrics_report())
+import torch_xla.debug.metrics as met
+
+print(met.metrics_report())
 ```
 
 ## Understand The Metrics Report

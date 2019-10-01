@@ -1,40 +1,29 @@
 from __future__ import division
 from __future__ import print_function
 
-import multiprocessing.dummy
+from six import iteritems, itervalues
 import threading
 import torch
 import torch_xla
-import torch_xla.utils.utils as xu
 import torch_xla.utils.keyd_queue as kq
+import torch_xla.utils.utils as xu
+import torch_xla.core.xla_model as xm
 
 
-class ParallelLoader(object):
+class PerDeviceQueue(object):
 
-  def __init__(self, loader, batch_size, devices, prefetch_size=4, batchdim=0):
+  def __init__(self, device, loader_prefetch_size, device_prefetch_size):
+    self.device = device
+    self.batch_number = 0
+    self.loader_queue = kq.Queue(maxsize=loader_prefetch_size)
+    self.queue = kq.Queue(maxsize=device_prefetch_size)
+
+
+class PerDeviceLoader(object):
+
+  def __init__(self, loader, device):
     self._loader = loader
-    self._prefetch_size = prefetch_size
-    self._batch_size = batch_size
-    self._devices = list(devices)
-    self._device_indices = dict()
-    for i, device in enumerate(self._devices):
-      self._device_indices[device] = i
-    self._batch_number = 0
-    self._batchdim = batchdim
-    self._done = False
-    self._lock = threading.Lock()
-    self._loader_queue = kq.Queue(maxsize=self._prefetch_size)
-    self._queue = kq.KeydQueue(maxsize=self._prefetch_size)
-    self._worker_count = 0
-    self._data = None
-    self._device_slices = None
-    thread = threading.Thread(target=self._loader_worker)
-    thread.daemon = True
-    thread.start()
-    for _ in range(0, prefetch_size):
-      thread = threading.Thread(target=self._worker)
-      thread.daemon = True
-      thread.start()
+    self._device = device
 
   def __iter__(self):
     return self
@@ -43,76 +32,118 @@ class ParallelLoader(object):
     return self.next()
 
   def next(self):
-    item = self._queue.get(self._batch_number)
+    xm.mark_step()
+    item = self._loader.next_item(self._device)
     if item is None:
       raise StopIteration
-    self._data, target, self._device_slices = item
-    self._batch_number += 1
-    return self._batch_number - 1, (self._data, target)
+    return item
+
+
+class ParallelLoader(object):
+
+  def __init__(self,
+               loader,
+               devices,
+               batchdim=0,
+               fixed_batch_size=False,
+               loader_prefetch_size=8,
+               device_prefetch_size=4):
+    self._loader = loader
+    self._devices = list(devices)
+    self._batchdim = batchdim
+    self._fixed_batch_size = fixed_batch_size
+    self._done = False
+    self._queues = dict()
+    for device in self._devices:
+      self._queues[device] = PerDeviceQueue(device, loader_prefetch_size,
+                                            device_prefetch_size)
+    thread = threading.Thread(target=self._loader_worker)
+    thread.daemon = True
+    thread.start()
+    for dqueue in itervalues(self._queues):
+      thread = threading.Thread(target=self._worker, args=(dqueue,))
+      thread.daemon = True
+      thread.start()
+
+  def per_device_loader(self, device):
+    return PerDeviceLoader(self, device)
+
+  def next_item(self, device):
+    dqueue = self._queues[device]
+    return dqueue.queue.get()
 
   def close(self):
     self._done = True
-    self._queue.close()
-    self._loader_queue.close()
+    for dqueue in itervalues(self._queues):
+      dqueue.queue.close()
+      dqueue.loader_queue.close()
 
-  def to(self, data, device):
-    assert data is self._data
-    return self._device_slices[self._device_indices[device]]
+  def _get_batch_size(self, data, dim):
+    size = []
 
-  def _up_workers(self, count):
-    with self._lock:
-      self._worker_count += count
-      return self._worker_count
+    def fn(v):
+      csize = v.size()[dim]
+      if not size:
+        size.append(csize)
+      else:
+        assert csize == size[0]
+
+    xu.for_each_instance(data, torch.Tensor, fn)
+    return size[0] if size else None
+
+  def _send_data_to(self, data, device):
+
+    def convert_fn(tensors):
+      devices = [str(device)] * len(tensors)
+      return torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+
+    def select_fn(v):
+      return type(v) == torch.Tensor
+
+    return xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
   def _loader_worker(self):
     batch_number = 0
-    for (data, target) in self._loader:
-      if data.size()[self._batchdim] != self._batch_size or self._done:
+    queues = list(self._queues.values())
+    data_iter = enumerate(self._loader)
+    batch_size = None
+    batch = []
+    while not self._done:
+      try:
+        _, data = next(data_iter)
+      except StopIteration:
         break
-      self._loader_queue.put((batch_number, (data, target)))
+      if self._fixed_batch_size:
+        if batch_size is None:
+          batch_size = self._get_batch_size(data, self._batchdim)
+        elif batch_size != self._get_batch_size(data, self._batchdim):
+          break
+      batch.append((batch_number, data))
       batch_number += 1
-    self._loader_queue.close_write()
+      if len(batch) == len(self._devices):
+        for queue_no, device_batch in enumerate(batch):
+          queues[queue_no].loader_queue.put(device_batch)
+        batch = []
+    for dqueue in queues:
+      dqueue.loader_queue.close_write()
 
-  def _create_tensor_slices(self, data):
-    if isinstance(data, torch.Tensor):
-      mini_batch_size = self._batch_size // len(self._devices)
-      slices = []
-      for x in range(0, self._batch_size, mini_batch_size):
-        slices.append(data[x:x + mini_batch_size])
-      return slices
-    elif isinstance(data, (list, tuple)):
-      slices = []
-      for xdata in data:
-        slices.append(self._create_tensor_slices(xdata))
-      return list(zip(*slices))
-    else:
-      raise RuntimeError('Unsupported input type: {}'.format(type(data)))
-
-  def _send_to_devices(self, slices, pool):
-
-    def _send(i):
-      return slices[i].to(device=torch.device(self._devices[i]))
-
-    if isinstance(slices[0], torch.Tensor):
-      return pool.map(_send, range(0, len(slices)))
-    elif isinstance(slices[0], (list, tuple)):
-      device_slices = []
-      for xslice in slices:
-        device_slices.append(self._send_to_devices(xslice, pool))
-      return list(zip(*device_slices))
-    else:
-      raise RuntimeError('Unsupported input type: {}'.format(type(slices[0])))
-
-  def _worker(self):
-    pool = multiprocessing.dummy.Pool(len(self._devices))
-    self._up_workers(1)
-    while True:
-      item = self._loader_queue.get()
+  def _get_batch(self, dqueue):
+    batch = []
+    while dqueue.queue.max_size() > len(batch):
+      item = dqueue.loader_queue.get()
       if item is None:
         break
-      batch_number, (data, target) = item
-      slices = self._create_tensor_slices(data)
-      device_slices = self._send_to_devices(slices, pool)
-      self._queue.put(batch_number, (data, target, device_slices))
-    if self._up_workers(-1) == 0:
-      self._queue.close_write()
+      batch.append(item[1])
+    return batch
+
+  def _worker(self, dqueue):
+    device = torch.device(dqueue.device)
+    while True:
+      batch = self._get_batch(dqueue)
+      if not batch:
+        break
+      batch = self._send_data_to(batch, device)
+      for data in batch:
+        dqueue.queue.put((dqueue.batch_number, data))
+        dqueue.batch_number += 1
+    dqueue.queue.close_write()

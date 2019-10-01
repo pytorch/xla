@@ -18,6 +18,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch_xla
 import torch_xla.distributed.data_parallel as dp
+import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
@@ -68,7 +69,7 @@ class BaseBench(object):
         now = time.time()
       print('{}: {:.3f}ms per loop'.format(bench_name,
                                            1000.0 * (now - start) / count))
-      xu.get_print_fn()(torch_xla._XLAC._xla_metrics_report())
+      xu.get_print_fn()(met.metrics_report())
     except Exception as e:
       xu.eprint('Failed running benchmark "{}": {}'.format(bench_name, e))
 
