@@ -132,6 +132,40 @@ The same multi-core API can be used to run on a single core as well by setting t
 
 Check the [full example](https://github.com/pytorch/xla/blob/master/test/test_train_mnist.py) showing how to train MNIST on TPU using `torch_xla.distributed.data_parallel.DataParallel` (Python threading).
 
+## Discrepancies between PyTorch/XLA
+
+PyTorch/XLA matches PyTorch eager mode user experience with a few exceptions imposed by the lazy tensor approach or implementation details.
+These differences don't affect performance, but might give "unexpected" results for normal PyTorch users.
+
+We list them in this section so that users are aware. They might get fixed in the future releases and updated here.
+
+1. Serialization of XLA tensors doesn't preserve view-relationship.
+
+   In normal PyTorch devices like CPU/CUDA, view-relationship is preserved when you save & load tensors sharing the same underlying storage.
+
+   ``` Python
+   a = torch.rand(3, 3)
+   b = a[0]
+   c = a[0:2]
+   ```
+   That means loaded `b` and `c` still share the same storage. `c` is updated along with `b` and vice versa.
+
+   In XLA case, `b` and `c` are separate tensors that one doesn't change with the other.
+
+1. `torch.load()` always load XLA Tensors to the original XLA devices when it was saved.
+
+    * `map_location` is no-op for XLA Tensors. It requires `torch_xla` to load XLA checkpoints.
+
+    _Solution_:
+
+    * Convert your tensors to CPU before calling `torch.save()` and move back to XLA device after `torch.load()` on CPU.
+
+1. `copy.copy()` returns returns a deep copy instead of shallow copy.
+
+    _Solution_:
+    * If you want shallow copy of a copy, you can use `tensor.view()` instead.
+
+
 ## Performance And Debugging
 
 Model is still running slow after many iterations? Check out [troubleshooting guide](TROUBLESHOOTING.md) for tips about how to debug them!

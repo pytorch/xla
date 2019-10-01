@@ -880,35 +880,36 @@ class TestAtenXlaTensor(XlaTestCase):
     nested = Nested(b, c)
     self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
 
+    with tempfile.TemporaryFile() as tf:
+        self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
+
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
-    x_file = tempfile.mktemp()
-    try:
-      torch.save(x, x_file)
-      x_loaded = torch.load(x_file)
+    with tempfile.NamedTemporaryFile() as tf:
+      torch.save(x, tf)
+      x_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
-    finally:
-      os.remove(x_file)
 
   def test_save_tuple(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
     number = 3
-    x_file = tempfile.mktemp()
-    try:
-      torch.save((x, number), x_file)
-      x_loaded, number_loaded = torch.load(x_file)
+    with tempfile.NamedTemporaryFile() as tf:
+      torch.save((x, number), tf)
+      x_loaded, number_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
       self.assertEqual(number, number_loaded)
-    finally:
-      os.remove(x_file)
 
-  def test_copy(self):
+  def test_deepcopy(self):
     xla_device = xm.xla_device()
     x = torch.rand(5, device=xla_device)
-    y = copy.copy(x)
+    x0 = x[0]
+    y = copy.deepcopy(x)
     self.assertEqual(x, y)
+    y[0] = 1
+    # Make sure x doesn't change with y.
+    self.assertEqual(x[0], x0)
 
   def test_print(self):
     xla_device = xm.xla_device()
