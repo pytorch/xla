@@ -175,7 +175,7 @@ T Multiply(const S& input) {
 
 static inline size_t DataHash(const void* data, size_t size) {
   return tensorflow::Hash64(reinterpret_cast<const char*>(data), size,
-                            0x5a2d296e9);
+                            0xc2b2ae3d27d4eb4f);
 }
 
 static inline size_t StringHash(const char* data) {
@@ -183,7 +183,8 @@ static inline size_t StringHash(const char* data) {
 }
 
 static inline size_t HashCombine(size_t a, size_t b) {
-  return a ^ (b + 0x9e3779b97f4a7c15 + (a << 6) + (a >> 2));
+  return a ^
+         (b * 0x27d4eb2f165667c5 + 0x9e3779b97f4a7c15 + (a << 6) + (a >> 2));
 }
 
 template <typename T, typename std::enable_if<
@@ -217,7 +218,7 @@ size_t Hash(const std::set<T>& values) {
 
 template <typename T>
 size_t ContainerHash(const T& values) {
-  size_t h = 0x5a2d296e9;
+  size_t h = 0x85ebca77c2b2ae63;
   for (auto& value : values) {
     h = HashCombine(h, Hash(value));
   }
@@ -226,7 +227,7 @@ size_t ContainerHash(const T& values) {
 
 template <typename T = void>
 size_t MHash() {
-  return 0x5a2d296e9;
+  return 0x165667b19e3779f9;
 }
 
 template <typename T, typename... Targs>
