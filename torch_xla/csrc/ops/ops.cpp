@@ -84,6 +84,7 @@ PTXLA_UNARY_OP(Sqrt, at::aten::sqrt, xla::Sqrt);
 PTXLA_UNARY_OP(Rsqrt, at::aten::rsqrt, xla::Rsqrt);
 PTXLA_UNARY_OP(Ceil, at::aten::ceil, xla::Ceil);
 PTXLA_UNARY_OP(Floor, at::aten::floor, xla::Floor);
+PTXLA_UNARY_OP(Not, at::aten::bitwise_not, xla::Not);
 
 PTXLA_BINARY_OP(Min, at::aten::min, xla::Min);
 PTXLA_BINARY_OP(Max, at::aten::max, xla::Max);

@@ -119,6 +119,8 @@ NodePtr Pow(const Value& input, const Value& exponent);
 
 NodePtr Fmod(const Value& dividend, const Value& divisor);
 
+NodePtr Not(const Value& input);
+
 NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1);
 
 std::tuple<NodePtr, NodePtr> LogSigmoid(const Value& input);
