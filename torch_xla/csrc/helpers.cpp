@@ -1,7 +1,5 @@
 #include "torch_xla/csrc/helpers.h"
 
-#include <c10/util/Exception.h>
-
 #include <limits>
 
 #include "tensorflow/compiler/xla/primitive_util.h"
@@ -56,10 +54,9 @@ xla::int64 XlaHelpers::GetCanonicalDimensionIndex(xla::int64 dim,
                                                   xla::int64 rank) {
   xla::int64 min_shape_dim = -rank;
   xla::int64 max_shape_dim = rank - 1;
-  if (min_shape_dim > dim || dim > max_shape_dim) {
-    AT_INDEX_ERROR("Value out of range (expected to be in range of [",
-                   min_shape_dim, ", ", max_shape_dim, "], but got ", dim, ")");
-  }
+  XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim)
+      << "Value out of range (expected to be in range of [" << min_shape_dim
+      << ", " << max_shape_dim << "], but got " << dim << ")";
   xla::int64 dim_index = dim < 0 ? rank + dim : dim;
   XLA_CHECK_GE(dim_index, 0);
   XLA_CHECK_LT(dim_index, rank);
@@ -396,4 +393,5 @@ xla::XlaOp XlaHelpers::PromotedBinaryOp(
       PromoteSecond(numeric_op1, numeric_op2);
   return bin_op(vops.first, vops.second);
 }
+
 }  // namespace torch_xla
