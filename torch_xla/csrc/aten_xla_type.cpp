@@ -203,6 +203,17 @@ at::Tensor AtenXlaType::__xor__(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
+at::Tensor AtenXlaType::bitwise_not(const at::Tensor& self) {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::bitwise_not(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::bitwise_not_(at::Tensor& self) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::bitwise_not_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::_adaptive_avg_pool2d(const at::Tensor& self,
                                              at::IntArrayRef output_size) {
   auto output_size_list = XlaHelpers::I64List(output_size);

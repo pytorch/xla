@@ -590,6 +590,14 @@ void XLATensor::bernoulli_(XLATensor& input, const XLATensor& probability) {
       ir::ops::Bernoulli(input.GetIrValue(), probability.GetIrValue()));
 }
 
+XLATensor XLATensor::bitwise_not(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Not(input.GetIrValue()));
+}
+
+void XLATensor::bitwise_not_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Not(input.GetIrValue()));
+}
+
 XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {
   // Consistent with the checks in bmm_out_or_baddbmm_.
   std::string tag = "bmm";
