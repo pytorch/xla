@@ -23,6 +23,7 @@ allowed_torch_tests = {
     'test_signal_window_functions',
     'test_broadcast_fused_matmul',
     'test_index',
+    'test_cat_empty',
     'test_advancedindex_big',
     'test_kthvalue',
     #'test_lu_solve_batched_many_batches',
