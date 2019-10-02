@@ -31,6 +31,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
 import torch_xla.distributed.data_parallel as dp
+import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
@@ -251,17 +252,18 @@ class TestToXlaTensorArena(XlaTestCase):
 class TestParallelLoader(XlaTestCase):
 
   def test(self):
-    devices = xm.get_xla_supported_devices()
+    devices = [torch.device(x) for x in xm.get_xla_supported_devices()]
     A = 3.11
     B = 4.09
     batch_size = 128 * len(devices)
     gen = xu.FnDataGenerator(
         lambda x: x * A + B, batch_size, _gen_tensor, dims=[8], count=10)
-    para_loader = pl.ParallelLoader(gen, batch_size, devices)
-    for x, (data, target) in para_loader:
-      for device in devices:
-        dx = para_loader.to(data, device)
-        self.assertEqual(dx.device, torch.device(device))
+    para_loader = pl.ParallelLoader(gen, devices)
+    for device in devices:
+      loader = para_loader.per_device_loader(device)
+      for x, (data, target) in loader:
+        self.assertEqual(data.device, device)
+        self.assertEqual(target.device, device)
 
 
 class TestAtenTensorTo(XlaTestCase):
@@ -880,35 +882,36 @@ class TestAtenXlaTensor(XlaTestCase):
     nested = Nested(b, c)
     self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
 
+    with tempfile.TemporaryFile() as tf:
+        self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
+
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
-    x_file = tempfile.mktemp()
-    try:
-      torch.save(x, x_file)
-      x_loaded = torch.load(x_file)
+    with tempfile.NamedTemporaryFile() as tf:
+      torch.save(x, tf)
+      x_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
-    finally:
-      os.remove(x_file)
 
   def test_save_tuple(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
     number = 3
-    x_file = tempfile.mktemp()
-    try:
-      torch.save((x, number), x_file)
-      x_loaded, number_loaded = torch.load(x_file)
+    with tempfile.NamedTemporaryFile() as tf:
+      torch.save((x, number), tf)
+      x_loaded, number_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
       self.assertEqual(number, number_loaded)
-    finally:
-      os.remove(x_file)
 
-  def test_copy(self):
+  def test_deepcopy(self):
     xla_device = xm.xla_device()
     x = torch.rand(5, device=xla_device)
-    y = copy.copy(x)
+    x0 = x[0]
+    y = copy.deepcopy(x)
     self.assertEqual(x, y)
+    y[0] = 1
+    # Make sure x doesn't change with y.
+    self.assertEqual(x[0], x0)
 
   def test_print(self):
     xla_device = xm.xla_device()
@@ -988,5 +991,5 @@ if __name__ == '__main__':
       use_full_mat_mul_precision=True)
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
-    print(torch_xla._XLAC._xla_metrics_report())
+    print(met.metrics_report())
   sys.exit(0 if test.result.wasSuccessful() else 1)
