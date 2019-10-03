@@ -38,6 +38,10 @@ std::vector<xla::int64> GetCompleteShape(
         << absl::StrJoin(input_sizes, ", ") << "]";
     return xla::util::ToVector<xla::int64>(output_sizes);
   }
+  XLA_CHECK_GT(incomplete_element_count, 0)
+      << "Cannot reshape tensor of 0 elements into shape "
+      << "[" << absl::StrJoin(output_sizes, ", ")
+      << "] because the unspecified dimension size -1 can be any value";
   XLA_CHECK_EQ(total_element_count % incomplete_element_count, 0)
       << "[" << absl::StrJoin(output_sizes, ", ") << "] vs. ["
       << absl::StrJoin(input_sizes, ", ") << "]";
