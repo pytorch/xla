@@ -1037,7 +1037,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
   }
   std::vector<xla::ComputationClient::DataPtr> parameters_data;
   std::unordered_set<xla::ComputationClient::Data::OpaqueHandle> data_handles;
-  for (auto node : ir::Util::ComputePostOrder(roots)) {
+  auto post_order = ir::Util::ComputePostOrder(roots);
+  for (auto node : post_order) {
     const ir::ops::DeviceData* device_data =
         dynamic_cast<const ir::ops::DeviceData*>(node);
     if (device_data != nullptr) {
@@ -1052,6 +1053,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
     return nullptr;
   }
   XLA_COUNTER("CachedSyncTensors", 1);
+  XLA_VALUE_METRIC("SyncTensorsGraphSize", post_order.size());
 
   return ScheduleSyncTensorsGraph(
       tensors, config, coll, std::move(parameters_data),
@@ -1250,6 +1252,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     lowering_ctx.AddResult(root);
     unique_device.set((*tensors)[index].GetDevice());
   }
+  XLA_VALUE_METRIC("SyncTensorsGraphSize", lowering_ctx.GetEmittedNodeCount());
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
