@@ -63,6 +63,8 @@ class LoweringContext {
   // before calling this API. Returns the generated XLA operations.
   XlaOpVector LowerNode(const Node* node);
 
+  size_t GetEmittedNodeCount() const { return emit_status_.size(); }
+
  private:
   // Reports an XLA builder error for the given node.
   TF_ATTRIBUTE_NORETURN void ReportBuilderError(const Node* node,
