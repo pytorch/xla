@@ -658,6 +658,14 @@ class TestAtenXlaTensor(XlaTestCase):
         10, (2, 3)), torch.randint(10, (3, 3))),
                      lambda x, y, z: torch.addmm(x, y, z))
 
+  def test_view_empty(self):
+    # These used to throw floating point exception.
+    empty = torch.empty(0, device=xm.xla_device())
+    with self.assertRaisesRegex(RuntimeError, r'unspecified dimension size -1 can be any value'):
+        empty.view(-1, 0)
+    with self.assertRaisesRegex(RuntimeError, r'unspecified dimension size -1 can be any value'):
+        empty.view(3, 0, -1, 0)
+
   def test_pred_type(self):
     xla_device = xm.xla_device()
     a = torch.rand(4)
