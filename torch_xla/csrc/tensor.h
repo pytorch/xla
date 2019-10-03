@@ -47,6 +47,8 @@ class XLATensor {
 
   at::Tensor ToTensor();
 
+  void ShallowCopyTo(XLATensor* dest) const;
+
   // Assigns the tensor value to the XLA tensor.
   void SetTensor(at::Tensor tensor);
 

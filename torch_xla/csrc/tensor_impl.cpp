@@ -75,8 +75,7 @@ void XLATensorImpl::shallow_copy_from(
       /*dest_impl=*/this,
       /*version_counter=*/version_counter(),
       /*allow_tensor_metadata_change=*/allow_tensor_metadata_change());
-
-  tensor_ = XLATensor::clone(xla_impl->tensor_);
+  xla_impl->tensor_.ShallowCopyTo(&tensor_);
   generation_ = 0;
 }
 
