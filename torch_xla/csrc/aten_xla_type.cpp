@@ -1036,7 +1036,9 @@ at::Tensor& AtenXlaType::dropout_(at::Tensor& self, double p, bool train) {
 }
 
 at::Tensor AtenXlaType::einsum(std::string equation, at::TensorList tensors) {
-  if (tensors.size() != 2 || !ir::ops::Einsum::SupportsEquation(equation)) {
+  if (tensors.size() != 2 ||
+      !ir::ops::Einsum::SupportsEquation(equation, tensors[0].dim(),
+                                         tensors[1].dim())) {
     return at::native::einsum(equation, tensors);
   }
   return bridge::AtenFromXlaTensor(
