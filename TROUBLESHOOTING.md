@@ -173,6 +173,23 @@ only be enabled for debugging.
   expensive, so setting this flag might help. It should be verified by the user that truncating
   to 32bit values is a valid operation according to the use of _PyTorch_ _Long_ values in it.
 
+* ```TF_CPP_LOG_THREAD_ID```: If set to 1, the TF logs will show the thread ID
+  helping with debugging multithreaded processes.
+
+* ```TF_CPP_VMODULE```: Environment variable used for TF VLOGs and takes the
+  form of `TF_CPP_VMODULE=name=value,...`. For PyTorch/XLA using a configuration like
+  `TF_CPP_VMODULE=tensor=5` would enable logging such as:
+
+  ```
+  2019-10-03 17:23:56.419040: I   27891 torch_xla/csrc/tensor.cpp:1104]
+  Executing IR graph hash 4211381954965020633 on device TPU:3 done!
+  2019-10-03 17:23:56.419448: I   27890 torch_xla/csrc/tensor.cpp:1104]
+  Executing IR graph hash 15483856951158150605 on device TPU:5 done!
+  2019-10-03 17:23:56.419539: I   27896 torch_xla/csrc/tensor.cpp:1104]
+  Executing IR graph hash 4211381954965020633 on device TPU:4 done!
+  ...
+  ```
+
 ### Retrieving Stack Traces
 
 In the event that the _PyTorch_ process is hanging, it might be useful to include the stack
