@@ -5,12 +5,21 @@
 namespace torch_xla {
 namespace cpp_test {
 
-class TorchXlaTest : public ::testing::Test {
+class XlaTest : public ::testing::Test {
  protected:
   void SetUp() override;
+
+  void TearDown() override;
+
+  static void CommonSetup();
 };
 
-class AtenXlaTensorTestBase : public TorchXlaTest {
+class TorchXlaTest : public XlaTest {
+ protected:
+  static void SetUpTestCase();
+};
+
+class AtenXlaTensorTestBase : public XlaTest {
  protected:
   static void SetUpTestCase();
 };

@@ -17,6 +17,7 @@
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/version.h"
 
 namespace torch_xla {
 namespace {
@@ -60,7 +61,20 @@ bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,
   return tensor_type == type;
 }
 
+void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
+  XLA_CHECK(type1 != at::kBool || type2 != at::kBool)
+      << "Subtraction, the `-` operator, with two bool tensors is not "
+         "supported. Use the `^` or `logical_xor()` operator instead.";
+  XLA_CHECK(type1 != at::kBool && type2 != at::kBool)
+      << "Subtraction, the `-` operator, with a bool tensor is not "
+         "supported. If you are trying to invert a mask, use the `~` or "
+         "`logical_not()` operator instead.";
+}
+
 void AtenInitialize() {
+  TF_LOG(INFO) << "PyTorch GIT revision: " << TORCH_GITREV;
+  TF_LOG(INFO) << "XLA GIT revision: " << XLA_GITREV;
+
   RegisterAtenTypeFunctions();
   XLATensorImpl::AtenInitialize();
 }
@@ -187,6 +201,17 @@ at::Tensor AtenXlaType::__xor__(const at::Tensor& self,
                                 const at::Tensor& other) {
   return bridge::AtenFromXlaTensor(XLATensor::__xor__(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+}
+
+at::Tensor AtenXlaType::bitwise_not(const at::Tensor& self) {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::bitwise_not(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::bitwise_not_(at::Tensor& self) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::bitwise_not_(self_tensor);
+  return self;
 }
 
 at::Tensor AtenXlaType::_adaptive_avg_pool2d(const at::Tensor& self,
@@ -1273,14 +1298,14 @@ at::Tensor AtenXlaType::full(at::IntArrayRef size, at::Scalar fill_value,
 
 at::Tensor AtenXlaType::full_like(const at::Tensor& self,
                                   at::Scalar fill_value) {
-  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::full_like(
       self_tensor, fill_value, self_tensor.GetDevice(), c10::nullopt));
 }
 
 at::Tensor AtenXlaType::full_like(const at::Tensor& self, at::Scalar fill_value,
                                   const at::TensorOptions& options) {
-  XLATensor self_tensor = bridge::GetXlaTensorUnwrap(self);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   XlaOptions xla_options(options, self_tensor.GetDevice());
   return bridge::AtenFromXlaTensor(
       XLATensor::full_like(self_tensor, fill_value, xla_options.get_device(),
@@ -2068,6 +2093,10 @@ at::Tensor& AtenXlaType::ne_(at::Tensor& self, const at::Tensor& other) {
 }
 
 at::Tensor AtenXlaType::neg(const at::Tensor& self) {
+  XLA_CHECK(self.scalar_type() != at::kBool)
+      << "Negation, the `-` operator, on a bool tensor is not supported. If "
+         "you are trying to invert a mask, use the `~` or `logical_not()` "
+         "operator instead.";
   return bridge::AtenFromXlaTensor(XLATensor::neg(bridge::GetXlaTensor(self)));
 }
 
@@ -2384,12 +2413,14 @@ at::Tensor& AtenXlaType::rsqrt_(at::Tensor& self) {
 
 at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Tensor& other,
                              at::Scalar alpha) {
+  CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
   return bridge::AtenFromXlaTensor(XLATensor::rsub(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other), alpha));
 }
 
 at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
                              at::Scalar alpha) {
+  CheckSubOperandTypes(self.scalar_type(), GetScalarType(other));
   return bridge::AtenFromXlaTensor(
       XLATensor::rsub(bridge::GetXlaTensor(self), other, alpha));
 }
@@ -2623,6 +2654,7 @@ at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) {
 
 at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) {
+  CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::sub(
       self_tensor, bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()),
@@ -2631,12 +2663,14 @@ at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
 
 at::Tensor AtenXlaType::sub(const at::Tensor& self, at::Scalar other,
                             at::Scalar alpha) {
+  CheckSubOperandTypes(self.scalar_type(), GetScalarType(other));
   return bridge::AtenFromXlaTensor(
       XLATensor::sub(bridge::GetXlaTensor(self), other, alpha));
 }
 
 at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Tensor& other,
                               at::Scalar alpha) {
+  CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::sub_(self_tensor,
                   bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()),
@@ -2646,6 +2680,7 @@ at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Tensor& other,
 
 at::Tensor& AtenXlaType::sub_(at::Tensor& self, at::Scalar other,
                               at::Scalar alpha) {
+  CheckSubOperandTypes(self.scalar_type(), GetScalarType(other));
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::sub_(self_tensor, other, alpha);
   return self;

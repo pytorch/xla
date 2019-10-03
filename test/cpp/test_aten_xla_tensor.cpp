@@ -2071,6 +2071,38 @@ TEST_F(AtenXlaTensorTest, TestNeg) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestBitwiseNot) {
+  std::vector<torch::ScalarType> types(
+      {torch::kByte, torch::kChar, torch::kShort, torch::kInt, torch::kLong});
+
+  ForEachDevice([&](const torch::Device& device) {
+    for (auto type : types) {
+      torch::Tensor a =
+          torch::randint(0, 63, {2, 2}, torch::TensorOptions(type));
+      torch::Tensor b = torch::bitwise_not(a);
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = torch::bitwise_not(xla_a);
+      AllEqual(b, xla_b);
+    }
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestBitwiseNotInPlace) {
+  std::vector<torch::ScalarType> types(
+      {torch::kByte, torch::kChar, torch::kShort, torch::kInt, torch::kLong});
+
+  ForEachDevice([&](const torch::Device& device) {
+    for (auto type : types) {
+      torch::Tensor a =
+          torch::randint(0, 63, {2, 2}, torch::TensorOptions(type));
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      a.bitwise_not_();
+      xla_a.bitwise_not_();
+      AllEqual(a, xla_a);
+    }
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSign) {
   torch::Tensor a =
       torch::randn({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;

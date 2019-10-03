@@ -13,7 +13,6 @@ MODEL_OPTS = {
         'default': 'resnet50',
     },
     '--test_set_batch_size': {
-        'default': 64,
         'type': int,
     },
     '--lr_scheduler_type': {
@@ -49,7 +48,9 @@ from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
+import torch_xla.debug.metrics as met
 import torch_xla.distributed.data_parallel as dp
+import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -63,15 +64,19 @@ DEFAULT_KWARGS = dict(
     target_accuracy=0.0,
 )
 MODEL_SPECIFIC_DEFAULTS = {
+    # Override some of the args in DEFAULT_KWARGS, or add them to the dict
+    # if they don't exist.
     'resnet50':
         dict(
-            {
+            DEFAULT_KWARGS, **{
+                'lr': 0.5,
                 'lr_scheduler_divide_every_n_epochs': 20,
                 'lr_scheduler_divisor': 5,
                 'lr_scheduler_type': 'WarmupAndExponentialDecayScheduler',
-            }, **DEFAULT_KWARGS)
+            })
 }
 
+# Set any args that were not explicitly given by the user.
 default_value_dict = MODEL_SPECIFIC_DEFAULTS.get(FLAGS.model, DEFAULT_KWARGS)
 for arg, value in default_value_dict.items():
   if getattr(FLAGS, arg) is None:
@@ -162,7 +167,7 @@ def train_imagenet():
       model.parameters(),
       lr=FLAGS.lr,
       momentum=FLAGS.momentum,
-      weight_decay=5e-4)
+      weight_decay=1e-4)
   num_training_steps_per_epoch = train_dataset_len // (
       FLAGS.batch_size * xm.xrt_world_size())
   lr_scheduler = schedulers.wrap_optimizer_with_scheduler(
@@ -207,16 +212,17 @@ def train_imagenet():
 
   accuracy = 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
-    para_loader = dp.ParallelLoader(train_loader, [device])
+    para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
+    if xm.is_master_ordinal():
+      print("Finished training epoch {}".format(epoch))
 
-    para_loader = dp.ParallelLoader(test_loader, [device])
+    para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
-    print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
     test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
 
     if FLAGS.metrics_debug:
-      print(torch_xla._XLAC._xla_metrics_report())
+      print(met.metrics_report())
 
   return accuracy
 
