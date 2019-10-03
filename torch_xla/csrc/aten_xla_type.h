@@ -799,6 +799,8 @@ class AtenXlaType {
 
   static at::Tensor nuclear_norm(const at::Tensor& self, bool keepdim);
 
+  static int64_t numel(const at::Tensor& self);
+
   static at::Tensor one_hot(const at::Tensor& self, int64_t num_classes);
 
   static at::Tensor ones(at::IntArrayRef size,
