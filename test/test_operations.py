@@ -722,6 +722,64 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_b = xla_a.frac()
     self.assertEqual(b, xla_b)
 
+  def test_flip(self):
+    device = xm.xla_device()
+    data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
+    self.assertEqual(torch.tensor([5, 6, 7, 8, 1, 2, 3, 4]).view(2, 2, 2), data.flip(0))
+    self.assertEqual(torch.tensor([3, 4, 1, 2, 7, 8, 5, 6]).view(2, 2, 2), data.flip(1))
+    self.assertEqual(torch.tensor([2, 1, 4, 3, 6, 5, 8, 7]).view(2, 2, 2), data.flip(2))
+    self.assertEqual(torch.tensor([7, 8, 5, 6, 3, 4, 1, 2]).view(2, 2, 2), data.flip(0, 1))
+    self.assertEqual(torch.tensor([8, 7, 6, 5, 4, 3, 2, 1]).view(2, 2, 2), data.flip(0, 1, 2))
+    # check for wrap dim
+    self.assertEqual(torch.tensor([2, 1, 4, 3, 6, 5, 8, 7]).view(2, 2, 2), data.flip(-1))
+    # check for permute
+    self.assertEqual(torch.tensor([6, 5, 8, 7, 2, 1, 4, 3]).view(2, 2, 2), data.flip(0, 2))
+    self.assertEqual(torch.tensor([6, 5, 8, 7, 2, 1, 4, 3]).view(2, 2, 2), data.flip(2, 0))
+
+  def test_flip_check_throws(self):
+    device = xm.xla_device()
+    data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
+    # not allow flip on the same dim more than once
+    self.assertRaises(RuntimeError, lambda: data.flip(0, 1, 1))
+    # not allow empty list as input
+    self.assertRaises(TypeError, lambda: data.flip())
+    # not allow size of flip dim > total dims
+    self.assertRaises(RuntimeError, lambda: data.flip(0, 1, 2, 3))
+    # not allow dim > max dim
+    self.assertRaises(RuntimeError, lambda: data.flip(3))
+
+  def test_flip_expand(self):
+    device = xm.xla_device()
+    data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
+    expanded_data = torch.arange(1, 4, device=device).view(3, 1).expand(3, 2)
+    transposed_data = torch.arange(1, 9, device=device).view(2, 2, 2).transpose(0, 1)
+    self.assertEqual(torch.tensor([3, 3, 2, 2, 1, 1]).view(3, 2), expanded_data.flip(0))
+    self.assertEqual(torch.tensor([8, 7, 4, 3, 6, 5, 2, 1]).view(2, 2, 2), transposed_data.flip(0, 1, 2))
+
+  def test_flip_shape(self):
+    device = xm.xla_device()
+    data = torch.randn(2, 3, 4, device=device)
+    size = [2, 3, 4]
+    test_dims = []
+    for i in range(1, 3):
+        test_dims += itertools.combinations(range(len(size)), i)
+    for ds in test_dims:
+        self.assertEqual(size, list(data.flip(ds).size()))
+
+  def test_flip_rectangular(self):
+    device = xm.xla_device()
+    data = torch.tensor([1, 2, 3, 4, 5, 6]).view(2, 3).to(device)
+    flip0_result = torch.tensor([[4, 5, 6], [1, 2, 3]]).to(device)
+    flip1_result = torch.tensor([[3, 2, 1], [6, 5, 4]]).to(device)
+
+    self.assertEqual(flip0_result, data.flip(0))
+    self.assertEqual(flip1_result, data.flip(1))
+
+  def test_flip_empty_tensor(self):
+    device = xm.xla_device()
+    data = torch.tensor([])
+    self.assertEqual(data, data.flip(0))
+
   def test_norm_p0(self):
     # p = 0 is equivalent to nonzero
     xla_device = xm.xla_device()
