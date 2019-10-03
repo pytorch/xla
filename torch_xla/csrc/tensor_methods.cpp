@@ -638,7 +638,8 @@ XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
     dim = XlaHelpers::GetCanonicalDimensionIndex(dim, tensor_shape.rank());
     tensor_shape.DeleteDimension(dim);
     if (!shapes.empty()) {
-      XLA_CHECK(xla::ShapeUtil::Equal(shapes.back(), tensor_shape));
+      XLA_CHECK(xla::ShapeUtil::Compatible(shapes.back(), tensor_shape))
+          << shapes.back() << " vs. " << tensor_shape;
     }
     shapes.push_back(tensor_shape);
     values.push_back(tensors[i].GetIrValue());
