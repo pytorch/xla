@@ -61,6 +61,10 @@ class AtenXlaType {
   static at::Tensor _adaptive_avg_pool2d_backward(const at::Tensor& grad_output,
                                                   const at::Tensor& self);
 
+  static at::Tensor bitwise_not(const at::Tensor& self);
+
+  static at::Tensor& bitwise_not_(at::Tensor& self);
+
   static at::Tensor _cast_Byte(const at::Tensor& self, bool non_blocking);
 
   static at::Tensor _cast_Char(const at::Tensor& self, bool non_blocking);
@@ -796,8 +800,6 @@ class AtenXlaType {
                          at::IntArrayRef dim, bool keepdim);
 
   static at::Tensor nuclear_norm(const at::Tensor& self, bool keepdim);
-
-  static int64_t numel(const at::Tensor& self);
 
   static at::Tensor one_hot(const at::Tensor& self, int64_t num_classes);
 

@@ -9,7 +9,7 @@ MODEL_OPTS = {
 FLAGS = args_parse.parse_common_options(
     datadir='/tmp/cifar-data',
     batch_size=128,
-    num_epochs=20,
+    num_epochs=25,
     momentum=0.9,
     lr=0.1,
     target_accuracy=80.0,
@@ -24,6 +24,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
+import torch_xla.debug.metrics as met
 import torch_xla.distributed.data_parallel as dp
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
@@ -215,7 +216,7 @@ def train_cifar():
     accuracy = sum(accuracies) / len(accuracies)
     print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
     if FLAGS.metrics_debug:
-      print(torch_xla._XLAC._xla_metrics_report())
+      print(met.metrics_report())
 
   return accuracy
 

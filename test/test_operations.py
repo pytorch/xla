@@ -31,6 +31,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
 import torch_xla.distributed.data_parallel as dp
+import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
@@ -251,17 +252,18 @@ class TestToXlaTensorArena(XlaTestCase):
 class TestParallelLoader(XlaTestCase):
 
   def test(self):
-    devices = xm.get_xla_supported_devices()
+    devices = [torch.device(x) for x in xm.get_xla_supported_devices()]
     A = 3.11
     B = 4.09
     batch_size = 128 * len(devices)
     gen = xu.FnDataGenerator(
         lambda x: x * A + B, batch_size, _gen_tensor, dims=[8], count=10)
-    para_loader = pl.ParallelLoader(gen, batch_size, devices)
-    for x, (data, target) in para_loader:
-      for device in devices:
-        dx = para_loader.to(data, device)
-        self.assertEqual(dx.device, torch.device(device))
+    para_loader = pl.ParallelLoader(gen, devices)
+    for device in devices:
+      loader = para_loader.per_device_loader(device)
+      for x, (data, target) in loader:
+        self.assertEqual(data.device, device)
+        self.assertEqual(target.device, device)
 
 
 class TestAtenTensorTo(XlaTestCase):
@@ -656,6 +658,14 @@ class TestAtenXlaTensor(XlaTestCase):
         10, (2, 3)), torch.randint(10, (3, 3))),
                      lambda x, y, z: torch.addmm(x, y, z))
 
+  def test_view_empty(self):
+    # These used to throw floating point exception.
+    empty = torch.empty(0, device=xm.xla_device())
+    with self.assertRaisesRegex(RuntimeError, r'unspecified dimension size -1 can be any value'):
+        empty.view(-1, 0)
+    with self.assertRaisesRegex(RuntimeError, r'unspecified dimension size -1 can be any value'):
+        empty.view(3, 0, -1, 0)
+
   def test_pred_type(self):
     xla_device = xm.xla_device()
     a = torch.rand(4)
@@ -719,6 +729,64 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_a = a.to(xla_device)
     xla_b = xla_a.frac()
     self.assertEqual(b, xla_b)
+
+  def test_flip(self):
+    device = xm.xla_device()
+    data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
+    self.assertEqual(torch.tensor([5, 6, 7, 8, 1, 2, 3, 4]).view(2, 2, 2), data.flip(0))
+    self.assertEqual(torch.tensor([3, 4, 1, 2, 7, 8, 5, 6]).view(2, 2, 2), data.flip(1))
+    self.assertEqual(torch.tensor([2, 1, 4, 3, 6, 5, 8, 7]).view(2, 2, 2), data.flip(2))
+    self.assertEqual(torch.tensor([7, 8, 5, 6, 3, 4, 1, 2]).view(2, 2, 2), data.flip(0, 1))
+    self.assertEqual(torch.tensor([8, 7, 6, 5, 4, 3, 2, 1]).view(2, 2, 2), data.flip(0, 1, 2))
+    # check for wrap dim
+    self.assertEqual(torch.tensor([2, 1, 4, 3, 6, 5, 8, 7]).view(2, 2, 2), data.flip(-1))
+    # check for permute
+    self.assertEqual(torch.tensor([6, 5, 8, 7, 2, 1, 4, 3]).view(2, 2, 2), data.flip(0, 2))
+    self.assertEqual(torch.tensor([6, 5, 8, 7, 2, 1, 4, 3]).view(2, 2, 2), data.flip(2, 0))
+
+  def test_flip_check_throws(self):
+    device = xm.xla_device()
+    data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
+    # not allow flip on the same dim more than once
+    self.assertRaises(RuntimeError, lambda: data.flip(0, 1, 1))
+    # not allow empty list as input
+    self.assertRaises(TypeError, lambda: data.flip())
+    # not allow size of flip dim > total dims
+    self.assertRaises(RuntimeError, lambda: data.flip(0, 1, 2, 3))
+    # not allow dim > max dim
+    self.assertRaises(RuntimeError, lambda: data.flip(3))
+
+  def test_flip_expand(self):
+    device = xm.xla_device()
+    data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
+    expanded_data = torch.arange(1, 4, device=device).view(3, 1).expand(3, 2)
+    transposed_data = torch.arange(1, 9, device=device).view(2, 2, 2).transpose(0, 1)
+    self.assertEqual(torch.tensor([3, 3, 2, 2, 1, 1]).view(3, 2), expanded_data.flip(0))
+    self.assertEqual(torch.tensor([8, 7, 4, 3, 6, 5, 2, 1]).view(2, 2, 2), transposed_data.flip(0, 1, 2))
+
+  def test_flip_shape(self):
+    device = xm.xla_device()
+    data = torch.randn(2, 3, 4, device=device)
+    size = [2, 3, 4]
+    test_dims = []
+    for i in range(1, 3):
+        test_dims += itertools.combinations(range(len(size)), i)
+    for ds in test_dims:
+        self.assertEqual(size, list(data.flip(ds).size()))
+
+  def test_flip_rectangular(self):
+    device = xm.xla_device()
+    data = torch.tensor([1, 2, 3, 4, 5, 6]).view(2, 3).to(device)
+    flip0_result = torch.tensor([[4, 5, 6], [1, 2, 3]]).to(device)
+    flip1_result = torch.tensor([[3, 2, 1], [6, 5, 4]]).to(device)
+
+    self.assertEqual(flip0_result, data.flip(0))
+    self.assertEqual(flip1_result, data.flip(1))
+
+  def test_flip_empty_tensor(self):
+    device = xm.xla_device()
+    data = torch.tensor([])
+    self.assertEqual(data, data.flip(0))
 
   def test_norm_p0(self):
     # p = 0 is equivalent to nonzero
@@ -864,6 +932,16 @@ class TestAtenXlaTensor(XlaTestCase):
         [torch.randn(3, 4),
          torch.tensor([2, 1], dtype=torch.long)], test_fn)
 
+  def test_index_select_out(self):
+
+    def test_fn(s, i):
+      out = torch.randn(5 * 4 * 5, device=s.device)
+      return torch.index_select(s, 0, i, out=out.view(5, 4, 5)), out
+
+    self.runAtenTest(
+        [torch.randn(3, 4, 5),
+         torch.tensor([2, 1, 0, 1, 2], dtype=torch.long)], test_fn)
+
   def test_save_view_alias_check(self):
 
     class Nested(object):
@@ -880,35 +958,36 @@ class TestAtenXlaTensor(XlaTestCase):
     nested = Nested(b, c)
     self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
 
+    with tempfile.TemporaryFile() as tf:
+      self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
+
   def test_save(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
-    x_file = tempfile.mktemp()
-    try:
-      torch.save(x, x_file)
-      x_loaded = torch.load(x_file)
+    with tempfile.NamedTemporaryFile() as tf:
+      torch.save(x, tf)
+      x_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
-    finally:
-      os.remove(x_file)
 
   def test_save_tuple(self):
     xla_device = xm.xla_device()
     x = torch.randn(5, device=xla_device)
     number = 3
-    x_file = tempfile.mktemp()
-    try:
-      torch.save((x, number), x_file)
-      x_loaded, number_loaded = torch.load(x_file)
+    with tempfile.NamedTemporaryFile() as tf:
+      torch.save((x, number), tf)
+      x_loaded, number_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
       self.assertEqual(number, number_loaded)
-    finally:
-      os.remove(x_file)
 
-  def test_copy(self):
+  def test_deepcopy(self):
     xla_device = xm.xla_device()
     x = torch.rand(5, device=xla_device)
-    y = copy.copy(x)
+    x0 = x[0]
+    y = copy.deepcopy(x)
     self.assertEqual(x, y)
+    y[0] = 1
+    # Make sure x doesn't change with y.
+    self.assertEqual(x[0], x0)
 
   def test_print(self):
     xla_device = xm.xla_device()
@@ -988,5 +1067,5 @@ if __name__ == '__main__':
       use_full_mat_mul_precision=True)
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
-    print(torch_xla._XLAC._xla_metrics_report())
+    print(met.metrics_report())
   sys.exit(0 if test.result.wasSuccessful() else 1)

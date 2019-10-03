@@ -230,7 +230,7 @@ XrtComputationClient::XrtComputationClient(
 
 ComputationClient::DataPtr XrtComputationClient::CreateDataPlaceholder(
     string device, Shape shape) {
-  return std::make_shared<XrtData>(this, std::move(device), std::move(shape));
+  return std::make_shared<XrtData>(std::move(device), std::move(shape));
 }
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(

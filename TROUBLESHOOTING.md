@@ -1,7 +1,70 @@
-# Performance Caveats
+# Troubleshooting
+
+Note that the information in this section is subject to be removed in future releases of the _PyTorch/XLA_ software,
+since many of them are peculiar to a given internal implementation which might change.
+
+To diagnose issues, we can use the execution metrics and counters provided by _PyTorch/XLA_
+The **first thing** to check when model is slow is to generate a metrics report.
+
+Metrics report is extremely helpful in diagonsing issues. Please try to include it in your bug
+report sent to us if you have it.
+
+## Get A Metrics Report
+
+Put the following line in your program to generate a report:
+
+```Python
+import torch_xla.debug.metrics as met
+
+print(met.metrics_report())
+```
+
+## Understand The Metrics Report
+
+The report includes things like:
+- how many time we issue _XLA_ compilations and time spent on issuing.
+- how many times we execute and time spent on execution
+- how many device data handles we create/destroy etc.
+
+This information is reported in terms of percentiles of the samples. An example is:
+
+```
+Metric: CompileTime
+  TotalSamples: 202
+  Counter: 06m09s401ms746.001us
+  ValueRate: 778ms572.062us / second
+  Rate: 0.425201 / second
+  Percentiles: 1%=001ms32.778us; 5%=001ms61.283us; 10%=001ms79.236us; 20%=001ms110.973us; 50%=001ms228.773us; 80%=001ms339.183us; 90%=001ms434.305us; 95%=002ms921.063us; 99%=21s102ms853.173us
+```
+
+We also provide counters, which are named integer variables which track internal software status. For example:
+
+```
+Counter: CachedSyncTensors
+  Value: 395
+```
+
+In this report, any counter that starts with `aten::`
+indicates a context switch between the XLA device and CPU, which can be a
+potential performance optimization area in the model code.
+
+Counters are useful to understand which operations are routed back to the CPU engine of _PyTorch_.
+They are fully qualified with their C++ namespace:
+
+```
+Counter: aten::nonzero
+  Value: 33
+```
+
+If you see `aten::` ops other than `nonzero` and `_local_scalar_dense`, that usually means a missing
+lowering in PyTorch/XLA. Feel free to open a feature request for it on [GitHub issues](https://github.com/pytorch/xla/issues).
+
+## Known Performance Caveats
 
 PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors share the full tensor interface with CPU & GPU tensors.
-However, constraints in XLA/hardware and the lazy evaluation model suggest certain patterns might result in bad performance:
+However, constraints in XLA/hardware and the lazy evaluation model suggest certain patterns might result in bad performance.
+
+If your model shows bad performance, keep in mind the following caveats:
 
 1.  **XLA/TPU yield degraded performance with too many recompilations.**
 
@@ -12,7 +75,7 @@ However, constraints in XLA/hardware and the lazy evaluation model suggest certa
 
     _Possible sources_:
     * Direct or indirect uses of `nonzero` introduce dynamic shapes; for example, masked indexing `base[index]` where `index` is a mask tensor.
-    * Loops with a different number of iterations between steps can result in different execution graphs thus require recompilations.
+    * Loops with a different number of iterations between steps can result in different execution graphs, thus require recompilations.
 
     _Solution_:
     * Tensor shapes should be the same between iterations, or a low number of shape variations should be used.
@@ -25,11 +88,11 @@ However, constraints in XLA/hardware and the lazy evaluation model suggest certa
 
     _Possible sources_:
 
-    - The `item()` operation explicitly asks for evaluating the result. Don't use it unless it's necessary.
+    - The `item()` operation explicitly asks to evaluate the result. Don't use it unless it's necessary.
 
     _Solution_:
 
-    - For most ops we can lower them to XLA to fix it. Checkout [metrics report section](#metrics-report) to find out the missing ops and open a feature request on github.
+    - For most ops we can lower them to XLA to fix it. Checkout [metrics report section](#metrics-report) to find out the missing ops and open a feature request on [GitHub](https://github.com/pytorch/xla/issues).
     - Even when a PyTorch tensor is known as a scalar, avoid using `tensor.item()`. Keep it as a tensor and use tensor operations on it.
     - Use `torch.where` to substitute control flow when applicable.
       E.g. The control flow with `item()` used in [clip_grad_norm_](https://github.com/pytorch/pytorch/blob/de19eeee99a2a282fc441f637b23d8e50c75ecd1/torch/nn/utils/clip_grad.py#L33) can be simply replaced by `torch.where` with dramatical performance improvement.
@@ -56,72 +119,15 @@ However, constraints in XLA/hardware and the lazy evaluation model suggest certa
    * When dataset is small, and there are too few steps, this may result in a no-op epoch. Therefore, it is better to use
    small batch sizes in those cases.
 
-# Debugging
+## More Debugging Tools
 
-Sometimes bad things happen and a deeper look into the _PyTorch/TPU_ stack is necessary.
-In order to do that, _PyTorch/TPU_ has a series of environment variables and function calls
-which can help understading its internal behavior.
+We don't expect users to use tools in this section to debug their models. But we might ask for
+them when you submit a bug report since they provide additional information that metrics report
+doesn't have.
 
-Note that the infromation in this section is subject to be removed in future releases of
-the _PyTorch/TPU_ software, since many of them are peculiar to a given internal implementation
-which might change.
+### Environment Variables
 
-## Metrics Report
-
-The _PyTorch/TPU_ stack keeps a series of metrics and counters during its execution, and
-the following API returns a string representation of them:
-
-```Python
-torch_xla._XLAC._xla_metrics_report()
-```
-
-Printing out that information can help during the debug phases and while reporting issues.
-
-The information included within the metrics report include things like
-- how many time we issue _XLA_ compilations and time spent on issuing.
-- how many times we execute and time spent on execution
-- how many device data handles we create/destroy etc...
-
-These information is reported in terms of percentiles of the samples.
-An example is:
-
-```
-Metric: CompileTime
-  TotalSamples: 202
-  Counter: 06m09s401ms746.001us
-  ValueRate: 778ms572.062us / second
-  Rate: 0.425201 / second
-  Percentiles: 1%=001ms32.778us; 5%=001ms61.283us; 10%=001ms79.236us; 20%=001ms110.973us; 50%=001ms228.773us; 80%=001ms339.183us; 90%=001ms434.305us; 95%=002ms921.063us; 99%=21s102ms853.173us
-```
-
-The _PyTorch/TPU_ stack also has counters, which are named integer variables tracks
-internal software status.
-Example:
-
-```
-Counter: CachedSyncTensors
-  Value: 395
-```
-
-In this report, any counter that starts with `aten::`
-indicates a context switch between the XLA device and CPU, which can be a
-potential performance optimization area in the model code.
-
-Counters are useful to understand which operations the _PyTorch/TPU_ stack is routing
-back to the CPU engine of _PyTorch_.
-Things which looks like a _C++_ namespace are part of this category:
-
-```
-Counter: aten::nonzero
-  Value: 33
-```
-
-If you see `aten::` ops other than `nonzero` and `_local_scalar_dense`, that usually means a missing
-lowering in PyTorch/XLA, feel free to open a feature request for it on github issues.
-
-## Environment Variables
-
-There are also a number of environment variables which control the behavior of the _PyTorch/TPU_
+There are also a number of environment variables which control the behavior of the _PyTorch/XLA_
 software stack.
 
 Setting such variables will cause different degrees of performance degradation, so they should
@@ -144,12 +150,12 @@ only be enabled for debugging.
 * ```XLA_METRICS_FILE```: If set, the path to a local file where the internal metrics will be
   saved at every step. Metrics will be appended to the file, if already existing.
 
-* ```GET_TENSORS_OPBYOP```: Enables pure _OpByOp_ dispatch. The _PyTorch/TPU_ software tries to
+* ```GET_TENSORS_OPBYOP```: Enables pure _OpByOp_ dispatch. The _PyTorch/XLA_ software tries to
   fuse together many _PyTorch_ operations into a single computation graph, but sometimes, either
   for debugging, or in case the _PyTorch_ code have a very dynamic nature (in shapes or graph
   terms), it is better to force the execution in _OpByOp_ mode (every IR node is lowered into
   a separate _XLA_ computation, and chain-executed). This environment variable, if set to 1,
-  enables _OpByOp_ during the "get tensors" operation (the operation used by _PyTorch/TPU_ to
+  enables _OpByOp_ during the "get tensors" operation (the operation used by _PyTorch/XLA_ to
   fetch intermediate values back from the _TPU_ device into _PyTorch_ CPU tensors).
 
 * ```SYNC_TENSORS_OPBYOP```: The same as _GET_TENSORS_OPBYOP_ but for "sync tensors" operation
@@ -167,10 +173,27 @@ only be enabled for debugging.
   expensive, so setting this flag might help. It should be verified by the user that truncating
   to 32bit values is a valid operation according to the use of _PyTorch_ _Long_ values in it.
 
-## Retrieving Stack Traces
+* ```TF_CPP_LOG_THREAD_ID```: If set to 1, the TF logs will show the thread ID
+  helping with debugging multithreaded processes.
+
+* ```TF_CPP_VMODULE```: Environment variable used for TF VLOGs and takes the
+  form of `TF_CPP_VMODULE=name=value,...`. For PyTorch/XLA using a configuration like
+  `TF_CPP_VMODULE=tensor=5` would enable logging such as:
+
+  ```
+  2019-10-03 17:23:56.419040: I   27891 torch_xla/csrc/tensor.cpp:1104]
+  Executing IR graph hash 4211381954965020633 on device TPU:3 done!
+  2019-10-03 17:23:56.419448: I   27890 torch_xla/csrc/tensor.cpp:1104]
+  Executing IR graph hash 15483856951158150605 on device TPU:5 done!
+  2019-10-03 17:23:56.419539: I   27896 torch_xla/csrc/tensor.cpp:1104]
+  Executing IR graph hash 4211381954965020633 on device TPU:4 done!
+  ...
+  ```
+
+### Retrieving Stack Traces
 
 In the event that the _PyTorch_ process is hanging, it might be useful to include the stack
-traces together with the _Github_ issue.
+traces together with the GitHub issue.
 
 First thing is to find out which PID the _PyTorch_ process is associated with. Using the ```ps```
 command it is possible to find that information. It will be a _python_ process running your

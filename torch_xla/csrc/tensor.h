@@ -47,6 +47,8 @@ class XLATensor {
 
   at::Tensor ToTensor();
 
+  void ShallowCopyTo(XLATensor* dest) const;
+
   // Assigns the tensor value to the XLA tensor.
   void SetTensor(at::Tensor tensor);
 
@@ -265,6 +267,9 @@ class XLATensor {
   static XLATensor bernoulli(const XLATensor& input);
   static void bernoulli_(XLATensor& input, double probability);
   static void bernoulli_(XLATensor& input, const XLATensor& probability);
+
+  static XLATensor bitwise_not(const XLATensor& input);
+  static void bitwise_not_(XLATensor& input);
 
   // Batch matrix multiplication. Both tensors must be 3D, the batch size must
   // match and the remaining two dimensions must be compatible for matrix

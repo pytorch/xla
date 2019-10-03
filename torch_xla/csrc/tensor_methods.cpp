@@ -590,6 +590,14 @@ void XLATensor::bernoulli_(XLATensor& input, const XLATensor& probability) {
       ir::ops::Bernoulli(input.GetIrValue(), probability.GetIrValue()));
 }
 
+XLATensor XLATensor::bitwise_not(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Not(input.GetIrValue()));
+}
+
+void XLATensor::bitwise_not_(XLATensor& input) {
+  input.SetIrValue(ir::ops::Not(input.GetIrValue()));
+}
+
 XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {
   // Consistent with the checks in bmm_out_or_baddbmm_.
   std::string tag = "bmm";
@@ -620,14 +628,32 @@ XLATensor XLATensor::cast(const XLATensor& input, at::ScalarType dtype) {
 
 XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                          xla::int64 dim) {
+  // Shape checks for cat:
+  // - If not empty, every tensor shape must be the same.
+  // - Empty tensor passes but is simply ignore in implementation,
+  //   e.g. ([2, 3, 5], [])
+  // - If empty dimension, other dimensions must be the same.
+  //   e.g. ([4, 0, 32, 32], [4, 2, 32, 32], dim=1) passes.
+  //   ([4, 0, 32, 32], [4, 2, 31, 32], dim=1) throws.
   XLA_CHECK_GT(tensors.size(), 0);
   std::vector<ir::Value> values;
-  for (auto& tensor : tensors) {
-    if (xla::ShapeUtil::ElementsIn(tensor.shape()) > 0) {
-      dim = XlaHelpers::GetCanonicalDimensionIndex(dim,
-                                                   tensor.shape().get().rank());
-      values.push_back(tensor.GetIrValue());
+  std::vector<xla::Shape> shapes;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    xla::Shape tensor_shape = tensors[i].shape();
+    if (tensor_shape.rank() == 1 && tensor_shape.dimensions()[0] == 0) {
+      continue;
     }
+    dim = XlaHelpers::GetCanonicalDimensionIndex(dim, tensor_shape.rank());
+    tensor_shape.DeleteDimension(dim);
+    if (!shapes.empty()) {
+      XLA_CHECK(xla::ShapeUtil::Compatible(shapes.back(), tensor_shape))
+          << shapes.back() << " vs. " << tensor_shape;
+    }
+    shapes.push_back(tensor_shape);
+    values.push_back(tensors[i].GetIrValue());
+  }
+  if (values.empty()) {
+    return tensors[0];
   }
   return tensors[0].CreateFrom(ir::MakeNode<ir::ops::Cat>(values, dim));
 }
@@ -949,9 +975,12 @@ void XLATensor::fill_(XLATensor& input, at::Scalar value) {
 
 XLATensor XLATensor::flip(const XLATensor& input,
                           tensorflow::gtl::ArraySlice<const xla::int64> dims) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::Flip>(
-      input.GetIrValue(), XlaHelpers::GetCanonicalDimensionIndices(
-                              dims, input.shape().get().rank())));
+  auto dimensions = XlaHelpers::GetCanonicalDimensionIndices(
+      dims, input.shape().get().rank());
+  std::set<xla::int64> unique_dims(dimensions.begin(), dimensions.end());
+  XLA_CHECK_EQ(unique_dims.size(), dimensions.size());
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::Flip>(input.GetIrValue(), dimensions));
 }
 
 XLATensor XLATensor::floor(const XLATensor& input) {
