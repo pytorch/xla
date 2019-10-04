@@ -1,11 +1,11 @@
 diff --git a/test/common_device_type.py b/test/common_device_type.py
-index 945882b0d7..e8232dee92 100644
+index b3352182c6..5818f994c4 100644
 --- a/test/common_device_type.py
 +++ b/test/common_device_type.py
-@@ -209,10 +209,81 @@ class CUDATestBase(DeviceTypeTestBase):
+@@ -216,10 +216,81 @@ class CUDATestBase(DeviceTypeTestBase):
          cls.primary_device = 'cuda:{0}'.format(torch.cuda.current_device())
-
-
+ 
+ 
 +import torch_xla
 +import torch_xla.core.xla_model as xm
 +
@@ -28,9 +28,9 @@ index 945882b0d7..e8232dee92 100644
 +    # Overrides to instantiate tests that are known to run quickly
 +    # and correctly on XLA.
 +    @classmethod
-+    def instantiate_test(cls, test):
-+        test_name = test.__name__ + "_" + cls.device_type
-+        if test.__name__ not in allowed_torch_tests:
++    def instantiate_test(cls, name, test):
++        test_name = name + "_" + cls.device_type
++        if test_name not in allowed_torch_tests and test.__name__ not in allowed_torch_tests:
 +            assert not hasattr(cls, test_name), "Redefinition of test {0}".format(test_name)
 +
 +            @wraps(test)
@@ -42,7 +42,7 @@ index 945882b0d7..e8232dee92 100644
 +        else:  # Test is allowed
 +            dtypes = cls._get_dtypes(test)
 +            if dtypes is None:  # Tests without dtype variants are instantiated as usual
-+                super().instantiate_test(test)
++                super().instantiate_test(name, test)
 +            else:  # Tests with dtype variants have unsupported dtypes skipped
 +                skipped_dtypes = [dtype for dtype in dtypes if dtype in cls.unsupported_dtypes]
 +
@@ -64,7 +64,7 @@ index 945882b0d7..e8232dee92 100644
 +                xla_dtypes = [dtype for dtype in dtypes if dtype not in cls.unsupported_dtypes]
 +                if len(xla_dtypes) != 0:
 +                    test.dtypes[cls.device_type] = xla_dtypes
-+                    super().instantiate_test(test)
++                    super().instantiate_test(name, test)
 +
 +    @classmethod
 +    def get_primary_device(cls):
@@ -81,6 +81,6 @@ index 945882b0d7..e8232dee92 100644
  if torch.cuda.is_available():
      device_type_test_bases.append(CUDATestBase)
 +device_type_test_bases.append(XLATestBase)
-
-
+ 
+ 
  # Adds 'instantiated' device-specific test cases to the given scope.
