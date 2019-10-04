@@ -832,7 +832,9 @@ at::Tensor& AtenXlaType::clamp_min_(at::Tensor& self, at::Scalar min) {
   return self;
 }
 
-at::Tensor AtenXlaType::clone(const at::Tensor& self) {
+at::Tensor AtenXlaType::clone(
+    const at::Tensor& self,
+    c10::optional<at::MemoryFormat> /* memory_format */) {
   return bridge::AtenFromXlaTensor(
       XLATensor::clone(bridge::GetXlaTensor(self)));
 }
