@@ -2,7 +2,7 @@
 
 # How to Run PyTorch with TPUs
 
-First, create your [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: `pytorch-0.5`):
+First, create your [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: ex. `pytorch-0.5`):
 
 Once you've created a Cloud TPU node, you can train your PyTorch models by either:
 
@@ -22,10 +22,10 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
 2. SSH into the VM and pull the stable docker image into the VM:
 
     ```Shell
-    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r0.1
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r0.5
     ```
 
-    Note we do also expose the following nightly Docker image versions, but we recommend you use a stable version (`r0.1`):
+    Note we do also expose the following nightly Docker image versions, but we recommend you use a stable version (`r0.5`):
     * `gcr.io/tpu-pytorch/xla:nightly`
     * `gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_20190531)`
 
@@ -35,12 +35,12 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
 
     * Run the container with a single command:
       ```Shell
-      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r0.1 python /pytorch/xla/test/test_train_mnist.py
+      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r0.5 python /pytorch/xla/test/test_train_mnist.py
       ```
 
     * Run the script in an interactive shell:
       ```Shell
-      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r0.1
+      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r0.5
       (pytorch) root@CONTAINERID:/$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
       (pytorch) root@CONTAINERID:/$ python pytorch/xla/test/test_train_mnist.py
       ```
@@ -58,7 +58,7 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
     * Click **Create** to create the instance.
 
 
-2. SSH into VM and activate the conda environment you wish to use. Each release (e.g.: `0.1`, `nightly`) is a separate conda environment.
+2. SSH into VM and activate the conda environment you wish to use. Each release (e.g.: `0.1`, `0.5`, `nightly`) is a separate conda environment.
 
     ```Shell
     (vm)$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
@@ -67,11 +67,12 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
     #
     base                  *  /anaconda3
     torch-xla-0.1              /anaconda3/envs/torch-xla-0.1
+    torch-xla-0.5              /anaconda3/envs/torch-xla-0.5
     torch-xla-nightly          /anaconda3/envs/torch-xla-nightly
 
-    (vm)$ conda activate torch-xla-0.1
-    (torch-xla-0.1)$ cd /usr/share/torch-xla-0.1/pytorch/xla
-    (torch-xla-0.1)$ python test/test_train_mnist.py
+    (vm)$ conda activate torch-xla-0.5
+    (torch-xla-0.5)$ cd /usr/share/torch-xla-0.5/pytorch/xla
+    (torch-xla-0.5)$ python test/test_train_mnist.py
     ```
 
     To update the wheels `torch` and `torch_xla` to the latest nightly
