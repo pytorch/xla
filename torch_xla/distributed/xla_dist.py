@@ -729,7 +729,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(
       description='PyTorch on TPU distrubuted training',
       epilog=('Usage example: xla_dist.py --tpu=[TPU_NAME]'
-              ' --conda-env pytorch-nightly -- python train'))
+              ' --conda-env torch-xla-nightly -- python train'))
 
   cluster_group = parser.add_argument_group('Cluster Setup')
   cluster_group.add_argument(
