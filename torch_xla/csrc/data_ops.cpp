@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
+#include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -182,8 +183,14 @@ xla::XlaOp BuildUpdateSlice(
     const xla::XlaOp& input, const xla::XlaOp& source,
     tensorflow::gtl::ArraySlice<const xla::int64> base_indices) {
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::Shape source_shape = XlaHelpers::ShapeOfXlaOp(source);
+  xla::XlaOp update_source = source;
+  if (source_shape.element_type() != input_shape.element_type()) {
+    update_source = ConvertTo(source, source_shape.element_type(),
+                              input_shape.element_type(), /*device=*/nullptr);
+  }
   xla::XlaOp reshaped_source =
-      XlaHelpers::ReshapeToRank(source, input_shape.rank());
+      XlaHelpers::ReshapeToRank(update_source, input_shape.rank());
   std::vector<xla::XlaOp> start_indices;
   for (auto index : base_indices) {
     start_indices.push_back(
