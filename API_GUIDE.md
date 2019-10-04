@@ -1,11 +1,11 @@
-# PyTorch on TPUs
+# PyTorch on XLA Devices
 
-PyTorch runs on TPUs with the [torch_xla package](https://github.com/pytorch/xla/). This document describes how to run your models on `xla` devices.
+PyTorch runs on XLA devices, like Cloud TPUs, with the [torch_xla package](https://github.com/pytorch/xla/). This document describes how to run your models on these devices.
 
 ## Creating an XLA Tensor
 
-PyTorch/XLA adds a new `xla` device type to PyTorch. This device type works like
-just other PyTorch device types. For example, the here's how to create and
+PyTorch/XLA adds a new `xla` device type to PyTorch. This device type works just
+like other PyTorch device types. For example, here's how to create and
 print an XLA tensor:
 
 ```python
@@ -20,12 +20,14 @@ print(t)
 
 This code should look familiar. PyTorch/XLA uses the same interface as regular
 PyTorch with a few additions. Importing `torch_xla` initializes PyTorch/XLA, and
-`xm.xla_device()` returns the current XLA device. This may be a CPU or Cloud TPU depending on your environment.
+`xm.xla_device()` returns the current XLA device. This may be a CPU or Cloud TPU
+depending on your environment.
 
-## Working with XLA Tensors
+## XLA Tensors are PyTorch Tensors
 
-Operations can be performed on XLA tensors just like CPU or CUDA tensors. XLA
-tensors can be added together:
+PyTorch operations can be performed on XLA tensors just like CPU or CUDA tensors.
+
+For example, XLA tensors can be added together:
 
 ```python
 t0 = torch.randn(2, 2, device=xm.xla_device())
@@ -49,7 +51,7 @@ print(l_out)
 ```
 
 Like other device types, XLA tensors only work with other XLA tensors on the
-same device. So
+same device. So code like
 
 ```python
 l_in = torch.randn(10, device=xm.xla_device())
@@ -61,48 +63,28 @@ print(l_out)
 
 will throw an error since the torch.nn.Linear module is on the CPU.
 
-Even though XLA tensors are lot like CPU and CUDA tensors, there are a few
-things that make them unique.
-
-## XLA Tensors are Lazy
-
-CPU and CUDA tensors launch operations immediately or `eagerly`. XLA tensors,
-on the other hand, are `lazy`. They record the operations performed on them
-into a graph until the results are needed. Deferring execution like this lets XLA optimize it. A graph of multiple separate operations might be fused into a single optimized operation, for example.
-
-XLA tensors executing lazily, like CUDA tensors executing asynchronously, is
-generally invisible to the caller. PyTorch/XLA automatically constructs the graphs,
-sends them to XLA devices, and performs the needed synchronization when
-copying data between an XLA device and the CPU.
-
-## XLA Tensors on Cloud TPUs can use bFloat16
-
-PyTorch/XLA supports the `bfloat16` data type on Cloud TPUs. When the
-`XLA_USE_BF16` environment variable is set all PyTorch float scalars and tensors
-will automatically be converted to bfloat16 on Cloud TPUs. They will be converted
-back to PyTorch floats if moved to the CPU.
-
-Cloud TPUs also treat the `torch.double` datatype as `torch.float`, so when
-`XLA_USE_BF16` is set then `torch.double` actually means `torch.float` and
-`torch.float` actually means `torch.bfloat16` when tensors are on Cloud TPUs.
-
 ## Running Models on XLA Devices
 
-### Getting Started
+Building a new PyTorch network or converting an existing one to run on XLA devices requires only a few lines of XLA-specific code. The following snippets highlight these lines when running on a single device, multiple devices with XLA multiprocessing, or multiple threads with XLA multithreading.
 
-The following snippet shows a network running on a single XLA device:
+### Running on a Single XLA Device
+
+The following snippet shows a network training on one of several
+device types:
 
 ```python
-import torch
-import torch_xla
 import torch_xla.core.xla_model as xm
 
-device = xm.xla_device()
-model = MNIST()
+device = 'cpu'
+if ON_CUDA:
+  device = 'cuda'
+if ON_XLA:
+  device = xm.xla_device()
+
+model = MNIST().train().to(device)
 loss_fn = nn.NLLLoss()
 optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
 
-model.train()
 for data, target in train_loader:
   optimizer.zero_grad()
   data = data.to(device)
@@ -110,26 +92,29 @@ for data, target in train_loader:
   output = model(data)
   loss = loss_fn(output, target)
   loss.backward()
-  xm.optimizer_step(optimizer, barrier=True)
+
+  if ON_XLA:
+    xm.optimizer_step(optimizer, barrier=True)
+  else:
+    optimizer.step()
+
 ```
 
-Like in the previous snippets, this snippet acquires the XLA device after
-importing `torch_xla` with `xm.xla_device()`. The network
-is constructed as usual and its inputs are sent to the XLA device after being
-loaded on the CPU. At the end of each training iteration
-`xm.optimizer_step(optimizer, barrier=True)` is called. This replaces the
-usual Pytorch `optimizer.step()` and causes XLA to execute its current graph
-and update the model's parameters.
+This snippet highlights how easy it is swap the device type your model runs
+on. The model definition, dataloader, optimizer and training loop are common
+to all device types. The only XLA-specific code is a couple lines that acquire
+the XLA device and step the optimizer with a `barrier`. Calling
+`xm.optimizer_step(optimizer, barrier=True)` at the end of each training
+iteration causes XLA to execute its current graph and update the model's
+parameters. See [XLA Tensor Deep Dive](#xla-tensor-deep-dive) for more on
+how XLA creates graphs and runs operations.
 
-### Running on Multiple Devices with MultiProcessing
+### Running on Multiple XLA Devices with MultiProcessing
 
-The snippet shown above only ran the network on a single device. PyTorch/XLA
-makes it easy to accelerate training by running on multiple devices. The
-following snippet shows how:
+PyTorch/XLA makes it easy to accelerate training by running on multiple devices.
+The following snippet shows how:
 
 ```python
-import torch
-import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -138,11 +123,10 @@ def _mp_fn(index):
   device = xm.xla_device()
   para_loader = pl.ParallelLoader(train_loader, [device])
 
-  model = MNIST()
+  model = MNIST().train().to(device)
   loss_fn = nn.NLLLoss()
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
 
-  model.train()
   for data, target in para_loader.per_device_loader(device):
     optimizer.zero_grad()
     output = model(data)
@@ -154,21 +138,22 @@ if __name__ == '__main__':
   xmp.spawn(_mp_fn, args=())
 ```
 
-There are only three differences between this multiprocessing snippet and the
-previous one. First, `xmp.spawn()` is used to create the processes that will
-run on other XLA devices. Second, a `ParallelLoader` is used to load the
-training data onto each device. Third, there's no need to call
-`xm.optimizer_step(optimizer)` with `barrier=True` since ParallelLoader
-automatically creates an XLA barrier that forces evaluation of the graph.
+There are three differences between this multidevice snippet and the previous
+single device snippet:
 
-See the [full multiprocessing example](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist.py) of how to train MNIST on multiple Cloud TPUs with multiprocessing.
+- `xmp.spawn()` creates the processes that each run an XLA device.
+- `ParallelLoader` loads the training data onto each device.
+- `xm.optimizer_step(optimizer)` no longer needs a `barrier`. ParallelLoader
+automatically creates an XLA barrier that evalutes the graph.
 
-### Running on Multiple Devices with MultiThreading
+The model definition, optimizer definition and training loop remain the same.
+
+See the [full multiprocessing example](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist.py) for more on training a network on multiple XLA devices with multiprocessing.
+
+### Running on Multiple XLA Devices with MultiThreading
 
 Running on multiple devices using processes (see above) is preferred to using
-threads. If, however, you prefer to use threads then PyTorch/XLA provides
-that support with its `DataParallel` interface. The following snippet shows
-the same network training with multiple threads:
+threads. If, however, you want to use threads then PyTorch/XLA has a `DataParallel` interface. The following snippet shows the same network training with multiple threads:
 
 ```python
 import torch_xla.core.xla_model as xm
@@ -193,24 +178,47 @@ for epoch in range(1, num_epochs + 1):
   model_parallel(train_loop_fn, train_loader)
 ```
 
-This multithreaded snippet differs from the multiprocessing example by first
-initializing itself with `DataParallel` and creating threads with
-`model_parallel(train_loop_fn, train_loader)` instead of creating
-processes with `xmp.spawn()`.
+The only differences between the multithreading and multiprocessing code are:
 
-See the [full multithreading example](https://github.com/pytorch/xla/blob/master/test/test_train_mnist.py) of how to train MNIST on multiple Cloud TPUs with
-multithreading.
+- Multiple devices are acquired in the same process with `xm.get_xla_supported_devices()`.
+- The model is wrapped in `dp.DataParallel` and passed both the training loop
+and dataloader.
 
-## XLA Tensor Internals
+See the [full multithreading example](https://github.com/pytorch/xla/blob/master/test/test_train_mnist.py) for more on training a network on multiple XLA
+devices with multithreading.
 
-As the above snippets and examples show, using an XLA device or even multiple
-XLA devices requires changing only a few lines of code. The internals of an XLA
-tensor, however, are different from those of CPU or CUDA tensors. In particular,
-XLA tensors have no storage and always appear to be contiguous.
+## XLA Tensor Deep Dive
 
-These differences mean that XLA tensors behave slightly differently when being
-saved, loaded, and copied. PyTorch/XLA, like all of PyTorch, is actively
-developed and these behaviors may change in the future.
+Using XLA tensors and devices requires changing only a few lines of code. But
+even though XLA tensors act a lot like CPU and CUDA tensors their internals are
+different. This section describes what makes XLA tensors unique.
+
+### XLA Tensors are Lazy
+
+CPU and CUDA tensors launch operations immediately or `eagerly`. XLA tensors,
+on the other hand, are `lazy`. They record operations in a graph until the
+results are needed. Deferring execution like this lets XLA optimize it. A graph
+of multiple separate operations might be fused into a single optimized operation, for example.
+
+Lazy execution is generally invisible to the caller. PyTorxh/XLA automatically
+constructs the graphs, sends them to XLA devices, and synchronizes when
+copying data between an XLA device and the CPU. Inserting a `barrier` when
+taking an optimizer step also synchronizes the CPU and the XLA device.
+
+### XLA Tensors and bFloat16
+
+When Cloud TPUs are used as XLA devices then:
+
+- Floating point (float and double) XLA tensors use the same datatype
+- If the `XLA_USE_BF16` environment variable is set this datatype is `bfloat16`.
+If not set it's fp32.
+
+XLA tensors on Cloud TPUs will report their PyTorch datatypes regardless of
+the actual datatype they're using. If moved to the CPU they will be converted
+from their actual datatype to their PyTorch datatype. For example, if
+`XLA_USE_BF16=1` then a XLA tensor with dtype `torch.double` on a Cloud TPU is
+actually using `bfloat16`, and if that tensor is moved to the CPU the resulting
+tensor will have dtype `torch.double`.
 
 ### Saving and Loading XLA Tensors
 
@@ -222,42 +230,44 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-t0 = torch.randn(2, 2, device=xm.xla_device())
-t1 = torch.randn(2, 2, device=xm.xla_device())
+device = xm.xla_device()
+
+t0 = torch.randn(2, 2, device=device)
+t1 = torch.randn(2, 2, device=device)
 
 tensors = (t0, t1)
 
 torch.save(tensors, 'tensors.pt')
 
 tensors = torch.load('tensors.pt')
-
-print(tensors)
 ```
 
-An XLA tensor and a view of that tensor cannot be saved together, however.
-The following snippet will throw an error:
+Unlike CPU and CUDA tensors, however, XLA tensors are always loaded back
+on the devices they were saved from. If these devices are unavailable when
+loading then the load will fail. We recommend moving XLA tensors to the CPU
+before saving for additional flexibility. When the tensors are loaded they
+will be on the CPU and can be moved to XLA or CUDA devices as desired.
 
 ```python
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-t = torch.randn(2, 2, device=xm.xla_device())
-t_view = t[0:2]
+device = xm.xla_device()
 
-tensors = (t, t_view)
+t0 = torch.randn(2, 2, device=device)
+t1 = torch.randn(2, 2, device=device)
+
+tensors = (t0.cpu(), t1.cpu())
 
 torch.save(tensors, 'tensors.pt')
-# RuntimeError: Tensor ID 2 is sharing a view with tensor ID 1
+
+tensors = torch.load('tensors.pt')
+
+t0 = tensors[0].to(device)
+t1 = tensors[1].to(device)
 ```
 
-To save an XLA tensor with views you can move it to the CPU before saving it.
-Converting XLA tensors to CPU tensors before saving also lets them
-be loaded as CPU tensors and placed on any available device. When XLA tensors
-are are loaded using `torch.load()` they are placed back on the XLA device
-they were saved from. If these devices are unavailable the load will fail.
-Setting the `map_location` in `torch.load` is a no-op for XLA tensors.
+## Further Reading
 
-### Copying XLA Tensors
-
-Copying an XLA tensor using Python's `copy.copy()` returns a deep copy instead of shallow copy. Use `tensor.view()` instead if you want a shallow copy.
+Additional documentation is available at the [PyTorch/XLA repo](https://github.com/pytorch/xla/). More examples of running networks on Cloud TPUs are available [here](https://github.com/pytorch-tpu/examples).

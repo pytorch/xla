@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'PyTorch/XLA'
-copyright = 'Copyright (c) 2018 Google Inc.'
+# copyright = 'Copyright (c) 2018 Google Inc.'
 author = 'PyTorch/XLA Dev Team'
 
 # The version info for the project you're documenting, acts as replacement for

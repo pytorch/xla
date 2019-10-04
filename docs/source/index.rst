@@ -21,16 +21,21 @@ distributed
 ----------------------------------
 
 .. automodule:: torch_xla.distributed.parallel_loader
-   :members:
+
+.. autoclass:: ParallelLoader
 
 .. automodule:: torch_xla.distributed.data_parallel
-   :members:
+
+.. autoclass:: DataParallel
 
 .. automodule:: torch_xla.distributed.xla_multiprocessing
-   :members:
+
+.. autofunction:: spawn
 
 utils
 ----------------------------------
 
 .. automodule:: torch_xla.utils.utils
-   :members:
+
+
+.. autoclass:: SampleGenerator
