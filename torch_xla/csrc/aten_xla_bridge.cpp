@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor_impl.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
@@ -62,6 +63,19 @@ XLATensor GetXlaTensor(const at::Tensor& tensor) {
   XLA_CHECK(xtensor) << "Input tensor is not an XLA tensor: "
                      << tensor.toString();
   return *xtensor;
+}
+
+std::tuple<XLATensor, XLATensor> GetPromotedXlaTensorsForBinaryOp(
+    const at::Tensor& self, const at::Tensor& other, at::ScalarType dtype) {
+  XLATensor tensor1 = GetXlaTensor(self);
+  if (self.scalar_type() != dtype) {
+      tensor1.SetScalarType(dtype);
+  }
+  XLATensor tensor2 = GetOrCreateXlaTensor(other, tensor1.GetDevice());
+  if (other.scalar_type() != dtype) {
+      tensor2.SetScalarType(dtype);
+  }
+  return std::make_tuple(tensor1, tensor2);
 }
 
 std::vector<XLATensor> GetXlaTensors(

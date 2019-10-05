@@ -920,7 +920,7 @@ XLATensor XLATensor::CopyTensorToDevice(const Device& device) {
 }
 
 XLATensor XLATensor::CreateFrom(ir::Value ir_value) const {
-  return Create(std::move(ir_value), GetDevice()/*, dtype()*/);
+  return Create(std::move(ir_value), GetDevice() , dtype());
 }
 
 XLATensor XLATensor::CreateFrom(ir::Value ir_value,

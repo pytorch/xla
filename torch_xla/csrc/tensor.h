@@ -904,6 +904,9 @@ class XLATensor {
   static XLATensor where(const XLATensor& condition, const XLATensor& input,
                          const XLATensor& other);
 
+  // Set logical_element_type which is visible to upstream PyTorch.
+  void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
+
  private:
   struct SyncTensorCollection {
     std::vector<size_t> indices;
@@ -1036,8 +1039,6 @@ class XLATensor {
       c10::optional<at::ScalarType> logical_element_type_opt) const;
   XLATensor CreateFrom(ir::Value ir_value, const Device& device,
                        at::ScalarType logical_element_type) const;
-
-  void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.
