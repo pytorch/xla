@@ -81,6 +81,7 @@
 #include "torch_xla/csrc/ops/split.h"
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
+#include "torch_xla/csrc/ops/std.h"
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/svd.h"
 #include "torch_xla/csrc/ops/symeig.h"
@@ -2026,6 +2027,16 @@ XLATensor XLATensor::stack(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
       dim, tensors.front().shape().get().rank() + 1);
   return tensors[0].CreateFrom(
       ir::MakeNode<ir::ops::Stack>(values, canonical_dim));
+}
+
+XLATensor XLATensor::std(const XLATensor& input,
+                         std::vector<xla::int64> dimensions,
+                         bool keep_reduced_dimensions, bool unbiased) {
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::Std>(input.GetIrValue(),
+                                 XlaHelpers::GetCanonicalDimensionIndices(
+                                     dimensions, input.shape().get().rank()),
+                                 keep_reduced_dimensions, unbiased));
 }
 
 XLATensor XLATensor::sub(const XLATensor& input, const XLATensor& other,

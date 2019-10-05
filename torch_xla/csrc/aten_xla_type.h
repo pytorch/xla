@@ -987,6 +987,11 @@ class AtenXlaType {
 
   static at::Tensor stack(at::TensorList tensors, int64_t dim);
 
+  static at::Tensor std(const at::Tensor& self, bool unbiased);
+
+  static at::Tensor std(const at::Tensor& self, at::IntArrayRef dim,
+                        bool unbiased, bool keepdim);
+
   static at::Tensor sub(const at::Tensor& self, const at::Tensor& other,
                         at::Scalar alpha);
 

@@ -812,6 +812,10 @@ class XLATensor {
   static XLATensor stack(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                          xla::int64 dim);
 
+  static XLATensor std(const XLATensor& input,
+                       std::vector<xla::int64> dimensions,
+                       bool keep_reduced_dimensions, bool unbiased);
+
   static XLATensor sub(const XLATensor& input, const XLATensor& other,
                        at::Scalar alpha);
   static void sub_(XLATensor& input, const XLATensor& other, at::Scalar alpha);
