@@ -2656,6 +2656,21 @@ at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) {
       XLATensor::stack(bridge::GetXlaTensors(tensors), dim));
 }
 
+at::Tensor AtenXlaType::std(const at::Tensor& self, bool unbiased) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::std(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions*/ false, unbiased));
+}
+
+at::Tensor AtenXlaType::std(const at::Tensor& self, at::IntArrayRef dim,
+                            bool unbiased, bool keepdim) {
+  return bridge::AtenFromXlaTensor(XLATensor::std(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions*/ keepdim, unbiased));
+}
+
 at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) {
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
