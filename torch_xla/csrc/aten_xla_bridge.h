@@ -25,7 +25,7 @@ std::vector<XLATensor> GetXlaTensors(
 
 // Same as above, promoted to the specified dtype if different.
 std::tuple<XLATensor, XLATensor> GetPromotedXlaTensorsForBinaryOp(
-    const at::Tensor& self, const at::Tensor& other, at::ScalarType dtype);
+    const at::Tensor& self, const at::Tensor& other);
 
 // If tensor is an XLA tensor type, returns the XLATensor embedded within it,
 // otherwise creates a new XLA tensor type with tensor as data.

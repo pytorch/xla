@@ -361,9 +361,7 @@ at::Tensor& AtenXlaType::acos_(at::Tensor& self) {
 
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) {
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::add(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
 }
@@ -992,9 +990,7 @@ at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
 }
 
 at::Tensor AtenXlaType::div(const at::Tensor& self, const at::Tensor& other) {
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::div(std::get<0>(xlatensors), std::get<1>(xlatensors)));
 }
@@ -1125,9 +1121,7 @@ at::Tensor AtenXlaType::eq(const at::Tensor& self, at::Scalar other) {
 }
 
 at::Tensor AtenXlaType::eq(const at::Tensor& self, const at::Tensor& other) {
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::eq(std::get<0>(xlatensors), std::get<1>(xlatensors)));
 }
@@ -1334,9 +1328,7 @@ at::Tensor AtenXlaType::ge(const at::Tensor& self, at::Scalar other) {
 }
 
 at::Tensor AtenXlaType::ge(const at::Tensor& self, const at::Tensor& other) {
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::ge(std::get<0>(xlatensors), std::get<1>(xlatensors)));
 }
@@ -1367,9 +1359,7 @@ at::Tensor AtenXlaType::gt(const at::Tensor& self, at::Scalar other) {
 }
 
 at::Tensor AtenXlaType::gt(const at::Tensor& self, const at::Tensor& other) {
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::ge(std::get<0>(xlatensors), std::get<1>(xlatensors)));
 }
@@ -1624,9 +1614,7 @@ at::Tensor AtenXlaType::le(const at::Tensor& self, at::Scalar other) {
 }
 
 at::Tensor AtenXlaType::le(const at::Tensor& self, const at::Tensor& other) {
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::le(std::get<0>(xlatensors), std::get<1>(xlatensors)));
 }
@@ -1746,9 +1734,7 @@ at::Tensor AtenXlaType::lt(const at::Tensor& self, at::Scalar other) {
 }
 
 at::Tensor AtenXlaType::lt(const at::Tensor& self, const at::Tensor& other) {
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::lt(std::get<0>(xlatensors), std::get<1>(xlatensors)));
   return bridge::AtenFromXlaTensor(
@@ -2015,9 +2001,7 @@ at::Tensor AtenXlaType::mm(const at::Tensor& self, const at::Tensor& mat2) {
 }
 
 at::Tensor AtenXlaType::mul(const at::Tensor& self, const at::Tensor& other) {
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::mul(std::get<0>(xlatensors), std::get<1>(xlatensors)));
 }
@@ -2104,9 +2088,7 @@ at::Tensor AtenXlaType::ne(const at::Tensor& self, at::Scalar other) {
 }
 
 at::Tensor AtenXlaType::ne(const at::Tensor& self, const at::Tensor& other) {
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::ne(std::get<0>(xlatensors), std::get<1>(xlatensors)));
 }
@@ -2445,9 +2427,7 @@ at::Tensor& AtenXlaType::rsqrt_(at::Tensor& self) {
 at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Tensor& other,
                              at::Scalar alpha) {
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::rsub(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
 }
@@ -2689,9 +2669,7 @@ at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) {
 at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) {
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
-  at::ScalarType dtype = at::result_type(self, other);
-  auto xlatensors =
-      bridge::GetPromotedXlaTensorsForBinaryOp(self, other, dtype);
+  auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::sub(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
 }

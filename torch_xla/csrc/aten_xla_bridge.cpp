@@ -66,14 +66,16 @@ XLATensor GetXlaTensor(const at::Tensor& tensor) {
 }
 
 std::tuple<XLATensor, XLATensor> GetPromotedXlaTensorsForBinaryOp(
-    const at::Tensor& self, const at::Tensor& other, at::ScalarType dtype) {
+    const at::Tensor& self, const at::Tensor& other) {
+  at::ScalarType dtype =
+      at::promote_types(self.scalar_type(), other.scalar_type());
   XLATensor tensor1 = GetXlaTensor(self);
   if (self.scalar_type() != dtype) {
-      tensor1.SetScalarType(dtype);
+    tensor1.SetScalarType(dtype);
   }
   XLATensor tensor2 = GetOrCreateXlaTensor(other, tensor1.GetDevice());
   if (other.scalar_type() != dtype) {
-      tensor2.SetScalarType(dtype);
+    tensor2.SetScalarType(dtype);
   }
   return std::make_tuple(tensor1, tensor2);
 }
