@@ -833,7 +833,9 @@ at::Tensor& AtenXlaType::clamp_min_(at::Tensor& self, at::Scalar min) {
   return self;
 }
 
-at::Tensor AtenXlaType::clone(const at::Tensor& self) {
+at::Tensor AtenXlaType::clone(
+    const at::Tensor& self,
+    c10::optional<at::MemoryFormat> /* memory_format */) {
   return bridge::AtenFromXlaTensor(
       XLATensor::clone(bridge::GetXlaTensor(self)));
 }
@@ -1038,7 +1040,9 @@ at::Tensor& AtenXlaType::dropout_(at::Tensor& self, double p, bool train) {
 }
 
 at::Tensor AtenXlaType::einsum(std::string equation, at::TensorList tensors) {
-  if (tensors.size() != 2 || !ir::ops::Einsum::SupportsEquation(equation)) {
+  if (tensors.size() != 2 ||
+      !ir::ops::Einsum::SupportsEquation(equation, tensors[0].dim(),
+                                         tensors[1].dim())) {
     return at::native::einsum(equation, tensors);
   }
   return bridge::AtenFromXlaTensor(
