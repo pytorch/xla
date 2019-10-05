@@ -222,31 +222,7 @@ tensor will have dtype `torch.double`.
 
 ### Saving and Loading XLA Tensors
 
-XLA tensors can be saved and loaded like CPU and CUDA tensors, as in the
-following snippet:
-
-```python
-import torch
-import torch_xla
-import torch_xla.core.xla_model as xm
-
-device = xm.xla_device()
-
-t0 = torch.randn(2, 2, device=device)
-t1 = torch.randn(2, 2, device=device)
-
-tensors = (t0, t1)
-
-torch.save(tensors, 'tensors.pt')
-
-tensors = torch.load('tensors.pt')
-```
-
-Unlike CPU and CUDA tensors, however, XLA tensors are always loaded back
-on the devices they were saved from. If these devices are unavailable when
-loading then the load will fail. We recommend moving XLA tensors to the CPU
-before saving for additional flexibility. When the tensors are loaded they
-will be on the CPU and can be moved to XLA or CUDA devices as desired.
+XLA tensors should be moved to the CPU before saving, as in the following snippet:
 
 ```python
 import torch
@@ -267,6 +243,13 @@ tensors = torch.load('tensors.pt')
 t0 = tensors[0].to(device)
 t1 = tensors[1].to(device)
 ```
+
+The loaded tensors can be put on any available device.
+
+While XLA tensors can be saved directly it is not recommended to do so. XLA
+tensors are always loaded back to the device they are saved from, and if
+that device is unavailable the load will fail. PyTorchXLA, like all of PyTorch,
+is under active development and this behavior may change in the future.
 
 ## Further Reading
 
