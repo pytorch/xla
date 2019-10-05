@@ -171,8 +171,8 @@ def _dump_differences(target, result, rtol=1e-5, atol=1e-3, max_diff_count=0):
 
 
 class XlaTestCase(unittest.TestCase):
-  precision = 1e-5
-  string_classes = (str, bytes)
+  PRECISION = 1e-5
+  STRING_CLASSES = (str, bytes)
 
   def __init__(self, method_name='runTest'):
     super(XlaTestCase, self).__init__(method_name)
@@ -184,7 +184,6 @@ class XlaTestCase(unittest.TestCase):
     tc = t.coalesce()
     self.assertEqual(tc.to_dense(), t.to_dense())
     self.assertTrue(tc.is_coalesced())
-
     # Our code below doesn't work when nnz is 0, because
     # then it's a 0D tensor, not a 2D tensor.
     if t._nnz() == 0:
@@ -207,26 +206,26 @@ class XlaTestCase(unittest.TestCase):
       new_values = t._values().new(new_values)
     else:
       new_values = torch.stack(new_values)
-
     new_indices = t._indices().new(new_indices).t()
     tg = t.new(new_indices, new_values, t.size())
 
     self.assertEqual(tc._indices(), tg._indices())
     self.assertEqual(tc._values(), tg._values())
-
     if t.is_coalesced():
       self.assertEqual(tc._indices(), t._indices())
       self.assertEqual(tc._values(), t._values())
 
     return tg
 
+  # This has been copied from pytorch/test/common_utils.py in order to decouple
+  # PyTorch/XLA tests from pytorch tests. We use this API only with a very
+  # limited set of object types, so it could be eventually simplified.
   def assertEqual(self, x, y, prec=None, message='', allow_inf=False):
     if isinstance(prec, str) and message == '':
       message = prec
       prec = None
     if prec is None:
-      prec = self.precision
-
+      prec = self.PRECISION
     if isinstance(x, torch.Tensor) and isinstance(y, Number):
       self.assertEqual(
           x.item(), y, prec=prec, message=message, allow_inf=allow_inf)
@@ -334,8 +333,8 @@ class XlaTestCase(unittest.TestCase):
             allow_inf=allow_inf)
       else:
         assertTensorsEqual(x, y)
-    elif isinstance(x, self.string_classes) and isinstance(
-        y, self.string_classes):
+    elif isinstance(x, self.STRING_CLASSES) and isinstance(
+        y, self.STRING_CLASSES):
       super(XlaTestCase, self).assertEqual(x, y, message)
     elif type(x) == set and type(y) == set:
       super(XlaTestCase, self).assertEqual(x, y, message)
