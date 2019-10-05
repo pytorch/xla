@@ -15,6 +15,29 @@
 
 namespace torch_xla {
 namespace cpp_test {
+namespace {
+
+void DumpDifferences(at::Tensor tensor1, at::Tensor tensor2) {
+  static bool dump_tensors =
+      xla::sys_util::GetEnvBool("XLA_TEST_DUMP_TENSORS", false);
+  at::Tensor dtensor1 = tensor1;
+  at::Tensor dtensor2 = tensor2;
+  if (tensor1.dtype() == at::kBool) {
+    dtensor1 = tensor1.toType(at::kByte);
+  }
+  if (tensor2.dtype() == at::kBool) {
+    dtensor2 = tensor2.toType(at::kByte);
+  }
+  at::Tensor diff = dtensor1 - dtensor2;
+  std::cerr << "Difference Tensor:\n" << diff << "\n";
+  if (dump_tensors) {
+    std::cerr << "Compared Tensors:\n"
+              << tensor1 << "\n-vs-\n"
+              << tensor2 << "\n";
+  }
+}
+
+}  // namespace
 
 at::Tensor ToCpuTensor(const at::Tensor& t) {
   // t.to() implicitly triggers a sync if t.device=torch::kXLA.
@@ -37,7 +60,11 @@ bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
   if (type1 != type2) {
     tensor1 = tensor1.toType(type2);
   }
-  return tensor1.equal(tensor2);
+  bool equal = tensor1.equal(tensor2);
+  if (!equal) {
+    DumpDifferences(tensor1, tensor2);
+  }
+  return equal;
 }
 
 bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
@@ -55,7 +82,11 @@ bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
   if (type1 != type2) {
     tensor1 = tensor1.toType(type2);
   }
-  return tensor1.equal(tensor2);
+  bool equal = tensor1.equal(tensor2);
+  if (!equal) {
+    DumpDifferences(tensor1, tensor2);
+  }
+  return equal;
 }
 
 void ForEachDevice(const std::function<void(const Device&)>& devfn) {
@@ -83,15 +114,7 @@ bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
   tensor2 = ToCpuTensor(tensor2);
   bool equal = tensor1.allclose(tensor2, rtol, atol);
   if (!equal) {
-    static bool dump_tensors =
-        xla::sys_util::GetEnvBool("XLA_TEST_DUMP_TENSORS", false);
-    at::Tensor diff = tensor1 - tensor2;
-    std::cerr << "Difference Tensor:\n" << diff << "\n";
-    if (dump_tensors) {
-      std::cerr << "Compared Tensors:\n"
-                << tensor1 << "\n-vs-\n"
-                << tensor2 << "\n";
-    }
+    DumpDifferences(tensor1, tensor2);
   }
   return equal;
 }
