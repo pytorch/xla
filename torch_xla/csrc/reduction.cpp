@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
@@ -14,6 +15,11 @@ namespace {
 struct ReductionInfo {
   std::vector<xla::int64> new_dimensions;
   xla::int64 element_count = 1;
+};
+
+struct SummationResult {
+  ReductionInfo rinfo;
+  xla::XlaOp result;
 };
 
 ReductionInfo GetReductionInfo(
@@ -29,7 +35,7 @@ ReductionInfo GetReductionInfo(
       if (keep_reduced_dimensions) {
         rinfo.new_dimensions.push_back(1);
       }
-    } else if (keep_reduced_dimensions) {
+    } else {
       rinfo.new_dimensions.push_back(shape.dimensions(i));
     }
   }
@@ -62,27 +68,28 @@ xla::XlaComputation CreateAnyComputation(xla::PrimitiveType type) {
   return ConsumeValue(builder.Build());
 }
 
-xla::XlaOp CreateSummation(
+SummationResult CreateSummation(
     const xla::XlaOp& input,
     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
     bool keep_reduced_dimensions, bool scale) {
   xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp init_value =
       XlaHelpers::ScalarValue<float>(0, shape.element_type(), input.builder());
-  ReductionInfo rinfo =
-      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
-  xla::XlaOp result = xla::Reduce(
+  SummationResult result;
+  result.rinfo = GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
+  result.result = xla::Reduce(
       input, init_value, XlaHelpers::CreateAddComputation(shape.element_type()),
       dimensions);
   if (scale) {
     xla::XlaOp scale = XlaHelpers::ScalarValue<float>(
-        rinfo.element_count > 0 ? 1.0f / static_cast<float>(rinfo.element_count)
-                                : NAN,
+        result.rinfo.element_count > 0
+            ? 1.0f / static_cast<float>(result.rinfo.element_count)
+            : NAN,
         shape.element_type(), input.builder());
-    result = xla::Mul(result, scale);
+    result.result = xla::Mul(result.result, scale);
   }
   if (keep_reduced_dimensions) {
-    result = xla::Reshape(result, rinfo.new_dimensions);
+    result.result = xla::Reshape(result.result, result.rinfo.new_dimensions);
   }
   return result;
 }
@@ -125,14 +132,50 @@ xla::XlaOp BuildMean(const xla::XlaOp& input,
                      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                      bool keep_reduced_dimensions) {
   return CreateSummation(input, dimensions, keep_reduced_dimensions,
-                         /*scale=*/true);
+                         /*scale=*/true)
+      .result;
+}
+
+xla::XlaOp BuildStdDeviation(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    bool keep_reduced_dimensions, bool unbiased) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp mean =
+      BuildMean(input, dimensions, /*keep_reduced_dimensions*/ true);
+  xla::XlaOp bcast_mean =
+      xla::BroadcastInDim(mean, input_shape.dimensions(),
+                          xla::util::Iota<xla::int64>(input_shape.rank()));
+  xla::XlaOp input_mean_diff = input - bcast_mean;
+  xla::XlaOp squared_var = input_mean_diff * input_mean_diff;
+  xla::XlaOp squared_result;
+  if (unbiased) {
+    SummationResult sum_result = CreateSummation(
+        squared_var, dimensions, keep_reduced_dimensions, /*scale=*/false);
+    if (sum_result.rinfo.element_count < 2) {
+      return XlaHelpers::ScalarBroadcast<float>(
+          NAN, input_shape.element_type(),
+          XlaHelpers::ShapeOfXlaOp(sum_result.result).dimensions(),
+          input.builder());
+    }
+    xla::XlaOp scale = XlaHelpers::ScalarValue<float>(
+        1.0f / static_cast<float>(sum_result.rinfo.element_count - 1),
+        input_shape.element_type(), input.builder());
+    squared_result = xla::Mul(sum_result.result, scale);
+  } else {
+    SummationResult sum_result = CreateSummation(
+        squared_var, dimensions, keep_reduced_dimensions, /*scale=*/true);
+    squared_result = sum_result.result;
+  }
+  return xla::Sqrt(squared_result);
 }
 
 xla::XlaOp BuildSum(const xla::XlaOp& input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions) {
   return CreateSummation(input, dimensions, keep_reduced_dimensions,
-                         /*scale=*/false);
+                         /*scale=*/false)
+      .result;
 }
 
 xla::XlaOp BuildProd(const xla::XlaOp& input,
