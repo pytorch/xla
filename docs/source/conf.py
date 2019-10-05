@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# PyTorch documentation build configuration file,
+
+# PyTorch documentation build configuration file.
+# This script is run by Sphinx when building the documentation.
+
 import torch
 import torch_xla
 import sphinx_rtd_theme
