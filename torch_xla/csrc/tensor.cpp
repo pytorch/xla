@@ -1172,7 +1172,6 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
 
     SyncTensorCollection coll;
     std::vector<xla::ComputationClient::DataPtr> tensors_data;
-    xla::util::Unique<Device> unique_device;
     std::vector<std::string> devices;
     std::vector<ir::Value> roots;
   };
@@ -1185,14 +1184,14 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   for (auto index : async->coll.indices) {
     XLATensor& tensor = (*tensors)[index];
     async->roots.push_back(tensor.CurrentIrValue());
-    async->unique_device.set(tensor.GetDevice());
 
     xla::ComputationClient::DataPtr xla_data = tensor.CurrentXlaData();
     if (xla_data == nullptr && config.force_xla_data) {
-      xla::Shape shape = MakeShapeWithDeviceLayout(
-          tensor.shape(), async->unique_device->hw_type);
+      const Device& tensor_device = tensor.GetDevice();
+      xla::Shape shape =
+          MakeShapeWithDeviceLayout(tensor.shape(), tensor_device.hw_type);
       xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
-          async->unique_device->ToString(), std::move(shape));
+          tensor_device.ToString(), std::move(shape));
       tensor.SetXlaData(xla_data, config.sync_xla_data);
     }
     async->tensors_data.emplace_back(std::move(xla_data));
@@ -1201,15 +1200,13 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   auto syncfn = [async]() -> xla::Status {
     xla::Status status;
     try {
-      std::string device = async->unique_device
-                               ? async->unique_device->ToString()
-                               : std::string();
       TF_VLOG(3) << "Executing (OpByOp) IR graph hash " << async->coll.hash
-                 << " on device " << device << " ...";
+                 << " on device " << async->coll.device << " ...";
       std::vector<xla::ComputationClient::DataPtr> results =
-          OpByOpExecutor::Get()->Execute(async->roots, device, async->devices);
+          OpByOpExecutor::Get()->Execute(async->roots, async->coll.device,
+                                         async->devices);
       TF_VLOG(3) << "Executing (OpByOp) IR graph hash " << async->coll.hash
-                 << " on device " << device << " done!";
+                 << " on device " << async->coll.device << " done!";
 
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
