@@ -25,7 +25,14 @@ class TmpFolder(object):
 
 
 class SampleGenerator(object):
-  """SampleGenerator (PLACEHOLDER)"""
+  """Iterator which returns multiple samples of a given input data.
+
+  Can be used in place of a PyTorch `DataLoader` to generate synthetic data.
+
+  Args:
+    data: The data which should be returned at each iterator step.
+    sample_count: The maximum number of `data` samples to be returned.
+  """
 
   def __init__(self, data, sample_count):
     self._data = data

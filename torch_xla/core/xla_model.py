@@ -30,7 +30,17 @@ def parse_xla_device(device):
 
 
 def get_xla_supported_devices(devkind=None, max_devices=None):
-  """get_xla_supported_devices (PLACEHOLDER)"""
+  """Returns a list of supported devices of a given kind.
+
+  Args:
+    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`
+      (the 'GPU' XLA device is currently not implemented).
+    max_devices (int, optional): The maximum number of devices to be returned of
+      that kind.
+
+  Returns:
+    The list of device strings.
+  """
 
   xla_devices = torch_xla._XLAC._xla_get_devices()
   devkind = devkind or ['TPU', 'GPU', 'CPU']
@@ -44,19 +54,43 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
 
 
 def xrt_world_size(defval=1):
-  """xrt_world_size (PLACEHOLDER)"""
+  """Retrieves the number of devices which is taking part of the replication.
+
+  Args:
+    defval (int, optional): The default value to be returned in case there is no
+      replication information available.
+      Default: 1
+
+  Returns:
+    The number of devices which is taking part of the replication.
+  """
 
   return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
 
 def get_ordinal(defval=0):
-  """get_ordinal (PLACEHOLDER)"""
+  """Retrieves the replication ordinal of the current process.
+
+  The ordinals range from 0 to `xrt_world_size()` minus 1.
+
+  Args:
+    defval (int, optional): The default value to be returned in case there is no
+      replication information available.
+      Default: 0
+
+  Returns:
+    The replication ordinal of the current process.
+  """
 
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
 def is_master_ordinal():
-  """is_master_ordinal (PLACEHOLDER)"""
+  """Checks whether the current process is the master ordinal (0).
+
+  Returns:
+    A boolean indicating whether the current process is the master ordinal.
+  """
 
   ordinal = get_ordinal(defval=-1)
   if ordinal >= 0:
@@ -72,7 +106,18 @@ def master_print(s, fd=sys.stdout):
 
 
 def xla_device(n=None, devkind=None):
-  """xla_device (PLACEHOLDER)"""
+  """Returns a given instance of an XLA device.
+
+  Args:
+    n (int, optional): The specific instance (ordinal) to be returned. If
+      specified, the specific XLA device instance will be returned. Otherwise
+      the first device of `devkind` will be returned.
+    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`
+      (the 'GPU' XLA device is currently not implemented).
+
+  Returns:
+    A `torch.device` with the requested instance.
+  """
 
   if n is None:
     devices = get_xla_supported_devices(devkind=devkind)
@@ -81,9 +126,10 @@ def xla_device(n=None, devkind=None):
     # to just have a single device to run on. Set the default device so that
     # the tensor barrier can work correctly and avoid growing graphs surprises.
     device = devices[0]
-    torch_xla._XLAC._xla_set_default_device(device)
-    return torch.device(device)
-  return torch.device('xla:{}'.format(n))
+  else:
+    device = 'xla:{}'.format(n)
+  torch_xla._XLAC._xla_set_default_device(device)
+  return torch.device(device)
 
 
 def xla_real_devices(devices):
@@ -377,7 +423,23 @@ def mark_step():
 
 
 def optimizer_step(optimizer, barrier=False, optimizer_args={}):
-  """optimizer_step (PLACEHOLDER)"""
+  """Run the provided optimizer step and issue the XLA device step computation.
+
+  Args:
+    optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance whose
+      `step()` function needs to be called. The `step()` function will be called
+      with the `optimizer_args` named arguments.
+    barrier (bool, optional): Whether the XLA tensor barrier should be issued in
+      this API. If using the PyTorch XLA `ParallelLoader` or `DataParallel`
+      support, this is not necessary as the barrier will be issued by the XLA
+      data loader iterator `next()` call.
+      Default: False
+    optimizer_args (dict, optional): Named arguments dictionary for the
+      `optimizer.step()` call.
+
+  Returns:
+    The same value returned by the `optimizer.step()` call.
+  """
 
   gradients = _fetch_gradients(optimizer)
   count = torch_xla._XLAC._xla_get_replication_devices_count()
