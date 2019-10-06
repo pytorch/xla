@@ -74,8 +74,7 @@ multiprocessing, or multiple threads with XLA multithreading.
 
 ### Running on a Single XLA Device
 
-The following snippet shows a network training on one of several
-device types:
+The following snippet shows a network training on a single XLA device:
 
 ```python
 import torch_xla.core.xla_model as xm
@@ -96,10 +95,10 @@ for data, target in train_loader:
   xm.optimizer_step(optimizer, barrier=True)
 ```
 
-This snippet highlights how easy it is swap the device type your model runs
-on. The model definition, dataloader, optimizer and training loop are common
-to all device types. The only XLA-specific code is a couple lines that acquire
-the XLA device and step the optimizer with a `barrier`. Calling
+This snippet highlights how easy it is to switch your model to run on XLA. The
+model definition, dataloader, optimizer and training loop can work on any device.
+The only XLA-specific code is a couple lines that acquire the XLA device and
+step the optimizer with a <b>barrier</b>. Calling
 `xm.optimizer_step(optimizer, barrier=True)` at the end of each training
 iteration causes XLA to execute its current graph and update the model's
 parameters. See [XLA Tensor Deep Dive](#xla-tensor-deep-dive) for more on
@@ -139,7 +138,7 @@ single device snippet:
 
 - `xmp.spawn()` creates the processes that each run an XLA device.
 - `ParallelLoader` loads the training data onto each device.
-- `xm.optimizer_step(optimizer)` no longer needs a `barrier`. ParallelLoader
+- `xm.optimizer_step(optimizer)` no longer needs a barrier. ParallelLoader
 automatically creates an XLA barrier that evalutes the graph.
 
 The model definition, optimizer definition and training loop remain the same.
@@ -197,16 +196,16 @@ different. This section describes what makes XLA tensors unique.
 
 ### XLA Tensors are Lazy
 
-CPU and CUDA tensors launch operations immediately or `eagerly`. XLA tensors,
-on the other hand, are `lazy`. They record operations in a graph until the
+CPU and CUDA tensors launch operations immediately or <b>eagerly</b>. XLA tensors,
+on the other hand, are <b>lazy</b>. They record operations in a graph until the
 results are needed. Deferring execution like this lets XLA optimize it. A graph
 of multiple separate operations might be fused into a single optimized
 operation, for example.
 
-Lazy execution is generally invisible to the caller. PyTorxh/XLA automatically
+Lazy execution is generally invisible to the caller. PyTorch/XLA automatically
 constructs the graphs, sends them to XLA devices, and synchronizes when
-copying data between an XLA device and the CPU. Inserting a `barrier` when
-taking an optimizer step also synchronizes the CPU and the XLA device.
+copying data between an XLA device and the CPU. Inserting a barrier when
+taking an optimizer step explicitly synchronizes the CPU and the XLA device.
 
 ### XLA Tensors and bFloat16
 
@@ -222,7 +221,7 @@ controlled by the `XLA_USE_BF16` environment variable:
 `bfloat16` on TPUs.
 
 XLA tensors on TPUs will always report their PyTorch datatype regardless of
-the actual datatype they're using. The conversion is automatic and opaque.
+the actual datatype they're using. This conversion is automatic and opaque.
 If an XLA tensor on a TPU is moved back to the CPU it will be converted
 from its actual datatype to its PyTorch datatype.
 
@@ -266,13 +265,13 @@ t0 = tensors[0].to(device)
 t1 = tensors[1].to(device)
 ```
 
-The loaded tensors can be put on any available device.
+This lets you put the loaded tensors on any available device.
 
-Per the above note on moving XLA tensors to the CPU, care must be taken to
-preserve views. Instead of saving views it's recommended that you recreate them
-after the tensors have been loaded and moved to their destination device.
+Per the above note on moving XLA tensors to the CPU, care must be taken when
+working with views. Instead of saving views it's recommended that you recreate
+them after the tensors have been loaded and moved to their destination device(s).
 
-While XLA tensors can be saved directly it is not recommended to do so. XLA
+Directly saving XLA tensors is possible but not recommended. XLA
 tensors are always loaded back to the device they were saved from, and if
 that device is unavailable the load will fail. PyTorchXLA, like all of PyTorch,
 is under active development and this behavior may change in the future.
