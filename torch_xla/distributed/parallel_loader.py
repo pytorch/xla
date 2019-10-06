@@ -40,6 +40,7 @@ class PerDeviceLoader(object):
 
 
 class ParallelLoader(object):
+  """ParallelLoader (PLACEHOLDER)"""
 
   def __init__(self,
                loader,

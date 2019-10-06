@@ -30,6 +30,8 @@ def parse_xla_device(device):
 
 
 def get_xla_supported_devices(devkind=None, max_devices=None):
+  """get_xla_supported_devices (PLACEHOLDER)"""
+
   xla_devices = torch_xla._XLAC._xla_get_devices()
   devkind = devkind or ['TPU', 'GPU', 'CPU']
   for kind in devkind:
@@ -42,14 +44,20 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
 
 
 def xrt_world_size(defval=1):
+  """xrt_world_size (PLACEHOLDER)"""
+
   return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
 
 def get_ordinal(defval=0):
+  """get_ordinal (PLACEHOLDER)"""
+
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
 def is_master_ordinal():
+  """is_master_ordinal (PLACEHOLDER)"""
+
   ordinal = get_ordinal(defval=-1)
   if ordinal >= 0:
     # We are either on multi-processing, or on BigSlice (or both).
@@ -64,6 +72,8 @@ def master_print(s, fd=sys.stdout):
 
 
 def xla_device(n=None, devkind=None):
+  """xla_device (PLACEHOLDER)"""
+
   if n is None:
     devices = get_xla_supported_devices(devkind=devkind)
     assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
@@ -367,6 +377,8 @@ def mark_step():
 
 
 def optimizer_step(optimizer, barrier=False, optimizer_args={}):
+  """optimizer_step (PLACEHOLDER)"""
+
   gradients = _fetch_gradients(optimizer)
   count = torch_xla._XLAC._xla_get_replication_devices_count()
   if count > 1:

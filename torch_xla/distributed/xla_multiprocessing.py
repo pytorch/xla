@@ -116,6 +116,8 @@ def _start_fn(index, fn, args):
 
 
 def spawn(fn, args=(), nprocs=None, join=True, daemon=False):
+  """spawn (PLACEHOLDER)"""
+
   if not _is_tpu_config():
     # If this is not an TPU setup, jump to normal multi-processing.
     nprocs = nprocs or 1

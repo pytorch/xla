@@ -25,6 +25,7 @@ class TmpFolder(object):
 
 
 class SampleGenerator(object):
+  """SampleGenerator (PLACEHOLDER)"""
 
   def __init__(self, data, sample_count):
     self._data = data
