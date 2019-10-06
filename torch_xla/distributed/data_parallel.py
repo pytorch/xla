@@ -34,13 +34,21 @@ class ThreadResult(object):
 
 
 class DataParallel(object):
-  """DataParallel (PLACEHOLDER)"""
+  """Enable the execution of a model network in replicated mode using threads.
 
-  def __init__(self, network, device_ids=None, batchdim=0):
+  Args:
+    network (:class:`torch.nn.Module` or callable): The model's network. Either
+      a subclass of `torch.nn.Module` or a callable returning a subclass of
+      `torch.nn.Module`.
+    device_ids (string... or :class:`torch.device`...): The list of devices on
+      which the replication should happen. If the list is empty, the network
+      will be run on PyTorch CPU device.
+  """
+
+  def __init__(self, network, device_ids=None):
     if device_ids is None:
       device_ids = xm.get_xla_supported_devices()
-    self._device_ids = list(device_ids)
-    self._batchdim = batchdim
+    self._device_ids = [str(x) for x in device_ids]
     self._native_run = False
     self._models = []
     self._contexts = []
@@ -92,7 +100,29 @@ class DataParallel(object):
       result.result = e
       self._handle_runner_exception(device, e)
 
-  def __call__(self, loop_fn, loader, fixed_batch_size=False):
+  def __call__(self, loop_fn, loader, fixed_batch_size=False, batchdim=0):
+    """Runs one EPOCH of training/test.
+
+    Args:
+      loop_fn (callable): The function which will be called on each thread
+        assigned to each device taking part of the replication. The function
+        will be called with the `def loop_fn(model, device_loader, device,
+        context)` signature. Where `model` is the per device network as passed
+        to the `DataParallel` contructor. The `device_loader` is the
+        `ParallelLoader` which will be returning samples for the current
+        `device`. And the `context` is a per thread/device context which has the
+        lifetime of the `DataParallel` object, and can be used by the `loop_fn`
+        to store objects which needs to persist across different EPOCH.
+      fixed_batch_size (bool, optional): Argument passed to the `ParallelLoader`
+        constructor.
+        Default: False
+      batchdim (int, optional): The dimension in the samples returned by the
+        `loader` holding the batch size.
+        Default: 0
+
+    Returns:
+      A list with the values returned by the `loop_fn` on each device.
+    """
     if self._native_run:
       ## This is called without XLA devices available. Run in normal mode.
       return [
@@ -103,7 +133,7 @@ class DataParallel(object):
     para_loader = pl.ParallelLoader(
         loader,
         self._device_ids,
-        batchdim=self._batchdim,
+        batchdim=batchdim,
         fixed_batch_size=fixed_batch_size)
     threads = []
     results = []
