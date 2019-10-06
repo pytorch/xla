@@ -40,7 +40,29 @@ class PerDeviceLoader(object):
 
 
 class ParallelLoader(object):
-  """ParallelLoader (PLACEHOLDER)"""
+  """Wraps an existing PyTorch DataLoader with background data upload.
+
+  Args:
+    loader (:class:`torch.utils.data.DataLoader`): The PyTorch DataLoader to be
+      wrapped.
+    devices (`torch.device`...): The list of devices where the data has to be
+      sent. The i-th sample returned by the `loader` will be sent to `devices[i
+      % len(devices)]`.
+    batchdim (int, optional): The dimension which is holding the batch size.
+      Default: 0
+    fixed_batch_size (bool, optional): Ensures that all the batch sizes sent to
+      the devices are of the same size. The original `loader` iteration stops as
+      soon as a not matching batch size is found.
+      Default: False
+    loader_prefetch_size (int, optional): The max capacity of the queue used by
+      the thread which is reading samples from the `loader`, to be processed by
+      the worker threads which upload data to the devices.
+      Default: 8
+    device_prefetch_size (int, optional): The max size of the per-device queues,
+      where the worker threads deposit tensors which have already been sent to
+      devices.
+      Default: 4
+  """
 
   def __init__(self,
                loader,
@@ -50,7 +72,7 @@ class ParallelLoader(object):
                loader_prefetch_size=8,
                device_prefetch_size=4):
     self._loader = loader
-    self._devices = list(devices)
+    self._devices = [torch.device(x) for x in devices]
     self._batchdim = batchdim
     self._fixed_batch_size = fixed_batch_size
     self._done = False
@@ -67,7 +89,15 @@ class ParallelLoader(object):
       thread.start()
 
   def per_device_loader(self, device):
-    return PerDeviceLoader(self, device)
+    """Retrieves the loader object for the given device.
+
+    Args:
+      device (`torch.device`): The device whole loader is being requested.
+
+    Returns:
+      The data loader for the `device`.
+    """
+    return PerDeviceLoader(self, torch.device(device))
 
   def next_item(self, device):
     dqueue = self._queues[device]
