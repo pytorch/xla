@@ -270,6 +270,16 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
       op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
 }
 
+std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
+    const xla::XlaOp& op1, const xla::XlaOp& op2) {
+  xla::PrimitiveType type1 = TypeOfXlaOp(op1);
+  xla::PrimitiveType type2 = TypeOfXlaOp(op2);
+  return type1 == type2
+             ? std::pair<xla::XlaOp, xla::XlaOp>(op1, op2)
+             : std::pair<xla::XlaOp, xla::XlaOp>(
+                   op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
+}
+
 xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
                                         const xla::Shape& shape2) {
   const auto& shape1_dims = shape1.dimensions();
@@ -329,6 +339,12 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::Promote(const xla::XlaOp& op1,
   return PromoteShapes(vops.first, vops.second);
 }
 
+std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecond(
+    const xla::XlaOp& op1, const xla::XlaOp& op2) {
+  std::pair<xla::XlaOp, xla::XlaOp> vops = PromoteSecondValue(op1, op2);
+  return PromoteShapes(vops.first, vops.second);
+}
+
 xla::XlaOp XlaHelpers::ImplicitBroadcast(const xla::XlaOp& op,
                                          const xla::Shape& op_shape,
                                          const xla::Shape& shape) {
@@ -373,7 +389,8 @@ xla::XlaOp XlaHelpers::PromotedBinaryOp(
         bin_op) {
   xla::XlaOp numeric_op1 = ConvertToNumeric(op1);
   xla::XlaOp numeric_op2 = ConvertToNumeric(op2);
-  std::pair<xla::XlaOp, xla::XlaOp> vops = Promote(numeric_op1, numeric_op2);
+  std::pair<xla::XlaOp, xla::XlaOp> vops =
+      PromoteSecond(numeric_op1, numeric_op2);
   return bin_op(vops.first, vops.second);
 }
 

@@ -2014,9 +2014,7 @@ at::Tensor AtenXlaType::mul(const at::Tensor& self, at::Scalar other) {
 at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor other_tensor = bridge::GetOrCreateXlaTensor(
-      other.unsafeGetTensorImpl()->is_wrapped_number()
-          ? other.toType(self.scalar_type())
-          : other,
+      other,
       self_tensor.GetDevice());
   XLATensor::mul_(self_tensor, other_tensor);
   return self;
