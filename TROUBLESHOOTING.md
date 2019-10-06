@@ -119,6 +119,25 @@ If your model shows bad performance, keep in mind the following caveats:
    * When dataset is small, and there are too few steps, this may result in a no-op epoch. Therefore, it is better to use
    small batch sizes in those cases.
 
+## XLA Tensor Quirks
+
+1. **XLA tensor internals are opaque.** XLA tensors always appear to be
+contiguous and without storage. Networks should not try to check the strides
+of XLA tensors.
+
+1. **XLA tensors should be moved to the CPU before saving them.** Saving
+XLA tensors directly causes them to be loaded back on the device(s) they were
+saved from. If a device is unavailable at load time then the load will fail.
+Moving XLA tensors to the CPU before saving them lets you decide which
+device(s) to put the loaded tensors on. This is necessary if you want to
+load the tensors on a machine without XLA devices. Care should be taken
+moving the XLA tensors to the CPU before saving them, however, as moving
+tensors across device types does not preserve view relationships. Instead,
+views should be reconstructed as necessary after the tensors are loaded.
+
+1. **Copying an XLA Tensor with Python's copy.copy returns a deep copy, not a
+shallow copy**. Use a view of an XLA tensor to get a shallow copy of it.
+
 ## More Debugging Tools
 
 We don't expect users to use tools in this section to debug their models. But we might ask for

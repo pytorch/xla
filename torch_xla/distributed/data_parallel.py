@@ -34,6 +34,7 @@ class ThreadResult(object):
 
 
 class DataParallel(object):
+  """DataParallel (PLACEHOLDER)"""
 
   def __init__(self, network, device_ids=None, batchdim=0):
     if device_ids is None:
