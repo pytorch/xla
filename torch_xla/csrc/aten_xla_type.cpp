@@ -1361,7 +1361,7 @@ at::Tensor AtenXlaType::gt(const at::Tensor& self, at::Scalar other) {
 at::Tensor AtenXlaType::gt(const at::Tensor& self, const at::Tensor& other) {
   auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
-      XLATensor::ge(std::get<0>(xlatensors), std::get<1>(xlatensors)));
+      XLATensor::gt(std::get<0>(xlatensors), std::get<1>(xlatensors)));
 }
 
 at::Tensor& AtenXlaType::gt_(at::Tensor& self, at::Scalar other) {
@@ -1737,8 +1737,6 @@ at::Tensor AtenXlaType::lt(const at::Tensor& self, const at::Tensor& other) {
   auto xlatensors = bridge::GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::lt(std::get<0>(xlatensors), std::get<1>(xlatensors)));
-  return bridge::AtenFromXlaTensor(
-      XLATensor::lt(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
 at::Tensor& AtenXlaType::lt_(at::Tensor& self, at::Scalar other) {
@@ -2013,9 +2011,8 @@ at::Tensor AtenXlaType::mul(const at::Tensor& self, at::Scalar other) {
 
 at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor other_tensor = bridge::GetOrCreateXlaTensor(
-      other,
-      self_tensor.GetDevice());
+  XLATensor other_tensor =
+      bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice());
   XLATensor::mul_(self_tensor, other_tensor);
   return self;
 }
