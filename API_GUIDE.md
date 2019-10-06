@@ -226,9 +226,25 @@ the actual datatype they're using. The conversion is automatic and opaque.
 If an XLA tensor on a TPU is moved back to the CPU it will be converted
 from its actual datatype to its PyTorch datatype.
 
+### Memory Layout
+
+The internal data representation of XLA tensors is opaque to the user. They
+do not expose their storage and they always appear to be contiguous, unlike
+CPU and CUDA tensors. This allows XLA to adjust a tensor's memory layout for
+better performance.
+
+### Moving XLA Tensors to and from the CPU
+
+XLA tensors can be moved from the CPU to an XLA device and from an XLA device
+to the CPU. If a view is moved then the data its viewing is copied to the
+other device and the view relationship is not preserved. Put another way,
+once data is copied to another device it has no relationship with its
+previous device or any tensors on it.
+
 ### Saving and Loading XLA Tensors
 
-XLA tensors should be moved to the CPU before saving, as in the following snippet:
+XLA tensors should be moved to the CPU before saving, as in the following
+snippet:
 
 ```python
 import torch
@@ -252,8 +268,12 @@ t1 = tensors[1].to(device)
 
 The loaded tensors can be put on any available device.
 
+Per the above note on moving XLA tensors to the CPU, care must be taken to
+preserve views. Instead of saving views it's recommended that you recreate them
+after the tensors have been loaded and moved to their destination device.
+
 While XLA tensors can be saved directly it is not recommended to do so. XLA
-tensors are always loaded back to the device they are saved from, and if
+tensors are always loaded back to the device they were saved from, and if
 that device is unavailable the load will fail. PyTorchXLA, like all of PyTorch,
 is under active development and this behavior may change in the future.
 
