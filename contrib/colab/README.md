@@ -1,18 +1,20 @@
 # Colab Notebooks
 
-We have a couple of Colab notebooks here that work with Colab. The name of the notebooks tell which
-version of Colab TF/XRT they're compatible with. For example, `mnist-training-xrt-1-15.ipynb` has
-been tested to be compatible with `TF/XRT 1.15`. On colab, you can check the current `TF/XRT` version
-by running a snippet like:
+We have a couple of Colab notebooks here that work with Colab. The name of the
+notebooks tells which version of Colab TF/XRT they're compatible with. For
+example, `mnist-training-xrt-1-15.ipynb` has been tested to be compatible with
+`TF/XRT 1.15`. On colab, you can check the current `TF/XRT` version by running
+a snippet like:
 
 ```
 import tensorflow as tf
 tf.__version__
 ```
 
-*Note*: These colab notebooks typically run on small machines (the Compute VMs, which run the input
-pipeline) and training is often bottlenecked on the small Compute VM machines. For optimal performance
-create a GCP VM and TPU pair following our GCP Tutorials.
+*Note*: These colab notebooks typically run on small machines (the Compute VMs,
+which runs the input pipeline) and training is often bottlenecked on the small
+Compute VM machines. For optimal performance create a GCP VM and TPU pair
+following our GCP Tutorials.
 
 ## Get started with our Colab Tutorials
 * [Training MNIST on TPUs](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/mnist-training-xrt-1-15.ipynb)
