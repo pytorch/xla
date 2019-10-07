@@ -1061,6 +1061,35 @@ TEST_F(AtenXlaTensorTest, TestMeanInDimsKeepCast) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestStd) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  for (auto unbiased : {true, false}) {
+    torch::Tensor b = torch::std(a, unbiased);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = torch::std(xla_a, unbiased);
+      AllClose(b, xla_b);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestStdInDim) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  int rank = a.dim();
+  for (auto unbiased : {true, false}) {
+    for (auto keepdim : {true, false}) {
+      for (int dim = -rank; dim < rank; ++dim) {
+        torch::Tensor b = torch::std(a, {dim}, unbiased, keepdim);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_a = CopyToDevice(a, device);
+          torch::Tensor xla_b = torch::std(xla_a, {dim}, unbiased, keepdim);
+          AllClose(b, xla_b);
+        });
+      }
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestSum) {
   torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::sum(a);

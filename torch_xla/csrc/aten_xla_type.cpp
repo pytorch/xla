@@ -2006,9 +2006,8 @@ at::Tensor AtenXlaType::mul(const at::Tensor& self, at::Scalar other) {
 
 at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor other_tensor =
-      bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice());
-  XLATensor::mul_(self_tensor, other_tensor);
+  XLATensor::mul_(self_tensor,
+                  bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()));
   return self;
 }
 
@@ -2653,6 +2652,21 @@ at::Tensor& AtenXlaType::squeeze_(at::Tensor& self, int64_t dim) {
 at::Tensor AtenXlaType::stack(at::TensorList tensors, int64_t dim) {
   return bridge::AtenFromXlaTensor(
       XLATensor::stack(bridge::GetXlaTensors(tensors), dim));
+}
+
+at::Tensor AtenXlaType::std(const at::Tensor& self, bool unbiased) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(XLATensor::std(
+      self_tensor,
+      xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
+      /*keep_reduced_dimensions*/ false, unbiased));
+}
+
+at::Tensor AtenXlaType::std(const at::Tensor& self, at::IntArrayRef dim,
+                            bool unbiased, bool keepdim) {
+  return bridge::AtenFromXlaTensor(XLATensor::std(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions*/ keepdim, unbiased));
 }
 
 at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
