@@ -1,0 +1,3 @@
+[submodule "pytorch_sphinx_theme"]
+	path = pytorch_sphinx_theme
+	url = https://github.com/pytorch/pytorch_sphinx_theme.git
