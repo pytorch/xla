@@ -1,1 +1,0 @@
-cmd='/private/home/mruberry/.conda/envs/torchxla/bin/cmake;-GUnix Makefiles;<SOURCE_DIR><SOURCE_SUBDIR>'

@@ -1,4 +1,0 @@
-/private/home/mruberry/xla/pytorch/xla/test/cpp/build/CMakeFiles/rebuild_cache.dir
-/private/home/mruberry/xla/pytorch/xla/test/cpp/build/CMakeFiles/test_ptxla.dir
-/private/home/mruberry/xla/pytorch/xla/test/cpp/build/CMakeFiles/googletest.dir
-/private/home/mruberry/xla/pytorch/xla/test/cpp/build/CMakeFiles/edit_cache.dir
