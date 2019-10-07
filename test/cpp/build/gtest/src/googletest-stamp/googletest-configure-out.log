@@ -1,0 +1,27 @@
+-- The C compiler identification is Clang 7.1.0
+-- The CXX compiler identification is Clang 7.1.0
+-- Check for working C compiler: /usr/bin/clang-7
+-- Check for working C compiler: /usr/bin/clang-7 -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Check for working CXX compiler: /usr/bin/clang++-7
+-- Check for working CXX compiler: /usr/bin/clang++-7 -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found PythonInterp: /private/home/mruberry/.conda/envs/my_pytorch_build/bin/python (found version "3.6.6") 
+-- Looking for pthread.h
+-- Looking for pthread.h - found
+-- Looking for pthread_create
+-- Looking for pthread_create - not found
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - found
+-- Found Threads: TRUE  
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /private/home/mruberry/xla/pytorch/xla/test/cpp/build/gtest/src/googletest-build

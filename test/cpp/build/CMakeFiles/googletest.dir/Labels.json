@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/private/home/mruberry/xla/pytorch/xla/test/cpp/build/CMakeFiles/googletest"
+		},
+		{
+			"file" : "/private/home/mruberry/xla/pytorch/xla/test/cpp/build/CMakeFiles/googletest.rule"
+		},
+		{
+			"file" : "/private/home/mruberry/xla/pytorch/xla/test/cpp/build/CMakeFiles/googletest-complete.rule"
+		},
+		{
+			"file" : "/private/home/mruberry/xla/pytorch/xla/test/cpp/build/gtest/src/googletest-stamp/googletest-install.rule"
+		},
+		{
+			"file" : "/private/home/mruberry/xla/pytorch/xla/test/cpp/build/gtest/src/googletest-stamp/googletest-mkdir.rule"
+		},
+		{
+			"file" : "/private/home/mruberry/xla/pytorch/xla/test/cpp/build/gtest/src/googletest-stamp/googletest-download.rule"
+		},
+		{
+			"file" : "/private/home/mruberry/xla/pytorch/xla/test/cpp/build/gtest/src/googletest-stamp/googletest-update.rule"
+		},
+		{
+			"file" : "/private/home/mruberry/xla/pytorch/xla/test/cpp/build/gtest/src/googletest-stamp/googletest-patch.rule"
+		},
+		{
+			"file" : "/private/home/mruberry/xla/pytorch/xla/test/cpp/build/gtest/src/googletest-stamp/googletest-configure.rule"
+		},
+		{
+			"file" : "/private/home/mruberry/xla/pytorch/xla/test/cpp/build/gtest/src/googletest-stamp/googletest-build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"googletest"
+		],
+		"name" : "googletest"
+	}
+}
