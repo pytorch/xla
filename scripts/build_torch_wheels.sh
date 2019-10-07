@@ -86,7 +86,7 @@ function build_and_install_torch() {
 
 function build_and_install_torch_xla() {
   git submodule update --init --recursive
-  export NO_CUDA=1 VERSIONED_XLA_BUILD=1
+  export NO_CUDA=1
   python setup.py bdist_wheel
   pip install dist/*.whl
 }
