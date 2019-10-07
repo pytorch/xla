@@ -23,7 +23,7 @@ XLATensor GetXlaTensor(const at::Tensor& tensor);
 std::vector<XLATensor> GetXlaTensors(
     tensorflow::gtl::ArraySlice<const at::Tensor> tensors);
 
-// Same as above, promoted to the specified dtype if different.
+// Same as above, with type promotion
 std::tuple<XLATensor, XLATensor> GetPromotedXlaTensorsForBinaryOp(
     const at::Tensor& self, const at::Tensor& other);
 
