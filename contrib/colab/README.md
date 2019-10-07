@@ -17,6 +17,6 @@ Compute VM machines. For optimal performance create a GCP VM and TPU pair
 following our GCP Tutorials.
 
 ## Get started with our Colab Tutorials
-* [Training MNIST on TPUs](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/mnist-training-xrt-1-15.ipynb)
-* [Training ResNet18 on TPUs with Cifar10 dataset](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet18-training-xrt-1-15.ipynb)
-* [Inference with Pretrained ResNet50 Model](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet50-inference-xrt-1-15.ipynb)
+* [Training MNIST on TPUs](https://colab.research.google.com/github/pytorch/xla/blob/xrt.r1.15/contrib/colab/mnist-training-xrt-1-15.ipynb)
+* [Training ResNet18 on TPUs with Cifar10 dataset](https://colab.research.google.com/github/pytorch/xla/blob/xrt.r1.15/contrib/colab/resnet18-training-xrt-1-15.ipynb)
+* [Inference with Pretrained ResNet50 Model](https://colab.research.google.com/github/pytorch/xla/blob/xrt.r1.15/contrib/colab/resnet50-inference-xrt-1-15.ipynb)
