@@ -4,6 +4,7 @@ set -e  # Fail on any error.
 set -x  # Display commands being run.
 
 PYTHON_VERSION=$1
+RELEASE_VERSION=$2  # rX.Y or nightly
 DEFAULT_PYTHON_VERSION=3.6
 DEBIAN_FRONTEND=noninteractive
 
@@ -86,7 +87,12 @@ function build_and_install_torch() {
 
 function build_and_install_torch_xla() {
   git submodule update --init --recursive
-  export NO_CUDA=1 VERSIONED_XLA_BUILD=1
+  export NO_CUDA=1
+  if [ "${RELEASE_VERSION}" = "nightly" ]; then
+    export VERSIONED_XLA_BUILD=1
+  else
+    export TORCH_XLA_VERSION=${RELEASE_VERSION:1}  # r0.5 -> 0.5
+  fi
   python setup.py bdist_wheel
   pip install dist/*.whl
 }
