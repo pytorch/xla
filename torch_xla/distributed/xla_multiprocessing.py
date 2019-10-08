@@ -116,6 +116,25 @@ def _start_fn(index, fn, args):
 
 
 def spawn(fn, args=(), nprocs=None, join=True, daemon=False):
+  """Enables multi processing based replication.
+
+  Args:
+    fn: The function to be called for each device which takes part of the
+      replication. The function will be called with a first argument being the
+      global index of the process within the replication, followed by the
+      arguments passed in `args`.
+    args: The arguments for `fn`.
+    nprocs: The number of processes/devices for the replication. At the moment,
+      if specified, can be either 1 or the maximum number of devices.
+    join: Whether the call should block waiting for the completion of the
+      processes which have being spawned.
+    daemon: Whether the processes being spawned should have the `daemon` flag
+      set (see Python multi-processing API).
+
+  Returns:
+    The same object returned by the `torch.multiprocessing.spawn` API.
+  """
+
   if not _is_tpu_config():
     # If this is not an TPU setup, jump to normal multi-processing.
     nprocs = nprocs or 1

@@ -119,6 +119,25 @@ If your model shows bad performance, keep in mind the following caveats:
    * When dataset is small, and there are too few steps, this may result in a no-op epoch. Therefore, it is better to use
    small batch sizes in those cases.
 
+## XLA Tensor Quirks
+
+1. **XLA tensor internals are opaque.** XLA tensors always appear to be
+contiguous and without storage. Networks should not try to check the strides
+of XLA tensors.
+
+1. **XLA tensors should be moved to the CPU before saving them.** Saving
+XLA tensors directly causes them to be loaded back on the device(s) they were
+saved from. If a device is unavailable at load time then the load will fail.
+Moving XLA tensors to the CPU before saving them lets you decide which
+device(s) to put the loaded tensors on. This is necessary if you want to
+load the tensors on a machine without XLA devices. Care should be taken
+moving the XLA tensors to the CPU before saving them, however, as moving
+tensors across device types does not preserve view relationships. Instead,
+views should be reconstructed as necessary after the tensors are loaded.
+
+1. **Copying an XLA Tensor with Python's copy.copy returns a deep copy, not a
+shallow copy**. Use a view of an XLA tensor to get a shallow copy of it.
+
 ## More Debugging Tools
 
 We don't expect users to use tools in this section to debug their models. But we might ask for
@@ -172,6 +191,23 @@ only be enabled for debugging.
   On the versions of the TPU HW at the time of writing, 64bit integer computations are
   expensive, so setting this flag might help. It should be verified by the user that truncating
   to 32bit values is a valid operation according to the use of _PyTorch_ _Long_ values in it.
+
+* ```TF_CPP_LOG_THREAD_ID```: If set to 1, the TF logs will show the thread ID
+  helping with debugging multithreaded processes.
+
+* ```TF_CPP_VMODULE```: Environment variable used for TF VLOGs and takes the
+  form of `TF_CPP_VMODULE=name=value,...`. For PyTorch/XLA using a configuration like
+  `TF_CPP_VMODULE=tensor=5` would enable logging such as:
+
+  ```
+  2019-10-03 17:23:56.419040: I   27891 torch_xla/csrc/tensor.cpp:1104]
+  Executing IR graph hash 4211381954965020633 on device TPU:3 done!
+  2019-10-03 17:23:56.419448: I   27890 torch_xla/csrc/tensor.cpp:1104]
+  Executing IR graph hash 15483856951158150605 on device TPU:5 done!
+  2019-10-03 17:23:56.419539: I   27896 torch_xla/csrc/tensor.cpp:1104]
+  Executing IR graph hash 4211381954965020633 on device TPU:4 done!
+  ...
+  ```
 
 ### Retrieving Stack Traces
 

@@ -4,6 +4,7 @@
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
+#include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
@@ -104,6 +105,12 @@ xla::XlaOp BuildDiagonalViewUpdate(const xla::XlaOp& target,
                                    const xla::XlaOp& input, xla::int64 offset,
                                    xla::int64 dim1, xla::int64 dim2) {
   xla::Shape target_shape = XlaHelpers::ShapeOfXlaOp(target);
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp diag_input = input;
+  if (target_shape.element_type() != input_shape.element_type()) {
+    diag_input = ConvertTo(input, input_shape.element_type(),
+                           target_shape.element_type(), /*device=*/nullptr);
+  }
   std::vector<xla::int64> permutation;
   xla::XlaOp diag_target = target;
   if (dim1 != 0 || dim2 != 1) {
@@ -111,7 +118,7 @@ xla::XlaOp BuildDiagonalViewUpdate(const xla::XlaOp& target,
     diag_target = xla::Transpose(diag_target, permutation);
     target_shape = XlaHelpers::ShapeOfXlaOp(diag_target);
   }
-  DiagonalMask dmask = CreateDiagonalMask(input, target_shape, offset);
+  DiagonalMask dmask = CreateDiagonalMask(diag_input, target_shape, offset);
   xla::XlaOp result = xla::Select(dmask.mask, dmask.source, diag_target);
   if (!permutation.empty()) {
     result = xla::Transpose(result, xla::InversePermutation(permutation));

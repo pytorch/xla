@@ -21,7 +21,7 @@ RUN if [ "${cloud_build}" = true ]; then github_branch="${release_version}" && \
   cd / && \
   git clone -b "${github_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
 
-RUN cd pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version}
+RUN cd pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${release_version}
 
 # Use conda environment on startup or when running scripts.
 RUN echo "conda activate pytorch" >> ~/.bashrc

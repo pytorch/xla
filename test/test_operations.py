@@ -13,17 +13,15 @@ parser.add_argument('--max_diff_count', type=int, default=25)
 parser.add_argument('--verbosity', type=int, default=0)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
-# Setup import folders.
-_XLA_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
-sys.path.append(os.path.join(os.path.dirname(_XLA_FOLDER), 'test'))
-sys.path.insert(0, _XLA_FOLDER)
 
 # Normal imports section starts here.
 import collections
-from common_utils import TestCase, run_tests, iter_indices
 import copy
 import itertools
+import math
+from numbers import Number
 import numpy
+import random
 import re
 import torch
 import torch.nn as nn
@@ -52,6 +50,28 @@ def _gen_int_tensor(*args, **kwargs):
 
 class Holder(object):
   pass
+
+
+def _iter_indices(tensor):
+  if tensor.dim() == 0:
+    return range(0)
+  if tensor.dim() == 1:
+    return range(tensor.size(0))
+  return itertools.product(*(range(s) for s in tensor.size()))
+
+
+def _is_iterable(obj):
+  try:
+    iter(obj)
+    return True
+  except TypeError:
+    return False
+
+
+def _set_rng_seed(seed):
+  torch.manual_seed(seed)
+  random.seed(seed)
+  numpy.random.seed(seed)
 
 
 def _get_device_support(devname):
@@ -128,7 +148,7 @@ def _dump_differences(target, result, rtol=1e-5, atol=1e-3, max_diff_count=0):
     assert isinstance(result, torch.Tensor)
     assert target.size() == result.size()
     if target.dim() > 0:
-      for i in iter_indices(target):
+      for i in _iter_indices(target):
         check_values(target[i], result[i], i)
         if max_diff_count > 0 and env.diff_count >= max_diff_count:
           break
@@ -150,7 +170,211 @@ def _dump_differences(target, result, rtol=1e-5, atol=1e-3, max_diff_count=0):
                                                        env.max_index))
 
 
-class XlaTestCase(TestCase):
+class XlaTestCase(unittest.TestCase):
+  PRECISION = 1e-5
+  STRING_CLASSES = (str, bytes)
+
+  def __init__(self, method_name='runTest'):
+    super(XlaTestCase, self).__init__(method_name)
+
+  def setUp(self):
+    _set_rng_seed(1234)
+
+  def safeCoalesce(self, t):
+    tc = t.coalesce()
+    self.assertEqual(tc.to_dense(), t.to_dense())
+    self.assertTrue(tc.is_coalesced())
+    # Our code below doesn't work when nnz is 0, because
+    # then it's a 0D tensor, not a 2D tensor.
+    if t._nnz() == 0:
+      self.assertEqual(t._indices(), tc._indices())
+      self.assertEqual(t._values(), tc._values())
+      return tc
+
+    value_map = {}
+    for idx, val in zip(t._indices().t(), t._values()):
+      idx_tup = tuple(idx.tolist())
+      if idx_tup in value_map:
+        value_map[idx_tup] += val
+      else:
+        value_map[idx_tup] = val.clone() if isinstance(val,
+                                                       torch.Tensor) else val
+
+    new_indices = sorted(list(value_map.keys()))
+    new_values = [value_map[idx] for idx in new_indices]
+    if t._values().ndimension() < 2:
+      new_values = t._values().new(new_values)
+    else:
+      new_values = torch.stack(new_values)
+    new_indices = t._indices().new(new_indices).t()
+    tg = t.new(new_indices, new_values, t.size())
+
+    self.assertEqual(tc._indices(), tg._indices())
+    self.assertEqual(tc._values(), tg._values())
+    if t.is_coalesced():
+      self.assertEqual(tc._indices(), t._indices())
+      self.assertEqual(tc._values(), t._values())
+
+    return tg
+
+  # This has been copied from pytorch/test/common_utils.py in order to decouple
+  # PyTorch/XLA tests from pytorch tests. We use this API only with a very
+  # limited set of object types, so it could be eventually simplified.
+  def assertEqual(self, x, y, prec=None, message='', allow_inf=False):
+    if isinstance(prec, str) and message == '':
+      message = prec
+      prec = None
+    if prec is None:
+      prec = self.PRECISION
+    if isinstance(x, torch.Tensor) and isinstance(y, Number):
+      self.assertEqual(
+          x.item(), y, prec=prec, message=message, allow_inf=allow_inf)
+    elif isinstance(y, torch.Tensor) and isinstance(x, Number):
+      self.assertEqual(
+          x, y.item(), prec=prec, message=message, allow_inf=allow_inf)
+    elif isinstance(x, torch.Tensor) and isinstance(y, numpy.bool_):
+      self.assertEqual(
+          x.item(), y, prec=prec, message=message, allow_inf=allow_inf)
+    elif isinstance(y, torch.Tensor) and isinstance(x, numpy.bool_):
+      self.assertEqual(
+          x, y.item(), prec=prec, message=message, allow_inf=allow_inf)
+    elif isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor):
+
+      def assertTensorsEqual(a, b):
+        super(XlaTestCase, self).assertEqual(a.size(), b.size(), message)
+        if a.numel() > 0:
+          if (a.device.type == 'cpu' and
+              (a.dtype == torch.float16 or a.dtype == torch.bfloat16)):
+            # CPU half and bfloat16 tensors don't have the methods we need below
+            a = a.to(torch.float32)
+          b = b.to(a)
+
+          if (a.dtype == torch.bool) != (b.dtype == torch.bool):
+            raise TypeError('Was expecting both tensors to be bool type.')
+          else:
+            if a.dtype == torch.bool and b.dtype == torch.bool:
+              # we want to respect precision but as bool doesn't support substraction,
+              # boolean tensor has to be converted to int
+              a = a.to(torch.int)
+              b = b.to(torch.int)
+
+            diff = a - b
+            if a.is_floating_point():
+              # check that NaNs are in the same locations
+              nan_mask = torch.isnan(a)
+              self.assertTrue(torch.equal(nan_mask, torch.isnan(b)), message)
+              diff[nan_mask] = 0
+              # inf check if allow_inf=True
+              if allow_inf:
+                inf_mask = torch.isinf(a)
+                inf_sign = inf_mask.sign()
+                self.assertTrue(
+                    torch.equal(inf_sign,
+                                torch.isinf(b).sign()), message)
+                diff[inf_mask] = 0
+            # TODO: implement abs on CharTensor (int8)
+            if diff.is_signed() and diff.dtype != torch.int8:
+              diff = diff.abs()
+            max_err = diff.max()
+            self.assertLessEqual(max_err, prec, message)
+
+      super(XlaTestCase, self).assertEqual(x.is_sparse, y.is_sparse, message)
+      super(XlaTestCase, self).assertEqual(x.is_quantized, y.is_quantized,
+                                           message)
+      if x.is_sparse:
+        x = self.safeCoalesce(x)
+        y = self.safeCoalesce(y)
+        assertTensorsEqual(x._indices(), y._indices())
+        assertTensorsEqual(x._values(), y._values())
+      elif x.is_quantized and y.is_quantized:
+        self.assertEqual(
+            x.qscheme(),
+            y.qscheme(),
+            prec=prec,
+            message=message,
+            allow_inf=allow_inf)
+        if x.qscheme() == torch.per_tensor_affine:
+          self.assertEqual(
+              x.q_scale(),
+              y.q_scale(),
+              prec=prec,
+              message=message,
+              allow_inf=allow_inf)
+          self.assertEqual(
+              x.q_zero_point(),
+              y.q_zero_point(),
+              prec=prec,
+              message=message,
+              allow_inf=allow_inf)
+        elif x.qscheme() == torch.per_channel_affine:
+          self.assertEqual(
+              x.q_per_channel_scales(),
+              y.q_per_channel_scales(),
+              prec=prec,
+              message=message,
+              allow_inf=allow_inf)
+          self.assertEqual(
+              x.q_per_channel_zero_points(),
+              y.q_per_channel_zero_points(),
+              prec=prec,
+              message=message,
+              allow_inf=allow_inf)
+          self.assertEqual(
+              x.q_per_channel_axis(),
+              y.q_per_channel_axis(),
+              prec=prec,
+              message=message)
+        self.assertEqual(x.dtype, y.dtype)
+        self.assertEqual(
+            x.int_repr().to(torch.int32),
+            y.int_repr().to(torch.int32),
+            prec=prec,
+            message=message,
+            allow_inf=allow_inf)
+      else:
+        assertTensorsEqual(x, y)
+    elif isinstance(x, self.STRING_CLASSES) and isinstance(
+        y, self.STRING_CLASSES):
+      super(XlaTestCase, self).assertEqual(x, y, message)
+    elif type(x) == set and type(y) == set:
+      super(XlaTestCase, self).assertEqual(x, y, message)
+    elif isinstance(x, dict) and isinstance(y, dict):
+      if isinstance(x, OrderedDict) and isinstance(y, OrderedDict):
+        self.assertEqual(
+            x.items(),
+            y.items(),
+            prec=prec,
+            message=message,
+            allow_inf=allow_inf)
+      else:
+        self.assertEqual(
+            set(x.keys()),
+            set(y.keys()),
+            prec=prec,
+            message=message,
+            allow_inf=allow_inf)
+        key_list = list(x.keys())
+        self.assertEqual([x[k] for k in key_list], [y[k] for k in key_list],
+                         prec=prec,
+                         message=message,
+                         allow_inf=allow_inf)
+    elif _is_iterable(x) and _is_iterable(y):
+      super(XlaTestCase, self).assertEqual(len(x), len(y), message)
+      for x_, y_ in zip(x, y):
+        self.assertEqual(
+            x_, y_, prec=prec, message=message, allow_inf=allow_inf)
+    elif isinstance(x, bool) and isinstance(y, bool):
+      super(XlaTestCase, self).assertEqual(x, y, message)
+    elif isinstance(x, Number) and isinstance(y, Number):
+      if abs(x) == math.inf or abs(y) == math.inf:
+        if allow_inf:
+          super(XlaTestCase, self).assertEqual(x, y, message)
+        else:
+          self.fail('Expected finite numeric values - x={}, y={}'.format(x, y))
+        return
+      super(XlaTestCase, self).assertLessEqual(abs(x - y), prec, message)
+    else:
+      super(XlaTestCase, self).assertEqual(x, y, message)
 
   def assertEqualRel(self, out, expected, rel_err=1e-2, abs_err=1e-5):
     try:
@@ -658,6 +882,16 @@ class TestAtenXlaTensor(XlaTestCase):
         10, (2, 3)), torch.randint(10, (3, 3))),
                      lambda x, y, z: torch.addmm(x, y, z))
 
+  def test_view_empty(self):
+    # These used to throw floating point exception.
+    empty = torch.empty(0, device=xm.xla_device())
+    with self.assertRaisesRegex(
+        RuntimeError, r'unspecified dimension size -1 can be any value'):
+      empty.view(-1, 0)
+    with self.assertRaisesRegex(
+        RuntimeError, r'unspecified dimension size -1 can be any value'):
+      empty.view(3, 0, -1, 0)
+
   def test_pred_type(self):
     xla_device = xm.xla_device()
     a = torch.rand(4)
@@ -725,16 +959,25 @@ class TestAtenXlaTensor(XlaTestCase):
   def test_flip(self):
     device = xm.xla_device()
     data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
-    self.assertEqual(torch.tensor([5, 6, 7, 8, 1, 2, 3, 4]).view(2, 2, 2), data.flip(0))
-    self.assertEqual(torch.tensor([3, 4, 1, 2, 7, 8, 5, 6]).view(2, 2, 2), data.flip(1))
-    self.assertEqual(torch.tensor([2, 1, 4, 3, 6, 5, 8, 7]).view(2, 2, 2), data.flip(2))
-    self.assertEqual(torch.tensor([7, 8, 5, 6, 3, 4, 1, 2]).view(2, 2, 2), data.flip(0, 1))
-    self.assertEqual(torch.tensor([8, 7, 6, 5, 4, 3, 2, 1]).view(2, 2, 2), data.flip(0, 1, 2))
+    self.assertEqual(
+        torch.tensor([5, 6, 7, 8, 1, 2, 3, 4]).view(2, 2, 2), data.flip(0))
+    self.assertEqual(
+        torch.tensor([3, 4, 1, 2, 7, 8, 5, 6]).view(2, 2, 2), data.flip(1))
+    self.assertEqual(
+        torch.tensor([2, 1, 4, 3, 6, 5, 8, 7]).view(2, 2, 2), data.flip(2))
+    self.assertEqual(
+        torch.tensor([7, 8, 5, 6, 3, 4, 1, 2]).view(2, 2, 2), data.flip(0, 1))
+    self.assertEqual(
+        torch.tensor([8, 7, 6, 5, 4, 3, 2, 1]).view(2, 2, 2),
+        data.flip(0, 1, 2))
     # check for wrap dim
-    self.assertEqual(torch.tensor([2, 1, 4, 3, 6, 5, 8, 7]).view(2, 2, 2), data.flip(-1))
+    self.assertEqual(
+        torch.tensor([2, 1, 4, 3, 6, 5, 8, 7]).view(2, 2, 2), data.flip(-1))
     # check for permute
-    self.assertEqual(torch.tensor([6, 5, 8, 7, 2, 1, 4, 3]).view(2, 2, 2), data.flip(0, 2))
-    self.assertEqual(torch.tensor([6, 5, 8, 7, 2, 1, 4, 3]).view(2, 2, 2), data.flip(2, 0))
+    self.assertEqual(
+        torch.tensor([6, 5, 8, 7, 2, 1, 4, 3]).view(2, 2, 2), data.flip(0, 2))
+    self.assertEqual(
+        torch.tensor([6, 5, 8, 7, 2, 1, 4, 3]).view(2, 2, 2), data.flip(2, 0))
 
   def test_flip_check_throws(self):
     device = xm.xla_device()
@@ -752,9 +995,13 @@ class TestAtenXlaTensor(XlaTestCase):
     device = xm.xla_device()
     data = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=device).view(2, 2, 2)
     expanded_data = torch.arange(1, 4, device=device).view(3, 1).expand(3, 2)
-    transposed_data = torch.arange(1, 9, device=device).view(2, 2, 2).transpose(0, 1)
-    self.assertEqual(torch.tensor([3, 3, 2, 2, 1, 1]).view(3, 2), expanded_data.flip(0))
-    self.assertEqual(torch.tensor([8, 7, 4, 3, 6, 5, 2, 1]).view(2, 2, 2), transposed_data.flip(0, 1, 2))
+    transposed_data = torch.arange(
+        1, 9, device=device).view(2, 2, 2).transpose(0, 1)
+    self.assertEqual(
+        torch.tensor([3, 3, 2, 2, 1, 1]).view(3, 2), expanded_data.flip(0))
+    self.assertEqual(
+        torch.tensor([8, 7, 4, 3, 6, 5, 2, 1]).view(2, 2, 2),
+        transposed_data.flip(0, 1, 2))
 
   def test_flip_shape(self):
     device = xm.xla_device()
@@ -762,9 +1009,9 @@ class TestAtenXlaTensor(XlaTestCase):
     size = [2, 3, 4]
     test_dims = []
     for i in range(1, 3):
-        test_dims += itertools.combinations(range(len(size)), i)
+      test_dims += itertools.combinations(range(len(size)), i)
     for ds in test_dims:
-        self.assertEqual(size, list(data.flip(ds).size()))
+      self.assertEqual(size, list(data.flip(ds).size()))
 
   def test_flip_rectangular(self):
     device = xm.xla_device()
@@ -924,6 +1171,16 @@ class TestAtenXlaTensor(XlaTestCase):
         [torch.randn(3, 4),
          torch.tensor([2, 1], dtype=torch.long)], test_fn)
 
+  def test_index_select_out(self):
+
+    def test_fn(s, i):
+      out = torch.randn(5 * 4 * 5, device=s.device)
+      return torch.index_select(s, 0, i, out=out.view(5, 4, 5)), out
+
+    self.runAtenTest(
+        [torch.randn(3, 4, 5),
+         torch.tensor([2, 1, 0, 1, 2], dtype=torch.long)], test_fn)
+
   def test_save_view_alias_check(self):
 
     class Nested(object):
@@ -941,7 +1198,7 @@ class TestAtenXlaTensor(XlaTestCase):
     self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
 
     with tempfile.TemporaryFile() as tf:
-        self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
+      self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
 
   def test_save(self):
     xla_device = xm.xla_device()
@@ -975,7 +1232,7 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_device = xm.xla_device()
     x = torch.tensor([5], device=xla_device)
     expected_str = 'tensor([5], device=\'' + str(xla_device) + '\')'
-    self.assertExpectedInline(str(x), expected_str)
+    self.assertEqual(str(x), expected_str)
 
 
 class MNISTComparator(nn.Module):
@@ -1040,6 +1297,347 @@ class TestGeneric(XlaTestCase):
     self.assertTrue('xla' in revs)
     self.assertTrue(revs['xla'])
     self.assertTrue('torch' in revs)
+
+
+class TestTypePromotion(XlaTestCase):
+
+  def setUp(self):
+    super(TestTypePromotion, self).setUp()
+    torch.set_default_dtype(torch.float32)
+    self.device = xm.xla_device()
+
+  # In-place operations don't promote.
+  # `int+float -> float` but `int.add_(float)` is rejected as an error.
+  # Promoting inplace would require re-allocating and copying the memory of the
+  # tensor data, since element size could change.
+  def test_inplace(self):
+    int_tensor = torch.ones([4, 4, 4], dtype=torch.int32, device=self.device)
+
+    expected = torch.ones([4, 4, 4], dtype=torch.int32, device=self.device)
+
+    long_tensor = torch.ones([4, 4, 4], dtype=torch.int64, device=self.device)
+    int_tensor.add_(long_tensor)
+    int_tensor.add_(1)
+    three = expected + 2
+    self.assertEqual(int_tensor, three)
+    self.assertEqual(int_tensor.dtype, torch.int32)
+
+  def test_unsinged(self):
+    dont_promote = torch.ones(3, dtype=torch.uint8) + 5
+    self.assertEqual(dont_promote.dtype, torch.uint8)
+
+  # some basic examples
+  def test_int_promotion(self):
+    a = torch.ones([4, 4, 4], dtype=torch.int32, device=self.device)
+    b = torch.ones([4, 4, 4], dtype=torch.int64, device=self.device)
+    c = a + b
+    self.assertEqual(c, b + b)
+    self.assertEqual(c.dtype, torch.int64)
+
+  def test_float_promotion(self):
+    a = torch.ones([4, 4, 4], dtype=torch.float, device=self.device)
+    b = torch.ones([4, 4, 4], dtype=torch.double, device=self.device)
+    c = a + b
+    self.assertEqual(c, b + b)
+    self.assertEqual(c.dtype, torch.double)
+    c = b + a
+    self.assertEqual(c, b + b)
+    self.assertEqual(c.dtype, torch.double)
+
+  def test_add_wrapped(self):
+    a = torch.ones([4, 4, 4], dtype=torch.int, device=self.device)
+    b = 1
+    c = a + b
+    self.assertEqual(c, a + a)
+    self.assertEqual(c.dtype, torch.int)
+
+  def test_int_to_float(self):
+    a = torch.ones([4, 4, 4], dtype=torch.int32, device=self.device)
+    b = torch.ones([4, 4, 4], dtype=torch.float, device=self.device)
+    c = a + b
+    self.assertEqual(c.dtype, torch.float32)
+
+  # some examples from:
+  # https://github.com/pytorch/pytorch/issues/9515
+  def test_from_issue(self):
+    a = torch.rand(3, dtype=torch.float32, device=self.device)
+    u = torch.tensor([0, 0, 1], dtype=torch.uint8, device=self.device)
+    self.assertEqual((a * 5).dtype, torch.float32)
+    self.assertEqual((u + 1).dtype, torch.uint8)
+    self.assertEqual((u + 1000).dtype, torch.uint8)  # integer overflow
+
+    # not a "wrapped number"
+    other = torch.tensor(5.5, dtype=torch.double, device=self.device)
+
+    self.assertEqual((u + 5.5).dtype, torch.get_default_dtype())
+    self.assertEqual((u + other).dtype, torch.double)
+    # adding a 0-dim tensor to a float doesn't promote to double unless first
+    # type was integral.
+    self.assertEqual((a + other).dtype, torch.float32)
+
+  def test_mixed_type_backward(self):
+    f = torch.ones([3, 3],
+                   dtype=torch.float,
+                   requires_grad=True,
+                   device=self.device)
+    ten = torch.tensor([10.], dtype=torch.double, device=self.device)
+    tens = f * ten
+    s = (tens + 2).sum()
+    s.backward()
+    self.assertEqual(f.grad, tens)
+
+    # If we don't convert the returned grad_input to the actual input type
+    # we get an error like:
+    # RuntimeError: Function SubBackward0 returned an invalid gradient at index 0 - expected type \
+    # torch.FloatTensor but got torch.DoubleTensor
+    f_dtypes = [torch.float, torch.double]
+    i_dtypes = [torch.int, torch.long]
+    for f in ['add', 'sub', 'rsub', 'mul', 'div']:
+      for dtype1 in f_dtypes:
+        for dtype2 in (f_dtypes + i_dtypes):
+          x = torch.ones(
+              10, requires_grad=True, dtype=dtype1, device=self.device)
+          y = torch.ones(10, dtype=dtype2, device=self.device)
+
+          func = getattr(torch, f)
+          func(x, y).sum().backward()
+
+  # verifies that a.add(b) is the same as a.to(b.dtype).add(b) in cases
+  # where that should hold.
+  def test_many_promotions(self):
+    from_to = {
+        torch.int: torch.long,
+        torch.uint8: torch.long,
+        torch.uint8: torch.float,
+        torch.int: torch.float,
+        torch.int: torch.double,
+        torch.bool: torch.long,
+        torch.bool: torch.float
+    }
+
+    for k, v in from_to.items():
+      a = torch.rand([3, 3], device=self.device).to(
+          k)  # no _th_uniform for half on cpu.
+      b = torch.rand([3, 3], device=self.device).to(v)
+      c = a.add(b)
+      d = a.to(v).add(b)
+      self.assertEqual(c.dtype, d.dtype, message='from {} to {}'.format(k, v))
+      self.assertEqual(c, d, message='from {} to {}'.format(k, v))
+
+  def test_non_promoting_ops(self):
+    x = torch.ones(4, dtype=torch.double)
+    err = 'expected dtype .ouble .*but got dtype .loat'
+    self.assertRaisesRegex(
+        RuntimeError, err,
+        lambda: torch.neg(torch.ones(4, dtype=torch.float), out=x))
+    self.assertRaisesRegex(
+        RuntimeError, err,
+        lambda: torch.lerp(x, torch.ones(4, dtype=torch.float), 1))
+
+  def test_alpha_mismatch(self):
+    x = torch.ones(4, dtype=torch.int)
+    err = 'alpha must not be'
+    self.assertRaisesRegex(RuntimeError, err,
+                           lambda: torch.add(x, x, alpha=1.1))
+    x = x.to(torch.bool)
+    self.assertRaisesRegex(RuntimeError, err,
+                           lambda: torch.add(x, x, alpha=1.1))
+    self.assertEqual(x + x, torch.add(x, x, alpha=True))
+
+  def test_booleans(self):
+    onedim = torch.tensor([True])
+
+    self.assertEqual(onedim + onedim, onedim)
+    self.assertEqual(onedim + True, onedim)
+    self.assertEqual(torch.add(True, True), True)
+    self.assertEqual(torch.add(False, False), False)
+    self.assertEqual(torch.add(False, True), True)
+
+    self.assertRaisesRegex(RuntimeError, 'Boolean alpha only supported',
+                           lambda: torch.add(1, 1, alpha=True))
+    self.assertEquals(
+        torch.add(torch.tensor(True), torch.tensor(True), True),
+        torch.tensor(True))
+
+  def test_create_bool_tensors(self):
+    expected = torch.tensor([0], dtype=torch.int64, device=self.device)
+    self.assertEqual(torch.arange(False, True, device=self.device), expected)
+    self.assertEqual(torch.arange(True, device=self.device), expected)
+    expected = torch.tensor([0, 0.5],
+                            dtype=torch.get_default_dtype(),
+                            device=self.device)
+    self.assertEqual(
+        torch.arange(False, True, 0.5, device=self.device), expected)
+    expected = torch.ones(0, dtype=torch.int64, device=self.device)
+    self.assertEqual(torch.arange(False, False, device=self.device), expected)
+
+    self.assertEqual(
+        torch.linspace(False, True, device=self.device),
+        torch.linspace(0, 1, device=self.device))
+    self.assertEqual(
+        torch.logspace(False, True, device=self.device),
+        torch.logspace(0, 1, device=self.device))
+
+    # this seems like odd behavior but ints also create float tensors, numpy doesn't have this function.
+    self.assertEqual(
+        torch.scalar_tensor(False, device=self.device),
+        torch.tensor(0., device=self.device))
+
+  def test_result_type(self):
+    self.assertEqual(
+        torch.result_type(torch.tensor(1, dtype=torch.int), 1), torch.int)
+    self.assertEqual(
+        torch.result_type(1, torch.tensor(1, dtype=torch.int)), torch.int)
+    self.assertEqual(torch.result_type(1, 1.), torch.get_default_dtype())
+    self.assertEqual(
+        torch.result_type(torch.tensor(1), 1.), torch.get_default_dtype())
+    self.assertEqual(
+        torch.result_type(
+            torch.tensor(1, dtype=torch.long),
+            torch.tensor([1, 1], dtype=torch.int)), torch.int)
+    self.assertEqual(
+        torch.result_type(torch.tensor([1., 1.], dtype=torch.float), 1.),
+        torch.float)
+    self.assertEqual(
+        torch.result_type(
+            torch.tensor(1., dtype=torch.float),
+            torch.tensor(1, dtype=torch.double)), torch.double)
+
+  def test_can_cast(self):
+    self.assertTrue(torch.can_cast(torch.double, torch.float))
+    self.assertFalse(torch.can_cast(torch.float, torch.int))
+
+  def test_comparison_ops_with_type_promotion(self):
+    value_for_type = {
+        torch.uint8: (1 << 5),
+        torch.int8: (1 << 5),
+        torch.int16: (1 << 10),
+        torch.int32: (1 << 20),
+        torch.int64: (1 << 35),
+        torch.float16: (1 << 10),
+        torch.float32: (1 << 20),
+        torch.float64: (1 << 35)
+    }
+    comparison_ops = [
+        dict(
+            name='lt',
+            out_op=lambda x, y, d: torch.lt(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.lt(x, y),
+            compare_op=lambda x, y: x < y,
+        ),
+        dict(
+            name='le',
+            out_op=lambda x, y, d: torch.le(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.le(x, y),
+            compare_op=lambda x, y: x <= y,
+        ),
+        dict(
+            name='gt',
+            out_op=lambda x, y, d: torch.gt(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.gt(x, y),
+            compare_op=lambda x, y: x > y,
+        ),
+        dict(
+            name='ge',
+            out_op=lambda x, y, d: torch.ge(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.ge(x, y),
+            compare_op=lambda x, y: x >= y,
+        ),
+        dict(
+            name='eq',
+            out_op=lambda x, y, d: torch.eq(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.eq(x, y),
+            compare_op=lambda x, y: x == y,
+        ),
+        dict(
+            name='ne',
+            out_op=lambda x, y, d: torch.ne(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.ne(x, y),
+            compare_op=lambda x, y: x != y,
+        ),
+    ]
+    device = self.device
+    all_dtypes = [
+        torch.uint8, torch.float, torch.double, torch.int32, torch.int64,
+        torch.int8
+    ]
+    for op in comparison_ops:
+      for dt1 in all_dtypes:
+        for dt2 in all_dtypes:
+          val1 = value_for_type[dt1]
+          val2 = value_for_type[dt2]
+          t1 = torch.tensor([val1], dtype=dt1, device=device)
+          t2 = torch.tensor([val2], dtype=dt2, device=device)
+          expected = torch.tensor([op['compare_op'](val1, val2)],
+                                  dtype=torch.bool)
+
+          out_res = op['out_op'](t1, t2, device)
+          self.assertEqual(out_res, expected)
+          self.assertTrue(out_res.dtype == torch.bool)
+          self.assertTrue(t1.dtype == dt1)
+          self.assertTrue(t2.dtype == dt2)
+
+          out_res = op['ret_op'](t1, t2)
+          self.assertEqual(out_res, expected)
+          self.assertTrue(out_res.dtype == torch.bool)
+          self.assertTrue(t1.dtype == dt1)
+          self.assertTrue(t2.dtype == dt2)
+
+          # test that comparing a zero dim tensor with another zero dim tensor has type promotion behavior
+          t1 = torch.tensor(val1, dtype=dt1, device=device)
+          t2 = torch.tensor(val2, dtype=dt2, device=device)
+          expected = torch.tensor(
+              op['compare_op'](val1, val2), dtype=torch.bool)
+
+          out_res = op['out_op'](t1, t2, device)
+          self.assertEqual(out_res, expected)
+          self.assertTrue(out_res.dtype == torch.bool)
+          self.assertTrue(t1.dtype == dt1)
+          self.assertTrue(t2.dtype == dt2)
+
+          out_res = op['ret_op'](t1, t2)
+          self.assertEqual(out_res, expected)
+          self.assertTrue(out_res.dtype == torch.bool)
+          self.assertTrue(t1.dtype == dt1)
+          self.assertTrue(t2.dtype == dt2)
+
+  def test_lt_with_type_promotion(self):
+    for dt in [
+        torch.uint8, torch.int8, torch.int32, torch.int64, torch.float,
+        torch.double
+    ]:
+      x = torch.tensor([0], dtype=dt, device=self.device)
+      expected = torch.tensor([True], dtype=torch.bool, device=self.device)
+
+      actual = x < 0.5
+      self.assertTrue(actual, expected)
+      self.assertTrue(actual.dtype == torch.bool)
+
+      actual = x < torch.tensor(0.5, device=self.device)
+      self.assertTrue(actual, expected)
+      self.assertTrue(actual.dtype == torch.bool)
+
+      x = torch.tensor(0, dtype=dt, device=self.device)
+      expected = torch.tensor(True, dtype=torch.bool, device=self.device)
+      actual = x < 0.5
+      self.assertTrue(actual, expected)
+      self.assertTrue(actual.dtype == torch.bool)
+
+      actual = x < torch.tensor(0.5, device=self.device)
+      self.assertTrue(actual, expected)
+      self.assertTrue(actual.dtype == torch.bool)
+
+  def test_promote_types(self):
+    self.assertEqual(torch.promote_types(torch.float, torch.int), torch.float)
+    self.assertEqual(
+        torch.promote_types(torch.float, torch.double), torch.double)
+    self.assertEqual(torch.promote_types(torch.int, torch.uint8), torch.int)
 
 
 if __name__ == '__main__':

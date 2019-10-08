@@ -47,12 +47,18 @@ class XLATensor {
 
   at::Tensor ToTensor();
 
+  void ShallowCopyTo(XLATensor* dest) const;
+
   // Assigns the tensor value to the XLA tensor.
   void SetTensor(at::Tensor tensor);
 
   void UpdateFromTensor(at::Tensor tensor);
 
   at::ScalarType dtype() const;
+
+  // Set logical_element_type which is visible to upstream PyTorch.
+  void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
+
   xla::util::MaybeRef<xla::Shape> shape() const;
 
   const Device& GetDevice() const;
@@ -810,6 +816,10 @@ class XLATensor {
   static XLATensor stack(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                          xla::int64 dim);
 
+  static XLATensor std(const XLATensor& input,
+                       std::vector<xla::int64> dimensions,
+                       bool keep_reduced_dimensions, bool unbiased);
+
   static XLATensor sub(const XLATensor& input, const XLATensor& other,
                        at::Scalar alpha);
   static void sub_(XLATensor& input, const XLATensor& other, at::Scalar alpha);
@@ -1034,8 +1044,6 @@ class XLATensor {
       c10::optional<at::ScalarType> logical_element_type_opt) const;
   XLATensor CreateFrom(ir::Value ir_value, const Device& device,
                        at::ScalarType logical_element_type) const;
-
-  void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.

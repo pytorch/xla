@@ -288,7 +288,8 @@ class AtenXlaType {
 
   static at::Tensor& clamp_min_(at::Tensor& self, at::Scalar min);
 
-  static at::Tensor clone(const at::Tensor& self);
+  static at::Tensor clone(const at::Tensor& self,
+                          c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor constant_pad_nd(const at::Tensor& self, at::IntArrayRef pad,
                                     at::Scalar value);
@@ -983,6 +984,11 @@ class AtenXlaType {
   static at::Tensor& squeeze_(at::Tensor& self, int64_t dim);
 
   static at::Tensor stack(at::TensorList tensors, int64_t dim);
+
+  static at::Tensor std(const at::Tensor& self, bool unbiased);
+
+  static at::Tensor std(const at::Tensor& self, at::IntArrayRef dim,
+                        bool unbiased, bool keepdim);
 
   static at::Tensor sub(const at::Tensor& self, const at::Tensor& other,
                         at::Scalar alpha);

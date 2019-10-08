@@ -9,13 +9,17 @@ load(
     "tf_cc_shared_object",
 )
 load(
-    "//tensorflow/core:platform/default/build_config.bzl",
+    "//tensorflow/core/platform:default/build_config.bzl",
     "tf_additional_all_protos",
     "tf_proto_library",
     "tf_proto_library_cc",
     "tf_proto_library_py",
 )
 load("//tensorflow/compiler/xla:xla.bzl", "xla_proto_library")
+load(
+    "//tensorflow/core/platform:default/cuda_build_defs.bzl",
+    "if_cuda_is_configured",
+)
 
 exports_files(
     [
@@ -132,5 +136,5 @@ cc_library(
         "//tensorflow/core/protobuf/tpu:topology_proto_cc",
         "//tensorflow/stream_executor:stream_executor_impl",
         "@com_google_absl//absl/strings",
-    ],
+    ] + if_cuda_is_configured(["//tensorflow/compiler/jit:xla_gpu_device"]),
 )
