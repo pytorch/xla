@@ -209,9 +209,9 @@ taking an optimizer step explicitly synchronizes the CPU and the XLA device.
 
 ### XLA Tensors and bFloat16
 
-PyTorch/XLA can use the
+PyTorchXLA can use the
 [bfloat16](https://en.wikipedia.org/wiki/Bfloat16_floating-point_format)
-datatype when running on TPUs. In fact, PyTorch/XLA handles float types
+datatype when running on TPUs. In fact, PyTorchXLA handles float types
 (`torch.float` and `torch.double`) differently on TPUs. This behavior is
 controlled by the `XLA_USE_BF16` environment variable:
 
@@ -273,7 +273,7 @@ them after the tensors have been loaded and moved to their destination device(s)
 
 Directly saving XLA tensors is possible but not recommended. XLA
 tensors are always loaded back to the device they were saved from, and if
-that device is unavailable the load will fail. PyTorch/XLA, like all of PyTorch,
+that device is unavailable the load will fail. PyTorchXLA, like all of PyTorch,
 is under active development and this behavior may change in the future.
 
 ## Further Reading
