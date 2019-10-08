@@ -25,19 +25,20 @@ xla::XlaOp Between(const xla::XlaOp& input, at::Scalar min_val,
 
 xla::XlaOp BuildComparisonOp(c10::Symbol kind, const xla::XlaOp& input,
                              const xla::XlaOp& other) {
+  std::pair<xla::XlaOp, xla::XlaOp> ops = XlaHelpers::Promote(input, other);
   switch (kind) {
     case at::aten::ne:
-      return xla::Ne(input, other);
+      return xla::Ne(ops.first, ops.second);
     case at::aten::eq:
-      return xla::Eq(input, other);
+      return xla::Eq(ops.first, ops.second);
     case at::aten::ge:
-      return xla::Ge(input, other);
+      return xla::Ge(ops.first, ops.second);
     case at::aten::le:
-      return xla::Le(input, other);
+      return xla::Le(ops.first, ops.second);
     case at::aten::gt:
-      return xla::Gt(input, other);
+      return xla::Gt(ops.first, ops.second);
     case at::aten::lt:
-      return xla::Lt(input, other);
+      return xla::Lt(ops.first, ops.second);
     default:
       XLA_ERROR() << "Invalid comparison operator kind: "
                   << kind.toQualString();

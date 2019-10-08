@@ -55,6 +55,10 @@ class XLATensor {
   void UpdateFromTensor(at::Tensor tensor);
 
   at::ScalarType dtype() const;
+
+  // Set logical_element_type which is visible to upstream PyTorch.
+  void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
+
   xla::util::MaybeRef<xla::Shape> shape() const;
 
   const Device& GetDevice() const;
@@ -1040,8 +1044,6 @@ class XLATensor {
       c10::optional<at::ScalarType> logical_element_type_opt) const;
   XLATensor CreateFrom(ir::Value ir_value, const Device& device,
                        at::ScalarType logical_element_type) const;
-
-  void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
   // We build an XLA graph accumulating XLA operations, but at a given point we
   // need to force a rendering, otherwise the graph can grow without control.
