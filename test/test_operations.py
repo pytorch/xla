@@ -1298,6 +1298,7 @@ class TestGeneric(XlaTestCase):
     self.assertTrue(revs['xla'])
     self.assertTrue('torch' in revs)
 
+
 class TestTypePromotion(XlaTestCase):
 
   def setUp(self):
@@ -1375,7 +1376,10 @@ class TestTypePromotion(XlaTestCase):
     self.assertEqual((a + other).dtype, torch.float32)
 
   def test_mixed_type_backward(self):
-    f = torch.ones([3, 3], dtype=torch.float, requires_grad=True, device=self.device)
+    f = torch.ones([3, 3],
+                   dtype=torch.float,
+                   requires_grad=True,
+                   device=self.device)
     ten = torch.tensor([10.], dtype=torch.double, device=self.device)
     tens = f * ten
     s = (tens + 2).sum()
@@ -1391,7 +1395,8 @@ class TestTypePromotion(XlaTestCase):
     for f in ['add', 'sub', 'rsub', 'mul', 'div']:
       for dtype1 in f_dtypes:
         for dtype2 in (f_dtypes + i_dtypes):
-          x = torch.ones(10, requires_grad=True, dtype=dtype1, device=self.device)
+          x = torch.ones(
+              10, requires_grad=True, dtype=dtype1, device=self.device)
           y = torch.ones(10, dtype=dtype2, device=self.device)
 
           func = getattr(torch, f)
@@ -1411,20 +1416,23 @@ class TestTypePromotion(XlaTestCase):
     }
 
     for k, v in from_to.items():
-        a = torch.rand([3, 3], device=self.device).to(k)  # no _th_uniform for half on cpu.
-        b = torch.rand([3, 3], device=self.device).to(v)
-        c = a.add(b)
-        d = a.to(v).add(b)
-        self.assertEqual(c.dtype, d.dtype, message='from {} to {}'.format(k, v))
-        self.assertEqual(c, d, message='from {} to {}'.format(k, v))
+      a = torch.rand([3, 3], device=self.device).to(
+          k)  # no _th_uniform for half on cpu.
+      b = torch.rand([3, 3], device=self.device).to(v)
+      c = a.add(b)
+      d = a.to(v).add(b)
+      self.assertEqual(c.dtype, d.dtype, message='from {} to {}'.format(k, v))
+      self.assertEqual(c, d, message='from {} to {}'.format(k, v))
 
   def test_non_promoting_ops(self):
     x = torch.ones(4, dtype=torch.double)
     err = 'expected dtype .ouble .*but got dtype .loat'
-    self.assertRaisesRegex(RuntimeError, err,
-                           lambda: torch.neg(torch.ones(4, dtype=torch.float), out=x))
-    self.assertRaisesRegex(RuntimeError, err,
-                             lambda: torch.lerp(x, torch.ones(4, dtype=torch.float), 1))
+    self.assertRaisesRegex(
+        RuntimeError, err,
+        lambda: torch.neg(torch.ones(4, dtype=torch.float), out=x))
+    self.assertRaisesRegex(
+        RuntimeError, err,
+        lambda: torch.lerp(x, torch.ones(4, dtype=torch.float), 1))
 
   def test_alpha_mismatch(self):
     x = torch.ones(4, dtype=torch.int)
@@ -1445,33 +1453,55 @@ class TestTypePromotion(XlaTestCase):
     self.assertEqual(torch.add(False, False), False)
     self.assertEqual(torch.add(False, True), True)
 
-    self.assertRaisesRegex(RuntimeError, "Boolean alpha only supported",
+    self.assertRaisesRegex(RuntimeError, 'Boolean alpha only supported',
                            lambda: torch.add(1, 1, alpha=True))
-    self.assertEquals(torch.add(torch.tensor(True), torch.tensor(True), True), torch.tensor(True))
+    self.assertEquals(
+        torch.add(torch.tensor(True), torch.tensor(True), True),
+        torch.tensor(True))
 
   def test_create_bool_tensors(self):
     expected = torch.tensor([0], dtype=torch.int64, device=self.device)
     self.assertEqual(torch.arange(False, True, device=self.device), expected)
     self.assertEqual(torch.arange(True, device=self.device), expected)
-    expected = torch.tensor([0, 0.5], dtype=torch.get_default_dtype(), device=self.device)
-    self.assertEqual(torch.arange(False, True, 0.5, device=self.device), expected)
+    expected = torch.tensor([0, 0.5],
+                            dtype=torch.get_default_dtype(),
+                            device=self.device)
+    self.assertEqual(
+        torch.arange(False, True, 0.5, device=self.device), expected)
     expected = torch.ones(0, dtype=torch.int64, device=self.device)
     self.assertEqual(torch.arange(False, False, device=self.device), expected)
 
-    self.assertEqual(torch.linspace(False, True, device=self.device), torch.linspace(0, 1, device=self.device))
-    self.assertEqual(torch.logspace(False, True, device=self.device), torch.logspace(0, 1, device=self.device))
+    self.assertEqual(
+        torch.linspace(False, True, device=self.device),
+        torch.linspace(0, 1, device=self.device))
+    self.assertEqual(
+        torch.logspace(False, True, device=self.device),
+        torch.logspace(0, 1, device=self.device))
 
     # this seems like odd behavior but ints also create float tensors, numpy doesn't have this function.
-    self.assertEqual(torch.scalar_tensor(False, device=self.device), torch.tensor(0., device=self.device))
+    self.assertEqual(
+        torch.scalar_tensor(False, device=self.device),
+        torch.tensor(0., device=self.device))
 
   def test_result_type(self):
-    self.assertEqual(torch.result_type(torch.tensor(1, dtype=torch.int), 1), torch.int)
-    self.assertEqual(torch.result_type(1, torch.tensor(1, dtype=torch.int)), torch.int)
+    self.assertEqual(
+        torch.result_type(torch.tensor(1, dtype=torch.int), 1), torch.int)
+    self.assertEqual(
+        torch.result_type(1, torch.tensor(1, dtype=torch.int)), torch.int)
     self.assertEqual(torch.result_type(1, 1.), torch.get_default_dtype())
-    self.assertEqual(torch.result_type(torch.tensor(1), 1.), torch.get_default_dtype())
-    self.assertEqual(torch.result_type(torch.tensor(1, dtype=torch.long), torch.tensor([1, 1], dtype=torch.int)), torch.int)
-    self.assertEqual(torch.result_type(torch.tensor([1., 1.], dtype=torch.float), 1.), torch.float)
-    self.assertEqual(torch.result_type(torch.tensor(1., dtype=torch.float), torch.tensor(1, dtype=torch.double)), torch.double)
+    self.assertEqual(
+        torch.result_type(torch.tensor(1), 1.), torch.get_default_dtype())
+    self.assertEqual(
+        torch.result_type(
+            torch.tensor(1, dtype=torch.long),
+            torch.tensor([1, 1], dtype=torch.int)), torch.int)
+    self.assertEqual(
+        torch.result_type(torch.tensor([1., 1.], dtype=torch.float), 1.),
+        torch.float)
+    self.assertEqual(
+        torch.result_type(
+            torch.tensor(1., dtype=torch.float),
+            torch.tensor(1, dtype=torch.double)), torch.double)
 
   def test_can_cast(self):
     self.assertTrue(torch.can_cast(torch.double, torch.float))
@@ -1479,55 +1509,64 @@ class TestTypePromotion(XlaTestCase):
 
   def test_comparison_ops_with_type_promotion(self):
     value_for_type = {
-      torch.uint8: (1 << 5),
-      torch.int8: (1 << 5),
-      torch.int16: (1 << 10),
-      torch.int32: (1 << 20),
-      torch.int64: (1 << 35),
-      torch.float16: (1 << 10),
-      torch.float32: (1 << 20),
-      torch.float64: (1 << 35)
+        torch.uint8: (1 << 5),
+        torch.int8: (1 << 5),
+        torch.int16: (1 << 10),
+        torch.int32: (1 << 20),
+        torch.int64: (1 << 35),
+        torch.float16: (1 << 10),
+        torch.float32: (1 << 20),
+        torch.float64: (1 << 35)
     }
     comparison_ops = [
-      dict(
-        name="lt",
-        out_op=lambda x, y, d: torch.lt(x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
-        ret_op=lambda x, y: torch.lt(x, y),
-        compare_op=lambda x, y: x < y,
-      ),
-      dict(
-        name="le",
-        out_op=lambda x, y, d: torch.le(x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
-        ret_op=lambda x, y: torch.le(x, y),
-        compare_op=lambda x, y: x <= y,
-      ),
-      dict(
-        name="gt",
-        out_op=lambda x, y, d: torch.gt(x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
-        ret_op=lambda x, y: torch.gt(x, y),
-        compare_op=lambda x, y: x > y,
-      ),
-      dict(
-        name="ge",
-        out_op=lambda x, y, d: torch.ge(x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
-        ret_op=lambda x, y: torch.ge(x, y),
-        compare_op=lambda x, y: x >= y,
-      ),
-      dict(
-        name="eq",
-        out_op=lambda x, y, d: torch.eq(x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
-        ret_op=lambda x, y: torch.eq(x, y),
-        compare_op=lambda x, y: x == y,
-      ),
-      dict(
-        name="ne",
-        out_op=lambda x, y, d: torch.ne(x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
-        ret_op=lambda x, y: torch.ne(x, y),
-        compare_op=lambda x, y: x != y,
-      ),
+        dict(
+            name='lt',
+            out_op=lambda x, y, d: torch.lt(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.lt(x, y),
+            compare_op=lambda x, y: x < y,
+        ),
+        dict(
+            name='le',
+            out_op=lambda x, y, d: torch.le(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.le(x, y),
+            compare_op=lambda x, y: x <= y,
+        ),
+        dict(
+            name='gt',
+            out_op=lambda x, y, d: torch.gt(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.gt(x, y),
+            compare_op=lambda x, y: x > y,
+        ),
+        dict(
+            name='ge',
+            out_op=lambda x, y, d: torch.ge(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.ge(x, y),
+            compare_op=lambda x, y: x >= y,
+        ),
+        dict(
+            name='eq',
+            out_op=lambda x, y, d: torch.eq(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.eq(x, y),
+            compare_op=lambda x, y: x == y,
+        ),
+        dict(
+            name='ne',
+            out_op=lambda x, y, d: torch.ne(
+                x, y, out=torch.empty(1, dtype=torch.bool, device=d)),
+            ret_op=lambda x, y: torch.ne(x, y),
+            compare_op=lambda x, y: x != y,
+        ),
     ]
     device = self.device
-    all_dtypes = [torch.uint8, torch.float, torch.double, torch.int32, torch.int64, torch.int8]
+    all_dtypes = [
+        torch.uint8, torch.float, torch.double, torch.int32, torch.int64,
+        torch.int8
+    ]
     for op in comparison_ops:
       for dt1 in all_dtypes:
         for dt2 in all_dtypes:
@@ -1535,15 +1574,16 @@ class TestTypePromotion(XlaTestCase):
           val2 = value_for_type[dt2]
           t1 = torch.tensor([val1], dtype=dt1, device=device)
           t2 = torch.tensor([val2], dtype=dt2, device=device)
-          expected = torch.tensor([op["compare_op"](val1, val2)], dtype=torch.bool)
+          expected = torch.tensor([op['compare_op'](val1, val2)],
+                                  dtype=torch.bool)
 
-          out_res = op["out_op"](t1, t2, device)
+          out_res = op['out_op'](t1, t2, device)
           self.assertEqual(out_res, expected)
           self.assertTrue(out_res.dtype == torch.bool)
           self.assertTrue(t1.dtype == dt1)
           self.assertTrue(t2.dtype == dt2)
 
-          out_res = op["ret_op"](t1, t2)
+          out_res = op['ret_op'](t1, t2)
           self.assertEqual(out_res, expected)
           self.assertTrue(out_res.dtype == torch.bool)
           self.assertTrue(t1.dtype == dt1)
@@ -1552,22 +1592,26 @@ class TestTypePromotion(XlaTestCase):
           # test that comparing a zero dim tensor with another zero dim tensor has type promotion behavior
           t1 = torch.tensor(val1, dtype=dt1, device=device)
           t2 = torch.tensor(val2, dtype=dt2, device=device)
-          expected = torch.tensor(op["compare_op"](val1, val2), dtype=torch.bool)
+          expected = torch.tensor(
+              op['compare_op'](val1, val2), dtype=torch.bool)
 
-          out_res = op["out_op"](t1, t2, device)
+          out_res = op['out_op'](t1, t2, device)
           self.assertEqual(out_res, expected)
           self.assertTrue(out_res.dtype == torch.bool)
           self.assertTrue(t1.dtype == dt1)
           self.assertTrue(t2.dtype == dt2)
 
-          out_res = op["ret_op"](t1, t2)
+          out_res = op['ret_op'](t1, t2)
           self.assertEqual(out_res, expected)
           self.assertTrue(out_res.dtype == torch.bool)
           self.assertTrue(t1.dtype == dt1)
           self.assertTrue(t2.dtype == dt2)
 
   def test_lt_with_type_promotion(self):
-    for dt in [torch.uint8, torch.int8, torch.int32, torch.int64, torch.float, torch.double]:
+    for dt in [
+        torch.uint8, torch.int8, torch.int32, torch.int64, torch.float,
+        torch.double
+    ]:
       x = torch.tensor([0], dtype=dt, device=self.device)
       expected = torch.tensor([True], dtype=torch.bool, device=self.device)
 
@@ -1591,8 +1635,10 @@ class TestTypePromotion(XlaTestCase):
 
   def test_promote_types(self):
     self.assertEqual(torch.promote_types(torch.float, torch.int), torch.float)
-    self.assertEqual(torch.promote_types(torch.float, torch.double), torch.double)
+    self.assertEqual(
+        torch.promote_types(torch.float, torch.double), torch.double)
     self.assertEqual(torch.promote_types(torch.int, torch.uint8), torch.int)
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
