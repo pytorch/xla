@@ -83,6 +83,7 @@ _FN_BLACKLIST = set([
     'numel',
     'ones',
     'ones_like',
+    'result_type',
     'zero_',
     'zeros',
     'zeros_like',

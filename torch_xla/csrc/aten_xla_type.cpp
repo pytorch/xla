@@ -71,6 +71,16 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
          "`logical_not()` operator instead.";
 }
 
+std::tuple<XLATensor, XLATensor> GetPromotedXlaTensorsForBinaryOp(
+    const at::Tensor& self, const at::Tensor& other) {
+  at::ScalarType dtype = at::result_type(self, other);
+  XLATensor tensor1 = bridge::GetXlaTensor(self);
+  XLATensor tensor2 = bridge::GetOrCreateXlaTensor(other, tensor1.GetDevice());
+  tensor1.SetScalarType(dtype);
+  tensor2.SetScalarType(dtype);
+  return std::make_tuple(tensor1, tensor2);
+}
+
 void AtenInitialize() {
   TF_LOG(INFO) << "PyTorch GIT revision: " << TORCH_GITREV;
   TF_LOG(INFO) << "XLA GIT revision: " << XLA_GITREV;
@@ -361,10 +371,9 @@ at::Tensor& AtenXlaType::acos_(at::Tensor& self) {
 
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::add(
-      self_tensor, bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()),
-      alpha));
+  auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::add(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
 }
 
 at::Tensor AtenXlaType::add(const at::Tensor& self, at::Scalar other,
@@ -991,10 +1000,9 @@ at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
 }
 
 at::Tensor AtenXlaType::div(const at::Tensor& self, const at::Tensor& other) {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::div(
-      self_tensor,
-      bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice())));
+  auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::div(std::get<0>(xlatensors), std::get<1>(xlatensors)));
 }
 
 at::Tensor AtenXlaType::div(const at::Tensor& self, at::Scalar other) {
@@ -1996,10 +2004,9 @@ at::Tensor AtenXlaType::mm(const at::Tensor& self, const at::Tensor& mat2) {
 }
 
 at::Tensor AtenXlaType::mul(const at::Tensor& self, const at::Tensor& other) {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::mul(
-      self_tensor,
-      bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice())));
+  auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::mul(std::get<0>(xlatensors), std::get<1>(xlatensors)));
 }
 
 at::Tensor AtenXlaType::mul(const at::Tensor& self, at::Scalar other) {
@@ -2418,8 +2425,9 @@ at::Tensor& AtenXlaType::rsqrt_(at::Tensor& self) {
 at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Tensor& other,
                              at::Scalar alpha) {
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
-  return bridge::AtenFromXlaTensor(XLATensor::rsub(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other), alpha));
+  auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::rsub(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
 }
 
 at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
@@ -2674,10 +2682,9 @@ at::Tensor AtenXlaType::std(const at::Tensor& self, at::IntArrayRef dim,
 at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) {
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::sub(
-      self_tensor, bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()),
-      alpha));
+  auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::sub(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
 }
 
 at::Tensor AtenXlaType::sub(const at::Tensor& self, at::Scalar other,

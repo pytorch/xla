@@ -23,6 +23,7 @@
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
@@ -326,7 +327,10 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
 }
 
 NodePtr ComparisonOp(c10::Symbol kind, const Value& input, at::Scalar other) {
-  return ComparisonOp(kind, input, MakeNode<Scalar>(other, input.shape()));
+  xla::Shape other_shape = input.shape();
+  other_shape.set_element_type(
+      MakeXlaPrimitiveType(GetScalarType(other), /*device=*/nullptr));
+  return ComparisonOp(kind, input, MakeNode<Scalar>(other, other_shape));
 }
 
 NodePtr Where(const Value& condition, const Value& input, const Value& other) {
