@@ -91,11 +91,6 @@ void AtenInitialize() {
 
 }  // namespace
 
-int64_t AtenXlaType::numel(const at::Tensor& self) {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return xla::ShapeUtil::ElementsIn(self_tensor.shape());
-}
-
 at::Tensor AtenXlaType::__and__(const at::Tensor& self, at::Scalar other) {
   return bridge::AtenFromXlaTensor(
       XLATensor::__and__(bridge::GetXlaTensor(self), other));
