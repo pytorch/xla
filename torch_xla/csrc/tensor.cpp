@@ -964,17 +964,21 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   for (size_t i = 0; i < tensors.size(); ++i) {
     unique_device.set(tensors[i].GetDevice());
   }
+  SyncTensorCollection coll;
+  if (!unique_device) {
+    return coll;
+  }
 
   std::vector<at::Tensor> at_tensors;
   std::vector<std::string> devices;
   std::vector<size_t> at_tensor_index;
-  SyncTensorCollection coll;
+  coll.device = unique_device->ToString();
   coll.indices.reserve(tensors.size());
-  TF_VLOG(4) << "Waiting on device barrier for device "
-             << unique_device->ToString() << " ...";
+  TF_VLOG(4) << "Waiting on device barrier for device " << coll.device
+             << " ...";
   coll.unlocker = LockDevices(unique_device.AsSet());
-  TF_VLOG(4) << "Waiting on device barrier for device "
-             << unique_device->ToString() << " done!";
+  TF_VLOG(4) << "Waiting on device barrier for device " << coll.device
+             << " done!";
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensors[i].CurrentXlaData() == nullptr) {
       ir::Value ir_value = tensors[i].CurrentIrValue();
@@ -995,14 +999,10 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       }
     }
   }
-  if (unique_device) {
-    coll.device = unique_device->ToString();
-    // Mix the hash with the resource domain hashes as compile handles are only
-    // valid within a domain (usually a single host).
-    coll.hash = xla::util::MHash(
-        coll.hash,
-        xla::ComputationClient::Get()->GetResourceDomain(coll.device));
-  }
+  // Mix the hash with the resource domain hashes as compile handles are only
+  // valid within a domain (usually a single host).
+  coll.hash = xla::util::MHash(
+      coll.hash, xla::ComputationClient::Get()->GetResourceDomain(coll.device));
   if (!at_tensors.empty()) {
     XLA_COUNTER("SyncTensorsToData", at_tensors.size());
     std::vector<xla::ComputationClient::DataPtr> handles =
