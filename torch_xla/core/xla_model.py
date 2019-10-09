@@ -441,9 +441,9 @@ def optimizer_step(optimizer, barrier=False, optimizer_args={}):
     The same value returned by the `optimizer.step()` call.
   """
 
-  gradients = _fetch_gradients(optimizer)
   count = torch_xla._XLAC._xla_get_replication_devices_count()
   if count > 1:
+    gradients = _fetch_gradients(optimizer)
     torch_xla._XLAC._xla_cross_replica_sum(gradients, 1.0 / count, [])
   loss = optimizer.step(**optimizer_args)
   if barrier:
