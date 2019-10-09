@@ -141,11 +141,11 @@ class XLATensor {
   // the computation boundaries.
   static void MarkStep(const Device* device);
 
-  // Retrieves the PyTorch tensors behind the XLA tensors. All the tensors must
-  // be on the same device.
+  // Retrieves the PyTorch CPU tensors behind the XLA tensors IR operations.
+  // All the tensors must be on the same device.
   static std::vector<at::Tensor> GetTensors(std::vector<XLATensor>* tensors);
 
-  // Operation which creates XLA tensors out of autograd variable by batching
+  // Operation which creates XLA tensors out of PyTorch CPU tensors by batching
   // the requests to the computation servers.
   static std::vector<XLATensor> CreateTensors(
       const std::vector<at::Tensor>& tensors,
