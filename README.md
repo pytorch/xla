@@ -2,7 +2,13 @@
 
 # How to Run PyTorch with TPUs
 
-First, create your [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: ex. `pytorch-0.5`):
+You can run your models on [Colab](https://github.com/pytorch/xla/tree/master/contrib/colab) or you can create your own Compute VM and Cloud TPU pair (better for performance and serious training). We also have tutorials available on Google Cloud website:
+
+* [Training FairSeq Transformer on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/transformer-pytorch)
+* [Training Resnet50 on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py)
+* [Training PyTorch models on Cloud TPU Pods](https://cloud.google.com/tpu/docs/tutorials/pytorch-pod)
+
+To run your model on a Compute VM and Cloud TPU pair, first create your [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: ex. `pytorch-0.5`):
 
 Once you've created a Cloud TPU node, you can train your PyTorch models by either:
 

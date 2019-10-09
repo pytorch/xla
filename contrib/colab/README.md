@@ -14,7 +14,10 @@ tf.__version__
 *Note*: These colab notebooks typically run on small machines (the Compute VMs,
 which runs the input pipeline) and training is often bottlenecked on the small
 Compute VM machines. For optimal performance create a GCP VM and TPU pair
-following our GCP Tutorials.
+following our GCP Tutorials:
+* [Training FairSeq Transformer on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/transformer-pytorch)
+* [Training Resnet50 on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py)
+* [Training PyTorch models on Cloud TPU Pods](https://cloud.google.com/tpu/docs/tutorials/pytorch-pod)
 
 ## Get started with our Colab Tutorials
 * [Training MNIST on TPUs](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/mnist-training-xrt-1-15.ipynb)
