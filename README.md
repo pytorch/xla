@@ -2,18 +2,21 @@
 
 # How to Run PyTorch with TPUs
 
-You can run your models on [Colab](https://github.com/pytorch/xla/tree/master/contrib/colab) or you can create your own Compute VM and Cloud TPU pair (better for performance and serious training). We also have tutorials available on Google Cloud website:
+You can either follow these tutorials available on Google Cloud website:
 
 * [Training FairSeq Transformer on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/transformer-pytorch)
 * [Training Resnet50 on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py)
 * [Training PyTorch models on Cloud TPU Pods](https://cloud.google.com/tpu/docs/tutorials/pytorch-pod)
 
-To run your model on a Compute VM and Cloud TPU pair, first create your [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: ex. `pytorch-0.5`):
+Or the following README to run your model.
+
+First create your Cloud [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: ex. `pytorch-0.5`):
 
 Once you've created a Cloud TPU node, you can train your PyTorch models by either:
 
 * [Consuming prebuilt docker images (*recommended*)](#consume-prebuilt-docker-images)
 * [Consuming prebuilt Compute VM Images](#consume-prebuilt-compute-vm-images)
+
 
 ## Consume Prebuilt Docker Images
 
@@ -147,12 +150,18 @@ post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalabl
 
 ---
 
-## Build Manually
+# Running on Colab
+
+You can also run your models on [Colab](https://github.com/pytorch/xla/tree/master/contrib/colab). However, do note that performance may be severely impacted when running on Colab compared to creating your own VM and TPU pair and there can be some bugs on Colab environment that may have already been fixed.
+
+---
+
+# Build Manually
 
 Please note that we have nightly releases available so users usually don't have to build manually. This is mainly for OSS contributors.
 Please refer to [contribution guide](CONTRIBUTING.md) for instructions to build from source.
 
-## Tests
+# Tests
 
 To run the tests, follow __one__ of the options below:
 
