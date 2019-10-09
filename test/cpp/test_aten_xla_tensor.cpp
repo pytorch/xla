@@ -1441,7 +1441,7 @@ TEST_F(AtenXlaTensorTest, TestCosineEmbeddingLoss) {
   torch::Tensor input2 =
       torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor target = torch::rand({4}, torch::TensorOptions(torch::kFloat));
-  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction : {torch::Reduction::Mean, torch::Reduction::Sum}) {
     for (double margin : {0., 0.2}) {
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor output = torch::cosine_embedding_loss(
@@ -1462,7 +1462,7 @@ TEST_F(AtenXlaTensorTest, TestHingeEmbeddingLoss) {
       torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor target =
       torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
-  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction : {torch::Reduction::Mean, torch::Reduction::Sum}) {
     for (double margin : {0., 0.2}) {
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor output =
@@ -1488,8 +1488,8 @@ TEST_F(AtenXlaTensorTest, TestTripletMarginLoss) {
   for (double margin : {0., 0.2}) {
     for (double p : {1, 2, 3, 4}) {
       for (bool swap : {false, true}) {
-        for (Reduction::Reduction reduction :
-             {Reduction::Mean, Reduction::Sum}) {
+        for (torch::Reduction::Reduction reduction :
+             {torch::Reduction::Mean, torch::Reduction::Sum}) {
           ForEachDevice([&](const torch::Device& device) {
             torch::Tensor output = torch::triplet_margin_loss(
                 anchor, positive, negative, margin, p, eps, swap, reduction);
@@ -1514,7 +1514,7 @@ TEST_F(AtenXlaTensorTest, TestMarginRankingLoss) {
       torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor target =
       torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
-  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction : {torch::Reduction::Mean, torch::Reduction::Sum}) {
     for (double margin : {0., 0.2}) {
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor output = torch::margin_ranking_loss(
@@ -1542,7 +1542,7 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogits) {
   torch::Tensor pos_weight =
       torch::rand({classes}, torch::TensorOptions(torch::kFloat));
   torch::Tensor undef;
-  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction : {torch::Reduction::Mean, torch::Reduction::Sum}) {
     for (bool undef_weight : {false, true}) {
       for (bool undef_pos_weight : {false, true}) {
         ForEachDevice([&](const torch::Device& device) {
@@ -1568,7 +1568,7 @@ TEST_F(AtenXlaTensorTest, TestKlDiv) {
       torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor target =
       torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
-  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction : {torch::Reduction::Mean, torch::Reduction::Sum}) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor output = torch::kl_div(input, target, reduction);
       torch::Tensor xla_input = CopyToDevice(input, device);
@@ -5514,7 +5514,7 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
           torch::randint(std::min(ignore_index, 0), classes, {batch},
                          torch::TensorOptions(torch::kLong));
       torch::Tensor undef_weight;
-      for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+      for (torch::Reduction::Reduction reduction : {torch::Reduction::Mean, torch::Reduction::Sum}) {
         torch::Tensor output =
             torch::nll_loss(/*self=*/input, /*target=*/target,
                             /*weight=*/undef_weight,
@@ -5540,8 +5540,8 @@ TEST_F(AtenXlaTensorTest, TestSmoothL1Loss) {
       torch::randn({2, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor target =
       torch::randn({2, 4}, torch::TensorOptions(torch::kFloat));
-  for (Reduction::Reduction reduction :
-       {Reduction::None, Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction :
+       {torch::Reduction::None, torch::Reduction::Mean, torch::Reduction::Sum}) {
     torch::Tensor output = torch::smooth_l1_loss(input, target, reduction);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
@@ -7402,7 +7402,7 @@ TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
           torch::randint(std::min(ignore_index, 0), classes, {batch},
                          torch::TensorOptions(torch::kLong));
       torch::Tensor undef_weight;
-      for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+      for (torch::Reduction::Reduction reduction : {torch::Reduction::Mean, torch::Reduction::Sum}) {
         auto testfn =
             [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
           return torch::nll_loss(
@@ -7423,8 +7423,8 @@ TEST_F(AtenXlaTensorTest, TestSmoothL1LossBackward) {
       {2, 4}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor target =
       torch::randn({2, 4}, torch::TensorOptions(torch::kFloat));
-  for (Reduction::Reduction reduction :
-       {Reduction::None, Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction :
+       {torch::Reduction::None, torch::Reduction::Mean, torch::Reduction::Sum}) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
       return torch::smooth_l1_loss(/*input=*/inputs[0], /*target=*/inputs[1],
@@ -7533,8 +7533,8 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
   int batch = 10;
   int classes = 5;
   torch::Tensor undef;
-  for (Reduction::Reduction reduction :
-       {Reduction::None, Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction :
+       {torch::Reduction::None, torch::Reduction::Mean, torch::Reduction::Sum}) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
       return torch::binary_cross_entropy_with_logits(
@@ -7572,7 +7572,7 @@ TEST_F(AtenXlaTensorTest, TestKlDivBackward) {
       {4, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
   torch::Tensor target = torch::rand(
       {4, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
-  for (Reduction::Reduction reduction : {Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction : {torch::Reduction::Mean, torch::Reduction::Sum}) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
       return torch::kl_div(/*self=*/inputs[0], /*target=*/inputs[1], reduction);

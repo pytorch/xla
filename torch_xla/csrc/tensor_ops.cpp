@@ -71,7 +71,7 @@ XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
       XLATensor::neg(XLATensor::mul(target, expanded_grad_output)),
       XLATensor::full_like(input, 0, input.GetDevice(), c10::nullopt));
   double input_elem_count = xla::ShapeUtil::ElementsIn(input_shape_ref.get());
-  return reduction == Reduction::Mean
+  return reduction == at::Reduction::Mean
              ? XLATensor::div(grad_input, input_elem_count)
              : grad_input;
 }
@@ -104,12 +104,12 @@ XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
   auto all_dimensions =
       xla::util::Iota<xla::int64>((*broadcasted_input.shape()).rank());
   switch (reduction) {
-    case Reduction::None:
+    case at::Reduction::None:
       return elementwise_loss;
-    case Reduction::Mean:
+    case at::Reduction::Mean:
       return XLATensor::mean(elementwise_loss, all_dimensions, false,
                              broadcasted_input.dtype());
-    case Reduction::Sum:
+    case at::Reduction::Sum:
       return XLATensor::sum(elementwise_loss, all_dimensions, false,
                             broadcasted_input.dtype());
     default:
@@ -139,10 +139,10 @@ XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
   XLATensor elementwise_loss_backward = XLATensor::where(
       XLATensor::lt(abs_diff, one), grad_squared_loss, grad_l1_loss);
   switch (reduction) {
-    case Reduction::None:
-    case Reduction::Sum:
+    case at::Reduction::None:
+    case at::Reduction::Sum:
       return XLATensor::mul(elementwise_loss_backward, grad_output);
-    case Reduction::Mean: {
+    case at::Reduction::Mean: {
       double grad_scale = xla::ShapeUtil::ElementsIn(broadcasted_input.shape());
       return XLATensor::mul(
           XLATensor::div(elementwise_loss_backward, grad_scale), grad_output);
