@@ -122,7 +122,7 @@ def _mp_fn(index):
   loss_fn = nn.NLLLoss()
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
 
-  for data, target in para_loader.per_device_loader(device):
+  for _, (data, target) in para_loader.per_device_loader(device):
     optimizer.zero_grad()
     output = model(data)
     loss = loss_fn(output, target)
