@@ -261,7 +261,7 @@ class TestParallelLoader(XlaTestCase):
     para_loader = pl.ParallelLoader(gen, devices)
     for device in devices:
       loader = para_loader.per_device_loader(device)
-      for x, (data, target) in loader:
+      for data, target in loader:
         self.assertEqual(data.device, device)
         self.assertEqual(target.device, device)
 
@@ -321,7 +321,7 @@ class TestParallelTensorMNIST(XlaTestCase):
       loss_fn = nn.NLLLoss()
       optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
-      for x, (data, target) in loader:
+      for data, target in loader:
         with xu.TimedScope(msg='Training loop: ', printfn=None):
           optimizer.zero_grad()
           output = xu.timed(lambda: model(data), msg='Model: ', printfn=None)
@@ -351,7 +351,7 @@ class TestParallelTensorResnet18(XlaTestCase):
       loss_fn = nn.NLLLoss()
       optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
-      for x, (data, target) in loader:
+      for data, target in loader:
         with xu.TimedScope(msg='Training loop: ', printfn=None):
           optimizer.zero_grad()
           output = xu.timed(lambda: model(data), msg='Model: ', printfn=None)

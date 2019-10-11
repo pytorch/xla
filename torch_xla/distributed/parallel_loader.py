@@ -14,7 +14,6 @@ class PerDeviceQueue(object):
 
   def __init__(self, device, loader_prefetch_size, device_prefetch_size):
     self.device = device
-    self.batch_number = 0
     self.loader_queue = kq.Queue(maxsize=loader_prefetch_size)
     self.queue = kq.Queue(maxsize=device_prefetch_size)
 
@@ -103,7 +102,6 @@ class ParallelLoader(object):
     return xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
   def _loader_worker(self):
-    batch_number = 0
     queues = list(self._queues.values())
     data_iter = enumerate(self._loader)
     batch_size = None
@@ -118,8 +116,7 @@ class ParallelLoader(object):
           batch_size = self._get_batch_size(data, self._batchdim)
         elif batch_size != self._get_batch_size(data, self._batchdim):
           break
-      batch.append((batch_number, data))
-      batch_number += 1
+      batch.append(data)
       if len(batch) == len(self._devices):
         for queue_no, device_batch in enumerate(batch):
           queues[queue_no].loader_queue.put(device_batch)
@@ -133,7 +130,7 @@ class ParallelLoader(object):
       item = dqueue.loader_queue.get()
       if item is None:
         break
-      batch.append(item[1])
+      batch.append(item)
     return batch
 
   def _worker(self, dqueue):
@@ -144,6 +141,5 @@ class ParallelLoader(object):
         break
       batch = self._send_data_to(batch, device)
       for data in batch:
-        dqueue.queue.put((dqueue.batch_number, data))
-        dqueue.batch_number += 1
+        dqueue.queue.put(data)
     dqueue.queue.close_write()
