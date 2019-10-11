@@ -166,7 +166,7 @@ def train_loop_fn(model, loader, device, context):
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
 
   model.train()
-  for _, (data, target) in loader:
+  for data, target in loader:
     optimizer.zero_grad()
     output = model(data)
     loss = loss_fn(output, target)

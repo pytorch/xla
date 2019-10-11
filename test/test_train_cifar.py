@@ -183,7 +183,7 @@ def train_cifar():
     tracker = xm.RateTracker()
 
     model.train()
-    for x, (data, target) in loader:
+    for x, (data, target) in enumerate(loader):
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
@@ -199,7 +199,7 @@ def train_cifar():
     total_samples = 0
     correct = 0
     model.eval()
-    for x, (data, target) in loader:
+    for data, target in loader:
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum().item()
