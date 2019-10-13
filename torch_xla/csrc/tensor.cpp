@@ -10,6 +10,7 @@
 #include <set>
 #include <stdexcept>
 
+#include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -1054,6 +1055,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
   }
   XLA_COUNTER("CachedSyncTensors", 1);
   XLA_VALUE_METRIC("SyncTensorsGraphSize", post_order.size());
+  TF_VLOG(5) << "SyncTensorsGraphSize=" << post_order.size();
 
   return ScheduleSyncTensorsGraph(
       tensors, config, coll, std::move(parameters_data),
@@ -1154,6 +1156,8 @@ void XLATensor::SyncLiveTensorsGraph(
     const Device* device,
     tensorflow::gtl::ArraySlice<const std::string> devices, bool wait) {
   auto tensors = GetLiveTensors(device);
+  TF_VLOG(4) << tensors.size() << " live tensors: devices=["
+             << absl::StrJoin(devices, ",") << "]";
   SyncTensorsGraph(&tensors, devices, wait, /*sync_xla_data=*/true);
 }
 
@@ -1250,6 +1254,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     unique_device.set((*tensors)[index].GetDevice());
   }
   XLA_VALUE_METRIC("SyncTensorsGraphSize", lowering_ctx.GetEmittedNodeCount());
+  TF_VLOG(5) << "SyncTensorsGraphSize=" << lowering_ctx.GetEmittedNodeCount();
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
