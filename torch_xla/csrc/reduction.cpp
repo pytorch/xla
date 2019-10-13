@@ -114,6 +114,51 @@ xla::XlaOp CreateProduct(
 
 }  // namespace
 
+xla::XlaOp BuildL1Loss(const xla::XlaOp& input, const xla::XlaOp& target,
+                       ReductionMode reduction) {
+  xla::XlaOp result = xla::Abs(input - target);
+  if (reduction == ReductionMode::kNone) {
+    return result;
+  }
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  result = xla::ReduceAll(
+      result, xla::Zero(input.builder(), input_shape.element_type()),
+      XlaHelpers::CreateAddComputation(input_shape.element_type()));
+  if (reduction == ReductionMode::kMean) {
+    xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
+    if (num_elements == 0) {
+      return xla::NanValue(input.builder(), input_shape.element_type());
+    } else {
+      xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
+          1.0 / static_cast<double>(num_elements), input_shape.element_type(),
+          input.builder());
+      result = result * scale_value;
+    }
+  }
+  return result;
+}
+
+xla::XlaOp BuildL1LossBackward(const xla::XlaOp& grad_output,
+                               const xla::XlaOp& input,
+                               const xla::XlaOp& target,
+                               ReductionMode reduction) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  if (reduction == ReductionMode::kNone) {
+    xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
+    xla::XlaOp mask = xla::Select(xla::Ge(input, target), one, -one);
+    return mask * grad_output;
+  }
+  xla::XlaOp grad_value = grad_output;
+  if (reduction == ReductionMode::kMean) {
+    xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
+    xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
+        1.0 / static_cast<double>(num_elements), input_shape.element_type(),
+        input.builder());
+    grad_value = grad_output * scale_value;
+  }
+  return xla::Select(xla::Ge(input, target), grad_value, -grad_value);
+}
+
 xla::XlaOp BuildCumulativeComputation(const xla::XlaOp& input, xla::int64 dim,
                                       const xla::XlaComputation& reducer,
                                       const xla::XlaOp& init) {
