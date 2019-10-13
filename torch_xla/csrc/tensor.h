@@ -459,10 +459,6 @@ class XLATensor {
   static XLATensor gt(const XLATensor& input, const XLATensor& other);
   static void gt_(XLATensor& input, const XLATensor& other);
 
-  static std::tuple<XLATensor, XLATensor> kthvalue(const XLATensor& input,
-                                                   xla::int64 k, xla::int64 dim,
-                                                   bool keepdim);
-
   // Gather slices from input into a result with shape specified by indices. The
   // shape of the indices are first made consistent using broadcast semantics.
   // For input of shape d1 x d2 x ... x dn and p indices of shape i1 x i2 x ...
@@ -521,6 +517,18 @@ class XLATensor {
                                    const XLATensor& input,
                                    const XLATensor& target,
                                    xla::int64 reduction);
+
+  static std::tuple<XLATensor, XLATensor> kthvalue(const XLATensor& input,
+                                                   xla::int64 k, xla::int64 dim,
+                                                   bool keepdim);
+
+  static XLATensor l1_loss(const XLATensor& input, const XLATensor& target,
+                           xla::int64 reduction);
+
+  static XLATensor l1_loss_backward(const XLATensor& grad_output,
+                                    const XLATensor& input,
+                                    const XLATensor& target,
+                                    xla::int64 reduction);
 
   static XLATensor le(const XLATensor& input, at::Scalar other);
   static void le_(XLATensor& input, at::Scalar other);
