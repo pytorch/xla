@@ -326,13 +326,6 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
                    std::move(lower_fn));
 }
 
-NodePtr ComparisonOp(c10::Symbol kind, const Value& input, at::Scalar other) {
-  xla::Shape other_shape = input.shape();
-  other_shape.set_element_type(
-      MakeXlaPrimitiveType(GetScalarType(other), /*device=*/nullptr));
-  return ComparisonOp(kind, input, MakeNode<Scalar>(other, other_shape));
-}
-
 NodePtr Where(const Value& condition, const Value& input, const Value& other) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_condition = loctx->GetOutputOp(node.operand(0));

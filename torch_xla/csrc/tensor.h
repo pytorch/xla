@@ -95,6 +95,9 @@ class XLATensor {
   static ir::Value GetIrValueForScalar(at::Scalar value,
                                        xla::PrimitiveType type,
                                        const Device& device);
+
+  static ir::Value GetIrValueForScalar(at::Scalar value, const Device& device);
+
   static ir::Value GetIrValueForScalar(at::Scalar value,
                                        const xla::Shape& shape,
                                        const Device& device);

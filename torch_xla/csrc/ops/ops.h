@@ -158,8 +158,6 @@ NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output, const Value& input);
 
 NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other);
 
-NodePtr ComparisonOp(c10::Symbol kind, const Value& input, at::Scalar other);
-
 NodePtr Where(const Value& condition, const Value& input, const Value& other);
 
 NodePtr ARange(at::Scalar start, at::Scalar end, at::Scalar step,

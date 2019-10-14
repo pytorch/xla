@@ -674,6 +674,12 @@ ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
 }
 
 ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
+                                         const Device& device) {
+  return GetIrValueForScalar(
+      value, MakeXlaPrimitiveType(GetScalarType(value), &device), device);
+}
+
+ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
                                          const xla::Shape& shape,
                                          const Device& device) {
   ir::Value ir_value = GetIrValueForScalar(value, shape.element_type(), device);
