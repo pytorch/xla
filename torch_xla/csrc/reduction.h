@@ -5,6 +5,20 @@
 
 namespace torch_xla {
 
+enum class ReductionMode {
+  kNone,
+  kMean,
+  kSum,
+};
+
+xla::XlaOp BuildL1Loss(const xla::XlaOp& input, const xla::XlaOp& target,
+                       ReductionMode reduction);
+
+xla::XlaOp BuildL1LossBackward(const xla::XlaOp& grad_output,
+                               const xla::XlaOp& input,
+                               const xla::XlaOp& target,
+                               ReductionMode reduction);
+
 // Builds a mean by reducing all the dimensions listed in dimensions. If
 // keep_reduced_dimensions is true, the reduced dimensions will be retained,
 // with value 1.

@@ -5560,6 +5560,41 @@ TEST_F(AtenXlaTensorTest, TestSmoothL1Loss) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestL1Loss) {
+  torch::Tensor input =
+      torch::randn({2, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor target =
+      torch::randn({2, 4}, torch::TensorOptions(torch::kFloat));
+  for (Reduction::Reduction reduction :
+       {Reduction::None, Reduction::Mean, Reduction::Sum}) {
+    torch::Tensor output = torch::l1_loss(input, target, reduction);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor xla_target = CopyToDevice(target, device);
+      torch::Tensor xla_output =
+          torch::l1_loss(xla_input, xla_target, reduction);
+      AllClose(output, xla_output);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestL1LossBackward) {
+  for (Reduction::Reduction reduction :
+       {Reduction::None, Reduction::Mean, Reduction::Sum}) {
+    auto testfn =
+        [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+      return torch::l1_loss(inputs[0], inputs[1], reduction);
+    };
+    ForEachDevice([&](const torch::Device& device) {
+      TestBackward(
+          {torch::rand({2, 4},
+                       torch::TensorOptions(torch::kFloat).requires_grad(true)),
+           torch::rand({2, 4}, torch::TensorOptions(torch::kFloat))},
+          device, testfn);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestBatchNorm1D) {
   int num_features = 3;
   torch::Tensor input =
