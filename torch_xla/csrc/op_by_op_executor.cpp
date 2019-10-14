@@ -89,6 +89,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   std::vector<const ir::Node*> post_order =
       ir::Util::ComputePostOrder(root_nodes);
   XLA_VALUE_METRIC("OpByOpGraphSize", post_order.size());
+  TF_VLOG(5) << "TensorsGraphSize=" << post_order.size();
 
   std::unordered_map<const ir::Node*, size_t> node_to_index;
   node_to_index.reserve(post_order.size());
