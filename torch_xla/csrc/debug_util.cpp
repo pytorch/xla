@@ -66,7 +66,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
   if (format == GraphFormat::kText) {
     ss << "\n" << ir::DumpUtil::ToText(root_nodes) << "\n";
   } else if (format == GraphFormat::kDot) {
-    ss << "\n" << ir::DumpUtil::ToText(root_nodes) << "\n";
+    ss << "\n" << ir::DumpUtil::ToDot(root_nodes) << "\n";
   } else if (format == GraphFormat::kHlo) {
     ss << "\n" << ir::DumpUtil::ToHlo(root_values) << "\n";
   } else {
