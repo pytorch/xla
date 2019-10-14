@@ -818,14 +818,11 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
     DebugUtil::SaveTensorsGraphInfo("GetTensorsOpByOp", *tensors,
                                     &coll.indices);
 
-    xla::util::Unique<Device> unique_device;
     std::vector<ir::Value> roots;
     for (auto index : coll.indices) {
       roots.push_back((*tensors)[index].CurrentIrValue());
-      unique_device.set((*tensors)[index].GetDevice());
     }
-    async_tensors_data =
-        OpByOpExecutor::Get()->Execute(roots, unique_device->ToString(), {});
+    async_tensors_data = OpByOpExecutor::Get()->Execute(roots, coll.device, {});
   }
 
   std::vector<xla::ComputationClient::DataPtr> tensors_data =
@@ -1022,6 +1019,8 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       tensors[at_tensor_index[i]].data()->xla_data = std::move(handles[i]);
     }
   }
+  TF_VLOG(4) << "Tensors graph hash " << coll.hash << " on device '"
+             << coll.device << "'";
   return coll;
 }
 
@@ -1240,8 +1239,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     tensorflow::gtl::ArraySlice<const std::string> devices,
     const SyncTensorsConfig& config) {
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
-  TF_VLOG(4) << "Syncing graph hash " << coll.hash << " on device '"
-             << coll.device << "'";
   if (coll.indices.empty()) {
     return nullptr;
   }
