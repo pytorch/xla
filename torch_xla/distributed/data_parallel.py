@@ -85,6 +85,10 @@ class DataParallel(object):
         'Exception in model function for device={}: {}'.format(device, str(e)),
         file=sys.stderr)
     traceback.print_exc(limit=16, file=sys.stderr)
+    # Explicitly flush out stderr and stdout before exiting since
+    # os._exit doesn't flush them.
+    sys.stdout.flush()
+    sys.stderr.flush()
     # One exception in one thread is fatal, as the other ones (assuming they
     # somehow did not generate the same exception) will be getting stuck in
     # cross replica sum operations waiting for the defunct thread and its
