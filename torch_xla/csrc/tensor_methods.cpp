@@ -48,6 +48,8 @@
 #include "torch_xla/csrc/ops/index_select.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/kth_value.h"
+#include "torch_xla/csrc/ops/l1_loss.h"
+#include "torch_xla/csrc/ops/l1_loss_backward.h"
 #include "torch_xla/csrc/ops/leaky_relu.h"
 #include "torch_xla/csrc/ops/leaky_relu_backward.h"
 #include "torch_xla/csrc/ops/linear_interpolation.h"
@@ -857,7 +859,8 @@ XLATensor XLATensor::eq(const XLATensor& input, at::Scalar other) {
 
 void XLATensor::eq_(XLATensor& input, at::Scalar other) {
   ir::NodePtr cmp_result =
-      ir::ops::ComparisonOp(at::aten::eq, input.GetIrValue(), other);
+      ir::ops::ComparisonOp(at::aten::eq, input.GetIrValue(),
+                            GetIrValueForScalar(other, input.GetDevice()));
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
@@ -1057,7 +1060,8 @@ XLATensor XLATensor::ge(const XLATensor& input, at::Scalar other) {
 
 void XLATensor::ge_(XLATensor& input, at::Scalar other) {
   ir::NodePtr cmp_result =
-      ir::ops::ComparisonOp(at::aten::ge, input.GetIrValue(), other);
+      ir::ops::ComparisonOp(at::aten::ge, input.GetIrValue(),
+                            GetIrValueForScalar(other, input.GetDevice()));
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
@@ -1077,7 +1081,8 @@ XLATensor XLATensor::gt(const XLATensor& input, at::Scalar other) {
 
 void XLATensor::gt_(XLATensor& input, at::Scalar other) {
   ir::NodePtr cmp_result =
-      ir::ops::ComparisonOp(at::aten::gt, input.GetIrValue(), other);
+      ir::ops::ComparisonOp(at::aten::gt, input.GetIrValue(),
+                            GetIrValueForScalar(other, input.GetDevice()));
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
@@ -1203,13 +1208,29 @@ std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
       input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long));
 }
 
+XLATensor XLATensor::l1_loss(const XLATensor& input, const XLATensor& target,
+                             xla::int64 reduction) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::L1Loss>(
+      input.GetIrValue(), target.GetIrValue(), reduction));
+}
+
+XLATensor XLATensor::l1_loss_backward(const XLATensor& grad_output,
+                                      const XLATensor& input,
+                                      const XLATensor& target,
+                                      xla::int64 reduction) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::L1LossBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
+      reduction));
+}
+
 XLATensor XLATensor::le(const XLATensor& input, at::Scalar other) {
   return DispatchComparisonOp(at::aten::le, input, other);
 }
 
 void XLATensor::le_(XLATensor& input, at::Scalar other) {
   ir::NodePtr cmp_result =
-      ir::ops::ComparisonOp(at::aten::le, input.GetIrValue(), other);
+      ir::ops::ComparisonOp(at::aten::le, input.GetIrValue(),
+                            GetIrValueForScalar(other, input.GetDevice()));
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
@@ -1326,7 +1347,8 @@ XLATensor XLATensor::lt(const XLATensor& input, at::Scalar other) {
 
 void XLATensor::lt_(XLATensor& input, at::Scalar other) {
   ir::NodePtr cmp_result =
-      ir::ops::ComparisonOp(at::aten::lt, input.GetIrValue(), other);
+      ir::ops::ComparisonOp(at::aten::lt, input.GetIrValue(),
+                            GetIrValueForScalar(other, input.GetDevice()));
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
@@ -1551,7 +1573,8 @@ XLATensor XLATensor::ne(const XLATensor& input, at::Scalar other) {
 
 void XLATensor::ne_(XLATensor& input, at::Scalar other) {
   ir::NodePtr cmp_result =
-      ir::ops::ComparisonOp(at::aten::ne, input.GetIrValue(), other);
+      ir::ops::ComparisonOp(at::aten::ne, input.GetIrValue(),
+                            GetIrValueForScalar(other, input.GetDevice()));
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
@@ -2299,7 +2322,8 @@ XLATensor XLATensor::where(const XLATensor& condition, const XLATensor& input,
 XLATensor XLATensor::DispatchComparisonOp(c10::Symbol kind,
                                           const XLATensor& input,
                                           at::Scalar other) {
-  ir::NodePtr node = ir::ops::ComparisonOp(kind, input.GetIrValue(), other);
+  ir::NodePtr node = ir::ops::ComparisonOp(
+      kind, input.GetIrValue(), GetIrValueForScalar(other, input.GetDevice()));
   return Create(node, input.GetDevice(), at::ScalarType::Bool);
 }
 

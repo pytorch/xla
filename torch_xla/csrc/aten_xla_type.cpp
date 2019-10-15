@@ -1601,6 +1601,21 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
+at::Tensor AtenXlaType::l1_loss(const at::Tensor& self,
+                                const at::Tensor& target, int64_t reduction) {
+  return bridge::AtenFromXlaTensor(XLATensor::l1_loss(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), reduction));
+}
+
+at::Tensor AtenXlaType::l1_loss_backward(const at::Tensor& grad_output,
+                                         const at::Tensor& self,
+                                         const at::Tensor& target,
+                                         int64_t reduction) {
+  return bridge::AtenFromXlaTensor(XLATensor::l1_loss_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(target), reduction));
+}
+
 at::Tensor AtenXlaType::layer_norm(const at::Tensor& input,
                                    at::IntArrayRef normalized_shape,
                                    const at::Tensor& weight,
@@ -2116,7 +2131,7 @@ at::Tensor AtenXlaType::nll_loss(const at::Tensor& self,
                                  const at::Tensor& target,
                                  const at::Tensor& weight, int64_t reduction,
                                  int64_t ignore_index) {
-  if (reduction != Reduction::Mean || weight.defined()) {
+  if (reduction != at::Reduction::Mean || weight.defined()) {
     return AtenXlaTypeDefault::nll_loss(self, target, weight, reduction,
                                         ignore_index);
   }
@@ -2128,7 +2143,7 @@ at::Tensor AtenXlaType::nll_loss_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Tensor& target, const at::Tensor& weight, int64_t reduction,
     int64_t ignore_index, const at::Tensor& total_weight) {
-  if (reduction != Reduction::Mean || weight.defined()) {
+  if (reduction != at::Reduction::Mean || weight.defined()) {
     return AtenXlaTypeDefault::nll_loss_backward(grad_output, self, target,
                                                  weight, reduction,
                                                  ignore_index, total_weight);

@@ -590,6 +590,14 @@ class AtenXlaType {
                                                      int64_t k, int64_t dim,
                                                      bool keepdim);
 
+  static at::Tensor l1_loss(const at::Tensor& self, const at::Tensor& target,
+                            int64_t reduction);
+
+  static at::Tensor l1_loss_backward(const at::Tensor& grad_output,
+                                     const at::Tensor& self,
+                                     const at::Tensor& target,
+                                     int64_t reduction);
+
   static at::Tensor layer_norm(const at::Tensor& input,
                                at::IntArrayRef normalized_shape,
                                const at::Tensor& weight, const at::Tensor& bias,

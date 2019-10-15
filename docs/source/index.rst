@@ -13,9 +13,12 @@ xla_model
 .. autofunction:: xrt_world_size
 
 .. autofunction:: get_ordinal
+.. autofunction:: get_local_ordinal
 .. autofunction:: is_master_ordinal
 
 .. autofunction:: optimizer_step
+
+.. autofunction:: save
 
 distributed
 ----------------------------------

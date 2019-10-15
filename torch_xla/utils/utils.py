@@ -1,6 +1,7 @@
 from __future__ import division
 from __future__ import print_function
 
+import copy
 import os
 import shutil
 import sys
@@ -99,19 +100,42 @@ def getenv_as(name, type, defval=None):
   return defval if env is None else type(env)
 
 
-def for_each_instance(value, inst, fn):
-  if type(value) == inst:
+def for_each_instance(value, select_fn, fn):
+  if select_fn(value):
     fn(value)
   elif isinstance(value, dict):
     for k, v in value.items():
-      for_each_instance(k, inst, fn)
-      for_each_instance(v, inst, fn)
+      for_each_instance(k, select_fn, fn)
+      for_each_instance(v, select_fn, fn)
   elif isinstance(value, (list, tuple, set)):
     for x in value:
-      for_each_instance(x, inst, fn)
+      for_each_instance(x, select_fn, fn)
   elif hasattr(value, '__dict__'):
-    for v in value.__dict__.values():
-      for_each_instance(v, inst, fn)
+    for k in value.__dict__.keys():
+      for_each_instance(value.__dict__[k], select_fn, fn)
+
+
+def for_each_instance_rewrite(value, select_fn, fn):
+  if select_fn(value):
+    return fn(value)
+  elif isinstance(value, dict):
+    result = dict()
+    for k, v in value.items():
+      k = for_each_instance_rewrite(k, select_fn, fn)
+      result[k] = for_each_instance_rewrite(v, select_fn, fn)
+    return result
+  elif isinstance(value, (list, tuple, set)):
+    result = []
+    for x in value:
+      result.append(for_each_instance_rewrite(x, select_fn, fn))
+    return type(value)(result)
+  elif hasattr(value, '__dict__'):
+    result = copy.deepcopy(value)
+    for k in result.__dict__.keys():
+      v = for_each_instance_rewrite(result.__dict__[k], select_fn, fn)
+      result.__dict__[k] = v
+    return result
+  return value
 
 
 def shape(inputs):

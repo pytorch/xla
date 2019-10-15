@@ -1,6 +1,7 @@
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import contextlib
 import os
 import socket
@@ -10,6 +11,9 @@ import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import traceback
+
+TpuConfigEntry = collections.namedtuple('TpuConfigEntry',
+                                        'worker_name ordinal host_port')
 
 
 def _find_free_tcp_port():
@@ -33,7 +37,9 @@ def _parse_tpu_config(config):
     parts = worker.split(';')
     if len(parts) != 3:
       raise ValueError('Bad worker syntax: {}'.format(worker))
-    parsed.append((parts[0], int(parts[1]), parts[2]))
+    parsed.append(
+        TpuConfigEntry(
+            worker_name=parts[0], ordinal=int(parts[1]), host_port=parts[2]))
   return parsed
 
 
@@ -78,12 +84,14 @@ def _prepare_env_for_index(index):
   gindex = _local_index_to_global(index)
   os.environ[xenv.MP_DEVICE] = 'TPU:{}'.format(gindex)
   os.environ[xenv.ORDINAL] = str(gindex)
+  os.environ[xenv.LOCAL_ORDINAL] = str(index)
   if xenv.LOCAL_WORKER not in os.environ:
     # The local worker can be missing for a 1 TPU host setup. Make sure we
     # always have one.
     tpu_config = _parse_tpu_config(os.environ[xenv.TPU_CONFIG])
     worker = tpu_config[0]
-    os.environ[xenv.LOCAL_WORKER] = '{}:{}'.format(worker[0], worker[1])
+    os.environ[xenv.LOCAL_WORKER] = '{}:{}'.format(worker.worker_name,
+                                                   worker.ordinal)
   if gindex > 0 and xenv.TPU_CONFIG in os.environ:
     # In multi-processing mode, only the process handling the first device of
     # the master worker, will do TPU mesh initialization.

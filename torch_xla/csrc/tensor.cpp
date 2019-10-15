@@ -10,6 +10,7 @@
 #include <set>
 #include <stdexcept>
 
+#include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -673,6 +674,12 @@ ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
 }
 
 ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
+                                         const Device& device) {
+  return GetIrValueForScalar(
+      value, MakeXlaPrimitiveType(GetScalarType(value), &device), device);
+}
+
+ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
                                          const xla::Shape& shape,
                                          const Device& device) {
   ir::Value ir_value = GetIrValueForScalar(value, shape.element_type(), device);
@@ -811,14 +818,11 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
     DebugUtil::SaveTensorsGraphInfo("GetTensorsOpByOp", *tensors,
                                     &coll.indices);
 
-    xla::util::Unique<Device> unique_device;
     std::vector<ir::Value> roots;
     for (auto index : coll.indices) {
       roots.push_back((*tensors)[index].CurrentIrValue());
-      unique_device.set((*tensors)[index].GetDevice());
     }
-    async_tensors_data =
-        OpByOpExecutor::Get()->Execute(roots, unique_device->ToString(), {});
+    async_tensors_data = OpByOpExecutor::Get()->Execute(roots, coll.device, {});
   }
 
   std::vector<xla::ComputationClient::DataPtr> tensors_data =
@@ -1015,6 +1019,8 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       tensors[at_tensor_index[i]].data()->xla_data = std::move(handles[i]);
     }
   }
+  TF_VLOG(4) << "Tensors graph hash " << coll.hash << " on device '"
+             << coll.device << "'";
   return coll;
 }
 
@@ -1054,6 +1060,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
   }
   XLA_COUNTER("CachedSyncTensors", 1);
   XLA_VALUE_METRIC("SyncTensorsGraphSize", post_order.size());
+  TF_VLOG(5) << "SyncTensorsGraphSize=" << post_order.size();
 
   return ScheduleSyncTensorsGraph(
       tensors, config, coll, std::move(parameters_data),
@@ -1154,10 +1161,13 @@ void XLATensor::SyncLiveTensorsGraph(
     const Device* device,
     tensorflow::gtl::ArraySlice<const std::string> devices, bool wait) {
   auto tensors = GetLiveTensors(device);
+  TF_VLOG(4) << tensors.size() << " live tensors: devices=["
+             << absl::StrJoin(devices, ",") << "]";
   SyncTensorsGraph(&tensors, devices, wait, /*sync_xla_data=*/true);
 }
 
 void XLATensor::MarkStep(const Device* device) {
+  XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->ClearProfileData(device);
 }
 
@@ -1230,8 +1240,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     tensorflow::gtl::ArraySlice<const std::string> devices,
     const SyncTensorsConfig& config) {
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
-  TF_VLOG(4) << "Syncing graph hash " << coll.hash << " on device '"
-             << coll.device << "'";
   if (coll.indices.empty()) {
     return nullptr;
   }
@@ -1250,6 +1258,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     unique_device.set((*tensors)[index].GetDevice());
   }
   XLA_VALUE_METRIC("SyncTensorsGraphSize", lowering_ctx.GetEmittedNodeCount());
+  TF_VLOG(5) << "SyncTensorsGraphSize=" << lowering_ctx.GetEmittedNodeCount();
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
