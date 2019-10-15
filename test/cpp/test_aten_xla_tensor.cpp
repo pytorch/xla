@@ -5565,8 +5565,9 @@ TEST_F(AtenXlaTensorTest, TestL1Loss) {
       torch::randn({2, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor target =
       torch::randn({2, 4}, torch::TensorOptions(torch::kFloat));
-  for (Reduction::Reduction reduction :
-       {Reduction::None, Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction :
+       {torch::Reduction::None, torch::Reduction::Mean,
+        torch::Reduction::Sum}) {
     torch::Tensor output = torch::l1_loss(input, target, reduction);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
@@ -5579,8 +5580,9 @@ TEST_F(AtenXlaTensorTest, TestL1Loss) {
 }
 
 TEST_F(AtenXlaTensorTest, TestL1LossBackward) {
-  for (Reduction::Reduction reduction :
-       {Reduction::None, Reduction::Mean, Reduction::Sum}) {
+  for (torch::Reduction::Reduction reduction :
+       {torch::Reduction::None, torch::Reduction::Mean,
+        torch::Reduction::Sum}) {
     auto testfn =
         [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
       return torch::l1_loss(inputs[0], inputs[1], reduction);
