@@ -455,7 +455,7 @@ class DistributedExecutor(object):
     self.docker_image = docker_image
     self.docker_run_flags = list(docker_run_flags) if docker_run_flags else None
     self.conda_env = conda_env
-    self.env_vars = list(env_vars) if env_vars else None
+    self.env_vars = list(env_vars) if env_vars else []
 
     for env_var in env_vars:
       if re.match('\w*=\w*', env_var) is None:
