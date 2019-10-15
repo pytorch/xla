@@ -50,11 +50,11 @@ std::string L1Loss::ToString() const {
 
 ReductionMode L1Loss::GetXlaReductionMode(xla::int64 reduction) {
   switch (reduction) {
-    case Reduction::Mean:
+    case at::Reduction::Mean:
       return ReductionMode::kMean;
-    case Reduction::None:
+    case at::Reduction::None:
       return ReductionMode::kNone;
-    case Reduction::Sum:
+    case at::Reduction::Sum:
       return ReductionMode::kSum;
   }
   XLA_ERROR() << "Unknown reduction mode: " << reduction;
