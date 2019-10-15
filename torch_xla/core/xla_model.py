@@ -326,32 +326,19 @@ class ToXlaTensorArena(object):
     return new_tensor
 
   def _collect_tensors(self, inputs):
-    if self._select_fn(inputs):
-      self._add(inputs)
-    elif isinstance(inputs, (list, tuple, set)):
-      for x in inputs:
-        self._collect_tensors(x)
-    elif isinstance(inputs, dict):
-      for k, v in inputs.items():
-        self._collect_tensors(k)
-        self._collect_tensors(v)
+
+    def collect_fn(value):
+      self._add(value)
+
+    xu.for_each_instance(inputs, lambda x: self._select_fn(x), collect_fn)
 
   def _replace_tensors(self, inputs):
-    if self._select_fn(inputs):
+
+    def convert_fn(value):
       return self._get_converted_tensor()
-    elif isinstance(inputs, (list, tuple, set)):
-      outputs = []
-      for x in inputs:
-        outputs.append(self._replace_tensors(x))
-      return type(inputs)(outputs)
-    elif isinstance(inputs, dict):
-      outputs = {}
-      for k, v in inputs.items():
-        k = self._replace_tensors(k)
-        v = self._replace_tensors(v)
-        outputs[k] = v
-      return outputs
-    return inputs
+
+    return xu.for_each_instance_rewrite(inputs, lambda x: self._select_fn(x),
+                                        convert_fn)
 
   def transform(self, inputs):
     self._tensors = []
@@ -398,7 +385,7 @@ def check_view_sharing(obj):
                     tid, torch_xla._XLAC._xla_get_tensor_id(oobj)))
           aliases[aid] = obj
 
-  xu.for_each_instance(obj, torch.Tensor, check_object)
+  xu.for_each_instance(obj, lambda x: type(x) == torch.Tensor, check_object)
 
 
 def _fetch_gradients(optimizer):
@@ -449,3 +436,35 @@ def optimizer_step(optimizer, barrier=False, optimizer_args={}):
   if barrier:
     mark_step()
   return loss
+
+
+def save(data, file_or_path, master_only=True):
+  """Saves the input data into a file.
+
+  The saved data is transfered to PyTorch CPU device before being saved, so a
+  following `torch.load()` will load CPU data.
+
+  Args:
+    data: The input data to be saved. Any nested combination of Python objects
+      (list, tuples, sets, dicts, ...).
+    file_or_path: The destination for the data saving operation. Either a file
+      path or a Python file object.
+    master_only (bool): Whether only the master device should save the data. If
+      False, the `file_or_path` argument must be a path, and the different
+      devices will save data to files with their ordinal as extension.
+      Default: True
+  """
+
+  def convert_fn(value):
+    return value.cpu()
+
+  cpu_data = xu.for_each_instance_rewrite(data,
+                                          lambda x: type(x) == torch.Tensor,
+                                          convert_fn)
+  if master_only:
+    if is_master_ordinal():
+      torch.save(cpu_data, file_or_path)
+  else:
+    assert type(file_or_path) == str
+    file_or_path = '{}.{}'.format(file_or_path, get_ordinal())
+    torch.save(cpu_data, file_or_path)
