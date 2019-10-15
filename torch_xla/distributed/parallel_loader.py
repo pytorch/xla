@@ -88,13 +88,16 @@ class ParallelLoader(object):
       thread.start()
 
   def per_device_loader(self, device):
-    """Retrieves the loader object for the given device.
+    """Retrieves the loader iterator object for the given device.
 
     Args:
       device (`torch.device`): The device whole loader is being requested.
 
     Returns:
-      The data loader for the `device`.
+      The loader iterator object for the `device`. This is not a
+      `torch.utils.data.DataLoader` interface, but a Python iterator which
+      returns the same tensor data structure as returned by the wrapped
+      `torch.utils.data.DataLoader`, but residing on XLA devices.
     """
     return PerDeviceLoader(self, torch.device(device))
 
