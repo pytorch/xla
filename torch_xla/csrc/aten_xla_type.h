@@ -1046,13 +1046,17 @@ class AtenXlaType {
                                        at::Scalar threshold);
 
   static at::Tensor to(const at::Tensor& self, const at::TensorOptions& options,
-                       bool non_blocking, bool copy);
+                       bool non_blocking, bool copy,
+                       c10::optional<at::MemoryFormat> memory_format);
   static at::Tensor to(const at::Tensor& self, c10::Device device,
-                       at::ScalarType dtype, bool non_blocking, bool copy);
+                       at::ScalarType dtype, bool non_blocking, bool copy,
+                       c10::optional<at::MemoryFormat> memory_format);
   static at::Tensor to(const at::Tensor& self, at::ScalarType dtype,
-                       bool non_blocking, bool copy);
+                       bool non_blocking, bool copy,
+                       c10::optional<at::MemoryFormat> memory_format);
   static at::Tensor to(const at::Tensor& self, const at::Tensor& other,
-                       bool non_blocking, bool copy);
+                       bool non_blocking, bool copy,
+                       c10::optional<at::MemoryFormat> memory_format);
 
   static std::tuple<at::Tensor, at::Tensor> topk(const at::Tensor& self,
                                                  int64_t k, int64_t dim,

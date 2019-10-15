@@ -2811,9 +2811,10 @@ at::Tensor AtenXlaType::threshold_backward(const at::Tensor& grad_output,
       threshold.to<double>()));
 }
 
-at::Tensor AtenXlaType::to(const at::Tensor& self,
-                           const at::TensorOptions& options,
-                           bool /* non_blocking */, bool /* copy */) {
+at::Tensor AtenXlaType::to(
+    const at::Tensor& self, const at::TensorOptions& options,
+    bool /* non_blocking */, bool /* copy */,
+    c10::optional<at::MemoryFormat> /* memory_format */) {
   auto self_tensor = bridge::TryGetXlaTensor(self);
   if (!self_tensor) {
     XLA_CHECK(options.has_device());
@@ -2835,19 +2836,23 @@ at::Tensor AtenXlaType::to(const at::Tensor& self,
 }
 
 at::Tensor AtenXlaType::to(const at::Tensor& self, c10::Device device,
-                           at::ScalarType dtype, bool non_blocking, bool copy) {
+                           at::ScalarType dtype, bool non_blocking, bool copy,
+                           c10::optional<at::MemoryFormat> memory_format) {
   return to(self, self.options().device(device).dtype(dtype), non_blocking,
-            copy);
+            copy, memory_format);
 }
 
 at::Tensor AtenXlaType::to(const at::Tensor& self, at::ScalarType dtype,
-                           bool non_blocking, bool copy) {
-  return to(self, self.options().dtype(dtype), non_blocking, copy);
+                           bool non_blocking, bool copy,
+                           c10::optional<at::MemoryFormat> memory_format) {
+  return to(self, self.options().dtype(dtype), non_blocking, copy,
+            memory_format);
 }
 
 at::Tensor AtenXlaType::to(const at::Tensor& self, const at::Tensor& other,
-                           bool non_blocking, bool copy) {
-  return to(self, other.options(), non_blocking, copy);
+                           bool non_blocking, bool copy,
+                           c10::optional<at::MemoryFormat> memory_format) {
+  return to(self, other.options(), non_blocking, copy, memory_format);
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::topk(const at::Tensor& self,
