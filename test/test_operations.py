@@ -339,7 +339,8 @@ class XlaTestCase(unittest.TestCase):
     elif type(x) == set and type(y) == set:
       super(XlaTestCase, self).assertEqual(x, y, message)
     elif isinstance(x, dict) and isinstance(y, dict):
-      if isinstance(x, OrderedDict) and isinstance(y, OrderedDict):
+      if isinstance(x, collections.OrderedDict) and isinstance(
+          y, collections.OrderedDict):
         self.assertEqual(
             x.items(),
             y.items(),
@@ -1217,6 +1218,17 @@ class TestAtenXlaTensor(XlaTestCase):
       x_loaded, number_loaded = torch.load(tf.name)
       self.assertEqual(x, x_loaded)
       self.assertEqual(number, number_loaded)
+
+  def test_save_api(self):
+    xla_device = xm.xla_device()
+    model = XlaMNIST().to(xla_device)
+    with tempfile.NamedTemporaryFile() as tf:
+      xm.save(model.state_dict(), tf)
+      state_dict = torch.load(tf.name)
+    cpu_model = XlaMNIST()
+    cpu_model.load_state_dict(state_dict)
+    loaded_model = cpu_model.to(xla_device)
+    self.assertEqual(model.state_dict(), loaded_model.state_dict())
 
   def test_deepcopy(self):
     xla_device = xm.xla_device()

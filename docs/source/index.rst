@@ -17,6 +17,8 @@ xla_model
 
 .. autofunction:: optimizer_step
 
+.. autofunction:: save
+
 distributed
 ----------------------------------
 
