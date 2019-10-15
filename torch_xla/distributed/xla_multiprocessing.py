@@ -84,6 +84,7 @@ def _prepare_env_for_index(index):
   gindex = _local_index_to_global(index)
   os.environ[xenv.MP_DEVICE] = 'TPU:{}'.format(gindex)
   os.environ[xenv.ORDINAL] = str(gindex)
+  os.environ[xenv.LOCAL_ORDINAL] = str(index)
   if xenv.LOCAL_WORKER not in os.environ:
     # The local worker can be missing for a 1 TPU host setup. Make sure we
     # always have one.

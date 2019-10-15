@@ -85,14 +85,37 @@ def get_ordinal(defval=0):
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
-def is_master_ordinal():
+def get_local_ordinal(defval=0):
+  """Retrieves the replication local ordinal of the current process.
+
+  The local ordinals range from 0 to the number of local devices minus 1.
+
+  Args:
+    defval (int, optional): The default value to be returned in case there is no
+      replication information available.
+      Default: 0
+
+  Returns:
+    The replication local ordinal of the current process.
+  """
+
+  return xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=defval)
+
+
+def is_master_ordinal(local=True):
   """Checks whether the current process is the master ordinal (0).
+
+  Args:
+    local (bool): Whether the local or global master ordinal should be checked.
+      In case of multi-host replication, there is only one global master ordinal
+      (host 0, device 0), while there are NUM_HOSTS local master ordinals.
+      Default: True
 
   Returns:
     A boolean indicating whether the current process is the master ordinal.
   """
 
-  ordinal = get_ordinal(defval=-1)
+  ordinal = get_local_ordinal(defval=-1) if local else get_ordinal(defval=-1)
   if ordinal >= 0:
     # We are either on multi-processing, or on BigSlice (or both).
     return ordinal == 0
@@ -100,8 +123,8 @@ def is_master_ordinal():
   return getattr(_TLS, 'device_index', 0) == 0
 
 
-def master_print(s, fd=sys.stdout):
-  if is_master_ordinal():
+def master_print(s, fd=sys.stdout, local=True):
+  if is_master_ordinal(local=local):
     print(s, file=fd)
 
 
