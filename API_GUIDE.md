@@ -271,6 +271,20 @@ Per the above note on moving XLA tensors to the CPU, care must be taken when
 working with views. Instead of saving views it's recommended that you recreate
 them after the tensors have been loaded and moved to their destination device(s).
 
+A utility API is provided to save data by taking care of previously moving it
+to CPU:
+
+```python
+import torch
+import torch_xla
+import torch_xla.core.xla_model as xm
+
+xm.save(model.state_dict(), path)
+```
+
+In case of multple devices, the above API will only save the data for the master
+device ordinal (0).
+
 Directly saving XLA tensors is possible but not recommended. XLA
 tensors are always loaded back to the device they were saved from, and if
 that device is unavailable the load will fail. PyTorch/XLA, like all of PyTorch,

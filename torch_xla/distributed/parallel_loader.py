@@ -121,7 +121,7 @@ class ParallelLoader(object):
       else:
         assert csize == size[0]
 
-    xu.for_each_instance(data, torch.Tensor, fn)
+    xu.for_each_instance(data, lambda x: type(x) == torch.Tensor, fn)
     return size[0] if size else None
 
   def _send_data_to(self, data, device):
