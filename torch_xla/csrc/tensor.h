@@ -630,6 +630,14 @@ class XLATensor {
 
   static XLATensor mm(const XLATensor& input, const XLATensor& weight);
 
+  static XLATensor mse_loss(const XLATensor& input, const XLATensor& target,
+                            xla::int64 reduction);
+
+  static XLATensor mse_loss_backward(const XLATensor& grad_output,
+                                     const XLATensor& input,
+                                     const XLATensor& target,
+                                     xla::int64 reduction);
+
   static XLATensor mul(const XLATensor& input, const XLATensor& other);
   static XLATensor mul(const XLATensor& input, at::Scalar other);
   static void mul_(XLATensor& input, const XLATensor& other);
