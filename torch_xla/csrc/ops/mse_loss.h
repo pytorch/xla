@@ -10,7 +10,7 @@ namespace ops {
 
 class MseLoss : public Node {
  public:
-  MseLoss(const Value& input, const Value& target, xla::int64 reduction);
+  MseLoss(const Value& input, const Value& target, ReductionMode reduction);
 
   std::string ToString() const override;
 
@@ -18,12 +18,10 @@ class MseLoss : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64 reduction() const { return reduction_; }
-
-  static ReductionMode GetXlaReductionMode(xla::int64 reduction);
+  ReductionMode reduction() const { return reduction_; }
 
  private:
-  xla::int64 reduction_;
+  ReductionMode reduction_;
 };
 
 }  // namespace ops

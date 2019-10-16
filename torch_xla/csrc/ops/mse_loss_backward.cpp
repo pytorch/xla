@@ -12,12 +12,12 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
-                           const Value& target, xla::int64 reduction) {
+                           const Value& target, ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
     return BuildMseLossBackward(operands[0], operands[1], operands[2],
-                                MseLoss::GetXlaReductionMode(reduction));
+                                reduction);
   };
   return InferOutputShape({grad_output.shape(), input.shape(), target.shape()},
                           lower_for_shape_fn);
@@ -26,13 +26,14 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 }  // namespace
 
 MseLossBackward::MseLossBackward(const Value& grad_output, const Value& input,
-                                 const Value& target, xla::int64 reduction)
+                                 const Value& target, ReductionMode reduction)
     : Node(ir::OpKind(at::aten::mse_loss_backward),
            {grad_output, input, target},
            [&]() {
              return NodeOutputShape(grad_output, input, target, reduction);
            },
-           /*num_outputs=*/1, xla::util::MHash(reduction)),
+           /*num_outputs=*/1,
+           xla::util::MHash(xla::util::GetEnumValue<ReductionMode>(reduction))),
       reduction_(reduction) {}
 
 NodePtr MseLossBackward::Clone(OpList operands) const {
@@ -44,15 +45,14 @@ XlaOpVector MseLossBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
   xla::XlaOp input = loctx->GetOutputOp(operand(1));
   xla::XlaOp target = loctx->GetOutputOp(operand(2));
-  return ReturnOp(
-      BuildMseLossBackward(grad_output, input, target,
-                           MseLoss::GetXlaReductionMode(reduction_)),
-      loctx);
+  return ReturnOp(BuildMseLossBackward(grad_output, input, target, reduction_),
+                  loctx);
 }
 
 std::string MseLossBackward::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", reduction=" << reduction_;
+  ss << Node::ToString()
+     << ", reduction=" << xla::util::GetEnumValue<ReductionMode>(reduction_);
   return ss.str();
 }
 

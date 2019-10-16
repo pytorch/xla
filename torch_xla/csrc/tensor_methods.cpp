@@ -1492,7 +1492,7 @@ XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight) {
 XLATensor XLATensor::mse_loss(const XLATensor& input, const XLATensor& target,
                               xla::int64 reduction) {
   return input.CreateFrom(ir::MakeNode<ir::ops::MseLoss>(
-      input.GetIrValue(), target.GetIrValue(), reduction));
+      input.GetIrValue(), target.GetIrValue(), GetXlaReductionMode(reduction)));
 }
 
 XLATensor XLATensor::mse_loss_backward(const XLATensor& grad_output,
@@ -1501,7 +1501,7 @@ XLATensor XLATensor::mse_loss_backward(const XLATensor& grad_output,
                                        xla::int64 reduction) {
   return input.CreateFrom(ir::MakeNode<ir::ops::MseLossBackward>(
       grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
-      reduction));
+      GetXlaReductionMode(reduction)));
 }
 
 XLATensor XLATensor::mul(const XLATensor& input, const XLATensor& other) {
