@@ -1,6 +1,6 @@
 [![CircleCI](https://circleci.com/gh/pytorch/xla.svg?style=svg)](https://circleci.com/gh/pytorch/xla)
 
-# How to Run PyTorch with TPUs
+# How to Run PyTorch with single TPU nodes
 
 You can either follow these tutorials available on Google Cloud website:
 
@@ -10,7 +10,7 @@ You can either follow these tutorials available on Google Cloud website:
 
 Or the following README to run your model.
 
-First create your Cloud [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: ex. `pytorch-0.5`):
+First [create your Cloud TPU node](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py#create_tpu) with the corresponding release you wish to consume (TPU software version: ex. `pytorch-0.5`):
 
 Once you've created a Cloud TPU node, you can train your PyTorch models by either:
 
@@ -94,6 +94,9 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
 ---
 
 # How to Run on TPU Pods (distributed training)
+
+Whereas the previous section focused on training on a single TPU node,
+this section discusses distributed training in TPU Pods.
 
 The recommended setup for running distributed training on TPU Pods uses the
 pairing of Compute VM [Instance
