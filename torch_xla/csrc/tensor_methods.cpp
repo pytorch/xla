@@ -62,6 +62,8 @@
 #include "torch_xla/csrc/ops/max_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/mean.h"
 #include "torch_xla/csrc/ops/min_in_dim.h"
+#include "torch_xla/csrc/ops/mse_loss.h"
+#include "torch_xla/csrc/ops/mse_loss_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/nll_loss.h"
@@ -1485,6 +1487,21 @@ std::tuple<XLATensor, XLATensor> XLATensor::min(const XLATensor& input,
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight) {
   return input.CreateFrom(
       ir::ops::Dot(input.GetIrValue(), weight.GetIrValue()));
+}
+
+XLATensor XLATensor::mse_loss(const XLATensor& input, const XLATensor& target,
+                              xla::int64 reduction) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::MseLoss>(
+      input.GetIrValue(), target.GetIrValue(), GetXlaReductionMode(reduction)));
+}
+
+XLATensor XLATensor::mse_loss_backward(const XLATensor& grad_output,
+                                       const XLATensor& input,
+                                       const XLATensor& target,
+                                       xla::int64 reduction) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::MseLossBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
+      GetXlaReductionMode(reduction)));
 }
 
 XLATensor XLATensor::mul(const XLATensor& input, const XLATensor& other) {

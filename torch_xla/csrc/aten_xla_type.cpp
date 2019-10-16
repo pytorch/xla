@@ -2013,6 +2013,21 @@ at::Tensor AtenXlaType::mm(const at::Tensor& self, const at::Tensor& mat2) {
                     /*weight=*/bridge::GetXlaTensor(mat2)));
 }
 
+at::Tensor AtenXlaType::mse_loss(const at::Tensor& self,
+                                 const at::Tensor& target, int64_t reduction) {
+  return bridge::AtenFromXlaTensor(XLATensor::mse_loss(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), reduction));
+}
+
+at::Tensor AtenXlaType::mse_loss_backward(const at::Tensor& grad_output,
+                                          const at::Tensor& self,
+                                          const at::Tensor& target,
+                                          int64_t reduction) {
+  return bridge::AtenFromXlaTensor(XLATensor::mse_loss_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(target), reduction));
+}
+
 at::Tensor AtenXlaType::mul(const at::Tensor& self, const at::Tensor& other) {
   auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(

@@ -19,6 +19,14 @@ xla::XlaOp BuildL1LossBackward(const xla::XlaOp& grad_output,
                                const xla::XlaOp& target,
                                ReductionMode reduction);
 
+xla::XlaOp BuildMseLoss(const xla::XlaOp& input, const xla::XlaOp& target,
+                        ReductionMode reduction);
+
+xla::XlaOp BuildMseLossBackward(const xla::XlaOp& grad_output,
+                                const xla::XlaOp& input,
+                                const xla::XlaOp& target,
+                                ReductionMode reduction);
+
 // Builds a mean by reducing all the dimensions listed in dimensions. If
 // keep_reduced_dimensions is true, the reduced dimensions will be retained,
 // with value 1.
