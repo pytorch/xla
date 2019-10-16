@@ -120,6 +120,8 @@ def _start_fn(index, fn, args):
         file=sys.stderr)
     traceback.print_exc(limit=16, file=sys.stderr)
     exit_code = 17
+  sys.stdout.flush()
+  sys.stderr.flush()
   sys.exit(exit_code)
 
 
