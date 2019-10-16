@@ -168,6 +168,7 @@ bool ParseMeshConfig(
                << ":" << local_worker.task_no << " from mesh service at "
                << client->address();
   service::grpc::Config config = client->GetConfig();
+  TF_VLOG(3) << "Mesh Config: " << config.DebugString();
 
   string mp_device = XrtComputationClient::GetMultiProcessingDevice();
   for (auto& config_worker : config.workers()) {
