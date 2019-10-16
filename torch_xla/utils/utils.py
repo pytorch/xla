@@ -104,14 +104,14 @@ def for_each_instance(value, select_fn, fn):
   if select_fn(value):
     fn(value)
   elif isinstance(value, dict):
-    for k, v in value.items():
+    for k in sorted(value.keys()):
       for_each_instance(k, select_fn, fn)
-      for_each_instance(v, select_fn, fn)
+      for_each_instance(value[k], select_fn, fn)
   elif isinstance(value, (list, tuple, set)):
     for x in value:
       for_each_instance(x, select_fn, fn)
   elif hasattr(value, '__dict__'):
-    for k in value.__dict__.keys():
+    for k in sorted(value.__dict__.keys()):
       for_each_instance(value.__dict__[k], select_fn, fn)
 
 
@@ -120,9 +120,9 @@ def for_each_instance_rewrite(value, select_fn, fn):
     return fn(value)
   elif isinstance(value, dict):
     result = dict()
-    for k, v in value.items():
-      k = for_each_instance_rewrite(k, select_fn, fn)
-      result[k] = for_each_instance_rewrite(v, select_fn, fn)
+    for k in sorted(value.keys()):
+      rwk = for_each_instance_rewrite(k, select_fn, fn)
+      result[rwk] = for_each_instance_rewrite(value[k], select_fn, fn)
     return result
   elif isinstance(value, (list, tuple, set)):
     result = []
@@ -131,7 +131,7 @@ def for_each_instance_rewrite(value, select_fn, fn):
     return type(value)(result)
   elif hasattr(value, '__dict__'):
     result = copy.deepcopy(value)
-    for k in result.__dict__.keys():
+    for k in sorted(result.__dict__.keys()):
       v = for_each_instance_rewrite(result.__dict__[k], select_fn, fn)
       result.__dict__[k] = v
     return result
