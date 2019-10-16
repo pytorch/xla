@@ -10,7 +10,7 @@ namespace ops {
 
 class L1Loss : public Node {
  public:
-  L1Loss(const Value& input, const Value& target, xla::int64 reduction);
+  L1Loss(const Value& input, const Value& target, ReductionMode reduction);
 
   std::string ToString() const override;
 
@@ -18,12 +18,10 @@ class L1Loss : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64 reduction() const { return reduction_; }
-
-  static ReductionMode GetXlaReductionMode(xla::int64 reduction);
+  ReductionMode reduction() const { return reduction_; }
 
  private:
-  xla::int64 reduction_;
+  ReductionMode reduction_;
 };
 
 }  // namespace ops
