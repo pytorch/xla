@@ -25,6 +25,7 @@ RUN cd pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${rel
 
 # Use conda environment on startup or when running scripts.
 RUN echo "conda activate pytorch" >> ~/.bashrc
+RUN echo "export TF_CPP_LOG_THREAD_ID=1" >> ~/.bashrc
 ENV PATH /root/anaconda3/envs/pytorch/bin/:$PATH
 
 # Define entrypoint and cmd
