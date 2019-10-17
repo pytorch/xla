@@ -1198,16 +1198,17 @@ at::Tensor AtenXlaType::empty(at::IntArrayRef size,
   return full(size, 0, options);
 }
 
-at::Tensor AtenXlaType::empty_like(const at::Tensor& self) {
+at::Tensor AtenXlaType::empty_like(
+    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
   XLA_FN_COUNTER("xla::");
-  return full_like(self, 0);
+  return full_like(self, 0, memory_format);
 }
 
 at::Tensor AtenXlaType::empty_like(
     const at::Tensor& self, const at::TensorOptions& options,
     c10::optional<at::MemoryFormat> memory_format) {
   XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, options);
+  return full_like(self, 0, options, memory_format);
 }
 
 at::Tensor AtenXlaType::empty_strided(at::IntArrayRef size,
@@ -1434,16 +1435,19 @@ at::Tensor AtenXlaType::full(at::IntArrayRef size, at::Scalar fill_value,
                       xla_options.get_device(), xla_options.get_scalar_type()));
 }
 
-at::Tensor AtenXlaType::full_like(const at::Tensor& self,
-                                  at::Scalar fill_value) {
+at::Tensor AtenXlaType::full_like(
+    const at::Tensor& self, at::Scalar fill_value,
+    c10::optional<at::MemoryFormat> /* memory_format */) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::full_like(
       self_tensor, fill_value, self_tensor.GetDevice(), c10::nullopt));
 }
 
-at::Tensor AtenXlaType::full_like(const at::Tensor& self, at::Scalar fill_value,
-                                  const at::TensorOptions& options) {
+at::Tensor AtenXlaType::full_like(
+    const at::Tensor& self, at::Scalar fill_value,
+    const at::TensorOptions& options,
+    c10::optional<at::MemoryFormat> /* memory_format */) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XlaOptions xla_options(options, self_tensor.GetDevice());
@@ -2533,15 +2537,17 @@ at::Tensor AtenXlaType::ones(at::IntArrayRef size,
   return full(size, 1, options);
 }
 
-at::Tensor AtenXlaType::ones_like(const at::Tensor& self) {
+at::Tensor AtenXlaType::ones_like(
+    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
   XLA_FN_COUNTER("xla::");
-  return full_like(self, 1);
+  return full_like(self, 1, memory_format);
 }
 
-at::Tensor AtenXlaType::ones_like(const at::Tensor& self,
-                                  const at::TensorOptions& options) {
+at::Tensor AtenXlaType::ones_like(
+    const at::Tensor& self, const at::TensorOptions& options,
+    c10::optional<at::MemoryFormat> memory_format) {
   XLA_FN_COUNTER("xla::");
-  return full_like(self, 1, options);
+  return full_like(self, 1, options, memory_format);
 }
 
 at::Tensor AtenXlaType::pairwise_distance(const at::Tensor& x1,
@@ -3490,15 +3496,17 @@ at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
   return full(size, 0, options);
 }
 
-at::Tensor AtenXlaType::zeros_like(const at::Tensor& self) {
+at::Tensor AtenXlaType::zeros_like(
+    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
   XLA_FN_COUNTER("xla::");
-  return full_like(self, 0);
+  return full_like(self, 0, memory_format);
 }
 
-at::Tensor AtenXlaType::zeros_like(const at::Tensor& self,
-                                   const at::TensorOptions& options) {
+at::Tensor AtenXlaType::zeros_like(
+    const at::Tensor& self, const at::TensorOptions& options,
+    c10::optional<at::MemoryFormat> memory_format) {
   XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, options);
+  return full_like(self, 0, options, memory_format);
 }
 
 void AtenXlaType::InitializeAtenBindings() {
