@@ -100,7 +100,7 @@ If your PR touches the C++ source files, please run the following command before
 
 ```Shell
 # If your PR only changes foo.cpp, run the following in xla/ folder
-clang-format-7 -i -style /PATH/TO/foo.cpp
+clang-format-7 -i -style=file /PATH/TO/foo.cpp
 # To format all cpp files, run the follwoing in xla/ folder
 find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
 ```
