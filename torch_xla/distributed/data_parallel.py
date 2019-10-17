@@ -136,6 +136,7 @@ class DataParallel(object):
                   torch.device(self._device_ids[0]), self._contexts[0])
       ]
 
+    xm.wait_device_ops()
     para_loader = pl.ParallelLoader(
         loader,
         self._device_ids,

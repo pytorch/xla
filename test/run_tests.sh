@@ -40,13 +40,13 @@ if [ "$LOGFILE" != "" ]; then
   python3 "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA 2>&1 | tee $LOGFILE
   python3 "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA 2>&1 | tee $LOGFILE
   python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
-  # run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
+  run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
   python3 "$CDIR/test_mp_replication.py" "$@" 2>&1 | tee $LOGFILE
 else
   python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
   python3 "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
   python3 "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
   python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  # run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   python3 "$CDIR/test_mp_replication.py" "$@"
 fi

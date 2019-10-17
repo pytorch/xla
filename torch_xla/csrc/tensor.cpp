@@ -1019,8 +1019,8 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
       tensors[at_tensor_index[i]].data()->xla_data = std::move(handles[i]);
     }
   }
-  TF_VLOG(4) << "Tensors graph hash " << coll.hash << " on device '"
-             << coll.device << "'";
+  TF_VLOG(4) << "Tensors graph hash " << coll.hash << " on device "
+             << coll.device;
   return coll;
 }
 
@@ -1169,6 +1169,21 @@ void XLATensor::SyncLiveTensorsGraph(
 void XLATensor::MarkStep(const Device* device) {
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->ClearProfileData(device);
+}
+
+void XLATensor::WaitDeviceOps(
+    tensorflow::gtl::ArraySlice<const std::string> devices) {
+  std::set<Device> wait_devices;
+  if (!devices.empty()) {
+    for (auto& device_str : devices) {
+      wait_devices.insert(Device(device_str));
+    }
+  } else {
+    for (auto& device_str : xla::ComputationClient::Get()->GetLocalDevices()) {
+      wait_devices.insert(Device(device_str));
+    }
+  }
+  LockDevices(wait_devices);
 }
 
 XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(

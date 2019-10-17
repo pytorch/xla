@@ -43,8 +43,8 @@ const xla::Shape& GetParameterShape(const ir::Output& operand,
 
 size_t ComputeNodeKey(
     const ir::Node* node,
-    tensorflow::gtl::ArraySlice<const xla::Shape*> input_shapes) {
-  size_t key = 0x129b98d6968b7;
+    tensorflow::gtl::ArraySlice<const xla::Shape*> input_shapes, size_t seed) {
+  size_t key = seed;
   const auto& operands = node->operands();
   for (size_t i = 0; i < operands.size(); ++i) {
     key = xla::util::HashCombine(key, xla::util::ShapeHash(GetParameterShape(
@@ -72,6 +72,11 @@ xla::XlaComputation BuildNodeComputation(
   return ConsumeValue(loctx.Build());
 }
 
+size_t GetNodesKeySeed(const std::string& device,
+                       tensorflow::gtl::ArraySlice<const std::string> devices) {
+  return xla::util::MHash(device, devices);
+}
+
 }  // namespace
 
 OpByOpExecutor::OpByOpExecutor(size_t compile_cache_size)
@@ -97,6 +102,9 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     node_to_index[post_order[i]] = i;
   }
 
+  auto compilation_devices =
+      xla::ComputationClient::Get()->GetCompilationDevices(device, devices);
+  size_t nodes_key_seed = GetNodesKeySeed(device, compilation_devices);
   Device exec_device(device);
   std::vector<size_t> cache_keys;
   std::unordered_map<size_t, std::vector<size_t>> compile_indices;
@@ -126,7 +134,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
         op_input_shapes.push_back(ops_shapes[op_index]);
       }
 
-      size_t cache_key = ComputeNodeKey(node, op_input_shapes);
+      size_t cache_key = ComputeNodeKey(node, op_input_shapes, nodes_key_seed);
       cxop.computation = compile_cache_.Get(cache_key);
       if (cxop.computation == nullptr) {
         XLA_COUNTER("OpByOpCompileCacheMiss", 1);
@@ -145,12 +153,9 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
               ConsumeValue(computation.GetProgramShape());
           compile_shapes.push_back(MakeShapeWithDeviceLayout(
               program_shape.result(), exec_device.hw_type));
-          compile_instances.push_back(
-              {std::move(computation), device,
-               xla::ComputationClient::Get()->GetCompilationDevices(device,
-                                                                    devices),
-               &compile_shapes.back()});
-
+          compile_instances.push_back({std::move(computation), device,
+                                       compilation_devices,
+                                       &compile_shapes.back()});
           ops_shapes[i] = &compile_shapes.back();
         } else {
           ops_shapes[i] =
@@ -171,8 +176,12 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   // If we missed the cache for certain ops, compile them now and fixup the
   // chained ops vector.
   if (!compile_instances.empty()) {
+    TF_VLOG(3) << "Compiling " << compile_instances.size()
+               << " computations on device " << device;
     auto computation_ptrs =
         xla::ComputationClient::Get()->Compile(std::move(compile_instances));
+    TF_VLOG(3) << "Compiling " << computation_ptrs.size()
+               << " computations on device " << device << " done!";
     for (size_t i = 0; i < computation_ptrs.size(); ++i) {
       compile_cache_.Add(cache_keys[i], computation_ptrs[i]);
       for (auto index : compile_indices[cache_keys[i]]) {
