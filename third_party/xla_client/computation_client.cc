@@ -66,7 +66,9 @@ bool IsLocalDevice(
     return true;
   }
   Device device = ParseDevice(mp_device);
-  return device.ordinal == parsed_device.id &&
+  const int devices_per_worker = sys_util::GetEnvInt("TPU_NUM_DEVICES", 8);
+  return device.ordinal ==
+             (devices_per_worker * parsed_device.task + parsed_device.id) &&
          device.kind == parsed_device.type;
 }
 
