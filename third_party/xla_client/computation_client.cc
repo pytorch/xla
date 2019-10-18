@@ -54,9 +54,23 @@ string GetXrtDevicePath(const string& worker, int task_no,
                       "/device:", device_type, ":", ordinal);
 }
 
-bool IsLocalDevice(
-    const XrtComputationClient::Worker& worker,
-    const tensorflow::DeviceNameUtils::ParsedName& parsed_device) {
+string BuildTaskDeviceKey(int task_no, const string& kind) {
+  return absl::StrCat(task_no, ":", kind);
+}
+
+tensorflow::DeviceNameUtils::ParsedName ParseXrtDevice(const string& device) {
+  tensorflow::DeviceNameUtils::ParsedName parsed_device;
+  XLA_CHECK(
+      tensorflow::DeviceNameUtils::ParseFullName(device, &parsed_device) &&
+      parsed_device.has_job && parsed_device.has_task && parsed_device.has_id &&
+      parsed_device.has_type)
+      << device;
+  return parsed_device;
+}
+
+bool IsLocalDevice(const XrtComputationClient::Worker& worker,
+                   const tensorflow::DeviceNameUtils::ParsedName& parsed_device,
+                   const std::map<string, int>& dev_task_map) {
   if (worker.name != parsed_device.job ||
       worker.task_no != parsed_device.task) {
     return false;
@@ -66,8 +80,28 @@ bool IsLocalDevice(
     return true;
   }
   Device device = ParseDevice(mp_device);
-  return device.ordinal == parsed_device.id &&
-         device.kind == parsed_device.type;
+  string task_device_key = BuildTaskDeviceKey(parsed_device.task, device.kind);
+  auto it = dev_task_map.find(task_device_key);
+  return it != dev_task_map.end()
+             ? (device.ordinal == it->second + parsed_device.id)
+             : false;
+}
+
+std::map<string, int> BuildDeviceTaskMap(
+    const XrtComputationClient::Options& options) {
+  // Builds a map from "TASK:DEV_KIND" (ie, "0:TPU") keys to the minimum global
+  // device ordinal assigned for that task+devkind couple.
+  std::map<string, int> dev_task_map;
+  for (auto& device_xrt_device : options.global_device_map) {
+    Device global_device = ParseDevice(device_xrt_device.first);
+    tensorflow::DeviceNameUtils::ParsedName parsed_device =
+        ParseXrtDevice(device_xrt_device.second);
+    string task_device_key =
+        BuildTaskDeviceKey(parsed_device.task, global_device.kind);
+    util::InsertCombined(&dev_task_map, task_device_key, global_device.ordinal,
+                         [](int a, int b) { return std::min(a, b); });
+  }
+  return dev_task_map;
 }
 
 void PopulateLocalDevices(XrtComputationClient::Options* options) {
@@ -76,28 +110,22 @@ void PopulateLocalDevices(XrtComputationClient::Options* options) {
   if (!local_worker.empty()) {
     worker = ParseWorker(local_worker);
   }
+  auto dev_task_map = BuildDeviceTaskMap(*options);
   std::map<string, int> min_ordinals;
   for (auto& device_xrt_device : options->global_device_map) {
     if (worker.task_no >= 0) {
-      tensorflow::DeviceNameUtils::ParsedName parsed_device;
-      XLA_CHECK(tensorflow::DeviceNameUtils::ParseFullName(
-                    device_xrt_device.second, &parsed_device) &&
-                parsed_device.has_job && parsed_device.has_task &&
-                parsed_device.has_id && parsed_device.has_type)
-          << device_xrt_device.second;
-      if (!IsLocalDevice(worker, parsed_device)) {
+      tensorflow::DeviceNameUtils::ParsedName parsed_device =
+          ParseXrtDevice(device_xrt_device.second);
+      if (!IsLocalDevice(worker, parsed_device, dev_task_map)) {
         continue;
       }
     }
     options->devices.insert(device_xrt_device.first);
 
     Device global_device = ParseDevice(device_xrt_device.first);
-    auto it = min_ordinals.find(global_device.kind);
-    if (it == min_ordinals.end()) {
-      min_ordinals.emplace(global_device.kind, global_device.ordinal);
-    } else {
-      it->second = std::min<int>(it->second, global_device.ordinal);
-    }
+    util::InsertCombined(&min_ordinals, global_device.kind,
+                         global_device.ordinal,
+                         [](int a, int b) { return std::min(a, b); });
   }
   for (auto kind : {"TPU", "GPU", "CPU"}) {
     auto it = min_ordinals.find(kind);
