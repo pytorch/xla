@@ -1635,26 +1635,41 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_layer_norm(
   XLATensor input_tensor = bridge::GetXlaTensor(input);
   const Device& device = input_tensor.GetDevice();
   auto input_reshaped = input.contiguous().view({1, M, -1});
-//  XLATensor undef;
-  XLATensor e1 = bridge::GetOrCreateXlaTensor({}, device);
-  XLATensor e2 = bridge::GetOrCreateXlaTensor({}, device);
+  XLATensor undef;
+  at::Tensor undef_at;
+
+  VLOG(0) << "DEBUG => M=" << M << " N=" << N;
+  VLOG(0) << "DEBUG => input.sizes(): " << input.sizes();
+  VLOG(0) << "DEBUG => input_reshaped.sizes(): " << input_reshaped.sizes();
+  VLOG(0) << "DEBUG => weight.sizes(): " << weight.sizes();
+  VLOG(0) << "DEBUG => bias.sizes(): " << bias.sizes();
+
   auto outputs = XLATensor::native_batch_norm(
       bridge::GetXlaTensor(input_reshaped),
-      bridge::GetOrCreateXlaTensor(weight, device),
-      bridge::GetOrCreateXlaTensor(bias, device),
-      e1, e2, true, 0, eps);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
-                         bridge::AtenFromXlaTensor(std::get<1>(outputs)),
-                         bridge::AtenFromXlaTensor(std::get<2>(outputs)));
-
-}
-
-//std::tuple<at::Tensor,at::Tensor,at::Tensor>
-//AtenXlaTypeDefault::native_layer_norm_backward(
-//    const at::Tensor & grad_out, const at::Tensor & input,
-//    const at::Tensor & mean, const at::Tensor & rstd, const at::Tensor & weight,
-//    int64_t M, int64_t N, std::array<bool,3> output_mask) {
-//}
+      undef, undef, undef, undef, true, 0, eps);
+  auto input_size = XlaHelpers::I64List(input.sizes());
+  auto outputs_reshaped = XLATensor::view(std::get<0>(outputs), input_size);
+  if (weight.defined() && bias.defined()) {
+    return std::make_tuple(
+        bridge::AtenFromXlaTensor(
+          XLATensor::addcmul(
+            bridge::GetXlaTensor(bias), 1, outputs_reshaped,
+            bridge::GetXlaTensor(weight))),
+        undef_at, undef_at);
+  } else if (weight.defined()) {
+    return std::make_tuple(
+        bridge::AtenFromXlaTensor(
+          XLATensor::mul(outputs_reshaped, bridge::GetXlaTensor(weight))),
+        undef_at, undef_at);
+  } else if (bias.defined()) {
+    return std::make_tuple(
+        bridge::AtenFromXlaTensor(
+          XLATensor::add(outputs_reshaped, bridge::GetXlaTensor(bias), 1)),
+        undef_at, undef_at);
+  } else {
+    return std::make_tuple(bridge::AtenFromXlaTensor(outputs_reshaped),
+        undef_at, undef_at);
+  }
 
 at::Tensor AtenXlaType::le(const at::Tensor& self, at::Scalar other) {
   return bridge::AtenFromXlaTensor(
