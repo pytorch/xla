@@ -137,6 +137,16 @@ std::vector<typename C::value_type::element_type*> GetSharedPointers(
   return pointers;
 }
 
+template <typename C, typename K, typename T, typename F>
+void InsertCombined(C* map, const K& key, const T& value, const F& combiner) {
+  auto it = map->find(key);
+  if (it == map->end()) {
+    map->emplace(key, value);
+  } else {
+    it->second = combiner(it->second, value);
+  }
+}
+
 template <typename T>
 std::vector<T> Iota(size_t size, T init = 0, T incr = 1) {
   std::vector<T> result(size);
