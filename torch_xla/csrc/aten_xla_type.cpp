@@ -1625,6 +1625,37 @@ at::Tensor AtenXlaType::layer_norm(const at::Tensor& input,
                                 cudnn_enable);
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_layer_norm(
+    const at::Tensor & input, const at::Tensor & weight,
+    const at::Tensor & bias, int64_t M, int64_t N, double eps) {
+  // NOTES
+  // 1. M here is 'n' here:
+  // https://github.com/pytorch/pytorch/pull/20345/files#diff-334eb235b4eb8d228fe544dbe506e3c7L502
+
+  XLATensor input_tensor = bridge::GetXlaTensor(input);
+  const Device& device = input_tensor.GetDevice();
+  auto input_reshaped = input.contiguous().view({1, M, -1});
+//  XLATensor undef;
+  XLATensor e1 = bridge::GetOrCreateXlaTensor({}, device);
+  XLATensor e2 = bridge::GetOrCreateXlaTensor({}, device);
+  auto outputs = XLATensor::native_batch_norm(
+      bridge::GetXlaTensor(input_reshaped),
+      bridge::GetOrCreateXlaTensor(weight, device),
+      bridge::GetOrCreateXlaTensor(bias, device),
+      e1, e2, true, 0, eps);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<1>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<2>(outputs)));
+
+}
+
+//std::tuple<at::Tensor,at::Tensor,at::Tensor>
+//AtenXlaTypeDefault::native_layer_norm_backward(
+//    const at::Tensor & grad_out, const at::Tensor & input,
+//    const at::Tensor & mean, const at::Tensor & rstd, const at::Tensor & weight,
+//    int64_t M, int64_t N, std::array<bool,3> output_mask) {
+//}
+
 at::Tensor AtenXlaType::le(const at::Tensor& self, at::Scalar other) {
   return bridge::AtenFromXlaTensor(
       XLATensor::le(bridge::GetXlaTensor(self), other));

@@ -603,6 +603,10 @@ class AtenXlaType {
                                const at::Tensor& weight, const at::Tensor& bias,
                                double eps, bool cudnn_enable);
 
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(
+      const at::Tensor & input, const at::Tensor & weight,
+      const at::Tensor & bias, int64_t M, int64_t N, double eps);
+
   static at::Tensor le(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor le(const at::Tensor& self, const at::Tensor& other);
