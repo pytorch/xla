@@ -222,6 +222,7 @@ def train_imagenet():
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
+  test_utils.close_summary_writer(writer)
   return accuracy
 
 

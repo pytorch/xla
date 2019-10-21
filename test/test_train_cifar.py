@@ -231,8 +231,7 @@ def train_cifar():
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
-  if writer:
-    writer.flush()
+  test_utils.close_summary_writer(writer)
   return accuracy
 
 
