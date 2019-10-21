@@ -235,6 +235,8 @@ def train_imagenet():
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
+  if writer:
+    writer.flush()
   return accuracy
 
 

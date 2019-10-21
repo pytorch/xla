@@ -213,8 +213,7 @@ def train_imagenet():
   for epoch in range(1, FLAGS.num_epochs + 1):
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
-    if xm.is_master_ordinal():
-      print("Finished training epoch {}".format(epoch))
+    xm.master_print("Finished training epoch {}".format(epoch))
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))

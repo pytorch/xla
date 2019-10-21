@@ -108,11 +108,13 @@ def train_cifar():
   print('==> Preparing data..')
 
   if FLAGS.fake_data:
+    train_dataset_len = 50000  # Number of example in CIFAR train set.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, 32,
                           32), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size
+        // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, 32,
                           32), torch.zeros(FLAGS.batch_size,
@@ -138,6 +140,7 @@ def train_cifar():
         train=True,
         download=True,
         transform=transform_train)
+    train_dataset_len = len(train_dataset)
     test_dataset = torchvision.datasets.CIFAR10(
         root=FLAGS.datadir,
         train=False,
@@ -228,6 +231,8 @@ def train_cifar():
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
+  if writer:
+    writer.flush()
   return accuracy
 
 

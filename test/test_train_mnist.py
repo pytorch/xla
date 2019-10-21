@@ -54,11 +54,13 @@ def train_mnist():
   torch.manual_seed(1)
 
   if FLAGS.fake_data:
+    train_dataset_len = 60000  # Number of images in MNIST dataset.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 1, 28,
                           28), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=60000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size
+        // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 1, 28,
                           28), torch.zeros(FLAGS.batch_size,
@@ -72,6 +74,7 @@ def train_mnist():
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
+    train_dataset_len = len(train_dataset)
     test_dataset = datasets.MNIST(
         FLAGS.datadir,
         train=False,
@@ -163,6 +166,8 @@ def train_mnist():
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
+  if writer:
+    writer.flush()
   return accuracy
 
 

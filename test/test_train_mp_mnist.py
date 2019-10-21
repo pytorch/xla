@@ -17,6 +17,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms
 import torch_xla
 import torch_xla.debug.metrics as met
@@ -140,8 +141,7 @@ def train_mnist():
   for epoch in range(1, FLAGS.num_epochs + 1):
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
-    if xm.is_master_ordinal():
-      print("Finished training epoch {}".format(epoch))
+    xm.master_print("Finished training epoch {}".format(epoch))
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
@@ -149,6 +149,8 @@ def train_mnist():
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
+  if writer:
+    writer.flush()
   return accuracy
 
 
