@@ -10,6 +10,7 @@ FLAGS = args_parse.parse_common_options(
 
 from common_utils import TestCase, run_tests
 import os
+from statistics import mean
 import shutil
 import test_utils
 import time
@@ -17,6 +18,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms
 import torch_xla
 import torch_xla.distributed.data_parallel as dp
@@ -145,10 +147,19 @@ def train_mnist():
     return accuracy
 
   accuracy = 0.0
+  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  num_devices = len(
+      xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
+  num_training_steps_per_epoch = train_dataset_len // (
+      FLAGS.batch_size * num_devices)
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
-    accuracy = sum(accuracies) / len(accuracies)
+    accuracy = mean(accuracies)
+    print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
+    global_step = (epoch - 1) * num_training_steps_per_epoch
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
+                                     global_step)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
