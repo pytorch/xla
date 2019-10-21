@@ -775,6 +775,17 @@ class AtenXlaType {
                              const at::Tensor& save_invstd, bool train,
                              double eps, std::array<bool, 3> output_mask);
 
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(
+      const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
+      int64_t M, int64_t N, double eps);
+
+  static std::tuple<at::Tensor, at::Tensor, at::Tensor>
+  native_layer_norm_backward(const at::Tensor& grad_out,
+                             const at::Tensor& input, const at::Tensor& mean,
+                             const at::Tensor& rstd, const at::Tensor& weight,
+                             int64_t M, int64_t N,
+                             std::array<bool, 3> output_mask);
+
   static at::Tensor ne(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor ne(const at::Tensor& self, const at::Tensor& other);

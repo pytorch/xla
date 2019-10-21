@@ -1366,27 +1366,65 @@ TEST_F(AtenXlaTensorTest, TestInstanceNorm) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLayerNorm) {
-  int num_channels = 5;
-  std::vector<int64_t> normalized_shape = {10, 10};
-  torch::Tensor input = torch::rand({20, num_channels, 10, 10},
-                                    torch::TensorOptions(torch::kFloat));
-  torch::Tensor weight =
-      torch::rand(normalized_shape, torch::TensorOptions(torch::kFloat));
-  torch::Tensor bias =
-      torch::rand(normalized_shape, torch::TensorOptions(torch::kFloat));
+  torch::Tensor input =
+      torch::rand({20, 10, 10, 10}, torch::TensorOptions(torch::kFloat));
   double eps = 1e-05;
-  torch::Tensor output =
-      torch::layer_norm(input, normalized_shape, weight, bias, eps,
-                        /*cudnn_enabled=*/false);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_input = CopyToDevice(input, device);
-    torch::Tensor xla_weight = CopyToDevice(weight, device);
-    torch::Tensor xla_bias = CopyToDevice(bias, device);
-    torch::Tensor xla_output = torch::layer_norm(xla_input, normalized_shape,
-                                                 xla_weight, xla_bias, eps,
-                                                 /*cudnn_enabled=*/false);
-    AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
-  });
+  torch::Tensor undef;
+  for (bool undef_weight : {true, false}) {
+    for (int64_t normalized_size : {2, 3}) {
+      std::vector<int64_t> normalized_shape(normalized_size, 10);
+      torch::Tensor weight =
+          torch::rand(normalized_shape, torch::TensorOptions(torch::kFloat));
+      torch::Tensor bias =
+          torch::rand(normalized_shape, torch::TensorOptions(torch::kFloat));
+      torch::Tensor output = torch::layer_norm(input, normalized_shape,
+                                               undef_weight ? undef : weight,
+                                               undef_weight ? undef : bias, eps,
+                                               /*cudnn_enabled=*/false);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        torch::Tensor xla_weight =
+            undef_weight ? undef : CopyToDevice(weight, device);
+        torch::Tensor xla_bias =
+            undef_weight ? undef : CopyToDevice(bias, device);
+        torch::Tensor xla_output = torch::layer_norm(
+            xla_input, normalized_shape, xla_weight, xla_bias, eps,
+            /*cudnn_enabled=*/false);
+        AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
+      });
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestLayerNormBackward) {
+  torch::Tensor input = torch::rand(
+      {2, 3, 3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  double eps = 1e-05;
+  for (bool undef_weight : {true, false}) {
+    for (int64_t normalized_size : {2, 3}) {
+      std::vector<int64_t> normalized_shape(normalized_size, 3);
+      auto testfn =
+          [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+        return torch::layer_norm(
+            /*input=*/inputs[0], normalized_shape, inputs[1], inputs[2],
+            /*eps=*/eps,
+            /*cudnn_enabled=*/false);
+      };
+      torch::Tensor weight =
+          torch::rand(normalized_shape,
+                      torch::TensorOptions(torch::kFloat).requires_grad(true));
+      torch::Tensor bias =
+          torch::rand(normalized_shape,
+                      torch::TensorOptions(torch::kFloat).requires_grad(true));
+      torch::Tensor undef;
+      ForEachDevice([&](const torch::Device& device) {
+        TestBackward(
+            {input, undef_weight ? undef : weight, undef_weight ? undef : bias},
+            device, testfn,
+            /*rtol=*/1e-3, /*atol=*/1e-4);
+      });
+    }
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
