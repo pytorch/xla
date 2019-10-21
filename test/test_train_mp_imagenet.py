@@ -38,7 +38,6 @@ FLAGS = args_parse.parse_common_options(
 
 import os
 import schedulers
-from statistics import mean
 import test_utils
 import torch
 import torch.nn as nn

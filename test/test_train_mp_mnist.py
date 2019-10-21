@@ -101,6 +101,9 @@ def train_mnist():
 
   device = xm.xla_device()
   model = MNIST().to(device)
+  writer = None
+  if FLAGS.logdir and xm.is_master_ordinal():
+    writer = SummaryWriter(log_dir=FLAGS.logdir)
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=FLAGS.momentum)
   loss_fn = nn.NLLLoss()
 
@@ -137,9 +140,12 @@ def train_mnist():
   for epoch in range(1, FLAGS.num_epochs + 1):
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
+    if xm.is_master_ordinal():
+      print("Finished training epoch {}".format(epoch))
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
