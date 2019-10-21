@@ -154,6 +154,11 @@ std::string GetTensorDotGraph(at::Tensor tensor) {
   return ir::DumpUtil::ToDot({xtensor.GetIrValue().node.get()});
 }
 
+std::string GetTensorHloGraph(at::Tensor tensor) {
+  XLATensor xtensor = bridge::GetXlaTensor(tensor);
+  return ir::DumpUtil::ToHlo({xtensor.GetIrValue()});
+}
+
 ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device) {
   xla::ComputationClient::DataPtr data = TensorToXlaData(tensor, device);
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
