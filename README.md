@@ -1,6 +1,9 @@
 [![CircleCI](https://circleci.com/gh/pytorch/xla.svg?style=svg)](https://circleci.com/gh/pytorch/xla)
 
-# How to Run PyTorch with TPUs
+For information regarding system architecture, please refer to the
+[Cloud TPU System Architecture](https://cloud.google.com/tpu/docs/system-architecture) page.
+
+# How to Run PyTorch with Single TPU Nodes
 
 You can either follow these tutorials available on Google Cloud website:
 
@@ -10,7 +13,7 @@ You can either follow these tutorials available on Google Cloud website:
 
 Or the following README to run your model.
 
-First create your Cloud [TPU](https://pantheon.corp.google.com/compute/tpus) node with the corresponding release you wish to consume (TPU software version: ex. `pytorch-0.5`):
+First [create your Cloud TPU node](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py#create_tpu) with the corresponding release you wish to consume (TPU software version: ex. `pytorch-0.5`):
 
 Once you've created a Cloud TPU node, you can train your PyTorch models by either:
 
@@ -95,6 +98,9 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
 
 # How to Run on TPU Pods (distributed training)
 
+Whereas the previous section focused on training on a single TPU node,
+this section discusses distributed training in TPU Pods.
+
 The recommended setup for running distributed training on TPU Pods uses the
 pairing of Compute VM [Instance
 Groups](https://cloud.google.com/compute/docs/instance-groups/) and TPU Pods.
@@ -110,6 +116,7 @@ Training on pods can be broken down to largely 3 different steps:
 
 ## Create your instance group
 1. Create an instance template.
+* During creation, make sure to go to section "Identity and API access" → "Access Scopes" and select "Allow full access to all Cloud APIs".
 * If you have already have a VM instance running that you used to train PyTorch/TPU workloads and want to use that exact setup for distributed training: [instructions](https://cloud.google.com/compute/docs/instance-templates/create-instance-templates#based-on-existing-instance).
 * Or, you can create an instance template using the PyTorch/XLA VM image we provide: [instructions](https://cloud.google.com/compute/docs/instance-templates/create-instance-templates#creating_a_new_instance_template).
 2. Create an instance group to drive the TPU pod.
@@ -128,8 +135,7 @@ Training on pods can be broken down to largely 3 different steps:
 2. Let's say the command you ran to run a v3-8 was: `XLA_USE_BF16=1 python test/test_train_imagenet.py --fake_data`.
 * To distribute training as a conda environment process:
 ```
-(torch-xla-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-(torch-xla-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --conda-env=torch-xla-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+(torch-xla-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --conda-env=torch-xla-nightly --env=XLA_USE_BF16=1 -- python /usr/share/torch-xla-0.5/pytorch/xla/test/test_train_imagenet.py --fake_data
 ```
 
 * Or, to distribute training as a docker container:

@@ -144,6 +144,11 @@ class XLATensor {
   // the computation boundaries.
   static void MarkStep(const Device* device);
 
+  // Waits for all the outstanding operations on all the supplied devices.
+  // If devices is empty, the wait will happen for all local devices.
+  static void WaitDeviceOps(
+      tensorflow::gtl::ArraySlice<const std::string> devices);
+
   // Retrieves the PyTorch CPU tensors behind the XLA tensors IR operations.
   // All the tensors must be on the same device.
   static std::vector<at::Tensor> GetTensors(std::vector<XLATensor>* tensors);
@@ -629,6 +634,14 @@ class XLATensor {
                                               xla::int64 dim, bool keepdim);
 
   static XLATensor mm(const XLATensor& input, const XLATensor& weight);
+
+  static XLATensor mse_loss(const XLATensor& input, const XLATensor& target,
+                            xla::int64 reduction);
+
+  static XLATensor mse_loss_backward(const XLATensor& grad_output,
+                                     const XLATensor& input,
+                                     const XLATensor& target,
+                                     xla::int64 reduction);
 
   static XLATensor mul(const XLATensor& input, const XLATensor& other);
   static XLATensor mul(const XLATensor& input, at::Scalar other);

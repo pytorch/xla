@@ -1,8 +1,10 @@
-#include "torch_xla/csrc/ops/l1_loss_backward.h"
+#include "torch_xla/csrc/ops/mse_loss_backward.h"
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/ops/mse_loss.h"
+#include "torch_xla/csrc/reduction.h"
 
 namespace torch_xla {
 namespace ir {
@@ -14,8 +16,8 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
-    return BuildL1LossBackward(operands[0], operands[1], operands[2],
-                               reduction);
+    return BuildMseLossBackward(operands[0], operands[1], operands[2],
+                                reduction);
   };
   return InferOutputShape({grad_output.shape(), input.shape(), target.shape()},
                           lower_for_shape_fn);
@@ -23,9 +25,10 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
 
 }  // namespace
 
-L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
-                               const Value& target, ReductionMode reduction)
-    : Node(ir::OpKind(at::aten::l1_loss_backward), {grad_output, input, target},
+MseLossBackward::MseLossBackward(const Value& grad_output, const Value& input,
+                                 const Value& target, ReductionMode reduction)
+    : Node(ir::OpKind(at::aten::mse_loss_backward),
+           {grad_output, input, target},
            [&]() {
              return NodeOutputShape(grad_output, input, target, reduction);
            },
@@ -33,20 +36,20 @@ L1LossBackward::L1LossBackward(const Value& grad_output, const Value& input,
            xla::util::MHash(xla::util::GetEnumValue<ReductionMode>(reduction))),
       reduction_(reduction) {}
 
-NodePtr L1LossBackward::Clone(OpList operands) const {
-  return MakeNode<L1LossBackward>(operands.at(0), operands.at(1),
-                                  operands.at(2), reduction_);
+NodePtr MseLossBackward::Clone(OpList operands) const {
+  return MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
+                                   operands.at(2), reduction_);
 }
 
-XlaOpVector L1LossBackward::Lower(LoweringContext* loctx) const {
+XlaOpVector MseLossBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
   xla::XlaOp input = loctx->GetOutputOp(operand(1));
   xla::XlaOp target = loctx->GetOutputOp(operand(2));
-  return ReturnOp(BuildL1LossBackward(grad_output, input, target, reduction_),
+  return ReturnOp(BuildMseLossBackward(grad_output, input, target, reduction_),
                   loctx);
 }
 
-std::string L1LossBackward::ToString() const {
+std::string MseLossBackward::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
      << ", reduction=" << xla::util::GetEnumValue<ReductionMode>(reduction_);

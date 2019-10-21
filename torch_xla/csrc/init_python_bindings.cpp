@@ -322,6 +322,12 @@ void InitXlaModuleBindings(py::module m) {
           StepMarker(device, devices, wait);
         },
         py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+  m.def("_xla_wait_device_ops",
+        [](const std::vector<std::string>& devices) {
+          NoGilSection nogil;
+          XLATensor::WaitDeviceOps(devices);
+        },
+        py::arg("devices"));
   m.def("_xla_counter_names", []() { return xla::metrics::GetCounterNames(); });
   m.def("_xla_counter_value", [](const std::string& name) -> py::object {
     xla::metrics::CounterData* data = xla::metrics::GetCounter(name);

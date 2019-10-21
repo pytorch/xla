@@ -8,10 +8,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class L1LossBackward : public Node {
+class MseLoss : public Node {
  public:
-  L1LossBackward(const Value& grad_output, const Value& input,
-                 const Value& target, ReductionMode reduction);
+  MseLoss(const Value& input, const Value& target, ReductionMode reduction);
 
   std::string ToString() const override;
 

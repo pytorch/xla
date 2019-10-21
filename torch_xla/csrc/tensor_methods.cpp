@@ -1,3 +1,5 @@
+#include <ATen/core/Reduction.h>
+
 #include <algorithm>
 #include <functional>
 
@@ -60,6 +62,8 @@
 #include "torch_xla/csrc/ops/max_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/mean.h"
 #include "torch_xla/csrc/ops/min_in_dim.h"
+#include "torch_xla/csrc/ops/mse_loss.h"
+#include "torch_xla/csrc/ops/mse_loss_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/nll_loss.h"
@@ -159,6 +163,18 @@ std::vector<xla::int64> GetExpandDimanesions(
     }
   }
   return dimensions;
+}
+
+ReductionMode GetXlaReductionMode(xla::int64 reduction) {
+  switch (reduction) {
+    case at::Reduction::Mean:
+      return ReductionMode::kMean;
+    case at::Reduction::None:
+      return ReductionMode::kNone;
+    case at::Reduction::Sum:
+      return ReductionMode::kSum;
+  }
+  XLA_ERROR() << "Unknown reduction mode: " << reduction;
 }
 
 // Resizes and / or checks whether a list is of the given size. The list is only
@@ -1192,7 +1208,8 @@ XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
                                      const XLATensor& input,
                                      const XLATensor& target,
                                      xla::int64 reduction) {
-  return tensor_ops::KlDivBackward(grad_output, input, target, reduction);
+  return tensor_ops::KlDivBackward(grad_output, input, target,
+                                   GetXlaReductionMode(reduction));
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
@@ -1211,7 +1228,7 @@ std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
 XLATensor XLATensor::l1_loss(const XLATensor& input, const XLATensor& target,
                              xla::int64 reduction) {
   return input.CreateFrom(ir::MakeNode<ir::ops::L1Loss>(
-      input.GetIrValue(), target.GetIrValue(), reduction));
+      input.GetIrValue(), target.GetIrValue(), GetXlaReductionMode(reduction)));
 }
 
 XLATensor XLATensor::l1_loss_backward(const XLATensor& grad_output,
@@ -1220,7 +1237,7 @@ XLATensor XLATensor::l1_loss_backward(const XLATensor& grad_output,
                                       xla::int64 reduction) {
   return input.CreateFrom(ir::MakeNode<ir::ops::L1LossBackward>(
       grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
-      reduction));
+      GetXlaReductionMode(reduction)));
 }
 
 XLATensor XLATensor::le(const XLATensor& input, at::Scalar other) {
@@ -1470,6 +1487,21 @@ std::tuple<XLATensor, XLATensor> XLATensor::min(const XLATensor& input,
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight) {
   return input.CreateFrom(
       ir::ops::Dot(input.GetIrValue(), weight.GetIrValue()));
+}
+
+XLATensor XLATensor::mse_loss(const XLATensor& input, const XLATensor& target,
+                              xla::int64 reduction) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::MseLoss>(
+      input.GetIrValue(), target.GetIrValue(), GetXlaReductionMode(reduction)));
+}
+
+XLATensor XLATensor::mse_loss_backward(const XLATensor& grad_output,
+                                       const XLATensor& input,
+                                       const XLATensor& target,
+                                       xla::int64 reduction) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::MseLossBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
+      GetXlaReductionMode(reduction)));
 }
 
 XLATensor XLATensor::mul(const XLATensor& input, const XLATensor& other) {
@@ -1924,7 +1956,8 @@ XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
 XLATensor XLATensor::smooth_l1_loss(const XLATensor& input,
                                     const XLATensor& target,
                                     xla::int64 reduction) {
-  return tensor_ops::SmoothL1Loss(input, target, reduction);
+  return tensor_ops::SmoothL1Loss(input, target,
+                                  GetXlaReductionMode(reduction));
 }
 
 XLATensor XLATensor::smooth_l1_loss_backward(const XLATensor& grad_output,
@@ -1932,7 +1965,7 @@ XLATensor XLATensor::smooth_l1_loss_backward(const XLATensor& grad_output,
                                              const XLATensor& target,
                                              xla::int64 reduction) {
   return tensor_ops::SmoothL1LossBackward(grad_output, input, target,
-                                          reduction);
+                                          GetXlaReductionMode(reduction));
 }
 
 XLATensor XLATensor::softmax(const XLATensor& input, xla::int64 dim,

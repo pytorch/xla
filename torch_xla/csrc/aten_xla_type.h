@@ -739,6 +739,14 @@ class AtenXlaType {
 
   static at::Tensor mm(const at::Tensor& self, const at::Tensor& mat2);
 
+  static at::Tensor mse_loss(const at::Tensor& self, const at::Tensor& target,
+                             int64_t reduction);
+
+  static at::Tensor mse_loss_backward(const at::Tensor& grad_output,
+                                      const at::Tensor& self,
+                                      const at::Tensor& target,
+                                      int64_t reduction);
+
   static at::Tensor mul(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor mul(const at::Tensor& self, at::Scalar other);

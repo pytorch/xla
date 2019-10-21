@@ -7,6 +7,7 @@
 source ~/.bashrc
 
 # Activate pytorch conda env at entry by default.
+# TODO: This should not be needed as it is already sourced from the .bashrc above.
 conda activate pytorch
 
 exec "$@"

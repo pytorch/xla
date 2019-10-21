@@ -432,6 +432,16 @@ def mark_step():
     ms.save_metrics()
 
 
+def wait_device_ops(devices=[]):
+  """Waits for all the async operations on the given devices to complete.
+
+  Args:
+    devices (string..., optional): The devices whose async ops need to be waited
+      for. If empty, all the local devices will be waited for.
+  """
+  torch_xla._XLAC._xla_wait_device_ops(devices=devices)
+
+
 def optimizer_step(optimizer, barrier=False, optimizer_args={}):
   """Run the provided optimizer step and issue the XLA device step computation.
 

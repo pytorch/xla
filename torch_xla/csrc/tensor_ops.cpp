@@ -1,7 +1,5 @@
 #include "torch_xla/csrc/tensor_ops.h"
 
-#include <ATen/core/Reduction.h>
-
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
@@ -61,7 +59,7 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
 }
 
 XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
-                        const XLATensor& target, xla::int64 reduction) {
+                        const XLATensor& target, ReductionMode reduction) {
   auto input_shape_ref = input.shape();
   XLATensor expanded_grad_output = XLATensor::expand(
       grad_output,
@@ -71,7 +69,7 @@ XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
       XLATensor::neg(XLATensor::mul(target, expanded_grad_output)),
       XLATensor::full_like(input, 0, input.GetDevice(), c10::nullopt));
   double input_elem_count = xla::ShapeUtil::ElementsIn(input_shape_ref.get());
-  return reduction == at::Reduction::Mean
+  return reduction == ReductionMode::kMean
              ? XLATensor::div(grad_input, input_elem_count)
              : grad_input;
 }
@@ -88,7 +86,7 @@ XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal) {
 }
 
 XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
-                       xla::int64 reduction) {
+                       ReductionMode reduction) {
   auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
   const XLATensor& broadcasted_input = broadcasted_inputs[0];
@@ -104,22 +102,23 @@ XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
   auto all_dimensions =
       xla::util::Iota<xla::int64>((*broadcasted_input.shape()).rank());
   switch (reduction) {
-    case at::Reduction::None:
+    case ReductionMode::kNone:
       return elementwise_loss;
-    case at::Reduction::Mean:
+    case ReductionMode::kMean:
       return XLATensor::mean(elementwise_loss, all_dimensions, false,
                              broadcasted_input.dtype());
-    case at::Reduction::Sum:
+    case ReductionMode::kSum:
       return XLATensor::sum(elementwise_loss, all_dimensions, false,
                             broadcasted_input.dtype());
     default:
-      XLA_ERROR() << "Invalid reduction type: " << reduction;
+      XLA_ERROR() << "Invalid reduction type: "
+                  << xla::util::GetEnumValue<ReductionMode>(reduction);
   }
 }
 
 XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
                                const XLATensor& input, const XLATensor& target,
-                               xla::int64 reduction) {
+                               ReductionMode reduction) {
   auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
   const XLATensor& broadcasted_input = broadcasted_inputs[0];
@@ -139,16 +138,17 @@ XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
   XLATensor elementwise_loss_backward = XLATensor::where(
       XLATensor::lt(abs_diff, one), grad_squared_loss, grad_l1_loss);
   switch (reduction) {
-    case at::Reduction::None:
-    case at::Reduction::Sum:
+    case ReductionMode::kNone:
+    case ReductionMode::kSum:
       return XLATensor::mul(elementwise_loss_backward, grad_output);
-    case at::Reduction::Mean: {
+    case ReductionMode::kMean: {
       double grad_scale = xla::ShapeUtil::ElementsIn(broadcasted_input.shape());
       return XLATensor::mul(
           XLATensor::div(elementwise_loss_backward, grad_scale), grad_output);
     }
     default:
-      XLA_ERROR() << "Invalid reduction type: " << reduction;
+      XLA_ERROR() << "Invalid reduction type: "
+                  << xla::util::GetEnumValue<ReductionMode>(reduction);
   }
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/tensor.h"
 
 // Certain tensor operations can be expressed in terms of other tensor
@@ -13,16 +14,16 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
                 c10::optional<xla::int64> dim);
 
 XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
-                        const XLATensor& target, xla::int64 reduction);
+                        const XLATensor& target, ReductionMode reduction);
 
 XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal);
 
 XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
-                       xla::int64 reduction);
+                       ReductionMode reduction);
 
 XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
                                const XLATensor& input, const XLATensor& target,
-                               xla::int64 reduction);
+                               ReductionMode reduction);
 
 XLATensor Softplus(const XLATensor& input, at::Scalar beta,
                    at::Scalar threshold);
