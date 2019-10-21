@@ -57,6 +57,8 @@ std::string GetTensorTextGraph(at::Tensor tensor);
 
 std::string GetTensorDotGraph(at::Tensor tensor);
 
+std::string GetTensorHloGraph(at::Tensor tensor);
+
 ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device);
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
