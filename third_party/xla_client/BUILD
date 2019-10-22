@@ -63,6 +63,7 @@ tf_cc_shared_object(
         "//tensorflow/compiler/xla/xla_client:tf_exported_symbols.lds",
         "//tensorflow/compiler/xla/xla_client:tf_version_script.lds",
         "//tensorflow/core:lib",
+        "//tensorflow/core/platform/cloud:gcs_file_system",
         "@com_google_absl//absl/strings",
     ],
 )
