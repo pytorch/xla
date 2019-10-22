@@ -24,7 +24,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.data_parallel as dp
@@ -215,7 +214,7 @@ def train_cifar():
     return accuracy
 
   accuracy = 0.0
-  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  writer = test_utils.get_summary_writer(FLAGS.logdir)
   num_devices = len(
       xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
   num_training_steps_per_epoch = train_dataset_len // (

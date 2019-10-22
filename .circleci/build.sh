@@ -33,9 +33,6 @@ pip install ninja
 # Install the Lark parser required for the XLA->ATEN Type code generation.
 pip install lark-parser
 
-# Install tensorboard since it's used by some test files.
-pip install tensorboard
-
 # Install Pytorch without MKLDNN
 xla/scripts/apply_patches.sh
 python setup.py build develop

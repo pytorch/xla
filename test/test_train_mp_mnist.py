@@ -103,8 +103,8 @@ def train_mnist():
   device = xm.xla_device()
   model = MNIST().to(device)
   writer = None
-  if FLAGS.logdir and xm.is_master_ordinal():
-    writer = SummaryWriter(log_dir=FLAGS.logdir)
+  if xm.is_master_ordinal():
+    writer = test_utils.get_summary_writer(FLAGS.logdir)
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=FLAGS.momentum)
   loss_fn = nn.NLLLoss()
 

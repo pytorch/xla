@@ -37,6 +37,21 @@ def close_summary_writer(summary_writer):
     summary_writer.close()
 
 
+def get_summary_writer(logdir):
+  """Initialize a Tensorboard SummaryWriter.
+
+  Args:
+    logdir: Str. File location where logs will be written or None. If None,
+        no writer is created.
+  
+  Returns:
+    Instance of `torch.utils.tensorboard.SummaryWriter`.
+  """
+  if logdir:
+    from torch.utils.tensorboard import SummaryWriter
+    return SummaryWriter(log_dir=logdir)
+
+
 def print_training_update(device, step_num, loss, rate, global_rate):
   """Prints the training metrics at a given step.
 
