@@ -733,9 +733,13 @@ TEST_F(AtenXlaTensorTest, TestSymEig) {
           auto xla_b = torch::symeig(xla_a, eigenvectors, upper);
           AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/3e-2,
                    /*atol=*/1e-2);
-          AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
-                   /*rtol=*/3e-2,
-                   /*atol=*/1e-2);
+          if (eigenvectors) {
+            AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
+                     /*rtol=*/3e-2,
+                     /*atol=*/1e-2);
+          } else {
+            EXPECT_EQ(std::get<1>(b).sizes(), std::get<1>(xla_b).sizes());
+          }
         });
       }
     }
