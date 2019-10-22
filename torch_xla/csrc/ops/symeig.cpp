@@ -20,11 +20,9 @@ std::vector<xla::XlaOp> LowerSymEig(const xla::XlaOp& input, bool eigenvectors,
   xla::XlaOp v = self_adj_eig_result.v;
   xla::XlaOp w = self_adj_eig_result.w;
   if (!eigenvectors) {
-    v = xla::Zeros(input.builder(), xla::ShapeUtil::MakeShape(
-                                        input.shape().element_type(), {0}));
-  }
-  if (!eigenvectors) {
-    v = xla::Zeros(input.builder(), XlaHelpers::ShapeOfXlaOp(v));
+    v = xla::Zeros(input.builder(),
+                   xla::ShapeUtil::MakeShape(
+                       XlaHelpers::ShapeOfXlaOp(input).element_type(), {0}));
   }
   return {w, v};
 }
@@ -35,8 +33,14 @@ xla::Shape NodeOutputShape(const Value& input, bool eigenvectors, bool lower) {
   // W is ..., M
   xla::Shape wshape(input_shape);
   wshape.DeleteDimension(input_shape.rank() - 1);
-  // V is ..., M, M
-  xla::Shape vshape(input_shape);
+  xla::Shape vshape;
+  if (eigenvectors) {
+    // V is ..., M, M
+    vshape = input_shape;
+  } else {
+    // V is 0
+    vshape = xla::ShapeUtil::MakeShape(input_shape.element_type(), {0});
+  }
   return xla::ShapeUtil::MakeTupleShape({wshape, vshape});
 }
 
