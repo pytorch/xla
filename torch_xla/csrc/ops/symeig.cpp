@@ -20,6 +20,10 @@ std::vector<xla::XlaOp> LowerSymEig(const xla::XlaOp& input, bool eigenvectors,
   xla::XlaOp v = self_adj_eig_result.v;
   xla::XlaOp w = self_adj_eig_result.w;
   if (!eigenvectors) {
+    v = xla::Zeros(input.builder(), xla::ShapeUtil::MakeShape(
+                                        input.shape().element_type(), {0}));
+  }
+  if (!eigenvectors) {
     v = xla::Zeros(input.builder(), XlaHelpers::ShapeOfXlaOp(v));
   }
   return {w, v};
