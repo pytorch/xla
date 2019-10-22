@@ -17,7 +17,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms
 import torch_xla
 import torch_xla.debug.metrics as met
