@@ -1124,6 +1124,13 @@ class AtenXlaType {
 
   static at::Tensor& unsqueeze_(at::Tensor& self, int64_t dim);
 
+  static at::Tensor upsample_nearest2d(const at::Tensor& self,
+                                       at::IntArrayRef output_size);
+
+  static at::Tensor upsample_nearest2d_backward(const at::Tensor& grad_output,
+                                                at::IntArrayRef output_size,
+                                                at::IntArrayRef input_size);
+
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 
   static at::Tensor view_as(const at::Tensor& self, const at::Tensor& other);

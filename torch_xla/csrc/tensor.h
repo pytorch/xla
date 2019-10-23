@@ -926,6 +926,13 @@ class XLATensor {
   // In-place version of the method above.
   static void unsqueeze_(XLATensor& input, xla::int64 dim);
 
+  static XLATensor upsample_nearest2d(const XLATensor& input,
+                                      std::vector<xla::int64> output_size);
+
+  static XLATensor upsample_nearest2d_backward(
+      const XLATensor& grad_output, std::vector<xla::int64> output_size,
+      std::vector<xla::int64> input_size);
+
   // Like reshape, but it returns a view into the original tensor.
   static XLATensor view(
       const XLATensor& input,
