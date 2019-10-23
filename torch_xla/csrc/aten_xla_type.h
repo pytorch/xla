@@ -80,8 +80,6 @@ class AtenXlaType {
   static at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
                                bool non_blocking);
 
-  static at::Tensor _dim_arange(const at::Tensor& like, int64_t dim);
-
   static at::Tensor& _index_put_impl_(at::Tensor& self, at::TensorList indices,
                                       const at::Tensor& values, bool accumulate,
                                       bool unsafe);
@@ -160,6 +158,9 @@ class AtenXlaType {
 
   static at::Tensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
                            const at::TensorOptions& options);
+
+  static at::Tensor& arange_out(at::Tensor& out, at::Scalar start,
+                                at::Scalar end, at::Scalar step);
 
   static at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
                            bool keepdim);

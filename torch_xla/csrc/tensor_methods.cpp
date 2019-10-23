@@ -484,6 +484,11 @@ XLATensor XLATensor::arange(at::Scalar start, at::Scalar end, at::Scalar step,
                 scalar_type);
 }
 
+void XLATensor::arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
+                           at::Scalar step, at::ScalarType scalar_type) {
+  out.SetIrValue(ir::ops::ARange(start, end, step, scalar_type));
+}
+
 XLATensor XLATensor::argmax(const XLATensor& input, xla::int64 dim,
                             bool keepdim) {
   xla::int64 canonical_dim =

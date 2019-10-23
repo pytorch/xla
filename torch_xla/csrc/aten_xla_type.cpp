@@ -292,10 +292,6 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   return dst;
 }
 
-at::Tensor AtenXlaType::_dim_arange(const at::Tensor& like, int64_t dim) {
-  return arange(like.size(dim), like.options().dtype(at::kLong));
-}
-
 at::Tensor& AtenXlaType::_index_put_impl_(at::Tensor& self,
                                           at::TensorList indices,
                                           const at::Tensor& values,
@@ -489,6 +485,13 @@ at::Tensor AtenXlaType::arange(at::Scalar start, at::Scalar end,
   return bridge::AtenFromXlaTensor(
       XLATensor::arange(start, end, step, xla_options.get_device(),
                         xla_options.get_scalar_type()));
+}
+
+at::Tensor& AtenXlaType::arange_out(at::Tensor& out, at::Scalar start,
+                                    at::Scalar end, at::Scalar step) {
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::arange_out(out_tensor, start, end, step, out.scalar_type());
+  return out;
 }
 
 at::Tensor AtenXlaType::argmax(const at::Tensor& self,
