@@ -2590,6 +2590,41 @@ TEST_F(AtenXlaTensorTest, TestBilinear) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestUpsampleNearest2D) {
+  int batch_size = 2;
+  int h = 5;
+  int w = 5;
+  int uh = 8;
+  int uw = 8;
+  int chans = 2;
+  torch::Tensor input = torch::rand({batch_size, chans, h, w},
+                                    torch::TensorOptions(torch::kFloat));
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor result = torch::upsample_nearest2d(input, {uh, uw});
+    torch::Tensor xla_result = torch::upsample_nearest2d(xla_input, {uh, uw});
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackward) {
+  int batch_size = 2;
+  int h = 5;
+  int w = 5;
+  int uh = 8;
+  int uw = 8;
+  int chans = 2;
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::upsample_nearest2d(inputs[0], {uh, uw});
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::rand({batch_size, chans, h, w},
+                     torch::TensorOptions(torch::kFloat).requires_grad(true))},
+        device, testfn);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestAddCMul) {
   torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
