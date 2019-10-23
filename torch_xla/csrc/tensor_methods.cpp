@@ -98,6 +98,8 @@
 #include "torch_xla/csrc/ops/tril.h"
 #include "torch_xla/csrc/ops/triu.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
+#include "torch_xla/csrc/ops/upsample_nearest2d.h"
+#include "torch_xla/csrc/ops/upsample_nearest2d_backward.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_ops.h"
@@ -2323,6 +2325,19 @@ void XLATensor::unsqueeze_(XLATensor& input, xla::int64 dim) {
       dim, input.shape().get().rank() + 1);
   input.SetIrValue(
       ir::MakeNode<ir::ops::Unsqueeze>(input.GetIrValue(), squeeze_dim));
+}
+
+XLATensor XLATensor::upsample_nearest2d(const XLATensor& input,
+                                        std::vector<xla::int64> output_size) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::UpsampleNearest>(
+      input.GetIrValue(), std::move(output_size)));
+}
+
+XLATensor XLATensor::upsample_nearest2d_backward(
+    const XLATensor& grad_output, std::vector<xla::int64> output_size,
+    std::vector<xla::int64> input_size) {
+  return grad_output.CreateFrom(ir::MakeNode<ir::ops::UpsampleNearestBackward>(
+      grad_output.GetIrValue(), std::move(output_size), std::move(input_size)));
 }
 
 XLATensor XLATensor::view(
