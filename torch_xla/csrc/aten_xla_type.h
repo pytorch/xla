@@ -65,6 +65,12 @@ class AtenXlaType {
 
   static at::Tensor& bitwise_not_(at::Tensor& self);
 
+  static at::Tensor& bitwise_xor_out(at::Tensor& out, const at::Tensor& self,
+                                     at::Scalar other);
+
+  static at::Tensor& bitwise_xor_out(at::Tensor& out, const at::Tensor& self,
+                                     const at::Tensor& other);
+
   static at::Tensor _cast_Byte(const at::Tensor& self, bool non_blocking);
 
   static at::Tensor _cast_Char(const at::Tensor& self, bool non_blocking);

@@ -283,6 +283,12 @@ class XLATensor {
   static XLATensor bitwise_not(const XLATensor& input);
   static void bitwise_not_(XLATensor& input);
 
+  static void bitwise_xor_out(XLATensor& out, const XLATensor& input,
+                              at::Scalar other);
+
+  static void bitwise_xor_out(XLATensor& out, const XLATensor& input,
+                              const XLATensor& other);
+
   // Batch matrix multiplication. Both tensors must be 3D, the batch size must
   // match and the remaining two dimensions must be compatible for matrix
   // multiplication.

@@ -208,17 +208,6 @@ at::Tensor AtenXlaType::__xor__(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor AtenXlaType::bitwise_not(const at::Tensor& self) {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::bitwise_not(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor& AtenXlaType::bitwise_not_(at::Tensor& self) {
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::bitwise_not_(self_tensor);
-  return self;
-}
-
 at::Tensor AtenXlaType::_adaptive_avg_pool2d(const at::Tensor& self,
                                              at::IntArrayRef output_size) {
   auto output_size_list = XlaHelpers::I64List(output_size);
@@ -241,6 +230,33 @@ at::Tensor AtenXlaType::_adaptive_avg_pool2d_backward(
   }
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::bitwise_not(const at::Tensor& self) {
+  return bridge::AtenFromXlaTensor(
+      XLATensor::bitwise_not(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::bitwise_not_(at::Tensor& self) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::bitwise_not_(self_tensor);
+  return self;
+}
+
+at::Tensor& AtenXlaType::bitwise_xor_out(at::Tensor& out,
+                                         const at::Tensor& self,
+                                         at::Scalar other) {
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::bitwise_xor_out(out_tensor, bridge::GetXlaTensor(self), other);
+  return out;
+}
+at::Tensor& AtenXlaType::bitwise_xor_out(at::Tensor& out,
+                                         const at::Tensor& self,
+                                         const at::Tensor& other) {
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::bitwise_xor_out(out_tensor, bridge::GetXlaTensor(self),
+                             bridge::GetXlaTensor(other));
+  return out;
 }
 
 at::Tensor AtenXlaType::_cast_Byte(const at::Tensor& self,

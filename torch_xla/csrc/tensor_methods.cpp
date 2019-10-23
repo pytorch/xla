@@ -359,6 +359,21 @@ XLATensor XLATensor::__xor__(const XLATensor& input, const XLATensor& other) {
       ir::ops::BitwiseXor(input.GetIrValue(), other.GetIrValue()));
 }
 
+void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,
+                                at::Scalar other) {
+  CheckIsIntegralOrPred(input.shape(), "__xor__");
+  ir::Value constant =
+      GetIrValueForScalar(other, input.shape(), input.GetDevice());
+  return out.SetIrValue(ir::ops::BitwiseXor(input.GetIrValue(), constant));
+}
+
+void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,
+                                const XLATensor& other) {
+  CheckIsIntegralOrPred(input.shape(), "__xor__");
+  return out.SetIrValue(
+      ir::ops::BitwiseXor(input.GetIrValue(), other.GetIrValue()));
+}
+
 XLATensor XLATensor::_adaptive_avg_pool2d(const XLATensor& input,
                                           std::vector<xla::int64> output_size) {
   return input.CreateFrom(ir::MakeNode<ir::ops::AdaptiveAvgPool2d>(
