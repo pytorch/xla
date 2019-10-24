@@ -173,6 +173,13 @@ std::vector<T> ToVector(const S& input) {
 }
 
 template <typename T>
+typename T::mapped_type FindOr(const T& cont, const typename T::key_type& key,
+                               const typename T::mapped_type& defval) {
+  auto it = cont.find(key);
+  return it != cont.end() ? it->second : defval;
+}
+
+template <typename T>
 typename std::underlying_type<T>::type GetEnumValue(T value) {
   return static_cast<typename std::underlying_type<T>::type>(value);
 }
