@@ -4,6 +4,7 @@
 #include <map>
 #include <sstream>
 
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/platform/default/logging.h"
 #include "tensorflow/core/platform/macros.h"
 
@@ -73,10 +74,9 @@ void MetricsArena::RegisterMetric(const string& name, MetricReprFn repr_fn,
                                   std::shared_ptr<MetricData>* data) {
   std::lock_guard<std::mutex> lock(lock_);
   if (*data == nullptr) {
-    std::shared_ptr<MetricData> new_data =
-        std::make_shared<MetricData>(std::move(repr_fn), max_samples);
-    auto it = metrics_.emplace(name, new_data).first;
-    *data = it->second;
+    *data = xla::util::MapInsert(&metrics_, name, [&]() {
+      return std::make_shared<MetricData>(std::move(repr_fn), max_samples);
+    });
   }
 }
 
@@ -84,9 +84,8 @@ void MetricsArena::RegisterCounter(const string& name,
                                    std::shared_ptr<CounterData>* data) {
   std::lock_guard<std::mutex> lock(lock_);
   if (*data == nullptr) {
-    std::shared_ptr<CounterData> new_data = std::make_shared<CounterData>();
-    auto it = counters_.emplace(name, new_data).first;
-    *data = it->second;
+    *data = xla::util::MapInsert(
+        &counters_, name, []() { return std::make_shared<CounterData>(); });
   }
 }
 
