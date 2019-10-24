@@ -37,7 +37,22 @@ void DumpDifferences(at::Tensor tensor1, at::Tensor tensor2) {
   }
 }
 
+std::unordered_set<std::string>* CreateIgnoredCounters() {
+  std::unordered_set<std::string>* icounters =
+      new std::unordered_set<std::string>();
+  // Add below the counters whose name need to be ignored when doing
+  // is-any-counter-changed assertins.
+  icounters->insert("aten::rand");
+  return icounters;
+}
+
 }  // namespace
+
+const std::unordered_set<std::string>* GetIgnoredCounters() {
+  static const std::unordered_set<std::string>* icounters =
+      CreateIgnoredCounters();
+  return icounters;
+}
 
 at::Tensor ToCpuTensor(const at::Tensor& t) {
   // t.to() implicitly triggers a sync if t.device=torch::kXLA.
