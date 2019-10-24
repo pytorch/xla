@@ -86,6 +86,8 @@ TEST_F(AtenXlaTensorTest, TestCastByte) {
     torch::Tensor xla_b = torch::_cast_Byte(xla_a);
     AllEqual(b, xla_b);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestCastShort) {
@@ -199,6 +201,8 @@ TEST_F(AtenXlaTensorTest, TestAddZeroSizeDim) {
     torch::Tensor xla_c = torch::add(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestSub) {
@@ -2258,6 +2262,8 @@ TEST_F(AtenXlaTensorTest, TestARange) {
         0.0, 100.0, 0.5, torch::TensorOptions(torch::kFloat).device(device));
     AllClose(a, xla_a);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestBartlettWindow) {
