@@ -179,6 +179,17 @@ typename T::mapped_type FindOr(const T& cont, const typename T::key_type& key,
   return it != cont.end() ? it->second : defval;
 }
 
+template <typename T, typename G>
+const typename T::mapped_type& MapInsert(T* cont,
+                                         const typename T::key_type& key,
+                                         const G& gen) {
+  auto it = cont->find(key);
+  if (it == cont->end()) {
+    it = cont->emplace(key, gen()).first;
+  }
+  return it->second;
+}
+
 template <typename T>
 typename std::underlying_type<T>::type GetEnumValue(T value) {
   return static_cast<typename std::underlying_type<T>::type>(value);
