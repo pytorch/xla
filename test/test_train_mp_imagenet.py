@@ -38,13 +38,11 @@ FLAGS = args_parse.parse_common_options(
 
 import os
 import schedulers
-from statistics import mean
 import test_utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
@@ -161,8 +159,8 @@ def train_imagenet():
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
   writer = None
-  if FLAGS.logdir and xm.is_master_ordinal():
-    writer = SummaryWriter(log_dir=FLAGS.logdir)
+  if xm.is_master_ordinal():
+    writer = test_utils.get_summary_writer(FLAGS.logdir)
   optimizer = optim.SGD(
       model.parameters(),
       lr=FLAGS.lr,
@@ -214,8 +212,7 @@ def train_imagenet():
   for epoch in range(1, FLAGS.num_epochs + 1):
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
-    if xm.is_master_ordinal():
-      print("Finished training epoch {}".format(epoch))
+    xm.master_print("Finished training epoch {}".format(epoch))
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
@@ -224,6 +221,7 @@ def train_imagenet():
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
+  test_utils.close_summary_writer(writer)
   return accuracy
 
 

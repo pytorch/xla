@@ -3040,6 +3040,29 @@ at::Tensor& AtenXlaType::unsqueeze_(at::Tensor& self, int64_t dim) {
   return self;
 }
 
+at::Tensor AtenXlaType::upsample_nearest2d(const at::Tensor& self,
+                                           at::IntArrayRef output_size) {
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  if (self_tensor.GetDevice().hw_type != DeviceType::TPU) {
+    return AtenXlaTypeDefault::upsample_nearest2d(self, output_size);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
+      self_tensor, xla::util::ToVector<xla::int64>(output_size)));
+}
+
+at::Tensor AtenXlaType::upsample_nearest2d_backward(
+    const at::Tensor& grad_output, at::IntArrayRef output_size,
+    at::IntArrayRef input_size) {
+  XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
+  if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU) {
+    return AtenXlaTypeDefault::upsample_nearest2d_backward(
+        grad_output, output_size, input_size);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d_backward(
+      grad_output_tensor, xla::util::ToVector<xla::int64>(output_size),
+      xla::util::ToVector<xla::int64>(input_size)));
+}
+
 at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntArrayRef size) {
   return bridge::AtenFromXlaTensor(
       XLATensor::view(bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
