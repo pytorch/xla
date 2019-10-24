@@ -158,7 +158,7 @@ post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalabl
 
 # Running on Colab
 
-You can also run your models on [Colab](https://github.com/pytorch/xla/tree/master/contrib/colab). However, do note that performance may be severely impacted when running on Colab compared to creating your own VM and TPU pair and there can be some bugs on Colab environment that may have already been fixed.
+You can also run your models on [Colab](https://github.com/pytorch/xla/tree/master/contrib/colab). However, do note that performance may at times be severely impacted when running on Colab compared to creating your own VM and TPU pair.
 
 ---
 
