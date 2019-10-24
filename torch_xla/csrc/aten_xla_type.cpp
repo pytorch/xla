@@ -208,15 +208,12 @@ at::Tensor AtenXlaType::__xor__(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor AtenXlaType::bitwise_not(const at::Tensor& self) {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::bitwise_not(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor& AtenXlaType::bitwise_not_(at::Tensor& self) {
+at::Tensor& AtenXlaType::bitwise_not_out(at::Tensor& out,
+                                         const at::Tensor& self) {
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::bitwise_not_(self_tensor);
-  return self;
+  XLATensor::bitwise_not_out(out_tensor, self_tensor);
+  return out;
 }
 
 at::Tensor AtenXlaType::_adaptive_avg_pool2d(const at::Tensor& self,
