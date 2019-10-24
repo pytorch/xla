@@ -2260,6 +2260,27 @@ TEST_F(AtenXlaTensorTest, TestARange) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestARangeOut) {
+  torch::Tensor a = torch::randn({4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::arange_out(a, 0, 4, 1);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::arange_out(xla_a, 0, 4, 1);
+    AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestDimARange) {
+  torch::Tensor like = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor a = torch::_dim_arange(like, 1);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_like =
+        torch::rand({2, 2}, torch::TensorOptions(torch::kFloat).device(device));
+    torch::Tensor xla_a = torch::_dim_arange(xla_like, 1);
+    AllClose(a, xla_a);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestBartlettWindow) {
   int window_length = 10;
   for (bool periodic : {false, true}) {

@@ -235,6 +235,9 @@ class XLATensor {
   static XLATensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
                           const Device& device, at::ScalarType scalar_type);
 
+  static void arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
+                         at::Scalar step, at::ScalarType scalar_type);
+
   static XLATensor argmax(const XLATensor& input, xla::int64 dim, bool keepdim);
   static XLATensor argmax(const XLATensor& input);
 
