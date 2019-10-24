@@ -1,3 +1,9 @@
+DEFAULT_FLOATING_PRECISION = 1e-3
+
+torch_test_precisions = {
+    # test_name : floating_precision,
+}
+
 allowed_torch_tests = {
     ## test_torch.py
     'test_addcdiv',
