@@ -243,42 +243,6 @@ at::Tensor AtenXlaType::_adaptive_avg_pool2d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
 }
 
-at::Tensor AtenXlaType::_cast_Byte(const at::Tensor& self,
-                                   bool /* non_blocking */) {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::cast(bridge::GetXlaTensor(self), at::ScalarType::Byte));
-}
-
-at::Tensor AtenXlaType::_cast_Char(const at::Tensor& self,
-                                   bool /* non_blocking */) {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::cast(bridge::GetXlaTensor(self), at::ScalarType::Char));
-}
-
-at::Tensor AtenXlaType::_cast_Float(const at::Tensor& self,
-                                    bool /* non_blocking */) {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::cast(bridge::GetXlaTensor(self), at::ScalarType::Float));
-}
-
-at::Tensor AtenXlaType::_cast_Int(const at::Tensor& self,
-                                  bool /* non_blocking */) {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::cast(bridge::GetXlaTensor(self), at::ScalarType::Int));
-}
-
-at::Tensor AtenXlaType::_cast_Long(const at::Tensor& self,
-                                   bool /* non_blocking */) {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::cast(bridge::GetXlaTensor(self), at::ScalarType::Long));
-}
-
-at::Tensor AtenXlaType::_cast_Short(const at::Tensor& self,
-                                    bool /* non_blocking */) {
-  return bridge::AtenFromXlaTensor(
-      XLATensor::cast(bridge::GetXlaTensor(self), at::ScalarType::Short));
-}
-
 at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
                                    const at::Tensor& dst, bool non_blocking) {
   // Do not mark the tensor creation as writeable to not discard the XLA tensor
