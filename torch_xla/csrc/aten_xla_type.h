@@ -1125,6 +1125,15 @@ class AtenXlaType {
 
   static at::Tensor& unsqueeze_(at::Tensor& self, int64_t dim);
 
+  static at::Tensor upsample_bilinear2d(const at::Tensor& self,
+                                        at::IntArrayRef output_size,
+                                        bool align_corners);
+
+  static at::Tensor upsample_bilinear2d_backward(const at::Tensor& grad_output,
+                                                 at::IntArrayRef output_size,
+                                                 at::IntArrayRef input_size,
+                                                 bool align_corners);
+
   static at::Tensor upsample_nearest2d(const at::Tensor& self,
                                        at::IntArrayRef output_size);
 

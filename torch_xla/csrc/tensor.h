@@ -929,6 +929,14 @@ class XLATensor {
   // In-place version of the method above.
   static void unsqueeze_(XLATensor& input, xla::int64 dim);
 
+  static XLATensor upsample_bilinear2d(const XLATensor& input,
+                                       std::vector<xla::int64> output_size,
+                                       bool align_corners);
+
+  static XLATensor upsample_bilinear2d_backward(
+      const XLATensor& grad_output, std::vector<xla::int64> output_size,
+      std::vector<xla::int64> input_size, bool align_corners);
+
   static XLATensor upsample_nearest2d(const XLATensor& input,
                                       std::vector<xla::int64> output_size);
 
