@@ -61,9 +61,7 @@ class AtenXlaType {
   static at::Tensor _adaptive_avg_pool2d_backward(const at::Tensor& grad_output,
                                                   const at::Tensor& self);
 
-  static at::Tensor bitwise_not(const at::Tensor& self);
-
-  static at::Tensor& bitwise_not_(at::Tensor& self);
+  static at::Tensor& bitwise_not_out(at::Tensor& out, const at::Tensor& self);
 
   static at::Tensor _cast_Byte(const at::Tensor& self, bool non_blocking);
 
