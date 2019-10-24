@@ -102,8 +102,6 @@ _FN_OUT = {
         FuncOpts(
             outfn_template=ArgTemplate(
                 'AtenXlaType::arange($1, $2, $3, $0.options())')),
-    'bitwise_not_out':
-        FuncOpts(),
     'clamp_out':
         FuncOpts(),
     'div_out':

@@ -2165,6 +2165,8 @@ TEST_F(AtenXlaTensorTest, TestBitwiseNot) {
       AllEqual(b, xla_b);
     }
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseNotInPlace) {
@@ -2181,6 +2183,8 @@ TEST_F(AtenXlaTensorTest, TestBitwiseNotInPlace) {
       AllEqual(a, xla_a);
     }
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestSign) {
