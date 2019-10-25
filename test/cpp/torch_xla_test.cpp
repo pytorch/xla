@@ -3,6 +3,7 @@
 #include <ATen/ATen.h>
 
 #include "absl/memory/memory.h"
+#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "torch_xla/csrc/aten_xla_type.h"
 #include "torch_xla/csrc/helpers.h"
 
@@ -16,11 +17,18 @@ void XlaTest::SetUp() {
 
 void XlaTest::TearDown() {}
 
-bool XlaTest::CounterChanged(
+void XlaTest::ExpectCounterNotChanged(
     const std::string& counter_regex,
     const std::unordered_set<std::string>* ignore_set) {
   MakeEndSnapshot();
-  return start_msnap_->CounterChanged(counter_regex, *end_msnap_, ignore_set);
+  auto changed =
+      start_msnap_->CounterChanged(counter_regex, *end_msnap_, ignore_set);
+  for (auto& change_counter : changed) {
+    TF_LOG(INFO) << "Counter '" << change_counter.name
+                 << "' changed: " << change_counter.before << " -> "
+                 << change_counter.after;
+  }
+  EXPECT_TRUE(changed.empty());
 }
 
 void XlaTest::MakeEndSnapshot() {
