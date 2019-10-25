@@ -13,11 +13,17 @@ namespace cpp_test {
 
 class MetricsSnapshot {
  public:
+  struct ChangedCounter {
+    std::string name;
+    xla::int64 before = 0;
+    xla::int64 after = 0;
+  };
+
   MetricsSnapshot();
 
-  bool CounterChanged(const std::string& counter_regex,
-                      const MetricsSnapshot& after,
-                      const std::unordered_set<std::string>* ignore_set) const;
+  std::vector<ChangedCounter> CounterChanged(
+      const std::string& counter_regex, const MetricsSnapshot& after,
+      const std::unordered_set<std::string>* ignore_set) const;
 
  private:
   struct MetricSamples {
