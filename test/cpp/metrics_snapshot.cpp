@@ -22,9 +22,10 @@ MetricsSnapshot::MetricsSnapshot() {
   }
 }
 
-bool MetricsSnapshot::CounterChanged(
+std::vector<MetricsSnapshot::ChangedCounter> MetricsSnapshot::CounterChanged(
     const std::string& counter_regex, const MetricsSnapshot& after,
     const std::unordered_set<std::string>* ignore_set) const {
+  std::vector<ChangedCounter> changed;
   std::regex cregex(counter_regex);
   for (auto& name_counter : after.counters_map_) {
     std::smatch match;
@@ -33,14 +34,12 @@ bool MetricsSnapshot::CounterChanged(
       xla::int64 start_value =
           xla::util::FindOr(counters_map_, name_counter.first, 0);
       if (name_counter.second != start_value) {
-        TF_LOG(INFO) << "Counter '" << name_counter.first
-                     << "' changed: " << start_value << " -> "
-                     << name_counter.second;
-        return true;
+        changed.push_back(
+            {name_counter.first, start_value, name_counter.second});
       }
     }
   }
-  return false;
+  return changed;
 }
 
 }  // namespace cpp_test

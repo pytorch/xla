@@ -17,8 +17,9 @@ class XlaTest : public ::testing::Test {
 
   static void CommonSetup();
 
-  bool CounterChanged(const std::string& counter_regex,
-                      const std::unordered_set<std::string>* ignore_set);
+  void ExpectCounterNotChanged(
+      const std::string& counter_regex,
+      const std::unordered_set<std::string>* ignore_set);
 
  private:
   void MakeEndSnapshot();
