@@ -162,12 +162,6 @@ class AtenXlaType {
   static at::Tensor& arange_out(at::Tensor& out, at::Scalar start,
                                 at::Scalar end, at::Scalar step);
 
-  static at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
-                           bool keepdim);
-
-  static at::Tensor argmin(const at::Tensor& self, c10::optional<int64_t> dim,
-                           bool keepdim);
-
   static at::Tensor argsort(const at::Tensor& self, int64_t dim,
                             bool descending);
 
@@ -685,6 +679,8 @@ class AtenXlaType {
 
   static std::tuple<at::Tensor, at::Tensor> max(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
+
+  static std::tuple<at::Tensor&, at::Tensor&> max_out(at::Tensor& max, at::Tensor& max_values, const at::Tensor& self, int64_t dim, bool keepdim);
 
   static at::Tensor max_pool1d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,

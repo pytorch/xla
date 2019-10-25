@@ -494,22 +494,6 @@ at::Tensor& AtenXlaType::arange_out(at::Tensor& out, at::Scalar start,
   return out;
 }
 
-at::Tensor AtenXlaType::argmax(const at::Tensor& self,
-                               c10::optional<int64_t> dim, bool keepdim) {
-  return dim ? bridge::AtenFromXlaTensor(
-                   XLATensor::argmax(bridge::GetXlaTensor(self), *dim, keepdim))
-             : bridge::AtenFromXlaTensor(
-                   XLATensor::argmax(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor AtenXlaType::argmin(const at::Tensor& self,
-                               c10::optional<int64_t> dim, bool keepdim) {
-  return dim ? bridge::AtenFromXlaTensor(
-                   XLATensor::argmin(bridge::GetXlaTensor(self), *dim, keepdim))
-             : bridge::AtenFromXlaTensor(
-                   XLATensor::argmin(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor AtenXlaType::argsort(const at::Tensor& self, int64_t dim,
                                 bool descending) {
   return std::get<1>(sort(self, dim, descending));
@@ -1833,6 +1817,10 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
+std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::max_out(at::Tensor& max,
+        at::Tensor& max_values, const at::Tensor& self, int64_t dim, bool keepdim) {
+
+}
 at::Tensor AtenXlaType::max_pool1d(const at::Tensor& self,
                                    at::IntArrayRef kernel_size,
                                    at::IntArrayRef stride,
