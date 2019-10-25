@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 
@@ -142,6 +143,8 @@ class Counter {
         new ::xla::metrics::Counter(name);      \
     __counter->AddValue(value);                 \
   } while (0)
+
+#define XLA_FN_COUNTER(ns) XLA_COUNTER(absl::StrCat(ns, __FUNCTION__), 1)
 
 #define XLA_VALUE_METRIC(name, value)                                    \
   do {                                                                   \
