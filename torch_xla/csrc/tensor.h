@@ -294,8 +294,6 @@ class XLATensor {
   static std::vector<XLATensor> broadcast_tensors(
       tensorflow::gtl::ArraySlice<const XLATensor> tensors);
 
-  static XLATensor cast(const XLATensor& input, at::ScalarType dtype);
-
   static XLATensor cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                        xla::int64 dim);
 

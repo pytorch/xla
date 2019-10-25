@@ -63,18 +63,6 @@ class AtenXlaType {
 
   static at::Tensor& bitwise_not_out(at::Tensor& out, const at::Tensor& self);
 
-  static at::Tensor _cast_Byte(const at::Tensor& self, bool non_blocking);
-
-  static at::Tensor _cast_Char(const at::Tensor& self, bool non_blocking);
-
-  static at::Tensor _cast_Float(const at::Tensor& self, bool non_blocking);
-
-  static at::Tensor _cast_Int(const at::Tensor& self, bool non_blocking);
-
-  static at::Tensor _cast_Long(const at::Tensor& self, bool non_blocking);
-
-  static at::Tensor _cast_Short(const at::Tensor& self, bool non_blocking);
-
   static at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
                                bool non_blocking);
 

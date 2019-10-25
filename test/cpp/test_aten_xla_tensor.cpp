@@ -90,6 +90,19 @@ TEST_F(AtenXlaTensorTest, TestCastByte) {
   EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
+TEST_F(AtenXlaTensorTest, TestCastChar) {
+  torch::Tensor a =
+      torch::rand({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
+  torch::Tensor b = torch::_cast_Char(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::_cast_Char(xla_a);
+    AllEqual(b, xla_b);
+  });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+}
+
 TEST_F(AtenXlaTensorTest, TestCastShort) {
   torch::Tensor a =
       torch::rand({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
@@ -99,6 +112,8 @@ TEST_F(AtenXlaTensorTest, TestCastShort) {
     torch::Tensor xla_b = torch::_cast_Short(xla_a);
     AllEqual(b, xla_b);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestCastInt) {
@@ -110,6 +125,8 @@ TEST_F(AtenXlaTensorTest, TestCastInt) {
     torch::Tensor xla_b = torch::_cast_Int(xla_a);
     AllEqual(b, xla_b);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestCastLong) {
@@ -121,6 +138,8 @@ TEST_F(AtenXlaTensorTest, TestCastLong) {
     torch::Tensor xla_b = torch::_cast_Long(xla_a);
     AllEqual(b, xla_b);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestCastFloat) {
@@ -132,6 +151,8 @@ TEST_F(AtenXlaTensorTest, TestCastFloat) {
     torch::Tensor xla_b = torch::_cast_Float(xla_a);
     AllEqual(b, xla_b);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestRetainType) {

@@ -645,11 +645,6 @@ std::vector<XLATensor> XLATensor::broadcast_tensors(
   return tensors.front().MakeOutputTensors(node);
 }
 
-XLATensor XLATensor::cast(const XLATensor& input, at::ScalarType dtype) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Cast>(input.GetIrValue(), dtype), dtype);
-}
-
 XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                          xla::int64 dim) {
   // Shape checks for cat:
