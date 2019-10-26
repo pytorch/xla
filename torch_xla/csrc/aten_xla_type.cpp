@@ -3496,17 +3496,15 @@ at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
   return full(size, 0, options);
 }
 
-at::Tensor AtenXlaType::zeros_like(
-    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
+at::Tensor AtenXlaType::zeros_like(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, memory_format);
+  return full_like(self, 0, c10::nullopt);
 }
 
-at::Tensor AtenXlaType::zeros_like(
-    const at::Tensor& self, const at::TensorOptions& options,
-    c10::optional<at::MemoryFormat> memory_format) {
+at::Tensor AtenXlaType::zeros_like(const at::Tensor& self,
+                                   const at::TensorOptions& options) {
   XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, options, memory_format);
+  return full_like(self, 0, options, c10::nullopt);
 }
 
 void AtenXlaType::InitializeAtenBindings() {

@@ -1144,12 +1144,10 @@ class AtenXlaType {
   static at::Tensor zeros(at::IntArrayRef size,
                           const at::TensorOptions& options);
 
-  static at::Tensor zeros_like(const at::Tensor& self,
-                               c10::optional<at::MemoryFormat> memory_format);
+  static at::Tensor zeros_like(const at::Tensor& self);
 
   static at::Tensor zeros_like(const at::Tensor& self,
-                               const at::TensorOptions& options,
-                               c10::optional<at::MemoryFormat> memory_format);
+                               const at::TensorOptions& options);
 };
 
 }  // namespace torch_xla
