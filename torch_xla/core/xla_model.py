@@ -391,19 +391,33 @@ def check_view_sharing(obj):
   tensors = set()
   aliases = dict()
 
+  def tensor_info(t):
+    return '{}{}'.format(t.dtype, list(t.size()))
+
+  def tensor_id(t):
+    if is_xla_tensor(t):
+      return torch_xla._XLAC._xla_get_tensor_id(t), 'xla'
+    return id(t), 'torch'
+
+  def alias_id(t):
+    if is_xla_tensor(t):
+      aid = torch_xla._XLAC._xla_get_tensor_view_alias_id(t)
+      return None if aid == 0 else aid, 'xla'
+    return t.storage().data_ptr(), 'torch'
+
   def check_object(obj):
-    if is_xla_tensor(obj):
-      tid = torch_xla._XLAC._xla_get_tensor_id(obj)
-      if tid not in tensors:
-        tensors.add(tid)
-        aid = torch_xla._XLAC._xla_get_tensor_view_alias_id(obj)
-        if aid != 0:
-          if aid in aliases:
-            oobj = aliases[aid]
-            raise RuntimeError(
-                'Tensor ID {} is sharing a view with tensor ID {}'.format(
-                    tid, torch_xla._XLAC._xla_get_tensor_id(oobj)))
-          aliases[aid] = obj
+    tid = tensor_id(obj)
+    if tid not in tensors:
+      tensors.add(tid)
+      aid = alias_id(obj)
+      if aid[0] is not None:
+        if aid in aliases:
+          oobj = aliases[aid]
+          raise RuntimeError(
+              'Tensor ID {} ({}) is sharing a view with tensor ID {} ({})'
+              .format(tid, tensor_info(obj), tensor_id(oobj),
+                      tensor_info(oobj)))
+        aliases[aid] = obj
 
   xu.for_each_instance(obj, lambda x: type(x) == torch.Tensor, check_object)
 

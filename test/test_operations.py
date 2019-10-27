@@ -1190,16 +1190,23 @@ class TestAtenXlaTensor(XlaTestCase):
         self.x = x
         self.y = y
 
-    a = torch.rand(16, device=xm.xla_device())
-    b = a[:10]
-    c = a[6:]
-    self.assertRaises(RuntimeError, lambda: xm.check_view_sharing([b, c]))
+    def check(device):
+      a = torch.rand(16, device=device)
+      b = a[:10]
+      c = a[6:]
+      self.assertRaises(RuntimeError, lambda: xm.check_view_sharing([b, c]))
 
-    nested = Nested(b, c)
-    self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
+      nested = Nested(b, c)
+      self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
 
-    with tempfile.TemporaryFile() as tf:
-      self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
+      with tempfile.TemporaryFile() as tf:
+        self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
+
+      d = a
+      xm.check_view_sharing([a, d])
+
+    check(xm.xla_device())
+    check(torch.device('cpu'))
 
   def test_save(self):
     xla_device = xm.xla_device()
