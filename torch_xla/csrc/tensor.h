@@ -283,8 +283,7 @@ class XLATensor {
   static void bernoulli_(XLATensor& input, double probability);
   static void bernoulli_(XLATensor& input, const XLATensor& probability);
 
-  static XLATensor bitwise_not(const XLATensor& input);
-  static void bitwise_not_(XLATensor& input);
+  static void bitwise_not_out(XLATensor& out, const XLATensor& input);
 
   // Batch matrix multiplication. Both tensors must be 3D, the batch size must
   // match and the remaining two dimensions must be compatible for matrix
@@ -294,8 +293,6 @@ class XLATensor {
   // Broadcasts the given tensors according to broadcasting semantics.
   static std::vector<XLATensor> broadcast_tensors(
       tensorflow::gtl::ArraySlice<const XLATensor> tensors);
-
-  static XLATensor cast(const XLATensor& input, at::ScalarType dtype);
 
   static XLATensor cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                        xla::int64 dim);
@@ -928,6 +925,14 @@ class XLATensor {
 
   // In-place version of the method above.
   static void unsqueeze_(XLATensor& input, xla::int64 dim);
+
+  static XLATensor upsample_bilinear2d(const XLATensor& input,
+                                       std::vector<xla::int64> output_size,
+                                       bool align_corners);
+
+  static XLATensor upsample_bilinear2d_backward(
+      const XLATensor& grad_output, std::vector<xla::int64> output_size,
+      std::vector<xla::int64> input_size, bool align_corners);
 
   static XLATensor upsample_nearest2d(const XLATensor& input,
                                       std::vector<xla::int64> output_size);

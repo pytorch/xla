@@ -90,6 +90,19 @@ TEST_F(AtenXlaTensorTest, TestCastByte) {
   EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
+TEST_F(AtenXlaTensorTest, TestCastChar) {
+  torch::Tensor a =
+      torch::rand({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
+  torch::Tensor b = torch::_cast_Char(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::_cast_Char(xla_a);
+    AllEqual(b, xla_b);
+  });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+}
+
 TEST_F(AtenXlaTensorTest, TestCastShort) {
   torch::Tensor a =
       torch::rand({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
@@ -99,6 +112,8 @@ TEST_F(AtenXlaTensorTest, TestCastShort) {
     torch::Tensor xla_b = torch::_cast_Short(xla_a);
     AllEqual(b, xla_b);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestCastInt) {
@@ -110,6 +125,8 @@ TEST_F(AtenXlaTensorTest, TestCastInt) {
     torch::Tensor xla_b = torch::_cast_Int(xla_a);
     AllEqual(b, xla_b);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestCastLong) {
@@ -121,6 +138,8 @@ TEST_F(AtenXlaTensorTest, TestCastLong) {
     torch::Tensor xla_b = torch::_cast_Long(xla_a);
     AllEqual(b, xla_b);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestCastFloat) {
@@ -132,6 +151,8 @@ TEST_F(AtenXlaTensorTest, TestCastFloat) {
     torch::Tensor xla_b = torch::_cast_Float(xla_a);
     AllEqual(b, xla_b);
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestRetainType) {
@@ -2185,6 +2206,8 @@ TEST_F(AtenXlaTensorTest, TestBitwiseNot) {
       AllEqual(b, xla_b);
     }
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseNotInPlace) {
@@ -2201,6 +2224,8 @@ TEST_F(AtenXlaTensorTest, TestBitwiseNotInPlace) {
       AllEqual(a, xla_a);
     }
   });
+
+  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
 }
 
 TEST_F(AtenXlaTensorTest, TestSign) {
@@ -2670,6 +2695,49 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackward) {
                      torch::TensorOptions(torch::kFloat).requires_grad(true))},
         device, testfn);
   });
+}
+
+TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2D) {
+  int batch_size = 2;
+  int h = 5;
+  int w = 5;
+  int uh = 8;
+  int uw = 8;
+  int chans = 2;
+  for (bool align_corners : {true, false}) {
+    torch::Tensor input = torch::rand({batch_size, chans, h, w},
+                                      torch::TensorOptions(torch::kFloat));
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor result =
+          torch::upsample_bilinear2d(input, {uh, uw}, align_corners);
+      torch::Tensor xla_result =
+          torch::upsample_bilinear2d(xla_input, {uh, uw}, align_corners);
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DBackward) {
+  int batch_size = 2;
+  int h = 5;
+  int w = 5;
+  int uh = 8;
+  int uw = 8;
+  int chans = 2;
+  for (bool align_corners : {true, false}) {
+    auto testfn =
+        [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+      return torch::upsample_bilinear2d(inputs[0], {uh, uw}, align_corners);
+    };
+    ForEachDevice([&](const torch::Device& device) {
+      TestBackward(
+          {torch::rand(
+              {batch_size, chans, h, w},
+              torch::TensorOptions(torch::kFloat).requires_grad(true))},
+          device, testfn);
+    });
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestAddCMul) {

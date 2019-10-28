@@ -98,6 +98,8 @@
 #include "torch_xla/csrc/ops/tril.h"
 #include "torch_xla/csrc/ops/triu.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
+#include "torch_xla/csrc/ops/upsample_bilinear2d.h"
+#include "torch_xla/csrc/ops/upsample_bilinear2d_backward.h"
 #include "torch_xla/csrc/ops/upsample_nearest2d.h"
 #include "torch_xla/csrc/ops/upsample_nearest2d_backward.h"
 #include "torch_xla/csrc/ops/view.h"
@@ -616,12 +618,8 @@ void XLATensor::bernoulli_(XLATensor& input, const XLATensor& probability) {
       ir::ops::Bernoulli(input.GetIrValue(), probability.GetIrValue()));
 }
 
-XLATensor XLATensor::bitwise_not(const XLATensor& input) {
-  return input.CreateFrom(ir::ops::Not(input.GetIrValue()));
-}
-
-void XLATensor::bitwise_not_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Not(input.GetIrValue()));
+void XLATensor::bitwise_not_out(XLATensor& out, const XLATensor& input) {
+  out.SetIrValue(ir::ops::Not(input.GetIrValue()));
 }
 
 XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {
@@ -645,11 +643,6 @@ std::vector<XLATensor> XLATensor::broadcast_tensors(
   }
   ir::NodePtr node = ir::ops::BroadcastTensors(tensor_ir_values);
   return tensors.front().MakeOutputTensors(node);
-}
-
-XLATensor XLATensor::cast(const XLATensor& input, at::ScalarType dtype) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Cast>(input.GetIrValue(), dtype), dtype);
 }
 
 XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
@@ -2330,6 +2323,21 @@ void XLATensor::unsqueeze_(XLATensor& input, xla::int64 dim) {
       dim, input.shape().get().rank() + 1);
   input.SetIrValue(
       ir::MakeNode<ir::ops::Unsqueeze>(input.GetIrValue(), squeeze_dim));
+}
+
+XLATensor XLATensor::upsample_bilinear2d(const XLATensor& input,
+                                         std::vector<xla::int64> output_size,
+                                         bool align_corners) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::UpsampleBilinear>(
+      input.GetIrValue(), std::move(output_size), align_corners));
+}
+
+XLATensor XLATensor::upsample_bilinear2d_backward(
+    const XLATensor& grad_output, std::vector<xla::int64> output_size,
+    std::vector<xla::int64> input_size, bool align_corners) {
+  return grad_output.CreateFrom(ir::MakeNode<ir::ops::UpsampleBilinearBackward>(
+      grad_output.GetIrValue(), std::move(output_size), std::move(input_size),
+      align_corners));
 }
 
 XLATensor XLATensor::upsample_nearest2d(const XLATensor& input,
