@@ -373,7 +373,8 @@ class AtenXlaType {
                           const at::TensorOptions& options,
                           c10::optional<at::MemoryFormat> memory_format);
 
-  static at::Tensor empty_like(const at::Tensor& self);
+  static at::Tensor empty_like(const at::Tensor& self,
+                               c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor empty_like(const at::Tensor& self,
                                const at::TensorOptions& options,
