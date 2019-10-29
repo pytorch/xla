@@ -765,14 +765,6 @@ at::Tensor& AtenXlaType::bernoulli_(at::Tensor& self, const at::Tensor& p,
   return self;
 }
 
-at::Tensor AtenXlaType::bilinear(const at::Tensor& input1,
-                                 const at::Tensor& input2,
-                                 const at::Tensor& weight,
-                                 const at::Tensor& bias) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::bilinear(input1, input2, weight, bias);
-}
-
 at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
     const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
     const at::Tensor& pos_weight, int64_t reduction) {
