@@ -808,12 +808,6 @@ at::Tensor AtenXlaType::constant_pad_nd(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(pad), value));
 }
 
-at::Tensor AtenXlaType::contiguous(const at::Tensor& self,
-                                   at::MemoryFormat memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return self;
-}
-
 // This functions covers the whole convolution lowering.
 at::Tensor AtenXlaType::convolution_overrideable(
     const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
