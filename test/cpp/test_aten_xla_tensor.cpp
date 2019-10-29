@@ -2530,6 +2530,9 @@ TEST_F(AtenXlaTensorTest, TestChainMatMul) {
         torch::chain_matmul({xla_a, xla_b, xla_c, xla_d});
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLinear) {
@@ -4701,6 +4704,9 @@ TEST_F(AtenXlaTensorTest, TestCelu) {
     torch::Tensor xla_output = torch::celu(xla_input, alpha);
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::elu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCeluInPlace) {
@@ -4714,6 +4720,9 @@ TEST_F(AtenXlaTensorTest, TestCeluInPlace) {
     AllClose(output, xla_output);
     AllClose(input, xla_input);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::elu_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAddMatMul) {
