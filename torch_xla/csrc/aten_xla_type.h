@@ -217,8 +217,6 @@ class AtenXlaType {
                                const at::Tensor& running_var, bool training,
                                double momentum, double eps, bool cudnn_enabled);
 
-  static at::Tensor bernoulli(const at::Tensor& self, double p,
-                              at::Generator* generator);
   static at::Tensor bernoulli(const at::Tensor& self, at::Generator* generator);
   static at::Tensor& bernoulli_(at::Tensor& self, double p,
                                 at::Generator* generator);

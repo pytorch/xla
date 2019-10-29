@@ -723,16 +723,6 @@ at::Tensor AtenXlaType::batch_norm(
   return bridge::AtenFromXlaTensor(std::get<0>(outputs));
 }
 
-at::Tensor AtenXlaType::bernoulli(const at::Tensor& self, double p,
-                                  at::Generator* generator) {
-  XLA_FN_COUNTER("xla::");
-  if (generator != nullptr) {
-    return AtenXlaTypeDefault::bernoulli(self, p, generator);
-  }
-  return bridge::AtenFromXlaTensor(
-      XLATensor::bernoulli(bridge::GetXlaTensor(self), p));
-}
-
 at::Tensor AtenXlaType::bernoulli(const at::Tensor& self,
                                   at::Generator* generator) {
   XLA_FN_COUNTER("xla::");
