@@ -529,12 +529,6 @@ at::Tensor AtenXlaType::argmin(const at::Tensor& self,
                    XLATensor::argmin(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor AtenXlaType::argsort(const at::Tensor& self, int64_t dim,
-                                bool descending) {
-  XLA_FN_COUNTER("xla::");
-  return std::get<1>(sort(self, dim, descending));
-}
-
 at::Tensor AtenXlaType::as_strided(const at::Tensor& self, at::IntArrayRef size,
                                    at::IntArrayRef stride,
                                    c10::optional<int64_t> storage_offset) {

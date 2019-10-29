@@ -906,6 +906,8 @@ TEST_F(AtenXlaTensorTest, TestArgSort) {
       }
     }
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMin) {
