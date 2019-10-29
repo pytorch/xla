@@ -607,6 +607,9 @@ class XLATensor {
   static std::tuple<XLATensor, XLATensor> max(const XLATensor& input,
                                               xla::int64 dim, bool keepdim);
 
+  static void max_out(XLATensor& max, XLATensor& max_values,
+                      const XLATensor& input, xla::int64 dim, bool keepdim);
+
   static XLATensor max_pool_nd(const XLATensor& input,
                                xla::int64 spatial_dim_count,
                                std::vector<xla::int64> kernel_size,
@@ -632,6 +635,9 @@ class XLATensor {
 
   static std::tuple<XLATensor, XLATensor> min(const XLATensor& input,
                                               xla::int64 dim, bool keepdim);
+
+  static void min_out(XLATensor& min, XLATensor& min_indices,
+                      const XLATensor& input, xla::int64 dim, bool keepdim);
 
   static XLATensor mm(const XLATensor& input, const XLATensor& weight);
 

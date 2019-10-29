@@ -669,7 +669,11 @@ class AtenXlaType {
   static std::tuple<at::Tensor, at::Tensor> max(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
 
-  static std::tuple<at::Tensor&, at::Tensor&> max_out(at::Tensor& max, at::Tensor& max_values, const at::Tensor& self, int64_t dim, bool keepdim);
+  static std::tuple<at::Tensor&, at::Tensor&> max_out(at::Tensor& max,
+                                                      at::Tensor& max_values,
+                                                      const at::Tensor& self,
+                                                      int64_t dim,
+                                                      bool keepdim);
 
   static at::Tensor max_pool1d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,
@@ -722,6 +726,12 @@ class AtenXlaType {
 
   static std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
+
+  static std::tuple<at::Tensor&, at::Tensor&> min_out(at::Tensor& min,
+                                                      at::Tensor& min_indices,
+                                                      const at::Tensor& self,
+                                                      int64_t dim,
+                                                      bool keepdim);
 
   static at::Tensor mm(const at::Tensor& self, const at::Tensor& mat2);
 

@@ -1423,6 +1423,16 @@ std::tuple<XLATensor, XLATensor> XLATensor::max(const XLATensor& input,
       input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long));
 }
 
+void XLATensor::max_out(XLATensor& max, XLATensor& max_values,
+                        const XLATensor& input, xla::int64 dim, bool keepdim) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  ir::NodePtr node = ir::MakeNode<ir::ops::MaxInDim>(input.GetIrValue(),
+                                                     canonical_dim, keepdim);
+  max.SetIrValue(ir::Value(node, 0));
+  max_values.SetIrValue(ir::Value(node, 1));
+}
+
 XLATensor XLATensor::max_pool_nd(const XLATensor& input,
                                  xla::int64 spatial_dim_count,
                                  std::vector<xla::int64> kernel_size,
@@ -1484,6 +1494,15 @@ std::tuple<XLATensor, XLATensor> XLATensor::min(const XLATensor& input,
       input.CreateFrom(ir::Value(node, 1), at::ScalarType::Long));
 }
 
+void XLATensor::min_out(XLATensor& min, XLATensor& min_indices,
+                        const XLATensor& input, xla::int64 dim, bool keepdim) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  ir::NodePtr node = ir::MakeNode<ir::ops::MinInDim>(input.GetIrValue(),
+                                                     canonical_dim, keepdim);
+  min.SetIrValue(ir::Value(node, 0));
+  min_indices.SetIrValue(ir::Value(node, 1));
+}
 XLATensor XLATensor::mm(const XLATensor& input, const XLATensor& weight) {
   return input.CreateFrom(
       ir::ops::Dot(input.GetIrValue(), weight.GetIrValue()));

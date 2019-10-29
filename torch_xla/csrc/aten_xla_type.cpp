@@ -511,24 +511,6 @@ at::Tensor& AtenXlaType::arange_out(at::Tensor& out, at::Scalar start,
   return out;
 }
 
-at::Tensor AtenXlaType::argmax(const at::Tensor& self,
-                               c10::optional<int64_t> dim, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  return dim ? bridge::AtenFromXlaTensor(
-                   XLATensor::argmax(bridge::GetXlaTensor(self), *dim, keepdim))
-             : bridge::AtenFromXlaTensor(
-                   XLATensor::argmax(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor AtenXlaType::argmin(const at::Tensor& self,
-                               c10::optional<int64_t> dim, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  return dim ? bridge::AtenFromXlaTensor(
-                   XLATensor::argmin(bridge::GetXlaTensor(self), *dim, keepdim))
-             : bridge::AtenFromXlaTensor(
-                   XLATensor::argmin(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor AtenXlaType::argsort(const at::Tensor& self, int64_t dim,
                                 bool descending) {
   XLA_FN_COUNTER("xla::");
@@ -2043,9 +2025,15 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
-std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::max_out(at::Tensor& max,
-        at::Tensor& max_values, const at::Tensor& self, int64_t dim, bool keepdim) {
-
+std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::max_out(
+    at::Tensor& max, at::Tensor& max_values, const at::Tensor& self,
+    int64_t dim, bool keepdim) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor max_tensor = bridge::GetXlaTensor(max);
+  XLATensor max_values_tensor = bridge::GetXlaTensor(max_values);
+  XLATensor::max_out(max_tensor, max_values_tensor, bridge::GetXlaTensor(self),
+                     dim, keepdim);
+  return std::forward_as_tuple(max, max_values);
 }
 at::Tensor AtenXlaType::max_pool1d(const at::Tensor& self,
                                    at::IntArrayRef kernel_size,
@@ -2231,6 +2219,17 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::min(const at::Tensor& self,
   auto outputs = XLATensor::min(bridge::GetXlaTensor(self), dim, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+}
+
+std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::min_out(
+    at::Tensor& min, at::Tensor& min_indices, const at::Tensor& self,
+    int64_t dim, bool keepdim) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor min_tensor = bridge::GetXlaTensor(min);
+  XLATensor min_indices_tensor = bridge::GetXlaTensor(min_indices);
+  XLATensor::min_out(min_tensor, min_indices_tensor, bridge::GetXlaTensor(self),
+                     dim, keepdim);
+  return std::forward_as_tuple(min, min_indices);
 }
 
 at::Tensor AtenXlaType::mm(const at::Tensor& self, const at::Tensor& mat2) {
