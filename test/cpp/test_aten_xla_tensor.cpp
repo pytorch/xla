@@ -86,8 +86,7 @@ TEST_F(AtenXlaTensorTest, TestCastByte) {
     torch::Tensor xla_b = torch::_cast_Byte(xla_a);
     AllEqual(b, xla_b);
   });
-
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCastChar) {
@@ -100,7 +99,7 @@ TEST_F(AtenXlaTensorTest, TestCastChar) {
     AllEqual(b, xla_b);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCastShort) {
@@ -113,7 +112,7 @@ TEST_F(AtenXlaTensorTest, TestCastShort) {
     AllEqual(b, xla_b);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCastInt) {
@@ -126,7 +125,7 @@ TEST_F(AtenXlaTensorTest, TestCastInt) {
     AllEqual(b, xla_b);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCastLong) {
@@ -139,7 +138,7 @@ TEST_F(AtenXlaTensorTest, TestCastLong) {
     AllEqual(b, xla_b);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCastFloat) {
@@ -152,7 +151,7 @@ TEST_F(AtenXlaTensorTest, TestCastFloat) {
     AllEqual(b, xla_b);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestRetainType) {
@@ -223,7 +222,7 @@ TEST_F(AtenXlaTensorTest, TestAddZeroSizeDim) {
     AllClose(c, xla_c);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSub) {
@@ -1833,7 +1832,7 @@ TEST_F(AtenXlaTensorTest, TestArgMin) {
     AllEqual(b, xla_b);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinDim) {
@@ -1847,7 +1846,7 @@ TEST_F(AtenXlaTensorTest, TestArgMinDim) {
     });
   }
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
@@ -1861,7 +1860,7 @@ TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
     });
   }
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
@@ -1873,7 +1872,7 @@ TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
     AllEqual(b, xla_b);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
@@ -1887,7 +1886,7 @@ TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
     });
   }
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMax) {
@@ -1899,7 +1898,7 @@ TEST_F(AtenXlaTensorTest, TestArgMax) {
     AllEqual(b, xla_b);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxDim) {
@@ -1913,7 +1912,7 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDim) {
     });
   }
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
@@ -1927,7 +1926,7 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
     });
   }
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
@@ -1939,7 +1938,7 @@ TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
     AllEqual(b, xla_b);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
@@ -1953,7 +1952,7 @@ TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
     });
   }
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAsin) {
@@ -2207,7 +2206,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseNot) {
     }
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseNotInPlace) {
@@ -2225,7 +2224,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseNotInPlace) {
     }
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSign) {
@@ -2308,7 +2307,7 @@ TEST_F(AtenXlaTensorTest, TestARange) {
     AllClose(a, xla_a);
   });
 
-  EXPECT_FALSE(CounterChanged("aten::.*", cpp_test::GetIgnoredCounters()));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestARangeOut) {
