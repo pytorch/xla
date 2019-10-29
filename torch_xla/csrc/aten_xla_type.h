@@ -148,11 +148,8 @@ class AtenXlaType {
   static at::Tensor& arange_out(at::Tensor& out, at::Scalar start,
                                 at::Scalar end, at::Scalar step);
 
-  static at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
-                           bool keepdim);
-
-  static at::Tensor argmin(const at::Tensor& self, c10::optional<int64_t> dim,
-                           bool keepdim);
+  static at::Tensor argsort(const at::Tensor& self, int64_t dim,
+                            bool descending);
 
   static at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size,
                                at::IntArrayRef stride,
@@ -659,6 +656,12 @@ class AtenXlaType {
   static std::tuple<at::Tensor, at::Tensor> max(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
 
+  static std::tuple<at::Tensor&, at::Tensor&> max_out(at::Tensor& max,
+                                                      at::Tensor& max_values,
+                                                      const at::Tensor& self,
+                                                      int64_t dim,
+                                                      bool keepdim);
+
   static at::Tensor max_pool1d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,
                                at::IntArrayRef stride, at::IntArrayRef padding,
@@ -710,6 +713,12 @@ class AtenXlaType {
 
   static std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
+
+  static std::tuple<at::Tensor&, at::Tensor&> min_out(at::Tensor& min,
+                                                      at::Tensor& min_indices,
+                                                      const at::Tensor& self,
+                                                      int64_t dim,
+                                                      bool keepdim);
 
   static at::Tensor mm(const at::Tensor& self, const at::Tensor& mat2);
 
