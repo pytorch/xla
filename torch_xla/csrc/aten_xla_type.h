@@ -177,11 +177,6 @@ class AtenXlaType {
 
   static at::Tensor& atan_(at::Tensor& self);
 
-  static at::Tensor avg_pool1d(const at::Tensor& self,
-                               at::IntArrayRef kernel_size,
-                               at::IntArrayRef stride, at::IntArrayRef padding,
-                               bool ceil_mode, bool count_include_pad);
-
   static at::Tensor avg_pool2d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,
                                at::IntArrayRef stride, at::IntArrayRef padding,
