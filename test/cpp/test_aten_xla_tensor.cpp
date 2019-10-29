@@ -3229,6 +3229,9 @@ TEST_F(AtenXlaTensorTest, TestBroadcastTensors) {
       AllClose(c[i], xla_c[i]);
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::expand", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestOneIndex) {
