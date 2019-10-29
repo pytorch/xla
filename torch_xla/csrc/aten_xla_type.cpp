@@ -758,15 +758,6 @@ at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
                                                       pos_weight, reduction);
 }
 
-at::Tensor AtenXlaType::binary_cross_entropy_with_logits_backward(
-    const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& target, const at::Tensor& weight,
-    const at::Tensor& pos_weight, int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::binary_cross_entropy_with_logits_backward(
-      grad_output, self, target, weight, pos_weight, reduction);
-}
-
 at::Tensor AtenXlaType::blackman_window(int64_t window_length,
                                         const at::TensorOptions& options) {
   XLA_FN_COUNTER("xla::");

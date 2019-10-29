@@ -1631,6 +1631,11 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogits) {
           torch::Tensor xla_output = torch::binary_cross_entropy_with_logits(
               xla_input, xla_target, xla_weight, xla_pos_weight, reduction);
         });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        // binary_cross_entropy_with_logits is composed of
+        // sub/mul_/add_/exp_/add_/log_/... ops in upstream pytorch.
+        ExpectCounterChanged("xla::mul", cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -7824,6 +7829,10 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
           TestBackward({input, target, weight, pos_weight}, device, testfn,
                        /*rtol=*/1e-3, /*atol=*/1e-5);
         });
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        // binary_cross_entropy_with_logits_backward is composed of
+        // sub/mul_/add_/exp_/add_/log_/... ops in upstream pytorch.
+        ExpectCounterChanged("xla::add", cpp_test::GetIgnoredCounters());
       }
     }
   }
