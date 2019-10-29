@@ -906,6 +906,9 @@ TEST_F(AtenXlaTensorTest, TestArgSort) {
       }
     }
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::sort", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMin) {
@@ -5453,6 +5456,10 @@ TEST_F(AtenXlaTensorTest, TestAvgPool1D) {
                                   /*count_include_pad=*/count_include_pad);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::avg_pool2d",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
