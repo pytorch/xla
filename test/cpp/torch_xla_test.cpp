@@ -31,6 +31,15 @@ void XlaTest::ExpectCounterNotChanged(
   EXPECT_TRUE(changed.empty());
 }
 
+void XlaTest::ExpectCounterChanged(
+    const std::string& counter_regex,
+    const std::unordered_set<std::string>* ignore_set) {
+  MakeEndSnapshot();
+  auto changed =
+      start_msnap_->CounterChanged(counter_regex, *end_msnap_, ignore_set);
+  EXPECT_TRUE(!changed.empty());
+}
+
 void XlaTest::MakeEndSnapshot() {
   if (end_msnap_ == nullptr) {
     end_msnap_ = absl::make_unique<MetricsSnapshot>();
