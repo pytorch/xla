@@ -154,9 +154,6 @@ class AtenXlaType {
   static at::Tensor argmin(const at::Tensor& self, c10::optional<int64_t> dim,
                            bool keepdim);
 
-  static at::Tensor argsort(const at::Tensor& self, int64_t dim,
-                            bool descending);
-
   static at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size,
                                at::IntArrayRef stride,
                                c10::optional<int64_t> storage_offset);
