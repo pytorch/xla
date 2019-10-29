@@ -593,23 +593,6 @@ at::Tensor& AtenXlaType::atan_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::avg_pool1d(const at::Tensor& self,
-                                   at::IntArrayRef kernel_size,
-                                   at::IntArrayRef stride,
-                                   at::IntArrayRef padding, bool ceil_mode,
-                                   bool count_include_pad) {
-  XLA_FN_COUNTER("xla::");
-  // Lowering when ceil_mode is set not supported yet.
-  if (ceil_mode && count_include_pad) {
-    return AtenXlaTypeDefault::avg_pool1d(self, kernel_size, stride, padding,
-                                          ceil_mode, count_include_pad);
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd(
-      bridge::GetXlaTensor(self), /*spatial_dim_count=*/1,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
-}
-
 at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
                                    at::IntArrayRef kernel_size,
                                    at::IntArrayRef stride,
