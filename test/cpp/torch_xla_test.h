@@ -21,6 +21,9 @@ class XlaTest : public ::testing::Test {
       const std::string& counter_regex,
       const std::unordered_set<std::string>* ignore_set);
 
+  void ExpectCounterChanged(const std::string& counter_regex,
+                            const std::unordered_set<std::string>* ignore_set);
+
  private:
   void MakeEndSnapshot();
 
