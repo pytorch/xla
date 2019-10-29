@@ -1834,6 +1834,9 @@ TEST_F(AtenXlaTensorTest, TestArgMin) {
     torch::Tensor xla_b = torch::argmin(xla_a, c10::nullopt, /*keepdim=*/false);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinDim) {
@@ -1846,6 +1849,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinDim) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
@@ -1858,6 +1864,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
@@ -1868,6 +1877,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
     torch::Tensor xla_b = torch::argmin(xla_a);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
@@ -1880,6 +1892,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMax) {
@@ -1890,6 +1905,9 @@ TEST_F(AtenXlaTensorTest, TestArgMax) {
     torch::Tensor xla_b = torch::argmax(xla_a, c10::nullopt, /*keepdim=*/false);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxDim) {
@@ -1902,6 +1920,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDim) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
@@ -1914,6 +1935,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
@@ -1924,6 +1948,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
     torch::Tensor xla_b = torch::argmax(xla_a, c10::nullopt, /*keepdim=*/false);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
@@ -1936,6 +1963,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAsin) {
