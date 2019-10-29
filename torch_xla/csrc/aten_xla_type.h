@@ -239,12 +239,6 @@ class AtenXlaType {
 
   static at::Tensor& ceil_(at::Tensor& self);
 
-  static at::Tensor celu(const at::Tensor& self, at::Scalar alpha);
-
-  static at::Tensor& celu_(at::Tensor& self, at::Scalar alpha);
-
-  static at::Tensor chain_matmul(at::TensorList matrices);
-
   static at::Tensor cholesky(const at::Tensor& self, bool upper);
 
   static at::Tensor clamp(const at::Tensor& self, c10::optional<at::Scalar> min,

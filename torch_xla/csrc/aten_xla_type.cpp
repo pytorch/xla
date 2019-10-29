@@ -790,21 +790,6 @@ at::Tensor& AtenXlaType::ceil_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::celu(const at::Tensor& self, at::Scalar alpha) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::celu(self, alpha);
-}
-
-at::Tensor& AtenXlaType::celu_(at::Tensor& self, at::Scalar alpha) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::celu_(self, alpha);
-}
-
-at::Tensor AtenXlaType::chain_matmul(at::TensorList matrices) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::chain_matmul(matrices);
-}
-
 at::Tensor AtenXlaType::cholesky(const at::Tensor& self, bool upper) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
