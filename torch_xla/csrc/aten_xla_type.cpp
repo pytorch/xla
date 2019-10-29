@@ -677,29 +677,6 @@ at::Tensor AtenXlaType::bartlett_window(int64_t window_length, bool periodic,
   return at::native::bartlett_window(window_length, periodic, options);
 }
 
-at::Tensor AtenXlaType::batch_norm(
-    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-    const at::Tensor& running_mean, const at::Tensor& running_var,
-    bool training, double momentum, double eps, bool cudnn_enabled) {
-  XLA_FN_COUNTER("xla::");
-  if (cudnn_enabled) {
-    return AtenXlaTypeDefault::batch_norm(input, weight, bias, running_mean,
-                                          running_var, training, momentum, eps,
-                                          cudnn_enabled);
-  }
-  XLATensor input_tensor = bridge::GetXlaTensor(input);
-  const Device& device = input_tensor.GetDevice();
-  XLATensor running_mean_tensor =
-      bridge::GetOrCreateXlaTensor(running_mean, device);
-  XLATensor running_var_tensor =
-      bridge::GetOrCreateXlaTensor(running_var, device);
-  auto outputs = XLATensor::native_batch_norm(
-      bridge::GetXlaTensor(input), bridge::GetOrCreateXlaTensor(weight, device),
-      bridge::GetOrCreateXlaTensor(bias, device), running_mean_tensor,
-      running_var_tensor, training, momentum, eps);
-  return bridge::AtenFromXlaTensor(std::get<0>(outputs));
-}
-
 at::Tensor AtenXlaType::bernoulli(const at::Tensor& self, double p,
                                   at::Generator* generator) {
   XLA_FN_COUNTER("xla::");

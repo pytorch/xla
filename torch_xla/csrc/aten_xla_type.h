@@ -203,12 +203,6 @@ class AtenXlaType {
   static at::Tensor bartlett_window(int64_t window_length, bool periodic,
                                     const at::TensorOptions& options);
 
-  static at::Tensor batch_norm(const at::Tensor& input,
-                               const at::Tensor& weight, const at::Tensor& bias,
-                               const at::Tensor& running_mean,
-                               const at::Tensor& running_var, bool training,
-                               double momentum, double eps, bool cudnn_enabled);
-
   static at::Tensor bernoulli(const at::Tensor& self, double p,
                               at::Generator* generator);
   static at::Tensor bernoulli(const at::Tensor& self, at::Generator* generator);
