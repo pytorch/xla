@@ -220,8 +220,6 @@ class AtenXlaType {
 
   static at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2);
 
-  static std::vector<at::Tensor> broadcast_tensors(at::TensorList tensors);
-
   static at::Tensor cat(at::TensorList tensors, int64_t dim);
 
   static at::Tensor ceil(const at::Tensor& self);

@@ -737,12 +737,6 @@ at::Tensor AtenXlaType::bmm(const at::Tensor& self, const at::Tensor& mat2) {
       XLATensor::bmm(bridge::GetXlaTensor(self), bridge::GetXlaTensor(mat2)));
 }
 
-std::vector<at::Tensor> AtenXlaType::broadcast_tensors(at::TensorList tensors) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensors(
-      XLATensor::broadcast_tensors(bridge::GetXlaTensors(tensors)));
-}
-
 at::Tensor AtenXlaType::cat(at::TensorList tensors, int64_t dim) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
