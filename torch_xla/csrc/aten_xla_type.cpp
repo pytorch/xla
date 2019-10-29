@@ -511,24 +511,6 @@ at::Tensor& AtenXlaType::arange_out(at::Tensor& out, at::Scalar start,
   return out;
 }
 
-at::Tensor AtenXlaType::argmax(const at::Tensor& self,
-                               c10::optional<int64_t> dim, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  return dim ? bridge::AtenFromXlaTensor(
-                   XLATensor::argmax(bridge::GetXlaTensor(self), *dim, keepdim))
-             : bridge::AtenFromXlaTensor(
-                   XLATensor::argmax(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor AtenXlaType::argmin(const at::Tensor& self,
-                               c10::optional<int64_t> dim, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  return dim ? bridge::AtenFromXlaTensor(
-                   XLATensor::argmin(bridge::GetXlaTensor(self), *dim, keepdim))
-             : bridge::AtenFromXlaTensor(
-                   XLATensor::argmin(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor AtenXlaType::argsort(const at::Tensor& self, int64_t dim,
                                 bool descending) {
   XLA_FN_COUNTER("xla::");
@@ -597,23 +579,6 @@ at::Tensor& AtenXlaType::atan_(at::Tensor& self) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::atan_(self_tensor);
   return self;
-}
-
-at::Tensor AtenXlaType::avg_pool1d(const at::Tensor& self,
-                                   at::IntArrayRef kernel_size,
-                                   at::IntArrayRef stride,
-                                   at::IntArrayRef padding, bool ceil_mode,
-                                   bool count_include_pad) {
-  XLA_FN_COUNTER("xla::");
-  // Lowering when ceil_mode is set not supported yet.
-  if (ceil_mode && count_include_pad) {
-    return AtenXlaTypeDefault::avg_pool1d(self, kernel_size, stride, padding,
-                                          ceil_mode, count_include_pad);
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::avg_pool_nd(
-      bridge::GetXlaTensor(self), /*spatial_dim_count=*/1,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
 }
 
 at::Tensor AtenXlaType::avg_pool2d(const at::Tensor& self,
@@ -700,29 +665,6 @@ at::Tensor AtenXlaType::bartlett_window(int64_t window_length, bool periodic,
   return at::native::bartlett_window(window_length, periodic, options);
 }
 
-at::Tensor AtenXlaType::batch_norm(
-    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-    const at::Tensor& running_mean, const at::Tensor& running_var,
-    bool training, double momentum, double eps, bool cudnn_enabled) {
-  XLA_FN_COUNTER("xla::");
-  if (cudnn_enabled) {
-    return AtenXlaTypeDefault::batch_norm(input, weight, bias, running_mean,
-                                          running_var, training, momentum, eps,
-                                          cudnn_enabled);
-  }
-  XLATensor input_tensor = bridge::GetXlaTensor(input);
-  const Device& device = input_tensor.GetDevice();
-  XLATensor running_mean_tensor =
-      bridge::GetOrCreateXlaTensor(running_mean, device);
-  XLATensor running_var_tensor =
-      bridge::GetOrCreateXlaTensor(running_var, device);
-  auto outputs = XLATensor::native_batch_norm(
-      bridge::GetXlaTensor(input), bridge::GetOrCreateXlaTensor(weight, device),
-      bridge::GetOrCreateXlaTensor(bias, device), running_mean_tensor,
-      running_var_tensor, training, momentum, eps);
-  return bridge::AtenFromXlaTensor(std::get<0>(outputs));
-}
-
 at::Tensor AtenXlaType::bernoulli(const at::Tensor& self,
                                   at::Generator* generator) {
   XLA_FN_COUNTER("xla::");
@@ -753,14 +695,6 @@ at::Tensor& AtenXlaType::bernoulli_(at::Tensor& self, const at::Tensor& p,
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::bernoulli_(self_tensor, bridge::GetXlaTensor(p));
   return self;
-}
-
-at::Tensor AtenXlaType::bilinear(const at::Tensor& input1,
-                                 const at::Tensor& input2,
-                                 const at::Tensor& weight,
-                                 const at::Tensor& bias) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::bilinear(input1, input2, weight, bias);
 }
 
 at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
@@ -2031,6 +1965,16 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
+std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::max_out(
+    at::Tensor& max, at::Tensor& max_values, const at::Tensor& self,
+    int64_t dim, bool keepdim) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor max_tensor = bridge::GetXlaTensor(max);
+  XLATensor max_values_tensor = bridge::GetXlaTensor(max_values);
+  XLATensor::max_out(max_tensor, max_values_tensor, bridge::GetXlaTensor(self),
+                     dim, keepdim);
+  return std::forward_as_tuple(max, max_values);
+}
 at::Tensor AtenXlaType::max_pool1d(const at::Tensor& self,
                                    at::IntArrayRef kernel_size,
                                    at::IntArrayRef stride,
@@ -2215,6 +2159,17 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::min(const at::Tensor& self,
   auto outputs = XLATensor::min(bridge::GetXlaTensor(self), dim, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+}
+
+std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::min_out(
+    at::Tensor& min, at::Tensor& min_indices, const at::Tensor& self,
+    int64_t dim, bool keepdim) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor min_tensor = bridge::GetXlaTensor(min);
+  XLATensor min_indices_tensor = bridge::GetXlaTensor(min_indices);
+  XLATensor::min_out(min_tensor, min_indices_tensor, bridge::GetXlaTensor(self),
+                     dim, keepdim);
+  return std::forward_as_tuple(min, min_indices);
 }
 
 at::Tensor AtenXlaType::mm(const at::Tensor& self, const at::Tensor& mat2) {

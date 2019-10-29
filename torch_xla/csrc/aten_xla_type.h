@@ -148,12 +148,6 @@ class AtenXlaType {
   static at::Tensor& arange_out(at::Tensor& out, at::Scalar start,
                                 at::Scalar end, at::Scalar step);
 
-  static at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
-                           bool keepdim);
-
-  static at::Tensor argmin(const at::Tensor& self, c10::optional<int64_t> dim,
-                           bool keepdim);
-
   static at::Tensor argsort(const at::Tensor& self, int64_t dim,
                             bool descending);
 
@@ -176,11 +170,6 @@ class AtenXlaType {
   static at::Tensor& atan2_(at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor& atan_(at::Tensor& self);
-
-  static at::Tensor avg_pool1d(const at::Tensor& self,
-                               at::IntArrayRef kernel_size,
-                               at::IntArrayRef stride, at::IntArrayRef padding,
-                               bool ceil_mode, bool count_include_pad);
 
   static at::Tensor avg_pool2d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,
@@ -211,20 +200,11 @@ class AtenXlaType {
   static at::Tensor bartlett_window(int64_t window_length, bool periodic,
                                     const at::TensorOptions& options);
 
-  static at::Tensor batch_norm(const at::Tensor& input,
-                               const at::Tensor& weight, const at::Tensor& bias,
-                               const at::Tensor& running_mean,
-                               const at::Tensor& running_var, bool training,
-                               double momentum, double eps, bool cudnn_enabled);
-
   static at::Tensor bernoulli(const at::Tensor& self, at::Generator* generator);
   static at::Tensor& bernoulli_(at::Tensor& self, double p,
                                 at::Generator* generator);
   static at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p,
                                 at::Generator* generator);
-
-  static at::Tensor bilinear(const at::Tensor& input1, const at::Tensor& input2,
-                             const at::Tensor& weight, const at::Tensor& bias);
 
   static at::Tensor binary_cross_entropy_with_logits(
       const at::Tensor& self, const at::Tensor& target,
@@ -671,6 +651,12 @@ class AtenXlaType {
   static std::tuple<at::Tensor, at::Tensor> max(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
 
+  static std::tuple<at::Tensor&, at::Tensor&> max_out(at::Tensor& max,
+                                                      at::Tensor& max_values,
+                                                      const at::Tensor& self,
+                                                      int64_t dim,
+                                                      bool keepdim);
+
   static at::Tensor max_pool1d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,
                                at::IntArrayRef stride, at::IntArrayRef padding,
@@ -722,6 +708,12 @@ class AtenXlaType {
 
   static std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
+
+  static std::tuple<at::Tensor&, at::Tensor&> min_out(at::Tensor& min,
+                                                      at::Tensor& min_indices,
+                                                      const at::Tensor& self,
+                                                      int64_t dim,
+                                                      bool keepdim);
 
   static at::Tensor mm(const at::Tensor& self, const at::Tensor& mat2);
 

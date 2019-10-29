@@ -906,6 +906,9 @@ TEST_F(AtenXlaTensorTest, TestArgSort) {
       }
     }
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::sort", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMin) {
@@ -1831,6 +1834,9 @@ TEST_F(AtenXlaTensorTest, TestArgMin) {
     torch::Tensor xla_b = torch::argmin(xla_a, c10::nullopt, /*keepdim=*/false);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinDim) {
@@ -1843,6 +1849,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinDim) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
@@ -1855,6 +1864,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
@@ -1865,6 +1877,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
     torch::Tensor xla_b = torch::argmin(xla_a);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
@@ -1877,6 +1892,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMax) {
@@ -1887,6 +1905,9 @@ TEST_F(AtenXlaTensorTest, TestArgMax) {
     torch::Tensor xla_b = torch::argmax(xla_a, c10::nullopt, /*keepdim=*/false);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxDim) {
@@ -1899,6 +1920,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDim) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
@@ -1911,6 +1935,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
@@ -1921,6 +1948,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
     torch::Tensor xla_b = torch::argmax(xla_a, c10::nullopt, /*keepdim=*/false);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
@@ -1933,6 +1963,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAsin) {
@@ -2639,6 +2672,9 @@ TEST_F(AtenXlaTensorTest, TestBilinear) {
         torch::bilinear(xla_input1, xla_input2, xla_weight, xla_bias);
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_trilinear", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleNearest2D) {
@@ -5431,6 +5467,10 @@ TEST_F(AtenXlaTensorTest, TestAvgPool1D) {
                                   /*count_include_pad=*/count_include_pad);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::avg_pool2d",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5851,6 +5891,10 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm1D) {
             /*cudnn_enabled=*/false);
         AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_batch_norm",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -5893,6 +5937,10 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2D) {
             /*cudnn_enabled=*/false);
         AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_batch_norm",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -7748,6 +7796,12 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2DBackward) {
                    testfn,
                    /*rtol=*/1e-3, /*atol=*/1e-4);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm",
+                         cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm_backward",
+                         cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -7788,6 +7842,12 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm3DBackward) {
                    testfn,
                    /*rtol=*/1e-3, /*atol=*/1e-3);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm",
+                         cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm_backward",
+                         cpp_test::GetIgnoredCounters());
   }
 }
 

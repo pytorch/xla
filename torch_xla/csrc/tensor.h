@@ -238,12 +238,6 @@ class XLATensor {
   static void arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
                          at::Scalar step, at::ScalarType scalar_type);
 
-  static XLATensor argmax(const XLATensor& input, xla::int64 dim, bool keepdim);
-  static XLATensor argmax(const XLATensor& input);
-
-  static XLATensor argmin(const XLATensor& input, xla::int64 dim, bool keepdim);
-  static XLATensor argmin(const XLATensor& input);
-
   // Takes a slice from the input as R1 at the specified offset and reshapes it
   // into the provided size.
   static XLATensor as_strided(const XLATensor& input,
@@ -607,6 +601,9 @@ class XLATensor {
   static std::tuple<XLATensor, XLATensor> max(const XLATensor& input,
                                               xla::int64 dim, bool keepdim);
 
+  static void max_out(XLATensor& max, XLATensor& max_values,
+                      const XLATensor& input, xla::int64 dim, bool keepdim);
+
   static XLATensor max_pool_nd(const XLATensor& input,
                                xla::int64 spatial_dim_count,
                                std::vector<xla::int64> kernel_size,
@@ -632,6 +629,9 @@ class XLATensor {
 
   static std::tuple<XLATensor, XLATensor> min(const XLATensor& input,
                                               xla::int64 dim, bool keepdim);
+
+  static void min_out(XLATensor& min, XLATensor& min_indices,
+                      const XLATensor& input, xla::int64 dim, bool keepdim);
 
   static XLATensor mm(const XLATensor& input, const XLATensor& weight);
 
