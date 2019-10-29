@@ -2672,6 +2672,9 @@ TEST_F(AtenXlaTensorTest, TestBilinear) {
         torch::bilinear(xla_input1, xla_input2, xla_weight, xla_bias);
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_trilinear", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleNearest2D) {
