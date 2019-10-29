@@ -261,9 +261,6 @@ class AtenXlaType {
   static at::Tensor constant_pad_nd(const at::Tensor& self, at::IntArrayRef pad,
                                     at::Scalar value);
 
-  static at::Tensor contiguous(const at::Tensor& self,
-                               at::MemoryFormat memory_format);
-
   static std::tuple<at::Tensor, at::Tensor, at::Tensor>
   convolution_backward_overrideable(
       const at::Tensor& grad_output, const at::Tensor& input,

@@ -5955,6 +5955,9 @@ TEST_F(AtenXlaTensorTest, TestContiguous) {
     torch::Tensor xla_output = torch::native::contiguous(xla_input);
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSqueezeAll) {
