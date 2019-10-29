@@ -5843,6 +5843,10 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm1D) {
             /*cudnn_enabled=*/false);
         AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_batch_norm",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -5885,6 +5889,10 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2D) {
             /*cudnn_enabled=*/false);
         AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_batch_norm",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -7740,6 +7748,12 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2DBackward) {
                    testfn,
                    /*rtol=*/1e-3, /*atol=*/1e-4);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm",
+                         cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm_backward",
+                         cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -7780,6 +7794,12 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm3DBackward) {
                    testfn,
                    /*rtol=*/1e-3, /*atol=*/1e-3);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm",
+                         cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm_backward",
+                         cpp_test::GetIgnoredCounters());
   }
 }
 
