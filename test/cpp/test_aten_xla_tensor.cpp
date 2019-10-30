@@ -1501,6 +1501,10 @@ TEST_F(AtenXlaTensorTest, TestCosineSimilarity) {
           torch::cosine_similarity(xla_x1, xla_x2, dim, eps);
       AllClose(output, xla_output);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::sum", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -1523,6 +1527,8 @@ TEST_F(AtenXlaTensorTest, TestCosineEmbeddingLoss) {
             xla_input1, xla_input2, xla_target, margin, reduction);
         AllClose(output, xla_output);
       });
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -6605,6 +6611,9 @@ TEST_F(AtenXlaTensorTest, TestDiagFlat) {
       torch::Tensor xla_output = torch::diagflat(xla_input, diagonal);
       AllClose(output, xla_output);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::diag", cpp_test::GetIgnoredCounters());
   }
 }
 
