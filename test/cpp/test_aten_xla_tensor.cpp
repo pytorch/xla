@@ -6684,6 +6684,10 @@ TEST_F(AtenXlaTensorTest, TestFlatten) {
                 torch::flatten(xla_input, start_dim, end_dim);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          // Depends on shapes, flatten could call into different view
+          // functions. So we skip positive checks here.
         }
       }
     }

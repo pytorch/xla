@@ -375,9 +375,6 @@ class AtenXlaType {
 
   static at::Tensor& fill_(at::Tensor& self, const at::Tensor& value);
 
-  static at::Tensor flatten(const at::Tensor& self, int64_t start_dim,
-                            int64_t end_dim);
-
   static at::Tensor flip(const at::Tensor& self, at::IntArrayRef dims);
 
   static at::Tensor floor(const at::Tensor& self);

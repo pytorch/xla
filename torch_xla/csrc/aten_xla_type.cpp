@@ -1219,12 +1219,6 @@ at::Tensor& AtenXlaType::fill_(at::Tensor& self, const at::Tensor& value) {
   return fill_(self, value.item());
 }
 
-at::Tensor AtenXlaType::flatten(const at::Tensor& self, int64_t start_dim,
-                                int64_t end_dim) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::flatten(self, start_dim, end_dim);
-}
-
 at::Tensor AtenXlaType::flip(const at::Tensor& self, at::IntArrayRef dims) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
