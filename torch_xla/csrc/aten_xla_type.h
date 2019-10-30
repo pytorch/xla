@@ -410,10 +410,6 @@ class AtenXlaType {
 
   static at::Tensor& ge_(at::Tensor& self, const at::Tensor& other);
 
-  static at::Tensor group_norm(const at::Tensor& input, int64_t num_groups,
-                               const at::Tensor& weight, const at::Tensor& bias,
-                               double eps, bool cudnn_enabled);
-
   static at::Tensor gt(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor gt(const at::Tensor& self, const at::Tensor& other);
