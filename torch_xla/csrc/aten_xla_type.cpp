@@ -898,23 +898,6 @@ at::Tensor& AtenXlaType::cosh_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::cosine_embedding_loss(const at::Tensor& input1,
-                                              const at::Tensor& input2,
-                                              const at::Tensor& target,
-                                              double margin,
-                                              int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::cosine_embedding_loss(input1, input2, target, margin,
-                                           reduction);
-}
-
-at::Tensor AtenXlaType::cosine_similarity(const at::Tensor& x1,
-                                          const at::Tensor& x2, int64_t dim,
-                                          double eps) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::cosine_similarity(x1, x2, dim, eps);
-}
-
 at::Tensor AtenXlaType::cross(const at::Tensor& self, const at::Tensor& other,
                               c10::optional<int64_t> dim) {
   XLA_FN_COUNTER("xla::");
@@ -949,11 +932,6 @@ at::Tensor AtenXlaType::diag(const at::Tensor& self, int64_t diagonal) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::diag(bridge::GetXlaTensor(self), diagonal));
-}
-
-at::Tensor AtenXlaType::diagflat(const at::Tensor& self, int64_t offset) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::diagflat(self, offset);
 }
 
 at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
