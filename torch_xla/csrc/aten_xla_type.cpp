@@ -1579,16 +1579,6 @@ at::Tensor AtenXlaType::instance_norm(
                                    cudnn_enabled);
 }
 
-bool AtenXlaType::is_floating_point(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::isFloatingType(self.scalar_type());
-}
-
-bool AtenXlaType::is_signed(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::isSignedType(self.scalar_type());
-}
-
 at::Tensor AtenXlaType::kl_div(const at::Tensor& self, const at::Tensor& target,
                                int64_t reduction) {
   XLA_FN_COUNTER("xla::");

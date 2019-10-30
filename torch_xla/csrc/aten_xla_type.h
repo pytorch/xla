@@ -503,10 +503,6 @@ class AtenXlaType {
       const at::Tensor& running_mean, const at::Tensor& running_var,
       bool use_input_stats, double momentum, double eps, bool cudnn_enabled);
 
-  static bool is_floating_point(const at::Tensor& self);
-
-  static bool is_signed(const at::Tensor& self);
-
   static at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
                            int64_t reduction);
 

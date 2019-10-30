@@ -77,6 +77,34 @@ TEST_F(AtenXlaTensorTest, TestClone) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestIsFloatingPoint) {
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    bool is_float = torch::is_floating_point(a);
+    bool xla_is_float = torch::is_floating_point(xla_a);
+    EXPECT_EQ(is_float, xla_is_float);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  // This check only checks scalar_type which doesn't call into XLA.
+  // So there's no positive asserts.
+}
+
+TEST_F(AtenXlaTensorTest, TestIsSigned) {
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    bool is_signed = torch::is_signed(a);
+    bool xla_is_signed = torch::is_signed(xla_a);
+    EXPECT_EQ(is_signed, xla_is_signed);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  // This check only checks scalar_type which doesn't call into XLA.
+  // So there's no positive asserts.
+}
+
 TEST_F(AtenXlaTensorTest, TestCastByte) {
   torch::Tensor a =
       torch::rand({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
