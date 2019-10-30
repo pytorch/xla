@@ -200,8 +200,6 @@ class AtenXlaType {
   static at::Tensor bartlett_window(int64_t window_length, bool periodic,
                                     const at::TensorOptions& options);
 
-  static at::Tensor bernoulli(const at::Tensor& self, double p,
-                              at::Generator* generator);
   static at::Tensor bernoulli(const at::Tensor& self, at::Generator* generator);
   static at::Tensor& bernoulli_(at::Tensor& self, double p,
                                 at::Generator* generator);
