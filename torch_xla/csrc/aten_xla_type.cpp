@@ -1168,16 +1168,6 @@ at::Tensor AtenXlaType::expand(const at::Tensor& self, at::IntArrayRef size,
       bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(size)));
 }
 
-at::Tensor AtenXlaType::expand_as(const at::Tensor& self,
-                                  const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor other_tensor = bridge::GetXlaTensor(other);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::expand(bridge::GetXlaTensor(self),
-                        xla::util::ToVector<xla::int64>(
-                            other_tensor.shape().get().dimensions())));
-}
-
 at::Tensor AtenXlaType::expm1(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
