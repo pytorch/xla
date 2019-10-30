@@ -1564,6 +1564,9 @@ TEST_F(AtenXlaTensorTest, TestHingeEmbeddingLoss) {
             xla_input, xla_target, margin, reduction);
         AllClose(output, xla_output);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
     }
   }
 }
