@@ -3235,6 +3235,9 @@ TEST_F(AtenXlaTensorTest, TestExpandAs) {
     torch::Tensor xla_c = torch::native::expand_as(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::expand", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEye) {
