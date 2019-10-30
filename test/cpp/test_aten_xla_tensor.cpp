@@ -2825,6 +2825,10 @@ TEST_F(AtenXlaTensorTest, TestBernoulliScalarProb) {
     EXPECT_GT(frac, 0.06);
     EXPECT_LT(frac, 0.14);
   });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bernoulli_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBernoulliTensorProb) {
@@ -2838,6 +2842,10 @@ TEST_F(AtenXlaTensorTest, TestBernoulliTensorProb) {
     EXPECT_GT(frac, 0.06);
     EXPECT_LT(frac, 0.14);
   });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bernoulli", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBernoulliScalarProbInPlace) {

@@ -665,16 +665,6 @@ at::Tensor AtenXlaType::bartlett_window(int64_t window_length, bool periodic,
   return at::native::bartlett_window(window_length, periodic, options);
 }
 
-at::Tensor AtenXlaType::bernoulli(const at::Tensor& self, double p,
-                                  at::Generator* generator) {
-  XLA_FN_COUNTER("xla::");
-  if (generator != nullptr) {
-    return AtenXlaTypeDefault::bernoulli(self, p, generator);
-  }
-  return bridge::AtenFromXlaTensor(
-      XLATensor::bernoulli(bridge::GetXlaTensor(self), p));
-}
-
 at::Tensor AtenXlaType::bernoulli(const at::Tensor& self,
                                   at::Generator* generator) {
   XLA_FN_COUNTER("xla::");
