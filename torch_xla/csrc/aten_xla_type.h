@@ -449,10 +449,6 @@ class AtenXlaType {
                                       const at::Tensor& self,
                                       at::Scalar min_val, at::Scalar max_val);
 
-  static at::Tensor hinge_embedding_loss(const at::Tensor& self,
-                                         const at::Tensor& target,
-                                         double margin, int64_t reduction);
-
   static at::Tensor index(const at::Tensor& self, at::TensorList indices);
 
   static at::Tensor index_add(const at::Tensor& self, int64_t dim,

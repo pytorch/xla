@@ -1431,13 +1431,6 @@ at::Tensor AtenXlaType::hardtanh_backward(const at::Tensor& grad_output,
       max_val));
 }
 
-at::Tensor AtenXlaType::hinge_embedding_loss(const at::Tensor& self,
-                                             const at::Tensor& target,
-                                             double margin, int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hinge_embedding_loss(self, target, margin, reduction);
-}
-
 at::Tensor AtenXlaType::index(const at::Tensor& self, at::TensorList indices) {
   XLA_FN_COUNTER("xla::");
   CanonicalIndexInfo canonical_index_info =
