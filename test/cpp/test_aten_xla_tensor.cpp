@@ -2584,6 +2584,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
     torch::Tensor xla_c = torch::einsum(equation, {xla_a, xla_b});
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
@@ -2597,6 +2600,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
     torch::Tensor xla_c = torch::einsum(equation, {xla_a, xla_b});
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinear) {
@@ -2612,6 +2618,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinear) {
     torch::Tensor xla_c = torch::einsum(equation, {xla_l, xla_a, xla_r});
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonal) {
@@ -2624,6 +2633,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonal) {
     torch::Tensor xla_result = torch::einsum(equation, {xla_input});
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonal) {
@@ -2636,6 +2648,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonal) {
     torch::Tensor xla_result = torch::einsum(equation, {xla_input});
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermute) {
@@ -2648,6 +2663,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermute) {
     torch::Tensor xla_result = torch::einsum(equation, {xla_input});
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
@@ -2661,6 +2679,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
     torch::Tensor xla_result = torch::einsum(equation, {xla_x, xla_y});
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBilinear) {
