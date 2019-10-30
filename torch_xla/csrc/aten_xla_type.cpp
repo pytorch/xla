@@ -1457,15 +1457,6 @@ at::Tensor AtenXlaType::index(const at::Tensor& self, at::TensorList indices) {
                        canonical_index_info.start_dim));
 }
 
-at::Tensor AtenXlaType::index_add(const at::Tensor& self, int64_t dim,
-                                  const at::Tensor& index,
-                                  const at::Tensor& source) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::index_add(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
-      bridge::GetXlaTensor(source)));
-}
-
 at::Tensor& AtenXlaType::index_add_(at::Tensor& self, int64_t dim,
                                     const at::Tensor& index,
                                     const at::Tensor& source) {
@@ -1476,15 +1467,6 @@ at::Tensor& AtenXlaType::index_add_(at::Tensor& self, int64_t dim,
   return self;
 }
 
-at::Tensor AtenXlaType::index_copy(const at::Tensor& self, int64_t dim,
-                                   const at::Tensor& index,
-                                   const at::Tensor& source) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::index_copy(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
-      bridge::GetXlaTensor(source)));
-}
-
 at::Tensor& AtenXlaType::index_copy_(at::Tensor& self, int64_t dim,
                                      const at::Tensor& index,
                                      const at::Tensor& source) {
@@ -1493,22 +1475,6 @@ at::Tensor& AtenXlaType::index_copy_(at::Tensor& self, int64_t dim,
   XLATensor::index_copy_(self_tensor, dim, bridge::GetXlaTensor(index),
                          bridge::GetXlaTensor(source));
   return self;
-}
-
-at::Tensor AtenXlaType::index_fill(const at::Tensor& self, int64_t dim,
-                                   const at::Tensor& index, at::Scalar value) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::index_fill(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index), value));
-}
-
-at::Tensor AtenXlaType::index_fill(const at::Tensor& self, int64_t dim,
-                                   const at::Tensor& index,
-                                   const at::Tensor& value) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::index_fill(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
-      bridge::GetXlaTensor(value)));
 }
 
 at::Tensor& AtenXlaType::index_fill_(at::Tensor& self, int64_t dim,
@@ -1528,19 +1494,6 @@ at::Tensor& AtenXlaType::index_fill_(at::Tensor& self, int64_t dim,
   XLATensor::index_fill_(self_tensor, dim, bridge::GetXlaTensor(index),
                          bridge::GetXlaTensor(value));
   return self;
-}
-
-at::Tensor AtenXlaType::index_put(const at::Tensor& self,
-                                  at::TensorList indices,
-                                  const at::Tensor& values, bool accumulate) {
-  XLA_FN_COUNTER("xla::");
-  CanonicalIndexInfo canonical_index_info =
-      GetCanonicalIndexInfo(self, indices);
-  return bridge::AtenFromXlaTensor(XLATensor::index_put(
-      bridge::GetXlaTensor(canonical_index_info.base),
-      bridge::GetXlaTensors(canonical_index_info.indices),
-      canonical_index_info.start_dim, bridge::GetXlaTensor(values), accumulate,
-      canonical_index_info.result_permutation));
 }
 
 at::Tensor& AtenXlaType::index_put_(at::Tensor& self, at::TensorList indices,

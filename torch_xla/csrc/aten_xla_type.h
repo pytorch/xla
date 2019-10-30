@@ -459,28 +459,13 @@ class AtenXlaType {
 
   static at::Tensor index(const at::Tensor& self, at::TensorList indices);
 
-  static at::Tensor index_add(const at::Tensor& self, int64_t dim,
-                              const at::Tensor& index,
-                              const at::Tensor& source);
-
   static at::Tensor& index_add_(at::Tensor& self, int64_t dim,
                                 const at::Tensor& index,
                                 const at::Tensor& source);
 
-  static at::Tensor index_copy(const at::Tensor& self, int64_t dim,
-                               const at::Tensor& index,
-                               const at::Tensor& source);
-
   static at::Tensor& index_copy_(at::Tensor& self, int64_t dim,
                                  const at::Tensor& index,
                                  const at::Tensor& source);
-
-  static at::Tensor index_fill(const at::Tensor& self, int64_t dim,
-                               const at::Tensor& index, at::Scalar value);
-
-  static at::Tensor index_fill(const at::Tensor& self, int64_t dim,
-                               const at::Tensor& index,
-                               const at::Tensor& value);
 
   static at::Tensor& index_fill_(at::Tensor& self, int64_t dim,
                                  const at::Tensor& index, at::Scalar value);
@@ -488,9 +473,6 @@ class AtenXlaType {
   static at::Tensor& index_fill_(at::Tensor& self, int64_t dim,
                                  const at::Tensor& index,
                                  const at::Tensor& value);
-
-  static at::Tensor index_put(const at::Tensor& self, at::TensorList indices,
-                              const at::Tensor& values, bool accumulate);
 
   static at::Tensor& index_put_(at::Tensor& self, at::TensorList indices,
                                 const at::Tensor& values, bool accumulate);
