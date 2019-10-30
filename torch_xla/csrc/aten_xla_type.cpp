@@ -1501,21 +1501,6 @@ at::Tensor AtenXlaType::index_select(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
-at::Tensor AtenXlaType::instance_norm(
-    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-    const at::Tensor& running_mean, const at::Tensor& running_var,
-    bool use_input_stats, double momentum, double eps, bool cudnn_enabled) {
-  XLA_FN_COUNTER("xla::");
-  if (cudnn_enabled || !use_input_stats) {
-    return AtenXlaTypeDefault::instance_norm(input, weight, bias, running_mean,
-                                             running_var, use_input_stats,
-                                             momentum, eps, cudnn_enabled);
-  }
-  return at::native::instance_norm(input, weight, bias, running_mean,
-                                   running_var, use_input_stats, momentum, eps,
-                                   cudnn_enabled);
-}
-
 bool AtenXlaType::is_floating_point(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return at::isFloatingType(self.scalar_type());
@@ -1567,16 +1552,6 @@ at::Tensor AtenXlaType::l1_loss_backward(const at::Tensor& grad_output,
   return bridge::AtenFromXlaTensor(XLATensor::l1_loss_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       bridge::GetXlaTensor(target), reduction));
-}
-
-at::Tensor AtenXlaType::layer_norm(const at::Tensor& input,
-                                   at::IntArrayRef normalized_shape,
-                                   const at::Tensor& weight,
-                                   const at::Tensor& bias, double eps,
-                                   bool cudnn_enable) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::layer_norm(input, normalized_shape, weight, bias, eps,
-                                cudnn_enable);
 }
 
 at::Tensor AtenXlaType::le(const at::Tensor& self, at::Scalar other) {
@@ -2319,11 +2294,6 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
   }
   return bridge::AtenFromXlaTensor(XLATensor::norm(
       bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
-}
-
-at::Tensor AtenXlaType::nuclear_norm(const at::Tensor& self, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::nuclear_norm(self, keepdim);
 }
 
 at::Tensor AtenXlaType::ones(at::IntArrayRef size,

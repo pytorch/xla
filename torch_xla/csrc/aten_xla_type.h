@@ -472,11 +472,6 @@ class AtenXlaType {
   static at::Tensor index_select(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index);
 
-  static at::Tensor instance_norm(
-      const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-      const at::Tensor& running_mean, const at::Tensor& running_var,
-      bool use_input_stats, double momentum, double eps, bool cudnn_enabled);
-
   static bool is_floating_point(const at::Tensor& self);
 
   static bool is_signed(const at::Tensor& self);
@@ -500,11 +495,6 @@ class AtenXlaType {
                                      const at::Tensor& self,
                                      const at::Tensor& target,
                                      int64_t reduction);
-
-  static at::Tensor layer_norm(const at::Tensor& input,
-                               at::IntArrayRef normalized_shape,
-                               const at::Tensor& weight, const at::Tensor& bias,
-                               double eps, bool cudnn_enable);
 
   static at::Tensor le(const at::Tensor& self, at::Scalar other);
 
@@ -739,8 +729,6 @@ class AtenXlaType {
 
   static at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
                          at::IntArrayRef dim, bool keepdim);
-
-  static at::Tensor nuclear_norm(const at::Tensor& self, bool keepdim);
 
   static at::Tensor one_hot(const at::Tensor& self, int64_t num_classes);
 
