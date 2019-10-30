@@ -304,10 +304,6 @@ class AtenXlaType {
 
   static at::Tensor dot(const at::Tensor& self, const at::Tensor& tensor);
 
-  static at::Tensor dropout(const at::Tensor& input, double p, bool train);
-
-  static at::Tensor& dropout_(at::Tensor& self, double p, bool train);
-
   static at::Tensor einsum(std::string equation, at::TensorList tensors);
 
   static at::Tensor elu(const at::Tensor& self, at::Scalar alpha,

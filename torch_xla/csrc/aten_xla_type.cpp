@@ -1000,22 +1000,6 @@ at::Tensor AtenXlaType::dot(const at::Tensor& self, const at::Tensor& tensor) {
   return matmul(self, tensor);
 }
 
-at::Tensor AtenXlaType::dropout(const at::Tensor& input, double p, bool train) {
-  XLA_FN_COUNTER("xla::");
-  return train ? bridge::AtenFromXlaTensor(
-                     XLATensor::dropout(bridge::GetXlaTensor(input), p))
-               : input;
-}
-
-at::Tensor& AtenXlaType::dropout_(at::Tensor& self, double p, bool train) {
-  XLA_FN_COUNTER("xla::");
-  if (train) {
-    XLATensor self_tensor = bridge::GetXlaTensor(self);
-    XLATensor::dropout_(self_tensor, p);
-  }
-  return self;
-}
-
 at::Tensor AtenXlaType::einsum(std::string equation, at::TensorList tensors) {
   XLA_FN_COUNTER("xla::");
   if (tensors.size() != 2 ||

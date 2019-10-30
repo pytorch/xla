@@ -36,7 +36,6 @@
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
-#include "torch_xla/csrc/ops/dropout.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/flip.h"
@@ -826,15 +825,6 @@ void XLATensor::div_(XLATensor& input, at::Scalar other) {
   ir::Value constant =
       GetIrValueForScalar(other, input.shape(), input.GetDevice());
   input.SetIrValue(input.GetIrValue() / constant);
-}
-
-XLATensor XLATensor::dropout(const XLATensor& input, double p) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Dropout>(input.GetIrValue(), p));
-}
-
-void XLATensor::dropout_(XLATensor& input, double p) {
-  input.SetIrValue(ir::MakeNode<ir::ops::Dropout>(input.GetIrValue(), p));
 }
 
 XLATensor XLATensor::eq(const XLATensor& input, at::Scalar other) {

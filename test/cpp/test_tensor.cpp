@@ -271,22 +271,6 @@ TEST_F(TensorTest, TestLogSoftmax) {
   });
 }
 
-TEST_F(TensorTest, TestDropout) {
-  at::Tensor input = at::rand({17, 21}, at::TensorOptions(at::kFloat));
-  ForEachDevice([&](const Device& device) {
-    XLATensor dev_input = XLATensor::Create(input, device);
-    for (int dim = 0; dim < input.dim(); ++dim) {
-      XLATensor dev_output = XLATensor::dropout(dev_input, 0.1);
-      double prob =
-          static_cast<double>(
-              dev_output.ToTensor().ne(0.0f).sum().item().toDouble()) /
-          input.numel();
-      EXPECT_GT(prob, 0.06);
-      EXPECT_LT(prob, 0.14);
-    }
-  });
-}
-
 TEST_F(TensorTest, TestMaxPool2D) {
   at::Tensor input = at::rand({1, 64, 112, 112}, at::TensorOptions(at::kFloat));
   int kernel_size = 3;

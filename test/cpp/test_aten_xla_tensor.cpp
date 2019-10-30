@@ -2879,13 +2879,18 @@ TEST_F(AtenXlaTensorTest, TestDropout) {
   torch::Tensor a = torch::rand({17, 21}, torch::TensorOptions(torch::kFloat));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor b =
-        torch::dropout(xla_a, 0.1, /*train=*/true).to(torch::kCPU);
+    torch::Tensor xla_b = torch::dropout(xla_a, 0.1, /*train=*/true);
     double prob =
-        static_cast<double>(b.ne(0.0f).sum().item().toDouble()) / a.numel();
+        static_cast<double>(xla_b.cpu().ne(0.0f).sum().item().toDouble()) /
+        a.numel();
     EXPECT_GT(prob, 0.86);
     EXPECT_LT(prob, 0.94);
   });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  // dropout is composed of many arithmetic ops.
+  ExpectCounterChanged("xla::bernoulli_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
@@ -2900,6 +2905,11 @@ TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
     EXPECT_GT(prob, 0.86);
     EXPECT_LT(prob, 0.94);
   });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  // dropout is composed of many arithmetic ops.
+  ExpectCounterChanged("xla::bernoulli_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestRandperm) {

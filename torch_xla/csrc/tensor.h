@@ -372,9 +372,6 @@ class XLATensor {
   static void div_(XLATensor& input, const XLATensor& other);
   static void div_(XLATensor& input, at::Scalar other);
 
-  static XLATensor dropout(const XLATensor& input, double p);
-  static void dropout_(XLATensor& input, double p);
-
   // A generalized contraction between tensors of arbitrary dimension defined by
   // the given equation and applied to the input tensors.
   static XLATensor einsum(const std::string& equation,
