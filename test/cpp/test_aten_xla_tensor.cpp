@@ -1404,6 +1404,10 @@ TEST_F(AtenXlaTensorTest, TestInstanceNorm) {
         /*use_input_stats=*/true, momentum, eps, /*cudnn_enabled=*/false);
     AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::native_batch_norm",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLayerNorm) {
@@ -1433,6 +1437,10 @@ TEST_F(AtenXlaTensorTest, TestLayerNorm) {
             /*cudnn_enabled=*/false);
         AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_layer_norm",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -1464,6 +1472,12 @@ TEST_F(AtenXlaTensorTest, TestLayerNormBackward) {
             device, testfn,
             /*rtol=*/1e-3, /*atol=*/1e-4);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_layer_norm",
+                           cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_layer_norm_backward",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -1476,6 +1490,9 @@ TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
     torch::Tensor xla_b = torch::nuclear_norm(xla_a);
     AllClose(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPairwiseDistance) {
