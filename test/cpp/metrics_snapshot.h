@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -25,12 +26,21 @@ class MetricsSnapshot {
       const std::string& counter_regex, const MetricsSnapshot& after,
       const std::unordered_set<std::string>* ignore_set) const;
 
+  std::string DumpDifferences(
+      const MetricsSnapshot& after,
+      const std::unordered_set<std::string>* ignore_set) const;
+
  private:
   struct MetricSamples {
     std::vector<xla::metrics::Sample> samples;
     double accumulator = 0.0;
     size_t total_samples = 0;
   };
+
+  static void DumpMetricDifference(const std::string& name,
+                                   const MetricSamples& before,
+                                   const MetricSamples& after,
+                                   std::stringstream* ss);
 
   std::unordered_map<std::string, MetricSamples> metrics_map_;
   std::unordered_map<std::string, xla::int64> counters_map_;

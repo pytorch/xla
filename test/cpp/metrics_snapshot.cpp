@@ -42,5 +42,44 @@ std::vector<MetricsSnapshot::ChangedCounter> MetricsSnapshot::CounterChanged(
   return changed;
 }
 
+std::string MetricsSnapshot::DumpDifferences(
+    const MetricsSnapshot& after,
+    const std::unordered_set<std::string>* ignore_set) const {
+  std::stringstream ss;
+  for (auto& name_counter : after.counters_map_) {
+    if (ignore_set == nullptr || ignore_set->count(name_counter.first) == 0) {
+      xla::int64 start_value =
+          xla::util::FindOr(counters_map_, name_counter.first, 0);
+      if (name_counter.second != start_value) {
+        ss << "Counter '" << name_counter.first << "' changed from "
+           << start_value << " to " << name_counter.second << "\n";
+      }
+    }
+  }
+  MetricSamples no_samples;
+  for (auto& name_metrics : after.metrics_map_) {
+    if (ignore_set == nullptr || ignore_set->count(name_metrics.first) == 0) {
+      auto it = metrics_map_.find(name_metrics.first);
+      if (it == metrics_map_.end() ||
+          name_metrics.second.total_samples != it->second.total_samples) {
+        const MetricSamples* start_samples =
+            (it != metrics_map_.end()) ? &it->second : &no_samples;
+        DumpMetricDifference(name_metrics.first, *start_samples,
+                             name_metrics.second, &ss);
+      }
+    }
+  }
+  return ss.str();
+}
+
+void MetricsSnapshot::DumpMetricDifference(const std::string& name,
+                                           const MetricSamples& before,
+                                           const MetricSamples& after,
+                                           std::stringstream* ss) {
+  // Dump only the sample count difference for now.
+  *ss << "Metric '" << name << "' collected extra "
+      << (after.total_samples - before.total_samples) << " samples\n";
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla

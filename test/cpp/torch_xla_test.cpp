@@ -3,6 +3,7 @@
 #include <ATen/ATen.h>
 
 #include "absl/memory/memory.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "torch_xla/csrc/aten_xla_type.h"
 #include "torch_xla/csrc/helpers.h"
@@ -15,7 +16,22 @@ void XlaTest::SetUp() {
   start_msnap_ = absl::make_unique<MetricsSnapshot>();
 }
 
-void XlaTest::TearDown() {}
+void XlaTest::TearDown() {
+  static bool dump_metrics =
+      xla::sys_util::GetEnvBool("XLA_TEST_DUMP_METRICS", false);
+  if (dump_metrics) {
+    MakeEndSnapshot();
+
+    std::string diffs = start_msnap_->DumpDifferences(*end_msnap_,
+                                                      /*ignore_se=*/nullptr);
+    if (!diffs.empty()) {
+      TF_LOG(INFO)
+          << ::testing::UnitTest::GetInstance()->current_test_info()->name()
+          << " Metrics Differences:\n"
+          << diffs;
+    }
+  }
+}
 
 void XlaTest::ExpectCounterNotChanged(
     const std::string& counter_regex,
