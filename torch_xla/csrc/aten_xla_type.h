@@ -391,11 +391,6 @@ class AtenXlaType {
 
   static at::Tensor& frac_(at::Tensor& self);
 
-  static at::Tensor frobenius_norm(const at::Tensor& self);
-
-  static at::Tensor frobenius_norm(const at::Tensor& self, at::IntArrayRef dim,
-                                   bool keepdim);
-
   static at::Tensor full(at::IntArrayRef size, at::Scalar fill_value,
                          const at::TensorOptions& options);
 

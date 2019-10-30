@@ -1266,17 +1266,6 @@ at::Tensor& AtenXlaType::frac_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::frobenius_norm(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::frobenius_norm(self);
-}
-
-at::Tensor AtenXlaType::frobenius_norm(const at::Tensor& self,
-                                       at::IntArrayRef dim, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::frobenius_norm(self, dim, keepdim);
-}
-
 at::Tensor AtenXlaType::full(at::IntArrayRef size, at::Scalar fill_value,
                              const at::TensorOptions& options) {
   XLA_FN_COUNTER("xla::");
