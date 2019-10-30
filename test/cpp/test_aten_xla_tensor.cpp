@@ -1362,6 +1362,10 @@ TEST_F(AtenXlaTensorTest, TestGroupNorm) {
                             /*cudnn_enabled=*/false);
       AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm",
+                         cpp_test::GetIgnoredCounters());
   }
 }
 
