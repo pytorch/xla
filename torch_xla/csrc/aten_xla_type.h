@@ -269,15 +269,6 @@ class AtenXlaType {
 
   static at::Tensor& cosh_(at::Tensor& self);
 
-  static at::Tensor cosine_embedding_loss(const at::Tensor& input1,
-                                          const at::Tensor& input2,
-                                          const at::Tensor& target,
-                                          double margin, int64_t reduction);
-
-  static at::Tensor cosine_similarity(const at::Tensor& x1,
-                                      const at::Tensor& x2, int64_t dim,
-                                      double eps);
-
   static at::Tensor cross(const at::Tensor& self, const at::Tensor& other,
                           c10::optional<int64_t> dim);
 
@@ -288,8 +279,6 @@ class AtenXlaType {
                            c10::optional<at::ScalarType> dtype);
 
   static at::Tensor diag(const at::Tensor& self, int64_t diagonal);
-
-  static at::Tensor diagflat(const at::Tensor& self, int64_t offset);
 
   static at::Tensor diagonal(const at::Tensor& self, int64_t offset,
                              int64_t dim1, int64_t dim2);
