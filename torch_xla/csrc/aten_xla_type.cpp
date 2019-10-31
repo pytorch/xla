@@ -2209,12 +2209,11 @@ at::Tensor AtenXlaType::nll_loss(const at::Tensor& self,
                                  const at::Tensor& weight, int64_t reduction,
                                  int64_t ignore_index) {
   XLA_FN_COUNTER("xla::");
-  if (reduction != at::Reduction::Mean || weight.defined()) {
-    return AtenXlaTypeDefault::nll_loss(self, target, weight, reduction,
-                                        ignore_index);
-  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(XLATensor::nll_loss(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), ignore_index));
+      self_tensor, bridge::GetXlaTensor(target),
+      bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice()), reduction,
+      ignore_index));
 }
 
 at::Tensor AtenXlaType::nll_loss_backward(
@@ -2222,23 +2221,24 @@ at::Tensor AtenXlaType::nll_loss_backward(
     const at::Tensor& target, const at::Tensor& weight, int64_t reduction,
     int64_t ignore_index, const at::Tensor& total_weight) {
   XLA_FN_COUNTER("xla::");
-  if (reduction != at::Reduction::Mean || weight.defined()) {
-    return AtenXlaTypeDefault::nll_loss_backward(grad_output, self, target,
-                                                 weight, reduction,
-                                                 ignore_index, total_weight);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor weight_tensor =
+      bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice());
+  XLATensor total_weight_tensor;
+  if (weight.defined()) {
+    total_weight_tensor =
+        bridge::GetOrCreateXlaTensor(total_weight, self_tensor.GetDevice());
   }
   return bridge::AtenFromXlaTensor(XLATensor::nll_loss_backward(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), ignore_index));
+      bridge::GetXlaTensor(grad_output), self_tensor,
+      bridge::GetXlaTensor(target), weight_tensor, reduction, ignore_index,
+      total_weight_tensor));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
     const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
     int64_t reduction, int64_t ignore_index) {
   XLA_FN_COUNTER("xla::");
-  if (weight.defined()) {
-    return AtenXlaTypeDefault::nll_loss_forward(self, target, weight, reduction,
-                                                ignore_index);
-  }
   at::Tensor total_weight = at::ones({}, at::TensorOptions(self.dtype()));
   return std::make_tuple(
       nll_loss(self, target, weight, reduction, ignore_index), total_weight);
