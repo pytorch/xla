@@ -1319,6 +1319,18 @@ at::Tensor& AtenXlaType::ge_(at::Tensor& self, const at::Tensor& other) {
   return self;
 }
 
+at::Tensor AtenXlaType::gelu(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::gelu(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor AtenXlaType::gelu_backward(const at::Tensor& grad,
+                                      const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::gelu_backward(
+      bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::gt(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(

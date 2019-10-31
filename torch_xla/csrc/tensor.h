@@ -452,6 +452,9 @@ class XLATensor {
   static XLATensor ge(const XLATensor& input, const XLATensor& other);
   static void ge_(XLATensor& input, const XLATensor& other);
 
+  static XLATensor gelu(const XLATensor& input);
+  static XLATensor gelu_backward(const XLATensor& grad, const XLATensor& input);
+
   static XLATensor gt(const XLATensor& input, at::Scalar other);
   static void gt_(XLATensor& input, at::Scalar other);
 
