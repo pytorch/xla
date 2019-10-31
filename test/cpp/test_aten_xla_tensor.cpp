@@ -2469,6 +2469,8 @@ TEST_F(AtenXlaTensorTest, TestMatmul_1x1) {
     torch::Tensor xla_c = torch::matmul(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_2x1) {
@@ -2481,6 +2483,8 @@ TEST_F(AtenXlaTensorTest, TestMatmul_2x1) {
     torch::Tensor xla_c = torch::matmul(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_1x2) {
@@ -2493,6 +2497,8 @@ TEST_F(AtenXlaTensorTest, TestMatmul_1x2) {
     torch::Tensor xla_c = torch::matmul(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_2x2) {
@@ -2505,6 +2511,8 @@ TEST_F(AtenXlaTensorTest, TestMatmul_2x2) {
     torch::Tensor xla_c = torch::matmul(xla_a, xla_b);
     AllClose(c, xla_c, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmulBcast) {
@@ -2519,6 +2527,8 @@ TEST_F(AtenXlaTensorTest, TestMatmulBcast) {
     torch::Tensor xla_c = torch::matmul(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDot) {
@@ -2557,6 +2567,8 @@ TEST_F(AtenXlaTensorTest, TestBatchMatMul) {
     torch::Tensor xla_c = torch::bmm(xla_a, xla_b);
     AllClose(c, xla_c, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestChainMatMul) {
@@ -4452,6 +4464,8 @@ TEST_F(AtenXlaTensorTest, TestPowTensorScalar) {
     torch::Tensor xla_result = torch::pow(xla_base, exponent);
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPowTensorScalarInPlace) {
@@ -4464,6 +4478,8 @@ TEST_F(AtenXlaTensorTest, TestPowTensorScalarInPlace) {
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
     AllClose(base, xla_base, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPowTensorTensor) {
@@ -4477,6 +4493,8 @@ TEST_F(AtenXlaTensorTest, TestPowTensorTensor) {
     torch::Tensor xla_result = torch::pow(xla_base, xla_exponent);
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPowTensorTensorInPlace) {
@@ -4491,6 +4509,8 @@ TEST_F(AtenXlaTensorTest, TestPowTensorTensorInPlace) {
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
     AllClose(base, xla_base, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPowTensorTensorBroadcast) {
@@ -4504,6 +4524,8 @@ TEST_F(AtenXlaTensorTest, TestPowTensorTensorBroadcast) {
     torch::Tensor xla_result = torch::pow(xla_base, xla_exponent);
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPowScalarTensor) {
@@ -4515,6 +4537,8 @@ TEST_F(AtenXlaTensorTest, TestPowScalarTensor) {
     torch::Tensor xla_result = torch::pow(base, xla_exponent);
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFmodScalar) {
@@ -4814,6 +4838,8 @@ TEST_F(AtenXlaTensorTest, TestAddMatMul) {
           torch::addmm(xla_bias, xla_input, xla_weight, /*beta=*/beta);
       AllClose(output, xla_output);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   }
 }
 
