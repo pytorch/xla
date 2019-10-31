@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/nll_loss.h"
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -7,14 +9,18 @@
 namespace torch_xla {
 namespace {
 
+struct WeightScale {
+  xla::XlaOp weight;
+  xla::XlaOp scale;
+};
+
 // Build a iota tensor populated with values 0 through depth - 1, with the
 // exception of ignore_index which is set to -1 (if between 0 and depth - 1).
 // This allows the ignored index to be ignored by the one-hot conversion.
 xla::XlaOp OneHotIota(xla::XlaBuilder* builder, xla::int64 depth, int axis,
                       const xla::Shape& indices_shape, int ignore_index) {
   int indices_dims = indices_shape.rank();
-  int output_dims = indices_dims + 1;
-  std::vector<xla::int64> linspace_dims(output_dims, 1);
+  std::vector<xla::int64> linspace_dims(indices_dims + 1, 1);
   linspace_dims[axis] = depth;
   xla::Shape linspace_xla_shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(
       indices_shape.element_type(), linspace_dims);
@@ -64,75 +70,107 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
                      xla::Broadcast(off_value, output_dimensions));
 }
 
-// Count the number of labels which aren't equal to "ignore_index".
-xla::XlaOp ValidLabelsCount(const xla::XlaOp& labels, int ignore_index) {
+WeightScale GetMaskedWeight(const absl::optional<xla::XlaOp>& weight,
+                            const xla::Shape& logits_shape,
+                            const xla::XlaOp& labels,
+                            const xla::XlaOp& one_hot_labels,
+                            int ignore_index) {
   xla::Shape labels_shape = XlaHelpers::ShapeOfXlaOp(labels);
   xla::XlaOp valid_bitmap = xla::Ne(
       labels, XlaHelpers::ScalarValue<xla::int64>(
                   ignore_index, labels_shape.element_type(), labels.builder()));
-  valid_bitmap = xla::ConvertElementType(valid_bitmap, xla::PrimitiveType::S32);
-  xla::XlaOp zero = XlaHelpers::ScalarValue<xla::int32>(
-      0, xla::PrimitiveType::S32, labels.builder());
+  xla::XlaOp xweight;
+  if (weight) {
+    xweight = xla::BroadcastInDim(*weight, logits_shape.dimensions(), {1});
+  } else {
+    xweight =
+        XlaHelpers::ScalarBroadcast<float>(1.0, logits_shape, labels.builder());
+  }
+  xla::XlaOp zeros =
+      XlaHelpers::ScalarBroadcast<float>(0.0, logits_shape, labels.builder());
+  xla::XlaOp xvalid_bitmap =
+      xla::BroadcastInDim(valid_bitmap, logits_shape.dimensions(), {0});
+  xla::XlaOp result_weight =
+      xla::Select(xvalid_bitmap, xweight, zeros) * one_hot_labels;
+
   xla::XlaComputation add_func =
-      XlaHelpers::CreateAddComputation(xla::PrimitiveType::S32);
-  return xla::ReduceAll(valid_bitmap, zero, add_func);
+      XlaHelpers::CreateAddComputation(logits_shape.element_type());
+  xla::XlaOp zero = xla::Zero(labels.builder(), logits_shape.element_type());
+  xla::XlaOp one = xla::One(labels.builder(), logits_shape.element_type());
+  xla::XlaOp scale = xla::ReduceAll(result_weight, zero, add_func);
+  scale = xla::Select(xla::Ne(scale, zero), scale, one);
+  return {result_weight, scale};
 }
 
 }  // namespace
 
 // Builds the NLLLoss for log-probabilities "logits" and class indices "labels".
 xla::XlaOp BuildNllLoss(const xla::XlaOp& logits, const xla::XlaOp& labels,
-                        int ignore_index) {
-  xla::XlaBuilder* builder = logits.builder();
+                        const absl::optional<xla::XlaOp>& weight,
+                        int ignore_index, ReductionMode reduction_mode) {
+  const int classes_axis = 1;
   xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
-  xla::XlaOp zero =
-      XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder);
+  xla::XlaOp zero = xla::Zero(logits.builder(), logits_shape.element_type());
+  xla::XlaOp one = xla::One(logits.builder(), logits_shape.element_type());
   xla::XlaOp one_hot_labels = LabelsToOneHot(
-      /*builder=*/builder,
+      /*builder=*/logits.builder(),
       /*depth=*/logits_shape.dimensions(1),
-      /*axis=*/1,
+      /*axis=*/classes_axis,
       /*indices=*/labels,
-      /*on_value=*/
-      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder),
+      /*on_value=*/one,
       /*off_value=*/zero,
       /*ignore_index=*/ignore_index);
-  // Compute sum(-one_hot_labels * logits) / batch.
-  xla::XlaOp mul = xla::Mul(xla::Neg(one_hot_labels), logits);
-  xla::XlaOp batch = xla::ConvertElementType(
-      ValidLabelsCount(labels, ignore_index), logits_shape.element_type());
+  xla::XlaOp mul = xla::Neg(one_hot_labels) * logits;
+  WeightScale weight_scale = GetMaskedWeight(weight, logits_shape, labels,
+                                             one_hot_labels, ignore_index);
+  mul = mul * weight_scale.weight;
   xla::XlaComputation add_func =
       XlaHelpers::CreateAddComputation(logits_shape.element_type());
-  xla::XlaOp one =
-      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder);
-  batch = xla::Select(xla::Ne(batch, zero), batch, one);
-  return xla::ReduceAll(mul, zero, add_func) / batch;
+  if (reduction_mode == ReductionMode::kNone) {
+    return xla::Reduce(mul, zero, add_func, {classes_axis});
+  }
+  xla::XlaOp sum = xla::ReduceAll(mul, zero, add_func);
+  if (reduction_mode == ReductionMode::kSum) {
+    return sum;
+  }
+  return sum / weight_scale.scale;
 }
 
 // Builds the NLLLoss gradient for log-probabilities "logits" and class indices
 // "labels".
-xla::XlaOp BuildNllLossBackward(const xla::XlaOp& logits,
-                                const xla::XlaOp& labels, int ignore_index) {
-  xla::XlaBuilder* builder = logits.builder();
+xla::XlaOp BuildNllLossBackward(const xla::XlaOp& grad_output,
+                                const xla::XlaOp& logits,
+                                const xla::XlaOp& labels,
+                                const absl::optional<xla::XlaOp>& weight,
+                                const absl::optional<xla::XlaOp>& total_weight,
+                                int ignore_index,
+                                ReductionMode reduction_mode) {
+  const int classes_axis = 1;
   xla::Shape logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
+  xla::XlaOp zero = xla::Zero(logits.builder(), logits_shape.element_type());
+  xla::XlaOp one = xla::One(logits.builder(), logits_shape.element_type());
   xla::XlaOp one_hot_labels = LabelsToOneHot(
-      /*builder=*/builder,
+      /*builder=*/logits.builder(),
       /*depth=*/logits_shape.dimensions(1),
-      /*axis=*/1,
+      /*axis=*/classes_axis,
       /*indices=*/labels,
-      /*on_value=*/
-      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder),
-      /*off_value=*/
-      XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder),
+      /*on_value=*/one,
+      /*off_value=*/zero,
       /*ignore_index=*/ignore_index);
-  xla::XlaOp batch = xla::ConvertElementType(
-      ValidLabelsCount(labels, ignore_index), logits_shape.element_type());
-  // Compute -one_hot_labels / batch.
-  xla::XlaOp zero =
-      XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder);
-  xla::XlaOp one =
-      XlaHelpers::ScalarValue<float>(1, logits_shape.element_type(), builder);
-  batch = xla::Select(xla::Ne(batch, zero), batch, one);
-  return xla::Neg(one_hot_labels) / batch;
+
+  xla::Shape grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
+  xla::XlaOp grad = grad_output;
+  if (grad_output_shape.rank() == 1) {
+    grad = xla::BroadcastInDim(grad, logits_shape.dimensions(), {0});
+  }
+  xla::XlaOp result = xla::Neg(one_hot_labels) * grad;
+  WeightScale weight_scale = GetMaskedWeight(weight, logits_shape, labels,
+                                             one_hot_labels, ignore_index);
+  result = result * weight_scale.weight;
+  if (reduction_mode != ReductionMode::kMean) {
+    return result;
+  }
+  return result / weight_scale.scale;
 }
 
 }  // namespace torch_xla

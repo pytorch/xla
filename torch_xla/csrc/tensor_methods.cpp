@@ -216,6 +216,14 @@ ir::Value GetIrValueOrDefault(const XLATensor& input, at::Scalar default_value,
                          : input.GetIrValue();
 }
 
+absl::optional<ir::Value> GetOptionalIrValue(const XLATensor& tensor) {
+  absl::optional<ir::Value> value;
+  if (!tensor.is_null()) {
+    value = tensor.GetIrValue();
+  }
+  return value;
+}
+
 void CheckIsIntegralOrPred(const xla::Shape& shape,
                            const std::string& op_name) {
   XLA_CHECK(xla::ShapeUtil::ElementIsIntegral(shape) ||
@@ -1616,16 +1624,23 @@ void XLATensor::neg_(XLATensor& input) {
 }
 
 XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target,
+                              const XLATensor& weight, xla::int64 reduction,
                               int ignore_index) {
   return input.CreateFrom(ir::MakeNode<ir::ops::NllLoss>(
-      input.GetIrValue(), target.GetIrValue(), ignore_index));
+      input.GetIrValue(), target.GetIrValue(), GetOptionalIrValue(weight),
+      GetXlaReductionMode(reduction), ignore_index));
 }
 
-XLATensor XLATensor::nll_loss_backward(const XLATensor& input,
+XLATensor XLATensor::nll_loss_backward(const XLATensor& grad_output,
+                                       const XLATensor& input,
                                        const XLATensor& target,
-                                       int ignore_index) {
+                                       const XLATensor& weight,
+                                       xla::int64 reduction, int ignore_index,
+                                       const XLATensor& total_weight) {
   return input.CreateFrom(ir::MakeNode<ir::ops::NllLossBackward>(
-      input.GetIrValue(), target.GetIrValue(), ignore_index));
+      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
+      GetOptionalIrValue(weight), GetOptionalIrValue(total_weight),
+      GetXlaReductionMode(reduction), ignore_index));
 }
 
 XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
