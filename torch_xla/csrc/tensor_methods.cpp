@@ -1059,6 +1059,16 @@ void XLATensor::ge_(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
+XLATensor XLATensor::gelu(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Gelu(input.GetIrValue()));
+}
+
+XLATensor XLATensor::gelu_backward(const XLATensor& grad,
+                                   const XLATensor& input) {
+  return input.CreateFrom(
+      ir::ops::GeluBackward(grad.GetIrValue(), input.GetIrValue()));
+}
+
 XLATensor XLATensor::gt(const XLATensor& input, at::Scalar other) {
   return DispatchComparisonOp(at::aten::gt, input, other);
 }

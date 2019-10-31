@@ -410,6 +410,11 @@ class AtenXlaType {
 
   static at::Tensor& ge_(at::Tensor& self, const at::Tensor& other);
 
+  static at::Tensor gelu(const at::Tensor& self);
+
+  static at::Tensor gelu_backward(const at::Tensor& grad,
+                                  const at::Tensor& self);
+
   static at::Tensor gt(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor gt(const at::Tensor& self, const at::Tensor& other);
