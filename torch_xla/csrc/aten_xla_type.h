@@ -468,10 +468,6 @@ class AtenXlaType {
   static at::Tensor index_select(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index);
 
-  static bool is_floating_point(const at::Tensor& self);
-
-  static bool is_signed(const at::Tensor& self);
-
   static at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
                            int64_t reduction);
 

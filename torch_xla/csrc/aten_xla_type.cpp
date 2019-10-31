@@ -20,6 +20,12 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/version.h"
 
+// [Implementation Guidelines]
+// - If you want to call a at::func which doesn't exist in AtenXlaType,
+//   call at::native::func instead.
+//   E.g. don't call tensor.is_floating_point() or
+//   at::is_floating_point(tensor), use at::native::is_floating_point(tensor).
+
 namespace torch_xla {
 namespace {
 
@@ -432,8 +438,9 @@ at::Tensor AtenXlaType::addmm(const at::Tensor& self, const at::Tensor& mat1,
   XLA_FN_COUNTER("xla::");
   // xla::dot doesn't support integer types.
   if (beta.to<double>() != 1 || alpha.to<double>() != 1 ||
-      !self.is_floating_point() || !mat1.is_floating_point() ||
-      !mat2.is_floating_point()) {
+      !at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(mat1) ||
+      !at::native::is_floating_point(mat2)) {
     return AtenXlaTypeDefault::addmm(self, mat1, mat2, beta, alpha);
   }
   return bridge::AtenFromXlaTensor(
@@ -720,7 +727,8 @@ at::Tensor AtenXlaType::blackman_window(int64_t window_length, bool periodic,
 at::Tensor AtenXlaType::bmm(const at::Tensor& self, const at::Tensor& mat2) {
   XLA_FN_COUNTER("xla::");
   // xla::dot doesn't support integer types.
-  if (!self.is_floating_point() || !mat2.is_floating_point()) {
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(mat2)) {
     return AtenXlaTypeDefault::bmm(self, mat2);
   }
   return bridge::AtenFromXlaTensor(
@@ -1485,16 +1493,6 @@ at::Tensor AtenXlaType::index_select(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
-bool AtenXlaType::is_floating_point(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::isFloatingType(self.scalar_type());
-}
-
-bool AtenXlaType::is_signed(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::isSignedType(self.scalar_type());
-}
-
 at::Tensor AtenXlaType::kl_div(const at::Tensor& self, const at::Tensor& target,
                                int64_t reduction) {
   XLA_FN_COUNTER("xla::");
@@ -1750,7 +1748,8 @@ at::Tensor AtenXlaType::matmul(const at::Tensor& self,
                                const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   // xla::dot doesn't support integer types.
-  if (!self.is_floating_point() || !other.is_floating_point()) {
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(other)) {
     return AtenXlaTypeDefault::matmul(self, other);
   }
   return bridge::AtenFromXlaTensor(XLATensor::matmul(
@@ -1986,7 +1985,8 @@ std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::min_out(
 at::Tensor AtenXlaType::mm(const at::Tensor& self, const at::Tensor& mat2) {
   XLA_FN_COUNTER("xla::");
   // xla::dot doesn't support integer types.
-  if (!self.is_floating_point() || !mat2.is_floating_point()) {
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(mat2)) {
     return AtenXlaTypeDefault::mm(self, mat2);
   }
   return bridge::AtenFromXlaTensor(
@@ -2324,7 +2324,7 @@ at::Tensor AtenXlaType::pinverse(const at::Tensor& self, double rcond) {
 at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::pow doesn't support integer types.
-  if (!self.is_floating_point()) {
+  if (!at::native::is_floating_point(self)) {
     return AtenXlaTypeDefault::pow(self, exponent);
   }
   return bridge::AtenFromXlaTensor(
@@ -2335,7 +2335,8 @@ at::Tensor AtenXlaType::pow(const at::Tensor& self,
                             const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::pow doesn't support integer types.
-  if (!self.is_floating_point() || !exponent.is_floating_point()) {
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(exponent)) {
     return AtenXlaTypeDefault::pow(self, exponent);
   }
   return bridge::AtenFromXlaTensor(XLATensor::pow(
@@ -2345,7 +2346,7 @@ at::Tensor AtenXlaType::pow(const at::Tensor& self,
 at::Tensor AtenXlaType::pow(at::Scalar self, const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::pow doesn't support integer types.
-  if (!exponent.is_floating_point()) {
+  if (!at::native::is_floating_point(exponent)) {
     return AtenXlaTypeDefault::pow(self, exponent);
   }
   return bridge::AtenFromXlaTensor(
@@ -2355,7 +2356,7 @@ at::Tensor AtenXlaType::pow(at::Scalar self, const at::Tensor& exponent) {
 at::Tensor& AtenXlaType::pow_(at::Tensor& self, at::Scalar exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::pow doesn't support integer types.
-  if (!self.is_floating_point()) {
+  if (!at::native::is_floating_point(self)) {
     return AtenXlaTypeDefault::pow_(self, exponent);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -2366,7 +2367,8 @@ at::Tensor& AtenXlaType::pow_(at::Tensor& self, at::Scalar exponent) {
 at::Tensor& AtenXlaType::pow_(at::Tensor& self, const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::pow doesn't support integer types.
-  if (!self.is_floating_point() || !exponent.is_floating_point()) {
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(exponent)) {
     return AtenXlaTypeDefault::pow_(self, exponent);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
