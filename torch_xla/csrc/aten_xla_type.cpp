@@ -20,12 +20,12 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/version.h"
 
-/* [Implementation Guidelines]
- - If you want to call a at::func which doesn't exist in AtenXlaType,
-   call at::native::func instead.
-   E.g. don't call tensor.is_floating_point() or at::is_floating_point(tensor),
-   use at::native::is_floating_point(tensor).
-*/
+// [Implementation Guidelines]
+// - If you want to call a at::func which doesn't exist in AtenXlaType,
+//   call at::native::func instead.
+//   E.g. don't call tensor.is_floating_point() or
+//   at::is_floating_point(tensor), use at::native::is_floating_point(tensor).
+
 namespace torch_xla {
 namespace {
 
@@ -1335,15 +1335,6 @@ at::Tensor& AtenXlaType::ge_(at::Tensor& self, const at::Tensor& other) {
   return self;
 }
 
-at::Tensor AtenXlaType::group_norm(const at::Tensor& input, int64_t num_groups,
-                                   const at::Tensor& weight,
-                                   const at::Tensor& bias, double eps,
-                                   bool cudnn_enabled) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::group_norm(input, num_groups, weight, bias, eps,
-                                cudnn_enabled);
-}
-
 at::Tensor AtenXlaType::gt(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -1448,13 +1439,6 @@ at::Tensor AtenXlaType::hardtanh_backward(const at::Tensor& grad_output,
       max_val));
 }
 
-at::Tensor AtenXlaType::hinge_embedding_loss(const at::Tensor& self,
-                                             const at::Tensor& target,
-                                             double margin, int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hinge_embedding_loss(self, target, margin, reduction);
-}
-
 at::Tensor AtenXlaType::index(const at::Tensor& self, at::TensorList indices) {
   XLA_FN_COUNTER("xla::");
   CanonicalIndexInfo canonical_index_info =
@@ -1463,15 +1447,6 @@ at::Tensor AtenXlaType::index(const at::Tensor& self, at::TensorList indices) {
       XLATensor::index(bridge::GetXlaTensor(canonical_index_info.base),
                        bridge::GetXlaTensors(canonical_index_info.indices),
                        canonical_index_info.start_dim));
-}
-
-at::Tensor AtenXlaType::index_add(const at::Tensor& self, int64_t dim,
-                                  const at::Tensor& index,
-                                  const at::Tensor& source) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::index_add(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
-      bridge::GetXlaTensor(source)));
 }
 
 at::Tensor& AtenXlaType::index_add_(at::Tensor& self, int64_t dim,
@@ -1484,15 +1459,6 @@ at::Tensor& AtenXlaType::index_add_(at::Tensor& self, int64_t dim,
   return self;
 }
 
-at::Tensor AtenXlaType::index_copy(const at::Tensor& self, int64_t dim,
-                                   const at::Tensor& index,
-                                   const at::Tensor& source) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::index_copy(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
-      bridge::GetXlaTensor(source)));
-}
-
 at::Tensor& AtenXlaType::index_copy_(at::Tensor& self, int64_t dim,
                                      const at::Tensor& index,
                                      const at::Tensor& source) {
@@ -1501,22 +1467,6 @@ at::Tensor& AtenXlaType::index_copy_(at::Tensor& self, int64_t dim,
   XLATensor::index_copy_(self_tensor, dim, bridge::GetXlaTensor(index),
                          bridge::GetXlaTensor(source));
   return self;
-}
-
-at::Tensor AtenXlaType::index_fill(const at::Tensor& self, int64_t dim,
-                                   const at::Tensor& index, at::Scalar value) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::index_fill(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index), value));
-}
-
-at::Tensor AtenXlaType::index_fill(const at::Tensor& self, int64_t dim,
-                                   const at::Tensor& index,
-                                   const at::Tensor& value) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::index_fill(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
-      bridge::GetXlaTensor(value)));
 }
 
 at::Tensor& AtenXlaType::index_fill_(at::Tensor& self, int64_t dim,
@@ -1538,19 +1488,6 @@ at::Tensor& AtenXlaType::index_fill_(at::Tensor& self, int64_t dim,
   return self;
 }
 
-at::Tensor AtenXlaType::index_put(const at::Tensor& self,
-                                  at::TensorList indices,
-                                  const at::Tensor& values, bool accumulate) {
-  XLA_FN_COUNTER("xla::");
-  CanonicalIndexInfo canonical_index_info =
-      GetCanonicalIndexInfo(self, indices);
-  return bridge::AtenFromXlaTensor(XLATensor::index_put(
-      bridge::GetXlaTensor(canonical_index_info.base),
-      bridge::GetXlaTensors(canonical_index_info.indices),
-      canonical_index_info.start_dim, bridge::GetXlaTensor(values), accumulate,
-      canonical_index_info.result_permutation));
-}
-
 at::Tensor& AtenXlaType::index_put_(at::Tensor& self, at::TensorList indices,
                                     const at::Tensor& values, bool accumulate) {
   XLA_FN_COUNTER("xla::");
@@ -1570,21 +1507,6 @@ at::Tensor AtenXlaType::index_select(const at::Tensor& self, int64_t dim,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::index_select(
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
-}
-
-at::Tensor AtenXlaType::instance_norm(
-    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-    const at::Tensor& running_mean, const at::Tensor& running_var,
-    bool use_input_stats, double momentum, double eps, bool cudnn_enabled) {
-  XLA_FN_COUNTER("xla::");
-  if (cudnn_enabled || !use_input_stats) {
-    return AtenXlaTypeDefault::instance_norm(input, weight, bias, running_mean,
-                                             running_var, use_input_stats,
-                                             momentum, eps, cudnn_enabled);
-  }
-  return at::native::instance_norm(input, weight, bias, running_mean,
-                                   running_var, use_input_stats, momentum, eps,
-                                   cudnn_enabled);
 }
 
 at::Tensor AtenXlaType::kl_div(const at::Tensor& self, const at::Tensor& target,
@@ -1628,16 +1550,6 @@ at::Tensor AtenXlaType::l1_loss_backward(const at::Tensor& grad_output,
   return bridge::AtenFromXlaTensor(XLATensor::l1_loss_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       bridge::GetXlaTensor(target), reduction));
-}
-
-at::Tensor AtenXlaType::layer_norm(const at::Tensor& input,
-                                   at::IntArrayRef normalized_shape,
-                                   const at::Tensor& weight,
-                                   const at::Tensor& bias, double eps,
-                                   bool cudnn_enable) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::layer_norm(input, normalized_shape, weight, bias, eps,
-                                cudnn_enable);
 }
 
 at::Tensor AtenXlaType::le(const at::Tensor& self, at::Scalar other) {
@@ -2382,11 +2294,6 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
   }
   return bridge::AtenFromXlaTensor(XLATensor::norm(
       bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
-}
-
-at::Tensor AtenXlaType::nuclear_norm(const at::Tensor& self, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::nuclear_norm(self, keepdim);
 }
 
 at::Tensor AtenXlaType::ones(at::IntArrayRef size,

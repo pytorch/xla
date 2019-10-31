@@ -1400,6 +1400,10 @@ TEST_F(AtenXlaTensorTest, TestGroupNorm) {
                             /*cudnn_enabled=*/false);
       AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm",
+                         cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -1432,6 +1436,10 @@ TEST_F(AtenXlaTensorTest, TestInstanceNorm) {
         /*use_input_stats=*/true, momentum, eps, /*cudnn_enabled=*/false);
     AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::native_batch_norm",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLayerNorm) {
@@ -1461,6 +1469,10 @@ TEST_F(AtenXlaTensorTest, TestLayerNorm) {
             /*cudnn_enabled=*/false);
         AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_layer_norm",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -1492,6 +1504,12 @@ TEST_F(AtenXlaTensorTest, TestLayerNormBackward) {
             device, testfn,
             /*rtol=*/1e-3, /*atol=*/1e-4);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_layer_norm",
+                           cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_layer_norm_backward",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -1504,6 +1522,9 @@ TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
     torch::Tensor xla_b = torch::nuclear_norm(xla_a);
     AllClose(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPairwiseDistance) {
@@ -1588,6 +1609,9 @@ TEST_F(AtenXlaTensorTest, TestHingeEmbeddingLoss) {
             xla_input, xla_target, margin, reduction);
         AllClose(output, xla_output);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -2484,7 +2508,8 @@ TEST_F(AtenXlaTensorTest, TestMatmul_2x1) {
     AllClose(c, xla_c);
   });
 
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  // TODO: we should lower aten::mv
+  ExpectCounterNotChanged("aten::(?!mv).*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_1x2) {
@@ -3582,6 +3607,9 @@ TEST_F(AtenXlaTensorTest, TestOneIndexPut) {
             torch::index_put(xla_params, {xla_indices}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3612,6 +3640,9 @@ TEST_F(AtenXlaTensorTest, TestOneIndexPutInPlace) {
         AllEqual(result, xla_result);
         AllEqual(params, xla_params);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3639,6 +3670,9 @@ TEST_F(AtenXlaTensorTest, TestOneIndexPutTransfer) {
             torch::index_put(xla_params, {indices}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3670,6 +3704,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPut) {
             xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3703,6 +3740,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutHeadNull) {
             xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3736,6 +3776,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutMiddleNull) {
             xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3769,6 +3812,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutTailNull) {
             xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3800,6 +3846,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutMiddleBroadcast) {
             xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3831,6 +3880,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutTailBroadcast) {
             xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3858,6 +3910,10 @@ TEST_F(AtenXlaTensorTest, TestMaskIndexPut) {
             torch::index_put(xla_params, {xla_indices}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::(?!nonzero).*",
+                              cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3888,6 +3944,10 @@ TEST_F(AtenXlaTensorTest, TestIndexPutImpl) {
         AllEqual(result, xla_result);
         AllEqual(params, xla_params);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::_index_put_impl_",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3913,6 +3973,9 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithScalar) {
             torch::index_fill(xla_base, dim, xla_index, value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3939,6 +4002,9 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithScalarInPlace) {
         AllEqual(result, xla_result);
         AllEqual(base, xla_base);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3966,6 +4032,9 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithTensor) {
             torch::index_fill(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3995,6 +4064,9 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithTensorInPlace) {
         AllEqual(result, xla_result);
         AllEqual(base, xla_base);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4022,6 +4094,9 @@ TEST_F(AtenXlaTensorTest, TestIndexFillRank0) {
             torch::index_fill(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4057,6 +4132,9 @@ TEST_F(AtenXlaTensorTest, TestIndexAdd) {
             torch::index_add(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4095,6 +4173,9 @@ TEST_F(AtenXlaTensorTest, TestIndexAddInPlace) {
         AllEqual(result, xla_result);
         AllEqual(base, xla_base);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4129,6 +4210,9 @@ TEST_F(AtenXlaTensorTest, TestIndexAddRank0) {
             torch::index_add(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4164,6 +4248,9 @@ TEST_F(AtenXlaTensorTest, TestIndexCopy) {
             torch::index_copy(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_copy_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4202,6 +4289,9 @@ TEST_F(AtenXlaTensorTest, TestIndexCopyInPlace) {
         AllEqual(result, xla_result);
         AllEqual(base, xla_base);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_copy_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4236,6 +4326,9 @@ TEST_F(AtenXlaTensorTest, TestIndexCopyRank0) {
             torch::index_copy(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_copy_", cpp_test::GetIgnoredCounters());
     }
   }
 }
