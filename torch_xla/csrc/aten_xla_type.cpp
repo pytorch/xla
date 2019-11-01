@@ -2053,6 +2053,31 @@ at::Tensor& AtenXlaType::mul_(at::Tensor& self, at::Scalar other) {
   return self;
 }
 
+at::Tensor AtenXlaType::mv(const at::Tensor& self, const at::Tensor& vec) {
+  XLA_FN_COUNTER("xla::");
+  // xla::dot doesn't support integer types.
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(vec)) {
+    return AtenXlaTypeDefault::mv(self, vec);
+  }
+  return bridge::AtenFromXlaTensor(
+      XLATensor::mv(bridge::GetXlaTensor(self), bridge::GetXlaTensor(vec)));
+}
+
+at::Tensor& AtenXlaType::mv_out(at::Tensor& out, const at::Tensor& self,
+                                const at::Tensor& vec) {
+  XLA_FN_COUNTER("xla::");
+  // xla::dot doesn't support integer types.
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(vec)) {
+    return AtenXlaTypeDefault::mv_out(out, self, vec);
+  }
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::mv_out(out_tensor, bridge::GetXlaTensor(self),
+                    bridge::GetXlaTensor(vec));
+  return out;
+}
+
 at::Tensor AtenXlaType::narrow(const at::Tensor& self, int64_t dim,
                                int64_t start, int64_t length) {
   XLA_FN_COUNTER("xla::");
