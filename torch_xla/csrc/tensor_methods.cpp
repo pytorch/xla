@@ -2093,8 +2093,7 @@ XLATensor XLATensor::sum(const XLATensor& input,
                          std::vector<xla::int64> dimensions,
                          bool keep_reduced_dimensions,
                          c10::optional<at::ScalarType> dtype) {
-  if ((at::isIntegralType(input.dtype()) || input.dtype() == at::kBool) &&
-      !dtype) {
+  if (at::isIntegralType(input.dtype(), /*includeBool=*/true) && !dtype) {
     dtype = at::ScalarType::Long;
   }
   return input.CreateFrom(
