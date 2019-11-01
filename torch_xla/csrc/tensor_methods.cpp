@@ -1519,6 +1519,15 @@ void XLATensor::mul_(XLATensor& input, at::Scalar other) {
   input.SetIrValue(input.GetIrValue() * constant);
 }
 
+XLATensor XLATensor::mv(const XLATensor& input, const XLATensor& vec) {
+  return input.CreateFrom(ir::ops::Dot(input.GetIrValue(), vec.GetIrValue()));
+}
+
+void XLATensor::mv_out(XLATensor& out, const XLATensor& input,
+                       const XLATensor& vec) {
+  out.SetIrValue(ir::ops::Dot(input.GetIrValue(), vec.GetIrValue()));
+}
+
 XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
                             xla::int64 start, xla::int64 length) {
   auto input_shape = input.shape();

@@ -2582,6 +2582,38 @@ TEST_F(AtenXlaTensorTest, TestTensorDot) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestMv) {
+  torch::Tensor a = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::mv(a, b);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = torch::mv(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mv", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestMvOut) {
+  torch::Tensor a = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::empty({4}, torch::TensorOptions(torch::kFloat));
+  torch::mv_out(c, a, b);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = torch::empty({4}, xla_b.options());
+    torch::mv_out(xla_c, xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mv_out", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestBatchMatMul) {
   torch::Tensor a = torch::rand({3, 6, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 4, 5}, torch::TensorOptions(torch::kFloat));

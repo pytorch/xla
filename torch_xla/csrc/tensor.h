@@ -648,6 +648,10 @@ class XLATensor {
   static void mul_(XLATensor& input, const XLATensor& other);
   static void mul_(XLATensor& input, at::Scalar other);
 
+  static XLATensor mv(const XLATensor& input, const XLATensor& vec);
+  static void mv_out(XLATensor& out, const XLATensor& input,
+                     const XLATensor& vec);
+
   // Returns a new tensor that is a narrowed view of the input in the given
   // dimension.
   static XLATensor narrow(const XLATensor& input, xla::int64 dim,
