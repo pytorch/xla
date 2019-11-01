@@ -43,7 +43,7 @@ def get_summary_writer(logdir):
   Args:
     logdir: Str. File location where logs will be written or None. If None,
         no writer is created.
-  
+
   Returns:
     Instance of `torch.utils.tensorboard.SummaryWriter`.
   """
