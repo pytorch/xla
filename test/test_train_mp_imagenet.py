@@ -146,13 +146,13 @@ def train_imagenet():
         train_dataset,
         batch_size=FLAGS.batch_size,
         sampler=train_sampler,
-        drop_last=True,
+        drop_last=FLAGS.drop_last,
         shuffle=False if train_sampler else True,
         num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
-        drop_last=True,
+        drop_last=FLAGS.drop_last,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
