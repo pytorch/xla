@@ -36,7 +36,6 @@
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
-#include "torch_xla/csrc/ops/dropout.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/flip.h"
@@ -155,7 +154,7 @@ void CheckDimensionSize(const XLATensor& t, xla::int64 dim,
       << " (while checking arguments for " << tag << ")";
 }
 
-std::vector<xla::int64> GetExpandDimanesions(
+std::vector<xla::int64> GetExpandDimensions(
     const xla::Shape& shape, std::vector<xla::int64> dimensions) {
   XLA_CHECK_GE(dimensions.size(), shape.rank()) << shape;
   xla::int64 base = dimensions.size() - shape.rank();
@@ -828,15 +827,6 @@ void XLATensor::div_(XLATensor& input, at::Scalar other) {
   input.SetIrValue(input.GetIrValue() / constant);
 }
 
-XLATensor XLATensor::dropout(const XLATensor& input, double p) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Dropout>(input.GetIrValue(), p));
-}
-
-void XLATensor::dropout_(XLATensor& input, double p) {
-  input.SetIrValue(ir::MakeNode<ir::ops::Dropout>(input.GetIrValue(), p));
-}
-
 XLATensor XLATensor::eq(const XLATensor& input, at::Scalar other) {
   return DispatchComparisonOp(at::aten::eq, input, other);
 }
@@ -936,7 +926,7 @@ XLATensor XLATensor::expand(const XLATensor& input,
   auto input_shape = input.shape();
   return input.CreateFrom(ir::MakeNode<ir::ops::Expand>(
       input.GetIrValue(),
-      GetExpandDimanesions(input_shape.get(), std::move(size))));
+      GetExpandDimensions(input_shape.get(), std::move(size))));
 }
 
 XLATensor XLATensor::expm1(const XLATensor& input) {
@@ -1057,6 +1047,16 @@ void XLATensor::ge_(XLATensor& input, const XLATensor& other) {
   ir::NodePtr cmp_result = ir::ops::ComparisonOp(
       at::aten::ge, input.GetIrValue(), other.GetIrValue());
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
+}
+
+XLATensor XLATensor::gelu(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Gelu(input.GetIrValue()));
+}
+
+XLATensor XLATensor::gelu_backward(const XLATensor& grad,
+                                   const XLATensor& input) {
+  return input.CreateFrom(
+      ir::ops::GeluBackward(grad.GetIrValue(), input.GetIrValue()));
 }
 
 XLATensor XLATensor::gt(const XLATensor& input, at::Scalar other) {
@@ -2093,8 +2093,7 @@ XLATensor XLATensor::sum(const XLATensor& input,
                          std::vector<xla::int64> dimensions,
                          bool keep_reduced_dimensions,
                          c10::optional<at::ScalarType> dtype) {
-  if ((at::isIntegralType(input.dtype()) || input.dtype() == at::kBool) &&
-      !dtype) {
+  if (at::isIntegralType(input.dtype(), /*includeBool=*/true) && !dtype) {
     dtype = at::ScalarType::Long;
   }
   return input.CreateFrom(
