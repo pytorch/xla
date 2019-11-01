@@ -154,7 +154,7 @@ void CheckDimensionSize(const XLATensor& t, xla::int64 dim,
       << " (while checking arguments for " << tag << ")";
 }
 
-std::vector<xla::int64> GetExpandDimanesions(
+std::vector<xla::int64> GetExpandDimensions(
     const xla::Shape& shape, std::vector<xla::int64> dimensions) {
   XLA_CHECK_GE(dimensions.size(), shape.rank()) << shape;
   xla::int64 base = dimensions.size() - shape.rank();
@@ -926,7 +926,7 @@ XLATensor XLATensor::expand(const XLATensor& input,
   auto input_shape = input.shape();
   return input.CreateFrom(ir::MakeNode<ir::ops::Expand>(
       input.GetIrValue(),
-      GetExpandDimanesions(input_shape.get(), std::move(size))));
+      GetExpandDimensions(input_shape.get(), std::move(size))));
 }
 
 XLATensor XLATensor::expm1(const XLATensor& input) {
