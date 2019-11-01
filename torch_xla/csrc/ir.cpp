@@ -3,6 +3,7 @@
 #include <functional>
 #include <sstream>
 
+#include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
@@ -15,9 +16,52 @@ namespace {
 
 using ShapeCache = xla::util::Cache<size_t, xla::Shape>;
 
+struct ScapeEntry {
+  std::string name;
+  size_t saved_next_id = 1;
+};
+
+struct ScopeContext {
+  std::vector<ScapeEntry> scopes;
+  size_t next_id = 1;
+};
+
+thread_local ScopeContext g_scope_context;
+
+void PushScope(const std::string& name) {
+  size_t id = g_scope_context.next_id;
+  g_scope_context.scopes.push_back(
+      {absl::StrCat(name, ".", id), g_scope_context.next_id + 1});
+  g_scope_context.next_id = 1;
+}
+
+void PopScope() {
+  XLA_CHECK(!g_scope_context.scopes.empty());
+  g_scope_context.next_id = g_scope_context.scopes.back().saved_next_id;
+  g_scope_context.scopes.pop_back();
+}
+
+void ResetScopeContext() {
+  XLA_CHECK_EQ(g_scope_context.scopes.size(), 0);
+  g_scope_context.next_id = 1;
+}
+
+std::string GetCurrentScope() {
+  std::string scope;
+  for (auto& scope_entry : g_scope_context.scopes) {
+    if (scope.empty()) {
+      absl::StrAppend(&scope, scope_entry.name);
+    } else {
+      absl::StrAppend(&scope, "/", scope_entry.name);
+    }
+  }
+  return scope;
+}
+
 ShapeCache* GetShapeCache() {
-  static const size_t kMaxShapeCacheSize = 1024;
-  static ShapeCache* cache = new ShapeCache(kMaxShapeCacheSize);
+  static xla::int64 shape_cache_size =
+      xla::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 1024);
+  static ShapeCache* cache = new ShapeCache(shape_cache_size);
   return cache;
 }
 
@@ -95,6 +139,7 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
       shape_(std::move(shape)),
       node_hash_(xla::util::HashCombine(op_.hash(), hash_seed)),
       hash_(node_hash_) {
+  metadata_.scope = GetCurrentScope();
   metadata_.frame_info = GetFrameInfo();
   for (auto& operand : operands) {
     AddOperand(operand.node, operand.index);
@@ -117,6 +162,7 @@ Node::Node(OpKind op, xla::Shape shape, size_t num_outputs, size_t hash_seed)
       shape_(std::move(shape)),
       node_hash_(GetOpHash(op_, shape_, hash_seed)),
       hash_(node_hash_) {
+  metadata_.scope = GetCurrentScope();
   metadata_.frame_info = GetFrameInfo();
 }
 
@@ -182,6 +228,9 @@ std::string Node::ToString() const {
   if (num_outputs() > 1) {
     ss << ", num_outputs=" << num_outputs();
   }
+  if (!metadata_.scope.empty()) {
+    ss << ", scope=" << metadata_.scope;
+  }
   EmitShortFrameInfo(ss, metadata_.frame_info);
   return ss.str();
 }
@@ -216,6 +265,12 @@ std::vector<SourceLocation> Node::GetFrameInfo() {
   static bool wants_frames = xla::sys_util::GetEnvBool("XLA_IR_DEBUG", false);
   return wants_frames ? GetPythonFrames() : std::vector<SourceLocation>();
 }
+
+ScopePusher::ScopePusher(const std::string& name) { PushScope(name); }
+
+ScopePusher::~ScopePusher() { PopScope(); }
+
+void ScopePusher::ResetScopes() { ResetScopeContext(); }
 
 }  // namespace ir
 }  // namespace torch_xla
