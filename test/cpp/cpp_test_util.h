@@ -10,9 +10,17 @@
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
+#include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/tensor.h"
+
+#define XLA_CPP_TEST_ENABLED(name)                          \
+  do {                                                      \
+    if (!::torch_xla::DebugUtil::ExperimentEnabled(name)) { \
+      GTEST_SKIP();                                         \
+    }                                                       \
+  } while (0)
 
 namespace torch_xla {
 namespace cpp_test {

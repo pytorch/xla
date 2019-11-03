@@ -2,12 +2,18 @@
 
 #include <vector>
 
+#include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 
 // Collection of XLA lowerings for operations which only involve some form of
 // data movement and no computation.
 namespace torch_xla {
+
+struct DynamicReshapeInfo {
+  xla::Shape output_shape;
+  xla::int64 dynamic_dimension = -1;
+};
 
 bool IsSparseGather(const xla::XlaOp& input, const xla::XlaOp& index,
                     xla::int64 dim);
@@ -19,6 +25,10 @@ bool IsSparseGather(const xla::XlaOp& input, const xla::XlaOp& index,
 std::vector<xla::int64> GetCompleteShape(
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes,
     tensorflow::gtl::ArraySlice<const xla::int64> input_sizes);
+
+absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
+    const xla::Shape& input_shape,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
 
 // Creates a new tensor with the same data as the input tensor and the specified
 // output size.
