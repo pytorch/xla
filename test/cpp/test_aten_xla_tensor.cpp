@@ -3782,6 +3782,44 @@ TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestNonzero) {
+  torch::Tensor a = torch::zeros({4, 2}, torch::TensorOptions(torch::kFloat));
+  a[0][1] = 1.0;
+  a[1][0] = 2.0;
+  a[3][1] = 3.0;
+  torch::Tensor b = torch::nonzero(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::nonzero(xla_a);
+    AllClose(b, xla_b);
+  });
+
+  if (DebugUtil::ExperimentEnabled("nonzero")) {
+    // If the nonzero support is enabled, we must not see any aten:: calls.
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  }
+  ExpectCounterChanged("xla::nonzero", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestMaskedSelect) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b =
+      torch::randint(0, 2, {5}, torch::TensorOptions(torch::kBool));
+  torch::Tensor c = torch::masked_select(a, b);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = torch::masked_select(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+
+  if (DebugUtil::ExperimentEnabled("masked_select")) {
+    // If the nonzero support is enabled, we must not see any aten:: calls.
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  }
+  ExpectCounterChanged("xla::masked_select", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestMultiIndexHeadNull) {
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,

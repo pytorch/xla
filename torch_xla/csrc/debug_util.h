@@ -34,6 +34,8 @@ class DebugUtil {
       const char* name, tensorflow::gtl::ArraySlice<const XLATensor> tensors,
       const std::vector<size_t>* indices,
       GraphFormat format = GetDefaultGraphFormat());
+
+  static bool ExperimentEnabled(const std::string& name);
 };
 
 }  // namespace torch_xla

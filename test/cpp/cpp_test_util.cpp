@@ -118,6 +118,8 @@ void ForEachDevice(const std::function<void(const torch::Device&)>& devfn) {
 
 bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
                  double atol) {
+  tensor1 = ToCpuTensor(tensor1);
+  tensor2 = ToCpuTensor(tensor2);
   if (tensor1.sizes() != tensor2.sizes() ||
       tensor1.dtype() != tensor2.dtype()) {
     std::cerr << "Different shape:\n"
@@ -125,8 +127,6 @@ bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
               << tensor2.dtype() << " " << tensor2.sizes() << "\n";
     return false;
   }
-  tensor1 = ToCpuTensor(tensor1);
-  tensor2 = ToCpuTensor(tensor2);
   bool equal = tensor1.allclose(tensor2, rtol, atol);
   if (!equal) {
     DumpDifferences(tensor1, tensor2);
