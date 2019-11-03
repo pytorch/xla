@@ -56,6 +56,7 @@
 #include "torch_xla/csrc/ops/linear_interpolation.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
+#include "torch_xla/csrc/ops/masked_select.h"
 #include "torch_xla/csrc/ops/max_in_dim.h"
 #include "torch_xla/csrc/ops/max_pool_nd.h"
 #include "torch_xla/csrc/ops/max_pool_nd_backward.h"
@@ -67,6 +68,7 @@
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/nll_loss.h"
 #include "torch_xla/csrc/ops/nll_loss_backward.h"
+#include "torch_xla/csrc/ops/nonzero.h"
 #include "torch_xla/csrc/ops/not_supported.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
@@ -1397,6 +1399,13 @@ void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                                                      expanded_mask, value));
 }
 
+XLATensor XLATensor::masked_select(const XLATensor& input,
+                                   const XLATensor& mask) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::MaskedSelect>(input.GetIrValue(),
+                                                         mask.GetIrValue());
+  return input.CreateFrom(ir::Value(node, 0));
+}
+
 XLATensor XLATensor::matmul(const XLATensor& input, const XLATensor& other) {
   return input.CreateFrom(
       ir::ops::MatMul(input.GetIrValue(), other.GetIrValue()));
@@ -1674,11 +1683,9 @@ XLATensor XLATensor::nll_loss_backward(const XLATensor& grad_output,
       GetXlaReductionMode(reduction), ignore_index));
 }
 
-XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
-                                   const Device& device) {
-  return Create(ir::MakeNode<ir::ops::NotSupported>(std::move(description),
-                                                    std::move(shape)),
-                device);
+XLATensor XLATensor::nonzero(const XLATensor& input) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::NonZero>(input.GetIrValue());
+  return input.CreateFrom(ir::Value(node, 0), at::ScalarType::Long);
 }
 
 XLATensor XLATensor::norm(const XLATensor& input, c10::optional<at::Scalar> p,
@@ -1688,6 +1695,13 @@ XLATensor XLATensor::norm(const XLATensor& input, c10::optional<at::Scalar> p,
       XlaHelpers::I64List(dim), input.shape().get().rank());
   return input.CreateFrom(
       ir::ops::Norm(input.GetIrValue(), p, dtype, canonical_dims, keepdim));
+}
+
+XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
+                                   const Device& device) {
+  return Create(ir::MakeNode<ir::ops::NotSupported>(std::move(description),
+                                                    std::move(shape)),
+                device);
 }
 
 XLATensor XLATensor::permute(

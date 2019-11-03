@@ -2,6 +2,7 @@
 
 #include <limits>
 
+#include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -108,6 +109,22 @@ xla::int64 XlaHelpers::GetCanonicalPosition(
     pos = std::min<xla::int64>(pos, dimensions[dim]);
   }
   return pos;
+}
+
+xla::int64 XlaHelpers::GetDynamicDimension(const xla::Shape& shape) {
+  xla::int64 dynamic_dimension = -1;
+  for (xla::int64 i = 0; i < shape.rank(); ++i) {
+    if (shape.is_dynamic_dimension(i)) {
+      XLA_CHECK(i == 0 || i == shape.rank() - 1)
+          << "Only most major or most minor dynamic dimension is supported: "
+          << i << " in " << shape;
+      XLA_CHECK(dynamic_dimension < 0)
+          << "Only one dynamic dimension is supported: " << i << " and "
+          << dynamic_dimension << " in " << shape;
+      dynamic_dimension = i;
+    }
+  }
+  return dynamic_dimension;
 }
 
 XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
@@ -315,10 +332,9 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
                    op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
 }
 
-xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
-                                        const xla::Shape& shape2) {
-  const auto& shape1_dims = shape1.dimensions();
-  const auto& shape2_dims = shape2.dimensions();
+std::vector<xla::int64> XlaHelpers::GetPromotedShape(
+    tensorflow::gtl::ArraySlice<const xla::int64> shape1_dims,
+    tensorflow::gtl::ArraySlice<const xla::int64> shape2_dims) {
   std::vector<xla::int64> dimensions;
   // If the rank of a shape is bigger than then other, fill up the first
   // dimensions with the ones of the bigger.
@@ -341,14 +357,22 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
     xla::int64 dim1 = shape1_dims[shape1_dims.size() - min_size + i];
     xla::int64 dim2 = shape2_dims[shape2_dims.size() - min_size + i];
     XLA_CHECK(dim1 == dim2 || dim1 == 1 || dim2 == 1)
-        << shape1 << " and " << shape2;
+        << "(" << absl::StrJoin(shape1_dims, ", ") << ") and ("
+        << absl::StrJoin(shape1_dims, ", ") << ")";
     if (dim1 == 0 || dim2 == 0) {
       dimensions.push_back(0);
     } else {
       dimensions.push_back(std::max<xla::int64>(dim1, dim2));
     }
   }
-  return xla::ShapeUtil::MakeShape(shape1.element_type(), dimensions);
+  return dimensions;
+}
+
+xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
+                                        const xla::Shape& shape2) {
+  return xla::ShapeUtil::MakeShape(
+      shape1.element_type(),
+      GetPromotedShape(shape1.dimensions(), shape2.dimensions()));
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(

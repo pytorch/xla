@@ -3,7 +3,10 @@
 #include <fstream>
 #include <mutex>
 #include <sstream>
+#include <unordered_set>
 
+#include "absl/memory/memory.h"
+#include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/ir.h"
@@ -25,6 +28,17 @@ DebugUtil::GraphFormat DefaultGraphFormat() {
     return DebugUtil::GraphFormat::kDot;
   }
   XLA_ERROR() << "Invalid save graph format: " << fmt_str;
+}
+
+std::unordered_set<std::string>* LoadExperiments() {
+  std::unique_ptr<std::unordered_set<std::string>> xset =
+      absl::make_unique<std::unordered_set<std::string>>();
+  std::string experiments = xla::sys_util::GetEnvString("XLA_EXPERIMENTAL", "");
+  std::vector<std::string> experiment_list = absl::StrSplit(experiments, ':');
+  for (auto& name : experiment_list) {
+    xset->insert(name);
+  }
+  return xset.release();
 }
 
 }  // namespace
@@ -87,6 +101,11 @@ void DebugUtil::SaveTensorsGraphInfo(
     std::ofstream graph_file(save_file, std::ios_base::app);
     graph_file << "[" << name << "]\n" << info << "\n";
   }
+}
+
+bool DebugUtil::ExperimentEnabled(const std::string& name) {
+  static const std::unordered_set<std::string>* xset = LoadExperiments();
+  return xset->find(name) != xset->end();
 }
 
 }  // namespace torch_xla

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 
@@ -59,5 +61,10 @@ xla::XlaOp CreateScatter(const xla::XlaOp& input, const xla::XlaOp& index,
 
 xla::XlaOp CreatePut(const xla::XlaOp& input, const xla::XlaOp& index,
                      const xla::XlaOp& source, bool accumulate);
+
+std::vector<xla::XlaOp> BuildNonZero(const xla::XlaOp& input);
+
+std::vector<xla::XlaOp> BuildMaskedSelect(const xla::XlaOp& input,
+                                          const xla::XlaOp& mask);
 
 }  // namespace torch_xla

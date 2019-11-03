@@ -6,9 +6,11 @@
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type_default.h"
+#include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
@@ -1606,6 +1608,21 @@ at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
   return masked_fill_(self, mask, value.item());
 }
 
+at::Tensor AtenXlaType::masked_select(const at::Tensor& self,
+                                      const at::Tensor& mask) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  // Initially make XLA handled masked_select() handling experimental, and
+  // opt-in. Only the XLA TPU backend for now implements the dynamic dimension
+  // setting required by the masked_select implementation.
+  if (!DebugUtil::ExperimentEnabled("masked_select") ||
+      self_tensor.GetDevice().hw_type != DeviceType::TPU) {
+    return AtenXlaTypeDefault::masked_select(self, mask);
+  }
+  return bridge::AtenFromXlaTensor(
+      XLATensor::masked_select(self_tensor, bridge::GetXlaTensor(mask)));
+}
+
 at::Tensor AtenXlaType::max(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -2034,6 +2051,19 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
           bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice()),
           reduction, ignore_index)),
       total_weight);
+}
+
+at::Tensor AtenXlaType::nonzero(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  // Initially make XLA handled nonzero() handling experimental, and opt-in.
+  // Only the XLA TPU backend for now implements the dynamic dimension setting
+  // required by the nonzero implementation.
+  if (!DebugUtil::ExperimentEnabled("nonzero") ||
+      self_tensor.GetDevice().hw_type != DeviceType::TPU) {
+    return AtenXlaTypeDefault::nonzero(self);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::nonzero(self_tensor));
 }
 
 at::Tensor AtenXlaType::norm(const at::Tensor& self,

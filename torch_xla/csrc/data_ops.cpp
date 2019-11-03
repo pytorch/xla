@@ -76,11 +76,36 @@ std::vector<xla::int64> GetCompleteShape(
   return complete_output_sizes;
 }
 
+absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
+    const xla::Shape& input_shape,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+  xla::int64 input_dynamic_dimension =
+      XlaHelpers::GetDynamicDimension(input_shape);
+  if (input_dynamic_dimension < 0) {
+    return absl::nullopt;
+  }
+  DynamicReshapeInfo info;
+  info.output_shape =
+      xla::ShapeUtil::MakeShape(input_shape.element_type(), output_sizes);
+  if (info.output_shape.rank() > 0) {
+    info.dynamic_dimension =
+        input_dynamic_dimension == 0 ? 0 : output_sizes.size() - 1;
+    info.output_shape.set_dynamic_dimension(info.dynamic_dimension, true);
+  }
+  return std::move(info);
+}
+
 xla::XlaOp BuildView(
     const xla::XlaOp& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto complete_output_sizes =
-      GetCompleteShape(output_sizes, XlaHelpers::SizesOfXlaOp(input));
+      GetCompleteShape(output_sizes, input_shape.dimensions());
+  auto info = GetDynamicReshapeInfo(input_shape, complete_output_sizes);
+  if (info) {
+    return xla::ReshapeWithInferredDimension(input, complete_output_sizes,
+                                             info->dynamic_dimension);
+  }
   return xla::Reshape(input, complete_output_sizes);
 }
 

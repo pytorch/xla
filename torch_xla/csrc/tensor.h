@@ -602,6 +602,8 @@ class XLATensor {
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            at::Scalar value);
 
+  static XLATensor masked_select(const XLATensor& input, const XLATensor& mask);
+
   static XLATensor matmul(const XLATensor& input, const XLATensor& other);
 
   static XLATensor max(const XLATensor& input, const XLATensor& other);
@@ -699,6 +701,8 @@ class XLATensor {
                                      const XLATensor& weight,
                                      xla::int64 reduction, int ignore_index,
                                      const XLATensor& total_weight);
+
+  static XLATensor nonzero(const XLATensor& input);
 
   static XLATensor norm(const XLATensor& input, c10::optional<at::Scalar> p,
                         c10::optional<at::ScalarType> dtype,
