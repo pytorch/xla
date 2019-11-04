@@ -8,6 +8,9 @@ namespace sys_util {
 
 string GetEnvString(const char* name, const string& defval);
 
+string GetEnvOrdinalPath(const char* name, const string& defval,
+                         const char* ordinal_env = "XRT_SHARD_LOCAL_ORDINAL");
+
 int64 GetEnvInt(const char* name, int64 defval);
 
 double GetEnvDouble(const char* name, double defval);
