@@ -384,8 +384,8 @@ class AtenXlaType {
 
   static at::Tensor& frac_(at::Tensor& self);
 
-  static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
-                              c10::optional<at::MemoryFormat> memory_format);
+  static at::Tensor full(at::IntArrayRef size, at::Scalar fill_value,
+                         const at::TensorOptions& options);
 
   static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
                               const at::TensorOptions& options,

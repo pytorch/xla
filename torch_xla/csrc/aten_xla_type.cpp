@@ -2286,12 +2286,6 @@ at::Tensor AtenXlaType::ones(at::IntArrayRef size,
 }
 
 at::Tensor AtenXlaType::ones_like(
-    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 1, memory_format);
-}
-
-at::Tensor AtenXlaType::ones_like(
     const at::Tensor& self, const at::TensorOptions& options,
     c10::optional<at::MemoryFormat> memory_format) {
   XLA_FN_COUNTER("xla::");
@@ -3244,12 +3238,6 @@ at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
                               const at::TensorOptions& options) {
   XLA_FN_COUNTER("xla::");
   return full(size, 0, options);
-}
-
-at::Tensor AtenXlaType::zeros_like(
-    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, memory_format);
 }
 
 at::Tensor AtenXlaType::zeros_like(
