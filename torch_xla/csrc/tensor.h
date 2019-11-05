@@ -648,6 +648,10 @@ class XLATensor {
   static void mul_(XLATensor& input, const XLATensor& other);
   static void mul_(XLATensor& input, at::Scalar other);
 
+  static XLATensor mv(const XLATensor& input, const XLATensor& vec);
+  static void mv_out(XLATensor& out, const XLATensor& input,
+                     const XLATensor& vec);
+
   // Returns a new tensor that is a narrowed view of the input in the given
   // dimension.
   static XLATensor narrow(const XLATensor& input, xla::int64 dim,
@@ -676,10 +680,15 @@ class XLATensor {
   static void neg_(XLATensor& input);
 
   static XLATensor nll_loss(const XLATensor& input, const XLATensor& target,
+                            const XLATensor& weight, xla::int64 reduction,
                             int ignore_index);
 
-  static XLATensor nll_loss_backward(const XLATensor& input,
-                                     const XLATensor& target, int ignore_index);
+  static XLATensor nll_loss_backward(const XLATensor& grad_output,
+                                     const XLATensor& input,
+                                     const XLATensor& target,
+                                     const XLATensor& weight,
+                                     xla::int64 reduction, int ignore_index,
+                                     const XLATensor& total_weight);
 
   static XLATensor norm(const XLATensor& input, c10::optional<at::Scalar> p,
                         c10::optional<at::ScalarType> dtype,

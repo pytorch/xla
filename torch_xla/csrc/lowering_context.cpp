@@ -36,8 +36,12 @@ class HloMetadataSetter {
   static void PopulateXlaOpMetadata(LoweringContext* loctx, const Node* node) {
     xla::OpMetadata metadata;
     metadata.set_op_type(node->op().ToString());
-    if (!node->metadata().frame_info.empty()) {
-      const SourceLocation& frame = node->metadata().frame_info.front();
+    const ir::MetaData& nmeta = node->metadata();
+    if (!nmeta.scope.empty()) {
+      metadata.set_op_name(nmeta.scope);
+    }
+    if (!nmeta.frame_info.empty()) {
+      const SourceLocation& frame = nmeta.frame_info.front();
       std::string::size_type pos = frame.file.find_last_of('/');
       if (pos == std::string::npos) {
         pos = 0;
@@ -133,7 +137,11 @@ void LoweringContext::ReportBuilderError(const Node* node,
   if (error_msg != nullptr) {
     ss << "Error: " << error_msg << "\n";
   }
-  ss << node->metadata().frame_info;
+  const ir::MetaData& nmeta = node->metadata();
+  if (!nmeta.scope.empty()) {
+    ss << "Scope: " << nmeta.scope << "\n";
+  }
+  ss << nmeta.frame_info;
   throw std::runtime_error(ss.str());
 }
 

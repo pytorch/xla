@@ -154,7 +154,7 @@ void CheckDimensionSize(const XLATensor& t, xla::int64 dim,
       << " (while checking arguments for " << tag << ")";
 }
 
-std::vector<xla::int64> GetExpandDimanesions(
+std::vector<xla::int64> GetExpandDimensions(
     const xla::Shape& shape, std::vector<xla::int64> dimensions) {
   XLA_CHECK_GE(dimensions.size(), shape.rank()) << shape;
   xla::int64 base = dimensions.size() - shape.rank();
@@ -214,6 +214,14 @@ ir::Value GetIrValueOrDefault(const XLATensor& input, at::Scalar default_value,
   return input.is_null() ? XLATensor::GetIrValueForScalar(default_value,
                                                           default_shape, device)
                          : input.GetIrValue();
+}
+
+absl::optional<ir::Value> GetOptionalIrValue(const XLATensor& tensor) {
+  absl::optional<ir::Value> value;
+  if (!tensor.is_null()) {
+    value = tensor.GetIrValue();
+  }
+  return value;
 }
 
 void CheckIsIntegralOrPred(const xla::Shape& shape,
@@ -926,7 +934,7 @@ XLATensor XLATensor::expand(const XLATensor& input,
   auto input_shape = input.shape();
   return input.CreateFrom(ir::MakeNode<ir::ops::Expand>(
       input.GetIrValue(),
-      GetExpandDimanesions(input_shape.get(), std::move(size))));
+      GetExpandDimensions(input_shape.get(), std::move(size))));
 }
 
 XLATensor XLATensor::expm1(const XLATensor& input) {
@@ -1511,6 +1519,15 @@ void XLATensor::mul_(XLATensor& input, at::Scalar other) {
   input.SetIrValue(input.GetIrValue() * constant);
 }
 
+XLATensor XLATensor::mv(const XLATensor& input, const XLATensor& vec) {
+  return input.CreateFrom(ir::ops::Dot(input.GetIrValue(), vec.GetIrValue()));
+}
+
+void XLATensor::mv_out(XLATensor& out, const XLATensor& input,
+                       const XLATensor& vec) {
+  out.SetIrValue(ir::ops::Dot(input.GetIrValue(), vec.GetIrValue()));
+}
+
 XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
                             xla::int64 start, xla::int64 length) {
   auto input_shape = input.shape();
@@ -1616,16 +1633,23 @@ void XLATensor::neg_(XLATensor& input) {
 }
 
 XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target,
+                              const XLATensor& weight, xla::int64 reduction,
                               int ignore_index) {
   return input.CreateFrom(ir::MakeNode<ir::ops::NllLoss>(
-      input.GetIrValue(), target.GetIrValue(), ignore_index));
+      input.GetIrValue(), target.GetIrValue(), GetOptionalIrValue(weight),
+      GetXlaReductionMode(reduction), ignore_index));
 }
 
-XLATensor XLATensor::nll_loss_backward(const XLATensor& input,
+XLATensor XLATensor::nll_loss_backward(const XLATensor& grad_output,
+                                       const XLATensor& input,
                                        const XLATensor& target,
-                                       int ignore_index) {
+                                       const XLATensor& weight,
+                                       xla::int64 reduction, int ignore_index,
+                                       const XLATensor& total_weight) {
   return input.CreateFrom(ir::MakeNode<ir::ops::NllLossBackward>(
-      input.GetIrValue(), target.GetIrValue(), ignore_index));
+      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
+      GetOptionalIrValue(weight), GetOptionalIrValue(total_weight),
+      GetXlaReductionMode(reduction), ignore_index));
 }
 
 XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
@@ -2093,8 +2117,7 @@ XLATensor XLATensor::sum(const XLATensor& input,
                          std::vector<xla::int64> dimensions,
                          bool keep_reduced_dimensions,
                          c10::optional<at::ScalarType> dtype) {
-  if ((at::isIntegralType(input.dtype()) || input.dtype() == at::kBool) &&
-      !dtype) {
+  if (at::isIntegralType(input.dtype(), /*includeBool=*/true) && !dtype) {
     dtype = at::ScalarType::Long;
   }
   return input.CreateFrom(
