@@ -553,12 +553,6 @@ class AtenXlaType {
                                         const at::Tensor& target, double margin,
                                         int64_t reduction);
 
-  static at::Tensor masked_fill(const at::Tensor& self, const at::Tensor& mask,
-                                at::Scalar value);
-
-  static at::Tensor masked_fill(const at::Tensor& self, const at::Tensor& mask,
-                                const at::Tensor& value);
-
   static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                   at::Scalar value);
 
