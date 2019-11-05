@@ -2495,6 +2495,7 @@ TEST_F(AtenXlaTensorTest, TestMatmul_1x1) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::dot", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_2x1) {
@@ -2508,8 +2509,8 @@ TEST_F(AtenXlaTensorTest, TestMatmul_2x1) {
     AllClose(c, xla_c);
   });
 
-  // TODO: we should lower aten::mv
-  ExpectCounterNotChanged("aten::(?!mv).*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mv", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_1x2) {
@@ -2524,6 +2525,7 @@ TEST_F(AtenXlaTensorTest, TestMatmul_1x2) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_2x2) {
@@ -2538,6 +2540,7 @@ TEST_F(AtenXlaTensorTest, TestMatmul_2x2) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmulBcast) {
