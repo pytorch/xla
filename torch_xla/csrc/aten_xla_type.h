@@ -512,9 +512,6 @@ class AtenXlaType {
                                         const at::Tensor& self,
                                         at::Scalar negative_slope);
 
-  static at::Tensor linear(const at::Tensor& input, const at::Tensor& weight,
-                           const at::Tensor& bias);
-
   static at::Tensor log(const at::Tensor& self);
 
   static at::Tensor log10(const at::Tensor& self);
