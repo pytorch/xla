@@ -2667,6 +2667,8 @@ TEST_F(AtenXlaTensorTest, TestLinear) {
     AllClose(result_with_bias, xla_result_with_bias, /*rtol=*/1e-2,
              /*atol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPinverse) {
