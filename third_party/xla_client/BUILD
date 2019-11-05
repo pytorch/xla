@@ -140,4 +140,5 @@ cc_library(
         "//tensorflow/stream_executor:stream_executor_impl",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured(["//tensorflow/compiler/jit:xla_gpu_device"]),
+    alwayslink = 1,
 )
