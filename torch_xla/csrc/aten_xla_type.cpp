@@ -1600,13 +1600,6 @@ at::Tensor AtenXlaType::leaky_relu_backward(const at::Tensor& grad_output,
       negative_slope.to<double>()));
 }
 
-at::Tensor AtenXlaType::linear(const at::Tensor& input,
-                               const at::Tensor& weight,
-                               const at::Tensor& bias) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::linear(input, weight, bias);
-}
-
 at::Tensor AtenXlaType::log(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::log(bridge::GetXlaTensor(self)));
