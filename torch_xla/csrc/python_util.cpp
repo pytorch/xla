@@ -2,8 +2,8 @@
 
 #include <Python.h>
 #include <frameobject.h>
-#include <torch/csrc/utils/auto_gil.h>
 #include <torch/csrc/utils/python_strings.h>
+#include <pybind11/pybind11.h>
 
 namespace torch_xla {
 
@@ -11,7 +11,7 @@ c10::optional<SourceLocation> GetPythonFrameTop() {
   if (!Py_IsInitialized()) {
     return c10::nullopt;
   }
-  AutoGIL gil;
+  pybind11::gil_scoped_acquire gil;
   PyFrameObject* frame = PyEval_GetFrame();
   if (frame == nullptr) {
     return c10::nullopt;
@@ -26,7 +26,7 @@ c10::optional<SourceLocation> GetPythonFrameTop() {
 std::vector<SourceLocation> GetPythonFrames() {
   std::vector<SourceLocation> frames;
   if (Py_IsInitialized()) {
-    AutoGIL gil;
+    pybind11::gil_scoped_acquire gil;
     PyFrameObject* frame = PyEval_GetFrame();
     while (frame != nullptr) {
       SourceLocation loc;
