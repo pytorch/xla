@@ -6,6 +6,9 @@ import sys
 
 def parse_common_options(datadir=None,
                          logdir=None,
+                         golden_metrics_filename=None,
+                         metrics_output_filename=None,
+                         service_account_filename=None,
                          num_cores=None,
                          batch_size=128,
                          num_epochs=10,
@@ -18,6 +21,12 @@ def parse_common_options(datadir=None,
   parser = argparse.ArgumentParser(add_help=False)
   parser.add_argument('--datadir', type=str, default=datadir)
   parser.add_argument('--logdir', type=str, default=logdir)
+  parser.add_argument('--golden_metrics_filename', type=str,
+                      default=golden_metrics_filename)
+  parser.add_argument('--metrics_output_filename', type=str,
+                      default=metrics_output_filename)
+  parser.add_argument('--service_account_filename', type=str,
+                      default=service_account_filename)
   parser.add_argument('--num_cores', type=int, default=num_cores)
   parser.add_argument('--batch_size', type=int, default=batch_size)
   parser.add_argument('--num_epochs', type=int, default=num_epochs)

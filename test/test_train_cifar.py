@@ -18,6 +18,7 @@ FLAGS = args_parse.parse_common_options(
 from common_utils import TestCase, run_tests
 import os
 from statistics import mean
+import metrics_comparator
 import shutil
 import test_utils
 import torch
@@ -242,7 +243,15 @@ class TrainCIFAR10(TestCase):
       shutil.rmtree(FLAGS.datadir)
 
   def test_accurracy(self):
-    self.assertGreaterEqual(train_cifar(), FLAGS.target_accuracy)
+    accuracy = train_cifar()
+    if FLAGS.golden_metrics_filename:
+      self.assertFalse(metrics_comparator.metrics_have_regressed(
+          met.metrics_report(),
+          FLAGS.golden_metrics_filename,
+          output_filename=FLAGS.metrics_output_filename,
+          prefix=str(FLAGS),
+          service_account_filename=FLAGS.service_account_filename))
+    self.assertGreaterEqual(accuracy, FLAGS.target_accuracy)
 
 
 # Run the tests.

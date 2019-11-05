@@ -11,6 +11,7 @@ FLAGS = args_parse.parse_common_options(
 from common_utils import TestCase, run_tests
 import os
 from statistics import mean
+import metrics_comparator
 import shutil
 import test_utils
 import time
@@ -177,8 +178,15 @@ class TrainMnist(TestCase):
       shutil.rmtree(FLAGS.datadir)
 
   def test_accurracy(self):
-    self.assertGreaterEqual(train_mnist(), FLAGS.target_accuracy)
-
+    accuracy = train_mnist()
+    if FLAGS.golden_metrics_filename:
+      self.assertFalse(metrics_comparator.metrics_have_regressed(
+          met.metrics_report(),
+          FLAGS.golden_metrics_filename,
+          output_filename=FLAGS.metrics_output_filename,
+          prefix=str(FLAGS),
+          service_account_filename=FLAGS.service_account_filename))
+    self.assertGreaterEqual(accuracy, FLAGS.target_accuracy)
 
 # Run the tests.
 torch.set_default_tensor_type('torch.FloatTensor')
