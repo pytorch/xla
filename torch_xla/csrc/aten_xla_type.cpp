@@ -1658,12 +1658,6 @@ at::Tensor& AtenXlaType::log_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::log_sigmoid(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::log_sigmoid(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor AtenXlaType::log_sigmoid_backward(const at::Tensor& grad_output,
                                              const at::Tensor& self,
                                              const at::Tensor& buffer) {
@@ -1680,13 +1674,6 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::log_sigmoid_forward(
       XLATensor::log_sigmoid_forward(bridge::GetXlaTensor(self));
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(result_tuple)),
                          bridge::AtenFromXlaTensor(std::get<1>(result_tuple)));
-}
-
-at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim,
-                                    c10::optional<at::ScalarType> dtype) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim, dtype));
 }
 
 at::Tensor AtenXlaType::lt(const at::Tensor& self, at::Scalar other) {
@@ -1713,15 +1700,6 @@ at::Tensor& AtenXlaType::lt_(at::Tensor& self, const at::Tensor& other) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::lt_(self_tensor, bridge::GetXlaTensor(other));
   return self;
-}
-
-at::Tensor AtenXlaType::margin_ranking_loss(const at::Tensor& input1,
-                                            const at::Tensor& input2,
-                                            const at::Tensor& target,
-                                            double margin, int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::margin_ranking_loss(input1, input2, target, margin,
-                                         reduction);
 }
 
 at::Tensor AtenXlaType::masked_fill(const at::Tensor& self,
