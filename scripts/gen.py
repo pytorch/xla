@@ -87,6 +87,7 @@ _FN_BLACKLIST = set([
     'zero_',
     'zeros',
     'zeros_like',
+    'to',
 ])
 
 _FN_BLACKLIST_REGEX = [
