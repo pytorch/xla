@@ -165,13 +165,6 @@ _FN_REMAP = {
     's__th_xor(Tensor, Tensor) -> Tensor':
         FuncOpts(
             outfn_name='AtenXlaType::__xor__', shape_check_indices=((0, 1),)),
-    '_s_where(Tensor, Tensor, Tensor) -> Tensor':
-        FuncOpts(
-            outfn_name='AtenXlaType::where',
-            shape_check_indices=(
-                (0, 1),
-                (0, 2),
-            )),
     's__th_eq(Tensor, Tensor) -> Tensor':
         FuncOpts(outfn_name='AtenXlaType::eq', shape_check_indices=((0, 1),)),
 }
