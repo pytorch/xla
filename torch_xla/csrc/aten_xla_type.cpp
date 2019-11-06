@@ -273,14 +273,7 @@ at::Tensor AtenXlaType::_adaptive_avg_pool2d_backward(
 at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
                                    const at::Tensor& dst, bool non_blocking) {
   XLA_FN_COUNTER("xla::");
-  // Do not mark the tensor creation as writeable to not discard the XLA tensor
-  // device context, but make a copy to avoid core data to be shared.
-  std::vector<at::Tensor> tensors = {self};
-  auto xla_tensors = bridge::XlaCreateTensorList(tensors);
-  // Hack in an overwrite of a const tensor.
-  at::Tensor t = CopyTensor(xla_tensors.front(), dst.scalar_type());
-  const_cast<at::Tensor&>(dst).unsafeGetTensorImpl()->shallow_copy_from(
-      t.getIntrusivePtr());
+  copy_(const_cast<at::Tensor&>(dst), self, non_blocking);
   return dst;
 }
 
