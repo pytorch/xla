@@ -582,12 +582,6 @@ class XLATensor {
   static XLATensor lt(const XLATensor& input, const XLATensor& other);
   static void lt_(XLATensor& input, const XLATensor& other);
 
-  // Fills elements of the input tensor with the provided value where mask is
-  // one. The shape of mask must be broadcastable with the shape of the
-  // underlying tensor.
-  static XLATensor masked_fill(const XLATensor& input, const XLATensor& mask,
-                               at::Scalar value);
-
   // In-place version of the method above.
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            at::Scalar value);
@@ -763,18 +757,11 @@ class XLATensor {
 
   static void scatter_(XLATensor& input, xla::int64 dim, const XLATensor& index,
                        const XLATensor& src);
-  static void scatter_add_(XLATensor& input, xla::int64 dim,
-                           const XLATensor& index, const XLATensor& src);
-
-  static XLATensor scatter(const XLATensor& input, xla::int64 dim,
-                           const XLATensor& index, const XLATensor& src);
-  static XLATensor scatter_add(const XLATensor& input, xla::int64 dim,
-                               const XLATensor& index, const XLATensor& src);
-
   static void scatter_(XLATensor& input, xla::int64 dim, const XLATensor& index,
                        at::Scalar value);
-  static XLATensor scatter(const XLATensor& input, xla::int64 dim,
-                           const XLATensor& index, at::Scalar value);
+
+  static void scatter_add_(XLATensor& input, xla::int64 dim,
+                           const XLATensor& index, const XLATensor& src);
 
   static XLATensor select(const XLATensor& input, xla::int64 dim,
                           xla::int64 index);

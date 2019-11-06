@@ -543,19 +543,11 @@ class AtenXlaType {
 
   static at::Tensor& lt_(at::Tensor& self, const at::Tensor& other);
 
-  static at::Tensor masked_fill(const at::Tensor& self, const at::Tensor& mask,
-                                at::Scalar value);
-
-  static at::Tensor masked_fill(const at::Tensor& self, const at::Tensor& mask,
-                                const at::Tensor& value);
-
   static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                   at::Scalar value);
 
   static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                   const at::Tensor& value);
-
-  static at::Tensor matmul(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor max(const at::Tensor& self, const at::Tensor& other);
 
@@ -570,25 +562,10 @@ class AtenXlaType {
                                                       int64_t dim,
                                                       bool keepdim);
 
-  static at::Tensor max_pool1d(const at::Tensor& self,
-                               at::IntArrayRef kernel_size,
-                               at::IntArrayRef stride, at::IntArrayRef padding,
-                               at::IntArrayRef dilation, bool ceil_mode);
-
-  static at::Tensor max_pool2d(const at::Tensor& self,
-                               at::IntArrayRef kernel_size,
-                               at::IntArrayRef stride, at::IntArrayRef padding,
-                               at::IntArrayRef dilation, bool ceil_mode);
-
   static std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
       const at::Tensor& self, at::IntArrayRef kernel_size,
       at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
       bool ceil_mode);
-
-  static at::Tensor max_pool3d(const at::Tensor& self,
-                               at::IntArrayRef kernel_size,
-                               at::IntArrayRef stride, at::IntArrayRef padding,
-                               at::IntArrayRef dilation, bool ceil_mode);
 
   static std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(
       const at::Tensor& self, at::IntArrayRef kernel_size,
@@ -612,8 +589,6 @@ class AtenXlaType {
 
   static at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim,
                          bool keepdim, c10::optional<at::ScalarType> dtype);
-
-  static std::vector<at::Tensor> meshgrid(at::TensorList tensors);
 
   static at::Tensor min(const at::Tensor& self, const at::Tensor& other);
 
@@ -650,9 +625,6 @@ class AtenXlaType {
 
   static at::Tensor& mv_out(at::Tensor& out, const at::Tensor& self,
                             const at::Tensor& vec);
-
-  static at::Tensor narrow(const at::Tensor& self, int64_t dim, int64_t start,
-                           int64_t length);
 
   static at::Tensor narrow_copy(const at::Tensor& self, int64_t dim,
                                 int64_t start, int64_t length);
@@ -694,10 +666,6 @@ class AtenXlaType {
 
   static at::Tensor& neg_(at::Tensor& self);
 
-  static at::Tensor nll_loss(const at::Tensor& self, const at::Tensor& target,
-                             const at::Tensor& weight, int64_t reduction,
-                             int64_t ignore_index);
-
   static at::Tensor nll_loss_backward(const at::Tensor& grad_output,
                                       const at::Tensor& self,
                                       const at::Tensor& target,
@@ -721,8 +689,6 @@ class AtenXlaType {
   static at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
                          at::IntArrayRef dim, bool keepdim);
 
-  static at::Tensor one_hot(const at::Tensor& self, int64_t num_classes);
-
   static at::Tensor ones(at::IntArrayRef size,
                          const at::TensorOptions& options);
 
@@ -733,16 +699,7 @@ class AtenXlaType {
                               const at::TensorOptions& options,
                               c10::optional<at::MemoryFormat> memory_format);
 
-  static at::Tensor pairwise_distance(const at::Tensor& x1,
-                                      const at::Tensor& x2, double p,
-                                      double eps, bool keepdim);
-
   static at::Tensor permute(const at::Tensor& self, at::IntArrayRef dims);
-
-  static at::Tensor pixel_shuffle(const at::Tensor& self,
-                                  int64_t upscale_factor);
-
-  static at::Tensor pinverse(const at::Tensor& self, double rcond);
 
   static at::Tensor pow(const at::Tensor& self, at::Scalar exponent);
 
@@ -810,12 +767,6 @@ class AtenXlaType {
   static at::Tensor rsub(const at::Tensor& self, at::Scalar other,
                          at::Scalar alpha);
 
-  static at::Tensor scatter(const at::Tensor& self, int64_t dim,
-                            const at::Tensor& index, const at::Tensor& src);
-
-  static at::Tensor scatter(const at::Tensor& self, int64_t dim,
-                            const at::Tensor& index, at::Scalar value);
-
   static at::Tensor& scatter_(at::Tensor& self, int64_t dim,
                               const at::Tensor& index, const at::Tensor& src);
 
@@ -826,14 +777,7 @@ class AtenXlaType {
                                   const at::Tensor& index,
                                   const at::Tensor& src);
 
-  static at::Tensor scatter_add(const at::Tensor& self, int64_t dim,
-                                const at::Tensor& index, const at::Tensor& src);
-
   static at::Tensor select(const at::Tensor& self, int64_t dim, int64_t index);
-
-  static at::Tensor selu(const at::Tensor& self);
-
-  static at::Tensor& selu_(at::Tensor& self);
 
   static at::Tensor sigmoid(const at::Tensor& self);
 
@@ -999,12 +943,6 @@ class AtenXlaType {
   static at::Tensor tril(const at::Tensor& self, int64_t diagonal);
 
   static at::Tensor& tril_(at::Tensor& self, int64_t diagonal);
-
-  static at::Tensor triplet_margin_loss(const at::Tensor& anchor,
-                                        const at::Tensor& positive,
-                                        const at::Tensor& negative,
-                                        double margin, double p, double eps,
-                                        bool swap, int64_t reduction);
 
   static at::Tensor triu(const at::Tensor& self, int64_t diagonal);
 
