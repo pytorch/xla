@@ -1355,16 +1355,6 @@ void XLATensor::lt_(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
-XLATensor XLATensor::masked_fill(const XLATensor& input, const XLATensor& mask,
-                                 at::Scalar value) {
-  // Expand mask to be the same size as input.
-  ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
-      mask.GetIrValue(),
-      xla::util::ToVector<xla::int64>(input.shape().get().dimensions()));
-  return input.CreateFrom(ir::MakeNode<ir::ops::MaskedFill>(
-      input.GetIrValue(), expanded_mask, value));
-}
-
 void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                              at::Scalar value) {
   // Expand mask to be the same size as input.
