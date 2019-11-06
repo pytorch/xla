@@ -1640,6 +1640,11 @@ TEST_F(AtenXlaTensorTest, TestTripletMarginLoss) {
                 reduction);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::clamp_min",
+                               cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::norm", cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -6074,7 +6079,7 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::nll_loss", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::nll_loss_forward", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSmoothL1Loss) {
@@ -8098,7 +8103,7 @@ TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
 
   ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
                           cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::nll_loss", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::nll_loss_forward", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::nll_loss_backward",
                        cpp_test::GetIgnoredCounters());
 }

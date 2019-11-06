@@ -2150,18 +2150,6 @@ at::Tensor& AtenXlaType::neg_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::nll_loss(const at::Tensor& self,
-                                 const at::Tensor& target,
-                                 const at::Tensor& weight, int64_t reduction,
-                                 int64_t ignore_index) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::nll_loss(
-      self_tensor, bridge::GetXlaTensor(target),
-      bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice()), reduction,
-      ignore_index));
-}
-
 at::Tensor AtenXlaType::nll_loss_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Tensor& target, const at::Tensor& weight, int64_t reduction,
@@ -2186,8 +2174,13 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
     int64_t reduction, int64_t ignore_index) {
   XLA_FN_COUNTER("xla::");
   at::Tensor total_weight = at::ones({}, at::TensorOptions(self.dtype()));
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   return std::make_tuple(
-      nll_loss(self, target, weight, reduction, ignore_index), total_weight);
+      bridge::AtenFromXlaTensor(XLATensor::nll_loss(
+          self_tensor, bridge::GetXlaTensor(target),
+          bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice()),
+          reduction, ignore_index)),
+      total_weight);
 }
 
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
@@ -3055,16 +3048,6 @@ at::Tensor& AtenXlaType::tril_(at::Tensor& self, int64_t diagonal) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::tril_(self_tensor, diagonal);
   return self;
-}
-
-at::Tensor AtenXlaType::triplet_margin_loss(const at::Tensor& anchor,
-                                            const at::Tensor& positive,
-                                            const at::Tensor& negative,
-                                            double margin, double p, double eps,
-                                            bool swap, int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::triplet_margin_loss(anchor, positive, negative, margin, p,
-                                         eps, swap, reduction);
 }
 
 at::Tensor AtenXlaType::triu(const at::Tensor& self, int64_t diagonal) {
