@@ -2784,6 +2784,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::svd(
                          bridge::AtenFromXlaTensor(std::get<2>(results)));
 }
 
+at::Tensor AtenXlaType::_s_where(const at::Tensor& condition,
+                                 const at::Tensor& self,
+                                 const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::where(
+      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(other)));
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::symeig(const at::Tensor& self,
                                                        bool eigenvectors,
                                                        bool upper) {
@@ -3091,14 +3100,6 @@ at::Tensor AtenXlaType::view_as(const at::Tensor& self,
                                 const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return view(self, other.sizes());
-}
-
-at::Tensor AtenXlaType::where(const at::Tensor& condition,
-                              const at::Tensor& self, const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::where(
-      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(other)));
 }
 
 at::Tensor& AtenXlaType::zero_(at::Tensor& self) {

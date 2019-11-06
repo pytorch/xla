@@ -886,6 +886,9 @@ class AtenXlaType {
   static std::tuple<at::Tensor, at::Tensor, at::Tensor> svd(
       const at::Tensor& self, bool some, bool compute_uv);
 
+  static at::Tensor _s_where(const at::Tensor& condition,
+                             const at::Tensor& self, const at::Tensor& other);
+
   static std::tuple<at::Tensor, at::Tensor> symeig(const at::Tensor& self,
                                                    bool eigenvectors,
                                                    bool upper);
@@ -984,9 +987,6 @@ class AtenXlaType {
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 
   static at::Tensor view_as(const at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor where(const at::Tensor& condition, const at::Tensor& self,
-                          const at::Tensor& other);
 
   static at::Tensor& zero_(at::Tensor& self);
 
