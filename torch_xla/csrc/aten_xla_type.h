@@ -782,10 +782,6 @@ class AtenXlaType {
 
   static at::Tensor select(const at::Tensor& self, int64_t dim, int64_t index);
 
-  static at::Tensor selu(const at::Tensor& self);
-
-  static at::Tensor& selu_(at::Tensor& self);
-
   static at::Tensor sigmoid(const at::Tensor& self);
 
   static at::Tensor& sigmoid_(at::Tensor& self);
