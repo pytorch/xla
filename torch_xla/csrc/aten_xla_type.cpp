@@ -2378,12 +2378,6 @@ at::Tensor AtenXlaType::repeat(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(repeats)));
 }
 
-at::Tensor AtenXlaType::reshape(const at::Tensor& self, at::IntArrayRef shape) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::reshape(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(shape)));
-}
-
 at::Tensor& AtenXlaType::resize_(at::Tensor& self, at::IntArrayRef size) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);

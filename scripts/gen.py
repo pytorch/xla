@@ -95,6 +95,7 @@ _FN_BLACKLIST = set([
     # They're blacklisted to avoid creating AtenXlaTypeDefault::func,
     # so that we can fall back to TypeDefault:: in PyTorch.
     'narrow',
+    'reshape',
 ])
 
 _FN_BLACKLIST_REGEX = [
