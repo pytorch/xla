@@ -805,8 +805,6 @@ class AtenXlaType {
 
   static at::Tensor& sinh_(at::Tensor& self);
 
-  static int64_t size(const at::Tensor& self, int64_t dim);
-
   static at::Tensor slice(const at::Tensor& self, int64_t dim, int64_t start,
                           int64_t end, int64_t step);
 
@@ -880,8 +878,6 @@ class AtenXlaType {
 
   static at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
                         bool keepdim, c10::optional<at::ScalarType> dtype);
-
-  static at::Tensor sum_to_size(const at::Tensor& self, at::IntArrayRef size);
 
   static std::tuple<at::Tensor, at::Tensor, at::Tensor> svd(
       const at::Tensor& self, bool some, bool compute_uv);

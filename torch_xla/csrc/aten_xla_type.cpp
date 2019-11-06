@@ -2559,11 +2559,6 @@ at::Tensor& AtenXlaType::sinh_(at::Tensor& self) {
   return self;
 }
 
-int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::GetXlaTensor(self).size(dim);
-}
-
 at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
                               int64_t start, int64_t end, int64_t step) {
   XLA_FN_COUNTER("xla::");
@@ -2767,12 +2762,6 @@ at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
   return bridge::AtenFromXlaTensor(
       XLATensor::sum(bridge::GetXlaTensor(self),
                      xla::util::ToVector<xla::int64>(dim), keepdim, dtype));
-}
-
-at::Tensor AtenXlaType::sum_to_size(const at::Tensor& self,
-                                    at::IntArrayRef size) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::sum_to_size(self, size);
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::svd(
