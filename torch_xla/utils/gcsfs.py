@@ -212,7 +212,7 @@ def remove(path):
   bucket.delete_blob(bpath)
 
 
-def write(path, content):
+def write(path, content, service_account_filename=None):
   """Write a string/bytes or file into a GCS blob.
 
   Args:
@@ -221,9 +221,15 @@ def write(path, content):
       delimited path.
     content (string, bytes or file object): The content to be written into
       ``path``.
+    service_account_filename (string, optional): Filename of the JSON service
+      account key to authenticate writes to Google Cloud Storage.
   """
   bucket_name, bpath = _parse_gcs_path(path)
-  gcs_client = gcs.Client()
+  if service_account_filename:
+    gcs_client = gcs.Client.from_service_account_json(
+        service_account_filename)
+  else:
+    gcs_client = gcs.Client()
   bucket = gcs_client.get_bucket(bucket_name)
   blob = bucket.blob(bpath)
   if isinstance(content, (bytes, str)):
