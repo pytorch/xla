@@ -78,6 +78,9 @@ class AtenXlaType {
                                                int64_t dim,
                                                const at::Tensor& self);
 
+  static at::Tensor _s_where(const at::Tensor& condition,
+                             const at::Tensor& self, const at::Tensor& other);
+
   static at::Tensor _softmax(const at::Tensor& self, int64_t dim,
                              bool half_to_float);
 
@@ -626,9 +629,6 @@ class AtenXlaType {
   static at::Tensor& mv_out(at::Tensor& out, const at::Tensor& self,
                             const at::Tensor& vec);
 
-  static at::Tensor narrow(const at::Tensor& self, int64_t dim, int64_t start,
-                           int64_t length);
-
   static at::Tensor narrow_copy(const at::Tensor& self, int64_t dim,
                                 int64_t start, int64_t length);
 
@@ -782,10 +782,6 @@ class AtenXlaType {
 
   static at::Tensor select(const at::Tensor& self, int64_t dim, int64_t index);
 
-  static at::Tensor selu(const at::Tensor& self);
-
-  static at::Tensor& selu_(at::Tensor& self);
-
   static at::Tensor sigmoid(const at::Tensor& self);
 
   static at::Tensor& sigmoid_(at::Tensor& self);
@@ -885,9 +881,6 @@ class AtenXlaType {
 
   static std::tuple<at::Tensor, at::Tensor, at::Tensor> svd(
       const at::Tensor& self, bool some, bool compute_uv);
-
-  static at::Tensor _s_where(const at::Tensor& condition,
-                             const at::Tensor& self, const at::Tensor& other);
 
   static std::tuple<at::Tensor, at::Tensor> symeig(const at::Tensor& self,
                                                    bool eigenvectors,

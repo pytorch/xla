@@ -307,6 +307,15 @@ at::Tensor AtenXlaType::_log_softmax_backward_data(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
 }
 
+at::Tensor AtenXlaType::_s_where(const at::Tensor& condition,
+                                 const at::Tensor& self,
+                                 const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::where(
+      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(other)));
+}
+
 at::Tensor AtenXlaType::_softmax(const at::Tensor& self, int64_t dim,
                                  bool /* half_to_float */) {
   XLA_FN_COUNTER("xla::");
@@ -1971,13 +1980,6 @@ at::Tensor& AtenXlaType::mv_out(at::Tensor& out, const at::Tensor& self,
   return out;
 }
 
-at::Tensor AtenXlaType::narrow(const at::Tensor& self, int64_t dim,
-                               int64_t start, int64_t length) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::narrow(bridge::GetXlaTensor(self), dim, start, length));
-}
-
 at::Tensor AtenXlaType::narrow_copy(const at::Tensor& self, int64_t dim,
                                     int64_t start, int64_t length) {
   XLA_FN_COUNTER("xla::");
@@ -2493,16 +2495,6 @@ at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,
       XLATensor::select(bridge::GetXlaTensor(self), dim, index));
 }
 
-at::Tensor AtenXlaType::selu(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::selu(self);
-}
-
-at::Tensor& AtenXlaType::selu_(at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::selu_(self);
-}
-
 at::Tensor AtenXlaType::sigmoid(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -2782,15 +2774,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::svd(
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)),
                          bridge::AtenFromXlaTensor(std::get<2>(results)));
-}
-
-at::Tensor AtenXlaType::_s_where(const at::Tensor& condition,
-                                 const at::Tensor& self,
-                                 const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::where(
-      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(other)));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::symeig(const at::Tensor& self,
