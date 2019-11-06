@@ -770,12 +770,6 @@ class AtenXlaType {
   static at::Tensor rsub(const at::Tensor& self, at::Scalar other,
                          at::Scalar alpha);
 
-  static at::Tensor scatter(const at::Tensor& self, int64_t dim,
-                            const at::Tensor& index, const at::Tensor& src);
-
-  static at::Tensor scatter(const at::Tensor& self, int64_t dim,
-                            const at::Tensor& index, at::Scalar value);
-
   static at::Tensor& scatter_(at::Tensor& self, int64_t dim,
                               const at::Tensor& index, const at::Tensor& src);
 
@@ -785,9 +779,6 @@ class AtenXlaType {
   static at::Tensor& scatter_add_(at::Tensor& self, int64_t dim,
                                   const at::Tensor& index,
                                   const at::Tensor& src);
-
-  static at::Tensor scatter_add(const at::Tensor& self, int64_t dim,
-                                const at::Tensor& index, const at::Tensor& src);
 
   static at::Tensor select(const at::Tensor& self, int64_t dim, int64_t index);
 
