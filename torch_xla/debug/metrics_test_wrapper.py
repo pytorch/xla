@@ -8,6 +8,7 @@ python metrics_test_wrapper.py --metrics_output_filename="metrics.txt" \
     -- python test/test_train_mnist.py --num_epochs=1
 """
 import argparse
+import glob
 import os
 import shutil
 import subprocess
@@ -21,18 +22,33 @@ _CLOUD_STORAGE_PREFIX = 'gs://'
 _XLA_METRICS_FILE = 'XLA_METRICS_FILE'
 
 
-def _run_subprocess(cmd, distributed=False):
+def _find_correct_metrics_file(base_metrics_file):
+  # Distributed training jobs write 1 file per core. If XLA_METRICS_FILE is set
+  # to 'base_metrics_file', then the distributed output files have the format
+  # 'base_metrics_file.0', 'base_metrics_file.1', etc.
+  metrics_files = glob.glob('{}*'.format(base_metrics_file))
+  if len(metrics_files) == 1:
+      # Non-distributed case: the correct file is simply 'base_metrics_file'.
+    file_to_read = base_metrics_file
+  else:
+    # Choose the file of the first core. When sorted alphabetically, the first
+    # element will be 'base_metrics_file' which is empty in the distributed
+    # case. The second element will be 'base_metrics_file.0'.
+    file_to_read = sorted(metrics_files)[1]
+  return file_to_read
+
+
+def _run_subprocess(cmd):
   # Use _XLA_METRICS_FILE to pass the metrics report from the subprocess
-  # to this process. Note that distributed training jobs write 1 file per
-  # core.
+  # to this process.
   tmp_dir = tempfile.mkdtemp()
   _, tmp_path = tempfile.mkstemp(dir=tmp_dir)
-  file_to_read = '{}.0'.format(tmp_path) if distributed else tmp_path
 
   # Run the PyTorch XLA script.
   os.environ[_XLA_METRICS_FILE] = tmp_path
   sp_return_code = subprocess.call(cmd)
-  with open(file_to_read, 'r') as tmp_metrics:
+
+  with open(_find_correct_metrics_file(tmp_path), 'r') as tmp_metrics:
     metrics = tmp_metrics.read()
 
   # Cleanup.
@@ -63,16 +79,11 @@ if __name__ == '__main__':
           description='PyTorch on TPU: Verify metrics and/or save to disk.',
       epilog=('Usage example: metrics_test_wrapper.py '
           '--golden_metrics_filename="gcs://bucket/file" '
-          '--metrics_output_filename="gcs://bucket/file" '
-          '--service_account_filename="path/to/file" -- python train.py'))
+          '--metrics_output_filename="gcs://bucket/file" -- python train.py'))
   parser.add_argument('--golden_metrics_filename', type=str, default=None,
                       help='Read metrics from here and compare to current.')
   parser.add_argument('--metrics_output_filename', type=str, default=None,
                       help='If provided, write current metrics here.')
-  parser.add_argument('--service_account_filename', type=str, default=None,
-                      help='Used to authenticate to Google Cloud Storage.')
-  parser.add_argument('--distributed', action='store_true',
-                      help='Whether the subprocess is a distributed job.')
   parser.add_argument(
       'positional',
       nargs='+',
@@ -83,13 +94,10 @@ if __name__ == '__main__':
     raise ValueError('At least one of golden_metrics_filename or '
                      'metrics_output_filename is required.')
 
-  metrics, sp_return_code = _run_subprocess(FLAGS.positional,
-                                            distributed=FLAGS.distributed)
+  metrics, sp_return_code = _run_subprocess(FLAGS.positional)
 
   # Include the params for this invocation when saving metrics.
   output_string = '{}\n\n{}'.format(FLAGS, metrics)
-  if FLAGS.service_account_filename:
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = FLAGS.service_account_filename
   _write_to_disk(output_string, FLAGS.metrics_output_filename)
 
   if FLAGS.golden_metrics_filename:
