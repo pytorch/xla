@@ -669,10 +669,6 @@ class AtenXlaType {
 
   static at::Tensor& neg_(at::Tensor& self);
 
-  static at::Tensor nll_loss(const at::Tensor& self, const at::Tensor& target,
-                             const at::Tensor& weight, int64_t reduction,
-                             int64_t ignore_index);
-
   static at::Tensor nll_loss_backward(const at::Tensor& grad_output,
                                       const at::Tensor& self,
                                       const at::Tensor& target,
@@ -965,12 +961,6 @@ class AtenXlaType {
   static at::Tensor tril(const at::Tensor& self, int64_t diagonal);
 
   static at::Tensor& tril_(at::Tensor& self, int64_t diagonal);
-
-  static at::Tensor triplet_margin_loss(const at::Tensor& anchor,
-                                        const at::Tensor& positive,
-                                        const at::Tensor& negative,
-                                        double margin, double p, double eps,
-                                        bool swap, int64_t reduction);
 
   static at::Tensor triu(const at::Tensor& self, int64_t diagonal);
 
