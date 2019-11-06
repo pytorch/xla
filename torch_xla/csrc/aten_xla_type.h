@@ -626,9 +626,6 @@ class AtenXlaType {
   static at::Tensor& mv_out(at::Tensor& out, const at::Tensor& self,
                             const at::Tensor& vec);
 
-  static at::Tensor narrow(const at::Tensor& self, int64_t dim, int64_t start,
-                           int64_t length);
-
   static at::Tensor narrow_copy(const at::Tensor& self, int64_t dim,
                                 int64_t start, int64_t length);
 
