@@ -1882,11 +1882,6 @@ at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
       /*keep_reduced_dimensions*/ keepdim, dtype));
 }
 
-std::vector<at::Tensor> AtenXlaType::meshgrid(at::TensorList tensors) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::meshgrid(tensors);
-}
-
 at::Tensor AtenXlaType::min(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -2259,28 +2254,10 @@ at::Tensor AtenXlaType::ones_like(
   return full_like(self, 1, options, memory_format);
 }
 
-at::Tensor AtenXlaType::pairwise_distance(const at::Tensor& x1,
-                                          const at::Tensor& x2, double p,
-                                          double eps, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::pairwise_distance(x1, x2, p, eps, keepdim);
-}
-
 at::Tensor AtenXlaType::permute(const at::Tensor& self, at::IntArrayRef dims) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::permute(
       bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
-}
-
-at::Tensor AtenXlaType::pixel_shuffle(const at::Tensor& self,
-                                      int64_t upscale_factor) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::pixel_shuffle(self, upscale_factor);
-}
-
-at::Tensor AtenXlaType::pinverse(const at::Tensor& self, double rcond) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::pinverse(self, rcond);
 }
 
 at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) {
