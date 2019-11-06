@@ -78,6 +78,9 @@ class AtenXlaType {
                                                int64_t dim,
                                                const at::Tensor& self);
 
+  static at::Tensor _s_where(const at::Tensor& condition,
+                             const at::Tensor& self, const at::Tensor& other);
+
   static at::Tensor _softmax(const at::Tensor& self, int64_t dim,
                              bool half_to_float);
 
@@ -626,9 +629,6 @@ class AtenXlaType {
   static at::Tensor& mv_out(at::Tensor& out, const at::Tensor& self,
                             const at::Tensor& vec);
 
-  static at::Tensor narrow(const at::Tensor& self, int64_t dim, int64_t start,
-                           int64_t length);
-
   static at::Tensor narrow_copy(const at::Tensor& self, int64_t dim,
                                 int64_t start, int64_t length);
 
@@ -745,8 +745,6 @@ class AtenXlaType {
 
   static at::Tensor repeat(const at::Tensor& self, at::IntArrayRef repeats);
 
-  static at::Tensor reshape(const at::Tensor& self, at::IntArrayRef shape);
-
   static at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size);
 
   static at::Tensor rrelu_with_noise(const at::Tensor& self,
@@ -781,10 +779,6 @@ class AtenXlaType {
                                   const at::Tensor& src);
 
   static at::Tensor select(const at::Tensor& self, int64_t dim, int64_t index);
-
-  static at::Tensor selu(const at::Tensor& self);
-
-  static at::Tensor& selu_(at::Tensor& self);
 
   static at::Tensor sigmoid(const at::Tensor& self);
 
@@ -975,9 +969,6 @@ class AtenXlaType {
                                                 at::IntArrayRef input_size);
 
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
-
-  static at::Tensor where(const at::Tensor& condition, const at::Tensor& self,
-                          const at::Tensor& other);
 
   static at::Tensor& zero_(at::Tensor& self);
 
