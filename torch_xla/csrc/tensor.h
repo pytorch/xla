@@ -727,11 +727,6 @@ class XLATensor {
   static XLATensor repeat(const XLATensor& input,
                           std::vector<xla::int64> repeats);
 
-  // Returns a tensor with the same data and number of elements as input, but
-  // with the specified shape.
-  static XLATensor reshape(const XLATensor& input,
-                           std::vector<xla::int64> output_size);
-
   static void resize_(XLATensor& input, std::vector<xla::int64> size);
 
   static XLATensor rrelu_with_noise(const XLATensor& input, XLATensor& noise,

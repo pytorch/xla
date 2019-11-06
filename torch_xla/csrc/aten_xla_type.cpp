@@ -307,6 +307,15 @@ at::Tensor AtenXlaType::_log_softmax_backward_data(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
 }
 
+at::Tensor AtenXlaType::_s_where(const at::Tensor& condition,
+                                 const at::Tensor& self,
+                                 const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::where(
+      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(other)));
+}
+
 at::Tensor AtenXlaType::_softmax(const at::Tensor& self, int64_t dim,
                                  bool /* half_to_float */) {
   XLA_FN_COUNTER("xla::");
@@ -2378,12 +2387,6 @@ at::Tensor AtenXlaType::repeat(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(repeats)));
 }
 
-at::Tensor AtenXlaType::reshape(const at::Tensor& self, at::IntArrayRef shape) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::reshape(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(shape)));
-}
-
 at::Tensor& AtenXlaType::resize_(at::Tensor& self, at::IntArrayRef size) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -3063,14 +3066,6 @@ at::Tensor AtenXlaType::view_as(const at::Tensor& self,
                                 const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return view(self, other.sizes());
-}
-
-at::Tensor AtenXlaType::where(const at::Tensor& condition,
-                              const at::Tensor& self, const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::where(
-      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(other)));
 }
 
 at::Tensor& AtenXlaType::zero_(at::Tensor& self) {
