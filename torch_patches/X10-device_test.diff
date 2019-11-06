@@ -1,8 +1,25 @@
 diff --git a/test/common_device_type.py b/test/common_device_type.py
-index b3352182c6..5818f994c4 100644
+index a23696c29c..80e95f9a15 100644
 --- a/test/common_device_type.py
 +++ b/test/common_device_type.py
-@@ -216,10 +216,81 @@ class CUDATestBase(DeviceTypeTestBase):
+@@ -3,6 +3,7 @@ import threading
+ from functools import wraps
+ import unittest
+ import torch
++import copy
+ from common_utils import TestCase, TEST_WITH_ROCM, TEST_MKL, \
+     skipCUDANonDefaultStreamIf
+ 
+@@ -191,7 +192,7 @@ class DeviceTypeTestBase(TestCase):
+                     # Sets precision and runs test
+                     # Note: precision is reset after the test is run
+                     guard_precision = self.precision
+-                    try :
++                    try:
+                         self.precision = self._get_precision_override(test, dtype)
+                         result = test(self, device_arg, dtype)
+                     finally:
+@@ -242,10 +243,95 @@ class CUDATestBase(DeviceTypeTestBase):
          cls.primary_device = 'cuda:{0}'.format(torch.cuda.current_device())
  
  
@@ -18,12 +35,17 @@ index b3352182c6..5818f994c4 100644
 +xla_meta = run_path(xla_meta_path)
 +assert xla_meta, "XLA metadata not found!"
 +allowed_torch_tests = xla_meta.get('allowed_torch_tests', None)
++torch_test_precisions = xla_meta.get('torch_test_precisions', None)
++DEFAULT_FLOATING_PRECISION = xla_meta.get('DEFAULT_FLOATING_PRECISION', None)
 +assert allowed_torch_tests is not None, "XLA tests not found!"
++assert torch_test_precisions is not None, "XLA test precisions not found!"
++assert DEFAULT_FLOATING_PRECISION is not None, "DEFAULT_FLOATING_PRECISION not found!"
 +
 +
 +class XLATestBase(DeviceTypeTestBase):
 +    device_type = 'xla'
 +    unsupported_dtypes = {torch.half}
++    precision = DEFAULT_FLOATING_PRECISION
 +
 +    # Overrides to instantiate tests that are known to run quickly
 +    # and correctly on XLA.
@@ -53,15 +75,24 @@ index b3352182c6..5818f994c4 100644
 +                    reason = "XLA does not support dtype {0}".format(str(dtype))
 +
 +                    @wraps(test)
-+                    def skipped_test(self, test=test, reason=reason):
++                    def skipped_test(self, *args, reason=reason, **kwargs):
 +                        raise unittest.SkipTest(reason)
-+                        return test(self, cls.device_type)
 +
 +                    assert not hasattr(cls, dtype_test_name), "Redefinition of test {0}".format(dtype_test_name)
 +                    setattr(cls, dtype_test_name, skipped_test)
 +
-+                # Instantiates supported dtypes as normal
++                # Instantiates supported dtypes
 +                xla_dtypes = [dtype for dtype in dtypes if dtype not in cls.unsupported_dtypes]
++
++                # Sets default precision for floating types to bfloat16 precision
++                if not hasattr(test, 'precision_overrides'):
++                    test.precision_overrides = {}
++
++                floating_precision = torch_test_precisions.get(test.__name__, DEFAULT_FLOATING_PRECISION)
++                test.precision_overrides[torch.float] = max(test.precision_overrides.get(torch.float, 0), floating_precision)
++                test.precision_overrides[torch.double] = max(test.precision_overrides.get(torch.double, 0), floating_precision)
++                test.precision_overrides[torch.bfloat16] = max(test.precision_overrides.get(torch.bfloat16, 0), floating_precision)
++
 +                if len(xla_dtypes) != 0:
 +                    test.dtypes[cls.device_type] = xla_dtypes
 +                    super().instantiate_test(name, test)
@@ -84,3 +115,12 @@ index b3352182c6..5818f994c4 100644
  
  
  # Adds 'instantiated' device-specific test cases to the given scope.
+@@ -289,7 +375,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
+                 assert inspect.isfunction(test), "Couldn't extract function from '{0}'".format(name)
+ 
+                 # Instantiates the device-specific tests
+-                device_type_test_class.instantiate_test(name, test)
++                device_type_test_class.instantiate_test(name, copy.deepcopy(test))
+             else:  # Ports non-test member
+                 assert not hasattr(device_type_test_class, name), "Redefinition of non-test member {0}".format(name)
+ 

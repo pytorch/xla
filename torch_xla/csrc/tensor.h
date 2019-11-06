@@ -235,11 +235,8 @@ class XLATensor {
   static XLATensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
                           const Device& device, at::ScalarType scalar_type);
 
-  static XLATensor argmax(const XLATensor& input, xla::int64 dim, bool keepdim);
-  static XLATensor argmax(const XLATensor& input);
-
-  static XLATensor argmin(const XLATensor& input, xla::int64 dim, bool keepdim);
-  static XLATensor argmin(const XLATensor& input);
+  static void arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
+                         at::Scalar step, at::ScalarType scalar_type);
 
   // Takes a slice from the input as R1 at the specified offset and reshapes it
   // into the provided size.
@@ -280,8 +277,7 @@ class XLATensor {
   static void bernoulli_(XLATensor& input, double probability);
   static void bernoulli_(XLATensor& input, const XLATensor& probability);
 
-  static XLATensor bitwise_not(const XLATensor& input);
-  static void bitwise_not_(XLATensor& input);
+  static void bitwise_not_out(XLATensor& out, const XLATensor& input);
 
   // Batch matrix multiplication. Both tensors must be 3D, the batch size must
   // match and the remaining two dimensions must be compatible for matrix
@@ -291,8 +287,6 @@ class XLATensor {
   // Broadcasts the given tensors according to broadcasting semantics.
   static std::vector<XLATensor> broadcast_tensors(
       tensorflow::gtl::ArraySlice<const XLATensor> tensors);
-
-  static XLATensor cast(const XLATensor& input, at::ScalarType dtype);
 
   static XLATensor cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
                        xla::int64 dim);
@@ -378,9 +372,6 @@ class XLATensor {
   static void div_(XLATensor& input, const XLATensor& other);
   static void div_(XLATensor& input, at::Scalar other);
 
-  static XLATensor dropout(const XLATensor& input, double p);
-  static void dropout_(XLATensor& input, double p);
-
   // A generalized contraction between tensors of arbitrary dimension defined by
   // the given equation and applied to the input tensors.
   static XLATensor einsum(const std::string& equation,
@@ -460,6 +451,9 @@ class XLATensor {
 
   static XLATensor ge(const XLATensor& input, const XLATensor& other);
   static void ge_(XLATensor& input, const XLATensor& other);
+
+  static XLATensor gelu(const XLATensor& input);
+  static XLATensor gelu_backward(const XLATensor& grad, const XLATensor& input);
 
   static XLATensor gt(const XLATensor& input, at::Scalar other);
   static void gt_(XLATensor& input, at::Scalar other);
@@ -588,12 +582,6 @@ class XLATensor {
   static XLATensor lt(const XLATensor& input, const XLATensor& other);
   static void lt_(XLATensor& input, const XLATensor& other);
 
-  // Fills elements of the input tensor with the provided value where mask is
-  // one. The shape of mask must be broadcastable with the shape of the
-  // underlying tensor.
-  static XLATensor masked_fill(const XLATensor& input, const XLATensor& mask,
-                               at::Scalar value);
-
   // In-place version of the method above.
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            at::Scalar value);
@@ -606,6 +594,9 @@ class XLATensor {
 
   static std::tuple<XLATensor, XLATensor> max(const XLATensor& input,
                                               xla::int64 dim, bool keepdim);
+
+  static void max_out(XLATensor& max, XLATensor& max_values,
+                      const XLATensor& input, xla::int64 dim, bool keepdim);
 
   static XLATensor max_pool_nd(const XLATensor& input,
                                xla::int64 spatial_dim_count,
@@ -633,6 +624,9 @@ class XLATensor {
   static std::tuple<XLATensor, XLATensor> min(const XLATensor& input,
                                               xla::int64 dim, bool keepdim);
 
+  static void min_out(XLATensor& min, XLATensor& min_indices,
+                      const XLATensor& input, xla::int64 dim, bool keepdim);
+
   static XLATensor mm(const XLATensor& input, const XLATensor& weight);
 
   static XLATensor mse_loss(const XLATensor& input, const XLATensor& target,
@@ -647,6 +641,10 @@ class XLATensor {
   static XLATensor mul(const XLATensor& input, at::Scalar other);
   static void mul_(XLATensor& input, const XLATensor& other);
   static void mul_(XLATensor& input, at::Scalar other);
+
+  static XLATensor mv(const XLATensor& input, const XLATensor& vec);
+  static void mv_out(XLATensor& out, const XLATensor& input,
+                     const XLATensor& vec);
 
   // Returns a new tensor that is a narrowed view of the input in the given
   // dimension.
@@ -676,10 +674,15 @@ class XLATensor {
   static void neg_(XLATensor& input);
 
   static XLATensor nll_loss(const XLATensor& input, const XLATensor& target,
+                            const XLATensor& weight, xla::int64 reduction,
                             int ignore_index);
 
-  static XLATensor nll_loss_backward(const XLATensor& input,
-                                     const XLATensor& target, int ignore_index);
+  static XLATensor nll_loss_backward(const XLATensor& grad_output,
+                                     const XLATensor& input,
+                                     const XLATensor& target,
+                                     const XLATensor& weight,
+                                     xla::int64 reduction, int ignore_index,
+                                     const XLATensor& total_weight);
 
   static XLATensor norm(const XLATensor& input, c10::optional<at::Scalar> p,
                         c10::optional<at::ScalarType> dtype,
@@ -724,11 +727,6 @@ class XLATensor {
   static XLATensor repeat(const XLATensor& input,
                           std::vector<xla::int64> repeats);
 
-  // Returns a tensor with the same data and number of elements as input, but
-  // with the specified shape.
-  static XLATensor reshape(const XLATensor& input,
-                           std::vector<xla::int64> output_size);
-
   static void resize_(XLATensor& input, std::vector<xla::int64> size);
 
   static XLATensor rrelu_with_noise(const XLATensor& input, XLATensor& noise,
@@ -754,18 +752,11 @@ class XLATensor {
 
   static void scatter_(XLATensor& input, xla::int64 dim, const XLATensor& index,
                        const XLATensor& src);
-  static void scatter_add_(XLATensor& input, xla::int64 dim,
-                           const XLATensor& index, const XLATensor& src);
-
-  static XLATensor scatter(const XLATensor& input, xla::int64 dim,
-                           const XLATensor& index, const XLATensor& src);
-  static XLATensor scatter_add(const XLATensor& input, xla::int64 dim,
-                               const XLATensor& index, const XLATensor& src);
-
   static void scatter_(XLATensor& input, xla::int64 dim, const XLATensor& index,
                        at::Scalar value);
-  static XLATensor scatter(const XLATensor& input, xla::int64 dim,
-                           const XLATensor& index, at::Scalar value);
+
+  static void scatter_add_(XLATensor& input, xla::int64 dim,
+                           const XLATensor& index, const XLATensor& src);
 
   static XLATensor select(const XLATensor& input, xla::int64 dim,
                           xla::int64 index);
@@ -925,6 +916,21 @@ class XLATensor {
 
   // In-place version of the method above.
   static void unsqueeze_(XLATensor& input, xla::int64 dim);
+
+  static XLATensor upsample_bilinear2d(const XLATensor& input,
+                                       std::vector<xla::int64> output_size,
+                                       bool align_corners);
+
+  static XLATensor upsample_bilinear2d_backward(
+      const XLATensor& grad_output, std::vector<xla::int64> output_size,
+      std::vector<xla::int64> input_size, bool align_corners);
+
+  static XLATensor upsample_nearest2d(const XLATensor& input,
+                                      std::vector<xla::int64> output_size);
+
+  static XLATensor upsample_nearest2d_backward(
+      const XLATensor& grad_output, std::vector<xla::int64> output_size,
+      std::vector<xla::int64> input_size);
 
   // Like reshape, but it returns a view into the original tensor.
   static XLATensor view(

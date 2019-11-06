@@ -42,5 +42,6 @@ utils
 
 .. automodule:: torch_xla.utils.utils
 
-
 .. autoclass:: SampleGenerator
+
+.. autoclass:: TfRecordReader

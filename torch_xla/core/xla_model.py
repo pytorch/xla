@@ -1,15 +1,12 @@
 from __future__ import print_function
 
 import collections
-import gc
-from six import itervalues
 import sys
 import os
 import re
 import threading
 import time
 import torch
-import torch.nn as nn
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
@@ -394,19 +391,33 @@ def check_view_sharing(obj):
   tensors = set()
   aliases = dict()
 
+  def tensor_info(t):
+    return '{}{}'.format(t.dtype, list(t.size()))
+
+  def tensor_id(t):
+    if is_xla_tensor(t):
+      return torch_xla._XLAC._xla_get_tensor_id(t), 'xla'
+    return id(t), 'torch'
+
+  def alias_id(t):
+    if is_xla_tensor(t):
+      aid = torch_xla._XLAC._xla_get_tensor_view_alias_id(t)
+      return None if aid == 0 else aid, 'xla'
+    return t.storage().data_ptr(), 'torch'
+
   def check_object(obj):
-    if is_xla_tensor(obj):
-      tid = torch_xla._XLAC._xla_get_tensor_id(obj)
-      if tid not in tensors:
-        tensors.add(tid)
-        aid = torch_xla._XLAC._xla_get_tensor_view_alias_id(obj)
-        if aid != 0:
-          if aid in aliases:
-            oobj = aliases[aid]
-            raise RuntimeError(
-                'Tensor ID {} is sharing a view with tensor ID {}'.format(
-                    tid, torch_xla._XLAC._xla_get_tensor_id(oobj)))
-          aliases[aid] = obj
+    tid = tensor_id(obj)
+    if tid not in tensors:
+      tensors.add(tid)
+      aid = alias_id(obj)
+      if aid[0] is not None:
+        if aid in aliases:
+          oobj = aliases[aid]
+          raise RuntimeError(
+              'Tensor ID {} ({}) is sharing a view with tensor ID {} ({})'
+              .format(tid, tensor_info(obj), tensor_id(oobj),
+                      tensor_info(oobj)))
+        aliases[aid] = obj
 
   xu.for_each_instance(obj, lambda x: type(x) == torch.Tensor, check_object)
 
@@ -481,10 +492,13 @@ def save(data, file_or_path, master_only=True):
     data: The input data to be saved. Any nested combination of Python objects
       (list, tuples, sets, dicts, ...).
     file_or_path: The destination for the data saving operation. Either a file
-      path or a Python file object.
+      path or a Python file object. If `master_only` is ``False`` the path or
+      file objects must point to different destinations as otherwise all the
+      writes from the same host will override each other.
     master_only (bool): Whether only the master device should save the data. If
-      False, the `file_or_path` argument must be a path, and the different
-      devices will save data to files with their ordinal as extension.
+      False, the `file_or_path` argument should be a different file or path for
+      each of the ordinals taking part to the replication, otherwise all the
+      replicas on the same host will be writing to the same location.
       Default: True
   """
 
@@ -498,6 +512,4 @@ def save(data, file_or_path, master_only=True):
     if is_master_ordinal():
       torch.save(cpu_data, file_or_path)
   else:
-    assert type(file_or_path) == str
-    file_or_path = '{}.{}'.format(file_or_path, get_ordinal())
     torch.save(cpu_data, file_or_path)

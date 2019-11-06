@@ -15,6 +15,14 @@ _TENSOR_IDS = {}
 _STEP = None
 
 
+def _is_master_ordinal():
+  try:
+    import torch_xla.core.xla_model as xm
+    return xm.is_master_ordinal()
+  except ImportError:
+    return True
+
+
 def _index_of(sizes, lindex):
   index = []
   for size in reversed(sizes):
@@ -86,20 +94,22 @@ def save(name, tensor, step=None):
   # configured with a None _SAVE_DIR.
   save_dir = _get_save_dir()
   if save_dir is not None:
-    name = _get_tensor_name(name)
-    if step is not None:
-      path = os.path.join(save_dir, 'step-{}'.format(step))
-      if not os.path.isdir(path):
-        os.mkdir(path)
-      if step != _STEP:
-        _STEP = step
-        _TENSOR_IDS = {}
-    else:
-      path = save_dir
-    id = _TENSOR_IDS.get(name, 0)
-    _TENSOR_IDS[name] = id + 1
-    path = os.path.join(path, '{}.{}'.format(name, id))
-    torch.save(tensor.data.cpu(), path)
+    tensor_data = tensor.cpu()
+    if _is_master_ordinal():
+      name = _get_tensor_name(name)
+      if step is not None:
+        path = os.path.join(save_dir, 'step-{}'.format(step))
+        if not os.path.isdir(path):
+          os.mkdir(path)
+        if step != _STEP:
+          _STEP = step
+          _TENSOR_IDS = {}
+      else:
+        path = save_dir
+      id = _TENSOR_IDS.get(name, 0)
+      _TENSOR_IDS[name] = id + 1
+      path = os.path.join(path, '{}.{}'.format(name, id))
+      torch.save(tensor_data, path)
   return tensor
 
 

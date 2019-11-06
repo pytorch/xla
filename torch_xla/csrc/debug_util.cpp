@@ -79,7 +79,7 @@ void DebugUtil::SaveTensorsGraphInfo(
     const char* name, tensorflow::gtl::ArraySlice<const XLATensor> tensors,
     const std::vector<size_t>* indices, GraphFormat format) {
   static const std::string save_file =
-      xla::sys_util::GetEnvString("XLA_SAVE_TENSORS_FILE", "");
+      xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "");
   if (!save_file.empty()) {
     static std::mutex lock;
     std::string info = GetTensorsGraphInfo(tensors, indices, format);

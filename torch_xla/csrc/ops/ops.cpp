@@ -161,6 +161,7 @@ NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1) {
 }
 
 std::tuple<NodePtr, NodePtr> LogSigmoid(const Value& input) {
+  ScopePusher ir_scope(at::aten::log_sigmoid.toQualString());
   // Use log-sum-exp trick to avoid overflow.
   NodePtr neg_input = Neg(input);
   NodePtr max_elem = Max(ScalarOp(0, input.shape()), neg_input);
@@ -171,6 +172,7 @@ std::tuple<NodePtr, NodePtr> LogSigmoid(const Value& input) {
 
 NodePtr LogSigmoidBackward(const Value& grad_output, const Value& input,
                            const Value& buffer) {
+  ScopePusher ir_scope(at::aten::log_sigmoid_backward.toQualString());
   NodePtr zero = ScalarOp(0, input.shape());
   NodePtr one = ScalarOp(1, input.shape());
   NodePtr minus_one = ScalarOp(-1, input.shape());
@@ -417,6 +419,7 @@ NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
 NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
              c10::optional<at::ScalarType> dtype,
              tensorflow::gtl::ArraySlice<const xla::int64> dims, bool keepdim) {
+  ScopePusher ir_scope(at::aten::norm.toQualString());
   auto dimensions = xla::util::ToVector<xla::int64>(dims);
   if (dimensions.empty()) {
     dimensions = xla::util::Iota<xla::int64>(input.shape().rank());
@@ -465,6 +468,7 @@ NodePtr Identity(xla::int64 lines, xla::int64 cols,
 
 NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
             at::Scalar input_scale) {
+  ScopePusher ir_scope(at::aten::elu.toQualString());
   const xla::Shape& shape = input.shape();
   NodePtr scaled_input = input * ScalarOp(input_scale, shape);
   NodePtr zero = ScalarOp(0, shape);
@@ -478,6 +482,7 @@ NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
 NodePtr EluBackward(const Value& grad_output, const Value& output,
                     at::Scalar alpha, at::Scalar scale,
                     at::Scalar input_scale) {
+  ScopePusher ir_scope(at::aten::elu_backward.toQualString());
   const xla::Shape& shape = grad_output.shape();
   NodePtr negative_output_branch =
       ScalarOp(input_scale, shape) *
@@ -488,23 +493,46 @@ NodePtr EluBackward(const Value& grad_output, const Value& output,
                positive_output_branch, negative_output_branch);
 }
 
+NodePtr Gelu(const Value& input) {
+  ScopePusher ir_scope("aten::gelu");
+  // input * 0.5 * (1.0 + torch.erf(input / math.sqrt(2.0)))
+  const xla::Shape& shape = input.shape();
+  return input * ScalarOp(0.5, shape) *
+         (Erf(input * ScalarOp(M_SQRT1_2, shape)) + ScalarOp(1.0, shape));
+}
+
+NodePtr GeluBackward(const Value& grad, const Value& input) {
+  ScopePusher ir_scope("aten::gelu_backward");
+  const float kAlpha = M_2_SQRTPI * M_SQRT1_2 * 0.5;
+  const xla::Shape& shape = input.shape();
+  NodePtr scratch = Erf(input * ScalarOp(M_SQRT1_2, shape));
+  NodePtr dinput = Exp(input * input * ScalarOp(-0.5, shape));
+  return grad * (ScalarOp(0.5, shape) * (ScalarOp(1.0, shape) + scratch) +
+                 input * dinput * ScalarOp(kAlpha, shape));
+}
+
 NodePtr Lshift(const Value& input, at::Scalar other) {
+  ScopePusher ir_scope(at::aten::__lshift__.toQualString());
   return input * ScalarOp(pow(2, other.to<double>()), input.shape());
 }
 
 NodePtr Lshift(const Value& input, const Value& other) {
+  ScopePusher ir_scope(at::aten::__lshift__.toQualString());
   return input * Pow(ScalarOp(2, input.shape()), other);
 }
 
 NodePtr Rshift(const Value& input, at::Scalar other) {
+  ScopePusher ir_scope(at::aten::__rshift__.toQualString());
   return input / ScalarOp(pow(2, other.to<double>()), input.shape());
 }
 
 NodePtr Rshift(const Value& input, const Value& other) {
+  ScopePusher ir_scope(at::aten::__rshift__.toQualString());
   return input / Pow(ScalarOp(2, input.shape()), other);
 }
 
 NodePtr Remainder(const Value& input, const Value& divisor) {
+  ScopePusher ir_scope(at::aten::remainder.toQualString());
   NodePtr f = Fmod(input, Abs(divisor));
   return f + divisor * ComparisonOp(at::aten::lt, SignOp(f) * SignOp(divisor),
                                     ScalarOp(0, input.shape()));

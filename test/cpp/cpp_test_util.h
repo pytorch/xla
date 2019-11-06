@@ -6,6 +6,7 @@
 #include <cmath>
 #include <functional>
 #include <string>
+#include <unordered_set>
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
@@ -15,6 +16,8 @@
 
 namespace torch_xla {
 namespace cpp_test {
+
+const std::unordered_set<std::string>* GetIgnoredCounters();
 
 // Converts an at::Tensor(device=torch::kXLA) to at::Tensor(device=torch::kCPU)
 // This at::Tensor can be torch::Tensor which is a Variable, or at::Tensor which
@@ -56,6 +59,8 @@ void WithAllDevices(
 std::string GetTensorTextGraph(at::Tensor tensor);
 
 std::string GetTensorDotGraph(at::Tensor tensor);
+
+std::string GetTensorHloGraph(at::Tensor tensor);
 
 ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device);
 

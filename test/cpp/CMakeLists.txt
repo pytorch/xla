@@ -36,6 +36,7 @@ ExternalProject_Get_Property(googletest SOURCE_DIR)
 set(TORCH_XLA_TEST_SOURCES
   main.cpp
   cpp_test_util.cpp
+  metrics_snapshot.cpp
   test_async_task.cpp
   test_aten_xla_tensor.cpp
   test_ir.cpp

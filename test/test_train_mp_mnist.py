@@ -88,11 +88,13 @@ def train_mnist():
         train_dataset,
         batch_size=FLAGS.batch_size,
         sampler=train_sampler,
+        drop_last=FLAGS.drop_last,
         shuffle=False if train_sampler else True,
         num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.batch_size,
+        drop_last=FLAGS.drop_last,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
@@ -101,6 +103,9 @@ def train_mnist():
 
   device = xm.xla_device()
   model = MNIST().to(device)
+  writer = None
+  if xm.is_master_ordinal():
+    writer = test_utils.get_summary_writer(FLAGS.logdir)
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=FLAGS.momentum)
   loss_fn = nn.NLLLoss()
 
@@ -137,12 +142,15 @@ def train_mnist():
   for epoch in range(1, FLAGS.num_epochs + 1):
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
+    xm.master_print("Finished training epoch {}".format(epoch))
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
+  test_utils.close_summary_writer(writer)
   return accuracy
 
 

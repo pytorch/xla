@@ -2,6 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+
+#include "metrics_snapshot.h"
+
 namespace torch_xla {
 namespace cpp_test {
 
@@ -12,6 +16,19 @@ class XlaTest : public ::testing::Test {
   void TearDown() override;
 
   static void CommonSetup();
+
+  void ExpectCounterNotChanged(
+      const std::string& counter_regex,
+      const std::unordered_set<std::string>* ignore_set);
+
+  void ExpectCounterChanged(const std::string& counter_regex,
+                            const std::unordered_set<std::string>* ignore_set);
+
+ private:
+  void MakeEndSnapshot();
+
+  std::unique_ptr<MetricsSnapshot> start_msnap_;
+  std::unique_ptr<MetricsSnapshot> end_msnap_;
 };
 
 class TorchXlaTest : public XlaTest {

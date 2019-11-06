@@ -45,7 +45,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
@@ -154,12 +153,14 @@ def train_imagenet():
         train_dataset,
         batch_size=FLAGS.batch_size,
         sampler=train_sampler,
+        drop_last=FLAGS.drop_last,
         shuffle=False if train_sampler else True,
         num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
         sampler=test_sampler,
+        drop_last=FLAGS.drop_last,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
@@ -219,7 +220,7 @@ def train_imagenet():
     return accuracy
 
   accuracy = 0.0
-  writer = SummaryWriter(log_dir=FLAGS.logdir) if FLAGS.logdir else None
+  writer = test_utils.get_summary_writer(FLAGS.logdir)
   num_devices = len(
       xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
   num_training_steps_per_epoch = train_dataset_len // (
@@ -235,6 +236,7 @@ def train_imagenet():
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
+  test_utils.close_summary_writer(writer)
   return accuracy
 
 

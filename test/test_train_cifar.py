@@ -17,6 +17,7 @@ FLAGS = args_parse.parse_common_options(
 
 from common_utils import TestCase, run_tests
 import os
+from statistics import mean
 import shutil
 import test_utils
 import torch
@@ -106,11 +107,13 @@ def train_cifar():
   print('==> Preparing data..')
 
   if FLAGS.fake_data:
+    train_dataset_len = 50000  # Number of example in CIFAR train set.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, 32,
                           32), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size
+        // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, 32,
                           32), torch.zeros(FLAGS.batch_size,
@@ -136,6 +139,7 @@ def train_cifar():
         train=True,
         download=True,
         transform=transform_train)
+    train_dataset_len = len(train_dataset)
     test_dataset = torchvision.datasets.CIFAR10(
         root=FLAGS.datadir,
         train=False,
@@ -154,12 +158,14 @@ def train_cifar():
         train_dataset,
         batch_size=FLAGS.batch_size,
         sampler=train_sampler,
+        drop_last=FLAGS.drop_last,
         shuffle=False if train_sampler else True,
         num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.batch_size,
         sampler=test_sampler,
+        drop_last=FLAGS.drop_last,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
@@ -210,14 +216,23 @@ def train_cifar():
     return accuracy
 
   accuracy = 0.0
+  writer = test_utils.get_summary_writer(FLAGS.logdir)
+  num_devices = len(
+      xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
+  num_training_steps_per_epoch = train_dataset_len // (
+      FLAGS.batch_size * num_devices)
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
-    accuracy = sum(accuracies) / len(accuracies)
+    accuracy = mean(accuracies)
     print("Epoch: {}, Mean Accuracy: {:.2f}%".format(epoch, accuracy))
+    global_step = (epoch - 1) * num_training_steps_per_epoch
+    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
+                                     global_step)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
+  test_utils.close_summary_writer(writer)
   return accuracy
 
 

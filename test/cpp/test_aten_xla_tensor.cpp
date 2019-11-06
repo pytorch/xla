@@ -28,7 +28,7 @@ void TestBackward(
   std::vector<torch::Tensor> input_vars;
   std::vector<torch::Tensor> xinput_vars;
   for (size_t i = 0; i < inputs.size(); ++i) {
-    auto& input = inputs[i];
+    const torch::Tensor& input = inputs[i];
     if (input.defined()) {
       input_vars.push_back(
           input.clone().detach().set_requires_grad(input.requires_grad()));
@@ -77,6 +77,34 @@ TEST_F(AtenXlaTensorTest, TestClone) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestIsFloatingPoint) {
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    bool is_float = torch::is_floating_point(a);
+    bool xla_is_float = torch::is_floating_point(xla_a);
+    EXPECT_EQ(is_float, xla_is_float);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  // This check only checks scalar_type which doesn't call into XLA.
+  // So there's no positive asserts.
+}
+
+TEST_F(AtenXlaTensorTest, TestIsSigned) {
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    bool is_signed = torch::is_signed(a);
+    bool xla_is_signed = torch::is_signed(xla_a);
+    EXPECT_EQ(is_signed, xla_is_signed);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  // This check only checks scalar_type which doesn't call into XLA.
+  // So there's no positive asserts.
+}
+
 TEST_F(AtenXlaTensorTest, TestCastByte) {
   torch::Tensor a =
       torch::rand({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
@@ -86,6 +114,20 @@ TEST_F(AtenXlaTensorTest, TestCastByte) {
     torch::Tensor xla_b = torch::_cast_Byte(xla_a);
     AllEqual(b, xla_b);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestCastChar) {
+  torch::Tensor a =
+      torch::rand({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
+  torch::Tensor b = torch::_cast_Char(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::_cast_Char(xla_a);
+    AllEqual(b, xla_b);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCastShort) {
@@ -97,6 +139,8 @@ TEST_F(AtenXlaTensorTest, TestCastShort) {
     torch::Tensor xla_b = torch::_cast_Short(xla_a);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCastInt) {
@@ -108,6 +152,8 @@ TEST_F(AtenXlaTensorTest, TestCastInt) {
     torch::Tensor xla_b = torch::_cast_Int(xla_a);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCastLong) {
@@ -119,6 +165,8 @@ TEST_F(AtenXlaTensorTest, TestCastLong) {
     torch::Tensor xla_b = torch::_cast_Long(xla_a);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCastFloat) {
@@ -130,6 +178,8 @@ TEST_F(AtenXlaTensorTest, TestCastFloat) {
     torch::Tensor xla_b = torch::_cast_Float(xla_a);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestRetainType) {
@@ -199,6 +249,8 @@ TEST_F(AtenXlaTensorTest, TestAddZeroSizeDim) {
     torch::Tensor xla_c = torch::add(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSub) {
@@ -733,9 +785,13 @@ TEST_F(AtenXlaTensorTest, TestSymEig) {
           auto xla_b = torch::symeig(xla_a, eigenvectors, upper);
           AllClose(std::get<0>(b), std::get<0>(xla_b), /*rtol=*/3e-2,
                    /*atol=*/1e-2);
-          AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
-                   /*rtol=*/3e-2,
-                   /*atol=*/1e-2);
+          if (eigenvectors) {
+            AllClose(std::get<1>(b).abs(), std::get<1>(xla_b).abs(),
+                     /*rtol=*/3e-2,
+                     /*atol=*/1e-2);
+          } else {
+            EXPECT_EQ(std::get<1>(b).sizes(), std::get<1>(xla_b).sizes());
+          }
         });
       }
     }
@@ -878,6 +934,9 @@ TEST_F(AtenXlaTensorTest, TestArgSort) {
       }
     }
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::sort", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMin) {
@@ -1281,6 +1340,9 @@ TEST_F(AtenXlaTensorTest, TestFrobeniusNorm) {
     torch::Tensor xla_b = torch::frobenius_norm(xla_a);
     AllClose(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::norm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFrobeniusNormInDim) {
@@ -1293,6 +1355,9 @@ TEST_F(AtenXlaTensorTest, TestFrobeniusNormInDim) {
           torch::frobenius_norm(xla_a, {dim}, /*keepdim=*/false);
       AllClose(b, xla_b);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::norm", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -1306,6 +1371,10 @@ TEST_F(AtenXlaTensorTest, TestFrobeniusNormInDims) {
           torch::frobenius_norm(xla_a, dims, /*keepdim=*/false);
       AllClose(b, xla_b);
     });
+
+    ExpectCounterNotChanged("aten::(?!real|conj).*",
+                            cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::sqrt", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -1331,6 +1400,10 @@ TEST_F(AtenXlaTensorTest, TestGroupNorm) {
                             /*cudnn_enabled=*/false);
       AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm",
+                         cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -1363,30 +1436,82 @@ TEST_F(AtenXlaTensorTest, TestInstanceNorm) {
         /*use_input_stats=*/true, momentum, eps, /*cudnn_enabled=*/false);
     AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::native_batch_norm",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLayerNorm) {
-  int num_channels = 5;
-  std::vector<int64_t> normalized_shape = {10, 10};
-  torch::Tensor input = torch::rand({20, num_channels, 10, 10},
-                                    torch::TensorOptions(torch::kFloat));
-  torch::Tensor weight =
-      torch::rand(normalized_shape, torch::TensorOptions(torch::kFloat));
-  torch::Tensor bias =
-      torch::rand(normalized_shape, torch::TensorOptions(torch::kFloat));
+  torch::Tensor input =
+      torch::rand({20, 10, 10, 10}, torch::TensorOptions(torch::kFloat));
   double eps = 1e-05;
-  torch::Tensor output =
-      torch::layer_norm(input, normalized_shape, weight, bias, eps,
-                        /*cudnn_enabled=*/false);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_input = CopyToDevice(input, device);
-    torch::Tensor xla_weight = CopyToDevice(weight, device);
-    torch::Tensor xla_bias = CopyToDevice(bias, device);
-    torch::Tensor xla_output = torch::layer_norm(xla_input, normalized_shape,
-                                                 xla_weight, xla_bias, eps,
-                                                 /*cudnn_enabled=*/false);
-    AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
-  });
+  torch::Tensor undef;
+  for (bool undef_weight : {true, false}) {
+    for (int64_t normalized_size : {2, 3}) {
+      std::vector<int64_t> normalized_shape(normalized_size, 10);
+      torch::Tensor weight =
+          torch::rand(normalized_shape, torch::TensorOptions(torch::kFloat));
+      torch::Tensor bias =
+          torch::rand(normalized_shape, torch::TensorOptions(torch::kFloat));
+      torch::Tensor output = torch::layer_norm(input, normalized_shape,
+                                               undef_weight ? undef : weight,
+                                               undef_weight ? undef : bias, eps,
+                                               /*cudnn_enabled=*/false);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        torch::Tensor xla_weight =
+            undef_weight ? undef : CopyToDevice(weight, device);
+        torch::Tensor xla_bias =
+            undef_weight ? undef : CopyToDevice(bias, device);
+        torch::Tensor xla_output = torch::layer_norm(
+            xla_input, normalized_shape, xla_weight, xla_bias, eps,
+            /*cudnn_enabled=*/false);
+        AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
+      });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_layer_norm",
+                           cpp_test::GetIgnoredCounters());
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestLayerNormBackward) {
+  torch::Tensor input = torch::rand(
+      {2, 3, 3, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  double eps = 1e-05;
+  for (bool undef_weight : {true, false}) {
+    for (int64_t normalized_size : {2, 3}) {
+      std::vector<int64_t> normalized_shape(normalized_size, 3);
+      auto testfn =
+          [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+        return torch::layer_norm(
+            /*input=*/inputs[0], normalized_shape, inputs[1], inputs[2],
+            /*eps=*/eps,
+            /*cudnn_enabled=*/false);
+      };
+      torch::Tensor weight =
+          torch::rand(normalized_shape,
+                      torch::TensorOptions(torch::kFloat).requires_grad(true));
+      torch::Tensor bias =
+          torch::rand(normalized_shape,
+                      torch::TensorOptions(torch::kFloat).requires_grad(true));
+      torch::Tensor undef;
+      ForEachDevice([&](const torch::Device& device) {
+        TestBackward(
+            {input, undef_weight ? undef : weight, undef_weight ? undef : bias},
+            device, testfn,
+            /*rtol=*/1e-3, /*atol=*/1e-4);
+      });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_layer_norm",
+                           cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_layer_norm_backward",
+                           cpp_test::GetIgnoredCounters());
+    }
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
@@ -1397,6 +1522,9 @@ TEST_F(AtenXlaTensorTest, TestNuclearNorm) {
     torch::Tensor xla_b = torch::nuclear_norm(xla_a);
     AllClose(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPairwiseDistance) {
@@ -1414,6 +1542,9 @@ TEST_F(AtenXlaTensorTest, TestPairwiseDistance) {
             torch::pairwise_distance(xla_x1, xla_x2, p, eps, keepdim);
         AllClose(output, xla_output, /*rtol=*/1e-5, /*atol=*/1e-5);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::norm", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -1432,6 +1563,10 @@ TEST_F(AtenXlaTensorTest, TestCosineSimilarity) {
           torch::cosine_similarity(xla_x1, xla_x2, dim, eps);
       AllClose(output, xla_output);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::sum", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -1454,6 +1589,8 @@ TEST_F(AtenXlaTensorTest, TestCosineEmbeddingLoss) {
             xla_input1, xla_input2, xla_target, margin, reduction);
         AllClose(output, xla_output);
       });
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -1475,6 +1612,9 @@ TEST_F(AtenXlaTensorTest, TestHingeEmbeddingLoss) {
             xla_input, xla_target, margin, reduction);
         AllClose(output, xla_output);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -1503,6 +1643,11 @@ TEST_F(AtenXlaTensorTest, TestTripletMarginLoss) {
                 reduction);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::clamp_min",
+                               cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::norm", cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -1529,6 +1674,9 @@ TEST_F(AtenXlaTensorTest, TestMarginRankingLoss) {
             xla_input1, xla_input2, xla_target, margin, reduction);
         AllClose(output, xla_output);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -1562,6 +1710,11 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogits) {
           torch::Tensor xla_output = torch::binary_cross_entropy_with_logits(
               xla_input, xla_target, xla_weight, xla_pos_weight, reduction);
         });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        // binary_cross_entropy_with_logits is composed of
+        // sub/mul_/add_/exp_/add_/log_/... ops in upstream pytorch.
+        ExpectCounterChanged("xla::mul", cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -1765,6 +1918,9 @@ TEST_F(AtenXlaTensorTest, TestArgMin) {
     torch::Tensor xla_b = torch::argmin(xla_a, c10::nullopt, /*keepdim=*/false);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinDim) {
@@ -1777,6 +1933,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinDim) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
@@ -1789,6 +1948,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
@@ -1799,6 +1961,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
     torch::Tensor xla_b = torch::argmin(xla_a);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
@@ -1811,6 +1976,9 @@ TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMax) {
@@ -1821,6 +1989,9 @@ TEST_F(AtenXlaTensorTest, TestArgMax) {
     torch::Tensor xla_b = torch::argmax(xla_a, c10::nullopt, /*keepdim=*/false);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxDim) {
@@ -1833,6 +2004,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDim) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
@@ -1845,6 +2019,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
@@ -1855,6 +2032,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
     torch::Tensor xla_b = torch::argmax(xla_a, c10::nullopt, /*keepdim=*/false);
     AllEqual(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
@@ -1867,6 +2047,9 @@ TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
       AllEqual(b, xla_b);
     });
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAsin) {
@@ -2119,6 +2302,8 @@ TEST_F(AtenXlaTensorTest, TestBitwiseNot) {
       AllEqual(b, xla_b);
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseNotInPlace) {
@@ -2135,6 +2320,8 @@ TEST_F(AtenXlaTensorTest, TestBitwiseNotInPlace) {
       AllEqual(a, xla_a);
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSign) {
@@ -2216,6 +2403,29 @@ TEST_F(AtenXlaTensorTest, TestARange) {
         0.0, 100.0, 0.5, torch::TensorOptions(torch::kFloat).device(device));
     AllClose(a, xla_a);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestARangeOut) {
+  torch::Tensor a = torch::randn({4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::arange_out(a, 0, 4, 1);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::arange_out(xla_a, 0, 4, 1);
+    AllClose(b, xla_b);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestDimARange) {
+  torch::Tensor like = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor a = torch::_dim_arange(like, 1);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_like =
+        torch::rand({2, 2}, torch::TensorOptions(torch::kFloat).device(device));
+    torch::Tensor xla_a = torch::_dim_arange(xla_like, 1);
+    AllClose(a, xla_a);
+  });
 }
 
 TEST_F(AtenXlaTensorTest, TestBartlettWindow) {
@@ -2228,7 +2438,7 @@ TEST_F(AtenXlaTensorTest, TestBartlettWindow) {
       torch::Tensor xla_output = torch::bartlett_window(
           window_length, periodic,
           torch::TensorOptions(torch::kFloat).device(device));
-      AllClose(output, xla_output);
+      AllClose(output, xla_output, /*rtol=*/1e-5, /*atol=*/1e-7);
     });
   }
 }
@@ -2272,6 +2482,10 @@ TEST_F(AtenXlaTensorTest, TestLogSigmoid) {
     torch::Tensor xla_b = torch::log_sigmoid(xla_a);
     AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::log_sigmoid_forward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSigmoid) {
@@ -2294,6 +2508,9 @@ TEST_F(AtenXlaTensorTest, TestMatmul_1x1) {
     torch::Tensor xla_c = torch::matmul(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::dot", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_2x1) {
@@ -2306,6 +2523,9 @@ TEST_F(AtenXlaTensorTest, TestMatmul_2x1) {
     torch::Tensor xla_c = torch::matmul(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mv", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_1x2) {
@@ -2318,6 +2538,9 @@ TEST_F(AtenXlaTensorTest, TestMatmul_1x2) {
     torch::Tensor xla_c = torch::matmul(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmul_2x2) {
@@ -2330,6 +2553,9 @@ TEST_F(AtenXlaTensorTest, TestMatmul_2x2) {
     torch::Tensor xla_c = torch::matmul(xla_a, xla_b);
     AllClose(c, xla_c, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMatmulBcast) {
@@ -2344,6 +2570,8 @@ TEST_F(AtenXlaTensorTest, TestMatmulBcast) {
     torch::Tensor xla_c = torch::matmul(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDot) {
@@ -2372,6 +2600,38 @@ TEST_F(AtenXlaTensorTest, TestTensorDot) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestMv) {
+  torch::Tensor a = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::mv(a, b);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = torch::mv(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mv", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestMvOut) {
+  torch::Tensor a = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::empty({4}, torch::TensorOptions(torch::kFloat));
+  torch::mv_out(c, a, b);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = torch::empty({4}, xla_b.options());
+    torch::mv_out(xla_c, xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mv_out", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestBatchMatMul) {
   torch::Tensor a = torch::rand({3, 6, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 4, 5}, torch::TensorOptions(torch::kFloat));
@@ -2382,6 +2642,8 @@ TEST_F(AtenXlaTensorTest, TestBatchMatMul) {
     torch::Tensor xla_c = torch::bmm(xla_a, xla_b);
     AllClose(c, xla_c, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestChainMatMul) {
@@ -2399,6 +2661,9 @@ TEST_F(AtenXlaTensorTest, TestChainMatMul) {
         torch::chain_matmul({xla_a, xla_b, xla_c, xla_d});
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLinear) {
@@ -2420,6 +2685,8 @@ TEST_F(AtenXlaTensorTest, TestLinear) {
     AllClose(result_with_bias, xla_result_with_bias, /*rtol=*/1e-2,
              /*atol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPinverse) {
@@ -2431,6 +2698,9 @@ TEST_F(AtenXlaTensorTest, TestPinverse) {
     torch::Tensor xla_result = torch::pinverse(xla_input);
     AllClose(result, xla_result, /*rtol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
@@ -2444,6 +2714,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
     torch::Tensor xla_c = torch::einsum(equation, {xla_a, xla_b});
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
@@ -2457,6 +2730,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
     torch::Tensor xla_c = torch::einsum(equation, {xla_a, xla_b});
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinear) {
@@ -2472,6 +2748,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinear) {
     torch::Tensor xla_c = torch::einsum(equation, {xla_l, xla_a, xla_r});
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonal) {
@@ -2484,6 +2763,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonal) {
     torch::Tensor xla_result = torch::einsum(equation, {xla_input});
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonal) {
@@ -2496,6 +2778,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonal) {
     torch::Tensor xla_result = torch::einsum(equation, {xla_input});
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermute) {
@@ -2508,6 +2793,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermute) {
     torch::Tensor xla_result = torch::einsum(equation, {xla_input});
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
@@ -2521,6 +2809,9 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
     torch::Tensor xla_result = torch::einsum(equation, {xla_x, xla_y});
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBilinear) {
@@ -2546,6 +2837,87 @@ TEST_F(AtenXlaTensorTest, TestBilinear) {
         torch::bilinear(xla_input1, xla_input2, xla_weight, xla_bias);
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_trilinear", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestUpsampleNearest2D) {
+  int batch_size = 2;
+  int h = 5;
+  int w = 5;
+  int uh = 8;
+  int uw = 8;
+  int chans = 2;
+  torch::Tensor input = torch::rand({batch_size, chans, h, w},
+                                    torch::TensorOptions(torch::kFloat));
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor result = torch::upsample_nearest2d(input, {uh, uw});
+    torch::Tensor xla_result = torch::upsample_nearest2d(xla_input, {uh, uw});
+    AllClose(result, xla_result);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackward) {
+  int batch_size = 2;
+  int h = 5;
+  int w = 5;
+  int uh = 8;
+  int uw = 8;
+  int chans = 2;
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::upsample_nearest2d(inputs[0], {uh, uw});
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::rand({batch_size, chans, h, w},
+                     torch::TensorOptions(torch::kFloat).requires_grad(true))},
+        device, testfn);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2D) {
+  int batch_size = 2;
+  int h = 5;
+  int w = 5;
+  int uh = 8;
+  int uw = 8;
+  int chans = 2;
+  for (bool align_corners : {true, false}) {
+    torch::Tensor input = torch::rand({batch_size, chans, h, w},
+                                      torch::TensorOptions(torch::kFloat));
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor result =
+          torch::upsample_bilinear2d(input, {uh, uw}, align_corners);
+      torch::Tensor xla_result =
+          torch::upsample_bilinear2d(xla_input, {uh, uw}, align_corners);
+      AllClose(result, xla_result);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DBackward) {
+  int batch_size = 2;
+  int h = 5;
+  int w = 5;
+  int uh = 8;
+  int uw = 8;
+  int chans = 2;
+  for (bool align_corners : {true, false}) {
+    auto testfn =
+        [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+      return torch::upsample_bilinear2d(inputs[0], {uh, uw}, align_corners);
+    };
+    ForEachDevice([&](const torch::Device& device) {
+      TestBackward(
+          {torch::rand(
+              {batch_size, chans, h, w},
+              torch::TensorOptions(torch::kFloat).requires_grad(true))},
+          device, testfn);
+    });
+  }
 }
 
 TEST_F(AtenXlaTensorTest, TestAddCMul) {
@@ -2613,6 +2985,10 @@ TEST_F(AtenXlaTensorTest, TestBernoulliScalarProb) {
     EXPECT_GT(frac, 0.06);
     EXPECT_LT(frac, 0.14);
   });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bernoulli_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBernoulliTensorProb) {
@@ -2626,6 +3002,10 @@ TEST_F(AtenXlaTensorTest, TestBernoulliTensorProb) {
     EXPECT_GT(frac, 0.06);
     EXPECT_LT(frac, 0.14);
   });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bernoulli", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBernoulliScalarProbInPlace) {
@@ -2656,13 +3036,18 @@ TEST_F(AtenXlaTensorTest, TestDropout) {
   torch::Tensor a = torch::rand({17, 21}, torch::TensorOptions(torch::kFloat));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor b =
-        torch::dropout(xla_a, 0.1, /*train=*/true).to(torch::kCPU);
+    torch::Tensor xla_b = torch::dropout(xla_a, 0.1, /*train=*/true);
     double prob =
-        static_cast<double>(b.ne(0.0f).sum().item().toDouble()) / a.numel();
+        static_cast<double>(xla_b.cpu().ne(0.0f).sum().item().toDouble()) /
+        a.numel();
     EXPECT_GT(prob, 0.86);
     EXPECT_LT(prob, 0.94);
   });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  // dropout is composed of many arithmetic ops.
+  ExpectCounterChanged("xla::bernoulli_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
@@ -2677,6 +3062,11 @@ TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
     EXPECT_GT(prob, 0.86);
     EXPECT_LT(prob, 0.94);
   });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  // dropout is composed of many arithmetic ops.
+  ExpectCounterChanged("xla::bernoulli_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestRandperm) {
@@ -2804,6 +3194,9 @@ TEST_F(AtenXlaTensorTest, TestScatter) {
       torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, xla_b);
       AllClose(d, xla_d);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -2821,6 +3214,9 @@ TEST_F(AtenXlaTensorTest, TestScatterR1) {
     torch::Tensor xla_d = torch::scatter(xla_a, 0, xla_c, xla_b);
     AllClose(d, xla_d);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterR3) {
@@ -2842,6 +3238,9 @@ TEST_F(AtenXlaTensorTest, TestScatterR3) {
     torch::Tensor xla_d = torch::scatter(xla_a, 1, xla_c, xla_b);
     AllClose(d, xla_d);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterBiggerSource) {
@@ -2862,6 +3261,9 @@ TEST_F(AtenXlaTensorTest, TestScatterBiggerSource) {
       torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, xla_b);
       AllClose(d, xla_d);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -2882,6 +3284,9 @@ TEST_F(AtenXlaTensorTest, TestScatterScalar) {
       torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, b);
       AllClose(d, xla_d);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -2903,6 +3308,9 @@ TEST_F(AtenXlaTensorTest, TestScatterAdd) {
       torch::Tensor xla_d = torch::scatter_add(xla_a, dim, xla_c, xla_b);
       AllClose(d, xla_d);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_add_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -2926,6 +3334,9 @@ TEST_F(AtenXlaTensorTest, TestScatterAddInPlace) {
       AllClose(d, xla_d);
       AllClose(a, xla_a);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_add_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -3006,6 +3417,9 @@ TEST_F(AtenXlaTensorTest, TestExpandAs) {
     torch::Tensor xla_c = torch::native::expand_as(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::expand", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEye) {
@@ -3055,6 +3469,9 @@ TEST_F(AtenXlaTensorTest, TestBroadcastTensors) {
       AllClose(c[i], xla_c[i]);
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::expand", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestOneIndex) {
@@ -3276,6 +3693,9 @@ TEST_F(AtenXlaTensorTest, TestOneIndexPut) {
             torch::index_put(xla_params, {xla_indices}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3306,6 +3726,9 @@ TEST_F(AtenXlaTensorTest, TestOneIndexPutInPlace) {
         AllEqual(result, xla_result);
         AllEqual(params, xla_params);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3333,6 +3756,9 @@ TEST_F(AtenXlaTensorTest, TestOneIndexPutTransfer) {
             torch::index_put(xla_params, {indices}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3364,6 +3790,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPut) {
             xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3397,6 +3826,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutHeadNull) {
             xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3430,6 +3862,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutMiddleNull) {
             xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3463,6 +3898,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutTailNull) {
             xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3494,6 +3932,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutMiddleBroadcast) {
             xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3525,6 +3966,9 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexPutTailBroadcast) {
             xla_params, {xla_indices_0, xla_indices_1}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3552,6 +3996,10 @@ TEST_F(AtenXlaTensorTest, TestMaskIndexPut) {
             torch::index_put(xla_params, {xla_indices}, xla_values, accumulate);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::(?!nonzero).*",
+                              cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_put_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3582,6 +4030,10 @@ TEST_F(AtenXlaTensorTest, TestIndexPutImpl) {
         AllEqual(result, xla_result);
         AllEqual(params, xla_params);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::_index_put_impl_",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3607,6 +4059,9 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithScalar) {
             torch::index_fill(xla_base, dim, xla_index, value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3633,6 +4088,9 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithScalarInPlace) {
         AllEqual(result, xla_result);
         AllEqual(base, xla_base);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3660,6 +4118,9 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithTensor) {
             torch::index_fill(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3689,6 +4150,9 @@ TEST_F(AtenXlaTensorTest, TestIndexFillWithTensorInPlace) {
         AllEqual(result, xla_result);
         AllEqual(base, xla_base);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3716,6 +4180,9 @@ TEST_F(AtenXlaTensorTest, TestIndexFillRank0) {
             torch::index_fill(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_fill_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3751,6 +4218,9 @@ TEST_F(AtenXlaTensorTest, TestIndexAdd) {
             torch::index_add(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3789,6 +4259,9 @@ TEST_F(AtenXlaTensorTest, TestIndexAddInPlace) {
         AllEqual(result, xla_result);
         AllEqual(base, xla_base);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3823,6 +4296,9 @@ TEST_F(AtenXlaTensorTest, TestIndexAddRank0) {
             torch::index_add(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3858,6 +4334,9 @@ TEST_F(AtenXlaTensorTest, TestIndexCopy) {
             torch::index_copy(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_copy_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3896,6 +4375,9 @@ TEST_F(AtenXlaTensorTest, TestIndexCopyInPlace) {
         AllEqual(result, xla_result);
         AllEqual(base, xla_base);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_copy_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3930,6 +4412,9 @@ TEST_F(AtenXlaTensorTest, TestIndexCopyRank0) {
             torch::index_copy(xla_base, dim, xla_index, xla_value);
         AllEqual(result, xla_result);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::index_copy_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4158,6 +4643,8 @@ TEST_F(AtenXlaTensorTest, TestPowTensorScalar) {
     torch::Tensor xla_result = torch::pow(xla_base, exponent);
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPowTensorScalarInPlace) {
@@ -4170,6 +4657,8 @@ TEST_F(AtenXlaTensorTest, TestPowTensorScalarInPlace) {
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
     AllClose(base, xla_base, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPowTensorTensor) {
@@ -4183,6 +4672,8 @@ TEST_F(AtenXlaTensorTest, TestPowTensorTensor) {
     torch::Tensor xla_result = torch::pow(xla_base, xla_exponent);
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPowTensorTensorInPlace) {
@@ -4197,6 +4688,8 @@ TEST_F(AtenXlaTensorTest, TestPowTensorTensorInPlace) {
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
     AllClose(base, xla_base, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPowTensorTensorBroadcast) {
@@ -4210,6 +4703,8 @@ TEST_F(AtenXlaTensorTest, TestPowTensorTensorBroadcast) {
     torch::Tensor xla_result = torch::pow(xla_base, xla_exponent);
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPowScalarTensor) {
@@ -4221,6 +4716,8 @@ TEST_F(AtenXlaTensorTest, TestPowScalarTensor) {
     torch::Tensor xla_result = torch::pow(base, xla_exponent);
     AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFmodScalar) {
@@ -4348,6 +4845,9 @@ TEST_F(AtenXlaTensorTest, TestWhere) {
     torch::Tensor xla_d = torch::where(xla_c, xla_a, xla_b);
     AllClose(d, xla_d);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_s_where", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestWhereBroadcast) {
@@ -4367,6 +4867,9 @@ TEST_F(AtenXlaTensorTest, TestWhereBroadcast) {
     torch::Tensor xla_d = torch::where(xla_c, xla_a, xla_b);
     AllClose(d, xla_d);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_s_where", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestWhereAutograd) {
@@ -4386,6 +4889,9 @@ TEST_F(AtenXlaTensorTest, TestWhereAutograd) {
     torch::Tensor xla_d = torch::_s_where(xla_c, xla_a, xla_b);
     AllClose(d, xla_d);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_s_where", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestThreshold) {
@@ -4454,6 +4960,9 @@ TEST_F(AtenXlaTensorTest, TestSelu) {
     torch::Tensor xla_output = torch::selu(xla_input);
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::elu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSeluInPlace) {
@@ -4466,6 +4975,9 @@ TEST_F(AtenXlaTensorTest, TestSeluInPlace) {
     AllClose(output, xla_output);
     AllClose(input, xla_input);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::elu_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCelu) {
@@ -4478,6 +4990,9 @@ TEST_F(AtenXlaTensorTest, TestCelu) {
     torch::Tensor xla_output = torch::celu(xla_input, alpha);
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::elu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCeluInPlace) {
@@ -4491,6 +5006,22 @@ TEST_F(AtenXlaTensorTest, TestCeluInPlace) {
     AllClose(output, xla_output);
     AllClose(input, xla_input);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::elu_", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestGelu) {
+  torch::Tensor input =
+      torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor output = torch::gelu(input);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::gelu(xla_input);
+    AllClose(output, xla_output);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::gelu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAddMatMul) {
@@ -4514,6 +5045,8 @@ TEST_F(AtenXlaTensorTest, TestAddMatMul) {
           torch::addmm(xla_bias, xla_input, xla_weight, /*beta=*/beta);
       AllClose(output, xla_output);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -4544,6 +5077,11 @@ TEST_F(AtenXlaTensorTest, TestOneHot) {
     torch::Tensor xla_output = torch::one_hot(xla_input, num_classes);
     AllEqual(output, xla_output);
   });
+
+  // TODO: PT one_hot impl employs item() which could be eliminated.
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTranspose) {
@@ -4578,6 +5116,9 @@ TEST_F(AtenXlaTensorTest, TestReshape) {
     torch::Tensor xla_output = torch::reshape(xla_input, {-1, 320});
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestResize) {
@@ -4726,6 +5267,9 @@ TEST_F(AtenXlaTensorTest, TestNarrow) {
         torch::Tensor xla_b = xla_a.narrow(dim, start, 6);
         AllClose(b, xla_b);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::slice", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4747,6 +5291,9 @@ TEST_F(AtenXlaTensorTest, TestNarrowUpdate) {
         xla_c.add_(xla_b, 1.0);
         AllClose(c, xla_c);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::slice", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4768,6 +5315,9 @@ TEST_F(AtenXlaTensorTest, TestNarrowUpdateBaseCheck) {
         xla_c.add_(xla_b, 1.0);
         AllClose(a, xla_a);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::slice", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4798,6 +5348,9 @@ TEST_F(AtenXlaTensorTest, TestNarrowUpdateTwoSlices) {
           AllClose(e, xla_e);
           AllClose(a, xla_a);
         });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::slice", cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -4822,6 +5375,9 @@ TEST_F(AtenXlaTensorTest, TestNarrowUpdateView) {
         xla_d.add_(xla_b, 1.0);
         AllClose(d, xla_d);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::slice", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -4846,6 +5402,9 @@ TEST_F(AtenXlaTensorTest, TestNarrowInNarrowUpdate) {
           xla_d.add_(xla_b, 1.0);
           AllClose(a, xla_a);
         });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::slice", cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -4893,6 +5452,9 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmax) {
       AllClose(output, xla_output, /*rtol=*/1e-3);
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_log_softmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLogSoftmaxCast) {
@@ -4908,6 +5470,9 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxCast) {
       AllClose(output, xla_output, /*rtol=*/1e-3);
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_log_softmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSoftmax) {
@@ -4991,6 +5556,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool1D) {
                                   /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool2d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5023,6 +5592,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2D) {
                                   /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool2d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5056,6 +5629,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DNonSquare) {
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool2d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5089,6 +5666,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3D) {
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool3d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5122,6 +5703,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DIncompleteAttributes) {
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool3d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5156,6 +5741,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNonSquare) {
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool3d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5188,6 +5777,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DNoBatch) {
                                   /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool2d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5221,6 +5814,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatch) {
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool3d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5252,6 +5849,10 @@ TEST_F(AtenXlaTensorTest, TestAvgPool1D) {
                                   /*count_include_pad=*/count_include_pad);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::avg_pool2d",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5512,33 +6113,44 @@ TEST_F(AtenXlaTensorTest, TestNllLoss) {
   int batch = 6;
   int classes = 2;
   for (auto dtype : {torch::kFloat, torch::kDouble}) {
-    for (int ignore_index : {-1, 1, 5}) {
-      torch::Tensor input =
-          torch::rand({batch, classes}, torch::TensorOptions(dtype));
-      torch::Tensor target =
-          torch::randint(std::min(ignore_index, 0), classes, {batch},
-                         torch::TensorOptions(torch::kLong));
-      torch::Tensor undef_weight;
-      for (torch::Reduction::Reduction reduction :
-           {torch::Reduction::Mean, torch::Reduction::Sum}) {
-        torch::Tensor output =
-            torch::nll_loss(/*self=*/input, /*target=*/target,
-                            /*weight=*/undef_weight,
-                            /*reduction=*/reduction,
-                            /*ignore_index=*/ignore_index);
+    for (int ignore_index : {-1, 0, 1, 5}) {
+      for (bool def_weight : {false, true}) {
+        torch::Tensor input =
+            torch::rand({batch, classes}, torch::TensorOptions(dtype));
+        torch::Tensor target =
+            torch::randint(std::min(ignore_index, 0), classes, {batch},
+                           torch::TensorOptions(torch::kLong));
+        torch::Tensor weight;
+        if (def_weight) {
+          weight = torch::rand({classes}, torch::TensorOptions(dtype));
+        }
+        for (torch::Reduction::Reduction reduction :
+             {torch::Reduction::Mean, torch::Reduction::Sum,
+              torch::Reduction::None}) {
+          torch::Tensor output =
+              torch::nll_loss(/*self=*/input, /*target=*/target,
+                              /*weight=*/weight,
+                              /*reduction=*/reduction,
+                              /*ignore_index=*/ignore_index);
 
-        ForEachDevice([&](const torch::Device& device) {
-          torch::Tensor xla_input = CopyToDevice(input, device);
-          torch::Tensor xla_target = CopyToDevice(target, device);
-          torch::Tensor xla_output = torch::nll_loss(
-              /*self=*/xla_input, /*target=*/xla_target,
-              /*weight=*/undef_weight,
-              /*reduction=*/reduction, /*ignore_index=*/ignore_index);
-          AllClose(output, xla_output);
-        });
+          ForEachDevice([&](const torch::Device& device) {
+            torch::Tensor xla_input = CopyToDevice(input, device);
+            torch::Tensor xla_target = CopyToDevice(target, device);
+            torch::Tensor xla_weight =
+                def_weight ? CopyToDevice(weight, device) : torch::Tensor();
+            torch::Tensor xla_output = torch::nll_loss(
+                /*self=*/xla_input, /*target=*/xla_target,
+                /*weight=*/xla_weight,
+                /*reduction=*/reduction, /*ignore_index=*/ignore_index);
+            AllClose(output, xla_output);
+          });
+        }
       }
     }
   }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::nll_loss_forward", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSmoothL1Loss) {
@@ -5672,6 +6284,10 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm1D) {
             /*cudnn_enabled=*/false);
         AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_batch_norm",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -5714,6 +6330,10 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2D) {
             /*cudnn_enabled=*/false);
         AllClose(output, xla_output, /*rtol=*/1e-3, /*atol=*/1e-5);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_batch_norm",
+                           cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -5736,6 +6356,9 @@ TEST_F(AtenXlaTensorTest, TestContiguous) {
     torch::Tensor xla_output = torch::native::contiguous(xla_input);
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSqueezeAll) {
@@ -5844,6 +6467,9 @@ TEST_F(AtenXlaTensorTest, TestMaskedFill) {
     torch::Tensor xla_result = torch::masked_fill(xla_input, xla_mask, value);
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMaskedFillInPlace) {
@@ -5860,6 +6486,9 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillInPlace) {
     AllClose(result, xla_result);
     AllClose(input, xla_input);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {
@@ -5875,6 +6504,9 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast) {
     torch::Tensor xla_result = torch::masked_fill(xla_input, xla_mask, value);
     AllClose(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFill) {
@@ -5990,6 +6622,9 @@ TEST_F(AtenXlaTensorTest, TestPixelShuffle) {
     torch::Tensor xla_output = torch::pixel_shuffle(xla_input, upscale_factor);
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::permute", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSumToSize) {
@@ -6358,6 +6993,9 @@ TEST_F(AtenXlaTensorTest, TestDiagFlat) {
       torch::Tensor xla_output = torch::diagflat(xla_input, diagonal);
       AllClose(output, xla_output);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::diag", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -6428,6 +7066,10 @@ TEST_F(AtenXlaTensorTest, TestFlatten) {
                 torch::flatten(xla_input, start_dim, end_dim);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          // Depends on shapes, flatten could call into different view
+          // functions. So we skip positive checks here.
         }
       }
     }
@@ -6728,6 +7370,9 @@ TEST_F(AtenXlaTensorTest, TestMeshgrid) {
       AllClose(d[i], xla_d[i]);
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestConstantPad) {
@@ -7178,6 +7823,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
                   torch::TensorOptions(torch::kFloat).requires_grad(true))},
               device, testfn);
         });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool2d_with_indices",
+                             cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -7206,6 +7855,12 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DBackward) {
                   torch::TensorOptions(torch::kFloat).requires_grad(true))},
               device, testfn);
         });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool3d_with_indices",
+                             cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool3d_with_indices_backward",
+                             cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -7261,6 +7916,12 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
                   torch::TensorOptions(torch::kFloat).requires_grad(true))},
               device, testfn);
         });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool3d_with_indices",
+                             cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool3d_with_indices_backward",
+                             cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -7300,6 +7961,10 @@ TEST_F(AtenXlaTensorTest, TestLogSigmoidBackward) {
                      torch::TensorOptions(torch::kFloat).requires_grad(true))},
         device, testfn, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::log_sigmoid_forward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
@@ -7316,6 +7981,9 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
               torch::TensorOptions(torch::kFloat).requires_grad(true))},
           device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::_log_softmax", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -7423,6 +8091,19 @@ TEST_F(AtenXlaTensorTest, TestEluBackward) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestGeluBackward) {
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::gelu(inputs[0]);
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::rand({2, 3},
+                     torch::TensorOptions(torch::kFloat).requires_grad(true))},
+        device, testfn);
+  });
+  ExpectCounterChanged("xla::gelu_backward", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestLeakyReluBackward) {
   double negative_slope = 0.01;
   auto testfn = [=](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
@@ -7476,28 +8157,41 @@ TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
   int batch = 6;
   int classes = 2;
   for (auto dtype : {torch::kFloat, torch::kDouble}) {
-    for (int ignore_index : {-1, 1, 5}) {
-      torch::Tensor input = torch::rand(
-          {batch, classes}, torch::TensorOptions(dtype).requires_grad(true));
-      torch::Tensor target =
-          torch::randint(std::min(ignore_index, 0), classes, {batch},
-                         torch::TensorOptions(torch::kLong));
-      torch::Tensor undef_weight;
-      for (torch::Reduction::Reduction reduction :
-           {torch::Reduction::Mean, torch::Reduction::Sum}) {
-        auto testfn =
-            [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-          return torch::nll_loss(
-              /*self=*/inputs[0], /*target=*/inputs[1], /*weight=*/undef_weight,
-              /*reduction=*/reduction, /*ignore_index=*/ignore_index);
-        };
-        ForEachDevice([&](const torch::Device& device) {
-          TestBackward({input, target}, device, testfn, /*rtol=*/1e-5,
-                       /*atol=*/1e-8);
-        });
+    for (int ignore_index : {-1, 0, 1, 5}) {
+      for (bool def_weight : {false, true}) {
+        torch::Tensor input = torch::rand(
+            {batch, classes}, torch::TensorOptions(dtype).requires_grad(true));
+        torch::Tensor target =
+            torch::randint(std::min(ignore_index, 0), classes, {batch},
+                           torch::TensorOptions(torch::kLong));
+        torch::Tensor weight;
+        if (def_weight) {
+          weight = torch::rand({classes}, torch::TensorOptions(dtype));
+        }
+        for (torch::Reduction::Reduction reduction :
+             {torch::Reduction::Mean, torch::Reduction::Sum,
+              torch::Reduction::None}) {
+          auto testfn =
+              [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+            return torch::nll_loss(
+                /*self=*/inputs[0], /*target=*/inputs[1],
+                /*weight=*/inputs[2],
+                /*reduction=*/reduction, /*ignore_index=*/ignore_index);
+          };
+          ForEachDevice([&](const torch::Device& device) {
+            TestBackward({input, target, weight}, device, testfn, /*rtol=*/1e-5,
+                         /*atol=*/1e-8);
+          });
+        }
       }
     }
   }
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::nll_loss_forward", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::nll_loss_backward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSmoothL1LossBackward) {
@@ -7569,6 +8263,12 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm2DBackward) {
                    testfn,
                    /*rtol=*/1e-3, /*atol=*/1e-4);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm",
+                         cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm_backward",
+                         cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -7609,6 +8309,12 @@ TEST_F(AtenXlaTensorTest, TestBatchNorm3DBackward) {
                    testfn,
                    /*rtol=*/1e-3, /*atol=*/1e-3);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm",
+                         cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::native_batch_norm_backward",
+                         cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -7646,6 +8352,10 @@ TEST_F(AtenXlaTensorTest, TestBCEWithLogitsBackward) {
           TestBackward({input, target, weight, pos_weight}, device, testfn,
                        /*rtol=*/1e-3, /*atol=*/1e-5);
         });
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        // binary_cross_entropy_with_logits_backward is composed of
+        // sub/mul_/add_/exp_/add_/log_/... ops in upstream pytorch.
+        ExpectCounterChanged("xla::add", cpp_test::GetIgnoredCounters());
       }
     }
   }
