@@ -2430,7 +2430,7 @@ TEST_F(AtenXlaTensorTest, TestBartlettWindow) {
       torch::Tensor xla_output = torch::bartlett_window(
           window_length, periodic,
           torch::TensorOptions(torch::kFloat).device(device));
-      AllClose(output, xla_output);
+      AllClose(output, xla_output, /*rtol=*/1e-5, /*atol=*/1e-7);
     });
   }
 }
