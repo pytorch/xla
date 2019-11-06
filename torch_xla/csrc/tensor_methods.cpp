@@ -1767,12 +1767,6 @@ XLATensor XLATensor::repeat(const XLATensor& input,
       ir::MakeNode<ir::ops::Repeat>(input.GetIrValue(), std::move(repeats)));
 }
 
-XLATensor XLATensor::reshape(const XLATensor& input,
-                             std::vector<xla::int64> output_size) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::View>(input.GetIrValue(), std::move(output_size)));
-}
-
 void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
   if (input.data()->view == nullptr) {
     input.SetIrValue(

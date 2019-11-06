@@ -5107,6 +5107,9 @@ TEST_F(AtenXlaTensorTest, TestReshape) {
     torch::Tensor xla_output = torch::reshape(xla_input, {-1, 320});
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestResize) {

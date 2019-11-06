@@ -742,8 +742,6 @@ class AtenXlaType {
 
   static at::Tensor repeat(const at::Tensor& self, at::IntArrayRef repeats);
 
-  static at::Tensor reshape(const at::Tensor& self, at::IntArrayRef shape);
-
   static at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size);
 
   static at::Tensor rrelu_with_noise(const at::Tensor& self,
