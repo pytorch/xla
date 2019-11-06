@@ -1853,27 +1853,6 @@ void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
-void XLATensor::scatter_add_(XLATensor& input, xla::int64 dim,
-                             const XLATensor& index, const XLATensor& src) {
-  input.SetIrValue(ir::MakeNode<ir::ops::ScatterAdd>(
-      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
-}
-
-XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
-                             const XLATensor& index, const XLATensor& src) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::Scatter>(
-      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
-}
-
-XLATensor XLATensor::scatter_add(const XLATensor& input, xla::int64 dim,
-                                 const XLATensor& index, const XLATensor& src) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::ScatterAdd>(
-      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
-}
-
 void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
                          const XLATensor& index, at::Scalar value) {
   ir::Value constant =
@@ -1883,12 +1862,10 @@ void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
-XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
-                             const XLATensor& index, at::Scalar value) {
-  ir::Value constant =
-      GetIrValueForScalar(value, input.shape(), input.GetDevice());
-  return input.CreateFrom(ir::MakeNode<ir::ops::Scatter>(
-      input.GetIrValue(), index.GetIrValue(), constant,
+void XLATensor::scatter_add_(XLATensor& input, xla::int64 dim,
+                             const XLATensor& index, const XLATensor& src) {
+  input.SetIrValue(ir::MakeNode<ir::ops::ScatterAdd>(
+      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 

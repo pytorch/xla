@@ -3189,6 +3189,9 @@ TEST_F(AtenXlaTensorTest, TestScatter) {
       torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, xla_b);
       AllClose(d, xla_d);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -3206,6 +3209,9 @@ TEST_F(AtenXlaTensorTest, TestScatterR1) {
     torch::Tensor xla_d = torch::scatter(xla_a, 0, xla_c, xla_b);
     AllClose(d, xla_d);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterR3) {
@@ -3227,6 +3233,9 @@ TEST_F(AtenXlaTensorTest, TestScatterR3) {
     torch::Tensor xla_d = torch::scatter(xla_a, 1, xla_c, xla_b);
     AllClose(d, xla_d);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestScatterBiggerSource) {
@@ -3247,6 +3256,9 @@ TEST_F(AtenXlaTensorTest, TestScatterBiggerSource) {
       torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, xla_b);
       AllClose(d, xla_d);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -3267,6 +3279,9 @@ TEST_F(AtenXlaTensorTest, TestScatterScalar) {
       torch::Tensor xla_d = torch::scatter(xla_a, dim, xla_c, b);
       AllClose(d, xla_d);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -3288,6 +3303,9 @@ TEST_F(AtenXlaTensorTest, TestScatterAdd) {
       torch::Tensor xla_d = torch::scatter_add(xla_a, dim, xla_c, xla_b);
       AllClose(d, xla_d);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_add_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -3311,6 +3329,9 @@ TEST_F(AtenXlaTensorTest, TestScatterAddInPlace) {
       AllClose(d, xla_d);
       AllClose(a, xla_a);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::scatter_add_", cpp_test::GetIgnoredCounters());
   }
 }
 

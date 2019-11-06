@@ -2465,22 +2465,6 @@ at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
       XLATensor::rsub(bridge::GetXlaTensor(self), other, alpha));
 }
 
-at::Tensor AtenXlaType::scatter(const at::Tensor& self, int64_t dim,
-                                const at::Tensor& index,
-                                const at::Tensor& src) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::scatter(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
-      bridge::GetXlaTensor(src)));
-}
-
-at::Tensor AtenXlaType::scatter(const at::Tensor& self, int64_t dim,
-                                const at::Tensor& index, at::Scalar value) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::scatter(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index), value));
-}
-
 at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
                                   const at::Tensor& index,
                                   const at::Tensor& src) {
@@ -2497,15 +2481,6 @@ at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::scatter_(self_tensor, dim, bridge::GetXlaTensor(index), value);
   return self;
-}
-
-at::Tensor AtenXlaType::scatter_add(const at::Tensor& self, int64_t dim,
-                                    const at::Tensor& index,
-                                    const at::Tensor& src) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::scatter_add(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
-      bridge::GetXlaTensor(src)));
 }
 
 at::Tensor& AtenXlaType::scatter_add_(at::Tensor& self, int64_t dim,
