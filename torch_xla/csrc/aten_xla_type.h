@@ -818,9 +818,6 @@ class AtenXlaType {
                                             const at::Tensor& target,
                                             int64_t reduction);
 
-  static at::Tensor softmax(const at::Tensor& self, int64_t dim,
-                            c10::optional<at::ScalarType> dtype);
-
   static at::Tensor softplus(const at::Tensor& self, at::Scalar beta,
                              at::Scalar threshold);
 
@@ -905,10 +902,6 @@ class AtenXlaType {
   static at::Tensor tanh_backward(const at::Tensor& grad_output,
                                   const at::Tensor& output);
 
-  static at::Tensor tensordot(const at::Tensor& self, const at::Tensor& other,
-                              at::IntArrayRef dims_self,
-                              at::IntArrayRef dims_other);
-
   static at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
                               at::Scalar value);
 
@@ -982,8 +975,6 @@ class AtenXlaType {
                                                 at::IntArrayRef input_size);
 
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
-
-  static at::Tensor view_as(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor where(const at::Tensor& condition, const at::Tensor& self,
                           const at::Tensor& other);

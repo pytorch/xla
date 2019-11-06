@@ -310,7 +310,8 @@ at::Tensor AtenXlaType::_log_softmax_backward_data(
 at::Tensor AtenXlaType::_softmax(const at::Tensor& self, int64_t dim,
                                  bool /* half_to_float */) {
   XLA_FN_COUNTER("xla::");
-  return softmax(self, dim, c10::nullopt);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::softmax(bridge::GetXlaTensor(self), dim, c10::nullopt));
 }
 
 at::Tensor AtenXlaType::_softmax_backward_data(const at::Tensor& grad_output,
@@ -2589,13 +2590,6 @@ at::Tensor AtenXlaType::smooth_l1_loss_backward(const at::Tensor& grad_output,
       bridge::GetXlaTensor(target), reduction));
 }
 
-at::Tensor AtenXlaType::softmax(const at::Tensor& self, int64_t dim,
-                                c10::optional<at::ScalarType> dtype) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::softmax(bridge::GetXlaTensor(self), dim, dtype));
-}
-
 at::Tensor AtenXlaType::softplus(const at::Tensor& self, at::Scalar beta,
                                  at::Scalar threshold) {
   XLA_FN_COUNTER("xla::");
@@ -2838,14 +2832,6 @@ at::Tensor AtenXlaType::tanh_backward(const at::Tensor& grad_output,
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output)));
 }
 
-at::Tensor AtenXlaType::tensordot(const at::Tensor& self,
-                                  const at::Tensor& other,
-                                  at::IntArrayRef dims_self,
-                                  at::IntArrayRef dims_other) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::tensordot(self, other, dims_self, dims_other);
-}
-
 at::Tensor AtenXlaType::threshold(const at::Tensor& self, at::Scalar threshold,
                                   at::Scalar value) {
   XLA_FN_COUNTER("xla::");
@@ -3085,12 +3071,6 @@ at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntArrayRef size) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::view(bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
-}
-
-at::Tensor AtenXlaType::view_as(const at::Tensor& self,
-                                const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return view(self, other.sizes());
 }
 
 at::Tensor AtenXlaType::where(const at::Tensor& condition,
