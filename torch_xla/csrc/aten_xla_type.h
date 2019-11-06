@@ -598,8 +598,6 @@ class AtenXlaType {
   static at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim,
                          bool keepdim, c10::optional<at::ScalarType> dtype);
 
-  static std::vector<at::Tensor> meshgrid(at::TensorList tensors);
-
   static at::Tensor min(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor min(const at::Tensor& self);
@@ -718,16 +716,7 @@ class AtenXlaType {
                               const at::TensorOptions& options,
                               c10::optional<at::MemoryFormat> memory_format);
 
-  static at::Tensor pairwise_distance(const at::Tensor& x1,
-                                      const at::Tensor& x2, double p,
-                                      double eps, bool keepdim);
-
   static at::Tensor permute(const at::Tensor& self, at::IntArrayRef dims);
-
-  static at::Tensor pixel_shuffle(const at::Tensor& self,
-                                  int64_t upscale_factor);
-
-  static at::Tensor pinverse(const at::Tensor& self, double rcond);
 
   static at::Tensor pow(const at::Tensor& self, at::Scalar exponent);
 
