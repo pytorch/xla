@@ -983,7 +983,13 @@ at::Tensor AtenXlaType::dot(const at::Tensor& self, const at::Tensor& tensor) {
       << "dot: Expected 1-D argument self, but got " << self.dim() << "-D";
   XLA_CHECK_EQ(tensor.dim(), 1)
       << "dot: Expected 1-D argument tensor, but got " << tensor.dim() << "-D";
-  return matmul(self, tensor);
+  // xla::dot doesn't support integer types.
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(tensor)) {
+    return AtenXlaTypeDefault::dot(self, tensor);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::matmul(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
 }
 
 at::Tensor AtenXlaType::einsum(std::string equation, at::TensorList tensors) {
@@ -1710,18 +1716,6 @@ at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                << "value tensor, but got tensor "
                                << "with " << value.dim() << " dimension(s).";
   return masked_fill_(self, mask, value.item());
-}
-
-at::Tensor AtenXlaType::matmul(const at::Tensor& self,
-                               const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  // xla::dot doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(other)) {
-    return AtenXlaTypeDefault::matmul(self, other);
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::matmul(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
 at::Tensor AtenXlaType::max(const at::Tensor& self, const at::Tensor& other) {
