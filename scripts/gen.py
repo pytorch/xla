@@ -87,6 +87,14 @@ _FN_BLACKLIST = set([
     'zero_',
     'zeros',
     'zeros_like',
+    # FIXME: Remove functions below when we switch to override leaf nodes only.
+    # The function names below might map to multiple function overrloads.
+    # If the function overload is a leaf node, we must have it in AtenXlaType::
+    # so that we still override them.
+    # Otherwise they're non leaves that we shouldn't generate override for them.
+    # They're blacklisted to avoid creating AtenXlaTypeDefault::func,
+    # so that we can fall back to TypeDefault:: in PyTorch.
+    'narrow',
     'to',
 ])
 

@@ -1971,13 +1971,6 @@ at::Tensor& AtenXlaType::mv_out(at::Tensor& out, const at::Tensor& self,
   return out;
 }
 
-at::Tensor AtenXlaType::narrow(const at::Tensor& self, int64_t dim,
-                               int64_t start, int64_t length) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::narrow(bridge::GetXlaTensor(self), dim, start, length));
-}
-
 at::Tensor AtenXlaType::narrow_copy(const at::Tensor& self, int64_t dim,
                                     int64_t start, int64_t length) {
   XLA_FN_COUNTER("xla::");
@@ -2491,16 +2484,6 @@ at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::select(bridge::GetXlaTensor(self), dim, index));
-}
-
-at::Tensor AtenXlaType::selu(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::selu(self);
-}
-
-at::Tensor& AtenXlaType::selu_(at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::selu_(self);
 }
 
 at::Tensor AtenXlaType::sigmoid(const at::Tensor& self) {
