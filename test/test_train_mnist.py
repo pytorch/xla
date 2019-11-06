@@ -97,12 +97,14 @@ def train_mnist():
         train_dataset,
         batch_size=FLAGS.batch_size,
         sampler=train_sampler,
+        drop_last=FLAGS.drop_last,
         shuffle=False if train_sampler else True,
         num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.batch_size,
         sampler=test_sampler,
+        drop_last=FLAGS.drop_last,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 

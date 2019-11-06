@@ -158,6 +158,21 @@ def _get_blob_path(bpath):
   return m.group(1)
 
 
+def _parse_gcs_path(path, wants_path=True):
+  m = re.match(r'gs://([^/]+)(.*)', path)
+  if not m:
+    raise ValueError('GCS invalid path: {}'.format(path))
+  if len(m.groups()) > 1:
+    bpath = m.group(2)
+    if bpath.startswith('/'):
+      bpath = bpath[1:]
+  else:
+    bpath = None
+  if not bpath and wants_path:
+    raise RuntimeError('GCS path missing: {}'.format(path))
+  return m.group(1), bpath
+
+
 def list(path):
   """Lists the content of a GCS bucket.
 
@@ -172,11 +187,7 @@ def list(path):
   Raises:
     ValueError: If an invalid GCS path is supplied.
   """
-  m = re.match(r'gs://([^/]+)(.*)', path)
-  if not m:
-    raise ValueError('GCS invalid path: {}'.format(path))
-  bucket_name = m.group(1)
-  bpath = m.group(2) if len(m.group(2)) > 1 else None
+  bucket_name, bpath = _parse_gcs_path(path, wants_path=False)
   gcs_client = gcs.Client()
   blobs = []
   for blob in gcs_client.list_blobs(bucket_name, prefix=bpath, delimiter='/'):
@@ -195,11 +206,27 @@ def remove(path):
   Raises:
     ValueError: If an invalid GCS path is supplied.
   """
-  m = re.match(r'gs://([^/]+)/(.+)', path)
-  if not m:
-    raise ValueError('GCS invalid path: {}'.format(path))
-  bucket_name = m.group(1)
-  bpath = m.group(2)
+  bucket_name, bpath = _parse_gcs_path(path)
   gcs_client = gcs.Client()
   bucket = gcs_client.get_bucket(bucket_name)
   bucket.delete_blob(bpath)
+
+
+def write(path, content):
+  """Write a string/bytes or file into a GCS blob.
+
+  Args:
+    path (string): The GCS path of the file. Must be "gs://BUCKET_NAME/PATH"
+      where ``BUCKET_NAME`` is the name of the GCS bucket, and ``PATH`` is a `/`
+      delimited path.
+    content (string, bytes or file object): The content to be written into
+      ``path``.
+  """
+  bucket_name, bpath = _parse_gcs_path(path)
+  gcs_client = gcs.Client()
+  bucket = gcs_client.get_bucket(bucket_name)
+  blob = bucket.blob(bpath)
+  if isinstance(content, (bytes, str)):
+    blob.upload_from_string(content)
+  else:
+    blob.upload_from_file(content)

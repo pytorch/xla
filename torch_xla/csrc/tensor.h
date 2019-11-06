@@ -582,12 +582,6 @@ class XLATensor {
   static XLATensor lt(const XLATensor& input, const XLATensor& other);
   static void lt_(XLATensor& input, const XLATensor& other);
 
-  // Fills elements of the input tensor with the provided value where mask is
-  // one. The shape of mask must be broadcastable with the shape of the
-  // underlying tensor.
-  static XLATensor masked_fill(const XLATensor& input, const XLATensor& mask,
-                               at::Scalar value);
-
   // In-place version of the method above.
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            at::Scalar value);
@@ -648,6 +642,10 @@ class XLATensor {
   static void mul_(XLATensor& input, const XLATensor& other);
   static void mul_(XLATensor& input, at::Scalar other);
 
+  static XLATensor mv(const XLATensor& input, const XLATensor& vec);
+  static void mv_out(XLATensor& out, const XLATensor& input,
+                     const XLATensor& vec);
+
   // Returns a new tensor that is a narrowed view of the input in the given
   // dimension.
   static XLATensor narrow(const XLATensor& input, xla::int64 dim,
@@ -676,10 +674,15 @@ class XLATensor {
   static void neg_(XLATensor& input);
 
   static XLATensor nll_loss(const XLATensor& input, const XLATensor& target,
+                            const XLATensor& weight, xla::int64 reduction,
                             int ignore_index);
 
-  static XLATensor nll_loss_backward(const XLATensor& input,
-                                     const XLATensor& target, int ignore_index);
+  static XLATensor nll_loss_backward(const XLATensor& grad_output,
+                                     const XLATensor& input,
+                                     const XLATensor& target,
+                                     const XLATensor& weight,
+                                     xla::int64 reduction, int ignore_index,
+                                     const XLATensor& total_weight);
 
   static XLATensor norm(const XLATensor& input, c10::optional<at::Scalar> p,
                         c10::optional<at::ScalarType> dtype,
@@ -724,11 +727,6 @@ class XLATensor {
   static XLATensor repeat(const XLATensor& input,
                           std::vector<xla::int64> repeats);
 
-  // Returns a tensor with the same data and number of elements as input, but
-  // with the specified shape.
-  static XLATensor reshape(const XLATensor& input,
-                           std::vector<xla::int64> output_size);
-
   static void resize_(XLATensor& input, std::vector<xla::int64> size);
 
   static XLATensor rrelu_with_noise(const XLATensor& input, XLATensor& noise,
@@ -754,18 +752,11 @@ class XLATensor {
 
   static void scatter_(XLATensor& input, xla::int64 dim, const XLATensor& index,
                        const XLATensor& src);
-  static void scatter_add_(XLATensor& input, xla::int64 dim,
-                           const XLATensor& index, const XLATensor& src);
-
-  static XLATensor scatter(const XLATensor& input, xla::int64 dim,
-                           const XLATensor& index, const XLATensor& src);
-  static XLATensor scatter_add(const XLATensor& input, xla::int64 dim,
-                               const XLATensor& index, const XLATensor& src);
-
   static void scatter_(XLATensor& input, xla::int64 dim, const XLATensor& index,
                        at::Scalar value);
-  static XLATensor scatter(const XLATensor& input, xla::int64 dim,
-                           const XLATensor& index, at::Scalar value);
+
+  static void scatter_add_(XLATensor& input, xla::int64 dim,
+                           const XLATensor& index, const XLATensor& src);
 
   static XLATensor select(const XLATensor& input, xla::int64 dim,
                           xla::int64 index);

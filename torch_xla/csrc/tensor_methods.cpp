@@ -216,6 +216,14 @@ ir::Value GetIrValueOrDefault(const XLATensor& input, at::Scalar default_value,
                          : input.GetIrValue();
 }
 
+absl::optional<ir::Value> GetOptionalIrValue(const XLATensor& tensor) {
+  absl::optional<ir::Value> value;
+  if (!tensor.is_null()) {
+    value = tensor.GetIrValue();
+  }
+  return value;
+}
+
 void CheckIsIntegralOrPred(const xla::Shape& shape,
                            const std::string& op_name) {
   XLA_CHECK(xla::ShapeUtil::ElementIsIntegral(shape) ||
@@ -1347,16 +1355,6 @@ void XLATensor::lt_(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
-XLATensor XLATensor::masked_fill(const XLATensor& input, const XLATensor& mask,
-                                 at::Scalar value) {
-  // Expand mask to be the same size as input.
-  ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
-      mask.GetIrValue(),
-      xla::util::ToVector<xla::int64>(input.shape().get().dimensions()));
-  return input.CreateFrom(ir::MakeNode<ir::ops::MaskedFill>(
-      input.GetIrValue(), expanded_mask, value));
-}
-
 void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                              at::Scalar value) {
   // Expand mask to be the same size as input.
@@ -1511,6 +1509,15 @@ void XLATensor::mul_(XLATensor& input, at::Scalar other) {
   input.SetIrValue(input.GetIrValue() * constant);
 }
 
+XLATensor XLATensor::mv(const XLATensor& input, const XLATensor& vec) {
+  return input.CreateFrom(ir::ops::Dot(input.GetIrValue(), vec.GetIrValue()));
+}
+
+void XLATensor::mv_out(XLATensor& out, const XLATensor& input,
+                       const XLATensor& vec) {
+  out.SetIrValue(ir::ops::Dot(input.GetIrValue(), vec.GetIrValue()));
+}
+
 XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
                             xla::int64 start, xla::int64 length) {
   auto input_shape = input.shape();
@@ -1616,16 +1623,23 @@ void XLATensor::neg_(XLATensor& input) {
 }
 
 XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target,
+                              const XLATensor& weight, xla::int64 reduction,
                               int ignore_index) {
   return input.CreateFrom(ir::MakeNode<ir::ops::NllLoss>(
-      input.GetIrValue(), target.GetIrValue(), ignore_index));
+      input.GetIrValue(), target.GetIrValue(), GetOptionalIrValue(weight),
+      GetXlaReductionMode(reduction), ignore_index));
 }
 
-XLATensor XLATensor::nll_loss_backward(const XLATensor& input,
+XLATensor XLATensor::nll_loss_backward(const XLATensor& grad_output,
+                                       const XLATensor& input,
                                        const XLATensor& target,
-                                       int ignore_index) {
+                                       const XLATensor& weight,
+                                       xla::int64 reduction, int ignore_index,
+                                       const XLATensor& total_weight) {
   return input.CreateFrom(ir::MakeNode<ir::ops::NllLossBackward>(
-      input.GetIrValue(), target.GetIrValue(), ignore_index));
+      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
+      GetOptionalIrValue(weight), GetOptionalIrValue(total_weight),
+      GetXlaReductionMode(reduction), ignore_index));
 }
 
 XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
@@ -1753,12 +1767,6 @@ XLATensor XLATensor::repeat(const XLATensor& input,
       ir::MakeNode<ir::ops::Repeat>(input.GetIrValue(), std::move(repeats)));
 }
 
-XLATensor XLATensor::reshape(const XLATensor& input,
-                             std::vector<xla::int64> output_size) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::View>(input.GetIrValue(), std::move(output_size)));
-}
-
 void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
   if (input.data()->view == nullptr) {
     input.SetIrValue(
@@ -1839,27 +1847,6 @@ void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
-void XLATensor::scatter_add_(XLATensor& input, xla::int64 dim,
-                             const XLATensor& index, const XLATensor& src) {
-  input.SetIrValue(ir::MakeNode<ir::ops::ScatterAdd>(
-      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
-}
-
-XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
-                             const XLATensor& index, const XLATensor& src) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::Scatter>(
-      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
-}
-
-XLATensor XLATensor::scatter_add(const XLATensor& input, xla::int64 dim,
-                                 const XLATensor& index, const XLATensor& src) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::ScatterAdd>(
-      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
-}
-
 void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
                          const XLATensor& index, at::Scalar value) {
   ir::Value constant =
@@ -1869,12 +1856,10 @@ void XLATensor::scatter_(XLATensor& input, xla::int64 dim,
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
-XLATensor XLATensor::scatter(const XLATensor& input, xla::int64 dim,
-                             const XLATensor& index, at::Scalar value) {
-  ir::Value constant =
-      GetIrValueForScalar(value, input.shape(), input.GetDevice());
-  return input.CreateFrom(ir::MakeNode<ir::ops::Scatter>(
-      input.GetIrValue(), index.GetIrValue(), constant,
+void XLATensor::scatter_add_(XLATensor& input, xla::int64 dim,
+                             const XLATensor& index, const XLATensor& src) {
+  input.SetIrValue(ir::MakeNode<ir::ops::ScatterAdd>(
+      input.GetIrValue(), index.GetIrValue(), src.GetIrValue(),
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 

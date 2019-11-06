@@ -307,6 +307,15 @@ at::Tensor AtenXlaType::_log_softmax_backward_data(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
 }
 
+at::Tensor AtenXlaType::_s_where(const at::Tensor& condition,
+                                 const at::Tensor& self,
+                                 const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::where(
+      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(other)));
+}
+
 at::Tensor AtenXlaType::_softmax(const at::Tensor& self, int64_t dim,
                                  bool /* half_to_float */) {
   XLA_FN_COUNTER("xla::");
@@ -983,7 +992,13 @@ at::Tensor AtenXlaType::dot(const at::Tensor& self, const at::Tensor& tensor) {
       << "dot: Expected 1-D argument self, but got " << self.dim() << "-D";
   XLA_CHECK_EQ(tensor.dim(), 1)
       << "dot: Expected 1-D argument tensor, but got " << tensor.dim() << "-D";
-  return matmul(self, tensor);
+  // xla::dot doesn't support integer types.
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(tensor)) {
+    return AtenXlaTypeDefault::dot(self, tensor);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::matmul(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
 }
 
 at::Tensor AtenXlaType::einsum(std::string equation, at::TensorList tensors) {
@@ -1585,13 +1600,6 @@ at::Tensor AtenXlaType::leaky_relu_backward(const at::Tensor& grad_output,
       negative_slope.to<double>()));
 }
 
-at::Tensor AtenXlaType::linear(const at::Tensor& input,
-                               const at::Tensor& weight,
-                               const at::Tensor& bias) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::linear(input, weight, bias);
-}
-
 at::Tensor AtenXlaType::log(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::log(bridge::GetXlaTensor(self)));
@@ -1643,12 +1651,6 @@ at::Tensor& AtenXlaType::log_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::log_sigmoid(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::log_sigmoid(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor AtenXlaType::log_sigmoid_backward(const at::Tensor& grad_output,
                                              const at::Tensor& self,
                                              const at::Tensor& buffer) {
@@ -1665,13 +1667,6 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::log_sigmoid_forward(
       XLATensor::log_sigmoid_forward(bridge::GetXlaTensor(self));
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(result_tuple)),
                          bridge::AtenFromXlaTensor(std::get<1>(result_tuple)));
-}
-
-at::Tensor AtenXlaType::log_softmax(const at::Tensor& self, int64_t dim,
-                                    c10::optional<at::ScalarType> dtype) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::log_softmax(bridge::GetXlaTensor(self), dim, dtype));
 }
 
 at::Tensor AtenXlaType::lt(const at::Tensor& self, at::Scalar other) {
@@ -1700,32 +1695,6 @@ at::Tensor& AtenXlaType::lt_(at::Tensor& self, const at::Tensor& other) {
   return self;
 }
 
-at::Tensor AtenXlaType::margin_ranking_loss(const at::Tensor& input1,
-                                            const at::Tensor& input2,
-                                            const at::Tensor& target,
-                                            double margin, int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::margin_ranking_loss(input1, input2, target, margin,
-                                         reduction);
-}
-
-at::Tensor AtenXlaType::masked_fill(const at::Tensor& self,
-                                    const at::Tensor& mask, at::Scalar value) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::masked_fill(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(mask), value));
-}
-
-at::Tensor AtenXlaType::masked_fill(const at::Tensor& self,
-                                    const at::Tensor& mask,
-                                    const at::Tensor& value) {
-  XLA_FN_COUNTER("xla::");
-  XLA_CHECK_EQ(value.dim(), 0) << "masked_fill only supports a 0-dimensional "
-                               << "value tensor, but got tensor "
-                               << "with " << value.dim() << " dimension(s).";
-  return masked_fill(self, mask, value.item());
-}
-
 at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                       at::Scalar value) {
   XLA_FN_COUNTER("xla::");
@@ -1741,18 +1710,6 @@ at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                << "value tensor, but got tensor "
                                << "with " << value.dim() << " dimension(s).";
   return masked_fill_(self, mask, value.item());
-}
-
-at::Tensor AtenXlaType::matmul(const at::Tensor& self,
-                               const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  // xla::dot doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(other)) {
-    return AtenXlaTypeDefault::matmul(self, other);
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::matmul(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
 at::Tensor AtenXlaType::max(const at::Tensor& self, const at::Tensor& other) {
@@ -1783,39 +1740,6 @@ std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::max_out(
   XLATensor::max_out(max_tensor, max_values_tensor, bridge::GetXlaTensor(self),
                      dim, keepdim);
   return std::forward_as_tuple(max, max_values);
-}
-at::Tensor AtenXlaType::max_pool1d(const at::Tensor& self,
-                                   at::IntArrayRef kernel_size,
-                                   at::IntArrayRef stride,
-                                   at::IntArrayRef padding,
-                                   at::IntArrayRef dilation, bool ceil_mode) {
-  XLA_FN_COUNTER("xla::");
-  // Lowering when dilation is non-trivial or ceil_mode is set not supported.
-  if (IsNonTrivialDilation(dilation)) {
-    return AtenXlaTypeDefault::max_pool1d(self, kernel_size, stride, padding,
-                                          dilation, ceil_mode);
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd(
-      bridge::GetXlaTensor(self), /*spatial_dim_count=*/1,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode));
-}
-
-at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
-                                   at::IntArrayRef kernel_size,
-                                   at::IntArrayRef stride,
-                                   at::IntArrayRef padding,
-                                   at::IntArrayRef dilation, bool ceil_mode) {
-  XLA_FN_COUNTER("xla::");
-  // Lowering when dilation is non-trivial or ceil_mode is set not supported.
-  if (IsNonTrivialDilation(dilation)) {
-    return AtenXlaTypeDefault::max_pool2d(self, kernel_size, stride, padding,
-                                          dilation, ceil_mode);
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd(
-      bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
@@ -1862,23 +1786,6 @@ at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
       XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
-}
-
-at::Tensor AtenXlaType::max_pool3d(const at::Tensor& self,
-                                   at::IntArrayRef kernel_size,
-                                   at::IntArrayRef stride,
-                                   at::IntArrayRef padding,
-                                   at::IntArrayRef dilation, bool ceil_mode) {
-  XLA_FN_COUNTER("xla::");
-  // Lowering when dilation is non-trivial or ceil_mode is set not supported.
-  if (IsNonTrivialDilation(dilation)) {
-    return AtenXlaTypeDefault::max_pool3d(self, kernel_size, stride, padding,
-                                          dilation, ceil_mode);
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::max_pool_nd(
-      bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
-      XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode));
 }
 
 at::Tensor AtenXlaType::max_pool3d_with_indices_backward(
@@ -1944,11 +1851,6 @@ at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
   return bridge::AtenFromXlaTensor(XLATensor::mean(
       bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
       /*keep_reduced_dimensions*/ keepdim, dtype));
-}
-
-std::vector<at::Tensor> AtenXlaType::meshgrid(at::TensorList tensors) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::meshgrid(tensors);
 }
 
 at::Tensor AtenXlaType::min(const at::Tensor& self, const at::Tensor& other) {
@@ -2038,11 +1940,29 @@ at::Tensor& AtenXlaType::mul_(at::Tensor& self, at::Scalar other) {
   return self;
 }
 
-at::Tensor AtenXlaType::narrow(const at::Tensor& self, int64_t dim,
-                               int64_t start, int64_t length) {
+at::Tensor AtenXlaType::mv(const at::Tensor& self, const at::Tensor& vec) {
   XLA_FN_COUNTER("xla::");
+  // xla::dot doesn't support integer types.
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(vec)) {
+    return AtenXlaTypeDefault::mv(self, vec);
+  }
   return bridge::AtenFromXlaTensor(
-      XLATensor::narrow(bridge::GetXlaTensor(self), dim, start, length));
+      XLATensor::mv(bridge::GetXlaTensor(self), bridge::GetXlaTensor(vec)));
+}
+
+at::Tensor& AtenXlaType::mv_out(at::Tensor& out, const at::Tensor& self,
+                                const at::Tensor& vec) {
+  XLA_FN_COUNTER("xla::");
+  // xla::dot doesn't support integer types.
+  if (!at::native::is_floating_point(self) ||
+      !at::native::is_floating_point(vec)) {
+    return AtenXlaTypeDefault::mv_out(out, self, vec);
+  }
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::mv_out(out_tensor, bridge::GetXlaTensor(self),
+                    bridge::GetXlaTensor(vec));
+  return out;
 }
 
 at::Tensor AtenXlaType::narrow_copy(const at::Tensor& self, int64_t dim,
@@ -2189,44 +2109,37 @@ at::Tensor& AtenXlaType::neg_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::nll_loss(const at::Tensor& self,
-                                 const at::Tensor& target,
-                                 const at::Tensor& weight, int64_t reduction,
-                                 int64_t ignore_index) {
-  XLA_FN_COUNTER("xla::");
-  if (reduction != at::Reduction::Mean || weight.defined()) {
-    return AtenXlaTypeDefault::nll_loss(self, target, weight, reduction,
-                                        ignore_index);
-  }
-  return bridge::AtenFromXlaTensor(XLATensor::nll_loss(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), ignore_index));
-}
-
 at::Tensor AtenXlaType::nll_loss_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Tensor& target, const at::Tensor& weight, int64_t reduction,
     int64_t ignore_index, const at::Tensor& total_weight) {
   XLA_FN_COUNTER("xla::");
-  if (reduction != at::Reduction::Mean || weight.defined()) {
-    return AtenXlaTypeDefault::nll_loss_backward(grad_output, self, target,
-                                                 weight, reduction,
-                                                 ignore_index, total_weight);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor weight_tensor =
+      bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice());
+  XLATensor total_weight_tensor;
+  if (weight.defined()) {
+    total_weight_tensor =
+        bridge::GetOrCreateXlaTensor(total_weight, self_tensor.GetDevice());
   }
   return bridge::AtenFromXlaTensor(XLATensor::nll_loss_backward(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), ignore_index));
+      bridge::GetXlaTensor(grad_output), self_tensor,
+      bridge::GetXlaTensor(target), weight_tensor, reduction, ignore_index,
+      total_weight_tensor));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
     const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
     int64_t reduction, int64_t ignore_index) {
   XLA_FN_COUNTER("xla::");
-  if (weight.defined()) {
-    return AtenXlaTypeDefault::nll_loss_forward(self, target, weight, reduction,
-                                                ignore_index);
-  }
   at::Tensor total_weight = at::ones({}, at::TensorOptions(self.dtype()));
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   return std::make_tuple(
-      nll_loss(self, target, weight, reduction, ignore_index), total_weight);
+      bridge::AtenFromXlaTensor(XLATensor::nll_loss(
+          self_tensor, bridge::GetXlaTensor(target),
+          bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice()),
+          reduction, ignore_index)),
+      total_weight);
 }
 
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
@@ -2292,28 +2205,10 @@ at::Tensor AtenXlaType::ones_like(
   return full_like(self, 1, options, memory_format);
 }
 
-at::Tensor AtenXlaType::pairwise_distance(const at::Tensor& x1,
-                                          const at::Tensor& x2, double p,
-                                          double eps, bool keepdim) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::pairwise_distance(x1, x2, p, eps, keepdim);
-}
-
 at::Tensor AtenXlaType::permute(const at::Tensor& self, at::IntArrayRef dims) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::permute(
       bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
-}
-
-at::Tensor AtenXlaType::pixel_shuffle(const at::Tensor& self,
-                                      int64_t upscale_factor) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::pixel_shuffle(self, upscale_factor);
-}
-
-at::Tensor AtenXlaType::pinverse(const at::Tensor& self, double rcond) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::pinverse(self, rcond);
 }
 
 at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) {
@@ -2471,12 +2366,6 @@ at::Tensor AtenXlaType::repeat(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(repeats)));
 }
 
-at::Tensor AtenXlaType::reshape(const at::Tensor& self, at::IntArrayRef shape) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::reshape(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(shape)));
-}
-
 at::Tensor& AtenXlaType::resize_(at::Tensor& self, at::IntArrayRef size) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -2544,22 +2433,6 @@ at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
       XLATensor::rsub(bridge::GetXlaTensor(self), other, alpha));
 }
 
-at::Tensor AtenXlaType::scatter(const at::Tensor& self, int64_t dim,
-                                const at::Tensor& index,
-                                const at::Tensor& src) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::scatter(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
-      bridge::GetXlaTensor(src)));
-}
-
-at::Tensor AtenXlaType::scatter(const at::Tensor& self, int64_t dim,
-                                const at::Tensor& index, at::Scalar value) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::scatter(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index), value));
-}
-
 at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
                                   const at::Tensor& index,
                                   const at::Tensor& src) {
@@ -2578,15 +2451,6 @@ at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
   return self;
 }
 
-at::Tensor AtenXlaType::scatter_add(const at::Tensor& self, int64_t dim,
-                                    const at::Tensor& index,
-                                    const at::Tensor& src) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::scatter_add(
-      bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index),
-      bridge::GetXlaTensor(src)));
-}
-
 at::Tensor& AtenXlaType::scatter_add_(at::Tensor& self, int64_t dim,
                                       const at::Tensor& index,
                                       const at::Tensor& src) {
@@ -2602,16 +2466,6 @@ at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::select(bridge::GetXlaTensor(self), dim, index));
-}
-
-at::Tensor AtenXlaType::selu(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::selu(self);
-}
-
-at::Tensor& AtenXlaType::selu_(at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::selu_(self);
 }
 
 at::Tensor AtenXlaType::sigmoid(const at::Tensor& self) {
@@ -3044,11 +2898,6 @@ at::Tensor AtenXlaType::trace(const at::Tensor& self) {
       XLATensor::trace(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor AtenXlaType::one_hot(const at::Tensor& self, int64_t num_classes) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::one_hot(self, num_classes);
-}
-
 at::Tensor AtenXlaType::transpose(const at::Tensor& self, int64_t dim0,
                                   int64_t dim1) {
   XLA_FN_COUNTER("xla::");
@@ -3088,16 +2937,6 @@ at::Tensor& AtenXlaType::tril_(at::Tensor& self, int64_t diagonal) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::tril_(self_tensor, diagonal);
   return self;
-}
-
-at::Tensor AtenXlaType::triplet_margin_loss(const at::Tensor& anchor,
-                                            const at::Tensor& positive,
-                                            const at::Tensor& negative,
-                                            double margin, double p, double eps,
-                                            bool swap, int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::triplet_margin_loss(anchor, positive, negative, margin, p,
-                                         eps, swap, reduction);
 }
 
 at::Tensor AtenXlaType::triu(const at::Tensor& self, int64_t diagonal) {
@@ -3217,14 +3056,6 @@ at::Tensor AtenXlaType::view_as(const at::Tensor& self,
                                 const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return view(self, other.sizes());
-}
-
-at::Tensor AtenXlaType::where(const at::Tensor& condition,
-                              const at::Tensor& self, const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::where(
-      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(other)));
 }
 
 at::Tensor& AtenXlaType::zero_(at::Tensor& self) {
