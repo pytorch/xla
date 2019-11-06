@@ -5036,6 +5036,11 @@ TEST_F(AtenXlaTensorTest, TestOneHot) {
     torch::Tensor xla_output = torch::one_hot(xla_input, num_classes);
     AllEqual(output, xla_output);
   });
+
+  // TODO: PT one_hot impl employs item() which could be eliminated.
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::scatter_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTranspose) {
