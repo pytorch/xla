@@ -40,7 +40,6 @@ from common_utils import TestCase, run_tests
 import os
 import schedulers
 from statistics import mean
-import metrics_comparator
 import test_utils
 import torch
 import torch.nn as nn
@@ -247,15 +246,7 @@ class TrainImageNet(TestCase):
     super(TrainImageNet, self).tearDown()
 
   def test_accurracy(self):
-    accuracy = train_imagenet()
-    if FLAGS.golden_metrics_filename:
-      self.assertFalse(metrics_comparator.metrics_have_regressed(
-          met.metrics_report(),
-          FLAGS.golden_metrics_filename,
-          output_filename=FLAGS.metrics_output_filename,
-          prefix=str(FLAGS),
-          service_account_filename=FLAGS.service_account_filename))
-    self.assertGreaterEqual(accuracy, FLAGS.target_accuracy)
+    self.assertGreaterEqual(train_imagenet(), FLAGS.target_accuracy)
 
 
 # Run the tests.
