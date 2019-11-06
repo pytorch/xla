@@ -2958,11 +2958,6 @@ at::Tensor AtenXlaType::trace(const at::Tensor& self) {
       XLATensor::trace(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor AtenXlaType::one_hot(const at::Tensor& self, int64_t num_classes) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::one_hot(self, num_classes);
-}
-
 at::Tensor AtenXlaType::transpose(const at::Tensor& self, int64_t dim0,
                                   int64_t dim1) {
   XLA_FN_COUNTER("xla::");
