@@ -549,8 +549,6 @@ class AtenXlaType {
   static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                   const at::Tensor& value);
 
-  static at::Tensor matmul(const at::Tensor& self, const at::Tensor& other);
-
   static at::Tensor max(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor max(const at::Tensor& self);
