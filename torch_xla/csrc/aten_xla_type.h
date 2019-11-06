@@ -78,6 +78,9 @@ class AtenXlaType {
                                                int64_t dim,
                                                const at::Tensor& self);
 
+  static at::Tensor _s_where(const at::Tensor& condition,
+                             const at::Tensor& self, const at::Tensor& other);
+
   static at::Tensor _softmax(const at::Tensor& self, int64_t dim,
                              bool half_to_float);
 
@@ -975,9 +978,6 @@ class AtenXlaType {
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 
   static at::Tensor view_as(const at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor where(const at::Tensor& condition, const at::Tensor& self,
-                          const at::Tensor& other);
 
   static at::Tensor& zero_(at::Tensor& self);
 
