@@ -1666,6 +1666,9 @@ TEST_F(AtenXlaTensorTest, TestMarginRankingLoss) {
             xla_input1, xla_input2, xla_target, margin, reduction);
         AllClose(output, xla_output);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::clamp_min_", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -2471,6 +2474,10 @@ TEST_F(AtenXlaTensorTest, TestLogSigmoid) {
     torch::Tensor xla_b = torch::log_sigmoid(xla_a);
     AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::log_sigmoid_forward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSigmoid) {
@@ -2667,6 +2674,8 @@ TEST_F(AtenXlaTensorTest, TestLinear) {
     AllClose(result_with_bias, xla_result_with_bias, /*rtol=*/1e-2,
              /*atol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestPinverse) {
@@ -5367,6 +5376,9 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmax) {
       AllClose(output, xla_output, /*rtol=*/1e-3);
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_log_softmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLogSoftmaxCast) {
@@ -5382,6 +5394,9 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxCast) {
       AllClose(output, xla_output, /*rtol=*/1e-3);
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_log_softmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSoftmax) {
@@ -7807,6 +7822,10 @@ TEST_F(AtenXlaTensorTest, TestLogSigmoidBackward) {
                      torch::TensorOptions(torch::kFloat).requires_grad(true))},
         device, testfn, /*rtol=*/1e-3, /*atol=*/1e-5);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::log_sigmoid_forward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
@@ -7823,6 +7842,9 @@ TEST_F(AtenXlaTensorTest, TestLogSoftmaxBackward) {
               torch::TensorOptions(torch::kFloat).requires_grad(true))},
           device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::_log_softmax", cpp_test::GetIgnoredCounters());
   }
 }
 
