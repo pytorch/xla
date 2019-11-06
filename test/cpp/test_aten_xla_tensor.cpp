@@ -1542,6 +1542,9 @@ TEST_F(AtenXlaTensorTest, TestPairwiseDistance) {
             torch::pairwise_distance(xla_x1, xla_x2, p, eps, keepdim);
         AllClose(output, xla_output, /*rtol=*/1e-5, /*atol=*/1e-5);
       });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::norm", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -2687,6 +2690,9 @@ TEST_F(AtenXlaTensorTest, TestPinverse) {
     torch::Tensor xla_result = torch::pinverse(xla_input);
     AllClose(result, xla_result, /*rtol=*/1e-4);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::svd", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
@@ -6505,6 +6511,9 @@ TEST_F(AtenXlaTensorTest, TestPixelShuffle) {
     torch::Tensor xla_output = torch::pixel_shuffle(xla_input, upscale_factor);
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::permute", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSumToSize) {
@@ -7250,6 +7259,9 @@ TEST_F(AtenXlaTensorTest, TestMeshgrid) {
       AllClose(d[i], xla_d[i]);
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestConstantPad) {
