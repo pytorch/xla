@@ -5480,6 +5480,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool1D) {
                                   /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool2d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5512,6 +5516,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2D) {
                                   /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool2d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5545,6 +5553,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DNonSquare) {
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool2d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5578,6 +5590,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3D) {
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool3d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5611,6 +5627,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DIncompleteAttributes) {
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool3d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5645,6 +5665,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNonSquare) {
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool3d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5677,6 +5701,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DNoBatch) {
                                   /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool2d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -5710,6 +5738,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatch) {
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
           });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool3d_with_indices",
+                               cpp_test::GetIgnoredCounters());
         }
       }
     }
@@ -7700,6 +7732,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
                   torch::TensorOptions(torch::kFloat).requires_grad(true))},
               device, testfn);
         });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool2d_with_indices",
+                             cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -7728,6 +7764,12 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DBackward) {
                   torch::TensorOptions(torch::kFloat).requires_grad(true))},
               device, testfn);
         });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool3d_with_indices",
+                             cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool3d_with_indices_backward",
+                             cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -7783,6 +7825,12 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
                   torch::TensorOptions(torch::kFloat).requires_grad(true))},
               device, testfn);
         });
+
+        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool3d_with_indices",
+                             cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool3d_with_indices_backward",
+                             cpp_test::GetIgnoredCounters());
       }
     }
   }
