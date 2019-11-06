@@ -2493,16 +2493,6 @@ at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,
       XLATensor::select(bridge::GetXlaTensor(self), dim, index));
 }
 
-at::Tensor AtenXlaType::selu(const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::selu(self);
-}
-
-at::Tensor& AtenXlaType::selu_(at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::selu_(self);
-}
-
 at::Tensor AtenXlaType::sigmoid(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
