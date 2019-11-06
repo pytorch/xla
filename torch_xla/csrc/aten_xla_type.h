@@ -528,17 +528,12 @@ class AtenXlaType {
 
   static at::Tensor& log_(at::Tensor& self);
 
-  static at::Tensor log_sigmoid(const at::Tensor& self);
-
   static at::Tensor log_sigmoid_backward(const at::Tensor& grad_output,
                                          const at::Tensor& self,
                                          const at::Tensor& buffer);
 
   static std::tuple<at::Tensor, at::Tensor> log_sigmoid_forward(
       const at::Tensor& self);
-
-  static at::Tensor log_softmax(const at::Tensor& self, int64_t dim,
-                                c10::optional<at::ScalarType> dtype);
 
   static at::Tensor lt(const at::Tensor& self, at::Scalar other);
 
@@ -547,11 +542,6 @@ class AtenXlaType {
   static at::Tensor& lt_(at::Tensor& self, at::Scalar other);
 
   static at::Tensor& lt_(at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor margin_ranking_loss(const at::Tensor& input1,
-                                        const at::Tensor& input2,
-                                        const at::Tensor& target, double margin,
-                                        int64_t reduction);
 
   static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                   at::Scalar value);
