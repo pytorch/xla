@@ -692,8 +692,6 @@ class AtenXlaType {
   static at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
                          at::IntArrayRef dim, bool keepdim);
 
-  static at::Tensor one_hot(const at::Tensor& self, int64_t num_classes);
-
   static at::Tensor ones(at::IntArrayRef size,
                          const at::TensorOptions& options);
 
