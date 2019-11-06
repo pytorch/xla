@@ -582,12 +582,6 @@ class XLATensor {
   static XLATensor lt(const XLATensor& input, const XLATensor& other);
   static void lt_(XLATensor& input, const XLATensor& other);
 
-  // Fills elements of the input tensor with the provided value where mask is
-  // one. The shape of mask must be broadcastable with the shape of the
-  // underlying tensor.
-  static XLATensor masked_fill(const XLATensor& input, const XLATensor& mask,
-                               at::Scalar value);
-
   // In-place version of the method above.
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            at::Scalar value);
