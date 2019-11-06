@@ -1,4 +1,4 @@
-"""Wrap PyTorch XLA jobs with extra logic around XLA metrics.
+"""Wrap PyTorch XLA training jobs with extra logic around XLA metrics.
 
 It can be used to save a historical record of metrics and/or check metrics
 against a golden set of metrics to search for performance regressions.
