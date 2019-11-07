@@ -324,9 +324,6 @@ class AtenXlaType {
                           c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor empty_like(const at::Tensor& self,
-                               c10::optional<at::MemoryFormat> memory_format);
-
-  static at::Tensor empty_like(const at::Tensor& self,
                                const at::TensorOptions& options,
                                c10::optional<at::MemoryFormat> memory_format);
 
@@ -392,9 +389,6 @@ class AtenXlaType {
 
   static at::Tensor full(at::IntArrayRef size, at::Scalar fill_value,
                          const at::TensorOptions& options);
-
-  static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
-                              c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
                               const at::TensorOptions& options,
@@ -696,9 +690,6 @@ class AtenXlaType {
                          const at::TensorOptions& options);
 
   static at::Tensor ones_like(const at::Tensor& self,
-                              c10::optional<at::MemoryFormat> memory_format);
-
-  static at::Tensor ones_like(const at::Tensor& self,
                               const at::TensorOptions& options,
                               c10::optional<at::MemoryFormat> memory_format);
 
@@ -970,9 +961,6 @@ class AtenXlaType {
 
   static at::Tensor zeros(at::IntArrayRef size,
                           const at::TensorOptions& options);
-
-  static at::Tensor zeros_like(const at::Tensor& self,
-                               c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor zeros_like(const at::Tensor& self,
                                const at::TensorOptions& options,
