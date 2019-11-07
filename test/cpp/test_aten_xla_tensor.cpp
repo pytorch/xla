@@ -2588,6 +2588,10 @@ TEST_F(AtenXlaTensorTest, TestBartlettWindow) {
           torch::TensorOptions(torch::kFloat).device(device));
       AllClose(output, xla_output, /*rtol=*/1e-5, /*atol=*/1e-7);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::slice", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -2602,6 +2606,10 @@ TEST_F(AtenXlaTensorTest, TestBlackmanWindow) {
           torch::TensorOptions(torch::kFloat).device(device));
       AllClose(output, xla_output, /*rtol=*/1e-5, /*atol=*/1e-7);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::cos_", cpp_test::GetIgnoredCounters());
   }
 }
 
@@ -2619,6 +2627,28 @@ TEST_F(AtenXlaTensorTest, TestHammingWindow) {
           torch::TensorOptions(torch::kFloat).device(device));
       AllClose(output, xla_output);
     });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::cos_", cpp_test::GetIgnoredCounters());
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestHannWindow) {
+  int window_length = 10;
+  for (bool periodic : {false, true}) {
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor output = torch::hann_window(
+          window_length, periodic, torch::TensorOptions(torch::kFloat));
+      torch::Tensor xla_output = torch::hann_window(
+          window_length, periodic,
+          torch::TensorOptions(torch::kFloat).device(device));
+      AllClose(output, xla_output);
+    });
+
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::cos_", cpp_test::GetIgnoredCounters());
   }
 }
 
