@@ -3626,6 +3626,9 @@ TEST_F(AtenXlaTensorTest, TestEye) {
         torch::eye(n, torch::TensorOptions(torch::kFloat).device(device));
     AllClose(out, xla_out);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::eye_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEyeWide) {
@@ -3638,6 +3641,9 @@ TEST_F(AtenXlaTensorTest, TestEyeWide) {
         lines, cols, torch::TensorOptions(torch::kFloat).device(device));
     AllClose(out, xla_out);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::eye_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEyeNarrow) {
@@ -3650,6 +3656,9 @@ TEST_F(AtenXlaTensorTest, TestEyeNarrow) {
         lines, cols, torch::TensorOptions(torch::kFloat).device(device));
     AllClose(out, xla_out);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::eye_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBroadcastTensors) {
