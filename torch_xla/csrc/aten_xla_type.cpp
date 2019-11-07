@@ -273,14 +273,7 @@ at::Tensor AtenXlaType::_adaptive_avg_pool2d_backward(
 at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
                                    const at::Tensor& dst, bool non_blocking) {
   XLA_FN_COUNTER("xla::");
-  // Do not mark the tensor creation as writeable to not discard the XLA tensor
-  // device context, but make a copy to avoid core data to be shared.
-  std::vector<at::Tensor> tensors = {self};
-  auto xla_tensors = bridge::XlaCreateTensorList(tensors);
-  // Hack in an overwrite of a const tensor.
-  at::Tensor t = CopyTensor(xla_tensors.front(), dst.scalar_type());
-  const_cast<at::Tensor&>(dst).unsafeGetTensorImpl()->shallow_copy_from(
-      t.getIntrusivePtr());
+  copy_(const_cast<at::Tensor&>(dst), self, non_blocking);
   return dst;
 }
 
@@ -305,6 +298,15 @@ at::Tensor AtenXlaType::_log_softmax_backward_data(
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::log_softmax_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
+}
+
+at::Tensor AtenXlaType::_s_where(const at::Tensor& condition,
+                                 const at::Tensor& self,
+                                 const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::where(
+      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(other)));
 }
 
 at::Tensor AtenXlaType::_softmax(const at::Tensor& self, int64_t dim,
@@ -2378,12 +2380,6 @@ at::Tensor AtenXlaType::repeat(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(repeats)));
 }
 
-at::Tensor AtenXlaType::reshape(const at::Tensor& self, at::IntArrayRef shape) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::reshape(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(shape)));
-}
-
 at::Tensor& AtenXlaType::resize_(at::Tensor& self, at::IntArrayRef size) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -2540,11 +2536,6 @@ at::Tensor& AtenXlaType::sinh_(at::Tensor& self) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::sinh_(self_tensor);
   return self;
-}
-
-int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::GetXlaTensor(self).size(dim);
 }
 
 at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
@@ -2750,12 +2741,6 @@ at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
   return bridge::AtenFromXlaTensor(
       XLATensor::sum(bridge::GetXlaTensor(self),
                      xla::util::ToVector<xla::int64>(dim), keepdim, dtype));
-}
-
-at::Tensor AtenXlaType::sum_to_size(const at::Tensor& self,
-                                    at::IntArrayRef size) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::sum_to_size(self, size);
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::svd(
@@ -3029,14 +3014,6 @@ at::Tensor AtenXlaType::view_as(const at::Tensor& self,
                                 const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return view(self, other.sizes());
-}
-
-at::Tensor AtenXlaType::where(const at::Tensor& condition,
-                              const at::Tensor& self, const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::where(
-      bridge::GetXlaTensor(condition), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(other)));
 }
 
 at::Tensor& AtenXlaType::zero_(at::Tensor& self) {

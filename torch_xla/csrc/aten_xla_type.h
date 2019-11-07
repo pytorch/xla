@@ -78,6 +78,9 @@ class AtenXlaType {
                                                int64_t dim,
                                                const at::Tensor& self);
 
+  static at::Tensor _s_where(const at::Tensor& condition,
+                             const at::Tensor& self, const at::Tensor& other);
+
   static at::Tensor _softmax(const at::Tensor& self, int64_t dim,
                              bool half_to_float);
 
@@ -742,8 +745,6 @@ class AtenXlaType {
 
   static at::Tensor repeat(const at::Tensor& self, at::IntArrayRef repeats);
 
-  static at::Tensor reshape(const at::Tensor& self, at::IntArrayRef shape);
-
   static at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size);
 
   static at::Tensor rrelu_with_noise(const at::Tensor& self,
@@ -797,8 +798,6 @@ class AtenXlaType {
   static at::Tensor sinh(const at::Tensor& self);
 
   static at::Tensor& sinh_(at::Tensor& self);
-
-  static int64_t size(const at::Tensor& self, int64_t dim);
 
   static at::Tensor slice(const at::Tensor& self, int64_t dim, int64_t start,
                           int64_t end, int64_t step);
@@ -873,8 +872,6 @@ class AtenXlaType {
 
   static at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
                         bool keepdim, c10::optional<at::ScalarType> dtype);
-
-  static at::Tensor sum_to_size(const at::Tensor& self, at::IntArrayRef size);
 
   static std::tuple<at::Tensor, at::Tensor, at::Tensor> svd(
       const at::Tensor& self, bool some, bool compute_uv);
@@ -964,9 +961,6 @@ class AtenXlaType {
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 
   static at::Tensor view_as(const at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor where(const at::Tensor& condition, const at::Tensor& self,
-                          const at::Tensor& other);
 
   static at::Tensor& zero_(at::Tensor& self);
 

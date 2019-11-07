@@ -2971,6 +2971,10 @@ TEST_F(AtenXlaTensorTest, TestSize) {
       EXPECT_EQ(torch::size(input, dim), torch::size(xla_input, dim));
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  // tensor.size(dim) is tensor property that PyTorch's implementation
+  // is common to all devices. So we don't assert postive checks here.
 }
 
 TEST_F(AtenXlaTensorTest, TestSelect) {
@@ -4856,6 +4860,9 @@ TEST_F(AtenXlaTensorTest, TestWhere) {
     torch::Tensor xla_d = torch::where(xla_c, xla_a, xla_b);
     AllClose(d, xla_d);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_s_where", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestWhereBroadcast) {
@@ -4875,6 +4882,9 @@ TEST_F(AtenXlaTensorTest, TestWhereBroadcast) {
     torch::Tensor xla_d = torch::where(xla_c, xla_a, xla_b);
     AllClose(d, xla_d);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_s_where", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestWhereAutograd) {
@@ -4894,6 +4904,9 @@ TEST_F(AtenXlaTensorTest, TestWhereAutograd) {
     torch::Tensor xla_d = torch::_s_where(xla_c, xla_a, xla_b);
     AllClose(d, xla_d);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_s_where", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestThreshold) {
@@ -5118,6 +5131,9 @@ TEST_F(AtenXlaTensorTest, TestReshape) {
     torch::Tensor xla_output = torch::reshape(xla_input, {-1, 320});
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestResize) {
@@ -6636,6 +6652,9 @@ TEST_F(AtenXlaTensorTest, TestSumToSize) {
     torch::Tensor xla_output = xla_input.sum_to_size(out_size);
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::sum", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTransposeDims) {
