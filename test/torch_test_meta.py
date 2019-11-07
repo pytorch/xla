@@ -4,142 +4,153 @@ torch_test_precisions = {
     # test_name : floating_precision,
 }
 
-allowed_torch_tests = {
-    ## test_torch.py
-    'test_addcdiv',
-    'test_addcmul',
-    'test_diagonal',
-    'test_isinf',
-    #'test_inverse_many_batches',
-    #'test_matrix_power',
-    #'test_chain_matmul',
-    #'test_solve',
-    #'test_solve_batched',
-    'test_solve_batched_non_contiguous',
-    #'test_solve_batched_many_batches',
-    'test_solve_batched_broadcasting',
-    #'test_cholesky_solve',
-    #'test_cholesky_solve_batched',
-    #'test_cholesky_solve_batched_many_batches',
-    #'test_cholesky_solve_batched_broadcasting',
-    #'test_cholesky_inverse',
-    #'test_cholesky_batched_many_batches',
-    #'test_cholesky',
-    'test_rot90',
-    'test_signal_window_functions',
-    'test_broadcast_fused_matmul',
-    'test_index',
-    'test_cat_empty',
-    'test_advancedindex_big',
-    'test_kthvalue',
-    #'test_lu_solve_batched_many_batches',
-    'test_lu_solve_batched_broadcasting',
-    'test_dim_reduction',
-    'test_remainder_overflow',
-    'test_rpow',
-    'test_lerp',
-    'test_neg',
-    'test_nuclear_norm_exceptions',
-    'test_geqrf',
-    #'test_triangular_solve',
-    'test_random_neg_values',
+disabled_torch_tests = {
+    # test_torch.py
+    # TestDevicePrecision
+    'test_sum_cpu_device_mismatch',  # doesn't raise
+    'test_solve_methods_arg_device',  # doesn't raise
+    'test_min_max_nan',
+    'test_copy_noncontig',
+    'test_copy_broadcast',
+
+    # TestTensorDeviceOps
+    'test_svd_tall_some_xla',
+    'test_svd_tall_some_col_maj_xla',
+    'test_svd_tall_all_xla',
+    'test_svd_tall_all_col_maj_xla',
+    'test_svd_square_xla',
+    'test_svd_square_col_maj_xla',
+    'test_prod_neg_dim_xla',
+    'test_prod_dim_xla',
+    'test_cumprod_xla',
+    'test_cumprod_neg_dim_xla',
+    'test_mean_64bit_indexing_xla',  # protobuf limit exceeded
+
+    # TestTorchDeviceType
+    'test_clamp',  # slow
+    'test_lu_unpack',  # very slow compile
+    'test_view',  # doesn't raise
+    'test_sub_typing',  # doesn't raise
+    'test_reduction_empty',  # runtime error
+    'test_randperm',
+    'test_pow',
+    'test_pow_scalar_overloads_mem_overlap',  # doesn't raise
+    'test_pdist_norm',
+    'test_nuclear_norm_axes_small_brute_force',
+    'test_mul_intertype_scalar',
+    'test_memory_format_type',
+    'test_memory_format_type_shortcuts',
+    'test_memory_format_to',
+    'test_memory_format_factory_like_functions_preserve_strides',
+    'test_memory_format_empty_like',
+    'test_memory_format_clone',
+    'test_lu_solve_batched_non_contiguous',
+    'test_lstsq',
+    'test_is_set_to',
+    'test_inverse',
+    'test_index_copy',
+    'test_empty_tensor_props',
+    'test_dist',
+    'test_dim_function_empty',
+    'test_diagflat',
+    'test_cumsum',
+    'test_copy_mem_overlap',  # doesn't raise
+    'test_copy_all_dtypes_and_devices',
+    'test_cholesky_solve_batched_non_contiguous',
+    'test_cdist_norm',
+    'test_cdist_norm_batch',
+    'test_cdist_non_contiguous',
+    'test_cdist_non_contiguous_batch',
+    'test_broadcast_batched_matmul',  # incorrect Size
+    'test_bincount',
+    'test_view_all_dtypes_and_devices',  # uses half
+    'test_unfold_all_devices_and_dtypes',  # uses half
+    'test_tensor_pow_tensor',  # lowering
+    'test_tensor_factories_empty',  # uses half
+    'test_symeig',
+    'test_svd',
+    'test_svd_no_singularvectors',
+    'test_storage_device',  # storage
+    'test_roll',
+    'test_resize_as_all_dtypes_and_devices',  # uses half
+    'test_resize_all_dtypes_and_devices',  # uses half
+    'test_pinverse',  # lowering
+    'test_norm',
+    'test_multinomial',
     'test_multinomial_alias',
-    'test_lapack_empty',
-    'test_nonzero_empty',
-    'test_normal',
-    'test_logical_any',
-    'test_logical_all',
-    'test_log_normal',
-    'test_geometric',
-    'test_cdist_empty',
-    'test_cdist_large',
-    'test_cdist_large_batch',
-    'test_multinomial_constraints',
-    'test_mul',
-    'test_cumprod',
-    'test_std_mean',
-    'test_std_mean_all_dims',
-    'test_var_mean',
-    'test_var_mean_all_dims',
-    'test_std_mean_some_dims',
-    'test_zeros_like',
-    'test_histc',
-    'test_bool_sub',
-    'test_bool_tensor_comparison_ops',
-    'test_bool_tensor_value_change',
-    'test_addcmul',
-    #'test_tensordot',
-    'test_narrow_empty',
-    'test_linspace',
-    'test_index_fill',
-    'test_take_empty',
-    'test_put_empty',
-    'test_scatter_to_large_input',
-    'test_scatter_add_to_large_input',
-    'test_scatter_bool',
-    'test_scatter_add_bool',
-    'test_masked_scatter_bool_tensor',
-    'test_atan2',
-    'test_atan2_edgecases',
-    'test_trapz',
-    'test_addcdiv',
-    'test_int_pow',
-    'test_int_tensor_pow_neg_ints',
-    'test_long_tensor_pow_floats',
-    'test_var_mean_some_dims',
-    'test_clamp',
-    ## test_indexing.py
-    'test_single_int',
-    'test_multiple_int',
-    'test_none',
-    'test_step',
-    'test_step_assignment',
-    #'test_bool_indices',
-    'test_bool_indices_accumulate',
-    'test_multiple_bool_indices',
-    #'test_byte_mask',
-    #'test_byte_mask_accumulate',
-    #'test_multiple_byte_mask',
-    'test_byte_mask2d',
-    'test_int_indices',
-    'test_int_indices2d',
-    'test_int_indices_broadcast',
-    'test_empty_index',
-    #'test_empty_ndim_index',
-    'test_empty_ndim_index_bool',
-    #'test_empty_slice',
-    #'test_index_getitem_copy_bools_slices',
-    'test_index_setitem_bools_slices',
-    'test_index_scalar_with_bool_mask',
-    #'test_setitem_expansion_error',
-    #'test_getitem_scalars',
-    'test_setitem_scalars',
-    'test_basic_advanced_combined',
-    'test_int_assignment',
-    #'test_byte_tensor_assignment',
-    'test_variable_slicing',
-    'test_ellipsis_tensor',
-    'test_invalid_index',
-    'test_out_of_bound_index',
-    'test_zero_dim_index',
-    'test_index_no_floats',
-    'test_none_index',
-    #'test_empty_tuple_index',
-    #'test_empty_fancy_index',
-    #'test_ellipsis_index',
-    'test_single_int_index',
-    'test_single_bool_index',
-    #'test_boolean_shape_mismatch',
-    'test_boolean_indexing_onedim',
-    #'test_boolean_assignment_value_mismatch',
-    'test_boolean_indexing_twodim',
-    #'test_boolean_indexing_weirdness',
-    #'test_boolean_indexing_weirdness_tensors',
-    'test_boolean_indexing_alldims',
-    'test_boolean_list_indexing',
-    'test_everything_returns_views',
-    #'test_broaderrors_indexing',
-    #'test_trivial_fancy_out_of_bounds',
-    #'test_index_is_larger',
-    #'test_broadcast_subspace',
+    'test_masked_select',  # uses half
+    'test_masked_fill_bool_tensor',  # lowering
+    'test_lu',
+    'test_logical_xor',  # storage
+    'test_logical',  # uses half
+    'test_logical_not',  # uses half
+    'test_is_signed',  # uses half
+    'test_has_storage_numpy',  # storage
+    'test_float_scalar_pow_float_tensor',  # lowering
+    'test_flip',  # runtime error
+    'test_fill_all_dtypes_and_devices',  # uses half
+    'test_eye',  # uses half
+    'test_empty_strided',  # storage
+    'test_dlpack_conversion',  # storage
+    'test_dim_reduction',
+    'test_det_logdet_slogdet_batched',  # lowering
+    'test_ctor_with_numpy_array',  # uses half
+    'test_contiguous',  # storage
+    'test_clone_all_dtypes_and_devices',  # uses half
+    'test_cat_all_dtypes_and_devices',  # uses half
+    'test_broadcast',
+    'test_bitwise_not',
+    'test_advancedindex',  # storage
+    'test_add',  # runtime error
+    'test_sign',
+    'test_qr',  # slow
+    'test_std_mean_some_dims',  # slow
+    'test_det_logdet_slogdet',  # very slow compile
+    'test_matrix_rank',  # slow
+    'test_triu_tril',
+
+    # test_indexing.py
+    # TestIndexing
+    'test_setitem_expansion_error',  # doesn't raise
+    'test_multiple_byte_mask',
+    'test_empty_slice',
+    'test_byte_tensor_assignment',
+    'test_byte_mask',
+    'test_byte_mask_accumulate',
+    'test_bool_indices',
+    'test_trivial_fancy_out_of_bounds',  # doesn't raise
+    'test_boolean_assignment_value_mismatch',  # doesn't raise
+    'test_index_getitem_copy_bools_slices',  # storage
+    'test_getitem_scalars',  # storage
+    'test_empty_ndim_index',  # runtime error
+    'test_empty_tuple_index',  # storage
+    'test_empty_fancy_index',  # runtime error
+    'test_ellipsis_index',  # storage
+    'test_broaderrors_indexing',  # runtime error
+    'test_broadcast_subspace',  # runtime error
+    'test_boolean_shape_mismatch',  # runtime error
+    'test_boolean_indexing_weirdness',  # runtime error
+    'test_boolean_indexing_weirdness_tensors',  # runtime error
+
+    # test_nn.py
+    # TestNNDeviceType
+    'test_embedding_backward',  # uses sparse
+    'test_embedding_dense_grad',  # slow
+    'test_batchnorm_grad',
+    'test_gumbel_softmax_xla',
+    'test_rnn_retain_variables',
+    'test_pool_invalid_size',  # doesn't raise
+    'test_nonlinearity_propagate_nan',
+    'test_InstanceNorm3d_general',  # precision (1e-2)
+    'test_InstanceNorm2d_general',  # precision (1e-2)
+    'test_InstanceNorm1d_general',  # precision (1e-2)
+    'test_EmbeddingBag_per_sample_weights_failures',  # runtime error
+    'test_variable_sequence',  # value error
+    'test_embedding_bag_device',  # runtime error
+    'test_embedding_bag_device',  # runtime error
+    'test_batchnorm_eval',  # runtime error
+    'test_MaxPool2d_indices',  # lowering
+    'test_MaxPool1d_indices',  # lowering
+    'test_EmbeddingBag_per_sample_weights_and_offsets',  # runtime error
+    'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # runtime error
 }
