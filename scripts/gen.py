@@ -96,6 +96,7 @@ _FN_BLACKLIST = set([
     # so that we can fall back to TypeDefault:: in PyTorch.
     'narrow',
     'reshape',
+    'size',
 ])
 
 _FN_BLACKLIST_REGEX = [
