@@ -2388,7 +2388,7 @@ TEST_F(AtenXlaTensorTest, TestEmptyLike) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::empty_like", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEmptyLikeOptions) {
@@ -2402,7 +2402,7 @@ TEST_F(AtenXlaTensorTest, TestEmptyLikeOptions) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::empty_like", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEmpty) {
@@ -2427,7 +2427,8 @@ TEST_F(AtenXlaTensorTest, TestZerosLike) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::zeros_like", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::zero_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestZerosLikeOptions) {
@@ -2441,7 +2442,8 @@ TEST_F(AtenXlaTensorTest, TestZerosLikeOptions) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::zeros_like", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestZeros) {
@@ -2453,7 +2455,8 @@ TEST_F(AtenXlaTensorTest, TestZeros) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::zeros", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::zero_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestOnes) {
@@ -2465,7 +2468,8 @@ TEST_F(AtenXlaTensorTest, TestOnes) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::ones", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::fill_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestOnesLike) {
@@ -2478,7 +2482,8 @@ TEST_F(AtenXlaTensorTest, TestOnesLike) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::ones_like", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::fill_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestOnesLikeOptions) {
@@ -2492,7 +2497,8 @@ TEST_F(AtenXlaTensorTest, TestOnesLikeOptions) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::ones_like", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFull) {
@@ -2505,7 +2511,8 @@ TEST_F(AtenXlaTensorTest, TestFull) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::full", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::fill_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFullLike) {
@@ -2518,7 +2525,8 @@ TEST_F(AtenXlaTensorTest, TestFullLike) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::full_like", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::fill_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFullLikeOptions) {
@@ -2533,7 +2541,8 @@ TEST_F(AtenXlaTensorTest, TestFullLikeOptions) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::full_like", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestARange) {
