@@ -115,7 +115,7 @@ def _start_fn(index, fn, args):
   sys.exit(exit_code)
 
 
-def spawn(fn, args=(), nprocs=None, join=True, daemon=False):
+def spawn(fn, args=(), nprocs=None, join=True, daemon=False, start_method='spawn'):
   if not _is_tpu_config():
     # If this is not an TPU setup, jump to normal multi-processing.
     nprocs = nprocs or 1
@@ -123,5 +123,6 @@ def spawn(fn, args=(), nprocs=None, join=True, daemon=False):
         fn, args=args, nprocs=nprocs, join=join, daemon=daemon)
 
   nprocs = _pre_fork_setup(nprocs)
-  return torch.multiprocessing.spawn(
-      _start_fn, args=(fn, args), nprocs=nprocs, join=join, daemon=daemon)
+  return torch.multiprocessing.start_processes(
+      _start_fn, args=(fn, args), nprocs=nprocs, join=join, daemon=daemon,
+      start_method=start_method)
