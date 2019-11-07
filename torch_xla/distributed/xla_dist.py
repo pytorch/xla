@@ -457,7 +457,7 @@ class DistributedExecutor(object):
     self.conda_env = conda_env
     self.env_vars = list(env_vars) if env_vars else []
 
-    for env_var in env_vars:
+    for env_var in self.env_vars:
       if re.match('\w*=\w*', env_var) is None:
         raise ValueError(
             ('Environment variable to distribute ({}) should follow '
