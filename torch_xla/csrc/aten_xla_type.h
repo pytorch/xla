@@ -151,9 +151,6 @@ class AtenXlaType {
   static at::Tensor& arange_out(at::Tensor& out, at::Scalar start,
                                 at::Scalar end, at::Scalar step);
 
-  static at::Tensor argsort(const at::Tensor& self, int64_t dim,
-                            bool descending);
-
   static at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size,
                                at::IntArrayRef stride,
                                c10::optional<int64_t> storage_offset);
@@ -314,9 +311,6 @@ class AtenXlaType {
                           c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor empty_like(const at::Tensor& self,
-                               c10::optional<at::MemoryFormat> memory_format);
-
-  static at::Tensor empty_like(const at::Tensor& self,
                                const at::TensorOptions& options,
                                c10::optional<at::MemoryFormat> memory_format);
 
@@ -382,9 +376,6 @@ class AtenXlaType {
 
   static at::Tensor full(at::IntArrayRef size, at::Scalar fill_value,
                          const at::TensorOptions& options);
-
-  static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
-                              c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
                               const at::TensorOptions& options,
@@ -671,9 +662,6 @@ class AtenXlaType {
                          const at::TensorOptions& options);
 
   static at::Tensor ones_like(const at::Tensor& self,
-                              c10::optional<at::MemoryFormat> memory_format);
-
-  static at::Tensor ones_like(const at::Tensor& self,
                               const at::TensorOptions& options,
                               c10::optional<at::MemoryFormat> memory_format);
 
@@ -877,19 +865,6 @@ class AtenXlaType {
                                        const at::Tensor& self,
                                        at::Scalar threshold);
 
-  static at::Tensor to(const at::Tensor& self, const at::TensorOptions& options,
-                       bool non_blocking, bool copy,
-                       c10::optional<at::MemoryFormat> memory_format);
-  static at::Tensor to(const at::Tensor& self, c10::Device device,
-                       at::ScalarType dtype, bool non_blocking, bool copy,
-                       c10::optional<at::MemoryFormat> memory_format);
-  static at::Tensor to(const at::Tensor& self, at::ScalarType dtype,
-                       bool non_blocking, bool copy,
-                       c10::optional<at::MemoryFormat> memory_format);
-  static at::Tensor to(const at::Tensor& self, const at::Tensor& other,
-                       bool non_blocking, bool copy,
-                       c10::optional<at::MemoryFormat> memory_format);
-
   static std::tuple<at::Tensor, at::Tensor> topk(const at::Tensor& self,
                                                  int64_t k, int64_t dim,
                                                  bool largest, bool sorted);
@@ -945,9 +920,6 @@ class AtenXlaType {
 
   static at::Tensor zeros(at::IntArrayRef size,
                           const at::TensorOptions& options);
-
-  static at::Tensor zeros_like(const at::Tensor& self,
-                               c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor zeros_like(const at::Tensor& self,
                                const at::TensorOptions& options,

@@ -98,9 +98,11 @@ _FN_BLACKLIST = set([
     'blackman_window',
     'hamming_window',
     'hann_window',
+    'empty_like',
     'narrow',
     'reshape',
     'size',
+    'to',
 ])
 
 _FN_BLACKLIST_REGEX = [

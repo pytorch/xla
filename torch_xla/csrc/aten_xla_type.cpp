@@ -521,12 +521,6 @@ at::Tensor& AtenXlaType::arange_out(at::Tensor& out, at::Scalar start,
   return out;
 }
 
-at::Tensor AtenXlaType::argsort(const at::Tensor& self, int64_t dim,
-                                bool descending) {
-  XLA_FN_COUNTER("xla::");
-  return std::get<1>(sort(self, dim, descending));
-}
-
 at::Tensor AtenXlaType::as_strided(const at::Tensor& self, at::IntArrayRef size,
                                    at::IntArrayRef stride,
                                    c10::optional<int64_t> storage_offset) {
@@ -1042,12 +1036,6 @@ at::Tensor AtenXlaType::empty(at::IntArrayRef size,
 }
 
 at::Tensor AtenXlaType::empty_like(
-    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, memory_format);
-}
-
-at::Tensor AtenXlaType::empty_like(
     const at::Tensor& self, const at::TensorOptions& options,
     c10::optional<at::MemoryFormat> memory_format) {
   XLA_FN_COUNTER("xla::");
@@ -1249,15 +1237,6 @@ at::Tensor AtenXlaType::full(at::IntArrayRef size, at::Scalar fill_value,
   return bridge::AtenFromXlaTensor(
       XLATensor::full(XlaHelpers::I64List(size), fill_value,
                       xla_options.get_device(), xla_options.get_scalar_type()));
-}
-
-at::Tensor AtenXlaType::full_like(
-    const at::Tensor& self, at::Scalar fill_value,
-    c10::optional<at::MemoryFormat> /* memory_format */) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::full_like(
-      self_tensor, fill_value, self_tensor.GetDevice(), c10::nullopt));
 }
 
 at::Tensor AtenXlaType::full_like(
@@ -2145,12 +2124,6 @@ at::Tensor AtenXlaType::ones(at::IntArrayRef size,
 }
 
 at::Tensor AtenXlaType::ones_like(
-    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 1, memory_format);
-}
-
-at::Tensor AtenXlaType::ones_like(
     const at::Tensor& self, const at::TensorOptions& options,
     c10::optional<at::MemoryFormat> memory_format) {
   XLA_FN_COUNTER("xla::");
@@ -2762,51 +2735,6 @@ at::Tensor AtenXlaType::threshold_backward(const at::Tensor& grad_output,
       threshold.to<double>()));
 }
 
-at::Tensor AtenXlaType::to(
-    const at::Tensor& self, const at::TensorOptions& options,
-    bool /* non_blocking */, bool /* copy */,
-    c10::optional<at::MemoryFormat> /* memory_format */) {
-  XLA_FN_COUNTER("xla::");
-  auto self_tensor = bridge::TryGetXlaTensor(self);
-  if (!self_tensor) {
-    XLA_CHECK(options.has_device());
-    at::ScalarType dtype = options.has_dtype()
-                               ? c10::typeMetaToScalarType(options.dtype())
-                               : self.scalar_type();
-    XLATensor xtensor =
-        XLATensor::Create(CopyTensor(self, dtype),
-                          bridge::AtenDeviceToXlaDevice(options.device()));
-    return bridge::AtenFromXlaTensor(xtensor);
-  }
-  if (options.has_device() && options.device().type() != at::kXLA) {
-    return bridge::XlaToAtenTensor(*self_tensor, options);
-  }
-  XlaOptions xla_options(options, self_tensor->GetDevice(),
-                         self_tensor->dtype());
-  return bridge::AtenFromXlaTensor(
-      XLATensor::to(*self_tensor, xla_options.device, xla_options.scalar_type));
-}
-
-at::Tensor AtenXlaType::to(const at::Tensor& self, c10::Device device,
-                           at::ScalarType dtype, bool non_blocking, bool copy,
-                           c10::optional<at::MemoryFormat> memory_format) {
-  return to(self, self.options().device(device).dtype(dtype), non_blocking,
-            copy, memory_format);
-}
-
-at::Tensor AtenXlaType::to(const at::Tensor& self, at::ScalarType dtype,
-                           bool non_blocking, bool copy,
-                           c10::optional<at::MemoryFormat> memory_format) {
-  return to(self, self.options().dtype(dtype), non_blocking, copy,
-            memory_format);
-}
-
-at::Tensor AtenXlaType::to(const at::Tensor& self, const at::Tensor& other,
-                           bool non_blocking, bool copy,
-                           c10::optional<at::MemoryFormat> memory_format) {
-  return to(self, other.options(), non_blocking, copy, memory_format);
-}
-
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::topk(const at::Tensor& self,
                                                      int64_t k, int64_t dim,
                                                      bool largest,
@@ -2989,12 +2917,6 @@ at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
                               const at::TensorOptions& options) {
   XLA_FN_COUNTER("xla::");
   return full(size, 0, options);
-}
-
-at::Tensor AtenXlaType::zeros_like(
-    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, memory_format);
 }
 
 at::Tensor AtenXlaType::zeros_like(
