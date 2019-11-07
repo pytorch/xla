@@ -663,18 +663,6 @@ at::Tensor AtenXlaType::avg_pool3d_backward(
       count_include_pad));
 }
 
-at::Tensor AtenXlaType::bartlett_window(int64_t window_length,
-                                        const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::bartlett_window(window_length, options);
-}
-
-at::Tensor AtenXlaType::bartlett_window(int64_t window_length, bool periodic,
-                                        const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::bartlett_window(window_length, periodic, options);
-}
-
 at::Tensor AtenXlaType::bernoulli(const at::Tensor& self,
                                   at::Generator* generator) {
   XLA_FN_COUNTER("xla::");
@@ -713,18 +701,6 @@ at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
   XLA_FN_COUNTER("xla::");
   return at::native::binary_cross_entropy_with_logits(self, target, weight,
                                                       pos_weight, reduction);
-}
-
-at::Tensor AtenXlaType::blackman_window(int64_t window_length,
-                                        const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::blackman_window(window_length, options);
-}
-
-at::Tensor AtenXlaType::blackman_window(int64_t window_length, bool periodic,
-                                        const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::blackman_window(window_length, periodic, options);
 }
 
 at::Tensor AtenXlaType::bmm(const at::Tensor& self, const at::Tensor& mat2) {
@@ -1366,45 +1342,6 @@ at::Tensor& AtenXlaType::gt_(at::Tensor& self, const at::Tensor& other) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::gt_(self_tensor, bridge::GetXlaTensor(other));
   return self;
-}
-
-at::Tensor AtenXlaType::hamming_window(int64_t window_length,
-                                       const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hamming_window(window_length, options);
-}
-
-at::Tensor AtenXlaType::hamming_window(int64_t window_length, bool periodic,
-                                       const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hamming_window(window_length, periodic, options);
-}
-
-at::Tensor AtenXlaType::hamming_window(int64_t window_length, bool periodic,
-                                       double alpha,
-                                       const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hamming_window(window_length, periodic, alpha, options);
-}
-
-at::Tensor AtenXlaType::hamming_window(int64_t window_length, bool periodic,
-                                       double alpha, double beta,
-                                       const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hamming_window(window_length, periodic, alpha, beta,
-                                    options);
-}
-
-at::Tensor AtenXlaType::hann_window(int64_t window_length,
-                                    const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hann_window(window_length, options);
-}
-
-at::Tensor AtenXlaType::hann_window(int64_t window_length, bool periodic,
-                                    const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hann_window(window_length, periodic, options);
 }
 
 at::Tensor AtenXlaType::hardshrink(const at::Tensor& self, at::Scalar lambda) {
