@@ -349,6 +349,10 @@ class XLATensor {
       XLATensor& input, double scale,
       const std::vector<std::vector<xla::int64>>& groups);
 
+  static void cross_replica_sum(
+      std::vector<XLATensor>* inputs, double scale,
+      const std::vector<std::vector<xla::int64>>& groups);
+
   // Returns the cumulative product of elements of input in the given dimension.
   static XLATensor cumprod(const XLATensor& input, xla::int64 dim,
                            c10::optional<at::ScalarType> dtype);

@@ -771,6 +771,14 @@ void XLATensor::cross_replica_sum_(
       ir::ops::CrossReplicaSumOp(input.GetIrValue(), scale, groups));
 }
 
+void XLATensor::cross_replica_sum(
+    std::vector<XLATensor>* inputs, double scale,
+    const std::vector<std::vector<xla::int64>>& groups) {
+  for (auto& input : *inputs) {
+    cross_replica_sum_(input, scale, groups);
+  }
+}
+
 XLATensor XLATensor::cumprod(const XLATensor& input, xla::int64 dim,
                              c10::optional<at::ScalarType> dtype) {
   xla::int64 canonical_dim =
