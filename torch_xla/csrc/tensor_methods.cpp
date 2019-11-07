@@ -1710,12 +1710,10 @@ std::tuple<XLATensor, XLATensor> XLATensor::qr(const XLATensor& input,
                          input.CreateFrom(ir::Value(node, 1)));
 }
 
-XLATensor XLATensor::randperm(xla::int64 n, const Device& device,
-                              at::ScalarType element_type) {
+void XLATensor::randperm_out(XLATensor& out, xla::int64 n) {
   xla::PrimitiveType xla_element_type =
-      MakeXlaPrimitiveType(element_type, &device);
-  return Create(ir::MakeNode<ir::ops::Randperm>(n, xla_element_type), device,
-                element_type);
+      GetDevicePrimitiveType(xla::PrimitiveType::S64, &out.GetDevice());
+  out.SetIrValue(ir::MakeNode<ir::ops::Randperm>(n, xla_element_type));
 }
 
 XLATensor XLATensor::reciprocal(const XLATensor& input) {

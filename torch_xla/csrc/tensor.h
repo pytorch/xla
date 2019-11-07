@@ -708,6 +708,8 @@ class XLATensor {
   static XLATensor randperm(xla::int64 n, const Device& device,
                             at::ScalarType scalar_type);
 
+  static void randperm_out(XLATensor& out, xla::int64 n);
+
   static XLATensor reciprocal(const XLATensor& input);
   static void reciprocal_(XLATensor& input);
 
