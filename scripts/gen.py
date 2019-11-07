@@ -100,6 +100,7 @@ _FN_BLACKLIST = set([
     'narrow',
     'ones',
     'ones_like',
+    'randperm',
     'reshape',
     'size',
     'to',
