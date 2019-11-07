@@ -1,5 +1,5 @@
 diff --git a/test/common_device_type.py b/test/common_device_type.py
-index a23696c29c..80e95f9a15 100644
+index a23696c29c..dc04d0a87b 100644
 --- a/test/common_device_type.py
 +++ b/test/common_device_type.py
 @@ -3,6 +3,7 @@ import threading
@@ -9,7 +9,7 @@ index a23696c29c..80e95f9a15 100644
 +import copy
  from common_utils import TestCase, TEST_WITH_ROCM, TEST_MKL, \
      skipCUDANonDefaultStreamIf
- 
+
 @@ -191,7 +192,7 @@ class DeviceTypeTestBase(TestCase):
                      # Sets precision and runs test
                      # Note: precision is reset after the test is run
@@ -19,10 +19,10 @@ index a23696c29c..80e95f9a15 100644
                          self.precision = self._get_precision_override(test, dtype)
                          result = test(self, device_arg, dtype)
                      finally:
-@@ -242,10 +243,95 @@ class CUDATestBase(DeviceTypeTestBase):
+@@ -242,10 +243,102 @@ class CUDATestBase(DeviceTypeTestBase):
          cls.primary_device = 'cuda:{0}'.format(torch.cuda.current_device())
- 
- 
+
+
 +import torch_xla
 +import torch_xla.core.xla_model as xm
 +
@@ -34,13 +34,12 @@ index a23696c29c..80e95f9a15 100644
 +xla_meta_path = xla_test_path + "/torch_test_meta.py"
 +xla_meta = run_path(xla_meta_path)
 +assert xla_meta, "XLA metadata not found!"
-+allowed_torch_tests = xla_meta.get('allowed_torch_tests', None)
++disabled_torch_tests = xla_meta.get('disabled_torch_tests', None)
 +torch_test_precisions = xla_meta.get('torch_test_precisions', None)
 +DEFAULT_FLOATING_PRECISION = xla_meta.get('DEFAULT_FLOATING_PRECISION', None)
-+assert allowed_torch_tests is not None, "XLA tests not found!"
++assert disabled_torch_tests is not None, "XLA tests not found!"
 +assert torch_test_precisions is not None, "XLA test precisions not found!"
 +assert DEFAULT_FLOATING_PRECISION is not None, "DEFAULT_FLOATING_PRECISION not found!"
-+
 +
 +class XLATestBase(DeviceTypeTestBase):
 +    device_type = 'xla'
@@ -52,7 +51,7 @@ index a23696c29c..80e95f9a15 100644
 +    @classmethod
 +    def instantiate_test(cls, name, test):
 +        test_name = name + "_" + cls.device_type
-+        if test_name not in allowed_torch_tests and test.__name__ not in allowed_torch_tests:
++        if test_name in disabled_torch_tests or test.__name__ in disabled_torch_tests:
 +            assert not hasattr(cls, test_name), "Redefinition of test {0}".format(test_name)
 +
 +            @wraps(test)
@@ -88,7 +87,7 @@ index a23696c29c..80e95f9a15 100644
 +                if not hasattr(test, 'precision_overrides'):
 +                    test.precision_overrides = {}
 +
-+                floating_precision = torch_test_precisions.get(test.__name__, DEFAULT_FLOATING_PRECISION)
++                floating_precision = torch_test_precisions.get(test_name, torch_test_precisions.get(test.__name__, DEFAULT_FLOATING_PRECISION))
 +                test.precision_overrides[torch.float] = max(test.precision_overrides.get(torch.float, 0), floating_precision)
 +                test.precision_overrides[torch.double] = max(test.precision_overrides.get(torch.double, 0), floating_precision)
 +                test.precision_overrides[torch.bfloat16] = max(test.precision_overrides.get(torch.bfloat16, 0), floating_precision)
@@ -106,21 +105,29 @@ index a23696c29c..80e95f9a15 100644
 +        # Sets the primary test device to the xla_device (CPU or TPU)
 +        cls.primary_device = str(xm.xla_device())
 +
++    # Overrides assertEqual to popular custom precision
++    def assertEqual(self, x, y, prec=None, message='', allow_inf=False):
++        if prec is None:
++            prec = self.precision
++        else:
++            prec = max(self.precision, prec)
++        return DeviceTypeTestBase.assertEqual(self, x, y, prec, message, allow_inf)
++
 +
  # Adds available device-type-specific test base classes
  device_type_test_bases.append(CPUTestBase)
  if torch.cuda.is_available():
      device_type_test_bases.append(CUDATestBase)
 +device_type_test_bases.append(XLATestBase)
- 
- 
+
+
  # Adds 'instantiated' device-specific test cases to the given scope.
-@@ -289,7 +375,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
+@@ -289,7 +382,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
                  assert inspect.isfunction(test), "Couldn't extract function from '{0}'".format(name)
- 
+
                  # Instantiates the device-specific tests
 -                device_type_test_class.instantiate_test(name, test)
 +                device_type_test_class.instantiate_test(name, copy.deepcopy(test))
              else:  # Ports non-test member
                  assert not hasattr(device_type_test_class, name), "Redefinition of non-test member {0}".format(name)
- 
+
