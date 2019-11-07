@@ -98,6 +98,7 @@ _FN_BLACKLIST = set([
     'narrow',
     'reshape',
     'size',
+    'to',
 ])
 
 _FN_BLACKLIST_REGEX = [
