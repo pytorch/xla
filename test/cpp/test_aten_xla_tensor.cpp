@@ -2960,6 +2960,10 @@ TEST_F(AtenXlaTensorTest, TestSize) {
       EXPECT_EQ(torch::size(input, dim), torch::size(xla_input, dim));
     }
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  // tensor.size(dim) is tensor property that PyTorch's implementation
+  // is common to all devices. So we don't assert postive checks here.
 }
 
 TEST_F(AtenXlaTensorTest, TestSelect) {
@@ -6637,6 +6641,9 @@ TEST_F(AtenXlaTensorTest, TestSumToSize) {
     torch::Tensor xla_output = xla_input.sum_to_size(out_size);
     AllClose(output, xla_output);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::sum", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTransposeDims) {
