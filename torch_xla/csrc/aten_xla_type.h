@@ -302,10 +302,6 @@ class AtenXlaType {
                           const at::TensorOptions& options,
                           c10::optional<at::MemoryFormat> memory_format);
 
-  static at::Tensor empty_like(const at::Tensor& self,
-                               const at::TensorOptions& options,
-                               c10::optional<at::MemoryFormat> memory_format);
-
   static at::Tensor empty_strided(at::IntArrayRef size, at::IntArrayRef stride,
                                   const at::TensorOptions& options);
 
@@ -365,13 +361,6 @@ class AtenXlaType {
   static at::Tensor frac(const at::Tensor& self);
 
   static at::Tensor& frac_(at::Tensor& self);
-
-  static at::Tensor full(at::IntArrayRef size, at::Scalar fill_value,
-                         const at::TensorOptions& options);
-
-  static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
-                              const at::TensorOptions& options,
-                              c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor gather(const at::Tensor& self, int64_t dim,
                            const at::Tensor& index, bool sparse_grad);
@@ -650,13 +639,6 @@ class AtenXlaType {
   static at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
                          at::IntArrayRef dim, bool keepdim);
 
-  static at::Tensor ones(at::IntArrayRef size,
-                         const at::TensorOptions& options);
-
-  static at::Tensor ones_like(const at::Tensor& self,
-                              const at::TensorOptions& options,
-                              c10::optional<at::MemoryFormat> memory_format);
-
   static at::Tensor permute(const at::Tensor& self, at::IntArrayRef dims);
 
   static at::Tensor pow(const at::Tensor& self, at::Scalar exponent);
@@ -909,13 +891,6 @@ class AtenXlaType {
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 
   static at::Tensor& zero_(at::Tensor& self);
-
-  static at::Tensor zeros(at::IntArrayRef size,
-                          const at::TensorOptions& options);
-
-  static at::Tensor zeros_like(const at::Tensor& self,
-                               const at::TensorOptions& options,
-                               c10::optional<at::MemoryFormat> memory_format);
 };
 
 }  // namespace torch_xla

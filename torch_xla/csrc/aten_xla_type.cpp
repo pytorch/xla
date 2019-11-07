@@ -997,30 +997,26 @@ at::Tensor AtenXlaType::embedding_dense_backward(const at::Tensor& grad_output,
       num_weights, padding_idx, scale_grad_by_freq));
 }
 
-at::Tensor AtenXlaType::empty(at::IntArrayRef size,
-                              const at::TensorOptions& options,
-                              c10::optional<at::MemoryFormat> memory_format) {
+at::Tensor AtenXlaType::empty(
+    at::IntArrayRef size, const at::TensorOptions& options,
+    c10::optional<at::MemoryFormat> /* memory_format */) {
   XLA_FN_COUNTER("xla::");
   // PT empty*() are optimizations to avoid initializing the data when it is
   // known it will be completely rewritten. But since for us doing a zero*()
   // does not actually end up doing any memory initialization, we use that and
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
-  return full(size, 0, options);
-}
-
-at::Tensor AtenXlaType::empty_like(
-    const at::Tensor& self, const at::TensorOptions& options,
-    c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, options, memory_format);
+  XlaOptions xla_options(options);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::full(XlaHelpers::I64List(size), 0, xla_options.get_device(),
+                      xla_options.get_scalar_type()));
 }
 
 at::Tensor AtenXlaType::empty_strided(at::IntArrayRef size,
                                       at::IntArrayRef stride,
                                       const at::TensorOptions& options) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor t = full(size, 0, options);
+  at::Tensor t = empty(size, options, c10::nullopt);
   return as_strided(t, size, stride, /*storage_offset=*/0);
 }
 
@@ -1202,27 +1198,6 @@ at::Tensor& AtenXlaType::frac_(at::Tensor& self) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::frac_(self_tensor);
   return self;
-}
-
-at::Tensor AtenXlaType::full(at::IntArrayRef size, at::Scalar fill_value,
-                             const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::full(XlaHelpers::I64List(size), fill_value,
-                      xla_options.get_device(), xla_options.get_scalar_type()));
-}
-
-at::Tensor AtenXlaType::full_like(
-    const at::Tensor& self, at::Scalar fill_value,
-    const at::TensorOptions& options,
-    c10::optional<at::MemoryFormat> /* memory_format */) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XlaOptions xla_options(options, self_tensor.GetDevice());
-  return bridge::AtenFromXlaTensor(
-      XLATensor::full_like(self_tensor, fill_value, xla_options.get_device(),
-                           xla_options.scalar_type));
 }
 
 at::Tensor AtenXlaType::gather(const at::Tensor& self, int64_t dim,
@@ -2091,19 +2066,6 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
       bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
 }
 
-at::Tensor AtenXlaType::ones(at::IntArrayRef size,
-                             const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return full(size, 1, options);
-}
-
-at::Tensor AtenXlaType::ones_like(
-    const at::Tensor& self, const at::TensorOptions& options,
-    c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 1, options, memory_format);
-}
-
 at::Tensor AtenXlaType::permute(const at::Tensor& self, at::IntArrayRef dims) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::permute(
@@ -2885,19 +2847,6 @@ at::Tensor& AtenXlaType::zero_(at::Tensor& self) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::zero_(self_tensor);
   return self;
-}
-
-at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
-                              const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return full(size, 0, options);
-}
-
-at::Tensor AtenXlaType::zeros_like(
-    const at::Tensor& self, const at::TensorOptions& options,
-    c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, options, memory_format);
 }
 
 void AtenXlaType::InitializeAtenBindings() {

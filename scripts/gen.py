@@ -81,12 +81,7 @@ _XPARSER = lark.Lark(
 
 _FN_BLACKLIST = set([
     'numel',
-    'ones',
-    'ones_like',
     'result_type',
-    'zero_',
-    'zeros',
-    'zeros_like',
     # FIXME: Remove functions below when we switch to override leaf nodes only.
     # The function names below might map to multiple function overrloads.
     # If the function overload is a leaf node, we must have it in AtenXlaType::
@@ -100,10 +95,16 @@ _FN_BLACKLIST = set([
     'hamming_window',
     'hann_window',
     'empty_like',
+    'full',
+    'full_like',
     'narrow',
+    'ones',
+    'ones_like',
     'reshape',
     'size',
     'to',
+    'zeros',
+    'zeros_like',
 ])
 
 _FN_BLACKLIST_REGEX = [
