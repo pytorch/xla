@@ -195,11 +195,6 @@ class AtenXlaType {
       at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
       c10::optional<int64_t> divisor_override);
 
-  static at::Tensor bartlett_window(int64_t window_length,
-                                    const at::TensorOptions& options);
-  static at::Tensor bartlett_window(int64_t window_length, bool periodic,
-                                    const at::TensorOptions& options);
-
   static at::Tensor bernoulli(const at::Tensor& self, at::Generator* generator);
   static at::Tensor& bernoulli_(at::Tensor& self, double p,
                                 at::Generator* generator);
@@ -210,11 +205,6 @@ class AtenXlaType {
       const at::Tensor& self, const at::Tensor& target,
       const at::Tensor& weight, const at::Tensor& pos_weight,
       int64_t reduction);
-
-  static at::Tensor blackman_window(int64_t window_length,
-                                    const at::TensorOptions& options);
-  static at::Tensor blackman_window(int64_t window_length, bool periodic,
-                                    const at::TensorOptions& options);
 
   static at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2);
 
@@ -414,21 +404,6 @@ class AtenXlaType {
   static at::Tensor& gt_(at::Tensor& self, at::Scalar other);
 
   static at::Tensor& gt_(at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor hamming_window(int64_t window_length,
-                                   const at::TensorOptions& options);
-  static at::Tensor hamming_window(int64_t window_length, bool periodic,
-                                   const at::TensorOptions& options);
-  static at::Tensor hamming_window(int64_t window_length, bool periodic,
-                                   double alpha,
-                                   const at::TensorOptions& options);
-  static at::Tensor hamming_window(int64_t window_length, bool periodic,
-                                   double alpha, double beta,
-                                   const at::TensorOptions& options);
-  static at::Tensor hann_window(int64_t window_length,
-                                const at::TensorOptions& options);
-  static at::Tensor hann_window(int64_t window_length, bool periodic,
-                                const at::TensorOptions& options);
 
   static at::Tensor hardshrink(const at::Tensor& self, at::Scalar lambda);
 
