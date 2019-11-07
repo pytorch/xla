@@ -94,6 +94,10 @@ _FN_BLACKLIST = set([
     # Otherwise they're non leaves that we shouldn't generate override for them.
     # They're blacklisted to avoid creating AtenXlaTypeDefault::func,
     # so that we can fall back to TypeDefault:: in PyTorch.
+    'bartlett_window',
+    'blackman_window',
+    'hamming_window',
+    'hann_window',
     'empty_like',
     'narrow',
     'reshape',
