@@ -110,10 +110,6 @@ _FN_BLACKLIST_REGEX = [
 _FN_OUT = {
     'add_out':
         FuncOpts(),
-    'arange_out(Tensor, Scalar, Scalar, Scalar) -> Tensor':
-        FuncOpts(
-            outfn_template=ArgTemplate(
-                'AtenXlaType::arange($1, $2, $3, $0.options())')),
     'clamp_out':
         FuncOpts(),
     'div_out':
