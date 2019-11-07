@@ -953,6 +953,16 @@ XLATensor XLATensor::eye(xla::int64 lines, xla::int64 cols,
       device, element_type);
 }
 
+void XLATensor::eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols) {
+  if (cols < 0) {
+    cols = lines;
+  }
+  out.SetIrValue(
+      ir::ops::Identity(lines, cols,
+                        GetDevicePrimitiveType(out.shape().get().element_type(),
+                                               &out.GetDevice())));
+}
+
 void XLATensor::fill_(XLATensor& input, at::Scalar value) {
   ir::Value constant =
       GetIrValueForScalar(value, input.shape(), input.GetDevice());

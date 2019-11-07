@@ -418,6 +418,8 @@ class XLATensor {
   static XLATensor eye(xla::int64 lines, xla::int64 cols, const Device& device,
                        at::ScalarType element_type);
 
+  static void eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols);
+
   // Fills the input with the given value.
   static void fill_(XLATensor& input, at::Scalar value);
 

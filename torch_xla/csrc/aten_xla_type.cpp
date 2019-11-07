@@ -1169,17 +1169,18 @@ at::Tensor& AtenXlaType::expm1_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::eye(int64_t n, const at::TensorOptions& options) {
+at::Tensor& AtenXlaType::eye_out(at::Tensor& out, int64_t n) {
   XLA_FN_COUNTER("xla::");
-  return eye(n, n, options);
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::eye_out(out_tensor, n, n);
+  return out;
 }
 
-at::Tensor AtenXlaType::eye(int64_t n, int64_t m,
-                            const at::TensorOptions& options) {
+at::Tensor& AtenXlaType::eye_out(at::Tensor& out, int64_t n, int64_t m) {
   XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(XLATensor::eye(
-      n, m, xla_options.get_device(), xla_options.get_scalar_type()));
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::eye_out(out_tensor, n, m);
+  return out;
 }
 
 at::Tensor& AtenXlaType::fill_(at::Tensor& self, at::Scalar value) {

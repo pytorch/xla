@@ -358,9 +358,9 @@ class AtenXlaType {
 
   static at::Tensor& expm1_(at::Tensor& self);
 
-  static at::Tensor eye(int64_t n, const at::TensorOptions& options);
+  static at::Tensor& eye_out(at::Tensor& out, int64_t n);
 
-  static at::Tensor eye(int64_t n, int64_t m, const at::TensorOptions& options);
+  static at::Tensor& eye_out(at::Tensor& out, int64_t n, int64_t m);
 
   static at::Tensor& fill_(at::Tensor& self, at::Scalar value);
 

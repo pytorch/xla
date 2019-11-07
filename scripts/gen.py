@@ -95,6 +95,7 @@ _FN_BLACKLIST = set([
     # They're blacklisted to avoid creating AtenXlaTypeDefault::func,
     # so that we can fall back to TypeDefault:: in PyTorch.
     'empty_like',
+    'eye',
     'narrow',
     'reshape',
     'size',
