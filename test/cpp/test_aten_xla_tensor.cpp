@@ -77,6 +77,17 @@ TEST_F(AtenXlaTensorTest, TestClone) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestTo) {
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    AllClose(a, xla_a);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestIsFloatingPoint) {
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
