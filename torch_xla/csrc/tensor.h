@@ -232,9 +232,6 @@ class XLATensor {
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions);
 
-  static XLATensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
-                          const Device& device, at::ScalarType scalar_type);
-
   static void arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
                          at::Scalar step, at::ScalarType scalar_type);
 

@@ -2546,6 +2546,7 @@ TEST_F(AtenXlaTensorTest, TestARange) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestARangeOut) {
@@ -2556,6 +2557,9 @@ TEST_F(AtenXlaTensorTest, TestARangeOut) {
     torch::Tensor xla_b = torch::arange_out(xla_a, 0, 4, 1);
     AllClose(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDimARange) {
@@ -2567,6 +2571,9 @@ TEST_F(AtenXlaTensorTest, TestDimARange) {
     torch::Tensor xla_a = torch::_dim_arange(xla_like, 1);
     AllClose(a, xla_a);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBartlettWindow) {

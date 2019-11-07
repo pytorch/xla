@@ -140,14 +140,6 @@ class AtenXlaType {
 
   static at::Tensor any(const at::Tensor& self, int64_t dim, bool keepdim);
 
-  static at::Tensor arange(at::Scalar end, const at::TensorOptions& options);
-
-  static at::Tensor arange(at::Scalar start, at::Scalar end,
-                           const at::TensorOptions& options);
-
-  static at::Tensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
-                           const at::TensorOptions& options);
-
   static at::Tensor& arange_out(at::Tensor& out, at::Scalar start,
                                 at::Scalar end, at::Scalar step);
 
