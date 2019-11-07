@@ -246,8 +246,6 @@ xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {
       BiasReduceDimensions(grad_output_shape.rank()));
 }
 
-}  // namespace
-
 xla::XlaOp BuildTransposedConvolution(
     const xla::XlaOp& input, const xla::XlaOp& kernel,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
@@ -276,25 +274,6 @@ xla::XlaOp BuildTransposedConvolution(
       padding, dilation, /*groups=*/1);
 }
 
-xla::XlaOp BuildTransposedConvolutionBias(
-    const xla::XlaOp& input, const xla::XlaOp& kernel, const xla::XlaOp& bias,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    tensorflow::gtl::ArraySlice<const xla::int64> dilation,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_padding,
-    xla::int64 groups) {
-  xla::XlaOp conv = BuildTransposedConvolution(
-      input, kernel, stride, padding, dilation, output_padding, groups);
-  auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
-  // Remove the channels dimension.
-  broadcast_sizes.erase(broadcast_sizes.begin() + 1);
-  // Make the bias match the output dimensions.
-  xla::XlaOp bias_broadcast =
-      xla::Transpose(xla::Broadcast(bias, broadcast_sizes),
-                     BiasTransposePermutation(broadcast_sizes.size() + 1));
-  return conv + bias_broadcast;
-}
-
 ConvGrads BuildTransposedConvolutionBackward(
     const xla::XlaOp& grad_output, const xla::XlaOp& input,
     const xla::XlaOp& kernel,
@@ -312,6 +291,8 @@ ConvGrads BuildTransposedConvolutionBackward(
   xla::XlaOp grad_bias = BuildGradBias(grad_output);
   return {grad_input, grad_weight, grad_bias};
 }
+
+}  // namespace
 
 xla::XlaOp BuildConvolutionOverrideable(
     const xla::XlaOp& input, const xla::XlaOp& kernel,
