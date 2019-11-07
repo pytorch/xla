@@ -3256,12 +3256,14 @@ TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
 
 TEST_F(AtenXlaTensorTest, TestRandperm) {
   int n = 5;
-  torch::Tensor shuffle =
-      torch::randperm(n, torch::TensorOptions().device(torch::kXLA));
+  torch::Tensor shuffle = torch::randperm(
+      n, torch::TensorOptions(torch::kLong).device(torch::kXLA));
   torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
   std::vector<xla::int64> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
                                        shuffle_cpu.data_ptr<int64_t>() + n);
   EXPECT_TRUE(xla::IsPermutation(shuffle_data, n));
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::randperm_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSlice) {

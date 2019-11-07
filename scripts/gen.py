@@ -101,6 +101,7 @@ _FN_BLACKLIST = set([
     'hann_window',
     'empty_like',
     'narrow',
+    'randperm',
     'reshape',
     'size',
     'to',
