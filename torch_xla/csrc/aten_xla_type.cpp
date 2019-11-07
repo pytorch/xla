@@ -487,32 +487,6 @@ at::Tensor AtenXlaType::any(const at::Tensor& self, int64_t dim, bool keepdim) {
       XLATensor::any(bridge::GetXlaTensor(self), {dim}, keepdim));
 }
 
-at::Tensor AtenXlaType::arange(at::Scalar end,
-                               const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(XLATensor::arange(
-      0, end, 1, xla_options.get_device(), xla_options.get_scalar_type()));
-}
-
-at::Tensor AtenXlaType::arange(at::Scalar start, at::Scalar end,
-                               const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(XLATensor::arange(
-      start, end, 1, xla_options.get_device(), xla_options.get_scalar_type()));
-}
-
-at::Tensor AtenXlaType::arange(at::Scalar start, at::Scalar end,
-                               at::Scalar step,
-                               const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::arange(start, end, step, xla_options.get_device(),
-                        xla_options.get_scalar_type()));
-}
-
 at::Tensor& AtenXlaType::arange_out(at::Tensor& out, at::Scalar start,
                                     at::Scalar end, at::Scalar step) {
   XLA_FN_COUNTER("xla::");

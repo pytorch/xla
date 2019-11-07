@@ -487,12 +487,6 @@ XLATensor XLATensor::any(const XLATensor& input,
                                  keep_reduced_dimensions));
 }
 
-XLATensor XLATensor::arange(at::Scalar start, at::Scalar end, at::Scalar step,
-                            const Device& device, at::ScalarType scalar_type) {
-  return Create(ir::ops::ARange(start, end, step, scalar_type), device,
-                scalar_type);
-}
-
 void XLATensor::arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
                            at::Scalar step, at::ScalarType scalar_type) {
   out.SetIrValue(ir::ops::ARange(start, end, step, scalar_type));
@@ -954,11 +948,8 @@ XLATensor XLATensor::eye(xla::int64 lines, xla::int64 cols,
 }
 
 void XLATensor::eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols) {
-  if (cols < 0) {
-    cols = lines;
-  }
   out.SetIrValue(
-      ir::ops::Identity(lines, cols,
+      ir::ops::Identity(lines, cols >= 0 ? cols : lines,
                         GetDevicePrimitiveType(out.shape().get().element_type(),
                                                &out.GetDevice())));
 }

@@ -94,12 +94,13 @@ _FN_BLACKLIST = set([
     # Otherwise they're non leaves that we shouldn't generate override for them.
     # They're blacklisted to avoid creating AtenXlaTypeDefault::func,
     # so that we can fall back to TypeDefault:: in PyTorch.
+    'arange',
     'bartlett_window',
     'blackman_window',
-    'hamming_window',
-    'hann_window',
     'empty_like',
     'eye',
+    'hamming_window',
+    'hann_window',
     'narrow',
     'reshape',
     'size',
@@ -115,10 +116,6 @@ _FN_BLACKLIST_REGEX = [
 _FN_OUT = {
     'add_out':
         FuncOpts(),
-    'arange_out(Tensor, Scalar, Scalar, Scalar) -> Tensor':
-        FuncOpts(
-            outfn_template=ArgTemplate(
-                'AtenXlaType::arange($1, $2, $3, $0.options())')),
     'clamp_out':
         FuncOpts(),
     'div_out':
