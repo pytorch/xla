@@ -108,6 +108,7 @@ disabled_torch_tests = {
     'test_det_logdet_slogdet',  # very slow compile
     'test_matrix_rank',  # slow
     'test_triu_tril',
+    'test_tensor_shape_empty',  # LLVM OOM in CI
 
     # test_indexing.py
     # TestIndexing
