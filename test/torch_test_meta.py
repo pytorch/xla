@@ -81,6 +81,8 @@ disabled_torch_tests = {
     'test_masked_select',  # uses half
     'test_masked_fill_bool_tensor',  # lowering
     'test_lu',
+    'test_logical_and',  # storage
+    'test_logical_or',  # storage
     'test_logical_xor',  # storage
     'test_logical',  # uses half
     'test_logical_not',  # uses half
