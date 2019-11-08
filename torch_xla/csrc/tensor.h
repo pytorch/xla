@@ -232,9 +232,6 @@ class XLATensor {
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions);
 
-  static XLATensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
-                          const Device& device, at::ScalarType scalar_type);
-
   static void arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
                          at::Scalar step, at::ScalarType scalar_type);
 
@@ -349,6 +346,10 @@ class XLATensor {
       XLATensor& input, double scale,
       const std::vector<std::vector<xla::int64>>& groups);
 
+  static void cross_replica_sum(
+      std::vector<XLATensor>* inputs, double scale,
+      const std::vector<std::vector<xla::int64>>& groups);
+
   // Returns the cumulative product of elements of input in the given dimension.
   static XLATensor cumprod(const XLATensor& input, xla::int64 dim,
                            c10::optional<at::ScalarType> dtype);
@@ -417,6 +418,8 @@ class XLATensor {
   // Returns a 2-D tensor with ones on the diagonal and zeros elsewhere.
   static XLATensor eye(xla::int64 lines, xla::int64 cols, const Device& device,
                        at::ScalarType element_type);
+
+  static void eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols);
 
   // Fills the input with the given value.
   static void fill_(XLATensor& input, at::Scalar value);
@@ -711,6 +714,8 @@ class XLATensor {
   static XLATensor randperm(xla::int64 n, const Device& device,
                             at::ScalarType scalar_type);
 
+  static void randperm_out(XLATensor& out, xla::int64 n);
+
   static XLATensor reciprocal(const XLATensor& input);
   static void reciprocal_(XLATensor& input);
 
@@ -726,11 +731,6 @@ class XLATensor {
   // repeats.
   static XLATensor repeat(const XLATensor& input,
                           std::vector<xla::int64> repeats);
-
-  // Returns a tensor with the same data and number of elements as input, but
-  // with the specified shape.
-  static XLATensor reshape(const XLATensor& input,
-                           std::vector<xla::int64> output_size);
 
   static void resize_(XLATensor& input, std::vector<xla::int64> size);
 

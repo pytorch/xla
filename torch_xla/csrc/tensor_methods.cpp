@@ -487,12 +487,6 @@ XLATensor XLATensor::any(const XLATensor& input,
                                  keep_reduced_dimensions));
 }
 
-XLATensor XLATensor::arange(at::Scalar start, at::Scalar end, at::Scalar step,
-                            const Device& device, at::ScalarType scalar_type) {
-  return Create(ir::ops::ARange(start, end, step, scalar_type), device,
-                scalar_type);
-}
-
 void XLATensor::arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
                            at::Scalar step, at::ScalarType scalar_type) {
   out.SetIrValue(ir::ops::ARange(start, end, step, scalar_type));
@@ -771,6 +765,14 @@ void XLATensor::cross_replica_sum_(
       ir::ops::CrossReplicaSumOp(input.GetIrValue(), scale, groups));
 }
 
+void XLATensor::cross_replica_sum(
+    std::vector<XLATensor>* inputs, double scale,
+    const std::vector<std::vector<xla::int64>>& groups) {
+  for (auto& input : *inputs) {
+    cross_replica_sum_(input, scale, groups);
+  }
+}
+
 XLATensor XLATensor::cumprod(const XLATensor& input, xla::int64 dim,
                              c10::optional<at::ScalarType> dtype) {
   xla::int64 canonical_dim =
@@ -951,6 +953,13 @@ XLATensor XLATensor::eye(xla::int64 lines, xla::int64 cols,
       ir::ops::Identity(lines, cols,
                         MakeXlaPrimitiveType(element_type, &device)),
       device, element_type);
+}
+
+void XLATensor::eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols) {
+  out.SetIrValue(
+      ir::ops::Identity(lines, cols >= 0 ? cols : lines,
+                        GetDevicePrimitiveType(out.shape().get().element_type(),
+                                               &out.GetDevice())));
 }
 
 void XLATensor::fill_(XLATensor& input, at::Scalar value) {
@@ -1716,12 +1725,10 @@ std::tuple<XLATensor, XLATensor> XLATensor::qr(const XLATensor& input,
                          input.CreateFrom(ir::Value(node, 1)));
 }
 
-XLATensor XLATensor::randperm(xla::int64 n, const Device& device,
-                              at::ScalarType element_type) {
+void XLATensor::randperm_out(XLATensor& out, xla::int64 n) {
   xla::PrimitiveType xla_element_type =
-      MakeXlaPrimitiveType(element_type, &device);
-  return Create(ir::MakeNode<ir::ops::Randperm>(n, xla_element_type), device,
-                element_type);
+      GetDevicePrimitiveType(xla::PrimitiveType::S64, &out.GetDevice());
+  out.SetIrValue(ir::MakeNode<ir::ops::Randperm>(n, xla_element_type));
 }
 
 XLATensor XLATensor::reciprocal(const XLATensor& input) {
@@ -1765,12 +1772,6 @@ XLATensor XLATensor::repeat(const XLATensor& input,
                             std::vector<xla::int64> repeats) {
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Repeat>(input.GetIrValue(), std::move(repeats)));
-}
-
-XLATensor XLATensor::reshape(const XLATensor& input,
-                             std::vector<xla::int64> output_size) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::View>(input.GetIrValue(), std::move(output_size)));
 }
 
 void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
