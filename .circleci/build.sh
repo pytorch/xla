@@ -22,10 +22,19 @@ fi
 
 PYTORCH_DIR=/tmp/pytorch
 XLA_DIR="$PYTORCH_DIR/xla"
-git clone --recursive --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
+git clone --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
 cp -r "$PWD" "$XLA_DIR"
 
 cd $PYTORCH_DIR
+
+# If torch_commit_id exists, checkout that.
+COMMITID_FILE="xla/.torch_commit_id"
+if [ -e "$COMMITID_FILE" ]; then
+  git checkout $(cat "$COMMITID_FILE")
+fi
+
+# Only checkout dependencies once PT commit ID checked out.
+git submodule update --init --recursive
 
 # Install ninja to speedup the build
 pip install ninja
