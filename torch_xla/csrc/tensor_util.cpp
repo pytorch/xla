@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/tensor_util.h"
 
 #include <algorithm>
+#include <cstring>
 #include <functional>
 #include <list>
 #include <numeric>
@@ -55,6 +56,8 @@ xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type,
                                                : xla::PrimitiveType::F32;
     case at::ScalarType::Float:
       return xla::PrimitiveType::F32;
+    case at::ScalarType::BFloat16:
+      return xla::PrimitiveType::BF16;
     case at::ScalarType::Bool:
       return xla::PrimitiveType::PRED;
     case at::ScalarType::Byte:
@@ -72,14 +75,37 @@ xla::PrimitiveType XlaTypeFromTensorType(at::ScalarType scalar_type,
   }
 }
 
+template <typename S>
+struct Caster {
+  template <typename D>
+  D cast(const S& value) const {
+    return static_cast<D>(value);
+  }
+};
+template <>
+struct Caster<at::BFloat16> {
+  template <typename D>
+  D cast(const at::BFloat16& value) const {
+    return static_cast<D>(static_cast<float>(value));
+  }
+};
+template <>
+struct Caster<tensorflow::bfloat16> {
+  template <typename D>
+  D cast(const tensorflow::bfloat16& value) const {
+    return static_cast<D>(static_cast<float>(value));
+  }
+};
+
 // Copies n bytes from source to dest, with different stride values for source
 // and destination.
 template <typename S, typename D>
 void StridedCopy(D* dest, xla::int64 dest_stride, const S* source,
                  xla::int64 source_stride, xla::int64 n) {
+  Caster<S> caster;
   const S* source_top = source + n * source_stride;
   for (; source < source_top; dest += dest_stride, source += source_stride) {
-    *dest = static_cast<D>(*source);
+    *dest = caster.template cast<D>(*source);
   }
 }
 
@@ -108,6 +134,10 @@ template <>
 struct NeedCast<tensorflow::bfloat16> {
   static constexpr bool value = true;
 };
+template <>
+struct NeedCast<at::BFloat16> {
+  static constexpr bool value = true;
+};
 
 template <bool CAST>
 struct CopyType {
@@ -128,6 +158,23 @@ void CopyData(D* dest, const S* source, xla::int64 n, const CopyCasted&) {
   // Use strided copy with step 1 since it has the static_cast<> required to
   // convert from/to bfloat16.
   StridedCopy(dest, 1, source, 1, n);
+}
+template <>
+void CopyData<at::BFloat16, tensorflow::bfloat16>(
+    at::BFloat16* dest, const tensorflow::bfloat16* source, xla::int64 n,
+    const CopyCasted&) {
+  static_assert(sizeof(at::BFloat16) == sizeof(tensorflow::bfloat16),
+                "Mismatching size for bfloat16 types");
+  std::memcpy(dest, source, n * sizeof(at::BFloat16));
+}
+template <>
+void CopyData<tensorflow::bfloat16, at::BFloat16>(tensorflow::bfloat16* dest,
+                                                  const at::BFloat16* source,
+                                                  xla::int64 n,
+                                                  const CopyCasted&) {
+  static_assert(sizeof(at::BFloat16) == sizeof(tensorflow::bfloat16),
+                "Mismatching size for bfloat16 types");
+  std::memcpy(dest, source, n * sizeof(at::BFloat16));
 }
 
 std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
@@ -335,6 +382,10 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
       TensorToBufferSType<float>(tensor, dest_shape, dest_buffer,
                                  dest_buffer_size, device);
       break;
+    case at::ScalarType::BFloat16:
+      TensorToBufferSType<at::BFloat16>(tensor, dest_shape, dest_buffer,
+                                        dest_buffer_size, device);
+      break;
     case at::ScalarType::Bool:
       TensorToBufferSType<bool>(tensor, dest_shape, dest_buffer,
                                 dest_buffer_size, device);
@@ -420,6 +471,9 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
       return XlaLiteralToTensor<SType, float>(literal, dest_element_type);
     case at::ScalarType::Double:
       return XlaLiteralToTensor<SType, double>(literal, dest_element_type);
+    case at::ScalarType::BFloat16:
+      return XlaLiteralToTensor<SType, at::BFloat16>(literal,
+                                                     dest_element_type);
     default:
       XLA_ERROR() << "Unsupported scalar type: " << dest_element_type;
   }
@@ -528,6 +582,8 @@ size_t TensorHash(const at::Tensor& tensor) {
       return xla::util::DataHash(ctensor.data_ptr<float>(), size);
     case at::ScalarType::Double:
       return xla::util::DataHash(ctensor.data_ptr<double>(), size);
+    case at::ScalarType::BFloat16:
+      return xla::util::DataHash(ctensor.data_ptr<at::BFloat16>(), size);
     default:
       XLA_ERROR() << "Unsupported scalar type: " << ctensor.scalar_type();
   }
@@ -573,6 +629,9 @@ xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
 at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
   switch (xla_type) {
     case xla::PrimitiveType::BF16:
+      if (!UseBF16()) {
+        return at::ScalarType::BFloat16;
+      }
     case xla::PrimitiveType::F32:
       return at::ScalarType::Float;
     case xla::PrimitiveType::F64:
@@ -636,6 +695,8 @@ xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
       return GetDevicePrimitiveType(xla::PrimitiveType::F64, device);
     case at::ScalarType::Float:
       return GetDevicePrimitiveType(xla::PrimitiveType::F32, device);
+    case at::ScalarType::BFloat16:
+      return GetDevicePrimitiveType(xla::PrimitiveType::BF16, device);
     case at::ScalarType::Bool:
       return GetDevicePrimitiveType(xla::PrimitiveType::PRED, device);
     case at::ScalarType::Byte:
