@@ -1184,6 +1184,9 @@ void XLATensor::WaitDeviceOps(
       wait_devices.insert(Device(device_str));
     }
   }
+  // The LockDevices() API returns a vector of xla::util::ExceptionCleanup
+  // object, which is going to be freed immediately, turning this operation into
+  // a lock barrier.
   LockDevices(wait_devices);
 }
 
