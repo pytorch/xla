@@ -104,6 +104,7 @@ _FN_BLACKLIST = set([
     'randperm',
     'reshape',
     'size',
+    'sum_to_size',
     'to',
     'zeros',
     'zeros_like',
