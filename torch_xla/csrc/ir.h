@@ -219,7 +219,7 @@ class Node {
     if (user_metadata_ == nullptr) {
       user_metadata_ = std::make_shared<T>();
     }
-    return dynamic_cast<T*>(user_metadata_.get());
+    return user_metadata<T>();
   }
 
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
