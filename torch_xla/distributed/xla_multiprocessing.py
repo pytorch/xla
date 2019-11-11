@@ -123,7 +123,7 @@ def _start_fn(index, fn, args):
   sys.exit(exit_code)
 
 
-def spawn(fn, args=(), nprocs=None, join=True, daemon=False):
+def spawn(fn, args=(), nprocs=None, join=True, daemon=False, start_method='spawn'):
   """Enables multi processing based replication.
 
   Args:
@@ -150,5 +150,6 @@ def spawn(fn, args=(), nprocs=None, join=True, daemon=False):
         fn, args=args, nprocs=nprocs, join=join, daemon=daemon)
 
   nprocs = _pre_fork_setup(nprocs)
-  return torch.multiprocessing.spawn(
-      _start_fn, args=(fn, args), nprocs=nprocs, join=join, daemon=daemon)
+  return torch.multiprocessing.start_processes(
+      _start_fn, args=(fn, args), nprocs=nprocs, join=join, daemon=daemon,
+      start_method=start_method)
