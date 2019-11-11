@@ -99,6 +99,7 @@ std::vector<XLATensor> GetXlaTensors(const std::vector<at::Tensor>& tensors,
       }
     }
   }
+  return xtensors;
 }
 
 void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
