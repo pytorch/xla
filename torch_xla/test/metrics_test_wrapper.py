@@ -3,11 +3,26 @@
 It can be used to save a historical record of metrics and/or check metrics
 against a golden set of metrics to search for performance regressions.
 
+This script expects a certain directory structure to setup tests and to hold
+metrics results. In the outermost directory, there should be a base config file
+detailed below. Within that directory, there should be a subdirectory for each
+test that contains a metrics_history subdirectory and (optionally) a config file
+to override fields of the base config. In other words, it should look like this:
+
+    root/
+      base_config.json
+      mnist/
+        config_overrides.json
+        metrics_history/
+
+TODO(zcain): Design and document the config file.
+
 Example usage:
-python metrics_test_wrapper.py --metrics_output_filename="metrics.txt" \
-    -- python test/test_train_mnist.py --num_epochs=1
+python metrics_test_wrapper.py --root="gs://model_metrics" \
+    --test_folder_name="mnist" -- python test/test_train_mnist.py --num_epochs=1
 """
 import argparse
+import datetime
 import glob
 import os
 import shutil
@@ -19,6 +34,7 @@ import torch_xla.utils.gcsfs as gcsfs
 
 
 _CLOUD_STORAGE_PREFIX = 'gs://'
+_METRICS_HISTORY_DIR_NAME = 'metrics_history'
 _XLA_METRICS_FILE = 'XLA_METRICS_FILE'
 
 
@@ -78,30 +94,38 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(
           description='PyTorch on TPU: Verify metrics and/or save to disk.',
       epilog=('Usage example: metrics_test_wrapper.py '
-          '--golden_metrics_filename="gcs://bucket/file" '
-          '--metrics_output_filename="gcs://bucket/file" -- python train.py'))
-  parser.add_argument('--golden_metrics_filename', type=str, default=None,
-                      help='Read metrics from here and compare to current.')
-  parser.add_argument('--metrics_output_filename', type=str, default=None,
-                      help='If provided, write current metrics here.')
+          '--root="gs://model_metrics" '
+          '--test_name="mnist" -- python train.py'))
+  parser.add_argument('--root', type=str, default=None,
+                      help='Root dir for metrics test data. See docstring at '
+                      'the top of this script.')
+  parser.add_argument('--test_folder_name', type=str, default=None,
+                      help='Folder within root/ for this test. See docstring '
+                      'at the top of this script.')
   parser.add_argument(
       'positional',
       nargs='+',
       type=str,
       help='The python command to run.')
   FLAGS = parser.parse_args()
-  if not (FLAGS.golden_metrics_filename or FLAGS.metrics_output_filename):
-    raise ValueError('At least one of golden_metrics_filename or '
-                     'metrics_output_filename is required.')
+  if not FLAGS.root or not FLAGS.test_folder_name:
+    raise ValueError('root and test_folder_name are required arguments.')
 
+  # TODO(zcain): Verify that root contains base_config.
+  # TODO(zcain): Read tolerances from base_config and maybe override with
+  #              test-specific config from test_folder_name.
+  # TODO(zcain): Read metrics_history for current test, retrieve N days of
+  #              history.
+  # TODO(zcain): Calculate mean and std dev for each metrics, then compare
+  #              against metrics from the subprocess call.
+  
   metrics, sp_return_code = _run_subprocess(FLAGS.positional)
 
   # Include the params for this invocation when saving metrics.
   output_string = '{}\n\n{}'.format(FLAGS, metrics)
-  _write_to_disk(output_string, FLAGS.metrics_output_filename)
-
-  if FLAGS.golden_metrics_filename:
-    # TODO(zcain): Read golden metrics file and compare to current metrics.
-    pass
+  output_filename = os.path.join(
+      FLAGS.root, FLAGS.test_folder_name, _METRICS_HISTORY_DIR_NAME,
+      datetime.datetime.utcnow().strftime('%Y_%m_%d'))
+  _write_to_disk(output_string, output_filename)
 
   sys.exit(sp_return_code)
