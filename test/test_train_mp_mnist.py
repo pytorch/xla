@@ -65,15 +65,16 @@ def train_mnist():
         sample_count=10000 // FLAGS.batch_size // xm.xrt_world_size())
   else:
     train_dataset = datasets.MNIST(
-        FLAGS.datadir,
+        os.path.join(FLAGS.datadir, str(xm.get_ordinal())),
         train=True,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
-        FLAGS.datadir,
+        os.path.join(FLAGS.datadir, str(xm.get_ordinal())),
         train=False,
+        download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
