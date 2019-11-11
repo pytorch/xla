@@ -41,17 +41,18 @@ _XLA_METRICS_FILE = 'XLA_METRICS_FILE'
 def _find_correct_metrics_file(base_metrics_file):
   # Distributed training jobs write 1 file per core. If XLA_METRICS_FILE is set
   # to 'base_metrics_file', then the distributed output files have the format
-  # 'base_metrics_file.0', 'base_metrics_file.1', etc.
+  # 'base_metrics_file.0', 'base_metrics_file.1', etc. Non-distributed training
+  # will simply write to 'base_metrics_file'.
   metrics_files = glob.glob('{}*'.format(base_metrics_file))
-  if len(metrics_files) == 1:
-      # Non-distributed case: the correct file is simply 'base_metrics_file'.
-    file_to_read = base_metrics_file
-  else:
-    # Choose the file of the first core. When sorted alphabetically, the first
-    # element will be 'base_metrics_file' which is empty in the distributed
-    # case. The second element will be 'base_metrics_file.0'.
-    file_to_read = sorted(metrics_files)[1]
-  return file_to_read
+
+  # Use 'base_metrics_file' if it contains the metrics, otherwise use the
+  # metrics file from the first numbered core, e.g. 'base_metrics_file.0'.
+  for filename in sorted(metrics_files):
+    if os.path.getsize(filename) > 0:
+      return filename
+
+  raise FileNotFoundError(
+      'No non-empty file was found matching: {}'.format(base_metrics_file))
 
 
 def _run_subprocess(cmd):
