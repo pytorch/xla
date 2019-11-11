@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/ops/cross_replica_sum.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -10,40 +9,13 @@
 namespace torch_xla {
 namespace ir {
 namespace ops {
-namespace {
 
-xla::Shape NodeOutputShape(tensorflow::gtl::ArraySlice<const Value> operands) {
-  std::vector<xla::Shape> tuple_shapes;
-  tuple_shapes.reserve(operands.size());
-  for (auto& operand : operands) {
-    tuple_shapes.push_back(operand.shape());
-  }
-  return xla::ShapeUtil::MakeTupleShape(tuple_shapes);
-}
-
-}  // namespace
-
-CrossReplicaSum::CrossReplicaSum(
-    tensorflow::gtl::ArraySlice<const Value> operands, double scale,
-    std::vector<std::vector<xla::int64>> groups)
-    : Node(xla_cross_replica_sum, operands,
-           [&]() { return NodeOutputShape(operands); },
-           /*num_outputs=*/operands.size(), xla::util::MHash(scale, groups)),
+CrossReplicaSum::CrossReplicaSum(const Value& operand, double scale,
+                                 std::vector<std::vector<xla::int64>> groups)
+    : Node(xla_cross_replica_sum, {operand}, operand.shape(),
+           /*num_outputs=*/1, xla::util::MHash(scale, groups)),
       scale_(scale),
       groups_(std::move(groups)) {}
-
-NodePtr CrossReplicaSum::Clone(OpList operands) const {
-  return MakeNode<CrossReplicaSum>(operands, scale_, groups_);
-}
-
-XlaOpVector CrossReplicaSum::Lower(LoweringContext* loctx) const {
-  std::vector<xla::XlaOp> inputs;
-  inputs.reserve(operands().size());
-  for (auto& input : operands()) {
-    inputs.push_back(loctx->GetOutputOp(input));
-  }
-  return ReturnOps(BuildCrossReplicaSum(inputs, scale_, groups_), loctx);
-}
 
 std::string CrossReplicaSum::ToString() const {
   std::stringstream ss;
@@ -54,6 +26,16 @@ std::string CrossReplicaSum::ToString() const {
   }
   ss << ")";
   return ss.str();
+}
+
+NodePtr CrossReplicaSum::Clone(OpList operands) const {
+  return MakeNode<CrossReplicaSum>(operands.at(0), scale_, groups_);
+}
+
+XlaOpVector CrossReplicaSum::Lower(LoweringContext* loctx) const {
+  xla::XlaOp op = loctx->GetOutputOp(operand(0));
+  xla::XlaOp crs = BuildCrossReplicaSum(op, scale_, groups_);
+  return ReturnOp(crs, loctx);
 }
 
 }  // namespace ops
