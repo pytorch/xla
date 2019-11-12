@@ -33,7 +33,8 @@ ReduceContext GetReduceContext(
 }  // namespace
 
 std::vector<xla::XlaOp> BuildCrossReplicaSum(
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands, double scale,
+    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands,
+    const xla::XlaOp& token, double scale,
     const std::vector<std::vector<xla::int64>>& groups) {
   std::vector<xla::ReplicaGroup> crs_groups;
   for (auto& group : groups) {
@@ -44,6 +45,7 @@ std::vector<xla::XlaOp> BuildCrossReplicaSum(
     crs_groups.push_back(std::move(rgroup));
   }
   // TODO: Chain reduces with xla::Token when support will show up.
+  xla::XlaOp chained_token = token;
   ReduceContext redux = GetReduceContext(operands);
   std::vector<xla::XlaOp> result(operands.size());
   for (auto& type_ctx : redux.contexts) {
@@ -60,6 +62,7 @@ std::vector<xla::XlaOp> BuildCrossReplicaSum(
       result[op_idx] = gte;
     }
   }
+  result.push_back(chained_token);
   return result;
 }
 

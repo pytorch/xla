@@ -204,6 +204,7 @@ def set_replication(device, devices):
     torch_xla._XLAC._xla_set_replication_devices([])
     _TLS.device_index = 0
   _TLS.device = device
+  _TLS.all_reduce_token = None
   torch_xla._XLAC._xla_set_default_device(device)
 
 
@@ -433,6 +434,19 @@ def _fetch_gradients(optimizer):
   return gradients
 
 
+def _get_all_reduce_token():
+  token = getattr(_TLS, 'all_reduce_token', None)
+  if token is None:
+    token = torch_xla._XLAC._xla_create_token()
+    _TLS.all_reduce_token = token
+  return token
+
+
+def cross_replica_sum(inputs, scale=1.0, groups=[]):
+  _TLS.all_reduce_token = torch_xla._XLAC._xla_cross_replica_sum(
+      inputs, _get_all_reduce_token(), scale, groups)
+
+
 def mark_step():
   torch_xla._XLAC._xla_step_marker(
       torch_xla._XLAC._xla_get_default_device(), [],
@@ -441,6 +455,7 @@ def mark_step():
   # same values from different threads.
   if is_master_ordinal():
     ms.save_metrics()
+  _TLS.all_reduce_token = None
 
 
 def wait_device_ops(devices=[]):
@@ -475,7 +490,7 @@ def optimizer_step(optimizer, barrier=False, optimizer_args={}):
   count = torch_xla._XLAC._xla_get_replication_devices_count()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
-    torch_xla._XLAC._xla_cross_replica_sum(gradients, 1.0 / count, [])
+    cross_replica_sum(gradients, scale=1.0 / count)
   loss = optimizer.step(**optimizer_args)
   if barrier:
     mark_step()
