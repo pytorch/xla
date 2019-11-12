@@ -54,6 +54,14 @@ def _local_index_to_global(index):
   return _get_local_worker_index() * _get_devices_per_worker() + index
 
 
+def _setup_world_size(num_devices):
+  # We cannot call into xla_model code at this point, as we do not know whether
+  # the called code would trigger XLA library initializations (which we must
+  # not do at this point). So we avoid calling into xm.xrt_world_size().
+  world_size = int(os.environ.get(xenv.WORLD_SIZE, '1')) * num_devices
+  os.environ[xenv.WORLD_SIZE] = str(world_size)
+
+
 def _pre_fork_setup(num_devices):
   if num_devices is None:
     num_devices = _get_devices_per_worker()
@@ -61,11 +69,6 @@ def _pre_fork_setup(num_devices):
     raise ValueError(
         'The number of devices must be either 1 or {}, got {} instead'.format(
             _get_devices_per_worker(), num_devices))
-  # We cannot call into xla_model code at this point, as we do not know whether
-  # the called code would trigger XLA library initializations (which we must
-  # not do at this point). So we avoid calling into xm.xrt_world_size().
-  world_size = int(os.environ.get(xenv.WORLD_SIZE, '1')) * num_devices
-  os.environ[xenv.WORLD_SIZE] = str(world_size)
   if not os.environ.get(xenv.SERVICE_ADDRESS, None):
     # In multi-processing mode, even if there is only one TPU host, we still
     # bring up the mesh service.
@@ -74,7 +77,8 @@ def _pre_fork_setup(num_devices):
   return num_devices
 
 
-def _prepare_env_for_index(index):
+def _prepare_env_for_index(index, num_devices):
+  _setup_world_size(num_devices)
   gindex = _local_index_to_global(index)
   os.environ[xenv.MP_DEVICE] = 'TPU:{}'.format(gindex)
   os.environ[xenv.ORDINAL] = str(gindex)
@@ -97,8 +101,8 @@ def _setup_replication():
     xm.set_replication(str(device), [str(device)])
 
 
-def _start_fn(index, fn, args):
-  gindex = _prepare_env_for_index(index)
+def _start_fn(index, num_devices, fn, args):
+  gindex = _prepare_env_for_index(index, num_devices)
   # Calling _setup_replication() will trigger XLA library initialization, so the
   # environment must be fully setup before doing so.
   _setup_replication()
@@ -115,7 +119,31 @@ def _start_fn(index, fn, args):
   sys.exit(exit_code)
 
 
-def spawn(fn, args=(), nprocs=None, join=True, daemon=False, start_method='spawn'):
+def spawn(fn,
+          args=(),
+          nprocs=None,
+          join=True,
+          daemon=False,
+          start_method='spawn'):
+  """Enables multi processing based replication.
+
+  Args:
+    fn: The function to be called for each device which takes part of the
+      replication. The function will be called with a first argument being the
+      global index of the process within the replication, followed by the
+      arguments passed in `args`.
+    args: The arguments for `fn`.
+    nprocs: The number of processes/devices for the replication. At the moment,
+      if specified, can be either 1 or the maximum number of devices.
+    join: Whether the call should block waiting for the completion of the
+      processes which have being spawned.
+    daemon: Whether the processes being spawned should have the `daemon` flag
+      set (see Python multi-processing API).
+
+  Returns:
+    The same object returned by the `torch.multiprocessing.spawn` API.
+  """
+
   if not _is_tpu_config():
     # If this is not an TPU setup, jump to normal multi-processing.
     nprocs = nprocs or 1
@@ -124,5 +152,9 @@ def spawn(fn, args=(), nprocs=None, join=True, daemon=False, start_method='spawn
 
   nprocs = _pre_fork_setup(nprocs)
   return torch.multiprocessing.start_processes(
-      _start_fn, args=(fn, args), nprocs=nprocs, join=join, daemon=daemon,
+      _start_fn,
+      args=(nprocs, fn, args),
+      nprocs=nprocs,
+      join=join,
+      daemon=daemon,
       start_method=start_method)
