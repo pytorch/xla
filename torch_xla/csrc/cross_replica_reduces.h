@@ -10,7 +10,8 @@ namespace torch_xla {
 // Builds a Cross Replica Sum operation on the operand, and scales the result by
 // scale.
 std::vector<xla::XlaOp> BuildCrossReplicaSum(
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands, double scale,
+    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands,
+    const xla::XlaOp& token, double scale,
     const std::vector<std::vector<xla::int64>>& groups);
 
 }  // namespace torch_xla

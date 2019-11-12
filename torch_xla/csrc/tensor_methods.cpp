@@ -751,35 +751,39 @@ XLATensor XLATensor::cross(const XLATensor& input, const XLATensor& other,
   return tensor_ops::Cross(input, other, dim);
 }
 
-XLATensor XLATensor::cross_replica_sum(
-    const XLATensor& input, double scale,
+std::pair<XLATensor, ir::Value> XLATensor::cross_replica_sum(
+    const XLATensor& input, const ir::Value& token, double scale,
     const std::vector<std::vector<xla::int64>>& groups) {
   std::vector<ir::Value> input_values({input.GetIrValue()});
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::CrossReplicaSum>(input_values, scale, groups));
+  ir::NodePtr node = ir::MakeNode<ir::ops::CrossReplicaSum>(input_values, token,
+                                                            scale, groups);
+  return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
-void XLATensor::cross_replica_sum_(
-    XLATensor& input, double scale,
+ir::Value XLATensor::cross_replica_sum_(
+    XLATensor& input, const ir::Value& token, double scale,
     const std::vector<std::vector<xla::int64>>& groups) {
   std::vector<ir::Value> input_values({input.GetIrValue()});
-  input.SetIrValue(
-      ir::MakeNode<ir::ops::CrossReplicaSum>(input_values, scale, groups));
+  ir::NodePtr node = ir::MakeNode<ir::ops::CrossReplicaSum>(input_values, token,
+                                                            scale, groups);
+  input.SetIrValue(ir::Value(node, 0));
+  return ir::Value(node, 1);
 }
 
-void XLATensor::cross_replica_sum(
-    std::vector<XLATensor>* inputs, double scale,
+ir::Value XLATensor::cross_replica_sum(
+    std::vector<XLATensor>* inputs, const ir::Value& token, double scale,
     const std::vector<std::vector<xla::int64>>& groups) {
   std::vector<ir::Value> input_values;
   input_values.reserve(inputs->size());
   for (auto& input : *inputs) {
     input_values.push_back(input.GetIrValue());
   }
-  ir::NodePtr node =
-      ir::MakeNode<ir::ops::CrossReplicaSum>(input_values, scale, groups);
+  ir::NodePtr node = ir::MakeNode<ir::ops::CrossReplicaSum>(input_values, token,
+                                                            scale, groups);
   for (size_t i = 0; i < inputs->size(); ++i) {
     (*inputs)[i].SetIrValue(ir::Value(node, i));
   }
+  return ir::Value(node, inputs->size());
 }
 
 XLATensor XLATensor::cumprod(const XLATensor& input, xla::int64 dim,

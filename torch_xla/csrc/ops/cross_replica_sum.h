@@ -9,7 +9,8 @@ namespace ops {
 class CrossReplicaSum : public Node {
  public:
   CrossReplicaSum(tensorflow::gtl::ArraySlice<const Value> operands,
-                  double scale, std::vector<std::vector<xla::int64>> groups);
+                  const Value& token, double scale,
+                  std::vector<std::vector<xla::int64>> groups);
 
   std::string ToString() const override;
 
