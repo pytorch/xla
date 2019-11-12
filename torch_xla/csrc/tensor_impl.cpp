@@ -55,6 +55,11 @@ XLATensorImpl::XLATensorImpl(XLATensor tensor)
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(std::move(tensor)) {}
 
+void XLATensorImpl::set_tensor(XLATensor xla_tensor) {
+  tensor_ = std::move(xla_tensor);
+  generation_ = 0;
+}
+
 c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach(
     const c10::VariableVersion& version_counter,
     bool allow_tensor_metadata_change) const {

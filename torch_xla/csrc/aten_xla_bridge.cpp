@@ -64,6 +64,14 @@ XLATensor GetXlaTensor(const at::Tensor& tensor) {
   return *xtensor;
 }
 
+void ReplaceXlaTensor(const at::Tensor& tensor, XLATensor new_xla_tensor) {
+  XLATensorImpl* impl =
+      dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
+  XLA_CHECK(impl != nullptr)
+      << "Input tensor is not an XLA tensor: " << tensor.toString();
+  impl->set_tensor(std::move(new_xla_tensor));
+}
+
 std::vector<XLATensor> GetXlaTensors(
     tensorflow::gtl::ArraySlice<const at::Tensor> tensors) {
   std::vector<XLATensor> xla_tensors;
