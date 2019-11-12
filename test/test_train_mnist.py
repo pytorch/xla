@@ -12,7 +12,6 @@ from common_utils import TestCase, run_tests
 import os
 from statistics import mean
 import shutil
-import test_utils
 import time
 import torch
 import torch.nn as nn
@@ -24,6 +23,7 @@ import torch_xla.distributed.data_parallel as dp
 import torch_xla.debug.metrics as met
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
+import torch_xla.test.test_utils as test_utils
 import unittest
 
 

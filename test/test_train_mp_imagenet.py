@@ -38,7 +38,6 @@ FLAGS = args_parse.parse_common_options(
 
 import os
 import schedulers
-import test_utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -52,6 +51,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.test.test_utils as test_utils
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
