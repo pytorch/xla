@@ -896,6 +896,7 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
         t.getIntrusivePtr());
   } else {
     XLATensor::copy_(*self_tensor, *src_tensor);
+    bridge::ReplaceXlaTensor(self, *self_tensor);
   }
   return self;
 }
