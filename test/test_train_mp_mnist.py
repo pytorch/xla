@@ -11,7 +11,6 @@ FLAGS = args_parse.parse_common_options(
 import os
 import shutil
 import sys
-import test_utils
 import time
 import torch
 import torch.nn as nn
@@ -25,6 +24,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.test.test_utils as test_utils
 
 
 class MNIST(nn.Module):
