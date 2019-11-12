@@ -11,7 +11,6 @@ FLAGS = args_parse.parse_common_options(
 import os
 import shutil
 import sys
-import test_utils
 import time
 import torch
 import torch.nn as nn
@@ -25,6 +24,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.test.test_utils as test_utils
 
 
 class MNIST(nn.Module):
@@ -65,15 +65,16 @@ def train_mnist():
         sample_count=10000 // FLAGS.batch_size // xm.xrt_world_size())
   else:
     train_dataset = datasets.MNIST(
-        FLAGS.datadir,
+        os.path.join(FLAGS.datadir, str(xm.get_ordinal())),
         train=True,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
-        FLAGS.datadir,
+        os.path.join(FLAGS.datadir, str(xm.get_ordinal())),
         train=False,
+        download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))

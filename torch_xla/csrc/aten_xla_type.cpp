@@ -312,7 +312,8 @@ at::Tensor AtenXlaType::_s_where(const at::Tensor& condition,
 at::Tensor AtenXlaType::_softmax(const at::Tensor& self, int64_t dim,
                                  bool /* half_to_float */) {
   XLA_FN_COUNTER("xla::");
-  return softmax(self, dim, c10::nullopt);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::softmax(bridge::GetXlaTensor(self), dim, c10::nullopt));
 }
 
 at::Tensor AtenXlaType::_softmax_backward_data(const at::Tensor& grad_output,
@@ -486,44 +487,12 @@ at::Tensor AtenXlaType::any(const at::Tensor& self, int64_t dim, bool keepdim) {
       XLATensor::any(bridge::GetXlaTensor(self), {dim}, keepdim));
 }
 
-at::Tensor AtenXlaType::arange(at::Scalar end,
-                               const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(XLATensor::arange(
-      0, end, 1, xla_options.get_device(), xla_options.get_scalar_type()));
-}
-
-at::Tensor AtenXlaType::arange(at::Scalar start, at::Scalar end,
-                               const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(XLATensor::arange(
-      start, end, 1, xla_options.get_device(), xla_options.get_scalar_type()));
-}
-
-at::Tensor AtenXlaType::arange(at::Scalar start, at::Scalar end,
-                               at::Scalar step,
-                               const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::arange(start, end, step, xla_options.get_device(),
-                        xla_options.get_scalar_type()));
-}
-
 at::Tensor& AtenXlaType::arange_out(at::Tensor& out, at::Scalar start,
                                     at::Scalar end, at::Scalar step) {
   XLA_FN_COUNTER("xla::");
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::arange_out(out_tensor, start, end, step, out.scalar_type());
   return out;
-}
-
-at::Tensor AtenXlaType::argsort(const at::Tensor& self, int64_t dim,
-                                bool descending) {
-  XLA_FN_COUNTER("xla::");
-  return std::get<1>(sort(self, dim, descending));
 }
 
 at::Tensor AtenXlaType::as_strided(const at::Tensor& self, at::IntArrayRef size,
@@ -662,18 +631,6 @@ at::Tensor AtenXlaType::avg_pool3d_backward(
       count_include_pad));
 }
 
-at::Tensor AtenXlaType::bartlett_window(int64_t window_length,
-                                        const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::bartlett_window(window_length, options);
-}
-
-at::Tensor AtenXlaType::bartlett_window(int64_t window_length, bool periodic,
-                                        const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::bartlett_window(window_length, periodic, options);
-}
-
 at::Tensor AtenXlaType::bernoulli(const at::Tensor& self,
                                   at::Generator* generator) {
   XLA_FN_COUNTER("xla::");
@@ -712,18 +669,6 @@ at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
   XLA_FN_COUNTER("xla::");
   return at::native::binary_cross_entropy_with_logits(self, target, weight,
                                                       pos_weight, reduction);
-}
-
-at::Tensor AtenXlaType::blackman_window(int64_t window_length,
-                                        const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::blackman_window(window_length, options);
-}
-
-at::Tensor AtenXlaType::blackman_window(int64_t window_length, bool periodic,
-                                        const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::blackman_window(window_length, periodic, options);
 }
 
 at::Tensor AtenXlaType::bmm(const at::Tensor& self, const at::Tensor& mat2) {
@@ -880,6 +825,7 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
         t.getIntrusivePtr());
   } else {
     XLATensor::copy_(*self_tensor, *src_tensor);
+    bridge::ReplaceXlaTensor(self, *self_tensor);
   }
   return self;
 }
@@ -1052,36 +998,26 @@ at::Tensor AtenXlaType::embedding_dense_backward(const at::Tensor& grad_output,
       num_weights, padding_idx, scale_grad_by_freq));
 }
 
-at::Tensor AtenXlaType::empty(at::IntArrayRef size,
-                              const at::TensorOptions& options,
-                              c10::optional<at::MemoryFormat> memory_format) {
+at::Tensor AtenXlaType::empty(
+    at::IntArrayRef size, const at::TensorOptions& options,
+    c10::optional<at::MemoryFormat> /* memory_format */) {
   XLA_FN_COUNTER("xla::");
   // PT empty*() are optimizations to avoid initializing the data when it is
   // known it will be completely rewritten. But since for us doing a zero*()
   // does not actually end up doing any memory initialization, we use that and
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
-  return full(size, 0, options);
-}
-
-at::Tensor AtenXlaType::empty_like(
-    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, memory_format);
-}
-
-at::Tensor AtenXlaType::empty_like(
-    const at::Tensor& self, const at::TensorOptions& options,
-    c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, options, memory_format);
+  XlaOptions xla_options(options);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::full(XlaHelpers::I64List(size), 0, xla_options.get_device(),
+                      xla_options.get_scalar_type()));
 }
 
 at::Tensor AtenXlaType::empty_strided(at::IntArrayRef size,
                                       at::IntArrayRef stride,
                                       const at::TensorOptions& options) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor t = full(size, 0, options);
+  at::Tensor t = empty(size, options, c10::nullopt);
   return as_strided(t, size, stride, /*storage_offset=*/0);
 }
 
@@ -1180,17 +1116,18 @@ at::Tensor& AtenXlaType::expm1_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::eye(int64_t n, const at::TensorOptions& options) {
+at::Tensor& AtenXlaType::eye_out(at::Tensor& out, int64_t n) {
   XLA_FN_COUNTER("xla::");
-  return eye(n, n, options);
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::eye_out(out_tensor, n, n);
+  return out;
 }
 
-at::Tensor AtenXlaType::eye(int64_t n, int64_t m,
-                            const at::TensorOptions& options) {
+at::Tensor& AtenXlaType::eye_out(at::Tensor& out, int64_t n, int64_t m) {
   XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(XLATensor::eye(
-      n, m, xla_options.get_device(), xla_options.get_scalar_type()));
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::eye_out(out_tensor, n, m);
+  return out;
 }
 
 at::Tensor& AtenXlaType::fill_(at::Tensor& self, at::Scalar value) {
@@ -1265,36 +1202,6 @@ at::Tensor& AtenXlaType::frac_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::full(at::IntArrayRef size, at::Scalar fill_value,
-                             const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::full(XlaHelpers::I64List(size), fill_value,
-                      xla_options.get_device(), xla_options.get_scalar_type()));
-}
-
-at::Tensor AtenXlaType::full_like(
-    const at::Tensor& self, at::Scalar fill_value,
-    c10::optional<at::MemoryFormat> /* memory_format */) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(XLATensor::full_like(
-      self_tensor, fill_value, self_tensor.GetDevice(), c10::nullopt));
-}
-
-at::Tensor AtenXlaType::full_like(
-    const at::Tensor& self, at::Scalar fill_value,
-    const at::TensorOptions& options,
-    c10::optional<at::MemoryFormat> /* memory_format */) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XlaOptions xla_options(options, self_tensor.GetDevice());
-  return bridge::AtenFromXlaTensor(
-      XLATensor::full_like(self_tensor, fill_value, xla_options.get_device(),
-                           xla_options.scalar_type));
-}
-
 at::Tensor AtenXlaType::gather(const at::Tensor& self, int64_t dim,
                                const at::Tensor& index,
                                bool /* sparse_grad */) {
@@ -1365,45 +1272,6 @@ at::Tensor& AtenXlaType::gt_(at::Tensor& self, const at::Tensor& other) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::gt_(self_tensor, bridge::GetXlaTensor(other));
   return self;
-}
-
-at::Tensor AtenXlaType::hamming_window(int64_t window_length,
-                                       const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hamming_window(window_length, options);
-}
-
-at::Tensor AtenXlaType::hamming_window(int64_t window_length, bool periodic,
-                                       const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hamming_window(window_length, periodic, options);
-}
-
-at::Tensor AtenXlaType::hamming_window(int64_t window_length, bool periodic,
-                                       double alpha,
-                                       const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hamming_window(window_length, periodic, alpha, options);
-}
-
-at::Tensor AtenXlaType::hamming_window(int64_t window_length, bool periodic,
-                                       double alpha, double beta,
-                                       const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hamming_window(window_length, periodic, alpha, beta,
-                                    options);
-}
-
-at::Tensor AtenXlaType::hann_window(int64_t window_length,
-                                    const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hann_window(window_length, options);
-}
-
-at::Tensor AtenXlaType::hann_window(int64_t window_length, bool periodic,
-                                    const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::hann_window(window_length, periodic, options);
 }
 
 at::Tensor AtenXlaType::hardshrink(const at::Tensor& self, at::Scalar lambda) {
@@ -2200,25 +2068,6 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
       bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
 }
 
-at::Tensor AtenXlaType::ones(at::IntArrayRef size,
-                             const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return full(size, 1, options);
-}
-
-at::Tensor AtenXlaType::ones_like(
-    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 1, memory_format);
-}
-
-at::Tensor AtenXlaType::ones_like(
-    const at::Tensor& self, const at::TensorOptions& options,
-    c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 1, options, memory_format);
-}
-
 at::Tensor AtenXlaType::permute(const at::Tensor& self, at::IntArrayRef dims) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::permute(
@@ -2305,20 +2154,15 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::qr(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
-at::Tensor AtenXlaType::randperm(int64_t n, const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  XlaOptions xla_options(options);
-  return bridge::AtenFromXlaTensor(XLATensor::randperm(
-      n, xla_options.get_device(), xla_options.get_scalar_type(at::kLong)));
-}
-
-at::Tensor AtenXlaType::randperm(int64_t n, at::Generator* generator,
-                                 const at::TensorOptions& options) {
+at::Tensor& AtenXlaType::randperm_out(at::Tensor& out, int64_t n,
+                                      at::Generator* generator) {
   XLA_FN_COUNTER("xla::");
   if (generator != nullptr) {
-    return AtenXlaTypeDefault::randperm(n, generator, options);
+    return AtenXlaTypeDefault::randperm_out(out, n, generator);
   }
-  return randperm(n, options);
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::randperm_out(out_tensor, n);
+  return out;
 }
 
 at::Tensor AtenXlaType::reciprocal(const at::Tensor& self) {
@@ -2538,11 +2382,6 @@ at::Tensor& AtenXlaType::sinh_(at::Tensor& self) {
   return self;
 }
 
-int64_t AtenXlaType::size(const at::Tensor& self, int64_t dim) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::GetXlaTensor(self).size(dim);
-}
-
 at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
                               int64_t start, int64_t end, int64_t step) {
   XLA_FN_COUNTER("xla::");
@@ -2566,13 +2405,6 @@ at::Tensor AtenXlaType::smooth_l1_loss_backward(const at::Tensor& grad_output,
   return bridge::AtenFromXlaTensor(XLATensor::smooth_l1_loss_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       bridge::GetXlaTensor(target), reduction));
-}
-
-at::Tensor AtenXlaType::softmax(const at::Tensor& self, int64_t dim,
-                                c10::optional<at::ScalarType> dtype) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::softmax(bridge::GetXlaTensor(self), dim, dtype));
 }
 
 at::Tensor AtenXlaType::softplus(const at::Tensor& self, at::Scalar beta,
@@ -2748,12 +2580,6 @@ at::Tensor AtenXlaType::sum(const at::Tensor& self, at::IntArrayRef dim,
                      xla::util::ToVector<xla::int64>(dim), keepdim, dtype));
 }
 
-at::Tensor AtenXlaType::sum_to_size(const at::Tensor& self,
-                                    at::IntArrayRef size) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::sum_to_size(self, size);
-}
-
 std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::svd(
     const at::Tensor& self, bool some, bool compute_uv) {
   XLA_FN_COUNTER("xla::");
@@ -2817,14 +2643,6 @@ at::Tensor AtenXlaType::tanh_backward(const at::Tensor& grad_output,
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output)));
 }
 
-at::Tensor AtenXlaType::tensordot(const at::Tensor& self,
-                                  const at::Tensor& other,
-                                  at::IntArrayRef dims_self,
-                                  at::IntArrayRef dims_other) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::tensordot(self, other, dims_self, dims_other);
-}
-
 at::Tensor AtenXlaType::threshold(const at::Tensor& self, at::Scalar threshold,
                                   at::Scalar value) {
   XLA_FN_COUNTER("xla::");
@@ -2848,51 +2666,6 @@ at::Tensor AtenXlaType::threshold_backward(const at::Tensor& grad_output,
   return bridge::AtenFromXlaTensor(XLATensor::threshold_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       threshold.to<double>()));
-}
-
-at::Tensor AtenXlaType::to(
-    const at::Tensor& self, const at::TensorOptions& options,
-    bool /* non_blocking */, bool /* copy */,
-    c10::optional<at::MemoryFormat> /* memory_format */) {
-  XLA_FN_COUNTER("xla::");
-  auto self_tensor = bridge::TryGetXlaTensor(self);
-  if (!self_tensor) {
-    XLA_CHECK(options.has_device());
-    at::ScalarType dtype = options.has_dtype()
-                               ? c10::typeMetaToScalarType(options.dtype())
-                               : self.scalar_type();
-    XLATensor xtensor =
-        XLATensor::Create(CopyTensor(self, dtype),
-                          bridge::AtenDeviceToXlaDevice(options.device()));
-    return bridge::AtenFromXlaTensor(xtensor);
-  }
-  if (options.has_device() && options.device().type() != at::kXLA) {
-    return bridge::XlaToAtenTensor(*self_tensor, options);
-  }
-  XlaOptions xla_options(options, self_tensor->GetDevice(),
-                         self_tensor->dtype());
-  return bridge::AtenFromXlaTensor(
-      XLATensor::to(*self_tensor, xla_options.device, xla_options.scalar_type));
-}
-
-at::Tensor AtenXlaType::to(const at::Tensor& self, c10::Device device,
-                           at::ScalarType dtype, bool non_blocking, bool copy,
-                           c10::optional<at::MemoryFormat> memory_format) {
-  return to(self, self.options().device(device).dtype(dtype), non_blocking,
-            copy, memory_format);
-}
-
-at::Tensor AtenXlaType::to(const at::Tensor& self, at::ScalarType dtype,
-                           bool non_blocking, bool copy,
-                           c10::optional<at::MemoryFormat> memory_format) {
-  return to(self, self.options().dtype(dtype), non_blocking, copy,
-            memory_format);
-}
-
-at::Tensor AtenXlaType::to(const at::Tensor& self, const at::Tensor& other,
-                           bool non_blocking, bool copy,
-                           c10::optional<at::MemoryFormat> memory_format) {
-  return to(self, other.options(), non_blocking, copy, memory_format);
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::topk(const at::Tensor& self,
@@ -3066,36 +2839,11 @@ at::Tensor AtenXlaType::view(const at::Tensor& self, at::IntArrayRef size) {
       XLATensor::view(bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
 }
 
-at::Tensor AtenXlaType::view_as(const at::Tensor& self,
-                                const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return view(self, other.sizes());
-}
-
 at::Tensor& AtenXlaType::zero_(at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::zero_(self_tensor);
   return self;
-}
-
-at::Tensor AtenXlaType::zeros(at::IntArrayRef size,
-                              const at::TensorOptions& options) {
-  XLA_FN_COUNTER("xla::");
-  return full(size, 0, options);
-}
-
-at::Tensor AtenXlaType::zeros_like(
-    const at::Tensor& self, c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, memory_format);
-}
-
-at::Tensor AtenXlaType::zeros_like(
-    const at::Tensor& self, const at::TensorOptions& options,
-    c10::optional<at::MemoryFormat> memory_format) {
-  XLA_FN_COUNTER("xla::");
-  return full_like(self, 0, options, memory_format);
 }
 
 void AtenXlaType::InitializeAtenBindings() {

@@ -79,24 +79,7 @@ _PARSER = lark.Lark(_GRAMMAR, parser='lalr', propagate_positions=True)
 _XPARSER = lark.Lark(
     _GRAMMAR, parser='lalr', propagate_positions=True, keep_all_tokens=True)
 
-_FN_BLACKLIST = set([
-    'numel',
-    'ones',
-    'ones_like',
-    'result_type',
-    'zero_',
-    'zeros',
-    'zeros_like',
-    # FIXME: Remove functions below when we switch to override leaf nodes only.
-    # The function names below might map to multiple function overrloads.
-    # If the function overload is a leaf node, we must have it in AtenXlaType::
-    # so that we still override them.
-    # Otherwise they're non leaves that we shouldn't generate override for them.
-    # They're blacklisted to avoid creating AtenXlaTypeDefault::func,
-    # so that we can fall back to TypeDefault:: in PyTorch.
-    'narrow',
-    'reshape',
-])
+_FN_BLACKLIST = set([])
 
 _FN_BLACKLIST_REGEX = [
     # ATEN functions
@@ -107,10 +90,6 @@ _FN_BLACKLIST_REGEX = [
 _FN_OUT = {
     'add_out':
         FuncOpts(),
-    'arange_out(Tensor, Scalar, Scalar, Scalar) -> Tensor':
-        FuncOpts(
-            outfn_template=ArgTemplate(
-                'AtenXlaType::arange($1, $2, $3, $0.options())')),
     'clamp_out':
         FuncOpts(),
     'div_out':

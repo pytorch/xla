@@ -136,7 +136,12 @@ tensors across device types does not preserve view relationships. Instead,
 views should be reconstructed as necessary after the tensors are loaded.
 
 1. **Copying an XLA Tensor with Python's copy.copy returns a deep copy, not a
-shallow copy**. Use a view of an XLA tensor to get a shallow copy of it.
+shallow copy.** Use a view of an XLA tensor to get a shallow copy of it.
+
+1. **Handling shared weights.** Modules can share weights by setting the
+Parameters of one module to another. This "tying" of module weights should
+be done **AFTER** the modules are moved to an XLA device. Otherwise two
+independent copies of the shared tensor will be made on the XLA device.
 
 ## More Debugging Tools
 

@@ -16,6 +16,8 @@ class XLATensorImpl : public c10::TensorImpl {
 
   XLATensor& tensor() { return tensor_; }
 
+  void set_tensor(XLATensor xla_tensor);
+
   c10::intrusive_ptr<TensorImpl> shallow_copy_and_detach(
       const c10::VariableVersion& version_counter,
       bool allow_tensor_metadata_change) const override;

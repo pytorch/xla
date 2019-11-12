@@ -140,19 +140,8 @@ class AtenXlaType {
 
   static at::Tensor any(const at::Tensor& self, int64_t dim, bool keepdim);
 
-  static at::Tensor arange(at::Scalar end, const at::TensorOptions& options);
-
-  static at::Tensor arange(at::Scalar start, at::Scalar end,
-                           const at::TensorOptions& options);
-
-  static at::Tensor arange(at::Scalar start, at::Scalar end, at::Scalar step,
-                           const at::TensorOptions& options);
-
   static at::Tensor& arange_out(at::Tensor& out, at::Scalar start,
                                 at::Scalar end, at::Scalar step);
-
-  static at::Tensor argsort(const at::Tensor& self, int64_t dim,
-                            bool descending);
 
   static at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size,
                                at::IntArrayRef stride,
@@ -198,11 +187,6 @@ class AtenXlaType {
       at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
       c10::optional<int64_t> divisor_override);
 
-  static at::Tensor bartlett_window(int64_t window_length,
-                                    const at::TensorOptions& options);
-  static at::Tensor bartlett_window(int64_t window_length, bool periodic,
-                                    const at::TensorOptions& options);
-
   static at::Tensor bernoulli(const at::Tensor& self, at::Generator* generator);
   static at::Tensor& bernoulli_(at::Tensor& self, double p,
                                 at::Generator* generator);
@@ -213,11 +197,6 @@ class AtenXlaType {
       const at::Tensor& self, const at::Tensor& target,
       const at::Tensor& weight, const at::Tensor& pos_weight,
       int64_t reduction);
-
-  static at::Tensor blackman_window(int64_t window_length,
-                                    const at::TensorOptions& options);
-  static at::Tensor blackman_window(int64_t window_length, bool periodic,
-                                    const at::TensorOptions& options);
 
   static at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2);
 
@@ -323,13 +302,6 @@ class AtenXlaType {
                           const at::TensorOptions& options,
                           c10::optional<at::MemoryFormat> memory_format);
 
-  static at::Tensor empty_like(const at::Tensor& self,
-                               c10::optional<at::MemoryFormat> memory_format);
-
-  static at::Tensor empty_like(const at::Tensor& self,
-                               const at::TensorOptions& options,
-                               c10::optional<at::MemoryFormat> memory_format);
-
   static at::Tensor empty_strided(at::IntArrayRef size, at::IntArrayRef stride,
                                   const at::TensorOptions& options);
 
@@ -364,9 +336,9 @@ class AtenXlaType {
 
   static at::Tensor& expm1_(at::Tensor& self);
 
-  static at::Tensor eye(int64_t n, const at::TensorOptions& options);
+  static at::Tensor& eye_out(at::Tensor& out, int64_t n);
 
-  static at::Tensor eye(int64_t n, int64_t m, const at::TensorOptions& options);
+  static at::Tensor& eye_out(at::Tensor& out, int64_t n, int64_t m);
 
   static at::Tensor& fill_(at::Tensor& self, at::Scalar value);
 
@@ -389,16 +361,6 @@ class AtenXlaType {
   static at::Tensor frac(const at::Tensor& self);
 
   static at::Tensor& frac_(at::Tensor& self);
-
-  static at::Tensor full(at::IntArrayRef size, at::Scalar fill_value,
-                         const at::TensorOptions& options);
-
-  static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
-                              c10::optional<at::MemoryFormat> memory_format);
-
-  static at::Tensor full_like(const at::Tensor& self, at::Scalar fill_value,
-                              const at::TensorOptions& options,
-                              c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor gather(const at::Tensor& self, int64_t dim,
                            const at::Tensor& index, bool sparse_grad);
@@ -423,21 +385,6 @@ class AtenXlaType {
   static at::Tensor& gt_(at::Tensor& self, at::Scalar other);
 
   static at::Tensor& gt_(at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor hamming_window(int64_t window_length,
-                                   const at::TensorOptions& options);
-  static at::Tensor hamming_window(int64_t window_length, bool periodic,
-                                   const at::TensorOptions& options);
-  static at::Tensor hamming_window(int64_t window_length, bool periodic,
-                                   double alpha,
-                                   const at::TensorOptions& options);
-  static at::Tensor hamming_window(int64_t window_length, bool periodic,
-                                   double alpha, double beta,
-                                   const at::TensorOptions& options);
-  static at::Tensor hann_window(int64_t window_length,
-                                const at::TensorOptions& options);
-  static at::Tensor hann_window(int64_t window_length, bool periodic,
-                                const at::TensorOptions& options);
 
   static at::Tensor hardshrink(const at::Tensor& self, at::Scalar lambda);
 
@@ -692,16 +639,6 @@ class AtenXlaType {
   static at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
                          at::IntArrayRef dim, bool keepdim);
 
-  static at::Tensor ones(at::IntArrayRef size,
-                         const at::TensorOptions& options);
-
-  static at::Tensor ones_like(const at::Tensor& self,
-                              c10::optional<at::MemoryFormat> memory_format);
-
-  static at::Tensor ones_like(const at::Tensor& self,
-                              const at::TensorOptions& options,
-                              c10::optional<at::MemoryFormat> memory_format);
-
   static at::Tensor permute(const at::Tensor& self, at::IntArrayRef dims);
 
   static at::Tensor pow(const at::Tensor& self, at::Scalar exponent);
@@ -723,9 +660,8 @@ class AtenXlaType {
   static std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self,
                                                bool some);
 
-  static at::Tensor randperm(int64_t n, const at::TensorOptions& options);
-  static at::Tensor randperm(int64_t n, at::Generator* generator,
-                             const at::TensorOptions& options);
+  static at::Tensor& randperm_out(at::Tensor& out, int64_t n,
+                                  at::Generator* generator);
 
   static at::Tensor reciprocal(const at::Tensor& self);
 
@@ -799,8 +735,6 @@ class AtenXlaType {
 
   static at::Tensor& sinh_(at::Tensor& self);
 
-  static int64_t size(const at::Tensor& self, int64_t dim);
-
   static at::Tensor slice(const at::Tensor& self, int64_t dim, int64_t start,
                           int64_t end, int64_t step);
 
@@ -811,9 +745,6 @@ class AtenXlaType {
                                             const at::Tensor& self,
                                             const at::Tensor& target,
                                             int64_t reduction);
-
-  static at::Tensor softmax(const at::Tensor& self, int64_t dim,
-                            c10::optional<at::ScalarType> dtype);
 
   static at::Tensor softplus(const at::Tensor& self, at::Scalar beta,
                              at::Scalar threshold);
@@ -875,8 +806,6 @@ class AtenXlaType {
   static at::Tensor sum(const at::Tensor& self, at::IntArrayRef dim,
                         bool keepdim, c10::optional<at::ScalarType> dtype);
 
-  static at::Tensor sum_to_size(const at::Tensor& self, at::IntArrayRef size);
-
   static std::tuple<at::Tensor, at::Tensor, at::Tensor> svd(
       const at::Tensor& self, bool some, bool compute_uv);
 
@@ -899,10 +828,6 @@ class AtenXlaType {
   static at::Tensor tanh_backward(const at::Tensor& grad_output,
                                   const at::Tensor& output);
 
-  static at::Tensor tensordot(const at::Tensor& self, const at::Tensor& other,
-                              at::IntArrayRef dims_self,
-                              at::IntArrayRef dims_other);
-
   static at::Tensor threshold(const at::Tensor& self, at::Scalar threshold,
                               at::Scalar value);
 
@@ -912,19 +837,6 @@ class AtenXlaType {
   static at::Tensor threshold_backward(const at::Tensor& grad_output,
                                        const at::Tensor& self,
                                        at::Scalar threshold);
-
-  static at::Tensor to(const at::Tensor& self, const at::TensorOptions& options,
-                       bool non_blocking, bool copy,
-                       c10::optional<at::MemoryFormat> memory_format);
-  static at::Tensor to(const at::Tensor& self, c10::Device device,
-                       at::ScalarType dtype, bool non_blocking, bool copy,
-                       c10::optional<at::MemoryFormat> memory_format);
-  static at::Tensor to(const at::Tensor& self, at::ScalarType dtype,
-                       bool non_blocking, bool copy,
-                       c10::optional<at::MemoryFormat> memory_format);
-  static at::Tensor to(const at::Tensor& self, const at::Tensor& other,
-                       bool non_blocking, bool copy,
-                       c10::optional<at::MemoryFormat> memory_format);
 
   static std::tuple<at::Tensor, at::Tensor> topk(const at::Tensor& self,
                                                  int64_t k, int64_t dim,
@@ -977,19 +889,7 @@ class AtenXlaType {
 
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 
-  static at::Tensor view_as(const at::Tensor& self, const at::Tensor& other);
-
   static at::Tensor& zero_(at::Tensor& self);
-
-  static at::Tensor zeros(at::IntArrayRef size,
-                          const at::TensorOptions& options);
-
-  static at::Tensor zeros_like(const at::Tensor& self,
-                               c10::optional<at::MemoryFormat> memory_format);
-
-  static at::Tensor zeros_like(const at::Tensor& self,
-                               const at::TensorOptions& options,
-                               c10::optional<at::MemoryFormat> memory_format);
 };
 
 }  // namespace torch_xla

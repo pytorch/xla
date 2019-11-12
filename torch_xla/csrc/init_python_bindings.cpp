@@ -83,6 +83,25 @@ std::vector<std::string> GetXlaDevices(
   return xla_devices;
 }
 
+std::vector<XLATensor> GetXlaTensors(const std::vector<at::Tensor>& tensors,
+                                     bool want_all) {
+  std::vector<XLATensor> xtensors;
+  xtensors.reserve(tensors.size());
+  if (want_all) {
+    for (auto& tensor : tensors) {
+      xtensors.push_back(bridge::GetXlaTensor(tensor));
+    }
+  } else {
+    for (auto& tensor : tensors) {
+      auto xtensor = bridge::TryGetXlaTensor(tensor);
+      if (xtensor) {
+        xtensors.push_back(*xtensor);
+      }
+    }
+  }
+  return xtensors;
+}
+
 void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
                            const py::list& groups) {
   std::vector<std::vector<xla::int64>> crs_groups;
@@ -92,22 +111,14 @@ void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
       crs_groups.back().push_back(replica_id.cast<xla::int64>());
     }
   }
-  for (auto& tensor : tensors) {
-    XLATensor xtensor = bridge::GetXlaTensor(tensor);
-    XLATensor::cross_replica_sum_(xtensor, scale, crs_groups);
-  }
+  std::vector<XLATensor> xtensors = GetXlaTensors(tensors, /*want_all=*/true);
+  XLATensor::cross_replica_sum(&xtensors, scale, crs_groups);
 }
 
 void SyncTensors(const std::vector<at::Tensor>& tensors,
                  const std::vector<std::string>& devices, bool wait,
                  bool sync_xla_data) {
-  std::vector<XLATensor> xtensors;
-  for (auto& tensor : tensors) {
-    auto xtensor = bridge::TryGetXlaTensor(tensor);
-    if (xtensor) {
-      xtensors.push_back(*xtensor);
-    }
-  }
+  std::vector<XLATensor> xtensors = GetXlaTensors(tensors, /*want_all=*/false);
   XLATensor::SyncTensorsGraph(&xtensors, devices, wait, sync_xla_data);
 }
 
@@ -127,13 +138,7 @@ void StepMarker(const std::string& device_str,
 }
 
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
-  std::vector<XLATensor> xtensors;
-  for (auto& tensor : tensors) {
-    auto xtensor = bridge::TryGetXlaTensor(tensor);
-    if (xtensor) {
-      xtensors.push_back(*xtensor);
-    }
-  }
+  std::vector<XLATensor> xtensors = GetXlaTensors(tensors, /*want_all=*/false);
   return XLATensor::DumpHloComputation(xtensors);
 }
 
