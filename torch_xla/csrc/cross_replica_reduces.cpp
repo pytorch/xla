@@ -1,8 +1,36 @@
 #include "torch_xla/csrc/cross_replica_reduces.h"
 
+#include <map>
+
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
+namespace {
+
+struct PerTypeContext {
+  std::vector<xla::XlaOp> ops;
+  std::vector<size_t> indices;
+};
+
+struct ReduceContext {
+  std::map<xla::PrimitiveType, PerTypeContext> contexts;
+  std::vector<xla::Shape> operand_shapes;
+};
+
+ReduceContext GetReduceContext(
+    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) {
+  ReduceContext redux;
+  for (size_t i = 0; i < operands.size(); ++i) {
+    redux.operand_shapes.push_back(XlaHelpers::ShapeOfXlaOp(operands[i]));
+    PerTypeContext& ctx =
+        redux.contexts[redux.operand_shapes.back().element_type()];
+    ctx.ops.push_back(operands[i]);
+    ctx.indices.push_back(i);
+  }
+  return redux;
+}
+
+}  // namespace
 
 std::vector<xla::XlaOp> BuildCrossReplicaSum(
     tensorflow::gtl::ArraySlice<const xla::XlaOp> operands, double scale,
@@ -15,19 +43,21 @@ std::vector<xla::XlaOp> BuildCrossReplicaSum(
     }
     crs_groups.push_back(std::move(rgroup));
   }
-  xla::XlaOp crs = xla::CrossReplicaSum(
-      xla::Tuple(operands[0].builder(), operands), crs_groups);
-  std::vector<xla::XlaOp> result;
-  result.reserve(operands.size());
-  for (size_t i = 0; i < operands.size(); ++i) {
-    result.push_back(xla::GetTupleElement(crs, i));
-  }
-  if (scale != 1.0) {
-    for (size_t i = 0; i < result.size(); ++i) {
-      xla::Shape shape = XlaHelpers::ShapeOfXlaOp(result[i]);
-      xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
-          scale, shape.element_type(), result[i].builder());
-      result[i] = result[i] * scaling_value;
+  // TODO: Chain reduces with xla::Token when support will show up.
+  ReduceContext redux = GetReduceContext(operands);
+  std::vector<xla::XlaOp> result(operands.size());
+  for (auto& type_ctx : redux.contexts) {
+    xla::XlaOp crs = xla::CrossReplicaSum(
+        xla::Tuple(operands[0].builder(), type_ctx.second.ops), crs_groups);
+    for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
+      size_t op_idx = type_ctx.second.indices[i];
+      xla::XlaOp gte = xla::GetTupleElement(crs, i);
+      if (scale != 1.0) {
+        xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
+            scale, redux.operand_shapes[op_idx].element_type(), gte.builder());
+        gte = gte * scaling_value;
+      }
+      result[op_idx] = gte;
     }
   }
   return result;
