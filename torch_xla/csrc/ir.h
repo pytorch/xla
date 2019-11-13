@@ -34,6 +34,7 @@ struct UserMetaData {
 };
 
 struct MetaData {
+  std::string scope;
   std::vector<SourceLocation> frame_info;
 };
 
@@ -218,7 +219,7 @@ class Node {
     if (user_metadata_ == nullptr) {
       user_metadata_ = std::make_shared<T>();
     }
-    return dynamic_cast<T*>(user_metadata_.get());
+    return user_metadata<T>();
   }
 
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);
@@ -270,6 +271,16 @@ class Node {
   // The IR framework user can attach a user defined metadata object deriving
   // from UserMetaData.
   std::shared_ptr<UserMetaData> user_metadata_;
+};
+
+// RAII data structure to be used a stack variable to enter a new IR scope. IR
+// scope names will appear in the IR and will help identifying the source of the
+// single IR nodes.
+struct ScopePusher {
+  explicit ScopePusher(const std::string& name);
+  ~ScopePusher();
+
+  static void ResetScopes();
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const Node& node) {

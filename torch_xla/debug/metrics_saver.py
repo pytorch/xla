@@ -5,15 +5,42 @@ import threading
 import torch_xla
 import torch_xla.debug.metrics as met
 
-_STEP_METRICS_FILE = os.environ.get('XLA_METRICS_FILE', None)
+_STEP_METRICS_FILE = None
 _STEP_METRICS_FILE_LOCK = threading.Lock()
+
+_TLS = threading.local()
+
+
+def _counter():
+  counter = getattr(_TLS, 'counter', 0)
+  _TLS.counter = counter + 1
+  return counter
+
+
+def _extract_metrics_file():
+  # Delay xla_model import to avoid cross dependencies.
+  import torch_xla.core.xla_model as xm
+  metrics_file = os.environ.get('XLA_METRICS_FILE', None)
+  if metrics_file is not None:
+    ordinal = xm.get_ordinal(defval=-1)
+    if ordinal >= 0:
+      metrics_file = '{}.{}'.format(metrics_file, ordinal)
+  return metrics_file
+
+
+def _get_metrics_file():
+  global _STEP_METRICS_FILE
+  if _STEP_METRICS_FILE is None:
+    _STEP_METRICS_FILE = _extract_metrics_file()
+  return _STEP_METRICS_FILE
 
 
 def save_metrics(metrics_file=None):
   if metrics_file is None:
-    metrics_file = _STEP_METRICS_FILE
+    metrics_file = _get_metrics_file()
   if metrics_file is not None:
-    metrics_data = met.metrics_report()
+    metrics_data = '[MetricsData; step={}]\n{}\n'.format(
+        _counter(), met.metrics_report())
     if metrics_file == 'STDERR':
       print(metrics_data, file=sys.stderr)
     elif metrics_file == 'STDOUT':

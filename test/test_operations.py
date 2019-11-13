@@ -126,6 +126,18 @@ def _zeros_like(tensor_list):
   return zeros_tensors
 
 
+def _prepare_tensors_for_diff(a, b):
+  a = a.cpu()
+  b = b.cpu()
+  if a.dtype == torch.float16 or a.dtype == torch.bfloat16:
+    a = a.to(torch.float32)
+  if b.dtype == torch.float16 or b.dtype == torch.bfloat16:
+    b = b.to(torch.float32)
+  if b.dtype != a.dtype:
+    b = b.to(a.dtype)
+  return a, b
+
+
 def _dump_differences(target, result, rtol=1e-5, atol=1e-3, max_diff_count=0):
   env = Holder()
   env.max_diff = 0.0
@@ -134,6 +146,7 @@ def _dump_differences(target, result, rtol=1e-5, atol=1e-3, max_diff_count=0):
   env.diff_count = 0
 
   def check_values(a, b, index):
+    a, b = _prepare_tensors_for_diff(a, b)
     r = max(abs(a), abs(b)) * rtol
     diff = abs(a - b)
     if diff > max(r, atol):
@@ -243,12 +256,7 @@ class XlaTestCase(unittest.TestCase):
       def assertTensorsEqual(a, b):
         super(XlaTestCase, self).assertEqual(a.size(), b.size(), message)
         if a.numel() > 0:
-          if (a.device.type == 'cpu' and
-              (a.dtype == torch.float16 or a.dtype == torch.bfloat16)):
-            # CPU half and bfloat16 tensors don't have the methods we need below
-            a = a.to(torch.float32)
-          b = b.to(a)
-
+          a, b = _prepare_tensors_for_diff(a, b)
           if (a.dtype == torch.bool) != (b.dtype == torch.bool):
             raise TypeError('Was expecting both tensors to be bool type.')
           else:
@@ -379,6 +387,7 @@ class XlaTestCase(unittest.TestCase):
 
   def assertEqualRel(self, out, expected, rel_err=1e-2, abs_err=1e-5):
     try:
+      out, expected = _prepare_tensors_for_diff(out, expected)
       nan_mask = torch.isnan(expected)
       self.assertTrue(torch.equal(nan_mask, torch.isnan(out)))
       diff_tensor = (out - expected).abs().float()
@@ -1190,16 +1199,23 @@ class TestAtenXlaTensor(XlaTestCase):
         self.x = x
         self.y = y
 
-    a = torch.rand(16, device=xm.xla_device())
-    b = a[:10]
-    c = a[6:]
-    self.assertRaises(RuntimeError, lambda: xm.check_view_sharing([b, c]))
+    def check(device):
+      a = torch.rand(16, device=device)
+      b = a[:10]
+      c = a[6:]
+      self.assertRaises(RuntimeError, lambda: xm.check_view_sharing([b, c]))
 
-    nested = Nested(b, c)
-    self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
+      nested = Nested(b, c)
+      self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
 
-    with tempfile.TemporaryFile() as tf:
-      self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
+      with tempfile.TemporaryFile() as tf:
+        self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
+
+      d = a
+      xm.check_view_sharing([a, d])
+
+    check(xm.xla_device())
+    check(torch.device('cpu'))
 
   def test_save(self):
     xla_device = xm.xla_device()
@@ -1245,6 +1261,13 @@ class TestAtenXlaTensor(XlaTestCase):
     x = torch.tensor([5], device=xla_device)
     expected_str = 'tensor([5], device=\'' + str(xla_device) + '\')'
     self.assertEqual(str(x), expected_str)
+
+  def test_basic_bfloat16(self):
+
+    def test_fn(s):
+      return s * torch.tensor(2.3, dtype=torch.float32)
+
+    self.runAtenTest([torch.ones(2, 2, dtype=torch.bfloat16)], test_fn)
 
 
 class MNISTComparator(nn.Module):

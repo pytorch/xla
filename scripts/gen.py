@@ -81,10 +81,31 @@ _XPARSER = lark.Lark(
 
 _FN_BLACKLIST = set([
     'numel',
+    'result_type',
+    # FIXME: Remove functions below when we switch to override leaf nodes only.
+    # The function names below might map to multiple function overrloads.
+    # If the function overload is a leaf node, we must have it in AtenXlaType::
+    # so that we still override them.
+    # Otherwise they're non leaves that we shouldn't generate override for them.
+    # They're blacklisted to avoid creating AtenXlaTypeDefault::func,
+    # so that we can fall back to TypeDefault:: in PyTorch.
+    'arange',
+    'bartlett_window',
+    'blackman_window',
+    'empty_like',
+    'eye',
+    'full',
+    'full_like',
+    'hamming_window',
+    'hann_window',
+    'narrow',
     'ones',
     'ones_like',
-    'result_type',
-    'zero_',
+    'randperm',
+    'reshape',
+    'size',
+    'sum_to_size',
+    'to',
     'zeros',
     'zeros_like',
 ])
@@ -97,12 +118,6 @@ _FN_BLACKLIST_REGEX = [
 
 _FN_OUT = {
     'add_out':
-        FuncOpts(),
-    'arange_out(Tensor, Scalar, Scalar, Scalar) -> Tensor':
-        FuncOpts(
-            outfn_template=ArgTemplate(
-                'AtenXlaType::arange($1, $2, $3, $0.options())')),
-    'bitwise_not_out':
         FuncOpts(),
     'clamp_out':
         FuncOpts(),
@@ -158,13 +173,6 @@ _FN_REMAP = {
     's__th_xor(Tensor, Tensor) -> Tensor':
         FuncOpts(
             outfn_name='AtenXlaType::__xor__', shape_check_indices=((0, 1),)),
-    '_s_where(Tensor, Tensor, Tensor) -> Tensor':
-        FuncOpts(
-            outfn_name='AtenXlaType::where',
-            shape_check_indices=(
-                (0, 1),
-                (0, 2),
-            )),
     's__th_eq(Tensor, Tensor) -> Tensor':
         FuncOpts(outfn_name='AtenXlaType::eq', shape_check_indices=((0, 1),)),
 }
@@ -631,11 +639,12 @@ def get_return_type_str(t, orig_sig):
   return orig_sig[0:token.column - 2]
 
 
-def generate_entry_debug_code(t, fname, params, fname_ns='aten'):
+def generate_entry_debug_code(t, fname, params, fname_ns=None):
   # Emits debug code for a given intercepted ATEN type function. For now we use
   # a counter which will show up in the metrics reports.
   code = ''
-  code += '  XLA_COUNTER("{}::{}", 1);\n'.format(fname_ns, fname)
+  if fname_ns is not None:
+    code += '  XLA_COUNTER("{}::{}", 1);\n'.format(fname_ns, fname)
   # VLOG info. Use the following to see debug output:
   #  export TF_CPP_VMODULE=aten_xla_type_default=3
   code += '  TF_VLOG(3) << "XLA {} :"'.format(fname)
@@ -761,7 +770,7 @@ def generate_aten_out(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
     num_outputs = len(tuple_type_list(rtype))
 
   code = '{} {{\n'.format(sig)
-  code += generate_entry_debug_code(tree, fname, params, fname_ns='xla')
+  code += generate_entry_debug_code(tree, fname, params)
 
   param_vars = get_param_names(params)
   if fnopts.outfn_template is not None:
@@ -800,7 +809,7 @@ def generate_aten_to_xla(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
   ref_param = get_reference_param(params, fnopts=fnopts)
 
   code = '{} {{\n'.format(sig)
-  code += generate_entry_debug_code(tree, fname, params)
+  code += generate_entry_debug_code(tree, fname, params, fname_ns='aten')
   xla_ref_param = param_name(ref_param) if ref_param else None
   tfetcher = TensorFetcher('xlatens')
   param_vars = []

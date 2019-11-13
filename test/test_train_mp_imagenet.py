@@ -38,13 +38,10 @@ FLAGS = args_parse.parse_common_options(
 
 import os
 import schedulers
-from statistics import mean
-import test_utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
@@ -54,6 +51,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.test.test_utils as test_utils
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -148,11 +146,13 @@ def train_imagenet():
         train_dataset,
         batch_size=FLAGS.batch_size,
         sampler=train_sampler,
+        drop_last=FLAGS.drop_last,
         shuffle=False if train_sampler else True,
         num_workers=FLAGS.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
+        drop_last=FLAGS.drop_last,
         shuffle=False,
         num_workers=FLAGS.num_workers)
 
@@ -161,8 +161,8 @@ def train_imagenet():
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
   writer = None
-  if FLAGS.logdir and xm.is_master_ordinal():
-    writer = SummaryWriter(log_dir=FLAGS.logdir)
+  if xm.is_master_ordinal():
+    writer = test_utils.get_summary_writer(FLAGS.logdir)
   optimizer = optim.SGD(
       model.parameters(),
       lr=FLAGS.lr,
@@ -214,8 +214,7 @@ def train_imagenet():
   for epoch in range(1, FLAGS.num_epochs + 1):
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
-    if xm.is_master_ordinal():
-      print("Finished training epoch {}".format(epoch))
+    xm.master_print("Finished training epoch {}".format(epoch))
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
@@ -224,6 +223,7 @@ def train_imagenet():
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
+  test_utils.close_summary_writer(writer)
   return accuracy
 
 

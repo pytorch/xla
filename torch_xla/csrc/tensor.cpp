@@ -1169,6 +1169,7 @@ void XLATensor::SyncLiveTensorsGraph(
 void XLATensor::MarkStep(const Device* device) {
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->ClearProfileData(device);
+  ir::ScopePusher::ResetScopes();
 }
 
 void XLATensor::WaitDeviceOps(
@@ -1183,6 +1184,9 @@ void XLATensor::WaitDeviceOps(
       wait_devices.insert(Device(device_str));
     }
   }
+  // The LockDevices() API returns a vector of xla::util::ExceptionCleanup
+  // object, which is going to be freed immediately, turning this operation into
+  // a lock barrier.
   LockDevices(wait_devices);
 }
 

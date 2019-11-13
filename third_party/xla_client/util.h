@@ -173,6 +173,37 @@ std::vector<T> ToVector(const S& input) {
 }
 
 template <typename T>
+std::vector<T> GetValuesVector(
+    tensorflow::gtl::ArraySlice<const T> values,
+    tensorflow::gtl::ArraySlice<const absl::optional<T>*> opt_values) {
+  std::vector<T> result(values.begin(), values.end());
+  for (auto opt : opt_values) {
+    if (*opt) {
+      result.push_back(*(*opt));
+    }
+  }
+  return result;
+}
+
+template <typename T>
+typename T::mapped_type FindOr(const T& cont, const typename T::key_type& key,
+                               const typename T::mapped_type& defval) {
+  auto it = cont.find(key);
+  return it != cont.end() ? it->second : defval;
+}
+
+template <typename T, typename G>
+const typename T::mapped_type& MapInsert(T* cont,
+                                         const typename T::key_type& key,
+                                         const G& gen) {
+  auto it = cont->find(key);
+  if (it == cont->end()) {
+    it = cont->emplace(key, gen()).first;
+  }
+  return it->second;
+}
+
+template <typename T>
 typename std::underlying_type<T>::type GetEnumValue(T value) {
   return static_cast<typename std::underlying_type<T>::type>(value);
 }

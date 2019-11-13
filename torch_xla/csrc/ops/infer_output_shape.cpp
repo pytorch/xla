@@ -9,7 +9,7 @@ namespace ops {
 xla::Shape InferOutputShape(
     tensorflow::gtl::ArraySlice<const xla::Shape> input_shapes,
     const LowerForShapeFn& core_lowering_fn) {
-  xla::XlaBuilder b("infer_output_shape");
+  xla::XlaBuilder b("InferOutputShape");
   std::vector<xla::XlaOp> parameters;
   for (size_t parameter_number = 0; parameter_number < input_shapes.size();
        ++parameter_number) {

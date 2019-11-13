@@ -19,6 +19,10 @@ c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor);
 // if tensor is not an XLA tensor.
 XLATensor GetXlaTensor(const at::Tensor& tensor);
 
+// Replaces the XLA tensor embedded within the XLA TensorImpl with the new
+// version.
+void ReplaceXlaTensor(const at::Tensor& tensor, XLATensor new_xla_tensor);
+
 // Same as above, applied to a list of tensors.
 std::vector<XLATensor> GetXlaTensors(
     tensorflow::gtl::ArraySlice<const at::Tensor> tensors);

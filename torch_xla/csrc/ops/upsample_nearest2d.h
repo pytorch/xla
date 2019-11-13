@@ -1,28 +1,27 @@
 #pragma once
 
+#include <vector>
+
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class ArgMax : public Node {
+class UpsampleNearest : public Node {
  public:
-  ArgMax(const Value& input, xla::int64 dim, bool keepdim);
-
-  std::string ToString() const override;
+  UpsampleNearest(const Value& input, std::vector<xla::int64> output_size);
 
   NodePtr Clone(OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64 dim() const { return dim_; };
+  std::string ToString() const override;
 
-  bool keepdim() const { return keepdim_; }
+  const std::vector<xla::int64>& output_size() const { return output_size_; }
 
  private:
-  xla::int64 dim_;
-  bool keepdim_;
+  std::vector<xla::int64> output_size_;
 };
 
 }  // namespace ops
