@@ -276,6 +276,12 @@ class XLATensor {
 
   static void bitwise_not_out(XLATensor& out, const XLATensor& input);
 
+  static void bitwise_xor_out(XLATensor& out, const XLATensor& input,
+                              at::Scalar other);
+
+  static void bitwise_xor_out(XLATensor& out, const XLATensor& input,
+                              const XLATensor& other);
+
   // Batch matrix multiplication. Both tensors must be 3D, the batch size must
   // match and the remaining two dimensions must be compatible for matrix
   // multiplication.
@@ -338,16 +344,16 @@ class XLATensor {
   static XLATensor cross(const XLATensor& input, const XLATensor& other,
                          c10::optional<xla::int64> dim);
 
-  static XLATensor cross_replica_sum(
-      const XLATensor& input, double scale,
+  static std::pair<XLATensor, ir::Value> cross_replica_sum(
+      const XLATensor& input, const ir::Value& token, double scale,
       const std::vector<std::vector<xla::int64>>& groups);
 
-  static void cross_replica_sum_(
-      XLATensor& input, double scale,
+  static ir::Value cross_replica_sum_(
+      XLATensor& input, const ir::Value& token, double scale,
       const std::vector<std::vector<xla::int64>>& groups);
 
-  static void cross_replica_sum(
-      std::vector<XLATensor>* inputs, double scale,
+  static ir::Value cross_replica_sum(
+      std::vector<XLATensor>* inputs, const ir::Value& token, double scale,
       const std::vector<std::vector<xla::int64>>& groups);
 
   // Returns the cumulative product of elements of input in the given dimension.

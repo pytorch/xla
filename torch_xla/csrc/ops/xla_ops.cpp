@@ -14,6 +14,7 @@ const OpKindWrapper xla_moving_average("xla::moving_average");
 const OpKindWrapper xla_not_supported("xla::not_supported");
 const OpKindWrapper xla_select("xla::select");
 const OpKindWrapper xla_tensor_data("xla::tensor_data");
+const OpKindWrapper xla_token("xla::token");
 const OpKindWrapper xla_unselect("xla::unselect");
 const OpKindWrapper xla_update_slice("xla::update_slice");
 

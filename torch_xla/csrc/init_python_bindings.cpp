@@ -22,6 +22,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ir_util.h"
+#include "torch_xla/csrc/ops/token.h"
 #include "torch_xla/csrc/python_util.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -102,8 +103,10 @@ std::vector<XLATensor> GetXlaTensors(const std::vector<at::Tensor>& tensors,
   return xtensors;
 }
 
-void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
-                           const py::list& groups) {
+std::shared_ptr<ir::Value> InsertCrossReplicaSum(
+    const std::vector<at::Tensor>& tensors,
+    const std::shared_ptr<ir::Value>& token, double scale,
+    const py::list& groups) {
   std::vector<std::vector<xla::int64>> crs_groups;
   for (auto& group : groups) {
     crs_groups.emplace_back();
@@ -112,7 +115,8 @@ void InsertCrossReplicaSum(const std::vector<at::Tensor>& tensors, double scale,
     }
   }
   std::vector<XLATensor> xtensors = GetXlaTensors(tensors, /*want_all=*/true);
-  XLATensor::cross_replica_sum(&xtensors, scale, crs_groups);
+  return std::make_shared<ir::Value>(
+      XLATensor::cross_replica_sum(&xtensors, *token, scale, crs_groups));
 }
 
 void SyncTensors(const std::vector<at::Tensor>& tensors,
@@ -375,10 +379,21 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_replication_devices_count", []() {
     return xla::ComputationClient::Get()->GetReplicationDevices().size();
   });
+
+  py::class_<ir::Value, std::shared_ptr<ir::Value>>(m, "IrValue");
+  m.def("_xla_create_token", []() {
+    ir::NodePtr node = ir::MakeNode<ir::ops::Token>();
+    return std::make_shared<ir::Value>(node);
+  });
   m.def("_xla_cross_replica_sum", [](const std::vector<at::Tensor>& tensors,
+                                     const std::shared_ptr<ir::Value>& token,
                                      double scale, const py::list& groups) {
-    NoGilSection nogil;
-    InsertCrossReplicaSum(tensors, scale, groups);
+    std::shared_ptr<ir::Value> new_token;
+    {
+      NoGilSection nogil;
+      new_token = InsertCrossReplicaSum(tensors, token, scale, groups);
+    }
+    return new_token;
   });
   m.def("_xla_set_default_device",
         [](const std::string& device) { return SetCurrentDevice(device); });
