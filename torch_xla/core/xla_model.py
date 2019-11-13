@@ -442,9 +442,19 @@ def _get_all_reduce_token():
   return token
 
 
-def cross_replica_sum(inputs, scale=1.0, groups=[]):
-  _TLS.all_reduce_token = torch_xla._XLAC._xla_cross_replica_sum(
-      inputs, _get_all_reduce_token(), scale, groups)
+def all_reduce(reduce_type, inputs, scale=1.0, groups=[]):
+  """Perform an inplace reduce operation on the input tensors.
+
+  Args:
+    reduce_type (string): One of ``sum``, ``mul``, ``and``, ``or``, ``min`` and
+      ``max``.
+    inputs (list): List of tensors to perform the all reduce op to.
+    scale (float): A default scaling value to be applied after the reduce.
+      Default: 1.0
+    groups (list): Reserved.
+  """
+  _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce(
+      reduce_type, inputs, _get_all_reduce_token(), scale, groups)
 
 
 def mark_step():
@@ -490,7 +500,7 @@ def optimizer_step(optimizer, barrier=False, optimizer_args={}):
   count = torch_xla._XLAC._xla_get_replication_devices_count()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
-    cross_replica_sum(gradients, scale=1.0 / count)
+    all_reduce('sum', gradients, scale=1.0 / count)
   loss = optimizer.step(**optimizer_args)
   if barrier:
     mark_step()
