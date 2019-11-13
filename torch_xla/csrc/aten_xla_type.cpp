@@ -235,15 +235,6 @@ at::Tensor AtenXlaType::__xor__(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor& AtenXlaType::bitwise_not_out(at::Tensor& out,
-                                         const at::Tensor& self) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor out_tensor = bridge::GetXlaTensor(out);
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::bitwise_not_out(out_tensor, self_tensor);
-  return out;
-}
-
 at::Tensor AtenXlaType::_adaptive_avg_pool2d(const at::Tensor& self,
                                              at::IntArrayRef output_size) {
   XLA_FN_COUNTER("xla::");
@@ -268,6 +259,32 @@ at::Tensor AtenXlaType::_adaptive_avg_pool2d_backward(
   }
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::bitwise_not_out(at::Tensor& out,
+                                         const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::bitwise_not_out(out_tensor, self_tensor);
+  return out;
+}
+
+at::Tensor& AtenXlaType::bitwise_xor_out(at::Tensor& out,
+                                         const at::Tensor& self,
+                                         at::Scalar other) {
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::bitwise_xor_out(out_tensor, bridge::GetXlaTensor(self), other);
+  return out;
+}
+
+at::Tensor& AtenXlaType::bitwise_xor_out(at::Tensor& out,
+                                         const at::Tensor& self,
+                                         const at::Tensor& other) {
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor::bitwise_xor_out(out_tensor, bridge::GetXlaTensor(self),
+                             bridge::GetXlaTensor(other));
+  return out;
 }
 
 at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,

@@ -591,6 +591,21 @@ void XLATensor::bitwise_not_out(XLATensor& out, const XLATensor& input) {
   out.SetIrValue(ir::ops::Not(input.GetIrValue()));
 }
 
+void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,
+                                at::Scalar other) {
+  CheckIsIntegralOrPred(input.shape(), "__xor__");
+  ir::Value constant =
+      GetIrValueForScalar(other, input.shape(), input.GetDevice());
+  return out.SetIrValue(ir::ops::BitwiseXor(input.GetIrValue(), constant));
+}
+
+void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,
+                                const XLATensor& other) {
+  CheckIsIntegralOrPred(input.shape(), "__xor__");
+  return out.SetIrValue(
+      ir::ops::BitwiseXor(input.GetIrValue(), other.GetIrValue()));
+}
+
 XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {
   // Consistent with the checks in bmm_out_or_baddbmm_.
   std::string tag = "bmm";
