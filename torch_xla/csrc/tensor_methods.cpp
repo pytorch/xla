@@ -307,19 +307,6 @@ void XLATensor::__irshift__(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::ops::Rshift(input.GetIrValue(), other.GetIrValue()));
 }
 
-void XLATensor::__ixor__(XLATensor& input, at::Scalar other) {
-  CheckIsIntegralOrPred(input.shape(), "__ixor__");
-  ir::Value other_broadcasted_ir =
-      GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  input.SetIrValue(
-      ir::ops::BitwiseXor(input.GetIrValue(), other_broadcasted_ir));
-}
-
-void XLATensor::__ixor__(XLATensor& input, const XLATensor& other) {
-  CheckIsIntegralOrPred(input.shape(), "__ixor__");
-  input.SetIrValue(ir::ops::BitwiseXor(input.GetIrValue(), other.GetIrValue()));
-}
-
 XLATensor XLATensor::__lshift__(const XLATensor& input, at::Scalar other) {
   return input.CreateFrom(ir::ops::Lshift(input.GetIrValue(), other));
 }
@@ -352,20 +339,6 @@ XLATensor XLATensor::__rshift__(const XLATensor& input,
                                 const XLATensor& other) {
   return input.CreateFrom(
       ir::ops::Rshift(input.GetIrValue(), other.GetIrValue()));
-}
-
-XLATensor XLATensor::__xor__(const XLATensor& input, at::Scalar other) {
-  CheckIsIntegralOrPred(input.shape(), "__xor__");
-  ir::Value other_broadcasted_ir =
-      GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  return input.CreateFrom(
-      ir::ops::BitwiseXor(input.GetIrValue(), other_broadcasted_ir));
-}
-
-XLATensor XLATensor::__xor__(const XLATensor& input, const XLATensor& other) {
-  CheckIsIntegralOrPred(input.shape(), "__xor__");
-  return input.CreateFrom(
-      ir::ops::BitwiseXor(input.GetIrValue(), other.GetIrValue()));
 }
 
 XLATensor XLATensor::_adaptive_avg_pool2d(const XLATensor& input,
