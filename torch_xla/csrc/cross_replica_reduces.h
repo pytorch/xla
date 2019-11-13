@@ -11,6 +11,9 @@ enum class AllReduceType {
   kSum,
   kMin,
   kMax,
+  kMul,
+  kOr,
+  kAnd,
 };
 
 std::vector<xla::XlaOp> BuildAllReduce(
