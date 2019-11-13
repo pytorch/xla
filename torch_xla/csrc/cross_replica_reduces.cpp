@@ -37,6 +37,12 @@ xla::XlaComputation GetReduceComutation(AllReduceType reduce_type,
   switch (reduce_type) {
     case AllReduceType::kSum:
       return XlaHelpers::CreateAddComputation(type);
+    case AllReduceType::kMul:
+      return XlaHelpers::CreateMulComputation(type);
+    case AllReduceType::kAnd:
+      return XlaHelpers::CreateAndComputation(type);
+    case AllReduceType::kOr:
+      return XlaHelpers::CreateOrComputation(type);
     case AllReduceType::kMin:
       return XlaHelpers::CreateMinComputation(type);
     case AllReduceType::kMax:

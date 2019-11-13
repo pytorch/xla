@@ -103,8 +103,25 @@ std::vector<XLATensor> GetXlaTensors(const std::vector<at::Tensor>& tensors,
   return xtensors;
 }
 
-std::shared_ptr<ir::Value> InsertCrossReplicaSum(
-    const std::vector<at::Tensor>& tensors,
+AllReduceType GetReduceType(const std::string& reduce_type) {
+  if (reduce_type == "sum") {
+    return AllReduceType::kSum;
+  } else if (reduce_type == "mul") {
+    return AllReduceType::kMul;
+  } else if (reduce_type == "and") {
+    return AllReduceType::kAnd;
+  } else if (reduce_type == "or") {
+    return AllReduceType::kOr;
+  } else if (reduce_type == "min") {
+    return AllReduceType::kMin;
+  } else if (reduce_type == "max") {
+    return AllReduceType::kMax;
+  }
+  XLA_ERROR() << "Unknown AllReduce type: " << reduce_type;
+}
+
+std::shared_ptr<ir::Value> AllReduceInPlace(
+    const std::string& reduce_type, const std::vector<at::Tensor>& tensors,
     const std::shared_ptr<ir::Value>& token, double scale,
     const py::list& groups) {
   std::vector<std::vector<xla::int64>> crs_groups;
@@ -116,7 +133,7 @@ std::shared_ptr<ir::Value> InsertCrossReplicaSum(
   }
   std::vector<XLATensor> xtensors = GetXlaTensors(tensors, /*want_all=*/true);
   return std::make_shared<ir::Value>(XLATensor::all_reduce(
-      &xtensors, *token, AllReduceType::kSum, scale, crs_groups));
+      &xtensors, *token, GetReduceType(reduce_type), scale, crs_groups));
 }
 
 void SyncTensors(const std::vector<at::Tensor>& tensors,
@@ -385,13 +402,14 @@ void InitXlaModuleBindings(py::module m) {
     ir::NodePtr node = ir::MakeNode<ir::ops::Token>();
     return std::make_shared<ir::Value>(node);
   });
-  m.def("_xla_cross_replica_sum", [](const std::vector<at::Tensor>& tensors,
-                                     const std::shared_ptr<ir::Value>& token,
-                                     double scale, const py::list& groups) {
+  m.def("_xla_all_reduce", [](const std::string& reduce_type,
+                              const std::vector<at::Tensor>& tensors,
+                              const std::shared_ptr<ir::Value>& token,
+                              double scale, const py::list& groups) {
     std::shared_ptr<ir::Value> new_token;
     {
       NoGilSection nogil;
-      new_token = InsertCrossReplicaSum(tensors, token, scale, groups);
+      new_token = AllReduceInPlace(reduce_type, tensors, token, scale, groups);
     }
     return new_token;
   });
