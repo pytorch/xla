@@ -177,9 +177,6 @@ class XLATensor {
   static void __irshift__(XLATensor& input, at::Scalar other);
   static void __irshift__(XLATensor& input, const XLATensor& other);
 
-  static void __ixor__(XLATensor& input, const XLATensor& other);
-  static void __ixor__(XLATensor& input, at::Scalar other);
-
   static XLATensor __lshift__(const XLATensor& input, at::Scalar other);
   static XLATensor __lshift__(const XLATensor& input, const XLATensor& other);
 
@@ -188,9 +185,6 @@ class XLATensor {
 
   static XLATensor __rshift__(const XLATensor& input, at::Scalar other);
   static XLATensor __rshift__(const XLATensor& input, const XLATensor& other);
-
-  static XLATensor __xor__(const XLATensor& input, at::Scalar other);
-  static XLATensor __xor__(const XLATensor& input, const XLATensor& other);
 
   static XLATensor _adaptive_avg_pool2d(const XLATensor& input,
                                         std::vector<xla::int64> output_size);

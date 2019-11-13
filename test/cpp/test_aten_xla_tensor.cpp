@@ -2575,8 +2575,7 @@ TEST_F(AtenXlaTensorTest, TestDimARange) {
   torch::Tensor like = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
   torch::Tensor a = torch::_dim_arange(like, 1);
   ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_like =
-        torch::rand({2, 2}, torch::TensorOptions(torch::kFloat).device(device));
+    torch::Tensor xla_like = CopyToDevice(like, device);
     torch::Tensor xla_a = torch::_dim_arange(xla_like, 1);
     AllClose(a, xla_a);
   });
@@ -7429,6 +7428,9 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXor) {
     torch::Tensor xla_result = xla_lhs.__xor__(xla_rhs);
     AllEqual(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_xor_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseXorInPlace) {
@@ -7444,6 +7446,9 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorInPlace) {
     AllEqual(result, xla_result);
     AllEqual(lhs, xla_lhs);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_xor_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseXorScalar) {
@@ -7456,6 +7461,9 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorScalar) {
     torch::Tensor xla_result = xla_lhs.__xor__(rhs);
     AllEqual(result, xla_result);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_xor_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseXorScalarInPlace) {
@@ -7469,6 +7477,9 @@ TEST_F(AtenXlaTensorTest, TestBitwiseXorScalarInPlace) {
     AllEqual(result, xla_result);
     AllEqual(lhs, xla_lhs);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_xor_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestLshift) {

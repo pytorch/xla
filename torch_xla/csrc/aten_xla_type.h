@@ -35,10 +35,6 @@ class AtenXlaType {
 
   static at::Tensor& __irshift__(at::Tensor& self, const at::Tensor& other);
 
-  static at::Tensor& __ixor__(at::Tensor& self, at::Scalar other);
-
-  static at::Tensor& __ixor__(at::Tensor& self, const at::Tensor& other);
-
   static at::Tensor __lshift__(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor __lshift__(const at::Tensor& self, const at::Tensor& other);
@@ -50,10 +46,6 @@ class AtenXlaType {
   static at::Tensor __rshift__(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor __rshift__(const at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor __xor__(const at::Tensor& self, at::Scalar other);
-
-  static at::Tensor __xor__(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor _adaptive_avg_pool2d(const at::Tensor& self,
                                          at::IntArrayRef output_size);

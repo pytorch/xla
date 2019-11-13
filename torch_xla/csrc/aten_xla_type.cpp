@@ -169,20 +169,6 @@ at::Tensor& AtenXlaType::__irshift__(at::Tensor& self,
   return self;
 }
 
-at::Tensor& AtenXlaType::__ixor__(at::Tensor& self, at::Scalar other) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::__ixor__(self_tensor, other);
-  return self;
-}
-
-at::Tensor& AtenXlaType::__ixor__(at::Tensor& self, const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::__ixor__(self_tensor, bridge::GetXlaTensor(other));
-  return self;
-}
-
 at::Tensor AtenXlaType::__lshift__(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -219,19 +205,6 @@ at::Tensor AtenXlaType::__rshift__(const at::Tensor& self,
                                    const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::__rshift__(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
-}
-
-at::Tensor AtenXlaType::__xor__(const at::Tensor& self, at::Scalar other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::__xor__(bridge::GetXlaTensor(self), other));
-}
-
-at::Tensor AtenXlaType::__xor__(const at::Tensor& self,
-                                const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::__xor__(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
@@ -273,6 +246,7 @@ at::Tensor& AtenXlaType::bitwise_not_out(at::Tensor& out,
 at::Tensor& AtenXlaType::bitwise_xor_out(at::Tensor& out,
                                          const at::Tensor& self,
                                          at::Scalar other) {
+  XLA_FN_COUNTER("xla::");
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::bitwise_xor_out(out_tensor, bridge::GetXlaTensor(self), other);
   return out;
@@ -281,6 +255,7 @@ at::Tensor& AtenXlaType::bitwise_xor_out(at::Tensor& out,
 at::Tensor& AtenXlaType::bitwise_xor_out(at::Tensor& out,
                                          const at::Tensor& self,
                                          const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::bitwise_xor_out(out_tensor, bridge::GetXlaTensor(self),
                              bridge::GetXlaTensor(other));
