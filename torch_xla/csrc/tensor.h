@@ -13,6 +13,7 @@
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/view.h"
@@ -222,6 +223,19 @@ class XLATensor {
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions);
 
+  static std::pair<XLATensor, ir::Value> all_reduce(
+      const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
+      double scale, const std::vector<std::vector<xla::int64>>& groups);
+
+  static ir::Value all_reduce_(
+      XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
+      double scale, const std::vector<std::vector<xla::int64>>& groups);
+
+  static ir::Value all_reduce(
+      std::vector<XLATensor>* inputs, const ir::Value& token,
+      AllReduceType reduce_type, double scale,
+      const std::vector<std::vector<xla::int64>>& groups);
+
   static XLATensor any(const XLATensor& input,
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions);
@@ -337,18 +351,6 @@ class XLATensor {
   // with the size 3.
   static XLATensor cross(const XLATensor& input, const XLATensor& other,
                          c10::optional<xla::int64> dim);
-
-  static std::pair<XLATensor, ir::Value> cross_replica_sum(
-      const XLATensor& input, const ir::Value& token, double scale,
-      const std::vector<std::vector<xla::int64>>& groups);
-
-  static ir::Value cross_replica_sum_(
-      XLATensor& input, const ir::Value& token, double scale,
-      const std::vector<std::vector<xla::int64>>& groups);
-
-  static ir::Value cross_replica_sum(
-      std::vector<XLATensor>* inputs, const ir::Value& token, double scale,
-      const std::vector<std::vector<xla::int64>>& groups);
 
   // Returns the cumulative product of elements of input in the given dimension.
   static XLATensor cumprod(const XLATensor& input, xla::int64 dim,

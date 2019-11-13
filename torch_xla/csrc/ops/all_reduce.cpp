@@ -1,9 +1,8 @@
-#include "torch_xla/csrc/ops/cross_replica_sum.h"
+#include "torch_xla/csrc/ops/all_reduce.h"
 
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
-#include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 
@@ -32,23 +31,26 @@ std::vector<Value> GetOperandList(
 
 }  // namespace
 
-CrossReplicaSum::CrossReplicaSum(
-    tensorflow::gtl::ArraySlice<const Value> operands, const Value& token,
-    double scale, std::vector<std::vector<xla::int64>> groups)
+AllReduce::AllReduce(AllReduceType reduce_type,
+                     tensorflow::gtl::ArraySlice<const Value> operands,
+                     const Value& token, double scale,
+                     std::vector<std::vector<xla::int64>> groups)
     : Node(xla_cross_replica_sum, GetOperandList(operands, token),
            [&]() { return NodeOutputShape(operands, token); },
            /*num_outputs=*/operands.size() + 1,
-           xla::util::MHash(scale, groups)),
+           xla::util::MHash(xla::util::GetEnumValue(reduce_type), scale,
+                            groups)),
+      reduce_type_(reduce_type),
       scale_(scale),
       groups_(std::move(groups)) {}
 
-NodePtr CrossReplicaSum::Clone(OpList operands) const {
+NodePtr AllReduce::Clone(OpList operands) const {
   std::vector<Value> operand_list(operands.begin(), operands.end() - 1);
-  return MakeNode<CrossReplicaSum>(operand_list, operands.back(), scale_,
-                                   groups_);
+  return MakeNode<AllReduce>(reduce_type_, operand_list, operands.back(),
+                             scale_, groups_);
 }
 
-XlaOpVector CrossReplicaSum::Lower(LoweringContext* loctx) const {
+XlaOpVector AllReduce::Lower(LoweringContext* loctx) const {
   auto& operand_list = operands();
   std::vector<xla::XlaOp> inputs;
   inputs.reserve(operand_list.size());
@@ -56,12 +58,15 @@ XlaOpVector CrossReplicaSum::Lower(LoweringContext* loctx) const {
     inputs.push_back(loctx->GetOutputOp(operand_list[i]));
   }
   xla::XlaOp token = loctx->GetOutputOp(operand_list.back());
-  return ReturnOps(BuildCrossReplicaSum(inputs, token, scale_, groups_), loctx);
+  return ReturnOps(BuildAllReduce(reduce_type_, inputs, token, scale_, groups_),
+                   loctx);
 }
 
-std::string CrossReplicaSum::ToString() const {
+std::string AllReduce::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", scale=" << scale_ << ", groups=(";
+  ss << Node::ToString()
+     << ", reduce_type=" << xla::util::GetEnumValue(reduce_type_)
+     << ", scale=" << scale_ << ", groups=(";
   for (size_t i = 0; i < groups_.size(); ++i) {
     ss << (i == 0 ? "(" : ",(");
     ss << absl::StrJoin(groups_[i], ", ") << ")";

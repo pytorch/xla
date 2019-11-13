@@ -2,6 +2,8 @@
 
 #include <map>
 
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
@@ -30,30 +32,46 @@ ReduceContext GetReduceContext(
   return redux;
 }
 
+xla::XlaComputation GetReduceComutation(AllReduceType reduce_type,
+                                        xla::PrimitiveType type) {
+  switch (reduce_type) {
+    case AllReduceType::kSum:
+      return XlaHelpers::CreateAddComputation(type);
+    case AllReduceType::kMin:
+      return XlaHelpers::CreateMinComputation(type);
+    case AllReduceType::kMax:
+      return XlaHelpers::CreateMaxComputation(type);
+  }
+  XLA_ERROR() << "Invalid reduce type: "
+              << xla::util::GetEnumValue(reduce_type);
+}
+
 }  // namespace
 
-std::vector<xla::XlaOp> BuildCrossReplicaSum(
+std::vector<xla::XlaOp> BuildAllReduce(
+    AllReduceType reduce_type,
     tensorflow::gtl::ArraySlice<const xla::XlaOp> operands,
     const xla::XlaOp& token, double scale,
     const std::vector<std::vector<xla::int64>>& groups) {
-  std::vector<xla::ReplicaGroup> crs_groups;
+  std::vector<xla::ReplicaGroup> reduce_groups;
   for (auto& group : groups) {
     xla::ReplicaGroup rgroup;
     for (auto replica_id : group) {
       rgroup.add_replica_ids(replica_id);
     }
-    crs_groups.push_back(std::move(rgroup));
+    reduce_groups.push_back(std::move(rgroup));
   }
   // TODO: Chain reduces with xla::Token when support will show up.
   xla::XlaOp chained_token = token;
   ReduceContext redux = GetReduceContext(operands);
   std::vector<xla::XlaOp> result(operands.size());
   for (auto& type_ctx : redux.contexts) {
-    xla::XlaOp crs = xla::CrossReplicaSum(
-        xla::Tuple(operands[0].builder(), type_ctx.second.ops), crs_groups);
+    xla::XlaOp reduce = xla::AllReduce(
+        xla::Tuple(operands[0].builder(), type_ctx.second.ops),
+        GetReduceComutation(reduce_type, type_ctx.first), reduce_groups);
     for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
       size_t op_idx = type_ctx.second.indices[i];
-      xla::XlaOp gte = xla::GetTupleElement(crs, i);
+      xla::XlaOp gte = xla::GetTupleElement(reduce, i);
       if (scale != 1.0) {
         xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
             scale, redux.operand_shapes[op_idx].element_type(), gte.builder());

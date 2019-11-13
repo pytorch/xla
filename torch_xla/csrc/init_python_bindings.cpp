@@ -115,8 +115,8 @@ std::shared_ptr<ir::Value> InsertCrossReplicaSum(
     }
   }
   std::vector<XLATensor> xtensors = GetXlaTensors(tensors, /*want_all=*/true);
-  return std::make_shared<ir::Value>(
-      XLATensor::cross_replica_sum(&xtensors, *token, scale, crs_groups));
+  return std::make_shared<ir::Value>(XLATensor::all_reduce(
+      &xtensors, *token, AllReduceType::kSum, scale, crs_groups));
 }
 
 void SyncTensors(const std::vector<at::Tensor>& tensors,

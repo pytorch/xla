@@ -7,7 +7,6 @@
 
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/constant.h"
-#include "torch_xla/csrc/ops/cross_replica_sum.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/scalar.h"
