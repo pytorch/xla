@@ -145,7 +145,11 @@ xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
                                 xla::ShapeUtil::MakeShape(type, {}), "x");
   xla::XlaOp y = xla::Parameter(&reduction_builder, 1,
                                 xla::ShapeUtil::MakeShape(type, {}), "y");
-  xla::Add(x, y);
+  if (type == xla::PrimitiveType::PRED) {
+    xla::Or(x, y);
+  } else {
+    xla::Add(x, y);
+  }
   return ConsumeValue(reduction_builder.Build());
 }
 
