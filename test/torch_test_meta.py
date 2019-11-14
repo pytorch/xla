@@ -110,6 +110,16 @@ disabled_torch_tests = {
     'test_triu_tril',
     'test_tensor_shape_empty',  # LLVM OOM in CI
 
+    # TestTorchDeviceTypeXLA
+
+    #'test_lu_solve_batched_xla_float64',  # Actual value: 0.026 at 1e-3 prec
+    #'test_lu_solve_xla_float64',  # Actual value: 0.0025 at 1e-3 prec
+    #'test_solve_batched_xla_float64',  # Actual value: 0.026 at 1e-3 prec
+    #'test_solve_xla_float64',  # Actual value: 0.0025 at 1e-3 prec
+    #'test_triangular_solve_batched_xla_float64',  # Actual value: 4e-7 at 1e-3 prec
+    #'test_triangular_solve_xla_float64',  # Actual value: 2e-8 at 1e-3 prec
+ 
+
     # test_indexing.py
     # TestIndexing
     'test_setitem_expansion_error',  # doesn't raise
