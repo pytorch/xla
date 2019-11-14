@@ -219,6 +219,8 @@ controlled by the `XLA_USE_BF16` environment variable:
 `torch.float` on TPUs.
 - If `XLA_USE_BF16` is set, then `torch.float` and `torch.double` are both
 `bfloat16` on TPUs.
+- If a PyTorch tensor has `torch.bfloat16` data type, this will be directly
+mapped to the TPU `bfloat16` (XLA `BF16` primitive type).
 
 XLA tensors on TPUs will always report their PyTorch datatype regardless of
 the actual datatype they're using. This conversion is automatic and opaque.
