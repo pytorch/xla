@@ -53,8 +53,7 @@ NllLossBackward::NllLossBackward(const Value& grad_output, const Value& logits,
                                     total_weight, reduction, ignore_index);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue<ReductionMode>(reduction),
-                            ignore_index)),
+           xla::util::MHash(xla::util::GetEnumValue(reduction), ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 
@@ -88,7 +87,7 @@ XlaOpVector NllLossBackward::Lower(LoweringContext* loctx) const {
 std::string NllLossBackward::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
-     << ", reduction=" << xla::util::GetEnumValue<ReductionMode>(reduction_)
+     << ", reduction=" << xla::util::GetEnumValue(reduction_)
      << ", ignore_index=" << ignore_index_;
   return ss.str();
 }

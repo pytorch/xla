@@ -33,7 +33,7 @@ MseLossBackward::MseLossBackward(const Value& grad_output, const Value& input,
              return NodeOutputShape(grad_output, input, target, reduction);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue<ReductionMode>(reduction))),
+           xla::util::MHash(xla::util::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 NodePtr MseLossBackward::Clone(OpList operands) const {
@@ -52,7 +52,7 @@ XlaOpVector MseLossBackward::Lower(LoweringContext* loctx) const {
 std::string MseLossBackward::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
-     << ", reduction=" << xla::util::GetEnumValue<ReductionMode>(reduction_);
+     << ", reduction=" << xla::util::GetEnumValue(reduction_);
   return ss.str();
 }
 
