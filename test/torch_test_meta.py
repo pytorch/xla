@@ -109,16 +109,15 @@ disabled_torch_tests = {
     'test_matrix_rank',  # slow
     'test_triu_tril',
     'test_tensor_shape_empty',  # LLVM OOM in CI
-
-    # TestTorchDeviceTypeXLA
-
-    #'test_lu_solve_batched_xla_float64',  # Actual value: 0.026 at 1e-3 prec
-    #'test_lu_solve_xla_float64',  # Actual value: 0.0025 at 1e-3 prec
-    #'test_solve_batched_xla_float64',  # Actual value: 0.026 at 1e-3 prec
-    #'test_solve_xla_float64',  # Actual value: 0.0025 at 1e-3 prec
-    #'test_triangular_solve_batched_xla_float64',  # Actual value: 4e-7 at 1e-3 prec
-    #'test_triangular_solve_xla_float64',  # Actual value: 2e-8 at 1e-3 prec
- 
+    'test_cholesky_inverse_xla_float64',  # precision (1e-6)
+    'test_cholesky_solve_batched_xla_float64',  # precision (1e-5)
+    'test_cholesky_solve_xla_float64',  # precision (1e-5)
+    'test_lu_solve_batched_xla_float64',  # precision (1e-6)
+    'test_lu_solve_xla_float64',  # precision (1e-7)
+    'test_solve_batched_xla_float64',  # precision (1e-6)
+    'test_solve_xla_float64',  # precison (1e-7)
+    'test_triangular_solve_batched_xla_float64',  # precision (1e-6)
+    'test_triangular_solve_xla_float64',  # precision (1e-7)
 
     # test_indexing.py
     # TestIndexing
