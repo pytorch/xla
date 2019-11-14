@@ -282,6 +282,17 @@ class XLATensor {
   static void bernoulli_(XLATensor& input, double probability);
   static void bernoulli_(XLATensor& input, const XLATensor& probability);
 
+  static XLATensor binary_cross_entropy(const XLATensor& input,
+                                        const XLATensor& target,
+                                        const XLATensor& weight,
+                                        xla::int64 reduction);
+
+  static XLATensor binary_cross_entropy_backward(const XLATensor& grad_output,
+                                                 const XLATensor& input,
+                                                 const XLATensor& target,
+                                                 const XLATensor& weight,
+                                                 xla::int64 reduction);
+
   static void bitwise_not_out(XLATensor& out, const XLATensor& input);
 
   static void bitwise_xor_out(XLATensor& out, const XLATensor& input,
