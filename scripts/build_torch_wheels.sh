@@ -62,9 +62,10 @@ function install_and_setup_conda() {
   conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
-  conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard google-cloud-storage
+  conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard
   /usr/bin/yes | pip install --upgrade google-api-python-client
   /usr/bin/yes | pip install --upgrade oauth2client
+  /usr/bin/yes | pip install --upgrade google-cloud-storage
   /usr/bin/yes | pip install lark-parser
 
   sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
