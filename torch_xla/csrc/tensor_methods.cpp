@@ -23,6 +23,8 @@
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
+#include "torch_xla/csrc/ops/binary_cross_entropy.h"
+#include "torch_xla/csrc/ops/binary_cross_entropy_backward.h"
 #include "torch_xla/csrc/ops/bitwise_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/cat.h"
@@ -560,6 +562,42 @@ void XLATensor::bernoulli_(XLATensor& input, const XLATensor& probability) {
       ir::ops::Bernoulli(input.GetIrValue(), probability.GetIrValue()));
 }
 
+XLATensor XLATensor::binary_cross_entropy(const XLATensor& input,
+                                          const XLATensor& target,
+                                          const XLATensor& weight,
+                                          xla::int64 reduction) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::BinaryCrossEntropy>(
+      input.GetIrValue(), target.GetIrValue(), GetOptionalIrValue(weight),
+      GetXlaReductionMode(reduction)));
+}
+
+XLATensor XLATensor::binary_cross_entropy_backward(const XLATensor& grad_output,
+                                                   const XLATensor& input,
+                                                   const XLATensor& target,
+                                                   const XLATensor& weight,
+                                                   xla::int64 reduction) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::BinaryCrossEntropyBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
+      GetOptionalIrValue(weight), GetXlaReductionMode(reduction)));
+}
+
+void XLATensor::binary_cross_entropy_backward_out(
+    XLATensor& grad_input, const XLATensor& grad_output, const XLATensor& input,
+    const XLATensor& target, const XLATensor& weight, xla::int64 reduction) {
+  grad_input.SetIrValue(ir::MakeNode<ir::ops::BinaryCrossEntropyBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
+      GetOptionalIrValue(weight), GetXlaReductionMode(reduction)));
+}
+
+void XLATensor::binary_cross_entropy_out(XLATensor& out, const XLATensor& input,
+                                         const XLATensor& target,
+                                         const XLATensor& weight,
+                                         xla::int64 reduction) {
+  out.SetIrValue(ir::MakeNode<ir::ops::BinaryCrossEntropy>(
+      input.GetIrValue(), target.GetIrValue(), GetOptionalIrValue(weight),
+      GetXlaReductionMode(reduction)));
+}
+
 void XLATensor::bitwise_not_out(XLATensor& out, const XLATensor& input) {
   out.SetIrValue(ir::ops::Not(input.GetIrValue()));
 }
@@ -569,14 +607,13 @@ void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,
   CheckIsIntegralOrPred(input.shape(), "__xor__");
   ir::Value constant =
       GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  return out.SetIrValue(ir::ops::BitwiseXor(input.GetIrValue(), constant));
+  out.SetIrValue(ir::ops::BitwiseXor(input.GetIrValue(), constant));
 }
 
 void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,
                                 const XLATensor& other) {
   CheckIsIntegralOrPred(input.shape(), "__xor__");
-  return out.SetIrValue(
-      ir::ops::BitwiseXor(input.GetIrValue(), other.GetIrValue()));
+  out.SetIrValue(ir::ops::BitwiseXor(input.GetIrValue(), other.GetIrValue()));
 }
 
 XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {

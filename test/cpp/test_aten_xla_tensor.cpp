@@ -1665,6 +1665,39 @@ TEST_F(AtenXlaTensorTest, TestTripletMarginLoss) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestBinaryCrossEntropy) {
+  int batch = 10;
+  int classes = 5;
+  torch::Tensor input =
+      torch::rand({batch, classes}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor target =
+      torch::rand({batch, classes}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor weight =
+      torch::rand({batch, classes}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor undef;
+  for (torch::Reduction::Reduction reduction :
+       {torch::Reduction::Mean, torch::Reduction::Sum,
+        torch::Reduction::None}) {
+    for (bool undef_weight : {false, true}) {
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor output = torch::binary_cross_entropy(
+            input, target, undef_weight ? undef : weight, reduction);
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        torch::Tensor xla_target = CopyToDevice(target, device);
+        torch::Tensor xla_weight =
+            undef_weight ? undef : CopyToDevice(weight, device);
+        torch::Tensor xla_output = torch::binary_cross_entropy(
+            xla_input, xla_target, xla_weight, reduction);
+        AllClose(output, xla_output);
+      });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::binary_cross_entropy",
+                           cpp_test::GetIgnoredCounters());
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestMarginRankingLoss) {
   torch::Tensor input1 =
       torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
@@ -8382,6 +8415,44 @@ TEST_F(AtenXlaTensorTest, TestAddMatMulBackward) {
           device, testfn);
     });
   }
+}
+
+TEST_F(AtenXlaTensorTest, TestBinaryCrossEntropyBackward) {
+  int batch = 6;
+  int classes = 2;
+  for (auto dtype : {torch::kFloat, torch::kDouble}) {
+    for (bool def_weight : {false, true}) {
+      torch::Tensor input = torch::rand(
+          {batch, classes}, torch::TensorOptions(dtype).requires_grad(true));
+      torch::Tensor target =
+          torch::rand({batch, classes}, torch::TensorOptions(dtype));
+      torch::Tensor weight;
+      if (def_weight) {
+        weight = torch::rand({batch, classes}, torch::TensorOptions(dtype));
+      }
+      for (torch::Reduction::Reduction reduction :
+           {torch::Reduction::Mean, torch::Reduction::Sum,
+            torch::Reduction::None}) {
+        auto testfn =
+            [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+          return torch::binary_cross_entropy(
+              /*self=*/inputs[0], /*target=*/inputs[1],
+              /*weight=*/inputs[2],
+              /*reduction=*/reduction);
+        };
+        ForEachDevice([&](const torch::Device& device) {
+          TestBackward({input, target, weight}, device, testfn, /*rtol=*/1e-5,
+                       /*atol=*/1e-8);
+        });
+      }
+    }
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::binary_cross_entropy",
+                       cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::binary_cross_entropy_backward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestNllLossBackward) {
