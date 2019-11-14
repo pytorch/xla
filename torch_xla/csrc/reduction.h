@@ -11,6 +11,16 @@ enum class ReductionMode {
   kSum,
 };
 
+xla::XlaOp BuildBinaryCrossEntropy(const xla::XlaOp& input,
+                                   const xla::XlaOp& target,
+                                   const absl::optional<xla::XlaOp>& weight,
+                                   ReductionMode reduction);
+
+xla::XlaOp BuildBinaryCrossEntropyBackward(
+    const xla::XlaOp& grad_output, const xla::XlaOp& input,
+    const xla::XlaOp& target, const absl::optional<xla::XlaOp>& weight,
+    ReductionMode reduction);
+
 xla::XlaOp BuildL1Loss(const xla::XlaOp& input, const xla::XlaOp& target,
                        ReductionMode reduction);
 

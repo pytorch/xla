@@ -191,6 +191,20 @@ class AtenXlaType {
   static at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p,
                                 at::Generator* generator);
 
+  // binary_cross_entropy is still in PyTorch TH legacy, which means both are
+  // overrideable for XLA. But overriding one set is sufficient. Currently
+  // binary_cross_entropy and its backward are used instead of the _out version.
+  // When it's moved to Aten in the future, we should only keep one set here.
+  static at::Tensor binary_cross_entropy(const at::Tensor& self,
+                                         const at::Tensor& target,
+                                         const at::Tensor& weight,
+                                         int64_t reduction);
+  static at::Tensor binary_cross_entropy_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self,
+                                                  const at::Tensor& target,
+                                                  const at::Tensor& weight,
+                                                  int64_t reduction);
+
   static at::Tensor binary_cross_entropy_with_logits(
       const at::Tensor& self, const at::Tensor& target,
       const at::Tensor& weight, const at::Tensor& pos_weight,

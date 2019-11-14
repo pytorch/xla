@@ -114,6 +114,74 @@ xla::XlaOp CreateProduct(
 
 }  // namespace
 
+xla::XlaOp BuildBinaryCrossEntropy(const xla::XlaOp& input,
+                                   const xla::XlaOp& target,
+                                   const absl::optional<xla::XlaOp>& weight,
+                                   ReductionMode reduction) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp xweight;
+  if (weight) {
+    // PyTorch guards weight and input has the same shape.
+    xweight = *weight;
+  } else {
+    xweight =
+        XlaHelpers::ScalarBroadcast<float>(1.0, input_shape, target.builder());
+  }
+  xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
+  xla::XlaOp result = -xweight * (target * xla::Log(input) +
+                                  (one - target) * xla::Log(one - input));
+  if (reduction == ReductionMode::kNone) {
+    return result;
+  }
+  result = xla::ReduceAll(
+      result, xla::Zero(input.builder(), input_shape.element_type()),
+      XlaHelpers::CreateAddComputation(input_shape.element_type()));
+  if (reduction == ReductionMode::kMean) {
+    xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
+    if (num_elements == 0) {
+      return xla::NanValue(input.builder(), input_shape.element_type());
+    } else {
+      xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
+          1.0 / static_cast<double>(num_elements), input_shape.element_type(),
+          input.builder());
+      result = result * scale_value;
+    }
+  }
+  return result;
+}
+
+xla::XlaOp BuildBinaryCrossEntropyBackward(
+    const xla::XlaOp& grad_output, const xla::XlaOp& input,
+    const xla::XlaOp& target, const absl::optional<xla::XlaOp>& weight,
+    ReductionMode reduction) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp xweight;
+  if (weight) {
+    // PyTorch guards weight and input has the same shape.
+    xweight = *weight;
+  } else {
+    xweight =
+        XlaHelpers::ScalarBroadcast<float>(1.0, input_shape, target.builder());
+  }
+  xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
+  xla::XlaOp result = xweight * (input - target) / input / (one - input);
+  if (reduction == ReductionMode::kNone) {
+    return result * grad_output;
+  }
+  if (reduction == ReductionMode::kMean) {
+    xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
+    if (num_elements == 0) {
+      return xla::NanValue(input.builder(), input_shape.element_type());
+    } else {
+      xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
+          1.0 / static_cast<double>(num_elements), input_shape.element_type(),
+          input.builder());
+      result = result * scale_value;
+    }
+  }
+  return result * grad_output;
+}
+
 xla::XlaOp BuildL1Loss(const xla::XlaOp& input, const xla::XlaOp& target,
                        ReductionMode reduction) {
   xla::XlaOp result = xla::Abs(input - target);
