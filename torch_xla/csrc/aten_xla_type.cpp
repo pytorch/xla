@@ -679,37 +679,6 @@ at::Tensor AtenXlaType::binary_cross_entropy_backward(
       bridge::GetXlaTensor(target), weight_tensor, reduction));
 }
 
-at::Tensor& AtenXlaType::binary_cross_entropy_backward_out(
-    at::Tensor& grad_input, const at::Tensor& grad_output,
-    const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
-    int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor grad_input_tensor = bridge::GetXlaTensor(grad_input);
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor weight_tensor =
-      bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice());
-  XLATensor::binary_cross_entropy_backward_out(
-      grad_input_tensor, bridge::GetXlaTensor(grad_output), self_tensor,
-      bridge::GetXlaTensor(target), weight_tensor, reduction);
-  return grad_input;
-}
-
-at::Tensor& AtenXlaType::binary_cross_entropy_out(at::Tensor& out,
-                                                  const at::Tensor& self,
-                                                  const at::Tensor& target,
-                                                  const at::Tensor& weight,
-                                                  int64_t reduction) {
-  XLA_FN_COUNTER("xla::");
-  XLATensor out_tensor = bridge::GetXlaTensor(out);
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor weight_tensor =
-      bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice());
-  XLATensor::binary_cross_entropy_out(out_tensor, self_tensor,
-                                      bridge::GetXlaTensor(target),
-                                      weight_tensor, reduction);
-  return out;
-}
-
 at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
     const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
     const at::Tensor& pos_weight, int64_t reduction) {

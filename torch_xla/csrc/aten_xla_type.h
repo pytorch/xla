@@ -205,16 +205,6 @@ class AtenXlaType {
                                                   const at::Tensor& weight,
                                                   int64_t reduction);
 
-  static at::Tensor& binary_cross_entropy_backward_out(
-      at::Tensor& grad_input, const at::Tensor& grad_output,
-      const at::Tensor& self, const at::Tensor& target,
-      const at::Tensor& weight, int64_t reduction);
-  static at::Tensor& binary_cross_entropy_out(at::Tensor& out,
-                                              const at::Tensor& self,
-                                              const at::Tensor& target,
-                                              const at::Tensor& weight,
-                                              int64_t reduction);
-
   static at::Tensor binary_cross_entropy_with_logits(
       const at::Tensor& self, const at::Tensor& target,
       const at::Tensor& weight, const at::Tensor& pos_weight,

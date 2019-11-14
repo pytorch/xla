@@ -617,23 +617,6 @@ XLATensor XLATensor::binary_cross_entropy_backward(const XLATensor& grad_output,
       GetOptionalIrValue(weight), GetXlaReductionMode(reduction)));
 }
 
-void XLATensor::binary_cross_entropy_backward_out(
-    XLATensor& grad_input, const XLATensor& grad_output, const XLATensor& input,
-    const XLATensor& target, const XLATensor& weight, xla::int64 reduction) {
-  grad_input.SetIrValue(ir::MakeNode<ir::ops::BinaryCrossEntropyBackward>(
-      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
-      GetOptionalIrValue(weight), GetXlaReductionMode(reduction)));
-}
-
-void XLATensor::binary_cross_entropy_out(XLATensor& out, const XLATensor& input,
-                                         const XLATensor& target,
-                                         const XLATensor& weight,
-                                         xla::int64 reduction) {
-  out.SetIrValue(ir::MakeNode<ir::ops::BinaryCrossEntropy>(
-      input.GetIrValue(), target.GetIrValue(), GetOptionalIrValue(weight),
-      GetXlaReductionMode(reduction)));
-}
-
 void XLATensor::bitwise_not_out(XLATensor& out, const XLATensor& input) {
   out.SetIrValue(ir::ops::Not(input.GetIrValue()));
 }

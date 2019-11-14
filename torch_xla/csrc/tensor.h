@@ -293,18 +293,6 @@ class XLATensor {
                                                  const XLATensor& weight,
                                                  xla::int64 reduction);
 
-  static void binary_cross_entropy_backward_out(XLATensor& grad_input,
-                                                const XLATensor& grad_output,
-                                                const XLATensor& input,
-                                                const XLATensor& target,
-                                                const XLATensor& weight,
-                                                xla::int64 reduction);
-
-  static void binary_cross_entropy_out(XLATensor& out, const XLATensor& input,
-                                       const XLATensor& target,
-                                       const XLATensor& weight,
-                                       xla::int64 reduction);
-
   static void bitwise_not_out(XLATensor& out, const XLATensor& input);
 
   static void bitwise_xor_out(XLATensor& out, const XLATensor& input,
