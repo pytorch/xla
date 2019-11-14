@@ -45,7 +45,7 @@ BinaryCrossEntropyBackward::BinaryCrossEntropyBackward(
                                     reduction);
            },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue<ReductionMode>(reduction))),
+           xla::util::MHash(xla::util::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 NodePtr BinaryCrossEntropyBackward::Clone(OpList operands) const {
@@ -73,7 +73,7 @@ XlaOpVector BinaryCrossEntropyBackward::Lower(LoweringContext* loctx) const {
 std::string BinaryCrossEntropyBackward::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
-     << ", reduction=" << xla::util::GetEnumValue<ReductionMode>(reduction_);
+     << ", reduction=" << xla::util::GetEnumValue(reduction_);
   return ss.str();
 }
 

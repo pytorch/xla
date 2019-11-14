@@ -252,77 +252,6 @@ class RateTracker(object):
     return count / delta if delta > 0 else 0.0
 
 
-class TrainStepMetrics(object):
-
-  LOG_FORMAT = ('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
-                'Loss: {:.6f}\tSamples/sec: {:.1f}')
-
-  def __init__(self, epoch, num_cores, batch_number, num_batches, batch_size,
-               loss, examples_per_sec, global_step):
-    """Constructor for the metrics of a single train step.
-
-    Args:
-      epoch: The current epoch number.
-      num_cores: The number of cores on which model is being trained.
-      batch_number: The current batch number. Reset to 0 every epoch.
-      num_batches: The number of batches in a single epoch.
-      batch_size: Per core batch size.
-      loss: Training loss.
-      examples_per_sec: The number of processed samples per second.
-      global_step: The global step number of current batch.
-    """
-    self._epoch = epoch
-    self._processed_samples = num_cores * (batch_number + 1) * batch_size
-    self._dataset_size = num_batches * batch_size
-    self._percent_epoch_done = 100. * batch_number * num_cores / num_batches
-    self._loss = loss
-    self._examples_per_sec = examples_per_sec
-    self._global_step = global_step
-    self._global_step_per_sec = examples_per_sec / batch_size
-
-  def write_summary(self, writer):
-    if writer:
-      writer.add_scalar('loss', self._loss, self._global_step)
-      writer.add_scalar('global_step/sec', self._global_step_per_sec,
-                        self._global_step)
-
-  def __repr__(self):
-    return self.LOG_FORMAT.format(self._epoch, self._processed_samples,
-                                  self._dataset_size, self._percent_epoch_done,
-                                  self._loss, self._examples_per_sec)
-
-
-class TestStepMetrics(object):
-
-  LOG_FORMAT = ('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%), '
-                'Samples/sec: {:.1f}\n')
-
-  def __init__(self, loss, correct, count, examples_per_sec, global_step):
-    """Constructor for the metrics of a single test step.
-
-    Args:
-      loss: The test loss.
-      correct: The number of correct samples.
-      count: Total number of samples.
-      examples_per_sec: The number of processed samples per second.
-      global_step: The global step number of current batch.
-    """
-    self._loss = loss
-    self._correct = correct
-    self._total = count
-    self._global_step = global_step
-    self._accuracy = 100.0 * correct / count
-    self._examples_per_sec = examples_per_sec
-
-  def write_summary(self, writer):
-    if writer:
-      writer.add_scalar('accuracy', self._accuracy, self._global_step)
-
-  def __repr__(self):
-    return self.LOG_FORMAT.format(self._loss, self._correct, self._total,
-                                  self._accuracy, self._examples_per_sec)
-
-
 class ToXlaTensorArena(object):
 
   def __init__(self, convert_fn, select_fn):
@@ -366,26 +295,6 @@ class ToXlaTensorArena(object):
     self._collect_tensors(inputs)
     self._convert()
     return self._replace_tensors(inputs)
-
-
-def _get_summary_writer(logdir=None):
-  if logdir:
-    from tensorboardX import SummaryWriter
-    return SummaryWriter(logdir)
-
-
-def get_log_fn(logdir=None, custom_log_fn=print):
-  writer = _get_summary_writer(logdir)
-
-  def log_fn(step_result):
-    if (isinstance(step_result, TrainStepMetrics) or
-        isinstance(step_result, TestStepMetrics)):
-      step_result.write_summary(writer)
-      custom_log_fn(str(step_result))
-    else:
-      custom_log_fn(step_result)
-
-  return log_fn
 
 
 def check_view_sharing(obj):
@@ -442,9 +351,19 @@ def _get_all_reduce_token():
   return token
 
 
-def cross_replica_sum(inputs, scale=1.0, groups=[]):
-  _TLS.all_reduce_token = torch_xla._XLAC._xla_cross_replica_sum(
-      inputs, _get_all_reduce_token(), scale, groups)
+def all_reduce(reduce_type, inputs, scale=1.0, groups=[]):
+  """Perform an inplace reduce operation on the input tensors.
+
+  Args:
+    reduce_type (string): One of ``sum``, ``mul``, ``and``, ``or``, ``min`` and
+      ``max``.
+    inputs (list): List of tensors to perform the all reduce op to.
+    scale (float): A default scaling value to be applied after the reduce.
+      Default: 1.0
+    groups (list): Reserved.
+  """
+  _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce(
+      reduce_type, inputs, _get_all_reduce_token(), scale, groups)
 
 
 def mark_step():
@@ -490,7 +409,7 @@ def optimizer_step(optimizer, barrier=False, optimizer_args={}):
   count = torch_xla._XLAC._xla_get_replication_devices_count()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
-    cross_replica_sum(gradients, scale=1.0 / count)
+    all_reduce('sum', gradients, scale=1.0 / count)
   loss = optimizer.step(**optimizer_args)
   if barrier:
     mark_step()

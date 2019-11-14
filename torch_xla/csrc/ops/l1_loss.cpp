@@ -26,7 +26,7 @@ L1Loss::L1Loss(const Value& input, const Value& target, ReductionMode reduction)
     : Node(ir::OpKind(at::aten::l1_loss), {input, target},
            [&]() { return NodeOutputShape(input, target, reduction); },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue<ReductionMode>(reduction))),
+           xla::util::MHash(xla::util::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 NodePtr L1Loss::Clone(OpList operands) const {
@@ -42,7 +42,7 @@ XlaOpVector L1Loss::Lower(LoweringContext* loctx) const {
 std::string L1Loss::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
-     << ", reduction=" << xla::util::GetEnumValue<ReductionMode>(reduction_);
+     << ", reduction=" << xla::util::GetEnumValue(reduction_);
   return ss.str();
 }
 

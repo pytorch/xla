@@ -7,9 +7,17 @@
 
 namespace torch_xla {
 
-// Builds a Cross Replica Sum operation on the operand, and scales the result by
-// scale.
-std::vector<xla::XlaOp> BuildCrossReplicaSum(
+enum class AllReduceType {
+  kSum,
+  kMin,
+  kMax,
+  kMul,
+  kOr,
+  kAnd,
+};
+
+std::vector<xla::XlaOp> BuildAllReduce(
+    AllReduceType reduce_type,
     tensorflow::gtl::ArraySlice<const xla::XlaOp> operands,
     const xla::XlaOp& token, double scale,
     const std::vector<std::vector<xla::int64>>& groups);

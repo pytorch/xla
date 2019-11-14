@@ -88,22 +88,14 @@ _FN_BLACKLIST_REGEX = [
 ]
 
 _FN_OUT = {
-    'add_out':
-        FuncOpts(),
-    'clamp_out':
-        FuncOpts(),
-    'div_out':
-        FuncOpts(),
-    'gather_out':
-        FuncOpts(),
-    'kthvalue_out':
-        FuncOpts(),
-    'index_select_out':
-        FuncOpts(),
-    'log_out':
-        FuncOpts(),
-    'topk_out':
-        FuncOpts(),
+    'add_out': FuncOpts(),
+    'clamp_out': FuncOpts(),
+    'div_out': FuncOpts(),
+    'gather_out': FuncOpts(),
+    'kthvalue_out': FuncOpts(),
+    'index_select_out': FuncOpts(),
+    'log_out': FuncOpts(),
+    'topk_out': FuncOpts(),
 }
 
 # List of tuples with the regex match first, and the corresponding FuncOpts()

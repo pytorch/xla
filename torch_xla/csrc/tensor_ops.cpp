@@ -112,7 +112,7 @@ XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
                             broadcasted_input.dtype());
     default:
       XLA_ERROR() << "Invalid reduction type: "
-                  << xla::util::GetEnumValue<ReductionMode>(reduction);
+                  << xla::util::GetEnumValue(reduction);
   }
 }
 
@@ -148,7 +148,7 @@ XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
     }
     default:
       XLA_ERROR() << "Invalid reduction type: "
-                  << xla::util::GetEnumValue<ReductionMode>(reduction);
+                  << xla::util::GetEnumValue(reduction);
   }
 }
 

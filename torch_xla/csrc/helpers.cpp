@@ -23,6 +23,17 @@ xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
   return precision_config;
 }
 
+xla::XlaComputation CreateComputation(
+    const std::string& name, xla::PrimitiveType type,
+    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>& op) {
+  xla::XlaBuilder builder(name);
+  xla::XlaOp x =
+      xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
+  xla::XlaOp y =
+      xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
+  return ConsumeValue(builder.Build(op(x, y)));
+}
+
 xla::XlaOp XlaHelpers::CreateReturnValue(
     xla::XlaBuilder* builder, const std::vector<xla::XlaOp>& outputs) {
   if (outputs.size() > 1) {
@@ -140,43 +151,41 @@ xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfigFromNdPadding(
 }
 
 xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
-  xla::XlaBuilder reduction_builder("AddComputation");
-  xla::XlaOp x = xla::Parameter(&reduction_builder, 0,
-                                xla::ShapeUtil::MakeShape(type, {}), "x");
-  xla::XlaOp y = xla::Parameter(&reduction_builder, 1,
-                                xla::ShapeUtil::MakeShape(type, {}), "y");
-  xla::Add(x, y);
-  return ConsumeValue(reduction_builder.Build());
+  return CreateComputation(
+      "AddComputation", type, [&](const xla::XlaOp& x, const xla::XlaOp& y) {
+        return type == xla::PrimitiveType::PRED ? xla::Or(x, y)
+                                                : xla::Add(x, y);
+      });
 }
 
 xla::XlaComputation XlaHelpers::CreateMulComputation(xla::PrimitiveType type) {
-  xla::XlaBuilder reduction_builder("MulComputation");
-  xla::XlaOp x = xla::Parameter(&reduction_builder, 0,
-                                xla::ShapeUtil::MakeShape(type, {}), "x");
-  xla::XlaOp y = xla::Parameter(&reduction_builder, 1,
-                                xla::ShapeUtil::MakeShape(type, {}), "y");
-  xla::Mul(x, y);
-  return ConsumeValue(reduction_builder.Build());
+  return CreateComputation(
+      "MulComputation", type,
+      [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::Mul(x, y); });
 }
 
 xla::XlaComputation XlaHelpers::CreateMaxComputation(xla::PrimitiveType type) {
-  xla::XlaBuilder builder("MaxComputation");
-  xla::XlaOp x =
-      xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
-  xla::XlaOp y =
-      xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
-  xla::Max(x, y);
-  return ConsumeValue(builder.Build());
+  return CreateComputation(
+      "MaxComputation", type,
+      [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::Max(x, y); });
 }
 
 xla::XlaComputation XlaHelpers::CreateMinComputation(xla::PrimitiveType type) {
-  xla::XlaBuilder builder("MinComputation");
-  xla::XlaOp x =
-      xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
-  xla::XlaOp y =
-      xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
-  xla::Min(x, y);
-  return ConsumeValue(builder.Build());
+  return CreateComputation(
+      "MinComputation", type,
+      [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::Min(x, y); });
+}
+
+xla::XlaComputation XlaHelpers::CreateAndComputation(xla::PrimitiveType type) {
+  return CreateComputation(
+      "AndComputation", type,
+      [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::And(x, y); });
+}
+
+xla::XlaComputation XlaHelpers::CreateOrComputation(xla::PrimitiveType type) {
+  return CreateComputation(
+      "OrComputation", type,
+      [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::Or(x, y); });
 }
 
 xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {

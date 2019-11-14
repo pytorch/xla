@@ -98,7 +98,7 @@ function build_and_install_torch_xla() {
 }
 
 function install_torchvision_from_source() {
-  torchvision_repo_version="v0.3.0"
+  torchvision_repo_version="v0.4.0"
   # Cannot install torchvision package with PyTorch installation from source.
   # https://github.com/pytorch/vision/issues/967
   git clone -b "${torchvision_repo_version}" https://github.com/pytorch/vision.git
