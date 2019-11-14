@@ -89,8 +89,8 @@ std::tuple<XLATensor, XLATensor> GetPromotedXlaTensorsForBinaryOp(
 }
 
 void AtenInitialize() {
-  TF_LOG(INFO) << "PyTorch GIT revision: " << TORCH_GITREV;
-  TF_LOG(INFO) << "XLA GIT revision: " << XLA_GITREV;
+  TF_VLOG(2) << "PyTorch GIT revision: " << TORCH_GITREV;
+  TF_VLOG(2) << "XLA GIT revision: " << XLA_GITREV;
 
   RegisterAtenTypeFunctions();
   XLATensorImpl::AtenInitialize();
