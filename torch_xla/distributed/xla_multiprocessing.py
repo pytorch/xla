@@ -136,17 +136,22 @@ def spawn(fn,
   """Enables multi processing based replication.
 
   Args:
-    fn: The function to be called for each device which takes part of the
-      replication. The function will be called with a first argument being the
-      global index of the process within the replication, followed by the
+    fn (callable): The function to be called for each device which takes part of
+      the replication. The function will be called with a first argument being
+      the global index of the process within the replication, followed by the
       arguments passed in `args`.
-    args: The arguments for `fn`.
-    nprocs: The number of processes/devices for the replication. At the moment,
-      if specified, can be either 1 or the maximum number of devices.
-    join: Whether the call should block waiting for the completion of the
+    args (tuple): The arguments for `fn`.
+      Default: Empty tuple
+    nprocs (int): The number of processes/devices for the replication. At the
+      moment, if specified, can be either 1 or the maximum number of devices.
+    join (bool): Whether the call should block waiting for the completion of the
       processes which have being spawned.
-    daemon: Whether the processes being spawned should have the `daemon` flag
-      set (see Python multi-processing API).
+      Default: True
+    daemon (bool): Whether the processes being spawned should have the `daemon`
+      flag set (see Python multi-processing API).
+      Default: False
+    start_method (string): The Python `multiprocessing` process creation mathod.
+      Default: `spawn`
 
   Returns:
     The same object returned by the `torch.multiprocessing.spawn` API.
