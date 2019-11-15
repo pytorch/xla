@@ -1688,7 +1688,7 @@ TEST_F(AtenXlaTensorTest, TestBinaryCrossEntropy) {
             undef_weight ? undef : CopyToDevice(weight, device);
         torch::Tensor xla_output = torch::binary_cross_entropy(
             xla_input, xla_target, xla_weight, reduction);
-        AllClose(output, xla_output);
+        AllClose(output, xla_output, /*rtol=*/1e-4, /*atol=*/1e-5);
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
@@ -8441,8 +8441,8 @@ TEST_F(AtenXlaTensorTest, TestBinaryCrossEntropyBackward) {
               /*reduction=*/reduction);
         };
         ForEachDevice([&](const torch::Device& device) {
-          TestBackward({input, target, weight}, device, testfn, /*rtol=*/1e-5,
-                       /*atol=*/1e-8);
+          TestBackward({input, target, weight}, device, testfn, /*rtol=*/1e-4,
+                       /*atol=*/1e-7);
         });
       }
     }
