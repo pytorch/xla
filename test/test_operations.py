@@ -1333,6 +1333,36 @@ class TestGeneric(XlaTestCase):
     self.assertTrue(revs['xla'])
     self.assertTrue('torch' in revs)
 
+  def test_util_foreach_api(self):
+
+    class ForTest(object):
+
+      def __init__(self):
+        self.a = {'k': [1, 2, 3], (3, 4): 'y', 5: {'a': 'n'}}
+        self.b = ('f', 17)
+
+    data = {
+        (1, 2): 11,
+        21: ForTest(),
+        'w': [12, ForTest()],
+    }
+
+    ids = []
+
+    def collect(x):
+      ids.append(id(x))
+
+    xu.for_each_instance(data, lambda x: True, collect)
+
+    wids = []
+
+    def convert(x):
+      wids.append(id(x))
+      return x
+
+    xu.for_each_instance_rewrite(data, lambda x: True, convert)
+    self.assertEqual(ids, wids)
+
 
 class TestTypePromotion(XlaTestCase):
 
