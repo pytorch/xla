@@ -491,25 +491,27 @@ at::Tensor AtenXlaType::as_strided(const at::Tensor& self, at::IntArrayRef size,
                                    at::IntArrayRef stride,
                                    c10::optional<int64_t> storage_offset) {
   XLA_FN_COUNTER("xla::");
-  if (!ir::ops::AsStrided::StrideIsSupported(XlaHelpers::I64List(size),
+  auto xsize = XlaHelpers::I64List(size);
+  if (!ir::ops::AsStrided::StrideIsSupported(xsize,
                                              XlaHelpers::I64List(stride))) {
     return AtenXlaTypeDefault::as_strided(self, size, stride, storage_offset);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::as_strided(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(size),
-      XlaHelpers::I64Optional(storage_offset)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::as_strided(bridge::GetXlaTensor(self), std::move(xsize),
+                            XlaHelpers::I64Optional(storage_offset)));
 }
 
 at::Tensor& AtenXlaType::as_strided_(at::Tensor& self, at::IntArrayRef size,
                                      at::IntArrayRef stride,
                                      c10::optional<int64_t> storage_offset) {
   XLA_FN_COUNTER("xla::");
-  if (!ir::ops::AsStrided::StrideIsSupported(XlaHelpers::I64List(size),
+  auto xsize = XlaHelpers::I64List(size);
+  if (!ir::ops::AsStrided::StrideIsSupported(xsize,
                                              XlaHelpers::I64List(stride))) {
     return AtenXlaTypeDefault::as_strided_(self, size, stride, storage_offset);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::as_strided_(self_tensor, XlaHelpers::I64List(size),
+  XLATensor::as_strided_(self_tensor, std::move(xsize),
                          XlaHelpers::I64Optional(storage_offset));
   return self;
 }
