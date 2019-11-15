@@ -436,12 +436,18 @@ def save(data, file_or_path, master_only=True):
       Default: True
   """
 
-  def convert_fn(value):
-    return value.cpu()
+  def convert_fn(tensors):
+    cpu_tensors = []
+    torch_xla._XLAC._xla_sync_multi(
+        tensors, devices=[], wait=True, sync_xla_data=True)
+    for sync_tensor in tensors:
+      cpu_tensors.append(sync_tensor.cpu())
+    return cpu_tensors
 
-  cpu_data = xu.for_each_instance_rewrite(data,
-                                          lambda x: type(x) == torch.Tensor,
-                                          convert_fn)
+  def select_fn(v):
+    return type(v) == torch.Tensor and is_xla_tensor(v)
+
+  cpu_data = ToXlaTensorArena(convert_fn, select_fn).transform(data)
   if master_only:
     if is_master_ordinal():
       torch.save(cpu_data, file_or_path)
