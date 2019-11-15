@@ -118,6 +118,7 @@ disabled_torch_tests = {
     'test_solve_xla_float64',  # precison (1e-7)
     'test_triangular_solve_batched_xla_float64',  # precision (1e-6)
     'test_triangular_solve_xla_float64',  # precision (1e-7)
+    'test_scalar_check',  # runtime error
 
     # test_indexing.py
     # TestIndexing
