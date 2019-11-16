@@ -206,13 +206,7 @@ std::ptrdiff_t GetTensorId(const at::Tensor& tensor) {
 std::vector<at::Tensor> GetXlaTensorsFromAten(
     const std::vector<at::Tensor>& aten_tensors,
     const std::vector<std::string>& devices) {
-  std::vector<at::Tensor> tensors;
-  tensors.reserve(aten_tensors.size());
-  for (auto& aten_tensor : aten_tensors) {
-    tensors.push_back(aten_tensor);
-  }
-
-  auto data_handles = CreateTensorsData(tensors, GetXlaDevices(devices));
+  auto data_handles = CreateTensorsData(aten_tensors, GetXlaDevices(devices));
 
   std::vector<at::Tensor> xla_tensors;
   xla_tensors.reserve(data_handles.size());

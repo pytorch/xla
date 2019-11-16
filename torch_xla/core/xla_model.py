@@ -453,3 +453,15 @@ def save(data, file_or_path, master_only=True):
       torch.save(cpu_data, file_or_path)
   else:
     torch.save(cpu_data, file_or_path)
+
+
+def send_cpu_data_to_device(data, device):
+
+  def convert_fn(tensors):
+    devices = [str(device)] * len(tensors)
+    return torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+
+  def select_fn(v):
+    return type(v) == torch.Tensor and v.device.type == 'cpu'
+
+  return ToXlaTensorArena(convert_fn, select_fn).transform(data)
