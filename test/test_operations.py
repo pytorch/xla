@@ -1367,7 +1367,7 @@ class TestGeneric(XlaTestCase):
     def collect(x):
       ids.append(id(x))
 
-    xu.for_each_instance(data, lambda x: True, collect)
+    xu.for_each_instance(data, lambda x: isinstance(x, (int, str)), collect)
 
     wids = []
 
@@ -1375,7 +1375,9 @@ class TestGeneric(XlaTestCase):
       wids.append(id(x))
       return x
 
-    xu.for_each_instance_rewrite(data, lambda x: True, convert)
+    xu.for_each_instance_rewrite(data, lambda x: isinstance(x, (int, str)),
+                                 convert)
+    self.assertEqual(len(ids), 30)
     self.assertEqual(ids, wids)
 
 
