@@ -48,6 +48,10 @@ def _gen_int_tensor(*args, **kwargs):
   return torch.randint(*args, **kwargs)
 
 
+def _gen_mask(size):
+  return torch.randint(0, 2, size, dtype=torch.bool)
+
+
 class Holder(object):
   pass
 
@@ -660,7 +664,7 @@ class TestAtenXlaTensor(XlaTestCase):
 
   def test_masked_fill_with_tensor(self):
     input = _gen_tensor(2, 5, 4, 3)
-    mask = torch.randint(0, 2, input.size(), dtype=torch.bool)
+    mask = _gen_mask(input.size())
     value = torch.tensor(42)
     xla_input = input.to(xm.xla_device())
     xla_mask = mask.to(xm.xla_device())
@@ -669,6 +673,17 @@ class TestAtenXlaTensor(XlaTestCase):
     xla_result = torch.masked_fill(xla_input, xla_mask, xla_value)
     self.assertEqual(input.data, xla_input.data.cpu())
     self.assertEqual(result.data, xla_result.data.cpu())
+
+  def test_masked_fill_in_out_place(self):
+
+    def test_fn(a, b, m):
+      ar = torch.masked_fill(a, m, 17.0)
+      bi = b.masked_fill_(m, 21.0)
+      return ar, bi
+
+    t1 = _gen_tensor(5, 3)
+    t2 = _gen_tensor(*t1.size())
+    self.runAtenTest([t1, t2, _gen_mask(t1.size())], test_fn)
 
   def test_add_mixed_device(self):
     input = _gen_tensor(3, 800, 1066)
