@@ -124,17 +124,6 @@ class ParallelLoader(object):
     xu.for_each_instance(data, lambda x: type(x) == torch.Tensor, fn)
     return size[0] if size else None
 
-  def _send_data_to(self, data, device):
-
-    def convert_fn(tensors):
-      devices = [str(device)] * len(tensors)
-      return torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
-
-    def select_fn(v):
-      return type(v) == torch.Tensor
-
-    return xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
-
   def _loader_worker(self):
     queues = list(self._queues.values())
     data_iter = enumerate(self._loader)
@@ -173,7 +162,7 @@ class ParallelLoader(object):
       batch = self._get_batch(dqueue)
       if not batch:
         break
-      batch = self._send_data_to(batch, device)
+      batch = xm.send_cpu_data_to_device(batch, device)
       for data in batch:
         dqueue.queue.put(data)
     dqueue.queue.close_write()
