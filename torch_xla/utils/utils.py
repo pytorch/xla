@@ -130,7 +130,7 @@ def for_each_instance_rewrite(value, select_fn, fn):
       result.append(for_each_instance_rewrite(x, select_fn, fn))
     return type(value)(result)
   elif hasattr(value, '__dict__'):
-    result = copy.deepcopy(value)
+    result = copy.copy(value)
     for k in result.__dict__.keys():
       v = for_each_instance_rewrite(result.__dict__[k], select_fn, fn)
       result.__dict__[k] = v
