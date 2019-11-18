@@ -110,8 +110,8 @@ disabled_torch_tests = {
     'test_triu_tril',
     'test_tensor_shape_empty',  # LLVM OOM in CI
     'test_cholesky_inverse',  # precision (1e-6)
-    'test_cholesky_solve_batched_broadcasting',  # precision
-    'test_cholesky_solve_batched_many_batches',  # precision
+    'test_cholesky_solve_batched_broadcasting',  # 0.0039 vs 0.001
+    'test_cholesky_solve_batched_many_batches',  # 0.36 vs 0.001
     'test_cholesky_solve_batched',  # precision (1e-5)
     'test_cholesky_solve',  # precision (1e-5)
     'test_lu_solve_batched',  # precision (1e-6)
@@ -119,7 +119,7 @@ disabled_torch_tests = {
     'test_solve_batched',  # precision (1e-6)
     'test_solve',  # precison (1e-7)
     'test_triangular_solve_batched',  # precision (1e-6)
-    'test_triangular_solve_batched_many_batches',  # precision
+    'test_triangular_solve_batched_many_batches',  # 1.02 vs 0.001
     'test_triangular_solve',  # precision (1e-7)
     'test_scalar_check',  # runtime error
 
