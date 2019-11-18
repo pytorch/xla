@@ -2242,7 +2242,9 @@ at::Tensor AtenXlaType::repeat(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(repeats)));
 }
 
-at::Tensor& AtenXlaType::resize_(at::Tensor& self, at::IntArrayRef size) {
+at::Tensor& AtenXlaType::resize_(
+    at::Tensor& self, at::IntArrayRef size,
+    c10::optional<at::MemoryFormat> /* memory_format */) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::resize_(self_tensor, XlaHelpers::I64List(size));
