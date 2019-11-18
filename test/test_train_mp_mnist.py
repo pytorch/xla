@@ -49,6 +49,11 @@ class MNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
+def _train_update(device, x, loss, tracker):
+  test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
+                                   tracker.global_rate())
+
+
 def train_mnist():
   torch.manual_seed(1)
 
@@ -122,8 +127,7 @@ def train_mnist():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
-                                         tracker.global_rate())
+        xm.add_step_closure(_train_update, args=(device, x, loss, tracker))
 
   def test_loop_fn(loader):
     total_samples = 0
@@ -143,7 +147,7 @@ def train_mnist():
   for epoch in range(1, FLAGS.num_epochs + 1):
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
-    xm.master_print("Finished training epoch {}".format(epoch))
+    xm.master_print('Finished training epoch {}'.format(epoch))
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))

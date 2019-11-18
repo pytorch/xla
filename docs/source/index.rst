@@ -18,6 +18,8 @@ xla_model
 
 .. autofunction:: all_reduce
 
+.. autofunction:: add_step_closure
+		  
 .. autofunction:: optimizer_step
 
 .. autofunction:: save

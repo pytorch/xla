@@ -366,6 +366,43 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=[]):
       reduce_type, inputs, _get_all_reduce_token(), scale, groups)
 
 
+def add_step_closure(closure, args=()):
+  """Adds a closure to the list of the ones to be run at the end of the step.
+
+  Many times during model training there is the need to print/report (print to
+  console, post to tensorboard, etc...) information which require the content of
+  intermediary tensors to be inspected.
+  Inspecting different tensors content in different points of the model code
+  requires many executions and typically causes performance issues.
+  Adding a step closure will ensure that it will be run after the barrier, when
+  all the live tensors will be already materialized to device data.
+  Live tensors which will include the ones captured by the closure arguments.
+  So using `add_step_closure()` will ensure a single execution will be
+  performed, even when multiple closures are queued, requiring multiple tensors
+  to be inspected.
+  Step closures will be run sequentially in the order they have been queued.
+  Note that even though using this API the execution will be optimized, it is
+  advised to throttle the printing/reporting events once every N steps.
+
+  Args:
+    closure (callable): The function to be called.
+    args (tuple): The arguments to be passed to the closure.
+  """
+  step_closures = getattr(_TLS, 'step_closures', None)
+  if step_closures is None:
+    step_closures = []
+    _TLS.step_closures = step_closures
+  step_closures.append(lambda a=args: closure(*a))
+
+
+def _run_step_closures():
+  step_closures = getattr(_TLS, 'step_closures', None)
+  if step_closures is not None:
+    _TLS.step_closures = []
+    for closure in step_closures:
+      closure()
+
+
 def mark_step():
   torch_xla._XLAC._xla_step_marker(
       torch_xla._XLAC._xla_get_default_device(), [],
@@ -374,6 +411,7 @@ def mark_step():
   # same values from different threads.
   if is_master_ordinal():
     ms.save_metrics()
+  _run_step_closures()
   _TLS.all_reduce_token = None
 
 
