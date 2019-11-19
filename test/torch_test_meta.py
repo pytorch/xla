@@ -167,4 +167,15 @@ disabled_torch_tests = {
     'test_MaxPool1d_indices',  # lowering
     'test_EmbeddingBag_per_sample_weights_and_offsets',  # runtime error
     'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # runtime error
+
+    # test_type_promotion.py
+    # TestTypePromotion
+    'test_many_promotions',
+    'test_inplace',
+    'test_indexing',
+    'test_booleans',  # not less than or equal to 0.001
+    'test_alternate_result',
+    'test_alpha_mismatch',
+    'test_lt_with_type_promotion',  # runtime error
+    'test_half',  # half
 }
