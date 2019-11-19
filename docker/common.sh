@@ -21,21 +21,30 @@ function collect_wheels() {
 
   pushd /tmp/staging-wheels
   cp /pytorch/dist/*.whl .
-  rename -v "s/torch-.*\+\w{7}/torch-${wheel_version}/" *.whl
+  rename -v "s/^torch-(.*?)-cp/torch-${wheel_version}-cp/" *.whl
   popd
   mv /tmp/staging-wheels/* .
   pushd /tmp/staging-wheels
   cp /pytorch/xla/dist/*.whl .
-  rename -v "s/torch_xla-.*\+\w{7}/torch_xla-${wheel_version}/" *.whl
+  rename -v "s/^torch_xla-(.*?)-cp/torch_xla-${wheel_version}-cp/" *.whl
   popd
   mv /tmp/staging-wheels/* .
+  pushd /tmp/staging-wheels
+  cp /pytorch/vision/dist/*.whl .
+  rename -v "s/^torchvision-(.*?)-cp/torchvision-${wheel_version}-cp/" *.whl
+  popd
+  mv /tmp/staging-wheels/* .
+
   rm -rf /tmp/staging-wheels
 
   pushd /pytorch/dist
-  rename -v "s/^torch/torch-${wheel_version}+$(date -u +%Y%m%d)/" *.whl
+  rename -v "s/^torch-(.*?)-cp/torch-${wheel_version}+$(date -u +%Y%m%d)-cp/" *.whl
   popd
   pushd /pytorch/xla/dist
-  rename -v "s/^torch_xla/torch_xla-${wheel_version}+$(date -u +%Y%m%d)/" *.whl
+  rename -v "s/^torch_xla-(.*?)-cp/torch_xla-${wheel_version}+$(date -u +%Y%m%d)-cp/" *.whl
   popd
-  cp /pytorch/dist/*.whl ./ && cp /pytorch/xla/dist/*.whl ./
+  pushd /pytorch/vision/dist
+  rename -v "s/^torchvision-(.*?)-cp/torchvision-${wheel_version}+$(date -u +%Y%m%d)-cp/" *.whl
+  popd
+  cp /pytorch/dist/*.whl ./ && cp /pytorch/xla/dist/*.whl ./ && cp /pytorch/vision/dist/*.whl ./
 }
