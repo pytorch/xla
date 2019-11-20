@@ -217,6 +217,15 @@ xla::XlaOp XlaHelpers::ReshapeToRank(const xla::XlaOp& input,
   return xla::Reshape(input, dimensions);
 }
 
+xla::XlaOp XlaHelpers::Flatten(const xla::XlaOp& input) {
+  xla::Shape input_shape = ShapeOfXlaOp(input);
+  if (input_shape.rank() == 1) {
+    return input;
+  }
+  xla::int64 input_elements = xla::ShapeUtil::ElementsIn(input_shape);
+  return xla::Reshape(input, {input_elements});
+}
+
 std::vector<xla::int64> XlaHelpers::MakeTransposePermutation(xla::int64 dim0,
                                                              xla::int64 dim1,
                                                              xla::int64 rank) {

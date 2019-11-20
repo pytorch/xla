@@ -669,6 +669,9 @@ class AtenXlaType {
   static at::Tensor prod(const at::Tensor& self, int64_t dim, bool keepdim,
                          c10::optional<at::ScalarType> dtype);
 
+  static at::Tensor& put_(at::Tensor& self, const at::Tensor& index,
+                          const at::Tensor& source, bool accumulate);
+
   static std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self,
                                                bool some);
 
@@ -829,6 +832,8 @@ class AtenXlaType {
   static at::Tensor t(const at::Tensor& self);
 
   static at::Tensor& t_(at::Tensor& self);
+
+  static at::Tensor take(const at::Tensor& self, const at::Tensor& index);
 
   static at::Tensor tan(const at::Tensor& self);
 

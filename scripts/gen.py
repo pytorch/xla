@@ -97,6 +97,7 @@ _FN_OUT = {
     'kthvalue_out': FuncOpts(),
     'index_select_out': FuncOpts(),
     'log_out': FuncOpts(),
+    'take_out': FuncOpts(),
     'topk_out': FuncOpts(),
 }
 
