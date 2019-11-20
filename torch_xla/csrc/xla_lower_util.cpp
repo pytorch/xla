@@ -522,27 +522,36 @@ xla::XlaOp CreateIndexFill(const xla::XlaOp& buffer, xla::int64 dim,
                              /*broadcast_value_to_index=*/true, nullptr);
 }
 
-xla::XlaOp CreateScatter(
-    const xla::XlaOp& input, const xla::XlaOp& index, const xla::XlaOp& src,
-    xla::int64 dim,
-    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
-        combiner) {
+XlaOpCombiner NumericAddCombiner() {
+  return [](const xla::XlaOp& x, const xla::XlaOp& y) -> xla::XlaOp {
+    xla::XlaOp numeric_x = ConvertToNumeric(x);
+    xla::XlaOp numeric_y = ConvertToNumeric(y);
+    xla::XlaOp numeric_sum = numeric_x + numeric_y;
+    return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
+                     XlaHelpers::TypeOfXlaOp(x),
+                     /*device=*/nullptr);
+  };
+}
+
+xla::XlaOp CreateScatter(const xla::XlaOp& input, const xla::XlaOp& index,
+                         const xla::XlaOp& source, xla::int64 dim,
+                         const XlaOpCombiner& combiner) {
   static int dense_scatter_factor =
       xla::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
   xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
-  xla::Shape src_shape = XlaHelpers::ShapeOfXlaOp(src);
-  XLA_CHECK_EQ(src_shape.rank(), index_shape.rank());
-  xla::XlaOp src_op = src;
-  if (src_shape.dimensions() != index_shape.dimensions()) {
-    std::vector<xla::int64> base_indices(src_shape.rank(), 0);
-    src_op = BuildSlice(src_op, base_indices, index_shape.dimensions());
+  xla::Shape source_shape = XlaHelpers::ShapeOfXlaOp(source);
+  XLA_CHECK_EQ(source_shape.rank(), index_shape.rank());
+  xla::XlaOp source_op = source;
+  if (source_shape.dimensions() != index_shape.dimensions()) {
+    std::vector<xla::int64> base_indices(source_shape.rank(), 0);
+    source_op = BuildSlice(source_op, base_indices, index_shape.dimensions());
   }
 
   xla::int64 input_elements = xla::ShapeUtil::ElementsIn(input_shape);
   xla::int64 index_elements = xla::ShapeUtil::ElementsIn(index_shape);
   if (index_elements >= input_elements / dense_scatter_factor) {
-    return XlaDenseScatter(input, index, src_op, dim, combiner);
+    return XlaDenseScatter(input, index, source_op, dim, combiner);
   }
 
   xla::ShapeUtil::AppendMajorDimension(1, &index_shape);
@@ -564,9 +573,30 @@ xla::XlaOp CreateScatter(
     scatter_dnums.add_scatter_dims_to_operand_dims(i);
   }
   return xla::Scatter(
-      input, scatter_indices, src_op,
+      input, scatter_indices, source_op,
       MakeScatterComputation(combiner, input_shape.element_type()),
       scatter_dnums);
+}
+
+xla::XlaOp CreatePut(const xla::XlaOp& input, const xla::XlaOp& index,
+                     const xla::XlaOp& source, bool accumulate) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
+  xla::int64 input_elements = xla::ShapeUtil::ElementsIn(input_shape);
+  xla::XlaOp r1_input = xla::Reshape(input, {input_elements});
+  xla::int64 index_elements = xla::ShapeUtil::ElementsIn(index_shape);
+  xla::XlaOp r1_index = xla::Reshape(index, {index_elements});
+  xla::XlaOp max_index = XlaHelpers::ScalarValue(
+      input_elements, index_shape.element_type(), index.builder());
+  xla::XlaOp bound_index = BoundIndices(r1_index, max_index);
+  xla::XlaOp r1_source = XlaHelpers::Flatten(source);
+  XlaOpCombiner combiner;
+  if (accumulate) {
+    combiner = NumericAddCombiner();
+  }
+  xla::XlaOp r1_scatter =
+      CreateScatter(r1_input, bound_index, r1_source, /*dim=*/0, combiner);
+  return xla::Reshape(r1_scatter, input_shape.dimensions());
 }
 
 }  // namespace torch_xla
