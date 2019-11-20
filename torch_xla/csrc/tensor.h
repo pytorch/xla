@@ -722,6 +722,9 @@ class XLATensor {
                         bool keep_reduced_dimensions,
                         c10::optional<at::ScalarType> dtype);
 
+  static void put_(XLATensor& input, const XLATensor& index,
+                   const XLATensor& source, bool accumulate);
+
   static std::tuple<XLATensor, XLATensor> qr(const XLATensor& input, bool some);
 
   static XLATensor randperm(xla::int64 n, const Device& device,
@@ -871,6 +874,8 @@ class XLATensor {
 
   static std::tuple<XLATensor, XLATensor> symeig(const XLATensor& input,
                                                  bool eigenvectors, bool upper);
+
+  static XLATensor take(const XLATensor& input, const XLATensor& index);
 
   static XLATensor tan(const XLATensor& input);
   static void tan_(XLATensor& input);

@@ -71,6 +71,7 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/prod.h"
+#include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
 #include "torch_xla/csrc/ops/randperm.h"
 #include "torch_xla/csrc/ops/repeat.h"
@@ -1740,6 +1741,12 @@ XLATensor XLATensor::prod(const XLATensor& input,
       dtype);
 }
 
+void XLATensor::put_(XLATensor& input, const XLATensor& index,
+                     const XLATensor& source, bool accumulate) {
+  input.SetIrValue(ir::MakeNode<ir::ops::Put>(
+      input.GetIrValue(), index.GetIrValue(), source.GetIrValue(), accumulate));
+}
+
 std::tuple<XLATensor, XLATensor> XLATensor::qr(const XLATensor& input,
                                                bool some) {
   ir::NodePtr node = ir::MakeNode<ir::ops::QR>(input.GetIrValue(), some);
@@ -2159,6 +2166,11 @@ std::tuple<XLATensor, XLATensor> XLATensor::symeig(const XLATensor& input,
       ir::MakeNode<ir::ops::SymEig>(input.GetIrValue(), eigenvectors, !upper);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
+}
+
+XLATensor XLATensor::take(const XLATensor& input, const XLATensor& index) {
+  return input.CreateFrom(
+      ir::ops::Take(input.GetIrValue(), index.GetIrValue()));
 }
 
 XLATensor XLATensor::tan(const XLATensor& input) {
