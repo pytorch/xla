@@ -25,6 +25,27 @@ disabled_torch_tests = {
     'test_cumprod_xla',
     'test_cumprod_neg_dim_xla',
     'test_mean_64bit_indexing_xla',  # protobuf limit exceeded
+    'test_pow_xla',  # (TPU) 0.0043 vs 0.001
+    'test_pow_xla',  # (TPU) 0.0032 vs 0.001
+    'test_pow_inplace_xla',  # (TPU) 0.0043 vs 0.001
+    'test_pow_inplace_xla',  # (TPU) 0.0032 vs 0.001
+    'test_pow_inplace_3_xla',  # (TPU) 0.0036 vs 0.001
+    'test_pow_inplace_3_xla',  # (TPU) 0.0028 vs 0.001
+    'test_pow_3_xla',  # (TPU) 0.0036 vs 0.001
+    'test_pow_3_xla',  # (TPU) 0.0028 vs 0.001
+    'test_pow_-2_xla',  # (TPU) 0.0913 vs 0.001
+    'test_pow_-2_xla',  # (TPU) 0.391 vs 0.001
+    'test_topk_neg_dim_sort_xla',  # (TPU) unimplemented HLO for X64
+    'test_topk_dim_sort_xla',  # (TPU) unimplemented HLO for X64
+    'test_topk_dim_desc_sort_xla',  # (TPU) unimplemented HLO for X64
+    'test_sort_xla',  # (TPU) unimplemented HLO for X64
+    'test_sort_neg_dim_xla',  # (TPU) unimplemented HLO for X64
+    'test_sort_neg_dim_descending_xla',  # (TPU) unimplemented HLO for X64
+    'test_sort_dim_xla',  # (TPU) unimplemented HLO for X64
+    'test_sort_dim_descending_xla',  # (TPU) unimplemented HLO for X64
+    'test_kthvalue_xla',  # (TPU) unimplemented HLO for X64
+    'test_kthvalue_neg_dim_xla',  # (TPU) unimplemented HLO for X64
+    'test_kthvalue_dim_xla',  # (TPU) unimplemented HLO for X64
 
     # TestTorchDeviceType
     'test_clamp',  # slow
@@ -110,17 +131,17 @@ disabled_torch_tests = {
     'test_triu_tril',
     'test_tensor_shape_empty',  # LLVM OOM in CI
     'test_cholesky_inverse',  # precision (1e-6)
-    'test_cholesky_solve_batched_broadcasting',  # 0.0039 vs 0.001
-    'test_cholesky_solve_batched_many_batches',  # 0.36 vs 0.001
-    'test_cholesky_solve_batched',  # precision (1e-5)
-    'test_cholesky_solve',  # precision (1e-5)
-    'test_lu_solve_batched',  # precision (1e-6)
-    'test_lu_solve',  # precision (1e-7)
-    'test_solve_batched',  # precision (1e-6)
-    'test_solve',  # precison (1e-7)
-    'test_triangular_solve_batched',  # precision (1e-6)
-    'test_triangular_solve_batched_many_batches',  # 1.02 vs 0.001
-    'test_triangular_solve',  # precision (1e-7)
+    'test_cholesky_solve_batched_broadcasting',  # (TPU) 0.0039 vs 0.001
+    'test_cholesky_solve_batched_many_batches',  # (TPU) 0.36 vs 0.001
+    'test_cholesky_solve_batched',  # (TPU) precision (1e-5)
+    'test_cholesky_solve',  # (TPU) precision (1e-5)
+    'test_lu_solve_batched',  # (TPU) precision (1e-6)
+    'test_lu_solve',  # (TPU) precision (1e-7)
+    'test_solve_batched',  # (TPU) precision (1e-6)
+    'test_solve',  # (TPU) precison (1e-7)
+    'test_triangular_solve_batched',  # (TPU) precision (1e-6)
+    'test_triangular_solve_batched_many_batches',  # (TPU) 1.02 vs 0.001
+    'test_triangular_solve',  # (TPU) precision (1e-7)
     'test_scalar_check',  # runtime error
 
     # test_indexing.py
