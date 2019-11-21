@@ -10,6 +10,7 @@ disabled_torch_tests = {
     'test_sum_cpu_device_mismatch',  # doesn't raise
     'test_solve_methods_arg_device',  # doesn't raise
     'test_min_max_nan',
+    'test_min_max_binary_op_nan',
     'test_copy_noncontig',
     'test_copy_broadcast',
 
