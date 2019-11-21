@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 
 namespace torch_xla {
@@ -231,12 +232,14 @@ xla::XlaOp XlaHelpers::ReshapeToRank(const xla::XlaOp& input,
   return xla::Reshape(input, dimensions);
 }
 
-xla::XlaOp XlaHelpers::Flatten(const xla::XlaOp& input) {
-  xla::Shape input_shape = ShapeOfXlaOp(input);
-  if (input_shape.rank() == 1) {
+xla::XlaOp XlaHelpers::Flatten(const xla::XlaOp& input,
+                               xla::Shape* input_shape) {
+  xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
+  *input_shape_tmp = ShapeOfXlaOp(input);
+  if (input_shape_tmp->rank() == 1) {
     return input;
   }
-  xla::int64 input_elements = xla::ShapeUtil::ElementsIn(input_shape);
+  xla::int64 input_elements = xla::ShapeUtil::ElementsIn(*input_shape_tmp);
   return xla::Reshape(input, {input_elements});
 }
 

@@ -244,14 +244,13 @@ xla::XlaOp BoundIndices(const xla::XlaOp& index, const xla::XlaOp& max_index) {
 
 xla::XlaOp BuildTake(const xla::XlaOp& input, const xla::XlaOp& index) {
   static const int take_dim = 0;
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
-  xla::int64 input_elements = xla::ShapeUtil::ElementsIn(input_shape);
-  xla::XlaOp r1_input = xla::Reshape(input, {input_elements});
-  xla::int64 index_elements = xla::ShapeUtil::ElementsIn(index_shape);
-  xla::XlaOp r1_index = xla::Reshape(index, {index_elements});
-  xla::XlaOp max_index = XlaHelpers::ScalarValue(
-      input_elements, index_shape.element_type(), index.builder());
+  xla::Shape input_shape;
+  xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
+  xla::Shape index_shape;
+  xla::XlaOp r1_index = XlaHelpers::Flatten(index, &index_shape);
+  xla::XlaOp max_index =
+      XlaHelpers::ScalarValue(xla::ShapeUtil::ElementsIn(input_shape),
+                              index_shape.element_type(), index.builder());
   xla::XlaOp bound_index = BoundIndices(r1_index, max_index);
   xla::XlaOp r1_result =
       TorchGather(r1_input, bound_index, take_dim,
@@ -261,9 +260,9 @@ xla::XlaOp BuildTake(const xla::XlaOp& input, const xla::XlaOp& index) {
 
 xla::XlaOp BuildResize(const xla::XlaOp& input,
                        tensorflow::gtl::ArraySlice<const xla::int64> size) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::Shape input_shape;
+  xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
   xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
-  xla::XlaOp r1_input = xla::Reshape(input, {num_elements});
   xla::int64 new_num_elements = xla::util::Multiply<xla::int64>(size);
   xla::XlaOp resized_input = input;
   if (num_elements > new_num_elements) {
