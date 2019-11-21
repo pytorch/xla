@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/convert_ops.h"
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
@@ -10,9 +11,8 @@ namespace {
 
 xla::XlaOp ExplicitBooleanConvert(const xla::XlaOp& op,
                                   xla::PrimitiveType from) {
-  xla::XlaOp zero =
-      xla::ConstantLiteral(op.builder(), xla::LiteralUtil::Zero(from));
-  return xla::Ne(op, xla::Broadcast(zero, XlaHelpers::SizesOfXlaOp(op)));
+  xla::XlaOp zero = xla::Zero(op.builder(), from);
+  return xla::Ne(op, zero);
 }
 
 }  // namespace
