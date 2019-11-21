@@ -1085,7 +1085,6 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest(torch.rand(0, 1, 3, 0), test_fn)
 
-  @unittest.skip("isfinite changes broke this test")
   def test_pred_and_u8(self):
 
     def test_fn(a):
