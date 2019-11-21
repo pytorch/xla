@@ -1,9 +1,8 @@
-#include "torch_xla/csrc/ops/nll_loss.h"
+#include "torch_xla/csrc/ops/binary_cross_entropy.h"
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
 namespace torch_xla {
@@ -13,7 +12,7 @@ namespace {
 
 xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
                            const absl::optional<Value>& weight,
-                           ReductionMode reduction, int ignore_index) {
+                           ReductionMode reduction) {
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
@@ -21,8 +20,7 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
     if (operands.size() > 2) {
       weight = operands[2];
     }
-    return BuildNllLoss(operands[0], operands[1], weight, ignore_index,
-                        reduction);
+    return BuildBinaryCrossEntropy(operands[0], operands[1], weight, reduction);
   };
   std::vector<xla::Shape> shapes;
   for (auto& input :
@@ -34,45 +32,40 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
 
 }  // namespace
 
-NllLoss::NllLoss(const Value& logits, const Value& labels,
-                 const absl::optional<Value>& weight, ReductionMode reduction,
-                 int ignore_index)
-    : Node(ir::OpKind(at::aten::nll_loss),
+BinaryCrossEntropy::BinaryCrossEntropy(const Value& logits, const Value& labels,
+                                       const absl::optional<Value>& weight,
+                                       ReductionMode reduction)
+    : Node(ir::OpKind(at::aten::binary_cross_entropy),
            xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
-           [&]() {
-             return NodeOutputShape(logits, labels, weight, reduction,
-                                    ignore_index);
-           },
+           [&]() { return NodeOutputShape(logits, labels, weight, reduction); },
            /*num_outputs=*/1,
-           xla::util::MHash(xla::util::GetEnumValue(reduction), ignore_index)),
-      reduction_(reduction),
-      ignore_index_(ignore_index) {}
+           xla::util::MHash(xla::util::GetEnumValue(reduction))),
+      reduction_(reduction) {}
 
-NodePtr NllLoss::Clone(OpList operands) const {
+NodePtr BinaryCrossEntropy::Clone(OpList operands) const {
   absl::optional<Value> weight;
   if (operands.size() > 2) {
     weight = operands.at(2);
   }
-  return MakeNode<NllLoss>(operands.at(0), operands.at(1), weight, reduction_,
-                           ignore_index_);
+  return MakeNode<BinaryCrossEntropy>(operands.at(0), operands.at(1), weight,
+                                      reduction_);
 }
 
-XlaOpVector NllLoss::Lower(LoweringContext* loctx) const {
+XlaOpVector BinaryCrossEntropy::Lower(LoweringContext* loctx) const {
   xla::XlaOp logits = loctx->GetOutputOp(operand(0));
   xla::XlaOp labels = loctx->GetOutputOp(operand(1));
   absl::optional<xla::XlaOp> weight;
   if (operands().size() > 2) {
     weight = loctx->GetOutputOp(operand(2));
   }
-  return ReturnOp(
-      BuildNllLoss(logits, labels, weight, ignore_index_, reduction_), loctx);
+  return ReturnOp(BuildBinaryCrossEntropy(logits, labels, weight, reduction_),
+                  loctx);
 }
 
-std::string NllLoss::ToString() const {
+std::string BinaryCrossEntropy::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
-     << ", reduction=" << xla::util::GetEnumValue(reduction_)
-     << ", ignore_index=" << ignore_index_;
+     << ", reduction=" << xla::util::GetEnumValue(reduction_);
   return ss.str();
 }
 

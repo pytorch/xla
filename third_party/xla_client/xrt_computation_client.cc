@@ -214,15 +214,15 @@ XrtComputationClient::XrtComputationClient(
   for (const auto& dev_target : options_.global_device_map) {
     const char* tag =
         options_.devices.count(dev_target.first) > 0 ? "LOCAL" : "REMOTE";
-    TF_LOG(INFO) << "XRT device (" << tag << ") " << dev_target.first << " -> "
-                 << dev_target.second;
+    TF_VLOG(1) << "XRT device (" << tag << ") " << dev_target.first << " -> "
+               << dev_target.second;
   }
   for (auto& worker_target : options_.workers_map) {
-    TF_LOG(INFO) << "Worker " << worker_target.second
-                 << " for /job:" << worker_target.first.name
-                 << "/replica:0/task:" << worker_target.first.task_no;
+    TF_VLOG(1) << "Worker " << worker_target.second
+               << " for /job:" << worker_target.first.name
+               << "/replica:0/task:" << worker_target.first.task_no;
   }
-  TF_LOG(INFO) << "XRT default device: " << options_.default_device;
+  TF_VLOG(1) << "XRT default device: " << options_.default_device;
   MaybeCreateLocalService(options_);
   InitializeDevices(std::move(topology_proto));
   StartHandleReleaser();
@@ -1111,8 +1111,8 @@ void XrtComputationClient::InitializeDevices(
       auto it = options_.workers_map.find(worker);
       XLA_CHECK(it != options_.workers_map.end());
 
-      TF_LOG(INFO) << "Configuring TPU for master worker " << worker.name << ":"
-                   << worker.task_no << " at " << it->second;
+      TF_VLOG(1) << "Configuring TPU for master worker " << worker.name << ":"
+                 << worker.task_no << " at " << it->second;
       tensorflow::tpu::TopologyProto worker_topology_proto =
           InitializeAndFetchTopology(worker.name, worker.task_no, it->second,
                                      session_cache_->GetConfig());
@@ -1122,7 +1122,7 @@ void XrtComputationClient::InitializeDevices(
       }
     }
     if (topology_proto != nullptr) {
-      TF_LOG(INFO) << "TPU topology: " << topology_proto->DebugString();
+      TF_VLOG(1) << "TPU topology: " << topology_proto->DebugString();
     }
   }
   for (const auto& dev_target : options_.global_device_map) {
@@ -1191,7 +1191,7 @@ void XrtComputationClient::CreateMeshService(
 
   string mesh_service_address =
       sys_util::GetEnvString("XRT_MESH_SERVICE_ADDRESS", "localhost:53010");
-  TF_LOG(INFO) << "Creating mesh service bound to " << mesh_service_address;
+  TF_VLOG(1) << "Creating mesh service bound to " << mesh_service_address;
   mesh_service_ = absl::make_unique<service::MeshService>(mesh_service_address,
                                                           std::move(config));
 }

@@ -65,6 +65,7 @@ function install_and_setup_conda() {
   conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard
   /usr/bin/yes | pip install --upgrade google-api-python-client
   /usr/bin/yes | pip install --upgrade oauth2client
+  /usr/bin/yes | pip install --upgrade google-cloud-storage
   /usr/bin/yes | pip install lark-parser
 
   sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
@@ -98,11 +99,14 @@ function build_and_install_torch_xla() {
 }
 
 function install_torchvision_from_source() {
-  torchvision_repo_version="v0.3.0"
+  torchvision_repo_version="master"
   # Cannot install torchvision package with PyTorch installation from source.
   # https://github.com/pytorch/vision/issues/967
   git clone -b "${torchvision_repo_version}" https://github.com/pytorch/vision.git
-  cd vision && python setup.py install
+  pushd vision
+  python setup.py bdist_wheel
+  pip install dist/*.whl
+  popd
 }
 
 function main() {

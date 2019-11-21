@@ -16,6 +16,10 @@ xla_model
 .. autofunction:: get_local_ordinal
 .. autofunction:: is_master_ordinal
 
+.. autofunction:: all_reduce
+
+.. autofunction:: add_step_closure
+		  
 .. autofunction:: optimizer_step
 
 .. autofunction:: save

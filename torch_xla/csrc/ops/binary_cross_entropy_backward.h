@@ -1,0 +1,32 @@
+#pragma once
+
+#include "absl/types/optional.h"
+#include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/reduction.h"
+
+namespace torch_xla {
+namespace ir {
+namespace ops {
+
+class BinaryCrossEntropyBackward : public Node {
+ public:
+  BinaryCrossEntropyBackward(const Value& grad_output, const Value& logits,
+                             const Value& labels,
+                             const absl::optional<Value>& weight,
+                             ReductionMode reduction);
+
+  std::string ToString() const override;
+
+  NodePtr Clone(OpList operands) const override;
+
+  XlaOpVector Lower(LoweringContext* loctx) const override;
+
+  ReductionMode reduction() const { return reduction_; }
+
+ private:
+  ReductionMode reduction_;
+};
+
+}  // namespace ops
+}  // namespace ir
+}  // namespace torch_xla

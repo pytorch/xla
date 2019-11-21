@@ -89,8 +89,8 @@ std::tuple<XLATensor, XLATensor> GetPromotedXlaTensorsForBinaryOp(
 }
 
 void AtenInitialize() {
-  TF_LOG(INFO) << "PyTorch GIT revision: " << TORCH_GITREV;
-  TF_LOG(INFO) << "XLA GIT revision: " << XLA_GITREV;
+  TF_VLOG(1) << "PyTorch GIT revision: " << TORCH_GITREV;
+  TF_VLOG(1) << "XLA GIT revision: " << XLA_GITREV;
 
   RegisterAtenTypeFunctions();
   XLATensorImpl::AtenInitialize();
@@ -491,25 +491,27 @@ at::Tensor AtenXlaType::as_strided(const at::Tensor& self, at::IntArrayRef size,
                                    at::IntArrayRef stride,
                                    c10::optional<int64_t> storage_offset) {
   XLA_FN_COUNTER("xla::");
-  if (!ir::ops::AsStrided::StrideIsSupported(XlaHelpers::I64List(size),
+  auto xsize = XlaHelpers::I64List(size);
+  if (!ir::ops::AsStrided::StrideIsSupported(xsize,
                                              XlaHelpers::I64List(stride))) {
     return AtenXlaTypeDefault::as_strided(self, size, stride, storage_offset);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::as_strided(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(size),
-      XlaHelpers::I64Optional(storage_offset)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::as_strided(bridge::GetXlaTensor(self), std::move(xsize),
+                            XlaHelpers::I64Optional(storage_offset)));
 }
 
 at::Tensor& AtenXlaType::as_strided_(at::Tensor& self, at::IntArrayRef size,
                                      at::IntArrayRef stride,
                                      c10::optional<int64_t> storage_offset) {
   XLA_FN_COUNTER("xla::");
-  if (!ir::ops::AsStrided::StrideIsSupported(XlaHelpers::I64List(size),
+  auto xsize = XlaHelpers::I64List(size);
+  if (!ir::ops::AsStrided::StrideIsSupported(xsize,
                                              XlaHelpers::I64List(stride))) {
     return AtenXlaTypeDefault::as_strided_(self, size, stride, storage_offset);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::as_strided_(self_tensor, XlaHelpers::I64List(size),
+  XLATensor::as_strided_(self_tensor, std::move(xsize),
                          XlaHelpers::I64Optional(storage_offset));
   return self;
 }
@@ -653,6 +655,30 @@ at::Tensor& AtenXlaType::bernoulli_(at::Tensor& self, const at::Tensor& p,
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::bernoulli_(self_tensor, bridge::GetXlaTensor(p));
   return self;
+}
+
+at::Tensor AtenXlaType::binary_cross_entropy(const at::Tensor& self,
+                                             const at::Tensor& target,
+                                             const at::Tensor& weight,
+                                             int64_t reduction) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor weight_tensor =
+      bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice());
+  return bridge::AtenFromXlaTensor(XLATensor::binary_cross_entropy(
+      self_tensor, bridge::GetXlaTensor(target), weight_tensor, reduction));
+}
+
+at::Tensor AtenXlaType::binary_cross_entropy_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& target, const at::Tensor& weight, int64_t reduction) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor weight_tensor =
+      bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice());
+  return bridge::AtenFromXlaTensor(XLATensor::binary_cross_entropy_backward(
+      bridge::GetXlaTensor(grad_output), self_tensor,
+      bridge::GetXlaTensor(target), weight_tensor, reduction));
 }
 
 at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
@@ -2216,7 +2242,9 @@ at::Tensor AtenXlaType::repeat(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(repeats)));
 }
 
-at::Tensor& AtenXlaType::resize_(at::Tensor& self, at::IntArrayRef size) {
+at::Tensor& AtenXlaType::resize_(
+    at::Tensor& self, at::IntArrayRef size,
+    c10::optional<at::MemoryFormat> /* memory_format */) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::resize_(self_tensor, XlaHelpers::I64List(size));
