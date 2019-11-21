@@ -1,20 +1,19 @@
 """Logic to compare XLA metrics and identify significant changes."""
 
-_METRICS_LINE_START = 'Metric: '
-_COUNTER_LINE_START = 'Counter: '
-_TOTAL_SAMPLES = 'TotalSamples'
-_ACCUMULATOR = 'Accumulator'
-_VALUE = 'Value'
+_METRIC_NAME_AND_SAMPLES_AND_ACCUMULATOR = \
+  "Metric: (\S+)\s+TotalSamples: (\d+)\s+Accumulator: (\S+)"
+_COUNTER_NAME_AND_VALUE = "Counter: (\S+)\s+Value: (\d+)"
 
 def _parse_metrics_report(report):
+  import pdb; pdb.set_trace()
+
   data_points = {}
-  line_iter = iter(report.splitlines())
-  while next(line_iter, None) is not None: 
-  for line in report.splitlines():
-    line = line.strip()
+  metrics_lines = metrics_data_string.splitlines()
+  for i in range(metrics_lines):
+    line = metrics_lines[i].strip()
     if line.startswith(_METRICS_LINE_START):
       metric_name = line.replace(_METRICS_LINE_START, '')
-      # find metric name
+      i+=1
       # find TotalSamples line
       # find Accumulator line
       # convert to standard metric, e.g. KB/MB/GB/TB to bytes and d/h/m/s/ms/us to ?s?
@@ -68,4 +67,4 @@ def compare_metrics(raw_data_points, metrics_report,
     metrics_report and the aggregates of raw_data_points, this report will have
     1 line reporting the difference.
   """
-
+  pass
