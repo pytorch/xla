@@ -47,11 +47,17 @@ xla::XlaOp CreateIndexCopy(const xla::XlaOp& buffer, xla::int64 dim,
 xla::XlaOp CreateIndexFill(const xla::XlaOp& buffer, xla::int64 dim,
                            const xla::XlaOp& index, const xla::XlaOp& values);
 
+using XlaOpCombiner =
+    std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>;
+
+XlaOpCombiner NumericAddCombiner();
+
 // Used to lower scatter and scatter_add.
-xla::XlaOp CreateScatter(
-    const xla::XlaOp& input, const xla::XlaOp& index, const xla::XlaOp& src,
-    xla::int64 dim,
-    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
-        combiner);
+xla::XlaOp CreateScatter(const xla::XlaOp& input, const xla::XlaOp& index,
+                         const xla::XlaOp& source, xla::int64 dim,
+                         const XlaOpCombiner& combiner);
+
+xla::XlaOp CreatePut(const xla::XlaOp& input, const xla::XlaOp& index,
+                     const xla::XlaOp& source, bool accumulate);
 
 }  // namespace torch_xla

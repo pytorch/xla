@@ -5,8 +5,12 @@
 #include <numeric>
 
 #include "absl/strings/str_join.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/slicing.h"
+#include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/convert_ops.h"
@@ -14,6 +18,25 @@
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
+namespace {
+
+bool IsSparseGather(const xla::Shape& input_shape,
+                    const xla::Shape& index_shape, xla::int64 dim) {
+  static int dense_gather_factor =
+      xla::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 100);
+  xla::int64 input_elements = xla::ShapeUtil::ElementsIn(input_shape);
+  xla::int64 index_elements = xla::ShapeUtil::ElementsIn(index_shape);
+  // Simple heuristic. Might need fine tuning.
+  return index_elements < input_elements / dense_gather_factor;
+}
+
+}  // namespace
+
+bool IsSparseGather(const xla::XlaOp& input, const xla::XlaOp& index,
+                    xla::int64 dim) {
+  return IsSparseGather(XlaHelpers::ShapeOfXlaOp(input),
+                        XlaHelpers::ShapeOfXlaOp(index), dim);
+}
 
 std::vector<xla::int64> GetCompleteShape(
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes,
@@ -212,18 +235,40 @@ xla::XlaOp BuildSlice(
   return xla::Slice(input, base_indices, limit_indices, strides);
 }
 
+xla::XlaOp BoundIndices(const xla::XlaOp& index, const xla::XlaOp& max_index) {
+  xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
+  return xla::Select(
+      xla::Ge(index, xla::Zero(index.builder(), index_shape.element_type())),
+      index, index + max_index);
+}
+
+xla::XlaOp BuildTake(const xla::XlaOp& input, const xla::XlaOp& index) {
+  static const int take_dim = 0;
+  xla::Shape input_shape;
+  xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
+  xla::Shape index_shape;
+  xla::XlaOp r1_index = XlaHelpers::Flatten(index, &index_shape);
+  xla::XlaOp max_index =
+      XlaHelpers::ScalarValue(xla::ShapeUtil::ElementsIn(input_shape),
+                              index_shape.element_type(), index.builder());
+  xla::XlaOp bound_index = BoundIndices(r1_index, max_index);
+  xla::XlaOp r1_result =
+      TorchGather(r1_input, bound_index, take_dim,
+                  IsSparseGather(input_shape, index_shape, take_dim));
+  return xla::Reshape(r1_result, index_shape.dimensions());
+}
+
 xla::XlaOp BuildResize(const xla::XlaOp& input,
                        tensorflow::gtl::ArraySlice<const xla::int64> size) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::Shape input_shape;
+  xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
   xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
-  xla::XlaOp r1_input = xla::Reshape(input, {num_elements});
   xla::int64 new_num_elements = xla::util::Multiply<xla::int64>(size);
   xla::XlaOp resized_input = input;
   if (num_elements > new_num_elements) {
     resized_input = xla::SliceInDim(r1_input, 0, new_num_elements, 1, 0);
   } else if (new_num_elements > num_elements) {
-    xla::XlaOp zero =
-        XlaHelpers::ScalarValue(0, input_shape.element_type(), input.builder());
+    xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
     xla::PaddingConfig padding_config;
     auto* dims = padding_config.add_dimensions();
     dims->set_edge_padding_low(0);

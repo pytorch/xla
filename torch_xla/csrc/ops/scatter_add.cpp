@@ -23,20 +23,10 @@ NodePtr ScatterAdd::Clone(OpList operands) const {
 }
 
 XlaOpVector ScatterAdd::Lower(LoweringContext* loctx) const {
-  auto add_scatter_combiner = [](const xla::XlaOp& x,
-                                 const xla::XlaOp& y) -> xla::XlaOp {
-    xla::XlaOp numeric_x = ConvertToNumeric(x);
-    xla::XlaOp numeric_y = ConvertToNumeric(y);
-    xla::XlaOp numeric_sum = numeric_x + numeric_y;
-    return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
-  };
-
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp index = loctx->GetOutputOp(operand(1));
   xla::XlaOp src = loctx->GetOutputOp(operand(2));
-  return ReturnOp(CreateScatter(input, index, src, dim_, add_scatter_combiner),
+  return ReturnOp(CreateScatter(input, index, src, dim_, NumericAddCombiner()),
                   loctx);
 }
 

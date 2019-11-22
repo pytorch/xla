@@ -9,6 +9,9 @@
 // data movement and no computation.
 namespace torch_xla {
 
+bool IsSparseGather(const xla::XlaOp& input, const xla::XlaOp& index,
+                    xla::int64 dim);
+
 // For input_sizes and a potentially incomplete output_sizes, return a complete
 // output shape. The complete output shape has same total number of elements as
 // input_sizes and matches output_sizes in all dimensions except for at most
@@ -76,6 +79,10 @@ xla::XlaOp BuildSlice(
     const xla::XlaOp& input,
     tensorflow::gtl::ArraySlice<const xla::int64> base_indices,
     tensorflow::gtl::ArraySlice<const xla::int64> sizes);
+
+xla::XlaOp BoundIndices(const xla::XlaOp& index, const xla::XlaOp& max_index);
+
+xla::XlaOp BuildTake(const xla::XlaOp& input, const xla::XlaOp& index);
 
 xla::XlaOp BuildResize(const xla::XlaOp& input,
                        tensorflow::gtl::ArraySlice<const xla::int64> size);

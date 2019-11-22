@@ -172,6 +172,9 @@ class XlaHelpers {
                                   xla::int64 expected_rank,
                                   xla::int64 offset = 0);
 
+  static xla::XlaOp Flatten(const xla::XlaOp& input,
+                            xla::Shape* input_shape = nullptr);
+
   // Gathers the input using the order specified by the permutation. For each i,
   // output[i] = input[permutation[i]]. The given permutation must be the same
   // size as the input.

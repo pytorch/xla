@@ -93,6 +93,27 @@ struct MidPolicy {
   size_t operator()(size_t size) const { return size / 2; }
 };
 
+template <class T>
+class MaybePtr {
+ public:
+  MaybePtr(T* ptr) : ptr_(ptr) {
+    if (ptr_ == nullptr) {
+      storage_ = T();
+      ptr_ = &storage_.value();
+    }
+  }
+
+  T* get() const { return ptr_; }
+
+  T* operator->() const { return get(); }
+
+  T& operator*() const { return *get(); }
+
+ private:
+  T* ptr_ = nullptr;
+  absl::optional<T> storage_;
+};
+
 // Hasher for string-like objects which hashes only a partial window of the data
 // of size N. The P (policy) type is a functor which returns the position of the
 // window.

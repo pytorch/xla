@@ -590,6 +590,19 @@ NodePtr Bernoulli(const Value& input, const Value& probability) {
                    input.shape(), std::move(lower_fn));
 }
 
+NodePtr Take(const Value& input, const Value& index) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_index = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp result = BuildTake(xla_input, xla_index);
+    return node.ReturnOp(result, loctx);
+  };
+  return GenericOp(OpKind(at::aten::take), {input, index},
+                   xla::ShapeUtil::MakeShape(input.shape().element_type(),
+                                             index.shape().dimensions()),
+                   std::move(lower_fn));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

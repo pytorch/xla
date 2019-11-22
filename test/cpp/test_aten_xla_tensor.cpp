@@ -3318,6 +3318,36 @@ TEST_F(AtenXlaTensorTest, TestSlice) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestTake) {
+  torch::Tensor a = torch::rand({4, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::randint(16, {5}, torch::TensorOptions(torch::kLong));
+  torch::Tensor c = torch::take(a, b);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = torch::take(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::take", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestTakeBackward) {
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::take(inputs[0], inputs[1]);
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::rand({4, 4},
+                     torch::TensorOptions(torch::kFloat).requires_grad(true)),
+         torch::randint(16, {5}, torch::TensorOptions(torch::kLong))},
+        device, testfn);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestStack) {
   torch::Tensor a = torch::rand({2, 4, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({2, 4, 3}, torch::TensorOptions(torch::kFloat));

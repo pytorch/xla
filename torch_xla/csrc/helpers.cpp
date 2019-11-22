@@ -7,9 +7,24 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
+#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 
 namespace torch_xla {
+namespace {
+
+xla::XlaOp ConvertBinaryOpResult(const xla::XlaOp& op1, const xla::XlaOp& op2,
+                                 const xla::XlaOp& result) {
+  xla::PrimitiveType type1 = XlaHelpers::TypeOfXlaOp(op1);
+  xla::PrimitiveType type2 = XlaHelpers::TypeOfXlaOp(op2);
+  xla::PrimitiveType result_type = XlaHelpers::TypeOfXlaOp(result);
+  if (type1 == type2 && type1 != result_type) {
+    return ConvertTo(result, result_type, type1, /*device=*/nullptr);
+  }
+  return result;
+}
+
+}  // namespace
 
 xla::PrecisionConfig::Precision XlaHelpers::s_mat_mul_precision =
     xla::PrecisionConfig::DEFAULT;
@@ -217,6 +232,17 @@ xla::XlaOp XlaHelpers::ReshapeToRank(const xla::XlaOp& input,
   return xla::Reshape(input, dimensions);
 }
 
+xla::XlaOp XlaHelpers::Flatten(const xla::XlaOp& input,
+                               xla::Shape* input_shape) {
+  xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
+  *input_shape_tmp = ShapeOfXlaOp(input);
+  if (input_shape_tmp->rank() == 1) {
+    return input;
+  }
+  xla::int64 input_elements = xla::ShapeUtil::ElementsIn(*input_shape_tmp);
+  return xla::Reshape(input, {input_elements});
+}
+
 std::vector<xla::int64> XlaHelpers::MakeTransposePermutation(xla::int64 dim0,
                                                              xla::int64 dim1,
                                                              xla::int64 rank) {
@@ -400,7 +426,8 @@ xla::XlaOp XlaHelpers::PromotedBinaryOp(
   xla::XlaOp numeric_op2 = ConvertToNumeric(op2);
   std::pair<xla::XlaOp, xla::XlaOp> vops =
       PromoteSecond(numeric_op1, numeric_op2);
-  return bin_op(vops.first, vops.second);
+  xla::XlaOp result = bin_op(vops.first, vops.second);
+  return ConvertBinaryOpResult(op1, op2, result);
 }
 
 }  // namespace torch_xla
