@@ -1,8 +1,5 @@
 from __future__ import print_function
 
-import sys; sys.path.insert(0, '/usr/share/torch-xla-nightly/pytorch/xla')
-
-
 import unittest
 
 from torch_xla.debug import metrics_compare_utils as mcu
@@ -105,6 +102,36 @@ DistractingText
 
 class MetricsCompareUtilsTest(unittest.TestCase):
 
+  # Return True if 2 dictionaries match using "almost equal" for floats.
+  def _dict_almost_equal(self, dict1, dict2):
+    if sorted(dict1.keys()) != sorted(dict2.keys()):
+      print('dict1 and dict2 had different keys. ({} vs {})'.format(
+          sorted(dict1.keys()), sorted(dict2.keys())))
+      return False
+    for key in dict1:
+      values1 = dict1[key]
+      values2 = dict2[key]
+      if len(values1) != len(values2):
+        print('Different number of values for key {}. ({} vs {}).'.format(
+            key, len(values1), len(values2)))
+        return False
+      for v1, v2 in zip(values1, values2):
+        if v1 is None and v2 is None:
+          continue
+        else:
+          try:
+            # Check that all numeric values are close enough.
+            if abs(v1 - v2) > max(1e-12 * max(abs(v1), abs(v2)), 0.0):
+              print('Floats not close enough for key {}. ({} vs {})'.format(
+                  key, values1, values2))
+              return False
+          except TypeError:
+            print('None values differed for key {}. ({} vs {})'.format(
+                key, values1, values2))
+            return False
+    return True
+
+
   def test_get_data_points_from_metrics_reports(self):
     correct_dict = {
         'InboundData__Accumulator_mb': [10000.0, 64750000.0, 64750.0],
@@ -118,8 +145,10 @@ class MetricsCompareUtilsTest(unittest.TestCase):
         'UniqueMetric__TotalSamples': [None, None, 9000],
         'UniqueCounter__Value': [None, None, 9000]
     }
-    self.assertEqual(mcu.get_data_points_from_metrics_reports(
-        [_REPORT_1, _REPORT_2, _REPORT_3]), correct_dict)
+    self.assertTrue(self._dict_almost_equal(
+        mcu.get_data_points_from_metrics_reports(
+            [_REPORT_1, _REPORT_2, _REPORT_3]),
+        correct_dict))
 
 
   def test_compare_metrics_reports_no_difference(self):
@@ -127,7 +156,7 @@ class MetricsCompareUtilsTest(unittest.TestCase):
         [_REPORT_3, _REPORT_3, _REPORT_3])
     metrics_difference_report = mcu.compare_metrics(
         data_points, _REPORT_3,
-        config={'base_tolerance': 2.0})
+        config={'base_tolerance': 0.0})
 
     # The latest metrics match the previous ones exactly, so the difference
     # report should be empty.
@@ -187,8 +216,6 @@ class MetricsCompareUtilsTest(unittest.TestCase):
     # big enough to trigger lines in the difference report.
     expected_report = 'Found new aten counter: aten::_local_scalar_dense__Value: 73216\n'
     self.assertEqual(metrics_difference_report, expected_report)
-
-
   
   
 if __name__ == '__main__':

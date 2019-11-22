@@ -8,6 +8,7 @@ GRPC_OPTIONS = [
 os.environ['TF_GRPC_DEFAULT_OPTIONS'] = ','.join(GRPC_OPTIONS)
 
 import torch
+from .version import __version__
 import _XLAC
 
 _XLAC._initialize_aten_bindings()

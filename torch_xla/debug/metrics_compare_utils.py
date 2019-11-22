@@ -75,8 +75,8 @@ def _parse_metrics_report(report):
   for match in metrics_matches:
     parsed_value, units = _accumulator_to_number(match[2])
     
-    # Dict keys will be of form 'MetricName_Accumulator_unit' or
-    # 'MetricName_Accumulator' if units are not given. For TotalSamples,
+    # Dict keys will be of form 'MetricName__Accumulator_unit' or
+    # 'MetricName__Accumulator' if units are not given. For TotalSamples,
     # the units are ommitted since this is just a count of samples.
     accumulator_key = '{}__{}{}{}'.format(
         match[0], 'Accumulator', '_' if units else '', units)
@@ -106,9 +106,9 @@ def get_data_points_from_metrics_reports(metrics_reports):
     
     For example, if the args were [report1, report2, report3], output might be:
     {
-      'CompileTime_Accumulator_sec': [50, None, 80],  # missing from report2
-      'InboundData_TotalSamples': [11, 12, 11],
-      'CreateCompileHandles_Value': [20, 20, 19],
+      'CompileTime__Accumulator_sec': [50, None, 80],  # missing from report2
+      'InboundData__TotalSamples': [11, 12, 11],
+      'CreateCompileHandles__Value': [20, 20, 19],
       ...
     }
   """
