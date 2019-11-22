@@ -4,9 +4,9 @@ package(default_visibility = ["//tensorflow:internal"])
 
 load(
     "//tensorflow:tensorflow.bzl",
-    "tf_cc_test",
     "tf_cc_binary",
     "tf_cc_shared_object",
+    "tf_cc_test",
 )
 load(
     "//tensorflow/core/platform:default/build_config.bzl",
@@ -15,7 +15,6 @@ load(
     "tf_proto_library_cc",
     "tf_proto_library_py",
 )
-load("//tensorflow/compiler/xla:xla.bzl", "xla_proto_library")
 load(
     "//tensorflow/core/platform:default/cuda_build_defs.bzl",
     "if_cuda_is_configured",
