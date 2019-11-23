@@ -541,7 +541,7 @@ NodePtr Remainder(const Value& input, const Value& divisor) {
 NodePtr MaxUnary(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
     xla::PrimitiveType element_type = input_shape.element_type();
     XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
     xla::XlaOp init_value =
@@ -560,7 +560,7 @@ NodePtr MaxUnary(const Value& input) {
 NodePtr MinUnary(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
     xla::PrimitiveType element_type = input_shape.element_type();
     XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
     xla::XlaOp init_value =
