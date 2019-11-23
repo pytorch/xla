@@ -72,7 +72,7 @@ SummationResult CreateSummation(
     const xla::XlaOp& input,
     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
     bool keep_reduced_dimensions, bool scale) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp init_value =
       XlaHelpers::ScalarValue<float>(0, shape.element_type(), input.builder());
   SummationResult result;
@@ -98,7 +98,7 @@ xla::XlaOp CreateProduct(
     const xla::XlaOp& input,
     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
     bool keep_reduced_dimensions) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp init_value =
       XlaHelpers::ScalarValue<float>(1, shape.element_type(), input.builder());
   ReductionInfo rinfo =
@@ -118,7 +118,7 @@ xla::XlaOp BuildBinaryCrossEntropy(const xla::XlaOp& input,
                                    const xla::XlaOp& target,
                                    const absl::optional<xla::XlaOp>& weight,
                                    ReductionMode reduction) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp xweight;
   if (weight) {
     // PyTorch guards weight and input has the same shape.
@@ -154,7 +154,7 @@ xla::XlaOp BuildBinaryCrossEntropyBackward(
     const xla::XlaOp& grad_output, const xla::XlaOp& input,
     const xla::XlaOp& target, const absl::optional<xla::XlaOp>& weight,
     ReductionMode reduction) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp xweight;
   if (weight) {
     // PyTorch guards weight and input has the same shape.
@@ -188,7 +188,7 @@ xla::XlaOp BuildL1Loss(const xla::XlaOp& input, const xla::XlaOp& target,
   if (reduction == ReductionMode::kNone) {
     return result;
   }
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   result = xla::ReduceAll(
       result, xla::Zero(input.builder(), input_shape.element_type()),
       XlaHelpers::CreateAddComputation(input_shape.element_type()));
@@ -210,7 +210,7 @@ xla::XlaOp BuildL1LossBackward(const xla::XlaOp& grad_output,
                                const xla::XlaOp& input,
                                const xla::XlaOp& target,
                                ReductionMode reduction) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   if (reduction == ReductionMode::kNone) {
     xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
     xla::XlaOp mask = xla::Select(xla::Ge(input, target), one, -one);
@@ -234,7 +234,7 @@ xla::XlaOp BuildMseLoss(const xla::XlaOp& input, const xla::XlaOp& target,
   if (reduction == ReductionMode::kNone) {
     return result;
   }
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   result = xla::ReduceAll(
       result, xla::Zero(input.builder(), input_shape.element_type()),
       XlaHelpers::CreateAddComputation(input_shape.element_type()));
@@ -256,7 +256,7 @@ xla::XlaOp BuildMseLossBackward(const xla::XlaOp& grad_output,
                                 const xla::XlaOp& input,
                                 const xla::XlaOp& target,
                                 ReductionMode reduction) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp two = XlaHelpers::ScalarValue<double>(
       2, input_shape.element_type(), input.builder());
   xla::XlaOp d_input = two * (input - target);
@@ -277,7 +277,7 @@ xla::XlaOp BuildMseLossBackward(const xla::XlaOp& grad_output,
 xla::XlaOp BuildCumulativeComputation(const xla::XlaOp& input, xla::int64 dim,
                                       const xla::XlaComputation& reducer,
                                       const xla::XlaOp& init) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   std::vector<xla::int64> window_strides(input_shape.rank(), 1);
   std::vector<xla::int64> window_dims(input_shape.rank(), 1);
   window_dims[dim] = input_shape.dimensions(dim);
@@ -300,7 +300,7 @@ xla::XlaOp BuildStdDeviation(
     const xla::XlaOp& input,
     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
     bool keep_reduced_dimensions, bool unbiased) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp mean =
       BuildMean(input, dimensions, /*keep_reduced_dimensions*/ true);
   xla::XlaOp bcast_mean =
@@ -346,7 +346,7 @@ xla::XlaOp BuildProd(const xla::XlaOp& input,
 
 xla::XlaOp BuildMaxInDim(const xla::XlaOp& input, xla::int64 dim,
                          bool keep_reduced_dimensions) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.min, shape.element_type(), input.builder());
@@ -363,7 +363,7 @@ xla::XlaOp BuildMaxInDim(const xla::XlaOp& input, xla::int64 dim,
 
 xla::XlaOp BuildMinInDim(const xla::XlaOp& input, xla::int64 dim,
                          bool keep_reduced_dimensions) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.max, shape.element_type(), input.builder());
@@ -379,18 +379,18 @@ xla::XlaOp BuildMinInDim(const xla::XlaOp& input, xla::int64 dim,
 }
 
 xla::XlaOp BuildArgMax(const xla::XlaOp& input, xla::int64 dim, bool keepdim) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape* shape = &XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp operand = input;
   if (dim < 0) {
     dim = 0;
-    operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(shape)});
-    shape = XlaHelpers::ShapeOfXlaOp(operand);
+    operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(*shape)});
+    shape = &XlaHelpers::ShapeOfXlaOp(operand);
   }
   xla::XlaOp result = xla::ArgMaxTwoPass(
       operand,
       GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
   if (keepdim) {
-    auto dimensions = xla::util::ToVector<xla::int64>(shape.dimensions());
+    auto dimensions = xla::util::ToVector<xla::int64>(shape->dimensions());
     dimensions[dim] = 1;
     result = xla::Reshape(result, dimensions);
   }
@@ -398,18 +398,18 @@ xla::XlaOp BuildArgMax(const xla::XlaOp& input, xla::int64 dim, bool keepdim) {
 }
 
 xla::XlaOp BuildArgMin(const xla::XlaOp& input, xla::int64 dim, bool keepdim) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape* shape = &XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp operand = input;
   if (dim < 0) {
     dim = 0;
-    operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(shape)});
-    shape = XlaHelpers::ShapeOfXlaOp(operand);
+    operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(*shape)});
+    shape = &XlaHelpers::ShapeOfXlaOp(operand);
   }
   xla::XlaOp result = xla::ArgMinTwoPass(
       operand,
       GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
   if (keepdim) {
-    auto dimensions = xla::util::ToVector<xla::int64>(shape.dimensions());
+    auto dimensions = xla::util::ToVector<xla::int64>(shape->dimensions());
     dimensions[dim] = 1;
     result = xla::Reshape(result, dimensions);
   }
@@ -419,7 +419,7 @@ xla::XlaOp BuildArgMin(const xla::XlaOp& input, xla::int64 dim, bool keepdim) {
 xla::XlaOp BuildAll(const xla::XlaOp& input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   ReductionInfo rinfo =
       GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
@@ -436,7 +436,7 @@ xla::XlaOp BuildAll(const xla::XlaOp& input,
 xla::XlaOp BuildAny(const xla::XlaOp& input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   ReductionInfo rinfo =
       GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(

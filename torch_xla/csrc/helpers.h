@@ -81,7 +81,7 @@ class XlaHelpers {
                                         const xla::XlaOp& value1, double alpha);
 
   // Returns the shape of the given XLA operation.
-  static xla::Shape ShapeOfXlaOp(const xla::XlaOp& op);
+  static const xla::Shape& ShapeOfXlaOp(const xla::XlaOp& op);
 
   // Returns the list of dimension sizes for the given XLA operation.
   static std::vector<xla::int64> SizesOfXlaOp(const xla::XlaOp& op);

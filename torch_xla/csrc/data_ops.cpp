@@ -98,7 +98,7 @@ absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
 xla::XlaOp BuildView(
     const xla::XlaOp& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto complete_output_sizes =
       GetCompleteShape(output_sizes, input_shape.dimensions());
   auto info = GetDynamicReshapeInfo(input_shape, complete_output_sizes);
@@ -230,8 +230,8 @@ std::vector<xla::XlaOp> BuildSplit(
 xla::XlaOp BuildUpdateSlice(
     const xla::XlaOp& input, const xla::XlaOp& source,
     tensorflow::gtl::ArraySlice<const xla::int64> base_indices) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::Shape source_shape = XlaHelpers::ShapeOfXlaOp(source);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& source_shape = XlaHelpers::ShapeOfXlaOp(source);
   xla::XlaOp update_source = source;
   if (source_shape.element_type() != input_shape.element_type()) {
     update_source = ConvertTo(source, source_shape.element_type(),
@@ -261,7 +261,7 @@ xla::XlaOp BuildSlice(
 }
 
 xla::XlaOp BoundIndices(const xla::XlaOp& index, const xla::XlaOp& max_index) {
-  xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
+  const xla::Shape& index_shape = XlaHelpers::ShapeOfXlaOp(index);
   return xla::Select(
       xla::Ge(index, xla::Zero(index.builder(), index_shape.element_type())),
       index, index + max_index);
@@ -307,8 +307,8 @@ xla::XlaOp BuildResize(const xla::XlaOp& input,
 xla::XlaOp BuildUnselect(const xla::XlaOp& target, const xla::XlaOp& source,
                          xla::int64 dim, xla::int64 start, xla::int64 end,
                          xla::int64 stride) {
-  xla::Shape target_shape = XlaHelpers::ShapeOfXlaOp(target);
-  xla::Shape source_shape = XlaHelpers::ShapeOfXlaOp(source);
+  const xla::Shape& target_shape = XlaHelpers::ShapeOfXlaOp(target);
+  const xla::Shape& source_shape = XlaHelpers::ShapeOfXlaOp(source);
   if (target_shape.dimensions(dim) == source_shape.dimensions(dim)) {
     // Shortcut for unselects which are fully covering selects.
     XLA_CHECK_EQ(start, 0);

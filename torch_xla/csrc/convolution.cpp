@@ -234,7 +234,7 @@ xla::XlaOp BuildConvBackwardWeight(
 }
 
 xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {
-  xla::Shape grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
+  const xla::Shape& grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
   // The bias contribution is linear in each output feature. Reduce the
   // remaining dimensions to get a tensor of the same shape as the bias, rank-1
   // with number of output features elements.
@@ -253,8 +253,8 @@ xla::XlaOp BuildTransposedConvolution(
     tensorflow::gtl::ArraySlice<const xla::int64> dilation,
     tensorflow::gtl::ArraySlice<const xla::int64> output_padding,
     xla::int64 groups) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::Shape kernel_shape = XlaHelpers::ShapeOfXlaOp(kernel);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& kernel_shape = XlaHelpers::ShapeOfXlaOp(kernel);
   xla::int64 num_spatial = input_shape.rank() - 2;
   // We only support 2D or 3D convolution.
   XLA_CHECK(num_spatial == 2 || num_spatial == 3) << num_spatial;

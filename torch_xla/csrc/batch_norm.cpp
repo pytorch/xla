@@ -7,7 +7,7 @@ namespace {
 
 xla::XlaOp VarianceRecover(const xla::XlaOp& invstd, float eps_value) {
   xla::XlaBuilder* builder = invstd.builder();
-  xla::Shape invstd_shape = XlaHelpers::ShapeOfXlaOp(invstd);
+  const xla::Shape& invstd_shape = XlaHelpers::ShapeOfXlaOp(invstd);
   xla::XlaOp eps =
       XlaHelpers::ScalarValue(eps_value, invstd_shape.element_type(), builder);
   xla::XlaOp one =
@@ -21,7 +21,7 @@ xla::XlaOp VarianceRecover(const xla::XlaOp& invstd, float eps_value) {
 xla::XlaOp BatchNormVarianceInvert(const xla::XlaOp& variance,
                                    float eps_value) {
   xla::XlaBuilder* builder = variance.builder();
-  xla::Shape variance_shape = XlaHelpers::ShapeOfXlaOp(variance);
+  const xla::Shape& variance_shape = XlaHelpers::ShapeOfXlaOp(variance);
   xla::XlaOp eps = XlaHelpers::ScalarValue(
       eps_value, variance_shape.element_type(), builder);
   xla::XlaOp one =

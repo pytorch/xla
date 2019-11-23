@@ -83,7 +83,7 @@ struct BatchInput {
 // dimension.
 BatchInput CreateBatchInput(const xla::XlaOp& input,
                             xla::int64 spatial_dim_count) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::int64 rank = input_shape.rank();
   XLA_CHECK(rank == spatial_dim_count + 1 || rank == spatial_dim_count + 2)
       << "Input must be a " << spatial_dim_count + 1 << "-D or "
@@ -168,7 +168,7 @@ xla::XlaOp BuildMaxPoolNd(
     tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode) {
   xla::XlaBuilder* builder = input.builder();
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
-  xla::Shape input_shape =
+  const xla::Shape& input_shape =
       XlaHelpers::ShapeOfXlaOp(batch_input_info.batch_input);
   xla::Literal init_value =
       xla::LiteralUtil::MinValue(input_shape.element_type());
@@ -199,7 +199,7 @@ xla::XlaOp BuildMaxPoolNdBackward(
     tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode) {
   xla::XlaBuilder* builder = out_backprop.builder();
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
-  xla::Shape input_shape =
+  const xla::Shape& input_shape =
       XlaHelpers::ShapeOfXlaOp(batch_input_info.batch_input);
   xla::XlaOp init_value =
       XlaHelpers::ScalarValue<float>(0, input_shape.element_type(), builder);
@@ -241,7 +241,7 @@ xla::XlaOp BuildAvgPoolNd(
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
                               /*stride_attr=*/stride);
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
-  xla::Shape input_shape =
+  const xla::Shape& input_shape =
       XlaHelpers::ShapeOfXlaOp(batch_input_info.batch_input);
   const auto ceil_mode_padding =
       CeilModePadding(padding, input_shape, kernel_size, stride, ceil_mode);
@@ -268,7 +268,7 @@ xla::XlaOp BuildAvgPoolNdBackward(
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
                               /*stride_attr=*/stride);
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
-  xla::Shape gradients_shape =
+  const xla::Shape& gradients_shape =
       XlaHelpers::ShapeOfXlaOp(batch_input_info.batch_input);
   const auto ceil_mode_padding =
       CeilModePadding(padding, gradients_shape, kernel_size, stride, ceil_mode);

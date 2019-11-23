@@ -220,12 +220,13 @@ xla::XlaComputation XlaHelpers::CreateOrComputation(xla::PrimitiveType type) {
       [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::Or(x, y); });
 }
 
-xla::Shape XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
-  return ConsumeValue(op.builder()->GetShape(op));
+const xla::Shape& XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
+  const xla::Shape* shape = ConsumeValue(op.builder()->GetShapePtr(op));
+  return *shape;
 }
 
 std::vector<xla::int64> XlaHelpers::SizesOfXlaOp(const xla::XlaOp& op) {
-  xla::Shape op_shape = ShapeOfXlaOp(op);
+  const xla::Shape& op_shape = ShapeOfXlaOp(op);
   return std::vector<xla::int64>(op_shape.dimensions().begin(),
                                  op_shape.dimensions().end());
 }
@@ -237,7 +238,7 @@ xla::PrimitiveType XlaHelpers::TypeOfXlaOp(const xla::XlaOp& op) {
 xla::XlaOp XlaHelpers::ReshapeToRank(const xla::XlaOp& input,
                                      xla::int64 expected_rank,
                                      xla::int64 offset) {
-  xla::Shape shape = ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeOfXlaOp(input);
   XLA_CHECK_LE(offset + shape.rank(), expected_rank);
   if (shape.rank() == expected_rank) {
     return input;
@@ -273,7 +274,7 @@ std::vector<xla::int64> XlaHelpers::MakeTransposePermutation(xla::int64 dim0,
 xla::XlaOp XlaHelpers::LinearInterpolation(const xla::XlaOp& value0,
                                            const xla::XlaOp& value1,
                                            double alpha) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(value0);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(value0);
   xla::XlaOp one = ScalarValue(1.0, shape.element_type(), value0.builder());
   xla::XlaOp alpha_value =
       ScalarValue(alpha, shape.element_type(), value0.builder());
@@ -377,8 +378,8 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(
     const xla::XlaOp& op1, const xla::XlaOp& op2) {
-  xla::Shape shape1 = ShapeOfXlaOp(op1);
-  xla::Shape shape2 = ShapeOfXlaOp(op2);
+  const xla::Shape& shape1 = ShapeOfXlaOp(op1);
+  const xla::Shape& shape2 = ShapeOfXlaOp(op2);
   if (xla::ShapeUtil::Compatible(shape1, shape2)) {
     // Fast path shortcut if the shapes already matches in dimensions.
     return std::pair<xla::XlaOp, xla::XlaOp>(op1, op2);
