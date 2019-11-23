@@ -1370,7 +1370,7 @@ void XLATensor::log1p_(XLATensor& input) {
 }
 
 XLATensor XLATensor::logdet(const XLATensor& input) {
-  return input.CreateFrom(ir::ops::LogDet(input.GetIrValue()));
+  return input.CreateFrom(ir::MakeNode<ir::ops::LogDet>(input.GetIrValue()));
 }
 
 XLATensor XLATensor::lt(const XLATensor& input, at::Scalar other) {
