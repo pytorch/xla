@@ -592,6 +592,8 @@ class XLATensor {
   static XLATensor log1p(const XLATensor& input);
   static void log1p_(XLATensor& input);
 
+  static XLATensor logdet(const XLATensor& input);
+
   static XLATensor lt(const XLATensor& input, at::Scalar other);
   static void lt_(XLATensor& input, at::Scalar other);
 
