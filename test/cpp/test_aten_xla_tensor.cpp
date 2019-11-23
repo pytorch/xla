@@ -827,6 +827,22 @@ TEST_F(AtenXlaTensorTest, TestCholesky) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestLogDet) {
+  static const int dims[] = {4, 7};
+  for (auto m : dims) {
+    torch::Tensor a =
+        torch::rand({3, m, m}, torch::TensorOptions(torch::kFloat));
+    torch::Tensor pd_a = torch::matmul(a, torch::transpose(a, 1, 2)) +
+                         torch::eye(m, torch::TensorOptions(torch::kFloat));
+    auto b = torch::logdet(pd_a);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(pd_a, device);
+      auto xla_b = torch::logdet(xla_a);
+      AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-4);
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestTriangularSolve) {
   static const int dims[] = {4, 7};
   for (bool batched_a : {true, false}) {

@@ -497,6 +497,8 @@ class AtenXlaType {
   static std::tuple<at::Tensor, at::Tensor> log_sigmoid_forward(
       const at::Tensor& self);
 
+  static at::Tensor logdet(const at::Tensor& self);
+
   static at::Tensor lt(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor lt(const at::Tensor& self, const at::Tensor& other);
