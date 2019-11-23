@@ -687,6 +687,13 @@ class AtenXlaType {
 
   static at::Tensor& reciprocal_(at::Tensor& self);
 
+  static at::Tensor reflection_pad2d(const at::Tensor& self,
+                                     at::IntArrayRef padding);
+
+  static at::Tensor reflection_pad2d_backward(const at::Tensor& grad_output,
+                                              const at::Tensor& self,
+                                              at::IntArrayRef padding);
+
   static at::Tensor relu(const at::Tensor& self);
 
   static at::Tensor& relu_(at::Tensor& self);

@@ -101,4 +101,15 @@ xla::XlaOp BuildUnselect(const xla::XlaOp& target, const xla::XlaOp& source,
                          xla::int64 dim, xla::int64 start, xla::int64 end,
                          xla::int64 stride);
 
+xla::XlaOp BuildReflectionPad2d(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+
+xla::XlaOp BuildReflectionPad2dBackward(
+    const xla::XlaOp& grad_output, const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+
+xla::XlaOp PadInDim(const xla::XlaOp& input, xla::int64 dim, xla::int64 pad_lo,
+                    xla::int64 pad_hi, const xla::XlaOp* pad_value = nullptr);
+
 }  // namespace torch_xla

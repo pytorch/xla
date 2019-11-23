@@ -739,6 +739,13 @@ class XLATensor {
   static XLATensor reciprocal(const XLATensor& input);
   static void reciprocal_(XLATensor& input);
 
+  static XLATensor reflection_pad2d(const XLATensor& input,
+                                    std::vector<xla::int64> padding);
+
+  static XLATensor reflection_pad2d_backward(const XLATensor& grad_output,
+                                             const XLATensor& input,
+                                             std::vector<xla::int64> padding);
+
   static XLATensor relu(const XLATensor& input);
   static void relu_(XLATensor& input);
 

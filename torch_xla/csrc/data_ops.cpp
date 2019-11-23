@@ -30,6 +30,16 @@ bool IsSparseGather(const xla::Shape& input_shape,
   return index_elements < input_elements / dense_gather_factor;
 }
 
+std::vector<xla::int64> GetReflectionPad2dSpatialDims(xla::int64 rank) {
+  std::vector<xla::int64> spatial_dims;
+  if (rank == 3) {
+    return {2, 1};
+  } else if (rank == 4) {
+    return {3, 2};
+  }
+  XLA_ERROR() << "Invalid input shape for reflection_pad2d: rank=" << rank;
+}
+
 }  // namespace
 
 bool IsSparseGather(const xla::XlaOp& input, const xla::XlaOp& index,
@@ -346,6 +356,95 @@ xla::XlaOp BuildUnselect(const xla::XlaOp& target, const xla::XlaOp& source,
   xla::XlaOp padded_source = xla::Pad(source, zero, padding_config);
   xla::XlaOp mask = xla::Pad(source_true, pred_zero, padding_config);
   return xla::Select(mask, padded_source, target);
+}
+
+xla::XlaOp BuildReflectionPad2d(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  std::vector<xla::int64> spatial_dims =
+      GetReflectionPad2dSpatialDims(input_shape.rank());
+
+  xla::XlaOp result = input;
+  for (xla::int64 i = 0; i < spatial_dims.size(); ++i) {
+    xla::int64 dim = spatial_dims[i];
+    xla::int64 dim_size = input_shape.dimensions(dim);
+    xla::int64 lhs_padding = padding[2 * i];
+    xla::int64 rhs_padding = padding[2 * i + 1];
+
+    XLA_CHECK(lhs_padding >= 0 && lhs_padding <= dim_size - 1);
+    XLA_CHECK(rhs_padding >= 0 && rhs_padding <= dim_size - 1);
+
+    xla::XlaOp reverse = xla::Rev(result, {dim});
+    xla::XlaOp lhs_pad = xla::SliceInDim(reverse, dim_size - 1 - lhs_padding,
+                                         dim_size - 1, 1, dim);
+    xla::XlaOp rhs_pad = xla::SliceInDim(reverse, 1, 1 + rhs_padding, 1, dim);
+    result = xla::ConcatInDim(input.builder(), {lhs_pad, result, rhs_pad}, dim);
+  }
+  return result;
+}
+
+xla::XlaOp BuildReflectionPad2dBackward(
+    const xla::XlaOp& grad_output, const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
+  std::vector<xla::int64> spatial_dims =
+      GetReflectionPad2dSpatialDims(grad_output_shape.rank());
+
+  xla::XlaOp grad = grad_output;
+  for (xla::int64 i = 0; i < spatial_dims.size(); ++i) {
+    xla::int64 dim = spatial_dims[i];
+    xla::int64 dim_size = grad_output_shape.dimensions(dim);
+    xla::int64 lhs_padding = padding[2 * i];
+    xla::int64 rhs_padding = padding[2 * i + 1];
+
+    XLA_CHECK(lhs_padding >= 0 && lhs_padding <= dim_size - 1);
+    XLA_CHECK(rhs_padding >= 0 && rhs_padding <= dim_size - 1);
+
+    xla::XlaOp lhs_pad = xla::SliceInDim(grad, 0, lhs_padding, 1, dim);
+    xla::XlaOp reverse_lhs_pad = xla::Rev(lhs_pad, {dim});
+    xla::XlaOp padded_lhs_pad =
+        PadInDim(reverse_lhs_pad, dim,
+                 /*pad_lo=*/1,
+                 /*pad_hi=*/input_shape.dimensions(dim) - lhs_padding - 1);
+
+    xla::XlaOp rhs_pad =
+        xla::SliceInDim(grad, dim_size - rhs_padding, dim_size, 1, dim);
+    xla::XlaOp reverse_rhs_pad = xla::Rev(rhs_pad, {dim});
+    xla::XlaOp padded_rhs_pad =
+        PadInDim(reverse_rhs_pad, dim,
+                 /*pad_lo=*/input_shape.dimensions(dim) - rhs_padding - 1,
+                 /*pad_hi=*/1);
+
+    xla::XlaOp grad_core =
+        xla::SliceInDim(grad, lhs_padding, dim_size - rhs_padding, 1, dim);
+    grad = padded_lhs_pad + grad_core + padded_rhs_pad;
+  }
+  return grad;
+}
+
+xla::XlaOp PadInDim(const xla::XlaOp& input, xla::int64 dim, xla::int64 pad_lo,
+                    xla::int64 pad_hi, const xla::XlaOp* pad_value) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp zero;
+  if (pad_value == nullptr) {
+    zero = xla::Zero(input.builder(), input_shape.element_type());
+    pad_value = &zero;
+  }
+  xla::PaddingConfig padding_config;
+  for (xla::int64 i = 0; i < input_shape.rank(); ++i) {
+    auto* dims = padding_config.add_dimensions();
+    dims->set_interior_padding(0);
+    if (i == dim) {
+      dims->set_edge_padding_low(pad_lo);
+      dims->set_edge_padding_high(pad_hi);
+    } else {
+      dims->set_edge_padding_low(0);
+      dims->set_edge_padding_high(0);
+    }
+  }
+  return xla::Pad(input, *pad_value, padding_config);
 }
 
 }  // namespace torch_xla
