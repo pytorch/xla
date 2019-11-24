@@ -1568,7 +1568,7 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::log_sigmoid_forward(
 at::Tensor AtenXlaType::logdet(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
-      XLATensor::logdet(bridge::GetXlaTensor(self));
+      XLATensor::logdet(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor AtenXlaType::lt(const at::Tensor& self, at::Scalar other) {
