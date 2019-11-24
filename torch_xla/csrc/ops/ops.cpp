@@ -603,6 +603,22 @@ NodePtr Take(const Value& input, const Value& index) {
                    std::move(lower_fn));
 }
 
+NodePtr LogDet(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp result = xla::LogDet(xla_input);
+    return node.ReturnOp(result, loctx);
+  };
+  const xla::Shape& input_shape = input.shape();
+  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  // The input tensor is ...,N,N
+  xla::Shape logdet_shape(input_shape);
+  logdet_shape.DeleteDimension(input_shape.rank() - 1);
+  logdet_shape.DeleteDimension(input_shape.rank() - 2);
+  return GenericOp(OpKind(at::aten::logdet), {input}, logdet_shape,
+                   std::move(lower_fn));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
