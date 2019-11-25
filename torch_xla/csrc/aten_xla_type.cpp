@@ -2130,7 +2130,7 @@ at::Tensor AtenXlaType::permute(const at::Tensor& self, at::IntArrayRef dims) {
 
 at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) {
   XLA_FN_COUNTER("xla::");
-  // xla::pow doesn't support integer types.
+  // xla::Pow() doesn't support integer types.
   if (!at::native::is_floating_point(self)) {
     return AtenXlaTypeDefault::pow(self, exponent);
   }
@@ -2141,9 +2141,8 @@ at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) {
 at::Tensor AtenXlaType::pow(const at::Tensor& self,
                             const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
-  // xla::pow doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(exponent)) {
+  // xla::Pow() doesn't support integer types.
+  if (!at::native::is_floating_point(self)) {
     return AtenXlaTypeDefault::pow(self, exponent);
   }
   return bridge::AtenFromXlaTensor(XLATensor::pow(
@@ -2152,8 +2151,8 @@ at::Tensor AtenXlaType::pow(const at::Tensor& self,
 
 at::Tensor AtenXlaType::pow(at::Scalar self, const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
-  // xla::pow doesn't support integer types.
-  if (!at::native::is_floating_point(exponent)) {
+  // xla::Pow() doesn't support integer types.
+  if (!self.isFloatingPoint()) {
     return AtenXlaTypeDefault::pow(self, exponent);
   }
   return bridge::AtenFromXlaTensor(
@@ -2162,7 +2161,7 @@ at::Tensor AtenXlaType::pow(at::Scalar self, const at::Tensor& exponent) {
 
 at::Tensor& AtenXlaType::pow_(at::Tensor& self, at::Scalar exponent) {
   XLA_FN_COUNTER("xla::");
-  // xla::pow doesn't support integer types.
+  // xla::Pow() doesn't support integer types.
   if (!at::native::is_floating_point(self)) {
     return AtenXlaTypeDefault::pow_(self, exponent);
   }
@@ -2173,9 +2172,8 @@ at::Tensor& AtenXlaType::pow_(at::Tensor& self, at::Scalar exponent) {
 
 at::Tensor& AtenXlaType::pow_(at::Tensor& self, const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
-  // xla::pow doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(exponent)) {
+  // xla::Pow() doesn't support integer types.
+  if (!at::native::is_floating_point(self)) {
     return AtenXlaTypeDefault::pow_(self, exponent);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);

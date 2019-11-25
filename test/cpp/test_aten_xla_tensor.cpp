@@ -5041,6 +5041,20 @@ TEST_F(AtenXlaTensorTest, TestPowScalarTensor) {
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestPowIntExponent) {
+  torch::Tensor base =
+      torch::abs(torch::rand({4, 2}, torch::TensorOptions(torch::kFloat)));
+  torch::Scalar exponent = 3;
+  torch::Tensor result = torch::pow(base, exponent);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_base = CopyToDevice(base, device);
+    torch::Tensor xla_result = torch::pow(xla_base, exponent);
+    AllClose(result, xla_result, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestFmodScalar) {
   torch::Tensor a =
       torch::rand({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
