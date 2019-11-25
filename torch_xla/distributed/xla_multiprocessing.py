@@ -154,20 +154,29 @@ def spawn(fn,
       Default: `spawn`
 
   Returns:
-    The same object returned by the `torch.multiprocessing.spawn` API.
+    The same object returned by the `torch.multiprocessing.spawn` API. If
+    `nprocs` is 1 the `fn` function will be called directly, and the API will
+    not return.
   """
 
   if not _is_tpu_config():
     # If this is not an TPU setup, jump to normal multi-processing.
     nprocs = nprocs or 1
-    return torch.multiprocessing.spawn(
-        fn, args=args, nprocs=nprocs, join=join, daemon=daemon)
+    if nprocs == 1:
+      fn(0, *args)
+      sys.exit(0)
+    else:
+      return torch.multiprocessing.spawn(
+          fn, args=args, nprocs=nprocs, join=join, daemon=daemon)
 
   nprocs = _pre_fork_setup(nprocs)
-  return torch.multiprocessing.start_processes(
-      _start_fn,
-      args=(nprocs, fn, args),
-      nprocs=nprocs,
-      join=join,
-      daemon=daemon,
-      start_method=start_method)
+  if nprocs == 1:
+    _start_fn(0, nprocs, fn, *args)
+  else:
+    return torch.multiprocessing.start_processes(
+        _start_fn,
+        args=(nprocs, fn, args),
+        nprocs=nprocs,
+        join=join,
+        daemon=daemon,
+        start_method=start_method)
