@@ -1348,6 +1348,12 @@ class TestGeneric(XlaTestCase):
     self.assertTrue(revs['xla'])
     self.assertTrue('torch' in revs)
 
+  def test_send_to_device_grad(self):
+    xla_device = xm.xla_device()
+    t = _gen_tensor(2, 2, requires_grad=True)
+    dt = xm.send_cpu_data_to_device([t], xla_device)
+    self.assertTrue(dt[0].requires_grad)
+
   def test_util_foreach_api(self):
 
     class ForTest(object):
