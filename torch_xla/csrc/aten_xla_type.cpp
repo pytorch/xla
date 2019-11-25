@@ -2240,6 +2240,22 @@ at::Tensor& AtenXlaType::reciprocal_(at::Tensor& self) {
   return self;
 }
 
+at::Tensor AtenXlaType::reflection_pad2d(const at::Tensor& self,
+                                         at::IntArrayRef padding) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::reflection_pad2d(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(padding)));
+}
+
+at::Tensor AtenXlaType::reflection_pad2d_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self,
+                                                  at::IntArrayRef padding) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::reflection_pad2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      xla::util::ToVector<xla::int64>(padding)));
+}
+
 at::Tensor AtenXlaType::relu(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::relu(bridge::GetXlaTensor(self)));

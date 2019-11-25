@@ -76,6 +76,8 @@
 #include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
 #include "torch_xla/csrc/ops/randperm.h"
+#include "torch_xla/csrc/ops/reflection_pad2d.h"
+#include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 #include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/resize.h"
 #include "torch_xla/csrc/ops/rrelu_with_noise.h"
@@ -1784,6 +1786,19 @@ XLATensor XLATensor::reciprocal(const XLATensor& input) {
 
 void XLATensor::reciprocal_(XLATensor& input) {
   input.SetIrValue(ir::ops::ReciprocalOp(input.GetIrValue()));
+}
+
+XLATensor XLATensor::reflection_pad2d(const XLATensor& input,
+                                      std::vector<xla::int64> padding) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::ReflectionPad2d>(
+      input.GetIrValue(), std::move(padding)));
+}
+
+XLATensor XLATensor::reflection_pad2d_backward(
+    const XLATensor& grad_output, const XLATensor& input,
+    std::vector<xla::int64> padding) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::ReflectionPad2dBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), std::move(padding)));
 }
 
 XLATensor XLATensor::relu(const XLATensor& input) {

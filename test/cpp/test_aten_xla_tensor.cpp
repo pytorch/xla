@@ -7751,6 +7751,51 @@ TEST_F(AtenXlaTensorTest, TestConstantPadIncomplete) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestReflectionPad2dRank3) {
+  torch::Tensor input =
+      torch::rand({2, 3, 4}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> pad{2, 2, 2, 2};
+  torch::Tensor output = torch::reflection_pad2d(input, pad);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::reflection_pad2d(xla_input, pad);
+    AllClose(output, xla_output);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::reflection_pad2d", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestReflectionPad2dRank4) {
+  torch::Tensor input =
+      torch::rand({2, 2, 3, 4}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> pad{2, 2, 2, 2};
+  torch::Tensor output = torch::reflection_pad2d(input, pad);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::reflection_pad2d(xla_input, pad);
+    AllClose(output, xla_output);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::reflection_pad2d", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestReflectionPad2dBackward) {
+  std::vector<int64_t> pad{2, 3, 1, 2};
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::reflection_pad2d(inputs[0], pad);
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::rand({1, 2, 4, 4},
+                     torch::TensorOptions(torch::kFloat).requires_grad(true))},
+        device, testfn);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestAsStrided) {
   torch::Tensor input =
       torch::rand({128, 320}, torch::TensorOptions(torch::kFloat));
