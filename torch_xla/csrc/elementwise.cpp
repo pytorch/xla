@@ -9,7 +9,7 @@ namespace {
 
 xla::XlaOp Between(const xla::XlaOp& input, at::Scalar min_val,
                    at::Scalar max_val) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::PrimitiveType element_type = shape.element_type();
   xla::XlaBuilder* builder = input.builder();
   xla::XlaOp check_low = BuildComparisonOp(
@@ -48,8 +48,8 @@ xla::XlaOp BuildComparisonOp(c10::Symbol kind, const xla::XlaOp& input,
 xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
                           const float threshold, const float value) {
   xla::XlaBuilder* builder = input.builder();
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::Shape output_shape = XlaHelpers::ShapeOfXlaOp(output);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& output_shape = XlaHelpers::ShapeOfXlaOp(output);
   xla::XlaOp xla_threshold = XlaHelpers::ScalarValue<float>(
       threshold, input_shape.element_type(), builder);
   xla::XlaOp xla_value = XlaHelpers::ScalarValue<float>(
@@ -59,13 +59,13 @@ xla::XlaOp BuildThreshold(const xla::XlaOp& input, const xla::XlaOp& output,
 }
 
 xla::XlaOp BuildRelu(const xla::XlaOp& input) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   return xla::Max(input, XlaHelpers::ScalarValue<float>(
                              0, input_shape.element_type(), input.builder()));
 }
 
 xla::XlaOp BuildHardshrink(const xla::XlaOp& input, at::Scalar lambda) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   return xla::Select(Between(input, -lambda, lambda),
                      XlaHelpers::ScalarBroadcast(0, shape, input.builder()),
                      input);
@@ -73,7 +73,7 @@ xla::XlaOp BuildHardshrink(const xla::XlaOp& input, at::Scalar lambda) {
 
 xla::XlaOp BuildSoftshrink(const xla::XlaOp& input, at::Scalar lambda) {
   xla::XlaBuilder* builder = input.builder();
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero = XlaHelpers::ScalarBroadcast(0, shape, builder);
   xla::XlaOp xla_lambd =
       XlaHelpers::ScalarBroadcast(lambda.to<double>(), shape, builder);
@@ -85,7 +85,7 @@ xla::XlaOp BuildSoftshrink(const xla::XlaOp& input, at::Scalar lambda) {
 
 xla::XlaOp BuildShrinkBackward(const xla::XlaOp& grad_output,
                                const xla::XlaOp& input, at::Scalar lambda) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   return xla::Select(Between(input, -lambda, lambda),
                      XlaHelpers::ScalarBroadcast(0, shape, input.builder()),
                      grad_output);
@@ -94,7 +94,7 @@ xla::XlaOp BuildShrinkBackward(const xla::XlaOp& grad_output,
 xla::XlaOp BuildHardtanhBackward(const xla::XlaOp& grad_output,
                                  const xla::XlaOp& input, at::Scalar min_val,
                                  at::Scalar max_val) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(grad_output);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(grad_output);
   xla::XlaOp zero = xla::Broadcast(
       XlaHelpers::ScalarValue(0, shape.element_type(), grad_output.builder()),
       shape.dimensions());
@@ -108,7 +108,7 @@ xla::XlaOp BuildLeakyRelu(const xla::XlaOp& input,
 
 std::vector<xla::XlaOp> BuildRrelu(const xla::XlaOp& input, at::Scalar lower,
                                    at::Scalar upper, bool training) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero =
       XlaHelpers::ScalarValue(0, shape.element_type(), input.builder());
   xla::XlaOp one =
@@ -135,7 +135,7 @@ xla::XlaOp BuildRreluBackward(const xla::XlaOp& grad_output,
                               const xla::XlaOp& input, const xla::XlaOp& noise,
                               at::Scalar lower, at::Scalar upper,
                               bool training) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero =
       XlaHelpers::ScalarValue(0, input_shape.element_type(), input.builder());
   xla::XlaOp grad_input;
@@ -154,7 +154,7 @@ xla::XlaOp BuildRreluBackward(const xla::XlaOp& grad_output,
 xla::XlaOp BuildLeakyReluBackward(const xla::XlaOp& grad_output,
                                   const xla::XlaOp& input,
                                   double negative_slope_value) {
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero = XlaHelpers::ScalarValue<double>(
       0, input_shape.element_type(), input.builder());
   xla::XlaOp negative_slope = XlaHelpers::ScalarValue(
@@ -164,21 +164,21 @@ xla::XlaOp BuildLeakyReluBackward(const xla::XlaOp& grad_output,
 }
 
 xla::XlaOp BuildSigmoid(const xla::XlaOp& input) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp half = XlaHelpers::ScalarValue<float>(0.5, shape.element_type(),
                                                    input.builder());
   return half + half * xla::Tanh(half * input);
 }
 
 xla::XlaOp BuildReciprocal(const xla::XlaOp& input) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp one =
       XlaHelpers::ScalarValue<float>(1., shape.element_type(), input.builder());
   return xla::Div(one, input);
 }
 
 xla::XlaOp BuildSign(const xla::XlaOp& input) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero =
       XlaHelpers::ScalarValue<float>(0., shape.element_type(), input.builder());
   xla::XlaOp sign =
@@ -190,7 +190,7 @@ xla::XlaOp BuildSign(const xla::XlaOp& input) {
 }
 
 xla::XlaOp BuildAbs(const xla::XlaOp& input) {
-  xla::Shape shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   if (xla::primitive_util::IsUnsignedIntegralType(shape.element_type())) {
     return input;
   }

@@ -50,8 +50,8 @@ std::vector<xla::XlaOp> LowerTriangularSolve(const xla::XlaOp& rhs,
                                              bool left_side, bool lower,
                                              bool transpose,
                                              bool unit_diagonal) {
-  xla::Shape rhs_shape = XlaHelpers::ShapeOfXlaOp(rhs);
-  xla::Shape lhs_shape = XlaHelpers::ShapeOfXlaOp(lhs);
+  const xla::Shape& rhs_shape = XlaHelpers::ShapeOfXlaOp(rhs);
+  const xla::Shape& lhs_shape = XlaHelpers::ShapeOfXlaOp(lhs);
   std::pair<xla::Shape, xla::Shape> broadcasted_shapes =
       InferTriangularSolveShape(rhs_shape, lhs_shape);
   xla::XlaOp rhs_broadcasted =

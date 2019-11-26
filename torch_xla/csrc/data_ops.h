@@ -2,12 +2,18 @@
 
 #include <vector>
 
+#include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 
 // Collection of XLA lowerings for operations which only involve some form of
 // data movement and no computation.
 namespace torch_xla {
+
+struct DynamicReshapeInfo {
+  xla::Shape output_shape;
+  xla::int64 dynamic_dimension = -1;
+};
 
 bool IsSparseGather(const xla::XlaOp& input, const xla::XlaOp& index,
                     xla::int64 dim);
@@ -19,6 +25,10 @@ bool IsSparseGather(const xla::XlaOp& input, const xla::XlaOp& index,
 std::vector<xla::int64> GetCompleteShape(
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes,
     tensorflow::gtl::ArraySlice<const xla::int64> input_sizes);
+
+absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
+    const xla::Shape& input_shape,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
 
 // Creates a new tensor with the same data as the input tensor and the specified
 // output size.
@@ -90,5 +100,16 @@ xla::XlaOp BuildResize(const xla::XlaOp& input,
 xla::XlaOp BuildUnselect(const xla::XlaOp& target, const xla::XlaOp& source,
                          xla::int64 dim, xla::int64 start, xla::int64 end,
                          xla::int64 stride);
+
+xla::XlaOp BuildReflectionPad2d(
+    const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+
+xla::XlaOp BuildReflectionPad2dBackward(
+    const xla::XlaOp& grad_output, const xla::XlaOp& input,
+    tensorflow::gtl::ArraySlice<const xla::int64> padding);
+
+xla::XlaOp PadInDim(const xla::XlaOp& input, xla::int64 dim, xla::int64 pad_lo,
+                    xla::int64 pad_hi, const xla::XlaOp* pad_value = nullptr);
 
 }  // namespace torch_xla

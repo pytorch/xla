@@ -10,10 +10,13 @@ def _mp_fn(index):
   real_device = xm.xla_real_devices([str(device)])[0]
   if real_device.startswith('TPU:'):
     ones = torch.ones((2, 3))
+    twos = ones + 1.0
     xones = ones.to(device)
-    torch_xla._XLAC._xla_cross_replica_sum([xones], 1.0, [])
+    xtwos = twos.to(device)
+    xm.all_reduce('sum', [xones, xtwos])
 
-    if not xones.cpu().allclose(ones * float(xm.xrt_world_size())):
+    if (not xones.cpu().allclose(ones * float(xm.xrt_world_size())) or
+        not xtwos.cpu().allclose(twos * float(xm.xrt_world_size()))):
       print('CrossReplicaSum produced wrong reductions')
       print(xones, file=sys.stderr)
       sys.exit(1)

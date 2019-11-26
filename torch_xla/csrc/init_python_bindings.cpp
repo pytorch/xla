@@ -358,8 +358,9 @@ void InitXlaModuleBindings(py::module m) {
       std::vector<at::Tensor> xla_tensors =
           GetXlaTensorsFromAten(tensors, devices);
       result.reserve(xla_tensors.size());
-      for (auto& tensor : xla_tensors) {
-        result.push_back(torch::autograd::make_variable(tensor));
+      for (size_t i = 0; i < xla_tensors.size(); ++i) {
+        result.push_back(torch::autograd::make_variable(
+            xla_tensors[i], /*requires_grad=*/tensors.at(i).requires_grad()));
       }
     }
     return result;

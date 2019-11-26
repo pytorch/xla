@@ -592,6 +592,8 @@ class XLATensor {
   static XLATensor log1p(const XLATensor& input);
   static void log1p_(XLATensor& input);
 
+  static XLATensor logdet(const XLATensor& input);
+
   static XLATensor lt(const XLATensor& input, at::Scalar other);
   static void lt_(XLATensor& input, at::Scalar other);
 
@@ -601,6 +603,8 @@ class XLATensor {
   // In-place version of the method above.
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            at::Scalar value);
+
+  static XLATensor masked_select(const XLATensor& input, const XLATensor& mask);
 
   static XLATensor matmul(const XLATensor& input, const XLATensor& other);
 
@@ -700,6 +704,8 @@ class XLATensor {
                                      xla::int64 reduction, int ignore_index,
                                      const XLATensor& total_weight);
 
+  static XLATensor nonzero(const XLATensor& input);
+
   static XLATensor norm(const XLATensor& input, c10::optional<at::Scalar> p,
                         c10::optional<at::ScalarType> dtype,
                         at::IntArrayRef dim, bool keepdim);
@@ -734,6 +740,13 @@ class XLATensor {
 
   static XLATensor reciprocal(const XLATensor& input);
   static void reciprocal_(XLATensor& input);
+
+  static XLATensor reflection_pad2d(const XLATensor& input,
+                                    std::vector<xla::int64> padding);
+
+  static XLATensor reflection_pad2d_backward(const XLATensor& grad_output,
+                                             const XLATensor& input,
+                                             std::vector<xla::int64> padding);
 
   static XLATensor relu(const XLATensor& input);
   static void relu_(XLATensor& input);

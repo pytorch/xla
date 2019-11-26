@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/shape_util.h"
@@ -148,10 +149,10 @@ NodePtr ReluOp(const Value& input) {
     XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
     return BuildRelu(operands[0]);
   };
-  xla::Shape output_shape =
-      InferOutputShape({input.shape()}, lower_for_shape_fn);
-  return GenericOp(OpKind(at::aten::relu), OpList{input}, output_shape,
-                   std::move(lower_fn));
+  return GenericOp(
+      OpKind(at::aten::relu), OpList{input},
+      [&]() { return InferOutputShape({input.shape()}, lower_for_shape_fn); },
+      std::move(lower_fn));
 }
 
 NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1) {
@@ -246,10 +247,12 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight,
     XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
     return xla::Dot(operands[0], operands[1]);
   };
-  xla::Shape output_shape =
-      InferOutputShape({input.shape(), weight.shape()}, lower_for_shape_fn);
   return GenericOp(OpKind(at::aten::addmm), OpList{input, weight, bias},
-                   output_shape, std::move(lower_fn));
+                   [&]() {
+                     return InferOutputShape({input.shape(), weight.shape()},
+                                             lower_for_shape_fn);
+                   },
+                   std::move(lower_fn));
 }
 
 NodePtr Dot(const Value& input, const Value& weight) {
@@ -270,9 +273,11 @@ NodePtr Dot(const Value& input, const Value& weight) {
     XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
     return xla::Dot(operands[0], operands[1]);
   };
-  xla::Shape output_shape =
-      InferOutputShape({input.shape(), weight.shape()}, lower_for_shape_fn);
-  return GenericOp(OpKind(at::aten::mm), OpList{input, weight}, output_shape,
+  return GenericOp(OpKind(at::aten::mm), OpList{input, weight},
+                   [&]() {
+                     return InferOutputShape({input.shape(), weight.shape()},
+                                             lower_for_shape_fn);
+                   },
                    std::move(lower_fn));
 }
 
@@ -286,10 +291,12 @@ NodePtr MatMul(const Value& lhs, const Value& rhs) {
       [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
     return CreateMatMul(operands[0], operands[1]);
   };
-  xla::Shape output_shape =
-      InferOutputShape({lhs.shape(), rhs.shape()}, lower_for_shape_fn);
-  return GenericOp(OpKind(at::aten::matmul), OpList{lhs, rhs}, output_shape,
-                   std::move(lower_fn));
+  return GenericOp(
+      OpKind(at::aten::matmul), OpList{lhs, rhs},
+      [&]() {
+        return InferOutputShape({lhs.shape(), rhs.shape()}, lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
@@ -307,10 +314,13 @@ NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
     return BuildAdaptiveAvgPool2dBackward(/*out_backprop=*/operands[0],
                                           /*input=*/operands[1]);
   };
-  xla::Shape output_shape = InferOutputShape(
-      {grad_output.shape(), input.shape()}, lower_for_shape_fn);
   return GenericOp(OpKind(at::aten::adaptive_avg_pool2d_backward),
-                   OpList{grad_output, input}, output_shape,
+                   OpList{grad_output, input},
+                   [&]() {
+                     return InferOutputShape(
+                         {grad_output.shape(), input.shape()},
+                         lower_for_shape_fn);
+                   },
                    std::move(lower_fn));
 }
 
@@ -411,9 +421,10 @@ NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
     auto results = CreateBroadcastTensors(operands);
     return xla::Tuple(results.front().builder(), results);
   };
-  return GenericOp(OpKind(at::aten::broadcast_tensors), tensors,
-                   InferOutputShape(tensor_shapes, lower_for_shape_fn),
-                   std::move(lower_fn), /*num_outputs=*/tensors.size());
+  return GenericOp(
+      OpKind(at::aten::broadcast_tensors), tensors,
+      [&]() { return InferOutputShape(tensor_shapes, lower_for_shape_fn); },
+      std::move(lower_fn), /*num_outputs=*/tensors.size());
 }
 
 NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
@@ -541,7 +552,7 @@ NodePtr Remainder(const Value& input, const Value& divisor) {
 NodePtr MaxUnary(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
     xla::PrimitiveType element_type = input_shape.element_type();
     XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
     xla::XlaOp init_value =
@@ -560,7 +571,7 @@ NodePtr MaxUnary(const Value& input) {
 NodePtr MinUnary(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
     xla::PrimitiveType element_type = input_shape.element_type();
     XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
     xla::XlaOp init_value =
@@ -600,6 +611,22 @@ NodePtr Take(const Value& input, const Value& index) {
   return GenericOp(OpKind(at::aten::take), {input, index},
                    xla::ShapeUtil::MakeShape(input.shape().element_type(),
                                              index.shape().dimensions()),
+                   std::move(lower_fn));
+}
+
+NodePtr LogDet(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp result = xla::LogDet(xla_input);
+    return node.ReturnOp(result, loctx);
+  };
+  const xla::Shape& input_shape = input.shape();
+  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  // The input tensor is ...,N,N
+  xla::Shape logdet_shape(input_shape);
+  logdet_shape.DeleteDimension(input_shape.rank() - 1);
+  logdet_shape.DeleteDimension(input_shape.rank() - 2);
+  return GenericOp(OpKind(at::aten::logdet), {input}, logdet_shape,
                    std::move(lower_fn));
 }
 

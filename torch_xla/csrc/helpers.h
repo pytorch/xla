@@ -81,7 +81,7 @@ class XlaHelpers {
                                         const xla::XlaOp& value1, double alpha);
 
   // Returns the shape of the given XLA operation.
-  static xla::Shape ShapeOfXlaOp(const xla::XlaOp& op);
+  static const xla::Shape& ShapeOfXlaOp(const xla::XlaOp& op);
 
   // Returns the list of dimension sizes for the given XLA operation.
   static std::vector<xla::int64> SizesOfXlaOp(const xla::XlaOp& op);
@@ -146,6 +146,9 @@ class XlaHelpers {
   static xla::int64 GetCanonicalPosition(
       tensorflow::gtl::ArraySlice<const xla::int64> dimensions, xla::int64 dim,
       xla::int64 pos);
+
+  // Retrieves the dynamic dimension of an input shape, or returns -1 if none.
+  static xla::int64 GetDynamicDimension(const xla::Shape& shape);
 
   // Retrieves type's minimum and maximum values.
   static MinMax MinMaxValues(xla::PrimitiveType type);
@@ -231,6 +234,10 @@ class XlaHelpers {
   //   shape1       = [9, 7, 6, 1, 2]
   //   shape2       =       [6, 5, 2]
   //   result_shape = [9, 7, 6, 5, 2]
+  static std::vector<xla::int64> GetPromotedShape(
+      tensorflow::gtl::ArraySlice<const xla::int64> shape1_dims,
+      tensorflow::gtl::ArraySlice<const xla::int64> shape2_dims);
+
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);
 

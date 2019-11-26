@@ -56,6 +56,7 @@
 #include "torch_xla/csrc/ops/linear_interpolation.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
+#include "torch_xla/csrc/ops/masked_select.h"
 #include "torch_xla/csrc/ops/max_in_dim.h"
 #include "torch_xla/csrc/ops/max_pool_nd.h"
 #include "torch_xla/csrc/ops/max_pool_nd_backward.h"
@@ -67,6 +68,7 @@
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/nll_loss.h"
 #include "torch_xla/csrc/ops/nll_loss_backward.h"
+#include "torch_xla/csrc/ops/nonzero.h"
 #include "torch_xla/csrc/ops/not_supported.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
@@ -74,6 +76,8 @@
 #include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
 #include "torch_xla/csrc/ops/randperm.h"
+#include "torch_xla/csrc/ops/reflection_pad2d.h"
+#include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 #include "torch_xla/csrc/ops/repeat.h"
 #include "torch_xla/csrc/ops/resize.h"
 #include "torch_xla/csrc/ops/rrelu_with_noise.h"
@@ -1366,6 +1370,10 @@ void XLATensor::log1p_(XLATensor& input) {
   input.SetIrValue(ir::ops::Log1p(input.GetIrValue()));
 }
 
+XLATensor XLATensor::logdet(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::LogDet(input.GetIrValue()));
+}
+
 XLATensor XLATensor::lt(const XLATensor& input, at::Scalar other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
 }
@@ -1395,6 +1403,13 @@ void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
       xla::util::ToVector<xla::int64>(input.shape().get().dimensions()));
   input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(input.GetIrValue(),
                                                      expanded_mask, value));
+}
+
+XLATensor XLATensor::masked_select(const XLATensor& input,
+                                   const XLATensor& mask) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::MaskedSelect>(input.GetIrValue(),
+                                                         mask.GetIrValue());
+  return input.CreateFrom(ir::Value(node, 0));
 }
 
 XLATensor XLATensor::matmul(const XLATensor& input, const XLATensor& other) {
@@ -1674,11 +1689,9 @@ XLATensor XLATensor::nll_loss_backward(const XLATensor& grad_output,
       GetXlaReductionMode(reduction), ignore_index));
 }
 
-XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
-                                   const Device& device) {
-  return Create(ir::MakeNode<ir::ops::NotSupported>(std::move(description),
-                                                    std::move(shape)),
-                device);
+XLATensor XLATensor::nonzero(const XLATensor& input) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::NonZero>(input.GetIrValue());
+  return input.CreateFrom(ir::Value(node, 0), at::ScalarType::Long);
 }
 
 XLATensor XLATensor::norm(const XLATensor& input, c10::optional<at::Scalar> p,
@@ -1688,6 +1701,13 @@ XLATensor XLATensor::norm(const XLATensor& input, c10::optional<at::Scalar> p,
       XlaHelpers::I64List(dim), input.shape().get().rank());
   return input.CreateFrom(
       ir::ops::Norm(input.GetIrValue(), p, dtype, canonical_dims, keepdim));
+}
+
+XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
+                                   const Device& device) {
+  return Create(ir::MakeNode<ir::ops::NotSupported>(std::move(description),
+                                                    std::move(shape)),
+                device);
 }
 
 XLATensor XLATensor::permute(
@@ -1766,6 +1786,19 @@ XLATensor XLATensor::reciprocal(const XLATensor& input) {
 
 void XLATensor::reciprocal_(XLATensor& input) {
   input.SetIrValue(ir::ops::ReciprocalOp(input.GetIrValue()));
+}
+
+XLATensor XLATensor::reflection_pad2d(const XLATensor& input,
+                                      std::vector<xla::int64> padding) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::ReflectionPad2d>(
+      input.GetIrValue(), std::move(padding)));
+}
+
+XLATensor XLATensor::reflection_pad2d_backward(
+    const XLATensor& grad_output, const XLATensor& input,
+    std::vector<xla::int64> padding) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::ReflectionPad2dBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), std::move(padding)));
 }
 
 XLATensor XLATensor::relu(const XLATensor& input) {

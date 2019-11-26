@@ -497,6 +497,8 @@ class AtenXlaType {
   static std::tuple<at::Tensor, at::Tensor> log_sigmoid_forward(
       const at::Tensor& self);
 
+  static at::Tensor logdet(const at::Tensor& self);
+
   static at::Tensor lt(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor lt(const at::Tensor& self, const at::Tensor& other);
@@ -510,6 +512,9 @@ class AtenXlaType {
 
   static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                   const at::Tensor& value);
+
+  static at::Tensor masked_select(const at::Tensor& self,
+                                  const at::Tensor& mask);
 
   static at::Tensor max(const at::Tensor& self, const at::Tensor& other);
 
@@ -639,6 +644,8 @@ class AtenXlaType {
       const at::Tensor& self, const at::Tensor& target,
       const at::Tensor& weight, int64_t reduction, int64_t ignore_index);
 
+  static at::Tensor nonzero(const at::Tensor& self);
+
   static at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
                          at::ScalarType dtype);
 
@@ -681,6 +688,13 @@ class AtenXlaType {
   static at::Tensor reciprocal(const at::Tensor& self);
 
   static at::Tensor& reciprocal_(at::Tensor& self);
+
+  static at::Tensor reflection_pad2d(const at::Tensor& self,
+                                     at::IntArrayRef padding);
+
+  static at::Tensor reflection_pad2d_backward(const at::Tensor& grad_output,
+                                              const at::Tensor& self,
+                                              at::IntArrayRef padding);
 
   static at::Tensor relu(const at::Tensor& self);
 

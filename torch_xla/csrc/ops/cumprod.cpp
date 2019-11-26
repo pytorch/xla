@@ -16,7 +16,7 @@ namespace {
 xla::XlaOp LowerCumProd(const xla::XlaOp& input, xla::int64 dim,
                         c10::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input = CastToScalarType(input, dtype);
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(casted_input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(casted_input);
   xla::XlaOp init = XlaHelpers::ScalarValue<float>(
       1, input_shape.element_type(), casted_input.builder());
   xla::XlaComputation reducer =

@@ -18,7 +18,7 @@ std::vector<xla::XlaOp> LowerSVD(const xla::XlaOp& input, bool some,
   xla::SVDResult svd_result =
       xla::SVD(input, /*max_iter=*/100, /*epsilon=*/1e-6,
                XlaHelpers::mat_mul_precision());
-  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp u = svd_result.u;
   xla::XlaOp v = svd_result.v;
   if (!compute_uv) {

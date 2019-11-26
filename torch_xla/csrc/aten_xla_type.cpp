@@ -6,9 +6,11 @@
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type_default.h"
+#include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
@@ -1563,6 +1565,12 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::log_sigmoid_forward(
                          bridge::AtenFromXlaTensor(std::get<1>(result_tuple)));
 }
 
+at::Tensor AtenXlaType::logdet(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::logdet(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::lt(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -1604,6 +1612,21 @@ at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                << "value tensor, but got tensor "
                                << "with " << value.dim() << " dimension(s).";
   return masked_fill_(self, mask, value.item());
+}
+
+at::Tensor AtenXlaType::masked_select(const at::Tensor& self,
+                                      const at::Tensor& mask) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  // Initially make XLA handled masked_select() handling experimental, and
+  // opt-in. Only the XLA TPU backend for now implements the dynamic dimension
+  // setting required by the masked_select implementation.
+  if (!DebugUtil::ExperimentEnabled("masked_select") ||
+      self_tensor.GetDevice().hw_type != DeviceType::TPU) {
+    return AtenXlaTypeDefault::masked_select(self, mask);
+  }
+  return bridge::AtenFromXlaTensor(
+      XLATensor::masked_select(self_tensor, bridge::GetXlaTensor(mask)));
 }
 
 at::Tensor AtenXlaType::max(const at::Tensor& self, const at::Tensor& other) {
@@ -2036,6 +2059,19 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
       total_weight);
 }
 
+at::Tensor AtenXlaType::nonzero(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  // Initially make XLA handled nonzero() handling experimental, and opt-in.
+  // Only the XLA TPU backend for now implements the dynamic dimension setting
+  // required by the nonzero implementation.
+  if (!DebugUtil::ExperimentEnabled("nonzero") ||
+      self_tensor.GetDevice().hw_type != DeviceType::TPU) {
+    return AtenXlaTypeDefault::nonzero(self);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::nonzero(self_tensor));
+}
+
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
                              c10::optional<at::Scalar> p,
                              at::ScalarType dtype) {
@@ -2094,7 +2130,7 @@ at::Tensor AtenXlaType::permute(const at::Tensor& self, at::IntArrayRef dims) {
 
 at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) {
   XLA_FN_COUNTER("xla::");
-  // xla::pow doesn't support integer types.
+  // xla::Pow() doesn't support integer types.
   if (!at::native::is_floating_point(self)) {
     return AtenXlaTypeDefault::pow(self, exponent);
   }
@@ -2105,9 +2141,8 @@ at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) {
 at::Tensor AtenXlaType::pow(const at::Tensor& self,
                             const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
-  // xla::pow doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(exponent)) {
+  // xla::Pow() doesn't support integer types.
+  if (!at::native::is_floating_point(self)) {
     return AtenXlaTypeDefault::pow(self, exponent);
   }
   return bridge::AtenFromXlaTensor(XLATensor::pow(
@@ -2116,8 +2151,8 @@ at::Tensor AtenXlaType::pow(const at::Tensor& self,
 
 at::Tensor AtenXlaType::pow(at::Scalar self, const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
-  // xla::pow doesn't support integer types.
-  if (!at::native::is_floating_point(exponent)) {
+  // xla::Pow() doesn't support integer types.
+  if (!self.isFloatingPoint()) {
     return AtenXlaTypeDefault::pow(self, exponent);
   }
   return bridge::AtenFromXlaTensor(
@@ -2126,7 +2161,7 @@ at::Tensor AtenXlaType::pow(at::Scalar self, const at::Tensor& exponent) {
 
 at::Tensor& AtenXlaType::pow_(at::Tensor& self, at::Scalar exponent) {
   XLA_FN_COUNTER("xla::");
-  // xla::pow doesn't support integer types.
+  // xla::Pow() doesn't support integer types.
   if (!at::native::is_floating_point(self)) {
     return AtenXlaTypeDefault::pow_(self, exponent);
   }
@@ -2137,9 +2172,8 @@ at::Tensor& AtenXlaType::pow_(at::Tensor& self, at::Scalar exponent) {
 
 at::Tensor& AtenXlaType::pow_(at::Tensor& self, const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
-  // xla::pow doesn't support integer types.
-  if (!at::native::is_floating_point(self) ||
-      !at::native::is_floating_point(exponent)) {
+  // xla::Pow() doesn't support integer types.
+  if (!at::native::is_floating_point(self)) {
     return AtenXlaTypeDefault::pow_(self, exponent);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -2202,6 +2236,22 @@ at::Tensor& AtenXlaType::reciprocal_(at::Tensor& self) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::reciprocal_(self_tensor);
   return self;
+}
+
+at::Tensor AtenXlaType::reflection_pad2d(const at::Tensor& self,
+                                         at::IntArrayRef padding) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::reflection_pad2d(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(padding)));
+}
+
+at::Tensor AtenXlaType::reflection_pad2d_backward(const at::Tensor& grad_output,
+                                                  const at::Tensor& self,
+                                                  at::IntArrayRef padding) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::reflection_pad2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      xla::util::ToVector<xla::int64>(padding)));
 }
 
 at::Tensor AtenXlaType::relu(const at::Tensor& self) {
