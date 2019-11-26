@@ -38,6 +38,14 @@
 namespace torch_xla {
 namespace {
 
+struct TlsData {
+  size_t trim_counter = 0;
+
+  void Reset() { trim_counter = 0; }
+};
+
+thread_local TlsData g_tls_data;
+
 // Locking:
 // We perform two kinds of operations of tensors, synchronous and asynchronous.
 // The ApplyPendingGraph() are synchronous, as we need the device data result
@@ -592,11 +600,10 @@ void XLATensor::AssignIrValue(ir::Value ir_value) const {
 
 void XLATensor::TryLimitGraphSize() {
   static const size_t kCheckFrequency =
-      xla::sys_util::GetEnvInt("TRIM_GRAPH_CHECK_FREQUENCY", 1000);
+      xla::sys_util::GetEnvInt("TRIM_GRAPH_CHECK_FREQUENCY", 5000);
   static const size_t kMaxPendingGraphSize =
-      xla::sys_util::GetEnvInt("TRIM_GRAPH_SIZE", 50000);
-  static std::atomic<size_t> counter(1);
-  if (data()->ir_value && counter.fetch_add(1) % kCheckFrequency == 0) {
+      xla::sys_util::GetEnvInt("TRIM_GRAPH_SIZE", 100000);
+  if (data()->ir_value && ++g_tls_data.trim_counter % kCheckFrequency == 0) {
     size_t graph_size = ir::Util::GetGraphSize({data()->ir_value.node.get()});
     if (graph_size > kMaxPendingGraphSize) {
       XLA_COUNTER("TrimIrGraph", 1);
@@ -1170,6 +1177,7 @@ void XLATensor::MarkStep(const Device* device) {
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->ClearProfileData(device);
   ir::ScopePusher::ResetScopes();
+  g_tls_data.Reset();
 }
 
 void XLATensor::WaitDeviceOps(
