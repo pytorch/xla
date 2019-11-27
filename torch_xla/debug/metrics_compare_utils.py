@@ -130,22 +130,28 @@ def _compute_aggregates(data_points):
 
 
 def compare_metrics(data_points, metrics_report,
-                    config={'base_tolerance': 2.0}):
+    config={'base_expression': 'v <= v_mean + (v_stddev * 2.0)'}):
   """Compare metrics_report to historical averages and report differences.
 
   Args:
     data_points(dict): Output of get_data_points_from_metrics_reports().
     metrics_report(string): Output of torch_xla metrics_report(). These will
       be compared with the aggregates of raw_data_points.
-    config(dict): Configuration for metrics comparison. Tolerances are
-      expressed as the number of standard deviations away from the mean.
-      You can supply a per-metric tolerance for any aggregated metric name,
-      otherwise base_tolerance will be used. Example config:
+    config(dict): Configuration for metrics comparison. You can supply a
+      per-metric expression for any aggregated metric name, otherwise
+      base_expression will be used. Example config:
       {
-        'base_tolerance': 2.0,
-        'TransferFromServerTime_Accumulator_sec_tolerance': 10.0,
+        'base_expression': 'v <= v_mean + (v_stddev * 2.0)',
+        'HigherIsBetter_Accumulator_sec_expression':
+            'v >= v_mean - (v_stddev * 3.0)',
         ...
       }
+
+      Expressions should be Python expressions that return True or False
+      depending on the values of:
+        v: the value of this metric based on `metrics_report`.
+        v_mean: the mean value of this metric based on `data_points`.
+        v_stddev: the stddev of this metric based on `data_points`.
 
   Returns:
     Metrics difference report (string). For any metric that differed between
@@ -165,16 +171,14 @@ def compare_metrics(data_points, metrics_report,
       v_mean = means_and_stddevs[k]['mean']
       v_stddev = means_and_stddevs[k]['stddev']
 
-      # base_tolerance can be overridden for individual metrics.
-      mul = config.get('{}_tolerance'.format(k), None)
-      if mul is None:
-        mul = config['base_tolerance']
+      # Expression can be overridden for individual metrics.
+      expression = config.get('{}_expression'.format(k))
+      if expression is None:
+        expression = config['base_expression']
 
-      lower_limit = v_mean - (v_stddev * mul)
-      upper_limit = v_mean + (v_stddev * mul)
-      if v < lower_limit or v > upper_limit:
-        difference_report += ('{} is outside the expected range using '
-            'tolerance: {}. Lower limit: {}  Upper limit: {}  '
+      if eval(expression) == False:
+        difference_report += ('{} failed its expression check. '
+            'Expression: {}.  Mean: {}.  Stddev: {}.  '
             'Actual Value: {}\n'.format(
-                k, mul, lower_limit, upper_limit, v))
+                k, expression, v_mean, v_stddev, v))
   return difference_report

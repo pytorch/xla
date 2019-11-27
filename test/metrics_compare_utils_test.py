@@ -199,7 +199,7 @@ class MetricsCompareUtilsTest(unittest.TestCase):
         [_REPORT_3, _REPORT_3, _REPORT_3])
     metrics_difference_report = mcu.compare_metrics(
         data_points, _REPORT_3,
-        config={'base_tolerance': 0.0})
+        config={'base_expression': 'v == v_mean'})
 
     # The latest metrics match the previous ones exactly, so the difference
     # report should be empty.
@@ -211,7 +211,7 @@ class MetricsCompareUtilsTest(unittest.TestCase):
         [_REPORT_3, _REPORT_3, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES])
     metrics_difference_report = mcu.compare_metrics(
         data_points, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES,
-        config={'base_tolerance': 2.0})
+        config={'base_expression': 'v <= v_mean + (v_stddev * 2.0)'})
 
     # Since the tolerance is 2.0, the small differences in values are not
     # big enough to trigger lines in the difference report.
@@ -223,11 +223,11 @@ class MetricsCompareUtilsTest(unittest.TestCase):
         [_REPORT_3, _REPORT_3, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES])
     metrics_difference_report = mcu.compare_metrics(
         data_points, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES,
-        config={'base_tolerance': 0.0})
+        config={'base_expression': 'v == v_mean'})
 
     # Since the tolerance is 0.0, even a tiny difference leads to a line in
     # the metrics_difference_report.
-    expected_report = 'InboundData__Accumulator_mb is outside the expected range using tolerance: 0.0. Lower limit: 68083.33333333333  Upper limit: 68083.33333333333  Actual Value: 74750.0\nInboundData__TotalSamples is outside the expected range using tolerance: 0.0. Lower limit: 72144.0  Upper limit: 72144.0  Actual Value: 70000.0\nUniqueCounter__Value is outside the expected range using tolerance: 0.0. Lower limit: 9333.0  Upper limit: 9333.0  Actual Value: 9999\n'
+    expected_report = 'InboundData__Accumulator_mb failed its expression check. Expression: v == v_mean.  Mean: 68083.33333333333.  Stddev: 4714.045207910317.  Actual Value: 74750.0\nInboundData__TotalSamples failed its expression check. Expression: v == v_mean.  Mean: 72144.0.  Stddev: 1516.0369388639579.  Actual Value: 70000.0\nUniqueCounter__Value failed its expression check. Expression: v == v_mean.  Mean: 9333.0.  Stddev: 470.93311627024065.  Actual Value: 9999\n'
     self.assertEqual(metrics_difference_report, expected_report)
 
 
@@ -237,14 +237,14 @@ class MetricsCompareUtilsTest(unittest.TestCase):
     metrics_difference_report = mcu.compare_metrics(
         data_points, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES,
         config={
-            'base_tolerance': 0.0,
-            'InboundData__Accumulator_mb_tolerance': 2.0,
-            'UniqueCounter__Value_tolerance': 1.5,
+            'base_expression': 'True',
+            'InboundData__Accumulator_mb_expression': 'v < v_mean',
+            'UniqueCounter__Value_expression': 'v < v_mean',
         })
 
     # 2 of 3 differing values have custom tolerances and therefore should pass.
     # The third uses the default tolerance of 0.0, so it will generate a line.
-    expected_report = 'InboundData__TotalSamples is outside the expected range using tolerance: 0.0. Lower limit: 72144.0  Upper limit: 72144.0  Actual Value: 70000.0\n'
+    expected_report = 'InboundData__Accumulator_mb failed its expression check. Expression: v < v_mean.  Mean: 68083.33333333333.  Stddev: 4714.045207910317.  Actual Value: 74750.0\nUniqueCounter__Value failed its expression check. Expression: v < v_mean.  Mean: 9333.0.  Stddev: 470.93311627024065.  Actual Value: 9999\n'
     self.assertEqual(metrics_difference_report, expected_report)
  
 
@@ -253,7 +253,7 @@ class MetricsCompareUtilsTest(unittest.TestCase):
         [_REPORT_3, _REPORT_3, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES])
     metrics_difference_report = mcu.compare_metrics(
         data_points, _REPORT_3_WITH_NEW_COUNTERS,
-        config={'base_tolerance': 2.0})
+        config={'base_expression': 'v <= v_mean + (v_stddev * 2.0)'})
 
     # Since the tolerance is 2.0, the small differences in values are not
     # big enough to trigger lines in the difference report.
@@ -263,6 +263,9 @@ class MetricsCompareUtilsTest(unittest.TestCase):
   def test_parse_real_metrics(self):
     print("Testing against TPU. If this hangs, check that $XRT_TPU_CONFIG is set")
     x = torch.rand(3, 5, device=xm.xla_device())
+    x = torch.flatten(x, 1)
+    x = torch.roll(x, 1, 0)
+    x = torch.flip(x, [0, 1])
     self.assertEqual(x.device.type, 'xla')
     metrics = met.metrics_report()
     self.assertTrue(metrics)
