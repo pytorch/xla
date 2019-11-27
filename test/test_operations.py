@@ -436,6 +436,22 @@ class XlaTestCase(unittest.TestCase):
       return value.data
     return value
 
+  def maybePrintGraph(self, tensors):
+    env = os.environ.get('TEST_PRINT_GRAPH', '').lower()
+    if env:
+      if env == 'text':
+        print(
+            'Test Graph:\n{}'.format(
+                torch_xla._XLAC._get_xla_tensors_text(tensors)),
+            file=sys.stderr)
+      elif env == 'hlo':
+        print(
+            'Test Graph:\n{}'.format(
+                torch_xla._XLAC._get_xla_tensors_hlo(tensors)),
+            file=sys.stderr)
+      else:
+        raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(env))
+
   def runAtenTest(self, tensors, fn, device=None, rel_err=1e-2, abs_err=1e-5):
     if device is None:
       device = xm.xla_device()
@@ -443,6 +459,7 @@ class XlaTestCase(unittest.TestCase):
     xla_tensors = [x.to(device) for x in tensors]
     results = xu.as_list(fn(*tensors))
     xla_results = xu.as_list(fn(*xla_tensors))
+    self.maybePrintGraph(xla_results)
     for at, xt in zip(results, xla_results):
       self.assertEqualRel(
           self.makeComparable(xt),
@@ -1205,6 +1222,24 @@ class TestAtenXlaTensor(XlaTestCase):
     self.runAtenTest(
         [torch.randn(3, 4, 5),
          torch.tensor([2, 1, 0, 1, 2], dtype=torch.long)], test_fn)
+
+  def test_pred_one_hot(self):
+
+    def test_fn(t, c):
+      s = (t[:, None] != c[None, :]).long()
+      return F.one_hot(s, num_classes=2)
+
+    token_type_ids = torch.randint(
+        1, 5, (
+            128,
+            32,
+        ), dtype=torch.int64)
+    cat_ids = torch.randint(
+        1, 5, (
+            128,
+            32,
+        ), dtype=torch.int64)
+    self.runAtenTest([token_type_ids, cat_ids], test_fn)
 
   def test_save_view_alias_check(self):
 
