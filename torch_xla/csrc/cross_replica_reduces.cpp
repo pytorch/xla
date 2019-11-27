@@ -67,11 +67,16 @@ std::vector<xla::XlaOp> BuildAllReduce(
     }
     reduce_groups.push_back(std::move(rgroup));
   }
-  // TODO: Chain reduces with xla::Token when support will show up.
+  // TODO: We use pseudo-tokens ATM, which are real values. This need to be
+  // switched to use the real XLA Token once support has been added to XLA
+  // AllReduce().
   xla::XlaOp chained_token = token;
   ReduceContext redux = GetReduceContext(operands);
   std::vector<xla::XlaOp> result(operands.size());
   for (auto& type_ctx : redux.contexts) {
+    type_ctx.second.ops.push_back(
+        xla::ConvertElementType(chained_token, type_ctx.first));
+
     xla::XlaOp reduce = xla::AllReduce(
         xla::Tuple(operands[0].builder(), type_ctx.second.ops),
         GetReduceComutation(reduce_type, type_ctx.first), reduce_groups);
@@ -85,8 +90,11 @@ std::vector<xla::XlaOp> BuildAllReduce(
       }
       result[op_idx] = gte;
     }
+    chained_token =
+        xla::GetTupleElement(reduce, type_ctx.second.indices.size());
   }
-  result.push_back(chained_token);
+  result.push_back(
+      xla::ConvertElementType(chained_token, XlaHelpers::TypeOfXlaOp(token)));
   return result;
 }
 
