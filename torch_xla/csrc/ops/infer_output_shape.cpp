@@ -13,9 +13,9 @@ xla::Shape InferOutputShape(
   std::vector<xla::XlaOp> parameters;
   for (size_t parameter_number = 0; parameter_number < input_shapes.size();
        ++parameter_number) {
-    parameters.push_back(
-        xla::Parameter(&b, parameter_number, input_shapes[parameter_number],
-                       absl::StrCat("param_", parameter_number)));
+    parameters.push_back(xla::Parameter(&b, parameter_number,
+                                        input_shapes[parameter_number],
+                                        absl::StrCat("p", parameter_number)));
   }
   xla::XlaOp result = core_lowering_fn(parameters);
   return XlaHelpers::ShapeOfXlaOp(result);
