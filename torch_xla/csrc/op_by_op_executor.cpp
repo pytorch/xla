@@ -63,7 +63,7 @@ xla::XlaComputation BuildNodeComputation(
   for (size_t i = 0; i < operands.size(); ++i) {
     xla::XlaOp param = xla::Parameter(
         loctx.builder(), i, GetParameterShape(operands[i], *input_shapes[i]),
-        absl::StrCat("param_", i));
+        absl::StrCat("p", i));
     loctx.AssignOutputOp(operands[i], param);
   }
   for (auto& xla_op : loctx.LowerNode(node)) {

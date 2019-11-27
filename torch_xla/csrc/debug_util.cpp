@@ -77,15 +77,17 @@ std::string DebugUtil::GetTensorsGraphInfo(
     ss << "  " << location.function << " (" << location.file << ":"
        << location.line << ")\n";
   }
+  std::string graph_str;
   if (format == GraphFormat::kText) {
-    ss << "\n" << ir::DumpUtil::ToText(root_nodes) << "\n";
+    graph_str = ir::DumpUtil::ToText(root_nodes);
   } else if (format == GraphFormat::kDot) {
-    ss << "\n" << ir::DumpUtil::ToDot(root_nodes) << "\n";
+    graph_str = ir::DumpUtil::ToDot(root_nodes);
   } else if (format == GraphFormat::kHlo) {
-    ss << "\n" << ir::DumpUtil::ToHlo(root_values) << "\n";
+    graph_str = ir::DumpUtil::ToHlo(root_values);
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
   }
+  ss << "\n## BEGIN_GRAPH\n" << graph_str << "\n## END_GRAPH\n\n";
   return ss.str();
 }
 

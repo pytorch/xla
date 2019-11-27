@@ -22,11 +22,14 @@ def save_graph(graph, path):
 
 def normalize(graph):
   # %397 = f32[128]{0} xla::cross_replica_sum(%396), scale=0.125, groups=()
+  # %broadcast.50 = f32[1,10]{1,0} broadcast(f32[1,10]{1,0} %reshape.49), dimensions={0,1}
   ngraph = []
   for line in graph:
-    m = re.match(r'(\s*)%\d+\s*=\s*(.*::[^(]+\()[^)]*(.*)', line)
+    line = re.sub(r'([a-z][a-z0-9_-]*)\.[0-9.]+', r'\1', line)
+    m = re.match(r'(\s*)%\d+\s*=\s*(.*::[^(]+\()([^)]*)(.*)', line)
     if m:
-      line = m.group(1) + m.group(2) + m.group(3)
+      args = re.sub(r'%\d+', r'?', m.group(3))
+      line = m.group(1) + m.group(2) + args + m.group(4)
     ngraph.append(line)
   return ngraph
 
@@ -49,8 +52,7 @@ def prase_graphs(gfile, dest_dir, graphs=None):
       else:
         frame.append(line)
     elif graph is not None:
-      graph.append(line)
-      m = re.match(r'}\s*$', line)
+      m = re.match(r'## END_GRAPH$', line)
       if m:
         if dest_dir:
           save_graph(graph,
@@ -64,14 +66,16 @@ def prase_graphs(gfile, dest_dir, graphs=None):
                 key='\n'.join(graph)))
         graph = None
         last_frame = None
+      else:
+        graph.append(line)
     else:
       m = re.match(r'TensorsGraphInfo:', line)
       if m:
         frame = []
       else:
-        m = re.match(r'IR {\s*', line)
+        m = re.match(r'## BEGIN_GRAPH$', line)
         if m:
-          graph = [line]
+          graph = []
   return graphs
 
 
