@@ -44,7 +44,7 @@ if [ "$LOGFILE" != "" ]; then
   python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA 2>&1 | tee $LOGFILE
   python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA 2>&1 | tee $LOGFILE
   python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
-  # run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
+  run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
   python3 "$CDIR/test_mp_replication.py" "$@" 2>&1 | tee $LOGFILE
 else
   python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
@@ -55,6 +55,6 @@ else
   python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
   python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
   python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  # run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   python3 "$CDIR/test_mp_replication.py" "$@"
 fi
