@@ -6,8 +6,6 @@ import re
 from numpy import mean
 from numpy import std
 
-#_METRIC_REGEX = r'Metric: (\S+)\s+TotalSamples: (\d+)\s+Accumulator: (\S+)\s+\S+Percentiles: 1%=(\S+); 5%=(\S+); 10%=(\S+); 20%=(\S+); 50%=(\S+); 80%=(\S+); 90%=(\S+); 95%=(\S+); 99%=(\S+);'
-#_METRIC_REGEX = r'Metric: (\S+)\s+TotalSamples: (\d+)\s+Accumulator: (\S+)[^P]+Percentiles: 1%=(\S+); 5%=(\S+); 10%=(\S+); 20%=(\S+); 50%=(\S+); 80%=(\S+); 90%=(\S+); 95%=(\S+); 99%=(\S+)'
 _METRIC_REGEX = r'Metric: (?P<metric_name>\S+)\s+TotalSamples: (?P<TotalSamples>\d+)\s+Accumulator: (?P<Accumulator>\S+)[^P]+Percentiles: 1%=(?P<Percentile_1>\S+); 5%=(?P<Percentile_5>\S+); 10%=(?P<Percentile_10>\S+); 20%=(?P<Percentile_20>\S+); 50%=(?P<Percentile_50>\S+); 80%=(?P<Percentile_80>\S+); 90%=(?P<Percentile_90>\S+); 95%=(?P<Percentile_95>\S+); 99%=(?P<Percentile_99>\S+)'
 _COUNTER_REGEX = r'Counter: (\S+)\s+Value: (\d+)'
 _TIME_FIND_REGEX = r'((?P<days>\d+)d)?((?P<hours>\d+)h)?((?P<minutes>\d+)m(?!s))?((?P<seconds>\d+)s)?((?P<milliseconds>\d+)ms)?((?P<microseconds>[\d.]+)us)?'

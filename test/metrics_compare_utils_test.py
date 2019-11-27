@@ -267,8 +267,6 @@ class MetricsCompareUtilsTest(unittest.TestCase):
     metrics = met.metrics_report()
     self.assertTrue(metrics)
     data_points = mcu.get_data_points_from_metrics_reports([metrics])
-    #print(metrics)
-    #print(data_points)
     self.assertIn('CompileTime__Percentile_99_sec', data_points.keys())
     self.assertIn('CompileTime__TotalSamples', data_points.keys())
   
