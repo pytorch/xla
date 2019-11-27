@@ -332,9 +332,16 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
     xla::XlaOp xla_output = BuildComparisonOp(kind, xla_input, xla_other);
     return node.ReturnOp(xla_output, loctx);
   };
-  xla::Shape output_shape = input.shape();
-  output_shape.set_element_type(xla::PrimitiveType::PRED);
-  return GenericOp(OpKind(kind), {input, other}, std::move(output_shape),
+  auto lower_for_shape_fn =
+      [kind](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
+      -> xla::XlaOp {
+    return BuildComparisonOp(kind, operands[0], operands[1]);
+  };
+  return GenericOp(OpKind(kind), {input, other},
+                   [&]() {
+                     return InferOutputShape({input.shape(), other.shape()},
+                                             lower_for_shape_fn);
+                   },
                    std::move(lower_fn));
 }
 

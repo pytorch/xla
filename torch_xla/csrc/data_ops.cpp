@@ -31,7 +31,6 @@ bool IsSparseGather(const xla::Shape& input_shape,
 }
 
 std::vector<xla::int64> GetReflectionPad2dSpatialDims(xla::int64 rank) {
-  std::vector<xla::int64> spatial_dims;
   if (rank == 3) {
     return {2, 1};
   } else if (rank == 4) {
