@@ -2,18 +2,22 @@ from __future__ import print_function
 
 import unittest
 
-from torch_xla.debug import metrics_compare_utils as mcu
+import torch
+import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
+import torch_xla.debug.metrics_compare_utils as mcu
 
 _REPORT_1 = """Metric: InboundData
   TotalSamples: 1728
   Accumulator: 10GB
   Rate: 16.8665 / second
+  Percentiles: 1%=393.00KB; 5%=393.00KB; 10%=786.00KB; 20%=1.54MB; 50%=1.54MB; 80%=1.54MB; 90%=1.54MB; 95%=1.54MB; 99%=1.54MB
 Metric: TransferToServerTime
   TotalSamples: 2616
   Accumulator: 01m29s615ms
   ValueRate: 783ms426.227us / second
   Rate: 24.5054 / second
-  Percentiles: 1%=003ms783.790us; 5%=004ms98.116us; 10%=010ms364.458us; 20%=015ms121.974us; 50%=026ms622.656us; 80%=035ms554.304us; 90%=082ms478.207us; 95%=108ms554.247us; 99%=129ms338.132us
+  Percentiles: 1%=05m003ms; 5%=05m004ms; 10%=05m010ms; 20%=05m015ms; 50%=05m026ms; 80%=05m035ms; 90%=05m082ms; 95%=05m108ms; 99%=05m129ms
 Counter: CachedSyncTensors
   Value: 11336
 Counter: CreateCompileHandles
@@ -24,9 +28,11 @@ Counter: CreateDataHandles
 _REPORT_2 = """--metric:localhost\n\n\nMetric: InboundData
   TotalSamples: 73216
   Accumulator: 64.75TB
+  Percentiles: 1%=393.00KB; 5%=393.00KB; 10%=786.00KB; 20%=1.54MB; 50%=1.54MB; 80%=1.54MB; 90%=1.54MB; 95%=1.54MB; 99%=1.54MB
 Metric: TransferToServerTime
   TotalSamples: 247016
   Accumulator: 04d17h11m07s495ms546.299us
+  Percentiles: 1%=05m003ms; 5%=05m004ms; 10%=05m010ms; 20%=05m015ms; 50%=05m026ms; 80%=05m035ms; 90%=05m082ms; 95%=05m108ms; 99%=05m129ms
 Counter: CachedSyncTensors
   Value: 1022168
 Counter: CreateCompileHandles
@@ -38,12 +44,15 @@ Counter: CreateDataHandles
 _REPORT_3 = """--root='gs://metric'\n\n\nMetric: InboundData
   TotalSamples: 73216
   Accumulator: 64.75GB
+  Percentiles: 1%=393.00KB; 5%=393.00KB; 10%=786.00KB; 20%=1.54MB; 50%=1.54MB; 80%=1.54MB; 90%=1.54MB; 95%=1.54MB; 99%=1.54MB
 Metric: TransferToServerTime
   TotalSamples: 247016
   Accumulator: 1s
+  Percentiles: 1%=05m003ms; 5%=05m004ms; 10%=05m010ms; 20%=05m015ms; 50%=05m026ms; 80%=05m035ms; 90%=05m082ms; 95%=05m108ms; 99%=05m129ms
 Metric: UniqueMetric
   TotalSamples: 9000
   Accumulator: 9000
+  Percentiles: 1%=8902; 5%=89010; 10%=8920; 20%=8940; 50%=9000; 80%=9060; 90%=9080; 95%=9090; 99%=9098
 Counter: CachedSyncTensors
   Value: 1022168
 Counter: CreateCompileHandles
@@ -58,12 +67,15 @@ DistractingText
 _REPORT_3_SLIGHTLY_DIFFERENT_VALUES = """distracting text\n\n\nMetric: InboundData
   TotalSamples: 70000
   Accumulator: 74.75GB
+  Percentiles: 1%=393.00KB; 5%=393.00KB; 10%=786.00KB; 20%=1.54MB; 50%=1.54MB; 80%=1.54MB; 90%=1.54MB; 95%=1.54MB; 99%=1.54MB
 Metric: TransferToServerTime
   TotalSamples: 247016
   Accumulator: 1s
+  Percentiles: 1%=05m003ms; 5%=05m004ms; 10%=05m010ms; 20%=05m015ms; 50%=05m026ms; 80%=05m035ms; 90%=05m082ms; 95%=05m108ms; 99%=05m129ms
 Metric: UniqueMetric
   TotalSamples: 9000
   Accumulator: 9000
+  Percentiles: 1%=8902; 5%=89010; 10%=8920; 20%=8940; 50%=9000; 80%=9060; 90%=9080; 95%=9090; 99%=9098
 Counter: CachedSyncTensors
   Value: 1022168
 Counter: CreateCompileHandles
@@ -78,12 +90,15 @@ DistractingText
 _REPORT_3_WITH_NEW_COUNTERS = """Metric: InboundData
   TotalSamples: 73216
   Accumulator: 64.75GB
+  Percentiles: 1%=393.00KB; 5%=393.00KB; 10%=786.00KB; 20%=1.54MB; 50%=1.54MB; 80%=1.54MB; 90%=1.54MB; 95%=1.54MB; 99%=1.54MB
 Metric: TransferToServerTime
   TotalSamples: 247016
   Accumulator: 1s
+  Percentiles: 1%=05m003ms; 5%=05m004ms; 10%=05m010ms; 20%=05m015ms; 50%=05m026ms; 80%=05m035ms; 90%=05m082ms; 95%=05m108ms; 99%=05m129ms
 Metric: UniqueMetric
   TotalSamples: 9000
   Accumulator: 9000
+  Percentiles: 1%=8902; 5%=89010; 10%=8920; 20%=8940; 50%=9000; 80%=9060; 90%=9080; 95%=9090; 99%=9098
 Counter: CachedSyncTensors
   Value: 1022168
 Counter: CreateCompileHandles
@@ -134,17 +149,45 @@ class MetricsCompareUtilsTest(unittest.TestCase):
 
   def test_get_data_points_from_metrics_reports(self):
     correct_dict = {
+        'InboundData__TotalSamples': [1728.0, 73216.0, 73216.0],
         'InboundData__Accumulator_mb': [10000.0, 64750000.0, 64750.0],
-        'InboundData__TotalSamples': [1728, 73216, 73216],
+        'InboundData__Percentile_1_mb': [0.393, 0.393, 0.393],
+        'InboundData__Percentile_5_mb': [0.393, 0.393, 0.393],
+        'InboundData__Percentile_10_mb': [0.786, 0.786, 0.786],
+        'InboundData__Percentile_20_mb': [1.54, 1.54, 1.54],
+        'InboundData__Percentile_50_mb': [1.54, 1.54, 1.54],
+        'InboundData__Percentile_80_mb': [1.54, 1.54, 1.54],
+        'InboundData__Percentile_90_mb': [1.54, 1.54, 1.54],
+        'InboundData__Percentile_95_mb': [1.54, 1.54, 1.54],
+        'InboundData__Percentile_99_mb': [1.54, 1.54, 1.54],
+        'TransferToServerTime__TotalSamples': [2616.0, 247016.0, 247016.0],
         'TransferToServerTime__Accumulator_sec': [89.615, 407467.495546299, 1.0],
-        'TransferToServerTime__TotalSamples': [2616, 247016, 247016],
+        'TransferToServerTime__Percentile_1_sec': [300.003, 300.003, 300.003],
+        'TransferToServerTime__Percentile_5_sec': [300.004, 300.004, 300.004],
+        'TransferToServerTime__Percentile_10_sec': [300.01, 300.01, 300.01],
+        'TransferToServerTime__Percentile_20_sec': [300.015, 300.015, 300.015],
+        'TransferToServerTime__Percentile_50_sec': [300.026, 300.026, 300.026],
+        'TransferToServerTime__Percentile_80_sec': [300.035, 300.035, 300.035],
+        'TransferToServerTime__Percentile_90_sec': [300.082, 300.082, 300.082],
+        'TransferToServerTime__Percentile_95_sec': [300.108, 300.108, 300.108],
+        'TransferToServerTime__Percentile_99_sec': [300.129, 300.129, 300.129],
+        'UniqueMetric__TotalSamples': [None, None, 9000.0],
+        'UniqueMetric__Accumulator': [None, None, 9000.0],
+        'UniqueMetric__Percentile_1': [None, None, 8902.0],
+        'UniqueMetric__Percentile_5': [None, None, 89010.0],
+        'UniqueMetric__Percentile_10': [None, None, 8920.0],
+        'UniqueMetric__Percentile_20': [None, None, 8940.0],
+        'UniqueMetric__Percentile_50': [None, None, 9000.0],
+        'UniqueMetric__Percentile_80': [None, None, 9060.0],
+        'UniqueMetric__Percentile_90': [None, None, 9080.0],
+        'UniqueMetric__Percentile_95': [None, None, 9090.0],
+        'UniqueMetric__Percentile_99': [None, None, 9098.0],
         'CachedSyncTensors__Value': [11336, 1022168, 1022168],
         'CreateCompileHandles__Value': [40, 40, 40],
         'CreateDataHandles__Value': [407992, 576462152, 576462152],
-        'UniqueMetric__Accumulator': [None, None, 9000.0],
-        'UniqueMetric__TotalSamples': [None, None, 9000],
         'UniqueCounter__Value': [None, None, 9000]
     }
+
     self.assertTrue(self._dict_almost_equal(
         mcu.get_data_points_from_metrics_reports(
             [_REPORT_1, _REPORT_2, _REPORT_3]),
@@ -184,7 +227,7 @@ class MetricsCompareUtilsTest(unittest.TestCase):
 
     # Since the tolerance is 0.0, even a tiny difference leads to a line in
     # the metrics_difference_report.
-    expected_report = 'InboundData__Accumulator_mb is outside the expected range using tolerance: 0.0. Lower limit: 68083.33333333333  Upper limit: 68083.33333333333  Actual Value: 74750.0\nInboundData__TotalSamples is outside the expected range using tolerance: 0.0. Lower limit: 72144.0  Upper limit: 72144.0  Actual Value: 70000\nUniqueCounter__Value is outside the expected range using tolerance: 0.0. Lower limit: 9333.0  Upper limit: 9333.0  Actual Value: 9999\n'
+    expected_report = 'InboundData__Accumulator_mb is outside the expected range using tolerance: 0.0. Lower limit: 68083.33333333333  Upper limit: 68083.33333333333  Actual Value: 74750.0\nInboundData__TotalSamples is outside the expected range using tolerance: 0.0. Lower limit: 72144.0  Upper limit: 72144.0  Actual Value: 70000.0\nUniqueCounter__Value is outside the expected range using tolerance: 0.0. Lower limit: 9333.0  Upper limit: 9333.0  Actual Value: 9999\n'
     self.assertEqual(metrics_difference_report, expected_report)
 
 
@@ -201,7 +244,7 @@ class MetricsCompareUtilsTest(unittest.TestCase):
 
     # 2 of 3 differing values have custom tolerances and therefore should pass.
     # The third uses the default tolerance of 0.0, so it will generate a line.
-    expected_report = 'InboundData__TotalSamples is outside the expected range using tolerance: 0.0. Lower limit: 72144.0  Upper limit: 72144.0  Actual Value: 70000\n'
+    expected_report = 'InboundData__TotalSamples is outside the expected range using tolerance: 0.0. Lower limit: 72144.0  Upper limit: 72144.0  Actual Value: 70000.0\n'
     self.assertEqual(metrics_difference_report, expected_report)
  
 
@@ -216,8 +259,20 @@ class MetricsCompareUtilsTest(unittest.TestCase):
     # big enough to trigger lines in the difference report.
     expected_report = 'Found new aten counter: aten::_local_scalar_dense__Value: 73216\n'
     self.assertEqual(metrics_difference_report, expected_report)
+
+  def test_parse_real_metrics(self):
+    print("Testing against TPU. If this hangs, check that $XRT_TPU_CONFIG is set")
+    x = torch.rand(3, 5, device=xm.xla_device())
+    self.assertEqual(x.device.type, 'xla')
+    metrics = met.metrics_report()
+    self.assertTrue(metrics)
+    data_points = mcu.get_data_points_from_metrics_reports([metrics])
+    #print(metrics)
+    #print(data_points)
+    self.assertIn('CompileTime__Percentile_99_sec', data_points.keys())
+    self.assertIn('CompileTime__TotalSamples', data_points.keys())
   
-  
+
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)

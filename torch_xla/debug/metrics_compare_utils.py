@@ -6,9 +6,11 @@ import re
 from numpy import mean
 from numpy import std
 
-_METRIC_REGEX = r'Metric: (\S+)\s+TotalSamples: (\d+)\s+Accumulator: (\S+)'
+#_METRIC_REGEX = r'Metric: (\S+)\s+TotalSamples: (\d+)\s+Accumulator: (\S+)\s+\S+Percentiles: 1%=(\S+); 5%=(\S+); 10%=(\S+); 20%=(\S+); 50%=(\S+); 80%=(\S+); 90%=(\S+); 95%=(\S+); 99%=(\S+);'
+#_METRIC_REGEX = r'Metric: (\S+)\s+TotalSamples: (\d+)\s+Accumulator: (\S+)[^P]+Percentiles: 1%=(\S+); 5%=(\S+); 10%=(\S+); 20%=(\S+); 50%=(\S+); 80%=(\S+); 90%=(\S+); 95%=(\S+); 99%=(\S+)'
+_METRIC_REGEX = r'Metric: (?P<metric_name>\S+)\s+TotalSamples: (?P<TotalSamples>\d+)\s+Accumulator: (?P<Accumulator>\S+)[^P]+Percentiles: 1%=(?P<Percentile_1>\S+); 5%=(?P<Percentile_5>\S+); 10%=(?P<Percentile_10>\S+); 20%=(?P<Percentile_20>\S+); 50%=(?P<Percentile_50>\S+); 80%=(?P<Percentile_80>\S+); 90%=(?P<Percentile_90>\S+); 95%=(?P<Percentile_95>\S+); 99%=(?P<Percentile_99>\S+)'
 _COUNTER_REGEX = r'Counter: (\S+)\s+Value: (\d+)'
-_TIME_FIND_REGEX = r'((?P<days>\d+)d)?((?P<hours>\d+)h)?((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?((?P<milliseconds>\d+)ms)?((?P<microseconds>[\d.]+)us)?'
+_TIME_FIND_REGEX = r'((?P<days>\d+)d)?((?P<hours>\d+)h)?((?P<minutes>\d+)m(?!s))?((?P<seconds>\d+)s)?((?P<milliseconds>\d+)ms)?((?P<microseconds>[\d.]+)us)?'
 _DISK_SIZE_REGEX = r'((?P<petabytes>[\d.]+)PB)?((?P<terabytes>[\d.]+)TB)?((?P<gigabytes>[\d.]+)GB)?((?P<megabytes>[\d.]+)MB)?((?P<kilobytes>[\d.]+)KB)?((?P<bytes>[\d.]+)B)?'
 
 
@@ -23,7 +25,8 @@ def _regex_matches_groupdict(regex, target_str):
   return None
 
 
-def _accumulator_to_number(accumulator_string):
+#def _accumulator_to_number(metric_str):
+def _metric_str_to_number(metric_str):
   # Convert XLA metrics report Accumulator strings into a number using
   # a standardized unit. Returns the value as float and unit as string.
   #
@@ -34,12 +37,12 @@ def _accumulator_to_number(accumulator_string):
 
   # Try to parse the string as a number (no units).
   try:
-    return float(accumulator_string), ''
+    return float(metric_str), ''
   except ValueError as e:
     pass
 
   # Try to parse the string as a duration.
-  time_gd = _regex_matches_groupdict(_TIME_FIND_REGEX, accumulator_string)
+  time_gd = _regex_matches_groupdict(_TIME_FIND_REGEX, metric_str)
   if time_gd:
     total_sec = 0.0
     total_sec += time_gd.get('days') * 24 * 60 * 60
@@ -51,7 +54,7 @@ def _accumulator_to_number(accumulator_string):
     return total_sec, 'sec'
 
   # Try to parse the string as disk space.
-  disk_gd = _regex_matches_groupdict(_DISK_SIZE_REGEX, accumulator_string)
+  disk_gd = _regex_matches_groupdict(_DISK_SIZE_REGEX, metric_str)
   if disk_gd:
     total_mb = 0.0
     total_mb += disk_gd.get('petabytes') * 1e9
@@ -62,28 +65,25 @@ def _accumulator_to_number(accumulator_string):
     total_mb += disk_gd.get('bytes') * 1e-6
     return total_mb, 'mb'
 
-  raise ValueError('Unknown accumulator_string format: {}'.format(
-      accumulator_string))
+  raise ValueError('Unknown metric_str format: {}'.format(
+      metric_str))
   
 
 def _parse_metrics_report(report):
   # Convert a string metrics report to a dict of parsed values.
   data_points = {}
 
-  metrics_matches = re.findall(_METRIC_REGEX, report)
-  # Each match tuple is of form (name, num samples, accumulator string).
-  for match in metrics_matches:
-    parsed_value, units = _accumulator_to_number(match[2])
-    
-    # Dict keys will be of form 'MetricName__Accumulator_unit' or
-    # 'MetricName__Accumulator' if units are not given. For TotalSamples,
-    # the units are ommitted since this is just a count of samples.
-    accumulator_key = '{}__{}{}{}'.format(
-        match[0], 'Accumulator', '_' if units else '', units)
-    samples_key = '{}__{}'.format(match[0], 'TotalSamples')
-    data_points[accumulator_key] = parsed_value
-    data_points[samples_key] = int(match[1])
-  
+  # Parse metrics into data points.
+  metric_match_gd = [m.groupdict() for m in re.finditer(_METRIC_REGEX, report)] 
+  for gd in metric_match_gd:
+    metric_name = gd.pop('metric_name')
+    for k, v in gd.items():
+      parsed_v, units = _metric_str_to_number(v)
+      full_key = '{}__{}{}{}'.format(
+        metric_name, k, '_' if units else '', units)
+      data_points[full_key] = parsed_v
+ 
+  # Parse counters into data points.
   counters_matches = re.findall(_COUNTER_REGEX, report)
   # Each match tuple is of the form (name, counter value).
   for match in counters_matches:
@@ -158,7 +158,7 @@ def compare_metrics(data_points, metrics_report,
   means_and_stddevs = _compute_aggregates(data_points)
 
   difference_report = ''
-  for k, v in parsed_report.items():
+  for k, v in sorted(parsed_report.items()):
     if k not in means_and_stddevs:
       # Alert if we have new ops falling back to CPU.
       if k.startswith('aten::'):
