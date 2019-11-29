@@ -1,11 +1,14 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <sstream>
 
+#include "absl/memory/memory.h"
+#include "absl/strings/str_split.h"
+#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
-#include "tensorflow/core/platform/default/logging.h"
 #include "tensorflow/core/platform/macros.h"
 
 namespace xla {
@@ -105,6 +108,26 @@ void MetricsArena::ForEachCounter(
   }
 }
 
+const std::vector<double>* ReadEnvPercentiles() {
+  std::string percentiles = sys_util::GetEnvString(
+      "XLA_METRICS_PERCENTILES", "0.01:0.05:0.1:0.2:0.5:0.8:0.9:0.95:0.99");
+  std::vector<std::string> percentiles_list = absl::StrSplit(percentiles, ':');
+  std::unique_ptr<std::vector<double>> metrics_percentiles =
+      absl::make_unique<std::vector<double>>();
+  for (auto& pct_str : percentiles_list) {
+    double pct = std::stod(pct_str);
+    XLA_CHECK(pct > 0.0 && pct < 1.0) << pct;
+    metrics_percentiles->push_back(pct);
+  }
+  std::sort(metrics_percentiles->begin(), metrics_percentiles->end());
+  return metrics_percentiles.release();
+}
+
+const std::vector<double>& GetPercentiles() {
+  static const std::vector<double>* metrics_percentiles = ReadEnvPercentiles();
+  return *metrics_percentiles;
+}
+
 void EmitMetricInfo(const string& name, MetricData* data,
                     std::stringstream* ss) {
   double accumulator = 0.0;
@@ -130,19 +153,17 @@ void EmitMetricInfo(const string& name, MetricData* data,
     }
   }
 
-  const int kNumPercentiles = 9;
-  static double const kPercentiles[kNumPercentiles] = {
-      0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.99};
+  const std::vector<double>& metrics_percentiles = GetPercentiles();
   std::sort(
       samples.begin(), samples.end(),
       [](const Sample& s1, const Sample& s2) { return s1.value < s2.value; });
   (*ss) << "  Percentiles: ";
-  for (int i = 0; i < kNumPercentiles; ++i) {
-    size_t index = kPercentiles[i] * samples.size();
+  for (size_t i = 0; i < metrics_percentiles.size(); ++i) {
+    size_t index = metrics_percentiles[i] * samples.size();
     if (i > 0) {
       (*ss) << "; ";
     }
-    (*ss) << (kPercentiles[i] * 100.0)
+    (*ss) << (metrics_percentiles[i] * 100.0)
           << "%=" << data->Repr(samples[index].value);
   }
   (*ss) << std::endl;
