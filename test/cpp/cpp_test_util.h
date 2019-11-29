@@ -34,6 +34,9 @@ const std::unordered_set<std::string>* GetIgnoredCounters();
 // on both sides.
 at::Tensor ToCpuTensor(const at::Tensor& t);
 
+// Helper function to copy a tensor to device.
+torch::Tensor CopyToDevice(torch::Tensor t, const torch::Device& device);
+
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2);
 
 bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2);
@@ -81,6 +84,12 @@ std::vector<at::Tensor> Fetch(
 
 std::vector<at::Tensor> ExecuteAndFetch(
     tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device);
+
+void TestBackward(
+    const std::vector<torch::Tensor>& inputs, const torch::Device& device,
+    const std::function<torch::Tensor(const std::vector<torch::Tensor>&)>&
+        testfn,
+    double rtol = 1e-5, double atol = 1e-8);
 
 }  // namespace cpp_test
 }  // namespace torch_xla
