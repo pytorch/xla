@@ -16,6 +16,7 @@ import os
 import re
 import tempfile
 import sys
+import urllib.parse
 
 try:
   from google.cloud import storage as gcs
@@ -155,7 +156,7 @@ def _get_blob_path(bpath):
   m = re.match(r'/b/[^/]+/o/(.+)', bpath)
   if not m:
     raise RuntimeError('GCS invalid blob path: {}'.format(bpath))
-  return m.group(1)
+  return urllib.parse.unquote(m.group(1))
 
 
 def _parse_gcs_path(path, wants_path=True):
@@ -188,6 +189,8 @@ def list(path):
     ValueError: If an invalid GCS path is supplied.
   """
   bucket_name, bpath = _parse_gcs_path(path, wants_path=False)
+  if bpath and not bpath.endswith('/'):
+    bpath += '/'
   gcs_client = gcs.Client()
   blobs = []
   for blob in gcs_client.list_blobs(bucket_name, prefix=bpath, delimiter='/'):
