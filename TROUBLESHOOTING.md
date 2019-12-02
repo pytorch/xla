@@ -237,33 +237,4 @@ The, given the PID, it is possible to grab the stack traces with the following c
 ./scripts/dump_stacks.py PID > /tmp/stack-traces.log
 ```
 
-## Using debug_run.py To Collect Debug Information
 
-A utility is provided in `scripts/debug_run.py` which can be used to create a `tar.gz`
-archive with the information required to debug _PyTorch/XLA_ executions.
-
-Example:
-
-```Shell
-./scripts/debug_run.py --outfile /tmp/debug_run.tar.gz -- python -u SCRIPT [ARGS...]
-```
-
-The _python_ `-u` flag is suggested to disable buffering so that captured logs are correctly
-interleaved (otherwise STDOUT will be rendered after all STDERR).
-
-The above command line example will leave the temporary folder containing the archived
-information on the filesystem. Use the `--tidy` flag to have that removed on exit:
-
-```Shell
-./scripts/debug_run.py --tidy --outfile /tmp/debug_run.tar.gz -- python -u SCRIPT [ARGS...]
-```
-
-The `debug_run.tar.gz` file should then be attached to bug reports when necessary.
-
-Since the script will collect a lot of data, it should usually be let run for no more
-than hundred steps or so.
-If the SCRIPT has arguments to control the number of steps, those should be used,
-otherwise hitting `CTRL^C` will interrupt the run.
-
-It is also sugested to run in single-core mode, to minimize the amount of data.
-Running in single-core mode is also strongly suggested when debugging execution issues.

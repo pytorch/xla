@@ -4,23 +4,17 @@ from __future__ import print_function
 
 import argparse
 import copy
-import getpass
 import glob
 import os
 import re
 import shutil
 import signal
-import socket
 import subprocess
 import sys
 import time
 import tempfile
 
 _QUIT = False
-_DEFAULT_VMODULE = [
-    'tensor=5', 'computation_client=5', 'xrt_computation_client=5',
-    'aten_xla_type=1'
-]
 
 
 def term_handler(signum, frame):
@@ -60,31 +54,16 @@ def get_first_file(path):
   return path if os.path.isfile(path) else None
 
 
-def build_vmodule(args, default):
-  default = list(default)
-  if args.vmodule:
-    default += args.vmodule.split(',')
-  return ','.join(default)
-
-
-def show_env(env, fd=sys.stdout):
-  print('XLA Environment:', file=fd)
-  for k, v in env.items():
-    if re.match(r'(XLA_|XRT_|TF_)', k):
-      print('  {}={}'.format(k, v), file=fd)
-
-
 def create_env(args):
   env = copy.copy(os.environ)
   env['XLA_IR_DEBUG'] = '1'
   env['XLA_HLO_DEBUG'] = '1'
   env['TF_CPP_LOG_THREAD_ID'] = '1'
-  env['TF_CPP_VMODULE'] = build_vmodule(args, _DEFAULT_VMODULE)
+  env['TF_CPP_VMODULE'] = 'tensor=5'
   env['XLA_SAVE_TENSORS_FILE'] = get_graphs_file_path(args.outdir)
   if args.hlo:
     env['XLA_SAVE_TENSORS_FMT'] = 'hlo'
   env['XLA_METRICS_FILE'] = get_metrics_file_path(args.outdir)
-  show_env(env)
   return env
 
 
@@ -100,22 +79,9 @@ def grab_graphs(args):
       fd.write(report)
 
 
-def create_temp_folder():
-  seq = -1
-  while True:
-    dir_name = 'debug_run-{}-{}'.format(socket.gethostname(), getpass.getuser())
-    if seq >= 0:
-      dir_name += '-{}'.format(seq)
-    temp_folder = os.path.join(tempfile.gettempdir(), dir_name)
-    if not os.path.isdir(temp_folder):
-      os.mkdir(temp_folder)
-      return temp_folder
-    seq += 1
-
-
 def setup_outdir(args):
   if args.outdir is None:
-    args.outdir = create_temp_folder()
+    args.outdir = tempfile.mkdtemp()
     print('Writing run results to {}'.format(args.outdir), file=sys.stderr)
   elif os.path.isdir(args.outdir):
     raise RuntimeError('Output folder must not exist: {}'.format(args.outdir))
@@ -124,19 +90,16 @@ def setup_outdir(args):
 
 
 def targz(folder, tarfile):
-  dirbase = os.path.dirname(folder)
-  dirname = os.path.basename(folder)
-  if subprocess.call(['tar', '-C', dirbase, '-czf', tarfile, dirname]) != 0:
+  if subprocess.call(['tar', 'czf', tarfile, folder]) != 0:
     raise RuntimeError('Failed to create folder {} archive into {}'.format(
         folder, tarfile))
 
 
-def read_proc_output(logfd, offset, outfd=None):
+def read_proc_output(logfd, offset):
   size = os.fstat(logfd).st_size
   if size > offset:
     data = os.pread(logfd, size - offset, offset)
-    if outfd is not None:
-      os.write(outfd, data)
+    sys.stdout.write(data.decode('utf-8'))
     offset = size
   else:
     data = None
@@ -152,13 +115,10 @@ def run_and_monitor(args):
       args.cmdline, stdout=logfd, stderr=subprocess.STDOUT, env=env)
 
   while not _QUIT and proc.poll() is None:
-    offset, data = read_proc_output(logfd, offset, outfd=sys.stdout.fileno())
-    if data is None:
-      time.sleep(1.0)
+    time.sleep(1.0)
+    offset, _ = read_proc_output(logfd, offset)
 
   proc.terminate()
-  proc.wait()
-  read_proc_output(logfd, offset, outfd=sys.stdout.fileno())
   os.close(logfd)
 
 
@@ -196,12 +156,6 @@ if __name__ == '__main__':
       type=str,
       default=None,
       help='The location of the tar.gz debug report file')
-  arg_parser.add_argument(
-      '--vmodule',
-      type=str,
-      default=None,
-      help='Extra --vmodule files to be added. A list of comma-separated NAME=LEVEL'
-  )
   arg_parser.add_argument('cmdline', nargs='+')
 
   args = arg_parser.parse_args()
