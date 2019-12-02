@@ -17,8 +17,8 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
   auto lower_for_shape_fn =
       [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
       -> xla::XlaOp {
-    return TorchGather(operands[0], operands[1], dim,
-                       IsSparseGather(operands[0], operands[1], dim));
+    return xla::TorchGather(operands[0], operands[1], dim,
+                            IsSparseGather(operands[0], operands[1], dim));
   };
   return InferOutputShape({input.shape(), index.shape()}, lower_for_shape_fn);
 }
@@ -39,7 +39,7 @@ XlaOpVector Gather::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp index = loctx->GetOutputOp(operand(1));
   return ReturnOp(
-      TorchGather(input, index, dim_, IsSparseGather(input, index, dim_)),
+      xla::TorchGather(input, index, dim_, IsSparseGather(input, index, dim_)),
       loctx);
 }
 

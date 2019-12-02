@@ -287,8 +287,8 @@ xla::XlaOp BuildTake(const xla::XlaOp& input, const xla::XlaOp& index) {
                               index_shape.element_type(), index.builder());
   xla::XlaOp bound_index = BoundIndices(r1_index, max_index);
   xla::XlaOp r1_result =
-      TorchGather(r1_input, bound_index, take_dim,
-                  IsSparseGather(input_shape, index_shape, take_dim));
+      xla::TorchGather(r1_input, bound_index, take_dim,
+                       IsSparseGather(input_shape, index_shape, take_dim));
   return xla::Reshape(r1_result, index_shape.dimensions());
 }
 
