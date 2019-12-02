@@ -855,7 +855,7 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
 
 std::vector<at::Tensor> XLATensor::GetTensors(std::vector<XLATensor>* tensors) {
   static const bool op_by_op =
-      xla::sys_util::GetEnvBool("GET_TENSORS_OPBYOP", false);
+      xla::sys_util::GetEnvBool("XLA_GET_TENSORS_OPBYOP", false);
   return op_by_op ? GetTensorsOpByOp(tensors) : GetTensorsFused(tensors);
 }
 
@@ -1148,7 +1148,7 @@ void XLATensor::SyncTensorsGraph(
     tensorflow::gtl::ArraySlice<const std::string> devices, bool wait,
     bool sync_xla_data) {
   static const bool op_by_op =
-      xla::sys_util::GetEnvBool("SYNC_TENSORS_OPBYOP", false);
+      xla::sys_util::GetEnvBool("XLA_SYNC_TENSORS_OPBYOP", false);
   SyncTensorsConfig config;
   config.sync_xla_data = sync_xla_data;
   if (op_by_op) {

@@ -56,6 +56,11 @@ void XlaTest::ExpectCounterChanged(
   EXPECT_TRUE(!changed.empty());
 }
 
+void XlaTest::ResetCounters() {
+  start_msnap_ = std::move(end_msnap_);
+  end_msnap_ = nullptr;
+}
+
 void XlaTest::MakeEndSnapshot() {
   if (end_msnap_ == nullptr) {
     end_msnap_ = absl::make_unique<MetricsSnapshot>();

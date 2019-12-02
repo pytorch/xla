@@ -32,29 +32,33 @@ export PYTORCH_TEST_WITH_SLOW=1
 
 function run_opbyop {
   echo "Running in OpByOp mode ..."
-  GET_TENSORS_OPBYOP=1 SYNC_TENSORS_OPBYOP=1 "$@"
+  XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 "$@"
+}
+
+function run_dynamic {
+  XLA_EXPERIMENTAL="nonzero:masked_select" "$@"
 }
 
 if [ "$LOGFILE" != "" ]; then
   python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA 2>&1 | tee $LOGFILE
-  python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA 2>&1 | tee $LOGFILE
+  run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA 2>&1 | tee $LOGFILE
   python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA 2>&1 | tee $LOGFILE
   python3 "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA 2>&1 | tee $LOGFILE
   python3 "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA 2>&1 | tee $LOGFILE
-  python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA 2>&1 | tee $LOGFILE
-  python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA 2>&1 | tee $LOGFILE
-  python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
+  run_dynamic python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA 2>&1 | tee $LOGFILE
+  run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA 2>&1 | tee $LOGFILE
+  run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 2>&1 | tee $LOGFILE
   python3 "$CDIR/test_mp_replication.py" "$@" 2>&1 | tee $LOGFILE
 else
   python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
-  python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
+  run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
   python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
   python3 "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
   python3 "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
-  python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
-  python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
-  python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_dynamic python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
+  run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
+  run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   python3 "$CDIR/test_mp_replication.py" "$@"
 fi

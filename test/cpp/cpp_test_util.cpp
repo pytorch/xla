@@ -59,7 +59,13 @@ at::Tensor ToCpuTensor(const at::Tensor& t) {
   return t.to(torch::kCPU);
 }
 
+torch::Tensor CopyToDevice(torch::Tensor t, const torch::Device& device) {
+  return t.to(device, /*non_blocking=*/false, /*copy=*/true);
+}
+
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
+  tensor1 = ToCpuTensor(tensor1);
+  tensor2 = ToCpuTensor(tensor2);
   if (tensor1.sizes() != tensor2.sizes() ||
       tensor1.dtype() != tensor2.dtype()) {
     std::cerr << "Different shape:\n"
@@ -67,9 +73,6 @@ bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
               << tensor2.dtype() << " " << tensor2.sizes() << "\n";
     return false;
   }
-  tensor1 = ToCpuTensor(tensor1);
-  tensor2 = ToCpuTensor(tensor2);
-
   at::ScalarType type1 = tensor1.scalar_type();
   at::ScalarType type2 = tensor2.scalar_type();
   if (type1 != type2) {
@@ -83,15 +86,14 @@ bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
 }
 
 bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
+  tensor1 = ToCpuTensor(tensor1);
+  tensor2 = ToCpuTensor(tensor2);
   if (tensor1.sizes() != tensor2.sizes()) {
     std::cerr << "Different shape:\n"
               << tensor1.dtype() << " " << tensor1.sizes() << "\n-vs-\n"
               << tensor2.dtype() << " " << tensor2.sizes() << "\n";
     return false;
   }
-  tensor1 = ToCpuTensor(tensor1);
-  tensor2 = ToCpuTensor(tensor2);
-
   at::ScalarType type1 = tensor1.scalar_type();
   at::ScalarType type2 = tensor2.scalar_type();
   if (type1 != type2) {
@@ -225,6 +227,42 @@ std::vector<at::Tensor> ExecuteAndFetch(
     tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device) {
   auto results = Execute(roots, device);
   return Fetch(results);
+}
+
+void TestBackward(
+    const std::vector<torch::Tensor>& inputs, const torch::Device& device,
+    const std::function<torch::Tensor(const std::vector<torch::Tensor>&)>&
+        testfn,
+    double rtol, double atol) {
+  std::vector<torch::Tensor> input_vars;
+  std::vector<torch::Tensor> xinput_vars;
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    const torch::Tensor& input = inputs[i];
+    if (input.defined()) {
+      input_vars.push_back(
+          input.clone().detach().set_requires_grad(input.requires_grad()));
+
+      torch::Tensor xinput = CopyToDevice(input, device)
+                                 .detach()
+                                 .set_requires_grad(input.requires_grad());
+      xinput_vars.push_back(xinput);
+    } else {
+      input_vars.emplace_back();
+      xinput_vars.emplace_back();
+    }
+  }
+
+  torch::Tensor output = testfn(input_vars);
+  torch::Tensor xoutput = testfn(xinput_vars);
+  AllClose(output, xoutput, rtol, atol);
+  output.backward(torch::ones_like(output));
+  xoutput.backward(torch::ones_like(xoutput));
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    if (inputs[i].defined() && inputs[i].requires_grad()) {
+      ASSERT_TRUE(xinput_vars[i].grad().defined());
+      AllClose(input_vars[i].grad(), xinput_vars[i].grad(), rtol, atol);
+    }
+  }
 }
 
 }  // namespace cpp_test
