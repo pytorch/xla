@@ -6,55 +6,18 @@
 #include "cpp_test_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {
+namespace {
 
 class AtenXlaTensorTest : public AtenXlaTensorTestBase {};
 
-// Helper function to copy a tensor to device.
-torch::Tensor CopyToDevice(torch::Tensor t, torch::Device device) {
-  return t.to(device, /*non_blocking=*/false, /*copy=*/true);
-}
-
-void TestBackward(
-    const std::vector<torch::Tensor>& inputs, const torch::Device& device,
-    const std::function<torch::Tensor(const std::vector<torch::Tensor>&)>&
-        testfn,
-    double rtol = 1e-5, double atol = 1e-8) {
-  std::vector<torch::Tensor> input_vars;
-  std::vector<torch::Tensor> xinput_vars;
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    const torch::Tensor& input = inputs[i];
-    if (input.defined()) {
-      input_vars.push_back(
-          input.clone().detach().set_requires_grad(input.requires_grad()));
-
-      torch::Tensor xinput = CopyToDevice(input, device)
-                                 .detach()
-                                 .set_requires_grad(input.requires_grad());
-      xinput_vars.push_back(xinput);
-    } else {
-      input_vars.emplace_back();
-      xinput_vars.emplace_back();
-    }
-  }
-
-  torch::Tensor output = testfn(input_vars);
-  torch::Tensor xoutput = testfn(xinput_vars);
-  AllClose(output, xoutput, rtol, atol);
-  output.backward(torch::ones_like(output));
-  xoutput.backward(torch::ones_like(xoutput));
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    if (inputs[i].defined() && inputs[i].requires_grad()) {
-      ASSERT_TRUE(xinput_vars[i].grad().defined());
-      AllClose(input_vars[i].grad(), xinput_vars[i].grad(), rtol, atol);
-    }
-  }
-}
+}  // namespace
 
 TEST_F(AtenXlaTensorTest, TestScalarTensor) {
   torch::Tensor scalar_tensor =
@@ -3808,13 +3771,15 @@ TEST_F(AtenXlaTensorTest, TestNonzero) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = torch::nonzero(xla_a);
     AllClose(b, xla_b);
-  });
 
-  if (DebugUtil::ExperimentEnabled("nonzero")) {
-    // If the nonzero support is enabled, we must not see any aten:: calls.
-    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  }
-  ExpectCounterChanged("xla::nonzero", cpp_test::GetIgnoredCounters());
+    if (DebugUtil::ExperimentEnabled("nonzero") &&
+        bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU) {
+      // If the nonzero support is enabled, we must not see any aten:: calls.
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    }
+    ExpectCounterChanged("xla::nonzero", cpp_test::GetIgnoredCounters());
+    ResetCounters();
+  });
 }
 
 TEST_F(AtenXlaTensorTest, TestMaskedSelect) {
@@ -3827,13 +3792,16 @@ TEST_F(AtenXlaTensorTest, TestMaskedSelect) {
     torch::Tensor xla_b = CopyToDevice(b, device);
     torch::Tensor xla_c = torch::masked_select(xla_a, xla_b);
     AllClose(c, xla_c);
-  });
 
-  if (DebugUtil::ExperimentEnabled("masked_select")) {
-    // If the nonzero support is enabled, we must not see any aten:: calls.
-    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  }
-  ExpectCounterChanged("xla::masked_select", cpp_test::GetIgnoredCounters());
+    if (DebugUtil::ExperimentEnabled("masked_select") &&
+        bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU) {
+      // If the masked_select support is enabled, we must not see any aten::
+      // calls.
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    }
+    ExpectCounterChanged("xla::masked_select", cpp_test::GetIgnoredCounters());
+    ResetCounters();
+  });
 }
 
 TEST_F(AtenXlaTensorTest, TestMultiIndexHeadNull) {
