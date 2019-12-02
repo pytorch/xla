@@ -230,9 +230,7 @@ def train_imagenet():
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = mean(accuracies)
-    if accuracy > max_accuracy:
-      print('New best accuracy:')
-      max_accuracy = accuracy
+    max_accuracy = max(accuracy, max_accuracy)
     print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
     global_step = (epoch - 1) * num_training_steps_per_epoch
     test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
