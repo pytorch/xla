@@ -171,7 +171,7 @@ def spawn(fn,
 
   nprocs = _pre_fork_setup(nprocs)
   if nprocs == 1:
-    _start_fn(0, nprocs, fn, *args)
+    _start_fn(0, nprocs, fn, args)
   else:
     return torch.multiprocessing.start_processes(
         _start_fn,
