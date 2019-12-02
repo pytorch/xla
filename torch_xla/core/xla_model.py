@@ -96,7 +96,10 @@ def get_local_ordinal(defval=0):
     The replication local ordinal of the current process.
   """
 
-  return xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=defval)
+  ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
+  if ordinal >= 0:
+    return ordinal
+  return getattr(_TLS, 'device_index', defval)
 
 
 def is_master_ordinal(local=True):
@@ -112,12 +115,8 @@ def is_master_ordinal(local=True):
     A boolean indicating whether the current process is the master ordinal.
   """
 
-  ordinal = get_local_ordinal(defval=-1) if local else get_ordinal(defval=-1)
-  if ordinal >= 0:
-    # We are either on multi-processing, or on BigSlice (or both).
-    return ordinal == 0
-  # We are in the multi-threaded DataParallel setup.
-  return getattr(_TLS, 'device_index', 0) == 0
+  ordinal = get_local_ordinal() if local else get_ordinal()
+  return ordinal == 0
 
 
 def master_print(s, fd=sys.stdout, local=True):
