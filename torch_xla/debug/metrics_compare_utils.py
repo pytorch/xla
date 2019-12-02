@@ -176,7 +176,8 @@ def compare_metrics(data_points, metrics_report,
       if expression is None:
         expression = config['base_expression']
 
-      if eval(expression) == False:
+      eval_vars = {'v': v, 'v_mean': v_mean, 'v_stddev': v_stddev}
+      if eval(expression, None, eval_vars) == False:
         difference_report += ('{} failed its expression check. '
             'Expression: {}.  Mean: {}.  Stddev: {}.  '
             'Actual Value: {}\n'.format(
