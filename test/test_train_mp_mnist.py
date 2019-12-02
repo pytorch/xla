@@ -144,6 +144,7 @@ def train_mnist():
     return accuracy
 
   accuracy = 0.0
+  epoch_accuracies = [0.0] * FLAGS.num_epochs
   for epoch in range(1, FLAGS.num_epochs + 1):
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
@@ -151,12 +152,13 @@ def train_mnist():
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
+    epoch_accuracies[epoch - 1] = accuracy
     test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
-  return accuracy
+  return max(epoch_accuracies)
 
 
 def _mp_fn(index, flags):

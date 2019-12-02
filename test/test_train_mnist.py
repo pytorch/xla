@@ -156,10 +156,12 @@ def train_mnist():
       xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
   num_training_steps_per_epoch = train_dataset_len // (
       FLAGS.batch_size * num_devices)
+  epoch_accuracies = [0.0] * FLAGS.num_epochs
   for epoch in range(1, FLAGS.num_epochs + 1):
     model_parallel(train_loop_fn, train_loader)
     accuracies = model_parallel(test_loop_fn, test_loader)
     accuracy = mean(accuracies)
+    epoch_accuracies[epoch - 1] = accuracy
     print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
     global_step = (epoch - 1) * num_training_steps_per_epoch
     test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
@@ -168,7 +170,7 @@ def train_mnist():
       print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
-  return accuracy
+  return max(epoch_accuracies)
 
 
 class TrainMnist(TestCase):
