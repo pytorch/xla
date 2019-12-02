@@ -146,18 +146,6 @@ class XrtComputationClient : public ComputationClient {
       tensorflow::gtl::ArraySlice<const DataPtr> arguments,
       const string& device, const ExecuteComputationOptions& options) override;
 
-  std::vector<std::vector<DataPtr>> ExecuteReplicated(
-      const Computation& computation,
-      const std::vector<std::vector<DataPtr>>& arguments,
-      tensorflow::gtl::ArraySlice<const string> devices,
-      const ExecuteReplicatedOptions& options) override;
-
-  std::vector<std::vector<DataPtr>> ExecuteParallel(
-      tensorflow::gtl::ArraySlice<const Computation* const> computations,
-      const std::vector<std::vector<DataPtr>>& arguments,
-      tensorflow::gtl::ArraySlice<const string> devices,
-      const ExecuteParallelOptions& options) override;
-
   std::vector<DataPtr> ExecuteChained(
       tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
       const string& device) override;

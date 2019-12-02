@@ -462,26 +462,6 @@ XrtComputationClient::ExecuteComputation(
 }
 
 std::vector<std::vector<ComputationClient::DataPtr>>
-XrtComputationClient::ExecuteReplicated(
-    const Computation& computation,
-    const std::vector<std::vector<DataPtr>>& arguments,
-    tensorflow::gtl::ArraySlice<const string> devices,
-    const ExecuteReplicatedOptions& options) {
-  metrics::TimedSection timed(ExecuteReplicatedMetric());
-
-  XrtSessionCache::SessionMap session_map;
-  tensorflow::ClientSession::FeedType feed_inputs;
-  std::vector<tensorflow::Output> exec_ops = CreateExecuteOps(
-      &session_map, dynamic_cast<const XrtComputation&>(computation), arguments,
-      options.explode_tuple, devices, &feed_inputs);
-  std::vector<const Computation*> computations(devices.size());
-  std::fill(computations.begin(), computations.end(), &computation);
-
-  return RunComputations(session_map, exec_ops, computations, devices,
-                         feed_inputs);
-}
-
-std::vector<std::vector<ComputationClient::DataPtr>>
 XrtComputationClient::RunComputations(
     const XrtSessionCache::SessionMap& session_map,
     const std::vector<tensorflow::Output>& exec_ops,
@@ -539,23 +519,6 @@ XrtComputationClient::RunComputations(
   }
   mwait.Wait();
   return results;
-}
-
-std::vector<std::vector<ComputationClient::DataPtr>>
-XrtComputationClient::ExecuteParallel(
-    tensorflow::gtl::ArraySlice<const Computation* const> computations,
-    const std::vector<std::vector<DataPtr>>& arguments,
-    tensorflow::gtl::ArraySlice<const string> devices,
-    const ExecuteParallelOptions& options) {
-  metrics::TimedSection timed(ExecuteParallelMetric());
-
-  XrtSessionCache::SessionMap session_map;
-  tensorflow::ClientSession::FeedType feed_inputs;
-  std::vector<tensorflow::Output> exec_ops =
-      CreateExecuteOps(&session_map, computations, arguments,
-                       options.explode_tuple, devices, &feed_inputs);
-  return RunComputations(session_map, exec_ops, computations, devices,
-                         feed_inputs);
 }
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChained(

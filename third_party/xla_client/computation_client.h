@@ -106,10 +106,6 @@ class ComputationClient {
 
   struct ExecuteComputationOptions : public ExecuteOptions {};
 
-  struct ExecuteReplicatedOptions : public ExecuteOptions {};
-
-  struct ExecuteParallelOptions : public ExecuteOptions {};
-
   // Describes an operation to be fed to the ExecuteChained() API.
   // If the device_data member is not nullptr, this operation is a device data
   // input. Otherwise computation must not be nullptr, and represents the
@@ -166,36 +162,6 @@ class ComputationClient {
       const Computation& computation,
       tensorflow::gtl::ArraySlice<const DataPtr> arguments,
       const string& device, const ExecuteComputationOptions& options) = 0;
-
-  // Executes the computation in replicated mode.
-  // The size of the arguments vector is the number of replicas to execute,
-  // and it must match the size of the computation.devices() as well as the
-  // devices passed as argument. The destination devices for each replicated
-  // computation come from the devices the Data objects are stored into, which
-  // must match the devices argument. Within arguments[i], every Data
-  // object must be coming from the same device. Returns a vector (of the same
-  // size of the arguments vector) with the results of the parallel execution.
-  // The result[i], a vector itself, will be the result of the computation fed
-  // with arguments[i]. If options.explode_tuple is true, the output tuples will
-  // be decomposed into their single elements.
-  virtual std::vector<std::vector<DataPtr>> ExecuteReplicated(
-      const Computation& computation,
-      const std::vector<std::vector<DataPtr>>& arguments,
-      tensorflow::gtl::ArraySlice<const string> devices,
-      const ExecuteReplicatedOptions& options) = 0;
-
-  // Executes the computations in parallel. Each computation must target a
-  // different device, and the the common device of arguments[i] must match
-  // devices[i]. The computations[i] computation is fed with arguments[i]
-  // arguments.
-  // Returns a vector of vectors of device side Data object, with result[i]
-  // being the return value of computations[i]. If options.explode_tuple is
-  // true, the output tuples will be decomposed into their single elements.
-  virtual std::vector<std::vector<DataPtr>> ExecuteParallel(
-      tensorflow::gtl::ArraySlice<const Computation* const> computations,
-      const std::vector<std::vector<DataPtr>>& arguments,
-      tensorflow::gtl::ArraySlice<const string> devices,
-      const ExecuteParallelOptions& options) = 0;
 
   // Executes a serie of operations, whose results are input of other
   // operations. The ops is a valid post-order for the execution, which means
@@ -256,8 +222,6 @@ class ComputationClient {
   static metrics::Metric* TransferFromServerMetric();
   static metrics::Metric* CompileMetric();
   static metrics::Metric* ExecuteMetric();
-  static metrics::Metric* ExecuteReplicatedMetric();
-  static metrics::Metric* ExecuteParallelMetric();
   static metrics::Metric* ExecuteChainedMetric();
   static metrics::Metric* DeconstructTupleMetric();
   static metrics::Counter* CreateDataHandlesCounter();

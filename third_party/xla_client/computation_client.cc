@@ -317,18 +317,6 @@ metrics::Metric* ComputationClient::ExecuteMetric() {
   return metric;
 }
 
-metrics::Metric* ComputationClient::ExecuteReplicatedMetric() {
-  static metrics::Metric* metric =
-      new metrics::Metric("ExecuteReplicatedTime", metrics::MetricFnTime);
-  return metric;
-}
-
-metrics::Metric* ComputationClient::ExecuteParallelMetric() {
-  static metrics::Metric* metric =
-      new metrics::Metric("ExecuteParallelTime", metrics::MetricFnTime);
-  return metric;
-}
-
 metrics::Metric* ComputationClient::ExecuteChainedMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("ExecuteChainedTime", metrics::MetricFnTime);
