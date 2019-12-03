@@ -24,7 +24,9 @@ python metrics_test_wrapper.py --root="gs://model_metrics" \
 import argparse
 import datetime
 import glob
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -36,6 +38,7 @@ import torch_xla.utils.gcsfs as gcsfs
 _CLOUD_STORAGE_PREFIX = 'gs://'
 _METRICS_HISTORY_DIR_NAME = 'metrics_history'
 _XLA_METRICS_FILE = 'XLA_METRICS_FILE'
+_METRICS_FILE_PATTERN = r'.*\d{4}_\d{2}_\d{2}'
 
 
 def _find_correct_metrics_file(base_metrics_file):
@@ -112,21 +115,68 @@ if __name__ == '__main__':
   if not FLAGS.root or not FLAGS.test_folder_name:
     raise ValueError('root and test_folder_name are required arguments.')
 
-  # TODO(zcain): Verify that root contains base_config.
-  # TODO(zcain): Read tolerances from base_config and maybe override with
-  #              test-specific config from test_folder_name.
-  # TODO(zcain): Read metrics_history for current test, retrieve N days of
-  #              history.
-  # TODO(zcain): Calculate mean and std dev for each metrics, then compare
-  #              against metrics from the subprocess call.
-  
+  # Run the user-supplied command.
   metrics, sp_return_code = _run_subprocess(FLAGS.positional)
 
-  # Include the params for this invocation when saving metrics.
-  output_string = '{}\n\n{}'.format(FLAGS, metrics)
-  output_filename = os.path.join(
-      FLAGS.root, FLAGS.test_folder_name, _METRICS_HISTORY_DIR_NAME,
-      datetime.datetime.utcnow().strftime('%Y_%m_%d'))
-  _write_to_disk(output_string, output_filename)
+  # Retrieve any config files that affect this test.
+  # NOTE: these are ordered in increasing specificity. For example, if there
+  # was a base config that affects all tests and a specific config for a
+  # particular test, then the base config will be the first element in the
+  # list and the most specific config will be the last element.
+  ordered_config_dicts = []
 
+  path_to_search = FLAGS.test_folder_name
+  import google.api_core.exceptions
+  while True:
+    try:
+      f = gcsfs.open(os.path.join(FLAGS.root, path_to_search, 'config.json'))
+      ordered_config_dicts.insert(0, json.load(f))
+    except google.api_core.exceptions.NotFound:
+      pass
+    if path_to_search == '':
+      break
+    path_to_search = os.path.split(path_to_search)[0]
+  if not ordered_config_dicts:
+    print('No config files found. See example usage at top of '
+          'metrics_test_wrapper.py')
+    sys.exit(1)  # Return non-OK status since config is required.
+
+  # Consolidate configs into 1 dict by overwriting the least-specific configs
+  # with the increasingly more-specific configs.
+  config = ordered_config_dicts[0]
+  for c in ordered_config_dicts:
+    config.update(c)
+
+  # Collect historical metrics for this test and check for any regressions in
+  # the current run vs. the averages from previous runs.
+  import pdb; pdb.set_trace()
+  metrics_storage_dir = os.path.join(
+      FLAGS.root, FLAGS.test_folder_name, _METRICS_HISTORY_DIR_NAME)
+  metrics_storage_dir += '/'
+  regression_test_config = config.get('regression_test_config', None)
+  if regression_test_config:
+    metrics_file_pattern = re.compile(_METRICS_FILE_PATTERN)
+    previous_metrics_files = [f for f in gcsfs.list(
+        metrics_storage_dir) if metrics_file_pattern.match(f.path)]
+    previous_metrics_strings = [gcsfs.open(f.path) for f in previous_metrics_files]
+    data_points = mcu.get_data_points_from_metrics_reports(
+      previous_metrics_strings)
+    regression_report = mcu.compare_metrics(data_points, metrics, config=regression_test_config)
+  else:
+    print('Unable to check for metrics regressions. Config should contain '
+          '"regression_test_config" key -- see example at the top of '
+          'metrics_test_wrapper.py.')
+    regression_report = ''
+
+  # Write the metrics from the current run to disk unless disabled by config.
+  if config.get('write_metrics_to_disk', True):
+    # Include the params for this invocation when saving metrics.
+    output_string = '{}\n\n{}'.format(FLAGS, metrics)
+    output_filename = os.path.join(
+        metrics_storage_dir, datetime.datetime.utcnow().strftime('%Y_%m_%d'))
+    _write_to_disk(output_string, output_filename)
+
+  if regression_report:
+    print('Metrics regression report:\n{}'.format(regression_report))
+    sys.exit(1)  # Return non-OK status code since there was a regression.
   sys.exit(sp_return_code)
