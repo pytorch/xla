@@ -1,6 +1,9 @@
 ---
 name: "\U0001F41B Bug Report"
 about: Submit a bug report to help us improve PyTorch/XLA integration
+title: ''
+labels: ''
+assignees: ''
 
 ---
 
@@ -26,7 +29,8 @@ Steps to reproduce the behavior:
 
  - reproducible on XLA backend [CPU/TPU]:
  - torch_xla version:
- - Any other relevant information:
+ - Any other relevant information. In case of issues related to slow executions, re-compilations, etc.., it is useful to have the `tar.gz` report from https://github.com/pytorch/xla/blob/master/TROUBLESHOOTING.md#using-debug_runpy-to-collect-debug-information
+
 
 ## Additional context
 
