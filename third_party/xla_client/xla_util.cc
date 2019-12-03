@@ -59,13 +59,17 @@ StatusOr<string> GetComputationHloText(const XlaComputation& computation) {
 
 void ReportComputationError(
     const Status& status,
-    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations) {
+    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
+    tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) {
   std::stringstream ss;
   for (size_t i = 0; i < computations.size(); ++i) {
     string hlo_text = GetComputationHloText(*computations[i]).ValueOrDie();
     MaybeSaveHloGraph(hlo_text, i);
     ss << ">>> Dumping Computation " << i << "\n";
     ss << hlo_text << "\n";
+    if (i < output_shapes.size() && output_shapes[i] != nullptr) {
+      ss << "OutputShape: " << *output_shapes[i] << "\n\n";
+    }
   }
   ss << "StackTrace:\n" << tensorflow::CurrentStackTrace() << "\n";
   ss << "Status: " << status << "\n";
@@ -75,9 +79,10 @@ void ReportComputationError(
 
 void CheckComputationStatus(
     const Status& status,
-    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations) {
+    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
+    tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) {
   if (!status.ok()) {
-    ReportComputationError(status, computations);
+    ReportComputationError(status, computations, output_shapes);
   }
 }
 
