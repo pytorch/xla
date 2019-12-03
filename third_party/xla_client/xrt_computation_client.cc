@@ -427,10 +427,12 @@ void XrtComputationClient::CheckCompileStatus(
     const SessionWork& session_work) {
   if (!status.ok()) {
     std::vector<const XlaComputation*> computations;
+    std::vector<const Shape*> output_shapes;
     for (auto li : session_work.index_mapping) {
       computations.push_back(&instances[li].computation);
+      output_shapes.push_back(instances[li].output_shape);
     }
-    util::ReportComputationError(status, computations);
+    util::ReportComputationError(status, computations, output_shapes);
   }
 }
 
@@ -454,7 +456,7 @@ XrtComputationClient::ExecuteComputation(
   std::vector<tensorflow::Tensor> outputs;
   util::CheckComputationStatus(
       session->session()->Run(feed_inputs, {exec_ops.front()}, &outputs),
-      {&computation.computation()});
+      {&computation.computation()}, {&computation.program_shape().result()});
   XLA_CHECK_EQ(outputs.size(), 1);
 
   return GetComputationResults(outputs[0], computation.program_shape().result(),
@@ -518,14 +520,17 @@ XrtComputationClient::RunComputations(
     auto session_runner = [&, this, session]() {
       std::vector<tensorflow::Output> exec_nodes;
       std::vector<const XlaComputation*> xla_computations;
+      std::vector<const Shape*> output_shapes;
       for (auto replica : replicas) {
         exec_nodes.push_back(exec_ops[replica]);
         xla_computations.push_back(&computations[replica]->computation());
+        output_shapes.push_back(
+            &computations[replica]->program_shape().result());
       }
       std::vector<tensorflow::Tensor> outputs;
       util::CheckComputationStatus(
           session->session()->Run(feed_inputs, exec_nodes, &outputs),
-          xla_computations);
+          xla_computations, output_shapes);
       XLA_CHECK_EQ(outputs.size(), exec_nodes.size());
 
       for (size_t i = 0; i < outputs.size(); ++i) {
@@ -634,7 +639,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
   std::vector<tensorflow::Tensor> outputs;
   util::CheckComputationStatus(
       session->session()->Run(feed_inputs, {cached_node.outputs[0]}, &outputs),
-      {});
+      {}, {});
   XLA_CHECK_EQ(outputs.size(), 1);
 
   std::vector<DataPtr> results;
@@ -692,7 +697,8 @@ XrtComputationClient::ExecuteChainedSplit(
       std::vector<tensorflow::Tensor> outputs;
       util::CheckComputationStatus(
           session->session()->Run(feed_inputs, {exec_ops.front()}, &outputs),
-          {&op.computation->computation()});
+          {&op.computation->computation()},
+          {&op.computation->program_shape().result()});
       XLA_CHECK_EQ(outputs.size(), 1);
       ops_outputs[i] = GetComputationResults(
           outputs[0], op.computation->program_shape().result(),

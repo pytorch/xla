@@ -1418,7 +1418,7 @@ class TestGeneric(XlaTestCase):
 
     xu.for_each_instance_rewrite(data, lambda x: isinstance(x, (int, str)),
                                  convert)
-    self.assertEqual(len(ids), 30)
+    self.assertEqual(len(ids), 15)
     self.assertEqual(ids, wids)
 
 
