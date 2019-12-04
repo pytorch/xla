@@ -114,7 +114,9 @@ function main() {
   install_req_packages
   install_and_setup_conda
   build_and_install_torch
-  pushd xla && build_and_install_torch_xla && popd
+  pushd xla
+  build_and_install_torch_xla
+  popd
   install_torchvision_from_source
   install_gcloud
 }
