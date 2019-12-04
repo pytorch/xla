@@ -209,7 +209,7 @@ if __name__ == '__main__':
     # Include the params for this invocation when saving metrics.
     output_string = '{}\n\n{}'.format(FLAGS, metrics)
     output_filename = os.path.join(
-        metrics_storage_dir, 'ZCAIN_TEST_' + datetime.datetime.utcnow().strftime('%Y_%m_%d'))
+        metrics_storage_dir, datetime.datetime.utcnow().strftime('%Y_%m_%d'))
     _write_to_disk(output_string, output_filename)
 
   if regression_report:
