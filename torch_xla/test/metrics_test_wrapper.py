@@ -7,15 +7,34 @@ This script expects a certain directory structure to setup tests and to hold
 metrics results. In the outermost directory, there should be a base config file
 detailed below. Within that directory, there should be a subdirectory for each
 test that contains a metrics_history subdirectory and (optionally) a config file
-to override fields of the base config. In other words, it should look like this:
+named 'config.json' to override fields of the base config. In other words, it
+should look like this:
 
     root/
-      base_config.json
+      config.json
       mnist/
-        config_overrides.json
+        config.json
         metrics_history/
 
-TODO(zcain): Design and document the config file.
+config.json has 2 relevant fields:
+  1. `write_metrics_to_disk`: (bool) If false, this wrapper will not write
+     any XLA metrics to disk.
+  2. `regression_test_config`: (dict) The config that will be used to determine
+     whether any metrics have regressed in a meaningful way. If absent, this
+     wrapper script will not perform any regression checks. For more details,
+     see `compare_metrics` in `torch_xla/debug/metrics_compare_utils`. The
+     config allows different checks for individual metrics.
+
+The config.json found in root/ is used as the base and any config.json files
+found in child directories will overwrite some or all of the base config for
+that specific test. Simple recommended starter config.json:
+
+{
+  "write_metrics_to_disk": true,
+  "regression_test_config": {
+    "base_expression": "v <= v_mean + (v_stddev * 3.0)"
+  }
+}
 
 Example usage:
 python metrics_test_wrapper.py --root="gs://model_metrics" \
@@ -32,7 +51,23 @@ import subprocess
 import sys
 import tempfile
 
+import torch_xla.debug.metrics_compare_utils as mcu
 import torch_xla.utils.gcsfs as gcsfs
+
+try:
+  import google.api_core.exceptions
+except:
+  msg = """Google Cloud Storage libraries are missing.
+Please install them using the following command:
+
+  pip install --upgrade google-cloud-storage
+
+Also follow the instructions in the link below to configure authentication:
+
+  https://cloud.google.com/storage/docs/reference/libraries
+"""
+  print(msg, file=sys.stderr)
+  raise
 
 
 _CLOUD_STORAGE_PREFIX = 'gs://'
@@ -126,7 +161,6 @@ if __name__ == '__main__':
   ordered_config_dicts = []
 
   path_to_search = FLAGS.test_folder_name
-  import google.api_core.exceptions
   while True:
     try:
       f = gcsfs.open(os.path.join(FLAGS.root, path_to_search, 'config.json'))
@@ -149,19 +183,21 @@ if __name__ == '__main__':
 
   # Collect historical metrics for this test and check for any regressions in
   # the current run vs. the averages from previous runs.
-  import pdb; pdb.set_trace()
   metrics_storage_dir = os.path.join(
       FLAGS.root, FLAGS.test_folder_name, _METRICS_HISTORY_DIR_NAME)
   metrics_storage_dir += '/'
   regression_test_config = config.get('regression_test_config', None)
   if regression_test_config:
     metrics_file_pattern = re.compile(_METRICS_FILE_PATTERN)
-    previous_metrics_files = [f for f in gcsfs.list(
+    prev_metrics_files = [f for f in gcsfs.list(
         metrics_storage_dir) if metrics_file_pattern.match(f.path)]
-    previous_metrics_strings = [gcsfs.open(f.path) for f in previous_metrics_files]
+    prev_metrics_strings = [gcsfs.open(
+        os.path.join(FLAGS.root, f.path), mode='rt').read() for f in
+        prev_metrics_files]
     data_points = mcu.get_data_points_from_metrics_reports(
-      previous_metrics_strings)
-    regression_report = mcu.compare_metrics(data_points, metrics, config=regression_test_config)
+        prev_metrics_strings)
+    regression_report = mcu.compare_metrics(
+        data_points, metrics, config=regression_test_config)
   else:
     print('Unable to check for metrics regressions. Config should contain '
           '"regression_test_config" key -- see example at the top of '
@@ -173,7 +209,7 @@ if __name__ == '__main__':
     # Include the params for this invocation when saving metrics.
     output_string = '{}\n\n{}'.format(FLAGS, metrics)
     output_filename = os.path.join(
-        metrics_storage_dir, datetime.datetime.utcnow().strftime('%Y_%m_%d'))
+        metrics_storage_dir, 'ZCAIN_TEST_' + datetime.datetime.utcnow().strftime('%Y_%m_%d'))
     _write_to_disk(output_string, output_filename)
 
   if regression_report:
