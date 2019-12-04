@@ -45,6 +45,14 @@ def get_graphdir_path(outdir):
   return os.path.join(outdir, 'graphdir')
 
 
+def get_metrics_imgdir_path(outdir):
+  return os.path.join(outdir, 'metrics_imgdir')
+
+
+def get_metrics_report_path(outdir):
+  return os.path.join(outdir, 'metrics_report')
+
+
 def get_graph_report_path(outdir):
   return os.path.join(outdir, 'graph_report')
 
@@ -97,6 +105,19 @@ def grab_graphs(args):
         graphs_file
     ]).decode('utf-8')
     with open(get_graph_report_path(args.outdir), 'w') as fd:
+      fd.write(report)
+
+
+def grab_metrics(args):
+  metrics_file = get_first_file(get_metrics_file_path(args.outdir))
+  if metrics_file is not None:
+    grab_metrics_path = os.path.join(get_scripts_path(), 'grab_metrics.py')
+    report = subprocess.check_output([
+        grab_metrics_path,
+        '--image_path={}'.format(get_metrics_imgdir_path(args.outdir)),
+        metrics_file
+    ]).decode('utf-8')
+    with open(get_metrics_report_path(args.outdir), 'w') as fd:
       fd.write(report)
 
 
@@ -164,6 +185,7 @@ def run_and_monitor(args):
 
 def process_output(args):
   grab_graphs(args)
+  grab_metrics(args)
   if args.outfile:
     targz(args.outdir, args.outfile)
   if args.tidy:
