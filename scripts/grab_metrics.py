@@ -12,35 +12,102 @@ from __future__ import print_function
 
 import argparse
 import collections
+import fileinput
+import os
 import re
 import sys
+
+try:
+  import matplotlib.pyplot as plt
+except ImportError:
+  pass
+
+Graph = collections.namedtuple('Graph', 'name points')
+
+
+def make_file_name(name):
+  return re.sub(r'[^a-zA-Z0-9_\-\.]', '_', name)
+
+
+def save_graph_image(graph, path, format='png', dpi=100):
+  plt.rcParams['figure.dpi'] = dpi
+
+  x = []
+  y = []
+  for p in graph.points:
+    x.append(p[0])
+    y.append(p[1])
+  plt.plot(x, y)
+  plt.xlabel('Step')
+  plt.ylabel('Value')
+  plt.title(graph.name)
+  plt.savefig(path, format=format)
+  plt.cla()
+  plt.clf()
+
+
+def create_graph_images(graphs, path, format='png', dpi=100):
+  if not 'matplotlib.pyplot' in sys.modules:
+    print(
+        'Missing matplotlib package: `pip install matplotlib`', file=sys.stderr)
+    return
+  for g in graphs:
+    save_graph_image(
+        g,
+        os.path.join(path,
+                     make_file_name(g.name) + '.' + format),
+        format=format,
+        dpi=dpi)
+
+
+def print_graphs(graphs, fd):
+  for g in graphs:
+    print('[{}]'.format(g.name), file=fd)
+    for p in g.points:
+      print('{}\t{}'.format(p[0], p[1]), file=fd)
+    print('', file=fd)
 
 
 def parse_metrics(lines):
   # Counter: CreateCompileHandles
   #  Value: 1631
+  # Metric: CompileTime
+  #  TotalSamples: 2
   metrics = collections.defaultdict(list)
-  metric = None
+  counter, metric = None, None
   for line in lines:
-    if metric is not None:
+    if counter is not None:
       m = re.match(r'\s*Value: ([^\s]+)', line)
       if m:
-        metrics[metric].append(m.group(1))
-      metric = None
-    else:
-      m = re.match(r'Counter: ([^\s]+)', line)
+        metrics[counter].append(float(m.group(1)))
+        counter = None
+        continue
+    if metric is not None:
+      # Here parsing Accumulator is better
+      m = re.match(r'\s*TotalSamples: ([^\s]+)', line)
       if m:
-        metric = m.group(1)
+        metrics[metric].append(float(m.group(1)))
+        metric = None
+        continue
+    m = re.match(r'Counter: ([^\s]+)', line)
+    if m:
+      counter, metric = m.group(1), None
+      continue
+    m = re.match(r'Metric: ([^\s]+)', line)
+    if m:
+      counter, metric = None, m.group(1)
+      continue
   return metrics
 
 
-def create_metric_report(args, metric, metric_data):
-  print('[{}]'.format(metric))
+def create_metric_graph(args, metric, metric_data):
+  points = []
   for i, v in enumerate(metric_data):
-    print('{}\t{}'.format(i, v))
+    points.append((i, v))
+  return Graph(name=metric, points=tuple(points))
 
 
-def process_synth(args, synth, metrics):
+def create_synth_graph(args, synth, metrics):
   name, expr = synth.split(':', 1)
   xvars = set()
   for m in re.finditer(r'[a-zA-Z_][a-zA-Z_0-9]*', expr):
@@ -52,7 +119,7 @@ def process_synth(args, synth, metrics):
     if metric_data is None:
       raise RuntimeError('Unknown metric: {}'.format(v))
     xmetrics.append(metric_data)
-  print('[{}]'.format(name))
+  points = []
   x = 0
   while True:
     env = {}
@@ -64,34 +131,42 @@ def process_synth(args, synth, metrics):
     if len(env) < len(xvars):
       break
     y = eval(expr, env)
-    print('{}\t{}'.format(x, y))
+    points.append((x, y))
     x += 1
+  return Graph(name=name, points=tuple(points))
+
+
+def match_metric(name, metrics):
+  for m in metrics:
+    if re.match(m, name):
+      return True
+  return False
 
 
 def create_report(args, metrics):
-  if args.metric:
-    metric_data = metrics.get(args.metric, None)
-    if metric_data is None:
-      raise RuntimeError('Unknown metric: {}'.format(args.metric))
-    create_metric_report(args, args.metric, metric_data)
-  else:
-    for metric in metrics.keys():
-      create_metric_report(args, metric, metrics[metric])
+  graphs = []
+  for metric in metrics.keys():
+    if not args.metrics or match_metric(metric, args.metrics):
+      graphs.append(create_metric_graph(args, metric, metrics[metric]))
   for synth in (args.synth or []):
-    process_synth(args, synth, metrics)
+    graphs.append(create_synth_graph(args, synth, metrics))
+  return graphs
 
 
-def process_metrics(args):
-  fd = sys.stdin if args.input is None else open(args.input, 'r')
-  metrics = parse_metrics(fd)
-  create_report(args, metrics)
+def process_metrics(args, files):
+  metrics = parse_metrics(fileinput.input(files))
+  graphs = create_report(args, metrics)
+  print_graphs(graphs, sys.stdout)
+  if args.image_path:
+    if not os.path.isdir(args.image_path):
+      os.mkdir(args.image_path)
+    create_graph_images(graphs, args.image_path)
 
 
 if __name__ == '__main__':
   arg_parser = argparse.ArgumentParser()
-  arg_parser.add_argument('--input', type=str)
-  arg_parser.add_argument('--metric', type=str)
+  arg_parser.add_argument('--metrics', action='append', type=str)
   arg_parser.add_argument('--synth', action='append', type=str)
+  arg_parser.add_argument('--image_path', type=str)
   args, files = arg_parser.parse_known_args()
-  args.files = files
-  process_metrics(args)
+  process_metrics(args, files)
