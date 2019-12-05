@@ -152,6 +152,9 @@ if __name__ == '__main__':
 
   # Run the user-supplied command.
   metrics, sp_return_code = _run_subprocess(FLAGS.positional)
+  if sp_return_code:
+    raise AssertionError(
+      'Child process had non-zero exit code: {}'.format(sp_return_code))
 
   # Retrieve any config files that affect this test.
   # NOTE: these are ordered in increasing specificity. For example, if there
@@ -216,6 +219,4 @@ if __name__ == '__main__':
     raise AssertionError(
         'Non-empty XLA metrics regression report:\n{}'.format(
             regression_report))
-  if sp_return_code:
-    raise AssertionError(
-      'Child process had non-zero exit code: {}'.format(sp_return_code))
+
