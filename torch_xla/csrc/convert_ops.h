@@ -9,16 +9,16 @@
 
 namespace torch_xla {
 
-xla::XlaOp ConvertTo(const xla::XlaOp& op, xla::PrimitiveType from,
+xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
                      xla::PrimitiveType to, const Device* device);
 
-xla::XlaOp ConvertToNumeric(const xla::XlaOp& op, xla::PrimitiveType from);
+xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from);
 
-xla::XlaOp ConvertToNumeric(const xla::XlaOp& op);
+xla::XlaOp ConvertToNumeric(xla::XlaOp op);
 
 // Cast the input to the given dtype. If dtype is null, no-op with the exception
 // of predicates, which are converted to 8-bit unsigned integers.
-xla::XlaOp CastToScalarType(const xla::XlaOp& input,
+xla::XlaOp CastToScalarType(xla::XlaOp input,
                             c10::optional<at::ScalarType> dtype);
 
 }  // namespace torch_xla

@@ -11,12 +11,10 @@ namespace ir {
 namespace ops {
 namespace {
 
-std::vector<xla::XlaOp> LowerBatchNorm(const xla::XlaOp& input,
-                                       const xla::XlaOp& weight,
-                                       const xla::XlaOp& bias,
-                                       const xla::XlaOp& running_mean,
-                                       const xla::XlaOp& running_var,
-                                       bool training, double eps) {
+std::vector<xla::XlaOp> LowerBatchNorm(xla::XlaOp input, xla::XlaOp weight,
+                                       xla::XlaOp bias, xla::XlaOp running_mean,
+                                       xla::XlaOp running_var, bool training,
+                                       double eps) {
   std::vector<xla::XlaOp> values;
   if (training) {
     BatchNormOutput batch_norm_output =

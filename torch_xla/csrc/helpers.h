@@ -77,17 +77,17 @@ class XlaHelpers {
 
   // Performa a linear interpolation between value0 and value1, by calculating:
   //   result = value0 * alpha + value1 * (1 - alpha)
-  static xla::XlaOp LinearInterpolation(const xla::XlaOp& value0,
-                                        const xla::XlaOp& value1, double alpha);
+  static xla::XlaOp LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
+                                        double alpha);
 
   // Returns the shape of the given XLA operation.
-  static const xla::Shape& ShapeOfXlaOp(const xla::XlaOp& op);
+  static const xla::Shape& ShapeOfXlaOp(xla::XlaOp op);
 
   // Returns the list of dimension sizes for the given XLA operation.
-  static std::vector<xla::int64> SizesOfXlaOp(const xla::XlaOp& op);
+  static std::vector<xla::int64> SizesOfXlaOp(xla::XlaOp op);
 
   // Returns the value type of given XLA operation.
-  static xla::PrimitiveType TypeOfXlaOp(const xla::XlaOp& op);
+  static xla::PrimitiveType TypeOfXlaOp(xla::XlaOp op);
 
   static xla::XlaOp CreateReturnValue(xla::XlaBuilder* builder,
                                       const std::vector<xla::XlaOp>& outputs);
@@ -171,11 +171,10 @@ class XlaHelpers {
   // appending 1s to the major dimension. If offset is greater than zero, 1s
   // will be prepened to the minor dimension as well.
   // Expected condition: rank(input) + offset <= expected_rank
-  static xla::XlaOp ReshapeToRank(const xla::XlaOp& input,
-                                  xla::int64 expected_rank,
+  static xla::XlaOp ReshapeToRank(xla::XlaOp input, xla::int64 expected_rank,
                                   xla::int64 offset = 0);
 
-  static xla::XlaOp Flatten(const xla::XlaOp& input,
+  static xla::XlaOp Flatten(xla::XlaOp input,
                             xla::Shape* input_shape = nullptr);
 
   // Gathers the input using the order specified by the permutation. For each i,
@@ -201,30 +200,30 @@ class XlaHelpers {
                                                           xla::int64 rank);
 
   // Performs type promotion to make sure both operations return the same type.
-  static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(const xla::XlaOp& op1,
-                                                         const xla::XlaOp& op2);
+  static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(xla::XlaOp op1,
+                                                         xla::XlaOp op2);
 
   // Performs type promotion, by casting the second operation to the type of the
   // first, if different.
-  static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecondValue(
-      const xla::XlaOp& op1, const xla::XlaOp& op2);
+  static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecondValue(xla::XlaOp op1,
+                                                              xla::XlaOp op2);
 
   // Eventually performs a broadcast to make sure the shapes of the returned
   // xla::XlaOp values have the same shape. The first returned xla::XlaOp is op1
   // or a broadcast of it, and the second returned xla::XlaOp is either op2 or a
   // broadcast ot it.
-  static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(const xla::XlaOp& op1,
-                                                         const xla::XlaOp& op2);
+  static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(xla::XlaOp op1,
+                                                         xla::XlaOp op2);
 
   // Combines PromoteValues() and PromoteShapes() returning two operations which
   // match in shape and types.
-  static std::pair<xla::XlaOp, xla::XlaOp> Promote(const xla::XlaOp& op1,
-                                                   const xla::XlaOp& op2);
+  static std::pair<xla::XlaOp, xla::XlaOp> Promote(xla::XlaOp op1,
+                                                   xla::XlaOp op2);
 
   // Combines PromoteSecondValue() and PromoteShapes() returning two operations
   // which match in shape and types.
-  static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecond(const xla::XlaOp& op1,
-                                                         const xla::XlaOp& op2);
+  static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecond(xla::XlaOp op1,
+                                                         xla::XlaOp op2);
 
   // Calculates the protomoted shape to which the input shapes should be
   // broadcasted for an elementwise operation. The size of the common dimensions
@@ -246,40 +245,34 @@ class XlaHelpers {
   // one that op is broadcast-able to (usually the result of a
   // GetPromotedShape() call). If op_shape matches shape, the op itself is
   // returned.
-  static xla::XlaOp ImplicitBroadcast(const xla::XlaOp& op,
-                                      const xla::Shape& op_shape,
+  static xla::XlaOp ImplicitBroadcast(xla::XlaOp op, const xla::Shape& op_shape,
                                       const xla::Shape& shape);
 
   // Performs the bin_op binary operation by promoting types and shapes of the
   // two input operands.
   static xla::XlaOp PromotedBinaryOp(
-      const xla::XlaOp& op1, const xla::XlaOp& op2,
-      const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
-          bin_op);
+      xla::XlaOp op1, xla::XlaOp op2,
+      const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& bin_op);
 
   // Basic promoted binary operation implementation follow.
-  static xla::XlaOp PromotedAdd(const xla::XlaOp& op1, const xla::XlaOp& op2) {
+  static xla::XlaOp PromotedAdd(xla::XlaOp op1, xla::XlaOp op2) {
     return PromotedBinaryOp(
-        op1, op2,
-        [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 + op2; });
+        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 + op2; });
   }
 
-  static xla::XlaOp PromotedSub(const xla::XlaOp& op1, const xla::XlaOp& op2) {
+  static xla::XlaOp PromotedSub(xla::XlaOp op1, xla::XlaOp op2) {
     return PromotedBinaryOp(
-        op1, op2,
-        [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 - op2; });
+        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 - op2; });
   }
 
-  static xla::XlaOp PromotedMul(const xla::XlaOp& op1, const xla::XlaOp& op2) {
+  static xla::XlaOp PromotedMul(xla::XlaOp op1, xla::XlaOp op2) {
     return PromotedBinaryOp(
-        op1, op2,
-        [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 * op2; });
+        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 * op2; });
   }
 
-  static xla::XlaOp PromotedDiv(const xla::XlaOp& op1, const xla::XlaOp& op2) {
+  static xla::XlaOp PromotedDiv(xla::XlaOp op1, xla::XlaOp op2) {
     return PromotedBinaryOp(
-        op1, op2,
-        [](const xla::XlaOp& op1, const xla::XlaOp& op2) { return op1 / op2; });
+        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 / op2; });
   }
 
   template <typename T>

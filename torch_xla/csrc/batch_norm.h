@@ -16,23 +16,18 @@ struct BatchNormGrads {
   xla::XlaOp grad_bias;
 };
 
-xla::XlaOp BatchNormVarianceInvert(const xla::XlaOp& variance, float eps_value);
+xla::XlaOp BatchNormVarianceInvert(xla::XlaOp variance, float eps_value);
 
-BatchNormOutput BuildBatchNormTraining(const xla::XlaOp& input,
-                                       const xla::XlaOp& weight,
-                                       const xla::XlaOp& bias, float eps_value);
+BatchNormOutput BuildBatchNormTraining(xla::XlaOp input, xla::XlaOp weight,
+                                       xla::XlaOp bias, float eps_value);
 
-xla::XlaOp BuildBatchNormInference(const xla::XlaOp& input,
-                                   const xla::XlaOp& weight,
-                                   const xla::XlaOp& bias,
-                                   const xla::XlaOp& mean,
-                                   const xla::XlaOp& variance, float eps_value);
+xla::XlaOp BuildBatchNormInference(xla::XlaOp input, xla::XlaOp weight,
+                                   xla::XlaOp bias, xla::XlaOp mean,
+                                   xla::XlaOp variance, float eps_value);
 
-BatchNormGrads BuildBatchNormBackward(const xla::XlaOp& grad,
-                                      const xla::XlaOp& input,
-                                      const xla::XlaOp& weight,
-                                      const xla::XlaOp& save_mean,
-                                      const xla::XlaOp& save_invstd,
-                                      bool training, float eps_value);
+BatchNormGrads BuildBatchNormBackward(xla::XlaOp grad, xla::XlaOp input,
+                                      xla::XlaOp weight, xla::XlaOp save_mean,
+                                      xla::XlaOp save_invstd, bool training,
+                                      float eps_value);
 
 }  // namespace torch_xla

@@ -45,8 +45,8 @@ xla::XlaOp OneHotIota(xla::XlaBuilder* builder, xla::int64 depth, int axis,
 // positions, respectively. If "ignore_index" is a valid class, it'll be
 // considered off.
 xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
-                          const xla::XlaOp& indices, const xla::XlaOp& on_value,
-                          const xla::XlaOp& off_value, int ignore_index) {
+                          xla::XlaOp indices, xla::XlaOp on_value,
+                          xla::XlaOp off_value, int ignore_index) {
   const xla::Shape& indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
 
   // Expand the labels with a depth dimension for the classes.
@@ -71,10 +71,8 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
 }
 
 WeightScale GetMaskedWeight(const absl::optional<xla::XlaOp>& weight,
-                            const xla::Shape& logits_shape,
-                            const xla::XlaOp& labels,
-                            const xla::XlaOp& one_hot_labels,
-                            int ignore_index) {
+                            const xla::Shape& logits_shape, xla::XlaOp labels,
+                            xla::XlaOp one_hot_labels, int ignore_index) {
   const xla::Shape& labels_shape = XlaHelpers::ShapeOfXlaOp(labels);
   xla::XlaOp valid_bitmap = xla::Ne(
       labels, XlaHelpers::ScalarValue<xla::int64>(
@@ -105,7 +103,7 @@ WeightScale GetMaskedWeight(const absl::optional<xla::XlaOp>& weight,
 }  // namespace
 
 // Builds the NLLLoss for log-probabilities "logits" and class indices "labels".
-xla::XlaOp BuildNllLoss(const xla::XlaOp& logits, const xla::XlaOp& labels,
+xla::XlaOp BuildNllLoss(xla::XlaOp logits, xla::XlaOp labels,
                         const absl::optional<xla::XlaOp>& weight,
                         int ignore_index, ReductionMode reduction_mode) {
   const int classes_axis = 1;
@@ -138,9 +136,8 @@ xla::XlaOp BuildNllLoss(const xla::XlaOp& logits, const xla::XlaOp& labels,
 
 // Builds the NLLLoss gradient for log-probabilities "logits" and class indices
 // "labels".
-xla::XlaOp BuildNllLossBackward(const xla::XlaOp& grad_output,
-                                const xla::XlaOp& logits,
-                                const xla::XlaOp& labels,
+xla::XlaOp BuildNllLossBackward(xla::XlaOp grad_output, xla::XlaOp logits,
+                                xla::XlaOp labels,
                                 const absl::optional<xla::XlaOp>& weight,
                                 const absl::optional<xla::XlaOp>& total_weight,
                                 int ignore_index,
