@@ -139,18 +139,16 @@ if __name__ == '__main__':
           '--test_name="mnist" -- python train.py'))
   parser.add_argument('--root', type=str, default=None,
                       help='Root dir for metrics test data. See docstring at '
-                      'the top of this script.')
+                      'the top of this script.', required=True)
   parser.add_argument('--test_folder_name', type=str, default=None,
                       help='Folder within root/ for this test. See docstring '
-                      'at the top of this script.')
+                      'at the top of this script.', required=True)
   parser.add_argument(
       'positional',
       nargs='+',
       type=str,
       help='The python command to run.')
   FLAGS = parser.parse_args()
-  if not FLAGS.root or not FLAGS.test_folder_name:
-    raise ValueError('root and test_folder_name are required arguments.')
 
   # Run the user-supplied command.
   metrics, sp_return_code = _run_subprocess(FLAGS.positional)
@@ -169,7 +167,7 @@ if __name__ == '__main__':
       ordered_config_dicts.insert(0, json.load(f))
     except google.api_core.exceptions.NotFound:
       pass
-    if path_to_search == '':
+    if not path_to_search:
       break
     path_to_search = os.path.split(path_to_search)[0]
   if not ordered_config_dicts:
