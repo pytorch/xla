@@ -12,7 +12,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-std::vector<xla::XlaOp> LowerSymEig(const xla::XlaOp& input, bool eigenvectors,
+std::vector<xla::XlaOp> LowerSymEig(xla::XlaOp input, bool eigenvectors,
                                     bool lower) {
   xla::SelfAdjointEigResult self_adj_eig_result =
       xla::SelfAdjointEig(input, /*lower=*/lower, /*max_iter=*/100,

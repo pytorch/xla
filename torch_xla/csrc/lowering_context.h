@@ -57,7 +57,7 @@ class LoweringContext {
   // embedded XLA builder (returned by the builder() API).
   // Uses root as return value forthe computation. It is an error to use this
   // API after having called the AddResult() API.
-  xla::StatusOr<xla::XlaComputation> Build(const xla::XlaOp& root);
+  xla::StatusOr<xla::XlaComputation> Build(xla::XlaOp root);
 
   // Lowers a single IR node. All the inputs to the node must have a lowering
   // before calling this API. Returns the generated XLA operations.

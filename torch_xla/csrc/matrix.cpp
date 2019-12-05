@@ -43,7 +43,7 @@ xla::PaddingConfig CreateDiagonalPaddingConfig(const xla::Shape& target_shape,
   return padding_config;
 }
 
-DiagonalMask CreateDiagonalMask(const xla::XlaOp& input,
+DiagonalMask CreateDiagonalMask(xla::XlaOp input,
                                 const xla::Shape& target_shape,
                                 xla::int64 offset) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
@@ -80,18 +80,18 @@ std::vector<xla::int64> GetDiagonalPermutation(xla::int64 rank, xla::int64 dim1,
 
 }  // namespace
 
-xla::XlaOp BuildTriu(const xla::XlaOp& input, xla::int64 diagonal) {
+xla::XlaOp BuildTriu(xla::XlaOp input, xla::int64 diagonal) {
   return xla::Select(xla::TriangleMask(input, diagonal - 1),
                      xla::ZerosLike(input), input);
 }
 
-xla::XlaOp BuildTril(const xla::XlaOp& input, xla::int64 diagonal) {
+xla::XlaOp BuildTril(xla::XlaOp input, xla::int64 diagonal) {
   return xla::Select(xla::TriangleMask(input, diagonal), input,
                      xla::ZerosLike(input));
 }
 
-xla::XlaOp BuildDiagonal(const xla::XlaOp& input, xla::int64 offset,
-                         xla::int64 dim1, xla::int64 dim2) {
+xla::XlaOp BuildDiagonal(xla::XlaOp input, xla::int64 offset, xla::int64 dim1,
+                         xla::int64 dim2) {
   xla::XlaOp diag_input = input;
   if (dim1 != 0 || dim2 != 1) {
     const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
@@ -101,9 +101,9 @@ xla::XlaOp BuildDiagonal(const xla::XlaOp& input, xla::int64 offset,
   return xla::GetMatrixDiagonal(diag_input, offset);
 }
 
-xla::XlaOp BuildDiagonalViewUpdate(const xla::XlaOp& target,
-                                   const xla::XlaOp& input, xla::int64 offset,
-                                   xla::int64 dim1, xla::int64 dim2) {
+xla::XlaOp BuildDiagonalViewUpdate(xla::XlaOp target, xla::XlaOp input,
+                                   xla::int64 offset, xla::int64 dim1,
+                                   xla::int64 dim2) {
   const xla::Shape* target_shape = &XlaHelpers::ShapeOfXlaOp(target);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp diag_input = input;

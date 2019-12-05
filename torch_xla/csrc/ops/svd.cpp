@@ -13,8 +13,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-std::vector<xla::XlaOp> LowerSVD(const xla::XlaOp& input, bool some,
-                                 bool compute_uv) {
+std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool some, bool compute_uv) {
   xla::SVDResult svd_result =
       xla::SVD(input, /*max_iter=*/100, /*epsilon=*/1e-6,
                XlaHelpers::mat_mul_precision());

@@ -86,8 +86,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::Build() {
   return builder()->Build();
 }
 
-xla::StatusOr<xla::XlaComputation> LoweringContext::Build(
-    const xla::XlaOp& root) {
+xla::StatusOr<xla::XlaComputation> LoweringContext::Build(xla::XlaOp root) {
   XLA_CHECK(root_tuple_.empty());
   return builder()->Build(root);
 }

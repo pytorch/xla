@@ -13,7 +13,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerCumSum(const xla::XlaOp& input, xla::int64 dim,
+xla::XlaOp LowerCumSum(xla::XlaOp input, xla::int64 dim,
                        c10::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input = CastToScalarType(input, dtype);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(casted_input);

@@ -11,87 +11,80 @@ enum class ReductionMode {
   kSum,
 };
 
-xla::XlaOp BuildBinaryCrossEntropy(const xla::XlaOp& input,
-                                   const xla::XlaOp& target,
+xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
                                    const absl::optional<xla::XlaOp>& weight,
                                    ReductionMode reduction);
 
 xla::XlaOp BuildBinaryCrossEntropyBackward(
-    const xla::XlaOp& grad_output, const xla::XlaOp& input,
-    const xla::XlaOp& target, const absl::optional<xla::XlaOp>& weight,
-    ReductionMode reduction);
+    xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp target,
+    const absl::optional<xla::XlaOp>& weight, ReductionMode reduction);
 
-xla::XlaOp BuildL1Loss(const xla::XlaOp& input, const xla::XlaOp& target,
+xla::XlaOp BuildL1Loss(xla::XlaOp input, xla::XlaOp target,
                        ReductionMode reduction);
 
-xla::XlaOp BuildL1LossBackward(const xla::XlaOp& grad_output,
-                               const xla::XlaOp& input,
-                               const xla::XlaOp& target,
-                               ReductionMode reduction);
+xla::XlaOp BuildL1LossBackward(xla::XlaOp grad_output, xla::XlaOp input,
+                               xla::XlaOp target, ReductionMode reduction);
 
-xla::XlaOp BuildMseLoss(const xla::XlaOp& input, const xla::XlaOp& target,
+xla::XlaOp BuildMseLoss(xla::XlaOp input, xla::XlaOp target,
                         ReductionMode reduction);
 
-xla::XlaOp BuildMseLossBackward(const xla::XlaOp& grad_output,
-                                const xla::XlaOp& input,
-                                const xla::XlaOp& target,
-                                ReductionMode reduction);
+xla::XlaOp BuildMseLossBackward(xla::XlaOp grad_output, xla::XlaOp input,
+                                xla::XlaOp target, ReductionMode reduction);
 
 // Builds a mean by reducing all the dimensions listed in dimensions. If
 // keep_reduced_dimensions is true, the reduced dimensions will be retained,
 // with value 1.
-xla::XlaOp BuildMean(const xla::XlaOp& input,
+xla::XlaOp BuildMean(xla::XlaOp input,
                      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                      bool keep_reduced_dimensions);
 
 xla::XlaOp BuildStdDeviation(
-    const xla::XlaOp& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    xla::XlaOp input, tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
     bool keep_reduced_dimensions, bool unbiased);
 
 // Builds the sum of all values by reducing all the dimensions listed in
 // dimensions. If keep_reduced_dimensions is true, the reduced dimensions will
 // be retained, with value 1.
-xla::XlaOp BuildSum(const xla::XlaOp& input,
+xla::XlaOp BuildSum(xla::XlaOp input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions);
 
 // Builds the max of all values by reducing in the given dimension. If
 // keep_reduced_dimensions is true, the reduced dimension will be retained, with
 // value 1.
-xla::XlaOp BuildMaxInDim(const xla::XlaOp& input, xla::int64 dim,
+xla::XlaOp BuildMaxInDim(xla::XlaOp input, xla::int64 dim,
                          bool keep_reduced_dimensions);
 
 // Builds the min of all values by reducing in the given dimension. If
 // keep_reduced_dimensions is true, the reduced dimension will be retained, with
 // value 1.
-xla::XlaOp BuildMinInDim(const xla::XlaOp& input, xla::int64 dim,
+xla::XlaOp BuildMinInDim(xla::XlaOp input, xla::int64 dim,
                          bool keep_reduced_dimensions);
 
 // Compute the indices of the maximum values of a tensor across a dimension.
-xla::XlaOp BuildArgMax(const xla::XlaOp& input, xla::int64 dim, bool keepdim);
+xla::XlaOp BuildArgMax(xla::XlaOp input, xla::int64 dim, bool keepdim);
 
 // Compute the indices of the minimum values of a tensor across a dimension.
-xla::XlaOp BuildArgMin(const xla::XlaOp& input, xla::int64 dim, bool keepdim);
+xla::XlaOp BuildArgMin(xla::XlaOp input, xla::int64 dim, bool keepdim);
 
 // Builds the product of all values by reducing all the dimensions listed in
 // dimensions. If keep_reduced_dimensions is true, the reduced dimensions will
 // be retained, with value 1.
-xla::XlaOp BuildProd(const xla::XlaOp& input,
+xla::XlaOp BuildProd(xla::XlaOp input,
                      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                      bool keep_reduced_dimensions);
 
 // Compute the cumulative computation specified by "reducer" and "init" in the
 // given dimension "dim".
-xla::XlaOp BuildCumulativeComputation(const xla::XlaOp& input, xla::int64 dim,
+xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, xla::int64 dim,
                                       const xla::XlaComputation& reducer,
-                                      const xla::XlaOp& init);
+                                      xla::XlaOp init);
 
-xla::XlaOp BuildAll(const xla::XlaOp& input,
+xla::XlaOp BuildAll(xla::XlaOp input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions);
 
-xla::XlaOp BuildAny(const xla::XlaOp& input,
+xla::XlaOp BuildAny(xla::XlaOp input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions);
 

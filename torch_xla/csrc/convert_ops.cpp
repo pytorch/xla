@@ -9,15 +9,14 @@
 namespace torch_xla {
 namespace {
 
-xla::XlaOp ExplicitBooleanConvert(const xla::XlaOp& op,
-                                  xla::PrimitiveType from) {
+xla::XlaOp ExplicitBooleanConvert(xla::XlaOp op, xla::PrimitiveType from) {
   xla::XlaOp zero = xla::Zero(op.builder(), from);
   return xla::Ne(op, zero);
 }
 
 }  // namespace
 
-xla::XlaOp ConvertTo(const xla::XlaOp& op, xla::PrimitiveType from,
+xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
                      xla::PrimitiveType to, const Device* device) {
   if (device == nullptr) {
     device = GetDefaultDevice();
@@ -51,7 +50,7 @@ xla::XlaOp ConvertTo(const xla::XlaOp& op, xla::PrimitiveType from,
   }
 }
 
-xla::XlaOp ConvertToNumeric(const xla::XlaOp& op, xla::PrimitiveType from) {
+xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {
   const Device* device = GetDefaultDevice();
   return from != xla::PrimitiveType::PRED
              ? op
@@ -60,11 +59,11 @@ xla::XlaOp ConvertToNumeric(const xla::XlaOp& op, xla::PrimitiveType from) {
                          device);
 }
 
-xla::XlaOp ConvertToNumeric(const xla::XlaOp& op) {
+xla::XlaOp ConvertToNumeric(xla::XlaOp op) {
   return ConvertToNumeric(op, XlaHelpers::TypeOfXlaOp(op));
 }
 
-xla::XlaOp CastToScalarType(const xla::XlaOp& input,
+xla::XlaOp CastToScalarType(xla::XlaOp input,
                             c10::optional<at::ScalarType> dtype) {
   if (dtype) {
     return ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),

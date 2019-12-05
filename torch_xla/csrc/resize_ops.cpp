@@ -41,7 +41,7 @@ xla::Shape GetBackwardOutputShape2d(
   return xla::ShapeUtil::MakeShape(input_shape.element_type(), input_size);
 }
 
-xla::XlaOp LowerForward2d(const std::string& target, const xla::XlaOp& input,
+xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
                           const xla::Shape& output_shape, bool align_corners,
                           bool half_pixel_centers) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
@@ -65,7 +65,7 @@ xla::XlaOp LowerForward2d(const std::string& target, const xla::XlaOp& input,
   return xla::Transpose(resised, inv_transpose_permute);
 }
 
-xla::XlaOp LowerBackward2d(const std::string& target, const xla::XlaOp& input,
+xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
                            const xla::Shape& output_shape, bool align_corners,
                            bool half_pixel_centers) {
   static double resiple_split_factor =

@@ -15,7 +15,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerSum(const xla::XlaOp& input,
+xla::XlaOp LowerSum(xla::XlaOp input,
                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
                     bool keep_reduced_dimensions,
                     c10::optional<at::ScalarType> dtype) {

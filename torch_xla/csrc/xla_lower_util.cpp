@@ -27,7 +27,7 @@ struct ConditionMaskData {
   xla::XlaOp length;
 };
 
-ConditionMaskData CreateConditionMaskData(const xla::XlaOp& condition) {
+ConditionMaskData CreateConditionMaskData(xla::XlaOp condition) {
   xla::Shape iota_shape = XlaHelpers::ShapeOfXlaOp(condition);
   iota_shape.set_element_type(xla::PrimitiveType::S32);
 
@@ -48,7 +48,7 @@ ConditionMaskData CreateConditionMaskData(const xla::XlaOp& condition) {
           length};
 }
 
-std::pair<xla::XlaOp, xla::Shape> DotExpand(const xla::XlaOp& op,
+std::pair<xla::XlaOp, xla::Shape> DotExpand(xla::XlaOp op,
                                             const xla::Shape& op_shape,
                                             const xla::Shape& to_shape) {
   xla::int64 rank_delta = to_shape.rank() - op_shape.rank();
@@ -71,9 +71,9 @@ std::pair<xla::XlaOp, xla::Shape> DotExpand(const xla::XlaOp& op,
       xla::ShapeUtil::MakeShape(op_shape.element_type(), broadcasted_sizes));
 }
 
-std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(const xla::XlaOp& lhs,
+std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
                                                const xla::Shape& lhs_shape,
-                                               const xla::XlaOp& rhs,
+                                               xla::XlaOp rhs,
                                                const xla::Shape& rhs_shape) {
   auto lhs_dimensions = xla::util::ToVector<xla::int64>(lhs_shape.dimensions());
   auto rhs_dimensions = xla::util::ToVector<xla::int64>(rhs_shape.dimensions());
@@ -122,10 +122,9 @@ xla::XlaComputation MakeScatterComputation(
 }
 
 xla::XlaOp CreateIndexAlongDim(
-    const xla::XlaOp& buffer, xla::int64 dim, const xla::XlaOp& index,
-    const xla::XlaOp& value, bool broadcast_value_to_index,
-    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
-        combiner) {
+    xla::XlaOp buffer, xla::int64 dim, xla::XlaOp index, xla::XlaOp value,
+    bool broadcast_value_to_index,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner) {
   const xla::Shape& buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
   xla::ScatterDimensionNumbers dim_numbers;
   dim_numbers.set_index_vector_dim(1);
@@ -174,10 +173,8 @@ bool ScatterRequiresPadding(const xla::Shape& input_shape,
 }
 
 xla::XlaOp XlaDenseScatter(
-    const xla::XlaOp& input, const xla::XlaOp& index, const xla::XlaOp& src,
-    xla::int64 dim,
-    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
-        combiner) {
+    xla::XlaOp input, xla::XlaOp index, xla::XlaOp src, xla::int64 dim,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner) {
   // Contribute back this code to xla::TorchScatterDense() once this has reached
   // a stable implementation.
   xla::XlaBuilder* builder = input.builder();
@@ -240,7 +237,7 @@ xla::XlaOp XlaDenseScatter(
   });
 }
 
-std::vector<xla::XlaOp> BuildConditionIndices(const xla::XlaOp& condition) {
+std::vector<xla::XlaOp> BuildConditionIndices(xla::XlaOp condition) {
   ConditionMaskData cmd = CreateConditionMaskData(condition);
   std::vector<xla::XlaOp> to_sort = {cmd.reshaped_condition_int};
   std::vector<xla::PrimitiveType> types_to_sort = {xla::PrimitiveType::S32};
@@ -270,7 +267,7 @@ std::vector<xla::XlaOp> BuildConditionIndices(const xla::XlaOp& condition) {
 
 }  // namespace
 
-xla::XlaOp PadToSize(const xla::XlaOp& input, const xla::XlaOp& pad_value,
+xla::XlaOp PadToSize(xla::XlaOp input, xla::XlaOp pad_value,
                      tensorflow::gtl::ArraySlice<const xla::int64> size) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK_EQ(input_shape.rank(), size.size());
@@ -286,7 +283,7 @@ xla::XlaOp PadToSize(const xla::XlaOp& input, const xla::XlaOp& pad_value,
   return xla::Pad(input, pad_value, padding_config);
 }
 
-std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
+std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64 k,
                                        xla::int64 dim, bool keepdim) {
   // Here 'k' is 1 based (1...).
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
@@ -322,7 +319,7 @@ std::vector<xla::XlaOp> CreateKthValue(const xla::XlaOp& input, xla::int64 k,
                                                       /*device=*/nullptr))};
 }
 
-std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
+std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64 k,
                                    xla::int64 dim, bool largest,
                                    bool /* sorted */) {
   // Here 'k' is 1 based (1...).
@@ -356,7 +353,7 @@ std::vector<xla::XlaOp> CreateTopK(const xla::XlaOp& input, xla::int64 k,
                                                       /*device=*/nullptr))};
 }
 
-xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs) {
+xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
   const auto precision_level = XlaHelpers::mat_mul_precision();
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(precision_level);
@@ -402,8 +399,7 @@ xla::XlaOp CreateMatMul(const xla::XlaOp& lhs, const xla::XlaOp& rhs) {
               << rhs_shape << ")";
 }
 
-xla::XlaOp BuildBernoulli(const xla::XlaOp& probability,
-                          const xla::Shape& shape) {
+xla::XlaOp BuildBernoulli(xla::XlaOp probability, const xla::Shape& shape) {
   const xla::Shape& probability_shape = XlaHelpers::ShapeOfXlaOp(probability);
   xla::XlaOp zero = XlaHelpers::ScalarValue<float>(
       0, probability_shape.element_type(), probability.builder());
@@ -414,7 +410,7 @@ xla::XlaOp BuildBernoulli(const xla::XlaOp& probability,
                                  shape.element_type());
 }
 
-xla::XlaOp BuildDropout(const xla::XlaOp& input, float probability) {
+xla::XlaOp BuildDropout(xla::XlaOp input, float probability) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp prob =
       XlaHelpers::ScalarBroadcast<float>(probability, shape, input.builder());
@@ -467,7 +463,7 @@ std::vector<xla::XlaOp> CreateBroadcastTensors(
   return result;
 }
 
-xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices,
+xla::XlaOp CreateIndex(xla::XlaOp input, xla::XlaOp indices,
                        xla::int64 start_dim) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const xla::Shape& indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
@@ -499,10 +495,9 @@ xla::XlaOp CreateIndex(const xla::XlaOp& input, const xla::XlaOp& indices,
 }
 
 xla::XlaOp CreateIndexUpdate(
-    const xla::XlaOp& buffer, const xla::XlaOp& indices, xla::int64 start_dim,
-    const xla::XlaOp& values,
-    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
-        combiner) {
+    xla::XlaOp buffer, xla::XlaOp indices, xla::int64 start_dim,
+    xla::XlaOp values,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner) {
   const xla::Shape& buffer_shape = XlaHelpers::ShapeOfXlaOp(buffer);
   const xla::Shape& indices_shape = XlaHelpers::ShapeOfXlaOp(indices);
   const xla::Shape& values_shape = XlaHelpers::ShapeOfXlaOp(values);
@@ -556,10 +551,9 @@ xla::XlaOp CreateIndexUpdate(
                       dim_numbers);
 }
 
-xla::XlaOp CreateIndexAdd(const xla::XlaOp& buffer, xla::int64 dim,
-                          const xla::XlaOp& index, const xla::XlaOp& value) {
-  auto add_scatter_combiner = [](const xla::XlaOp& x,
-                                 const xla::XlaOp& y) -> xla::XlaOp {
+xla::XlaOp CreateIndexAdd(xla::XlaOp buffer, xla::int64 dim, xla::XlaOp index,
+                          xla::XlaOp value) {
+  auto add_scatter_combiner = [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
     return x + y;
   };
   return CreateIndexAlongDim(buffer, dim, index, value,
@@ -567,20 +561,20 @@ xla::XlaOp CreateIndexAdd(const xla::XlaOp& buffer, xla::int64 dim,
                              add_scatter_combiner);
 }
 
-xla::XlaOp CreateIndexCopy(const xla::XlaOp& buffer, xla::int64 dim,
-                           const xla::XlaOp& index, const xla::XlaOp& value) {
+xla::XlaOp CreateIndexCopy(xla::XlaOp buffer, xla::int64 dim, xla::XlaOp index,
+                           xla::XlaOp value) {
   return CreateIndexAlongDim(buffer, dim, index, value,
                              /*broadcast_value_to_index=*/false, nullptr);
 }
 
-xla::XlaOp CreateIndexFill(const xla::XlaOp& buffer, xla::int64 dim,
-                           const xla::XlaOp& index, const xla::XlaOp& value) {
+xla::XlaOp CreateIndexFill(xla::XlaOp buffer, xla::int64 dim, xla::XlaOp index,
+                           xla::XlaOp value) {
   return CreateIndexAlongDim(buffer, dim, index, value,
                              /*broadcast_value_to_index=*/true, nullptr);
 }
 
 XlaOpCombiner NumericAddCombiner() {
-  return [](const xla::XlaOp& x, const xla::XlaOp& y) -> xla::XlaOp {
+  return [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
     xla::XlaOp numeric_x = ConvertToNumeric(x);
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = numeric_x + numeric_y;
@@ -590,9 +584,8 @@ XlaOpCombiner NumericAddCombiner() {
   };
 }
 
-xla::XlaOp CreateScatter(const xla::XlaOp& input, const xla::XlaOp& index,
-                         const xla::XlaOp& source, xla::int64 dim,
-                         const XlaOpCombiner& combiner) {
+xla::XlaOp CreateScatter(xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
+                         xla::int64 dim, const XlaOpCombiner& combiner) {
   static int dense_scatter_factor =
       xla::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
@@ -635,8 +628,8 @@ xla::XlaOp CreateScatter(const xla::XlaOp& input, const xla::XlaOp& index,
       scatter_dnums);
 }
 
-xla::XlaOp CreatePut(const xla::XlaOp& input, const xla::XlaOp& index,
-                     const xla::XlaOp& source, bool accumulate) {
+xla::XlaOp CreatePut(xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
+                     bool accumulate) {
   xla::Shape input_shape;
   xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
   xla::Shape index_shape;
@@ -655,14 +648,13 @@ xla::XlaOp CreatePut(const xla::XlaOp& input, const xla::XlaOp& index,
   return xla::Reshape(r1_scatter, input_shape.dimensions());
 }
 
-std::vector<xla::XlaOp> BuildNonZero(const xla::XlaOp& input) {
+std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   return BuildConditionIndices(
       xla::Ne(input, xla::Zero(input.builder(), input_shape.element_type())));
 }
 
-std::vector<xla::XlaOp> BuildMaskedSelect(const xla::XlaOp& input,
-                                          const xla::XlaOp& mask) {
+std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask) {
   xla::Shape input_shape;
   xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
   const xla::Shape& mask_shape = XlaHelpers::ShapeOfXlaOp(mask);

@@ -190,8 +190,7 @@ std::vector<std::pair<xla::int64, xla::int64>> MakePadding(
 
 // Computes the input gradient for a convolution.
 xla::XlaOp BuildConvBackwardInput(
-    const xla::XlaOp& grad_output, const xla::XlaOp& kernel,
-    const xla::Shape& input_shape,
+    xla::XlaOp grad_output, xla::XlaOp kernel, const xla::Shape& input_shape,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_stride,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_padding,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_dilation,
@@ -209,8 +208,7 @@ xla::XlaOp BuildConvBackwardInput(
 
 // Computes the kernel gradient for a convolution.
 xla::XlaOp BuildConvBackwardWeight(
-    const xla::XlaOp& grad_output, const xla::XlaOp& input,
-    const xla::Shape& kernel_shape,
+    xla::XlaOp grad_output, xla::XlaOp input, const xla::Shape& kernel_shape,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_stride,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_padding,
     tensorflow::gtl::ArraySlice<const xla::int64> spatial_dilation,
@@ -247,7 +245,7 @@ xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {
 }
 
 xla::XlaOp BuildTransposedConvolution(
-    const xla::XlaOp& input, const xla::XlaOp& kernel,
+    xla::XlaOp input, xla::XlaOp kernel,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     tensorflow::gtl::ArraySlice<const xla::int64> dilation,
@@ -275,8 +273,7 @@ xla::XlaOp BuildTransposedConvolution(
 }
 
 ConvGrads BuildTransposedConvolutionBackward(
-    const xla::XlaOp& grad_output, const xla::XlaOp& input,
-    const xla::XlaOp& kernel,
+    xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp kernel,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     tensorflow::gtl::ArraySlice<const xla::int64> dilation,
@@ -295,7 +292,7 @@ ConvGrads BuildTransposedConvolutionBackward(
 }  // namespace
 
 xla::XlaOp BuildConvolutionOverrideable(
-    const xla::XlaOp& input, const xla::XlaOp& kernel,
+    xla::XlaOp input, xla::XlaOp kernel,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     tensorflow::gtl::ArraySlice<const xla::int64> dilation, bool transposed,
@@ -320,7 +317,7 @@ xla::XlaOp BuildConvolutionOverrideable(
 }
 
 xla::XlaOp BuildConvolutionOverrideableBias(
-    const xla::XlaOp& input, const xla::XlaOp& kernel, const xla::XlaOp& bias,
+    xla::XlaOp input, xla::XlaOp kernel, xla::XlaOp bias,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     tensorflow::gtl::ArraySlice<const xla::int64> dilation, bool transposed,
@@ -340,8 +337,7 @@ xla::XlaOp BuildConvolutionOverrideableBias(
 }
 
 ConvGrads BuildConvolutionBackwardOverrideable(
-    const xla::XlaOp& grad_output, const xla::XlaOp& input,
-    const xla::XlaOp& kernel,
+    xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp kernel,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding,
     tensorflow::gtl::ArraySlice<const xla::int64> dilation, bool transposed,

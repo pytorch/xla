@@ -81,8 +81,7 @@ struct BatchInput {
 
 // Adds a batch dimension of size 1 if the input tensor doesn't have a batch
 // dimension.
-BatchInput CreateBatchInput(const xla::XlaOp& input,
-                            xla::int64 spatial_dim_count) {
+BatchInput CreateBatchInput(xla::XlaOp input, xla::int64 spatial_dim_count) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::int64 rank = input_shape.rank();
   XLA_CHECK(rank == spatial_dim_count + 1 || rank == spatial_dim_count + 2)
@@ -94,7 +93,7 @@ BatchInput CreateBatchInput(const xla::XlaOp& input,
   return {input, rank};
 }
 
-xla::XlaOp RemoveTrivialBatch(const xla::XlaOp& batch, xla::int64 original_rank,
+xla::XlaOp RemoveTrivialBatch(xla::XlaOp batch, xla::int64 original_rank,
                               xla::int64 spatial_dim_count) {
   if (original_rank == spatial_dim_count + 1) {
     return SqueezeTrivialDimension(batch, 0);
@@ -162,7 +161,7 @@ bool IsSupportedAdaptiveAvgPool2d(
 }
 
 xla::XlaOp BuildMaxPoolNd(
-    const xla::XlaOp& input, xla::int64 spatial_dim_count,
+    xla::XlaOp input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode) {
@@ -192,8 +191,7 @@ xla::XlaOp BuildMaxPoolNd(
 }
 
 xla::XlaOp BuildMaxPoolNdBackward(
-    const xla::XlaOp& out_backprop, const xla::XlaOp& input,
-    xla::int64 spatial_dim_count,
+    xla::XlaOp out_backprop, xla::XlaOp input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode) {
@@ -232,7 +230,7 @@ xla::XlaOp BuildMaxPoolNdBackward(
 }
 
 xla::XlaOp BuildAvgPoolNd(
-    const xla::XlaOp& input, xla::int64 spatial_dim_count,
+    xla::XlaOp input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode,
@@ -258,8 +256,7 @@ xla::XlaOp BuildAvgPoolNd(
 }
 
 xla::XlaOp BuildAvgPoolNdBackward(
-    const xla::XlaOp& out_backprop, const xla::XlaOp& input,
-    xla::int64 spatial_dim_count,
+    xla::XlaOp out_backprop, xla::XlaOp input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode,
@@ -288,7 +285,7 @@ xla::XlaOp BuildAvgPoolNdBackward(
 }
 
 xla::XlaOp BuildAdaptiveAvgPool2d(
-    const xla::XlaOp& input,
+    xla::XlaOp input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
   XLA_CHECK_EQ(output_size.size(), 2) << "Invalid output size rank";
   const auto input_size = XlaHelpers::SizesOfXlaOp(input);
@@ -310,8 +307,8 @@ xla::XlaOp BuildAdaptiveAvgPool2d(
                             /*spatial_dim_count=*/2);
 }
 
-xla::XlaOp BuildAdaptiveAvgPool2dBackward(const xla::XlaOp& out_backprop,
-                                          const xla::XlaOp& input) {
+xla::XlaOp BuildAdaptiveAvgPool2dBackward(xla::XlaOp out_backprop,
+                                          xla::XlaOp input) {
   BatchInput batch_out_backprop_info =
       CreateBatchInput(/*input=*/out_backprop, /*spatial_dim_count=*/2);
   const auto out_backprop_size =

@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerSqueeze(const xla::XlaOp& input, int dim) {
+xla::XlaOp LowerSqueeze(xla::XlaOp input, int dim) {
   if (dim == -1) {
     return SqueezeAllTrivialDimensions(input);
   }

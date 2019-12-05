@@ -14,7 +14,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerMean(const xla::XlaOp& input,
+xla::XlaOp LowerMean(xla::XlaOp input,
                      const std::vector<xla::int64>& dimensions,
                      bool keep_reduced_dimensions,
                      const c10::optional<at::ScalarType>& dtype) {

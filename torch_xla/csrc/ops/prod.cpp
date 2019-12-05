@@ -15,7 +15,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerProd(const xla::XlaOp& input,
+xla::XlaOp LowerProd(xla::XlaOp input,
                      const std::vector<xla::int64>& dimensions,
                      bool keep_reduced_dimensions,
                      c10::optional<at::ScalarType> dtype) {

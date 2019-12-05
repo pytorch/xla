@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerAsStrided(const xla::XlaOp& input,
+xla::XlaOp LowerAsStrided(xla::XlaOp input,
                           tensorflow::gtl::ArraySlice<xla::int64> size,
                           xla::int64 storage_offset) {
   xla::int64 input_element_count =

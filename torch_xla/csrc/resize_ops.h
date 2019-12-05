@@ -16,11 +16,11 @@ xla::Shape GetBackwardOutputShape2d(
     const xla::Shape& input_shape,
     tensorflow::gtl::ArraySlice<const xla::int64> input_size);
 
-xla::XlaOp LowerForward2d(const std::string& target, const xla::XlaOp& input,
+xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
                           const xla::Shape& output_shape, bool align_corners,
                           bool half_pixel_centers);
 
-xla::XlaOp LowerBackward2d(const std::string& target, const xla::XlaOp& input,
+xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
                            const xla::Shape& output_shape, bool align_corners,
                            bool half_pixel_centers);
 

@@ -7,15 +7,14 @@
 namespace torch_xla {
 
 // Builds the NLLLoss for log-probabilities "logits" and class indices "labels".
-xla::XlaOp BuildNllLoss(const xla::XlaOp& logits, const xla::XlaOp& labels,
+xla::XlaOp BuildNllLoss(xla::XlaOp logits, xla::XlaOp labels,
                         const absl::optional<xla::XlaOp>& weight,
                         int ignore_index, ReductionMode reduction_mode);
 
 // Builds the NLLLoss gradient for log-probabilities "logits" and class indices
 // "labels".
-xla::XlaOp BuildNllLossBackward(const xla::XlaOp& grad_output,
-                                const xla::XlaOp& logits,
-                                const xla::XlaOp& labels,
+xla::XlaOp BuildNllLossBackward(xla::XlaOp grad_output, xla::XlaOp logits,
+                                xla::XlaOp labels,
                                 const absl::optional<xla::XlaOp>& weight,
                                 const absl::optional<xla::XlaOp>& total_weight,
                                 int ignore_index, ReductionMode reduction_mode);

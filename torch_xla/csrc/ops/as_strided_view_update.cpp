@@ -14,7 +14,7 @@ namespace ops {
 namespace {
 
 xla::XlaOp LowerAsStridedViewUpdate(
-    const xla::XlaOp& target, const xla::XlaOp& input,
+    xla::XlaOp target, xla::XlaOp input,
     tensorflow::gtl::ArraySlice<xla::int64> size, xla::int64 storage_offset) {
   xla::int64 input_element_count =
       xla::ShapeUtil::ElementsIn(XlaHelpers::ShapeOfXlaOp(input));

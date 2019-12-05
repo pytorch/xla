@@ -25,7 +25,7 @@ std::vector<xla::int64> BroadcastDimensions(xla::int64 dims,
   return result_dims;
 }
 
-SoftMaxPartials LogSoftmaxPartials(const xla::XlaOp& logits, xla::int64 dim) {
+SoftMaxPartials LogSoftmaxPartials(xla::XlaOp logits, xla::int64 dim) {
   const xla::Shape& logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
   std::vector<xla::int64> broadcast_dimensions =
       BroadcastDimensions(logits_shape.rank(), dim);
@@ -47,7 +47,7 @@ SoftMaxPartials LogSoftmaxPartials(const xla::XlaOp& logits, xla::int64 dim) {
   return {std::move(broadcast_dimensions), shifted_logits, exp_shifted, reduce};
 }
 
-xla::XlaOp SoftmaxSumOfGrad(const xla::XlaOp& grad_output, xla::int64 dim) {
+xla::XlaOp SoftmaxSumOfGrad(xla::XlaOp grad_output, xla::int64 dim) {
   const xla::Shape& grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
   auto broadcast_dimensions =
       BroadcastDimensions(grad_output_shape.rank(), dim);
@@ -61,14 +61,14 @@ xla::XlaOp SoftmaxSumOfGrad(const xla::XlaOp& grad_output, xla::int64 dim) {
 
 }  // namespace
 
-xla::XlaOp BuildLogSoftmax(const xla::XlaOp& logits, xla::int64 dim) {
+xla::XlaOp BuildLogSoftmax(xla::XlaOp logits, xla::int64 dim) {
   SoftMaxPartials parts = LogSoftmaxPartials(logits, dim);
   return xla::Sub(parts.shifted_logits, xla::Log(parts.reduce),
                   parts.broadcast_dimensions);
 }
 
-xla::XlaOp BuildLogSoftmaxGrad(const xla::XlaOp& grad_output,
-                               const xla::XlaOp& output, xla::int64 dim) {
+xla::XlaOp BuildLogSoftmaxGrad(xla::XlaOp grad_output, xla::XlaOp output,
+                               xla::int64 dim) {
   // Inspired from tf2xla.
   xla::XlaOp sum = SoftmaxSumOfGrad(grad_output, dim);
   const xla::Shape& grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
@@ -78,13 +78,13 @@ xla::XlaOp BuildLogSoftmaxGrad(const xla::XlaOp& grad_output,
                   xla::Mul(xla::Exp(output), sum, broadcast_dimensions));
 }
 
-xla::XlaOp BuildSoftmax(const xla::XlaOp& logits, xla::int64 dim) {
+xla::XlaOp BuildSoftmax(xla::XlaOp logits, xla::int64 dim) {
   SoftMaxPartials parts = LogSoftmaxPartials(logits, dim);
   return xla::Div(parts.exp_shifted, parts.reduce, parts.broadcast_dimensions);
 }
 
-xla::XlaOp BuildSoftmaxGrad(const xla::XlaOp& grad_output,
-                            const xla::XlaOp& output, xla::int64 dim) {
+xla::XlaOp BuildSoftmaxGrad(xla::XlaOp grad_output, xla::XlaOp output,
+                            xla::int64 dim) {
   xla::XlaOp sum = SoftmaxSumOfGrad(xla::Mul(grad_output, output), dim);
   const xla::Shape& grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
   auto broadcast_dimensions =

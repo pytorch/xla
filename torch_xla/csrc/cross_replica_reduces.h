@@ -18,8 +18,7 @@ enum class AllReduceType {
 
 std::vector<xla::XlaOp> BuildAllReduce(
     AllReduceType reduce_type,
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands,
-    const xla::XlaOp& token, double scale,
-    const std::vector<std::vector<xla::int64>>& groups);
+    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands, xla::XlaOp token,
+    double scale, const std::vector<std::vector<xla::int64>>& groups);
 
 }  // namespace torch_xla

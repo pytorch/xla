@@ -7,22 +7,21 @@ namespace torch_xla {
 
 // Computes max pooling for the given input.
 xla::XlaOp BuildMaxPoolNd(
-    const xla::XlaOp& input, xla::int64 spatial_dim_count,
+    xla::XlaOp input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode);
 
 // Computes the gradient for max pooling.
 xla::XlaOp BuildMaxPoolNdBackward(
-    const xla::XlaOp& out_backprop, const xla::XlaOp& input,
-    xla::int64 spatial_dim_count,
+    xla::XlaOp out_backprop, xla::XlaOp input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode);
 
 // Computes average pooling for the given input.
 xla::XlaOp BuildAvgPoolNd(
-    const xla::XlaOp& input, xla::int64 spatial_dim_count,
+    xla::XlaOp input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode,
@@ -30,8 +29,7 @@ xla::XlaOp BuildAvgPoolNd(
 
 // Computes the gradient for average pooling.
 xla::XlaOp BuildAvgPoolNdBackward(
-    const xla::XlaOp& out_backprop, const xla::XlaOp& input,
-    xla::int64 spatial_dim_count,
+    xla::XlaOp out_backprop, xla::XlaOp input, xla::int64 spatial_dim_count,
     tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
     tensorflow::gtl::ArraySlice<const xla::int64> stride,
     tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode,
@@ -39,12 +37,12 @@ xla::XlaOp BuildAvgPoolNdBackward(
 
 // Computes adaptive average pooling for the given input and output size.
 xla::XlaOp BuildAdaptiveAvgPool2d(
-    const xla::XlaOp& input,
+    xla::XlaOp input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_size);
 
 // Computes the gradient for adaptive average pooling.
-xla::XlaOp BuildAdaptiveAvgPool2dBackward(const xla::XlaOp& out_backprop,
-                                          const xla::XlaOp& input);
+xla::XlaOp BuildAdaptiveAvgPool2dBackward(xla::XlaOp out_backprop,
+                                          xla::XlaOp input);
 
 // Returns true if XLA lowering is supported for the given input and output size
 // combination.

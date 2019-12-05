@@ -45,8 +45,7 @@ std::pair<xla::Shape, xla::Shape> InferTriangularSolveShape(
                                            lhs_batch_promoted_shape);
 }
 
-std::vector<xla::XlaOp> LowerTriangularSolve(const xla::XlaOp& rhs,
-                                             const xla::XlaOp& lhs,
+std::vector<xla::XlaOp> LowerTriangularSolve(xla::XlaOp rhs, xla::XlaOp lhs,
                                              bool left_side, bool lower,
                                              bool transpose,
                                              bool unit_diagonal) {
