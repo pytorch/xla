@@ -13,7 +13,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-std::vector<xla::XlaOp> LowerQR(const xla::XlaOp& input, bool some) {
+std::vector<xla::XlaOp> LowerQR(xla::XlaOp input, bool some) {
   xla::QRDecompositionResult qr_result =
       xla::QRDecomposition(input, /*full_matrices=*/!some,
                            /*block_size=*/128, XlaHelpers::mat_mul_precision())

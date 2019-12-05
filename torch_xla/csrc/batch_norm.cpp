@@ -5,7 +5,7 @@
 namespace torch_xla {
 namespace {
 
-xla::XlaOp VarianceRecover(const xla::XlaOp& invstd, float eps_value) {
+xla::XlaOp VarianceRecover(xla::XlaOp invstd, float eps_value) {
   xla::XlaBuilder* builder = invstd.builder();
   const xla::Shape& invstd_shape = XlaHelpers::ShapeOfXlaOp(invstd);
   xla::XlaOp eps =
@@ -18,8 +18,7 @@ xla::XlaOp VarianceRecover(const xla::XlaOp& invstd, float eps_value) {
 
 }  // namespace
 
-xla::XlaOp BatchNormVarianceInvert(const xla::XlaOp& variance,
-                                   float eps_value) {
+xla::XlaOp BatchNormVarianceInvert(xla::XlaOp variance, float eps_value) {
   xla::XlaBuilder* builder = variance.builder();
   const xla::Shape& variance_shape = XlaHelpers::ShapeOfXlaOp(variance);
   xla::XlaOp eps = XlaHelpers::ScalarValue(
@@ -29,10 +28,8 @@ xla::XlaOp BatchNormVarianceInvert(const xla::XlaOp& variance,
   return one / xla::Sqrt(variance + eps);
 }
 
-BatchNormOutput BuildBatchNormTraining(const xla::XlaOp& input,
-                                       const xla::XlaOp& weight,
-                                       const xla::XlaOp& bias,
-                                       float eps_value) {
+BatchNormOutput BuildBatchNormTraining(xla::XlaOp input, xla::XlaOp weight,
+                                       xla::XlaOp bias, float eps_value) {
   xla::XlaOp outputs =
       xla::BatchNormTraining(input, weight, bias, eps_value, 1);
   xla::XlaOp output = xla::GetTupleElement(outputs, 0);
@@ -41,19 +38,17 @@ BatchNormOutput BuildBatchNormTraining(const xla::XlaOp& input,
   return {output, batch_mean, batch_variance};
 }
 
-xla::XlaOp BuildBatchNormInference(
-    const xla::XlaOp& input, const xla::XlaOp& weight, const xla::XlaOp& bias,
-    const xla::XlaOp& mean, const xla::XlaOp& variance, float eps_value) {
+xla::XlaOp BuildBatchNormInference(xla::XlaOp input, xla::XlaOp weight,
+                                   xla::XlaOp bias, xla::XlaOp mean,
+                                   xla::XlaOp variance, float eps_value) {
   return xla::BatchNormInference(input, weight, bias, mean, variance, eps_value,
                                  1);
 }
 
-BatchNormGrads BuildBatchNormBackward(const xla::XlaOp& grad,
-                                      const xla::XlaOp& input,
-                                      const xla::XlaOp& weight,
-                                      const xla::XlaOp& save_mean,
-                                      const xla::XlaOp& save_invstd,
-                                      bool training, float eps_value) {
+BatchNormGrads BuildBatchNormBackward(xla::XlaOp grad, xla::XlaOp input,
+                                      xla::XlaOp weight, xla::XlaOp save_mean,
+                                      xla::XlaOp save_invstd, bool training,
+                                      float eps_value) {
   xla::XlaOp grads = xla::BatchNormGrad(input, weight, save_mean,
                                         VarianceRecover(save_invstd, eps_value),
                                         grad, eps_value, 1);

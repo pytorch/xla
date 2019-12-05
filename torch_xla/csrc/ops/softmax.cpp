@@ -12,7 +12,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerSoftmax(const xla::XlaOp& input, xla::int64 dim,
+xla::XlaOp LowerSoftmax(xla::XlaOp input, xla::int64 dim,
                         const c10::optional<at::ScalarType>& dtype) {
   xla::XlaOp result = BuildSoftmax(input, dim);
   return CastToScalarType(result, dtype);
