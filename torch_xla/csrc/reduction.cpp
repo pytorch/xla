@@ -112,6 +112,19 @@ xla::XlaOp CreateProduct(
   return result;
 }
 
+xla::XlaOp AverageValue(const xla::XlaOp& input, const xla::XlaOp& reduced) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp num_elements = XlaHelpers::GetDimensionsSize(
+      {input}, XlaHelpers::GetAllDimensions(input_shape));
+  xla::XlaOp zero =
+      xla::One(input.builder(), XlaHelpers::TypeOfXlaOp(num_elements));
+  return xla::Select(
+      xla::Ne(num_elements, zero),
+      reduced /
+          xla::ConvertElementType(num_elements, input_shape.element_type()),
+      xla::NanValue(input.builder(), input_shape.element_type()));
+}
+
 }  // namespace
 
 xla::XlaOp BuildBinaryCrossEntropy(const xla::XlaOp& input,
@@ -133,21 +146,13 @@ xla::XlaOp BuildBinaryCrossEntropy(const xla::XlaOp& input,
   if (reduction == ReductionMode::kNone) {
     return result;
   }
-  result = xla::ReduceAll(
+  xla::XlaOp reduced_result = xla::ReduceAll(
       result, xla::Zero(input.builder(), input_shape.element_type()),
       XlaHelpers::CreateAddComputation(input_shape.element_type()));
   if (reduction == ReductionMode::kMean) {
-    xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
-    if (num_elements == 0) {
-      return xla::NanValue(input.builder(), input_shape.element_type());
-    } else {
-      xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
-          1.0 / static_cast<double>(num_elements), input_shape.element_type(),
-          input.builder());
-      result = result * scale_value;
-    }
+    reduced_result = AverageValue(result, reduced_result);
   }
-  return result;
+  return reduced_result;
 }
 
 xla::XlaOp BuildBinaryCrossEntropyBackward(
@@ -168,18 +173,11 @@ xla::XlaOp BuildBinaryCrossEntropyBackward(
   if (reduction == ReductionMode::kNone) {
     return result * grad_output;
   }
+  result = result * grad_output;
   if (reduction == ReductionMode::kMean) {
-    xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
-    if (num_elements == 0) {
-      return xla::NanValue(input.builder(), input_shape.element_type());
-    } else {
-      xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
-          1.0 / static_cast<double>(num_elements), input_shape.element_type(),
-          input.builder());
-      result = result * scale_value;
-    }
+    result = AverageValue(input, result);
   }
-  return result * grad_output;
+  return result;
 }
 
 xla::XlaOp BuildL1Loss(const xla::XlaOp& input, const xla::XlaOp& target,
@@ -193,15 +191,7 @@ xla::XlaOp BuildL1Loss(const xla::XlaOp& input, const xla::XlaOp& target,
       result, xla::Zero(input.builder(), input_shape.element_type()),
       XlaHelpers::CreateAddComputation(input_shape.element_type()));
   if (reduction == ReductionMode::kMean) {
-    xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
-    if (num_elements == 0) {
-      return xla::NanValue(input.builder(), input_shape.element_type());
-    } else {
-      xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
-          1.0 / static_cast<double>(num_elements), input_shape.element_type(),
-          input.builder());
-      result = result * scale_value;
-    }
+    result = AverageValue(input, result);
   }
   return result;
 }
@@ -218,11 +208,7 @@ xla::XlaOp BuildL1LossBackward(const xla::XlaOp& grad_output,
   }
   xla::XlaOp grad_value = grad_output;
   if (reduction == ReductionMode::kMean) {
-    xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
-    xla::XlaOp scale_value = XlaHelpers::ScalarValue<double>(
-        1.0 / static_cast<double>(num_elements), input_shape.element_type(),
-        input.builder());
-    grad_value = grad_output * scale_value;
+    grad_value = AverageValue(input, grad_value);
   }
   return xla::Select(xla::Ge(input, target), grad_value, -grad_value);
 }

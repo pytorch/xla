@@ -34,7 +34,7 @@ extern const OpKindWrapper xla_cross_replica_sum;
 extern const OpKindWrapper xla_device_data;
 extern const OpKindWrapper xla_diagonal_view_update;
 extern const OpKindWrapper xla_generic_slice;
-extern const OpKindWrapper xla_get_dimension_size;
+extern const OpKindWrapper xla_get_dimensions_size;
 extern const OpKindWrapper xla_moving_average;
 extern const OpKindWrapper xla_not_supported;
 extern const OpKindWrapper xla_select;
