@@ -1395,13 +1395,15 @@ class TestGeneric(XlaTestCase):
     class ForTest(object):
 
       def __init__(self):
-        self.a = {'k': [1, 2, 3], (3, 4): 'y', 5: {'a': 'n'}}
+        self.a = {'k': [1, 2, 3], 4.9: 'y', 5: {'a': 'n'}}
         self.b = ('f', 17)
 
+    duped_data = ForTest()
     data = {
-        (1, 2): 11,
+        2.3: 11,
         21: ForTest(),
-        'w': [12, ForTest()],
+        'w': [12, ForTest(), duped_data],
+        123: duped_data,
     }
 
     ids = []
@@ -1409,7 +1411,8 @@ class TestGeneric(XlaTestCase):
     def collect(x):
       ids.append(id(x))
 
-    xu.for_each_instance(data, lambda x: isinstance(x, (int, str)), collect)
+    xu.for_each_instance(data, lambda x: isinstance(x, (int, str, float)),
+                         collect)
 
     wids = []
 
@@ -1417,10 +1420,43 @@ class TestGeneric(XlaTestCase):
       wids.append(id(x))
       return x
 
-    xu.for_each_instance_rewrite(data, lambda x: isinstance(x, (int, str)),
+    xu.for_each_instance_rewrite(data,
+                                 lambda x: isinstance(x, (int, str, float)),
                                  convert)
-    self.assertEqual(len(ids), 15)
+    self.assertEqual(len(ids), 17)
     self.assertEqual(ids, wids)
+
+  def test_util_foreach_api_cycle(self):
+
+    class ForTest1(object):
+
+      def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    class ForTest2(object):
+
+      def __init__(self, a):
+        self.a = a
+        self.b = ForTest1(self, a)
+
+    xdata = {
+        2: (11, ['a', 'b'], 17),
+        'w': [12, 'q', 12.33],
+        17.09: set(['a', 'b', 21]),
+    }
+    data = ForTest2(xdata)
+
+    wids = []
+
+    def convert(x):
+      wids.append(id(x))
+      return x
+
+    xu.for_each_instance_rewrite(data,
+                                 lambda x: isinstance(x, (int, str, float)),
+                                 convert)
+    self.assertEqual(len(wids), 11)
 
 
 class TestTypePromotion(XlaTestCase):
