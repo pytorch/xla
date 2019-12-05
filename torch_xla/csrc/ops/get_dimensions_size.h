@@ -1,14 +1,16 @@
 #pragma once
 
+#include <vector>
+
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class GetDimensionSize : public Node {
+class GetDimensionsSize : public Node {
  public:
-  GetDimensionSize(const Value& input, xla::int64 dimension);
+  GetDimensionsSize(const Value& input, std::vector<xla::int64> dimensions);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -16,10 +18,10 @@ class GetDimensionSize : public Node {
 
   std::string ToString() const override;
 
-  xla::int64 dimension() const { return dimension_; }
+  const std::vector<xla::int64>& dimensions() const { return dimensions_; }
 
  private:
-  xla::int64 dimension_;
+  std::vector<xla::int64> dimensions_;
 };
 
 }  // namespace ops

@@ -161,6 +161,25 @@ class XLATensor {
       const std::vector<std::string>& devices);
 
   //////////////////////////////////////////////////////////////////////////////
+  // XLA dedicated operators follows here, listed in alphabetical order.
+  //////////////////////////////////////////////////////////////////////////////
+  static std::pair<XLATensor, ir::Value> all_reduce(
+      const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
+      double scale, const std::vector<std::vector<xla::int64>>& groups);
+
+  static ir::Value all_reduce_(
+      XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
+      double scale, const std::vector<std::vector<xla::int64>>& groups);
+
+  static ir::Value all_reduce(
+      std::vector<XLATensor>* inputs, const ir::Value& token,
+      AllReduceType reduce_type, double scale,
+      const std::vector<std::vector<xla::int64>>& groups);
+
+  static XLATensor get_dimensions_size(const XLATensor& input,
+                                       std::vector<xla::int64> dimensions);
+
+  //////////////////////////////////////////////////////////////////////////////
   // ATEN operators follows here, listed in alphabetical order.
   //////////////////////////////////////////////////////////////////////////////
   static XLATensor __and__(const XLATensor& input, at::Scalar other);
@@ -222,19 +241,6 @@ class XLATensor {
   static XLATensor all(const XLATensor& input,
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions);
-
-  static std::pair<XLATensor, ir::Value> all_reduce(
-      const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-      double scale, const std::vector<std::vector<xla::int64>>& groups);
-
-  static ir::Value all_reduce_(
-      XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-      double scale, const std::vector<std::vector<xla::int64>>& groups);
-
-  static ir::Value all_reduce(
-      std::vector<XLATensor>* inputs, const ir::Value& token,
-      AllReduceType reduce_type, double scale,
-      const std::vector<std::vector<xla::int64>>& groups);
 
   static XLATensor any(const XLATensor& input,
                        std::vector<xla::int64> dimensions,
