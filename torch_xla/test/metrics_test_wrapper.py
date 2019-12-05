@@ -40,6 +40,8 @@ Example usage:
 python metrics_test_wrapper.py --root="gs://model_metrics" \
     --test_folder_name="mnist" -- python test/test_train_mnist.py --num_epochs=1
 """
+from __future__ import print_function
+
 import argparse
 import datetime
 import glob
@@ -171,9 +173,9 @@ if __name__ == '__main__':
       break
     path_to_search = os.path.split(path_to_search)[0]
   if not ordered_config_dicts:
-    print('No config files found. See example usage at top of '
-          'metrics_test_wrapper.py')
-    sys.exit(1)  # Return non-OK status since config is required.
+    raise ValueError('No config files found in {} or parent directories. '
+        'See example usage at top of metrics_test_wrapper.py'.format(
+            os.path.join(FLAGS.root, FLAGS.test_folder_name)))
 
   # Consolidate configs into 1 dict by overwriting the least-specific configs
   # with the increasingly more-specific configs.
@@ -201,7 +203,7 @@ if __name__ == '__main__':
   else:
     print('Unable to check for metrics regressions. Config should contain '
           '"regression_test_config" key -- see example at the top of '
-          'metrics_test_wrapper.py.')
+          'metrics_test_wrapper.py.', file=sys.stderr)
     regression_report = ''
 
   # Write the metrics from the current run to disk unless disabled by config.
@@ -213,6 +215,9 @@ if __name__ == '__main__':
     _write_to_disk(output_string, output_filename)
 
   if regression_report:
-    print('Metrics regression report:\n{}'.format(regression_report))
-    sys.exit(1)  # Return non-OK status code since there was a regression.
-  sys.exit(sp_return_code)
+    raise AssertionError(
+        'Non-empty XLA metrics regression report:\n{}'.format(
+            regression_report))
+  if sp_return_code:
+    raise AssertionError(
+      'Child process had non-zero exit code: {}'.format(sp_return_code))
