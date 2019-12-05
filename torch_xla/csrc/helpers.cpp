@@ -3,6 +3,7 @@
 #include <limits>
 
 #include "absl/strings/str_join.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -125,6 +126,24 @@ xla::int64 XlaHelpers::GetDynamicDimension(const xla::Shape& shape) {
     }
   }
   return dynamic_dimension;
+}
+
+xla::XlaOp XlaHelpers::GetDimensionsSize(
+    tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions) {
+  XLA_CHECK(!inputs.empty());
+  xla::XlaOp size;
+  for (auto& input : inputs) {
+    for (auto dim : dimensions) {
+      if (size.valid()) {
+        size = size * xla::GetDimensionSize(input, dim);
+      } else {
+        size = xla::GetDimensionSize(input, dim);
+      }
+    }
+  }
+  return size.valid() ? size
+                      : xla::One(inputs[0].builder(), xla::PrimitiveType::S32);
 }
 
 XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {

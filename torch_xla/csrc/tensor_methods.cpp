@@ -43,6 +43,7 @@
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
+#include "torch_xla/csrc/ops/get_dimensions_size.h"
 #include "torch_xla/csrc/ops/hardshrink.h"
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 #include "torch_xla/csrc/ops/index_ops.h"
@@ -257,6 +258,55 @@ ViewInfo CreateAsStridedViewInfo(
 
 }  // namespace
 
+//////////////////////////////////////////////////////////////////////////////
+// XLA dedicated operators follows here, listed in alphabetical order.
+//////////////////////////////////////////////////////////////////////////////
+std::pair<XLATensor, ir::Value> XLATensor::all_reduce(
+    const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
+    double scale, const std::vector<std::vector<xla::int64>>& groups) {
+  std::vector<ir::Value> input_values({input.GetIrValue()});
+  ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(reduce_type, input_values,
+                                                      token, scale, groups);
+  return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
+}
+
+ir::Value XLATensor::all_reduce_(
+    XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
+    double scale, const std::vector<std::vector<xla::int64>>& groups) {
+  std::vector<ir::Value> input_values({input.GetIrValue()});
+  ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(reduce_type, input_values,
+                                                      token, scale, groups);
+  input.SetIrValue(ir::Value(node, 0));
+  return ir::Value(node, 1);
+}
+
+ir::Value XLATensor::all_reduce(
+    std::vector<XLATensor>* inputs, const ir::Value& token,
+    AllReduceType reduce_type, double scale,
+    const std::vector<std::vector<xla::int64>>& groups) {
+  std::vector<ir::Value> input_values;
+  input_values.reserve(inputs->size());
+  for (auto& input : *inputs) {
+    input_values.push_back(input.GetIrValue());
+  }
+  ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(reduce_type, input_values,
+                                                      token, scale, groups);
+  for (size_t i = 0; i < inputs->size(); ++i) {
+    (*inputs)[i].SetIrValue(ir::Value(node, i));
+  }
+  return ir::Value(node, inputs->size());
+}
+
+XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
+                                         std::vector<xla::int64> dimensions) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::GetDimensionsSize>(
+                              input.GetIrValue(), std::move(dimensions)),
+                          at::ScalarType::Int);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// ATEN operators follows here, listed in alphabetical order.
+//////////////////////////////////////////////////////////////////////////////
 XLATensor XLATensor::__and__(const XLATensor& input, at::Scalar other) {
   CheckIsIntegralOrPred(input.shape(), "__and__");
   ir::Value other_broadcasted_ir =
@@ -455,42 +505,6 @@ XLATensor XLATensor::all(const XLATensor& input,
                                  XlaHelpers::GetCanonicalDimensionIndices(
                                      dimensions, input.shape().get().rank()),
                                  keep_reduced_dimensions));
-}
-
-std::pair<XLATensor, ir::Value> XLATensor::all_reduce(
-    const XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-    double scale, const std::vector<std::vector<xla::int64>>& groups) {
-  std::vector<ir::Value> input_values({input.GetIrValue()});
-  ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(reduce_type, input_values,
-                                                      token, scale, groups);
-  return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
-}
-
-ir::Value XLATensor::all_reduce_(
-    XLATensor& input, const ir::Value& token, AllReduceType reduce_type,
-    double scale, const std::vector<std::vector<xla::int64>>& groups) {
-  std::vector<ir::Value> input_values({input.GetIrValue()});
-  ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(reduce_type, input_values,
-                                                      token, scale, groups);
-  input.SetIrValue(ir::Value(node, 0));
-  return ir::Value(node, 1);
-}
-
-ir::Value XLATensor::all_reduce(
-    std::vector<XLATensor>* inputs, const ir::Value& token,
-    AllReduceType reduce_type, double scale,
-    const std::vector<std::vector<xla::int64>>& groups) {
-  std::vector<ir::Value> input_values;
-  input_values.reserve(inputs->size());
-  for (auto& input : *inputs) {
-    input_values.push_back(input.GetIrValue());
-  }
-  ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(reduce_type, input_values,
-                                                      token, scale, groups);
-  for (size_t i = 0; i < inputs->size(); ++i) {
-    (*inputs)[i].SetIrValue(ir::Value(node, i));
-  }
-  return ir::Value(node, inputs->size());
 }
 
 XLATensor XLATensor::any(const XLATensor& input,

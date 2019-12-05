@@ -89,6 +89,14 @@ class XlaHelpers {
   // Returns the value type of given XLA operation.
   static xla::PrimitiveType TypeOfXlaOp(const xla::XlaOp& op);
 
+  static std::vector<xla::int64> GetAllDimensions(size_t rank) {
+    return xla::util::Iota<xla::int64>(rank);
+  }
+
+  static std::vector<xla::int64> GetAllDimensions(const xla::Shape& shape) {
+    return xla::util::Iota<xla::int64>(shape.rank());
+  }
+
   static xla::XlaOp CreateReturnValue(xla::XlaBuilder* builder,
                                       const std::vector<xla::XlaOp>& outputs);
 
@@ -149,6 +157,10 @@ class XlaHelpers {
 
   // Retrieves the dynamic dimension of an input shape, or returns -1 if none.
   static xla::int64 GetDynamicDimension(const xla::Shape& shape);
+
+  static xla::XlaOp GetDimensionsSize(
+      tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
+      tensorflow::gtl::ArraySlice<const xla::int64> dimensions);
 
   // Retrieves type's minimum and maximum values.
   static MinMax MinMaxValues(xla::PrimitiveType type);
