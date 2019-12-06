@@ -186,7 +186,7 @@ include_dirs = [
 ]
 include_dirs += [
     third_party_path + '/tensorflow/bazel-tensorflow',
-    third_party_path + '/tensorflow/bazel-genfiles',
+    third_party_path + '/tensorflow/bazel-bin',
     third_party_path +
     '/tensorflow/bazel-tensorflow/external/protobuf_archive/src',
     third_party_path +
