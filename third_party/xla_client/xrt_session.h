@@ -4,6 +4,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "tensorflow/cc/client/client_session.h"
@@ -74,23 +75,24 @@ class XrtSession {
 
   explicit XrtSession(const tensorflow::SessionOptions& session_options);
 
-  const string& target() const { return target_; }
+  const std::string& target() const { return target_; }
 
   tensorflow::Scope* root() { return &root_; }
 
   tensorflow::ClientSession* session() { return &session_; }
 
-  NodeCache* GetNodeCache(const string& key) { return &node_cache_[key]; }
+  NodeCache* GetNodeCache(const std::string& key) { return &node_cache_[key]; }
 
   void Reset();
 
-  static string GetCacheKey(const string& op_name, const string& device);
+  static std::string GetCacheKey(const std::string& op_name,
+                                 const std::string& device);
 
  private:
-  string target_;
+  std::string target_;
   tensorflow::Scope root_;
   tensorflow::ClientSession session_;
-  std::map<string, NodeCache> node_cache_;
+  std::map<std::string, NodeCache> node_cache_;
 };
 
 }  // namespace xla

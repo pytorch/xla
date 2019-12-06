@@ -20,12 +20,12 @@ class ComputationClient {
    public:
     using OpaqueHandle = int64;
 
-    Data(string device, Shape shape)
+    Data(std::string device, Shape shape)
         : device_(std::move(device)), shape_(std::move(shape)) {}
 
     virtual ~Data() {}
 
-    const string& device() const { return device_; }
+    const std::string& device() const { return device_; }
 
     const Shape& shape() const { return shape_; }
 
@@ -36,7 +36,7 @@ class ComputationClient {
     virtual bool HasValue() const = 0;
 
    private:
-    string device_;
+    std::string device_;
     Shape shape_;
   };
 
@@ -45,7 +45,7 @@ class ComputationClient {
   class Computation {
    public:
     Computation(XlaComputation computation, ProgramShape program_shape,
-                std::vector<string> devices)
+                std::vector<std::string> devices)
         : computation_(std::move(computation)),
           program_shape_(std::move(program_shape)),
           devices_(std::move(devices)) {}
@@ -56,12 +56,12 @@ class ComputationClient {
 
     const ProgramShape& program_shape() const { return program_shape_; }
 
-    const std::vector<string>& devices() const { return devices_; }
+    const std::vector<std::string>& devices() const { return devices_; }
 
    private:
     XlaComputation computation_;
     ProgramShape program_shape_;
-    std::vector<string> devices_;
+    std::vector<std::string> devices_;
   };
 
   using ComputationPtr = std::shared_ptr<Computation>;
@@ -75,28 +75,28 @@ class ComputationClient {
     using PopulateFn = std::function<void(const TensorSource&, void*, size_t)>;
 
     TensorSource() = default;
-    TensorSource(Shape shape, string device, PopulateFn populate_fn)
+    TensorSource(Shape shape, std::string device, PopulateFn populate_fn)
         : shape(std::move(shape)),
           device(std::move(device)),
           populate_fn(std::move(populate_fn)) {}
 
     Shape shape;
-    string device;
+    std::string device;
     PopulateFn populate_fn;
   };
 
   struct CompileInstance {
     CompileInstance() = default;
-    CompileInstance(XlaComputation computation, string compilation_device,
-                    std::vector<string> devices, const Shape* output_shape)
+    CompileInstance(XlaComputation computation, std::string compilation_device,
+                    std::vector<std::string> devices, const Shape* output_shape)
         : computation(std::move(computation)),
           compilation_device(std::move(compilation_device)),
           devices(std::move(devices)),
           output_shape(output_shape) {}
 
     XlaComputation computation;
-    string compilation_device;
-    std::vector<string> devices;
+    std::string compilation_device;
+    std::vector<std::string> devices;
     const Shape* output_shape = nullptr;
   };
 
@@ -143,7 +143,7 @@ class ComputationClient {
 
   // Creates a Data object with no actual device handle in it. The device handle
   // will be populated in an asynchrounous fashion.
-  virtual DataPtr CreateDataPlaceholder(string device, Shape shape) = 0;
+  virtual DataPtr CreateDataPlaceholder(std::string device, Shape shape) = 0;
 
   // Transfers local tensor values to the TPU servers and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
@@ -165,7 +165,7 @@ class ComputationClient {
   virtual std::vector<DataPtr> ExecuteComputation(
       const Computation& computation,
       tensorflow::gtl::ArraySlice<const DataPtr> arguments,
-      const string& device, const ExecuteComputationOptions& options) = 0;
+      const std::string& device, const ExecuteComputationOptions& options) = 0;
 
   // Executes the computation in replicated mode.
   // The size of the arguments vector is the number of replicas to execute,
@@ -181,7 +181,7 @@ class ComputationClient {
   virtual std::vector<std::vector<DataPtr>> ExecuteReplicated(
       const Computation& computation,
       const std::vector<std::vector<DataPtr>>& arguments,
-      tensorflow::gtl::ArraySlice<const string> devices,
+      tensorflow::gtl::ArraySlice<const std::string> devices,
       const ExecuteReplicatedOptions& options) = 0;
 
   // Executes the computations in parallel. Each computation must target a
@@ -194,7 +194,7 @@ class ComputationClient {
   virtual std::vector<std::vector<DataPtr>> ExecuteParallel(
       tensorflow::gtl::ArraySlice<const Computation* const> computations,
       const std::vector<std::vector<DataPtr>>& arguments,
-      tensorflow::gtl::ArraySlice<const string> devices,
+      tensorflow::gtl::ArraySlice<const std::string> devices,
       const ExecuteParallelOptions& options) = 0;
 
   // Executes a serie of operations, whose results are input of other
@@ -205,7 +205,7 @@ class ComputationClient {
   // within the ops post-order.
   virtual std::vector<DataPtr> ExecuteChained(
       tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
-      const string& device) = 0;
+      const std::string& device) = 0;
 
   virtual std::vector<std::vector<DataPtr>> DeconstructTuple(
       tensorflow::gtl::ArraySlice<const DataPtr> tuples) = 0;
@@ -213,26 +213,27 @@ class ComputationClient {
   // Returns a unique string which identifies the resource domain of a given
   // device. Within a resource domain, handles to device memory or compiled
   // computations can be used for all devices part of such domain.
-  virtual string GetResourceDomain(const string& device) const = 0;
+  virtual std::string GetResourceDomain(const std::string& device) const = 0;
 
-  virtual string GetDefaultDevice() const = 0;
+  virtual std::string GetDefaultDevice() const = 0;
 
   virtual size_t GetNumDevices() const = 0;
 
-  virtual std::vector<string> GetLocalDevices() const = 0;
+  virtual std::vector<std::string> GetLocalDevices() const = 0;
 
-  virtual std::vector<string> GetAllDevices() const = 0;
+  virtual std::vector<std::string> GetAllDevices() const = 0;
 
-  virtual void SetReplicationDevices(std::vector<string> devices) = 0;
+  virtual void SetReplicationDevices(std::vector<std::string> devices) = 0;
 
-  virtual const std::vector<string>& GetReplicationDevices() const = 0;
+  virtual const std::vector<std::string>& GetReplicationDevices() const = 0;
 
   virtual void SetRngSeed(size_t seed) = 0;
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.
-  ComputationPtr Compile(XlaComputation computation, string compilation_device,
-                         std::vector<string> devices,
+  ComputationPtr Compile(XlaComputation computation,
+                         std::string compilation_device,
+                         std::vector<std::string> devices,
                          const Shape* output_shape);
 
   // Retrieves the set of devices to be passed to the computation client
@@ -245,7 +246,7 @@ class ComputationClient {
 
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.
-  static int64 GetDeviceOrdinal(const string& device);
+  static int64 GetDeviceOrdinal(const std::string& device);
 
   // Returns the ComputationClient singleton.
   static ComputationClient* Get();

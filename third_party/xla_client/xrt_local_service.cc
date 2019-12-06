@@ -13,7 +13,7 @@
 namespace xla {
 namespace {
 
-void FillServerDef(const string& cluster_spec, const string& job_name,
+void FillServerDef(const std::string& cluster_spec, const std::string& job_name,
                    int task_index, tensorflow::ServerDef* options) {
   options->set_protocol("grpc");
   options->set_job_name(job_name);
@@ -24,12 +24,12 @@ void FillServerDef(const string& cluster_spec, const string& job_name,
   for (auto& job_str : absl::StrSplit(cluster_spec, ',')) {
     tensorflow::JobDef* job_def = cluster->add_job();
     // Split each entry in the flag into 2 pieces, separated by "|".
-    std::vector<string> job_pieces = absl::StrSplit(job_str, '|');
+    std::vector<std::string> job_pieces = absl::StrSplit(job_str, '|');
     XLA_CHECK_EQ(2, job_pieces.size()) << job_str;
-    const string& cjob_name = job_pieces[0];
-    const string& spec = job_pieces[1];
+    const std::string& cjob_name = job_pieces[0];
+    const std::string& spec = job_pieces[1];
     job_def->set_name(cjob_name);
-    std::vector<string> host_ports = absl::StrSplit(spec, ';');
+    std::vector<std::string> host_ports = absl::StrSplit(spec, ';');
     for (size_t i = 0; i < host_ports.size(); ++i) {
       (*job_def->mutable_tasks())[i] = host_ports[i];
     }
@@ -49,8 +49,8 @@ void FillServerDef(const string& cluster_spec, const string& job_name,
 
 }  // namespace
 
-XrtLocalService::XrtLocalService(const string& cluster_spec,
-                                 const string& job_name, int task_index) {
+XrtLocalService::XrtLocalService(const std::string& cluster_spec,
+                                 const std::string& job_name, int task_index) {
   tensorflow::ServerDef server_def;
   FillServerDef(cluster_spec, job_name, task_index, &server_def);
   TF_CHECK_OK(tensorflow::NewServer(server_def, &server_));

@@ -28,7 +28,7 @@ size_t SingleShapeHash(const Shape& shape, size_t seed) {
   return HashCombine(seed, static_cast<int>(shape.element_type()));
 }
 
-void MaybeSaveHloGraph(const string& hlo_text, size_t index) {
+void MaybeSaveHloGraph(const std::string& hlo_text, size_t index) {
   static const std::string save_file =
       sys_util::GetEnvString("XLA_SAVE_HLO_FILE", "");
   if (!save_file.empty()) {
@@ -51,7 +51,7 @@ StatusOr<std::unique_ptr<HloModule>> CreateModuleFromProto(
   return HloModule::CreateFromProto(proto, hlo_module_config);
 }
 
-StatusOr<string> GetComputationHloText(const XlaComputation& computation) {
+StatusOr<std::string> GetComputationHloText(const XlaComputation& computation) {
   TF_ASSIGN_OR_RETURN(auto hlo_module,
                       CreateModuleFromProto(computation.proto()));
   return hlo_module->ToString();
@@ -63,7 +63,7 @@ void ReportComputationError(
     tensorflow::gtl::ArraySlice<const Shape* const> output_shapes) {
   std::stringstream ss;
   for (size_t i = 0; i < computations.size(); ++i) {
-    string hlo_text = GetComputationHloText(*computations[i]).ValueOrDie();
+    std::string hlo_text = GetComputationHloText(*computations[i]).ValueOrDie();
     MaybeSaveHloGraph(hlo_text, i);
     ss << ">>> Dumping Computation " << i << "\n";
     ss << hlo_text << "\n";

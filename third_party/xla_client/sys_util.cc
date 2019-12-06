@@ -9,14 +9,14 @@
 namespace xla {
 namespace sys_util {
 
-string GetEnvString(const char* name, const string& defval) {
+std::string GetEnvString(const char* name, const std::string& defval) {
   const char* env = std::getenv(name);
   return env != nullptr ? env : defval;
 }
 
-string GetEnvOrdinalPath(const char* name, const string& defval,
-                         const char* ordinal_env) {
-  string path = GetEnvString(name, defval);
+std::string GetEnvOrdinalPath(const char* name, const std::string& defval,
+                              const char* ordinal_env) {
+  std::string path = GetEnvString(name, defval);
   if (!path.empty()) {
     int64 ordinal = GetEnvInt(ordinal_env, -1);
     if (ordinal >= 0) {

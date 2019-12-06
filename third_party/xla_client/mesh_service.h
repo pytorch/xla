@@ -14,7 +14,7 @@ class MeshService {
   struct Impl;
 
  public:
-  MeshService(const string& address, grpc::Config config);
+  MeshService(const std::string& address, grpc::Config config);
 
   ~MeshService();
 
@@ -28,14 +28,14 @@ class MeshClient {
  public:
   static MeshClient* Get();
 
-  const string& address() const;
+  const std::string& address() const;
 
   grpc::Config GetConfig() const;
 
-  void Rendezvous(const string& tag) const;
+  void Rendezvous(const std::string& tag) const;
 
  private:
-  MeshClient(const string& address);
+  MeshClient(const std::string& address);
 
   ~MeshClient();
 
