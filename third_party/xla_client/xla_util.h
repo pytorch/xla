@@ -18,7 +18,7 @@ StatusOr<std::unique_ptr<HloModule>> CreateModuleFromProto(
     const DebugOptions& debug_options = DebugOptions());
 
 // Returns a textual representation of the input XLA computation.
-StatusOr<string> GetComputationHloText(const XlaComputation& computation);
+StatusOr<std::string> GetComputationHloText(const XlaComputation& computation);
 
 void ReportComputationError(
     const Status& status,

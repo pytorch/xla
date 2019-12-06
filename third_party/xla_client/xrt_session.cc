@@ -15,7 +15,8 @@ void XrtSession::Reset() {
   }
 }
 
-string XrtSession::GetCacheKey(const string& op_name, const string& device) {
+std::string XrtSession::GetCacheKey(const std::string& op_name,
+                                    const std::string& device) {
   return absl::StrCat(op_name, ";", device);
 }
 

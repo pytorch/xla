@@ -72,7 +72,7 @@ class MeshServiceImpl : public grpc::MeshService::Service {
     std::atomic<size_t> release_count;
   };
 
-  std::shared_ptr<RendezvousData> GetRendezvous(const string& tag) {
+  std::shared_ptr<RendezvousData> GetRendezvous(const std::string& tag) {
     std::lock_guard<std::mutex> lock(lock_);
     auto it = rendezvous_map_.find(tag);
     if (it == rendezvous_map_.end()) {
@@ -85,7 +85,7 @@ class MeshServiceImpl : public grpc::MeshService::Service {
     return it->second;
   }
 
-  void ReleaseRendezvous(const string& tag,
+  void ReleaseRendezvous(const std::string& tag,
                          const std::shared_ptr<RendezvousData>& rendezvous) {
     if (rendezvous->release_count.fetch_add(1) == 0) {
       std::lock_guard<std::mutex> lock(lock_);
@@ -95,7 +95,8 @@ class MeshServiceImpl : public grpc::MeshService::Service {
 
   std::mutex lock_;
   grpc::Config config_;
-  std::unordered_map<string, std::shared_ptr<RendezvousData>> rendezvous_map_;
+  std::unordered_map<std::string, std::shared_ptr<RendezvousData>>
+      rendezvous_map_;
 };
 
 ::grpc::Status MeshServiceImpl::GetConfig(::grpc::ServerContext* context,
@@ -123,7 +124,8 @@ class MeshServiceImpl : public grpc::MeshService::Service {
 }  // namespace
 
 struct MeshService::Impl {
-  Impl(const string& address, grpc::Config config) : impl(std::move(config)) {
+  Impl(const std::string& address, grpc::Config config)
+      : impl(std::move(config)) {
     ::grpc::ServerBuilder builder;
     builder.AddListeningPort(address, ::grpc::InsecureServerCredentials());
     builder.RegisterService(&impl);
@@ -134,13 +136,13 @@ struct MeshService::Impl {
   std::unique_ptr<::grpc::Server> server;
 };
 
-MeshService::MeshService(const string& address, grpc::Config config)
+MeshService::MeshService(const std::string& address, grpc::Config config)
     : impl_(new Impl(address, std::move(config))) {}
 
 MeshService::~MeshService() {}
 
 struct MeshClient::Impl {
-  explicit Impl(const string& address) : address(address) {
+  explicit Impl(const std::string& address) : address(address) {
     channel =
         ::grpc::CreateChannel(address, ::grpc::InsecureChannelCredentials());
     stub = grpc::MeshService::NewStub(channel);
@@ -148,12 +150,12 @@ struct MeshClient::Impl {
 
   std::shared_ptr<::grpc::Channel> channel;
   std::unique_ptr<grpc::MeshService::Stub> stub;
-  string address;
+  std::string address;
 };
 
 MeshClient* MeshClient::Get() {
   auto create_client = []() {
-    string mesh_service_address =
+    std::string mesh_service_address =
         sys_util::GetEnvString("XRT_MESH_SERVICE_ADDRESS", "");
     return !mesh_service_address.empty() ? new MeshClient(mesh_service_address)
                                          : nullptr;
@@ -162,7 +164,7 @@ MeshClient* MeshClient::Get() {
   return client;
 }
 
-MeshClient::MeshClient(const string& address) : impl_(new Impl(address)) {
+MeshClient::MeshClient(const std::string& address) : impl_(new Impl(address)) {
   int64 connect_wait_seconds =
       sys_util::GetEnvInt("XRT_MESH_CONNECT_WAIT", 300);
   TF_LOG(INFO) << "Waiting to connect to client mesh master ("
@@ -175,7 +177,7 @@ MeshClient::MeshClient(const string& address) : impl_(new Impl(address)) {
 
 MeshClient::~MeshClient() {}
 
-const string& MeshClient::address() const { return impl_->address; }
+const std::string& MeshClient::address() const { return impl_->address; }
 
 grpc::Config MeshClient::GetConfig() const {
   ::grpc::ClientContext context;
@@ -188,7 +190,7 @@ grpc::Config MeshClient::GetConfig() const {
   return std::move(*response.mutable_config());
 }
 
-void MeshClient::Rendezvous(const string& tag) const {
+void MeshClient::Rendezvous(const std::string& tag) const {
   ::grpc::ClientContext context;
   grpc::RendezvousRequest reqeust;
   grpc::RendezvousResponse response;

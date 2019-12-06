@@ -2,6 +2,7 @@
 #define TENSORFLOW_COMPILER_XLA_RPC_XRT_LOCAL_SERVICE_H_
 
 #include <memory>
+#include <string>
 
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -24,7 +25,7 @@ class XrtLocalService {
   // represents this job.
   // The task_index must be within the range of the ADDRESS_LIST of the current
   // job in the cluster_spec.
-  XrtLocalService(const string& cluster_spec, const string& job_name,
+  XrtLocalService(const std::string& cluster_spec, const std::string& job_name,
                   int task_index);
 
   // Starts the service.

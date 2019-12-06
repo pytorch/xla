@@ -23,7 +23,7 @@ struct Sample {
   double value = 0;
 };
 
-using MetricReprFn = std::function<string(double)>;
+using MetricReprFn = std::function<std::string(double)>;
 
 // Class used to collect time-stamped numeric samples. The samples are stored in
 // a circular buffer whose size can be configured at constructor time.
@@ -47,7 +47,7 @@ class MetricData {
   // is not nullptr, it will receive the count of the posted values.
   std::vector<Sample> Samples(double* accumulator, size_t* total_samples) const;
 
-  string Repr(double value) const { return repr_fn_(value); }
+  std::string Repr(double value) const { return repr_fn_(value); }
 
  private:
   mutable std::mutex lock_;
@@ -72,12 +72,12 @@ class CounterData {
 };
 
 // Emits the value in a to_string() conversion.
-string MetricFnValue(double value);
+std::string MetricFnValue(double value);
 // Emits the value in a humanized bytes representation.
-string MetricFnBytes(double value);
+std::string MetricFnBytes(double value);
 // Emits the value in a humanized time representation. The value is expressed in
 // nanoseconds EPOCH time.
-string MetricFnTime(double value);
+std::string MetricFnTime(double value);
 
 // The typical use of a Metric is one in which it gets created either in a
 // global scope context:
@@ -90,10 +90,10 @@ string MetricFnTime(double value);
 //   }
 class Metric {
  public:
-  explicit Metric(string name, MetricReprFn repr_fn = MetricFnValue,
+  explicit Metric(std::string name, MetricReprFn repr_fn = MetricFnValue,
                   size_t max_samples = 1024);
 
-  const string& Name() const { return name_; }
+  const std::string& Name() const { return name_; }
 
   double Accumulator() const;
 
@@ -103,12 +103,12 @@ class Metric {
 
   std::vector<Sample> Samples(double* accumulator, size_t* total_samples) const;
 
-  string Repr(double value) const;
+  std::string Repr(double value) const;
 
  private:
   MetricData* GetData() const;
 
-  string name_;
+  std::string name_;
   MetricReprFn repr_fn_;
   size_t max_samples_;
   mutable std::shared_ptr<MetricData> data_ptr_;
@@ -123,7 +123,7 @@ class Metric {
 //   counter->AddValue(+1);
 class Counter {
  public:
-  explicit Counter(string name);
+  explicit Counter(std::string name);
 
   void AddValue(xla::int64 value) { GetData()->AddValue(value); }
 
@@ -132,7 +132,7 @@ class Counter {
  private:
   CounterData* GetData() const;
 
-  string name_;
+  std::string name_;
   mutable std::shared_ptr<CounterData> data_ptr_;
   mutable std::atomic<CounterData*> data_;
 };
@@ -154,25 +154,25 @@ class Counter {
   } while (0)
 
 // Creates a report with the current metrics statistics.
-string CreateMetricReport();
+std::string CreateMetricReport();
 
 // Returns the currently registered metric names. Note that the list can grow
 // since metrics are usualy function intialized (they are static function
 // variables).
-std::vector<string> GetMetricNames();
+std::vector<std::string> GetMetricNames();
 
 // Retrieves the metric data of a given metric, or nullptr if such metric does
 // not exist.
-MetricData* GetMetric(const string& name);
+MetricData* GetMetric(const std::string& name);
 
 // Returns the currently registered counter names. Note that the list can grow
 // since counters are usualy function intialized (they are static function
 // variables).
-std::vector<string> GetCounterNames();
+std::vector<std::string> GetCounterNames();
 
 // Retrieves the counter data of a given counter, or nullptr if such counter
 // does not exist.
-CounterData* GetCounter(const string& name);
+CounterData* GetCounter(const std::string& name);
 
 // Scope based utility class to measure the time the code takes within a given
 // C++ scope.

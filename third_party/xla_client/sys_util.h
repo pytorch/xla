@@ -1,15 +1,18 @@
 #ifndef TENSORFLOW_COMPILER_XLA_RPC_SYS_UTIL_H_
 #define TENSORFLOW_COMPILER_XLA_RPC_SYS_UTIL_H_
 
+#include <string>
+
 #include "tensorflow/compiler/xla/types.h"
 
 namespace xla {
 namespace sys_util {
 
-string GetEnvString(const char* name, const string& defval);
+std::string GetEnvString(const char* name, const std::string& defval);
 
-string GetEnvOrdinalPath(const char* name, const string& defval,
-                         const char* ordinal_env = "XRT_SHARD_LOCAL_ORDINAL");
+std::string GetEnvOrdinalPath(
+    const char* name, const std::string& defval,
+    const char* ordinal_env = "XRT_SHARD_LOCAL_ORDINAL");
 
 int64 GetEnvInt(const char* name, int64 defval);
 

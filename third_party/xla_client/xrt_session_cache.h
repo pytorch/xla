@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <utility>
 
 #include "tensorflow/compiler/xla/types.h"
@@ -63,7 +64,7 @@ class XrtSessionCache {
   };
 
   // Map from session target to XrtSession reference.
-  using SessionMap = std::map<string, Ref>;
+  using SessionMap = std::map<std::string, Ref>;
 
   XrtSessionCache(tensorflow::ConfigProto config,
                   std::function<void(XrtSession*)> initfn);
@@ -73,22 +74,22 @@ class XrtSessionCache {
   // Retrieves a new session reference, for which the caller will have exclusive
   // access. Once the reference object is destroyed, the session will be
   // returned to the cache.
-  Ref GetSession(const string& target);
+  Ref GetSession(const std::string& target);
 
   // Retrieves an XRT session by first checking the references already stored in
   // the session_map, and, if missing, one will be fetched from the cache and
   // added to the session_map.
-  XrtSession* GetSession(const string& target, SessionMap* session_map);
+  XrtSession* GetSession(const std::string& target, SessionMap* session_map);
 
   void AddSession(std::shared_ptr<XrtSession> session);
 
  private:
-  std::shared_ptr<XrtSession> CreateSession(const string& target) const;
+  std::shared_ptr<XrtSession> CreateSession(const std::string& target) const;
 
   tensorflow::ConfigProto config_;
   std::function<void(XrtSession*)> initfn_;
   std::mutex lock_;
-  std::map<string, std::deque<std::shared_ptr<XrtSession>>> session_map_;
+  std::map<std::string, std::deque<std::shared_ptr<XrtSession>>> session_map_;
 };
 
 }  // namespace xla
