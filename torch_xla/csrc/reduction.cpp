@@ -110,7 +110,7 @@ xla::XlaOp CreateProduct(
   return result;
 }
 
-xla::XlaOp AverageValue(const xla::XlaOp& input, const xla::XlaOp& reduced) {
+xla::XlaOp AverageValue(xla::XlaOp input, xla::XlaOp reduced) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp num_elements = XlaHelpers::GetDimensionsSize(
       {input}, XlaHelpers::GetAllDimensions(input_shape));
