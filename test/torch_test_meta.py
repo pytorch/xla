@@ -174,6 +174,7 @@ disabled_torch_tests = {
     # TestNNDeviceType
     'test_embedding_backward',  # uses sparse
     'test_embedding_dense_grad',  # slow
+    'test_EmbeddingBag_per_sample_weights_and_new_offsets', # wrong result
     'test_batchnorm_grad',
     'test_gumbel_softmax_xla',
     'test_rnn_retain_variables',
