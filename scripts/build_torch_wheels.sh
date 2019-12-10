@@ -62,7 +62,7 @@ function install_and_setup_conda() {
   conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
-  conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard hypothesis psutil
+  conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard hypothesis
   /usr/bin/yes | pip install --upgrade google-api-python-client
   /usr/bin/yes | pip install --upgrade oauth2client
   /usr/bin/yes | pip install --upgrade google-cloud-storage

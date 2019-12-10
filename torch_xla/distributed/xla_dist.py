@@ -660,16 +660,9 @@ class DistributedExecutor(object):
       if self.docker_image:
         rm_container = ['docker', 'rm', '-f', self.docker_container]
         self._build_and_run_ssh(rm_container, client_worker)
-      if self.conda_env:
-        # Issue torch_xla.utils.pkill in conda env.
-        rm_pgroup_cmds = []
-        rm_pgroup_cmds.append(['.', '/etc/profile'])  # For non-interactive shell.
-        rm_pgroup_cmds.append(['conda', 'activate', self.conda_env])
-        rm_pgroup_cmds.append(['python', '-m', 'torch_xla.utils.pkill',
-                '--script_name', remote_script])
-        rm_pgroup = [concat_cmd_list(cmd) for cmd in rm_pgroup_cmds]
-        rm_pgroup = concat_cmd_list(rm_pgroup, delimiter='; ')
-        self._build_and_run_ssh(rm_pgroup, client_worker, log=False)
+      rm_pgroup = ('kill -9 -$(ps xao pid,pgid,cmd | grep {} | grep -v grep'
+                   ' | awk "{{print \$2}}")').format(remote_script)
+      self._build_and_run_ssh(rm_pgroup, client_worker, log=False)
 
     threads = []
     for client_worker in script_map:
