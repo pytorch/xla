@@ -59,17 +59,16 @@ std::string GetTensorsDump(
   return coverter(nodes);
 }
 
-std::string SetCurrentDevice(const std::string& device_str) {
-  c10::Device prev_device =
-      XLATensorImpl::SetCurrentAtenDevice(c10::Device(device_str));
+std::string SetCurrentThreadDevice(const std::string& device_str) {
+  c10::Device prev_device = bridge::SetCurrentDevice(c10::Device(device_str));
   std::stringstream ss;
   ss << prev_device;
   return ss.str();
 }
 
-std::string GetCurrentDevice() {
+std::string GetCurrentThreadDevice() {
   std::stringstream ss;
-  ss << XLATensorImpl::GetCurrentAtenDevice();
+  ss << bridge::GetCurrentAtenDevice();
   return ss.str();
 }
 
@@ -417,9 +416,10 @@ void InitXlaModuleBindings(py::module m) {
     }
     return new_token;
   });
-  m.def("_xla_set_default_device",
-        [](const std::string& device) { return SetCurrentDevice(device); });
-  m.def("_xla_get_default_device", []() { return GetCurrentDevice(); });
+  m.def("_xla_set_default_device", [](const std::string& device) {
+    return SetCurrentThreadDevice(device);
+  });
+  m.def("_xla_get_default_device", []() { return GetCurrentThreadDevice(); });
   m.def("_xla_sync_multi",
         [](const std::vector<at::Tensor>& tensors,
            const std::vector<std::string>& devices, bool wait,

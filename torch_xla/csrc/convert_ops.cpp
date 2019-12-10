@@ -18,10 +18,7 @@ xla::XlaOp ExplicitBooleanConvert(xla::XlaOp op, xla::PrimitiveType from) {
 
 xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
                      xla::PrimitiveType to, const Device* device) {
-  if (device == nullptr) {
-    device = GetDefaultDevice();
-  }
-  if (device->hw_type != DeviceType::TPU) {
+  if (GetDeviceOrCurrent(device).hw_type != DeviceType::TPU) {
     return xla::ConvertElementType(op, to);
   }
   switch (from) {
@@ -51,12 +48,13 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
 }
 
 xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {
-  const Device* device = GetDefaultDevice();
+  Device xla_device = GetCurrentDevice();
   return from != xla::PrimitiveType::PRED
              ? op
-             : ConvertTo(op, from,
-                         GetDevicePrimitiveType(xla::PrimitiveType::U8, device),
-                         device);
+             : ConvertTo(
+                   op, from,
+                   GetDevicePrimitiveType(xla::PrimitiveType::U8, &xla_device),
+                   &xla_device);
 }
 
 xla::XlaOp ConvertToNumeric(xla::XlaOp op) {

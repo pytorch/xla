@@ -546,19 +546,18 @@ std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
 
 xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
                               const Device* device) {
-  if (device == nullptr) {
-    device = GetDefaultDevice();
-  }
+  Device xla_device = GetDeviceOrCurrent(device);
   xla::Shape computed_shape;
   if (shape == nullptr) {
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
     computed_shape = MakeTorchTensorLayout(
-        dimensions, XlaTypeFromTensorType(tensor.type().scalarType(), *device));
+        dimensions,
+        XlaTypeFromTensorType(tensor.type().scalarType(), xla_device));
     shape = &computed_shape;
   }
   xla::Literal literal(*shape);
   PopulateTensorBuffer(tensor, *shape, literal.untyped_data(),
-                       literal.size_bytes(), *device);
+                       literal.size_bytes(), xla_device);
   return literal;
 }
 
@@ -617,13 +616,11 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
 
 xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
                                             const Device* device) {
-  if (device == nullptr) {
-    device = GetDefaultDevice();
-  }
+  Device xla_device = GetDeviceOrCurrent(device);
   return MakeArrayShapeFromDimensions(
       XlaHelpers::I64List(tensor.sizes()),
-      MakeXlaPrimitiveType(tensor.type().scalarType(), device),
-      device->hw_type);
+      MakeXlaPrimitiveType(tensor.type().scalarType(), &xla_device),
+      xla_device.hw_type);
 }
 
 at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
@@ -655,32 +652,30 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
 
 xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
                                           const Device* device) {
-  if (device == nullptr) {
-    device = GetDefaultDevice();
-  }
+  Device xla_device = GetDeviceOrCurrent(device);
   switch (type) {
     case xla::PrimitiveType::F64:
       if (UseBF16()) {
         return xla::PrimitiveType::BF16;
       }
-      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::F64
-                                                : xla::PrimitiveType::F32;
+      return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::F64
+                                                   : xla::PrimitiveType::F32;
     case xla::PrimitiveType::F32:
       // When PyTorch will support native BF16 type, the global configuration
       // can be replaced (or augmented) with the proper mapping.
       return UseBF16() ? xla::PrimitiveType::BF16 : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U8:
-      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::U8
-                                                : xla::PrimitiveType::S32;
+      return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::U8
+                                                   : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S8:
-      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S8
-                                                : xla::PrimitiveType::S32;
+      return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::S8
+                                                   : xla::PrimitiveType::S32;
     case xla::PrimitiveType::U16:
-      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::U16
-                                                : xla::PrimitiveType::S32;
+      return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::U16
+                                                   : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S16:
-      return device->hw_type != DeviceType::TPU ? xla::PrimitiveType::S16
-                                                : xla::PrimitiveType::S32;
+      return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::S16
+                                                   : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S64:
       return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
     default:

@@ -44,7 +44,7 @@ struct XlaOptions {
     }
   }
 
-  Device get_device() const { return device ? *device : *GetDefaultDevice(); }
+  Device get_device() const { return device ? *device : GetCurrentDevice(); }
 
   at::ScalarType get_scalar_type(
       at::ScalarType defval = at::ScalarType::Float) const {
