@@ -20,6 +20,7 @@ following our GCP Tutorials:
 * [Training PyTorch models on Cloud TPU Pods](https://cloud.google.com/tpu/docs/tutorials/pytorch-pod)
 
 ## Get started with our Colab Tutorials
+* [Fast Neural Style Transfer](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/style_transfer_inference-xrt-1-15.ipynb)
 * [Training MNIST on TPUs](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/mnist-training-xrt-1-15.ipynb)
 * [Training ResNet18 on TPUs with Cifar10 dataset](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet18-training-xrt-1-15.ipynb)
 * [Inference with Pretrained ResNet50 Model](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet50-inference-xrt-1-15.ipynb)
