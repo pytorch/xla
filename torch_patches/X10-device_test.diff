@@ -1,7 +1,7 @@
-diff --git a/test/common_device_type.py b/test/common_device_type.py
+diff --git a/torch/testing/_internal/common_device_type.py b/torch/testing/_internal/common_device_type.py
 index a23696c29c..d7eb93373b 100644
---- a/test/common_device_type.py
-+++ b/test/common_device_type.py
+--- a/torch/testing/_internal/common_device_type.py
++++ b/torch/testing/_internal/common_device_type.py
 @@ -3,6 +3,7 @@ import threading
  from functools import wraps
  import unittest
