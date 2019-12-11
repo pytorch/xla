@@ -7,7 +7,7 @@ index a23696c29c..d7eb93373b 100644
  import unittest
  import torch
 +import copy
- from common_utils import TestCase, TEST_WITH_ROCM, TEST_MKL, \
+ from torch.testlib.common_utils import TestCase, TEST_WITH_ROCM, TEST_MKL, \
      skipCUDANonDefaultStreamIf
 
 @@ -191,7 +192,7 @@ class DeviceTypeTestBase(TestCase):
