@@ -2858,14 +2858,15 @@ at::Tensor& AtenXlaType::unsqueeze_(at::Tensor& self, int64_t dim) {
 
 at::Tensor AtenXlaType::upsample_bilinear2d(const at::Tensor& self,
                                             at::IntArrayRef output_size,
-                                            bool align_corners) {
+                                            bool align_corners, double scales_1,
+                                            double scales_2) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   // Only the XLA TPU backend for now implements the CustomCall required by our
   // XLA lowering.
   if (self_tensor.GetDevice().hw_type != DeviceType::TPU) {
-    return AtenXlaTypeDefault::upsample_bilinear2d(self, output_size,
-                                                   align_corners);
+    return AtenXlaTypeDefault::upsample_bilinear2d(
+        self, output_size, align_corners, scales_1, scales_2);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_bilinear2d(
       self_tensor, xla::util::ToVector<xla::int64>(output_size),
@@ -2874,14 +2875,16 @@ at::Tensor AtenXlaType::upsample_bilinear2d(const at::Tensor& self,
 
 at::Tensor AtenXlaType::upsample_bilinear2d_backward(
     const at::Tensor& grad_output, at::IntArrayRef output_size,
-    at::IntArrayRef input_size, bool align_corners) {
+    at::IntArrayRef input_size, bool align_corners, double scales_1,
+    double scales_2) {
   XLA_FN_COUNTER("xla::");
   XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
   // Only the XLA TPU backend for now implements the CustomCall required by our
   // XLA lowering.
   if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU) {
     return AtenXlaTypeDefault::upsample_bilinear2d_backward(
-        grad_output, output_size, input_size, align_corners);
+        grad_output, output_size, input_size, align_corners, scales_1,
+        scales_2);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_bilinear2d_backward(
       grad_output_tensor, xla::util::ToVector<xla::int64>(output_size),
@@ -2889,13 +2892,15 @@ at::Tensor AtenXlaType::upsample_bilinear2d_backward(
 }
 
 at::Tensor AtenXlaType::upsample_nearest2d(const at::Tensor& self,
-                                           at::IntArrayRef output_size) {
+                                           at::IntArrayRef output_size,
+                                           double scales_1, double scales_2) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   // Only the XLA TPU backend for now implements the CustomCall required by our
   // XLA lowering.
   if (self_tensor.GetDevice().hw_type != DeviceType::TPU) {
-    return AtenXlaTypeDefault::upsample_nearest2d(self, output_size);
+    return AtenXlaTypeDefault::upsample_nearest2d(self, output_size, scales_1,
+                                                  scales_2);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
       self_tensor, xla::util::ToVector<xla::int64>(output_size)));
@@ -2903,14 +2908,14 @@ at::Tensor AtenXlaType::upsample_nearest2d(const at::Tensor& self,
 
 at::Tensor AtenXlaType::upsample_nearest2d_backward(
     const at::Tensor& grad_output, at::IntArrayRef output_size,
-    at::IntArrayRef input_size) {
+    at::IntArrayRef input_size, double scales_1, double scales_2) {
   XLA_FN_COUNTER("xla::");
   XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
   // Only the XLA TPU backend for now implements the CustomCall required by our
   // XLA lowering.
   if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU) {
     return AtenXlaTypeDefault::upsample_nearest2d_backward(
-        grad_output, output_size, input_size);
+        grad_output, output_size, input_size, scales_1, scales_2);
   }
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d_backward(
       grad_output_tensor, xla::util::ToVector<xla::int64>(output_size),

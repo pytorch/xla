@@ -905,19 +905,25 @@ class AtenXlaType {
 
   static at::Tensor upsample_bilinear2d(const at::Tensor& self,
                                         at::IntArrayRef output_size,
-                                        bool align_corners);
+                                        bool align_corners, double scales_1,
+                                        double scales_2);
 
   static at::Tensor upsample_bilinear2d_backward(const at::Tensor& grad_output,
                                                  at::IntArrayRef output_size,
                                                  at::IntArrayRef input_size,
-                                                 bool align_corners);
+                                                 bool align_corners,
+                                                 double scales_1,
+                                                 double scales_2);
 
   static at::Tensor upsample_nearest2d(const at::Tensor& self,
-                                       at::IntArrayRef output_size);
+                                       at::IntArrayRef output_size,
+                                       double scales_1, double scales_2);
 
   static at::Tensor upsample_nearest2d_backward(const at::Tensor& grad_output,
                                                 at::IntArrayRef output_size,
-                                                at::IntArrayRef input_size);
+                                                at::IntArrayRef input_size,
+                                                double scales_1,
+                                                double scales_2);
 
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 
