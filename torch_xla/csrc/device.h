@@ -46,12 +46,8 @@ struct Device {
 
 const Device* GetDefaultDevice();
 
-Device GetCurrentDevice();
-
-Device SetCurrentDevice(const Device& device);
-
-static inline Device GetDeviceOrCurrent(const Device* device) {
-  return device != nullptr ? *device : GetCurrentDevice();
+static inline const Device& GetDeviceOrDefault(const Device* device) {
+  return device != nullptr ? *device : *GetDefaultDevice();
 }
 
 }  // namespace torch_xla

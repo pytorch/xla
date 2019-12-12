@@ -57,10 +57,6 @@ std::string ToXlaString(const c10::Device& device);
 
 c10::Device AtenDefaultDevice();
 
-c10::Device SetCurrentDevice(const c10::Device& device);
-
-c10::Device GetCurrentAtenDevice();
-
 at::Tensor XlaToAtenTensor(XLATensor xla_tensor,
                            const at::TensorOptions& tensor_options);
 

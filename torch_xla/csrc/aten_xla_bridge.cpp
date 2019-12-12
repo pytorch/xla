@@ -175,7 +175,7 @@ Device AtenDeviceToXlaDevice(const c10::Device& device) {
     }
   }
   if (ordinal < 0) {
-    return GetCurrentDevice();
+    return *GetDefaultDevice();
   }
   return AtenXlaDeviceMapper::Get()->GetDeviceFromOrdinal(ordinal);
 }
@@ -191,16 +191,6 @@ std::string ToXlaString(const c10::Device& device) {
 
 c10::Device AtenDefaultDevice() {
   return XlaDeviceToAtenDevice(*GetDefaultDevice());
-}
-
-c10::Device SetCurrentDevice(const c10::Device& device) {
-  c10::Device prev_device = XLATensorImpl::SetCurrentAtenDevice(device);
-  SetCurrentDevice(AtenDeviceToXlaDevice(device));
-  return prev_device;
-}
-
-c10::Device GetCurrentAtenDevice() {
-  return XLATensorImpl::GetCurrentAtenDevice();
 }
 
 at::Tensor XlaToAtenTensor(XLATensor xla_tensor,
