@@ -68,10 +68,12 @@ XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
       XLATensor::gt(target, 0),
       XLATensor::neg(XLATensor::mul(target, expanded_grad_output)),
       XLATensor::full_like(input, 0, input.GetDevice(), c10::nullopt));
-  double input_elem_count = xla::ShapeUtil::ElementsIn(input_shape_ref.get());
-  return reduction == ReductionMode::kMean
-             ? XLATensor::div(grad_input, input_elem_count)
-             : grad_input;
+  if (reduction == ReductionMode::kMean) {
+    XLATensor dims_size = XLATensor::get_dimensions_size(
+        input, XlaHelpers::GetAllDimensions(input_shape_ref));
+    grad_input = XLATensor::div(grad_input, dims_size);
+  }
+  return grad_input;
 }
 
 XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal) {
@@ -142,7 +144,9 @@ XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
     case ReductionMode::kSum:
       return XLATensor::mul(elementwise_loss_backward, grad_output);
     case ReductionMode::kMean: {
-      double grad_scale = xla::ShapeUtil::ElementsIn(broadcasted_input.shape());
+      XLATensor grad_scale = XLATensor::get_dimensions_size(
+          broadcasted_input,
+          XlaHelpers::GetAllDimensions(broadcasted_input.shape()));
       return XLATensor::mul(
           XLATensor::div(elementwise_loss_backward, grad_scale), grad_output);
     }

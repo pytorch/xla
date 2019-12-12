@@ -8,6 +8,8 @@
 namespace torch_xla {
 namespace {
 
+thread_local Device g_current_device;
+
 std::string DeviceTypeToString(DeviceType hw_type) {
   switch (hw_type) {
     case DeviceType::CPU:
@@ -64,6 +66,14 @@ std::string Device::ToString() const {
 const Device* GetDefaultDevice() {
   static const Device* default_device = new Device("");
   return default_device;
+}
+
+Device GetCurrentDevice() { return g_current_device; }
+
+Device SetCurrentDevice(const Device& device) {
+  Device current = g_current_device;
+  g_current_device = device;
+  return current;
 }
 
 }  // namespace torch_xla

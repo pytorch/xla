@@ -9,7 +9,7 @@ XrtSessionCache::XrtSessionCache(tensorflow::ConfigProto config,
                                  std::function<void(XrtSession*)> initfn)
     : config_(std::move(config)), initfn_(std::move(initfn)) {}
 
-XrtSessionCache::Ref XrtSessionCache::GetSession(const string& target) {
+XrtSessionCache::Ref XrtSessionCache::GetSession(const std::string& target) {
   std::lock_guard<std::mutex> lock(lock_);
   auto& session_queue = session_map_[target];
   if (!session_queue.empty()) {
@@ -21,7 +21,7 @@ XrtSessionCache::Ref XrtSessionCache::GetSession(const string& target) {
   return Ref(this, CreateSession(target));
 }
 
-XrtSession* XrtSessionCache::GetSession(const string& target,
+XrtSession* XrtSessionCache::GetSession(const std::string& target,
                                         SessionMap* session_map) {
   auto it = session_map->find(target);
   if (it == session_map->end()) {
@@ -36,7 +36,7 @@ void XrtSessionCache::AddSession(std::shared_ptr<XrtSession> session) {
 }
 
 std::shared_ptr<XrtSession> XrtSessionCache::CreateSession(
-    const string& target) const {
+    const std::string& target) const {
   XLA_COUNTER("XrtSessionCount", 1);
   tensorflow::SessionOptions session_options;
   session_options.env = tensorflow::Env::Default();
@@ -46,7 +46,7 @@ std::shared_ptr<XrtSession> XrtSessionCache::CreateSession(
   tensorflow::RPCOptions* rpc_options =
       session_options.config.mutable_rpc_options();
 
-  string compression = sys_util::GetEnvString("XRT_GRPC_COMPRESSION", "");
+  std::string compression = sys_util::GetEnvString("XRT_GRPC_COMPRESSION", "");
   if (!compression.empty()) {
     rpc_options->set_compression_algorithm(compression);
     rpc_options->set_compression_level(

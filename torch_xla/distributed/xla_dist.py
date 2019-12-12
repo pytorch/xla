@@ -436,7 +436,6 @@ class DistributedExecutor(object):
       'XRT_SHARD_ORDINAL',
   ]
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
-  DEFAULT_USER_NAME = 'pytorchtpudistrunner'
 
   def __init__(self,
                cluster,
@@ -508,8 +507,7 @@ class DistributedExecutor(object):
         '--internal-ip',
         '--zone={}'.format(client_worker._zone),
         local_path,
-        '{}@{}:{}'.format(self.DEFAULT_USER_NAME, client_worker._hostname,
-                          remote_path),
+        '{}:{}'.format(client_worker._hostname, remote_path),
     ]
 
   def _build_ssh_cmd(self, remote_cmd, client_worker):
@@ -522,7 +520,7 @@ class DistributedExecutor(object):
         'ssh',
         '--internal-ip',
         '--zone={}'.format(client_worker._zone),
-        '{}@{}'.format(self.DEFAULT_USER_NAME, client_worker._hostname),
+        '{}'.format(client_worker._hostname),
         '--command',
         '\'{}\''.format(remote_cmd),
     ]
@@ -656,14 +654,15 @@ class DistributedExecutor(object):
   def _cleanup(self, script_map):
 
     def _cleanup_worker(local_script, remote_script, client_worker):
-      rm_script = ['rm', remote_script]
-      self._build_and_run_ssh(rm_script, client_worker)
-      subprocess.call(['rm', local_script])
+      rm_tmp_dir = ['rm', '-rf', os.path.dirname(remote_script)]
+      self._build_and_run_ssh(rm_tmp_dir, client_worker)
+      subprocess.call(['rm', '-rf', os.path.dirname(local_script)])
       if self.docker_image:
         rm_container = ['docker', 'rm', '-f', self.docker_container]
         self._build_and_run_ssh(rm_container, client_worker)
-      rm_proc = ['pkill', '-u', self.DEFAULT_USER_NAME]
-      self._build_and_run_ssh(rm_proc, client_worker, log=False)
+      rm_pgroup = ('kill -9 -$(ps xao pid,pgid,cmd | grep {} | grep -v grep'
+                   ' | awk "{{print \$2}}")').format(remote_script)
+      self._build_and_run_ssh(rm_pgroup, client_worker, log=False)
 
     threads = []
     for client_worker in script_map:
@@ -727,9 +726,10 @@ class DistributedExecutor(object):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(
-      description='PyTorch on TPU distrubuted training',
-      epilog=('Usage example: xla_dist.py --tpu=[TPU_NAME]'
-              ' --conda-env torch-xla-nightly -- python train'))
+      description='PyTorch on TPU distrubuted training launcher.',
+      epilog=('Usage example: python -m'
+              ' torch_xla.distributed.xla_dist --tpu=[TPU_NAME]'
+              ' --conda-env torch-xla-nightly -- python train.py'))
 
   cluster_group = parser.add_argument_group('Cluster Setup')
   cluster_group.add_argument(

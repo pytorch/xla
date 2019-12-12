@@ -59,17 +59,16 @@ std::string GetTensorsDump(
   return coverter(nodes);
 }
 
-std::string SetCurrentDevice(const std::string& device_str) {
-  c10::Device prev_device =
-      XLATensorImpl::SetCurrentAtenDevice(c10::Device(device_str));
+std::string SetCurrentThreadDevice(const std::string& device_str) {
+  c10::Device prev_device = bridge::SetCurrentDevice(c10::Device(device_str));
   std::stringstream ss;
   ss << prev_device;
   return ss.str();
 }
 
-std::string GetCurrentDevice() {
+std::string GetCurrentThreadDevice() {
   std::stringstream ss;
-  ss << XLATensorImpl::GetCurrentAtenDevice();
+  ss << bridge::GetCurrentAtenDevice();
   return ss.str();
 }
 
@@ -217,6 +216,12 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
   return xla_tensors;
 }
 
+at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor, xla::int64 dim) {
+  XLATensor xtensor = bridge::GetXlaTensor(tensor);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::get_dimensions_size(xtensor, {dim}));
+}
+
 py::object GetMetricData(const std::string& name) {
   xla::metrics::MetricData* data = xla::metrics::GetMetric(name);
   if (data == nullptr) {
@@ -327,9 +332,12 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
   m.def("_get_git_revs", []() { return GetRevisions(); });
-  m.def("_get_xla_tensor", [](const at::Tensor& tensor) -> XLATensor {
-    return bridge::GetXlaTensor(tensor);
-  });
+  m.def("_get_xla_tensor",
+        [](const at::Tensor& tensor) { return bridge::GetXlaTensor(tensor); });
+  m.def("_get_xla_tensor_dimension_size",
+        [](const at::Tensor& tensor, int dim) {
+          return GetXlaTensorDimensionSize(tensor, dim);
+        });
   m.def("_get_xla_tensors_dot",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
           auto coverter =
@@ -408,9 +416,10 @@ void InitXlaModuleBindings(py::module m) {
     }
     return new_token;
   });
-  m.def("_xla_set_default_device",
-        [](const std::string& device) { return SetCurrentDevice(device); });
-  m.def("_xla_get_default_device", []() { return GetCurrentDevice(); });
+  m.def("_xla_set_default_device", [](const std::string& device) {
+    return SetCurrentThreadDevice(device);
+  });
+  m.def("_xla_get_default_device", []() { return GetCurrentThreadDevice(); });
   m.def("_xla_sync_multi",
         [](const std::vector<at::Tensor>& tensors,
            const std::vector<std::string>& devices, bool wait,

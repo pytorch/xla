@@ -9,20 +9,16 @@
 namespace torch_xla {
 namespace {
 
-xla::XlaOp ExplicitBooleanConvert(const xla::XlaOp& op,
-                                  xla::PrimitiveType from) {
+xla::XlaOp ExplicitBooleanConvert(xla::XlaOp op, xla::PrimitiveType from) {
   xla::XlaOp zero = xla::Zero(op.builder(), from);
   return xla::Ne(op, zero);
 }
 
 }  // namespace
 
-xla::XlaOp ConvertTo(const xla::XlaOp& op, xla::PrimitiveType from,
+xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
                      xla::PrimitiveType to, const Device* device) {
-  if (device == nullptr) {
-    device = GetDefaultDevice();
-  }
-  if (device->hw_type != DeviceType::TPU) {
+  if (GetDeviceOrCurrent(device).hw_type != DeviceType::TPU) {
     return xla::ConvertElementType(op, to);
   }
   switch (from) {
@@ -51,20 +47,21 @@ xla::XlaOp ConvertTo(const xla::XlaOp& op, xla::PrimitiveType from,
   }
 }
 
-xla::XlaOp ConvertToNumeric(const xla::XlaOp& op, xla::PrimitiveType from) {
-  const Device* device = GetDefaultDevice();
+xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {
+  Device xla_device = GetCurrentDevice();
   return from != xla::PrimitiveType::PRED
              ? op
-             : ConvertTo(op, from,
-                         GetDevicePrimitiveType(xla::PrimitiveType::U8, device),
-                         device);
+             : ConvertTo(
+                   op, from,
+                   GetDevicePrimitiveType(xla::PrimitiveType::U8, &xla_device),
+                   &xla_device);
 }
 
-xla::XlaOp ConvertToNumeric(const xla::XlaOp& op) {
+xla::XlaOp ConvertToNumeric(xla::XlaOp op) {
   return ConvertToNumeric(op, XlaHelpers::TypeOfXlaOp(op));
 }
 
-xla::XlaOp CastToScalarType(const xla::XlaOp& input,
+xla::XlaOp CastToScalarType(xla::XlaOp input,
                             c10::optional<at::ScalarType> dtype) {
   if (dtype) {
     return ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),

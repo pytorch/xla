@@ -394,8 +394,9 @@ class XlaTestCase(unittest.TestCase):
       out, expected = _prepare_tensors_for_diff(out, expected)
       nan_mask = torch.isnan(expected)
       self.assertTrue(torch.equal(nan_mask, torch.isnan(out)))
+      out[nan_mask] = 0
+      expected[nan_mask] = 0
       diff_tensor = (out - expected).abs().float()
-      diff_tensor[nan_mask] = 0
       max_rel_err = torch.max(out.abs(), expected.abs()).float() * rel_err
       # Allow higher relative differences as long as we're still below the
       # absolute error.
@@ -436,6 +437,22 @@ class XlaTestCase(unittest.TestCase):
       return value.data
     return value
 
+  def maybePrintGraph(self, tensors):
+    env = os.environ.get('TEST_PRINT_GRAPH', '').lower()
+    if env:
+      if env == 'text':
+        print(
+            'Test Graph:\n{}'.format(
+                torch_xla._XLAC._get_xla_tensors_text(tensors)),
+            file=sys.stderr)
+      elif env == 'hlo':
+        print(
+            'Test Graph:\n{}'.format(
+                torch_xla._XLAC._get_xla_tensors_hlo(tensors)),
+            file=sys.stderr)
+      else:
+        raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(env))
+
   def runAtenTest(self, tensors, fn, device=None, rel_err=1e-2, abs_err=1e-5):
     if device is None:
       device = xm.xla_device()
@@ -443,6 +460,7 @@ class XlaTestCase(unittest.TestCase):
     xla_tensors = [x.to(device) for x in tensors]
     results = xu.as_list(fn(*tensors))
     xla_results = xu.as_list(fn(*xla_tensors))
+    self.maybePrintGraph(xla_results)
     for at, xt in zip(results, xla_results):
       self.assertEqualRel(
           self.makeComparable(xt),
@@ -1206,6 +1224,24 @@ class TestAtenXlaTensor(XlaTestCase):
         [torch.randn(3, 4, 5),
          torch.tensor([2, 1, 0, 1, 2], dtype=torch.long)], test_fn)
 
+  def test_pred_one_hot(self):
+
+    def test_fn(t, c):
+      s = (t[:, None] != c[None, :]).long()
+      return F.one_hot(s, num_classes=2)
+
+    token_type_ids = torch.randint(
+        1, 5, (
+            128,
+            32,
+        ), dtype=torch.int64)
+    cat_ids = torch.randint(
+        1, 5, (
+            128,
+            32,
+        ), dtype=torch.int64)
+    self.runAtenTest([token_type_ids, cat_ids], test_fn)
+
   def test_save_view_alias_check(self):
 
     class Nested(object):
@@ -1359,13 +1395,15 @@ class TestGeneric(XlaTestCase):
     class ForTest(object):
 
       def __init__(self):
-        self.a = {'k': [1, 2, 3], (3, 4): 'y', 5: {'a': 'n'}}
+        self.a = {'k': [1, 2, 3], 4.9: 'y', 5: {'a': 'n'}}
         self.b = ('f', 17)
 
+    duped_data = ForTest()
     data = {
-        (1, 2): 11,
+        2.3: 11,
         21: ForTest(),
-        'w': [12, ForTest()],
+        'w': [12, ForTest(), duped_data],
+        123: duped_data,
     }
 
     ids = []
@@ -1373,7 +1411,8 @@ class TestGeneric(XlaTestCase):
     def collect(x):
       ids.append(id(x))
 
-    xu.for_each_instance(data, lambda x: isinstance(x, (int, str)), collect)
+    xu.for_each_instance(data, lambda x: isinstance(x, (int, str, float)),
+                         collect)
 
     wids = []
 
@@ -1381,10 +1420,43 @@ class TestGeneric(XlaTestCase):
       wids.append(id(x))
       return x
 
-    xu.for_each_instance_rewrite(data, lambda x: isinstance(x, (int, str)),
+    xu.for_each_instance_rewrite(data,
+                                 lambda x: isinstance(x, (int, str, float)),
                                  convert)
-    self.assertEqual(len(ids), 30)
+    self.assertEqual(len(ids), 17)
     self.assertEqual(ids, wids)
+
+  def test_util_foreach_api_cycle(self):
+
+    class ForTest1(object):
+
+      def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    class ForTest2(object):
+
+      def __init__(self, a):
+        self.a = a
+        self.b = ForTest1(self, a)
+
+    xdata = {
+        2: (11, ['a', 'b'], 17),
+        'w': [12, 'q', 12.33],
+        17.09: set(['a', 'b', 21]),
+    }
+    data = ForTest2(xdata)
+
+    wids = []
+
+    def convert(x):
+      wids.append(id(x))
+      return x
+
+    xu.for_each_instance_rewrite(data,
+                                 lambda x: isinstance(x, (int, str, float)),
+                                 convert)
+    self.assertEqual(len(wids), 11)
 
 
 class TestTypePromotion(XlaTestCase):

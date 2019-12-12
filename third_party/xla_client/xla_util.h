@@ -18,17 +18,19 @@ StatusOr<std::unique_ptr<HloModule>> CreateModuleFromProto(
     const DebugOptions& debug_options = DebugOptions());
 
 // Returns a textual representation of the input XLA computation.
-StatusOr<string> GetComputationHloText(const XlaComputation& computation);
+StatusOr<std::string> GetComputationHloText(const XlaComputation& computation);
 
 void ReportComputationError(
     const Status& status,
-    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations);
+    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
+    tensorflow::gtl::ArraySlice<const Shape* const> output_shapes);
 
 // Checks whether an action on the given computation generated an error, and if
 // that was the case, emit error and computations HLO text.
 void CheckComputationStatus(
     const Status& status,
-    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations);
+    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
+    tensorflow::gtl::ArraySlice<const Shape* const> output_shapes);
 
 size_t ShapeHash(const Shape& shape);
 

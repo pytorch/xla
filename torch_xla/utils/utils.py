@@ -100,42 +100,70 @@ def getenv_as(name, type, defval=None):
   return defval if env is None else type(env)
 
 
-def for_each_instance(value, select_fn, fn):
+def _for_each_instance(value, select_fn, fn, seen):
+  if id(value) in seen:
+    return
+  seen.add(id(value))
   if select_fn(value):
     fn(value)
   elif isinstance(value, dict):
     for k, v in value.items():
-      for_each_instance(k, select_fn, fn)
-      for_each_instance(v, select_fn, fn)
+      _for_each_instance(k, select_fn, fn, seen)
+      _for_each_instance(v, select_fn, fn, seen)
   elif isinstance(value, (list, tuple, set)):
     for x in value:
-      for_each_instance(x, select_fn, fn)
+      _for_each_instance(x, select_fn, fn, seen)
   elif hasattr(value, '__dict__'):
     for k in value.__dict__.keys():
-      for_each_instance(value.__dict__[k], select_fn, fn)
+      _for_each_instance(value.__dict__[k], select_fn, fn, seen)
+
+
+def for_each_instance(value, select_fn, fn):
+  seen = set()
+  _for_each_instance(value, select_fn, fn, seen)
+
+
+def _for_each_instance_rewrite(value, select_fn, fn, rwmap):
+  rvalue = rwmap.get(id(value), None)
+  if rvalue is not None:
+    return rvalue
+  result = value
+  if select_fn(value):
+    result = fn(value)
+    rwmap[id(value)] = result
+  elif isinstance(value, dict):
+    result = dict()
+    rwmap[id(value)] = result
+    for k, v in value.items():
+      k = _for_each_instance_rewrite(k, select_fn, fn, rwmap)
+      result[k] = _for_each_instance_rewrite(v, select_fn, fn, rwmap)
+  elif isinstance(value, set):
+    result = set()
+    rwmap[id(value)] = result
+    for x in value:
+      result.add(_for_each_instance_rewrite(x, select_fn, fn, rwmap))
+  elif isinstance(value, (list, tuple)):
+    # We transform tuples to lists here, as we need to set the object mapping
+    # before calling into the recursion. This code might break if user code
+    # expects a tuple.
+    result = list()
+    rwmap[id(value)] = result
+    for x in value:
+      result.append(_for_each_instance_rewrite(x, select_fn, fn, rwmap))
+  elif hasattr(value, '__dict__'):
+    result = copy.copy(value)
+    rwmap[id(value)] = result
+    for k in result.__dict__.keys():
+      v = _for_each_instance_rewrite(result.__dict__[k], select_fn, fn, rwmap)
+      result.__dict__[k] = v
+  else:
+    rwmap[id(value)] = result
+  return result
 
 
 def for_each_instance_rewrite(value, select_fn, fn):
-  if select_fn(value):
-    return fn(value)
-  elif isinstance(value, dict):
-    result = dict()
-    for k, v in value.items():
-      k = for_each_instance_rewrite(k, select_fn, fn)
-      result[k] = for_each_instance_rewrite(v, select_fn, fn)
-    return result
-  elif isinstance(value, (list, tuple, set)):
-    result = []
-    for x in value:
-      result.append(for_each_instance_rewrite(x, select_fn, fn))
-    return type(value)(result)
-  elif hasattr(value, '__dict__'):
-    result = copy.copy(value)
-    for k in result.__dict__.keys():
-      v = for_each_instance_rewrite(result.__dict__[k], select_fn, fn)
-      result.__dict__[k] = v
-    return result
-  return value
+  rwmap = dict()
+  return _for_each_instance_rewrite(value, select_fn, fn, rwmap)
 
 
 def shape(inputs):

@@ -66,7 +66,7 @@ xla::XlaOp LoweringContext::GetParameter(
   if (it == parameters_map_.end()) {
     xla::XlaOp param =
         xla::Parameter(builder(), parameters_.size(), data->shape(),
-                       absl::StrCat("param_", parameters_.size()));
+                       absl::StrCat("p", parameters_.size()));
     parameters_.push_back(data);
     it = parameters_map_.emplace(handle, param).first;
   }
@@ -86,8 +86,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::Build() {
   return builder()->Build();
 }
 
-xla::StatusOr<xla::XlaComputation> LoweringContext::Build(
-    const xla::XlaOp& root) {
+xla::StatusOr<xla::XlaComputation> LoweringContext::Build(xla::XlaOp root) {
   XLA_CHECK(root_tuple_.empty());
   return builder()->Build(root);
 }

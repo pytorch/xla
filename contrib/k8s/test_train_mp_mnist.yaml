@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pytorch-tpu-train-mnist
+spec:
+  template:
+    metadata:
+      annotations:
+        # The runtime version that the TPU will run with.
+        # Note: It's called "tf-version" for historical reasons.
+        tf-version.cloud-tpus.google.com: "pytorch-nightly"
+    spec:
+      restartPolicy: Never
+      volumes:
+      # Increase size of tmpfs /dev/shm to avoid OOM.
+      - name: dshm
+        emptyDir:
+          medium: Memory
+      containers:
+      - name: mnist-pytorch-tpu
+        # This is the image we publish nightly with our package pre-installed.
+        image: gcr.io/tpu-pytorch/xla:nightly
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: dshm
+        # For the time being we need to manually set XRT_TPU_CONFIG from
+        # KUBE_GOOGLE_CLOUD_TPU_ENDPOINTS env var hooked in by GKE.
+        command: [
+          'bash', '-c',
+          'XRT_TPU_CONFIG="tpu_worker;0;${KUBE_GOOGLE_CLOUD_TPU_ENDPOINTS:7}"
+          python pytorch/xla/test/test_train_mp_mnist.py'
+        ]
+        env:
+        # Example environment variables injected to container on GKE.
+        - name: XLA_USE_BF16
+          value: "0"
+        resources:
+          limits:
+            # Request a single v3-8 Cloud TPU device to train the model.
+            # A single v3-8 Cloud TPU device consists of 4 chips, each of which
+            # has 2 cores, so there are 8 cores in total.
+            cloud-tpus.google.com/v3: 8
+          requests:
+            memory: 30Gi
+            cpu: 10
+

@@ -174,7 +174,7 @@ only be enabled for debugging.
 * ```XLA_METRICS_FILE```: If set, the path to a local file where the internal metrics will be
   saved at every step. Metrics will be appended to the file, if already existing.
 
-* ```GET_TENSORS_OPBYOP```: Enables pure _OpByOp_ dispatch. The _PyTorch/XLA_ software tries to
+* ```XLA_GET_TENSORS_OPBYOP```: Enables pure _OpByOp_ dispatch. The _PyTorch/XLA_ software tries to
   fuse together many _PyTorch_ operations into a single computation graph, but sometimes, either
   for debugging, or in case the _PyTorch_ code have a very dynamic nature (in shapes or graph
   terms), it is better to force the execution in _OpByOp_ mode (every IR node is lowered into
@@ -182,9 +182,9 @@ only be enabled for debugging.
   enables _OpByOp_ during the "get tensors" operation (the operation used by _PyTorch/XLA_ to
   fetch intermediate values back from the _TPU_ device into _PyTorch_ CPU tensors).
 
-* ```SYNC_TENSORS_OPBYOP```: The same as _GET_TENSORS_OPBYOP_ but for "sync tensors" operation
-  (the operation used at the end of a step, to flush pending IR computations and materialize
-  them into _TPU_ device data).
+* ```XLA_SYNC_TENSORS_OPBYOP```: The same as _XLA_GET_TENSORS_OPBYOP_ but for "sync tensors"
+  operation (the operation used at the end of a step, to flush pending IR computations and
+  materialize them into _TPU_ device data).
 
 * ```XLA_SYNC_WAIT```: Forces the XLA tensor sync operation to wait for its completion, before
   moving to the next step.
@@ -237,4 +237,33 @@ The, given the PID, it is possible to grab the stack traces with the following c
 ./scripts/dump_stacks.py PID > /tmp/stack-traces.log
 ```
 
+## Using debug_run.py To Collect Debug Information
 
+A utility is provided in `scripts/debug_run.py` which can be used to create a `tar.gz`
+archive with the information required to debug _PyTorch/XLA_ executions.
+
+Example:
+
+```Shell
+./scripts/debug_run.py --outfile /tmp/debug_run.tar.gz -- python -u SCRIPT [ARGS...]
+```
+
+The _python_ `-u` flag is suggested to disable buffering so that captured logs are correctly
+interleaved (otherwise STDOUT will be rendered after all STDERR).
+
+The above command line example will leave the temporary folder containing the archived
+information on the filesystem. Use the `--tidy` flag to have that removed on exit:
+
+```Shell
+./scripts/debug_run.py --tidy --outfile /tmp/debug_run.tar.gz -- python -u SCRIPT [ARGS...]
+```
+
+The `debug_run.tar.gz` file should then be attached to bug reports when necessary.
+
+Since the script will collect a lot of data, it should usually be let run for no more
+than hundred steps or so.
+If the SCRIPT has arguments to control the number of steps, those should be used,
+otherwise hitting `CTRL^C` will interrupt the run.
+
+It is also sugested to run in single-core mode, to minimize the amount of data.
+Running in single-core mode is also strongly suggested when debugging execution issues.

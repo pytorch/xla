@@ -9,7 +9,7 @@ DEFAULT_PYTHON_VERSION=3.6
 DEBIAN_FRONTEND=noninteractive
 
 function install_bazel() {
-  local BAZEL_VERSION="0.24.1"
+  local BAZEL_VERSION="1.1.0"
   local BAZEL_FILE="bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh"
   sudo apt-get install -y pkg-config zip zlib1g-dev unzip
   curl -L -O "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_FILE}"
@@ -114,7 +114,9 @@ function main() {
   install_req_packages
   install_and_setup_conda
   build_and_install_torch
-  pushd xla && build_and_install_torch_xla && popd
+  pushd xla
+  build_and_install_torch_xla
+  popd
   install_torchvision_from_source
   install_gcloud
 }

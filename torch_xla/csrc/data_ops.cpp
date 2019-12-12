@@ -31,7 +31,6 @@ bool IsSparseGather(const xla::Shape& input_shape,
 }
 
 std::vector<xla::int64> GetReflectionPad2dSpatialDims(xla::int64 rank) {
-  std::vector<xla::int64> spatial_dims;
   if (rank == 3) {
     return {2, 1};
   } else if (rank == 4) {
@@ -42,8 +41,7 @@ std::vector<xla::int64> GetReflectionPad2dSpatialDims(xla::int64 rank) {
 
 }  // namespace
 
-bool IsSparseGather(const xla::XlaOp& input, const xla::XlaOp& index,
-                    xla::int64 dim) {
+bool IsSparseGather(xla::XlaOp input, xla::XlaOp index, xla::int64 dim) {
   return IsSparseGather(XlaHelpers::ShapeOfXlaOp(input),
                         XlaHelpers::ShapeOfXlaOp(index), dim);
 }
@@ -106,7 +104,7 @@ absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
 }
 
 xla::XlaOp BuildView(
-    const xla::XlaOp& input,
+    xla::XlaOp input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto complete_output_sizes =
@@ -119,7 +117,7 @@ xla::XlaOp BuildView(
   return xla::Reshape(input, complete_output_sizes);
 }
 
-xla::XlaOp SqueezeTrivialDimension(const xla::XlaOp& input, size_t dim) {
+xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, size_t dim) {
   auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   XLA_CHECK_LT(dim, input_sizes.size());
   if (input_sizes[dim] != 1) {
@@ -129,7 +127,7 @@ xla::XlaOp SqueezeTrivialDimension(const xla::XlaOp& input, size_t dim) {
   return xla::Reshape(input, input_sizes);
 }
 
-xla::XlaOp SqueezeAllTrivialDimensions(const xla::XlaOp& input) {
+xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input) {
   auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   // Squeeze the trivial (of size 1) dimensions.
   std::vector<xla::int64> non_singleton_dimensions;
@@ -140,7 +138,7 @@ xla::XlaOp SqueezeAllTrivialDimensions(const xla::XlaOp& input) {
 }
 
 xla::XlaOp BuildExpand(
-    const xla::XlaOp& input,
+    xla::XlaOp input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
   auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   // Adjust the rank of the input to match the rank of the output.
@@ -160,7 +158,7 @@ std::vector<xla::int64> BuildUnsqueezeDimensions(
   return unsqueeze_dimensions;
 }
 
-xla::XlaOp BuildUnsqueeze(const xla::XlaOp& input, size_t dim) {
+xla::XlaOp BuildUnsqueeze(xla::XlaOp input, size_t dim) {
   auto dimensions =
       BuildUnsqueezeDimensions(XlaHelpers::SizesOfXlaOp(input), dim);
   return xla::Reshape(input, dimensions);
@@ -185,7 +183,7 @@ xla::XlaOp BuildCat(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
   return xla::ConcatInDim(inputs[0].builder(), inputs, dim);
 }
 
-xla::XlaOp BuildRepeat(const xla::XlaOp& input,
+xla::XlaOp BuildRepeat(xla::XlaOp input,
                        tensorflow::gtl::ArraySlice<const xla::int64> repeats) {
   const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   XLA_CHECK_GE(repeats.size(), input_sizes.size())
@@ -221,8 +219,8 @@ size_t ComputeSplitCount(
 }
 
 std::vector<xla::XlaOp> BuildSplit(
-    const xla::XlaOp& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> split_sizes, xla::int64 dim) {
+    xla::XlaOp input, tensorflow::gtl::ArraySlice<const xla::int64> split_sizes,
+    xla::int64 dim) {
   const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
   xla::int64 dim_size = input_sizes.at(dim);
   xla::int64 index = 0;
@@ -238,7 +236,7 @@ std::vector<xla::XlaOp> BuildSplit(
 }
 
 xla::XlaOp BuildUpdateSlice(
-    const xla::XlaOp& input, const xla::XlaOp& source,
+    xla::XlaOp input, xla::XlaOp source,
     tensorflow::gtl::ArraySlice<const xla::int64> base_indices) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const xla::Shape& source_shape = XlaHelpers::ShapeOfXlaOp(source);
@@ -258,7 +256,7 @@ xla::XlaOp BuildUpdateSlice(
 }
 
 xla::XlaOp BuildSlice(
-    const xla::XlaOp& input,
+    xla::XlaOp input,
     tensorflow::gtl::ArraySlice<const xla::int64> base_indices,
     tensorflow::gtl::ArraySlice<const xla::int64> sizes) {
   XLA_CHECK_EQ(base_indices.size(), sizes.size());
@@ -270,14 +268,14 @@ xla::XlaOp BuildSlice(
   return xla::Slice(input, base_indices, limit_indices, strides);
 }
 
-xla::XlaOp BoundIndices(const xla::XlaOp& index, const xla::XlaOp& max_index) {
+xla::XlaOp BoundIndices(xla::XlaOp index, xla::XlaOp max_index) {
   const xla::Shape& index_shape = XlaHelpers::ShapeOfXlaOp(index);
   return xla::Select(
       xla::Ge(index, xla::Zero(index.builder(), index_shape.element_type())),
       index, index + max_index);
 }
 
-xla::XlaOp BuildTake(const xla::XlaOp& input, const xla::XlaOp& index) {
+xla::XlaOp BuildTake(xla::XlaOp input, xla::XlaOp index) {
   static const int take_dim = 0;
   xla::Shape input_shape;
   xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
@@ -288,12 +286,12 @@ xla::XlaOp BuildTake(const xla::XlaOp& input, const xla::XlaOp& index) {
                               index_shape.element_type(), index.builder());
   xla::XlaOp bound_index = BoundIndices(r1_index, max_index);
   xla::XlaOp r1_result =
-      TorchGather(r1_input, bound_index, take_dim,
-                  IsSparseGather(input_shape, index_shape, take_dim));
+      xla::TorchGather(r1_input, bound_index, take_dim,
+                       IsSparseGather(input_shape, index_shape, take_dim));
   return xla::Reshape(r1_result, index_shape.dimensions());
 }
 
-xla::XlaOp BuildResize(const xla::XlaOp& input,
+xla::XlaOp BuildResize(xla::XlaOp input,
                        tensorflow::gtl::ArraySlice<const xla::int64> size) {
   xla::Shape input_shape;
   xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
@@ -314,9 +312,8 @@ xla::XlaOp BuildResize(const xla::XlaOp& input,
   return xla::Reshape(resized_input, size);
 }
 
-xla::XlaOp BuildUnselect(const xla::XlaOp& target, const xla::XlaOp& source,
-                         xla::int64 dim, xla::int64 start, xla::int64 end,
-                         xla::int64 stride) {
+xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,
+                         xla::int64 start, xla::int64 end, xla::int64 stride) {
   const xla::Shape& target_shape = XlaHelpers::ShapeOfXlaOp(target);
   const xla::Shape& source_shape = XlaHelpers::ShapeOfXlaOp(source);
   if (target_shape.dimensions(dim) == source_shape.dimensions(dim)) {
@@ -359,8 +356,7 @@ xla::XlaOp BuildUnselect(const xla::XlaOp& target, const xla::XlaOp& source,
 }
 
 xla::XlaOp BuildReflectionPad2d(
-    const xla::XlaOp& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+    xla::XlaOp input, tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   std::vector<xla::int64> spatial_dims =
       GetReflectionPad2dSpatialDims(input_shape.rank());
@@ -385,7 +381,7 @@ xla::XlaOp BuildReflectionPad2d(
 }
 
 xla::XlaOp BuildReflectionPad2dBackward(
-    const xla::XlaOp& grad_output, const xla::XlaOp& input,
+    xla::XlaOp grad_output, xla::XlaOp input,
     tensorflow::gtl::ArraySlice<const xla::int64> padding) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const xla::Shape& grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
@@ -424,7 +420,7 @@ xla::XlaOp BuildReflectionPad2dBackward(
   return grad;
 }
 
-xla::XlaOp PadInDim(const xla::XlaOp& input, xla::int64 dim, xla::int64 pad_lo,
+xla::XlaOp PadInDim(xla::XlaOp input, xla::int64 dim, xla::int64 pad_lo,
                     xla::int64 pad_hi, const xla::XlaOp* pad_value) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero;

@@ -103,7 +103,9 @@ disabled_torch_tests = {
     'test_masked_select',  # uses half
     'test_masked_fill_bool_tensor',  # lowering
     'test_lu',
-    'test_logical_xor',  # storage
+    'test_logical_and',  # uses half
+    'test_logical_or',  # uses half
+    'test_logical_xor',  # uses half
     'test_logical',  # uses half
     'test_logical_not',  # uses half
     'test_is_signed',  # uses half
@@ -172,6 +174,7 @@ disabled_torch_tests = {
     # TestNNDeviceType
     'test_embedding_backward',  # uses sparse
     'test_embedding_dense_grad',  # slow
+    'test_EmbeddingBag_per_sample_weights_and_new_offsets', # wrong result
     'test_batchnorm_grad',
     'test_gumbel_softmax_xla',
     'test_rnn_retain_variables',

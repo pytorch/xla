@@ -3,6 +3,7 @@
 #include <limits>
 
 #include "absl/strings/str_join.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -14,8 +15,8 @@
 namespace torch_xla {
 namespace {
 
-xla::XlaOp ConvertBinaryOpResult(const xla::XlaOp& op1, const xla::XlaOp& op2,
-                                 const xla::XlaOp& result) {
+xla::XlaOp ConvertBinaryOpResult(xla::XlaOp op1, xla::XlaOp op2,
+                                 xla::XlaOp result) {
   xla::PrimitiveType type1 = XlaHelpers::TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = XlaHelpers::TypeOfXlaOp(op2);
   xla::PrimitiveType result_type = XlaHelpers::TypeOfXlaOp(result);
@@ -41,7 +42,7 @@ xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
 
 xla::XlaComputation CreateComputation(
     const std::string& name, xla::PrimitiveType type,
-    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>& op) {
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& op) {
   xla::XlaBuilder builder(name);
   xla::XlaOp x =
       xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
@@ -127,6 +128,24 @@ xla::int64 XlaHelpers::GetDynamicDimension(const xla::Shape& shape) {
   return dynamic_dimension;
 }
 
+xla::XlaOp XlaHelpers::GetDimensionsSize(
+    tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions) {
+  XLA_CHECK(!inputs.empty());
+  xla::XlaOp size;
+  for (auto& input : inputs) {
+    for (auto dim : dimensions) {
+      if (size.valid()) {
+        size = size * xla::GetDimensionSize(input, dim);
+      } else {
+        size = xla::GetDimensionSize(input, dim);
+      }
+    }
+  }
+  return size.valid() ? size
+                      : xla::One(inputs[0].builder(), xla::PrimitiveType::S32);
+}
+
 XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
   switch (type) {
     case xla::PrimitiveType::S8:
@@ -184,7 +203,7 @@ xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfigFromNdPadding(
 
 xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
   return CreateComputation(
-      "AddComputation", type, [&](const xla::XlaOp& x, const xla::XlaOp& y) {
+      "AddComputation", type, [&](xla::XlaOp x, xla::XlaOp y) {
         return type == xla::PrimitiveType::PRED ? xla::Or(x, y)
                                                 : xla::Add(x, y);
       });
@@ -193,50 +212,49 @@ xla::XlaComputation XlaHelpers::CreateAddComputation(xla::PrimitiveType type) {
 xla::XlaComputation XlaHelpers::CreateMulComputation(xla::PrimitiveType type) {
   return CreateComputation(
       "MulComputation", type,
-      [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::Mul(x, y); });
+      [&](xla::XlaOp x, xla::XlaOp y) { return xla::Mul(x, y); });
 }
 
 xla::XlaComputation XlaHelpers::CreateMaxComputation(xla::PrimitiveType type) {
   return CreateComputation(
       "MaxComputation", type,
-      [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::Max(x, y); });
+      [&](xla::XlaOp x, xla::XlaOp y) { return xla::Max(x, y); });
 }
 
 xla::XlaComputation XlaHelpers::CreateMinComputation(xla::PrimitiveType type) {
   return CreateComputation(
       "MinComputation", type,
-      [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::Min(x, y); });
+      [&](xla::XlaOp x, xla::XlaOp y) { return xla::Min(x, y); });
 }
 
 xla::XlaComputation XlaHelpers::CreateAndComputation(xla::PrimitiveType type) {
   return CreateComputation(
       "AndComputation", type,
-      [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::And(x, y); });
+      [&](xla::XlaOp x, xla::XlaOp y) { return xla::And(x, y); });
 }
 
 xla::XlaComputation XlaHelpers::CreateOrComputation(xla::PrimitiveType type) {
   return CreateComputation(
       "OrComputation", type,
-      [&](const xla::XlaOp& x, const xla::XlaOp& y) { return xla::Or(x, y); });
+      [&](xla::XlaOp x, xla::XlaOp y) { return xla::Or(x, y); });
 }
 
-const xla::Shape& XlaHelpers::ShapeOfXlaOp(const xla::XlaOp& op) {
+const xla::Shape& XlaHelpers::ShapeOfXlaOp(xla::XlaOp op) {
   const xla::Shape* shape = ConsumeValue(op.builder()->GetShapePtr(op));
   return *shape;
 }
 
-std::vector<xla::int64> XlaHelpers::SizesOfXlaOp(const xla::XlaOp& op) {
+std::vector<xla::int64> XlaHelpers::SizesOfXlaOp(xla::XlaOp op) {
   const xla::Shape& op_shape = ShapeOfXlaOp(op);
   return std::vector<xla::int64>(op_shape.dimensions().begin(),
                                  op_shape.dimensions().end());
 }
 
-xla::PrimitiveType XlaHelpers::TypeOfXlaOp(const xla::XlaOp& op) {
+xla::PrimitiveType XlaHelpers::TypeOfXlaOp(xla::XlaOp op) {
   return ShapeOfXlaOp(op).element_type();
 }
 
-xla::XlaOp XlaHelpers::ReshapeToRank(const xla::XlaOp& input,
-                                     xla::int64 expected_rank,
+xla::XlaOp XlaHelpers::ReshapeToRank(xla::XlaOp input, xla::int64 expected_rank,
                                      xla::int64 offset) {
   const xla::Shape& shape = ShapeOfXlaOp(input);
   XLA_CHECK_LE(offset + shape.rank(), expected_rank);
@@ -250,8 +268,7 @@ xla::XlaOp XlaHelpers::ReshapeToRank(const xla::XlaOp& input,
   return xla::Reshape(input, dimensions);
 }
 
-xla::XlaOp XlaHelpers::Flatten(const xla::XlaOp& input,
-                               xla::Shape* input_shape) {
+xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
   xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
   *input_shape_tmp = ShapeOfXlaOp(input);
   if (input_shape_tmp->rank() == 1) {
@@ -271,8 +288,7 @@ std::vector<xla::int64> XlaHelpers::MakeTransposePermutation(xla::int64 dim0,
   return permute_dims;
 }
 
-xla::XlaOp XlaHelpers::LinearInterpolation(const xla::XlaOp& value0,
-                                           const xla::XlaOp& value1,
+xla::XlaOp XlaHelpers::LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
                                            double alpha) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(value0);
   xla::XlaOp one = ScalarValue(1.0, shape.element_type(), value0.builder());
@@ -281,8 +297,8 @@ xla::XlaOp XlaHelpers::LinearInterpolation(const xla::XlaOp& value0,
   return value0 * alpha_value + value1 * (one - alpha_value);
 }
 
-std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
-    const xla::XlaOp& op1, const xla::XlaOp& op2) {
+std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(xla::XlaOp op1,
+                                                            xla::XlaOp op2) {
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
   if (type1 == type2) {
@@ -324,7 +340,7 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
-    const xla::XlaOp& op1, const xla::XlaOp& op2) {
+    xla::XlaOp op1, xla::XlaOp op2) {
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
   return type1 == type2
@@ -376,8 +392,8 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
       GetPromotedShape(shape1.dimensions(), shape2.dimensions()));
 }
 
-std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(
-    const xla::XlaOp& op1, const xla::XlaOp& op2) {
+std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
+                                                            xla::XlaOp op2) {
   const xla::Shape& shape1 = ShapeOfXlaOp(op1);
   const xla::Shape& shape2 = ShapeOfXlaOp(op2);
   if (xla::ShapeUtil::Compatible(shape1, shape2)) {
@@ -393,19 +409,19 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(
       ImplicitBroadcast(op2, shape2, shape));
 }
 
-std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::Promote(const xla::XlaOp& op1,
-                                                      const xla::XlaOp& op2) {
+std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::Promote(xla::XlaOp op1,
+                                                      xla::XlaOp op2) {
   std::pair<xla::XlaOp, xla::XlaOp> vops = PromoteValues(op1, op2);
   return PromoteShapes(vops.first, vops.second);
 }
 
-std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecond(
-    const xla::XlaOp& op1, const xla::XlaOp& op2) {
+std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecond(xla::XlaOp op1,
+                                                            xla::XlaOp op2) {
   std::pair<xla::XlaOp, xla::XlaOp> vops = PromoteSecondValue(op1, op2);
   return PromoteShapes(vops.first, vops.second);
 }
 
-xla::XlaOp XlaHelpers::ImplicitBroadcast(const xla::XlaOp& op,
+xla::XlaOp XlaHelpers::ImplicitBroadcast(xla::XlaOp op,
                                          const xla::Shape& op_shape,
                                          const xla::Shape& shape) {
   const auto& op_shape_dims = op_shape.dimensions();
@@ -444,9 +460,8 @@ xla::XlaOp XlaHelpers::ImplicitBroadcast(const xla::XlaOp& op,
 }
 
 xla::XlaOp XlaHelpers::PromotedBinaryOp(
-    const xla::XlaOp& op1, const xla::XlaOp& op2,
-    const std::function<xla::XlaOp(const xla::XlaOp&, const xla::XlaOp&)>&
-        bin_op) {
+    xla::XlaOp op1, xla::XlaOp op2,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& bin_op) {
   xla::XlaOp numeric_op1 = ConvertToNumeric(op1);
   xla::XlaOp numeric_op2 = ConvertToNumeric(op2);
   std::pair<xla::XlaOp, xla::XlaOp> vops =
