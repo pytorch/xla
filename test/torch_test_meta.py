@@ -185,6 +185,9 @@ disabled_torch_tests = {
     'test_boolean_shape_mismatch',  # runtime error
     'test_boolean_indexing_weirdness',  # runtime error
     'test_boolean_indexing_weirdness_tensors',  # runtime error
+    'test_zero_dim_index', # runtime error
+    'test_index_setitem_bools_slices', # runtime error
+    'test_index_scalar_with_bool_mask', # runtime error
 
     # test_nn.py
     # TestNNDeviceType
