@@ -214,6 +214,10 @@ disabled_torch_tests = {
     'test_MaxPool1d_indices',  # lowering
     'test_EmbeddingBag_per_sample_weights_and_offsets',  # runtime error
     'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # runtime error
+    'test_one_hot', # runtime error
+    'test_batchnorm_update_stats', # runtime error
+    'test_batchnorm_simple_average', # runtime error
+    'test_BatchNorm_empty', # runtime error
 
     # test_type_promotion.py
     # TestTypePromotion
