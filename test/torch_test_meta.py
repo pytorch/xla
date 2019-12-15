@@ -48,6 +48,8 @@ disabled_torch_tests = {
     'test_kthvalue_xla',  # (TPU) unimplemented HLO for X64
     'test_kthvalue_neg_dim_xla',  # (TPU) unimplemented HLO for X64
     'test_kthvalue_dim_xla',  # (TPU) unimplemented HLO for X64
+    'test_mul_scalar_xla', # runtime error
+    'test_mul_inplace_scalar_xla', # runtime error
 
     # TestTorchDeviceType
     'test_clamp',  # slow
