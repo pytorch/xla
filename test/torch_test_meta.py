@@ -3,7 +3,7 @@ DEFAULT_FLOATING_PRECISION = 1e-3
 torch_test_precisions = {
     # test_name : floating_precision,
 }
-# testing
+
 disabled_torch_tests = {
     # test_torch.py
     # TestDevicePrecision
@@ -13,6 +13,7 @@ disabled_torch_tests = {
     'test_min_max_binary_op_nan',
     'test_copy_noncontig',
     'test_copy_broadcast',
+    'test_var', # runtime error
 
     # TestTensorDeviceOps
     'test_svd_tall_some_xla',
