@@ -188,6 +188,9 @@ disabled_torch_tests = {
     'test_zero_dim_index', # runtime error
     'test_index_setitem_bools_slices', # runtime error
     'test_index_scalar_with_bool_mask', # runtime error
+    
+    # NumpyTests
+    'test_boolean_indexing_alldims', # runtime error
 
     # test_nn.py
     # TestNNDeviceType
