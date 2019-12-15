@@ -66,6 +66,7 @@ disabled_torch_tests = {
     'test_memory_format_factory_like_functions_preserve_strides',
     'test_memory_format_empty_like',
     'test_memory_format_clone',
+    'test_memory_format_factory_like_functions_preserve',
     'test_lu_solve_batched_non_contiguous',
     'test_lstsq',
     'test_is_set_to',
