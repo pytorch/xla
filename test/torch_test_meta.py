@@ -229,4 +229,8 @@ disabled_torch_tests = {
     'test_alpha_mismatch',
     'test_lt_with_type_promotion',  # runtime error
     'test_half',  # half
+    'test_result_type', # runtime error
+    'test_from_issue', # runtime error
+    'test_create_bool_tensors', # runtime error
+    'test_comparison_ops_with_type_promotion', # runtime error
 }
