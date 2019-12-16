@@ -66,7 +66,7 @@ disabled_torch_tests = {
     'test_memory_format_factory_like_functions_preserve_strides',
     'test_memory_format_empty_like',
     'test_memory_format_clone',
-    'test_memory_format_factory_like_functions_preserve',
+    'test_memory_format_factory_like_functions_preserve', # assertion error
     'test_lu_solve_batched_non_contiguous',
     'test_lstsq',
     'test_is_set_to',
@@ -147,18 +147,6 @@ disabled_torch_tests = {
     'test_triangular_solve_batched_many_batches',  # (TPU) 1.02 vs 0.001
     'test_triangular_solve',  # (TPU) precision (1e-7)
     'test_scalar_check',  # runtime error
-    'test_unique_consecutive', # runtime error
-    'test_unique', # runtime error
-    'test_unfold_scalars', # runtime error
-    'test_rpow', # runtime error
-    'test_remainder_overflow', # runtime error
-    'test_nonzero_empty', # runtime error
-    'test_logical_any', # runtime error
-    'test_logical_all', # runtime error
-    'test_lapack_empty', # runtime error
-    'test_histc', # runtime error
-    'test_bool_tensor_comparison_ops', # runtime error
-    'test_blas_empty', # runtime error
 
     # test_indexing.py
     # TestIndexing
