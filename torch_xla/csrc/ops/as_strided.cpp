@@ -68,10 +68,9 @@ bool AsStrided::StrideIsSupported(
     tensorflow::gtl::ArraySlice<xla::int64> size,
     tensorflow::gtl::ArraySlice<xla::int64> stride) {
   XLA_CHECK_EQ(size.size(), stride.size());
-  XLA_CHECK(!size.empty()) << "Output size cannot be empty";
   std::vector<xla::int64> expected_stride(size.size(), 1);
-  for (size_t i = size.size() - 1; i > 0; --i) {
-    expected_stride[i - 1] = expected_stride[i] * size[i];
+  for (size_t i = size.size(); i > 1; --i) {
+    expected_stride[i - 2] = expected_stride[i - 1] * size[i - 1];
   }
   return stride == expected_stride;
 }
