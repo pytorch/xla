@@ -220,7 +220,7 @@ disabled_torch_tests = {
     'test_BatchNorm_empty', # runtime error
 
     # test_type_promotion.py
-    # TestTypePromotion
+    # TestTypePromotion (no longer redundantly tested)
     'test_many_promotions',
     'test_inplace',
     'test_indexing',
