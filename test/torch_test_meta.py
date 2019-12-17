@@ -76,6 +76,7 @@ disabled_torch_tests = {
     'test_dist',
     'test_dim_function_empty',
     'test_diagflat',
+    'test_cat_out',  # doesn't raise
     'test_cumsum',
     'test_copy_mem_overlap',  # doesn't raise
     'test_copy_all_dtypes_and_devices',
