@@ -195,7 +195,14 @@ c10::Device AtenDefaultDevice() {
 
 c10::Device SetCurrentDevice(const c10::Device& device) {
   c10::Device prev_device = XLATensorImpl::SetCurrentAtenDevice(device);
-  SetCurrentDevice(AtenDeviceToXlaDevice(device));
+  torch_xla::SetCurrentDevice(AtenDeviceToXlaDevice(device));
+  return prev_device;
+}
+
+Device SetCurrentDevice(const Device& device) {
+  Device prev_device = GetCurrentDevice();
+  XLATensorImpl::SetCurrentAtenDevice(XlaDeviceToAtenDevice(device));
+  torch_xla::SetCurrentDevice(device);
   return prev_device;
 }
 

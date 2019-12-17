@@ -108,13 +108,13 @@ bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
 
 void ForEachDevice(const std::function<void(const Device&)>& devfn) {
   const Device* device = GetDefaultDevice();
-  XLATensorImpl::SetCurrentAtenDevice(bridge::XlaDeviceToAtenDevice(*device));
+  bridge::SetCurrentDevice(*device);
   devfn(*device);
 }
 
 void ForEachDevice(const std::function<void(const torch::Device&)>& devfn) {
   torch::Device device = bridge::AtenDefaultDevice();
-  XLATensorImpl::SetCurrentAtenDevice(device);
+  bridge::SetCurrentDevice(device);
   devfn(device);
 }
 
