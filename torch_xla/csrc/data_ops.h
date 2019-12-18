@@ -29,6 +29,14 @@ absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
     const xla::Shape& input_shape,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
 
+xla::Shape GetDynamicReshape(
+    const xla::Shape& input_shape,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
+
+xla::XlaOp DynamicReshape(
+    xla::XlaOp input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
+
 // Creates a new tensor with the same data as the input tensor and the specified
 // output size.
 xla::XlaOp BuildView(

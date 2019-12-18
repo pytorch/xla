@@ -318,7 +318,7 @@ void TensorToBuffer(const at::Tensor& tensor, const xla::Shape& dest_shape,
                     const Device& device) {
   at::Tensor contiguous_tensor = tensor.contiguous();
   xla::Shape src_shape = MakeTorchTensorLayout(
-      XlaHelpers::I64List(contiguous_tensor.sizes()),
+      XlaHelpers::I64List(contiguous_tensor.sizes()), /*dynamic_dimensions=*/{},
       XlaTypeFromTensorType(contiguous_tensor.type().scalarType(), device));
   CopyTensors<SType, DType>(contiguous_tensor.data_ptr<SType>(), src_shape,
                             dest_buffer, dest_buffer_size, dest_shape);
@@ -440,7 +440,8 @@ at::Tensor XlaLiteralToTensor(const xla::Literal& literal,
   std::vector<int64_t> dimensions =
       xla::util::ToVector<int64_t>(literal.shape().dimensions());
   xla::Shape torch_shape = MakeTorchTensorLayout(
-      literal.shape().dimensions(), literal.shape().element_type());
+      literal.shape().dimensions(), /*dynamic_dimensions=*/{},
+      literal.shape().element_type());
   xla::int64 total_elements = xla::ShapeUtil::ElementsIn(torch_shape);
 
   const auto literal_data = literal.data<SType>();
@@ -551,7 +552,7 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
   if (shape == nullptr) {
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
     computed_shape = MakeTorchTensorLayout(
-        dimensions,
+        dimensions, /*dynamic_dimensions=*/{},
         XlaTypeFromTensorType(tensor.type().scalarType(), xla_device));
     shape = &computed_shape;
   }
@@ -608,7 +609,8 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
       &device_shape, [&](xla::Shape* subshape, const xla::ShapeIndex&) {
         if (subshape->IsArray()) {
           *subshape = MakeArrayShapeFromDimensions(
-              subshape->dimensions(), subshape->element_type(), device_type);
+              subshape->dimensions(), subshape->dynamic_dimensions(),
+              subshape->element_type(), device_type);
         }
       });
   return device_shape;
@@ -619,6 +621,7 @@ xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
   Device xla_device = GetDeviceOrCurrent(device);
   return MakeArrayShapeFromDimensions(
       XlaHelpers::I64List(tensor.sizes()),
+      /*dynamic_dimensions=*/{},
       MakeXlaPrimitiveType(tensor.type().scalarType(), &xla_device),
       xla_device.hw_type);
 }
