@@ -66,7 +66,8 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install --upgrade google-api-python-client
   /usr/bin/yes | pip install --upgrade oauth2client
   /usr/bin/yes | pip install --upgrade google-cloud-storage
-  /usr/bin/yes | pip install lark-parser tensorboardX
+  /usr/bin/yes | pip install lark-parser
+  /usr/bin/yes | pip install tensorboardX
 
   sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
 }
