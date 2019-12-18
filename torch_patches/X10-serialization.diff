@@ -1,11 +1,11 @@
 diff --git a/torch/serialization.py b/torch/serialization.py
-index 1c1c5f21b0..80748971fa 100644
+index 1e41b22e1f..2f3d2c1797 100644
 --- a/torch/serialization.py
 +++ b/torch/serialization.py
-@@ -319,6 +319,8 @@ def save(obj, f, pickle_module=pickle, pickle_protocol=DEFAULT_PROTOCOL, _use_ne
-         >>> buffer = io.BytesIO()
-         >>> torch.save(x, buffer)
+@@ -380,6 +380,8 @@ def save(obj, f, pickle_module=pickle, pickle_protocol=DEFAULT_PROTOCOL, _use_ne
      """
+     _check_dill_version(pickle_module)
+ 
 +    import torch_xla.core.xla_model as xm
 +    xm.check_view_sharing(obj)
      if _use_new_zipfile_serialization:
