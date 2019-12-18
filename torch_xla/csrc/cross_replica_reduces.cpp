@@ -29,7 +29,8 @@ xla::Shape MakeReduceShape(
   shapes_and_layouts.reserve(operand_shapes.size());
   for (auto& shape : operand_shapes) {
     shapes_and_layouts.push_back(MakeArrayShapeFromDimensions(
-        shape.dimensions(), shape.element_type(), xla_device.hw_type));
+        shape.dimensions(), shape.dynamic_dimensions(), shape.element_type(),
+        xla_device.hw_type));
   }
   return xla::ShapeUtil::MakeTupleShape(shapes_and_layouts);
 }

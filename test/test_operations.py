@@ -409,8 +409,8 @@ class XlaTestCase(unittest.TestCase):
         self.fail('Relative error higher than the maximum tolerance')
     except:
       _dump_differences(
-          out,
           expected,
+          out,
           rtol=rel_err,
           atol=abs_err,
           max_diff_count=FLAGS.max_diff_count)
@@ -421,8 +421,8 @@ class XlaTestCase(unittest.TestCase):
       super(XlaTestCase, self).assertEqual(out, expected)
     except:
       _dump_differences(
-          out,
           expected,
+          out,
           rtol=1e-8,
           atol=1e-8,
           max_diff_count=FLAGS.max_diff_count)
