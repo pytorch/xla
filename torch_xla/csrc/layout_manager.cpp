@@ -124,38 +124,72 @@ xla::Shape MakeShapeWithSortedLayout(
   return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
 }
 
+xla::Shape* SetDynamicDimensions(
+    xla::Shape* shape,
+    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions) {
+  if (!dynamic_dimensions.empty()) {
+    XLA_CHECK_EQ(dynamic_dimensions.size(), shape->rank());
+    for (size_t i = 0; i < dynamic_dimensions.size(); ++i) {
+      shape->set_dynamic_dimension(i, dynamic_dimensions[i]);
+    }
+  }
+  return shape;
+}
+
 xla::Shape MakeTpuShape(
     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,
     xla::PrimitiveType type) {
   static double max_padding_factor =
       xla::sys_util::GetEnvDouble("XLA_MAX_PADDING_FACTOR", 1.25);
+  xla::Shape shape;
   if (PaddingFactor(dimensions[dimensions.size() - 1], 128) *
           PaddingFactor(dimensions[dimensions.size() - 2], 8) <
       max_padding_factor) {
-    return xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
+    shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
+  } else {
+    shape = MakeShapeWithSortedLayout(dimensions, type);
   }
-  return MakeShapeWithSortedLayout(dimensions, type);
+  SetDynamicDimensions(&shape, dynamic_dimensions);
+  return shape;
 }
 
 }  // namespace
 
 xla::Shape MakeTorchTensorLayout(
     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,
     xla::PrimitiveType type) {
-  return xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
+  xla::Shape shape =
+      xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
+  SetDynamicDimensions(&shape, dynamic_dimensions);
+  return shape;
+}
+
+xla::Shape MakeShapeWithLayout(
+    xla::PrimitiveType type,
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,
+    tensorflow::gtl::ArraySlice<const xla::int64> layout) {
+  xla::Shape shape =
+      xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
+  SetDynamicDimensions(&shape, dynamic_dimensions);
+  return shape;
 }
 
 xla::Shape MakeArrayShapeFromDimensions(
     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,
     xla::PrimitiveType type, DeviceType device_type) {
   auto layout_ptr = LayoutManager::Get()->GetLayout(dimensions);
   if (layout_ptr != nullptr) {
-    return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, *layout_ptr);
+    return MakeShapeWithLayout(type, dimensions, dynamic_dimensions,
+                               *layout_ptr);
   }
   if (dimensions.size() > 1 && device_type == DeviceType::TPU) {
-    return MakeTpuShape(dimensions, type);
+    return MakeTpuShape(dimensions, dynamic_dimensions, type);
   }
-  return MakeTorchTensorLayout(dimensions, type);
+  return MakeTorchTensorLayout(dimensions, dynamic_dimensions, type);
 }
 
 }  // namespace torch_xla

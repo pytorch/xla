@@ -482,11 +482,13 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   if (data()->ir_value) {
     const xla::Shape& node_shape = data()->ir_value.shape();
     return MakeArrayShapeFromDimensions(
-        node_shape.dimensions(), node_shape.element_type(), device.hw_type);
+        node_shape.dimensions(), node_shape.dynamic_dimensions(),
+        node_shape.element_type(), device.hw_type);
   }
   XLA_CHECK(data()->tensor_data);
   return MakeArrayShapeFromDimensions(
       XlaHelpers::I64List(data()->tensor_data->sizes()),
+      /*dynamic_dimensions=*/{},
       MakeXlaPrimitiveType(data()->tensor_data->type().scalarType(), &device),
       device.hw_type);
 }

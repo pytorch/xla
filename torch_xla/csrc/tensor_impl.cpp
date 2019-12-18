@@ -124,6 +124,7 @@ void XLATensorImpl::SetupSizeProperties() {
     }
     strides_.clear();
     xla::Shape torch_shape = MakeTorchTensorLayout(shape.get().dimensions(),
+                                                   /*dynamic_dimensions=*/{},
                                                    shape.get().element_type());
     for (auto stride : ComputeShapeStrides(torch_shape)) {
       strides_.push_back(stride);
