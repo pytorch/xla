@@ -1060,7 +1060,8 @@ XLATensor XLATensor::full(tensorflow::gtl::ArraySlice<const xla::int64> size,
                           at::Scalar fill_value, const Device& device,
                           at::ScalarType scalar_type) {
   xla::Shape shape = MakeArrayShapeFromDimensions(
-      size, MakeXlaPrimitiveType(scalar_type, &device), device.hw_type);
+      size, /*dynamic_dimensions=*/{},
+      MakeXlaPrimitiveType(scalar_type, &device), device.hw_type);
   return Create(GetIrValueForScalar(fill_value, shape, device), device,
                 scalar_type);
 }
@@ -2418,9 +2419,11 @@ XLATensor XLATensor::view(
   auto input_shape = input.shape();
   std::vector<xla::int64> complete_dimensions =
       GetCompleteShape(output_size, input_shape.get().dimensions());
+  xla::Shape complete_shape =
+      GetDynamicReshape(input_shape, complete_dimensions);
   xla::Shape shape = MakeArrayShapeFromDimensions(
-      complete_dimensions, input_shape.get().element_type(),
-      input.GetDevice().hw_type);
+      complete_shape.dimensions(), complete_shape.dynamic_dimensions(),
+      complete_shape.element_type(), input.GetDevice().hw_type);
   ViewInfo view_info(
       ViewInfo::Type::kReshape, std::move(shape),
       xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
