@@ -2,13 +2,14 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace torch_xla {
 namespace {
 
-thread_local Device g_current_device;
+thread_local absl::optional<Device> g_current_device;
 
 std::string DeviceTypeToString(DeviceType hw_type) {
   switch (hw_type) {
@@ -68,11 +69,17 @@ const Device* GetDefaultDevice() {
   return default_device;
 }
 
-Device GetCurrentDevice() { return g_current_device; }
+Device GetCurrentDevice() {
+  if (!g_current_device) {
+    g_current_device = *GetDefaultDevice();
+  }
+  return *g_current_device;
+}
 
 Device SetCurrentDevice(const Device& device) {
-  Device current = g_current_device;
+  Device current = GetCurrentDevice();
   g_current_device = device;
+  TF_VLOG(2) << "New current device: " << device;
   return current;
 }
 
