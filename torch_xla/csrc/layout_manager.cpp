@@ -154,6 +154,17 @@ xla::Shape MakeTpuShape(
   return shape;
 }
 
+xla::Shape MakeShapeWithLayout(
+    xla::PrimitiveType type,
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,
+    tensorflow::gtl::ArraySlice<const xla::int64> layout) {
+  xla::Shape shape =
+      xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
+  SetDynamicDimensions(&shape, dynamic_dimensions);
+  return shape;
+}
+
 }  // namespace
 
 xla::Shape MakeTorchTensorLayout(
@@ -162,17 +173,6 @@ xla::Shape MakeTorchTensorLayout(
     xla::PrimitiveType type) {
   xla::Shape shape =
       xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
-  SetDynamicDimensions(&shape, dynamic_dimensions);
-  return shape;
-}
-
-xla::Shape MakeShapeWithLayout(
-    xla::PrimitiveType type,
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,
-    tensorflow::gtl::ArraySlice<const xla::int64> layout) {
-  xla::Shape shape =
-      xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
   SetDynamicDimensions(&shape, dynamic_dimensions);
   return shape;
 }

@@ -7,7 +7,8 @@
 
 namespace torch_xla {
 
-// Creates a minor-to-major layout from given dimensions.
+// Creates a minor-to-major layout from given dimensions. The dynamic_dimensions
+// slice should be either empty, or of the same size as dimensions.
 xla::Shape MakeTorchTensorLayout(
     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
     tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,

@@ -106,11 +106,18 @@ absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
       if (size_diff == 0) {
         if (i_index == input_dynamic_dimension) {
           dynamic_dimension = o_index;
-          break;
+        } else if (i_index - 1 == input_dynamic_dimension) {
+          dynamic_dimension = o_index - 1;
         }
       }
       if (size_diff >= 0) {
         if (o_index < output_sizes.size()) {
+          // Catch whether a dynamic dimension is being split by a reshape.
+          // Which is not allowed.
+          XLA_CHECK(size_diff == 0 || i_index - 1 != input_dynamic_dimension)
+              << "Unable to map dynamic dimension of shape " << input_shape
+              << " to output sizes (" << absl::StrJoin(output_sizes, ", ")
+              << ")";
           output_size *= output_sizes[o_index];
           ++o_index;
         }
@@ -121,6 +128,10 @@ absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
           ++i_index;
         }
       }
+    }
+    if (dynamic_dimension < 0 &&
+        input_dynamic_dimension == input_shape.rank() - 1) {
+      dynamic_dimension = output_sizes.size() - 1;
     }
     XLA_CHECK(dynamic_dimension >= 0)
         << "Unable to map dynamic dimension of shape " << input_shape
