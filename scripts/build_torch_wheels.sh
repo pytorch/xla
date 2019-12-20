@@ -67,7 +67,8 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install --upgrade oauth2client
   /usr/bin/yes | pip install --upgrade google-cloud-storage
   /usr/bin/yes | pip install lark-parser
-  /usr/bin/yes | pip install tensorboardX
+  # TODO(zcain): Switch to stable pip version of tensorboardX. https://github.com/lanpa/tensorboardX/issues/538
+  /usr/bin/yes | pip install 'git+https://github.com/lanpa/tensorboardX'
 
   sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
 }
