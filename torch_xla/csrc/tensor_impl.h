@@ -34,10 +34,6 @@ class XLATensorImpl : public c10::TensorImpl {
 
   int64_t size(int64_t d) const override;
 
-  static c10::Device GetCurrentAtenDevice();
-
-  static c10::Device SetCurrentAtenDevice(c10::Device device);
-
   static void AtenInitialize();
 
   const at::Storage& storage() const override;
