@@ -79,7 +79,7 @@ To build from source:
   python setup.py install
   ```
 
-* Install Bazel following the [instructions](https://docs.bazel.build/versions/master/install.html). You should only install version 0.24.1, as no older nor newer releases will be able to build the required dependencies.
+* Install Bazel following the [instructions](https://docs.bazel.build/versions/master/install.html). You should only install version 1.1.0, as no older nor newer releases will be able to build the required dependencies.
 
 * Build the _PyTorch/XLA_ source:
 
