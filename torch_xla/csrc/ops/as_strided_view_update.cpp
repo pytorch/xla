@@ -21,10 +21,11 @@ xla::XlaOp LowerAsStridedViewUpdate(
   xla::int64 slice_size = xla::util::Multiply<xla::int64>(size);
   if (input_element_count == slice_size) {
     XLA_CHECK_EQ(storage_offset, 0);
-    return xla::Reshape(input, size);
+    return XlaHelpers::DynamicReshape(input, size);
   }
-  xla::XlaOp r1_target = xla::Reshape(target, {slice_size});
-  xla::XlaOp r1_input = xla::Reshape(input, {input_element_count});
+  xla::XlaOp r1_target = XlaHelpers::DynamicReshape(target, {slice_size});
+  xla::XlaOp r1_input =
+      XlaHelpers::DynamicReshape(input, {input_element_count});
   xla::XlaOp r1_result = BuildUnselect(r1_target, r1_input, 0, storage_offset,
                                        storage_offset + input_element_count, 1);
   return xla::Reshape(r1_result, size);

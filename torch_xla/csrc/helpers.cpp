@@ -325,6 +325,15 @@ xla::XlaOp XlaHelpers::DynamicReshape(
   return xla::Reshape(input, output_sizes);
 }
 
+xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
+                                        const xla::Shape& shape) {
+  xla::int64 dynamic_dimension = GetDynamicDimension(shape);
+  return dynamic_dimension < 0
+             ? xla::Reshape(input, shape.dimensions())
+             : xla::ReshapeWithInferredDimension(input, shape.dimensions(),
+                                                 dynamic_dimension);
+}
+
 xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
   xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
   *input_shape_tmp = ShapeOfXlaOp(input);
@@ -332,7 +341,7 @@ xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
     return input;
   }
   xla::int64 input_elements = xla::ShapeUtil::ElementsIn(*input_shape_tmp);
-  return xla::Reshape(input, {input_elements});
+  return DynamicReshape(input, {input_elements});
 }
 
 std::vector<xla::int64> XlaHelpers::MakeTransposePermutation(xla::int64 dim0,
