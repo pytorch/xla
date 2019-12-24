@@ -32,7 +32,8 @@ ConditionMaskData CreateConditionMaskData(xla::XlaOp condition) {
   iota_shape.set_element_type(xla::PrimitiveType::S32);
 
   xla::int64 flattened_size = xla::Product(iota_shape.dimensions());
-  xla::XlaOp reshaped_condition = xla::Reshape(condition, {flattened_size});
+  xla::XlaOp reshaped_condition =
+      XlaHelpers::DynamicReshape(condition, {flattened_size});
   xla::XlaOp zeros = xla::ZerosLike(reshaped_condition);
   xla::XlaOp zeros_int =
       xla::ConvertElementType(zeros, xla::PrimitiveType::S32);
@@ -48,16 +49,15 @@ ConditionMaskData CreateConditionMaskData(xla::XlaOp condition) {
           length};
 }
 
-std::pair<xla::XlaOp, xla::Shape> DotExpand(xla::XlaOp op,
-                                            const xla::Shape& op_shape,
-                                            const xla::Shape& to_shape) {
+xla::XlaOp DotExpand(xla::XlaOp op, const xla::Shape& op_shape,
+                     const xla::Shape& to_shape) {
   xla::int64 rank_delta = to_shape.rank() - op_shape.rank();
   XLA_CHECK_GT(rank_delta, 0) << op_shape << " vs. " << to_shape;
 
   std::vector<xla::int64> reshape_sizes(to_shape.rank(), 1);
   std::copy(op_shape.dimensions().begin(), op_shape.dimensions().end(),
             reshape_sizes.begin() + rank_delta);
-  xla::XlaOp result = xla::Reshape(op, reshape_sizes);
+  xla::XlaOp result = XlaHelpers::DynamicReshape(op, reshape_sizes);
 
   std::vector<xla::int64> broadcasted_sizes(
       to_shape.dimensions().begin(),
@@ -65,10 +65,8 @@ std::pair<xla::XlaOp, xla::Shape> DotExpand(xla::XlaOp op,
   broadcasted_sizes.insert(broadcasted_sizes.end(),
                            op_shape.dimensions().begin(),
                            op_shape.dimensions().end());
-  return std::make_pair(
-      xla::BroadcastInDim(result, broadcasted_sizes,
-                          xla::util::Iota<xla::int64>(to_shape.rank())),
-      xla::ShapeUtil::MakeShape(op_shape.element_type(), broadcasted_sizes));
+  return xla::BroadcastInDim(result, broadcasted_sizes,
+                             xla::util::Iota<xla::int64>(to_shape.rank()));
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
@@ -310,8 +308,8 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64 k,
                                   start_indices, limit_indices, strides);
   if (!keepdim) {
     auto reshape_sizes = XlaHelpers::DropDimensions(shape.dimensions(), {dim});
-    values = xla::Reshape(values, reshape_sizes);
-    indices = xla::Reshape(indices, reshape_sizes);
+    values = XlaHelpers::DynamicReshape(values, reshape_sizes);
+    indices = XlaHelpers::DynamicReshape(indices, reshape_sizes);
   }
   // aten::kthvalue() wants Long tensors as indices.
   return {values, xla::ConvertElementType(
@@ -366,19 +364,21 @@ xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
     return xla::Dot(lhs, rhs);
   }
   if (lhs_shape.rank() == 1 && rhs_shape.rank() == 2) {
-    xla::XlaOp reshaped_lhs = xla::Reshape(lhs, {1, lhs_shape.dimensions(0)});
-    return xla::Reshape(xla::Dot(reshaped_lhs, rhs), {rhs_shape.dimensions(1)});
+    xla::XlaOp reshaped_lhs =
+        XlaHelpers::DynamicReshape(lhs, {1, lhs_shape.dimensions(0)});
+    return XlaHelpers::DynamicReshape(xla::Dot(reshaped_lhs, rhs),
+                                      {rhs_shape.dimensions(1)});
   }
   if (lhs_shape.rank() >= 1 && rhs_shape.rank() >= 1 &&
       (lhs_shape.rank() >= 3 || rhs_shape.rank() >= 3)) {
     xla::XlaOp reshaped_lhs = lhs;
     xla::XlaOp reshaped_rhs = rhs;
     if (lhs_shape.rank() > rhs_shape.rank()) {
-      std::tie(reshaped_rhs, rhs_shape) =
-          DotExpand(reshaped_rhs, rhs_shape, lhs_shape);
+      reshaped_rhs = DotExpand(reshaped_rhs, rhs_shape, lhs_shape);
+      rhs_shape = XlaHelpers::ShapeOfXlaOp(reshaped_rhs);
     } else if (rhs_shape.rank() > lhs_shape.rank()) {
-      std::tie(reshaped_lhs, lhs_shape) =
-          DotExpand(reshaped_lhs, lhs_shape, rhs_shape);
+      reshaped_lhs = DotExpand(reshaped_lhs, lhs_shape, rhs_shape);
+      lhs_shape = XlaHelpers::ShapeOfXlaOp(reshaped_lhs);
     }
     std::tie(reshaped_lhs, reshaped_rhs) =
         DotBroadcast(reshaped_lhs, lhs_shape, reshaped_rhs, rhs_shape);
@@ -609,7 +609,8 @@ xla::XlaOp CreateScatter(xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
   to_concat.reserve(input_shape.rank());
   for (xla::int64 i = 0; i < input_shape.rank(); ++i) {
     if (i == dim) {
-      to_concat.push_back(xla::Reshape(index, index_shape.dimensions()));
+      to_concat.push_back(
+          XlaHelpers::DynamicReshape(index, index_shape.dimensions()));
     } else {
       to_concat.push_back(xla::Iota(input.builder(), index_shape, i));
     }
@@ -645,7 +646,7 @@ xla::XlaOp CreatePut(xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
   }
   xla::XlaOp r1_scatter =
       CreateScatter(r1_input, bound_index, r1_source, /*dim=*/0, combiner);
-  return xla::Reshape(r1_scatter, input_shape.dimensions());
+  return XlaHelpers::DynamicReshapeAs(r1_scatter, input_shape);
 }
 
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input) {
