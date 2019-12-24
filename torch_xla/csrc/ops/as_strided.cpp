@@ -19,9 +19,10 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input,
   xla::int64 slice_size = xla::util::Multiply<xla::int64>(size);
   if (input_element_count == slice_size) {
     XLA_CHECK_EQ(storage_offset, 0);
-    return xla::Reshape(input, size);
+    return XlaHelpers::DynamicReshape(input, size);
   }
-  xla::XlaOp r1_slice = xla::Reshape(input, {input_element_count});
+  xla::XlaOp r1_slice =
+      XlaHelpers::DynamicReshape(input, {input_element_count});
   xla::XlaOp r1_result = xla::SliceInDim(r1_slice, storage_offset,
                                          storage_offset + slice_size, 1, 0);
   return xla::Reshape(r1_result, size);

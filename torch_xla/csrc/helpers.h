@@ -135,6 +135,8 @@ class XlaHelpers {
       xla::XlaOp input,
       tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
 
+  static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
+
   // Creates a convolution or dot precision configuration.
   static xla::PrecisionConfig BuildPrecisionConfig(
       const xla::PrecisionConfig::Precision conv_precision);
