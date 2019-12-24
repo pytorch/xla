@@ -265,6 +265,66 @@ xla::XlaOp XlaHelpers::ReshapeToRank(xla::XlaOp input, xla::int64 expected_rank,
   return xla::Reshape(input, dimensions);
 }
 
+absl::optional<XlaHelpers::DynamicReshapeInfo>
+XlaHelpers::GetDynamicReshapeInfo(
+    const xla::Shape& input_shape,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+  xla::int64 input_dynamic_dimension = GetDynamicDimension(input_shape);
+  if (input_dynamic_dimension < 0) {
+    return absl::nullopt;
+  }
+  DynamicReshapeInfo info;
+  info.output_shape =
+      xla::ShapeUtil::MakeShape(input_shape.element_type(), output_sizes);
+  if (info.output_shape.rank() > 0) {
+    xla::int64 size_at_dyndim = 1;
+    for (xla::int64 i = 0; i <= input_dynamic_dimension; ++i) {
+      size_at_dyndim *= input_shape.dimensions(i);
+    }
+    xla::int64 dynamic_dimension = -1;
+    xla::int64 out_size = 1;
+    for (xla::int64 i = 0; i < output_sizes.size(); ++i) {
+      XLA_CHECK_LE(out_size, size_at_dyndim / input_shape.dimensions(
+                                                  input_dynamic_dimension))
+          << "Unable to map dynamic dimension of shape " << input_shape
+          << " to output sizes (" << absl::StrJoin(output_sizes, ", ") << ")";
+      out_size *= output_sizes[i];
+      if (out_size >= size_at_dyndim) {
+        dynamic_dimension = i;
+        break;
+      }
+    }
+    XLA_CHECK(dynamic_dimension >= 0)
+        << "Unable to map dynamic dimension of shape " << input_shape
+        << " to output sizes (" << absl::StrJoin(output_sizes, ", ") << ")";
+    info.dynamic_dimension = dynamic_dimension;
+    info.output_shape.set_dynamic_dimension(info.dynamic_dimension, true);
+  }
+  return std::move(info);
+}
+
+xla::Shape XlaHelpers::GetDynamicReshape(
+    const xla::Shape& input_shape,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+  auto info = GetDynamicReshapeInfo(input_shape, output_sizes);
+  if (info) {
+    return info->output_shape;
+  }
+  return xla::ShapeUtil::MakeShape(input_shape.element_type(), output_sizes);
+}
+
+xla::XlaOp XlaHelpers::DynamicReshape(
+    xla::XlaOp input,
+    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+  const xla::Shape& input_shape = ShapeOfXlaOp(input);
+  auto info = GetDynamicReshapeInfo(input_shape, output_sizes);
+  if (info) {
+    return xla::ReshapeWithInferredDimension(input, output_sizes,
+                                             info->dynamic_dimension);
+  }
+  return xla::Reshape(input, output_sizes);
+}
+
 xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
   xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
   *input_shape_tmp = ShapeOfXlaOp(input);
