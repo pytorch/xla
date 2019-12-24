@@ -88,7 +88,8 @@ SummationResult CreateSummation(
     result.result = xla::Mul(result.result, scale);
   }
   if (keep_reduced_dimensions) {
-    result.result = xla::Reshape(result.result, result.rinfo.new_dimensions);
+    result.result =
+        XlaHelpers::DynamicReshape(result.result, result.rinfo.new_dimensions);
   }
   return result;
 }
@@ -105,7 +106,7 @@ xla::XlaOp CreateProduct(
       input, init_value, XlaHelpers::CreateMulComputation(shape.element_type()),
       dimensions);
   if (keep_reduced_dimensions) {
-    result = xla::Reshape(result, rinfo.new_dimensions);
+    result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
   return result;
 }
@@ -333,7 +334,7 @@ xla::XlaOp BuildMaxInDim(xla::XlaOp input, xla::int64 dim,
       input, init_value, XlaHelpers::CreateMaxComputation(shape.element_type()),
       {dim});
   if (keep_reduced_dimensions) {
-    result = xla::Reshape(result, rinfo.new_dimensions);
+    result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
   return result;
 }
@@ -350,7 +351,7 @@ xla::XlaOp BuildMinInDim(xla::XlaOp input, xla::int64 dim,
       input, init_value, XlaHelpers::CreateMinComputation(shape.element_type()),
       {dim});
   if (keep_reduced_dimensions) {
-    result = xla::Reshape(result, rinfo.new_dimensions);
+    result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
   return result;
 }
@@ -360,7 +361,8 @@ xla::XlaOp BuildArgMax(xla::XlaOp input, xla::int64 dim, bool keepdim) {
   xla::XlaOp operand = input;
   if (dim < 0) {
     dim = 0;
-    operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(*shape)});
+    operand = XlaHelpers::DynamicReshape(operand,
+                                         {xla::ShapeUtil::ElementsIn(*shape)});
     shape = &XlaHelpers::ShapeOfXlaOp(operand);
   }
   xla::XlaOp result = xla::ArgMaxTwoPass(
@@ -369,7 +371,7 @@ xla::XlaOp BuildArgMax(xla::XlaOp input, xla::int64 dim, bool keepdim) {
   if (keepdim) {
     auto dimensions = xla::util::ToVector<xla::int64>(shape->dimensions());
     dimensions[dim] = 1;
-    result = xla::Reshape(result, dimensions);
+    result = XlaHelpers::DynamicReshape(result, dimensions);
   }
   return result;
 }
@@ -379,7 +381,8 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, xla::int64 dim, bool keepdim) {
   xla::XlaOp operand = input;
   if (dim < 0) {
     dim = 0;
-    operand = xla::Reshape(operand, {xla::ShapeUtil::ElementsIn(*shape)});
+    operand = XlaHelpers::DynamicReshape(operand,
+                                         {xla::ShapeUtil::ElementsIn(*shape)});
     shape = &XlaHelpers::ShapeOfXlaOp(operand);
   }
   xla::XlaOp result = xla::ArgMinTwoPass(
@@ -388,7 +391,7 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, xla::int64 dim, bool keepdim) {
   if (keepdim) {
     auto dimensions = xla::util::ToVector<xla::int64>(shape->dimensions());
     dimensions[dim] = 1;
-    result = xla::Reshape(result, dimensions);
+    result = XlaHelpers::DynamicReshape(result, dimensions);
   }
   return result;
 }
@@ -405,7 +408,7 @@ xla::XlaOp BuildAll(xla::XlaOp input,
       xla::Reduce(input, init_value, CreateAllComputation(shape.element_type()),
                   dimensions);
   if (keep_reduced_dimensions) {
-    result = xla::Reshape(result, rinfo.new_dimensions);
+    result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
   return result;
 }
@@ -422,7 +425,7 @@ xla::XlaOp BuildAny(xla::XlaOp input,
       xla::Reduce(input, init_value, CreateAnyComputation(shape.element_type()),
                   dimensions);
   if (keep_reduced_dimensions) {
-    result = xla::Reshape(result, rinfo.new_dimensions);
+    result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
   return result;
 }

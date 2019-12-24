@@ -5,6 +5,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
@@ -16,7 +17,7 @@ xla::Shape NodeOutputShape(
     const Value& input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
   const xla::Shape& input_shape = input.shape();
-  auto info = GetDynamicReshapeInfo(input_shape, output_sizes);
+  auto info = XlaHelpers::GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
     return std::move(info->output_shape);
   }

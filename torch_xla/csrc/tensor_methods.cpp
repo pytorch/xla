@@ -2420,7 +2420,7 @@ XLATensor XLATensor::view(
   std::vector<xla::int64> complete_dimensions =
       GetCompleteShape(output_size, input_shape.get().dimensions());
   xla::Shape complete_shape =
-      GetDynamicReshape(input_shape, complete_dimensions);
+      XlaHelpers::GetDynamicReshape(input_shape, complete_dimensions);
   xla::Shape shape = MakeArrayShapeFromDimensions(
       complete_shape.dimensions(), complete_shape.dynamic_dimensions(),
       complete_shape.element_type(), input.GetDevice().hw_type);
