@@ -18,21 +18,19 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   at::DeviceType type() const override { return at::DeviceType::XLA; }
 
   c10::Device exchangeDevice(c10::Device device) const override {
-    Device prev_device =
-        SetCurrentDevice(bridge::AtenDeviceToXlaDevice(device));
-    return bridge::XlaDeviceToAtenDevice(prev_device);
+    return bridge::SetCurrentDevice(device);
   }
 
   c10::Device getDevice() const override {
-    return bridge::XlaDeviceToAtenDevice(GetCurrentDevice());
+    return bridge::GetCurrentAtenDevice();
   }
 
   void setDevice(c10::Device device) const override {
-    SetCurrentDevice(bridge::AtenDeviceToXlaDevice(device));
+    bridge::SetCurrentDevice(device);
   }
 
   void uncheckedSetDevice(c10::Device device) const noexcept override {
-    SetCurrentDevice(bridge::AtenDeviceToXlaDevice(device));
+    bridge::SetCurrentDevice(device);
   }
 
   c10::Stream getStream(c10::Device device) const noexcept override {
@@ -40,8 +38,7 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   }
 
   c10::Stream exchangeStream(c10::Stream s) const noexcept override {
-    return c10::Stream(c10::Stream::DEFAULT,
-                       bridge::XlaDeviceToAtenDevice(GetCurrentDevice()));
+    return c10::Stream(c10::Stream::DEFAULT, bridge::GetCurrentAtenDevice());
   }
 
   c10::DeviceIndex deviceCount() const noexcept override {
