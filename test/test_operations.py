@@ -33,6 +33,7 @@ import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
+import torch_xla.core.compex as cx
 import torch_xla.core.xla_model as xm
 import torchvision
 import unittest
@@ -560,6 +561,40 @@ class XlaMNIST(nn.Module):
     x = F.relu(self.fc1(x))
     x = self.fc2(x)
     return F.log_softmax(x, dim=1)
+
+
+class TestCompexSingleCoreMNIST(XlaTestCase):
+
+  def test(self):
+    device = xm.xla_device()
+    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=8)
+    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=50)
+    train_loader = xu.SampleGenerator(
+        data=(torch.zeros(batch_size, 1, 28,
+                          28), torch.zeros(batch_size, dtype=torch.int64)),
+        sample_count=sample_count)
+
+    model = XlaMNIST().to(device)
+    loss_fn = nn.NLLLoss()
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
+
+    ctx = xu.Context()
+
+    def loss_check_fn(outputs):
+      loss = outputs[0]
+      ctx.loss = loss.cpu().item()
+
+    def loop_fn(batch):
+      data, target = batch
+      optimizer.zero_grad()
+      output = model(data)
+      loss = loss_fn(output, target)
+      loss.backward()
+      xm.optimizer_step(optimizer)
+      return [loss]
+
+    cx.run(train_loader, device, loop_fn, output_closure=loss_check_fn)
+    self.assertLess(ctx.loss, 0.25)
 
 
 class TestParallelTensorMNIST(XlaTestCase):
