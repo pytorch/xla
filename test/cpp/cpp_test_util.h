@@ -32,10 +32,11 @@ const std::unordered_set<std::string>* GetIgnoredCounters();
 // know nothing about autograd. If the input tensor is already a CPU tensor, it
 // will be returned. Needed because EqualValues and AllClose require CPU tensors
 // on both sides.
-at::Tensor ToCpuTensor(const at::Tensor& t);
+at::Tensor ToCpuTensor(const at::Tensor& tensor);
 
 // Helper function to copy a tensor to device.
-torch::Tensor CopyToDevice(torch::Tensor t, const torch::Device& device);
+torch::Tensor CopyToDevice(const torch::Tensor& tensor,
+                           const torch::Device& device);
 
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2);
 

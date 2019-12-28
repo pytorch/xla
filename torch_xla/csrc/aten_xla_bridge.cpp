@@ -57,6 +57,10 @@ c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor) {
   return impl->tensor();
 }
 
+bool IsXlaTensor(const at::Tensor& tensor) {
+  return TryGetXlaTensor(tensor).has_value();
+}
+
 XLATensor GetXlaTensor(const at::Tensor& tensor) {
   auto xtensor = TryGetXlaTensor(tensor);
   XLA_CHECK(xtensor) << "Input tensor is not an XLA tensor: "
