@@ -17,7 +17,7 @@ namespace torch_xla {
 namespace cpp_test {
 namespace {
 
-void DumpDifferences(at::Tensor tensor1, at::Tensor tensor2) {
+void DumpDifferences(const at::Tensor& tensor1, const at::Tensor& tensor2) {
   static bool dump_tensors =
       xla::sys_util::GetEnvBool("XLA_TEST_DUMP_TENSORS", false);
   at::Tensor dtensor1 = tensor1;
@@ -34,6 +34,24 @@ void DumpDifferences(at::Tensor tensor1, at::Tensor tensor2) {
     std::cerr << "Compared Tensors:\n"
               << tensor1 << "\n-vs-\n"
               << tensor2 << "\n";
+  }
+}
+
+void MaybeDumpGraph(const at::Tensor& tensor) {
+  static std::string dump_graph =
+      xla::sys_util::GetEnvString("XLA_TEST_DUMP_GRAPHS", "");
+  if (!dump_graph.empty() && bridge::IsXlaTensor(tensor)) {
+    std::string graph_str;
+    if (dump_graph == "text") {
+      graph_str = GetTensorTextGraph(tensor);
+    } else if (dump_graph == "hlo") {
+      graph_str = GetTensorHloGraph(tensor);
+    } else if (dump_graph == "dot") {
+      graph_str = GetTensorDotGraph(tensor);
+    }
+    if (!graph_str.empty()) {
+      std::cerr << "\n>> Tensor Graph:\n" << graph_str << "\n\n";
+    }
   }
 }
 
@@ -54,16 +72,19 @@ const std::unordered_set<std::string>* GetIgnoredCounters() {
   return icounters;
 }
 
-at::Tensor ToCpuTensor(const at::Tensor& t) {
-  // t.to() implicitly triggers a sync if t.device=torch::kXLA.
-  return t.to(torch::kCPU);
+at::Tensor ToCpuTensor(const at::Tensor& tensor) {
+  // tensor.to() implicitly triggers a sync if t.device=torch::kXLA.
+  return tensor.to(torch::kCPU);
 }
 
-torch::Tensor CopyToDevice(torch::Tensor t, const torch::Device& device) {
-  return t.to(device, /*non_blocking=*/false, /*copy=*/true);
+torch::Tensor CopyToDevice(const torch::Tensor& tensor,
+                           const torch::Device& device) {
+  return tensor.to(device, /*non_blocking=*/false, /*copy=*/true);
 }
 
 bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
+  MaybeDumpGraph(tensor1);
+  MaybeDumpGraph(tensor2);
   tensor1 = ToCpuTensor(tensor1);
   tensor2 = ToCpuTensor(tensor2);
   if (tensor1.sizes() != tensor2.sizes() ||
@@ -86,6 +107,8 @@ bool EqualValues(at::Tensor tensor1, at::Tensor tensor2) {
 }
 
 bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
+  MaybeDumpGraph(tensor1);
+  MaybeDumpGraph(tensor2);
   tensor1 = ToCpuTensor(tensor1);
   tensor2 = ToCpuTensor(tensor2);
   if (tensor1.sizes() != tensor2.sizes()) {
@@ -120,6 +143,8 @@ void ForEachDevice(const std::function<void(const torch::Device&)>& devfn) {
 
 bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
                  double atol) {
+  MaybeDumpGraph(tensor1);
+  MaybeDumpGraph(tensor2);
   tensor1 = ToCpuTensor(tensor1);
   tensor2 = ToCpuTensor(tensor2);
   if (tensor1.sizes() != tensor2.sizes() ||
