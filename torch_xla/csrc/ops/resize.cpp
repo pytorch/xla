@@ -19,7 +19,7 @@ xla::Shape NodeOutputShape(const Value& input,
 }  // namespace
 
 Resize::Resize(const Value& input, std::vector<xla::int64> size)
-    : Node(ir::OpKind(at::aten::resize_), {input},
+    : Node(ir::OpKind(at::aten::resize), {input},
            [&]() { return NodeOutputShape(input, size); },
            /*num_outputs=*/1, xla::util::MHash(size)),
       size_(std::move(size)) {}
