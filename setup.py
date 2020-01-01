@@ -18,6 +18,13 @@ import subprocess
 import sys
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
+third_party_path = os.path.join(base_dir, 'third_party')
+
+
+def _get_build_mode():
+  for i in range(1, len(sys.argv)):
+    if not sys.argv[i].startswith('-'):
+      return sys.argv[i]
 
 
 def _check_env_flag(name, default=''):
@@ -69,17 +76,42 @@ def create_version_files(base_dir, version, xla_git_sha, torch_git_sha):
 def generate_xla_aten_code(base_dir):
   generate_code_cmd = [os.path.join(base_dir, 'scripts', 'generate_code.sh')]
   if subprocess.call(generate_code_cmd) != 0:
-    print("Failed to run '{}'".format(generate_code_cmd), file=sys.stderr)
+    print(
+        'Failed to generate ATEN bindings: {}'.format(generate_code_cmd),
+        file=sys.stderr)
     sys.exit(1)
 
 
-def build_extra_libraries(base_dir):
+def build_extra_libraries(base_dir, build_mode=None):
   build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
-  if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
-    build_libs_cmd += [sys.argv[1]]
+  if build_mode is not None:
+    build_libs_cmd += [build_mode]
   if subprocess.call(build_libs_cmd) != 0:
-    print("Failed to run '{}'".format(build_libs_cmd), file=sys.stderr)
+    print(
+        'Failed to build external libraries: {}'.format(build_libs_cmd),
+        file=sys.stderr)
     sys.exit(1)
+
+
+def generate_protos(base_dir, third_party_path):
+  # Application proto files should be in torch_xla/pb/src/ and the generated
+  # files will go in torch_xla/pb/cpp/.
+  proto_files = glob.glob(os.path.join(base_dir, 'torch_xla/pb/src/*.proto'))
+  if proto_files:
+    protoc = os.path.join(
+        third_party_path,
+        'tensorflow/bazel-out/host/bin/external/com_google_protobuf/protoc')
+    protoc_cmd = [
+        protoc, '-I',
+        os.path.join(third_party_path, 'tensorflow'), '-I',
+        os.path.join(base_dir, 'torch_xla/pb/src'), '--cpp_out',
+        os.path.join(base_dir, 'torch_xla/pb/cpp')
+    ] + proto_files
+    if subprocess.call(protoc_cmd) != 0:
+      print(
+          'Failed to generate protobuf files: {}'.format(protoc_cmd),
+          file=sys.stderr)
+      sys.exit(1)
 
 
 def _compile_parallel(self,
@@ -91,7 +123,7 @@ def _compile_parallel(self,
                       extra_preargs=None,
                       extra_postargs=None,
                       depends=None):
-  # those lines are copied from distutils.ccompiler.CCompiler directly
+  # Those lines are copied from distutils.ccompiler.CCompiler directly.
   macros, objects, extra_postargs, pp_opts, build = self._setup_compile(
       output_dir, macros, include_dirs, sources, depends, extra_postargs)
   cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
@@ -152,7 +184,7 @@ class Build(BuildExtension):
     # the tests.
     BuildExtension.run(self)
     if _check_env_flag('BUILD_CPP_TESTS', default='1'):
-      # Build the C++ tests
+      # Build the C++ tests.
       cmd = [os.path.join(base_dir, 'test/cpp/run_tests.sh'), '-B']
       if subprocess.call(cmd) != 0:
         print('Failed to build tests: {}'.format(cmd), file=sys.stderr)
@@ -162,42 +194,47 @@ class Build(BuildExtension):
 xla_git_sha, torch_git_sha = get_git_head_sha(base_dir)
 version = get_build_version(xla_git_sha)
 
-# Generate version info (torch_xla.__version__)
-create_version_files(base_dir, version, xla_git_sha, torch_git_sha)
+build_mode = _get_build_mode()
+if build_mode not in ['clean']:
+  # Generate version info (torch_xla.__version__).
+  create_version_files(base_dir, version, xla_git_sha, torch_git_sha)
 
-# Generate the code before globbing!
-generate_xla_aten_code(base_dir)
+  # Generate the code before globbing!
+  generate_xla_aten_code(base_dir)
 
-# Build the support libraries (ie, TF).
-build_extra_libraries(base_dir)
+  # Build the support libraries (ie, TF).
+  build_extra_libraries(base_dir, build_mode=build_mode)
+
+  # Generate the proto C++/python files only after third_party has built.
+  generate_protos(base_dir, third_party_path)
 
 # Fetch the sources to be built.
 torch_xla_sources = (
-    glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp'))
+    glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
+    glob.glob('torch_xla/pb/cpp/*.cc'))
 
-# Constant known variables used throughout this file
-lib_path = os.path.join(base_dir, 'torch_xla', 'lib')
+# Constant known variables used throughout this file.
+lib_path = os.path.join(base_dir, 'torch_xla/lib')
 pytorch_source_path = os.getenv('PYTORCH_SOURCE_PATH',
                                 os.path.dirname(base_dir))
-third_party_path = os.path.join(base_dir, 'third_party')
 
+# Setup include directories folders.
 include_dirs = [
     base_dir,
 ]
-include_dirs += [
-    third_party_path + '/tensorflow/bazel-tensorflow',
-    third_party_path + '/tensorflow/bazel-bin',
-    third_party_path +
-    '/tensorflow/bazel-tensorflow/external/protobuf_archive/src',
-    third_party_path +
-    '/tensorflow/bazel-tensorflow/external/com_google_protobuf/src',
-    third_party_path + '/tensorflow/bazel-tensorflow/external/eigen_archive',
-    third_party_path + '/tensorflow/bazel-tensorflow/external/com_google_absl',
-]
+for ipath in [
+    'tensorflow/bazel-tensorflow',
+    'tensorflow/bazel-bin',
+    'tensorflow/bazel-tensorflow/external/protobuf_archive/src',
+    'tensorflow/bazel-tensorflow/external/com_google_protobuf/src',
+    'tensorflow/bazel-tensorflow/external/eigen_archive',
+    'tensorflow/bazel-tensorflow/external/com_google_absl',
+]:
+  include_dirs.append(os.path.join(third_party_path, ipath))
 include_dirs += [
     pytorch_source_path,
-    os.path.join(pytorch_source_path, 'torch', 'csrc'),
-    os.path.join(pytorch_source_path, 'torch', 'lib', 'tmp_install', 'include'),
+    os.path.join(pytorch_source_path, 'torch/csrc'),
+    os.path.join(pytorch_source_path, 'torch/lib/tmp_install/include'),
 ]
 
 library_dirs = []
