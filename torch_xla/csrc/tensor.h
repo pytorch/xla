@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 #include <string>
 #include <unordered_map>
 
@@ -992,6 +993,13 @@ class XLATensor {
     std::string device;
   };
 
+  struct CompilationResult {
+    Device device;
+    size_t emitted_nodes = 0;
+    std::shared_ptr<xla::ComputationClient::Computation> computation;
+    std::vector<xla::ComputationClient::DataPtr> parameters_data;
+  };
+
   struct CachedComputation {
     CachedComputation(
         std::shared_ptr<xla::ComputationClient::Computation> computation,
@@ -1007,7 +1015,8 @@ class XLATensor {
   struct Async {
     Async(SyncTensorCollection* coll,
           std::vector<xla::ComputationClient::DataPtr> parameters_data,
-          std::string device, ComputationCache::TypePtr cached_computation);
+          std::vector<xla::ComputationClient::DataPtr> tensors_data,
+          ComputationCache::TypePtr cached_computation);
 
     void Wait();
 
@@ -1156,18 +1165,46 @@ class XLATensor {
       tensorflow::gtl::ArraySlice<const xla::ComputationClient::DataPtr>
           tensors_data);
 
+  static std::vector<ir::Value> CollectRoots(
+      const std::vector<XLATensor>& tensors,
+      tensorflow::gtl::ArraySlice<const size_t> indices);
+
+  static std::vector<xla::ComputationClient::DataPtr> FetchTensorData(
+      std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
+      tensorflow::gtl::ArraySlice<const size_t> indices);
+
   // Schedules the execution of a sync tensors operation in background. The
   // asynchronous operation will hold the device locks by capturing the ones
   // present within the coll structure.
+  static std::shared_ptr<XLATensor::Async> ScheduleSyncTensorsGraph(
+      SyncTensorCollection* coll,
+      std::vector<xla::ComputationClient::DataPtr> parameters_data,
+      std::vector<xla::ComputationClient::DataPtr> tensors_data,
+      ComputationCache::TypePtr cached_computation);
+
   static std::shared_ptr<Async> ScheduleSyncTensorsGraph(
       std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
       SyncTensorCollection* coll,
       std::vector<xla::ComputationClient::DataPtr> parameters_data,
       std::string device, ComputationCache::TypePtr cached_computation);
 
+  static std::vector<xla::ComputationClient::DataPtr> FetchParameters(
+      const std::vector<XLATensor>& tensors,
+      tensorflow::gtl::ArraySlice<const size_t> indices, size_t* graph_size);
+
+  static ComputationCache::TypePtr LookupCachedCompile(
+      const std::vector<XLATensor>& tensors, size_t hash,
+      tensorflow::gtl::ArraySlice<const size_t> indices,
+      std::vector<xla::ComputationClient::DataPtr>* parameters_data);
+
   static std::shared_ptr<Async> TryRunCachedSync(
       std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
       SyncTensorCollection* coll);
+
+  static CompilationResult Compile(
+      const std::vector<XLATensor>& tensors,
+      tensorflow::gtl::ArraySlice<const std::string> devices,
+      const SyncTensorCollection& coll);
 
   static std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensor>* tensors,
