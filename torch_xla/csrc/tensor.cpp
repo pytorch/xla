@@ -13,6 +13,7 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/literal_util.h"
+#include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -479,19 +480,21 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   if (data()->xla_data != nullptr) {
     return data()->xla_data->shape();
   }
-  const Device& device = GetDevice();
   if (data()->ir_value) {
-    const xla::Shape& node_shape = data()->ir_value.shape();
-    return MakeArrayShapeFromDimensions(
-        node_shape.dimensions(), node_shape.dynamic_dimensions(),
-        node_shape.element_type(), device.hw_type);
+    return data()->ir_value.shape();
   }
   XLA_CHECK(data()->tensor_data);
-  return MakeArrayShapeFromDimensions(
-      XlaHelpers::I64List(data()->tensor_data->sizes()),
-      /*dynamic_dimensions=*/{},
+  const Device& device = GetDevice();
+  return xla::ShapeUtil::MakeShape(
       MakeXlaPrimitiveType(data()->tensor_data->type().scalarType(), &device),
-      device.hw_type);
+      XlaHelpers::I64List(data()->tensor_data->sizes()));
+}
+
+xla::Shape XLATensor::shape_with_layout() const {
+  auto tensor_shape = shape();
+  return MakeArrayShapeFromDimensions(
+      tensor_shape.get().dimensions(), tensor_shape.get().dynamic_dimensions(),
+      tensor_shape.get().element_type(), GetDevice().hw_type);
 }
 
 const Device& XLATensor::GetDevice() const { return data()->device; }
