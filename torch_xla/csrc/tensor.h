@@ -62,6 +62,7 @@ class XLATensor {
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
   xla::util::MaybeRef<xla::Shape> shape() const;
+  xla::Shape shape_with_layout() const;
 
   const Device& GetDevice() const;
   xla::int64 GetUniqueId() const;
