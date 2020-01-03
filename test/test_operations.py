@@ -959,12 +959,10 @@ class TestAtenXlaTensor(XlaTestCase):
     self.assertRaises(RuntimeError, lambda: c & c.byte())
     self.assertRaises(RuntimeError, lambda: xla_c & xla_c.byte())
 
-  def test_bitwise_type(self):
+  def test_bitwise_and_not(self):
     xla_device = xm.xla_device()
     a = torch.randint(255, (4,), dtype=torch.long)
     xla_a = a.to(xla_device)
-    self.assertRaises(RuntimeError, lambda: a & a.byte())
-    self.assertRaises(RuntimeError, lambda: xla_a & xla_a.byte())
 
     def test_fn(a):
       return a & (~a)
