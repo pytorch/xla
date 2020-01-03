@@ -991,7 +991,10 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   coll.indices.reserve(tensors.size());
   TF_VLOG(4) << "Waiting on device barrier for device " << coll.device
              << " ...";
-  coll.unlocker = LockDevices(unique_device.AsSet());
+  {
+    XLA_TIMED("DeviceLockWait");
+    coll.unlocker = LockDevices(unique_device.AsSet());
+  }
   TF_VLOG(4) << "Waiting on device barrier for device " << coll.device
              << " done!";
   for (size_t i = 0; i < tensors.size(); ++i) {
