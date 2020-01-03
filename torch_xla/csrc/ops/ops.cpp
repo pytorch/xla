@@ -615,10 +615,10 @@ NodePtr Take(const Value& input, const Value& index) {
     xla::XlaOp result = BuildTake(xla_input, xla_index);
     return node.ReturnOp(result, loctx);
   };
+  xla::Shape result_shape = index.shape();
+  result_shape.set_element_type(input.shape().element_type());
   return GenericOp(OpKind(at::aten::take), {input, index},
-                   xla::ShapeUtil::MakeShape(input.shape().element_type(),
-                                             index.shape().dimensions()),
-                   std::move(lower_fn));
+                   std::move(result_shape), std::move(lower_fn));
 }
 
 NodePtr LogDet(const Value& input) {
