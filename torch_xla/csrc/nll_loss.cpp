@@ -22,8 +22,8 @@ xla::XlaOp OneHotIota(xla::XlaBuilder* builder, xla::int64 depth, int axis,
   int indices_dims = indices_shape.rank();
   std::vector<xla::int64> linspace_dims(indices_dims + 1, 1);
   linspace_dims[axis] = depth;
-  xla::Shape linspace_xla_shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(
-      indices_shape.element_type(), linspace_dims);
+  xla::Shape linspace_xla_shape =
+      xla::ShapeUtil::MakeShape(indices_shape.element_type(), linspace_dims);
   xla::XlaOp iota = xla::Iota(builder, linspace_xla_shape, axis);
   if (ignore_index >= 0 && ignore_index < depth) {
     xla::XlaOp ignore_index_op =
