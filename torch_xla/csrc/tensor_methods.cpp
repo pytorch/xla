@@ -247,8 +247,7 @@ ViewInfo CreateAsStridedViewInfo(
     const xla::Shape& input_shape,
     tensorflow::gtl::ArraySlice<const xla::int64> size,
     c10::optional<xla::int64> storage_offset) {
-  xla::Shape result_shape =
-      xla::ShapeUtil::MakeShape(input_shape.element_type(), size);
+  xla::Shape result_shape = XlaHelpers::GetDynamicReshape(input_shape, size);
   AsStridedInfo as_strided_info;
   if (storage_offset) {
     as_strided_info.offset = *storage_offset;
@@ -2408,11 +2407,8 @@ XLATensor XLATensor::view(
   auto input_shape = input.shape();
   std::vector<xla::int64> complete_dimensions =
       GetCompleteShape(output_size, input_shape.get().dimensions());
-  xla::Shape complete_shape =
+  xla::Shape shape =
       XlaHelpers::GetDynamicReshape(input_shape, complete_dimensions);
-  xla::Shape shape = MakeArrayShapeFromDimensions(
-      complete_shape.dimensions(), complete_shape.dynamic_dimensions(),
-      complete_shape.element_type(), input.GetDevice().hw_type);
   ViewInfo view_info(
       ViewInfo::Type::kReshape, std::move(shape),
       xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
