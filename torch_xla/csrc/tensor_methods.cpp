@@ -108,6 +108,7 @@
 #include "torch_xla/csrc/ops/upsample_nearest2d.h"
 #include "torch_xla/csrc/ops/upsample_nearest2d_backward.h"
 #include "torch_xla/csrc/ops/view.h"
+#include "torch_xla/csrc/shape_builder.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -211,7 +212,8 @@ std::vector<xla::int64> CheckIntList(
 xla::Shape BatchNormFeaturesShape(const XLATensor& input) {
   xla::PrimitiveType input_element_type =
       MakeXlaPrimitiveType(input.dtype(), &input.GetDevice());
-  return xla::ShapeUtil::MakeShape(input_element_type, {input.size(1)});
+  auto input_shape = input.shape();
+  return ShapeBuilder(input_element_type).Add(input_shape.get(), 1).Build();
 }
 
 // Returns the IR for the given input or the provided default value broadcasted

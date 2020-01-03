@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/shape_builder.h"
 
 namespace torch_xla {
 namespace resize {
@@ -29,10 +30,12 @@ xla::Shape GetForwardOutputShape2d(
     const xla::Shape& input_shape,
     tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
   XLA_CHECK_EQ(output_size.size(), 2);
-  return xla::ShapeUtil::MakeShape(
-      input_shape.element_type(),
-      {input_shape.dimensions(0), input_shape.dimensions(1), output_size[0],
-       output_size[1]});
+  return ShapeBuilder(input_shape.element_type())
+      .Add(input_shape, 0)
+      .Add(input_shape, 1)
+      .Add(output_size[0])
+      .Add(output_size[1])
+      .Build();
 }
 
 xla::Shape GetBackwardOutputShape2d(
