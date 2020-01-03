@@ -15,14 +15,6 @@ class AtenXlaType {
   // pytorch folder file:
   //   build/aten/src/ATen/RegistrationDeclarations.h
   /////////////////////////////////////////////////////////////////////////////
-  static at::Tensor __and__(const at::Tensor& self, at::Scalar other);
-
-  static at::Tensor __and__(const at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor& __iand__(at::Tensor& self, at::Scalar other);
-
-  static at::Tensor& __iand__(at::Tensor& self, const at::Tensor& other);
-
   static at::Tensor& __ilshift__(at::Tensor& self, at::Scalar other);
 
   static at::Tensor& __ilshift__(at::Tensor& self, const at::Tensor& other);
@@ -52,6 +44,12 @@ class AtenXlaType {
 
   static at::Tensor _adaptive_avg_pool2d_backward(const at::Tensor& grad_output,
                                                   const at::Tensor& self);
+
+  static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
+                                     const at::Tensor& other);
+
+  static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
+                                     at::Scalar other);
 
   static at::Tensor& bitwise_not_out(at::Tensor& out, const at::Tensor& self);
 

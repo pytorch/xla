@@ -184,12 +184,6 @@ class XLATensor {
   //////////////////////////////////////////////////////////////////////////////
   // ATEN operators follows here, listed in alphabetical order.
   //////////////////////////////////////////////////////////////////////////////
-  static XLATensor __and__(const XLATensor& input, at::Scalar other);
-  static XLATensor __and__(const XLATensor& input, const XLATensor& other);
-
-  static void __iand__(XLATensor& input, const XLATensor& other);
-  static void __iand__(XLATensor& input, at::Scalar other);
-
   static void __ilshift__(XLATensor& input, at::Scalar other);
   static void __ilshift__(XLATensor& input, const XLATensor& other);
 
@@ -300,6 +294,12 @@ class XLATensor {
                                                  const XLATensor& target,
                                                  const XLATensor& weight,
                                                  xla::int64 reduction);
+
+  static void bitwise_and_out(XLATensor& out, const XLATensor& input,
+                              at::Scalar other);
+
+  static void bitwise_and_out(XLATensor& out, const XLATensor& input,
+                              const XLATensor& other);
 
   static void bitwise_not_out(XLATensor& out, const XLATensor& input);
 
