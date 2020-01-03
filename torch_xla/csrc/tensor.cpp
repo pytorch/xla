@@ -670,6 +670,7 @@ ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
     }
     data = GetDeviceData(tensor, device);
   } else {
+    XLA_TIMED("IrValueTensorToXlaData");
     data = TensorToXlaData(tensor, device);
   }
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
