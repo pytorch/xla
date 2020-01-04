@@ -253,8 +253,7 @@ ViewInfo CreateAsStridedViewInfo(
     as_strided_info.offset = *storage_offset;
   }
   return ViewInfo(ViewInfo::Type::kAsStrided, std::move(result_shape),
-                  xla::util::ToVector<xla::int64>(input_shape.dimensions()),
-                  std::move(as_strided_info));
+                  input_shape, std::move(as_strided_info));
 }
 
 }  // namespace
@@ -1579,9 +1578,7 @@ XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
                               xla::ShapeUtil::ElementsIn(narrow_shape))
                                  ? ViewInfo::Type::kReshape
                                  : ViewInfo::Type::kNarrow;
-  ViewInfo view_info(
-      view_type, std::move(narrow_shape),
-      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
+  ViewInfo view_info(view_type, std::move(narrow_shape), input_shape);
   view_info.indices[dim] = XlaHelpers::GetCanonicalPosition(
       input_shape.get().dimensions(), dim, start);
   return input.CreateViewTensor(std::move(view_info));
@@ -1718,10 +1715,8 @@ XLATensor XLATensor::permute(
     tensorflow::gtl::ArraySlice<const xla::int64> dims) {
   auto input_shape = input.shape();
   ViewInfo view_info(
-      ViewInfo::Type::kPermute,
-      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()),
-      XlaHelpers::GetCanonicalDimensionIndices(dims, input_shape.get().rank()),
-      input_shape.get().element_type());
+      ViewInfo::Type::kPermute, input_shape,
+      XlaHelpers::GetCanonicalDimensionIndices(dims, input_shape.get().rank()));
   return input.CreateViewTensor(std::move(view_info));
 }
 
@@ -1847,9 +1842,8 @@ void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
     auto input_shape = input.shape();
     xla::Shape resize_shape =
         xla::ShapeUtil::MakeShape(input_shape.get().element_type(), size);
-    ViewInfo view_info(
-        ViewInfo::Type::kResize, std::move(resize_shape),
-        xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
+    ViewInfo view_info(ViewInfo::Type::kResize, std::move(resize_shape),
+                       input_shape);
     input.SetSubView(std::move(view_info));
   }
 }
@@ -2297,10 +2291,7 @@ XLATensor XLATensor::transpose(const XLATensor& input, xla::int64 dim0,
   auto input_shape = input.shape();
   auto permute_dims = XlaHelpers::MakeTransposePermutation(
       /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
-  ViewInfo view_info(
-      ViewInfo::Type::kPermute,
-      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()),
-      permute_dims, input_shape.get().element_type());
+  ViewInfo view_info(ViewInfo::Type::kPermute, input_shape, permute_dims);
   return input.CreateViewTensor(std::move(view_info));
 }
 
@@ -2409,9 +2400,7 @@ XLATensor XLATensor::view(
       GetCompleteShape(output_size, input_shape.get().dimensions());
   xla::Shape shape =
       XlaHelpers::GetDynamicReshape(input_shape, complete_dimensions);
-  ViewInfo view_info(
-      ViewInfo::Type::kReshape, std::move(shape),
-      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
+  ViewInfo view_info(ViewInfo::Type::kReshape, std::move(shape), input_shape);
   return input.CreateViewTensor(std::move(view_info));
 }
 
