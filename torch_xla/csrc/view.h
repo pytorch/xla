@@ -54,18 +54,18 @@ struct ViewInfo {
   };
 
   ViewInfo() = default;
-  ViewInfo(Type view_type, xla::Shape shape, std::vector<xla::int64> sizes);
-  ViewInfo(Type view_type, std::vector<xla::int64> sizes,
-           std::vector<xla::int64> permutation, xla::PrimitiveType type);
+  ViewInfo(Type view_type, xla::Shape shape, xla::Shape source_shape);
+  ViewInfo(Type view_type, xla::Shape source_shape,
+           std::vector<xla::int64> permutation);
   ViewInfo(Type view_type, const xla::Shape& source_shape, SelectInfo select);
-  ViewInfo(Type view_type, xla::Shape shape, std::vector<xla::int64> sizes,
+  ViewInfo(Type view_type, xla::Shape shape, xla::Shape source_shape,
            AsStridedInfo as_strided);
   ViewInfo(Type view_type, const xla::Shape& source_shape,
            DiagonalInfo diagonal);
 
   bool operator==(const ViewInfo& ref) const {
     return view_type == ref.view_type && shape == ref.shape &&
-           indices == ref.indices && sizes == ref.sizes &&
+           indices == ref.indices && source_shape == ref.source_shape &&
            permutation == ref.permutation && select == ref.select &&
            as_strided == ref.as_strided && diagonal == ref.diagonal;
   }
@@ -77,8 +77,8 @@ struct ViewInfo {
   // In case of narrowing, the starting indices from where the narrow slice is
   // cut.
   std::vector<xla::int64> indices;
-  // The dimension sizes of the source of this view.
-  std::vector<xla::int64> sizes;
+  // The shape of the source of this view.
+  xla::Shape source_shape;
   // The permutation to be used. If empty, this is not a permute operation.
   std::vector<xla::int64> permutation;
   // Information used for sliced views.
