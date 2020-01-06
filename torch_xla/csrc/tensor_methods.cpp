@@ -315,20 +315,6 @@ void XLATensor::__ilshift__(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::ops::Lshift(input.GetIrValue(), other.GetIrValue()));
 }
 
-void XLATensor::__ior__(XLATensor& input, at::Scalar other) {
-  CheckIsIntegralOrPred(input.shape(), "__ior__");
-  ir::Value other_broadcasted_ir =
-      GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  input.SetIrValue(
-      ir::ops::BitwiseOr(input.GetIrValue(), other_broadcasted_ir));
-}
-
-void XLATensor::__ior__(XLATensor& input, const XLATensor& other) {
-  CheckIsIntegralOrPred(input.shape(), "__ior__");
-  return input.SetIrValue(
-      ir::ops::BitwiseOr(input.GetIrValue(), other.GetIrValue()));
-}
-
 void XLATensor::__irshift__(XLATensor& input, at::Scalar other) {
   input.SetIrValue(ir::ops::Rshift(input.GetIrValue(), other));
 }
@@ -345,20 +331,6 @@ XLATensor XLATensor::__lshift__(const XLATensor& input,
                                 const XLATensor& other) {
   return input.CreateFrom(
       ir::ops::Lshift(input.GetIrValue(), other.GetIrValue()));
-}
-
-XLATensor XLATensor::__or__(const XLATensor& input, const XLATensor& other) {
-  CheckIsIntegralOrPred(input.shape(), "__or__");
-  return input.CreateFrom(
-      ir::ops::BitwiseOr(input.GetIrValue(), other.GetIrValue()));
-}
-
-XLATensor XLATensor::__or__(const XLATensor& input, at::Scalar other) {
-  CheckIsIntegralOrPred(input.shape(), "__or__");
-  ir::Value other_broadcasted_ir =
-      GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  return input.CreateFrom(
-      ir::ops::BitwiseOr(input.GetIrValue(), other_broadcasted_ir));
 }
 
 XLATensor XLATensor::__rshift__(const XLATensor& input, at::Scalar other) {
@@ -625,6 +597,20 @@ void XLATensor::bitwise_and_out(XLATensor& out, const XLATensor& input,
 
 void XLATensor::bitwise_not_out(XLATensor& out, const XLATensor& input) {
   out.SetIrValue(ir::ops::Not(input.GetIrValue()));
+}
+
+void XLATensor::bitwise_or_out(XLATensor& out, const XLATensor& input,
+                               at::Scalar other) {
+  CheckIsIntegralOrPred(input.shape(), "__or__");
+  ir::Value constant =
+      GetIrValueForScalar(other, input.shape(), input.GetDevice());
+  out.SetIrValue(ir::ops::BitwiseOr(input.GetIrValue(), constant));
+}
+
+void XLATensor::bitwise_or_out(XLATensor& out, const XLATensor& input,
+                               const XLATensor& other) {
+  CheckIsIntegralOrPred(input.shape(), "__or__");
+  out.SetIrValue(ir::ops::BitwiseOr(input.GetIrValue(), other.GetIrValue()));
 }
 
 void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,

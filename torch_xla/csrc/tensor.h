@@ -187,17 +187,11 @@ class XLATensor {
   static void __ilshift__(XLATensor& input, at::Scalar other);
   static void __ilshift__(XLATensor& input, const XLATensor& other);
 
-  static void __ior__(XLATensor& input, const XLATensor& other);
-  static void __ior__(XLATensor& input, at::Scalar other);
-
   static void __irshift__(XLATensor& input, at::Scalar other);
   static void __irshift__(XLATensor& input, const XLATensor& other);
 
   static XLATensor __lshift__(const XLATensor& input, at::Scalar other);
   static XLATensor __lshift__(const XLATensor& input, const XLATensor& other);
-
-  static XLATensor __or__(const XLATensor& input, at::Scalar other);
-  static XLATensor __or__(const XLATensor& input, const XLATensor& other);
 
   static XLATensor __rshift__(const XLATensor& input, at::Scalar other);
   static XLATensor __rshift__(const XLATensor& input, const XLATensor& other);
@@ -302,6 +296,12 @@ class XLATensor {
                               const XLATensor& other);
 
   static void bitwise_not_out(XLATensor& out, const XLATensor& input);
+
+  static void bitwise_or_out(XLATensor& out, const XLATensor& input,
+                             at::Scalar other);
+
+  static void bitwise_or_out(XLATensor& out, const XLATensor& input,
+                             const XLATensor& other);
 
   static void bitwise_xor_out(XLATensor& out, const XLATensor& input,
                               at::Scalar other);
