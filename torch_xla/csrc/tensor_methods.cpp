@@ -253,7 +253,7 @@ ViewInfo CreateAsStridedViewInfo(
     as_strided_info.offset = *storage_offset;
   }
   return ViewInfo(ViewInfo::Type::kAsStrided, std::move(result_shape),
-                  input_shape, std::move(as_strided_info));
+                  input_shape, as_strided_info);
 }
 
 }  // namespace
