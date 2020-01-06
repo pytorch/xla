@@ -7490,7 +7490,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseOr) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::__or__", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_or_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseOrInPlace) {
@@ -7508,7 +7508,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseOrInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::__ior__", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_or_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseOrScalar) {
@@ -7523,7 +7523,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseOrScalar) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::__or__", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_or_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseOrScalarInPlace) {
@@ -7539,7 +7539,7 @@ TEST_F(AtenXlaTensorTest, TestBitwiseOrScalarInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::__ior__", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bitwise_or_out", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBitwiseXor) {

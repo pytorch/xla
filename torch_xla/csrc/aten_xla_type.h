@@ -19,10 +19,6 @@ class AtenXlaType {
 
   static at::Tensor& __ilshift__(at::Tensor& self, const at::Tensor& other);
 
-  static at::Tensor& __ior__(at::Tensor& self, at::Scalar other);
-
-  static at::Tensor& __ior__(at::Tensor& self, const at::Tensor& other);
-
   static at::Tensor& __irshift__(at::Tensor& self, at::Scalar other);
 
   static at::Tensor& __irshift__(at::Tensor& self, const at::Tensor& other);
@@ -30,10 +26,6 @@ class AtenXlaType {
   static at::Tensor __lshift__(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor __lshift__(const at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor __or__(const at::Tensor& self, at::Scalar other);
-
-  static at::Tensor __or__(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor __rshift__(const at::Tensor& self, at::Scalar other);
 
@@ -52,6 +44,12 @@ class AtenXlaType {
                                      at::Scalar other);
 
   static at::Tensor& bitwise_not_out(at::Tensor& out, const at::Tensor& self);
+
+  static at::Tensor& bitwise_or_out(at::Tensor& out, const at::Tensor& self,
+                                    const at::Tensor& other);
+
+  static at::Tensor& bitwise_or_out(at::Tensor& out, const at::Tensor& self,
+                                    at::Scalar other);
 
   static at::Tensor& bitwise_xor_out(at::Tensor& out, const at::Tensor& self,
                                      at::Scalar other);
