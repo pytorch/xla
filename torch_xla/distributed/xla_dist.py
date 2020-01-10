@@ -4,12 +4,18 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
+import cloud_tpu_client
+from collections import deque
+from collections import namedtuple
 import logging
+import multiprocessing
 import os
 import re
 import subprocess
 import sys
+import time
 import threading
+from torch_xla.distributed.cluster import ClusterResolver
 
 from torch_xla.distributed.cluster import ClusterResolver
 
@@ -26,6 +32,25 @@ def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
     concat += token
   return concat
 
+class RecentEvents(object):
+
+  def __init__(self, count_history_sec=3600):
+    self._count_history_sec = count_history_sec
+    self._dq = deque()
+
+  def _cleanup_events(self):
+    cutoff = time.time() - self._count_history_sec
+    while len(self._dq) > 0 and self._dq[0] < cutoff:
+      self._dq.popleft()
+
+  def add(self, count=1):
+    now = time.time()
+    for _ in range(count):
+      self._dq.append(now)
+
+  def count(self):
+    self._cleanup_events()
+    return len(self._dq)
 
 class DistributedExecutor(object):
 
@@ -40,6 +65,7 @@ class DistributedExecutor(object):
       'XRT_SHARD_ORDINAL',
   ]
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
+  MAX_TPU_RETRY_PER_HOUR = 3
 
   def __init__(self,
                cluster,
@@ -49,11 +75,16 @@ class DistributedExecutor(object):
                conda_env=None,
                env_vars=None):
     self._cluster = cluster
-    logging.basicConfig(
-        format='%(asctime)-12s %(clientip)s [%(ordinal)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        level=logging.DEBUG)
-    self.logger = logging.getLogger('DistributedExecutor')
+    self.logger = logging.getLogger(self.__class__.__name__)
+    self.logger.setLevel(logging.INFO)
+    self.logger.propagate = False
+    formatter = logging.Formatter(
+      fmt='%(asctime)-12s %(clientip)s [%(ordinal)s] %(message)s',
+      datefmt='%Y-%m-%d %H:%M:%S')
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.INFO)
+    sh.setFormatter(formatter)
+    self.logger.addHandler(sh)
     self.docker_container = docker_container or self.DEFAULT_CONTAINER_NAME
     self.docker_image = docker_image
     self.docker_run_flags = list(docker_run_flags) if docker_run_flags else None
@@ -264,8 +295,9 @@ class DistributedExecutor(object):
       if self.docker_image:
         rm_container = ['docker', 'rm', '-f', self.docker_container]
         self._build_and_run_ssh(rm_container, client_worker)
-      rm_pgroup = ('kill -9 -$(ps xao pid,pgid,cmd | grep {} | grep -v grep'
-                   ' | awk "{{print \$2}}")').format(remote_script)
+      rm_pgroup = ('kill -9 -$(ps xao pid,pgid,cmd | grep "bash -c \\"{}\\""'
+                   ' | grep -v grep | awk "{{print \$2}}")').format(
+                     remote_script)
       self._build_and_run_ssh(rm_pgroup, client_worker, log=False)
 
     threads = []
@@ -299,18 +331,10 @@ class DistributedExecutor(object):
       thread.start()
       threads.append(thread)
 
-    try:
-      for thread in threads:
-        thread.join()
-    except KeyboardInterrupt:
-      pass
-    finally:
-      self._cleanup(script_map)
-
     for thread in threads:
       thread.join()
 
-  def run(self, cmd):
+  def _run_cmd(self, cmd, script_map):
     self.logger.info(
         'Command to distribute: {}'.format(concat_cmd_list(cmd)),
         extra={
@@ -318,15 +342,46 @@ class DistributedExecutor(object):
             'ordinal': ''
         })
     self.logger.info(
-        'Cluster configuration: {}'.format(self._cluster),
+        f'Cluster configuration: {self._cluster}',
         extra={
             'clientip': '',
             'ordinal': ''
         })
-    script_map = self._prepare_scripts(cmd)
-    self._scp_scripts(script_map)
-    self._start_run(script_map)
+    try:
+      self._scp_scripts(script_map)
+      self._start_run(script_map)
+    except KeyboardInterrupt:
+      pass  # parent process already handles this
 
+  def run(self, cmd):
+    trials = RecentEvents()
+    while trials.count() <= self.MAX_TPU_RETRY_PER_HOUR:
+      try:
+        script_map = self._prepare_scripts(cmd)
+        proc = multiprocessing.Process(
+          target=self._run_cmd, args=(cmd, script_map,))
+        proc.start()
+        while True:
+          if not proc.is_alive():
+            sys.exit(0)
+          if self._cluster.is_service_unhealthy_maintenance():
+            # Kill all training, wait for healthy, and restart
+            break
+          time.sleep(1)
+
+        self._cleanup(script_map)
+        proc.terminate()
+        self._cluster.wait_for_healthy_service()
+        trials.add()
+      except KeyboardInterrupt:
+        self.logger.info(
+          'Cleaning up processes (takes a couple of seconds)',
+          extra={'clientip': '', 'ordinal': ''})
+        self._cleanup(script_map)
+        sys.exit(0)
+
+    self.logger.info(
+      'Max number of retries reached.', extra={'clientip': '', 'ordinal': ''})
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(

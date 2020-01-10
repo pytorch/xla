@@ -1,5 +1,6 @@
 import cloud_tpu_client
 from concurrent import futures
+import logging
 import requests
 
 from torch_xla.distributed.worker import ClientWorker
@@ -16,6 +17,10 @@ except ImportError:
                     'install with pip')
 
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
+
+# Silence noisy loggging
+logging.getLogger("oauth2client").setLevel(logging.ERROR)
+logging.getLogger("googleapiclient").setLevel(logging.ERROR)
 
 
 class Cluster(object):
@@ -108,6 +113,39 @@ class Cluster(object):
             'service_workers: {service_workers}}}').format(
                 client_workers=self._client_workers,
                 service_workers=self._service_workers)
+
+  def _get_all_tpus(self):
+    tpus = set()
+    for service_worker in self._service_workers:
+      tpus.add(service_worker._tpu)
+    return list(tpus)
+
+  def is_service_unhealthy_maintenance(self):
+
+    def is_unhealthy_maintenance(tpu_name):
+      ctc = cloud_tpu_client.Client(tpu=tpu_name)
+      return ctc.health() == 'UNHEALTHY_MAINTENANCE'
+
+    tpus = self._get_all_tpus()
+    with futures.ThreadPoolExecutor(max_workers=len(tpus)) as executor:
+      results = executor.map(is_unhealthy_maintenance, tpus)
+      for maintenance in results:
+        if maintenance:
+          return True
+
+    return False
+
+  def wait_for_healthy_service(self):
+
+    def wait_for_healthy_worker(tpu_name):
+      ctc = cloud_tpu_client.Client(tpu=tpu_name)
+      ctc.wait_for_healthy()
+
+    tpus = self._get_all_tpus()
+    with futures.ThreadPoolExecutor(max_workers=len(tpus)) as executor:
+      results = executor.map(wait_for_healthy_worker, tpus)
+      for result in results:
+        continue  # Only iterating to re-raise any worker errors.
 
 
 class ClusterResolver(object):
@@ -276,14 +314,14 @@ class ClusterResolver(object):
           port=endpoint['port'],
           machine_type=machine_type,
           zone=zone,
-          runtime_version=runtime_version)
+          runtime_version=runtime_version,
+          tpu=tpu_name)
         workers.append(worker)
 
     with futures.ThreadPoolExecutor(max_workers=len(self._tpus)) as executor:
       results = executor.map(add_service_worker, self._tpus)
       for result in results:
         continue  # Only iterating to re-raise any worker errors.
-
 
     return workers
 
@@ -305,4 +343,3 @@ class ClusterResolver(object):
     cluster = Cluster(client_workers, service_workers)
     cluster.validate()
     return cluster
-
