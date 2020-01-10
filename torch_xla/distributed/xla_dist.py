@@ -4,6 +4,8 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
+import cloud_tpu_client
+from concurrent import futures
 import logging
 import os
 import re
@@ -101,27 +103,27 @@ class ClientWorker(Worker):
 
 class ServiceWorker(Worker):
 
-  def __init__(self, internal_ip, port, machine_type, zone, sw_version):
+  def __init__(self, internal_ip, port, machine_type, zone, runtime_version):
     super(ServiceWorker, self).__init__(internal_ip, machine_type, zone)
     self._port = int(port)
-    if not isinstance(sw_version, str):
-      raise ValueError('sw_version must be of type str')
-    self._sw_version = sw_version
+    if not isinstance(runtime_version, str):
+      raise ValueError('runtime_version must be of type str')
+    self._runtime_version = runtime_version
 
   def __repr__(self):
     return ('{{{internal_ip}, {port}, {machine_type}, {zone},'
-            ' {sw_version}}}').format(
+            ' {runtime_version}}}').format(
                 internal_ip=self._internal_ip,
                 port=self._port,
                 machine_type=self._machine_type,
                 zone=self._zone,
-                sw_version=self._sw_version)
+                runtime_version=self._runtime_version)
 
   def __eq__(self, other):
     return (self._internal_ip == other._internal_ip and
             self._port == other._port and
             self._machine_type == other._machine_type and
-            self._zone == other._zone and self._sw_version == other._sw_version)
+            self._zone == other._zone and self._runtime_version == other._runtime_version)
 
   def __ne__(self, other):
     return not self.__eq__(other)
@@ -202,10 +204,10 @@ class Cluster(object):
             'All service_workers must have the same machine_type, got: {}'
             .format(server_machine_types))
 
-    sw_versions = {worker._sw_version for worker in self._service_workers}
-    if len(sw_versions) != 1:
+    runtime_versions = {worker._runtime_version for worker in self._service_workers}
+    if len(runtime_versions) != 1:
       raise RuntimeError(
-          'All service workers must have the same sw_version, got: {}'.format(
+          'All service workers must have the same runtime_version, got: {}'.format(
               zones))
 
   def __eq__(self, other):
@@ -247,16 +249,16 @@ class ClusterResolver(object):
       if not isinstance(vms, list) or len(vms) == 0:
         raise ValueError('vms must be a non-empty list if provided')
 
-    self._tpus = [tpu]
+    self._tpus = tpu if isinstance(tpu, list) else [tpu]
     self._vms = vms
     self._zone = zone
     self._project = project
 
-    self._credentials = GoogleCredentials.get_application_default()
-    self._tpu_service = discovery.build(
-        'tpu', 'v1', credentials=self._credentials, cache_discovery=False)
     self._compute_service = discovery.build(
-        'compute', 'v1', credentials=self._credentials, cache_discovery=False)
+        'compute',
+        'v1',
+        credentials=GoogleCredentials.get_application_default(),
+        cache_discovery=False)
 
     if project is None:
       self._project = self._get_instance_metadata('project/project-id')
@@ -364,42 +366,38 @@ class ClusterResolver(object):
       RuntimeError: If the TPU DNE or the TPU is in not in HEALTHY state.
     """
     workers = []
-    batch = self._tpu_service.new_batch_http_request()
 
-    def add_service_worker(request_id, resp, exception):
-      """Callback for each request in BatchHttpRequest."""
-      if exception is not None:
-        raise exception
-      tpu_name = self._parse_resource_url(resp['name'], 'nodes')
-      zone = self._parse_resource_url(resp['name'], 'locations')
-      if resp['state'] != 'READY':
+    def add_service_worker(tpu_name):
+      ctc = cloud_tpu_client.Client(tpu=tpu_name)
+      tpu_name = ctc.name()
+      if ctc.state() != 'READY':
         raise RuntimeError(
             ('TPU {tpu_name} is not READY yet. '
-             'Re-run when all TPUs are READY').format(tpu_name=tpu_name))
-      if 'health' not in resp or resp['health'] != 'HEALTHY':
+              'Re-run when all TPUs are READY').format(tpu_name=tpu_name))
+      if ctc.health() != 'HEALTHY':
         raise RuntimeError(
             ('TPU {tpu_name} is not HEALTHY yet. '
-             'Re-run when all TPUs are HEALTHY').format(tpu_name=tpu_name))
-      sw_version = resp['tensorflowVersion']
-      machine_type = resp['acceleratorType']
-      for endpoint in resp['networkEndpoints']:
+              'Re-run when all TPUs are HEALTHY').format(tpu_name=tpu_name))
+
+      runtime_version = ctc.runtime_version()
+      machine_type = ctc.accelerator_type()
+      zone = self._parse_resource_url(ctc._full_name(), 'locations')
+      network_endpoints = ctc.network_endpoints()
+
+      for endpoint in network_endpoints:
         worker = ServiceWorker(
-            internal_ip=endpoint['ipAddress'],
-            port=endpoint['port'],
-            machine_type=machine_type,
-            zone=zone,
-            sw_version=sw_version)
+          internal_ip=endpoint['ipAddress'],
+          port=endpoint['port'],
+          machine_type=machine_type,
+          zone=zone,
+          runtime_version=runtime_version)
         workers.append(worker)
 
-    for tpu in self._tpus:
-      tpu_fq_name = 'projects/{project}/locations/{location}/nodes/{node}'.format(
-          project=self._project, location=self._zone, node=tpu)
-      req = self._tpu_service.projects().locations().nodes().get(
-          name=tpu_fq_name,
-          fields=('acceleratorType,health,ipAddress,name,'
-                  'networkEndpoints,state,tensorflowVersion'))
-      batch.add(req, add_service_worker)
-    batch.execute()
+    with futures.ThreadPoolExecutor(max_workers=len(self._tpus)) as executor:
+      results = executor.map(add_service_worker, self._tpus)
+      for result in results:
+        continue  # Only iterating to re-raise any worker errors.
+
 
     return workers
 
@@ -714,7 +712,7 @@ class DistributedExecutor(object):
             'ordinal': ''
         })
     self.logger.info(
-        'Cluster configuration: {}'.format(self._cluster),
+        f'Cluster configuration: {self._cluster}',
         extra={
             'clientip': '',
             'ordinal': ''
