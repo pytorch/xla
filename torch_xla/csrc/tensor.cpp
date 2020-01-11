@@ -1370,8 +1370,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
 
   CompilationResult compile_result = Compile(*tensors, devices, coll);
 
-  XLA_VALUE_METRIC("SyncTensorsGraphSize", compile_result.emitted_nodes);
-  TF_VLOG(5) << "SyncTensorsGraphSize=" << compile_result.emitted_nodes;
+  XLA_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);
+  TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;
 
   auto cached_computation = std::make_shared<CachedComputation>(
       std::move(compile_result.computation),
