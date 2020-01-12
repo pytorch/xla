@@ -3804,6 +3804,31 @@ TEST_F(AtenXlaTensorTest, TestMaskedSelect) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestMaskedScatter) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b =
+      torch::randint(0, 2, {3, 5}, torch::TensorOptions(torch::kBool));
+  torch::Tensor c = torch::rand({15}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor d = torch::masked_scatter(a, b, c);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = CopyToDevice(c, device);
+    torch::Tensor xla_d = torch::masked_scatter(xla_a, xla_b, xla_c);
+    AllClose(d, xla_d);
+
+    if (DebugUtil::ExperimentEnabled("masked_scatter") &&
+        bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU) {
+      // If the masked_select support is enabled, we must not see any aten::
+      // calls.
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    }
+    ExpectCounterChanged("xla::masked_scatter_",
+                         cpp_test::GetIgnoredCounters());
+    ResetCounters();
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestMultiIndexHeadNull) {
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,

@@ -612,6 +612,9 @@ class XLATensor {
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            at::Scalar value);
 
+  static void masked_scatter_(XLATensor& input, const XLATensor& mask,
+                              const XLATensor& source);
+
   static XLATensor masked_select(const XLATensor& input, const XLATensor& mask);
 
   static XLATensor matmul(const XLATensor& input, const XLATensor& other);

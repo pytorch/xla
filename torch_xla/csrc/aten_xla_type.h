@@ -509,6 +509,9 @@ class AtenXlaType {
   static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                   const at::Tensor& value);
 
+  static at::Tensor& masked_scatter_(at::Tensor& self, const at::Tensor& mask,
+                                     const at::Tensor& source);
+
   static at::Tensor masked_select(const at::Tensor& self,
                                   const at::Tensor& mask);
 

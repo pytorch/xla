@@ -137,6 +137,9 @@ class XlaHelpers {
 
   static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
 
+  static bool SameStaticDimensions(const xla::Shape& shape1,
+                                   const xla::Shape& shape2);
+
   // Creates a convolution or dot precision configuration.
   static xla::PrecisionConfig BuildPrecisionConfig(
       const xla::PrecisionConfig::Precision conv_precision);
