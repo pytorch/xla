@@ -334,6 +334,12 @@ xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
                                                  dynamic_dimension);
 }
 
+bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
+                                      const xla::Shape& shape2) {
+  return shape1.is_static() && shape2.is_static() &&
+         shape1.dimensions() == shape2.dimensions();
+}
+
 xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
   xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
   *input_shape_tmp = ShapeOfXlaOp(input);

@@ -1596,6 +1596,23 @@ at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
   return masked_fill_(self, mask, value.item());
 }
 
+at::Tensor& AtenXlaType::masked_scatter_(at::Tensor& self,
+                                         const at::Tensor& mask,
+                                         const at::Tensor& source) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  // Initially make XLA handled masked_scatter_() handling experimental, and
+  // opt-in. Only the XLA TPU backend for now implements the dynamic dimension
+  // setting required by the masked_scatter_ implementation.
+  if (!DebugUtil::ExperimentEnabled("masked_scatter") ||
+      self_tensor.GetDevice().hw_type != DeviceType::TPU) {
+    return AtenXlaTypeDefault::masked_scatter_(self, mask, source);
+  }
+  XLATensor::masked_scatter_(self_tensor, bridge::GetXlaTensor(mask),
+                             bridge::GetXlaTensor(source));
+  return self;
+}
+
 at::Tensor AtenXlaType::masked_select(const at::Tensor& self,
                                       const at::Tensor& mask) {
   XLA_FN_COUNTER("xla::");
