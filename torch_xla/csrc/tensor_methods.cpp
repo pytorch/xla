@@ -57,6 +57,7 @@
 #include "torch_xla/csrc/ops/linear_interpolation.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
+#include "torch_xla/csrc/ops/masked_scatter.h"
 #include "torch_xla/csrc/ops/masked_select.h"
 #include "torch_xla/csrc/ops/max_in_dim.h"
 #include "torch_xla/csrc/ops/max_pool_nd.h"
@@ -232,6 +233,14 @@ absl::optional<ir::Value> GetOptionalIrValue(const XLATensor& tensor) {
     value = tensor.GetIrValue();
   }
   return value;
+}
+
+ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
+  if (input.shape().dimensions() == target_shape.dimensions()) {
+    return input;
+  }
+  return ir::MakeNode<ir::ops::Expand>(
+      input, xla::util::ToVector<xla::int64>(target_shape.dimensions()));
 }
 
 void CheckIsIntegralOrPred(const xla::Shape& shape,
@@ -1385,12 +1394,18 @@ void XLATensor::lt_(XLATensor& input, const XLATensor& other) {
 
 void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                              at::Scalar value) {
-  // Expand mask to be the same size as input.
-  ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
-      mask.GetIrValue(),
-      xla::util::ToVector<xla::int64>(input.shape().get().dimensions()));
-  input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(input.GetIrValue(),
-                                                     expanded_mask, value));
+  ir::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
+  input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(
+      input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
+      value));
+}
+
+void XLATensor::masked_scatter_(XLATensor& input, const XLATensor& mask,
+                                const XLATensor& source) {
+  ir::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
+  input.SetIrValue(ir::MakeNode<ir::ops::MaskedScatter>(
+      input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
+      source.GetIrValue()));
 }
 
 XLATensor XLATensor::masked_select(const XLATensor& input,
