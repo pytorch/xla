@@ -58,17 +58,6 @@ xla::XlaOp BuildCat(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
 xla::XlaOp BuildRepeat(xla::XlaOp input,
                        tensorflow::gtl::ArraySlice<const xla::int64> repeats);
 
-// Computes the number of splits with a dimension size and the split sizes.
-size_t ComputeSplitCount(
-    xla::int64 dim_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> split_sizes);
-
-// Splits a tensor into parts whose size is passed in split_sizes, along the dim
-// dimension.
-std::vector<xla::XlaOp> BuildSplit(
-    xla::XlaOp input, tensorflow::gtl::ArraySlice<const xla::int64> split_sizes,
-    xla::int64 dim);
-
 // Creates an updated version of input, where, starting at base_indices, source
 // if overlapped with input.
 xla::XlaOp BuildUpdateSlice(

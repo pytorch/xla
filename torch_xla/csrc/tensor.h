@@ -852,13 +852,6 @@ class XLATensor {
                                        const XLATensor& input,
                                        at::Scalar lambda);
 
-  static std::vector<XLATensor> split(const XLATensor& input,
-                                      xla::int64 split_size, xla::int64 dim);
-
-  static std::vector<XLATensor> split_with_sizes(
-      const XLATensor& input, std::vector<xla::int64> split_size,
-      xla::int64 dim);
-
   static XLATensor sqrt(const XLATensor& input);
   static void sqrt_(XLATensor& input);
 
