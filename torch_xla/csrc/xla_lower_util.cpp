@@ -49,13 +49,15 @@ ConditionMaskData CreateConditionMaskData(xla::XlaOp condition) {
           kConditionType, length};
 }
 
-xla::XlaOp GetPromotedR1Mask(xla::XlaOp mask, const xla::Shape& input_shape) {
+xla::XlaOp GetPromotedMask(xla::XlaOp mask, const xla::Shape& input_shape) {
   const xla::Shape& mask_shape = XlaHelpers::ShapeOfXlaOp(mask);
   xla::Shape promoted_mask_shape =
       XlaHelpers::GetPromotedShape(mask_shape, input_shape);
-  xla::XlaOp bcast_mask =
-      XlaHelpers::ImplicitBroadcast(mask, mask_shape, promoted_mask_shape);
-  return XlaHelpers::Flatten(bcast_mask);
+  return XlaHelpers::ImplicitBroadcast(mask, mask_shape, promoted_mask_shape);
+}
+
+xla::XlaOp GetPromotedR1Mask(xla::XlaOp mask, const xla::Shape& input_shape) {
+  return XlaHelpers::Flatten(GetPromotedMask(mask, input_shape));
 }
 
 bool ShouldUseDenseScatter(const xla::Shape& input_shape,
@@ -687,13 +689,12 @@ std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask) {
 
 xla::XlaOp BuildMaskedScatter(xla::XlaOp input, xla::XlaOp mask,
                               xla::XlaOp source) {
-  xla::Shape input_shape;
-  xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
-  xla::XlaOp r1_bcast_mask = GetPromotedR1Mask(mask, input_shape);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp bcast_mask = GetPromotedMask(mask, input_shape);
   xla::Shape source_shape;
   xla::XlaOp r1_source = XlaHelpers::Flatten(source, &source_shape);
 
-  auto indices = BuildConditionIndices(r1_bcast_mask);
+  auto indices = BuildConditionIndices(bcast_mask);
   xla::XlaOp mask_indices = indices[0];
   xla::XlaOp num_indices = indices[1];
 
@@ -703,10 +704,16 @@ xla::XlaOp BuildMaskedScatter(xla::XlaOp input, xla::XlaOp mask,
   }
   r1_source = xla::SetDimensionSize(r1_source, num_indices, 0);
 
-  xla::XlaOp r1_index = XlaHelpers::Flatten(mask_indices);
-  xla::XlaOp r1_scatter = CreateScatter(r1_input, r1_index, r1_source,
-                                        /*dim=*/0, /*combiner=*/nullptr);
-  return XlaHelpers::DynamicReshapeAs(r1_scatter, input_shape);
+  xla::ScatterDimensionNumbers scatter_dnums;
+  scatter_dnums.set_index_vector_dim(1);
+  for (xla::int64 i = 0; i < input_shape.rank(); ++i) {
+    scatter_dnums.add_inserted_window_dims(i);
+    scatter_dnums.add_scatter_dims_to_operand_dims(i);
+  }
+  return xla::Scatter(
+      input, mask_indices, r1_source,
+      MakeScatterComputation(nullptr, input_shape.element_type()),
+      scatter_dnums);
 }
 
 }  // namespace torch_xla
