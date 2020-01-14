@@ -36,7 +36,7 @@ function run_opbyop {
 }
 
 function run_dynamic {
-  XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" "$@"
+  XLA_EXPERIMENTAL="nonzero:masked_select" "$@"
 }
 
 function run_all_tests {
