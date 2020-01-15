@@ -9,7 +9,7 @@ DEFAULT_PYTHON_VERSION=3.6
 DEBIAN_FRONTEND=noninteractive
 
 function install_bazel() {
-  local BAZEL_VERSION="1.1.0"
+  local BAZEL_VERSION="1.2.1"
   local BAZEL_FILE="bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh"
   sudo apt-get install -y pkg-config zip zlib1g-dev unzip
   curl -L -O "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_FILE}"
@@ -20,13 +20,13 @@ function install_bazel() {
 
 function install_llvm_clang() {
   sudo apt-get -y install wget
-  sudo bash -c 'echo "deb http://apt.llvm.org/stretch/ llvm-toolchain-stretch-7 main" >> /etc/apt/sources.list'
-  sudo bash -c 'echo "deb-src http://apt.llvm.org/stretch/ llvm-toolchain-stretch-7 main" >> /etc/apt/sources.list'
+  sudo bash -c 'echo "deb http://apt.llvm.org/stretch/ llvm-toolchain-stretch-8 main" >> /etc/apt/sources.list'
+  sudo bash -c 'echo "deb-src http://apt.llvm.org/stretch/ llvm-toolchain-stretch-8 main" >> /etc/apt/sources.list'
   wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
   sudo apt-get update
-  sudo apt-get -y install clang-7 clang++-7
-  echo 'export CC=clang-7 CXX=clang++-7' >> ~/.bashrc
-  export CC=clang-7 CXX=clang++-7
+  sudo apt-get -y install clang-8 clang++-8
+  echo 'export CC=clang-8 CXX=clang++-8' >> ~/.bashrc
+  export CC=clang-8 CXX=clang++-8
 }
 
 function install_req_packages() {
