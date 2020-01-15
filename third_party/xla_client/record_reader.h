@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <mutex>
+#include <string>
 
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/core/lib/io/record_reader.h"
@@ -12,14 +13,15 @@ namespace util {
 
 class RecordReader {
  public:
-  RecordReader(string path, const string& compression, int64 buffer_size);
+  RecordReader(std::string path, const std::string& compression,
+               int64 buffer_size);
 
-  const string& path() const { return path_; }
+  const std::string& path() const { return path_; }
 
-  bool Read(string* value);
+  bool Read(std::string* value);
 
  private:
-  string path_;
+  std::string path_;
   std::mutex lock_;
   uint64 offset_ = 0;
   std::unique_ptr<tensorflow::RandomAccessFile> file_;
