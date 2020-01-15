@@ -329,7 +329,8 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
     for (size_t i = 0; i < outputs.size(); ++i) {
       size_t li = session_work.second.index_mapping[i];
       LiteralProto response;
-      XLA_CHECK(response.ParseFromString(outputs[i].scalar<std::string>()()));
+      XLA_CHECK(
+          response.ParseFromString(outputs[i].scalar<tensorflow::tstring>()()));
       results[li] = std::move(Literal::CreateFromProto(response).ValueOrDie());
       total_size += results[li].size_bytes();
     }
@@ -1102,7 +1103,8 @@ tensorflow::tpu::TopologyProto XrtComputationClient::InitializeAndFetchTopology(
   XLA_CHECK_EQ(outputs.size(), 1);
 
   tensorflow::tpu::TopologyProto topology_proto;
-  XLA_CHECK(topology_proto.ParseFromString(outputs[0].scalar<std::string>()()));
+  XLA_CHECK(topology_proto.ParseFromString(
+      outputs[0].scalar<tensorflow::tstring>()()));
   return topology_proto;
 }
 
