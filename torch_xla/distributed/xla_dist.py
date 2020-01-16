@@ -712,7 +712,7 @@ class DistributedExecutor(object):
             'ordinal': ''
         })
     self.logger.info(
-        f'Cluster configuration: {self._cluster}',
+        'Cluster configuration: {}'.format(self._cluster),
         extra={
             'clientip': '',
             'ordinal': ''
