@@ -2057,14 +2057,19 @@ void XLATensor::sqrt_(XLATensor& input) {
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), -1));
+  auto input_shape = input.shape();
+  auto output_dimensions = BuildSqueezedDimensions(
+      input_shape.get().dimensions(), /*squeeze_dim=*/-1);
+  return view(input, output_dimensions);
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input, xla::int64 dim) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::Squeeze>(
-      input.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
+  auto input_shape = input.shape();
+  xla::int64 squeeze_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  auto output_dimensions =
+      BuildSqueezedDimensions(input_shape.get().dimensions(), squeeze_dim);
+  return view(input, output_dimensions);
 }
 
 void XLATensor::squeeze_(XLATensor& input) {

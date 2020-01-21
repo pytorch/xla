@@ -28,7 +28,7 @@ xla::XlaOp BuildView(
 
 // Squeezes the given dimension if trivial (size 1), returns the unchanged input
 // otherwise.
-xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, size_t dim);
+xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, xla::int64 dim);
 
 // Squeezes out the trivial (size 1) dimensions of the input.
 xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input);
@@ -39,11 +39,15 @@ xla::XlaOp BuildExpand(
     xla::XlaOp input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
 
+std::vector<xla::int64> BuildSqueezedDimensions(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    xla::int64 squeeze_dim);
+
 std::vector<xla::int64> BuildUnsqueezeDimensions(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, size_t dim);
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, xla::int64 dim);
 
 // Insert a dimension of size one at the specified position.
-xla::XlaOp BuildUnsqueeze(xla::XlaOp input, size_t dim);
+xla::XlaOp BuildUnsqueeze(xla::XlaOp input, xla::int64 dim);
 
 // Concatenates a list of tensors along a new dimension dim.
 xla::XlaOp BuildStack(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
