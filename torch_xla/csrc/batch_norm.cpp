@@ -1,31 +1,28 @@
 #include "torch_xla/csrc/batch_norm.h"
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
 namespace {
 
 xla::XlaOp VarianceRecover(xla::XlaOp invstd, float eps_value) {
-  xla::XlaBuilder* builder = invstd.builder();
   const xla::Shape& invstd_shape = XlaHelpers::ShapeOfXlaOp(invstd);
-  xla::XlaOp eps =
-      XlaHelpers::ScalarValue(eps_value, invstd_shape.element_type(), builder);
-  xla::XlaOp one =
-      XlaHelpers::ScalarValue<float>(1, invstd_shape.element_type(), builder);
-  xla::XlaOp one_over_invstd = one / invstd;
+  xla::XlaOp eps = XlaHelpers::ScalarValue(
+      eps_value, invstd_shape.element_type(), invstd.builder());
+  xla::XlaOp one_over_invstd =
+      xla::One(invstd.builder(), invstd_shape.element_type()) / invstd;
   return one_over_invstd * one_over_invstd - eps;
 }
 
 }  // namespace
 
 xla::XlaOp BatchNormVarianceInvert(xla::XlaOp variance, float eps_value) {
-  xla::XlaBuilder* builder = variance.builder();
   const xla::Shape& variance_shape = XlaHelpers::ShapeOfXlaOp(variance);
   xla::XlaOp eps = XlaHelpers::ScalarValue(
-      eps_value, variance_shape.element_type(), builder);
-  xla::XlaOp one =
-      XlaHelpers::ScalarValue<float>(1, variance_shape.element_type(), builder);
-  return one / xla::Sqrt(variance + eps);
+      eps_value, variance_shape.element_type(), variance.builder());
+  return xla::One(variance.builder(), variance_shape.element_type()) /
+         xla::Sqrt(variance + eps);
 }
 
 BatchNormOutput BuildBatchNormTraining(xla::XlaOp input, xla::XlaOp weight,
