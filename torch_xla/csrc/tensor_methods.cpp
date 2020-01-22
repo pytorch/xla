@@ -57,6 +57,7 @@
 #include "torch_xla/csrc/ops/linear_interpolation.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
+#include "torch_xla/csrc/ops/masked_scatter.h"
 #include "torch_xla/csrc/ops/masked_select.h"
 #include "torch_xla/csrc/ops/max_in_dim.h"
 #include "torch_xla/csrc/ops/max_pool_nd.h"
@@ -89,7 +90,6 @@
 #include "torch_xla/csrc/ops/shrink_backward.h"
 #include "torch_xla/csrc/ops/softmax.h"
 #include "torch_xla/csrc/ops/softshrink.h"
-#include "torch_xla/csrc/ops/split.h"
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
 #include "torch_xla/csrc/ops/std.h"
@@ -232,6 +232,14 @@ absl::optional<ir::Value> GetOptionalIrValue(const XLATensor& tensor) {
     value = tensor.GetIrValue();
   }
   return value;
+}
+
+ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
+  if (input.shape().dimensions() == target_shape.dimensions()) {
+    return input;
+  }
+  return ir::MakeNode<ir::ops::Expand>(
+      input, xla::util::ToVector<xla::int64>(target_shape.dimensions()));
 }
 
 void CheckIsIntegralOrPred(const xla::Shape& shape,
@@ -1385,12 +1393,18 @@ void XLATensor::lt_(XLATensor& input, const XLATensor& other) {
 
 void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                              at::Scalar value) {
-  // Expand mask to be the same size as input.
-  ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
-      mask.GetIrValue(),
-      xla::util::ToVector<xla::int64>(input.shape().get().dimensions()));
-  input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(input.GetIrValue(),
-                                                     expanded_mask, value));
+  ir::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
+  input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(
+      input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
+      value));
+}
+
+void XLATensor::masked_scatter_(XLATensor& input, const XLATensor& mask,
+                                const XLATensor& source) {
+  ir::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
+  input.SetIrValue(ir::MakeNode<ir::ops::MaskedScatter>(
+      input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
+      source.GetIrValue()));
 }
 
 XLATensor XLATensor::masked_select(const XLATensor& input,
@@ -2034,39 +2048,6 @@ XLATensor XLATensor::softshrink_backward(const XLATensor& grad_out,
       input.GetIrValue(), lambda));
 }
 
-std::vector<XLATensor> XLATensor::split(const XLATensor& input,
-                                        xla::int64 split_size, xla::int64 dim) {
-  auto input_shape = input.shape();
-  int split_dim =
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
-  xla::int64 dim_size = input_shape.get().dimensions(split_dim);
-  if (dim_size == 0) {
-    // Deal with dim_size=0, it's a corner case which only return 1 0-dim tensor
-    // no matter what split_size is.
-    xla::Literal literal(input_shape.get());
-    return {
-        input.CreateFrom(ir::MakeNode<ir::ops::Constant>(std::move(literal)))};
-  }
-  std::vector<xla::int64> split_sizes;
-  for (; dim_size > 0; dim_size -= split_size) {
-    split_sizes.push_back(std::min<xla::int64>(dim_size, split_size));
-  }
-  ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
-      input.GetIrValue(), std::move(split_sizes), split_dim);
-  return input.MakeOutputTensors(node);
-}
-
-std::vector<XLATensor> XLATensor::split_with_sizes(
-    const XLATensor& input, std::vector<xla::int64> split_size,
-    xla::int64 dim) {
-  auto input_shape = input.shape();
-  int split_dim =
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
-  ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
-      input.GetIrValue(), std::move(split_size), split_dim);
-  return input.MakeOutputTensors(node);
-}
-
 XLATensor XLATensor::sqrt(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Sqrt(input.GetIrValue()));
 }
@@ -2076,14 +2057,19 @@ void XLATensor::sqrt_(XLATensor& input) {
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), -1));
+  auto input_shape = input.shape();
+  auto output_dimensions = BuildSqueezedDimensions(
+      input_shape.get().dimensions(), /*squeeze_dim=*/-1);
+  return view(input, output_dimensions);
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input, xla::int64 dim) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::Squeeze>(
-      input.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
+  auto input_shape = input.shape();
+  xla::int64 squeeze_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  auto output_dimensions =
+      BuildSqueezedDimensions(input_shape.get().dimensions(), squeeze_dim);
+  return view(input, output_dimensions);
 }
 
 void XLATensor::squeeze_(XLATensor& input) {

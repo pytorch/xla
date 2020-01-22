@@ -509,6 +509,9 @@ class AtenXlaType {
   static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                   const at::Tensor& value);
 
+  static at::Tensor& masked_scatter_(at::Tensor& self, const at::Tensor& mask,
+                                     const at::Tensor& source);
+
   static at::Tensor masked_select(const at::Tensor& self,
                                   const at::Tensor& mask);
 
@@ -788,13 +791,6 @@ class AtenXlaType {
 
   static std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor& self,
                                                  int64_t dim, bool descending);
-
-  static std::vector<at::Tensor> split(const at::Tensor& self,
-                                       int64_t split_size, int64_t dim);
-
-  static std::vector<at::Tensor> split_with_sizes(const at::Tensor& self,
-                                                  at::IntArrayRef split_sizes,
-                                                  int64_t dim);
 
   static at::Tensor sqrt(const at::Tensor& self);
 

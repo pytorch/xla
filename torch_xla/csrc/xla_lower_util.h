@@ -2,13 +2,15 @@
 
 #include <vector>
 
+#include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace torch_xla {
 
-xla::XlaOp PadToSize(xla::XlaOp input, xla::XlaOp pad_value,
-                     tensorflow::gtl::ArraySlice<const xla::int64> size);
+xla::XlaOp PadToSize(xla::XlaOp input,
+                     tensorflow::gtl::ArraySlice<const xla::int64> size,
+                     absl::optional<xla::XlaOp> pad_value = absl::nullopt);
 
 std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64 k,
                                        xla::int64 dim, bool keepdim);
@@ -61,5 +63,8 @@ xla::XlaOp CreatePut(xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input);
 
 std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask);
+
+xla::XlaOp BuildMaskedScatter(xla::XlaOp input, xla::XlaOp mask,
+                              xla::XlaOp source);
 
 }  // namespace torch_xla

@@ -3804,6 +3804,31 @@ TEST_F(AtenXlaTensorTest, TestMaskedSelect) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestMaskedScatter) {
+  torch::Tensor a = torch::rand({3, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b =
+      torch::randint(0, 2, {3, 5}, torch::TensorOptions(torch::kBool));
+  torch::Tensor c = torch::rand({15}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor d = torch::masked_scatter(a, b, c);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = CopyToDevice(c, device);
+    torch::Tensor xla_d = torch::masked_scatter(xla_a, xla_b, xla_c);
+    AllClose(d, xla_d);
+
+    if (DebugUtil::ExperimentEnabled("masked_scatter") &&
+        bridge::AtenDeviceToXlaDevice(device).hw_type == DeviceType::TPU) {
+      // If the masked_select support is enabled, we must not see any aten::
+      // calls.
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    }
+    ExpectCounterChanged("xla::masked_scatter_",
+                         cpp_test::GetIgnoredCounters());
+    ResetCounters();
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestMultiIndexHeadNull) {
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
@@ -7005,61 +7030,6 @@ TEST_F(AtenXlaTensorTest, TestTransposeDimsInPlace) {
     AllClose(output, xla_output);
     AllClose(input, xla_input);
   });
-}
-
-TEST_F(AtenXlaTensorTest, TestSplit) {
-  torch::Tensor input =
-      torch::rand({7, 8, 9}, torch::TensorOptions(torch::kFloat));
-  int rank = input.dim();
-  for (int split_size : {2, 3}) {
-    for (int dim = -rank; dim < rank; ++dim) {
-      std::vector<torch::Tensor> outputs = torch::split(input, split_size, dim);
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor xla_input = CopyToDevice(input, device);
-        std::vector<torch::Tensor> xla_outputs =
-            torch::split(xla_input, split_size, dim);
-        ASSERT_EQ(outputs.size(), xla_outputs.size());
-        for (size_t i = 0; i < outputs.size(); ++i) {
-          AllClose(outputs[i], xla_outputs[i]);
-        }
-      });
-    }
-  }
-}
-
-TEST_F(AtenXlaTensorTest, TestSplitEmpty) {
-  torch::Tensor input = torch::rand({0}, torch::TensorOptions(torch::kFloat));
-  int split_size = 0;
-  int dim = 0;
-  std::vector<torch::Tensor> outputs = torch::split(input, split_size, dim);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_input = CopyToDevice(input, device);
-    std::vector<torch::Tensor> xla_outputs =
-        torch::split(xla_input, split_size, dim);
-    ASSERT_EQ(outputs.size(), xla_outputs.size());
-    for (size_t i = 0; i < outputs.size(); ++i) {
-      AllClose(outputs[i], xla_outputs[i]);
-    }
-  });
-}
-
-TEST_F(AtenXlaTensorTest, TestSplitWithSizes) {
-  torch::Tensor input =
-      torch::rand({15, 15, 15}, torch::TensorOptions(torch::kFloat));
-  int rank = input.dim();
-  for (int dim = -rank; dim < rank; ++dim) {
-    std::vector<torch::Tensor> outputs =
-        torch::split_with_sizes(input, {4, 5, 6}, dim);
-    ForEachDevice([&](const torch::Device& device) {
-      torch::Tensor xla_input = CopyToDevice(input, device);
-      std::vector<torch::Tensor> xla_outputs =
-          torch::split_with_sizes(xla_input, {4, 5, 6}, dim);
-      ASSERT_EQ(outputs.size(), xla_outputs.size());
-      for (size_t i = 0; i < outputs.size(); ++i) {
-        AllClose(outputs[i], xla_outputs[i]);
-      }
-    });
-  }
 }
 
 TEST_F(AtenXlaTensorTest, TestCrossImplicitDim) {

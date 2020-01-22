@@ -8,7 +8,7 @@
 namespace xla {
 namespace util {
 
-RecordReader::RecordReader(string path, const string& compression,
+RecordReader::RecordReader(std::string path, const string& compression,
                            int64 buffer_size)
     : path_(std::move(path)) {
   tensorflow::Env* env = tensorflow::Env::Default();
@@ -20,13 +20,18 @@ RecordReader::RecordReader(string path, const string& compression,
   reader_.reset(new tensorflow::io::RecordReader(file_.get(), options));
 }
 
-bool RecordReader::Read(string* value) {
+bool RecordReader::Read(std::string* value) {
+  // We need to pass a tensorflow::tstring here, which will ultimately result in
+  // making a copy. Hopefully the tensorflow string story will end with a nice
+  // outcome.
+  tensorflow::tstring tvalue;
   std::lock_guard<std::mutex> slock(lock_);
-  xla::Status status = reader_->ReadRecord(&offset_, value);
+  xla::Status status = reader_->ReadRecord(&offset_, &tvalue);
   if (tensorflow::errors::IsOutOfRange(status)) {
     return false;
   }
   XLA_CHECK_OK(status) << path_ << " offset " << offset_;
+  *value = tvalue;
   return true;
 }
 

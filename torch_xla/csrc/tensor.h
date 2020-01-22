@@ -612,6 +612,9 @@ class XLATensor {
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            at::Scalar value);
 
+  static void masked_scatter_(XLATensor& input, const XLATensor& mask,
+                              const XLATensor& source);
+
   static XLATensor masked_select(const XLATensor& input, const XLATensor& mask);
 
   static XLATensor matmul(const XLATensor& input, const XLATensor& other);
@@ -848,13 +851,6 @@ class XLATensor {
   static XLATensor softshrink_backward(const XLATensor& grad_out,
                                        const XLATensor& input,
                                        at::Scalar lambda);
-
-  static std::vector<XLATensor> split(const XLATensor& input,
-                                      xla::int64 split_size, xla::int64 dim);
-
-  static std::vector<XLATensor> split_with_sizes(
-      const XLATensor& input, std::vector<xla::int64> split_size,
-      xla::int64 dim);
 
   static XLATensor sqrt(const XLATensor& input);
   static void sqrt_(XLATensor& input);

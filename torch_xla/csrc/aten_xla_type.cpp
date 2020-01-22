@@ -1596,6 +1596,21 @@ at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
   return masked_fill_(self, mask, value.item());
 }
 
+at::Tensor& AtenXlaType::masked_scatter_(at::Tensor& self,
+                                         const at::Tensor& mask,
+                                         const at::Tensor& source) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  // Only the XLA TPU backend for now implements the dynamic dimension setting
+  // required by the masked_scatter_ implementation.
+  if (self_tensor.GetDevice().hw_type != DeviceType::TPU) {
+    return AtenXlaTypeDefault::masked_scatter_(self, mask, source);
+  }
+  XLATensor::masked_scatter_(self_tensor, bridge::GetXlaTensor(mask),
+                             bridge::GetXlaTensor(source));
+  return self;
+}
+
 at::Tensor AtenXlaType::masked_select(const at::Tensor& self,
                                       const at::Tensor& mask) {
   XLA_FN_COUNTER("xla::");
@@ -2506,22 +2521,6 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::sort(const at::Tensor& self,
                                  dim, descending, true);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
-}
-
-std::vector<at::Tensor> AtenXlaType::split(const at::Tensor& self,
-                                           int64_t split_size, int64_t dim) {
-  XLA_FN_COUNTER("xla::");
-  auto xla_tensors =
-      XLATensor::split(bridge::GetXlaTensor(self), split_size, dim);
-  return bridge::AtenFromXlaTensors(xla_tensors);
-}
-
-std::vector<at::Tensor> AtenXlaType::split_with_sizes(
-    const at::Tensor& self, at::IntArrayRef split_sizes, int64_t dim) {
-  XLA_FN_COUNTER("xla::");
-  auto xla_tensors = XLATensor::split_with_sizes(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(split_sizes), dim);
-  return bridge::AtenFromXlaTensors(xla_tensors);
 }
 
 at::Tensor AtenXlaType::sqrt(const at::Tensor& self) {

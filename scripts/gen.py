@@ -938,7 +938,7 @@ def generate_registrations(fgens, overrides):
     if override_fn:
       code += (
           '  .op(torch::RegisterOperators::options().schema("{}")\n      '
-          '.impl_unboxedOnlyKernel<{}, &{}>(at::TensorTypeId::XLATensorId)\n'
+          '.impl_unboxedOnlyKernel<{}, &{}>(at::DispatchKey::XLATensorId)\n'
           '      .aliasAnalysis(c10::AliasAnalysisKind::FROM_SCHEMA))\n'.format(
               fgen.aten_sig, fgen.funsig, override_fn, override_fn,
               fgen.aten_sig))

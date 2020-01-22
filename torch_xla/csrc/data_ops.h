@@ -28,7 +28,7 @@ xla::XlaOp BuildView(
 
 // Squeezes the given dimension if trivial (size 1), returns the unchanged input
 // otherwise.
-xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, size_t dim);
+xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, xla::int64 dim);
 
 // Squeezes out the trivial (size 1) dimensions of the input.
 xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input);
@@ -39,11 +39,15 @@ xla::XlaOp BuildExpand(
     xla::XlaOp input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
 
+std::vector<xla::int64> BuildSqueezedDimensions(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    xla::int64 squeeze_dim);
+
 std::vector<xla::int64> BuildUnsqueezeDimensions(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, size_t dim);
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, xla::int64 dim);
 
 // Insert a dimension of size one at the specified position.
-xla::XlaOp BuildUnsqueeze(xla::XlaOp input, size_t dim);
+xla::XlaOp BuildUnsqueeze(xla::XlaOp input, xla::int64 dim);
 
 // Concatenates a list of tensors along a new dimension dim.
 xla::XlaOp BuildStack(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
@@ -57,17 +61,6 @@ xla::XlaOp BuildCat(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
 // Repeats the input tensor along each dimension by the given number of repeats.
 xla::XlaOp BuildRepeat(xla::XlaOp input,
                        tensorflow::gtl::ArraySlice<const xla::int64> repeats);
-
-// Computes the number of splits with a dimension size and the split sizes.
-size_t ComputeSplitCount(
-    xla::int64 dim_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> split_sizes);
-
-// Splits a tensor into parts whose size is passed in split_sizes, along the dim
-// dimension.
-std::vector<xla::XlaOp> BuildSplit(
-    xla::XlaOp input, tensorflow::gtl::ArraySlice<const xla::int64> split_sizes,
-    xla::int64 dim);
 
 // Creates an updated version of input, where, starting at base_indices, source
 // if overlapped with input.
