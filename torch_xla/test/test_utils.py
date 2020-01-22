@@ -3,11 +3,35 @@ import sys
 import time
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
+import torch_xla.debug.metrics as met
+import torch_xla.debug.metrics_compare_utils as mcu
 
 
 def _get_device_spec(device):
   ordinal = xm.get_ordinal(defval=-1)
   return str(device) if ordinal < 0 else '{}/{}'.format(device, ordinal)
+
+
+def add_xla_metrics_to_summary(summary_writer, global_step):
+  """Adds XLA performance metrics to a SummaryWriter.
+
+  Args:
+    summary_writer: instance of Tensorboard SummaryWriter or
+        None. If None, no summary files will be written.
+    global_step: Int. The global step value for this data point.
+  """
+  if summary_writer is None:
+    return
+  metrics = mcu.parse_metrics_report(met.metrics_report())
+  aten_ops_sum = 0
+  for metric_name, metric_value in metrics.items():
+    if metric_name.find("aten::") == 0:
+      aten_ops_sum += metric_value
+    else:
+      add_scalar_to_summary(summary_writer, metric_name,
+                            metric_value, global_step)
+  add_scalar_to_summary(summary_writer, "aten_ops_sum",
+                        aten_ops_sum, global_step)
 
 
 def add_scalar_to_summary(summary_writer, metric_name, metric_value,

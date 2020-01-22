@@ -166,6 +166,7 @@ def train_mnist():
     global_step = (epoch - 1) * num_training_steps_per_epoch
     test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
                                      global_step)
+    test_utils.add_xla_metrics_to_summary(writer, global_step)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 

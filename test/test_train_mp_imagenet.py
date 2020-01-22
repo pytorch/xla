@@ -225,6 +225,7 @@ def train_imagenet():
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
     max_accuracy = max(accuracy, max_accuracy)
     test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
+    test_utils.add_xla_metrics_to_summary(writer, epoch)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
