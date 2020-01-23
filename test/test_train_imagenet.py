@@ -36,7 +36,7 @@ FLAGS = args_parse.parse_common_options(
     opts=MODEL_OPTS.items(),
 )
 
-from common_utils import TestCase, run_tests
+from torch.testing._internal.common_utils import TestCase, run_tests
 import os
 import schedulers
 from statistics import mean

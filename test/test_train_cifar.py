@@ -15,7 +15,7 @@ FLAGS = args_parse.parse_common_options(
     target_accuracy=80.0,
     opts=MODEL_OPTS.items())
 
-from common_utils import TestCase, run_tests
+from torch.testing._internal.common_utils import TestCase, run_tests
 import os
 from statistics import mean
 import shutil
