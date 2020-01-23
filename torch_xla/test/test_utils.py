@@ -2,9 +2,9 @@ import os
 import sys
 import time
 import torch_xla.core.xla_model as xm
-import torch_xla.utils.utils as xu
 import torch_xla.debug.metrics as met
 import torch_xla.debug.metrics_compare_utils as mcu
+import torch_xla.utils.utils as xu
 
 
 def _get_device_spec(device):
