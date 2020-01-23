@@ -15,21 +15,9 @@ class AtenXlaType {
   // pytorch folder file:
   //   build/aten/src/ATen/RegistrationDeclarations.h
   /////////////////////////////////////////////////////////////////////////////
-  static at::Tensor __and__(const at::Tensor& self, at::Scalar other);
-
-  static at::Tensor __and__(const at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor& __iand__(at::Tensor& self, at::Scalar other);
-
-  static at::Tensor& __iand__(at::Tensor& self, const at::Tensor& other);
-
   static at::Tensor& __ilshift__(at::Tensor& self, at::Scalar other);
 
   static at::Tensor& __ilshift__(at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor& __ior__(at::Tensor& self, at::Scalar other);
-
-  static at::Tensor& __ior__(at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor& __irshift__(at::Tensor& self, at::Scalar other);
 
@@ -38,10 +26,6 @@ class AtenXlaType {
   static at::Tensor __lshift__(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor __lshift__(const at::Tensor& self, const at::Tensor& other);
-
-  static at::Tensor __or__(const at::Tensor& self, at::Scalar other);
-
-  static at::Tensor __or__(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor __rshift__(const at::Tensor& self, at::Scalar other);
 
@@ -53,7 +37,19 @@ class AtenXlaType {
   static at::Tensor _adaptive_avg_pool2d_backward(const at::Tensor& grad_output,
                                                   const at::Tensor& self);
 
+  static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
+                                     const at::Tensor& other);
+
+  static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
+                                     at::Scalar other);
+
   static at::Tensor& bitwise_not_out(at::Tensor& out, const at::Tensor& self);
+
+  static at::Tensor& bitwise_or_out(at::Tensor& out, const at::Tensor& self,
+                                    const at::Tensor& other);
+
+  static at::Tensor& bitwise_or_out(at::Tensor& out, const at::Tensor& self,
+                                    at::Scalar other);
 
   static at::Tensor& bitwise_xor_out(at::Tensor& out, const at::Tensor& self,
                                      at::Scalar other);
@@ -513,6 +509,9 @@ class AtenXlaType {
   static at::Tensor& masked_fill_(at::Tensor& self, const at::Tensor& mask,
                                   const at::Tensor& value);
 
+  static at::Tensor& masked_scatter_(at::Tensor& self, const at::Tensor& mask,
+                                     const at::Tensor& source);
+
   static at::Tensor masked_select(const at::Tensor& self,
                                   const at::Tensor& mask);
 
@@ -793,13 +792,6 @@ class AtenXlaType {
   static std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor& self,
                                                  int64_t dim, bool descending);
 
-  static std::vector<at::Tensor> split(const at::Tensor& self,
-                                       int64_t split_size, int64_t dim);
-
-  static std::vector<at::Tensor> split_with_sizes(const at::Tensor& self,
-                                                  at::IntArrayRef split_sizes,
-                                                  int64_t dim);
-
   static at::Tensor sqrt(const at::Tensor& self);
 
   static at::Tensor& sqrt_(at::Tensor& self);
@@ -905,19 +897,25 @@ class AtenXlaType {
 
   static at::Tensor upsample_bilinear2d(const at::Tensor& self,
                                         at::IntArrayRef output_size,
-                                        bool align_corners);
+                                        bool align_corners,
+                                        c10::optional<double> scales_h,
+                                        c10::optional<double> scales_w);
 
-  static at::Tensor upsample_bilinear2d_backward(const at::Tensor& grad_output,
-                                                 at::IntArrayRef output_size,
-                                                 at::IntArrayRef input_size,
-                                                 bool align_corners);
+  static at::Tensor upsample_bilinear2d_backward(
+      const at::Tensor& grad_output, at::IntArrayRef output_size,
+      at::IntArrayRef input_size, bool align_corners,
+      c10::optional<double> scales_h, c10::optional<double> scales_w);
 
   static at::Tensor upsample_nearest2d(const at::Tensor& self,
-                                       at::IntArrayRef output_size);
+                                       at::IntArrayRef output_size,
+                                       c10::optional<double> scales_h,
+                                       c10::optional<double> scales_w);
 
   static at::Tensor upsample_nearest2d_backward(const at::Tensor& grad_output,
                                                 at::IntArrayRef output_size,
-                                                at::IntArrayRef input_size);
+                                                at::IntArrayRef input_size,
+                                                c10::optional<double> scales_h,
+                                                c10::optional<double> scales_w);
 
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 

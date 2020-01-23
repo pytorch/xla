@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 #include <string>
 #include <unordered_map>
 
@@ -61,6 +62,7 @@ class XLATensor {
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
   xla::util::MaybeRef<xla::Shape> shape() const;
+  xla::Shape shape_with_layout() const;
 
   const Device& GetDevice() const;
   xla::int64 GetUniqueId() const;
@@ -182,26 +184,14 @@ class XLATensor {
   //////////////////////////////////////////////////////////////////////////////
   // ATEN operators follows here, listed in alphabetical order.
   //////////////////////////////////////////////////////////////////////////////
-  static XLATensor __and__(const XLATensor& input, at::Scalar other);
-  static XLATensor __and__(const XLATensor& input, const XLATensor& other);
-
-  static void __iand__(XLATensor& input, const XLATensor& other);
-  static void __iand__(XLATensor& input, at::Scalar other);
-
   static void __ilshift__(XLATensor& input, at::Scalar other);
   static void __ilshift__(XLATensor& input, const XLATensor& other);
-
-  static void __ior__(XLATensor& input, const XLATensor& other);
-  static void __ior__(XLATensor& input, at::Scalar other);
 
   static void __irshift__(XLATensor& input, at::Scalar other);
   static void __irshift__(XLATensor& input, const XLATensor& other);
 
   static XLATensor __lshift__(const XLATensor& input, at::Scalar other);
   static XLATensor __lshift__(const XLATensor& input, const XLATensor& other);
-
-  static XLATensor __or__(const XLATensor& input, at::Scalar other);
-  static XLATensor __or__(const XLATensor& input, const XLATensor& other);
 
   static XLATensor __rshift__(const XLATensor& input, at::Scalar other);
   static XLATensor __rshift__(const XLATensor& input, const XLATensor& other);
@@ -299,7 +289,19 @@ class XLATensor {
                                                  const XLATensor& weight,
                                                  xla::int64 reduction);
 
+  static void bitwise_and_out(XLATensor& out, const XLATensor& input,
+                              at::Scalar other);
+
+  static void bitwise_and_out(XLATensor& out, const XLATensor& input,
+                              const XLATensor& other);
+
   static void bitwise_not_out(XLATensor& out, const XLATensor& input);
+
+  static void bitwise_or_out(XLATensor& out, const XLATensor& input,
+                             at::Scalar other);
+
+  static void bitwise_or_out(XLATensor& out, const XLATensor& input,
+                             const XLATensor& other);
 
   static void bitwise_xor_out(XLATensor& out, const XLATensor& input,
                               at::Scalar other);
@@ -610,6 +612,9 @@ class XLATensor {
   static void masked_fill_(XLATensor& input, const XLATensor& mask,
                            at::Scalar value);
 
+  static void masked_scatter_(XLATensor& input, const XLATensor& mask,
+                              const XLATensor& source);
+
   static XLATensor masked_select(const XLATensor& input, const XLATensor& mask);
 
   static XLATensor matmul(const XLATensor& input, const XLATensor& other);
@@ -847,13 +852,6 @@ class XLATensor {
                                        const XLATensor& input,
                                        at::Scalar lambda);
 
-  static std::vector<XLATensor> split(const XLATensor& input,
-                                      xla::int64 split_size, xla::int64 dim);
-
-  static std::vector<XLATensor> split_with_sizes(
-      const XLATensor& input, std::vector<xla::int64> split_size,
-      xla::int64 dim);
-
   static XLATensor sqrt(const XLATensor& input);
   static void sqrt_(XLATensor& input);
 
@@ -992,6 +990,13 @@ class XLATensor {
     std::string device;
   };
 
+  struct CompilationResult {
+    Device device;
+    size_t emitted_nodes = 0;
+    std::shared_ptr<xla::ComputationClient::Computation> computation;
+    std::vector<xla::ComputationClient::DataPtr> parameters_data;
+  };
+
   struct CachedComputation {
     CachedComputation(
         std::shared_ptr<xla::ComputationClient::Computation> computation,
@@ -1007,7 +1012,8 @@ class XLATensor {
   struct Async {
     Async(SyncTensorCollection* coll,
           std::vector<xla::ComputationClient::DataPtr> parameters_data,
-          std::string device, ComputationCache::TypePtr cached_computation);
+          std::vector<xla::ComputationClient::DataPtr> tensors_data,
+          ComputationCache::TypePtr cached_computation);
 
     void Wait();
 
@@ -1156,18 +1162,46 @@ class XLATensor {
       tensorflow::gtl::ArraySlice<const xla::ComputationClient::DataPtr>
           tensors_data);
 
+  static std::vector<ir::Value> CollectRoots(
+      const std::vector<XLATensor>& tensors,
+      tensorflow::gtl::ArraySlice<const size_t> indices);
+
+  static std::vector<xla::ComputationClient::DataPtr> FetchTensorData(
+      std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
+      tensorflow::gtl::ArraySlice<const size_t> indices);
+
   // Schedules the execution of a sync tensors operation in background. The
   // asynchronous operation will hold the device locks by capturing the ones
   // present within the coll structure.
+  static std::shared_ptr<XLATensor::Async> ScheduleSyncTensorsGraph(
+      SyncTensorCollection* coll,
+      std::vector<xla::ComputationClient::DataPtr> parameters_data,
+      std::vector<xla::ComputationClient::DataPtr> tensors_data,
+      ComputationCache::TypePtr cached_computation);
+
   static std::shared_ptr<Async> ScheduleSyncTensorsGraph(
       std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
       SyncTensorCollection* coll,
       std::vector<xla::ComputationClient::DataPtr> parameters_data,
       std::string device, ComputationCache::TypePtr cached_computation);
 
+  static std::vector<xla::ComputationClient::DataPtr> FetchParameters(
+      const std::vector<XLATensor>& tensors,
+      tensorflow::gtl::ArraySlice<const size_t> indices, size_t* graph_size);
+
+  static ComputationCache::TypePtr LookupCachedCompile(
+      const std::vector<XLATensor>& tensors, size_t hash,
+      tensorflow::gtl::ArraySlice<const size_t> indices,
+      std::vector<xla::ComputationClient::DataPtr>* parameters_data);
+
   static std::shared_ptr<Async> TryRunCachedSync(
       std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
       SyncTensorCollection* coll);
+
+  static CompilationResult Compile(
+      const std::vector<XLATensor>& tensors,
+      tensorflow::gtl::ArraySlice<const std::string> devices,
+      const SyncTensorCollection& coll);
 
   static std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensor>* tensors,

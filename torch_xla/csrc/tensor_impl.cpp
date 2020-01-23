@@ -7,30 +7,30 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
 
-thread_local c10::Device g_current_device(at::DeviceType::XLA, 0);
-
 struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   at::DeviceType type() const override { return at::DeviceType::XLA; }
 
   c10::Device exchangeDevice(c10::Device device) const override {
-    std::swap(g_current_device, device);
-    return device;
+    return bridge::SetCurrentDevice(device);
   }
 
-  c10::Device getDevice() const override { return g_current_device; }
+  c10::Device getDevice() const override {
+    return bridge::GetCurrentAtenDevice();
+  }
 
   void setDevice(c10::Device device) const override {
-    g_current_device = device;
+    bridge::SetCurrentDevice(device);
   }
 
   void uncheckedSetDevice(c10::Device device) const noexcept override {
-    g_current_device = device;
+    bridge::SetCurrentDevice(device);
   }
 
   c10::Stream getStream(c10::Device device) const noexcept override {
@@ -38,7 +38,7 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   }
 
   c10::Stream exchangeStream(c10::Stream s) const noexcept override {
-    return c10::Stream(c10::Stream::DEFAULT, g_current_device);
+    return c10::Stream(c10::Stream::DEFAULT, bridge::GetCurrentAtenDevice());
   }
 
   c10::DeviceIndex deviceCount() const noexcept override {
@@ -124,6 +124,7 @@ void XLATensorImpl::SetupSizeProperties() {
     }
     strides_.clear();
     xla::Shape torch_shape = MakeTorchTensorLayout(shape.get().dimensions(),
+                                                   /*dynamic_dimensions=*/{},
                                                    shape.get().element_type());
     for (auto stride : ComputeShapeStrides(torch_shape)) {
       strides_.push_back(stride);
@@ -134,14 +135,6 @@ void XLATensorImpl::SetupSizeProperties() {
 
 caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {
   return c10::scalarTypeToTypeMeta(tensor.dtype());
-}
-
-c10::Device XLATensorImpl::GetCurrentAtenDevice() { return g_current_device; }
-
-c10::Device XLATensorImpl::SetCurrentAtenDevice(c10::Device device) {
-  std::swap(g_current_device, device);
-  TF_VLOG(2) << "New Aten device : " << g_current_device;
-  return device;
 }
 
 void XLATensorImpl::AtenInitialize() {

@@ -84,57 +84,30 @@ std::vector<xla::int64> GetCompleteShape(
   return complete_output_sizes;
 }
 
-absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
-    const xla::Shape& input_shape,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
-  xla::int64 input_dynamic_dimension =
-      XlaHelpers::GetDynamicDimension(input_shape);
-  if (input_dynamic_dimension < 0) {
-    return absl::nullopt;
-  }
-  DynamicReshapeInfo info;
-  info.output_shape =
-      xla::ShapeUtil::MakeShape(input_shape.element_type(), output_sizes);
-  if (info.output_shape.rank() > 0) {
-    info.dynamic_dimension =
-        input_dynamic_dimension == 0 ? 0 : output_sizes.size() - 1;
-    info.output_shape.set_dynamic_dimension(info.dynamic_dimension, true);
-  }
-  return std::move(info);
-}
-
 xla::XlaOp BuildView(
     xla::XlaOp input,
     tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   const auto complete_output_sizes =
       GetCompleteShape(output_sizes, input_shape.dimensions());
-  auto info = GetDynamicReshapeInfo(input_shape, complete_output_sizes);
-  if (info) {
-    return xla::ReshapeWithInferredDimension(input, complete_output_sizes,
-                                             info->dynamic_dimension);
-  }
-  return xla::Reshape(input, complete_output_sizes);
+  return XlaHelpers::DynamicReshape(input, complete_output_sizes);
 }
 
-xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, size_t dim) {
-  auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
-  XLA_CHECK_LT(dim, input_sizes.size());
-  if (input_sizes[dim] != 1) {
+xla::XlaOp SqueezeTrivialDimension(xla::XlaOp input, xla::int64 dim) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  XLA_CHECK_LT(dim, input_shape.rank());
+  if (input_shape.dimensions(dim) != 1) {
     return input;
   }
-  input_sizes.erase(input_sizes.begin() + dim);
-  return xla::Reshape(input, input_sizes);
+  auto output_sizes = BuildSqueezedDimensions(input_shape.dimensions(), dim);
+  return XlaHelpers::DynamicReshape(input, output_sizes);
 }
 
 xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input) {
-  auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
-  // Squeeze the trivial (of size 1) dimensions.
-  std::vector<xla::int64> non_singleton_dimensions;
-  std::copy_if(input_sizes.begin(), input_sizes.end(),
-               std::back_inserter(non_singleton_dimensions),
-               [](const size_t dim_size) { return dim_size != 1; });
-  return xla::Reshape(input, non_singleton_dimensions);
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  auto output_sizes =
+      BuildSqueezedDimensions(input_shape.dimensions(), /*squeeze_dim=*/-1);
+  return XlaHelpers::DynamicReshape(input, output_sizes);
 }
 
 xla::XlaOp BuildExpand(
@@ -145,23 +118,36 @@ xla::XlaOp BuildExpand(
   XLA_CHECK_LE(input_sizes.size(), output_sizes.size());
   input_sizes.insert(input_sizes.begin(),
                      output_sizes.size() - input_sizes.size(), 1);
-  xla::XlaOp implicit_reshape = xla::Reshape(input, input_sizes);
+  xla::XlaOp implicit_reshape = XlaHelpers::DynamicReshape(input, input_sizes);
   return xla::BroadcastInDim(implicit_reshape, output_sizes,
                              xla::util::Iota<xla::int64>(output_sizes.size()));
 }
 
+std::vector<xla::int64> BuildSqueezedDimensions(
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    xla::int64 squeeze_dim) {
+  std::vector<xla::int64> output_dimensions;
+  for (xla::int64 i = 0; i < dimensions.size(); ++i) {
+    xla::int64 dim = dimensions[i];
+    if (dim != 1 || (i != squeeze_dim && squeeze_dim >= 0)) {
+      output_dimensions.push_back(dim);
+    }
+  }
+  return output_dimensions;
+}
+
 std::vector<xla::int64> BuildUnsqueezeDimensions(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, size_t dim) {
+    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, xla::int64 dim) {
   XLA_CHECK_LE(dim, dimensions.size());
   auto unsqueeze_dimensions = xla::util::ToVector<xla::int64>(dimensions);
   unsqueeze_dimensions.insert(unsqueeze_dimensions.begin() + dim, 1);
   return unsqueeze_dimensions;
 }
 
-xla::XlaOp BuildUnsqueeze(xla::XlaOp input, size_t dim) {
+xla::XlaOp BuildUnsqueeze(xla::XlaOp input, xla::int64 dim) {
   auto dimensions =
       BuildUnsqueezeDimensions(XlaHelpers::SizesOfXlaOp(input), dim);
-  return xla::Reshape(input, dimensions);
+  return XlaHelpers::DynamicReshape(input, dimensions);
 }
 
 xla::XlaOp BuildStack(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
@@ -172,7 +158,8 @@ xla::XlaOp BuildStack(tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
   for (size_t i = 0; i < inputs.size(); ++i) {
     auto input_size = XlaHelpers::SizesOfXlaOp(inputs[i]);
     input_size.insert(input_size.begin() + dim, 1);
-    reshaped_inputs.push_back(xla::Reshape(inputs[i], input_size));
+    reshaped_inputs.push_back(
+        XlaHelpers::DynamicReshape(inputs[i], input_size));
   }
   return xla::ConcatInDim(inputs[0].builder(), reshaped_inputs, dim);
 }
@@ -202,37 +189,6 @@ xla::XlaOp BuildRepeat(xla::XlaOp input,
     repeated = xla::Broadcast(repeated, remaining_repeats);
   }
   return repeated;
-}
-
-size_t ComputeSplitCount(
-    xla::int64 dim_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> split_sizes) {
-  size_t count = 0;
-  for (auto size : split_sizes) {
-    if (size > dim_size) {
-      break;
-    }
-    dim_size -= size;
-    ++count;
-  }
-  return count;
-}
-
-std::vector<xla::XlaOp> BuildSplit(
-    xla::XlaOp input, tensorflow::gtl::ArraySlice<const xla::int64> split_sizes,
-    xla::int64 dim) {
-  const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
-  xla::int64 dim_size = input_sizes.at(dim);
-  xla::int64 index = 0;
-  std::vector<xla::XlaOp> splits;
-  for (auto size : split_sizes) {
-    if (index + size > dim_size) {
-      break;
-    }
-    splits.emplace_back(SliceInDim(input, index, index + size, 1, dim));
-    index += size;
-  }
-  return splits;
 }
 
 xla::XlaOp BuildUpdateSlice(
@@ -288,7 +244,7 @@ xla::XlaOp BuildTake(xla::XlaOp input, xla::XlaOp index) {
   xla::XlaOp r1_result =
       xla::TorchGather(r1_input, bound_index, take_dim,
                        IsSparseGather(input_shape, index_shape, take_dim));
-  return xla::Reshape(r1_result, index_shape.dimensions());
+  return XlaHelpers::DynamicReshape(r1_result, index_shape.dimensions());
 }
 
 xla::XlaOp BuildResize(xla::XlaOp input,
@@ -309,7 +265,7 @@ xla::XlaOp BuildResize(xla::XlaOp input,
     dims->set_edge_padding_high(new_num_elements - num_elements);
     resized_input = xla::Pad(r1_input, zero, padding_config);
   }
-  return xla::Reshape(resized_input, size);
+  return XlaHelpers::DynamicReshape(resized_input, size);
 }
 
 xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,

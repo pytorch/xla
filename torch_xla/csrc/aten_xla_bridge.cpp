@@ -57,6 +57,10 @@ c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor) {
   return impl->tensor();
 }
 
+bool IsXlaTensor(const at::Tensor& tensor) {
+  return TryGetXlaTensor(tensor).has_value();
+}
+
 XLATensor GetXlaTensor(const at::Tensor& tensor) {
   auto xtensor = TryGetXlaTensor(tensor);
   XLA_CHECK(xtensor) << "Input tensor is not an XLA tensor: "
@@ -169,7 +173,7 @@ Device AtenDeviceToXlaDevice(const c10::Device& device) {
   XLA_CHECK_EQ(device.type(), at::kXLA) << device;
   int ordinal = device.has_index() ? device.index() : -1;
   if (ordinal < 0) {
-    c10::Device current_device = XLATensorImpl::GetCurrentAtenDevice();
+    c10::Device current_device = GetCurrentAtenDevice();
     if (current_device.has_index()) {
       ordinal = current_device.index();
     }
@@ -194,13 +198,17 @@ c10::Device AtenDefaultDevice() {
 }
 
 c10::Device SetCurrentDevice(const c10::Device& device) {
-  c10::Device prev_device = XLATensorImpl::SetCurrentAtenDevice(device);
-  SetCurrentDevice(AtenDeviceToXlaDevice(device));
-  return prev_device;
+  Device prev_device =
+      torch_xla::SetCurrentDevice(AtenDeviceToXlaDevice(device));
+  return XlaDeviceToAtenDevice(prev_device);
+}
+
+Device SetCurrentDevice(const Device& device) {
+  return torch_xla::SetCurrentDevice(device);
 }
 
 c10::Device GetCurrentAtenDevice() {
-  return XLATensorImpl::GetCurrentAtenDevice();
+  return XlaDeviceToAtenDevice(torch_xla::GetCurrentDevice());
 }
 
 at::Tensor XlaToAtenTensor(XLATensor xla_tensor,

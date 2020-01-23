@@ -15,6 +15,8 @@ namespace bridge {
 
 c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor);
 
+bool IsXlaTensor(const at::Tensor& tensor);
+
 // Extracts the XLATensor out of our version of at::Tensor. Throws an exception
 // if tensor is not an XLA tensor.
 XLATensor GetXlaTensor(const at::Tensor& tensor);
@@ -58,6 +60,8 @@ std::string ToXlaString(const c10::Device& device);
 c10::Device AtenDefaultDevice();
 
 c10::Device SetCurrentDevice(const c10::Device& device);
+
+Device SetCurrentDevice(const Device& device);
 
 c10::Device GetCurrentAtenDevice();
 

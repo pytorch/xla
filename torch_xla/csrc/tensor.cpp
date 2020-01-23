@@ -10,8 +10,10 @@
 #include <set>
 #include <stdexcept>
 
+#include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/literal_util.h"
+#include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -363,15 +365,15 @@ XLATensor::Data::~Data() { DeviceContextArena::Get()->UnregisterTensor(this); }
 XLATensor::Async::Async(
     SyncTensorCollection* coll,
     std::vector<xla::ComputationClient::DataPtr> parameters_data,
-    std::string device, ComputationCache::TypePtr cached_computation)
+    std::vector<xla::ComputationClient::DataPtr> tensors_data,
+    ComputationCache::TypePtr cached_computation)
     : mwait(1),
       indices(std::move(coll->indices)),
       unlocker(std::move(coll->unlocker)),
       parameters_data(std::move(parameters_data)),
-      device(std::move(device)),
-      cached_computation(std::move(cached_computation)) {
-  tensors_data.reserve(indices.size());
-}
+      device(std::move(coll->device)),
+      cached_computation(std::move(cached_computation)),
+      tensors_data(std::move(tensors_data)) {}
 
 void XLATensor::Async::Wait() {
   mwait.Wait();
@@ -478,17 +480,21 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   if (data()->xla_data != nullptr) {
     return data()->xla_data->shape();
   }
-  const Device& device = GetDevice();
   if (data()->ir_value) {
-    const xla::Shape& node_shape = data()->ir_value.shape();
-    return MakeArrayShapeFromDimensions(
-        node_shape.dimensions(), node_shape.element_type(), device.hw_type);
+    return data()->ir_value.shape();
   }
   XLA_CHECK(data()->tensor_data);
-  return MakeArrayShapeFromDimensions(
-      XlaHelpers::I64List(data()->tensor_data->sizes()),
+  const Device& device = GetDevice();
+  return xla::ShapeUtil::MakeShape(
       MakeXlaPrimitiveType(data()->tensor_data->type().scalarType(), &device),
-      device.hw_type);
+      XlaHelpers::I64List(data()->tensor_data->sizes()));
+}
+
+xla::Shape XLATensor::shape_with_layout() const {
+  auto tensor_shape = shape();
+  return MakeArrayShapeFromDimensions(
+      tensor_shape.get().dimensions(), tensor_shape.get().dynamic_dimensions(),
+      tensor_shape.get().element_type(), GetDevice().hw_type);
 }
 
 const Device& XLATensor::GetDevice() const { return data()->device; }
@@ -560,7 +566,7 @@ void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data,
                            bool sync) {
   data()->xla_data = std::move(xla_data);
   // Assigning a device data should always clear the IR node, to allow graph
-  // trimming. A view cannot be rest though, unless we are at a step-end sync.
+  // trimming. A view cannot be reset though, unless we are at a step-end sync.
   AssignIrValue(ir::Value());
   if (sync) {
     data()->view = nullptr;
@@ -664,6 +670,7 @@ ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
     }
     data = GetDeviceData(tensor, device);
   } else {
+    XLA_TIMED("IrValueTensorToXlaData");
     data = TensorToXlaData(tensor, device);
   }
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
@@ -712,9 +719,8 @@ std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
     XLA_CHECK_EQ(xla::util::Multiply<xla::int64>(ir_value.shape().dimensions()),
                  xla::util::Multiply<xla::int64>(view->shape().dimensions()))
         << ir_value.shape() << " vs. " << view->shape();
-    ViewInfo view_info(
-        ViewInfo::Type::kReshape, ir_value.shape(),
-        xla::util::ToVector<xla::int64>(view->shape().dimensions()));
+    ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.shape(),
+                       view->shape());
     view = view->CreateSubView(view_info.shape, view_info);
   }
   view->Update(std::move(ir_value));
@@ -735,9 +741,8 @@ std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
   // Node, and using the same alias for the created IR Node.
   ir::Value ir_value = GetIrValue();
   std::shared_ptr<Alias> alias = std::make_shared<Alias>(ir_value);
-  ViewInfo this_view_info(
-      ViewInfo::Type::kNoOp, ir_value.shape(),
-      xla::util::ToVector<xla::int64>(ir_value.shape().dimensions()));
+  ViewInfo this_view_info(ViewInfo::Type::kNoOp, ir_value.shape(),
+                          ir_value.shape());
   data()->view = std::make_shared<View>(ir_value.shape(), alias,
                                         std::move(this_view_info));
   AssignIrValue(ir::Value());
@@ -825,10 +830,7 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
     DebugUtil::SaveTensorsGraphInfo("GetTensorsOpByOp", *tensors,
                                     &coll.indices);
 
-    std::vector<ir::Value> roots;
-    for (auto index : coll.indices) {
-      roots.push_back((*tensors)[index].CurrentIrValue());
-    }
+    std::vector<ir::Value> roots = CollectRoots(*tensors, coll.indices);
     async_tensors_data = OpByOpExecutor::Get()->Execute(roots, coll.device, {});
   }
 
@@ -987,7 +989,10 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   coll.indices.reserve(tensors.size());
   TF_VLOG(4) << "Waiting on device barrier for device " << coll.device
              << " ...";
-  coll.unlocker = LockDevices(unique_device.AsSet());
+  {
+    XLA_TIMED("DeviceLockWait");
+    coll.unlocker = LockDevices(unique_device.AsSet());
+  }
   TF_VLOG(4) << "Waiting on device barrier for device " << coll.device
              << " done!";
   for (size_t i = 0; i < tensors.size(); ++i) {
@@ -1031,22 +1036,59 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   return coll;
 }
 
+XLATensor::ComputationCache::TypePtr XLATensor::LookupCachedCompile(
+    const std::vector<XLATensor>& tensors, size_t hash,
+    tensorflow::gtl::ArraySlice<const size_t> indices,
+    std::vector<xla::ComputationClient::DataPtr>* parameters_data) {
+  ComputationCache::TypePtr cached_computation =
+      GetComputationCache()->Get(hash);
+  if (cached_computation == nullptr) {
+    XLA_COUNTER("UncachedCompile", 1);
+    return nullptr;
+  }
+  size_t graph_size;
+  *parameters_data = FetchParameters(tensors, indices, &graph_size);
+  if (cached_computation->num_parameters != parameters_data->size()) {
+    XLA_COUNTER("CachedCompileParamMismatch", 1);
+    GetComputationCache()->Erase(hash);
+    return nullptr;
+  }
+  XLA_VALUE_METRIC("TensorsGraphSize", graph_size);
+  TF_VLOG(5) << "TensorsGraphSize=" << graph_size;
+
+  XLA_COUNTER("CachedCompile", 1);
+  return cached_computation;
+}
+
 std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
     std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
     SyncTensorCollection* coll) {
-  ComputationCache::TypePtr cached_computation =
-      GetComputationCache()->Get(coll->hash);
+  std::vector<xla::ComputationClient::DataPtr> parameters_data;
+  ComputationCache::TypePtr cached_computation = LookupCachedCompile(
+      *tensors, coll->hash, coll->indices, &parameters_data);
   if (cached_computation == nullptr) {
     return nullptr;
   }
+  return ScheduleSyncTensorsGraph(tensors, config, coll,
+                                  std::move(parameters_data), coll->device,
+                                  std::move(cached_computation));
+}
 
-  xla::util::Unique<Device> unique_device;
+XLATensor::ComputationCache* XLATensor::GetComputationCache() {
+  static const size_t kMaxCacheSize =
+      xla::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
+  static ComputationCache* cache = new ComputationCache(kMaxCacheSize);
+  return cache;
+}
+
+std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchParameters(
+    const std::vector<XLATensor>& tensors,
+    tensorflow::gtl::ArraySlice<const size_t> indices, size_t* graph_size) {
   std::vector<const ir::Node*> roots;
-  roots.reserve(coll->indices.size());
-  for (auto index : coll->indices) {
-    ir::Value ir_value = (*tensors)[index].CurrentIrValue();
+  roots.reserve(indices.size());
+  for (auto index : indices) {
+    ir::Value ir_value = tensors.at(index).CurrentIrValue();
     roots.push_back(ir_value.node.get());
-    unique_device.set((*tensors)[index].GetDevice());
   }
   std::vector<xla::ComputationClient::DataPtr> parameters_data;
   std::unordered_set<xla::ComputationClient::Data::OpaqueHandle> data_handles;
@@ -1060,38 +1102,30 @@ std::shared_ptr<XLATensor::Async> XLATensor::TryRunCachedSync(
       }
     }
   }
-  if (cached_computation->num_parameters != parameters_data.size()) {
-    XLA_COUNTER("CachedSyncParamMismatch", 1);
-    GetComputationCache()->Erase(coll->hash);
-    return nullptr;
+  if (graph_size != nullptr) {
+    *graph_size = post_order.size();
   }
-  XLA_COUNTER("CachedSyncTensors", 1);
-  XLA_VALUE_METRIC("SyncTensorsGraphSize", post_order.size());
-  TF_VLOG(5) << "SyncTensorsGraphSize=" << post_order.size();
-
-  return ScheduleSyncTensorsGraph(
-      tensors, config, coll, std::move(parameters_data),
-      unique_device->ToString(), std::move(cached_computation));
+  return parameters_data;
 }
 
-XLATensor::ComputationCache* XLATensor::GetComputationCache() {
-  static const size_t kMaxCacheSize =
-      xla::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
-  static ComputationCache* cache = new ComputationCache(kMaxCacheSize);
-  return cache;
+std::vector<ir::Value> XLATensor::CollectRoots(
+    const std::vector<XLATensor>& tensors,
+    tensorflow::gtl::ArraySlice<const size_t> indices) {
+  std::vector<ir::Value> roots;
+  roots.reserve(indices.size());
+  for (auto index : indices) {
+    roots.push_back(tensors.at(index).CurrentIrValue());
+  }
+  return roots;
 }
 
-std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
+std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchTensorData(
     std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
-    SyncTensorCollection* coll,
-    std::vector<xla::ComputationClient::DataPtr> parameters_data,
-    std::string device, ComputationCache::TypePtr cached_computation) {
-  DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", *tensors,
-                                  &coll->indices);
-
-  std::shared_ptr<Async> async = std::make_shared<Async>(
-      coll, std::move(parameters_data), device, std::move(cached_computation));
-  for (auto index : async->indices) {
+    tensorflow::gtl::ArraySlice<const size_t> indices) {
+  std::vector<xla::ComputationClient::DataPtr> tensors_data;
+  tensors_data.reserve(indices.size());
+  for (auto index : indices) {
+    XLATensor& tensor = (*tensors)[index];
     // If the config.force_xla_data flag is true, the purpose of this tensor
     // sync operation is to truncate the IR graph and materialize device data in
     // place of IR graph, on selected tensors. But since operation will complete
@@ -1101,17 +1135,28 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     // into the async variable), any other operation trying to access the
     // tensor's device data will have to wait until the asynchronous operation
     // completes.
-    xla::ComputationClient::DataPtr xla_data =
-        (*tensors)[index].CurrentXlaData();
+    xla::ComputationClient::DataPtr xla_data = tensor.CurrentXlaData();
     if (xla_data == nullptr && config.force_xla_data) {
-      xla::Shape shape = MakeShapeWithDeviceLayout((*tensors)[index].shape(),
-                                                   Device(device).hw_type);
+      const Device& tensor_device = tensor.GetDevice();
+      xla::Shape shape =
+          MakeShapeWithDeviceLayout(tensor.shape(), tensor_device.hw_type);
       xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
-          device, std::move(shape));
-      (*tensors)[index].SetXlaData(xla_data, config.sync_xla_data);
+          tensor_device.ToString(), std::move(shape));
+      tensor.SetXlaData(xla_data, config.sync_xla_data);
     }
-    async->tensors_data.emplace_back(std::move(xla_data));
+    tensors_data.emplace_back(std::move(xla_data));
   }
+  return tensors_data;
+}
+
+std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
+    SyncTensorCollection* coll,
+    std::vector<xla::ComputationClient::DataPtr> parameters_data,
+    std::vector<xla::ComputationClient::DataPtr> tensors_data,
+    ComputationCache::TypePtr cached_computation) {
+  std::shared_ptr<Async> async = std::make_shared<Async>(
+      coll, std::move(parameters_data), std::move(tensors_data),
+      std::move(cached_computation));
 
   auto syncfn = [async, hash = coll->hash]() {
     xla::ComputationClient::ExecuteComputationOptions options;
@@ -1141,6 +1186,20 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
 
   xla::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
   return async;
+}
+
+std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
+    std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
+    SyncTensorCollection* coll,
+    std::vector<xla::ComputationClient::DataPtr> parameters_data,
+    std::string device, ComputationCache::TypePtr cached_computation) {
+  DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", *tensors,
+                                  &coll->indices);
+
+  auto tensors_data = FetchTensorData(tensors, config, coll->indices);
+  return ScheduleSyncTensorsGraph(coll, std::move(parameters_data),
+                                  std::move(tensors_data),
+                                  std::move(cached_computation));
 }
 
 void XLATensor::SyncTensorsGraph(
@@ -1204,35 +1263,28 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
     const SyncTensorsConfig& config) {
   struct Async {
     explicit Async(SyncTensorCollection coll,
+                   std::vector<xla::ComputationClient::DataPtr> tensors_data,
+                   std::vector<ir::Value> roots,
                    tensorflow::gtl::ArraySlice<const std::string> devices)
-        : coll(std::move(coll)), devices(devices.begin(), devices.end()) {}
+        : coll(std::move(coll)),
+          tensors_data(std::move(tensors_data)),
+          roots(std::move(roots)),
+          devices(devices.begin(), devices.end()) {}
 
     SyncTensorCollection coll;
     std::vector<xla::ComputationClient::DataPtr> tensors_data;
-    std::vector<std::string> devices;
     std::vector<ir::Value> roots;
+    std::vector<std::string> devices;
   };
 
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   DebugUtil::SaveTensorsGraphInfo("SyncTensorsGraphOpByOp", *tensors,
                                   &coll.indices);
 
-  auto async = std::make_shared<Async>(std::move(coll), devices);
-  for (auto index : async->coll.indices) {
-    XLATensor& tensor = (*tensors)[index];
-    async->roots.push_back(tensor.CurrentIrValue());
-
-    xla::ComputationClient::DataPtr xla_data = tensor.CurrentXlaData();
-    if (xla_data == nullptr && config.force_xla_data) {
-      const Device& tensor_device = tensor.GetDevice();
-      xla::Shape shape =
-          MakeShapeWithDeviceLayout(tensor.shape(), tensor_device.hw_type);
-      xla_data = xla::ComputationClient::Get()->CreateDataPlaceholder(
-          tensor_device.ToString(), std::move(shape));
-      tensor.SetXlaData(xla_data, config.sync_xla_data);
-    }
-    async->tensors_data.emplace_back(std::move(xla_data));
-  }
+  std::vector<ir::Value> roots = CollectRoots(*tensors, coll.indices);
+  auto tensors_data = FetchTensorData(tensors, config, coll.indices);
+  auto async = std::make_shared<Async>(std::move(coll), std::move(tensors_data),
+                                       std::move(roots), devices);
 
   auto syncfn = [async]() -> xla::Status {
     xla::Status status;
@@ -1262,31 +1314,18 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   return async_op.Schedule();
 }
 
-std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
-    std::vector<XLATensor>* tensors,
+XLATensor::CompilationResult XLATensor::Compile(
+    const std::vector<XLATensor>& tensors,
     tensorflow::gtl::ArraySlice<const std::string> devices,
-    const SyncTensorsConfig& config) {
-  SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
-  if (coll.indices.empty()) {
-    return nullptr;
-  }
-  std::shared_ptr<Async> async = TryRunCachedSync(tensors, config, &coll);
-  if (async != nullptr) {
-    return async;
-  }
-  XLA_COUNTER("UncachedSyncTensors", 1);
-
+    const SyncTensorCollection& coll) {
   xla::util::Unique<Device> unique_device;
   ir::LoweringContext lowering_ctx("SyncTensorsGraph");
   for (auto index : coll.indices) {
-    ir::Value ir_value = (*tensors)[index].CurrentIrValue();
+    ir::Value ir_value = tensors[index].CurrentIrValue();
     xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
     lowering_ctx.AddResult(root);
-    unique_device.set((*tensors)[index].GetDevice());
+    unique_device.set(tensors[index].GetDevice());
   }
-  XLA_VALUE_METRIC("SyncTensorsGraphSize", lowering_ctx.GetEmittedNodeCount());
-  TF_VLOG(5) << "SyncTensorsGraphSize=" << lowering_ctx.GetEmittedNodeCount();
-
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
   xla::Shape shape =
@@ -1310,13 +1349,38 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
       lowering_ctx.GetParametersData();
   XLA_CHECK_EQ(program_shape.parameters_size(), parameters_data.size());
 
+  return {/*device=*/*unique_device,
+          /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
+          /*computation=*/std::move(computations.front()),
+          /*parameters_data=*/std::move(parameters_data)};
+}
+
+std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
+    std::vector<XLATensor>* tensors,
+    tensorflow::gtl::ArraySlice<const std::string> devices,
+    const SyncTensorsConfig& config) {
+  SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
+  if (coll.indices.empty()) {
+    return nullptr;
+  }
+  std::shared_ptr<Async> async = TryRunCachedSync(tensors, config, &coll);
+  if (async != nullptr) {
+    return async;
+  }
+
+  CompilationResult compile_result = Compile(*tensors, devices, coll);
+
+  XLA_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);
+  TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;
+
   auto cached_computation = std::make_shared<CachedComputation>(
-      std::move(computations.front()), parameters_data.size());
+      std::move(compile_result.computation),
+      compile_result.parameters_data.size());
   GetComputationCache()->Add(coll.hash, cached_computation);
 
   return ScheduleSyncTensorsGraph(
-      tensors, config, &coll, std::move(parameters_data),
-      unique_device->ToString(), std::move(cached_computation));
+      tensors, config, &coll, std::move(compile_result.parameters_data),
+      compile_result.device.ToString(), std::move(cached_computation));
 }
 
 }  // namespace torch_xla

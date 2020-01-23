@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
@@ -43,6 +44,14 @@ std::string Permute::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", dims=[" << absl::StrJoin(dims_, ", ") << "]";
   return ss.str();
+}
+
+xla::Shape Permute::MakePermuteShape(
+    const xla::Shape& source_shape,
+    tensorflow::gtl::ArraySlice<const xla::int64> permutation) {
+  return XlaHelpers::GetDynamicReshape(
+      source_shape,
+      XlaHelpers::Permute(permutation, source_shape.dimensions()));
 }
 
 }  // namespace ops

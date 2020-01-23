@@ -57,6 +57,7 @@
 #include "torch_xla/csrc/ops/linear_interpolation.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
+#include "torch_xla/csrc/ops/masked_scatter.h"
 #include "torch_xla/csrc/ops/masked_select.h"
 #include "torch_xla/csrc/ops/max_in_dim.h"
 #include "torch_xla/csrc/ops/max_pool_nd.h"
@@ -89,7 +90,6 @@
 #include "torch_xla/csrc/ops/shrink_backward.h"
 #include "torch_xla/csrc/ops/softmax.h"
 #include "torch_xla/csrc/ops/softshrink.h"
-#include "torch_xla/csrc/ops/split.h"
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
 #include "torch_xla/csrc/ops/std.h"
@@ -108,6 +108,7 @@
 #include "torch_xla/csrc/ops/upsample_nearest2d.h"
 #include "torch_xla/csrc/ops/upsample_nearest2d_backward.h"
 #include "torch_xla/csrc/ops/view.h"
+#include "torch_xla/csrc/shape_builder.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -211,7 +212,8 @@ std::vector<xla::int64> CheckIntList(
 xla::Shape BatchNormFeaturesShape(const XLATensor& input) {
   xla::PrimitiveType input_element_type =
       MakeXlaPrimitiveType(input.dtype(), &input.GetDevice());
-  return xla::ShapeUtil::MakeShape(input_element_type, {input.size(1)});
+  auto input_shape = input.shape();
+  return ShapeBuilder(input_element_type).Add(input_shape.get(), 1).Build();
 }
 
 // Returns the IR for the given input or the provided default value broadcasted
@@ -232,6 +234,14 @@ absl::optional<ir::Value> GetOptionalIrValue(const XLATensor& tensor) {
   return value;
 }
 
+ir::Value MaybeExpand(const ir::Value& input, const xla::Shape& target_shape) {
+  if (input.shape().dimensions() == target_shape.dimensions()) {
+    return input;
+  }
+  return ir::MakeNode<ir::ops::Expand>(
+      input, xla::util::ToVector<xla::int64>(target_shape.dimensions()));
+}
+
 void CheckIsIntegralOrPred(const xla::Shape& shape,
                            const std::string& op_name) {
   XLA_CHECK(xla::ShapeUtil::ElementIsIntegral(shape) ||
@@ -245,15 +255,13 @@ ViewInfo CreateAsStridedViewInfo(
     const xla::Shape& input_shape,
     tensorflow::gtl::ArraySlice<const xla::int64> size,
     c10::optional<xla::int64> storage_offset) {
-  xla::Shape result_shape =
-      xla::ShapeUtil::MakeShape(input_shape.element_type(), size);
+  xla::Shape result_shape = XlaHelpers::GetDynamicReshape(input_shape, size);
   AsStridedInfo as_strided_info;
   if (storage_offset) {
     as_strided_info.offset = *storage_offset;
   }
   return ViewInfo(ViewInfo::Type::kAsStrided, std::move(result_shape),
-                  xla::util::ToVector<xla::int64>(input_shape.dimensions()),
-                  std::move(as_strided_info));
+                  input_shape, std::move(as_strided_info));
 }
 
 }  // namespace
@@ -307,53 +315,12 @@ XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
 //////////////////////////////////////////////////////////////////////////////
 // ATEN operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
-XLATensor XLATensor::__and__(const XLATensor& input, at::Scalar other) {
-  CheckIsIntegralOrPred(input.shape(), "__and__");
-  ir::Value other_broadcasted_ir =
-      GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  return input.CreateFrom(
-      ir::ops::BitwiseAnd(input.GetIrValue(), other_broadcasted_ir));
-}
-
-XLATensor XLATensor::__and__(const XLATensor& input, const XLATensor& other) {
-  CheckIsIntegralOrPred(input.shape(), "__and__");
-  return input.CreateFrom(
-      ir::ops::BitwiseAnd(input.GetIrValue(), other.GetIrValue()));
-}
-
-void XLATensor::__iand__(XLATensor& input, at::Scalar other) {
-  CheckIsIntegralOrPred(input.shape(), "__iand__");
-  ir::Value other_broadcasted_ir =
-      GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  input.SetIrValue(
-      ir::ops::BitwiseAnd(input.GetIrValue(), other_broadcasted_ir));
-}
-
-void XLATensor::__iand__(XLATensor& input, const XLATensor& other) {
-  CheckIsIntegralOrPred(input.shape(), "__iand__");
-  input.SetIrValue(ir::ops::BitwiseAnd(input.GetIrValue(), other.GetIrValue()));
-}
-
 void XLATensor::__ilshift__(XLATensor& input, at::Scalar other) {
   input.SetIrValue(ir::ops::Lshift(input.GetIrValue(), other));
 }
 
 void XLATensor::__ilshift__(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::ops::Lshift(input.GetIrValue(), other.GetIrValue()));
-}
-
-void XLATensor::__ior__(XLATensor& input, at::Scalar other) {
-  CheckIsIntegralOrPred(input.shape(), "__ior__");
-  ir::Value other_broadcasted_ir =
-      GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  input.SetIrValue(
-      ir::ops::BitwiseOr(input.GetIrValue(), other_broadcasted_ir));
-}
-
-void XLATensor::__ior__(XLATensor& input, const XLATensor& other) {
-  CheckIsIntegralOrPred(input.shape(), "__ior__");
-  return input.SetIrValue(
-      ir::ops::BitwiseOr(input.GetIrValue(), other.GetIrValue()));
 }
 
 void XLATensor::__irshift__(XLATensor& input, at::Scalar other) {
@@ -372,20 +339,6 @@ XLATensor XLATensor::__lshift__(const XLATensor& input,
                                 const XLATensor& other) {
   return input.CreateFrom(
       ir::ops::Lshift(input.GetIrValue(), other.GetIrValue()));
-}
-
-XLATensor XLATensor::__or__(const XLATensor& input, const XLATensor& other) {
-  CheckIsIntegralOrPred(input.shape(), "__or__");
-  return input.CreateFrom(
-      ir::ops::BitwiseOr(input.GetIrValue(), other.GetIrValue()));
-}
-
-XLATensor XLATensor::__or__(const XLATensor& input, at::Scalar other) {
-  CheckIsIntegralOrPred(input.shape(), "__or__");
-  ir::Value other_broadcasted_ir =
-      GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  return input.CreateFrom(
-      ir::ops::BitwiseOr(input.GetIrValue(), other_broadcasted_ir));
 }
 
 XLATensor XLATensor::__rshift__(const XLATensor& input, at::Scalar other) {
@@ -636,8 +589,36 @@ XLATensor XLATensor::binary_cross_entropy_backward(const XLATensor& grad_output,
       GetOptionalIrValue(weight), GetXlaReductionMode(reduction)));
 }
 
+void XLATensor::bitwise_and_out(XLATensor& out, const XLATensor& input,
+                                at::Scalar other) {
+  CheckIsIntegralOrPred(input.shape(), "__and__");
+  ir::Value constant =
+      GetIrValueForScalar(other, input.shape(), input.GetDevice());
+  out.SetIrValue(ir::ops::BitwiseAnd(input.GetIrValue(), constant));
+}
+
+void XLATensor::bitwise_and_out(XLATensor& out, const XLATensor& input,
+                                const XLATensor& other) {
+  CheckIsIntegralOrPred(input.shape(), "__and__");
+  out.SetIrValue(ir::ops::BitwiseAnd(input.GetIrValue(), other.GetIrValue()));
+}
+
 void XLATensor::bitwise_not_out(XLATensor& out, const XLATensor& input) {
   out.SetIrValue(ir::ops::Not(input.GetIrValue()));
+}
+
+void XLATensor::bitwise_or_out(XLATensor& out, const XLATensor& input,
+                               at::Scalar other) {
+  CheckIsIntegralOrPred(input.shape(), "__or__");
+  ir::Value constant =
+      GetIrValueForScalar(other, input.shape(), input.GetDevice());
+  out.SetIrValue(ir::ops::BitwiseOr(input.GetIrValue(), constant));
+}
+
+void XLATensor::bitwise_or_out(XLATensor& out, const XLATensor& input,
+                               const XLATensor& other) {
+  CheckIsIntegralOrPred(input.shape(), "__or__");
+  out.SetIrValue(ir::ops::BitwiseOr(input.GetIrValue(), other.GetIrValue()));
 }
 
 void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,
@@ -1060,7 +1041,8 @@ XLATensor XLATensor::full(tensorflow::gtl::ArraySlice<const xla::int64> size,
                           at::Scalar fill_value, const Device& device,
                           at::ScalarType scalar_type) {
   xla::Shape shape = MakeArrayShapeFromDimensions(
-      size, MakeXlaPrimitiveType(scalar_type, &device), device.hw_type);
+      size, /*dynamic_dimensions=*/{},
+      MakeXlaPrimitiveType(scalar_type, &device), device.hw_type);
   return Create(GetIrValueForScalar(fill_value, shape, device), device,
                 scalar_type);
 }
@@ -1411,12 +1393,18 @@ void XLATensor::lt_(XLATensor& input, const XLATensor& other) {
 
 void XLATensor::masked_fill_(XLATensor& input, const XLATensor& mask,
                              at::Scalar value) {
-  // Expand mask to be the same size as input.
-  ir::NodePtr expanded_mask = ir::MakeNode<ir::ops::Expand>(
-      mask.GetIrValue(),
-      xla::util::ToVector<xla::int64>(input.shape().get().dimensions()));
-  input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(input.GetIrValue(),
-                                                     expanded_mask, value));
+  ir::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
+  input.SetIrValue(ir::MakeNode<ir::ops::MaskedFill>(
+      input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
+      value));
+}
+
+void XLATensor::masked_scatter_(XLATensor& input, const XLATensor& mask,
+                                const XLATensor& source) {
+  ir::ScopePusher ir_scope(at::aten::masked_scatter.toQualString());
+  input.SetIrValue(ir::MakeNode<ir::ops::MaskedScatter>(
+      input.GetIrValue(), MaybeExpand(mask.GetIrValue(), input.shape()),
+      source.GetIrValue()));
 }
 
 XLATensor XLATensor::masked_select(const XLATensor& input,
@@ -1590,9 +1578,7 @@ XLATensor XLATensor::narrow(const XLATensor& input, xla::int64 dim,
                               xla::ShapeUtil::ElementsIn(narrow_shape))
                                  ? ViewInfo::Type::kReshape
                                  : ViewInfo::Type::kNarrow;
-  ViewInfo view_info(
-      view_type, std::move(narrow_shape),
-      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
+  ViewInfo view_info(view_type, std::move(narrow_shape), input_shape);
   view_info.indices[dim] = XlaHelpers::GetCanonicalPosition(
       input_shape.get().dimensions(), dim, start);
   return input.CreateViewTensor(std::move(view_info));
@@ -1729,10 +1715,8 @@ XLATensor XLATensor::permute(
     tensorflow::gtl::ArraySlice<const xla::int64> dims) {
   auto input_shape = input.shape();
   ViewInfo view_info(
-      ViewInfo::Type::kPermute,
-      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()),
-      XlaHelpers::GetCanonicalDimensionIndices(dims, input_shape.get().rank()),
-      input_shape.get().element_type());
+      ViewInfo::Type::kPermute, input_shape,
+      XlaHelpers::GetCanonicalDimensionIndices(dims, input_shape.get().rank()));
   return input.CreateViewTensor(std::move(view_info));
 }
 
@@ -1858,9 +1842,8 @@ void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
     auto input_shape = input.shape();
     xla::Shape resize_shape =
         xla::ShapeUtil::MakeShape(input_shape.get().element_type(), size);
-    ViewInfo view_info(
-        ViewInfo::Type::kResize, std::move(resize_shape),
-        xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
+    ViewInfo view_info(ViewInfo::Type::kResize, std::move(resize_shape),
+                       input_shape);
     input.SetSubView(std::move(view_info));
   }
 }
@@ -2065,39 +2048,6 @@ XLATensor XLATensor::softshrink_backward(const XLATensor& grad_out,
       input.GetIrValue(), lambda));
 }
 
-std::vector<XLATensor> XLATensor::split(const XLATensor& input,
-                                        xla::int64 split_size, xla::int64 dim) {
-  auto input_shape = input.shape();
-  int split_dim =
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
-  xla::int64 dim_size = input_shape.get().dimensions(split_dim);
-  if (dim_size == 0) {
-    // Deal with dim_size=0, it's a corner case which only return 1 0-dim tensor
-    // no matter what split_size is.
-    xla::Literal literal(input_shape.get());
-    return {
-        input.CreateFrom(ir::MakeNode<ir::ops::Constant>(std::move(literal)))};
-  }
-  std::vector<xla::int64> split_sizes;
-  for (; dim_size > 0; dim_size -= split_size) {
-    split_sizes.push_back(std::min<xla::int64>(dim_size, split_size));
-  }
-  ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
-      input.GetIrValue(), std::move(split_sizes), split_dim);
-  return input.MakeOutputTensors(node);
-}
-
-std::vector<XLATensor> XLATensor::split_with_sizes(
-    const XLATensor& input, std::vector<xla::int64> split_size,
-    xla::int64 dim) {
-  auto input_shape = input.shape();
-  int split_dim =
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
-  ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
-      input.GetIrValue(), std::move(split_size), split_dim);
-  return input.MakeOutputTensors(node);
-}
-
 XLATensor XLATensor::sqrt(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Sqrt(input.GetIrValue()));
 }
@@ -2107,14 +2057,19 @@ void XLATensor::sqrt_(XLATensor& input) {
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input) {
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Squeeze>(input.GetIrValue(), -1));
+  auto input_shape = input.shape();
+  auto output_dimensions = BuildSqueezedDimensions(
+      input_shape.get().dimensions(), /*squeeze_dim=*/-1);
+  return view(input, output_dimensions);
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input, xla::int64 dim) {
-  return input.CreateFrom(ir::MakeNode<ir::ops::Squeeze>(
-      input.GetIrValue(),
-      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
+  auto input_shape = input.shape();
+  xla::int64 squeeze_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  auto output_dimensions =
+      BuildSqueezedDimensions(input_shape.get().dimensions(), squeeze_dim);
+  return view(input, output_dimensions);
 }
 
 void XLATensor::squeeze_(XLATensor& input) {
@@ -2308,10 +2263,7 @@ XLATensor XLATensor::transpose(const XLATensor& input, xla::int64 dim0,
   auto input_shape = input.shape();
   auto permute_dims = XlaHelpers::MakeTransposePermutation(
       /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
-  ViewInfo view_info(
-      ViewInfo::Type::kPermute,
-      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()),
-      permute_dims, input_shape.get().element_type());
+  ViewInfo view_info(ViewInfo::Type::kPermute, input_shape, permute_dims);
   return input.CreateViewTensor(std::move(view_info));
 }
 
@@ -2418,12 +2370,9 @@ XLATensor XLATensor::view(
   auto input_shape = input.shape();
   std::vector<xla::int64> complete_dimensions =
       GetCompleteShape(output_size, input_shape.get().dimensions());
-  xla::Shape shape = MakeArrayShapeFromDimensions(
-      complete_dimensions, input_shape.get().element_type(),
-      input.GetDevice().hw_type);
-  ViewInfo view_info(
-      ViewInfo::Type::kReshape, std::move(shape),
-      xla::util::ToVector<xla::int64>(input_shape.get().dimensions()));
+  xla::Shape shape =
+      XlaHelpers::GetDynamicReshape(input_shape, complete_dimensions);
+  ViewInfo view_info(ViewInfo::Type::kReshape, std::move(shape), input_shape);
   return input.CreateViewTensor(std::move(view_info));
 }
 

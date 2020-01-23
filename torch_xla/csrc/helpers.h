@@ -6,6 +6,7 @@
 #include <functional>
 #include <vector>
 
+#include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
@@ -22,6 +23,11 @@ class XlaHelpers {
   struct MinMax {
     at::Scalar min;
     at::Scalar max;
+  };
+
+  struct DynamicReshapeInfo {
+    xla::Shape output_shape;
+    xla::int64 dynamic_dimension = -1;
   };
 
   template <class T>
@@ -116,6 +122,23 @@ class XlaHelpers {
     return ScalarBroadcast<T>(scalar_value, shape.element_type(),
                               shape.dimensions(), builder);
   }
+
+  static absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
+      const xla::Shape& input_shape,
+      tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
+
+  static xla::Shape GetDynamicReshape(
+      const xla::Shape& input_shape,
+      tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
+
+  static xla::XlaOp DynamicReshape(
+      xla::XlaOp input,
+      tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
+
+  static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
+
+  static bool SameStaticDimensions(const xla::Shape& shape1,
+                                   const xla::Shape& shape2);
 
   // Creates a convolution or dot precision configuration.
   static xla::PrecisionConfig BuildPrecisionConfig(

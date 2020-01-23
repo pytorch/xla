@@ -92,14 +92,20 @@ ir::Value ApplyUpdate(ir::Value ir_value,
             result, xla::InversePermutation(view_info.permutation));
         break;
       case ViewInfo::Type::kReshape:
-        result = ir::MakeNode<ir::ops::View>(result, view_info.sizes);
+        result = ir::MakeNode<ir::ops::View>(
+            result, xla::util::ToVector<xla::int64>(
+                        view_info.source_shape.dimensions()));
         break;
       case ViewInfo::Type::kResize:
-        result = ir::MakeNode<ir::ops::Resize>(result, view_info.sizes);
+        result = ir::MakeNode<ir::ops::Resize>(
+            result, xla::util::ToVector<xla::int64>(
+                        view_info.source_shape.dimensions()));
         break;
       case ViewInfo::Type::kAsStrided:
         result = ir::MakeNode<ir::ops::AsStridedViewUpdate>(
-            tmp_values[i - 1], result, view_info.sizes,
+            tmp_values[i - 1], result,
+            xla::util::ToVector<xla::int64>(
+                view_info.source_shape.dimensions()),
             view_info.as_strided->offset);
         break;
       case ViewInfo::Type::kDiagonal:
@@ -117,19 +123,17 @@ ir::Value ApplyUpdate(ir::Value ir_value,
 
 }  // namespace
 
-ViewInfo::ViewInfo(Type view_type, xla::Shape shape,
-                   std::vector<xla::int64> sizes)
+ViewInfo::ViewInfo(Type view_type, xla::Shape shape, xla::Shape source_shape)
     : view_type(view_type),
       shape(std::move(shape)),
-      indices(sizes.size(), 0),
-      sizes(std::move(sizes)) {}
+      indices(source_shape.rank(), 0),
+      source_shape(std::move(source_shape)) {}
 
-ViewInfo::ViewInfo(Type view_type, std::vector<xla::int64> sizes,
-                   std::vector<xla::int64> permutation, xla::PrimitiveType type)
+ViewInfo::ViewInfo(Type view_type, xla::Shape source_shape,
+                   std::vector<xla::int64> permutation)
     : view_type(view_type),
-      shape(xla::ShapeUtil::MakeShape(type,
-                                      XlaHelpers::Permute(permutation, sizes))),
-      sizes(std::move(sizes)),
+      shape(ir::ops::Permute::MakePermuteShape(source_shape, permutation)),
+      source_shape(std::move(source_shape)),
       permutation(std::move(permutation)) {
   XLA_CHECK(view_type == Type::kPermute);
 }
@@ -139,16 +143,16 @@ ViewInfo::ViewInfo(Type view_type, const xla::Shape& source_shape,
     : view_type(view_type),
       shape(ir::ops::Select::MakeSelectShape(
           source_shape, select.dim, select.start, select.end, select.stride)),
-      sizes(xla::util::ToVector<xla::int64>(source_shape.dimensions())),
+      source_shape(source_shape),
       select(std::move(select)) {
   XLA_CHECK(view_type == Type::kSelect);
 }
 
-ViewInfo::ViewInfo(Type view_type, xla::Shape shape,
-                   std::vector<xla::int64> sizes, AsStridedInfo as_strided)
+ViewInfo::ViewInfo(Type view_type, xla::Shape shape, xla::Shape source_shape,
+                   AsStridedInfo as_strided)
     : view_type(view_type),
       shape(std::move(shape)),
-      sizes(std::move(sizes)),
+      source_shape(std::move(source_shape)),
       as_strided(std::move(as_strided)) {
   XLA_CHECK(view_type == Type::kAsStrided);
 }
@@ -158,7 +162,7 @@ ViewInfo::ViewInfo(Type view_type, const xla::Shape& source_shape,
     : view_type(view_type),
       shape(ir::ops::Diagonal::MakeDiagonalShape(source_shape, diagonal.offset,
                                                  diagonal.dim1, diagonal.dim2)),
-      sizes(xla::util::ToVector<xla::int64>(source_shape.dimensions())),
+      source_shape(source_shape),
       diagonal(std::move(diagonal)) {
   XLA_CHECK(view_type == Type::kDiagonal);
 }

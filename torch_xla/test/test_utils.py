@@ -15,7 +15,7 @@ def add_scalar_to_summary(summary_writer, metric_name, metric_value,
   """Add a scalar data point to a SummaryWriter.
 
   Args:
-    summary_writer: instance of `torch.utils.tensorboard.SummaryWriter` or
+    summary_writer: instance of Tensorboard SummaryWriter or
         None. If None, no summary files will be written.
     metric_name: Str. Name of the metric to write.
     metric_value: Float. Value of the metric.
@@ -29,7 +29,7 @@ def close_summary_writer(summary_writer):
   """Flush and close a SummaryWriter.
 
   Args:
-    summary_writer: instance of `torch.utils.tensorboard.SummaryWriter` or
+    summary_writer: instance of Tensorboard SummaryWriter or
         None. If None, no action is taken.
   """
   if summary_writer is not None:
@@ -45,10 +45,10 @@ def get_summary_writer(logdir):
         no writer is created.
 
   Returns:
-    Instance of `torch.utils.tensorboard.SummaryWriter`.
+    Instance of Tensorboard SummaryWriter.
   """
   if logdir:
-    from torch.utils.tensorboard import SummaryWriter
+    from tensorboardX import SummaryWriter
     return SummaryWriter(log_dir=logdir)
 
 

@@ -1,5 +1,5 @@
 import math
-import test_utils
+import torch_xla.test.test_utils as test_utils
 from torch.optim.lr_scheduler import _LRScheduler
 
 

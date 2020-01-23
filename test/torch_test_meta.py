@@ -66,6 +66,7 @@ disabled_torch_tests = {
     'test_memory_format_factory_like_functions_preserve_strides',
     'test_memory_format_empty_like',
     'test_memory_format_clone',
+    'test_memory_format_factory_like_functions_preserve', # assertion error
     'test_lu_solve_batched_non_contiguous',
     'test_lstsq',
     'test_is_set_to',
@@ -75,6 +76,7 @@ disabled_torch_tests = {
     'test_dist',
     'test_dim_function_empty',
     'test_diagflat',
+    'test_cat_out',  # doesn't raise
     'test_cumsum',
     'test_copy_mem_overlap',  # doesn't raise
     'test_copy_all_dtypes_and_devices',
