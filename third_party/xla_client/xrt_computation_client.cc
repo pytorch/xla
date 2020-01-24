@@ -10,6 +10,7 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "tensorflow/cc/ops/const_op.h"
+#include "tensorflow/compiler/xla/debug_options_flags.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
@@ -837,6 +838,7 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
   auto config = xrt_computation->mutable_config();
+  *config->mutable_debug_options() = GetDebugOptionsFromFlags();
   config->set_num_cores_per_replica(1);
   if (devices.size() > 1) {
     auto device_assignment = config->mutable_device_assignment();
