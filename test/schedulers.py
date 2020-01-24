@@ -77,10 +77,10 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
     if self._summary_writer:
       if self._is_warmup_epoch() or (
           self._step_count % self._num_steps_per_epoch == 0):
-        test_utils.add_scalar_to_summary(self._summary_writer,
-                                         'LearningRate',
-                                         self.optimizer.param_groups[0]['lr'],
-                                         self._step_count)
+        test_utils.write_to_summary(
+          self._summary_writer, self._step_count,
+          dict_to_write={'LearningRate': self.optimizer.param_groups[0]['lr']},
+          write_xla_metrics=False)
 
 
 def wrap_optimizer_with_scheduler(optimizer,
