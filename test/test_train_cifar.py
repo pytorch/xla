@@ -15,7 +15,6 @@ FLAGS = args_parse.parse_common_options(
     target_accuracy=80.0,
     opts=MODEL_OPTS.items())
 
-from torch.testing._internal.common_utils import TestCase, run_tests
 import os
 from statistics import mean
 import shutil
@@ -112,8 +111,8 @@ def train_cifar():
         data=(torch.zeros(FLAGS.batch_size, 3, 32,
                           32), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=train_dataset_len // FLAGS.batch_size
-        // xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size //
+        xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, 32,
                           32), torch.zeros(FLAGS.batch_size,
@@ -149,11 +148,15 @@ def train_cifar():
     test_sampler = None
     if xm.xrt_world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
-          train_dataset, num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(), shuffle=True)
+          train_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=True)
       test_sampler = torch.utils.data.distributed.DistributedSampler(
-          test_dataset, num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(), shuffle=False)
+          test_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
@@ -197,8 +200,7 @@ def train_cifar():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        test_utils.print_training_update(device, x, loss.item(),
-                                         tracker.rate(),
+        test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
                                          tracker.global_rate())
 
   def test_loop_fn(model, loader, device, context):
@@ -229,9 +231,11 @@ def train_cifar():
     max_accuracy = max(accuracy, max_accuracy)
     print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
     global_step = (epoch - 1) * num_training_steps_per_epoch
-    test_utils.write_to_summary(writer, global_step,
-                                dict_to_write={'Accuracy/test': accuracy},
-                                write_xla_metrics=True)
+    test_utils.write_to_summary(
+        writer,
+        global_step,
+        dict_to_write={'Accuracy/test': accuracy},
+        write_xla_metrics=True)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
@@ -240,7 +244,7 @@ def train_cifar():
   return max_accuracy
 
 
-class TrainCIFAR10(TestCase):
+class TrainCIFAR10(unittest.TestCase):
 
   def tearDown(self):
     super(TrainCIFAR10, self).tearDown()
@@ -252,5 +256,6 @@ class TrainCIFAR10(TestCase):
 
 
 # Run the tests.
-torch.set_default_tensor_type('torch.FloatTensor')
-run_tests()
+if __name__ == '__main__':
+  torch.set_default_tensor_type('torch.FloatTensor')
+  unittest.main()
