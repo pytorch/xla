@@ -17,13 +17,13 @@ def write_to_summary(summary_writer, global_step, dict_to_write={},
   """Writes scalars to a SummaryWriter. Optionally writes XLA perf metrics.
 
   Args:
-    summary_writer: instance of Tensorboard SummaryWriter or
-        None. If None, no summary files will be written.
-    global_step: Int. The global step value for these data points.
-    dict_to_write: Dict where key is the scalar name and value is the
-        scalar value to be written to Tensorboard.
-    write_xla_metrics: Bool. If true, this method will retrieve XLA performance
-        metrics, parse them, and write them as scalars to Tensorboard.
+    summary_writer (Tensorboard SummaryWriter): The SummaryWriter to write to.
+      If None, no summary files will be written.
+    global_step (int): The global step value for these data points.
+    dict_to_write (dict, optional): Dict where key is the scalar name and value
+      is the scalar value to be written to Tensorboard.
+    write_xla_metrics (bool, optional): If true, this method will retrieve XLA
+      performance metrics, parse them, and write them as scalars to Tensorboard.
   """
   if summary_writer is None:
     return
@@ -36,8 +36,7 @@ def write_to_summary(summary_writer, global_step, dict_to_write={},
     for metric_name, metric_value in metrics.items():
       if metric_name.find("aten::") == 0:
         aten_ops_sum += metric_value
-      else:
-        summary_writer.add_scalar(metric_name, metric_value, global_step)
+      summary_writer.add_scalar(metric_name, metric_value, global_step)
     summary_writer.add_scalar("aten_ops_sum", metric_value, global_step)
 
 
