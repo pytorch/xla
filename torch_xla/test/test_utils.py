@@ -12,41 +12,33 @@ def _get_device_spec(device):
   return str(device) if ordinal < 0 else '{}/{}'.format(device, ordinal)
 
 
-def add_xla_metrics_to_summary(summary_writer, global_step):
+def write_to_summary(summary_writer, global_step, dict_to_write={},
+                     write_xla_metrics=False):
   """Adds XLA performance metrics to a SummaryWriter.
 
   Args:
     summary_writer: instance of Tensorboard SummaryWriter or
         None. If None, no summary files will be written.
-    global_step: Int. The global step value for this data point.
+    global_step: Int. The global step value for these data points.
+    dict_to_write: Dict where key is the scalar name and value is the
+        scalar value to be written to Tensorboard.
+    write_xla_metrics: Bool. If true, this method will retrieve XLA performance
+        metrics, parse them, and write them as scalars to Tensorboard.
   """
   if summary_writer is None:
     return
-  metrics = mcu.parse_metrics_report(met.metrics_report())
-  aten_ops_sum = 0
-  for metric_name, metric_value in metrics.items():
-    if metric_name.find("aten::") == 0:
-      aten_ops_sum += metric_value
-    else:
-      add_scalar_to_summary(summary_writer, metric_name,
-                            metric_value, global_step)
-  add_scalar_to_summary(summary_writer, "aten_ops_sum",
-                        aten_ops_sum, global_step)
+  for k, v in dict_to_write.items():
+    summary_writer.add_scalar(k, v, global_step)
 
-
-def add_scalar_to_summary(summary_writer, metric_name, metric_value,
-                          global_step):
-  """Add a scalar data point to a SummaryWriter.
-
-  Args:
-    summary_writer: instance of Tensorboard SummaryWriter or
-        None. If None, no summary files will be written.
-    metric_name: Str. Name of the metric to write.
-    metric_value: Float. Value of the metric.
-    global_step: Int. The global step value for this data point.
-  """
-  if summary_writer is not None:
-    summary_writer.add_scalar(metric_name, metric_value, global_step)
+  if write_xla_metrics:
+    metrics = mcu.parse_metrics_report(met.metrics_report())
+    aten_ops_sum = 0
+    for metric_name, metric_value in metrics.items():
+      if metric_name.find("aten::") == 0:
+        aten_ops_sum += metric_value
+      else:
+        summary_writer.add_scalar(metric_name, metric_value, global_step)
+    summary_writer.add_scalar("aten_ops_sum", metric_value, global_step)
 
 
 def close_summary_writer(summary_writer):
