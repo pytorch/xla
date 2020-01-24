@@ -23,7 +23,6 @@ def _regex_matches_groupdict(regex, target_str):
   return None
 
 
-#def _accumulator_to_number(metric_str):
 def _metric_str_to_number(metric_str):
   # Convert XLA metrics report Accumulator strings into a number using
   # a standardized unit. Returns the value as float and unit as string.
@@ -67,8 +66,23 @@ def _metric_str_to_number(metric_str):
       metric_str))
   
 
-def _parse_metrics_report(report):
-  # Convert a string metrics report to a dict of parsed values.
+def parse_metrics_report(report):
+  """Convert a string metrics report to a dict of parsed values.
+
+  Args:
+    report(string): Output from call to metrics_report().
+
+  Returns:
+    dict of metric name to metric value. Metric name will be appended
+    with the unit of measurement. Example output:
+
+    {
+      'CompileTime__Accumulator_sec': 50.0,
+      'InboundData__TotalSamples': 11,
+      'CreateCompileHandles__Value': 20,
+      ...
+    }
+  """
   data_points = {}
 
   # Parse metrics into data points.
@@ -112,7 +126,7 @@ def get_data_points_from_metrics_reports(metrics_reports):
   """
   data_points = collections.defaultdict(lambda: [None] * len(metrics_reports))
   for report_index in range(len(metrics_reports)):
-    parsed_report = _parse_metrics_report(metrics_reports[report_index])
+    parsed_report = parse_metrics_report(metrics_reports[report_index])
     for metric_name in parsed_report:
       data_points[metric_name][report_index] = parsed_report.get(
           metric_name, None)
