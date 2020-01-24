@@ -69,8 +69,6 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install lark-parser
   /usr/bin/yes | pip install cloud-tpu-client
   /usr/bin/yes | pip install tensorboardX
-
-  sudo /sbin/ldconfig "${HOME}/anaconda3/lib/" "${HOME}/anaconda3/envs/pytorch/lib"
 }
 
 function build_and_install_torch() {
