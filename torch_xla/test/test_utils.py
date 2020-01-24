@@ -14,7 +14,7 @@ def _get_device_spec(device):
 
 def write_to_summary(summary_writer, global_step, dict_to_write={},
                      write_xla_metrics=False):
-  """Adds XLA performance metrics to a SummaryWriter.
+  """Writes scalars to a SummaryWriter. Optionally writes XLA perf metrics.
 
   Args:
     summary_writer: instance of Tensorboard SummaryWriter or
