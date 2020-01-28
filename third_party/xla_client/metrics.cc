@@ -306,13 +306,14 @@ std::string MetricFnTime(double value) {
   } const time_parts[] = {
       {"d", 86400.0 * 1e9, 2, 0, '0'}, {"h", 3600.0 * 1e9, 2, 0, '0'},
       {"m", 60.0 * 1e9, 2, 0, '0'},    {"s", 1e9, 2, 0, '0'},
-      {"ms", 1e6, 3, 0, '0'},          {"us", 1e3, 3, 3, '0'},
+      {"ms", 1e6, 3, 0, '0'},          {"us", 1e3, 7, 3, '0'},
   };
   int count = 0;
   std::stringstream ss;
-  for (auto& part : time_parts) {
+  for (size_t i = 0; i < TF_ARRAYSIZE(time_parts); ++i) {
+    const TimePart& part = time_parts[i];
     double ctime = value / part.scaler;
-    if (ctime >= 1.0 || count > 0) {
+    if (ctime >= 1.0 || count > 0 || i + 1 == TF_ARRAYSIZE(time_parts)) {
       ss.precision(part.precision);
       ss.width(part.width);
       ss.fill(part.fill);
