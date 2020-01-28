@@ -1,6 +1,8 @@
 #ifndef TENSORFLOW_COMPILER_XLA_RPC_COMPUTATION_CLIENT_H_
 #define TENSORFLOW_COMPILER_XLA_RPC_COMPUTATION_CLIENT_H_
 
+#include <cmath>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -16,6 +18,29 @@ namespace xla {
 
 class ComputationClient {
  public:
+  struct Percentile {
+    struct Point {
+      double percentile = 0.0;
+      double value = 0.0;
+    };
+
+    uint64 start_nstime = 0;
+    uint64 end_nstime = 0;
+    double min_value = NAN;
+    double max_value = NAN;
+    double mean = NAN;
+    double stddev = NAN;
+    size_t num_samples = 0;
+    size_t total_samples = 0;
+    double accumulator = NAN;
+    std::vector<Point> points;
+  };
+
+  struct Metric {
+    absl::optional<Percentile> percentile;
+    absl::optional<int64> int64_value;
+  };
+
   class Data {
    public:
     using OpaqueHandle = int64;
@@ -228,6 +253,8 @@ class ComputationClient {
   virtual const std::vector<std::string>& GetReplicationDevices() const = 0;
 
   virtual void SetRngSeed(size_t seed) = 0;
+
+  virtual std::map<std::string, Metric> GetMetrics() const = 0;
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.

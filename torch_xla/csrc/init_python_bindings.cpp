@@ -8,6 +8,7 @@
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
+#include "tensorflow/compiler/xla/xla_client/metrics_reader.h"
 #include "tensorflow/compiler/xla/xla_client/record_reader.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/example/example.pb.h"
@@ -458,7 +459,7 @@ void InitXlaModuleBindings(py::module m) {
     return GetMetricData(name);
   });
   m.def("_xla_metrics_report",
-        []() { return xla::metrics::CreateMetricReport(); });
+        []() { return xla::metrics_reader::CreateMetricReport(); });
   m.def("_xla_tensors_report",
         [](size_t nodes_threshold, const std::string& device) {
           return GetLiveTensorsReport(nodes_threshold, device);

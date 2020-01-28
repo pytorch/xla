@@ -182,6 +182,8 @@ class XrtComputationClient : public ComputationClient {
 
   void SetRngSeed(size_t seed) override;
 
+  std::map<std::string, Metric> GetMetrics() const override;
+
   static std::string GetMultiProcessingDevice();
 
  private:
