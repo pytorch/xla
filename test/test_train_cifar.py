@@ -240,7 +240,7 @@ def train_cifar():
       print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
-  print('Max Accuracy: {:.2f}%'.format(accuracy))
+  print('Max Accuracy: {:.2f}%'.format(max_accuracy))
   return max_accuracy
 
 
