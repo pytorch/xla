@@ -153,12 +153,14 @@ def train_mnist():
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
     max_accuracy = max(accuracy, max_accuracy)
-    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy, epoch)
+    test_utils.write_to_summary(writer, epoch,
+                                dict_to_write={'Accuracy/test': accuracy},
+                                write_xla_metrics=True)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
-  xm.master_print('Max Accuracy: {:.2f}%'.format(accuracy))
+  xm.master_print('Max Accuracy: {:.2f}%'.format(max_accuracy))
   return max_accuracy
 
 

@@ -8,7 +8,6 @@ FLAGS = args_parse.parse_common_options(
     target_accuracy=98.0,
     num_epochs=18)
 
-from common_utils import TestCase, run_tests
 import os
 from statistics import mean
 import shutil
@@ -58,8 +57,8 @@ def train_mnist():
         data=(torch.zeros(FLAGS.batch_size, 1, 28,
                           28), torch.zeros(FLAGS.batch_size,
                                            dtype=torch.int64)),
-        sample_count=train_dataset_len // FLAGS.batch_size
-        // xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size //
+        xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 1, 28,
                           28), torch.zeros(FLAGS.batch_size,
@@ -132,8 +131,7 @@ def train_mnist():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        test_utils.print_training_update(device, x, loss.item(),
-                                         tracker.rate(),
+        test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
                                          tracker.global_rate())
 
   def test_loop_fn(model, loader, device, context):
@@ -164,17 +162,20 @@ def train_mnist():
     max_accuracy = max(accuracy, max_accuracy)
     print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
     global_step = (epoch - 1) * num_training_steps_per_epoch
-    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
-                                     global_step)
+    test_utils.write_to_summary(
+        writer,
+        global_step,
+        dict_to_write={'Accuracy/test': accuracy},
+        write_xla_metrics=True)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
-  print('Max Accuracy: {:.2f}%'.format(accuracy))
+  print('Max Accuracy: {:.2f}%'.format(max_accuracy))
   return max_accuracy
 
 
-class TrainMnist(TestCase):
+class TrainMnist(unittest.TestCase):
 
   def tearDown(self):
     super(TrainMnist, self).tearDown()
@@ -186,5 +187,6 @@ class TrainMnist(TestCase):
 
 
 # Run the tests.
-torch.set_default_tensor_type('torch.FloatTensor')
-run_tests()
+if __name__ == '__main__':
+  torch.set_default_tensor_type('torch.FloatTensor')
+  unittest.main()

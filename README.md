@@ -31,17 +31,28 @@ Follow these steps to train a PyTorch model with Docker on a TPU:
     Docker images with `torch` and `torch_xla` preinstalled in the `pytorch` conda
     environment are distributed under: `gcr.io/tpu-pytorch/xla`.
 
-2. SSH into the VM and pull the stable docker image into the VM:
+2. SSH into the VM and pull a version of the docker image into the VM. The currently available versions are:
+
+    * `gcr.io/tpu-pytorch/xla:r0.5`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:nightly`: Nightly version.
+    * `gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_20190531)`: The nightly version of the given day.
+    
+    At this time is recommended to use nightly versions and eventually switch to the stable version in case there are issues with nightly.
+    Remember to create a TPU with `pytorch-nightly` version when using nightly.
+
+    To pull the dockers run one of the following commands:
+
+    ```Shell
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:nightly
+    ```
+
+    ```Shell
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD
+    ```
 
     ```Shell
     (vm)$ docker pull gcr.io/tpu-pytorch/xla:r0.5
     ```
-
-    Note we do also expose the following nightly Docker image versions, but we recommend you use a stable version (`r0.5`):
-    * `gcr.io/tpu-pytorch/xla:nightly`
-    * `gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_20190531)`
-
-    If you decide to consume this, be sure to create a TPU with `pytorch-nightly` version.
 
 3. Where `$TPU_IP_ADDRESS` (e.g.: `10.1.1.2`) is your TPU Internal IP displayed in GCP UI, after pulling the docker image you can either:
 

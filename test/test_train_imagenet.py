@@ -36,7 +36,6 @@ FLAGS = args_parse.parse_common_options(
     opts=MODEL_OPTS.items(),
 )
 
-from common_utils import TestCase, run_tests
 import os
 import schedulers
 from statistics import mean
@@ -233,17 +232,20 @@ def train_imagenet():
     max_accuracy = max(accuracy, max_accuracy)
     print('Epoch: {}, Mean Accuracy: {:.2f}%'.format(epoch, accuracy))
     global_step = (epoch - 1) * num_training_steps_per_epoch
-    test_utils.add_scalar_to_summary(writer, 'Accuracy/test', accuracy,
-                                     global_step)
+    test_utils.write_to_summary(
+        writer,
+        global_step,
+        dict_to_write={'Accuracy/test': accuracy},
+        write_xla_metrics=True)
     if FLAGS.metrics_debug:
       print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
-  print('Max Accuracy: {:.2f}%'.format(accuracy))
+  print('Max Accuracy: {:.2f}%'.format(max_accuracy))
   return max_accuracy
 
 
-class TrainImageNet(TestCase):
+class TrainImageNet(unittest.TestCase):
 
   def tearDown(self):
     super(TrainImageNet, self).tearDown()
@@ -253,5 +255,6 @@ class TrainImageNet(TestCase):
 
 
 # Run the tests.
-torch.set_default_tensor_type('torch.FloatTensor')
-run_tests()
+if __name__ == '__main__':
+  torch.set_default_tensor_type('torch.FloatTensor')
+  unittest.main()

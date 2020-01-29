@@ -54,11 +54,11 @@ To build from source:
   pip install lark-parser
   ```
 
-* Currently _PyTorch_ does not build with _GCC_ 6.x, 7.x, and 8.x (various kind of ICEs). _CLANG_ 7.x is known to be working, so install that in your VM:
+* Currently _PyTorch_ does not build with _GCC_ 6.x, 7.x, and 8.x (various kind of ICEs). _CLANG_ 7.x and 8.x are known to be working, so install that in your VM:
 
   ```Shell
-  sudo apt-get install clang-7 clang++-7
-  export CC=clang-7 CXX=clang++-7
+  sudo apt-get install clang-8 clang++-8
+  export CC=clang-8 CXX=clang++-8
   ```
 
   You may need to add the following line to your _/etc/apt/sources.list_ file:
@@ -79,7 +79,7 @@ To build from source:
   python setup.py install
   ```
 
-* Install Bazel following the [instructions](https://docs.bazel.build/versions/master/install.html). You should only install version 1.1.0, as no older nor newer releases will be able to build the required dependencies.
+* Install Bazel following the [instructions](https://docs.bazel.build/versions/master/install.html). You should only install version 1.2.1, as no older nor newer releases will be able to build the required dependencies.
 
 * Build the _PyTorch/XLA_ source:
 

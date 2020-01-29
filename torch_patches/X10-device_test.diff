@@ -1,13 +1,13 @@
-diff --git a/test/common_device_type.py b/test/common_device_type.py
+diff --git a/torch/testing/_internal/common_device_type.py b/torch/testing/_internal/common_device_type.py
 index a23696c29c..d7eb93373b 100644
---- a/test/common_device_type.py
-+++ b/test/common_device_type.py
+--- a/torch/testing/_internal/common_device_type.py
++++ b/torch/testing/_internal/common_device_type.py
 @@ -3,6 +3,7 @@ import threading
  from functools import wraps
  import unittest
  import torch
 +import copy
- from common_utils import TestCase, TEST_WITH_ROCM, TEST_MKL, \
+ from torch.testing._internal.common_utils import TestCase, TEST_WITH_ROCM, TEST_MKL, \
      skipCUDANonDefaultStreamIf
 
 @@ -191,7 +192,7 @@ class DeviceTypeTestBase(TestCase):
