@@ -268,7 +268,7 @@ std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
 
 std::vector<std::string> ComputationClient::GetCompilationDevices(
     const std::string& device,
-    tensorflow::gtl::ArraySlice<const std::string> devices) const {
+    absl::Span<const std::string> devices) const {
   std::vector<std::string> compilation_devices;
   if (devices.empty()) {
     auto& replication_devices = GetReplicationDevices();

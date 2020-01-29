@@ -13,8 +13,7 @@ namespace {
 xla::Shape NodeOutputShape(const Value& input, xla::int64 k, xla::int64 dim,
                            bool largest, bool sorted) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::Tuple(operands[0].builder(),
                       CreateTopK(operands[0], k, dim, largest, sorted));
   };

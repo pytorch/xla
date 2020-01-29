@@ -31,8 +31,7 @@ inline NodePtr DeviceDataOp(
   return MakeNode<DeviceData>(std::move(data));
 }
 
-inline NodePtr GenericOp(OpKind op,
-                         tensorflow::gtl::ArraySlice<const Value> operands,
+inline NodePtr GenericOp(OpKind op, absl::Span<const Value> operands,
                          xla::Shape shape, Generic::LowerFn lower_fn,
                          size_t num_outputs = 1,
                          size_t hash_seed = 0x5a2d296e9) {
@@ -40,8 +39,7 @@ inline NodePtr GenericOp(OpKind op,
                            std::move(lower_fn), num_outputs, hash_seed);
 }
 
-inline NodePtr GenericOp(OpKind op,
-                         tensorflow::gtl::ArraySlice<const Value> operands,
+inline NodePtr GenericOp(OpKind op, absl::Span<const Value> operands,
                          const std::function<xla::Shape()>& shape_fn,
                          Generic::LowerFn lower_fn, size_t num_outputs = 1,
                          size_t hash_seed = 0x5a2d296e9) {
@@ -157,11 +155,11 @@ NodePtr Where(const Value& condition, const Value& input, const Value& other);
 NodePtr ARange(at::Scalar start, at::Scalar end, at::Scalar step,
                at::ScalarType scalar_type);
 
-NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors);
+NodePtr BroadcastTensors(absl::Span<const Value> tensors);
 
 NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
              c10::optional<at::ScalarType> dtype,
-             tensorflow::gtl::ArraySlice<const xla::int64> dims, bool keepdim);
+             absl::Span<const xla::int64> dims, bool keepdim);
 
 NodePtr Identity(xla::int64 lines, xla::int64 cols,
                  xla::PrimitiveType element_type);

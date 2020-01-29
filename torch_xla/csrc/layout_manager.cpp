@@ -26,7 +26,7 @@ class LayoutManager {
   }
 
   const std::vector<xla::int64>* GetLayout(
-      tensorflow::gtl::ArraySlice<const xla::int64> dimensions) const {
+      absl::Span<const xla::int64> dimensions) const {
     auto it = layouts_.find(dimensions);
     return it != layouts_.end() ? &it->second->layout : nullptr;
   }
@@ -38,14 +38,13 @@ class LayoutManager {
   };
 
   struct DimensionsHasher {
-    size_t operator()(
-        const tensorflow::gtl::ArraySlice<const xla::int64>& dimensions) const {
+    size_t operator()(const absl::Span<const xla::int64>& dimensions) const {
       return xla::util::MHash(dimensions);
     }
   };
 
   using LayoutMap =
-      std::unordered_map<tensorflow::gtl::ArraySlice<const xla::int64>,
+      std::unordered_map<absl::Span<const xla::int64>,
                          std::shared_ptr<LayoutEntry>, DimensionsHasher>;
 
   LayoutManager() {
@@ -112,9 +111,8 @@ double PaddingFactor(xla::int64 size, int padding) {
                         : 0.0);
 }
 
-xla::Shape MakeShapeWithSortedLayout(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    xla::PrimitiveType type) {
+xla::Shape MakeShapeWithSortedLayout(absl::Span<const xla::int64> dimensions,
+                                     xla::PrimitiveType type) {
   // Place bigger dimensions on most minor layout locations.
   std::vector<xla::int64> layout =
       xla::util::Iota<xla::int64>(dimensions.size(), dimensions.size() - 1, -1);
@@ -124,9 +122,8 @@ xla::Shape MakeShapeWithSortedLayout(
   return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
 }
 
-xla::Shape* SetDynamicDimensions(
-    xla::Shape* shape,
-    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions) {
+xla::Shape* SetDynamicDimensions(xla::Shape* shape,
+                                 absl::Span<const bool> dynamic_dimensions) {
   if (!dynamic_dimensions.empty()) {
     XLA_CHECK_EQ(dynamic_dimensions.size(), shape->rank());
     for (size_t i = 0; i < dynamic_dimensions.size(); ++i) {
@@ -136,10 +133,9 @@ xla::Shape* SetDynamicDimensions(
   return shape;
 }
 
-xla::Shape MakeTpuShape(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,
-    xla::PrimitiveType type) {
+xla::Shape MakeTpuShape(absl::Span<const xla::int64> dimensions,
+                        absl::Span<const bool> dynamic_dimensions,
+                        xla::PrimitiveType type) {
   static double max_padding_factor =
       xla::sys_util::GetEnvDouble("XLA_MAX_PADDING_FACTOR", 1.25);
   xla::Shape shape;
@@ -154,11 +150,10 @@ xla::Shape MakeTpuShape(
   return shape;
 }
 
-xla::Shape MakeShapeWithLayout(
-    xla::PrimitiveType type,
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,
-    tensorflow::gtl::ArraySlice<const xla::int64> layout) {
+xla::Shape MakeShapeWithLayout(xla::PrimitiveType type,
+                               absl::Span<const xla::int64> dimensions,
+                               absl::Span<const bool> dynamic_dimensions,
+                               absl::Span<const xla::int64> layout) {
   xla::Shape shape =
       xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
   SetDynamicDimensions(&shape, dynamic_dimensions);
@@ -167,10 +162,9 @@ xla::Shape MakeShapeWithLayout(
 
 }  // namespace
 
-xla::Shape MakeTorchTensorLayout(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,
-    xla::PrimitiveType type) {
+xla::Shape MakeTorchTensorLayout(absl::Span<const xla::int64> dimensions,
+                                 absl::Span<const bool> dynamic_dimensions,
+                                 xla::PrimitiveType type) {
   xla::Shape shape =
       xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
   SetDynamicDimensions(&shape, dynamic_dimensions);
@@ -178,9 +172,9 @@ xla::Shape MakeTorchTensorLayout(
 }
 
 xla::Shape MakeArrayShapeFromDimensions(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    tensorflow::gtl::ArraySlice<const bool> dynamic_dimensions,
-    xla::PrimitiveType type, DeviceType device_type) {
+    absl::Span<const xla::int64> dimensions,
+    absl::Span<const bool> dynamic_dimensions, xla::PrimitiveType type,
+    DeviceType device_type) {
   auto layout_ptr = LayoutManager::Get()->GetLayout(dimensions);
   if (layout_ptr != nullptr) {
     return MakeShapeWithLayout(type, dimensions, dynamic_dimensions,

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tensorflow/core/lib/gtl/array_slice.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -10,7 +10,7 @@ namespace ops {
 class UpdateSlice : public Node {
  public:
   UpdateSlice(const Value& input, const Value& source,
-              tensorflow::gtl::ArraySlice<const xla::int64> base_indices);
+              absl::Span<const xla::int64> base_indices);
 
   NodePtr Clone(OpList operands) const override;
 

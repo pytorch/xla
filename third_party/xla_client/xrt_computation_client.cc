@@ -235,7 +235,7 @@ ComputationClient::DataPtr XrtComputationClient::CreateDataPlaceholder(
 }
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
-    tensorflow::gtl::ArraySlice<const TensorSource> tensors) {
+    absl::Span<const TensorSource> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
 
   std::mutex lock;
@@ -297,7 +297,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
 }
 
 std::vector<Literal> XrtComputationClient::TransferFromServer(
-    tensorflow::gtl::ArraySlice<const DataPtr> handles) {
+    absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromServerMetric());
 
   XrtSessionCache::SessionMap session_map;
@@ -441,7 +441,7 @@ void XrtComputationClient::CheckCompileStatus(
 std::vector<ComputationClient::DataPtr>
 XrtComputationClient::ExecuteComputation(
     const Computation& computation,
-    tensorflow::gtl::ArraySlice<const DataPtr> arguments,
+    absl::Span<const DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
   metrics::TimedSection timed(ExecuteMetric());
 
@@ -469,7 +469,7 @@ std::vector<std::vector<ComputationClient::DataPtr>>
 XrtComputationClient::ExecuteReplicated(
     const Computation& computation,
     const std::vector<std::vector<DataPtr>>& arguments,
-    tensorflow::gtl::ArraySlice<const std::string> devices,
+    absl::Span<const std::string> devices,
     const ExecuteReplicatedOptions& options) {
   metrics::TimedSection timed(ExecuteReplicatedMetric());
 
@@ -489,8 +489,8 @@ std::vector<std::vector<ComputationClient::DataPtr>>
 XrtComputationClient::RunComputations(
     const XrtSessionCache::SessionMap& session_map,
     const std::vector<tensorflow::Output>& exec_ops,
-    tensorflow::gtl::ArraySlice<const Computation* const> computations,
-    tensorflow::gtl::ArraySlice<const std::string> devices,
+    absl::Span<const Computation* const> computations,
+    absl::Span<const std::string> devices,
     const tensorflow::ClientSession::FeedType& feed_inputs) {
   // In the PyTorch/XRT interface we keep a map (options_.workers_map) from a
   // worker+taskno, to the GRPC server which is the entry point for that worker.
@@ -550,9 +550,9 @@ XrtComputationClient::RunComputations(
 
 std::vector<std::vector<ComputationClient::DataPtr>>
 XrtComputationClient::ExecuteParallel(
-    tensorflow::gtl::ArraySlice<const Computation* const> computations,
+    absl::Span<const Computation* const> computations,
     const std::vector<std::vector<DataPtr>>& arguments,
-    tensorflow::gtl::ArraySlice<const std::string> devices,
+    absl::Span<const std::string> devices,
     const ExecuteParallelOptions& options) {
   metrics::TimedSection timed(ExecuteParallelMetric());
 
@@ -566,7 +566,7 @@ XrtComputationClient::ExecuteParallel(
 }
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChained(
-    tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
+    absl::Span<const ExecuteChainedOp> ops,
     const std::string& device) {
   static int64 split_mode = sys_util::GetEnvInt("XRT_SPLIT_CHAINED_EXEC", 0);
   return split_mode ? ExecuteChainedSplit(ops, device)
@@ -574,7 +574,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChained(
 }
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
-    tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
+    absl::Span<const ExecuteChainedOp> ops,
     const std::string& device) {
   metrics::TimedSection timed(ExecuteChainedMetric());
 
@@ -657,7 +657,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
 
 std::vector<ComputationClient::DataPtr>
 XrtComputationClient::ExecuteChainedSplit(
-    tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
+    absl::Span<const ExecuteChainedOp> ops,
     const std::string& device) {
   metrics::TimedSection timed(ExecuteChainedMetric());
 
@@ -731,7 +731,7 @@ XrtComputationClient::ExecuteChainedSplit(
 
 std::vector<std::vector<ComputationClient::DataPtr>>
 XrtComputationClient::DeconstructTuple(
-    tensorflow::gtl::ArraySlice<const DataPtr> tuples) {
+    absl::Span<const DataPtr> tuples) {
   metrics::TimedSection timed(DeconstructTupleMetric());
 
   XrtSessionCache::SessionMap session_map;
@@ -832,7 +832,7 @@ const std::string& XrtComputationClient::TorchDeviceToXrtDevice(
 
 std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
     const XlaComputation& computation,
-    tensorflow::gtl::ArraySlice<const std::string> devices,
+    absl::Span<const std::string> devices,
     const Shape* output_shape) const {
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
@@ -863,7 +863,7 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
 }
 
 tensorflow::Tensor XrtComputationClient::GetArgumentsInputs(
-    tensorflow::gtl::ArraySlice<const DataPtr> arguments,
+    absl::Span<const DataPtr> arguments,
     const std::string& device) {
   tensorflow::Tensor inputs_tensor(tensorflow::DT_INT64,
                                    tensorflow::TensorShape({arguments.size()}));
@@ -877,9 +877,9 @@ tensorflow::Tensor XrtComputationClient::GetArgumentsInputs(
 
 std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     XrtSessionCache::SessionMap* session_map,
-    tensorflow::gtl::ArraySlice<const Computation* const> computations,
+    absl::Span<const Computation* const> computations,
     const std::vector<std::vector<DataPtr>>& arguments, bool explode_tuple,
-    tensorflow::gtl::ArraySlice<const std::string> devices,
+    absl::Span<const std::string> devices,
     tensorflow::ClientSession::FeedType* feed_inputs) {
   std::vector<tensorflow::Output> exec_ops;
   for (size_t i = 0; i < computations.size(); ++i) {
@@ -913,7 +913,7 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
 std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     XrtSessionCache::SessionMap* session_map, const XrtComputation& computation,
     const std::vector<std::vector<DataPtr>>& arguments, bool explode_tuple,
-    tensorflow::gtl::ArraySlice<const std::string> devices,
+    absl::Span<const std::string> devices,
     tensorflow::ClientSession::FeedType* feed_inputs) {
   std::vector<tensorflow::Output> exec_ops;
   for (size_t i = 0; i < arguments.size(); ++i) {
@@ -1600,7 +1600,7 @@ tensorflow::TensorShape XrtComputationClient::MakeEquivalentTensorShape(
 
 std::vector<std::vector<ComputationClient::DataPtr>>
 XrtComputationClient::BuildParallelArguments(
-    tensorflow::gtl::ArraySlice<const DataPtr> arguments) {
+    absl::Span<const DataPtr> arguments) {
   std::vector<std::vector<DataPtr>> para_arguments(1);
   para_arguments[0].insert(para_arguments[0].end(), arguments.begin(),
                            arguments.end());

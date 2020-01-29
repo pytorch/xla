@@ -54,13 +54,14 @@ ir::Value EnsureRank1(const ir::Value& index);
 // Implements indexing by tensors of long according to the top-level
 // description.
 XLATensor IndexByTensors(const XLATensor& base,
-                         tensorflow::gtl::ArraySlice<const XLATensor> indices,
+                         absl::Span<const XLATensor> indices,
                          xla::int64 start_dim);
 
-ir::Value IndexPutByTensors(
-    const XLATensor& base, tensorflow::gtl::ArraySlice<const XLATensor> indices,
-    xla::int64 start_dim, const XLATensor& updates, bool accumulate,
-    tensorflow::gtl::ArraySlice<const xla::int64> result_permutation);
+ir::Value IndexPutByTensors(const XLATensor& base,
+                            absl::Span<const XLATensor> indices,
+                            xla::int64 start_dim, const XLATensor& updates,
+                            bool accumulate,
+                            absl::Span<const xla::int64> result_permutation);
 
 ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
                       const XLATensor& index, at::Scalar value);

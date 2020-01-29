@@ -12,8 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/lib/gtl/inlined_vector.h"
 #include "torch_xla/csrc/python_util.h"
 
@@ -159,7 +159,7 @@ inline std::ostream& operator<<(std::ostream& stream, const OpKind& op) {
   return stream;
 }
 
-using OpList = tensorflow::gtl::ArraySlice<const Value>;
+using OpList = absl::Span<const Value>;
 
 // A node in the graph. Nodes for operations which requires extra data to be
 // stored for lowering, should inherit from this class and add operation
@@ -234,7 +234,7 @@ class Node {
 
   XlaOpVector ReturnOp(xla::XlaOp op, LoweringContext* loctx) const;
 
-  XlaOpVector ReturnOps(tensorflow::gtl::ArraySlice<const xla::XlaOp> ops,
+  XlaOpVector ReturnOps(absl::Span<const xla::XlaOp> ops,
                         LoweringContext* loctx) const;
 
  private:

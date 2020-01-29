@@ -76,8 +76,7 @@ absl::optional<AttrTag> ParseAttrTag(const std::string& node_string,
   return tag;
 }
 
-NodeIdMap GenerateIdMap(
-    tensorflow::gtl::ArraySlice<const Node* const> post_order) {
+NodeIdMap GenerateIdMap(absl::Span<const Node* const> post_order) {
   NodeIdMap id_map;
   for (auto node : post_order) {
     XLA_CHECK(id_map.emplace(node, id_map.size()).second) << node->ToString();
@@ -86,7 +85,7 @@ NodeIdMap GenerateIdMap(
 }
 
 std::unordered_map<const Node*, size_t> GetRootsIds(
-    tensorflow::gtl::ArraySlice<const Node* const> roots) {
+    absl::Span<const Node* const> roots) {
   std::unordered_map<const Node*, size_t> roots_ids;
   for (size_t i = 0; i < roots.size(); ++i) {
     roots_ids[roots[i]] = i;
@@ -175,15 +174,13 @@ std::string GenerateTextNodeSpec(const Node* node, const NodeIdMap& id_map) {
 
 }  // namespace
 
-std::string DumpUtil::ToDot(
-    tensorflow::gtl::ArraySlice<const Node* const> nodes) {
+std::string DumpUtil::ToDot(absl::Span<const Node* const> nodes) {
   auto post_order = Util::ComputePostOrder(nodes);
   return PostOrderToDot(post_order, nodes);
 }
 
-std::string DumpUtil::PostOrderToDot(
-    tensorflow::gtl::ArraySlice<const Node* const> post_order,
-    tensorflow::gtl::ArraySlice<const Node* const> roots) {
+std::string DumpUtil::PostOrderToDot(absl::Span<const Node* const> post_order,
+                                     absl::Span<const Node* const> roots) {
   std::unordered_map<const Node*, size_t> roots_ids = GetRootsIds(roots);
   NodeIdMap id_map = GenerateIdMap(post_order);
   std::stringstream ss;
@@ -216,15 +213,13 @@ std::string DumpUtil::PostOrderToDot(
   return ss.str();
 }
 
-std::string DumpUtil::ToText(
-    tensorflow::gtl::ArraySlice<const Node* const> nodes) {
+std::string DumpUtil::ToText(absl::Span<const Node* const> nodes) {
   auto post_order = Util::ComputePostOrder(nodes);
   return PostOrderToText(post_order, nodes);
 }
 
-std::string DumpUtil::PostOrderToText(
-    tensorflow::gtl::ArraySlice<const Node* const> post_order,
-    tensorflow::gtl::ArraySlice<const Node* const> roots) {
+std::string DumpUtil::PostOrderToText(absl::Span<const Node* const> post_order,
+                                      absl::Span<const Node* const> roots) {
   std::unordered_map<const Node*, size_t> roots_ids = GetRootsIds(roots);
   NodeIdMap id_map = GenerateIdMap(post_order);
   std::stringstream ss;
@@ -242,7 +237,7 @@ std::string DumpUtil::PostOrderToText(
   return ss.str();
 }
 
-std::string DumpUtil::ToHlo(tensorflow::gtl::ArraySlice<const Value> values) {
+std::string DumpUtil::ToHlo(absl::Span<const Value> values) {
   ir::LoweringContext lowering_ctx("IrToHlo");
   for (auto& ir_value : values) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);

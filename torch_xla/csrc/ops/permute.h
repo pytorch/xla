@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tensorflow/core/lib/gtl/array_slice.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -19,9 +19,8 @@ class Permute : public Node {
 
   const std::vector<xla::int64>& dims() const { return dims_; }
 
-  static xla::Shape MakePermuteShape(
-      const xla::Shape& source_shape,
-      tensorflow::gtl::ArraySlice<const xla::int64> permutation);
+  static xla::Shape MakePermuteShape(const xla::Shape& source_shape,
+                                     absl::Span<const xla::int64> permutation);
 
  private:
   // The permutation of dimensions.

@@ -12,10 +12,9 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           tensorflow::gtl::ArraySlice<const xla::int64> dims) {
+                           absl::Span<const xla::int64> dims) {
   auto lower_for_shape_fn =
-      [dims](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [dims](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return xla::Transpose(operands[0], dims);
   };
@@ -46,9 +45,8 @@ std::string Permute::ToString() const {
   return ss.str();
 }
 
-xla::Shape Permute::MakePermuteShape(
-    const xla::Shape& source_shape,
-    tensorflow::gtl::ArraySlice<const xla::int64> permutation) {
+xla::Shape Permute::MakePermuteShape(const xla::Shape& source_shape,
+                                     absl::Span<const xla::int64> permutation) {
   return XlaHelpers::GetDynamicReshape(
       source_shape,
       XlaHelpers::Permute(permutation, source_shape.dimensions()));

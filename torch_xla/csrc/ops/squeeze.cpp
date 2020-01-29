@@ -21,8 +21,7 @@ xla::XlaOp LowerSqueeze(xla::XlaOp input, int dim) {
 
 xla::Shape NodeOutputShape(const Value& input, int dim) {
   auto lower_for_shape_fn =
-      [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return LowerSqueeze(operands[0], dim);
   };

@@ -3,7 +3,7 @@
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
 
-#include "tensorflow/core/lib/gtl/array_slice.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {

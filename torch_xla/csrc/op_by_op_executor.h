@@ -3,11 +3,11 @@
 #include <string>
 #include <vector>
 
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/async_task.h"
 #include "tensorflow/compiler/xla/xla_client/cache.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -24,19 +24,16 @@ class OpByOpExecutor {
   static OpByOpExecutor* Get();
 
   std::vector<xla::ComputationClient::ExecuteChainedOp> BuildOps(
-      tensorflow::gtl::ArraySlice<const ir::Value> roots,
-      const std::string& device,
-      tensorflow::gtl::ArraySlice<const std::string> devices);
+      absl::Span<const ir::Value> roots, const std::string& device,
+      absl::Span<const std::string> devices);
 
   std::vector<xla::ComputationClient::DataPtr> Execute(
-      tensorflow::gtl::ArraySlice<const ir::Value> roots,
-      const std::string& device,
-      tensorflow::gtl::ArraySlice<const std::string> devices);
+      absl::Span<const ir::Value> roots, const std::string& device,
+      absl::Span<const std::string> devices);
 
-  AsyncTask ExecuteAsync(
-      tensorflow::gtl::ArraySlice<const ir::Value> roots,
-      const std::string& device,
-      tensorflow::gtl::ArraySlice<const std::string> devices);
+  AsyncTask ExecuteAsync(absl::Span<const ir::Value> roots,
+                         const std::string& device,
+                         absl::Span<const std::string> devices);
 
  private:
   using CompileCache =

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tensorflow/core/lib/gtl/array_slice.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -9,7 +9,7 @@ namespace ops {
 
 class Cat : public Node {
  public:
-  Cat(tensorflow::gtl::ArraySlice<const ir::Value> values, xla::int64 dim);
+  Cat(absl::Span<const ir::Value> values, xla::int64 dim);
 
   std::string ToString() const override;
 

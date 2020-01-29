@@ -11,9 +11,9 @@
 #include <vector>
 
 #include "absl/types/optional.h"
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/core/lib/core/errors.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/lib/hash/hash.h"
 
 namespace xla {
@@ -195,8 +195,8 @@ std::vector<T> ToVector(const S& input) {
 
 template <typename T>
 std::vector<T> GetValuesVector(
-    tensorflow::gtl::ArraySlice<const T> values,
-    tensorflow::gtl::ArraySlice<const absl::optional<T>*> opt_values) {
+    absl::Span<const T> values,
+    absl::Span<const absl::optional<T>* const> opt_values) {
   std::vector<T> result(values.begin(), values.end());
   for (auto opt : opt_values) {
     if (*opt) {
@@ -264,7 +264,7 @@ template <typename T>
 size_t ContainerHash(const T& values);
 
 template <typename T>
-size_t Hash(tensorflow::gtl::ArraySlice<const T> values) {
+size_t Hash(absl::Span<const T> values) {
   return ContainerHash(values);
 }
 

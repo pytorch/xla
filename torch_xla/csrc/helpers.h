@@ -7,13 +7,13 @@
 #include <vector>
 
 #include "absl/types/optional.h"
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace torch_xla {
 
@@ -108,10 +108,9 @@ class XlaHelpers {
 
   // Creates a scalar broadcasted to a given shape.
   template <class T>
-  static xla::XlaOp ScalarBroadcast(
-      T scalar_value, xla::PrimitiveType type,
-      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-      xla::XlaBuilder* builder) {
+  static xla::XlaOp ScalarBroadcast(T scalar_value, xla::PrimitiveType type,
+                                    absl::Span<const xla::int64> dimensions,
+                                    xla::XlaBuilder* builder) {
     xla::XlaOp scalar_op = ScalarValue<T>(scalar_value, type, builder);
     return xla::Broadcast(scalar_op, dimensions);
   }
@@ -124,16 +123,13 @@ class XlaHelpers {
   }
 
   static absl::optional<DynamicReshapeInfo> GetDynamicReshapeInfo(
-      const xla::Shape& input_shape,
-      tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
+      const xla::Shape& input_shape, absl::Span<const xla::int64> output_sizes);
 
   static xla::Shape GetDynamicReshape(
-      const xla::Shape& input_shape,
-      tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
+      const xla::Shape& input_shape, absl::Span<const xla::int64> output_sizes);
 
-  static xla::XlaOp DynamicReshape(
-      xla::XlaOp input,
-      tensorflow::gtl::ArraySlice<const xla::int64> output_sizes);
+  static xla::XlaOp DynamicReshape(xla::XlaOp input,
+                                   absl::Span<const xla::int64> output_sizes);
 
   static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
 
@@ -156,12 +152,12 @@ class XlaHelpers {
 
   // Creates an XLA padding configuration from a n-dimensional padding list.
   static xla::PaddingConfig MakeXlaPaddingConfigFromNdPadding(
-      tensorflow::gtl::ArraySlice<const xla::int64> padding);
+      absl::Span<const xla::int64> padding);
 
   // Creates a set of dimension by dropping the drop_dims ones.
   static std::vector<xla::int64> DropDimensions(
-      tensorflow::gtl::ArraySlice<const xla::int64> sizes,
-      tensorflow::gtl::ArraySlice<const xla::int64> drop_dims);
+      absl::Span<const xla::int64> sizes,
+      absl::Span<const xla::int64> drop_dims);
 
   // Get the canonical dimension index in the [0, rank) interval. Negative
   // indices are interpreted as follows: -1 is rank-1, -2 is rank-2 etc.
@@ -169,21 +165,18 @@ class XlaHelpers {
 
   // Same as above, for multiple dimensions.
   static std::vector<xla::int64> GetCanonicalDimensionIndices(
-      tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-      xla::int64 rank);
+      absl::Span<const xla::int64> dimensions, xla::int64 rank);
 
   // Returns the canonical position in the dim dimension, handling negative
   // values for the position.
   static xla::int64 GetCanonicalPosition(
-      tensorflow::gtl::ArraySlice<const xla::int64> dimensions, xla::int64 dim,
-      xla::int64 pos);
+      absl::Span<const xla::int64> dimensions, xla::int64 dim, xla::int64 pos);
 
   // Retrieves the dynamic dimension of an input shape, or returns -1 if none.
   static xla::int64 GetDynamicDimension(const xla::Shape& shape);
 
-  static xla::XlaOp GetDimensionsSize(
-      tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
-      tensorflow::gtl::ArraySlice<const xla::int64> dimensions);
+  static xla::XlaOp GetDimensionsSize(absl::Span<const xla::XlaOp> inputs,
+                                      absl::Span<const xla::int64> dimensions);
 
   // Retrieves type's minimum and maximum values.
   static MinMax MinMaxValues(xla::PrimitiveType type);
@@ -217,8 +210,7 @@ class XlaHelpers {
   // size as the input.
   template <typename Container>
   static std::vector<typename Container::value_type> Permute(
-      tensorflow::gtl::ArraySlice<const xla::int64> permutation,
-      const Container& input) {
+      absl::Span<const xla::int64> permutation, const Container& input) {
     using T = typename Container::value_type;
     XLA_CHECK(xla::IsPermutation(permutation, input.size()))
         << "Invalid permutation specified";
@@ -269,8 +261,8 @@ class XlaHelpers {
   //   shape2       =       [6, 5, 2]
   //   result_shape = [9, 7, 6, 5, 2]
   static std::vector<xla::int64> GetPromotedShape(
-      tensorflow::gtl::ArraySlice<const xla::int64> shape1_dims,
-      tensorflow::gtl::ArraySlice<const xla::int64> shape2_dims);
+      absl::Span<const xla::int64> shape1_dims,
+      absl::Span<const xla::int64> shape2_dims);
 
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);

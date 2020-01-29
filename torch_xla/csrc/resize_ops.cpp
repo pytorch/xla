@@ -26,9 +26,8 @@ double ResizeFactor(const xla::Shape& input_shape,
 
 }  // namespace
 
-xla::Shape GetForwardOutputShape2d(
-    const xla::Shape& input_shape,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
+xla::Shape GetForwardOutputShape2d(const xla::Shape& input_shape,
+                                   absl::Span<const xla::int64> output_size) {
   XLA_CHECK_EQ(output_size.size(), 2);
   return ShapeBuilder(input_shape.element_type())
       .Add(input_shape, 0)
@@ -38,9 +37,8 @@ xla::Shape GetForwardOutputShape2d(
       .Build();
 }
 
-xla::Shape GetBackwardOutputShape2d(
-    const xla::Shape& input_shape,
-    tensorflow::gtl::ArraySlice<const xla::int64> input_size) {
+xla::Shape GetBackwardOutputShape2d(const xla::Shape& input_shape,
+                                    absl::Span<const xla::int64> input_size) {
   return xla::ShapeUtil::MakeShape(input_shape.element_type(), input_size);
 }
 

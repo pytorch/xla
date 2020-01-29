@@ -133,38 +133,36 @@ class XrtComputationClient : public ComputationClient {
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 
   std::vector<DataPtr> TransferToServer(
-      tensorflow::gtl::ArraySlice<const TensorSource> tensors) override;
+      absl::Span<const TensorSource> tensors) override;
 
   std::vector<Literal> TransferFromServer(
-      tensorflow::gtl::ArraySlice<const DataPtr> handles) override;
+      absl::Span<const DataPtr> handles) override;
 
   std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) override;
 
   std::vector<DataPtr> ExecuteComputation(
-      const Computation& computation,
-      tensorflow::gtl::ArraySlice<const DataPtr> arguments,
+      const Computation& computation, absl::Span<const DataPtr> arguments,
       const std::string& device,
       const ExecuteComputationOptions& options) override;
 
   std::vector<std::vector<DataPtr>> ExecuteReplicated(
       const Computation& computation,
       const std::vector<std::vector<DataPtr>>& arguments,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
+      absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
 
   std::vector<std::vector<DataPtr>> ExecuteParallel(
-      tensorflow::gtl::ArraySlice<const Computation* const> computations,
+      absl::Span<const Computation* const> computations,
       const std::vector<std::vector<DataPtr>>& arguments,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
+      absl::Span<const std::string> devices,
       const ExecuteParallelOptions& options) override;
 
-  std::vector<DataPtr> ExecuteChained(
-      tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
-      const std::string& device) override;
+  std::vector<DataPtr> ExecuteChained(absl::Span<const ExecuteChainedOp> ops,
+                                      const std::string& device) override;
 
   std::vector<std::vector<DataPtr>> DeconstructTuple(
-      tensorflow::gtl::ArraySlice<const DataPtr> tuples) override;
+      absl::Span<const DataPtr> tuples) override;
 
   std::string GetResourceDomain(const std::string& device) const override;
 
@@ -238,33 +236,31 @@ class XrtComputationClient : public ComputationClient {
   const std::string& TorchDeviceToXrtDevice(const std::string& device) const;
 
   std::unique_ptr<xrt::XLAComputation> CreateXrtComputation(
-      const XlaComputation& computation,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
+      const XlaComputation& computation, absl::Span<const std::string> devices,
       const Shape* output_shape) const;
 
-  tensorflow::Tensor GetArgumentsInputs(
-      tensorflow::gtl::ArraySlice<const DataPtr> arguments,
-      const std::string& device);
+  tensorflow::Tensor GetArgumentsInputs(absl::Span<const DataPtr> arguments,
+                                        const std::string& device);
 
   std::vector<tensorflow::Output> CreateExecuteOps(
       XrtSessionCache::SessionMap* session_map,
-      tensorflow::gtl::ArraySlice<const Computation* const> computations,
+      absl::Span<const Computation* const> computations,
       const std::vector<std::vector<DataPtr>>& arguments, bool explode_tuple,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
+      absl::Span<const std::string> devices,
       tensorflow::ClientSession::FeedType* feed_inputs);
 
   std::vector<tensorflow::Output> CreateExecuteOps(
       XrtSessionCache::SessionMap* session_map,
       const XrtComputation& computation,
       const std::vector<std::vector<DataPtr>>& arguments, bool explode_tuple,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
+      absl::Span<const std::string> devices,
       tensorflow::ClientSession::FeedType* feed_inputs);
 
   std::vector<std::vector<DataPtr>> RunComputations(
       const XrtSessionCache::SessionMap& session_map,
       const std::vector<tensorflow::Output>& exec_ops,
-      tensorflow::gtl::ArraySlice<const Computation* const> computations,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
+      absl::Span<const Computation* const> computations,
+      absl::Span<const std::string> devices,
       const tensorflow::ClientSession::FeedType& feed_inputs);
 
   // Retrieves the worker,worker_host pair for a given PyTorch device (ie,
@@ -315,15 +311,13 @@ class XrtComputationClient : public ComputationClient {
   void InitSession(XrtSession* session) const;
 
   // Implement the chained execution using the XRTExecuteChained op support.
-  std::vector<DataPtr> ExecuteChainedXrt(
-      tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
-      const std::string& device);
+  std::vector<DataPtr> ExecuteChainedXrt(absl::Span<const ExecuteChainedOp> ops,
+                                         const std::string& device);
 
   // Implement the chained execution using multiple XRTExecute in many RPC round
   // trips.
   std::vector<DataPtr> ExecuteChainedSplit(
-      tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
-      const std::string& device);
+      absl::Span<const ExecuteChainedOp> ops, const std::string& device);
 
   // Creates an XRT graph with an XRTCompile operation:
   //
@@ -445,12 +439,12 @@ class XrtComputationClient : public ComputationClient {
   // Builds an argument vector usable in a replicated context, out of a single
   // replica argument vector. Essentially turns a [N] into a [1][N].
   static std::vector<std::vector<DataPtr>> BuildParallelArguments(
-      tensorflow::gtl::ArraySlice<const DataPtr> arguments);
+      absl::Span<const DataPtr> arguments);
 
   // Extracts the XlaComputation pointers out of Computation ones. Used to be
   // passed to xrt_util::CheckComputationStatus() for its error reporting.
   static std::vector<const XlaComputation*> GetXlaComputations(
-      tensorflow::gtl::ArraySlice<const Computation* const> computations);
+      absl::Span<const Computation* const> computations);
 
   static tensorflow::ConfigProto CreateConfigProto(const Options& options);
 

@@ -63,8 +63,8 @@ xla::XlaOp XlaHelpers::CreateReturnValue(
 }
 
 std::vector<xla::int64> XlaHelpers::DropDimensions(
-    tensorflow::gtl::ArraySlice<const xla::int64> sizes,
-    tensorflow::gtl::ArraySlice<const xla::int64> drop_dims) {
+    absl::Span<const xla::int64> sizes,
+    absl::Span<const xla::int64> drop_dims) {
   std::vector<xla::int64> new_dims;
   size_t drop_index = 0;
   for (size_t i = 0; i < sizes.size(); ++i) {
@@ -92,7 +92,7 @@ xla::int64 XlaHelpers::GetCanonicalDimensionIndex(xla::int64 dim,
 }
 
 std::vector<xla::int64> XlaHelpers::GetCanonicalDimensionIndices(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, xla::int64 rank) {
+    absl::Span<const xla::int64> dimensions, xla::int64 rank) {
   std::vector<xla::int64> canonical_dim_indices;
   for (xla::int64 dim : dimensions) {
     canonical_dim_indices.push_back(GetCanonicalDimensionIndex(dim, rank));
@@ -101,8 +101,7 @@ std::vector<xla::int64> XlaHelpers::GetCanonicalDimensionIndices(
 }
 
 xla::int64 XlaHelpers::GetCanonicalPosition(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions, xla::int64 dim,
-    xla::int64 pos) {
+    absl::Span<const xla::int64> dimensions, xla::int64 dim, xla::int64 pos) {
   dim = GetCanonicalDimensionIndex(dim, dimensions.size());
   if (pos < 0) {
     pos = GetCanonicalDimensionIndex(pos, dimensions[dim]);
@@ -126,8 +125,8 @@ xla::int64 XlaHelpers::GetDynamicDimension(const xla::Shape& shape) {
 }
 
 xla::XlaOp XlaHelpers::GetDimensionsSize(
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> inputs,
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions) {
+    absl::Span<const xla::XlaOp> inputs,
+    absl::Span<const xla::int64> dimensions) {
   XLA_CHECK(!inputs.empty());
   xla::XlaOp size;
   for (auto& input : inputs) {
@@ -184,7 +183,7 @@ XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
 }
 
 xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfigFromNdPadding(
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+    absl::Span<const xla::int64> padding) {
   xla::PaddingConfig padding_config;
   XLA_CHECK_EQ(padding.size() % 2, 0)
       << "Padding specification must have even length";
@@ -266,9 +265,8 @@ xla::XlaOp XlaHelpers::ReshapeToRank(xla::XlaOp input, xla::int64 expected_rank,
 }
 
 absl::optional<XlaHelpers::DynamicReshapeInfo>
-XlaHelpers::GetDynamicReshapeInfo(
-    const xla::Shape& input_shape,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+XlaHelpers::GetDynamicReshapeInfo(const xla::Shape& input_shape,
+                                  absl::Span<const xla::int64> output_sizes) {
   xla::int64 input_dynamic_dimension = GetDynamicDimension(input_shape);
   if (input_dynamic_dimension < 0) {
     return absl::nullopt;
@@ -304,8 +302,7 @@ XlaHelpers::GetDynamicReshapeInfo(
 }
 
 xla::Shape XlaHelpers::GetDynamicReshape(
-    const xla::Shape& input_shape,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+    const xla::Shape& input_shape, absl::Span<const xla::int64> output_sizes) {
   auto info = GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
     return info->output_shape;
@@ -314,8 +311,7 @@ xla::Shape XlaHelpers::GetDynamicReshape(
 }
 
 xla::XlaOp XlaHelpers::DynamicReshape(
-    xla::XlaOp input,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+    xla::XlaOp input, absl::Span<const xla::int64> output_sizes) {
   const xla::Shape& input_shape = ShapeOfXlaOp(input);
   auto info = GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
@@ -422,8 +418,8 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
 }
 
 std::vector<xla::int64> XlaHelpers::GetPromotedShape(
-    tensorflow::gtl::ArraySlice<const xla::int64> shape1_dims,
-    tensorflow::gtl::ArraySlice<const xla::int64> shape2_dims) {
+    absl::Span<const xla::int64> shape1_dims,
+    absl::Span<const xla::int64> shape2_dims) {
   std::vector<xla::int64> dimensions;
   // If the rank of a shape is bigger than then other, fill up the first
   // dimensions with the ones of the bigger.
