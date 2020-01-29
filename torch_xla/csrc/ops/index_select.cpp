@@ -14,8 +14,7 @@ namespace {
 xla::Shape NodeOutputShape(const Value& input, const Value& index,
                            xla::int64 dim) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::TorchIndexSelect(operands[0], operands[1], dim);
   };
   return InferOutputShape({input.shape(), index.shape()}, lower_for_shape_fn);

@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "tensorflow/core/lib/gtl/array_slice.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
 
@@ -26,8 +26,7 @@ XLATensor GetXlaTensor(const at::Tensor& tensor);
 void ReplaceXlaTensor(const at::Tensor& tensor, XLATensor new_xla_tensor);
 
 // Same as above, applied to a list of tensors.
-std::vector<XLATensor> GetXlaTensors(
-    tensorflow::gtl::ArraySlice<const at::Tensor> tensors);
+std::vector<XLATensor> GetXlaTensors(absl::Span<const at::Tensor> tensors);
 
 // If tensor is an XLA tensor type, returns the XLATensor embedded within it,
 // otherwise creates a new XLA tensor type with tensor as data.
@@ -36,10 +35,9 @@ XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device);
 // Creates a vector of at::Tensor objects extracted from a list of XLA tensors.
 std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors);
 
-void XlaUpdateTensors(
-    tensorflow::gtl::ArraySlice<const at::Tensor> dest_xla_tensors,
-    tensorflow::gtl::ArraySlice<const at::Tensor> source_cpu_tensors,
-    tensorflow::gtl::ArraySlice<const size_t> indices);
+void XlaUpdateTensors(absl::Span<const at::Tensor> dest_xla_tensors,
+                      absl::Span<const at::Tensor> source_cpu_tensors,
+                      absl::Span<const size_t> indices);
 
 // Tries to extract the device out of the XLA tensor. Returns nullopt if the
 // input is not an XLA tensor.
@@ -72,7 +70,7 @@ at::Tensor XlaToAtenTensor(XLATensor xla_tensor,
 at::Tensor AtenFromXlaTensor(XLATensor xla_tensor);
 
 std::vector<at::Tensor> AtenFromXlaTensors(
-    tensorflow::gtl::ArraySlice<const XLATensor> xla_tensors);
+    absl::Span<const XLATensor> xla_tensors);
 
 // Creates an XLA tensor holding the data in tensor, on the given device.
 at::Tensor CreateXlaTensor(at::Tensor tensor,

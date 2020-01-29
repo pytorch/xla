@@ -3,11 +3,11 @@
 
 #include <string>
 
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/service/hlo.pb.h"
 #include "tensorflow/compiler/xla/service/hlo_module.h"
 #include "tensorflow/compiler/xla/status_macros.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace xla {
 namespace util {
@@ -21,16 +21,14 @@ StatusOr<std::unique_ptr<HloModule>> CreateModuleFromProto(
 StatusOr<std::string> GetComputationHloText(const XlaComputation& computation);
 
 void ReportComputationError(
-    const Status& status,
-    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
-    tensorflow::gtl::ArraySlice<const Shape* const> output_shapes);
+    const Status& status, absl::Span<const XlaComputation* const> computations,
+    absl::Span<const Shape* const> output_shapes);
 
 // Checks whether an action on the given computation generated an error, and if
 // that was the case, emit error and computations HLO text.
 void CheckComputationStatus(
-    const Status& status,
-    tensorflow::gtl::ArraySlice<const XlaComputation* const> computations,
-    tensorflow::gtl::ArraySlice<const Shape* const> output_shapes);
+    const Status& status, absl::Span<const XlaComputation* const> computations,
+    absl::Span<const Shape* const> output_shapes);
 
 size_t ShapeHash(const Shape& shape);
 

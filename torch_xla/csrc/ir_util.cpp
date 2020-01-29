@@ -42,7 +42,7 @@ std::vector<const Node*> Util::ComputePostOrder(const Node* node,
 }
 
 std::vector<const Node*> Util::ComputePostOrder(
-    tensorflow::gtl::ArraySlice<const Node* const> nodes) {
+    absl::Span<const Node* const> nodes) {
   EmissionMap emap;
   std::vector<const Node*> post_order;
   for (auto node : nodes) {
@@ -53,9 +53,8 @@ std::vector<const Node*> Util::ComputePostOrder(
   return post_order;
 }
 
-std::vector<Value> Util::Clone(
-    tensorflow::gtl::ArraySlice<const Value> values,
-    tensorflow::gtl::ArraySlice<const Node* const> post_order) {
+std::vector<Value> Util::Clone(absl::Span<const Value> values,
+                               absl::Span<const Node* const> post_order) {
   std::unordered_map<const Node*, NodePtr> clone_map;
   for (auto node : post_order) {
     if (clone_map.count(node) > 0) {
@@ -80,8 +79,7 @@ std::vector<Value> Util::Clone(
   return cloned;
 }
 
-std::vector<Value> Util::Clone(
-    tensorflow::gtl::ArraySlice<const Value> values) {
+std::vector<Value> Util::Clone(absl::Span<const Value> values) {
   std::vector<const Node*> nodes;
   for (auto& value : values) {
     nodes.push_back(value.node.get());
@@ -90,8 +88,7 @@ std::vector<Value> Util::Clone(
   return Clone(values, post_order);
 }
 
-size_t Util::GetGraphSize(
-    tensorflow::gtl::ArraySlice<const Node* const> nodes) {
+size_t Util::GetGraphSize(absl::Span<const Node* const> nodes) {
   std::vector<const Node*> post_order = ComputePostOrder(nodes);
   return post_order.size();
 }

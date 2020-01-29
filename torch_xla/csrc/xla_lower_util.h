@@ -3,13 +3,12 @@
 #include <vector>
 
 #include "absl/types/optional.h"
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace torch_xla {
 
-xla::XlaOp PadToSize(xla::XlaOp input,
-                     tensorflow::gtl::ArraySlice<const xla::int64> size,
+xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
                      absl::optional<xla::XlaOp> pad_value = absl::nullopt);
 
 std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64 k,
@@ -28,7 +27,7 @@ xla::XlaOp BuildRandperm(xla::int64 n, xla::PrimitiveType element_type,
                          xla::XlaBuilder* builder);
 
 std::vector<xla::XlaOp> CreateBroadcastTensors(
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands);
+    absl::Span<const xla::XlaOp> operands);
 
 // Similar to tf.gather_nd, used to implement advanced indexing.
 xla::XlaOp CreateIndex(xla::XlaOp input, xla::XlaOp indices,

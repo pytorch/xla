@@ -13,9 +13,9 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerAsStridedViewUpdate(
-    xla::XlaOp target, xla::XlaOp input,
-    tensorflow::gtl::ArraySlice<xla::int64> size, xla::int64 storage_offset) {
+xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
+                                    absl::Span<const xla::int64> size,
+                                    xla::int64 storage_offset) {
   xla::int64 input_element_count =
       xla::ShapeUtil::ElementsIn(XlaHelpers::ShapeOfXlaOp(input));
   xla::int64 slice_size = xla::util::Multiply<xla::int64>(size);
@@ -32,11 +32,10 @@ xla::XlaOp LowerAsStridedViewUpdate(
 }
 
 xla::Shape NodeOutputShape(const Value& target, const Value& input,
-                           tensorflow::gtl::ArraySlice<xla::int64> size,
+                           absl::Span<const xla::int64> size,
                            xla::int64 storage_offset) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerAsStridedViewUpdate(operands[0], operands[1], size,
                                     storage_offset);
   };

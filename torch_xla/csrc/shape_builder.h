@@ -2,9 +2,9 @@
 
 #include <vector>
 
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace torch_xla {
 
@@ -15,7 +15,7 @@ class ShapeBuilder {
   ShapeBuilder& Add(const xla::Shape& shape, xla::int64 dim);
 
   ShapeBuilder& Add(const xla::Shape& shape,
-                    tensorflow::gtl::ArraySlice<const xla::int64> dimensions);
+                    absl::Span<const xla::int64> dimensions);
 
   ShapeBuilder& Add(xla::int64 size);
 

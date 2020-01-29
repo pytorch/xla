@@ -202,8 +202,7 @@ std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
 }
 
 struct CopyPartition {
-  explicit CopyPartition(
-      tensorflow::gtl::ArraySlice<const xla::int64> dimensions)
+  explicit CopyPartition(absl::Span<const xla::int64> dimensions)
       : base(dimensions.size()), limit(dimensions.begin(), dimensions.end()) {}
 
   std::vector<xla::int64> base;
@@ -211,7 +210,7 @@ struct CopyPartition {
 };
 
 std::vector<CopyPartition> CreateCopyPartitions(
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+    absl::Span<const xla::int64> dimensions,
     xla::int64 strided_copy_dimension) {
   // The minimum number of elements copy that can be assigned to a thread.
   static const xla::int64 kMinThreadElements = 100000;
@@ -247,12 +246,10 @@ std::vector<CopyPartition> CreateCopyPartitions(
 }
 
 template <typename SType, typename DType>
-void SlicedCopy(tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-                const SType* src_data,
-                tensorflow::gtl::ArraySlice<const xla::int64> src_strides,
-                DType* dest_data,
-                tensorflow::gtl::ArraySlice<const xla::int64> dest_strides,
-                tensorflow::gtl::ArraySlice<const xla::int64> iter_dims,
+void SlicedCopy(absl::Span<const xla::int64> dimensions, const SType* src_data,
+                absl::Span<const xla::int64> src_strides, DType* dest_data,
+                absl::Span<const xla::int64> dest_strides,
+                absl::Span<const xla::int64> iter_dims,
                 const CopyPartition& part) {
   std::vector<xla::int64> indices(part.base);
   xla::int64 inner_src_stride = src_strides[iter_dims.front()];

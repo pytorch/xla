@@ -123,9 +123,9 @@ CanonicalIndexInfo TransposeToFront(at::Tensor base, at::TensorList indices) {
 
 // Wraps index tensors once into the [0, dim_size) interval, where dim_size is
 // the size of the current indexed dimension.
-std::vector<XLATensor> WrapIndicesOnce(
-    const XLATensor& base, tensorflow::gtl::ArraySlice<const XLATensor> indices,
-    int start_dim) {
+std::vector<XLATensor> WrapIndicesOnce(const XLATensor& base,
+                                       absl::Span<const XLATensor> indices,
+                                       int start_dim) {
   std::vector<XLATensor> canonical_indices;
   auto base_shape_ref = base.shape();
   XLA_CHECK_LE(indices.size(), base_shape_ref.get().rank());
@@ -156,8 +156,7 @@ ir::NodePtr IndexFillOp(const ir::Value& buffer, xla::int64 dim,
                          loctx);
   };
   auto lower_for_shape_fn =
-      [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return CreateIndexFill(operands[0], dim, operands[1], operands[2]);
   };
   ir::Value index_rank1 = EnsureRank1(index);
@@ -182,8 +181,7 @@ ir::NodePtr IndexAddOp(const ir::Value& buffer, xla::int64 dim,
                          loctx);
   };
   auto lower_for_shape_fn =
-      [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return CreateIndexAdd(operands[0], dim, operands[1], operands[2]);
   };
   ir::Value index_rank1 = EnsureRank1(index);
@@ -208,8 +206,7 @@ ir::NodePtr IndexCopyOp(const ir::Value& buffer, xla::int64 dim,
                          loctx);
   };
   auto lower_for_shape_fn =
-      [dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return CreateIndexCopy(operands[0], dim, operands[1], operands[2]);
   };
   ir::Value index_rank1 = EnsureRank1(index);
@@ -252,7 +249,7 @@ ir::Value EnsureRank1(const ir::Value& index) {
 }
 
 XLATensor IndexByTensors(const XLATensor& base,
-                         tensorflow::gtl::ArraySlice<const XLATensor> indices,
+                         absl::Span<const XLATensor> indices,
                          xla::int64 start_dim) {
   if (indices.empty()) {
     return base;
@@ -268,10 +265,11 @@ XLATensor IndexByTensors(const XLATensor& base,
       base.GetDevice(), base.dtype());
 }
 
-ir::Value IndexPutByTensors(
-    const XLATensor& base, tensorflow::gtl::ArraySlice<const XLATensor> indices,
-    xla::int64 start_dim, const XLATensor& values, bool accumulate,
-    tensorflow::gtl::ArraySlice<const xla::int64> result_permutation) {
+ir::Value IndexPutByTensors(const XLATensor& base,
+                            absl::Span<const XLATensor> indices,
+                            xla::int64 start_dim, const XLATensor& values,
+                            bool accumulate,
+                            absl::Span<const xla::int64> result_permutation) {
   if (indices.empty()) {
     return base.GetIrValue();
   }

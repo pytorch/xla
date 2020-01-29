@@ -798,10 +798,8 @@ std::vector<XLATensor> XLATensor::GetLiveTensors(const Device* device) {
 }
 
 std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
-    const std::vector<XLATensor>& tensors,
-    tensorflow::gtl::ArraySlice<const size_t> indices,
-    tensorflow::gtl::ArraySlice<const xla::ComputationClient::DataPtr>
-        tensors_data) {
+    const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
+    absl::Span<const xla::ComputationClient::DataPtr> tensors_data) {
   std::vector<xla::ComputationClient::DataPtr> result_tensors_data;
   size_t indices_index = 0;
   for (size_t i = 0; i < tensors.size(); ++i) {
@@ -872,11 +870,10 @@ std::vector<at::Tensor> XLATensor::GetTensorsFused(
   std::vector<xla::ComputationClient::DataPtr> tensors_data =
       GatherTensorsXlaData(
           *tensors,
-          async != nullptr ? async->indices
-                           : tensorflow::gtl::ArraySlice<const size_t>(),
-          async != nullptr ? async->tensors_data
-                           : tensorflow::gtl::ArraySlice<
-                                 const xla::ComputationClient::DataPtr>());
+          async != nullptr ? async->indices : absl::Span<const size_t>(),
+          async != nullptr
+              ? async->tensors_data
+              : absl::Span<const xla::ComputationClient::DataPtr>());
   std::vector<xla::Literal> literals =
       xla::ComputationClient::Get()->TransferFromServer(tensors_data);
   std::vector<at::Tensor> results;
@@ -1038,7 +1035,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
 
 XLATensor::ComputationCache::TypePtr XLATensor::LookupCachedCompile(
     const std::vector<XLATensor>& tensors, size_t hash,
-    tensorflow::gtl::ArraySlice<const size_t> indices,
+    absl::Span<const size_t> indices,
     std::vector<xla::ComputationClient::DataPtr>* parameters_data) {
   ComputationCache::TypePtr cached_computation =
       GetComputationCache()->Get(hash);
@@ -1082,8 +1079,8 @@ XLATensor::ComputationCache* XLATensor::GetComputationCache() {
 }
 
 std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchParameters(
-    const std::vector<XLATensor>& tensors,
-    tensorflow::gtl::ArraySlice<const size_t> indices, size_t* graph_size) {
+    const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
+    size_t* graph_size) {
   std::vector<const ir::Node*> roots;
   roots.reserve(indices.size());
   for (auto index : indices) {
@@ -1109,8 +1106,7 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchParameters(
 }
 
 std::vector<ir::Value> XLATensor::CollectRoots(
-    const std::vector<XLATensor>& tensors,
-    tensorflow::gtl::ArraySlice<const size_t> indices) {
+    const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices) {
   std::vector<ir::Value> roots;
   roots.reserve(indices.size());
   for (auto index : indices) {
@@ -1121,7 +1117,7 @@ std::vector<ir::Value> XLATensor::CollectRoots(
 
 std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchTensorData(
     std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
-    tensorflow::gtl::ArraySlice<const size_t> indices) {
+    absl::Span<const size_t> indices) {
   std::vector<xla::ComputationClient::DataPtr> tensors_data;
   tensors_data.reserve(indices.size());
   for (auto index : indices) {
@@ -1202,10 +1198,9 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
                                   std::move(cached_computation));
 }
 
-void XLATensor::SyncTensorsGraph(
-    std::vector<XLATensor>* tensors,
-    tensorflow::gtl::ArraySlice<const std::string> devices, bool wait,
-    bool sync_xla_data) {
+void XLATensor::SyncTensorsGraph(std::vector<XLATensor>* tensors,
+                                 absl::Span<const std::string> devices,
+                                 bool wait, bool sync_xla_data) {
   static const bool op_by_op =
       xla::sys_util::GetEnvBool("XLA_SYNC_TENSORS_OPBYOP", false);
   SyncTensorsConfig config;
@@ -1223,9 +1218,9 @@ void XLATensor::SyncTensorsGraph(
   }
 }
 
-void XLATensor::SyncLiveTensorsGraph(
-    const Device* device,
-    tensorflow::gtl::ArraySlice<const std::string> devices, bool wait) {
+void XLATensor::SyncLiveTensorsGraph(const Device* device,
+                                     absl::Span<const std::string> devices,
+                                     bool wait) {
   auto tensors = GetLiveTensors(device);
   TF_VLOG(4) << tensors.size() << " live tensors: devices=["
              << absl::StrJoin(devices, ",") << "]";
@@ -1239,8 +1234,7 @@ void XLATensor::MarkStep(const Device* device) {
   g_tls_data.Reset();
 }
 
-void XLATensor::WaitDeviceOps(
-    tensorflow::gtl::ArraySlice<const std::string> devices) {
+void XLATensor::WaitDeviceOps(absl::Span<const std::string> devices) {
   std::set<Device> wait_devices;
   if (!devices.empty()) {
     for (auto& device_str : devices) {
@@ -1258,14 +1252,13 @@ void XLATensor::WaitDeviceOps(
 }
 
 XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
-    std::vector<XLATensor>* tensors,
-    tensorflow::gtl::ArraySlice<const std::string> devices,
+    std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
     const SyncTensorsConfig& config) {
   struct Async {
     explicit Async(SyncTensorCollection coll,
                    std::vector<xla::ComputationClient::DataPtr> tensors_data,
                    std::vector<ir::Value> roots,
-                   tensorflow::gtl::ArraySlice<const std::string> devices)
+                   absl::Span<const std::string> devices)
         : coll(std::move(coll)),
           tensors_data(std::move(tensors_data)),
           roots(std::move(roots)),
@@ -1316,8 +1309,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
 
 XLATensor::CompilationResult XLATensor::Compile(
     const std::vector<XLATensor>& tensors,
-    tensorflow::gtl::ArraySlice<const std::string> devices,
-    const SyncTensorCollection& coll) {
+    absl::Span<const std::string> devices, const SyncTensorCollection& coll) {
   xla::util::Unique<Device> unique_device;
   ir::LoweringContext lowering_ctx("SyncTensorsGraph");
   for (auto index : coll.indices) {
@@ -1356,8 +1348,7 @@ XLATensor::CompilationResult XLATensor::Compile(
 }
 
 std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
-    std::vector<XLATensor>* tensors,
-    tensorflow::gtl::ArraySlice<const std::string> devices,
+    std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
     const SyncTensorsConfig& config) {
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {

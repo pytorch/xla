@@ -29,8 +29,7 @@ xla::Shape NodeOutputShape(const Value& input,
                            bool keep_reduced_dimensions,
                            const c10::optional<at::ScalarType>& dtype) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerMean(operands[0], dimensions, keep_reduced_dimensions, dtype);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);

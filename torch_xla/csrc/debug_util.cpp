@@ -48,9 +48,9 @@ DebugUtil::GraphFormat DebugUtil::GetDefaultGraphFormat() {
   return format;
 }
 
-std::string DebugUtil::GetTensorsGraphInfo(
-    tensorflow::gtl::ArraySlice<const XLATensor> tensors,
-    const std::vector<size_t>* indices, GraphFormat format) {
+std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
+                                           const std::vector<size_t>* indices,
+                                           GraphFormat format) {
   std::vector<const ir::Node*> root_nodes;
   std::vector<ir::Value> root_values;
   if (indices != nullptr) {
@@ -91,9 +91,10 @@ std::string DebugUtil::GetTensorsGraphInfo(
   return ss.str();
 }
 
-void DebugUtil::SaveTensorsGraphInfo(
-    const char* name, tensorflow::gtl::ArraySlice<const XLATensor> tensors,
-    const std::vector<size_t>* indices, GraphFormat format) {
+void DebugUtil::SaveTensorsGraphInfo(const char* name,
+                                     absl::Span<const XLATensor> tensors,
+                                     const std::vector<size_t>* indices,
+                                     GraphFormat format) {
   static const std::string save_file =
       xla::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "");
   if (!save_file.empty()) {

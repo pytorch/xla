@@ -41,9 +41,9 @@ const xla::Shape& GetParameterShape(const ir::Output& operand,
              : xla::ShapeUtil::GetTupleElementShape(input_shape, operand.index);
 }
 
-size_t ComputeNodeKey(
-    const ir::Node* node,
-    tensorflow::gtl::ArraySlice<const xla::Shape*> input_shapes, size_t seed) {
+size_t ComputeNodeKey(const ir::Node* node,
+                      absl::Span<const xla::Shape* const> input_shapes,
+                      size_t seed) {
   size_t key = seed;
   const auto& operands = node->operands();
   for (size_t i = 0; i < operands.size(); ++i) {
@@ -55,8 +55,7 @@ size_t ComputeNodeKey(
 }
 
 xla::XlaComputation BuildNodeComputation(
-    const ir::Node* node,
-    tensorflow::gtl::ArraySlice<const xla::Shape*> input_shapes,
+    const ir::Node* node, absl::Span<const xla::Shape* const> input_shapes,
     const Device& device) {
   ir::LoweringContext loctx("BuildNodeComputation");
   const auto& operands = node->operands();
@@ -73,7 +72,7 @@ xla::XlaComputation BuildNodeComputation(
 }
 
 size_t GetNodesKeySeed(const std::string& device,
-                       tensorflow::gtl::ArraySlice<const std::string> devices) {
+                       absl::Span<const std::string> devices) {
   return xla::util::MHash(device, devices);
 }
 
@@ -83,9 +82,8 @@ OpByOpExecutor::OpByOpExecutor(size_t compile_cache_size)
     : compile_cache_(compile_cache_size) {}
 
 std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
-    tensorflow::gtl::ArraySlice<const ir::Value> roots,
-    const std::string& device,
-    tensorflow::gtl::ArraySlice<const std::string> devices) {
+    absl::Span<const ir::Value> roots, const std::string& device,
+    absl::Span<const std::string> devices) {
   std::vector<const ir::Node*> root_nodes;
   root_nodes.reserve(roots.size());
   for (auto& root : roots) {
@@ -193,18 +191,16 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
 }
 
 std::vector<xla::ComputationClient::DataPtr> OpByOpExecutor::Execute(
-    tensorflow::gtl::ArraySlice<const ir::Value> roots,
-    const std::string& device,
-    tensorflow::gtl::ArraySlice<const std::string> devices) {
+    absl::Span<const ir::Value> roots, const std::string& device,
+    absl::Span<const std::string> devices) {
   auto chained_exec_ops = BuildOps(roots, device, devices);
   return xla::ComputationClient::Get()->ExecuteChained(chained_exec_ops,
                                                        device);
 }
 
 OpByOpExecutor::AsyncTask OpByOpExecutor::ExecuteAsync(
-    tensorflow::gtl::ArraySlice<const ir::Value> roots,
-    const std::string& device,
-    tensorflow::gtl::ArraySlice<const std::string> devices) {
+    absl::Span<const ir::Value> roots, const std::string& device,
+    absl::Span<const std::string> devices) {
   std::vector<ir::Value> roots_vector(roots.begin(), roots.end());
   std::vector<std::string> devices_vector(devices.begin(), devices.end());
   auto taskfn = [this, roots = std::move(roots_vector),

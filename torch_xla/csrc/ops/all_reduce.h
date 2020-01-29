@@ -9,8 +9,7 @@ namespace ops {
 
 class AllReduce : public Node {
  public:
-  AllReduce(AllReduceType reduce_type,
-            tensorflow::gtl::ArraySlice<const Value> operands,
+  AllReduce(AllReduceType reduce_type, absl::Span<const Value> operands,
             const Value& token, double scale,
             std::vector<std::vector<xla::int64>> groups);
 

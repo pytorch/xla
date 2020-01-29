@@ -14,8 +14,9 @@ namespace {
 xla::Shape NodeOutputShape(const Value& input,
                            const std::vector<xla::int64>& size) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp { return BuildExpand(operands[0], size); };
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildExpand(operands[0], size);
+  };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 

@@ -211,7 +211,7 @@ XlaOpVector Node::ReturnOp(xla::XlaOp op, LoweringContext* loctx) const {
   return XlaOpVector({std::move(op)});
 }
 
-XlaOpVector Node::ReturnOps(tensorflow::gtl::ArraySlice<const xla::XlaOp> ops,
+XlaOpVector Node::ReturnOps(absl::Span<const xla::XlaOp> ops,
                             LoweringContext* loctx) const {
   XLA_CHECK_EQ(num_outputs(), ops.size());
   XlaOpVector result;

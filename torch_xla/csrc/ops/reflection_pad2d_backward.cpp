@@ -11,12 +11,10 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(
-    const Value& grad_output, const Value& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding) {
+xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
+                           absl::Span<const xla::int64> padding) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildReflectionPad2dBackward(operands[0], operands[1], padding);
   };
   return InferOutputShape({grad_output.shape(), input.shape()},

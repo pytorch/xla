@@ -44,9 +44,7 @@ namespace ops {
 
 #define PTXLA_BINARY_OP(name, sym, xla_fn)                                     \
   NodePtr name(const Value& input0, const Value& input1) {                     \
-    auto shape_fn =                                                            \
-        [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)            \
-        -> xla::XlaOp {                                                        \
+    auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp { \
       auto promoted = XlaHelpers::Promote(operands[0], operands[1]);           \
       return xla_fn(promoted.first, promoted.second);                          \
     };                                                                         \
@@ -145,7 +143,7 @@ NodePtr ReluOp(const Value& input) {
     return node.ReturnOp(xla_output, loctx);
   };
   auto lower_for_shape_fn =
-      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
     return BuildRelu(operands[0]);
   };
@@ -243,7 +241,7 @@ NodePtr AddMatMulOp(const Value& input, const Value& weight,
     return node.ReturnOp(xla_output, loctx);
   };
   auto lower_for_shape_fn =
-      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
     return xla::Dot(operands[0], operands[1]);
   };
@@ -269,7 +267,7 @@ NodePtr Dot(const Value& input, const Value& weight) {
                          loctx);
   };
   auto lower_for_shape_fn =
-      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
     return xla::Dot(operands[0], operands[1]);
   };
@@ -288,7 +286,7 @@ NodePtr MatMul(const Value& lhs, const Value& rhs) {
     return node.ReturnOp(CreateMatMul(xla_lhs, xla_rhs), loctx);
   };
   auto lower_for_shape_fn =
-      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return CreateMatMul(operands[0], operands[1]);
   };
   return GenericOp(
@@ -309,7 +307,7 @@ NodePtr AdaptiveAvgPool2dBackward(const Value& grad_output,
     return node.ReturnOp(xla_output, loctx);
   };
   auto lower_for_shape_fn =
-      [](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) -> xla::XlaOp {
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2);
     return BuildAdaptiveAvgPool2dBackward(/*out_backprop=*/operands[0],
                                           /*input=*/operands[1]);
@@ -333,8 +331,7 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other) {
     return node.ReturnOp(xla_output, loctx);
   };
   auto lower_for_shape_fn =
-      [kind](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [kind](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildComparisonOp(kind, operands[0], operands[1]);
   };
   return GenericOp(OpKind(kind), {input, other},
@@ -410,7 +407,7 @@ NodePtr ARange(at::Scalar start, at::Scalar end, at::Scalar step,
   return MakeNode<Constant>(std::move(values));
 }
 
-NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
+NodePtr BroadcastTensors(absl::Span<const Value> tensors) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     std::vector<xla::XlaOp> xla_operands;
     for (const Output& operand : node.operands()) {
@@ -423,8 +420,7 @@ NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
     tensor_shapes.push_back(tensor.shape());
   }
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto results = CreateBroadcastTensors(operands);
     return xla::Tuple(results.front().builder(), results);
   };
@@ -436,7 +432,7 @@ NodePtr BroadcastTensors(tensorflow::gtl::ArraySlice<const Value> tensors) {
 
 NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
              c10::optional<at::ScalarType> dtype,
-             tensorflow::gtl::ArraySlice<const xla::int64> dims, bool keepdim) {
+             absl::Span<const xla::int64> dims, bool keepdim) {
   ScopePusher ir_scope(at::aten::norm.toQualString());
   auto dimensions = xla::util::ToVector<xla::int64>(dims);
   if (dimensions.empty()) {

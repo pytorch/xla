@@ -15,8 +15,7 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& logits,
                            const absl::optional<Value>& weight,
                            ReductionMode reduction) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     absl::optional<xla::XlaOp> weight;
     if (operands.size() > 3) {
       weight = operands[3];

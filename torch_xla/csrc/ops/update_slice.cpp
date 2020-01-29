@@ -12,12 +12,10 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(
-    const Value& input, const Value& source,
-    tensorflow::gtl::ArraySlice<const xla::int64> base_indices) {
+xla::Shape NodeOutputShape(const Value& input, const Value& source,
+                           absl::Span<const xla::int64> base_indices) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildUpdateSlice(operands[0], operands[1], base_indices);
   };
   return InferOutputShape({input.shape(), source.shape()}, lower_for_shape_fn);
@@ -25,9 +23,8 @@ xla::Shape NodeOutputShape(
 
 }  // namespace
 
-UpdateSlice::UpdateSlice(
-    const Value& input, const Value& source,
-    tensorflow::gtl::ArraySlice<const xla::int64> base_indices)
+UpdateSlice::UpdateSlice(const Value& input, const Value& source,
+                         absl::Span<const xla::int64> base_indices)
     : Node(xla_update_slice, {input, source},
            [&]() { return NodeOutputShape(input, source, base_indices); },
            /*num_outputs=*/1, xla::util::MHash(base_indices)),

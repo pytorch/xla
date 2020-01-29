@@ -25,8 +25,8 @@ class AsStrided : public Node {
   xla::int64 storage_offset() const { return storage_offset_; }
 
   // We only support strides which are already consistent with the size.
-  static bool StrideIsSupported(tensorflow::gtl::ArraySlice<xla::int64> size,
-                                tensorflow::gtl::ArraySlice<xla::int64> stride);
+  static bool StrideIsSupported(absl::Span<const xla::int64> size,
+                                absl::Span<const xla::int64> stride);
 
  private:
   std::vector<xla::int64> size_;

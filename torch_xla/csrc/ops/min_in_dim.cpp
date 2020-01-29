@@ -12,8 +12,7 @@ namespace {
 
 xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp values = BuildMinInDim(operands[0], dim, keepdim);
     xla::XlaOp indices = BuildArgMin(operands[0], dim, keepdim);
     return xla::Tuple(values.builder(), {values, indices});

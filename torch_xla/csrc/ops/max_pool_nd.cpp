@@ -12,14 +12,13 @@ namespace ops {
 namespace {
 
 // Infers the output shape of the max pooling operation.
-xla::Shape NodeOutputShape(
-    const Value& input, xla::int64 spatial_dim_count,
-    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode) {
+xla::Shape NodeOutputShape(const Value& input, xla::int64 spatial_dim_count,
+                           absl::Span<const xla::int64> kernel_size,
+                           absl::Span<const xla::int64> stride,
+                           absl::Span<const xla::int64> padding,
+                           bool ceil_mode) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1)
         << "Unexpected number of operands: " << operands.size();
     return BuildMaxPoolNd(operands[0], spatial_dim_count, kernel_size, stride,

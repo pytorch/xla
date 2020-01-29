@@ -130,18 +130,17 @@ class XLATensor {
   // the tensors must be on the same device. If wait is true, the sync operation
   // will be run synchronously. The devices argument, if not empty, tells the
   // devices which should be partecipating into the replicated computation.
-  static void SyncTensorsGraph(
-      std::vector<XLATensor>* tensors,
-      tensorflow::gtl::ArraySlice<const std::string> devices, bool wait,
-      bool sync_xla_data);
+  static void SyncTensorsGraph(std::vector<XLATensor>* tensors,
+                               absl::Span<const std::string> devices, bool wait,
+                               bool sync_xla_data);
 
   // Makes sure that any outstanding IR operation accumulated over live tensors,
   // gets turned into device data. If wait is true, the sync operation will be
   // run synchronously. The devices argument, if not empty, tells the devices
   // which should be partecipating into the replicated computation.
-  static void SyncLiveTensorsGraph(
-      const Device* device,
-      tensorflow::gtl::ArraySlice<const std::string> devices, bool wait);
+  static void SyncLiveTensorsGraph(const Device* device,
+                                   absl::Span<const std::string> devices,
+                                   bool wait);
 
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
@@ -149,8 +148,7 @@ class XLATensor {
 
   // Waits for all the outstanding operations on all the supplied devices.
   // If devices is empty, the wait will happen for all local devices.
-  static void WaitDeviceOps(
-      tensorflow::gtl::ArraySlice<const std::string> devices);
+  static void WaitDeviceOps(absl::Span<const std::string> devices);
 
   // Retrieves the PyTorch CPU tensors behind the XLA tensors IR operations.
   // All the tensors must be on the same device.
@@ -316,10 +314,9 @@ class XLATensor {
 
   // Broadcasts the given tensors according to broadcasting semantics.
   static std::vector<XLATensor> broadcast_tensors(
-      tensorflow::gtl::ArraySlice<const XLATensor> tensors);
+      absl::Span<const XLATensor> tensors);
 
-  static XLATensor cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
-                       xla::int64 dim);
+  static XLATensor cat(absl::Span<const XLATensor> tensors, xla::int64 dim);
 
   static XLATensor ceil(const XLATensor& input);
   static void ceil_(XLATensor& input);
@@ -335,9 +332,9 @@ class XLATensor {
 
   // Pad with the given value and size specified by the given list of low and
   // high paddings.
-  static XLATensor constant_pad_nd(
-      const XLATensor& input, tensorflow::gtl::ArraySlice<const xla::int64> pad,
-      at::Scalar value);
+  static XLATensor constant_pad_nd(const XLATensor& input,
+                                   absl::Span<const xla::int64> pad,
+                                   at::Scalar value);
 
   static XLATensor convolution_overrideable(
       const XLATensor& input, const XLATensor& weight, const XLATensor& bias,
@@ -397,7 +394,7 @@ class XLATensor {
   // A generalized contraction between tensors of arbitrary dimension defined by
   // the given equation and applied to the input tensors.
   static XLATensor einsum(const std::string& equation,
-                          tensorflow::gtl::ArraySlice<const XLATensor> tensors);
+                          absl::Span<const XLATensor> tensors);
 
   static XLATensor elu(const XLATensor& input, at::Scalar alpha,
                        at::Scalar scale, at::Scalar input_scale);
@@ -447,7 +444,7 @@ class XLATensor {
 
   // Flips (reverses) the values in the dimensions of the input tensor.
   static XLATensor flip(const XLATensor& input,
-                        tensorflow::gtl::ArraySlice<const xla::int64> dims);
+                        absl::Span<const xla::int64> dims);
 
   static XLATensor floor(const XLATensor& input);
   static void floor_(XLATensor& input);
@@ -460,7 +457,7 @@ class XLATensor {
   static XLATensor frac(const XLATensor& input);
   static void frac_(XLATensor& input);
 
-  static XLATensor full(tensorflow::gtl::ArraySlice<const xla::int64> size,
+  static XLATensor full(absl::Span<const xla::int64> size,
                         at::Scalar fill_value, const Device& device,
                         at::ScalarType scalar_type);
   static XLATensor full_like(const XLATensor& input, at::Scalar fill_value,
@@ -491,7 +488,7 @@ class XLATensor {
   // x ik, the output shape is d1 x ... x d(start_dim) x i1 x ... x ik x
   // d(start_dim+p+1) x ... x dn.
   static XLATensor index(const XLATensor& input,
-                         tensorflow::gtl::ArraySlice<const XLATensor> indices,
+                         absl::Span<const XLATensor> indices,
                          xla::int64 start_dim);
 
   static XLATensor index_add(const XLATensor& input, xla::int64 dim,
@@ -524,17 +521,17 @@ class XLATensor {
 
   // Puts values into the input tensor using the given indices (a tuple of
   // tensors) and returns the result.
-  static XLATensor index_put(
-      const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const XLATensor> indices,
-      xla::int64 start_dim, const XLATensor& values, bool accumulate,
-      tensorflow::gtl::ArraySlice<const xla::int64> result_permutation);
+  static XLATensor index_put(const XLATensor& input,
+                             absl::Span<const XLATensor> indices,
+                             xla::int64 start_dim, const XLATensor& values,
+                             bool accumulate,
+                             absl::Span<const xla::int64> result_permutation);
 
-  static void index_put_(
-      XLATensor& input, const XLATensor& canonical_base,
-      tensorflow::gtl::ArraySlice<const XLATensor> indices,
-      xla::int64 start_dim, const XLATensor& values, bool accumulate,
-      tensorflow::gtl::ArraySlice<const xla::int64> result_permutation);
+  static void index_put_(XLATensor& input, const XLATensor& canonical_base,
+                         absl::Span<const XLATensor> indices,
+                         xla::int64 start_dim, const XLATensor& values,
+                         bool accumulate,
+                         absl::Span<const xla::int64> result_permutation);
 
   static XLATensor index_select(const XLATensor& input, xla::int64 dim,
                                 const XLATensor& index);
@@ -726,7 +723,7 @@ class XLATensor {
 
   // Permute the dimensions of this tensor according to the given permutation.
   static XLATensor permute(const XLATensor& input,
-                           tensorflow::gtl::ArraySlice<const xla::int64> dims);
+                           absl::Span<const xla::int64> dims);
 
   static XLATensor pow(const XLATensor& input, at::Scalar exponent);
   static XLATensor pow(const XLATensor& input, const XLATensor& exponent);
@@ -866,8 +863,7 @@ class XLATensor {
   static void squeeze_(XLATensor& input);
   static void squeeze_(XLATensor& input, xla::int64 dim);
 
-  static XLATensor stack(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
-                         xla::int64 dim);
+  static XLATensor stack(absl::Span<const XLATensor> tensors, xla::int64 dim);
 
   static XLATensor std(const XLATensor& input,
                        std::vector<xla::int64> dimensions,
@@ -973,9 +969,8 @@ class XLATensor {
       std::vector<xla::int64> input_size);
 
   // Like reshape, but it returns a view into the original tensor.
-  static XLATensor view(
-      const XLATensor& input,
-      tensorflow::gtl::ArraySlice<const xla::int64> output_size);
+  static XLATensor view(const XLATensor& input,
+                        absl::Span<const xla::int64> output_size);
 
   static void zero_(XLATensor& input);
 
@@ -1150,25 +1145,21 @@ class XLATensor {
   // Runs an asynchronous syn operation using the op-by-op executor.
   using OpByOpAsync = xla::util::AsyncTask<xla::Status>;
   static OpByOpAsync SyncTensorsGraphOpByOp(
-      std::vector<XLATensor>* tensors,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
+      std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
       const SyncTensorsConfig& config);
 
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.
   static std::vector<xla::ComputationClient::DataPtr> GatherTensorsXlaData(
-      const std::vector<XLATensor>& tensors,
-      tensorflow::gtl::ArraySlice<const size_t> indices,
-      tensorflow::gtl::ArraySlice<const xla::ComputationClient::DataPtr>
-          tensors_data);
+      const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
+      absl::Span<const xla::ComputationClient::DataPtr> tensors_data);
 
   static std::vector<ir::Value> CollectRoots(
-      const std::vector<XLATensor>& tensors,
-      tensorflow::gtl::ArraySlice<const size_t> indices);
+      const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices);
 
   static std::vector<xla::ComputationClient::DataPtr> FetchTensorData(
       std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
-      tensorflow::gtl::ArraySlice<const size_t> indices);
+      absl::Span<const size_t> indices);
 
   // Schedules the execution of a sync tensors operation in background. The
   // asynchronous operation will hold the device locks by capturing the ones
@@ -1186,26 +1177,24 @@ class XLATensor {
       std::string device, ComputationCache::TypePtr cached_computation);
 
   static std::vector<xla::ComputationClient::DataPtr> FetchParameters(
-      const std::vector<XLATensor>& tensors,
-      tensorflow::gtl::ArraySlice<const size_t> indices, size_t* graph_size);
+      const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
+      size_t* graph_size);
 
   static ComputationCache::TypePtr LookupCachedCompile(
       const std::vector<XLATensor>& tensors, size_t hash,
-      tensorflow::gtl::ArraySlice<const size_t> indices,
+      absl::Span<const size_t> indices,
       std::vector<xla::ComputationClient::DataPtr>* parameters_data);
 
   static std::shared_ptr<Async> TryRunCachedSync(
       std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
       SyncTensorCollection* coll);
 
-  static CompilationResult Compile(
-      const std::vector<XLATensor>& tensors,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
-      const SyncTensorCollection& coll);
+  static CompilationResult Compile(const std::vector<XLATensor>& tensors,
+                                   absl::Span<const std::string> devices,
+                                   const SyncTensorCollection& coll);
 
   static std::shared_ptr<Async> SyncTensorsGraphInternal(
-      std::vector<XLATensor>* tensors,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
+      std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
       const SyncTensorsConfig& config);
 
   static ir::Value CreateTensorNode(xla::ComputationClient::DataPtr data);

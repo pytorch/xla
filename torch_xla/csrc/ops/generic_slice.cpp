@@ -12,22 +12,21 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(
-    const Value& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> base_indices,
-    tensorflow::gtl::ArraySlice<const xla::int64> sizes) {
+xla::Shape NodeOutputShape(const Value& input,
+                           absl::Span<const xla::int64> base_indices,
+                           absl::Span<const xla::int64> sizes) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp { return BuildSlice(operands[0], base_indices, sizes); };
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildSlice(operands[0], base_indices, sizes);
+  };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
 
 }  // namespace
 
-GenericSlice::GenericSlice(
-    const Value& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> base_indices,
-    tensorflow::gtl::ArraySlice<const xla::int64> sizes)
+GenericSlice::GenericSlice(const Value& input,
+                           absl::Span<const xla::int64> base_indices,
+                           absl::Span<const xla::int64> sizes)
     : Node(xla_generic_slice, {input},
            [&]() { return NodeOutputShape(input, base_indices, sizes); },
            /*num_outputs=*/1, xla::util::MHash(base_indices, sizes)),

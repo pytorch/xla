@@ -13,9 +13,8 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(
-    const Value& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_sizes) {
+xla::Shape NodeOutputShape(const Value& input,
+                           absl::Span<const xla::int64> output_sizes) {
   const xla::Shape& input_shape = input.shape();
   auto info = XlaHelpers::GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {

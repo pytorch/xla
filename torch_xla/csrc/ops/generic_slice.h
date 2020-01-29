@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tensorflow/core/lib/gtl/array_slice.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -9,9 +9,8 @@ namespace ops {
 
 class GenericSlice : public Node {
  public:
-  GenericSlice(const Value& input,
-               tensorflow::gtl::ArraySlice<const xla::int64> base_indices,
-               tensorflow::gtl::ArraySlice<const xla::int64> sizes);
+  GenericSlice(const Value& input, absl::Span<const xla::int64> base_indices,
+               absl::Span<const xla::int64> sizes);
 
   NodePtr Clone(OpList operands) const override;
 

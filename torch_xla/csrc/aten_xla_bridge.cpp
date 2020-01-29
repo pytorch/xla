@@ -76,8 +76,7 @@ void ReplaceXlaTensor(const at::Tensor& tensor, XLATensor new_xla_tensor) {
   impl->set_tensor(std::move(new_xla_tensor));
 }
 
-std::vector<XLATensor> GetXlaTensors(
-    tensorflow::gtl::ArraySlice<const at::Tensor> tensors) {
+std::vector<XLATensor> GetXlaTensors(absl::Span<const at::Tensor> tensors) {
   std::vector<XLATensor> xla_tensors;
   xla_tensors.reserve(tensors.size());
   for (const auto& tensor : tensors) {
@@ -123,10 +122,9 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors) {
   return aten_xla_tensors;
 }
 
-void XlaUpdateTensors(
-    tensorflow::gtl::ArraySlice<const at::Tensor> dest_xla_tensors,
-    tensorflow::gtl::ArraySlice<const at::Tensor> source_cpu_tensors,
-    tensorflow::gtl::ArraySlice<const size_t> indices) {
+void XlaUpdateTensors(absl::Span<const at::Tensor> dest_xla_tensors,
+                      absl::Span<const at::Tensor> source_cpu_tensors,
+                      absl::Span<const size_t> indices) {
   for (auto index : indices) {
     auto xtensor = TryGetXlaTensor(dest_xla_tensors.at(index));
     if (xtensor) {
@@ -230,7 +228,7 @@ at::Tensor AtenFromXlaTensor(XLATensor xla_tensor) {
 }
 
 std::vector<at::Tensor> AtenFromXlaTensors(
-    tensorflow::gtl::ArraySlice<const XLATensor> xla_tensors) {
+    absl::Span<const XLATensor> xla_tensors) {
   std::vector<at::Tensor> tensors;
   tensors.reserve(xla_tensors.size());
   for (auto& tensor : xla_tensors) {

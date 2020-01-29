@@ -11,8 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::XlaOp LowerAsStrided(xla::XlaOp input,
-                          tensorflow::gtl::ArraySlice<xla::int64> size,
+xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64> size,
                           xla::int64 storage_offset) {
   xla::int64 input_element_count =
       xla::ShapeUtil::ElementsIn(XlaHelpers::ShapeOfXlaOp(input));
@@ -29,11 +28,10 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input,
 }
 
 xla::Shape NodeOutputShape(const Value& input,
-                           tensorflow::gtl::ArraySlice<xla::int64> size,
+                           absl::Span<const xla::int64> size,
                            xla::int64 storage_offset) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerAsStrided(operands[0], size, storage_offset);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
@@ -65,9 +63,8 @@ XlaOpVector AsStrided::Lower(LoweringContext* loctx) const {
   return ReturnOp(LowerAsStrided(input, size_, storage_offset_), loctx);
 }
 
-bool AsStrided::StrideIsSupported(
-    tensorflow::gtl::ArraySlice<xla::int64> size,
-    tensorflow::gtl::ArraySlice<xla::int64> stride) {
+bool AsStrided::StrideIsSupported(absl::Span<const xla::int64> size,
+                                  absl::Span<const xla::int64> stride) {
   XLA_CHECK_EQ(size.size(), stride.size());
   std::vector<xla::int64> expected_stride(size.size(), 1);
   for (size_t i = size.size(); i > 1; --i) {
