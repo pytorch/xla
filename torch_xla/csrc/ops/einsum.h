@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tensorflow/core/lib/gtl/array_slice.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -9,8 +9,7 @@ namespace ops {
 
 class Einsum : public Node {
  public:
-  Einsum(const std::string& equation,
-         tensorflow::gtl::ArraySlice<const ir::Value> values);
+  Einsum(const std::string& equation, absl::Span<const ir::Value> values);
 
   std::string ToString() const override;
 

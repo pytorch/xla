@@ -12,7 +12,7 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           tensorflow::gtl::ArraySlice<const xla::int64> size) {
+                           absl::Span<const xla::int64> size) {
   return xla::ShapeUtil::MakeShape(input.shape().element_type(), size);
 }
 

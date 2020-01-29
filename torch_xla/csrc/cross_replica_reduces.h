@@ -2,8 +2,8 @@
 
 #include <vector>
 
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace torch_xla {
 
@@ -17,8 +17,8 @@ enum class AllReduceType {
 };
 
 std::vector<xla::XlaOp> BuildAllReduce(
-    AllReduceType reduce_type,
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands, xla::XlaOp token,
-    double scale, const std::vector<std::vector<xla::int64>>& groups);
+    AllReduceType reduce_type, absl::Span<const xla::XlaOp> operands,
+    xla::XlaOp token, double scale,
+    const std::vector<std::vector<xla::int64>>& groups);
 
 }  // namespace torch_xla

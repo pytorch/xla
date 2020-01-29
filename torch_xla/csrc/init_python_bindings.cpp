@@ -46,8 +46,8 @@ c10::optional<Device> GetOptionalDevice(const std::string& device_str) {
 
 std::string GetTensorsDump(
     const std::vector<at::Tensor>& tensors,
-    const std::function<std::string(
-        tensorflow::gtl::ArraySlice<const ir::Node* const>)>& coverter) {
+    const std::function<std::string(absl::Span<const ir::Node* const>)>&
+        coverter) {
   std::vector<const ir::Node*> nodes;
   std::vector<ir::Value> values;
   for (auto& tensor : tensors) {
@@ -339,18 +339,16 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_get_xla_tensors_dot",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
-          auto coverter =
-              [](tensorflow::gtl::ArraySlice<const ir::Node* const> nodes) {
-                return ir::DumpUtil::ToDot(nodes);
-              };
+          auto coverter = [](absl::Span<const ir::Node* const> nodes) {
+            return ir::DumpUtil::ToDot(nodes);
+          };
           return GetTensorsDump(tensors, coverter);
         });
   m.def("_get_xla_tensors_text",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
-          auto coverter =
-              [](tensorflow::gtl::ArraySlice<const ir::Node* const> nodes) {
-                return ir::DumpUtil::ToText(nodes);
-              };
+          auto coverter = [](absl::Span<const ir::Node* const> nodes) {
+            return ir::DumpUtil::ToText(nodes);
+          };
           return GetTensorsDump(tensors, coverter);
         });
   m.def("_get_xla_tensors_hlo",

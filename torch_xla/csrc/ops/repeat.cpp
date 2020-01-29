@@ -11,11 +11,10 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(
-    const Value& input, tensorflow::gtl::ArraySlice<const xla::int64> repeats) {
+xla::Shape NodeOutputShape(const Value& input,
+                           absl::Span<const xla::int64> repeats) {
   auto lower_for_shape_fn =
-      [repeats](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [repeats](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return BuildRepeat(operands[0], repeats);
   };

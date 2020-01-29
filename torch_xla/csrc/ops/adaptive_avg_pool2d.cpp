@@ -11,12 +11,10 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(
-    const Value& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
+xla::Shape NodeOutputShape(const Value& input,
+                           absl::Span<const xla::int64> output_size) {
   auto lower_for_shape_fn =
-      [output_size](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [output_size](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return BuildAdaptiveAvgPool2d(operands[0], output_size);
   };

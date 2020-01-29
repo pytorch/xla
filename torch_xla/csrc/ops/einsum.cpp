@@ -12,13 +12,12 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(tensorflow::gtl::ArraySlice<const ir::Value> values,
+xla::Shape NodeOutputShape(absl::Span<const ir::Value> values,
                            const std::string& equation) {
   XLA_CHECK_EQ(values.size(), 2)
       << "Only two inputs supported for einsum for now";
   auto lower_for_shape_fn =
-      [equation](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [equation](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::Einsum(operands[0], operands[1], equation,
                        XlaHelpers::mat_mul_precision());
   };
@@ -32,8 +31,7 @@ xla::Shape NodeOutputShape(tensorflow::gtl::ArraySlice<const ir::Value> values,
 
 }  // namespace
 
-Einsum::Einsum(const std::string& equation,
-               tensorflow::gtl::ArraySlice<const ir::Value> values)
+Einsum::Einsum(const std::string& equation, absl::Span<const ir::Value> values)
     : Node(ir::OpKind(at::aten::einsum), values,
            [&]() { return NodeOutputShape(values, equation); },
            /*num_outputs=*/1, xla::util::MHash(equation)),

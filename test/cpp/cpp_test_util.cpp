@@ -207,7 +207,7 @@ ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device) {
 }
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
-    tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device) {
+    absl::Span<const ir::Value> roots, const Device& device) {
   ir::LoweringContext lowering_ctx("Execute");
   for (auto node : roots) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(node);
@@ -236,8 +236,7 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
 }
 
 std::vector<at::Tensor> Fetch(
-    tensorflow::gtl::ArraySlice<const xla::ComputationClient::DataPtr>
-        device_data) {
+    absl::Span<const xla::ComputationClient::DataPtr> device_data) {
   std::vector<xla::Literal> literals =
       xla::ComputationClient::Get()->TransferFromServer(device_data);
   std::vector<at::Tensor> tensors;
@@ -248,8 +247,8 @@ std::vector<at::Tensor> Fetch(
   return tensors;
 }
 
-std::vector<at::Tensor> ExecuteAndFetch(
-    tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device) {
+std::vector<at::Tensor> ExecuteAndFetch(absl::Span<const ir::Value> roots,
+                                        const Device& device) {
   auto results = Execute(roots, device);
   return Fetch(results);
 }

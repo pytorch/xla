@@ -15,8 +15,7 @@ xla::Shape NodeOutputShape(const Value& input,
                            std::vector<xla::int64>& dimensions,
                            bool keep_reduced_dimensions, bool unbiased) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildStdDeviation(operands[0], dimensions, keep_reduced_dimensions,
                              unbiased);
   };

@@ -14,15 +14,12 @@ namespace {
 
 xla::Shape NodeOutputShape(
     const Value& grad_output, const Value& input, const Value& weight,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding,
-    tensorflow::gtl::ArraySlice<const xla::int64> dilation, bool transposed,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_padding,
-    xla::int64 groups) {
+    absl::Span<const xla::int64> stride, absl::Span<const xla::int64> padding,
+    absl::Span<const xla::int64> dilation, bool transposed,
+    absl::Span<const xla::int64> output_padding, xla::int64 groups) {
   auto lower_for_shape_fn =
       [stride, padding, dilation, transposed, output_padding,
-       groups](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+       groups](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 3);
     // The precision doesn't matter for shape inference.
     ConvGrads grads = BuildConvolutionBackwardOverrideable(

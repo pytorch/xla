@@ -11,11 +11,11 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(tensorflow::gtl::ArraySlice<const ir::Value> values,
-                           xla::int64 dim) {
+xla::Shape NodeOutputShape(absl::Span<const ir::Value> values, xla::int64 dim) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp { return BuildCat(operands, dim); };
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildCat(operands, dim);
+  };
   std::vector<xla::Shape> shapes;
   shapes.reserve(values.size());
   for (auto& value : values) {
@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(tensorflow::gtl::ArraySlice<const ir::Value> values,
 
 }  // namespace
 
-Cat::Cat(tensorflow::gtl::ArraySlice<const ir::Value> values, xla::int64 dim)
+Cat::Cat(absl::Span<const ir::Value> values, xla::int64 dim)
     : Node(ir::OpKind(at::aten::cat), values,
            [&]() { return NodeOutputShape(values, dim); },
            /*num_outputs=*/1, xla::util::MHash(dim)),

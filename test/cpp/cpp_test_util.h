@@ -8,8 +8,8 @@
 #include <string>
 #include <unordered_set>
 
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
@@ -77,14 +77,13 @@ std::string GetTensorHloGraph(at::Tensor tensor);
 ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device);
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
-    tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device);
+    absl::Span<const ir::Value> roots, const Device& device);
 
 std::vector<at::Tensor> Fetch(
-    tensorflow::gtl::ArraySlice<const xla::ComputationClient::DataPtr>
-        device_data);
+    absl::Span<const xla::ComputationClient::DataPtr> device_data);
 
-std::vector<at::Tensor> ExecuteAndFetch(
-    tensorflow::gtl::ArraySlice<const ir::Value> roots, const Device& device);
+std::vector<at::Tensor> ExecuteAndFetch(absl::Span<const ir::Value> roots,
+                                        const Device& device);
 
 void TestBackward(
     const std::vector<torch::Tensor>& inputs, const torch::Device& device,

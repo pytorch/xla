@@ -281,8 +281,7 @@ std::vector<xla::XlaOp> BuildConditionIndices(xla::XlaOp condition) {
 
 }  // namespace
 
-xla::XlaOp PadToSize(xla::XlaOp input,
-                     tensorflow::gtl::ArraySlice<const xla::int64> size,
+xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
                      absl::optional<xla::XlaOp> pad_value) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK_EQ(input_shape.rank(), size.size());
@@ -466,7 +465,7 @@ xla::XlaOp BuildRandperm(xla::int64 n, xla::PrimitiveType element_type,
 }
 
 std::vector<xla::XlaOp> CreateBroadcastTensors(
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) {
+    absl::Span<const xla::XlaOp> operands) {
   xla::Shape result_shape = XlaHelpers::ShapeOfXlaOp(operands.front());
   std::vector<xla::Shape> operand_shapes;
   for (const xla::XlaOp operand : operands) {

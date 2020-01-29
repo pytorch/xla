@@ -9,9 +9,8 @@ ShapeBuilder& ShapeBuilder::Add(const xla::Shape& shape, xla::int64 dim) {
   return *this;
 }
 
-ShapeBuilder& ShapeBuilder::Add(
-    const xla::Shape& shape,
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions) {
+ShapeBuilder& ShapeBuilder::Add(const xla::Shape& shape,
+                                absl::Span<const xla::int64> dimensions) {
   dims_.reserve(dimensions.size());
   for (auto dim : dimensions) {
     dims_.push_back({&shape, dim});

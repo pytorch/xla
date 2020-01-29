@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/nll_loss.h"
 
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -15,8 +15,7 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
                            const absl::optional<Value>& weight,
                            ReductionMode reduction, int ignore_index) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     absl::optional<xla::XlaOp> weight;
     if (operands.size() > 2) {
       weight = operands[2];

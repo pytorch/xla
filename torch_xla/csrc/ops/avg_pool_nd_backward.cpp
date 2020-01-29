@@ -11,15 +11,14 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(
-    const Value& grad_output, const Value& input, xla::int64 spatial_dim_count,
-    tensorflow::gtl::ArraySlice<const xla::int64> kernel_size,
-    tensorflow::gtl::ArraySlice<const xla::int64> stride,
-    tensorflow::gtl::ArraySlice<const xla::int64> padding, bool ceil_mode,
-    bool count_include_pad) {
+xla::Shape NodeOutputShape(const Value& grad_output, const Value& input,
+                           xla::int64 spatial_dim_count,
+                           absl::Span<const xla::int64> kernel_size,
+                           absl::Span<const xla::int64> stride,
+                           absl::Span<const xla::int64> padding, bool ceil_mode,
+                           bool count_include_pad) {
   auto lower_for_shape_fn =
-      [&](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2)
         << "Unexpected number of operands: " << operands.size();
     return BuildAvgPoolNdBackward(/*out_backprop=*/operands[0],

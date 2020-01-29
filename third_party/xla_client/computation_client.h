@@ -6,11 +6,11 @@
 #include <vector>
 
 #include "absl/types/optional.h"
+#include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
 
 namespace xla {
 
@@ -147,12 +147,12 @@ class ComputationClient {
 
   // Transfers local tensor values to the TPU servers and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
-      tensorflow::gtl::ArraySlice<const TensorSource> tensors) = 0;
+      absl::Span<const TensorSource> tensors) = 0;
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
   virtual std::vector<Literal> TransferFromServer(
-      tensorflow::gtl::ArraySlice<const DataPtr> handles) = 0;
+      absl::Span<const DataPtr> handles) = 0;
 
   // Compiles a set of computations.
   virtual std::vector<ComputationPtr> Compile(
@@ -163,8 +163,7 @@ class ComputationClient {
   // If options.explode_tuple is true, the output tuple will be decomposed into
   // its single elements.
   virtual std::vector<DataPtr> ExecuteComputation(
-      const Computation& computation,
-      tensorflow::gtl::ArraySlice<const DataPtr> arguments,
+      const Computation& computation, absl::Span<const DataPtr> arguments,
       const std::string& device, const ExecuteComputationOptions& options) = 0;
 
   // Executes the computation in replicated mode.
@@ -181,7 +180,7 @@ class ComputationClient {
   virtual std::vector<std::vector<DataPtr>> ExecuteReplicated(
       const Computation& computation,
       const std::vector<std::vector<DataPtr>>& arguments,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
+      absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) = 0;
 
   // Executes the computations in parallel. Each computation must target a
@@ -192,9 +191,9 @@ class ComputationClient {
   // being the return value of computations[i]. If options.explode_tuple is
   // true, the output tuples will be decomposed into their single elements.
   virtual std::vector<std::vector<DataPtr>> ExecuteParallel(
-      tensorflow::gtl::ArraySlice<const Computation* const> computations,
+      absl::Span<const Computation* const> computations,
       const std::vector<std::vector<DataPtr>>& arguments,
-      tensorflow::gtl::ArraySlice<const std::string> devices,
+      absl::Span<const std::string> devices,
       const ExecuteParallelOptions& options) = 0;
 
   // Executes a serie of operations, whose results are input of other
@@ -204,11 +203,10 @@ class ComputationClient {
   // every ExecuteChainedOp marked with is_result=true, in the order they appear
   // within the ops post-order.
   virtual std::vector<DataPtr> ExecuteChained(
-      tensorflow::gtl::ArraySlice<const ExecuteChainedOp> ops,
-      const std::string& device) = 0;
+      absl::Span<const ExecuteChainedOp> ops, const std::string& device) = 0;
 
   virtual std::vector<std::vector<DataPtr>> DeconstructTuple(
-      tensorflow::gtl::ArraySlice<const DataPtr> tuples) = 0;
+      absl::Span<const DataPtr> tuples) = 0;
 
   // Returns a unique string which identifies the resource domain of a given
   // device. Within a resource domain, handles to device memory or compiled
@@ -241,8 +239,7 @@ class ComputationClient {
   // device will be returned. Otherwise a vector with the devices content will
   // be returned.
   std::vector<std::string> GetCompilationDevices(
-      const std::string& device,
-      tensorflow::gtl::ArraySlice<const std::string> devices) const;
+      const std::string& device, absl::Span<const std::string> devices) const;
 
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.

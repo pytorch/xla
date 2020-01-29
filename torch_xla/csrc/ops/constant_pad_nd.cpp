@@ -13,12 +13,11 @@ namespace ops {
 namespace {
 
 xla::Shape NodeOutputShape(const Value& input,
-                           tensorflow::gtl::ArraySlice<const xla::int64> pad) {
+                           absl::Span<const xla::int64> pad) {
   xla::PrimitiveType input_element_type = input.shape().element_type();
   auto lower_for_shape_fn =
       [input_element_type,
-       pad](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+       pad](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp xla_input = operands[0];
     return xla::Pad(
         xla_input,

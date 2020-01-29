@@ -190,9 +190,9 @@ ReductionMode GetXlaReductionMode(xla::int64 reduction) {
 // Resizes and / or checks whether a list is of the given size. The list is only
 // resized if its size is 1. If it's empty, it's replaced with the provided
 // default first.
-std::vector<xla::int64> CheckIntList(
-    tensorflow::gtl::ArraySlice<const xla::int64> list, size_t length,
-    const std::string& name, std::vector<xla::int64> def = {}) {
+std::vector<xla::int64> CheckIntList(absl::Span<const xla::int64> list,
+                                     size_t length, const std::string& name,
+                                     std::vector<xla::int64> def = {}) {
   std::vector<xla::int64> result;
   if (list.empty()) {
     result = std::move(def);
@@ -251,10 +251,9 @@ void CheckIsIntegralOrPred(const xla::Shape& shape,
       << shape;
 }
 
-ViewInfo CreateAsStridedViewInfo(
-    const xla::Shape& input_shape,
-    tensorflow::gtl::ArraySlice<const xla::int64> size,
-    c10::optional<xla::int64> storage_offset) {
+ViewInfo CreateAsStridedViewInfo(const xla::Shape& input_shape,
+                                 absl::Span<const xla::int64> size,
+                                 c10::optional<xla::int64> storage_offset) {
   xla::Shape result_shape = XlaHelpers::GetDynamicReshape(input_shape, size);
   AsStridedInfo as_strided_info;
   if (storage_offset) {
@@ -648,7 +647,7 @@ XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {
 }
 
 std::vector<XLATensor> XLATensor::broadcast_tensors(
-    tensorflow::gtl::ArraySlice<const XLATensor> tensors) {
+    absl::Span<const XLATensor> tensors) {
   XLA_CHECK(!tensors.empty()) << "broadcast_tensors cannot take an empty list";
   std::vector<ir::Value> tensor_ir_values;
   for (const auto& tensor : tensors) {
@@ -658,8 +657,7 @@ std::vector<XLATensor> XLATensor::broadcast_tensors(
   return tensors.front().MakeOutputTensors(node);
 }
 
-XLATensor XLATensor::cat(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
-                         xla::int64 dim) {
+XLATensor XLATensor::cat(absl::Span<const XLATensor> tensors, xla::int64 dim) {
   // Shape checks for cat:
   // - If not empty, every tensor shape must be the same.
   // - Empty tensor passes but is simply ignore in implementation,
@@ -723,9 +721,9 @@ XLATensor XLATensor::clone(const XLATensor& input) {
   return input.CreateFrom(input.GetIrValue());
 }
 
-XLATensor XLATensor::constant_pad_nd(
-    const XLATensor& input, tensorflow::gtl::ArraySlice<const xla::int64> pad,
-    at::Scalar value) {
+XLATensor XLATensor::constant_pad_nd(const XLATensor& input,
+                                     absl::Span<const xla::int64> pad,
+                                     at::Scalar value) {
   std::vector<xla::int64> complete_pad(pad.begin(), pad.end());
   complete_pad.resize(2 * input.shape().get().rank());
   return input.CreateFrom(ir::MakeNode<ir::ops::ConstantPadNd>(
@@ -880,9 +878,8 @@ void XLATensor::eq_(XLATensor& input, const XLATensor& other) {
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
 }
 
-XLATensor XLATensor::einsum(
-    const std::string& equation,
-    tensorflow::gtl::ArraySlice<const XLATensor> tensors) {
+XLATensor XLATensor::einsum(const std::string& equation,
+                            absl::Span<const XLATensor> tensors) {
   std::vector<ir::Value> tensor_ir_values;
   for (const auto& tensor : tensors) {
     tensor_ir_values.push_back(tensor.GetIrValue());
@@ -991,7 +988,7 @@ void XLATensor::fill_(XLATensor& input, at::Scalar value) {
 }
 
 XLATensor XLATensor::flip(const XLATensor& input,
-                          tensorflow::gtl::ArraySlice<const xla::int64> dims) {
+                          absl::Span<const xla::int64> dims) {
   auto dimensions = XlaHelpers::GetCanonicalDimensionIndices(
       dims, input.shape().get().rank());
   std::set<xla::int64> unique_dims(dimensions.begin(), dimensions.end());
@@ -1037,7 +1034,7 @@ void XLATensor::frac_(XLATensor& input) {
   input.SetIrValue(ir::ops::FracOp(input.GetIrValue()));
 }
 
-XLATensor XLATensor::full(tensorflow::gtl::ArraySlice<const xla::int64> size,
+XLATensor XLATensor::full(absl::Span<const xla::int64> size,
                           at::Scalar fill_value, const Device& device,
                           at::ScalarType scalar_type) {
   xla::Shape shape = MakeArrayShapeFromDimensions(
@@ -1121,7 +1118,7 @@ void XLATensor::gt_(XLATensor& input, const XLATensor& other) {
 }
 
 XLATensor XLATensor::index(const XLATensor& input,
-                           tensorflow::gtl::ArraySlice<const XLATensor> indices,
+                           absl::Span<const XLATensor> indices,
                            xla::int64 start_dim) {
   return IndexByTensors(input, indices, start_dim);
 }
@@ -1186,19 +1183,18 @@ void XLATensor::index_fill_(XLATensor& input, xla::int64 dim,
 }
 
 XLATensor XLATensor::index_put(
-    const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const XLATensor> indices, xla::int64 start_dim,
-    const XLATensor& values, bool accumulate,
-    tensorflow::gtl::ArraySlice<const xla::int64> result_permutation) {
+    const XLATensor& input, absl::Span<const XLATensor> indices,
+    xla::int64 start_dim, const XLATensor& values, bool accumulate,
+    absl::Span<const xla::int64> result_permutation) {
   return input.CreateFrom(IndexPutByTensors(input, indices, start_dim, values,
                                             accumulate, result_permutation));
 }
 
-void XLATensor::index_put_(
-    XLATensor& input, const XLATensor& canonical_base,
-    tensorflow::gtl::ArraySlice<const XLATensor> indices, xla::int64 start_dim,
-    const XLATensor& values, bool accumulate,
-    tensorflow::gtl::ArraySlice<const xla::int64> result_permutation) {
+void XLATensor::index_put_(XLATensor& input, const XLATensor& canonical_base,
+                           absl::Span<const XLATensor> indices,
+                           xla::int64 start_dim, const XLATensor& values,
+                           bool accumulate,
+                           absl::Span<const xla::int64> result_permutation) {
   input.SetIrValue(IndexPutByTensors(canonical_base, indices, start_dim, values,
                                      accumulate, result_permutation));
 }
@@ -1710,9 +1706,8 @@ XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
                 device);
 }
 
-XLATensor XLATensor::permute(
-    const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> dims) {
+XLATensor XLATensor::permute(const XLATensor& input,
+                             absl::Span<const xla::int64> dims) {
   auto input_shape = input.shape();
   ViewInfo view_info(
       ViewInfo::Type::kPermute, input_shape,
@@ -2082,7 +2077,7 @@ void XLATensor::squeeze_(XLATensor& input, xla::int64 dim) {
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank())));
 }
 
-XLATensor XLATensor::stack(tensorflow::gtl::ArraySlice<const XLATensor> tensors,
+XLATensor XLATensor::stack(absl::Span<const XLATensor> tensors,
                            xla::int64 dim) {
   XLA_CHECK_GT(tensors.size(), 0);
   std::vector<ir::Value> values;
@@ -2364,9 +2359,8 @@ XLATensor XLATensor::upsample_nearest2d_backward(
       grad_output.GetIrValue(), std::move(output_size), std::move(input_size)));
 }
 
-XLATensor XLATensor::view(
-    const XLATensor& input,
-    tensorflow::gtl::ArraySlice<const xla::int64> output_size) {
+XLATensor XLATensor::view(const XLATensor& input,
+                          absl::Span<const xla::int64> output_size) {
   auto input_shape = input.shape();
   std::vector<xla::int64> complete_dimensions =
       GetCompleteShape(output_size, input_shape.get().dimensions());

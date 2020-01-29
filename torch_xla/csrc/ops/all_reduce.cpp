@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(tensorflow::gtl::ArraySlice<const Value> operands,
+xla::Shape NodeOutputShape(absl::Span<const Value> operands,
                            const Value& token) {
   std::vector<xla::Shape> tuple_shapes;
   tuple_shapes.reserve(operands.size() + 1);
@@ -22,8 +22,8 @@ xla::Shape NodeOutputShape(tensorflow::gtl::ArraySlice<const Value> operands,
   return xla::ShapeUtil::MakeTupleShape(tuple_shapes);
 }
 
-std::vector<Value> GetOperandList(
-    tensorflow::gtl::ArraySlice<const Value> operands, const Value& token) {
+std::vector<Value> GetOperandList(absl::Span<const Value> operands,
+                                  const Value& token) {
   std::vector<Value> operand_list(operands.begin(), operands.end());
   operand_list.push_back(token);
   return operand_list;
@@ -32,9 +32,8 @@ std::vector<Value> GetOperandList(
 }  // namespace
 
 AllReduce::AllReduce(AllReduceType reduce_type,
-                     tensorflow::gtl::ArraySlice<const Value> operands,
-                     const Value& token, double scale,
-                     std::vector<std::vector<xla::int64>> groups)
+                     absl::Span<const Value> operands, const Value& token,
+                     double scale, std::vector<std::vector<xla::int64>> groups)
     : Node(xla_cross_replica_sum, GetOperandList(operands, token),
            [&]() { return NodeOutputShape(operands, token); },
            /*num_outputs=*/operands.size() + 1,

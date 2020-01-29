@@ -22,10 +22,9 @@ struct SummationResult {
   xla::XlaOp result;
 };
 
-ReductionInfo GetReductionInfo(
-    const xla::Shape& shape,
-    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    bool keep_reduced_dimensions) {
+ReductionInfo GetReductionInfo(const xla::Shape& shape,
+                               absl::Span<const xla::int64> dimensions,
+                               bool keep_reduced_dimensions) {
   ReductionInfo rinfo;
   size_t idim = 0;
   for (xla::int64 i = 0; i < shape.rank(); ++i) {
@@ -68,9 +67,9 @@ xla::XlaComputation CreateAnyComputation(xla::PrimitiveType type) {
   return ConsumeValue(builder.Build());
 }
 
-SummationResult CreateSummation(
-    xla::XlaOp input, tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    bool keep_reduced_dimensions, bool scale) {
+SummationResult CreateSummation(xla::XlaOp input,
+                                absl::Span<const xla::int64> dimensions,
+                                bool keep_reduced_dimensions, bool scale) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp init_value =
       XlaHelpers::ScalarValue<float>(0, shape.element_type(), input.builder());
@@ -94,9 +93,9 @@ SummationResult CreateSummation(
   return result;
 }
 
-xla::XlaOp CreateProduct(
-    xla::XlaOp input, tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    bool keep_reduced_dimensions) {
+xla::XlaOp CreateProduct(xla::XlaOp input,
+                         absl::Span<const xla::int64> dimensions,
+                         bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp init_value =
       XlaHelpers::ScalarValue<float>(1, shape.element_type(), input.builder());
@@ -267,17 +266,16 @@ xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, xla::int64 dim,
       /*base_dilations=*/{}, /*window_dilations=*/{}, padding);
 }
 
-xla::XlaOp BuildMean(xla::XlaOp input,
-                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+xla::XlaOp BuildMean(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
                      bool keep_reduced_dimensions) {
   return CreateSummation(input, dimensions, keep_reduced_dimensions,
                          /*scale=*/true)
       .result;
 }
 
-xla::XlaOp BuildStdDeviation(
-    xla::XlaOp input, tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
-    bool keep_reduced_dimensions, bool unbiased) {
+xla::XlaOp BuildStdDeviation(xla::XlaOp input,
+                             absl::Span<const xla::int64> dimensions,
+                             bool keep_reduced_dimensions, bool unbiased) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp mean =
       BuildMean(input, dimensions, /*keep_reduced_dimensions*/ true);
@@ -308,16 +306,14 @@ xla::XlaOp BuildStdDeviation(
   return xla::Sqrt(squared_result);
 }
 
-xla::XlaOp BuildSum(xla::XlaOp input,
-                    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+xla::XlaOp BuildSum(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
                     bool keep_reduced_dimensions) {
   return CreateSummation(input, dimensions, keep_reduced_dimensions,
                          /*scale=*/false)
       .result;
 }
 
-xla::XlaOp BuildProd(xla::XlaOp input,
-                     tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+xla::XlaOp BuildProd(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
                      bool keep_reduced_dimensions) {
   return CreateProduct(input, dimensions, keep_reduced_dimensions);
 }
@@ -396,8 +392,7 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, xla::int64 dim, bool keepdim) {
   return result;
 }
 
-xla::XlaOp BuildAll(xla::XlaOp input,
-                    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
                     bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   ReductionInfo rinfo =
@@ -413,8 +408,7 @@ xla::XlaOp BuildAll(xla::XlaOp input,
   return result;
 }
 
-xla::XlaOp BuildAny(xla::XlaOp input,
-                    tensorflow::gtl::ArraySlice<const xla::int64> dimensions,
+xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
                     bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   ReductionInfo rinfo =

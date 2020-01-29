@@ -14,8 +14,7 @@ namespace {
 xla::Shape NodeOutputShape(const Value& base, const Value& indices,
                            xla::int64 start_dim) {
   auto lower_for_shape_fn =
-      [start_dim](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [start_dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 2);
     return CreateIndex(operands[0], operands[1], start_dim);
   };

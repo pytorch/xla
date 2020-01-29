@@ -38,8 +38,7 @@ xla::Shape NodeOutputShape(const Value& input, const Value& weight,
                            const Value& bias, const Value& running_mean,
                            const Value& running_var, bool training) {
   auto lower_for_shape_fn =
-      [training](tensorflow::gtl::ArraySlice<const xla::XlaOp> operands)
-      -> xla::XlaOp {
+      [training](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     std::vector<xla::XlaOp> values =
         LowerBatchNorm(operands[0], operands[1], operands[2], operands[3],
                        operands[4], training, 0.5);

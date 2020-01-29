@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "tensorflow/core/lib/gtl/array_slice.h"
+#include "absl/types/span.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -32,21 +32,18 @@ class Util {
   // Same as above, but computes the post order on the set of nodes specified as
   // argument.
   static std::vector<const Node*> ComputePostOrder(
-      tensorflow::gtl::ArraySlice<const Node* const> nodes);
+      absl::Span<const Node* const> nodes);
 
   // Clones the IR graph whose roots are passed in the values parameter.
-  static std::vector<Value> Clone(
-      tensorflow::gtl::ArraySlice<const Value> values);
+  static std::vector<Value> Clone(absl::Span<const Value> values);
 
   // Same as the above, but the post-order is passed as parameter.
-  static std::vector<Value> Clone(
-      tensorflow::gtl::ArraySlice<const Value> values,
-      tensorflow::gtl::ArraySlice<const Node* const> post_order);
+  static std::vector<Value> Clone(absl::Span<const Value> values,
+                                  absl::Span<const Node* const> post_order);
 
   // Retrieves the number of nodes within the graph whose sink are passed in the
   // nodes argument.
-  static size_t GetGraphSize(
-      tensorflow::gtl::ArraySlice<const Node* const> nodes);
+  static size_t GetGraphSize(absl::Span<const Node* const> nodes);
 };
 
 }  // namespace ir

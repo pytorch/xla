@@ -22,8 +22,7 @@ struct ReduceContext {
   std::map<xla::PrimitiveType, PerTypeContext> contexts;
 };
 
-xla::Shape MakeReduceShape(
-    tensorflow::gtl::ArraySlice<const xla::Shape> operand_shapes) {
+xla::Shape MakeReduceShape(absl::Span<const xla::Shape> operand_shapes) {
   Device xla_device = GetCurrentDevice();
   std::vector<xla::Shape> shapes_and_layouts;
   shapes_and_layouts.reserve(operand_shapes.size());
@@ -35,8 +34,7 @@ xla::Shape MakeReduceShape(
   return xla::ShapeUtil::MakeTupleShape(shapes_and_layouts);
 }
 
-ReduceContext GetReduceContext(
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands) {
+ReduceContext GetReduceContext(absl::Span<const xla::XlaOp> operands) {
   ReduceContext redux;
   for (size_t i = 0; i < operands.size(); ++i) {
     xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operands[i]);
@@ -71,9 +69,9 @@ xla::XlaComputation GetReduceComutation(AllReduceType reduce_type,
 }  // namespace
 
 std::vector<xla::XlaOp> BuildAllReduce(
-    AllReduceType reduce_type,
-    tensorflow::gtl::ArraySlice<const xla::XlaOp> operands, xla::XlaOp token,
-    double scale, const std::vector<std::vector<xla::int64>>& groups) {
+    AllReduceType reduce_type, absl::Span<const xla::XlaOp> operands,
+    xla::XlaOp token, double scale,
+    const std::vector<std::vector<xla::int64>>& groups) {
   std::vector<xla::ReplicaGroup> reduce_groups;
   for (auto& group : groups) {
     xla::ReplicaGroup rgroup;
