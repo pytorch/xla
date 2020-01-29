@@ -160,7 +160,7 @@ def train_mnist():
       print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
-  xm.master_print('Max Accuracy: {:.2f}%'.format(accuracy))
+  xm.master_print('Max Accuracy: {:.2f}%'.format(max_accuracy))
   return max_accuracy
 
 
