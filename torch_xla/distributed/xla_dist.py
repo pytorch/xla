@@ -11,6 +11,8 @@ import subprocess
 import sys
 import threading
 
+from torch_xla.distributed.cluster import ClusterResolver
+
 
 def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
   concat = ''
