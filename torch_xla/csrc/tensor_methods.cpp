@@ -152,6 +152,13 @@ void CheckRank(const XLATensor& t, xla::int64 expected_rank,
       << " (while checking arguments for " << tag << ")";
 }
 
+template <typename T>
+void CheckShapeDimensions(const T& size) {
+  XLA_CHECK(std::all_of(size.begin(), size.end(), [](xla::int64 dim) {
+    return dim >= 0;
+  })) << "Dimensions cannot be negative numbers";
+}
+
 void CheckDimensionSize(const XLATensor& t, xla::int64 dim,
                         xla::int64 expected_size, const std::string& tag,
                         const std::string& arg_name, int arg_number) {
@@ -1037,6 +1044,7 @@ void XLATensor::frac_(XLATensor& input) {
 XLATensor XLATensor::full(absl::Span<const xla::int64> size,
                           at::Scalar fill_value, const Device& device,
                           at::ScalarType scalar_type) {
+  CheckShapeDimensions(size);
   xla::Shape shape = MakeArrayShapeFromDimensions(
       size, /*dynamic_dimensions=*/{},
       MakeXlaPrimitiveType(scalar_type, &device), device.hw_type);
