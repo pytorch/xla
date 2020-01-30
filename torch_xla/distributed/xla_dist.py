@@ -352,32 +352,30 @@ class DistributedExecutor(object):
     for thread in threads:
       thread.join()
 
-  def _run_cmd(self, cmd, script_map):
-    self.logger.info(
-        'Command to distribute: {}'.format(concat_cmd_list(cmd)),
-        extra={
-            'clientip': '',
-            'ordinal': ''
-        })
-    self.logger.info(
-        f'Cluster configuration: {self._cluster}',
-        extra={
-            'clientip': '',
-            'ordinal': ''
-        })
+  def _run_cmd(self, script_map):
     try:
       self._scp_scripts(script_map)
       self._start_run(script_map)
     except KeyboardInterrupt:
-      pass  # parent process already handles this
+      self.logger.warning(
+        'Child process received Ctrl^C. Exiting...',
+        extra={'clientip': '', 'ordinal': ''})
+      sys.exit(130)  # exit due to SIGINT from child proccess
 
   def run(self, cmd):
     trials = RecentEvents()
     while trials.count() <= self.MAX_TPU_RETRY_PER_HOUR:
       try:
+        self.logger.info(
+            'Command to distribute: {}'.format(concat_cmd_list(cmd)),
+            extra={'clientip': '', 'ordinal': ''})
+        self.logger.info(
+            f'Cluster configuration: {self._cluster}',
+            extra={'clientip': '', 'ordinal': ''})
+
         script_map = self._prepare_scripts(cmd)
         proc = multiprocessing.Process(
-          target=self._run_cmd, args=(cmd, script_map,))
+          target=self._run_cmd, args=(script_map,))
         proc.start()
         while True:
           if not proc.is_alive():
