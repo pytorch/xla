@@ -33,22 +33,35 @@ def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
   return concat
 
 class RecentEvents(object):
+  """Utility class for counting events that happened in the last N seconds."""
 
   def __init__(self, count_history_sec=3600):
+    """Creates a new RecentEvents object.
+
+    Args:
+      count_history_sec: The timespan in seconds to keep track of event counts.
+    """
     self._count_history_sec = count_history_sec
     self._dq = deque()
 
   def _cleanup_events(self):
+    """Helper to cleanup events in the deque that are not in timeframe."""
     cutoff = time.time() - self._count_history_sec
     while len(self._dq) > 0 and self._dq[0] < cutoff:
       self._dq.popleft()
 
   def add(self, count=1):
+    """Adds a number of events to the history of the tracker.
+
+    Args:
+      count: The number of counts to add to the tracker's history.
+    """
     now = time.time()
     for _ in range(count):
       self._dq.append(now)
 
   def count(self):
+    """Returns the count of events within the last count_history_sec."""
     self._cleanup_events()
     return len(self._dq)
 
@@ -67,6 +80,20 @@ class DistributedExecutor(object):
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   MAX_TPU_RETRY_PER_HOUR = 3
 
+  @classmethod
+  def _get_logger(cls):
+    logger = logging.getLogger(cls.__name__)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    formatter = logging.Formatter(
+      fmt='%(asctime)-12s %(clientip)s [%(ordinal)s] %(message)s',
+      datefmt='%Y-%m-%d %H:%M:%S')
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.INFO)
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)
+    return logger
+
   def __init__(self,
                cluster,
                docker_container=None,
@@ -75,16 +102,7 @@ class DistributedExecutor(object):
                conda_env=None,
                env_vars=None):
     self._cluster = cluster
-    self.logger = logging.getLogger(self.__class__.__name__)
-    self.logger.setLevel(logging.INFO)
-    self.logger.propagate = False
-    formatter = logging.Formatter(
-      fmt='%(asctime)-12s %(clientip)s [%(ordinal)s] %(message)s',
-      datefmt='%Y-%m-%d %H:%M:%S')
-    sh = logging.StreamHandler()
-    sh.setLevel(logging.INFO)
-    sh.setFormatter(formatter)
-    self.logger.addHandler(sh)
+    self.logger = self._get_logger()
     self.docker_container = docker_container or self.DEFAULT_CONTAINER_NAME
     self.docker_image = docker_image
     self.docker_run_flags = list(docker_run_flags) if docker_run_flags else None
@@ -363,9 +381,10 @@ class DistributedExecutor(object):
         proc.start()
         while True:
           if not proc.is_alive():
-            sys.exit(0)
-          if self._cluster.is_service_unhealthy_maintenance():
-            # Kill all training, wait for healthy, and restart
+            sys.exit(proc.exitcode)
+          if len(self._cluster.list_tpus_with_health(
+              'UNHEALTHY_MAINTENANCE')) != 0:
+            # TPU Maintenance: kill all training, wait for healthy, and restart
             break
           time.sleep(1)
 
@@ -378,7 +397,7 @@ class DistributedExecutor(object):
           'Cleaning up processes (takes a couple of seconds)',
           extra={'clientip': '', 'ordinal': ''})
         self._cleanup(script_map)
-        sys.exit(0)
+        sys.exit(130)
 
     self.logger.info(
       'Max number of retries reached.', extra={'clientip': '', 'ordinal': ''})

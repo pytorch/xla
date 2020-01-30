@@ -114,26 +114,19 @@ class Cluster(object):
                 client_workers=self._client_workers,
                 service_workers=self._service_workers)
 
-  def _get_all_tpus(self):
+  def list_tpus_with_health(self, health):
+
+    def _tpu_with_health(tpu_name):
+      ctc = cloud_tpu_client.Client(tpu_name)
+      if ctc.health() == health:
+        return tpu_name
+
     tpus = set()
     for service_worker in self._service_workers:
       tpus.add(service_worker._tpu)
-    return list(tpus)
-
-  def is_service_unhealthy_maintenance(self):
-
-    def is_unhealthy_maintenance(tpu_name):
-      ctc = cloud_tpu_client.Client(tpu=tpu_name)
-      return ctc.health() == 'UNHEALTHY_MAINTENANCE'
-
-    tpus = self._get_all_tpus()
     with futures.ThreadPoolExecutor(max_workers=len(tpus)) as executor:
-      results = executor.map(is_unhealthy_maintenance, tpus)
-      for maintenance in results:
-        if maintenance:
-          return True
-
-    return False
+      results = executor.map(_tpu_with_health, tpus)
+      return [tpu_name for tpu_name in results if tpu_name is not None]
 
   def wait_for_healthy_service(self):
 
@@ -141,7 +134,7 @@ class Cluster(object):
       ctc = cloud_tpu_client.Client(tpu=tpu_name)
       ctc.wait_for_healthy()
 
-    tpus = self._get_all_tpus()
+    tpus = self.list_tpus_with_health('UNHEALTHY_MAINTENANCE')
     with futures.ThreadPoolExecutor(max_workers=len(tpus)) as executor:
       results = executor.map(wait_for_healthy_worker, tpus)
       for result in results:
