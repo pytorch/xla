@@ -17,8 +17,6 @@ import time
 import threading
 from torch_xla.distributed.cluster import ClusterResolver
 
-from torch_xla.distributed.cluster import ClusterResolver
-
 
 def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
   concat = ''
@@ -31,39 +29,6 @@ def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
       concat += delimiter
     concat += token
   return concat
-
-class RecentEvents(object):
-  """Utility class for counting events that happened in the last N seconds."""
-
-  def __init__(self, count_history_sec=3600):
-    """Creates a new RecentEvents object.
-
-    Args:
-      count_history_sec: The timespan in seconds to keep track of event counts.
-    """
-    self._count_history_sec = count_history_sec
-    self._dq = deque()
-
-  def _cleanup_events(self):
-    """Helper to cleanup events in the deque that are not in timeframe."""
-    cutoff = time.time() - self._count_history_sec
-    while len(self._dq) > 0 and self._dq[0] < cutoff:
-      self._dq.popleft()
-
-  def add(self, count=1):
-    """Adds a number of events to the history of the tracker.
-
-    Args:
-      count: The number of counts to add to the tracker's history.
-    """
-    now = time.time()
-    for _ in range(count):
-      self._dq.append(now)
-
-  def count(self):
-    """Returns the count of events within the last count_history_sec."""
-    self._cleanup_events()
-    return len(self._dq)
 
 class DistributedExecutor(object):
 
@@ -78,7 +43,7 @@ class DistributedExecutor(object):
       'XRT_SHARD_ORDINAL',
   ]
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
-  MAX_TPU_RETRY_PER_HOUR = 3
+  MAX_TPU_RETRY = 50
 
   @classmethod
   def _get_logger(cls):
@@ -363,8 +328,8 @@ class DistributedExecutor(object):
       sys.exit(130)  # exit due to SIGINT from child proccess
 
   def run(self, cmd):
-    trials = RecentEvents()
-    while trials.count() <= self.MAX_TPU_RETRY_PER_HOUR:
+    trials = 0
+    while trials <= self.MAX_TPU_RETRY:
       try:
         self.logger.info(
             'Command to distribute: {}'.format(concat_cmd_list(cmd)),
@@ -389,7 +354,7 @@ class DistributedExecutor(object):
         self._cleanup(script_map)
         proc.terminate()
         self._cluster.wait_for_healthy_service()
-        trials.add()
+        trials += 1
       except KeyboardInterrupt:
         self.logger.info(
           'Cleaning up processes (takes a couple of seconds)',
