@@ -18,6 +18,10 @@ import re
 import sys
 
 try:
+  import matplotlib
+  # Force matplotlib to use the AGG backend and hence prevent missing DISPLAY
+  # errors when run on terminals.
+  matplotlib.use('AGG')
   import matplotlib.pyplot as plt
 except ImportError:
   pass
