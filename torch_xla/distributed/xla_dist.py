@@ -11,6 +11,7 @@ import logging
 import multiprocessing
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -45,9 +46,8 @@ class DistributedExecutor(object):
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   MAX_TPU_RETRY = 50
 
-  @classmethod
-  def _get_logger(cls):
-    logger = logging.getLogger(cls.__name__)
+  def _get_logger(self):
+    logger = logging.getLogger(self.__class__.__name__)
     logger.setLevel(logging.INFO)
     logger.propagate = False
     formatter = logging.Formatter(
@@ -325,7 +325,7 @@ class DistributedExecutor(object):
       self.logger.warning(
         'Child process received Ctrl^C. Exiting...',
         extra={'clientip': '', 'ordinal': ''})
-      sys.exit(130)  # exit due to SIGINT from child proccess
+      sys.exit(128 + signal.SIGINT)
 
   def run(self, cmd):
     trials = 0
@@ -360,7 +360,7 @@ class DistributedExecutor(object):
           'Cleaning up processes (takes a couple of seconds)',
           extra={'clientip': '', 'ordinal': ''})
         self._cleanup(script_map)
-        sys.exit(130)
+        sys.exit(128 + signal.SIGINT)
 
     self.logger.info(
       'Max number of retries reached.', extra={'clientip': '', 'ordinal': ''})
