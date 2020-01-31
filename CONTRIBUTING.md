@@ -114,3 +114,31 @@ If your PR touches the Python source files, please run the following command bef
 #TODO:
 ```
 
+### Running the Tests
+
+To run the tests, follow __one__ of the options below:
+
+* Run on local CPU using the XRT client:
+
+  ```Shell
+  export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
+  export XRT_WORKERS="localservice:0;grpc://localhost:40934"
+  ```
+
+  Select any free TCP port you prefer instead of 40934 (totally arbitrary).
+
+* Run on Cloud TPU using the XRT client, set the XRT_TPU_CONFIG environment variable:
+
+  ```Shell
+  export XRT_TPU_CONFIG="tpu_worker;0;<IP of the TPU node>:8470"
+  ```
+
+Note that the IP of the TPU node can change if the TPU node is reset. If _PyTorch_
+seem to hang at startup, verify that the IP of your TPU node is still the same of
+the one you have configured.
+
+If you are planning to be building from source and hence using the latest _PyTorch/TPU_ code base,
+it is suggested for you to select the _Nightly_ builds when you create a Cloud TPU instance.
+
+Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is working.
+
