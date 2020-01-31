@@ -1318,6 +1318,29 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest([torch.ones(2, 2, dtype=torch.bfloat16)], test_fn)
 
+  def test_float32_bfloat16_cast(self):
+
+    def test_fn(s, t):
+      s = s.to(torch.bfloat16)
+      t = t.to(torch.bfloat16)
+      v = s + t
+      return v.to(torch.float32)
+
+    self.runAtenTest([torch.ones(2, 2), torch.randn(2, 2)], test_fn)
+
+  def test_bfloat16_float32_cast(self):
+
+    def test_fn(s, t):
+      s = s.to(torch.float32)
+      t = t.to(torch.float32)
+      v = s * t
+      return v.to(torch.bfloat16)
+
+    self.runAtenTest([
+        torch.ones(2, 2).to(torch.bfloat16),
+        torch.randn(2, 2).to(torch.bfloat16)
+    ], test_fn)
+
 
 class MNISTComparator(nn.Module):
 
