@@ -494,7 +494,8 @@ class ClusterResolverTest(unittest.TestCase):
             port='8470',
             machine_type='v3-32',
             zone='fake-zone',
-            runtime_version='pytorch-nightly') for ip in range(4)
+            runtime_version='pytorch-nightly',
+            tpu='fake-pod') for ip in range(4)
     ]
     self.assertCountEqual(expected, service_workers)
 
@@ -523,7 +524,8 @@ class ClusterResolverTest(unittest.TestCase):
             port='8470',
             machine_type='v3-8',
             zone='fake-zone',
-            runtime_version='pytorch-nightly') for ip in range(256)
+            runtime_version='pytorch-nightly',
+            tpu=f'fake-tpu-{ip}') for ip in range(256)
     ]
     self.assertCountEqual(expected, service_workers)
 
@@ -649,7 +651,8 @@ class ClusterResolverTest(unittest.TestCase):
             port='8470',
             machine_type='v3-32',
             zone='fake-zone',
-            runtime_version='pytorch-nightly') for ip in range(4)
+            runtime_version='pytorch-nightly',
+            tpu='fake-pod') for ip in range(4)
     ]
     expected = Cluster(expected_client_workers, expected_service_workers)
     self.assertEqual(expected, cluster)
