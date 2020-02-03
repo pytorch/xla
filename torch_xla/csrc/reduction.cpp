@@ -47,9 +47,8 @@ xla::XlaComputation CreateAllComputation(xla::PrimitiveType type) {
       xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
   xla::XlaOp y =
       xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
-  xla::XlaOp zero =
-      xla::ConstantLiteral(&builder, xla::LiteralUtil::Zero(type));
-  xla::XlaOp one = xla::ConstantLiteral(&builder, xla::LiteralUtil::One(type));
+  xla::XlaOp zero = xla::Zero(&builder, type);
+  xla::XlaOp one = xla::One(&builder, type);
   xla::Select(xla::And(xla::Ne(x, zero), xla::Ne(y, zero)), one, zero);
   return ConsumeValue(builder.Build());
 }
@@ -60,9 +59,8 @@ xla::XlaComputation CreateAnyComputation(xla::PrimitiveType type) {
       xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
   xla::XlaOp y =
       xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
-  xla::XlaOp zero =
-      xla::ConstantLiteral(&builder, xla::LiteralUtil::Zero(type));
-  xla::XlaOp one = xla::ConstantLiteral(&builder, xla::LiteralUtil::One(type));
+  xla::XlaOp zero = xla::Zero(&builder, type);
+  xla::XlaOp one = xla::One(&builder, type);
   xla::Select(xla::Or(xla::Ne(x, zero), xla::Ne(y, zero)), one, zero);
   return ConsumeValue(builder.Build());
 }
