@@ -1323,7 +1323,7 @@ class TestAtenXlaTensor(XlaTestCase):
     def test_fn(s, t):
       s = s.to(torch.bfloat16)
       t = t.to(torch.bfloat16)
-      v = s + t
+      v = s * t
       return v.to(torch.float32)
 
     self.runAtenTest([torch.ones(2, 2), torch.randn(2, 2)], test_fn)
