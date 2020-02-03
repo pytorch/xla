@@ -479,6 +479,7 @@ XLATensor XLATensor::any(const XLATensor& input,
 void XLATensor::arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
                            at::Scalar step, at::ScalarType scalar_type) {
   out.SetIrValue(ir::ops::ARange(start, end, step, scalar_type));
+  out.SetScalarType(scalar_type);
 }
 
 XLATensor XLATensor::as_strided(const XLATensor& input,
