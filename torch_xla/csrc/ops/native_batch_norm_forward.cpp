@@ -21,7 +21,7 @@ std::vector<xla::XlaOp> LowerBatchNorm(xla::XlaOp input, xla::XlaOp weight,
         BuildBatchNormTraining(input, weight, bias, eps);
     values.push_back(std::move(batch_norm_output.output));
     values.push_back(std::move(batch_norm_output.batch_mean));
-    values.push_back(std::move(batch_norm_output.batch_variance));
+    values.push_back(batch_norm_output.batch_variance);
     values.push_back(
         BatchNormVarianceInvert(batch_norm_output.batch_variance, eps));
   } else {

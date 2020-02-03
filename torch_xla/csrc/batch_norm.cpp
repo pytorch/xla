@@ -21,14 +21,13 @@ xla::XlaOp BatchNormVarianceInvert(xla::XlaOp variance, float eps_value) {
   const xla::Shape& variance_shape = XlaHelpers::ShapeOfXlaOp(variance);
   xla::XlaOp eps = XlaHelpers::ScalarValue(
       eps_value, variance_shape.element_type(), variance.builder());
-  return xla::One(variance.builder(), variance_shape.element_type()) /
-         xla::Sqrt(variance + eps);
+  return xla::Rsqrt(variance + eps);
 }
 
 BatchNormOutput BuildBatchNormTraining(xla::XlaOp input, xla::XlaOp weight,
                                        xla::XlaOp bias, float eps_value) {
-  xla::XlaOp outputs =
-      xla::BatchNormTraining(input, weight, bias, eps_value, 1);
+  xla::XlaOp outputs = xla::BatchNormTraining(input, weight, bias, eps_value,
+                                              /*feature_index=*/1);
   xla::XlaOp output = xla::GetTupleElement(outputs, 0);
   xla::XlaOp batch_mean = xla::GetTupleElement(outputs, 1);
   xla::XlaOp batch_variance = xla::GetTupleElement(outputs, 2);
@@ -39,7 +38,7 @@ xla::XlaOp BuildBatchNormInference(xla::XlaOp input, xla::XlaOp weight,
                                    xla::XlaOp bias, xla::XlaOp mean,
                                    xla::XlaOp variance, float eps_value) {
   return xla::BatchNormInference(input, weight, bias, mean, variance, eps_value,
-                                 1);
+                                 /*feature_index=*/1);
 }
 
 BatchNormGrads BuildBatchNormBackward(xla::XlaOp grad, xla::XlaOp input,
@@ -48,7 +47,7 @@ BatchNormGrads BuildBatchNormBackward(xla::XlaOp grad, xla::XlaOp input,
                                       float eps_value) {
   xla::XlaOp grads = xla::BatchNormGrad(input, weight, save_mean,
                                         VarianceRecover(save_invstd, eps_value),
-                                        grad, eps_value, 1);
+                                        grad, eps_value, /*feature_index=*/1);
   xla::XlaOp grad_input = xla::GetTupleElement(grads, 0);
   xla::XlaOp grad_weight = xla::GetTupleElement(grads, 1);
   xla::XlaOp grad_bias = xla::GetTupleElement(grads, 2);

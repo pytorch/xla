@@ -1600,7 +1600,7 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
   ir::Value running_mean_value =
       GetIrValueOrDefault(running_mean, 0, features_shape, input.GetDevice());
   ir::Value running_var_value =
-      GetIrValueOrDefault(running_var, 1, features_shape, input.GetDevice());
+      GetIrValueOrDefault(running_var, 0, features_shape, input.GetDevice());
   ir::NodePtr node = ir::MakeNode<ir::ops::NativeBatchNormForward>(
       input.GetIrValue(), weight_value, bias_value, running_mean_value,
       running_var_value, training, eps);
@@ -1609,7 +1609,6 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
   XLATensor variance_inverse;
   if (training) {
     mean = input.CreateFrom(ir::Value(node, 1));
-    XLATensor variance = input.CreateFrom(ir::Value(node, 2));
     variance_inverse = input.CreateFrom(ir::Value(node, 3));
     if (!running_mean.is_null()) {
       running_mean.SetIrValue(ir::MakeNode<ir::ops::LinearInterpolation>(
@@ -1617,7 +1616,7 @@ std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::native_batch_norm(
     }
     if (!running_var.is_null()) {
       running_var.SetIrValue(ir::MakeNode<ir::ops::LinearInterpolation>(
-          variance.GetIrValue(), running_var.GetIrValue(), momentum));
+          ir::Value(node, 2), running_var.GetIrValue(), momentum));
     }
   }
   return std::make_tuple(std::move(output), std::move(mean),
