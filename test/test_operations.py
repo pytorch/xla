@@ -1326,7 +1326,8 @@ class TestAtenXlaTensor(XlaTestCase):
       v = s + t
       return v.to(torch.float32)
 
-    self.runAtenTest([torch.ones(2, 2), torch.randn(2, 2)], test_fn)
+    self.runAtenTest(
+            [torch.ones(2, 2), torch.randn(2, 2)], test_fn, rel_err=5e-1)
 
   def test_bfloat16_float32_cast(self):
 
