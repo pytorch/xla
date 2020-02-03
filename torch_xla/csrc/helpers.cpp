@@ -359,7 +359,7 @@ std::vector<xla::int64> XlaHelpers::MakeTransposePermutation(xla::int64 dim0,
 xla::XlaOp XlaHelpers::LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
                                            double alpha) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(value0);
-  xla::XlaOp one = ScalarValue(1.0, shape.element_type(), value0.builder());
+  xla::XlaOp one = xla::One(value0.builder(), shape.element_type());
   xla::XlaOp alpha_value =
       ScalarValue(alpha, shape.element_type(), value0.builder());
   return value0 * alpha_value + value1 * (one - alpha_value);
