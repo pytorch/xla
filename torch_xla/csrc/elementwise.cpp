@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/elementwise.h"
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -93,9 +94,9 @@ xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
 xla::XlaOp BuildHardtanhBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                  at::Scalar min_val, at::Scalar max_val) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(grad_output);
-  xla::XlaOp zero = xla::Broadcast(
-      XlaHelpers::ScalarValue(0, shape.element_type(), grad_output.builder()),
-      shape.dimensions());
+  xla::XlaOp zero =
+      xla::Broadcast(xla::Zero(grad_output.builder(), shape.element_type()),
+                     shape.dimensions());
   return xla::Select(Between(input, min_val, max_val), grad_output, zero);
 }
 
@@ -106,10 +107,8 @@ xla::XlaOp BuildLeakyRelu(xla::XlaOp input, double negative_slope_value) {
 std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, at::Scalar lower,
                                    at::Scalar upper, bool training) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp zero =
-      XlaHelpers::ScalarValue(0, shape.element_type(), input.builder());
-  xla::XlaOp one =
-      XlaHelpers::ScalarValue(1, shape.element_type(), input.builder());
+  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp one = xla::One(input.builder(), shape.element_type());
   xla::XlaOp noise;
   xla::XlaOp output;
   if (training) {
@@ -132,8 +131,7 @@ xla::XlaOp BuildRreluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                               xla::XlaOp noise, at::Scalar lower,
                               at::Scalar upper, bool training) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp zero =
-      XlaHelpers::ScalarValue(0, input_shape.element_type(), input.builder());
+  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
   xla::XlaOp grad_input;
   if (training) {
     grad_input = noise * grad_output;
@@ -150,8 +148,7 @@ xla::XlaOp BuildRreluBackward(xla::XlaOp grad_output, xla::XlaOp input,
 xla::XlaOp BuildLeakyReluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                   double negative_slope_value) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp zero = XlaHelpers::ScalarValue<double>(
-      0, input_shape.element_type(), input.builder());
+  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
   xla::XlaOp negative_slope = XlaHelpers::ScalarValue(
       negative_slope_value, input_shape.element_type(), input.builder());
   return xla::Select(xla::Gt(input, zero), grad_output,
@@ -167,15 +164,13 @@ xla::XlaOp BuildSigmoid(xla::XlaOp input) {
 
 xla::XlaOp BuildReciprocal(xla::XlaOp input) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp one =
-      XlaHelpers::ScalarValue<float>(1., shape.element_type(), input.builder());
+  xla::XlaOp one = xla::One(input.builder(), shape.element_type());
   return xla::Div(one, input);
 }
 
 xla::XlaOp BuildSign(xla::XlaOp input) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp zero =
-      XlaHelpers::ScalarValue<float>(0., shape.element_type(), input.builder());
+  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
   xla::XlaOp sign =
       xla::primitive_util::IsUnsignedIntegralType(shape.element_type())
           ? xla::ConvertElementType(xla::Gt(input, zero), shape.element_type())

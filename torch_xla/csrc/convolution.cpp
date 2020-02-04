@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/convolution.h"
 
 #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/kernels/conv_grad_ops.h"
@@ -236,8 +237,7 @@ xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {
   // with number of output features elements.
   return xla::Reduce(
       grad_output,
-      XlaHelpers::ScalarValue<float>(0, grad_output_shape.element_type(),
-                                     grad_output.builder()),
+      xla::Zero(grad_output.builder(), grad_output_shape.element_type()),
       XlaHelpers::CreateAddComputation(grad_output_shape.element_type()),
       BiasReduceDimensions(grad_output_shape.rank()));
 }

@@ -50,12 +50,12 @@ DiagonalMask CreateDiagonalMask(xla::XlaOp input,
   xla::PaddingConfig padding_config =
       CreateDiagonalPaddingConfig(target_shape, input_shape, offset);
   xla::XlaOp zero_scalar =
-      XlaHelpers::ScalarValue(0, input_shape.element_type(), input.builder());
+      xla::Zero(input.builder(), input_shape.element_type());
   xla::XlaOp source = xla::Reshape(xla::Pad(input, zero_scalar, padding_config),
                                    target_shape.dimensions());
 
   xla::XlaOp false_scalar =
-      XlaHelpers::ScalarValue(false, xla::PrimitiveType::PRED, input.builder());
+      xla::Zero(input.builder(), xla::PrimitiveType::PRED);
   xla::XlaOp empty_mask =
       XlaHelpers::ScalarBroadcast(true, xla::PrimitiveType::PRED,
                                   input_shape.dimensions(), input.builder());

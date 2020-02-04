@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/masked_fill.h"
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -21,8 +22,7 @@ NodePtr MaskedFill::Clone(OpList operands) const {
 XlaOpVector MaskedFill::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp mask = loctx->GetOutputOp(operand(1));
-  xla::XlaOp zero = XlaHelpers::ScalarValue(
-      0, XlaHelpers::ShapeOfXlaOp(mask).element_type(), loctx->builder());
+  xla::XlaOp zero = xla::Zero(loctx->builder(), XlaHelpers::TypeOfXlaOp(mask));
   xla::XlaOp mask_pred = xla::Ne(mask, zero);
   // Input shape is the same as output shape.
   const xla::Shape& input_shape = shape();

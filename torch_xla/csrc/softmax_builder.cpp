@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/softmax_builder.h"
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
 
@@ -39,8 +40,7 @@ SoftMaxPartials LogSoftmaxPartials(xla::XlaOp logits, xla::int64 dim) {
   xla::XlaOp shifted_logits =
       xla::Sub(logits, logits_max, broadcast_dimensions);
   xla::XlaOp exp_shifted = xla::Exp(shifted_logits);
-  xla::XlaOp init_value =
-      XlaHelpers::ScalarValue<float>(0, logits_shape.element_type(), builder);
+  xla::XlaOp init_value = xla::Zero(builder, logits_shape.element_type());
   xla::XlaOp reduce = xla::Reduce(
       exp_shifted, init_value,
       XlaHelpers::CreateAddComputation(logits_shape.element_type()), {dim});

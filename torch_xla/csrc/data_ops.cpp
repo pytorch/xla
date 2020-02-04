@@ -274,10 +274,8 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,
       GetDevicePrimitiveType(xla::PrimitiveType::PRED, /*device=*/nullptr);
   xla::XlaOp source_true = XlaHelpers::ScalarBroadcast(
       1, pred_type, source_shape.dimensions(), source.builder());
-  xla::XlaOp pred_zero =
-      XlaHelpers::ScalarValue(0, pred_type, target.builder());
-  xla::XlaOp zero =
-      XlaHelpers::ScalarValue(0, target_shape.element_type(), target.builder());
+  xla::XlaOp pred_zero = xla::Zero(target.builder(), pred_type);
+  xla::XlaOp zero = xla::Zero(target.builder(), target_shape.element_type());
   xla::PaddingConfig padding_config;
   for (xla::int64 i = 0; i < target_shape.rank(); ++i) {
     auto* dims = padding_config.add_dimensions();
