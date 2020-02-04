@@ -419,10 +419,10 @@ xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
 
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, const xla::Shape& shape) {
   const xla::Shape& probability_shape = XlaHelpers::ShapeOfXlaOp(probability);
-  xla::XlaOp zero = XlaHelpers::ScalarValue<float>(
-      0, probability_shape.element_type(), probability.builder());
-  xla::XlaOp one = XlaHelpers::ScalarValue<float>(
-      1, probability_shape.element_type(), probability.builder());
+  xla::XlaOp zero =
+      xla::Zero(probability.builder(), probability_shape.element_type());
+  xla::XlaOp one =
+      xla::One(probability.builder(), probability_shape.element_type());
   xla::XlaOp noise = xla::RngUniform(zero, one, probability_shape);
   return xla::ConvertElementType(xla::Lt(noise, probability),
                                  shape.element_type());

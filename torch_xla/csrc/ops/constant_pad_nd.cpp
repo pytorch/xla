@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
@@ -19,10 +20,9 @@ xla::Shape NodeOutputShape(const Value& input,
       [input_element_type,
        pad](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp xla_input = operands[0];
-    return xla::Pad(
-        xla_input,
-        XlaHelpers::ScalarValue(0, input_element_type, xla_input.builder()),
-        XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad));
+    return xla::Pad(xla_input,
+                    xla::Zero(xla_input.builder(), input_element_type),
+                    XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad));
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
