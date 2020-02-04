@@ -96,6 +96,7 @@ _FN_OUT = {
     'gather_out': FuncOpts(),
     'kthvalue_out': FuncOpts(),
     'index_select_out': FuncOpts(),
+    'inverse_out' : FuncOpts(),
     'log_out': FuncOpts(),
     'masked_select_out': FuncOpts(),
     'nonzero_out': FuncOpts(),
