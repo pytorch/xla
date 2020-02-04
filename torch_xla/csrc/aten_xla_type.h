@@ -433,6 +433,8 @@ class AtenXlaType {
   static at::Tensor index_select(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index);
 
+  static at::Tensor inverse(const at::Tensor& self);
+
   static at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
                            int64_t reduction);
 

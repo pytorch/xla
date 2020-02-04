@@ -1217,6 +1217,10 @@ XLATensor XLATensor::index_select(const XLATensor& input, xla::int64 dim,
       index_value));
 }
 
+XLATensor XLATensor::inverse(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Inverse(input.GetIrValue()));
+}
+
 XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
                                      const XLATensor& input,
                                      const XLATensor& target,

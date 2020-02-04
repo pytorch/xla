@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "tensorflow/compiler/xla/client/lib/qr.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "torch_xla/csrc/convert_ops.h"
@@ -124,6 +125,19 @@ xla::XlaOp BuildDiagonalViewUpdate(xla::XlaOp target, xla::XlaOp input,
     result = xla::Transpose(result, xla::InversePermutation(permutation));
   }
   return result;
+}
+
+xla::XlaOp BuildInverse(xla::XlaOp input) {
+  xla::QRDecompositionResult qr_result =
+      xla::QRDecomposition(input, /*full_matrices=*/false,
+                           XlaHelpers::mat_mul_precision())
+          .ValueOrDie();
+  return xla::TriangularSolve(qr_result.r,
+                              xla::TransposeInMinorDims(qr_result.q),
+                              /*left_side=*/true,
+                              /*lower=*/false, /*unit_diagonal=*/false,
+                              /*transpose_a=*/
+                              xla::TriangularSolveOptions::NO_TRANSPOSE);
 }
 
 }  // namespace torch_xla
