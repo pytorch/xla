@@ -1403,6 +1403,12 @@ at::Tensor AtenXlaType::index_select(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
+at::Tensor AtenXlaType::inverse(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::inverse(bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::kl_div(const at::Tensor& self, const at::Tensor& target,
                                int64_t reduction) {
   XLA_FN_COUNTER("xla::");

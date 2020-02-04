@@ -194,6 +194,8 @@ NodePtr Take(const Value& input, const Value& index);
 
 NodePtr LogDet(const Value& input);
 
+NodePtr Inverse(const Value& input);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

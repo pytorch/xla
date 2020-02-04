@@ -13,6 +13,7 @@
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/matrix.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/constant.h"
@@ -630,6 +631,16 @@ NodePtr LogDet(const Value& input) {
   logdet_shape.DeleteDimension(input_shape.rank() - 1);
   logdet_shape.DeleteDimension(input_shape.rank() - 2);
   return GenericOp(OpKind(at::aten::logdet), {input}, logdet_shape,
+                   std::move(lower_fn));
+}
+
+NodePtr Inverse(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp result = BuildInverse(xla_input);
+    return node.ReturnOp(result, loctx);
+  };
+  return GenericOp(OpKind(at::aten::inverse), {input}, input.shape(),
                    std::move(lower_fn));
 }
 
