@@ -3624,6 +3624,16 @@ TEST_F(AtenXlaTensorTest, TestIndexSelectRank0) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestInverse) {
+  at::Tensor a = at::randn({5, 5}, at::TensorOptions(at::kFloat));
+  at::Tensor b = at::inverse(a);
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    at::Tensor xla_b = at::inverse(xla_a);
+    AllClose(b, xla_b);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestExpand) {
   torch::Tensor a = torch::rand({3, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = a.expand({2, 3, 4}, /*implicit=*/false);
