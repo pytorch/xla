@@ -37,26 +37,6 @@ class AtenXlaType {
   static at::Tensor _adaptive_avg_pool2d_backward(const at::Tensor& grad_output,
                                                   const at::Tensor& self);
 
-  static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
-                                     const at::Tensor& other);
-
-  static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
-                                     at::Scalar other);
-
-  static at::Tensor& bitwise_not_out(at::Tensor& out, const at::Tensor& self);
-
-  static at::Tensor& bitwise_or_out(at::Tensor& out, const at::Tensor& self,
-                                    const at::Tensor& other);
-
-  static at::Tensor& bitwise_or_out(at::Tensor& out, const at::Tensor& self,
-                                    at::Scalar other);
-
-  static at::Tensor& bitwise_xor_out(at::Tensor& out, const at::Tensor& self,
-                                     at::Scalar other);
-
-  static at::Tensor& bitwise_xor_out(at::Tensor& out, const at::Tensor& self,
-                                     const at::Tensor& other);
-
   static at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
                                bool non_blocking);
 
@@ -205,6 +185,26 @@ class AtenXlaType {
       const at::Tensor& self, const at::Tensor& target,
       const at::Tensor& weight, const at::Tensor& pos_weight,
       int64_t reduction);
+
+  static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
+                                     const at::Tensor& other);
+
+  static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
+                                     at::Scalar other);
+
+  static at::Tensor& bitwise_not_out(at::Tensor& out, const at::Tensor& self);
+
+  static at::Tensor& bitwise_or_out(at::Tensor& out, const at::Tensor& self,
+                                    const at::Tensor& other);
+
+  static at::Tensor& bitwise_or_out(at::Tensor& out, const at::Tensor& self,
+                                    at::Scalar other);
+
+  static at::Tensor& bitwise_xor_out(at::Tensor& out, const at::Tensor& self,
+                                     at::Scalar other);
+
+  static at::Tensor& bitwise_xor_out(at::Tensor& out, const at::Tensor& self,
+                                     const at::Tensor& other);
 
   static at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2);
 
