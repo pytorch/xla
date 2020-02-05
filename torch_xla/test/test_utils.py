@@ -12,9 +12,13 @@ def _get_device_spec(device):
   return str(device) if ordinal < 0 else '{}/{}'.format(device, ordinal)
 
 
-def write_to_summary(summary_writer, global_step, dict_to_write={},
+def write_to_summary(summary_writer,
+                     global_step,
+                     dict_to_write={},
                      write_xla_metrics=False):
-  """Writes scalars to a SummaryWriter. Optionally writes XLA perf metrics.
+  """Writes scalars to a SummaryWriter.
+
+  Optionally writes XLA perf metrics.
 
   Args:
     summary_writer (Tensorboard SummaryWriter): The SummaryWriter to write to.
@@ -34,18 +38,18 @@ def write_to_summary(summary_writer, global_step, dict_to_write={},
     metrics = mcu.parse_metrics_report(met.metrics_report())
     aten_ops_sum = 0
     for metric_name, metric_value in metrics.items():
-      if metric_name.find("aten::") == 0:
+      if metric_name.find('aten::') == 0:
         aten_ops_sum += metric_value
       summary_writer.add_scalar(metric_name, metric_value, global_step)
-    summary_writer.add_scalar("aten_ops_sum", metric_value, global_step)
+    summary_writer.add_scalar('aten_ops_sum', metric_value, global_step)
 
 
 def close_summary_writer(summary_writer):
   """Flush and close a SummaryWriter.
 
   Args:
-    summary_writer: instance of Tensorboard SummaryWriter or
-        None. If None, no action is taken.
+    summary_writer: instance of Tensorboard SummaryWriter or None. If None, no
+      action is taken.
   """
   if summary_writer is not None:
     summary_writer.flush()
@@ -56,8 +60,8 @@ def get_summary_writer(logdir):
   """Initialize a Tensorboard SummaryWriter.
 
   Args:
-    logdir: Str. File location where logs will be written or None. If None,
-        no writer is created.
+    logdir: Str. File location where logs will be written or None. If None, no
+      writer is created.
 
   Returns:
     Instance of Tensorboard SummaryWriter.
@@ -77,9 +81,11 @@ def print_training_update(device, step_num, loss, rate, global_rate):
     rate: Float. The examples/sec rate for the current batch.
     global_rate: Float. The average examples/sec rate since training began.
   """
-  print('[{}]({}) Loss={:.5f} Rate={:.2f} GlobalRate={:.2f} Time={}'.format(
-      _get_device_spec(device), step_num, loss, rate, global_rate,
-      time.asctime()))
+  print(
+      '[{}]({}) Loss={:.5f} Rate={:.2f} GlobalRate={:.2f} Time={}'.format(
+          _get_device_spec(device), step_num, loss, rate, global_rate,
+          time.asctime()),
+      flush=True)
 
 
 def print_test_update(device, accuracy):
@@ -89,4 +95,6 @@ def print_test_update(device, accuracy):
     device: Instance of `torch.device`.
     accuracy: Float.
   """
-  print('[{}] Accuracy={:.2f}%'.format(_get_device_spec(device), accuracy))
+  print(
+      '[{}] Accuracy={:.2f}%'.format(_get_device_spec(device), accuracy),
+      flush=True)
