@@ -1943,7 +1943,7 @@ TEST_F(AtenXlaTensorTest, TestArgMin) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::argmin", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinDim) {
@@ -1958,7 +1958,7 @@ TEST_F(AtenXlaTensorTest, TestArgMinDim) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::argmin", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
@@ -1973,7 +1973,7 @@ TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::argmin", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
@@ -1986,7 +1986,7 @@ TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::argmin", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
@@ -2001,7 +2001,7 @@ TEST_F(AtenXlaTensorTest, TestArgMinWrapper) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::min_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::argmin", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMax) {
@@ -2014,7 +2014,7 @@ TEST_F(AtenXlaTensorTest, TestArgMax) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::argmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxDim) {
@@ -2029,7 +2029,7 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDim) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::argmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
@@ -2044,7 +2044,7 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::argmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
@@ -2057,7 +2057,7 @@ TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::argmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
@@ -2072,7 +2072,7 @@ TEST_F(AtenXlaTensorTest, TestArgMaxWrapper) {
   }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::max_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::argmax", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAsin) {

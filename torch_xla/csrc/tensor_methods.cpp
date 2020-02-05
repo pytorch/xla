@@ -20,6 +20,8 @@
 #include "torch_xla/csrc/ops/all.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/any.h"
+#include "torch_xla/csrc/ops/arg_max.h"
+#include "torch_xla/csrc/ops/arg_min.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
@@ -480,6 +482,36 @@ void XLATensor::arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
                            at::Scalar step, at::ScalarType scalar_type) {
   out.SetIrValue(ir::ops::ARange(start, end, step, scalar_type));
   out.SetScalarType(scalar_type);
+}
+
+XLATensor XLATensor::argmax(const XLATensor& input, xla::int64 dim,
+                            bool keepdim) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::ArgMax>(input.GetIrValue(), canonical_dim, keepdim),
+      at::ScalarType::Long);
+}
+
+XLATensor XLATensor::argmax(const XLATensor& input) {
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::ArgMax>(input.GetIrValue(), -1, false),
+      at::ScalarType::Long);
+}
+
+XLATensor XLATensor::argmin(const XLATensor& input, xla::int64 dim,
+                            bool keepdim) {
+  xla::int64 canonical_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::ArgMin>(input.GetIrValue(), canonical_dim, keepdim),
+      at::ScalarType::Long);
+}
+
+XLATensor XLATensor::argmin(const XLATensor& input) {
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::ArgMin>(input.GetIrValue(), -1, false),
+      at::ScalarType::Long);
 }
 
 XLATensor XLATensor::as_strided(const XLATensor& input,
