@@ -40,13 +40,14 @@ function run_dynamic {
 }
 
 function run_all_tests {
+  run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestViewOpsXLA
   python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
   python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
   python3 "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
   python3 "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
-  run_dynamic python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
+  run_dynamic python3 "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   python3 "$CDIR/test_mp_replication.py" "$@"
