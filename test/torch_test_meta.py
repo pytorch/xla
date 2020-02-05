@@ -148,6 +148,13 @@ disabled_torch_tests = {
     'test_triangular_solve',  # (TPU) precision (1e-7)
     'test_scalar_check',  # runtime error
 
+    # TestViewOps
+    'test_contiguous_nonview',
+    'test_expand_as_view',
+    'test_expand_view',
+    'test_reshape_nonview',
+    'test_unfold_view',
+
     # test_indexing.py
     # TestIndexing
     'test_setitem_expansion_error',  # doesn't raise
