@@ -20,6 +20,13 @@ if which sccache > /dev/null; then
   sccache --zero-stats
 fi
 
+# Try rebasing on top of pytorch/xla master first.
+# This allows us to pickup the latest fix for PT-XLA breakage.
+# Also it might improve build time as we have warm cache.
+git config --global user.email "circleci.ossci@gmail.com"
+git config --global user.name "CircleCI"
+git rebase origin/master
+
 PYTORCH_DIR=/tmp/pytorch
 XLA_DIR="$PYTORCH_DIR/xla"
 git clone --recursive --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
