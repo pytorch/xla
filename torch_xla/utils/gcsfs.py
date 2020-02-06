@@ -174,6 +174,10 @@ def _parse_gcs_path(path, wants_path=True):
   return m.group(1), bpath
 
 
+def _create_gcs_blob(blob):
+  return GcsBlob(path=_get_blob_path(blob.path), size=blob.size)
+
+
 def list(path):
   """Lists the content of a GCS bucket.
 
@@ -194,8 +198,30 @@ def list(path):
   gcs_client = gcs.Client()
   blobs = []
   for blob in gcs_client.list_blobs(bucket_name, prefix=bpath, delimiter='/'):
-    blobs.append(GcsBlob(path=_get_blob_path(blob.path), size=blob.size))
+    blobs.append(_create_gcs_blob(blob))
   return blobs
+
+
+def stat(path):
+  """Fetches the information of a GCS file.
+
+  Args:
+    path (string): The GCS path of the file. Must be "gs://BUCKET_NAME/PATH"
+      where ``BUCKET_NAME`` is the name of the GCS bucket, and ``PATH`` is a `/`
+      delimited path.
+
+  Returns:
+    A ``GcsBlob`` object, having ``path`` and ``size`` fields.
+
+  Raises:
+    ValueError: If an invalid GCS path is supplied.
+  """
+  bucket_name, bpath = _parse_gcs_path(path, wants_path=True)
+  gcs_client = gcs.Client()
+  bucket = gcs_client.get_bucket(bucket_name)
+  blob = bucket.blob(bpath)
+  blob.reload()
+  return _create_gcs_blob(blob)
 
 
 def remove(path):
