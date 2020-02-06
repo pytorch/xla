@@ -212,7 +212,7 @@ _CTOR_FUNCTIONS = {
     'randn_like': '.device(at::DeviceType::CPU)',
     'randint': '.device(at::DeviceType::CPU)',
     'randint_like': '.device(at::DeviceType::CPU)',
-    'randperm': '.device(at::DeviceType::CPU)',
+    'randperm_out': '.device(at::DeviceType::CPU)',
     'scalar_tensor': '.device(at::DeviceType::CPU)',
 }
 

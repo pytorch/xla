@@ -689,9 +689,6 @@ class AtenXlaType {
   static std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self,
                                                bool some);
 
-  static at::Tensor& randperm_out(at::Tensor& out, int64_t n,
-                                  at::Generator* generator);
-
   static at::Tensor reciprocal(const at::Tensor& self);
 
   static at::Tensor& reciprocal_(at::Tensor& self);
