@@ -267,8 +267,7 @@ std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
 }
 
 std::vector<std::string> ComputationClient::GetCompilationDevices(
-    const std::string& device,
-    absl::Span<const std::string> devices) const {
+    const std::string& device, absl::Span<const std::string> devices) const {
   std::vector<std::string> compilation_devices;
   if (devices.empty()) {
     auto& replication_devices = GetReplicationDevices();
@@ -298,6 +297,12 @@ ComputationClient* ComputationClient::Get() {
 metrics::Metric* ComputationClient::TransferToServerMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("TransferToServerTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::TransferToServerTransformMetric() {
+  static metrics::Metric* metric = new metrics::Metric(
+      "TransferToServerTransformTime", metrics::MetricFnTime);
   return metric;
 }
 

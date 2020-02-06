@@ -6,9 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Randperm : public Node {
+class ArgMax : public Node {
  public:
-  Randperm(xla::int64 upper_bound, xla::PrimitiveType element_type);
+  ArgMax(const Value& input, xla::int64 dim, bool keepdim);
 
   std::string ToString() const override;
 
@@ -16,11 +16,13 @@ class Randperm : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  xla::int64 upper_bound() const { return upper_bound_; }
+  xla::int64 dim() const { return dim_; };
+
+  bool keepdim() const { return keepdim_; }
 
  private:
-  xla::int64 upper_bound_;
-  xla::PrimitiveType element_type_;
+  xla::int64 dim_;
+  bool keepdim_;
 };
 
 }  // namespace ops

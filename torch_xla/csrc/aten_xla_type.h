@@ -117,6 +117,12 @@ class AtenXlaType {
   static at::Tensor& arange_out(at::Tensor& out, at::Scalar start,
                                 at::Scalar end, at::Scalar step);
 
+  static at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
+                           bool keepdim);
+
+  static at::Tensor argmin(const at::Tensor& self, c10::optional<int64_t> dim,
+                           bool keepdim);
+
   static at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size,
                                at::IntArrayRef stride,
                                c10::optional<int64_t> storage_offset);
@@ -433,6 +439,8 @@ class AtenXlaType {
   static at::Tensor index_select(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index);
 
+  static at::Tensor inverse(const at::Tensor& self);
+
   static at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
                            int64_t reduction);
 
@@ -680,9 +688,6 @@ class AtenXlaType {
 
   static std::tuple<at::Tensor, at::Tensor> qr(const at::Tensor& self,
                                                bool some);
-
-  static at::Tensor& randperm_out(at::Tensor& out, int64_t n,
-                                  at::Generator* generator);
 
   static at::Tensor reciprocal(const at::Tensor& self);
 

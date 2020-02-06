@@ -23,9 +23,6 @@ xla::XlaOp BuildBernoulli(xla::XlaOp probability, const xla::Shape& shape);
 
 xla::XlaOp BuildDropout(xla::XlaOp input, float probability);
 
-xla::XlaOp BuildRandperm(xla::int64 n, xla::PrimitiveType element_type,
-                         xla::XlaBuilder* builder);
-
 std::vector<xla::XlaOp> CreateBroadcastTensors(
     absl::Span<const xla::XlaOp> operands);
 
