@@ -278,6 +278,7 @@ class ComputationClient {
  protected:
   // Metrics common to all client intrfaces.
   static metrics::Metric* TransferToServerMetric();
+  static metrics::Metric* TransferToServerTransformMetric();
   static metrics::Metric* TransferFromServerMetric();
   static metrics::Metric* CompileMetric();
   static metrics::Metric* ExecuteMetric();

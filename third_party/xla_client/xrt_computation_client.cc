@@ -243,38 +243,41 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
   int64 total_size = 0;
   util::MultiWait mwait(tensors.size());
   std::map<XrtSession*, SessionWork> session_work_map;
-  for (size_t i = 0; i < tensors.size(); ++i) {
-    auto converter = [&, i]() {
-      std::string device = GetEffectiveDevice(tensors[i].device);
-      const std::string& xrt_device = TorchDeviceToXrtDevice(device);
-      tensorflow::Tensor tensor(
-          TensorAllocator::Get(),
-          XlaTypeToDataType(tensors[i].shape.element_type()),
-          MakeEquivalentTensorShape(tensors[i].shape));
-      auto tdata = tensor.tensor_data();
-      tensors[i].populate_fn(tensors[i], const_cast<char*>(tdata.data()),
-                             tdata.size());
+  {
+    metrics::TimedSection timed(TransferToServerTransformMetric());
 
-      {
-        std::lock_guard<std::mutex> slock(lock);
-        XrtSession* session = GetSessionForXrtDevice(alloc_session_cache_.get(),
-                                                     xrt_device, &session_map);
-        SessionWork* session_work = &session_work_map[session];
-        tensorflow::Scope device_scope =
-            session->root()->WithDevice(xrt_device);
-        const XrtSession::CachedNode& cached_node =
-            GetAllocateNode(session, device_scope, device, tensors[i].shape);
-        session_work->feed_inputs.insert({cached_node.holders[0], tensor});
-        session_work->outputs_handles.push_back(cached_node.outputs[0]);
-        session_work->index_mapping.push_back(i);
+    for (size_t i = 0; i < tensors.size(); ++i) {
+      auto converter = [&, i]() {
+        std::string device = GetEffectiveDevice(tensors[i].device);
+        const std::string& xrt_device = TorchDeviceToXrtDevice(device);
+        tensorflow::Tensor tensor(
+            TensorAllocator::Get(),
+            XlaTypeToDataType(tensors[i].shape.element_type()),
+            MakeEquivalentTensorShape(tensors[i].shape));
+        auto tdata = tensor.tensor_data();
+        tensors[i].populate_fn(tensors[i], const_cast<char*>(tdata.data()),
+                               tdata.size());
 
-        total_size += tdata.size();
-      }
-    };
-    env::ScheduleClosure(mwait.Completer(std::move(converter)));
+        {
+          std::lock_guard<std::mutex> slock(lock);
+          XrtSession* session = GetSessionForXrtDevice(
+              alloc_session_cache_.get(), xrt_device, &session_map);
+          SessionWork* session_work = &session_work_map[session];
+          tensorflow::Scope device_scope =
+              session->root()->WithDevice(xrt_device);
+          const XrtSession::CachedNode& cached_node =
+              GetAllocateNode(session, device_scope, device, tensors[i].shape);
+          session_work->feed_inputs.insert({cached_node.holders[0], tensor});
+          session_work->outputs_handles.push_back(cached_node.outputs[0]);
+          session_work->index_mapping.push_back(i);
+
+          total_size += tdata.size();
+        }
+      };
+      env::ScheduleClosure(mwait.Completer(std::move(converter)));
+    }
+    mwait.Wait();
   }
-  mwait.Wait();
-
   OutboundDataMetric()->AddSample(total_size);
 
   std::vector<DataPtr> results(tensors.size());
@@ -440,8 +443,7 @@ void XrtComputationClient::CheckCompileStatus(
 
 std::vector<ComputationClient::DataPtr>
 XrtComputationClient::ExecuteComputation(
-    const Computation& computation,
-    absl::Span<const DataPtr> arguments,
+    const Computation& computation, absl::Span<const DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
   metrics::TimedSection timed(ExecuteMetric());
 
@@ -566,16 +568,14 @@ XrtComputationClient::ExecuteParallel(
 }
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChained(
-    absl::Span<const ExecuteChainedOp> ops,
-    const std::string& device) {
+    absl::Span<const ExecuteChainedOp> ops, const std::string& device) {
   static int64 split_mode = sys_util::GetEnvInt("XRT_SPLIT_CHAINED_EXEC", 0);
   return split_mode ? ExecuteChainedSplit(ops, device)
                     : ExecuteChainedXrt(ops, device);
 }
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
-    absl::Span<const ExecuteChainedOp> ops,
-    const std::string& device) {
+    absl::Span<const ExecuteChainedOp> ops, const std::string& device) {
   metrics::TimedSection timed(ExecuteChainedMetric());
 
   XrtSessionCache::SessionMap session_map;
@@ -657,8 +657,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
 
 std::vector<ComputationClient::DataPtr>
 XrtComputationClient::ExecuteChainedSplit(
-    absl::Span<const ExecuteChainedOp> ops,
-    const std::string& device) {
+    absl::Span<const ExecuteChainedOp> ops, const std::string& device) {
   metrics::TimedSection timed(ExecuteChainedMetric());
 
   std::vector<int64> uses(ops.size(), 0);
@@ -730,8 +729,7 @@ XrtComputationClient::ExecuteChainedSplit(
 }
 
 std::vector<std::vector<ComputationClient::DataPtr>>
-XrtComputationClient::DeconstructTuple(
-    absl::Span<const DataPtr> tuples) {
+XrtComputationClient::DeconstructTuple(absl::Span<const DataPtr> tuples) {
   metrics::TimedSection timed(DeconstructTupleMetric());
 
   XrtSessionCache::SessionMap session_map;
@@ -831,8 +829,7 @@ const std::string& XrtComputationClient::TorchDeviceToXrtDevice(
 }
 
 std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
-    const XlaComputation& computation,
-    absl::Span<const std::string> devices,
+    const XlaComputation& computation, absl::Span<const std::string> devices,
     const Shape* output_shape) const {
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
@@ -863,8 +860,7 @@ std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
 }
 
 tensorflow::Tensor XrtComputationClient::GetArgumentsInputs(
-    absl::Span<const DataPtr> arguments,
-    const std::string& device) {
+    absl::Span<const DataPtr> arguments, const std::string& device) {
   tensorflow::Tensor inputs_tensor(tensorflow::DT_INT64,
                                    tensorflow::TensorShape({arguments.size()}));
   for (size_t i = 0; i < arguments.size(); ++i) {
