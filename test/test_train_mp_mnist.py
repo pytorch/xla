@@ -157,7 +157,7 @@ def train_mnist():
                                 dict_to_write={'Accuracy/test': accuracy},
                                 write_xla_metrics=True)
     if FLAGS.metrics_debug:
-      print(met.metrics_report())
+      xm.master_print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
   xm.master_print('Max Accuracy: {:.2f}%'.format(max_accuracy))
