@@ -6,6 +6,7 @@ import argparse
 import threading
 import torch
 import torch_xla
+import torch_xla.debug.metrics as met
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 
@@ -35,7 +36,7 @@ def run_benchmark(args, pos_args):
     threads.append(t)
   for t in threads:
     t.join()
-  print(torch_xla._XLAC._xla_metrics_report())
+  print(met.metrics_report())
 
 
 if __name__ == '__main__':
