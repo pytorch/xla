@@ -3282,8 +3282,8 @@ TEST_F(AtenXlaTensorTest, TestRandperm) {
   std::vector<xla::int64> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
                                        shuffle_cpu.data_ptr<int64_t>() + n);
   EXPECT_TRUE(xla::IsPermutation(shuffle_data, n));
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::randperm_out", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::(?!randperm_out).*",
+                          cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSlice) {

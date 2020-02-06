@@ -2235,17 +2235,6 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::qr(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
-at::Tensor& AtenXlaType::randperm_out(at::Tensor& out, int64_t n,
-                                      at::Generator* generator) {
-  XLA_FN_COUNTER("xla::");
-  if (generator != nullptr) {
-    return AtenXlaTypeDefault::randperm_out(out, n, generator);
-  }
-  XLATensor out_tensor = bridge::GetXlaTensor(out);
-  XLATensor::randperm_out(out_tensor, n);
-  return out;
-}
-
 at::Tensor AtenXlaType::reciprocal(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(

@@ -71,7 +71,6 @@ disabled_torch_tests = {
     'test_lstsq',
     'test_is_set_to',
     'test_inverse',
-    'test_index_copy',
     'test_empty_tensor_props',
     'test_dist',
     'test_dim_function_empty',
