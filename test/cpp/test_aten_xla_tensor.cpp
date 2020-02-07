@@ -7042,6 +7042,61 @@ TEST_F(AtenXlaTensorTest, TestTransposeDimsInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSplit) {
+  torch::Tensor input =
+      torch::rand({7, 8, 9}, torch::TensorOptions(torch::kFloat));
+  int rank = input.dim();
+  for (int split_size : {2, 3}) {
+    for (int dim = -rank; dim < rank; ++dim) {
+      std::vector<torch::Tensor> outputs = torch::split(input, split_size, dim);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        std::vector<torch::Tensor> xla_outputs =
+            torch::split(xla_input, split_size, dim);
+        ASSERT_EQ(outputs.size(), xla_outputs.size());
+        for (size_t i = 0; i < outputs.size(); ++i) {
+          AllClose(outputs[i], xla_outputs[i]);
+        }
+      });
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestSplitEmpty) {
+  torch::Tensor input = torch::rand({0}, torch::TensorOptions(torch::kFloat));
+  int split_size = 0;
+  int dim = 0;
+  std::vector<torch::Tensor> outputs = torch::split(input, split_size, dim);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    std::vector<torch::Tensor> xla_outputs =
+        torch::split(xla_input, split_size, dim);
+    ASSERT_EQ(outputs.size(), xla_outputs.size());
+    for (size_t i = 0; i < outputs.size(); ++i) {
+      AllClose(outputs[i], xla_outputs[i]);
+    }
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestSplitWithSizes) {
+  torch::Tensor input =
+      torch::rand({15, 15, 15}, torch::TensorOptions(torch::kFloat));
+  int rank = input.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    std::vector<torch::Tensor> outputs =
+        torch::split_with_sizes(input, {4, 5, 6}, dim);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      std::vector<torch::Tensor> xla_outputs =
+          torch::split_with_sizes(xla_input, {4, 5, 6}, dim);
+      ASSERT_EQ(outputs.size(), xla_outputs.size());
+      for (size_t i = 0; i < outputs.size(); ++i) {
+        AllClose(outputs[i], xla_outputs[i]);
+      }
+    });
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestCrossImplicitDim) {
   std::vector<std::vector<int64_t>> dim_sizes = {
       {4, 5, 3}, {4, 3, 5}, {3, 4, 5}};

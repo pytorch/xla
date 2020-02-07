@@ -91,6 +91,7 @@
 #include "torch_xla/csrc/ops/shrink_backward.h"
 #include "torch_xla/csrc/ops/softmax.h"
 #include "torch_xla/csrc/ops/softshrink.h"
+#include "torch_xla/csrc/ops/split.h"
 #include "torch_xla/csrc/ops/squeeze.h"
 #include "torch_xla/csrc/ops/stack.h"
 #include "torch_xla/csrc/ops/std.h"
@@ -2078,6 +2079,39 @@ XLATensor XLATensor::softshrink_backward(const XLATensor& grad_out,
   return input.CreateFrom(ir::MakeNode<ir::ops::ShrinkBackward>(
       ir::OpKind(at::aten::softshrink_backward), grad_out.GetIrValue(),
       input.GetIrValue(), lambda));
+}
+
+std::vector<XLATensor> XLATensor::split(const XLATensor& input,
+                                        xla::int64 split_size, xla::int64 dim) {
+  auto input_shape = input.shape();
+  int split_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  xla::int64 dim_size = input_shape.get().dimensions(split_dim);
+  if (dim_size == 0) {
+    // Deal with dim_size=0, it's a corner case which only return 1 0-dim tensor
+    // no matter what split_size is.
+    xla::Literal literal(input_shape.get());
+    return {
+        input.CreateFrom(ir::MakeNode<ir::ops::Constant>(std::move(literal)))};
+  }
+  std::vector<xla::int64> split_sizes;
+  for (; dim_size > 0; dim_size -= split_size) {
+    split_sizes.push_back(std::min<xla::int64>(dim_size, split_size));
+  }
+  ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
+      input.GetIrValue(), std::move(split_sizes), split_dim);
+  return input.MakeOutputTensors(node);
+}
+
+std::vector<XLATensor> XLATensor::split_with_sizes(
+    const XLATensor& input, std::vector<xla::int64> split_size,
+    xla::int64 dim) {
+  auto input_shape = input.shape();
+  int split_dim =
+      XlaHelpers::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  ir::NodePtr node = ir::MakeNode<ir::ops::Split>(
+      input.GetIrValue(), std::move(split_size), split_dim);
+  return input.MakeOutputTensors(node);
 }
 
 XLATensor XLATensor::sqrt(const XLATensor& input) {
