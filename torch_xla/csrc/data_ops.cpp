@@ -184,6 +184,36 @@ xla::XlaOp BuildRepeat(xla::XlaOp input, absl::Span<const xla::int64> repeats) {
   return repeated;
 }
 
+size_t ComputeSplitCount(xla::int64 dim_size,
+                         absl::Span<const xla::int64> split_sizes) {
+  size_t count = 0;
+  for (auto size : split_sizes) {
+    if (size > dim_size) {
+      break;
+    }
+    dim_size -= size;
+    ++count;
+  }
+  return count;
+}
+
+std::vector<xla::XlaOp> BuildSplit(xla::XlaOp input,
+                                   absl::Span<const xla::int64> split_sizes,
+                                   xla::int64 dim) {
+  const auto input_sizes = XlaHelpers::SizesOfXlaOp(input);
+  xla::int64 dim_size = input_sizes.at(dim);
+  xla::int64 index = 0;
+  std::vector<xla::XlaOp> splits;
+  for (auto size : split_sizes) {
+    if (index + size > dim_size) {
+      break;
+    }
+    splits.emplace_back(SliceInDim(input, index, index + size, 1, dim));
+    index += size;
+  }
+  return splits;
+}
+
 xla::XlaOp BuildUpdateSlice(xla::XlaOp input, xla::XlaOp source,
                             absl::Span<const xla::int64> base_indices) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);

@@ -2536,6 +2536,22 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::sort(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
+std::vector<at::Tensor> AtenXlaType::split(const at::Tensor& self,
+                                           int64_t split_size, int64_t dim) {
+  XLA_FN_COUNTER("xla::");
+  auto xla_tensors =
+      XLATensor::split(bridge::GetXlaTensor(self), split_size, dim);
+  return bridge::AtenFromXlaTensors(xla_tensors);
+}
+
+std::vector<at::Tensor> AtenXlaType::split_with_sizes(
+    const at::Tensor& self, at::IntArrayRef split_sizes, int64_t dim) {
+  XLA_FN_COUNTER("xla::");
+  auto xla_tensors = XLATensor::split_with_sizes(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(split_sizes), dim);
+  return bridge::AtenFromXlaTensors(xla_tensors);
+}
+
 at::Tensor AtenXlaType::sqrt(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::sqrt(bridge::GetXlaTensor(self)));
