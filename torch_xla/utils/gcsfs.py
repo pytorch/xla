@@ -1,12 +1,3 @@
-# To use this module the Google Cloud Storage libraries need to be installed:
-#
-#  pip install --upgrade google-cloud-storage
-#
-# For information on how to setup authentication follow the link below:
-#
-#  https://cloud.google.com/storage/docs/reference/libraries
-#
-
 from __future__ import division
 from __future__ import print_function
 
@@ -16,25 +7,23 @@ import os
 import re
 import tempfile
 import sys
-import urllib.parse
+import torch_xla
 
-try:
-  from google.cloud import storage as gcs
-except:
-  msg = """Google Cloud Storage libraries are missing.
-Please install them using the following command:
+GcsBlob = collections.namedtuple('GcsBlob', 'path size mtime isdir')
 
-  pip install --upgrade google-cloud-storage
 
-Also follow the instructions in the link below to configure authentication:
+def _mkblob(path, fstat):
+  return GcsBlob(
+      path=path,
+      size=fstat['length'],
+      mtime=fstat['mtime_nsec'] * 1.0e-9,
+      isdir=fstat['is_directory'])
 
-  https://cloud.google.com/storage/docs/reference/libraries
 
-"""
-  print(msg, file=sys.stderr)
-  raise
-
-GcsBlob = collections.namedtuple('GcsBlob', 'path size')
+def _slurp_file(path):
+  fstat = torch_xla._XLAC._xla_tffile_stat(path)
+  gcs_file = torch_xla._XLAC._xla_tffile_open(path)
+  return torch_xla._XLAC._xla_tffile_read(gcs_file, 0, fstat['length'])
 
 
 class WriteableFile(io.RawIOBase):
@@ -42,8 +31,6 @@ class WriteableFile(io.RawIOBase):
   def __init__(self, path, init_data=None, append=False):
     super(WriteableFile, self).__init__()
     self._path = path
-    self._gcs_client = gcs.Client()
-    self._blob = gcs.Blob.from_string(path, client=self._gcs_client)
     self._wfile = tempfile.NamedTemporaryFile()
     if init_data is not None:
       self._wfile.write(init_data)
@@ -59,7 +46,7 @@ class WriteableFile(io.RawIOBase):
     self._wfile.flush()
     offset = self._wfile.tell()
     self._wfile.seek(0, os.SEEK_SET)
-    self._blob.upload_from_file(self._wfile)
+    write(self._path, self._wfile.read())
     self._wfile.seek(offset, os.SEEK_SET)
 
   @property
@@ -139,43 +126,16 @@ def open(path, mode='r', encoding='utf-8'):
   """
   if mode.startswith('w'):
     return WriteableFile(path)
-  gcs_client = gcs.Client()
-  blob = gcs.Blob.from_string(path, client=gcs_client)
   if mode.startswith('a') or mode.startswith('r+'):
-    data = blob.download_as_string() if blob.exists() else None
+    try:
+      data = _slurp_file(path)
+    except:
+      data = None
     return WriteableFile(path, init_data=data, append=mode.startswith('a'))
-  data = blob.download_as_string()
+  data = _slurp_file(path)
   if mode.find('t') >= 0:
     return io.StringIO(data.decode(encoding))
   return io.BytesIO(data)
-
-
-def _get_blob_path(bpath):
-  # The paths returned by the list_blobs() API have the
-  # '/b/BUCKET_NAME/o/BLOB_PATH' format.
-  m = re.match(r'/b/[^/]+/o/(.+)', bpath)
-  if not m:
-    raise RuntimeError('GCS invalid blob path: {}'.format(bpath))
-  return urllib.parse.unquote(m.group(1))
-
-
-def _parse_gcs_path(path, wants_path=True):
-  m = re.match(r'gs://([^/]+)(.*)', path)
-  if not m:
-    raise ValueError('GCS invalid path: {}'.format(path))
-  if len(m.groups()) > 1:
-    bpath = m.group(2)
-    if bpath.startswith('/'):
-      bpath = bpath[1:]
-  else:
-    bpath = None
-  if not bpath and wants_path:
-    raise RuntimeError('GCS path missing: {}'.format(path))
-  return m.group(1), bpath
-
-
-def _create_gcs_blob(blob):
-  return GcsBlob(path=_get_blob_path(blob.path), size=blob.size)
 
 
 def list(path):
@@ -187,18 +147,18 @@ def list(path):
       delimited path.
 
   Returns:
-    A list of ``GcsBlob`` object, having ``path`` and ``size`` fields.
+    A list of ``GcsBlob`` objects.
 
   Raises:
     ValueError: If an invalid GCS path is supplied.
   """
-  bucket_name, bpath = _parse_gcs_path(path, wants_path=False)
-  if bpath and not bpath.endswith('/'):
-    bpath += '/'
-  gcs_client = gcs.Client()
   blobs = []
-  for blob in gcs_client.list_blobs(bucket_name, prefix=bpath, delimiter='/'):
-    blobs.append(_create_gcs_blob(blob))
+  for mpath in torch_xla._XLAC._xla_tffs_list(path):
+    try:
+      fstat = torch_xla._XLAC._xla_tffile_stat(mpath)
+      blobs.append(_mkblob(mpath, fstat))
+    except:
+      pass
   return blobs
 
 
@@ -211,17 +171,13 @@ def stat(path):
       delimited path.
 
   Returns:
-    A ``GcsBlob`` object, having ``path`` and ``size`` fields.
+    A ``GcsBlob`` object.
 
   Raises:
     ValueError: If an invalid GCS path is supplied.
   """
-  bucket_name, bpath = _parse_gcs_path(path, wants_path=True)
-  gcs_client = gcs.Client()
-  bucket = gcs_client.get_bucket(bucket_name)
-  blob = bucket.blob(bpath)
-  blob.reload()
-  return _create_gcs_blob(blob)
+  fstat = torch_xla._XLAC._xla_tffile_stat(path)
+  return _mkblob(path, fstat)
 
 
 def remove(path):
@@ -235,10 +191,21 @@ def remove(path):
   Raises:
     ValueError: If an invalid GCS path is supplied.
   """
-  bucket_name, bpath = _parse_gcs_path(path)
-  gcs_client = gcs.Client()
-  bucket = gcs_client.get_bucket(bucket_name)
-  bucket.delete_blob(bpath)
+  torch_xla._XLAC._xla_tffs_remove(path)
+
+
+def read(path):
+  """Reads the whole content of a GCS blob.
+
+  Args:
+    path (string): The GCS path of the file. Must be "gs://BUCKET_NAME/PATH"
+      where ``BUCKET_NAME`` is the name of the GCS bucket, and ``PATH`` is a `/`
+      delimited path.
+
+  Returns:
+    The bytes stored within the GCS blob.
+  """
+  return _slurp_file(path)
 
 
 def write(path, content):
@@ -251,11 +218,8 @@ def write(path, content):
     content (string, bytes or file object): The content to be written into
       ``path``.
   """
-  bucket_name, bpath = _parse_gcs_path(path)
-  gcs_client = gcs.Client()
-  bucket = gcs_client.get_bucket(bucket_name)
-  blob = bucket.blob(bpath)
-  if isinstance(content, (bytes, str)):
-    blob.upload_from_string(content)
-  else:
-    blob.upload_from_file(content)
+  if not isinstance(content, (bytes, str)):
+    content = content.read()
+  gcs_file = torch_xla._XLAC._xla_tffile_create(path)
+  torch_xla._XLAC._xla_tffile_write(gcs_file, content)
+  torch_xla._XLAC._xla_tffile_flush(gcs_file)
