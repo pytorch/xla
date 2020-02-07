@@ -18,6 +18,9 @@ xla::XlaOp ExplicitBooleanConvert(xla::XlaOp op, xla::PrimitiveType from) {
 
 xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
                      xla::PrimitiveType to, const Device* device) {
+  if (from == to) {
+    return op;
+  }
   if (GetDeviceOrCurrent(device).hw_type != DeviceType::TPU) {
     return xla::ConvertElementType(op, to);
   }

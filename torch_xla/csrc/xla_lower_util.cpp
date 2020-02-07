@@ -419,10 +419,10 @@ xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
 
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, const xla::Shape& shape) {
   const xla::Shape& probability_shape = XlaHelpers::ShapeOfXlaOp(probability);
-  xla::XlaOp zero = XlaHelpers::ScalarValue<float>(
-      0, probability_shape.element_type(), probability.builder());
-  xla::XlaOp one = XlaHelpers::ScalarValue<float>(
-      1, probability_shape.element_type(), probability.builder());
+  xla::XlaOp zero =
+      xla::Zero(probability.builder(), probability_shape.element_type());
+  xla::XlaOp one =
+      xla::One(probability.builder(), probability_shape.element_type());
   xla::XlaOp noise = xla::RngUniform(zero, one, probability_shape);
   return xla::ConvertElementType(xla::Lt(noise, probability),
                                  shape.element_type());
@@ -437,31 +437,6 @@ xla::XlaOp BuildDropout(xla::XlaOp input, float probability) {
     mask = mask / prob;
   }
   return input * mask;
-}
-
-xla::XlaOp BuildRandperm(xla::int64 n, xla::PrimitiveType element_type,
-                         xla::XlaBuilder* builder) {
-  xla::XlaOp input = xla::Iota(builder, element_type, n);
-  // Ensure that the key space is greater than or equal to the cube of the
-  // number of values to manage the number of collisions. Inspired by
-  // RandomShuffleOp in tf2xla, where the full rationale for picking the
-  // exponent value is described.
-  const int kExponent = 3;
-  const int rounds = static_cast<int>(
-      std::ceil(kExponent * std::log(n) / std::log(tensorflow::kuint32max)));
-  const xla::Shape key_shape = xla::ShapeUtil::MakeShape(xla::U32, {n});
-  xla::XlaOp zero = xla::ConstantR0(builder, 0U);
-  xla::XlaOp max_value = xla::ConstantR0(builder, tensorflow::kuint32max);
-
-  xla::XlaOp curr = input;
-  for (int i = 0; i < rounds; ++i) {
-    xla::XlaOp keys = xla::RngUniform(zero, max_value, key_shape);
-    xla::XlaOp sorted = xla::Sort(
-        {keys, curr},
-        xla::CreateScalarLtComputation({xla::U32, element_type}, builder));
-    curr = xla::GetTupleElement(sorted, 1);
-  }
-  return curr;
 }
 
 std::vector<xla::XlaOp> CreateBroadcastTensors(

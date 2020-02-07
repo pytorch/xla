@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "tensorflow/compiler/xla/client/lib/qr.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "torch_xla/csrc/convert_ops.h"
@@ -50,12 +51,12 @@ DiagonalMask CreateDiagonalMask(xla::XlaOp input,
   xla::PaddingConfig padding_config =
       CreateDiagonalPaddingConfig(target_shape, input_shape, offset);
   xla::XlaOp zero_scalar =
-      XlaHelpers::ScalarValue(0, input_shape.element_type(), input.builder());
+      xla::Zero(input.builder(), input_shape.element_type());
   xla::XlaOp source = xla::Reshape(xla::Pad(input, zero_scalar, padding_config),
                                    target_shape.dimensions());
 
   xla::XlaOp false_scalar =
-      XlaHelpers::ScalarValue(false, xla::PrimitiveType::PRED, input.builder());
+      xla::Zero(input.builder(), xla::PrimitiveType::PRED);
   xla::XlaOp empty_mask =
       XlaHelpers::ScalarBroadcast(true, xla::PrimitiveType::PRED,
                                   input_shape.dimensions(), input.builder());
@@ -124,6 +125,19 @@ xla::XlaOp BuildDiagonalViewUpdate(xla::XlaOp target, xla::XlaOp input,
     result = xla::Transpose(result, xla::InversePermutation(permutation));
   }
   return result;
+}
+
+xla::XlaOp BuildInverse(xla::XlaOp input) {
+  xla::QRDecompositionResult qr_result =
+      xla::QRDecomposition(input, /*full_matrices=*/false,
+                           XlaHelpers::mat_mul_precision())
+          .ValueOrDie();
+  return xla::TriangularSolve(qr_result.r,
+                              xla::TransposeInMinorDims(qr_result.q),
+                              /*left_side=*/true,
+                              /*lower=*/false, /*unit_diagonal=*/false,
+                              /*transpose_a=*/
+                              xla::TriangularSolveOptions::NO_TRANSPOSE);
 }
 
 }  // namespace torch_xla

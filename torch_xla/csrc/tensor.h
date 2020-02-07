@@ -237,6 +237,12 @@ class XLATensor {
   static void arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
                          at::Scalar step, at::ScalarType scalar_type);
 
+  static XLATensor argmax(const XLATensor& input, xla::int64 dim, bool keepdim);
+  static XLATensor argmax(const XLATensor& input);
+
+  static XLATensor argmin(const XLATensor& input, xla::int64 dim, bool keepdim);
+  static XLATensor argmin(const XLATensor& input);
+
   // Takes a slice from the input as R1 at the specified offset and reshapes it
   // into the provided size.
   static XLATensor as_strided(const XLATensor& input,
@@ -536,6 +542,8 @@ class XLATensor {
   static XLATensor index_select(const XLATensor& input, xla::int64 dim,
                                 const XLATensor& index);
 
+  static XLATensor inverse(const XLATensor& input);
+
   static XLATensor kl_div_backward(const XLATensor& grad_output,
                                    const XLATensor& input,
                                    const XLATensor& target,
@@ -743,8 +751,6 @@ class XLATensor {
 
   static XLATensor randperm(xla::int64 n, const Device& device,
                             at::ScalarType scalar_type);
-
-  static void randperm_out(XLATensor& out, xla::int64 n);
 
   static XLATensor reciprocal(const XLATensor& input);
   static void reciprocal_(XLATensor& input);
