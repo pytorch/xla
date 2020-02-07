@@ -148,9 +148,6 @@ def list(path):
 
   Returns:
     A list of ``GcsBlob`` objects.
-
-  Raises:
-    ValueError: If an invalid GCS path is supplied.
   """
   blobs = []
   for mpath in torch_xla._XLAC._xla_tffs_list(path):
@@ -172,9 +169,6 @@ def stat(path):
 
   Returns:
     A ``GcsBlob`` object.
-
-  Raises:
-    ValueError: If an invalid GCS path is supplied.
   """
   fstat = torch_xla._XLAC._xla_tffile_stat(path)
   return _mkblob(path, fstat)
@@ -187,9 +181,6 @@ def remove(path):
     path (string): The GCS path of the file. Must be "gs://BUCKET_NAME/PATH"
       where ``BUCKET_NAME`` is the name of the GCS bucket, and ``PATH`` is a `/`
       delimited path.
-
-  Raises:
-    ValueError: If an invalid GCS path is supplied.
   """
   torch_xla._XLAC._xla_tffs_remove(path)
 
