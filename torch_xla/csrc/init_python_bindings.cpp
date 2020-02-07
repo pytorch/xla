@@ -4,15 +4,19 @@
 #include <cstring>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/metrics_reader.h"
+#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/record_reader.h"
+#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
+#include "tensorflow/core/platform/env.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/pybind.h"
@@ -328,6 +332,58 @@ py::object RecordReadExample(
   return example;
 }
 
+std::unique_ptr<tensorflow::RandomAccessFile> OpenTfFile(
+    const std::string& path) {
+  tensorflow::Env* env = tensorflow::Env::Default();
+  std::unique_ptr<tensorflow::RandomAccessFile> file;
+  XLA_CHECK_OK(env->NewRandomAccessFile(path, &file));
+  return file;
+}
+
+py::object StatTfFile(const std::string& path) {
+  tensorflow::Env* env = tensorflow::Env::Default();
+  tensorflow::FileStatistics stat;
+  {
+    NoGilSection nogil;
+    XLA_CHECK_OK(env->Stat(path, &stat));
+  }
+  auto py_stat = py::dict();
+  py_stat["length"] = py::cast(stat.length);
+  py_stat["mtime_nsec"] = py::cast(stat.mtime_nsec);
+  py_stat["is_directory"] = py::cast(stat.is_directory);
+  return py_stat;
+}
+
+py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
+                     size_t size) {
+  static const size_t kMinReadSize = 1024 * 1024;
+  std::unique_ptr<char[]> buffer;
+  {
+    NoGilSection nogil;
+    buffer.reset(new char[size]);
+
+    size_t num_threads = std::max<size_t>(size / kMinReadSize, 1);
+    num_threads =
+        std::min<size_t>(num_threads, std::thread::hardware_concurrency());
+    size_t block_size = size / num_threads;
+
+    xla::util::MultiWait mwait(num_threads);
+    for (size_t i = 0; i < num_threads; ++i) {
+      auto reader = [&, i]() {
+        uint64_t base = static_cast<uint64_t>(i) * block_size;
+        size_t tsize =
+            (i + 1 < num_threads) ? block_size : (size - i * block_size);
+
+        tensorflow::StringPiece result;
+        XLA_CHECK_OK(file->Read(offset, tsize, &result, buffer.get() + base));
+      };
+      xla::env::ScheduleIoClosure(mwait.Completer(std::move(reader)));
+    }
+    mwait.Wait();
+  }
+  return py::bytes(buffer.get(), size);
+}
+
 void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
@@ -493,6 +549,23 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_tfexample_read",
         [](const std::shared_ptr<xla::util::RecordReader>& reader) {
           return RecordReadExample(reader);
+        });
+
+  py::class_<tensorflow::RandomAccessFile>(m, "TfFile");
+  m.def("_xla_tffile_open", [](const std::string& path) {
+    std::unique_ptr<tensorflow::RandomAccessFile> file;
+    {
+      NoGilSection nogil;
+      file = OpenTfFile(path);
+    }
+    return py::cast(file.release(),
+                    pybind11::return_value_policy::take_ownership);
+  });
+  m.def("_xla_tffile_stat",
+        [](const std::string& path) { return StatTfFile(path); });
+  m.def("_xla_tffile_read",
+        [](tensorflow::RandomAccessFile* file, uint64_t offset, size_t size) {
+          return ReadTfFile(file, offset, size);
         });
 }
 
