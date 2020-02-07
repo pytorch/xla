@@ -384,6 +384,43 @@ py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
   return py::bytes(buffer.get(), size);
 }
 
+std::unique_ptr<tensorflow::WritableFile> CreateTfFile(
+    const std::string& path) {
+  tensorflow::Env* env = tensorflow::Env::Default();
+  std::unique_ptr<tensorflow::WritableFile> file;
+  XLA_CHECK_OK(env->NewWritableFile(path, &file));
+  return file;
+}
+
+void WriteTfFile(tensorflow::WritableFile* file, const std::string& data) {
+  XLA_CHECK_OK(file->Append(tensorflow::StringPiece(data.data(), data.size())));
+}
+
+void FlushTfFile(tensorflow::WritableFile* file) {
+  XLA_CHECK_OK(file->Flush());
+  XLA_CHECK_OK(file->Sync());
+}
+
+py::object ListTfFs(const std::string& pattern) {
+  std::vector<std::string> files;
+  {
+    NoGilSection nogil;
+    tensorflow::Env* env = tensorflow::Env::Default();
+    XLA_CHECK_OK(env->GetMatchingPaths(pattern, &files));
+  }
+
+  auto py_files = py::tuple(files.size());
+  for (size_t i = 0; i < files.size(); ++i) {
+    py_files[i] = files[i];
+  }
+  return py_files;
+}
+
+void RemoveTfFile(const std::string& path) {
+  tensorflow::Env* env = tensorflow::Env::Default();
+  XLA_CHECK_OK(env->DeleteFile(path));
+}
+
 void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
@@ -551,7 +588,7 @@ void InitXlaModuleBindings(py::module m) {
           return RecordReadExample(reader);
         });
 
-  py::class_<tensorflow::RandomAccessFile>(m, "TfFile");
+  py::class_<tensorflow::RandomAccessFile>(m, "TfRdFile");
   m.def("_xla_tffile_open", [](const std::string& path) {
     std::unique_ptr<tensorflow::RandomAccessFile> file;
     {
@@ -567,6 +604,33 @@ void InitXlaModuleBindings(py::module m) {
         [](tensorflow::RandomAccessFile* file, uint64_t offset, size_t size) {
           return ReadTfFile(file, offset, size);
         });
+
+  py::class_<tensorflow::WritableFile>(m, "TfWrFile");
+  m.def("_xla_tffile_create", [](const std::string& path) {
+    std::unique_ptr<tensorflow::WritableFile> file;
+    {
+      NoGilSection nogil;
+      file = CreateTfFile(path);
+    }
+    return py::cast(file.release(),
+                    pybind11::return_value_policy::take_ownership);
+  });
+  m.def("_xla_tffile_write",
+        [](tensorflow::WritableFile* file, const std::string& data) {
+          NoGilSection nogil;
+          WriteTfFile(file, data);
+        });
+  m.def("_xla_tffile_flush", [](tensorflow::WritableFile* file) {
+    NoGilSection nogil;
+    FlushTfFile(file);
+  });
+
+  m.def("_xla_tffs_list",
+        [](const std::string& pattern) { return ListTfFs(pattern); });
+  m.def("_xla_tffs_remove", [](const std::string& path) {
+    NoGilSection nogil;
+    RemoveTfFile(path);
+  });
 }
 
 }  // namespace
