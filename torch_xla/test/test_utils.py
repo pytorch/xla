@@ -68,7 +68,10 @@ def get_summary_writer(logdir):
   """
   if logdir:
     from tensorboardX import SummaryWriter
-    return SummaryWriter(log_dir=logdir)
+    writer = SummaryWriter(log_dir=logdir)
+    write_to_summary(writer, 0, dict_to_write={
+        'TensorboardStartTimestamp': time.time()})
+    return writer
 
 
 def print_training_update(device, step_num, loss, rate, global_rate):
