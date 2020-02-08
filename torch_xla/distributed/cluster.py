@@ -1,7 +1,9 @@
 import cloud_tpu_client
 from concurrent import futures
 import logging
+import multiprocessing
 import requests
+import time
 
 from torch_xla.distributed.worker import ClientWorker
 from torch_xla.distributed.worker import ServiceWorker
@@ -130,15 +132,58 @@ class Cluster(object):
 
   def wait_for_healthy_service(self):
 
-    def wait_for_healthy_worker(tpu_name):
+    def wait_for_healthy_service_worker(tpu_name):
       ctc = cloud_tpu_client.Client(tpu=tpu_name)
       ctc.wait_for_healthy()
 
     tpus = self.list_tpus_with_health('UNHEALTHY_MAINTENANCE')
+    if not tpus:
+      return
     with futures.ThreadPoolExecutor(max_workers=len(tpus)) as executor:
-      results = executor.map(wait_for_healthy_worker, tpus)
+      results = executor.map(wait_for_healthy_service_worker, tpus)
       for result in results:
         continue  # Only iterating to re-raise any worker errors.
+
+  def wait_for_healthy_client(
+      self, dist_executor, timeout_s=1200, interval_s=10):
+
+    def wait_for_healthy_client_worker(client_worker):
+      heartbeart_check = [
+        'echo', 'client_worker', '$(hostname)', 'is', 'healthy']
+      timeout = time.time() + timeout_s
+
+      def _healthy_client_worker():
+        proc = multiprocessing.Process(
+          target=dist_executor._build_and_run_ssh,
+          args=(heartbeart_check, client_worker,))
+        proc.daemon = True
+        proc.start()
+
+        time.sleep(interval_s)
+        if proc.is_alive():
+          proc.terminate()
+          return False
+
+        return proc.exitcode == 0
+
+      while not _healthy_client_worker():
+        logging.warning(
+            ('Waiting for client_worker "%s" to become healthy'),
+            str(client_worker))
+        if time.time() + interval_s > timeout:
+          raise RuntimeError(
+            'Timed out waiting for client_worker {} to become healthy'.format(
+              client_worker))
+
+      logging.warning('client_worker "%s" is healthy.', str(client_worker))
+
+    with futures.ThreadPoolExecutor(
+        max_workers=len(self._client_workers)) as executor:
+      results = executor.map(
+        wait_for_healthy_client_worker, self._client_workers)
+      for result in results:
+        if result:
+          result.result()  # Only iterating to re-raise any worker errors.
 
 
 class ClusterResolver(object):

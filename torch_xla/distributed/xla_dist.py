@@ -5,11 +5,11 @@ from __future__ import print_function
 
 import argparse
 import cloud_tpu_client
-from collections import deque
-from collections import namedtuple
+from concurrent import futures
 import logging
 import multiprocessing
 import os
+import queue
 import re
 import signal
 import subprocess
@@ -34,7 +34,6 @@ def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
 class DistributedExecutor(object):
 
   SCRIPT_PATH_TMPL = '/tmp/{pid}/dist_training_ptxla_{worker}.sh'
-  MASTER_IDX = 0
   MESH_SERVICE_PORT = 8477  # Use single port to disallow concurrent runs
   DIST_ENV_VARS = [
       'XRT_TPU_CONFIG',
@@ -42,6 +41,7 @@ class DistributedExecutor(object):
       'XRT_MESH_SERVICE_ADDRESS',
       'XRT_SHARD_WORLD_SIZE',
       'XRT_SHARD_ORDINAL',
+      'XLA_EMIT_STEPLOG',
   ]
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   MAX_TPU_RETRY = 50
@@ -67,6 +67,15 @@ class DistributedExecutor(object):
                conda_env=None,
                env_vars=None):
     self._cluster = cluster
+    client_master_ip = ClusterResolver._get_instance_metadata(
+      'instance/network-interfaces/0/ip')
+    self._client_master = list(filter(
+      lambda cw: cw._internal_ip == client_master_ip,
+      self._cluster._client_workers))[0]
+    self._heartbeats = {
+      cw._internal_ip: queue.Queue() for cw in self._cluster._client_workers
+    }
+    self._error_queue = multiprocessing.Queue()
     self.logger = self._get_logger()
     self.docker_container = docker_container or self.DEFAULT_CONTAINER_NAME
     self.docker_image = docker_image
@@ -86,14 +95,38 @@ class DistributedExecutor(object):
                ' will interfere with the values set for distributed'
                ' training'.format(dist_var)))
 
+  def _check_client_mesh_health(self):
+
+    def _pop_mark_step_queue(queue, timeout=30):
+      queue.get(timeout=timeout)
+
+    with futures.ThreadPoolExecutor(
+        max_workers=len(self._heartbeats)) as executor:
+      try:
+        results = executor.map(_pop_mark_step_queue, self._heartbeats.values())
+        for result in results:
+          if result:
+            result.result()  # Only iterating to re-raise any worker errors.
+      except queue.Empty:
+        self._error_queue.put(RuntimeError(
+          'Client mesh is unhealthy due to non-matching heartbeats'))
+
   def _stream_logs(self, process, client_worker):
     client_ip = client_worker._internal_ip
     ordinal = self._cluster._client_workers.index(client_worker)
 
     def _stream_output(stream, log_fn):
       for std in iter(stream.readline, b''):
+        std_line = std.decode('utf-8').rstrip('\n')
+        if 'torch_xla.core.xla_model::mark_step' in std_line:
+          self._heartbeats[client_ip].put(1)
+          if client_ip == self._client_master._internal_ip:
+            t = threading.Thread(target=self._check_client_mesh_health)
+            t.daemon = True
+            t.start()
+          continue
         log_fn(
-            std.decode('utf-8').rstrip('\n'),
+            std_line,
             extra={
                 'clientip': client_ip,
                 'ordinal': ordinal
@@ -150,10 +183,15 @@ class DistributedExecutor(object):
     if log:
       self._stream_logs(proc, client_worker)
     proc.wait()
+    if proc.returncode == 255:
+      self._error_queue.put(RuntimeError(
+        'Client mesh is unhealthy due to dead client worker: {}'.format(
+          client_worker)))
+    return proc.returncode
 
   def _build_and_run_ssh(self, remote_cmd, client_worker, shell=True, log=True):
     cmd = self._build_ssh_cmd(remote_cmd, client_worker)
-    self._run_remote_cmd(cmd, client_worker, shell=shell, log=log)
+    return self._run_remote_cmd(cmd, client_worker, shell=shell, log=log)
 
   def _docker_run_cmd(self, cmd):
     docker_cmd = [
@@ -174,19 +212,21 @@ class DistributedExecutor(object):
     return docker_cmd
 
   def _env_vars_cmd(self, worker_idx):
-    client_master = self._cluster._client_workers[self.MASTER_IDX]
+    client_worker = self._cluster._client_workers[worker_idx]
     env_vars = {
         'XRT_LOCAL_WORKER':
             'c_tpu_worker:{}'.format(worker_idx),
         'XRT_MESH_SERVICE_ADDRESS':
-            '{}:{}'.format(client_master._internal_ip, self.MESH_SERVICE_PORT),
+            '{}:{}'.format(
+              self._client_master._internal_ip, self.MESH_SERVICE_PORT),
         'XRT_SHARD_WORLD_SIZE':
             len(self._cluster._client_workers),
         'XRT_SHARD_ORDINAL':
             worker_idx,
+        'XLA_EMIT_STEPLOG': 1,
     }
     # Only for master
-    if worker_idx == self.MASTER_IDX:
+    if client_worker == self._client_master:
       xrt_server_config = [
           'c_tpu_worker;{worker_idx};{worker_ip}:{worker_port}'.format(
               worker_idx=idx,
@@ -273,11 +313,11 @@ class DistributedExecutor(object):
 
     def _cleanup_worker(local_script, remote_script, client_worker):
       rm_tmp_dir = ['rm', '-rf', os.path.dirname(remote_script)]
-      self._build_and_run_ssh(rm_tmp_dir, client_worker)
+      self._build_and_run_ssh(rm_tmp_dir, client_worker, log=False)
       subprocess.call(['rm', '-rf', os.path.dirname(local_script)])
       if self.docker_image:
         rm_container = ['docker', 'rm', '-f', self.docker_container]
-        self._build_and_run_ssh(rm_container, client_worker)
+        self._build_and_run_ssh(rm_container, client_worker, log=False)
       rm_pgroup = ('kill -9 -$(ps xao pid,pgid,cmd | grep "bash -c \\"{}\\""'
                    ' | grep -v grep | awk "{{print \$2}}")').format(
                      remote_script)
@@ -294,6 +334,13 @@ class DistributedExecutor(object):
           ))
       thread.start()
       threads.append(thread)
+
+    # Cleanup states in case of restart
+    self._heartbeats = {
+      cw._internal_ip: queue.Queue() for cw in self._cluster._client_workers
+    }
+    self._error_queue = multiprocessing.Queue()
+
     for thread in threads:
       thread.join()
 
@@ -339,8 +386,7 @@ class DistributedExecutor(object):
             extra={'clientip': '', 'ordinal': ''})
 
         script_map = self._prepare_scripts(cmd)
-        proc = multiprocessing.Process(
-          target=self._run_cmd, args=(script_map,))
+        proc = multiprocessing.Process(target=self._run_cmd, args=(script_map,))
         proc.start()
         while True:
           if not proc.is_alive():
@@ -349,8 +395,15 @@ class DistributedExecutor(object):
               'UNHEALTHY_MAINTENANCE')) != 0:
             # TPU Maintenance: kill all training, wait for healthy, and restart
             break
+          if not self._error_queue.empty():
+            # Potential HostError on GCE VM: kill all, wait, and restart
+            self.logger.warning(
+              self._error_queue.get(), extra={'clientip': '', 'ordinal': ''})
+            break
           time.sleep(1)
 
+        # First wait for VMs to come back then cleanup all others
+        self._cluster.wait_for_healthy_client(self)
         self._cleanup(script_map)
         proc.terminate()
         self._cluster.wait_for_healthy_service()

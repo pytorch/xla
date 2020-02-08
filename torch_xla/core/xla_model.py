@@ -403,6 +403,8 @@ def _run_step_closures():
 
 
 def mark_step():
+  if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False):
+    print('torch_xla.core.xla_model::mark_step', flush=True)
   torch_xla._XLAC._xla_step_marker(
       torch_xla._XLAC._xla_get_default_device(), [],
       wait=xu.getenv_as('XLA_SYNC_WAIT', bool, False))
