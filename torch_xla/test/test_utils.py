@@ -70,7 +70,8 @@ def get_summary_writer(logdir):
     from tensorboardX import SummaryWriter
     writer = SummaryWriter(log_dir=logdir)
     current_time = time.time()
-    write_to_summary(writer, 0, dict_to_write={'StartupTime': current_time})
+    write_to_summary(writer, 0, dict_to_write={
+        'TensorboardStartTimestamp': current_time})
     return writer
 
 
