@@ -1285,7 +1285,8 @@ XrtComputationClient::GetMetrics() const {
            "XrtReleaseAllAllocations"},
           {"/tensorflow/xrt/ops/compact_allocations", "XrtCompactAllocations"},
           {"/tensorflow/xrt/memory_manager/compaction", "XrtCompaction"},
-          {"/tensorflow/xrt/memory_manager/try_free_memory", "XrtCompaction"}};
+          {"/tensorflow/xrt/memory_manager/try_free_memory",
+           "XrtTryFreeMemory"}};
 
   std::map<std::string, Metric> metrics_data;
   xrt::XRTMetricsCollect metrics;
