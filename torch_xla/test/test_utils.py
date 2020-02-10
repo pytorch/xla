@@ -41,7 +41,7 @@ def write_to_summary(summary_writer,
       if metric_name.find('aten::') == 0:
         aten_ops_sum += metric_value
       summary_writer.add_scalar(metric_name, metric_value, global_step)
-    summary_writer.add_scalar('aten_ops_sum', metric_value, global_step)
+    summary_writer.add_scalar('aten_ops_sum', aten_ops_sum, global_step)
 
 
 def close_summary_writer(summary_writer):
