@@ -58,6 +58,8 @@ disabled_torch_tests = {
     'test_pow',
     'test_pow_scalar_overloads_mem_overlap',  # doesn't raise
     'test_pdist_norm',
+    'test_pdist_norm_backward_xla',  # pdist_single
+    'test_pdist_norm_forward_xla',  # pdist_single
     'test_nuclear_norm_axes_small_brute_force',
     'test_mul_intertype_scalar',
     'test_memory_format_type',
