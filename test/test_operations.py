@@ -1175,6 +1175,13 @@ class TestAtenXlaTensor(XlaTestCase):
         [torch.randn(0, 1, 2, 0),
          torch.tensor([], dtype=torch.long)], test_fn)
 
+  def test_view_and_copy_(self):
+    xla_device = xm.xla_device()
+    x = torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5], device='cpu')
+    y = torch.tensor([0, 0, 0, 0, 0, 0], device=xla_device)
+    y[::2].copy_(x[::2])
+    self.assertEqual(y, [1, 0, 3, 0, 5, 0])
+
   def test_diagonal_write(self):
 
     def test_fn(t):
