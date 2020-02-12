@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_RPC_XRT_COMPUTATION_CLIENT_H_
-#define TENSORFLOW_COMPILER_XLA_RPC_XRT_COMPUTATION_CLIENT_H_
+#ifndef XLA_CLIENT_XRT_COMPUTATION_CLIENT_H_
+#define XLA_CLIENT_XRT_COMPUTATION_CLIENT_H_
 
 #include <atomic>
 #include <functional>
@@ -476,4 +476,4 @@ class XrtComputationClient : public ComputationClient {
 
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_RPC_XRT_COMPUTATION_CLIENT_H_
+#endif  // XLA_CLIENT_XRT_COMPUTATION_CLIENT_H_

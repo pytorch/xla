@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_XLA_CLIENT_TRIGGERED_TASK_H_
-#define TENSORFLOW_COMPILER_XLA_XLA_CLIENT_TRIGGERED_TASK_H_
+#ifndef XLA_CLIENT_TRIGGERED_TASK_H_
+#define XLA_CLIENT_TRIGGERED_TASK_H_
 
 #include <condition_variable>
 #include <functional>
@@ -52,4 +52,4 @@ class TriggeredTask {
 }  // namespace util
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_XLA_CLIENT_TRIGGERED_TASK_H_
+#endif  // XLA_CLIENT_TRIGGERED_TASK_H_

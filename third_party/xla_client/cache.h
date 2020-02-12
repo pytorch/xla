@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_RPC_CACHE_H_
-#define TENSORFLOW_COMPILER_XLA_RPC_CACHE_H_
+#ifndef XLA_CLIENT_CACHE_H_
+#define XLA_CLIENT_CACHE_H_
 
 #include <functional>
 #include <list>
@@ -108,4 +108,4 @@ class Cache {
 }  // namespace util
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_RPC_CACHE_H_
+#endif  // XLA_CLIENT_CACHE_H_

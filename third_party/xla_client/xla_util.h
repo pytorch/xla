@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_RPC_XLA_UTIL_H_
-#define TENSORFLOW_COMPILER_XLA_RPC_XLA_UTIL_H_
+#ifndef XLA_CLIENT_XLA_UTIL_H_
+#define XLA_CLIENT_XLA_UTIL_H_
 
 #include <string>
 
@@ -35,4 +35,4 @@ size_t ShapeHash(const Shape& shape);
 }  // namespace util
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_RPC_XLA_UTIL_H_
+#endif  // XLA_CLIENT_XLA_UTIL_H_

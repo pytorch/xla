@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_RPC_UTIL_H_
-#define TENSORFLOW_COMPILER_XLA_RPC_UTIL_H_
+#ifndef XLA_CLIENT_UTIL_H_
+#define XLA_CLIENT_UTIL_H_
 
 #include <cstring>
 #include <exception>
@@ -300,4 +300,4 @@ size_t MHash(T value, Targs... Fargs) {
 }  // namespace util
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_RPC_UTIL_H_
+#endif  // XLA_CLIENT_UTIL_H_

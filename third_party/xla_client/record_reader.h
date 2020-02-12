@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_RPC_RECORD_READER_H_
-#define TENSORFLOW_COMPILER_XLA_RPC_RECORD_READER_H_
+#ifndef XLA_CLIENT_RECORD_READER_H_
+#define XLA_CLIENT_RECORD_READER_H_
 
 #include <memory>
 #include <mutex>
@@ -31,4 +31,4 @@ class RecordReader {
 }  // namespace util
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_RPC_RECORD_READER_H_
+#endif  // XLA_CLIENT_RECORD_READER_H_
