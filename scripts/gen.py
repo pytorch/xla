@@ -100,6 +100,7 @@ _FN_OUT = {
     'log_out': FuncOpts(),
     'masked_select_out': FuncOpts(),
     'nonzero_out': FuncOpts(),
+    'pow_out': FuncOpts(),
     'take_out': FuncOpts(),
     'topk_out': FuncOpts(),
 }

@@ -578,7 +578,9 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
   data()->xla_data = nullptr;
   data()->tensor_data = c10::nullopt;
   data()->generation += 1;
-  if (data()->view != nullptr) {
+  // UpdateView if we can, otherwise just override.
+  if (data()->view != nullptr && xla::util::Multiply<xla::int64>(ir_value.shape().dimensions())
+          == xla::util::Multiply<xla::int64>(data()->view->shape().dimensions())) {
     // If we have an active view, and a SetIrValue() happens, it means we are
     // within an in-place execution context, and we need to update the view's
     // alias as well.
