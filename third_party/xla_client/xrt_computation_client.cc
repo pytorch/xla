@@ -1265,8 +1265,7 @@ const std::vector<std::string>& XrtComputationClient::GetReplicationDevices()
 
 void XrtComputationClient::SetRngSeed(size_t seed) { rng_seed_ = seed; }
 
-std::map<std::string, ComputationClient::Metric>
-XrtComputationClient::GetMetrics() const {
+std::map<std::string, Metric> XrtComputationClient::GetMetrics() const {
   static const std::map<std::string, std::string>* metric_remap =
       new std::map<std::string, std::string>{
           {"/tensorflow/xrt/ops/allocate", "XrtAllocate"},
@@ -1286,7 +1285,10 @@ XrtComputationClient::GetMetrics() const {
           {"/tensorflow/xrt/ops/compact_allocations", "XrtCompactAllocations"},
           {"/tensorflow/xrt/memory_manager/compaction", "XrtCompaction"},
           {"/tensorflow/xrt/memory_manager/try_free_memory",
-           "XrtTryFreeMemory"}};
+           "XrtTryFreeMemory"},
+          {"/tensorflow/xrt/executor/program_memory_evict", "XrtExecutorEvict"},
+          {"/tensorflow/xrt/ds_executor/program_memory_evict",
+           "XrtExecutorEvict"}};
 
   std::map<std::string, Metric> metrics_data;
   xrt::XRTMetricsCollect metrics;
