@@ -99,6 +99,7 @@ cc_library(
         "tf_logging.h",
         "thread_pool.h",
         "triggered_task.h",
+        "types.h",
         "unique.h",
         "util.h",
         "xla_util.h",

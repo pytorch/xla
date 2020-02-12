@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_RPC_METRICS_READER_H_
-#define TENSORFLOW_COMPILER_XLA_RPC_METRICS_READER_H_
+#ifndef XLA_CLIENT_METRICS_READER_H_
+#define XLA_CLIENT_METRICS_READER_H_
 
 #include <string>
 
@@ -12,4 +12,4 @@ std::string CreateMetricReport();
 }  // namespace metrics_reader
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_RPC_METRICS_READER_H_
+#endif  // XLA_CLIENT_METRICS_READER_H_

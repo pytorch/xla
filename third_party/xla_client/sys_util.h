@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_RPC_SYS_UTIL_H_
-#define TENSORFLOW_COMPILER_XLA_RPC_SYS_UTIL_H_
+#ifndef XLA_CLIENT_SYS_UTIL_H_
+#define XLA_CLIENT_SYS_UTIL_H_
 
 #include <string>
 
@@ -26,4 +26,4 @@ int64 NowNs();
 }  // namespace sys_util
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_RPC_SYS_UTIL_H_
+#endif  // XLA_CLIENT_SYS_UTIL_H_
