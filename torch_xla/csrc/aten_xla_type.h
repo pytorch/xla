@@ -503,6 +503,9 @@ class AtenXlaType {
 
   static at::Tensor logdet(const at::Tensor& self);
 
+  static at::Tensor logsumexp(const at::Tensor& self, at::IntArrayRef dim,
+                              bool keepdim);
+
   static at::Tensor lt(const at::Tensor& self, at::Scalar other);
 
   static at::Tensor lt(const at::Tensor& self, const at::Tensor& other);

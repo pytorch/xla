@@ -318,15 +318,22 @@ xla::XlaOp BuildProd(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
 
 xla::XlaOp BuildMaxInDim(xla::XlaOp input, xla::int64 dim,
                          bool keep_reduced_dimensions) {
+  return BuildMaxInDims(input, {dim}, keep_reduced_dimensions);
+}
+
+xla::XlaOp BuildMaxInDims(xla::XlaOp input,
+                          absl::Span<const xla::int64> dimensions,
+                          bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.min, shape.element_type(), input.builder());
-  ReductionInfo rinfo = GetReductionInfo(shape, {dim}, keep_reduced_dimensions);
+  ReductionInfo rinfo =
+      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
   XLA_CHECK_GT(rinfo.element_count, 0);
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMaxComputation(shape.element_type()),
-      {dim});
+      dimensions);
   if (keep_reduced_dimensions) {
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
@@ -420,6 +427,28 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
   return result;
+}
+
+xla::XlaOp BuildLogsumexp(xla::XlaOp input,
+                          absl::Span<const xla::int64> dimensions,
+                          bool keep_reduced_dimensions) {
+  // Use the log-sum-exp trick to avoid overflow.
+  xla::XlaOp max_in_dim =
+      BuildMaxInDims(input, dimensions, /*keep_reduced_dimensions=*/true);
+  xla::XlaOp exps = xla::Exp(input - max_in_dim);
+  xla::XlaOp sums = CreateSummation(exps, dimensions, keep_reduced_dimensions,
+                                    /*scale=*/false)
+                        .result;
+  xla::XlaOp logs = xla::Log(sums);
+  // If keep_reduced_dimensions is false, we need to reshpae the max_in_dim to
+  // the reduced shape before doing the add.
+  if (!keep_reduced_dimensions) {
+    max_in_dim =
+        CreateSummation(max_in_dim, dimensions, keep_reduced_dimensions,
+                        /*scale=*/false)
+            .result;
+  }
+  return logs + max_in_dim;
 }
 
 }  // namespace torch_xla
