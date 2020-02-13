@@ -833,7 +833,7 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
   auto src_tensor = bridge::TryGetXlaTensor(src);
   if (!src_tensor) {
     XLA_CHECK(self_tensor);
-    self_tensor->SetTensor(CopyTensor(src, self.scalar_type()));
+    self_tensor->UpdateFromTensor(CopyTensor(src, self.scalar_type()));
   } else if (!self_tensor) {
     // TODO: Is self_tensor good enough?  I don't think so... therefore
     // the hack below:

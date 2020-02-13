@@ -577,12 +577,12 @@ void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data,
 void XLATensor::SetIrValue(ir::Value ir_value) {
   data()->xla_data = nullptr;
   data()->tensor_data = c10::nullopt;
-  data()->generation += 1;
   if (data()->view != nullptr) {
     // If we have an active view, and a SetIrValue() happens, it means we are
     // within an in-place execution context, and we need to update the view's
     // alias as well.
     data()->view = UpdateView(data()->view, std::move(ir_value));
+    data()->generation += 1;
   } else {
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
@@ -602,6 +602,7 @@ void XLATensor::AssignIrValue(ir::Value ir_value) const {
     ir_value->get_user_metadata<IrNodeMetaData>()->BindTensorData(data_ptr());
   }
   data()->ir_value = std::move(ir_value);
+  data()->generation += 1;
 }
 
 void XLATensor::TryLimitGraphSize() {
@@ -791,6 +792,23 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor) {
   }
   data()->xla_data = nullptr;
   AssignIrValue(ir::Value());
+}
+
+void XLATensor::UpdateFromTensorOut(at::Tensor tensor) {
+  if (data()->view != nullptr &&
+      xla::ShapeUtil::ElementsIn(shape()) != tensor.numel()) {
+    data()->view = nullptr;
+  }
+  UpdateFromTensor(std::move(tensor));
+}
+
+void XLATensor::UpdateFromTensorOut(const XLATensor& tensor) {
+  if (data()->view != nullptr &&
+      xla::ShapeUtil::ElementsIn(shape()) !=
+          xla::ShapeUtil::ElementsIn(tensor.shape())) {
+    data()->view = nullptr;
+  }
+  SetIrValue(tensor.GetIrValue());
 }
 
 std::vector<XLATensor> XLATensor::GetLiveTensors(const Device* device) {

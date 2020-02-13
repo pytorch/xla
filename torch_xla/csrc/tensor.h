@@ -55,6 +55,8 @@ class XLATensor {
   void SetTensor(at::Tensor tensor);
 
   void UpdateFromTensor(at::Tensor tensor);
+  void UpdateFromTensorOut(at::Tensor tensor);
+  void UpdateFromTensorOut(const XLATensor& tensor);
 
   at::ScalarType dtype() const;
 

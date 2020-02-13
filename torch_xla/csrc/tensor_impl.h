@@ -18,6 +18,8 @@ class XLATensorImpl : public c10::TensorImpl {
 
   void set_tensor(XLATensor xla_tensor);
 
+  void force_refresh_sizes() { generation_ = 0; }
+
   c10::intrusive_ptr<TensorImpl> shallow_copy_and_detach(
       const c10::VariableVersion& version_counter,
       bool allow_tensor_metadata_change) const override;
@@ -34,11 +36,11 @@ class XLATensorImpl : public c10::TensorImpl {
 
   int64_t size(int64_t d) const override;
 
-  static void AtenInitialize();
-
   const at::Storage& storage() const override;
 
   bool has_storage() const override;
+
+  static void AtenInitialize();
 
  private:
   void SetupSizeProperties();
