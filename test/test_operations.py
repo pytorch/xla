@@ -1341,6 +1341,13 @@ class TestAtenXlaTensor(XlaTestCase):
         torch.randn(2, 2).to(torch.bfloat16)
     ], test_fn)
 
+  def test_view_and_copy_(self):
+    xla_device = xm.xla_device()
+    x = torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5], device='cpu')
+    y = torch.tensor([0, 0, 0, 0, 0, 0], device=xla_device)
+    y[::2].copy_(x[::2])
+    self.assertEqual(y, [1, 0, 3, 0, 5, 0])
+
 
 class MNISTComparator(nn.Module):
 

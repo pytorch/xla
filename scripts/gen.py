@@ -96,9 +96,10 @@ _FN_OUT = {
     'gather_out': FuncOpts(),
     'kthvalue_out': FuncOpts(),
     'index_select_out': FuncOpts(),
-    'inverse_out' : FuncOpts(),
+    'inverse_out': FuncOpts(),
     'log_out': FuncOpts(),
     'masked_select_out': FuncOpts(),
+    'pow_out': FuncOpts(),
     'nonzero_out': FuncOpts(),
     'take_out': FuncOpts(),
     'topk_out': FuncOpts(),
@@ -725,7 +726,7 @@ def generate_aten_remap(ctx, fname, sig, params, fnopts):
 
 
 def generate_outfn_result_copy(dest, src):
-  return '  {}.unsafeGetTensorImpl()->shallow_copy_from({}.getIntrusivePtr());\n'.format(
+  return '  bridge::XlaUpdateTensors({{{}}}, {{{}}}, {{0}});\n'.format(
       dest, src)
 
 

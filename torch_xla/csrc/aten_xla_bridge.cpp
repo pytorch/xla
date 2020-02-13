@@ -46,11 +46,14 @@ AtenXlaDeviceMapper* AtenXlaDeviceMapper::Get() {
   return device_mapper;
 }
 
+XLATensorImpl* GetXlaTensorImpl(const at::Tensor& tensor) {
+  return dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
+}
+
 }  // namespace
 
 c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor) {
-  XLATensorImpl* impl =
-      dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
+  XLATensorImpl* impl = GetXlaTensorImpl(tensor);
   if (impl == nullptr) {
     return c10::nullopt;
   }
@@ -58,7 +61,7 @@ c10::optional<XLATensor> TryGetXlaTensor(const at::Tensor& tensor) {
 }
 
 bool IsXlaTensor(const at::Tensor& tensor) {
-  return TryGetXlaTensor(tensor).has_value();
+  return GetXlaTensorImpl(tensor) != nullptr;
 }
 
 XLATensor GetXlaTensor(const at::Tensor& tensor) {
@@ -126,11 +129,19 @@ void XlaUpdateTensors(absl::Span<const at::Tensor> dest_xla_tensors,
                       absl::Span<const at::Tensor> source_cpu_tensors,
                       absl::Span<const size_t> indices) {
   for (auto index : indices) {
-    auto xtensor = TryGetXlaTensor(dest_xla_tensors.at(index));
-    if (xtensor) {
-      xtensor->UpdateFromTensor(source_cpu_tensors.at(index));
+    at::Tensor dest = dest_xla_tensors.at(index);
+    at::Tensor source = source_cpu_tensors.at(index);
+    XLATensorImpl* dest_impl = GetXlaTensorImpl(dest);
+    if (dest_impl != nullptr) {
+      auto xla_source = TryGetXlaTensor(source);
+      if (!xla_source) {
+        dest_impl->tensor().UpdateFromTensorOut(source);
+      } else {
+        dest_impl->tensor().UpdateFromTensorOut(*xla_source);
+      }
+      dest_impl->force_refresh_sizes();
     } else {
-      dest_xla_tensors.at(index).copy_(source_cpu_tensors.at(index));
+      dest.resize_as_(source).copy_(source);
     }
   }
 }
