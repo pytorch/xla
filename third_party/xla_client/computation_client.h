@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_COMPUTATION_CLIENT_H_
-#define XLA_CLIENT_COMPUTATION_CLIENT_H_
+#ifndef TENSORFLOW_COMPILER_XLA_RPC_COMPUTATION_CLIENT_H_
+#define TENSORFLOW_COMPILER_XLA_RPC_COMPUTATION_CLIENT_H_
 
 #include <cmath>
 #include <map>
@@ -13,12 +13,34 @@
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/types.h"
 
 namespace xla {
 
 class ComputationClient {
  public:
+  struct Percentile {
+    struct Point {
+      double percentile = 0.0;
+      double value = 0.0;
+    };
+
+    uint64 start_nstime = 0;
+    uint64 end_nstime = 0;
+    double min_value = NAN;
+    double max_value = NAN;
+    double mean = NAN;
+    double stddev = NAN;
+    size_t num_samples = 0;
+    size_t total_samples = 0;
+    double accumulator = NAN;
+    std::vector<Point> points;
+  };
+
+  struct Metric {
+    absl::optional<Percentile> percentile;
+    absl::optional<int64> int64_value;
+  };
+
   class Data {
    public:
     using OpaqueHandle = int64;
@@ -278,4 +300,4 @@ class ComputationClient {
 
 }  // namespace xla
 
-#endif  // XLA_CLIENT_COMPUTATION_CLIENT_H_
+#endif  // TENSORFLOW_COMPILER_XLA_RPC_COMPUTATION_CLIENT_H_

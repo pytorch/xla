@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_XRT_LOCAL_SERVICE_H_
-#define XLA_CLIENT_XRT_LOCAL_SERVICE_H_
+#ifndef TENSORFLOW_COMPILER_XLA_RPC_XRT_LOCAL_SERVICE_H_
+#define TENSORFLOW_COMPILER_XLA_RPC_XRT_LOCAL_SERVICE_H_
 
 #include <memory>
 #include <string>
@@ -37,4 +37,4 @@ class XrtLocalService {
 
 }  // namespace xla
 
-#endif  // XLA_CLIENT_XRT_LOCAL_SERVICE_H_
+#endif  // TENSORFLOW_COMPILER_XLA_RPC_XRT_LOCAL_SERVICE_H_

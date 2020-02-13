@@ -14,14 +14,14 @@ namespace {
 std::string CreateXrtMetricReport() {
   // The metrics are in milliseconds while metrics::MetricFnTime takes
   // nanoseconds.
-  // TODO: Read the unit of measure and use the proper formatting function.
   const double scale = 1e6;
   metrics::MetricReprFn repr_fn = metrics::MetricFnTime;
   auto xrt_metrics = ComputationClient::Get()->GetMetrics();
   std::stringstream ss;
   for (auto& name_metric : xrt_metrics) {
     if (name_metric.second.percentile) {
-      const Percentile& percentile = *name_metric.second.percentile;
+      const ComputationClient::Percentile& percentile =
+          *name_metric.second.percentile;
       ss << "Metric: " << name_metric.first << std::endl;
       ss << "  TotalSamples: " << percentile.total_samples << std::endl;
       ss << "  Accumulator: " << repr_fn(percentile.accumulator * scale)

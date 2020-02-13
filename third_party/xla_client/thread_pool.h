@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_THREAD_POOL_H_
-#define XLA_CLIENT_THREAD_POOL_H_
+#ifndef TENSORFLOW_COMPILER_XLA_XLA_CLIENT_THREAD_POOL_H_
+#define TENSORFLOW_COMPILER_XLA_XLA_CLIENT_THREAD_POOL_H_
 
 #include <functional>
 #include <memory>
@@ -34,4 +34,4 @@ Completion ScheduleIoClosureWithCompletion(std::function<void()> closure);
 }  // namespace env
 }  // namespace xla
 
-#endif  // XLA_CLIENT_THREAD_POOL_H_
+#endif  // TENSORFLOW_COMPILER_XLA_XLA_CLIENT_THREAD_POOL_H_

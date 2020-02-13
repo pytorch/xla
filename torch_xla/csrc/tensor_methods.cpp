@@ -1931,7 +1931,11 @@ void XLATensor::copy_(XLATensor& input, XLATensor& src) {
           ir::MakeNode<ir::ops::Cast>(src.GetIrValue(), input.dtype()));
     }
   } else {
-    input.UpdateFromTensor(src.ToTensor());
+    XLATensor new_tensor = src.CopyTensorToDevice(input.GetDevice());
+    if (input.dtype() != src.dtype()) {
+      new_tensor.SetScalarType(input.dtype());
+    }
+    std::swap(input, new_tensor);
   }
 }
 

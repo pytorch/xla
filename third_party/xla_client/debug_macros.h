@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_DEBUG_MACROS_H_
-#define XLA_CLIENT_DEBUG_MACROS_H_
+#ifndef TENSORFLOW_COMPILER_XLA_RPC_DEBUG_MACROS_H_
+#define TENSORFLOW_COMPILER_XLA_RPC_DEBUG_MACROS_H_
 
 #include "tensorflow/compiler/xla/statusor.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
@@ -28,4 +28,4 @@ T ConsumeValue(xla::StatusOr<T>&& status) {
   return status.ConsumeValueOrDie();
 }
 
-#endif  // XLA_CLIENT_DEBUG_MACROS_H_
+#endif  // TENSORFLOW_COMPILER_XLA_RPC_DEBUG_MACROS_H_

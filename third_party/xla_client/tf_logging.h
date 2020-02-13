@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_TF_LOGGING_H_
-#define XLA_CLIENT_TF_LOGGING_H_
+#ifndef TENSORFLOW_COMPILER_XLA_RPC_TF_LOGGING_H_
+#define TENSORFLOW_COMPILER_XLA_RPC_TF_LOGGING_H_
 
 #include <sstream>
 
@@ -79,4 +79,4 @@ class ErrorGenerator {
 }  // namespace internal
 }  // namespace xla
 
-#endif  // XLA_CLIENT_TF_LOGGING_H_
+#endif  // TENSORFLOW_COMPILER_XLA_RPC_TF_LOGGING_H_

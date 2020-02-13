@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_XRT_MESH_SERVICE_H_
-#define XLA_CLIENT_XRT_MESH_SERVICE_H_
+#ifndef TENSORFLOW_COMPILER_XLA_RPC_XRT_MESH_SERVICE_H_
+#define TENSORFLOW_COMPILER_XLA_RPC_XRT_MESH_SERVICE_H_
 
 #include <memory>
 #include <string>
@@ -45,4 +45,4 @@ class MeshClient {
 }  // namespace service
 }  // namespace xla
 
-#endif  // XLA_CLIENT_XRT_MESH_SERVICE_H_
+#endif  // TENSORFLOW_COMPILER_XLA_RPC_XRT_MESH_SERVICE_H_

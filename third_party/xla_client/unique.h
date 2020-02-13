@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_UNIQUE_H_
-#define XLA_CLIENT_UNIQUE_H_
+#ifndef TENSORFLOW_COMPILER_XLA_XLA_CLIENT_UNIQUE_H_
+#define TENSORFLOW_COMPILER_XLA_XLA_CLIENT_UNIQUE_H_
 
 #include <functional>
 #include <set>
@@ -45,4 +45,4 @@ class Unique {
 }  // namespace util
 }  // namespace xla
 
-#endif  // XLA_CLIENT_UNIQUE_H_
+#endif  // TENSORFLOW_COMPILER_XLA_XLA_CLIENT_UNIQUE_H_

@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_METRICS_H_
-#define XLA_CLIENT_METRICS_H_
+#ifndef TENSORFLOW_COMPILER_XLA_RPC_METRICS_H_
+#define TENSORFLOW_COMPILER_XLA_RPC_METRICS_H_
 
 #include <atomic>
 #include <memory>
@@ -203,4 +203,4 @@ class TimedSection {
 }  // namespace metrics
 }  // namespace xla
 
-#endif  // XLA_CLIENT_METRICS_H_
+#endif  // TENSORFLOW_COMPILER_XLA_RPC_METRICS_H_
