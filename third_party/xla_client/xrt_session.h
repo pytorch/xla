@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_RPC_XRT_SESSION_H_
-#define TENSORFLOW_COMPILER_XLA_RPC_XRT_SESSION_H_
+#ifndef XLA_CLIENT_XRT_SESSION_H_
+#define XLA_CLIENT_XRT_SESSION_H_
 
 #include <functional>
 #include <map>
@@ -97,4 +97,4 @@ class XrtSession {
 
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_RPC_XRT_SESSION_H_
+#endif  // XLA_CLIENT_XRT_SESSION_H_

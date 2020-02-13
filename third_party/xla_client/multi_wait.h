@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_XLA_CLIENT_MULTI_WAIT_H_
-#define TENSORFLOW_COMPILER_XLA_XLA_CLIENT_MULTI_WAIT_H_
+#ifndef XLA_CLIENT_MULTI_WAIT_H_
+#define XLA_CLIENT_MULTI_WAIT_H_
 
 #include <condition_variable>
 #include <functional>
@@ -45,4 +45,4 @@ class MultiWait {
 }  // namespace util
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_XLA_CLIENT_MULTI_WAIT_H_
+#endif  // XLA_CLIENT_MULTI_WAIT_H_
