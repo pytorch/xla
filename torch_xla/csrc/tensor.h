@@ -607,6 +607,10 @@ class XLATensor {
 
   static XLATensor logdet(const XLATensor& input);
 
+  static XLATensor logsumexp(const XLATensor& input,
+                             std::vector<xla::int64> dimensions,
+                             bool keep_reduced_dimensions);
+
   static XLATensor lt(const XLATensor& input, at::Scalar other);
   static void lt_(XLATensor& input, at::Scalar other);
 

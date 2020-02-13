@@ -375,7 +375,7 @@ at::Tensor AtenXlaType::all(const at::Tensor& self) {
   return bridge::AtenFromXlaTensor(XLATensor::all(
       self_tensor,
       xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
-      /*keep_reduced_dimensions*/ false));
+      /*keep_reduced_dimensions=*/false));
 }
 
 at::Tensor AtenXlaType::all(const at::Tensor& self, int64_t dim, bool keepdim) {
@@ -390,7 +390,7 @@ at::Tensor AtenXlaType::any(const at::Tensor& self) {
   return bridge::AtenFromXlaTensor(XLATensor::any(
       self_tensor,
       xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
-      /*keep_reduced_dimensions*/ false));
+      /*keep_reduced_dimensions=*/false));
 }
 
 at::Tensor AtenXlaType::any(const at::Tensor& self, int64_t dim, bool keepdim) {
@@ -1571,6 +1571,14 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::log_sigmoid_forward(
                          bridge::AtenFromXlaTensor(std::get<1>(result_tuple)));
 }
 
+at::Tensor AtenXlaType::logsumexp(const at::Tensor& self, at::IntArrayRef dim,
+                                  bool keepdim) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::logsumexp(
+      bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
+      /*keep_reduced_dimensions=*/keepdim));
+}
+
 at::Tensor AtenXlaType::logdet(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -1779,7 +1787,7 @@ at::Tensor AtenXlaType::mean(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(XLATensor::mean(
       self_tensor,
       xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
-      /*keep_reduced_dimensions*/ false, dtype));
+      /*keep_reduced_dimensions=*/false, dtype));
 }
 
 at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
@@ -1788,7 +1796,7 @@ at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::mean(
       bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
-      /*keep_reduced_dimensions*/ keepdim, dtype));
+      /*keep_reduced_dimensions=*/keepdim, dtype));
 }
 
 at::Tensor AtenXlaType::min(const at::Tensor& self, const at::Tensor& other) {
@@ -2602,7 +2610,7 @@ at::Tensor AtenXlaType::std(const at::Tensor& self, bool unbiased) {
   return bridge::AtenFromXlaTensor(XLATensor::std(
       self_tensor,
       xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
-      /*keep_reduced_dimensions*/ false, unbiased));
+      /*keep_reduced_dimensions=*/false, unbiased));
 }
 
 at::Tensor AtenXlaType::std(const at::Tensor& self, at::IntArrayRef dim,
@@ -2610,7 +2618,7 @@ at::Tensor AtenXlaType::std(const at::Tensor& self, at::IntArrayRef dim,
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::std(
       bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(dim),
-      /*keep_reduced_dimensions*/ keepdim, unbiased));
+      /*keep_reduced_dimensions=*/keepdim, unbiased));
 }
 
 at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
