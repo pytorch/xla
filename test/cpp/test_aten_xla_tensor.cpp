@@ -2686,6 +2686,20 @@ TEST_F(AtenXlaTensorTest, TestLogSigmoid) {
                        cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestLogsumexp) {
+  at::Tensor a = at::rand({3, 4, 3}, torch::TensorOptions(torch::kFloat));
+  for (auto dims : std::vector<std::vector<int64_t>>{{0, 1}, {-3, -2}}) {
+    for (bool keepdim : {false, true}) {
+      at::Tensor b = at::logsumexp(a, dims, keepdim);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+        at::Tensor xla_b = at::logsumexp(xla_a, dims, keepdim);
+        AllClose(b, xla_b);
+      });
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestSigmoid) {
   torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::sigmoid(a);

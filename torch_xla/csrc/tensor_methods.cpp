@@ -58,6 +58,7 @@
 #include "torch_xla/csrc/ops/leaky_relu_backward.h"
 #include "torch_xla/csrc/ops/linear_interpolation.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
+#include "torch_xla/csrc/ops/logsumexp.h"
 #include "torch_xla/csrc/ops/masked_fill.h"
 #include "torch_xla/csrc/ops/masked_scatter.h"
 #include "torch_xla/csrc/ops/masked_select.h"
@@ -1409,6 +1410,16 @@ void XLATensor::log1p_(XLATensor& input) {
 
 XLATensor XLATensor::logdet(const XLATensor& input) {
   return input.CreateFrom(ir::ops::LogDet(input.GetIrValue()));
+}
+
+XLATensor XLATensor::logsumexp(const XLATensor& input,
+                               std::vector<xla::int64> dimensions,
+                               bool keep_reduced_dimensions) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::Logsumexp>(
+      input.GetIrValue(),
+      XlaHelpers::GetCanonicalDimensionIndices(dimensions,
+                                               input.shape().get().rank()),
+      keep_reduced_dimensions));
 }
 
 XLATensor XLATensor::lt(const XLATensor& input, at::Scalar other) {
