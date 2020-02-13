@@ -53,6 +53,13 @@ xla::XlaOp BuildSum(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
 xla::XlaOp BuildMaxInDim(xla::XlaOp input, xla::int64 dim,
                          bool keep_reduced_dimensions);
 
+// Builds the max of all values by reducing in the given dimensions. If
+// keep_reduced_dimensions is true, the reduced dimension will be retained, with
+// value 1.
+xla::XlaOp BuildMaxInDims(xla::XlaOp input,
+                          absl::Span<const xla::int64> dimensions,
+                          bool keep_reduced_dimensions);
+
 // Builds the min of all values by reducing in the given dimension. If
 // keep_reduced_dimensions is true, the reduced dimension will be retained, with
 // value 1.
@@ -82,5 +89,9 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
 
 xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
                     bool keep_reduced_dimensions);
+
+xla::XlaOp BuildLogsumexp(xla::XlaOp input,
+                          absl::Span<const xla::int64> dimensions,
+                          bool keep_reduced_dimensions);
 
 }  // namespace torch_xla
