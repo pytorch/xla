@@ -69,8 +69,7 @@ SummationResult CreateSummation(xla::XlaOp input,
                                 absl::Span<const xla::int64> dimensions,
                                 bool keep_reduced_dimensions, bool scale) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp init_value =
-      XlaHelpers::ScalarValue<float>(0, shape.element_type(), input.builder());
+  xla::XlaOp init_value = xla::Zero(input.builder(), shape.element_type());
   SummationResult result;
   result.rinfo = GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
   result.result = xla::Reduce(
@@ -95,8 +94,7 @@ xla::XlaOp CreateProduct(xla::XlaOp input,
                          absl::Span<const xla::int64> dimensions,
                          bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp init_value =
-      XlaHelpers::ScalarValue<float>(1, shape.element_type(), input.builder());
+  xla::XlaOp init_value = xla::One(input.builder(), shape.element_type());
   ReductionInfo rinfo =
       GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
   xla::XlaOp result = xla::Reduce(
