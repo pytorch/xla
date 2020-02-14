@@ -234,7 +234,64 @@ ComputationClient::DataPtr XrtComputationClient::CreateDataPlaceholder(
   return std::make_shared<XrtData>(std::move(device), std::move(shape));
 }
 
+std::vector<size_t> XrtComputationClient::PartitionTransferToServer(
+    absl::Span<const TensorSource> tensors) {
+  // We need to limit the amount of data we send to the XRT backend since
+  // Protocol Buffers does not allow sizes greater than 2GB. We keep some margin
+  // to avoid extra metadata pushing us over the limit.
+  static int64 max_partition_size =
+      sys_util::GetEnvInt("XRT_MAX_TENSORS_PARTITION", 1800000000);
+  uint64 current_size = 0;
+  std::vector<size_t> partitions;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    int64 tensor_size = ShapeUtil::ByteSizeOfElements(tensors[i].shape);
+    if (current_size + tensor_size > max_partition_size) {
+      if (partitions.empty() && i > 0) {
+        partitions.push_back(0);
+      }
+      partitions.push_back(i);
+      current_size = 0;
+    }
+    current_size += tensor_size;
+  }
+  if (partitions.empty()) {
+    partitions.push_back(0);
+  }
+  return partitions;
+}
+
 std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
+    absl::Span<const TensorSource> tensors) {
+  auto partitions = PartitionTransferToServer(tensors);
+  if (partitions.size() == 1) {
+    // Fast path in case of single partition. Avoid creating threads and
+    // waiting, since this is the common case.
+    return TransferToServerInternal(tensors);
+  }
+  XLA_COUNTER("XrtPartitionedTransferToServer", 1);
+
+  util::MultiWait mwait(partitions.size());
+  std::vector<DataPtr> results(tensors.size());
+  for (size_t i = 0; i < partitions.size(); ++i) {
+    auto sender = [&, i]() {
+      size_t base_index = partitions[i];
+      size_t length = (i + 1 < partitions.size())
+                          ? partitions[i + 1] - base_index
+                          : partitions.size() - base_index;
+      auto partitions_results =
+          TransferToServerInternal(tensors.subspan(base_index, length));
+      for (size_t r = 0; r < length; ++r) {
+        results[base_index + r] = std::move(partitions_results[r]);
+      }
+    };
+    env::ScheduleIoClosure(mwait.Completer(std::move(sender)));
+  }
+  mwait.Wait();
+  return results;
+}
+
+std::vector<ComputationClient::DataPtr>
+XrtComputationClient::TransferToServerInternal(
     absl::Span<const TensorSource> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
 
@@ -280,22 +337,28 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
   }
   OutboundDataMetric()->AddSample(total_size);
 
+  mwait.Reset(session_work_map.size());
   std::vector<DataPtr> results(tensors.size());
-  for (auto& session_work : session_work_map) {
-    std::vector<tensorflow::Tensor> outputs;
-    XLA_CHECK_OK(session_work.first->session()->Run(
-        session_work.second.feed_inputs, session_work.second.outputs_handles,
-        &outputs));
-    XLA_CHECK_EQ(outputs.size(), session_work.second.outputs_handles.size());
+  for (auto& session_session_work : session_work_map) {
+    XrtSession* session = session_session_work.first;
+    SessionWork* session_work = &session_session_work.second;
+    auto runner = [&, session, session_work]() {
+      std::vector<tensorflow::Tensor> outputs;
+      XLA_CHECK_OK(session->session()->Run(
+          session_work->feed_inputs, session_work->outputs_handles, &outputs));
+      XLA_CHECK_EQ(outputs.size(), session_work->outputs_handles.size());
 
-    for (size_t i = 0; i < outputs.size(); ++i) {
-      size_t li = session_work.second.index_mapping[i];
-      results[li] = std::make_shared<XrtData>(
-          this, GetEffectiveDevice(tensors[li].device), tensors[li].shape,
-          outputs[i].scalar<int64>()());
-    }
-    CreateDataHandlesCounter()->AddValue(outputs.size());
+      for (size_t i = 0; i < outputs.size(); ++i) {
+        size_t li = session_work->index_mapping[i];
+        results[li] = std::make_shared<XrtData>(
+            this, GetEffectiveDevice(tensors[li].device), tensors[li].shape,
+            outputs[i].scalar<int64>()());
+      }
+      CreateDataHandlesCounter()->AddValue(outputs.size());
+    };
+    env::ScheduleIoClosure(mwait.Completer(std::move(runner)));
   }
+  mwait.Wait();
   return results;
 }
 
