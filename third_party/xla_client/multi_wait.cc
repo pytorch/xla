@@ -49,6 +49,7 @@ std::function<void()> MultiWait::Completer(std::function<void()> func) {
     try {
       func();
     } catch (...) {
+      std::lock_guard<std::mutex> lock(mutex_);
       exptr_ = std::current_exception();
     }
     Done();
