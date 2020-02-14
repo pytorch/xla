@@ -13,6 +13,7 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.keyd_queue as kq
 
+MARK_STEP_TOKEN = 'torch_xla.core.xla_model::mark_step'
 _TLS = threading.local()
 
 
@@ -404,7 +405,7 @@ def _run_step_closures():
 
 def mark_step():
   if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False):
-    print('torch_xla.core.xla_model::mark_step', flush=True)
+    print(MARK_STEP_TOKEN, flush=True)
   torch_xla._XLAC._xla_step_marker(
       torch_xla._XLAC._xla_get_default_device(), [],
       wait=xu.getenv_as('XLA_SYNC_WAIT', bool, False))

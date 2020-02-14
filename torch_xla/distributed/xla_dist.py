@@ -17,6 +17,7 @@ import sys
 import time
 import threading
 from torch_xla.distributed.cluster import ClusterResolver
+from torch_xla.core.xla_model import MARK_STEP_TOKEN
 
 
 def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
@@ -69,9 +70,9 @@ class DistributedExecutor(object):
     self._cluster = cluster
     client_master_ip = ClusterResolver._get_instance_metadata(
       'instance/network-interfaces/0/ip')
-    self._client_master = list(filter(
+    self._client_master = next(filter(
       lambda cw: cw._internal_ip == client_master_ip,
-      self._cluster._client_workers))[0]
+      self._cluster._client_workers))
     self._heartbeats = {
       cw._internal_ip: queue.Queue() for cw in self._cluster._client_workers
     }
@@ -118,7 +119,7 @@ class DistributedExecutor(object):
     def _stream_output(stream, log_fn):
       for std in iter(stream.readline, b''):
         std_line = std.decode('utf-8').rstrip('\n')
-        if 'torch_xla.core.xla_model::mark_step' in std_line:
+        if MARK_STEP_TOKEN in std_line:
           self._heartbeats[client_ip].put(1)
           if client_ip == self._client_master._internal_ip:
             t = threading.Thread(target=self._check_client_mesh_health)
