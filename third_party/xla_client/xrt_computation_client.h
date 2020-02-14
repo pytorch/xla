@@ -263,6 +263,9 @@ class XrtComputationClient : public ComputationClient {
       absl::Span<const std::string> devices,
       const tensorflow::ClientSession::FeedType& feed_inputs);
 
+  std::vector<DataPtr> TransferToServerInternal(
+      absl::Span<const TensorSource> tensors);
+
   // Retrieves the worker,worker_host pair for a given PyTorch device (ie,
   // TPU:0).
   std::pair<Worker, std::string> GetWorkerForDevice(
@@ -440,6 +443,9 @@ class XrtComputationClient : public ComputationClient {
   // replica argument vector. Essentially turns a [N] into a [1][N].
   static std::vector<std::vector<DataPtr>> BuildParallelArguments(
       absl::Span<const DataPtr> arguments);
+
+  static std::vector<size_t> PartitionTransferToServer(
+      absl::Span<const TensorSource> tensors);
 
   // Extracts the XlaComputation pointers out of Computation ones. Used to be
   // passed to xrt_util::CheckComputationStatus() for its error reporting.
