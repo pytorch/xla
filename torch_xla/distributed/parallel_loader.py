@@ -10,6 +10,16 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 
 
+def _get_input_size(data):
+  obj = xu.Object({'size': 0})
+
+  def fn(v):
+    obj.size += v.numel() * v.element_size()
+
+  xu.for_each_instance(data, lambda x: type(x) == torch.Tensor, fn)
+  return obj.size
+
+
 class PerDeviceQueue(object):
 
   def __init__(self, device, loader_prefetch_size, device_prefetch_size):
@@ -61,6 +71,9 @@ class ParallelLoader(object):
       where the worker threads deposit tensors which have already been sent to
       devices.
       Default: 4
+    max_device_prefetch_mem (int, optional): The maximum memory a single device
+      data upload can use.
+      Default: 1500000000
   """
 
   def __init__(self,
@@ -69,11 +82,13 @@ class ParallelLoader(object):
                batchdim=0,
                fixed_batch_size=False,
                loader_prefetch_size=8,
-               device_prefetch_size=4):
+               device_prefetch_size=4,
+               max_device_prefetch_mem=1500000000):
     self._loader = loader
     self._devices = [torch.device(x) for x in devices]
     self._batchdim = batchdim
     self._fixed_batch_size = fixed_batch_size
+    self._max_device_prefetch_mem = max_device_prefetch_mem
     self._done = False
     self._queues = dict()
     for device in self._devices:
@@ -112,17 +127,17 @@ class ParallelLoader(object):
       dqueue.loader_queue.close()
 
   def _get_batch_size(self, data, dim):
-    size = []
+    obj = xu.Object({'size': -1})
 
     def fn(v):
       csize = v.size()[dim]
-      if not size:
-        size.append(csize)
+      if obj.size < 0:
+        obj.size = csize
       else:
-        assert csize == size[0]
+        assert csize == obj.size
 
     xu.for_each_instance(data, lambda x: type(x) == torch.Tensor, fn)
-    return size[0] if size else None
+    return obj.size if obj.size >= 0 else None
 
   def _loader_worker(self):
     queues = list(self._queues.values())
@@ -148,11 +163,17 @@ class ParallelLoader(object):
       dqueue.loader_queue.close_write()
 
   def _get_batch(self, dqueue):
+    item_size, mem_size = 0, 0
     batch = []
     while dqueue.queue.max_size() > len(batch):
+      if batch and (mem_size + item_size) > self._max_device_prefetch_mem:
+        break
       item = dqueue.loader_queue.get()
       if item is None:
         break
+      if item_size == 0:
+        item_size = _get_input_size(item)
+      mem_size += item_size
       batch.append(item)
     return batch
 

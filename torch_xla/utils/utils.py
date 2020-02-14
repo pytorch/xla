@@ -9,6 +9,13 @@ import tempfile
 import time
 
 
+class Object(object):
+
+  def __init__(self, defs={}):
+    for k, v in defs.items():
+      setattr(self, k, v)
+
+
 class Cleaner(object):
 
   def __init__(self, func):
