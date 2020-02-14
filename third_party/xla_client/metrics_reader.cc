@@ -11,23 +11,38 @@ namespace xla {
 namespace metrics_reader {
 namespace {
 
+struct MetricFnInfo {
+  metrics::MetricReprFn repr_fn;
+  double scale;
+};
+
+MetricFnInfo GetMetricRenderInfo(const Percentile& percentile) {
+  switch (percentile.unit_of_measure) {
+    default:
+    case Percentile::UnitOfMeaure::kNumber:
+      return {metrics::MetricFnValue, 1.0};
+    case Percentile::UnitOfMeaure::kTime:
+      return {metrics::MetricFnTime, 1e6};
+    case Percentile::UnitOfMeaure::kBytes:
+      return {metrics::MetricFnBytes, 1.0};
+  }
+}
+
 std::string CreateXrtMetricReport() {
-  // The metrics are in milliseconds while metrics::MetricFnTime takes
-  // nanoseconds.
-  // TODO: Read the unit of measure and use the proper formatting function.
-  const double scale = 1e6;
-  metrics::MetricReprFn repr_fn = metrics::MetricFnTime;
   auto xrt_metrics = ComputationClient::Get()->GetMetrics();
   std::stringstream ss;
   for (auto& name_metric : xrt_metrics) {
     if (name_metric.second.percentile) {
       const Percentile& percentile = *name_metric.second.percentile;
+      MetricFnInfo minfo = GetMetricRenderInfo(percentile);
       ss << "Metric: " << name_metric.first << std::endl;
       ss << "  TotalSamples: " << percentile.total_samples << std::endl;
-      ss << "  Accumulator: " << repr_fn(percentile.accumulator * scale)
+      ss << "  Accumulator: "
+         << minfo.repr_fn(percentile.accumulator * minfo.scale) << std::endl;
+      ss << "  Mean: " << minfo.repr_fn(percentile.mean * minfo.scale)
          << std::endl;
-      ss << "  Mean: " << repr_fn(percentile.mean * scale) << std::endl;
-      ss << "  StdDev: " << repr_fn(percentile.stddev * scale) << std::endl;
+      ss << "  StdDev: " << minfo.repr_fn(percentile.stddev * minfo.scale)
+         << std::endl;
 
       uint64 delta_time = percentile.end_nstime - percentile.start_nstime;
       if (delta_time > 0) {
@@ -42,7 +57,7 @@ std::string CreateXrtMetricReport() {
           ss << "; ";
         }
         ss << percentile.points[i].percentile
-           << "%=" << repr_fn(percentile.points[i].value * scale);
+           << "%=" << minfo.repr_fn(percentile.points[i].value * minfo.scale);
       }
       ss << std::endl;
     } else if (name_metric.second.int64_value) {

@@ -1388,6 +1388,17 @@ std::map<std::string, Metric> XrtComputationClient::GetMetrics() const {
           xrt::MetricValues::kPercentilesValue) {
         const xrt::Percentiles& xrt_percentile = xrt_metric.percentiles_value();
         Percentile percentile;
+        switch (xrt_metric.unit_of_measure()) {
+          case xrt::MetricValues::NUMBER:
+            percentile.unit_of_measure = Percentile::UnitOfMeaure::kNumber;
+            break;
+          case xrt::MetricValues::TIME:
+            percentile.unit_of_measure = Percentile::UnitOfMeaure::kTime;
+            break;
+          case xrt::MetricValues::BYTES:
+            percentile.unit_of_measure = Percentile::UnitOfMeaure::kBytes;
+            break;
+        }
         percentile.start_nstime = xrt_percentile.start_nstime();
         percentile.end_nstime = xrt_percentile.end_nstime();
         percentile.min_value = xrt_percentile.min_value();
