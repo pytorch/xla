@@ -1217,9 +1217,6 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     SyncTensorCollection* coll,
     std::vector<xla::ComputationClient::DataPtr> parameters_data,
     std::string device, ComputationCache::TypePtr cached_computation) {
-  DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", *tensors,
-                                  &coll->indices);
-
   auto tensors_data = FetchTensorData(tensors, config, coll->indices);
   return ScheduleSyncTensorsGraph(coll, std::move(parameters_data),
                                   std::move(tensors_data),
@@ -1382,6 +1379,9 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   if (coll.indices.empty()) {
     return nullptr;
   }
+  DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", *tensors,
+                                  &coll.indices);
+
   std::shared_ptr<Async> async = TryRunCachedSync(tensors, config, &coll);
   if (async != nullptr) {
     return async;
