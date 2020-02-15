@@ -14,7 +14,7 @@ namespace {
 
 struct ReductionInfo {
   std::vector<xla::int64> new_dimensions;
-  xla::int64 element_count = 1;
+  XlaHelpers::DynamicSize element_count;
 };
 
 struct SummationResult {
@@ -22,14 +22,13 @@ struct SummationResult {
   xla::XlaOp result;
 };
 
-ReductionInfo GetReductionInfo(const xla::Shape& shape,
+ReductionInfo GetReductionInfo(xla::XlaOp input, const xla::Shape& shape,
                                absl::Span<const xla::int64> dimensions,
                                bool keep_reduced_dimensions) {
   ReductionInfo rinfo;
   size_t idim = 0;
   for (xla::int64 i = 0; i < shape.rank(); ++i) {
     if (idim < dimensions.size() && dimensions[idim] == i) {
-      rinfo.element_count *= shape.dimensions(i);
       ++idim;
       if (keep_reduced_dimensions) {
         rinfo.new_dimensions.push_back(1);
@@ -38,6 +37,7 @@ ReductionInfo GetReductionInfo(const xla::Shape& shape,
       rinfo.new_dimensions.push_back(shape.dimensions(i));
     }
   }
+  rinfo.element_count = XlaHelpers::GetDimensionsSize({input}, dimensions);
   return rinfo;
 }
 
@@ -65,23 +65,39 @@ xla::XlaComputation CreateAnyComputation(xla::PrimitiveType type) {
   return ConsumeValue(builder.Build());
 }
 
+xla::XlaOp GetScaleValue(xla::XlaOp input, xla::XlaOp count,
+                         xla::PrimitiveType type) {
+  xla::XlaOp zero = xla::Zero(input.builder(), XlaHelpers::TypeOfXlaOp(count));
+  xla::XlaOp one = xla::One(input.builder(), type);
+  xla::XlaOp scale = xla::Select(xla::Ne(count, zero),
+                                 one / xla::ConvertElementType(count, type),
+                                 xla::NanValue(input.builder(), type));
+  return input * scale;
+}
+
+xla::XlaOp AverageValue(xla::XlaOp input, xla::XlaOp reduced) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp num_elements =
+      XlaHelpers::GetDimensionsSize({input},
+                                    XlaHelpers::GetAllDimensions(input_shape))
+          .size;
+  return GetScaleValue(reduced, num_elements, input_shape.element_type());
+}
+
 SummationResult CreateSummation(xla::XlaOp input,
                                 absl::Span<const xla::int64> dimensions,
                                 bool keep_reduced_dimensions, bool scale) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp init_value = xla::Zero(input.builder(), shape.element_type());
   SummationResult result;
-  result.rinfo = GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
+  result.rinfo =
+      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
   result.result = xla::Reduce(
       input, init_value, XlaHelpers::CreateAddComputation(shape.element_type()),
       dimensions);
   if (scale) {
-    xla::XlaOp scale = XlaHelpers::ScalarValue<float>(
-        result.rinfo.element_count > 0
-            ? 1.0f / static_cast<float>(result.rinfo.element_count)
-            : NAN,
-        shape.element_type(), input.builder());
-    result.result = xla::Mul(result.result, scale);
+    result.result = GetScaleValue(
+        result.result, result.rinfo.element_count.size, shape.element_type());
   }
   if (keep_reduced_dimensions) {
     result.result =
@@ -96,7 +112,7 @@ xla::XlaOp CreateProduct(xla::XlaOp input,
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp init_value = xla::One(input.builder(), shape.element_type());
   ReductionInfo rinfo =
-      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
+      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMulComputation(shape.element_type()),
       dimensions);
@@ -104,19 +120,6 @@ xla::XlaOp CreateProduct(xla::XlaOp input,
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
   return result;
-}
-
-xla::XlaOp AverageValue(xla::XlaOp input, xla::XlaOp reduced) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp num_elements = XlaHelpers::GetDimensionsSize(
-      {input}, XlaHelpers::GetAllDimensions(input_shape));
-  xla::XlaOp zero =
-      xla::One(input.builder(), XlaHelpers::TypeOfXlaOp(num_elements));
-  return xla::Select(
-      xla::Ne(num_elements, zero),
-      reduced /
-          xla::ConvertElementType(num_elements, input_shape.element_type()),
-      xla::NanValue(input.builder(), input_shape.element_type()));
 }
 
 }  // namespace
@@ -284,16 +287,12 @@ xla::XlaOp BuildStdDeviation(xla::XlaOp input,
   if (unbiased) {
     SummationResult sum_result = CreateSummation(
         squared_var, dimensions, keep_reduced_dimensions, /*scale=*/false);
-    if (sum_result.rinfo.element_count < 2) {
-      return XlaHelpers::ScalarBroadcast<float>(
-          NAN, input_shape.element_type(),
-          XlaHelpers::ShapeOfXlaOp(sum_result.result).dimensions(),
-          input.builder());
-    }
-    xla::XlaOp scale = XlaHelpers::ScalarValue<float>(
-        1.0f / static_cast<float>(sum_result.rinfo.element_count - 1),
-        input_shape.element_type(), input.builder());
-    squared_result = xla::Mul(sum_result.result, scale);
+    squared_result = GetScaleValue(
+        sum_result.result,
+        sum_result.rinfo.element_count.size -
+            xla::One(input.builder(), XlaHelpers::TypeOfXlaOp(
+                                          sum_result.rinfo.element_count.size)),
+        input_shape.element_type());
   } else {
     SummationResult sum_result = CreateSummation(
         squared_var, dimensions, keep_reduced_dimensions, /*scale=*/true);
@@ -327,8 +326,11 @@ xla::XlaOp BuildMaxInDims(xla::XlaOp input,
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.min, shape.element_type(), input.builder());
   ReductionInfo rinfo =
-      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
-  XLA_CHECK_GT(rinfo.element_count, 0);
+      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
+  if (rinfo.element_count.scalar_size) {
+    // When can only assert this if dimensions are not dynamic.
+    XLA_CHECK_GT(*rinfo.element_count.scalar_size, 0);
+  }
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMaxComputation(shape.element_type()),
       dimensions);
@@ -344,8 +346,12 @@ xla::XlaOp BuildMinInDim(xla::XlaOp input, xla::int64 dim,
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.max, shape.element_type(), input.builder());
-  ReductionInfo rinfo = GetReductionInfo(shape, {dim}, keep_reduced_dimensions);
-  XLA_CHECK_GT(rinfo.element_count, 0);
+  ReductionInfo rinfo =
+      GetReductionInfo(input, shape, {dim}, keep_reduced_dimensions);
+  if (rinfo.element_count.scalar_size) {
+    // When can only assert this if dimensions are not dynamic.
+    XLA_CHECK_GT(*rinfo.element_count.scalar_size, 0);
+  }
   xla::XlaOp result = xla::Reduce(
       input, init_value, XlaHelpers::CreateMinComputation(shape.element_type()),
       {dim});
@@ -399,7 +405,7 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
                     bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   ReductionInfo rinfo =
-      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
+      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
       input.builder(), xla::LiteralUtil::One(shape.element_type()));
   xla::XlaOp result =
@@ -415,7 +421,7 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
                     bool keep_reduced_dimensions) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   ReductionInfo rinfo =
-      GetReductionInfo(shape, dimensions, keep_reduced_dimensions);
+      GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
       input.builder(), xla::LiteralUtil::Zero(shape.element_type()));
   xla::XlaOp result =
@@ -438,7 +444,7 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
                                     /*scale=*/false)
                         .result;
   xla::XlaOp logs = xla::Log(sums);
-  // If keep_reduced_dimensions is false, we need to reshpae the max_in_dim to
+  // If keep_reduced_dimensions is false, we need to reshape the max_in_dim to
   // the reduced shape before doing the add.
   if (!keep_reduced_dimensions) {
     max_in_dim =
