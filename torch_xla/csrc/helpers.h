@@ -25,6 +25,11 @@ class XlaHelpers {
     at::Scalar max;
   };
 
+  struct DynamicSize {
+    xla::XlaOp size;
+    absl::optional<xla::int64> scalar_size;
+  };
+
   struct DynamicReshapeInfo {
     xla::Shape output_shape;
     xla::int64 dynamic_dimension = -1;
@@ -175,8 +180,8 @@ class XlaHelpers {
   // Retrieves the dynamic dimension of an input shape, or returns -1 if none.
   static xla::int64 GetDynamicDimension(const xla::Shape& shape);
 
-  static xla::XlaOp GetDimensionsSize(absl::Span<const xla::XlaOp> inputs,
-                                      absl::Span<const xla::int64> dimensions);
+  static DynamicSize GetDimensionsSize(absl::Span<const xla::XlaOp> inputs,
+                                       absl::Span<const xla::int64> dimensions);
 
   // Retrieves type's minimum and maximum values.
   static MinMax MinMaxValues(xla::PrimitiveType type);

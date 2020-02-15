@@ -30,9 +30,8 @@ struct ConditionMaskData {
 
 ConditionMaskData CreateConditionMaskData(xla::XlaOp condition) {
   static const xla::PrimitiveType kConditionType = xla::PrimitiveType::S32;
-  static const xla::PrimitiveType kIotaType = xla::PrimitiveType::S32;
   xla::Shape iota_shape = XlaHelpers::ShapeOfXlaOp(condition);
-  iota_shape.set_element_type(kIotaType);
+  iota_shape.set_element_type(GetShapeDimensionType(/*device=*/nullptr));
 
   xla::int64 flattened_size = xla::ShapeUtil::ElementsIn(iota_shape);
   xla::XlaOp r1_condition =
