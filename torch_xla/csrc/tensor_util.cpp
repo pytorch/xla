@@ -709,4 +709,10 @@ xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
   }
 }
 
+xla::PrimitiveType GetShapeDimensionType(const Device* device) {
+  Device xla_device = GetDeviceOrCurrent(device);
+  return xla_device.hw_type == DeviceType::CPU ? xla::PrimitiveType::S64
+                                               : xla::PrimitiveType::S32;
+}
+
 }  // namespace torch_xla

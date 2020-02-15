@@ -11,6 +11,7 @@
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
@@ -124,13 +125,27 @@ xla::int64 XlaHelpers::GetDynamicDimension(const xla::Shape& shape) {
   return dynamic_dimension;
 }
 
-xla::XlaOp XlaHelpers::GetDimensionsSize(
+XlaHelpers::DynamicSize XlaHelpers::GetDimensionsSize(
     absl::Span<const xla::XlaOp> inputs,
     absl::Span<const xla::int64> dimensions) {
   XLA_CHECK(!inputs.empty());
+  xla::PrimitiveType size_type = GetShapeDimensionType(/*device=*/nullptr);
   xla::XlaOp size;
+  xla::int64 size_scalar = 1;
   for (auto& input : inputs) {
+    const xla::Shape& shape = ShapeOfXlaOp(input);
     for (auto dim : dimensions) {
+      if (size_scalar >= 0) {
+        if (!shape.is_dynamic_dimension(dim)) {
+          size_scalar *= shape.dimensions(dim);
+          continue;
+        } else {
+          if (size_scalar != 1) {
+            size = ScalarValue(size_scalar, size_type, input.builder());
+          }
+          size_scalar = -1;
+        }
+      }
       if (size.valid()) {
         size = size * xla::GetDimensionSize(input, dim);
       } else {
@@ -138,8 +153,14 @@ xla::XlaOp XlaHelpers::GetDimensionsSize(
       }
     }
   }
-  return size.valid() ? size
-                      : xla::One(inputs[0].builder(), xla::PrimitiveType::S32);
+  absl::optional<xla::int64> scalar_size;
+  if (size_scalar >= 0) {
+    scalar_size = size_scalar;
+  }
+  if (!size.valid()) {
+    size = ScalarValue(size_scalar, size_type, inputs[0].builder());
+  }
+  return {size, scalar_size};
 }
 
 XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
