@@ -12,6 +12,7 @@ disabled_torch_tests = {
     'test_min_max_nan',  # XLA min/max ignores Nans.
     'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
     'test_copy_broadcast',
+    'test_digamma',  # Precision issue at the first assert, then NAN handling (both on TPU)
 
     # TestTensorDeviceOps
     'test_svd_tall_some_xla',
