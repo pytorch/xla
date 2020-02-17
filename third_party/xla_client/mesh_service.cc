@@ -15,6 +15,7 @@
 #include <mutex>
 #include <unordered_map>
 
+#include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.grpc.pb.h"
@@ -65,32 +66,68 @@ class MeshServiceImpl : public grpc::MeshService::Service {
                             grpc::RendezvousResponse* response) override;
 
  private:
-  struct RendezvousData {
-    explicit RendezvousData(size_t count) : mwait(count), release_count(0) {}
+  class RendezvousData {
+   public:
+    explicit RendezvousData(size_t count)
+        : mwait_(count), release_count_(0), payloads_(count) {}
 
-    util::MultiWait mwait;
-    std::atomic<size_t> release_count;
+    bool Release() { return release_count_.fetch_add(1) == 0; }
+
+    void SetPayload(size_t ordinal, std::string payload) {
+      std::lock_guard<std::mutex> lock(lock_);
+      if (ordinal >= payloads_.size()) {
+        status_ = ::grpc::Status(::grpc::StatusCode::INVALID_ARGUMENT,
+                                 absl::StrCat("Invalid ordinal: ", ordinal));
+      } else {
+        payloads_[ordinal] = std::move(payload);
+      }
+    }
+
+    ::grpc::Status Wait() {
+      ::grpc::Status status =
+          ToGrpcStatus(xla::util::CheckedCall([&]() { mwait_.Wait(); }));
+      if (status.ok()) {
+        std::lock_guard<std::mutex> lock(lock_);
+        status = status_;
+      }
+      return status;
+    }
+
+    void Done() { mwait_.Done(); }
+
+    const std::vector<std::string>& Payloads() const { return payloads_; };
+
+   private:
+    std::mutex lock_;
+    util::MultiWait mwait_;
+    std::atomic<size_t> release_count_;
+    std::vector<std::string> payloads_;
+    ::grpc::Status status_;
   };
 
   std::shared_ptr<RendezvousData> GetRendezvous(const std::string& tag) {
     std::lock_guard<std::mutex> lock(lock_);
     auto it = rendezvous_map_.find(tag);
     if (it == rendezvous_map_.end()) {
-      it =
-          rendezvous_map_
-              .emplace(tag,
-                       std::make_shared<RendezvousData>(config_.workers_size()))
-              .first;
+      it = rendezvous_map_
+               .emplace(tag, std::make_shared<RendezvousData>(
+                                 GetTopologyDeviceCount()))
+               .first;
     }
     return it->second;
   }
 
   void ReleaseRendezvous(const std::string& tag,
                          const std::shared_ptr<RendezvousData>& rendezvous) {
-    if (rendezvous->release_count.fetch_add(1) == 0) {
+    if (rendezvous->Release()) {
       std::lock_guard<std::mutex> lock(lock_);
       rendezvous_map_.erase(tag);
     }
+  }
+
+  size_t GetTopologyDeviceCount() const {
+    return config_.proto().num_tasks() *
+           config_.proto().num_tpu_devices_per_task();
   }
 
   std::mutex lock_;
@@ -110,13 +147,19 @@ class MeshServiceImpl : public grpc::MeshService::Service {
     ::grpc::ServerContext* context, const grpc::RendezvousRequest* request,
     grpc::RendezvousResponse* response) {
   auto rendezvous = GetRendezvous(request->tag());
-  rendezvous->mwait.Done();
-  TF_VLOG(3) << "Entering rendezvous: tag=" << request->tag()
-             << " peer=" << context->peer();
-  ::grpc::Status status =
-      ToGrpcStatus(xla::util::CheckedCall([&]() { rendezvous->mwait.Wait(); }));
-  TF_VLOG(3) << "Exiting rendezvous: tag=" << request->tag()
-             << " peer=" << context->peer() << " status=" << status;
+  rendezvous->SetPayload(request->ordinal(), request->payload());
+  rendezvous->Done();
+  TF_VLOG(3) << "Entering rendezvous: ordinal=" << request->ordinal()
+             << " tag=" << request->tag() << " peer=" << context->peer();
+  ::grpc::Status status = rendezvous->Wait();
+  TF_VLOG(3) << "Exiting rendezvous: ordinal=" << request->ordinal()
+             << " tag=" << request->tag() << " peer=" << context->peer()
+             << " status=" << status;
+  if (status.ok()) {
+    for (auto& payload : rendezvous->Payloads()) {
+      response->add_payloads(payload);
+    }
+  }
   ReleaseRendezvous(request->tag(), rendezvous);
   return status;
 }
@@ -190,17 +233,25 @@ grpc::Config MeshClient::GetConfig() const {
   return std::move(*response.mutable_config());
 }
 
-void MeshClient::Rendezvous(const std::string& tag) const {
+std::vector<std::string> MeshClient::Rendezvous(
+    int ordinal, const std::string& tag, const std::string& payload) const {
   ::grpc::ClientContext context;
   grpc::RendezvousRequest reqeust;
   grpc::RendezvousResponse response;
   reqeust.set_tag(tag);
-  TF_VLOG(3) << "Waiting for rendezvous: " << tag;
+  reqeust.set_payload(payload);
+  reqeust.set_ordinal(ordinal);
+  TF_VLOG(3) << "Waiting for rendezvous: ordinal=" << ordinal << " tag=" << tag;
   ::grpc::Status status = impl_->stub->Rendezvous(&context, reqeust, &response);
   TF_VLOG(3) << "Rendezvous wait complete: " << tag;
   if (!status.ok()) {
     XLA_ERROR() << "Failed to meet rendezvous '" << tag << "': " << status;
   }
+  std::vector<std::string> rv_payloads;
+  for (auto& rv_payload : response.payloads()) {
+    rv_payloads.push_back(rv_payload);
+  }
+  return rv_payloads;
 }
 
 }  // namespace service

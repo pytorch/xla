@@ -180,3 +180,13 @@ def spawn(fn,
         join=join,
         daemon=daemon,
         start_method=start_method)
+
+
+def rendezvous(tag, payload=''):
+  """Waits for all the mesh clients to reach the named rendezvous.
+
+  Args:
+    tag (string): The name of the rendezvous to join.
+    payload (string, optional): The payload to be sent to the rendezvous.
+  """
+  return torch_xla._XLAC._xla_rendezvous(xm.get_ordinal(), tag, payload)
