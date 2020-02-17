@@ -9,8 +9,9 @@ disabled_torch_tests = {
     # TestDevicePrecision
     'test_sum_cpu_device_mismatch',  # doesn't raise
     'test_solve_methods_arg_device',  # doesn't raise
-    'test_min_max_nan',  # XLA min/max ignores Nans.
-    'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
+    'test_min_max_nan',
+    'test_min_max_binary_op_nan',
+    'test_copy_noncontig',
     'test_copy_broadcast',
     'test_digamma',  # Precision issue at the first assert, then NAN handling (both on TPU)
 
@@ -73,7 +74,7 @@ disabled_torch_tests = {
     'test_lstsq',
     'test_is_set_to',
     'test_inverse',
-    'test_empty_tensor_props',  # stride
+    'test_empty_tensor_props',
     'test_dist',
     'test_dim_function_empty',
     'test_diagflat',
