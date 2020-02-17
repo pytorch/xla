@@ -312,7 +312,7 @@ class ClusterResolverTest(unittest.TestCase):
   def setUp(self):
     super(ClusterResolverTest, self).setUp()
     self.addCleanup(mock.patch.stopall)
-    mock.patch.object(ClusterResolver, '_get_instance_metadata',
+    mock.patch.object(ClusterResolver, 'get_instance_metadata',
                       mock_request_metadata).start()
     mock.patch.object(GoogleCredentials, 'get_application_default',
                       lambda *args, **kwargs: None).start()

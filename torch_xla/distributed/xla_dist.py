@@ -5,7 +5,6 @@ from __future__ import print_function
 
 import argparse
 import cloud_tpu_client
-from concurrent import futures
 import logging
 import multiprocessing
 import os
@@ -17,7 +16,7 @@ import sys
 import time
 import threading
 from torch_xla.distributed.cluster import ClusterResolver
-from torch_xla.core.xla_model import MARK_STEP_TOKEN
+from torch_xla.utils.utils import parallel_work
 
 
 def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
@@ -60,6 +59,13 @@ class DistributedExecutor(object):
     logger.addHandler(sh)
     return logger
 
+  def _reinit(self):
+    """Initializes members that need to be cleanly initialized for each run."""
+    self._heartbeats = {
+      cw.internal_ip: queue.Queue() for cw in self._cluster.client_workers
+    }
+    self._error_queue = multiprocessing.Queue()
+
   def __init__(self,
                cluster,
                docker_container=None,
@@ -68,15 +74,12 @@ class DistributedExecutor(object):
                conda_env=None,
                env_vars=None):
     self._cluster = cluster
-    client_master_ip = ClusterResolver._get_instance_metadata(
+    self._reinit()
+    client_master_ip = ClusterResolver.get_instance_metadata(
       'instance/network-interfaces/0/ip')
     self._client_master = next(filter(
-      lambda cw: cw._internal_ip == client_master_ip,
-      self._cluster._client_workers))
-    self._heartbeats = {
-      cw._internal_ip: queue.Queue() for cw in self._cluster._client_workers
-    }
-    self._error_queue = multiprocessing.Queue()
+      lambda cw: cw.internal_ip == client_master_ip,
+      self._cluster.client_workers))
     self.logger = self._get_logger()
     self.docker_container = docker_container or self.DEFAULT_CONTAINER_NAME
     self.docker_image = docker_image
@@ -101,27 +104,23 @@ class DistributedExecutor(object):
     def _pop_mark_step_queue(queue, timeout=30):
       queue.get(timeout=timeout)
 
-    with futures.ThreadPoolExecutor(
-        max_workers=len(self._heartbeats)) as executor:
-      try:
-        results = executor.map(_pop_mark_step_queue, self._heartbeats.values())
-        for result in results:
-          if result:
-            result.result()  # Only iterating to re-raise any worker errors.
-      except queue.Empty:
-        self._error_queue.put(RuntimeError(
-          'Client mesh is unhealthy due to non-matching heartbeats'))
+    try:
+      parallel_work(
+        len(self._heartbeats), _pop_mark_step_queue, self._heartbeats.values())
+    except queue.Empty:
+      self._error_queue.put(RuntimeError(
+        'Client mesh is unhealthy due to non-matching heartbeats'))
 
   def _stream_logs(self, process, client_worker):
-    client_ip = client_worker._internal_ip
-    ordinal = self._cluster._client_workers.index(client_worker)
+    client_ip = client_worker.internal_ip
+    ordinal = self._cluster.client_workers.index(client_worker)
 
     def _stream_output(stream, log_fn):
       for std in iter(stream.readline, b''):
         std_line = std.decode('utf-8').rstrip('\n')
-        if MARK_STEP_TOKEN in std_line:
+        if 'torch_xla.core.xla_model::mark_step' in std_line:
           self._heartbeats[client_ip].put(1)
-          if client_ip == self._client_master._internal_ip:
+          if client_ip == self._client_master.internal_ip:
             t = threading.Thread(target=self._check_client_mesh_health)
             t.daemon = True
             t.start()
@@ -213,15 +212,15 @@ class DistributedExecutor(object):
     return docker_cmd
 
   def _env_vars_cmd(self, worker_idx):
-    client_worker = self._cluster._client_workers[worker_idx]
+    client_worker = self._cluster.client_workers[worker_idx]
     env_vars = {
         'XRT_LOCAL_WORKER':
             'c_tpu_worker:{}'.format(worker_idx),
         'XRT_MESH_SERVICE_ADDRESS':
             '{}:{}'.format(
-              self._client_master._internal_ip, self.MESH_SERVICE_PORT),
+              self._client_master.internal_ip, self.MESH_SERVICE_PORT),
         'XRT_SHARD_WORLD_SIZE':
-            len(self._cluster._client_workers),
+            len(self._cluster.client_workers),
         'XRT_SHARD_ORDINAL':
             worker_idx,
         'XLA_EMIT_STEPLOG': 1,
@@ -231,9 +230,9 @@ class DistributedExecutor(object):
       xrt_server_config = [
           'c_tpu_worker;{worker_idx};{worker_ip}:{worker_port}'.format(
               worker_idx=idx,
-              worker_ip=service_worker._internal_ip,
+              worker_ip=service_worker.internal_ip,
               worker_port=service_worker._port)
-          for idx, service_worker in enumerate(self._cluster._service_workers)
+          for idx, service_worker in enumerate(self._cluster.service_workers)
       ]
       xrt_tpu_config = '|'.join(xrt_server_config)
       env_vars['XRT_TPU_CONFIG'] = '{}'.format(xrt_tpu_config)
@@ -247,7 +246,7 @@ class DistributedExecutor(object):
 
   def _prepare_scripts(self, cmd):
     worker_script_map = {}
-    for i in range(len(self._cluster._client_workers)):
+    for i in range(len(self._cluster.client_workers)):
       script_path = self.SCRIPT_PATH_TMPL.format(pid=os.getpid(), worker=i)
 
       # ex. script = [['conda', 'activate', 'pytorch'], ['python', 'train.py']]
@@ -269,7 +268,7 @@ class DistributedExecutor(object):
       with open(script_path, 'w') as f:
         f.write(script_body)
       subprocess.call(['chmod', '+x', script_path])
-      worker_script_map[self._cluster._client_workers[i]] = {
+      worker_script_map[self._cluster.client_workers[i]] = {
           'local_path':
               script_path,
           'remote_path':
@@ -337,10 +336,7 @@ class DistributedExecutor(object):
       threads.append(thread)
 
     # Cleanup states in case of restart
-    self._heartbeats = {
-      cw._internal_ip: queue.Queue() for cw in self._cluster._client_workers
-    }
-    self._error_queue = multiprocessing.Queue()
+    self._reinit()
 
     for thread in threads:
       thread.join()
