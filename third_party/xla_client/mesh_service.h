@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.pb.h"
@@ -32,7 +33,8 @@ class MeshClient {
 
   grpc::Config GetConfig() const;
 
-  void Rendezvous(const std::string& tag) const;
+  std::vector<std::string> Rendezvous(int ordinal, const std::string& tag,
+                                      const std::string& payload) const;
 
  private:
   MeshClient(const std::string& address);

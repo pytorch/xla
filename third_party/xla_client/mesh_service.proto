@@ -30,9 +30,12 @@ message GetConfigResponse {
 
 message RendezvousRequest {
   required string tag = 1;
+  required bytes payload = 2;
+  required uint32 ordinal = 3;
 }
 
 message RendezvousResponse {
+  repeated bytes payloads = 1;
 }
 
 service MeshService {

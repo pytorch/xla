@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/mesh_service.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/metrics_reader.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
@@ -257,6 +258,16 @@ py::object GetRevisions() {
   return py_dict;
 }
 
+std::vector<std::string> Rendezvous(int ordinal, const std::string& tag,
+                                    const std::string& payload) {
+  xla::service::MeshClient* mesh_client = xla::service::MeshClient::Get();
+  std::vector<std::string> payloads;
+  if (mesh_client != nullptr) {
+    payloads = mesh_client->Rendezvous(ordinal, tag, payload);
+  }
+  return payloads;
+}
+
 std::shared_ptr<xla::util::RecordReader> CreateRecordReader(
     std::string path, const std::string& compression, xla::int64 buffer_size) {
   return std::make_shared<xla::util::RecordReader>(std::move(path), compression,
@@ -490,6 +501,10 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_replication_devices_count", []() {
     return xla::ComputationClient::Get()->GetReplicationDevices().size();
   });
+  m.def("_xla_rendezvous",
+        [](int ordinal, const std::string& tag, const std::string& payload) {
+          return Rendezvous(ordinal, tag, payload);
+        });
 
   py::class_<ir::Value, std::shared_ptr<ir::Value>>(m, "IrValue");
   m.def("_xla_create_token", []() {
