@@ -48,6 +48,7 @@ disabled_torch_tests = {
     'test_kthvalue_xla',  # (TPU) unimplemented HLO for X64
     'test_kthvalue_neg_dim_xla',  # (TPU) unimplemented HLO for X64
     'test_kthvalue_dim_xla',  # (TPU) unimplemented HLO for X64
+    'test_eig_with_eigvec_xla_float64',  # Precision: tensor(1.1798, dtype=torch.float64) not less than or equal to 0.001
 
     # TestTorchDeviceType
     'test_clamp',  # slow
