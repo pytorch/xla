@@ -6,7 +6,7 @@ import time
 
 from torch_xla.distributed.worker import ClientWorker
 from torch_xla.distributed.worker import ServiceWorker
-from torch_xla.utils.utils import parallel_work
+import torch_xla.utils.utils as xu
 
 try:
   from googleapiclient import discovery
@@ -50,10 +50,17 @@ class Cluster(object):
       if not isinstance(service_worker, ServiceWorker):
         raise ValueError(
             'service_workers argument must be a list of ServiceWorker')
-    self.client_workers = list(client_workers)
-    self.service_workers = list(service_workers)
+    self._client_workers = list(client_workers)
+    self._service_workers = list(service_workers)
     self._check_client_machine_type = check_client_machine_type
     self._check_service_machine_type = check_service_machine_type
+
+
+  def get_client_workers(self):
+    return self._client_workers
+
+  def get_service_workers(self):
+    return self._service_workers
 
   def validate(self):
     """Validates the current cluster configuration.
@@ -65,23 +72,23 @@ class Cluster(object):
         cores, RAM size) we raise an exception. For TPUs we similarly
         raise an exception if different zones or machine/accelerator_type.
     """
-    if len(self.client_workers) == 0 or len(self.service_workers) == 0:
+    if len(self._client_workers) == 0 or len(self._service_workers) == 0:
       raise RuntimeError(
           'Both client_workers and service_workers should not be empty')
 
-    if len(self.client_workers) != len(self.service_workers):
+    if len(self._client_workers) != len(self._service_workers):
       raise RuntimeError(
           'The client_workers and service_workers must have a 1:1 mapping')
 
-    zones = {worker._zone for worker in self.client_workers}
-    zones.update(worker._zone for worker in self.service_workers)
+    zones = {worker._zone for worker in self._client_workers}
+    zones.update(worker._zone for worker in self._service_workers)
     if len(zones) != 1:
       raise RuntimeError(
           'All workers must be in the same zone, got: {}'.format(zones))
 
     if self._check_client_machine_type:
       client_machine_types = {
-          worker._machine_type for worker in self.client_workers
+          worker._machine_type for worker in self._client_workers
       }
       if len(client_machine_types) != 1:
         raise RuntimeError(
@@ -90,22 +97,22 @@ class Cluster(object):
 
     if self._check_service_machine_type:
       server_machine_types = {
-          worker._machine_type for worker in self.service_workers
+          worker._machine_type for worker in self._service_workers
       }
       if len(server_machine_types) != 1:
         raise RuntimeError(
             'All service_workers must have the same machine_type, got: {}'
             .format(server_machine_types))
 
-    runtime_versions = {worker._runtime_version for worker in self.service_workers}
+    runtime_versions = {worker._runtime_version for worker in self._service_workers}
     if len(runtime_versions) != 1:
       raise RuntimeError(
           'All service workers must have the same runtime_version, got: {}'.format(
               zones))
 
   def __eq__(self, other):
-    return (self.client_workers == other.client_workers and
-            self.service_workers == other.service_workers)
+    return (self._client_workers == other._client_workers and
+            self._service_workers == other._service_workers)
 
   def __ne__(self, other):
     return not self.__eq__(other)
@@ -113,8 +120,8 @@ class Cluster(object):
   def __repr__(self):
     return ('{{client_workers: {client_workers}, '
             'service_workers: {service_workers}}}').format(
-                client_workers=self.client_workers,
-                service_workers=self.service_workers)
+                client_workers=self._client_workers,
+                service_workers=self._service_workers)
 
   def list_tpus_with_health(self, health):
 
@@ -124,9 +131,10 @@ class Cluster(object):
         return tpu_name
 
     tpus = set()
-    for service_worker in self.service_workers:
+    for service_worker in self._service_workers:
       tpus.add(service_worker._tpu)
-    return parallel_work(len(tpus), _tpu_with_health, tpus)
+    results = xu.parallel_work(len(tpus), _tpu_with_health, tpus)
+    return [res for res in results if res]
 
   def wait_for_healthy_service(self):
 
@@ -135,9 +143,8 @@ class Cluster(object):
       ctc.wait_for_healthy()
 
     tpus = self.list_tpus_with_health('UNHEALTHY_MAINTENANCE')
-    if not tpus:
-      return
-    parallel_work(len(tpus), wait_for_healthy_service_worker, tpus)
+    if tpus:
+      xu.parallel_work(len(tpus), wait_for_healthy_service_worker, tpus)
 
   def wait_for_healthy_client(
       self, dist_executor, timeout=1200, interval=10):
@@ -145,7 +152,7 @@ class Cluster(object):
     def wait_for_healthy_client_worker(client_worker):
       heartbeart_check = [
         'echo', 'client_worker', '$(hostname)', 'is', 'healthy']
-      timeout = time.time() + timeout
+      check_timeout = time.time() + timeout
 
       def _healthy_client_worker():
         proc = multiprocessing.Process(
@@ -153,8 +160,8 @@ class Cluster(object):
           args=(heartbeart_check, client_worker,))
         proc.daemon = True
         proc.start()
+        proc.join(interval)
 
-        time.sleep(interval)
         if proc.is_alive():
           proc.terminate()
           return False
@@ -165,17 +172,17 @@ class Cluster(object):
         logging.warning(
           'Waiting for client_worker "{}" to become healthy'.format(
             client_worker))
-        if time.time() + interval > timeout:
+        if time.time() + interval > check_timeout:
           raise RuntimeError(
             'Timed out waiting for client_worker {} to become healthy'.format(
               client_worker))
 
-      logging.warning('client_worker "%s" is healthy.', str(client_worker))
+      logging.warning('client_worker "{}" is healthy.'.format(client_worker))
 
-    parallel_work(
-      len(self.client_workers),
+    xu.parallel_work(
+      len(self._client_workers),
       wait_for_healthy_client_worker,
-      self.client_workers)
+      self._client_workers)
 
 class ClusterResolver(object):
   """Cluster Resolver for Client VM and Cloud TPU mesh."""
@@ -347,7 +354,7 @@ class ClusterResolver(object):
           tpu=tpu_name)
         workers.append(worker)
 
-    parallel_work(len(self._tpus), add_service_worker, self._tpus)
+    xu.parallel_work(len(self._tpus), add_service_worker, self._tpus)
 
     return workers
 

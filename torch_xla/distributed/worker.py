@@ -6,13 +6,19 @@ class Worker(object):
   def __init__(self, internal_ip, machine_type, zone):
     if not isinstance(internal_ip, str):
       raise ValueError('internal_ip must be of type str')
-    self.internal_ip = internal_ip
+    self._internal_ip = internal_ip
     if not isinstance(machine_type, str):
       raise ValueError('machine_type must be of type str')
     self._machine_type = machine_type
     if not isinstance(zone, str):
       raise ValueError('zone must be of type str')
     self._zone = zone
+
+  def get_internal_ip(self):
+    return self._internal_ip
+
+  def get_zone(self):
+    return self._zone
 
 
 class ClientWorker(Worker):
@@ -23,16 +29,19 @@ class ClientWorker(Worker):
       raise ValueError('hostname must be of type str')
     self._hostname = hostname
 
+  def get_hostname(self):
+    return self._hostname
+
   def __repr__(self):
     return ('{{{internal_ip}, {machine_type}, {zone},'
             ' {hostname}}}').format(
-                internal_ip=self.internal_ip,
+                internal_ip=self._internal_ip,
                 machine_type=self._machine_type,
                 zone=self._zone,
                 hostname=self._hostname)
 
   def __eq__(self, other):
-    return (self.internal_ip == other.internal_ip and
+    return (self._internal_ip == other._internal_ip and
             self._machine_type == other._machine_type and
             self._zone == other._zone and self._hostname == other._hostname)
 
@@ -45,13 +54,13 @@ class ClientWorker(Worker):
   def __repr__(self):
     return ('{{{internal_ip}, {machine_type}, {zone},'
             ' {hostname}}}').format(
-                internal_ip=self.internal_ip,
+                internal_ip=self._internal_ip,
                 machine_type=self._machine_type,
                 zone=self._zone,
                 hostname=self._hostname)
 
   def __eq__(self, other):
-    return (self.internal_ip == other.internal_ip and
+    return (self._internal_ip == other._internal_ip and
             self._machine_type == other._machine_type and
             self._zone == other._zone and self._hostname == other._hostname)
 
@@ -75,10 +84,13 @@ class ServiceWorker(Worker):
       raise ValueError('tpu must be of type str')
     self._tpu = tpu
 
+  def get_port(self):
+    return self._port
+
   def __repr__(self):
     return ('{{{internal_ip}, {port}, {machine_type}, {zone},'
             ' {runtime_version}, {tpu}}}').format(
-                internal_ip=self.internal_ip,
+                internal_ip=self._internal_ip,
                 port=self._port,
                 machine_type=self._machine_type,
                 zone=self._zone,
@@ -86,7 +98,7 @@ class ServiceWorker(Worker):
                 tpu=self._tpu)
 
   def __eq__(self, other):
-    return (self.internal_ip == other.internal_ip and
+    return (self._internal_ip == other._internal_ip and
             self._port == other._port and
             self._machine_type == other._machine_type and
             self._zone == other._zone and
