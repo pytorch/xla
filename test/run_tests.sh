@@ -50,7 +50,8 @@ function run_all_tests {
   run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  python3 "$CDIR/test_mp_replication.py" "$@"
+  python3 "$CDIR/test_mp_replication.py"
+  python3 "$CDIR/test_mp_rendezvous.py"
 }
 
 if [ "$LOGFILE" != "" ]; then
