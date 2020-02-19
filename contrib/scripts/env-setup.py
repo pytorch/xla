@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# Sample usage:
+#   python env-setup.py --version xrt==1.15.0 --apt-packages libomp5
 import argparse
 import collections
 from datetime import datetime, timedelta
@@ -31,14 +33,14 @@ def get_version(version):
       (datetime.today() - timedelta(1)).strftime('%Y%m%d')))
 
   try:
-    datetime.datetime.strptime(version, '%Y%m%d')
+    datetime.strptime(version, '%Y%m%d')
     return VersionConfig(f'nightly+{version}', f'TPU-dev{version}')
   except ValueError:
     pass  # Not a dated nightly.
 
-  if version not in VERSION_MAP:
+  if version not in STABLE_VERSION_MAP:
     raise ValueError(f'Version {version} unknown')
-  return VERSION_MAP[version]
+  return STABLE_VERSION_MAP[version]
 
 def parse_env_tpu_ip():
   # In both Colab and Kaggle: TPU_NAME='grpc://abc.def.ghi.jkl:8470'
@@ -60,17 +62,17 @@ def install_vm(version, apt_packages):
   apt_pkgs = ' '.join(apt_packages)
 
   installation_cmds = [
-    'pip uninstall -y torch torchvision',
-    f'gsutil cp {torch_whl_path} .',
-    f'gsutil cp {torch_xla_whl_path} .',
-    f'gsutil cp {torchvision_whl_path} .',
-    f'pip install {torch_whl}',
-    f'pip install {torch_xla_whl}',
-    f'pip install {torchvision_whl}',
-    f'sudo apt-get install {apt_pkgs}',
+    ['pip', 'uninstall', '-y', 'torch', 'torchvision'],
+    ['gsutil', 'cp', torch_whl_path, '.'],
+    ['gsutil', 'cp', torch_xla_whl_path, '.'],
+    ['gsutil', 'cp', torchvision_whl_path, '.'],
+    ['pip', 'install', torch_whl],
+    ['pip', 'install', torch_xla_whl],
+    ['pip', 'install', torchvision_whl],
+    ['sudo', 'apt-get', 'install', apt_pkgs],
   ]
   for cmd in installation_cmds:
-    subprocess.call(cmd.split())
+    subprocess.call(cmd)
 
 def run_setup(args):
   version = get_version(args.version)
