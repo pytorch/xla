@@ -79,6 +79,7 @@ def run_setup(args):
   tpu_ip = args.tpu_ip if args.tpu_ip else parse_env_tpu_ip()
 
   # Update TPU
+  print('Updating TPU and VM. This may take around 2 minutes.')
   update = threading.Thread(target=update_tpu_runtime, args=(tpu_ip, version,))
   update.start()
   install_vm(version, args.apt_packages)
