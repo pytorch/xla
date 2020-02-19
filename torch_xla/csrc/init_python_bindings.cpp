@@ -275,7 +275,7 @@ std::shared_ptr<xla::util::RecordReader> CreateRecordReader(
 }
 
 bool RecordRead(const std::shared_ptr<xla::util::RecordReader>& reader,
-                std::string* value) {
+                xla::util::RecordReader::Data* value) {
   NoGilSection nogil;
   return reader->Read(value);
 }
@@ -286,12 +286,12 @@ py::object RecordReadExample(
     return std::vector<int64_t>({size});
   };
 
-  std::string value;
+  xla::util::RecordReader::Data value;
   if (!RecordRead(reader, &value)) {
     return py::none();
   }
   tensorflow::Example exmsg;
-  if (!exmsg.ParseFromString(value)) {
+  if (!exmsg.ParseFromArray(value.data(), value.size())) {
     XLA_ERROR() << "Unable to parse TF example from " << reader->path();
   }
   auto example = py::dict();
@@ -592,11 +592,11 @@ void InitXlaModuleBindings(py::module m) {
   m.def(
       "_xla_tfrecord_read",
       [](const std::shared_ptr<xla::util::RecordReader>& reader) -> py::object {
-        std::string record;
+        xla::util::RecordReader::Data record;
         if (!RecordRead(reader, &record)) {
           return py::none();
         }
-        return py::bytes(record);
+        return py::bytes(record.data(), record.size());
       });
   m.def("_xla_tfexample_read",
         [](const std::shared_ptr<xla::util::RecordReader>& reader) {

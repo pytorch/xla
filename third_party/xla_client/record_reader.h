@@ -13,12 +13,14 @@ namespace util {
 
 class RecordReader {
  public:
+  using Data = tensorflow::tstring;
+
   RecordReader(std::string path, const std::string& compression,
                int64 buffer_size);
 
   const std::string& path() const { return path_; }
 
-  bool Read(std::string* value);
+  bool Read(Data* value);
 
  private:
   std::string path_;
