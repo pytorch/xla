@@ -5,7 +5,7 @@ set -x
 DIST_BUCKET="gs://tpu-pytorch/wheels"
 TORCH_WHEEL="torch-nightly-cp36-cp36m-linux_x86_64.whl"
 TORCH_XLA_WHEEL="torch_xla-nightly-cp36-cp36m-linux_x86_64.whl"
-TORCHVISION_WHEEL="torch_xla-nightly-cp36-cp36m-linux_x86_64.whl"
+TORCHVISION_WHEEL="torchvision-nightly-cp36-cp36m-linux_x86_64.whl"
 
 [[ ! -z "$1" ]] && conda activate $1
 
