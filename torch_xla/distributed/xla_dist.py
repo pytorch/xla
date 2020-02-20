@@ -8,7 +8,6 @@ import cloud_tpu_client
 import logging
 import multiprocessing
 import os
-import queue
 import re
 import signal
 import subprocess
@@ -63,7 +62,10 @@ class DistributedExecutor(object):
   def _initialize(self):
     """Initializes members that need to be cleanly initialized for each run."""
     self._last_heartbeats = {
-      cw.get_internal_ip(): time.time()
+      cw.get_internal_ip(): {
+        'last_time': time.time(),
+        'count': 0,
+      }
       for cw in self._cluster.get_client_workers()
     }
     self._error_queue = multiprocessing.Queue()
@@ -102,19 +104,25 @@ class DistributedExecutor(object):
                ' will interfere with the values set for distributed'
                ' training'.format(dist_var)))
 
-  def _check_client_mesh_health(self, health_timeout=120):
+  def _check_client_mesh_health(
+      self, uneven_health_timeout=300, even_health_timeout=1800):
+    uneven = False
     max_delay = 0
     now = time.time()
-    master_last = self._last_heartbeats[self._client_master.get_internal_ip()]
-    for cw_ip in self._last_heartbeats.keys():
+    master_hb = self._last_heartbeats[self._client_master.get_internal_ip()]
+    for cw_ip, cw_hb in self._last_heartbeats.items():
       if cw_ip == self._client_master.get_internal_ip():
         continue
-      max_delay = max(
-        max_delay, master_last - self._last_heartbeats[cw_ip])
+      max_delay = max(max_delay, master_hb['last_time'] - cw_hb['last_time'])
+      if master_hb['count'] != cw_hb['count']:
+        uneven = True
 
-    if max_delay > health_timeout:
+    if uneven and max_delay > uneven_health_timeout:
       self._error_queue.put(RuntimeError(
-        'Client mesh is unhealthy due to non-matching heartbeats'))
+        'Client mesh is unhealthy with uneven heartbeats'))
+    elif not uneven and max_delay > even_health_timeout:
+      self._error_queue.put(RuntimeError(
+        'Client mesh is unhealthy with even heartbeats'))
 
   def _stream_logs(self, process, client_worker):
     client_ip = client_worker.get_internal_ip()
@@ -124,14 +132,9 @@ class DistributedExecutor(object):
       for std in iter(stream.readline, b''):
         std_line = std.decode('utf-8').rstrip('\n')
         if 'torch_xla.core.xla_model::mark_step' in std_line:
-          self._last_heartbeats[client_ip] = time.time()
-          # Only run expensive hang-check every N seconds.
-          time_since_last_check = time.time() - self._last_heartbeat_check_time
-          if client_ip == self._client_master.get_internal_ip() and time_since_last_check > self.HEARTBEAT_CHECK_PERIOD:
-            self._last_heartbeat_check_time = time.time()
-            t = threading.Thread(target=self._check_client_mesh_health)
-            t.daemon = True
-            t.start()
+          hb_stream = self._last_heartbeats[client_ip]
+          hb_stream['last_time'] = time.time()  # atomic update operations
+          hb_stream['count'] += 1
           continue
         log_fn(
             std_line,
@@ -141,18 +144,16 @@ class DistributedExecutor(object):
             })
 
     stdout = threading.Thread(
-        target=_stream_output, args=(
+        target=_stream_output, daemon=True, args=(
             process.stdout,
             self.logger.info,
         ))
-    stdout.daemon = True
     stdout.start()
     stderr = threading.Thread(
-        target=_stream_output, args=(
+        target=_stream_output, daemon=True, args=(
             process.stderr,
             self.logger.error,
         ))
-    stderr.daemon = True
     stderr.start()
     stdout.join()
     stderr.join()
@@ -306,12 +307,11 @@ class DistributedExecutor(object):
         _gcloud_scp(local_path, remote_path, client_worker)
         continue
       thread = threading.Thread(
-          target=_gcloud_scp, args=(
+          target=_gcloud_scp, daemon=True, args=(
               local_path,
               remote_path,
               client_worker,
           ))
-      thread.daemon = True
       thread.start()
       threads.append(thread)
 
@@ -355,18 +355,24 @@ class DistributedExecutor(object):
     def _run_script(script_path, client_worker):
       self._build_and_run_ssh([script_path], client_worker)
 
+    def _regular_health_check():
+      while True:
+        self._check_client_mesh_health()
+        time.sleep(self.HEARTBEAT_CHECK_PERIOD)
+
     threads = []
     for client_worker in script_map:
       thread = threading.Thread(
           target=_run_script,
+          daemon=True,
           args=(
               script_map[client_worker]['remote_path'],
               client_worker,
           ))
-      thread.daemon = True
       thread.start()
       threads.append(thread)
 
+    threading.Thread(target=_regular_health_check, daemon=True).start()
     for thread in threads:
       thread.join()
 
@@ -406,6 +412,7 @@ class DistributedExecutor(object):
             self.logger.warning(
               self._error_queue.get(), extra={'clientip': '', 'ordinal': ''})
             break
+
           proc.join(10)
 
         # First wait for VMs to come back then cleanup all others
