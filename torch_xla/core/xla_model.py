@@ -504,3 +504,13 @@ def send_cpu_data_to_device(data, device):
     return type(v) == torch.Tensor and v.device.type == 'cpu'
 
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
+
+
+def rendezvous(tag, payload=''):
+  """Waits for all the mesh clients to reach the named rendezvous.
+
+  Args:
+    tag (string): The name of the rendezvous to join.
+    payload (string, optional): The payload to be sent to the rendezvous.
+  """
+  return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload)
