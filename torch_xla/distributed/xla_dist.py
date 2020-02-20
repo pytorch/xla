@@ -106,21 +106,20 @@ class DistributedExecutor(object):
 
   def _check_client_mesh_health(
       self, uneven_health_timeout=300, even_health_timeout=1800):
-    uneven = False
-    max_delay = 0
+    max_delay = 0.0
+    count = None
     now = time.time()
-    master_hb = self._last_heartbeats[self._client_master.get_internal_ip()]
-    for cw_ip, cw_hb in self._last_heartbeats.items():
-      if cw_ip == self._client_master.get_internal_ip():
-        continue
-      max_delay = max(max_delay, master_hb['last_time'] - cw_hb['last_time'])
-      if master_hb['count'] != cw_hb['count']:
-        uneven = True
+    for cw_hb in self._last_heartbeats.values():
+      max_delay = max(max_delay, now - cw_hb['last_time'])
+      if count is None:
+        count = cw_hb['count']
+      elif count >= 0 and count != cw_hb['count']:
+        count = -1
 
-    if uneven and max_delay > uneven_health_timeout:
+    if count < 0 and max_delay > uneven_health_timeout:
       self._error_queue.put(RuntimeError(
         'Client mesh is unhealthy with uneven heartbeats'))
-    elif not uneven and max_delay > even_health_timeout:
+    elif count > 0 and max_delay > even_health_timeout:
       self._error_queue.put(RuntimeError(
         'Client mesh is unhealthy with even heartbeats'))
 
