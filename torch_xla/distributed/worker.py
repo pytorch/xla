@@ -14,6 +14,12 @@ class Worker(object):
       raise ValueError('zone must be of type str')
     self._zone = zone
 
+  def get_internal_ip(self):
+    return self._internal_ip
+
+  def get_zone(self):
+    return self._zone
+
 
 class ClientWorker(Worker):
 
@@ -22,6 +28,9 @@ class ClientWorker(Worker):
     if hostname is not None and not isinstance(hostname, str):
       raise ValueError('hostname must be of type str')
     self._hostname = hostname
+
+  def get_hostname(self):
+    return self._hostname
 
   def __repr__(self):
     return ('{{{internal_ip}, {machine_type}, {zone},'
@@ -74,6 +83,9 @@ class ServiceWorker(Worker):
     if tpu is not None and not isinstance(tpu, str):
       raise ValueError('tpu must be of type str')
     self._tpu = tpu
+
+  def get_port(self):
+    return self._port
 
   def __repr__(self):
     return ('{{{internal_ip}, {port}, {machine_type}, {zone},'

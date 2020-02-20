@@ -1,10 +1,12 @@
 import cloud_tpu_client
-from concurrent import futures
 import logging
+import multiprocessing
 import requests
+import time
 
 from torch_xla.distributed.worker import ClientWorker
 from torch_xla.distributed.worker import ServiceWorker
+import torch_xla.utils.utils as xu
 
 try:
   from googleapiclient import discovery
@@ -52,6 +54,13 @@ class Cluster(object):
     self._service_workers = list(service_workers)
     self._check_client_machine_type = check_client_machine_type
     self._check_service_machine_type = check_service_machine_type
+
+
+  def get_client_workers(self):
+    return self._client_workers
+
+  def get_service_workers(self):
+    return self._service_workers
 
   def validate(self):
     """Validates the current cluster configuration.
@@ -124,28 +133,62 @@ class Cluster(object):
     tpus = set()
     for service_worker in self._service_workers:
       tpus.add(service_worker._tpu)
-    with futures.ThreadPoolExecutor(max_workers=len(tpus)) as executor:
-      results = executor.map(_tpu_with_health, tpus)
-      return [tpu_name for tpu_name in results if tpu_name is not None]
+    results = xu.parallel_work(len(tpus), _tpu_with_health, tpus)
+    return [res for res in results if res]
 
   def wait_for_healthy_service(self):
 
-    def wait_for_healthy_worker(tpu_name):
+    def wait_for_healthy_service_worker(tpu_name):
       ctc = cloud_tpu_client.Client(tpu=tpu_name)
       ctc.wait_for_healthy()
 
     tpus = self.list_tpus_with_health('UNHEALTHY_MAINTENANCE')
-    with futures.ThreadPoolExecutor(max_workers=len(tpus)) as executor:
-      results = executor.map(wait_for_healthy_worker, tpus)
-      for result in results:
-        continue  # Only iterating to re-raise any worker errors.
+    if tpus:
+      xu.parallel_work(len(tpus), wait_for_healthy_service_worker, tpus)
 
+  def wait_for_healthy_client(
+      self, dist_executor, timeout=1200, interval=10):
+
+    def wait_for_healthy_client_worker(client_worker):
+      heartbeart_check = [
+        'echo', 'client_worker', '$(hostname)', 'is', 'healthy']
+      check_timeout = time.time() + timeout
+
+      def _healthy_client_worker():
+        proc = multiprocessing.Process(
+          target=dist_executor._build_and_run_ssh,
+          args=(heartbeart_check, client_worker,))
+        proc.daemon = True
+        proc.start()
+        proc.join(interval)
+
+        if proc.is_alive():
+          proc.terminate()
+          return False
+
+        return proc.exitcode == 0
+
+      while not _healthy_client_worker():
+        logging.warning(
+          'Waiting for client_worker "{}" to become healthy'.format(
+            client_worker))
+        if time.time() + interval > check_timeout:
+          raise RuntimeError(
+            'Timed out waiting for client_worker {} to become healthy'.format(
+              client_worker))
+
+      logging.warning('client_worker "{}" is healthy.'.format(client_worker))
+
+    xu.parallel_work(
+      len(self._client_workers),
+      wait_for_healthy_client_worker,
+      self._client_workers)
 
 class ClusterResolver(object):
   """Cluster Resolver for Client VM and Cloud TPU mesh."""
 
   @staticmethod
-  def _get_instance_metadata(metadata):
+  def get_instance_metadata(metadata):
     response = requests.get(
         '{}/computeMetadata/v1/{}'.format(_GCE_METADATA_ENDPOINT, metadata),
         headers={'Metadata-Flavor': 'Google'})
@@ -178,11 +221,11 @@ class ClusterResolver(object):
         cache_discovery=False)
 
     if project is None:
-      self._project = self._get_instance_metadata('project/project-id')
+      self._project = self.get_instance_metadata('project/project-id')
     if zone is None:
-      zone_path = self._get_instance_metadata('instance/zone')
+      zone_path = self.get_instance_metadata('instance/zone')
       self._zone = self._parse_resource_url(zone_path, 'zones')
-    self._vm_master = self._get_instance_metadata('instance/name')
+    self._vm_master = self.get_instance_metadata('instance/name')
 
   def _get_instance_group(self):
     """Gets the instance group that the current VM belongs to."""
@@ -311,10 +354,7 @@ class ClusterResolver(object):
           tpu=tpu_name)
         workers.append(worker)
 
-    with futures.ThreadPoolExecutor(max_workers=len(self._tpus)) as executor:
-      results = executor.map(add_service_worker, self._tpus)
-      for result in results:
-        continue  # Only iterating to re-raise any worker errors.
+    xu.parallel_work(len(self._tpus), add_service_worker, self._tpus)
 
     return workers
 
