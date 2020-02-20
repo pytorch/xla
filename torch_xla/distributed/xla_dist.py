@@ -133,7 +133,8 @@ class DistributedExecutor(object):
         std_line = std.decode('utf-8').rstrip('\n')
         if 'torch_xla.core.xla_model::mark_step' in std_line:
           hb_stream = self._last_heartbeats[client_ip]
-          hb_stream['last_time'] = time.time()  # atomic update operations
+          # Only single thread updates each of these, so there is no race
+          hb_stream['last_time'] = time.time()
           hb_stream['count'] += 1
           continue
         log_fn(
