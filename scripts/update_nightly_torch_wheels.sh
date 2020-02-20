@@ -7,4 +7,4 @@ if [ "$CONDA_DEFAULT_ENV" != "torch-xla-nightly" ]; then
   conda activate torch-xla-nightly
 fi
 
-$(dirname $0)/update_torch_wheels.sh
+$(dirname ${BASH_SOURCE[0]})/update_torch_wheels.sh
