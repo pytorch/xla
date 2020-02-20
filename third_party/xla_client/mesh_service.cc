@@ -110,8 +110,8 @@ class MeshServiceImpl : public grpc::MeshService::Service {
     auto it = rendezvous_map_.find(tag);
     if (it == rendezvous_map_.end()) {
       it = rendezvous_map_
-               .emplace(tag, std::make_shared<RendezvousData>(
-                                 GetTopologyDeviceCount()))
+               .emplace(tag,
+                        std::make_shared<RendezvousData>(config_.mesh_size()))
                .first;
     }
     return it->second;
@@ -123,11 +123,6 @@ class MeshServiceImpl : public grpc::MeshService::Service {
       std::lock_guard<std::mutex> lock(lock_);
       rendezvous_map_.erase(tag);
     }
-  }
-
-  size_t GetTopologyDeviceCount() const {
-    return config_.proto().num_tasks() *
-           config_.proto().num_tpu_devices_per_task();
   }
 
   std::mutex lock_;

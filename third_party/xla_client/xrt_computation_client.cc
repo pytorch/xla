@@ -1262,6 +1262,7 @@ void XrtComputationClient::CreateMeshService(
       device->set_global_name(worker_device.global_name);
     }
   }
+  config.set_mesh_size(sys_util::GetEnvInt("XRT_SHARD_WORLD_SIZE", 1));
 
   std::string mesh_service_address =
       sys_util::GetEnvString("XRT_MESH_SERVICE_ADDRESS", "localhost:53010");
