@@ -1,6 +1,7 @@
 from __future__ import division
 from __future__ import print_function
 
+from concurrent import futures
 import copy
 import os
 import shutil
@@ -217,6 +218,22 @@ def timed(fn, msg='', printfn=eprint):
   result = fn()
   printfn('{}{:.3f}ms'.format(msg, 1000.0 * (time.time() - s)))
   return result
+
+
+def parallel_work(num_workers, fn, *args):
+  """Executes fn in parallel threads with args and returns result list.
+
+  Args:
+    num_workers: number of workers in thread pool to execute work.
+    fn: python function for each thread to execute.
+    *args: arguments used to call executor.map with.
+
+  Raises:
+    Exception: re-raises any exceptions that may have been raised by workers.
+  """
+  with futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+    results = executor.map(fn, *args)
+    return [res for res in results]  # Iterating to re-raise any exceptions
 
 
 class TimedScope(object):
