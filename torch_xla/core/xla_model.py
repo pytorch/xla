@@ -492,6 +492,7 @@ def save(data, file_or_path, master_only=True):
       torch.save(cpu_data, file_or_path)
   else:
     torch.save(cpu_data, file_or_path)
+  rendezvous('torch_xla.core.xla_model.save')
 
 
 def send_cpu_data_to_device(data, device):
