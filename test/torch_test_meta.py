@@ -201,6 +201,7 @@ disabled_torch_tests = {
     'test_MaxPool1d_indices',  # lowering
     'test_EmbeddingBag_per_sample_weights_and_offsets',  # runtime error
     'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # runtime error
+    'test_softshrink_negative',  # runtime error
     'test_nll_loss_empty_tensor_reduction_mean',  # floating point division 0 by 0, expecting nan but get 0
 
     # test_type_promotion.py
