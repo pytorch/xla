@@ -86,6 +86,8 @@ disabled_torch_tests = {
     'test_cholesky_solve_batched_non_contiguous',
     'test_cdist_norm',
     'test_cdist_norm_batch',
+    'test_cdist_large',
+    'test_cdist_large_batch',
     'test_cdist_non_contiguous',
     'test_cdist_non_contiguous_batch',
     'test_broadcast_batched_matmul',  # incorrect Size
