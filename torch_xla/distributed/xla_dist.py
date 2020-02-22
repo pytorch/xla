@@ -541,8 +541,6 @@ class DistributedExecutor(object):
 
         script_map = self._prepare_scripts(cmd)
         self._sync_checkpoints()
-        import pdb
-        pdb.set_trace()
         proc = multiprocessing.Process(target=self._run_cmd, args=(script_map,))
         proc.start()
         while True:
