@@ -13,7 +13,10 @@ import signal
 import subprocess
 import sys
 import time
+from datetime import datetime, timedelta
+from collections import namedtuple
 import threading
+
 from torch_xla.distributed.cluster import ClusterResolver
 import torch_xla.utils.utils as xu
 
@@ -45,6 +48,8 @@ class DistributedExecutor(object):
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   MAX_TPU_RETRY = 50
   HEARTBEAT_CHECK_PERIOD = 30
+  DIR_SYNC_FILESIZE_TOL = 0.02
+  DIR_SYNC_TIMEDELTA_MIN = 10
 
   def _get_logger(self):
     logger = logging.getLogger(self.__class__.__name__)
@@ -77,6 +82,7 @@ class DistributedExecutor(object):
                docker_image=None,
                docker_run_flags=None,
                conda_env=None,
+               checkpoint_sync_dir=None,
                env_vars=None):
     self._cluster = cluster
     self._initialize()
@@ -91,6 +97,7 @@ class DistributedExecutor(object):
     self.docker_run_flags = list(docker_run_flags) if docker_run_flags else None
     self.conda_env = conda_env
     self.env_vars = list(env_vars) if env_vars else []
+    self.checkpoint_sync_dir = checkpoint_sync_dir
 
     for env_var in self.env_vars:
       if re.match('\w*=\w*', env_var) is None:
@@ -158,17 +165,17 @@ class DistributedExecutor(object):
     stdout.join()
     stderr.join()
 
-  def _build_scp_cmd(self, local_path, remote_path, client_worker):
-    return [
-        'gcloud',
-        '-q',
-        'compute',
-        'scp',
-        '--internal-ip',
-        '--zone={}'.format(client_worker.get_zone()),
-        local_path,
-        '{}:{}'.format(client_worker.get_hostname(), remote_path),
-    ]
+  def _build_scp_cmd(
+      self, local_path, remote_path, client_worker, recurse=False):
+    cmd = ['gcloud', '-q', 'compute', 'scp']
+    if recurse:
+      cmd.append('--recurse')
+    cmd.extend(['--internal-ip', '--zone={}'.format(client_worker.get_zone())])
+    if not isinstance(local_path, list):
+        local_path = [local_path]
+    cmd.extend(local_path)
+    cmd.append('{}:{}'.format(client_worker.get_hostname(), remote_path))
+    return cmd
 
   def _build_ssh_cmd(self, remote_cmd, client_worker):
     if isinstance(remote_cmd, list):
@@ -288,16 +295,15 @@ class DistributedExecutor(object):
 
     return worker_script_map
 
+  def _gcloud_scp(self, local_path, remote_path, client_worker):
+    self._build_and_run_ssh(
+        ['mkdir', '-p', os.path.dirname(remote_path)], client_worker)
+    scp_cmd = self._build_scp_cmd(local_path, remote_path, client_worker)
+    proc = subprocess.Popen(
+        scp_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    self._stream_logs(proc, client_worker)
+
   def _scp_scripts(self, script_map):
-
-    def _gcloud_scp(local_path, remote_path, client_worker):
-      self._build_and_run_ssh(
-          ['mkdir', '-p', os.path.dirname(remote_path)], client_worker)
-      scp_cmd = self._build_scp_cmd(local_path, remote_path, client_worker)
-      proc = subprocess.Popen(
-          scp_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      self._stream_logs(proc, client_worker)
-
     threads = []
     for i, client_worker in enumerate(script_map):
       local_path = script_map[client_worker]['local_path']
@@ -317,6 +323,142 @@ class DistributedExecutor(object):
 
     for thread in threads:
       thread.join()
+
+  def _sync_checkpoints(self):
+    """
+    Used to synchronize checkpoints between workers, before restarting
+      the training script.
+    For the time being, assumes master's copy is healthy.
+    Assumes user has implemented logic to load checkpoints safely in their code.
+
+    * get the last modified file/dir in path
+    * get the files/dirs that are within 10 mins of that file/dir.
+    * get sizes for the same files from remote hosts
+    * compare sizes
+    * for all remote hosts that has a drastically different copy
+      * scp over from healthy host
+    """
+
+    def find_healthy_host(dir_states):
+      # At the moment, assumes master is always healthy
+      for state, host in dir_states:
+        if host == self._client_master:
+          return state, host
+
+    def parse_stat_output(stdout):
+      lines = stdout.decode("utf-8").split('\n')
+      dat = [line.split() for line in lines if line]
+      file_info_dict = {}
+      for line_dat in dat:
+        filename = ' '.join(line_dat[:-3])
+        size = float(line_dat.pop())
+        timestamp = datetime.strptime(
+            ' '.join(line_dat[-2:]), "%Y-%m-%d %H:%M:%S")
+        file_info_dict[filename] = fileinfo(timestamp, size)
+      return file_info_dict
+
+    def parse_du_output(stdout):
+      lines = stdout.decode("utf-8").split('\n')
+      dat = [line.split() for line in lines if line]
+      update_dir_sizes_dict = {}
+      for line_dat in dat:
+        size = float(line_dat[0])
+        filename = ' '.join(line_dat[1:])
+        if filename == self.checkpoint_sync_dir:
+          continue
+        update_dir_sizes_dict[filename] = size
+      return update_dir_sizes_dict
+
+    def mkdir_and_get_info(client_worker):
+      command = ';'.join([
+          'mkdir -p {path} ',
+          'find {path} -mindepth 1 -maxdepth 1 | xargs stat -c "%n %.19y %s"',
+      ]).format(path=self.checkpoint_sync_dir)
+      command = self._build_ssh_cmd(command, client_worker)
+      command = concat_cmd_list(command, quote='')
+      stdout, stderr = subprocess.Popen(
+          command, shell=True, stdout=subprocess.PIPE,
+          stderr=subprocess.PIPE).communicate()
+      file_info_dict = parse_stat_output(stdout)
+      # stat command does not print the full directory size.
+      # use `du` to correct directory sizes.
+      du_command = 'du --max-depth 1 -b {path}'.format(
+          path=self.checkpoint_sync_dir)
+      du_command = self._build_ssh_cmd(du_command, client_worker)
+      du_command = concat_cmd_list(du_command, quote='')
+      stdout, stderr = subprocess.Popen(
+          du_command, shell=True, stdout=subprocess.PIPE).communicate()
+      update_dir_sizes_dict = parse_du_output(stdout)
+      update_dir_sizes_dict = {
+          filename: fileinfo(file_info_dict[filename].timestamp, size)
+          for filename, size in update_dir_sizes_dict.items()}
+      file_info_dict.update(update_dir_sizes_dict)
+      return file_info_dict, client_worker
+
+    def mkdirs_and_get_infos():
+      workers = self._cluster._client_workers
+      return xu.parallel_work(len(workers), mkdir_and_get_info, workers)
+
+    def get_last_checkpoint_files(healthy_dir_info):
+      last_modified_ts, _ = max(healthy_dir_info.values())
+      after_ts = last_modified_ts - timedelta(self.DIR_SYNC_TIMEDELTA_MIN)
+      last_chpt_files = {
+          filename: fileinfo
+          for filename, fileinfo in healthy_dir_info.items()
+          if fileinfo.timestamp > after_ts}
+      return last_chpt_files
+
+    def is_host_corrupt(last_checkpoint_files, dir_info):
+      corrupt = False
+      for filename, fileinfo in last_checkpoint_files.items():
+        if filename not in dir_info:
+          return True
+        elif fileinfo.size == 0:
+          continue
+        remote_size = dir_info[filename].size
+        size_delta = fileinfo.size - remote_size
+        if size_delta / fileinfo.size > self.DIR_SYNC_FILESIZE_TOL:
+          return True
+      return False
+
+    def get_corrupt_hosts(last_checkpoint_files, dir_infos):
+      return [host for (dir_info, host) in dir_infos
+              if is_host_corrupt(last_checkpoint_files, dir_info)]
+
+    def copy_from_healthy_host(
+        healthy_host, last_checkpoint_files, remote_host):
+      # Assuming master is healthy, copying from local files.
+      local_paths = list(last_checkpoint_files.keys())
+      remote_path = self.checkpoint_sync_dir
+      scp_cmd = self._build_scp_cmd(
+          local_paths, remote_path, remote_host, recurse=True)
+      proc = subprocess.Popen(
+          scp_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      proc.wait()
+
+    if self.checkpoint_sync_dir is None:
+      return
+    self.logger.info(
+        'Begin syncing checkpoints at "{}"'.format(self.checkpoint_sync_dir),
+        extra={'clientip': '', 'ordinal': ''})
+    fileinfo = namedtuple('fileinfo', ['timestamp', 'size'])
+    dir_infos = mkdirs_and_get_infos()
+    healthy_dir_info, healthy_host = find_healthy_host(dir_infos)
+    if not healthy_dir_info:
+      return
+    last_checkpoint_files = get_last_checkpoint_files(healthy_dir_info)
+    corrupt_hosts = get_corrupt_hosts(last_checkpoint_files, dir_infos)
+    if corrupt_hosts:
+        self.logger.info(
+            'Found corrupt checkpoints in following hosts: {}'.format(
+                ', '.join(host.get_internal_ip() for host in corrupt_hosts)),
+            extra={'clientip': '', 'ordinal': ''})
+        args = [(healthy_host, last_checkpoint_files, host)
+                for host in corrupt_hosts]
+        xu.parallel_work(
+            len(corrupt_hosts), copy_from_healthy_host, *zip(*args))
+        self.logger.info(
+            'Synchronized checkpoints', extra={'clientip': '', 'ordinal': ''})
 
   def _cleanup(self, script_map):
 
@@ -398,6 +540,9 @@ class DistributedExecutor(object):
             extra={'clientip': '', 'ordinal': ''})
 
         script_map = self._prepare_scripts(cmd)
+        self._sync_checkpoints()
+        import pdb
+        pdb.set_trace()
         proc = multiprocessing.Process(target=self._run_cmd, args=(script_map,))
         proc.start()
         while True:
@@ -481,6 +626,12 @@ if __name__ == '__main__':
       type=str,
       help='List of environment variables to distribute.')
   parser.add_argument(
+      '--checkpoint-sync-dir',
+      type=str,
+      default=None,
+      help='''Path to the directory to sync between workers at initialization,
+              as well as automatic restarts.''')
+  parser.add_argument(
       'positional',
       nargs='+',
       type=str,
@@ -502,5 +653,6 @@ if __name__ == '__main__':
       docker_image=FLAGS.docker_image,
       docker_run_flags=FLAGS.docker_run_flag,
       conda_env=FLAGS.conda_env,
+      checkpoint_sync_dir=FLAGS.checkpoint_sync_dir,
       env_vars=FLAGS.env)
   executor.run(FLAGS.positional)
