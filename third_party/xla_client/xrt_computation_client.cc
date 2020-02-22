@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <functional>
+#include <limits>
 #include <list>
 #include <sstream>
 #include <unordered_map>
@@ -183,6 +184,28 @@ void MaybeSaveLongCompileHlo(double compile_time,
   }
 }
 
+template <typename T>
+T ParseProto(const tensorflow::Tensor& tensor) {
+  const tensorflow::tstring& tensor_data =
+      tensor.scalar<tensorflow::tstring>()();
+  // The ParseFromArray() API takes an 'int' as size argument, so the tensor
+  // size better be fitting the 'int' domain.
+  XLA_CHECK_LE(tensor_data.size(),
+               static_cast<size_t>(std::numeric_limits<int>::max()));
+  T proto;
+  XLA_CHECK(proto.ParseFromArray(tensor_data.data(), tensor_data.size()));
+  return proto;
+}
+
+int64 GetMaxTensorsPartitionSize() {
+  // We need to limit the amount of data we send to the XRT backend since
+  // Protocol Buffers does not allow sizes greater than 2GB. We keep some margin
+  // to avoid extra metadata pushing us over the limit.
+  static int64 max_partition_size =
+      sys_util::GetEnvInt("XRT_MAX_TENSORS_PARTITION", 1800000000);
+  return max_partition_size;
+}
+
 }  // namespace
 
 void XrtComputationClient::XrtData::Assign(const Data& data) {
@@ -236,11 +259,7 @@ ComputationClient::DataPtr XrtComputationClient::CreateDataPlaceholder(
 
 std::vector<size_t> XrtComputationClient::PartitionTransferToServer(
     absl::Span<const TensorSource> tensors) {
-  // We need to limit the amount of data we send to the XRT backend since
-  // Protocol Buffers does not allow sizes greater than 2GB. We keep some margin
-  // to avoid extra metadata pushing us over the limit.
-  static int64 max_partition_size =
-      sys_util::GetEnvInt("XRT_MAX_TENSORS_PARTITION", 1800000000);
+  int64 max_partition_size = GetMaxTensorsPartitionSize();
   uint64 current_size = 0;
   std::vector<size_t> partitions;
   for (size_t i = 0; i < tensors.size(); ++i) {
@@ -366,12 +385,23 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromServerMetric());
 
-  XrtSessionCache::SessionMap session_map;
+  int64 max_partition_size = GetMaxTensorsPartitionSize();
+  std::list<XrtSessionCache::SessionMap> session_maps;
+  int64 current_size = 0;
+  session_maps.emplace_back();
   std::map<XrtSession*, SessionWork> session_work_map;
   for (size_t i = 0; i < handles.size(); ++i) {
     const XrtData& xrt_data = dynamic_cast<const XrtData&>(*handles[i]);
-    XrtSession* session = GetSessionForDevice(session_cache_.get(),
-                                              xrt_data.device(), &session_map);
+
+    int64 shape_size = ShapeUtil::ByteSizeOfElements(xrt_data.shape());
+    if (current_size + shape_size >= max_partition_size) {
+      session_maps.emplace_back();
+      current_size = 0;
+    }
+    current_size += shape_size;
+
+    XrtSession* session = GetSessionForDevice(
+        session_cache_.get(), xrt_data.device(), &session_maps.back());
     SessionWork* session_work = &session_work_map[session];
     tensorflow::Scope device_scope =
         session->root()->WithDevice(TorchDeviceToXrtDevice(xrt_data.device()));
@@ -383,25 +413,30 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
     session_work->index_mapping.push_back(i);
   }
 
-  int64 total_size = 0;
+  util::MultiWait mwait(session_work_map.size());
+  std::atomic<int64> total_size(0);
   std::vector<Literal> results(handles.size());
-  for (auto& session_work : session_work_map) {
-    std::vector<tensorflow::Tensor> outputs;
-    XLA_CHECK_OK(session_work.first->session()->Run(
-        session_work.second.feed_inputs, session_work.second.outputs_handles,
-        &outputs));
-    XLA_CHECK_EQ(outputs.size(), session_work.second.outputs_handles.size());
+  for (auto& session_session_work : session_work_map) {
+    XrtSession* session = session_session_work.first;
+    SessionWork* session_work = &session_session_work.second;
+    auto runner = [&, session, session_work]() {
+      std::vector<tensorflow::Tensor> outputs;
+      XLA_CHECK_OK(session->session()->Run(
+          session_work->feed_inputs, session_work->outputs_handles, &outputs));
+      XLA_CHECK_EQ(outputs.size(), session_work->outputs_handles.size());
 
-    for (size_t i = 0; i < outputs.size(); ++i) {
-      size_t li = session_work.second.index_mapping[i];
-      LiteralProto response;
-      XLA_CHECK(
-          response.ParseFromString(outputs[i].scalar<tensorflow::tstring>()()));
-      results[li] = std::move(Literal::CreateFromProto(response).ValueOrDie());
-      total_size += results[li].size_bytes();
-    }
+      for (size_t i = 0; i < outputs.size(); ++i) {
+        size_t li = session_work->index_mapping[i];
+        LiteralProto response = ParseProto<LiteralProto>(outputs[i]);
+        results[li] =
+            std::move(Literal::CreateFromProto(response).ValueOrDie());
+        total_size += results[li].size_bytes();
+      }
+    };
+    env::ScheduleIoClosure(mwait.Completer(std::move(runner)));
   }
-  InboundDataMetric()->AddSample(total_size);
+  mwait.Wait();
+  InboundDataMetric()->AddSample(total_size.load());
   return results;
 }
 
@@ -1161,10 +1196,7 @@ tensorflow::tpu::TopologyProto XrtComputationClient::InitializeAndFetchTopology(
   XLA_CHECK_OK(session.Run({tensorflow::Output(result, 0)}, &outputs));
   XLA_CHECK_EQ(outputs.size(), 1);
 
-  tensorflow::tpu::TopologyProto topology_proto;
-  XLA_CHECK(topology_proto.ParseFromString(
-      outputs[0].scalar<tensorflow::tstring>()()));
-  return topology_proto;
+  return ParseProto<tensorflow::tpu::TopologyProto>(outputs[0]);
 }
 
 void XrtComputationClient::InitializeDevices(
@@ -1380,9 +1412,7 @@ std::map<std::string, Metric> XrtComputationClient::GetMetrics() const {
     XLA_CHECK_OK(session.Run({result}, &outputs));
     XLA_CHECK_EQ(outputs.size(), 1);
 
-    xrt::MetricsReport report;
-    XLA_CHECK(
-        report.ParseFromString(outputs[0].scalar<tensorflow::tstring>()()));
+    xrt::MetricsReport report = ParseProto<xrt::MetricsReport>(outputs[0]);
     for (auto& xrt_metric : report.metrics()) {
       Metric metric;
       if (xrt_metric.values_oneof_case() ==
