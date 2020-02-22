@@ -164,60 +164,58 @@ disabled_torch_tests = {
 
     # test_indexing.py
     # TestIndexing
-    'test_setitem_expansion_error',  # doesn't raise
-    'test_multiple_byte_mask',
-    'test_empty_slice',
-    'test_byte_tensor_assignment',
-    'test_byte_mask',
-    'test_byte_mask_accumulate',
-    'test_bool_indices',
-    'test_trivial_fancy_out_of_bounds',  # doesn't raise
-    'test_boolean_assignment_value_mismatch',  # doesn't raise
+    'test_setitem_expansion_error',  # expecting a different runtime error
+    'test_multiple_byte_mask', # expecting a different runtime error
+    'test_empty_slice', # stride
+    'test_byte_tensor_assignment', # expecting a different runtime error
+    'test_byte_mask', # expecting a different runtime error
+    'test_byte_mask_accumulate', # expecting a different runtime error
+    'test_bool_indices', # expecting a different runtime error
     'test_index_getitem_copy_bools_slices',  # storage
     'test_getitem_scalars',  # storage
-    'test_empty_ndim_index',  # runtime error
+    'test_empty_ndim_index',  # expecting a different runtime error
+
+    # NumpyTests
+    'test_trivial_fancy_out_of_bounds',  # expecting a different runtime error
+    'test_boolean_assignment_value_mismatch',  # expecting a different runtime error
     'test_empty_tuple_index',  # storage
-    'test_empty_fancy_index',  # runtime error
+    'test_empty_fancy_index',  # expecting a different runtime error
     'test_ellipsis_index',  # storage
-    'test_broaderrors_indexing',  # runtime error
-    'test_broadcast_subspace',  # runtime error
-    'test_boolean_shape_mismatch',  # runtime error
-    'test_boolean_indexing_weirdness',  # runtime error
-    'test_boolean_indexing_weirdness_tensors',  # runtime error
+    'test_broaderrors_indexing',  # expecting a different runtime error
+    'test_broadcast_subspace',  # FIXME! XLA doesn't support arange with negative step
+    'test_boolean_shape_mismatch',  # expecting a different runtime error
+    'test_boolean_indexing_weirdness',  # expecting a different runtime error
+    'test_boolean_indexing_weirdness_tensors',  # expecting a different runtime error
 
     # test_nn.py
     # TestNNDeviceType
-    'test_embedding_backward',  # uses sparse
+    'test_embedding_backward',  # sparse
     'test_embedding_dense_grad',  # slow
-    'test_EmbeddingBag_per_sample_weights_and_new_offsets', # wrong result
-    'test_batchnorm_grad',
-    'test_gumbel_softmax_xla',
-    'test_rnn_retain_variables',
-    'test_pool_invalid_size',  # doesn't raise
-    'test_nonlinearity_propagate_nan',
+    'test_EmbeddingBag_per_sample_weights_and_new_offsets', # FIXME! UndefinedTensorImpl::_singleton
+    'test_batchnorm_grad', # FIXME! UndefinedTensorImpl::_singleton
+    'test_pool_invalid_size',  # expecting a different runtime error
+    'test_nonlinearity_propagate_nan', # relu6 with a nan tensor returns a tensor([0.]) instead of a nan tensor
     'test_InstanceNorm3d_general',  # precision (1e-2)
     'test_InstanceNorm2d_general',  # precision (1e-2)
     'test_InstanceNorm1d_general',  # precision (1e-2)
-    'test_EmbeddingBag_per_sample_weights_failures',  # runtime error
-    'test_variable_sequence',  # value error
-    'test_embedding_bag_device',  # runtime error
-    'test_embedding_bag_device',  # runtime error
-    'test_batchnorm_eval',  # runtime error
+    'test_EmbeddingBag_per_sample_weights_failures',  # expecting a different runtime error
+    'test_variable_sequence',  # PackedSequence batch_sizes.device.type should be CPU but is XLA
+    'test_embedding_bag_device',  # FIXME! UndefinedTensorImpl::_singleton
+    'test_batchnorm_eval',  # FIXME! UndefinedTensorImpl::_singleton
     'test_MaxPool2d_indices',  # lowering
     'test_MaxPool1d_indices',  # lowering
     'test_EmbeddingBag_per_sample_weights_and_offsets',  # runtime error
     'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # runtime error
-    'test_nll_loss_empty_tensor_reduction_mean',  # floating point division 0 by 0
     'test_softshrink_negative',  # runtime error
+    'test_nll_loss_empty_tensor_reduction_mean',  # floating point division 0 by 0, expecting nan but get 0
 
     # test_type_promotion.py
     # TestTypePromotion
-    'test_many_promotions',
-    'test_inplace',
-    'test_indexing',
-    'test_booleans',  # not less than or equal to 0.001
-    'test_alternate_result',
-    'test_alpha_mismatch',
-    'test_lt_with_type_promotion',  # runtime error
-    'test_half',  # half
+    'test_many_promotions', # stride
+    'test_inplace', # FIXME! XLA allows adding int and double inplace
+    'test_indexing', # FIXME! XLA allows int to double type promotion
+    'test_alternate_result', # expecting a different runtime error
+    'test_alpha_mismatch', # FIXME! XLA allows torch.add(int32, int32, alpha=float)
+    'test_lt_with_type_promotion',  # compareing XLA tensor with CPU tensor, will fix pytorch test
+    'test_half',  # half support
 }
