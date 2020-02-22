@@ -436,8 +436,6 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
   m.def("_get_git_revs", []() { return GetRevisions(); });
-  m.def("_get_xla_tensor",
-        [](const at::Tensor& tensor) { return bridge::GetXlaTensor(tensor); });
   m.def("_get_xla_tensor_dimension_size",
         [](const at::Tensor& tensor, int dim) {
           return GetXlaTensorDimensionSize(tensor, dim);
@@ -471,6 +469,20 @@ void InitXlaModuleBindings(py::module m) {
       for (size_t i = 0; i < xla_tensors.size(); ++i) {
         result.push_back(torch::autograd::make_variable(
             xla_tensors[i], /*requires_grad=*/tensors.at(i).requires_grad()));
+      }
+    }
+    return result;
+  });
+  m.def("_xla_get_cpu_tensors", [](const std::vector<at::Tensor>& tensors) {
+    std::vector<at::Tensor> result;
+    {
+      NoGilSection nogil;
+      std::vector<at::Tensor> cpu_tensors =
+          bridge::XlaCreateTensorList(tensors);
+      result.reserve(cpu_tensors.size());
+      for (size_t i = 0; i < cpu_tensors.size(); ++i) {
+        result.push_back(torch::autograd::make_variable(
+            cpu_tensors[i], /*requires_grad=*/tensors.at(i).requires_grad()));
       }
     }
     return result;

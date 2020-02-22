@@ -476,12 +476,7 @@ def save(data, file_or_path, master_only=True):
   """
 
   def convert_fn(tensors):
-    cpu_tensors = []
-    torch_xla._XLAC._xla_sync_multi(
-        tensors, devices=[], wait=True, sync_xla_data=True)
-    for sync_tensor in tensors:
-      cpu_tensors.append(sync_tensor.cpu())
-    return cpu_tensors
+    return torch_xla._XLAC._xla_get_cpu_tensors(tensors)
 
   def select_fn(v):
     return type(v) == torch.Tensor and is_xla_tensor(v)
