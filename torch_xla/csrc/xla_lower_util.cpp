@@ -177,12 +177,12 @@ xla::XlaOp CreateIndexAlongDim(
 }
 
 bool ScatterRequiresPadding(const xla::Shape& input_shape,
-                            const xla::Shape& index_shape) {
+                            const xla::Shape& index_shape, xla::int64 dim) {
   bool requires_padding = false;
   for (size_t i = 0; i < input_shape.rank(); ++i) {
     if (input_shape.dimensions(i) > index_shape.dimensions(i)) {
       requires_padding = true;
-    } else {
+    } else if (i != dim) {
       XLA_CHECK_EQ(input_shape.dimensions(i), index_shape.dimensions(i));
     }
   }
@@ -236,7 +236,7 @@ xla::XlaOp XlaDenseScatter(
         mask, xla::ConstantR0<bool>(builder, false),
         xla::CreateScalarOrComputation(xla::PrimitiveType::PRED, builder),
         {dim + 1});
-    if (ScatterRequiresPadding(input_shape, index_shape)) {
+    if (ScatterRequiresPadding(input_shape, index_shape, dim)) {
       masked_src = PadToSize(masked_src, input_shape.dimensions());
       reduced_mask = PadToSize(reduced_mask, input_shape.dimensions());
     }
