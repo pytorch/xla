@@ -1175,6 +1175,17 @@ class TestAtenXlaTensor(XlaTestCase):
         [torch.randn(0, 1, 2, 0),
          torch.tensor([], dtype=torch.long)], test_fn)
 
+  def test_scatter_add_small_target(self):
+
+    def test_fn(t, s, i):
+      t.scatter_add_(1, i, s)
+      return t
+
+    self.runAtenTest(
+        [torch.randn(2, 4),
+         torch.randn(2, 8),
+         torch.randint(0, 4, (2, 8))], test_fn)
+
   def test_diagonal_write(self):
 
     def test_fn(t):
