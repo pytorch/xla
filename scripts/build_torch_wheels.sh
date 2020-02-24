@@ -9,7 +9,7 @@ DEFAULT_PYTHON_VERSION=3.6
 DEBIAN_FRONTEND=noninteractive
 
 function install_bazel() {
-  local BAZEL_VERSION="1.2.1"
+  local BAZEL_VERSION=$(wget -q -O - "https://raw.githubusercontent.com/tensorflow/tensorflow/master/.bazelversion")
   local BAZEL_FILE="bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh"
   sudo apt-get install -y pkg-config zip zlib1g-dev unzip
   curl -L -O "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_FILE}"
