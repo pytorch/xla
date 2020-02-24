@@ -455,7 +455,7 @@ def optimizer_step(optimizer, barrier=False, optimizer_args={}):
   return loss
 
 
-def save(data, file_or_path, master_only=True):
+def save(data, file_or_path, master_only=True, global_master=False):
   """Saves the input data into a file.
 
   The saved data is transfered to PyTorch CPU device before being saved, so a
@@ -468,11 +468,14 @@ def save(data, file_or_path, master_only=True):
       path or a Python file object. If `master_only` is ``False`` the path or
       file objects must point to different destinations as otherwise all the
       writes from the same host will override each other.
-    master_only (bool): Whether only the master device should save the data. If
-      False, the `file_or_path` argument should be a different file or path for
-      each of the ordinals taking part to the replication, otherwise all the
-      replicas on the same host will be writing to the same location.
+    master_only (bool, optional): Whether only the master device should save the
+      data. If False, the `file_or_path` argument should be a different file or
+      path for each of the ordinals taking part to the replication, otherwise
+      all the replicas on the same host will be writing to the same location.
       Default: True
+    global_master (bool, optional): When ``master_only`` is ``True`` this flag
+      controls whether every host's master (if ``global_master`` is ``False``)
+      saves the content, or only the global master (ordinal 0).
   """
 
   def convert_fn(tensors):
@@ -483,7 +486,7 @@ def save(data, file_or_path, master_only=True):
 
   cpu_data = ToXlaTensorArena(convert_fn, select_fn).transform(data)
   if master_only:
-    if is_master_ordinal():
+    if is_master_ordinal(local=not global_master):
       torch.save(cpu_data, file_or_path)
   else:
     torch.save(cpu_data, file_or_path)
