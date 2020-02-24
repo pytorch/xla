@@ -182,8 +182,14 @@ template <typename T>
 std::vector<T> Range(T start, T end, T step = 1) {
   std::vector<T> result;
   result.reserve(static_cast<size_t>((end - start) / step));
-  for (; start < end; start += step) {
-    result.push_back(start);
+  if (start < end) {
+    for (; start < end; start += step) {
+      result.push_back(start);
+    }
+  } else {
+    for (; start > end; start += step) {
+      result.push_back(start);
+    }
   }
   return result;
 }

@@ -182,7 +182,6 @@ disabled_torch_tests = {
     'test_empty_fancy_index',  # expecting a different runtime error
     'test_ellipsis_index',  # storage
     'test_broaderrors_indexing',  # expecting a different runtime error
-    'test_broadcast_subspace',  # FIXME! XLA doesn't support arange with negative step
     'test_boolean_shape_mismatch',  # expecting a different runtime error
     'test_boolean_indexing_weirdness',  # expecting a different runtime error
     'test_boolean_indexing_weirdness_tensors',  # expecting a different runtime error

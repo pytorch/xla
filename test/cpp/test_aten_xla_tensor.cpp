@@ -2558,13 +2558,17 @@ TEST_F(AtenXlaTensorTest, TestFullLikeOptions) {
 }
 
 TEST_F(AtenXlaTensorTest, TestARange) {
-  torch::Tensor a =
-      torch::arange(0.0, 100.0, 0.5, torch::TensorOptions(torch::kFloat));
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = torch::arange(
-        0.0, 100.0, 0.5, torch::TensorOptions(torch::kFloat).device(device));
-    AllClose(a, xla_a);
-  });
+  for (auto& ranges : std::vector<std::vector<float>>{{0.0, 100.0, 0.5},
+                                                      {0.0, -100.0, -0.5}}) {
+    torch::Tensor a = torch::arange(ranges[0], ranges[1], ranges[2],
+                                    torch::TensorOptions(torch::kFloat));
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a =
+          torch::arange(ranges[0], ranges[1], ranges[2],
+                        torch::TensorOptions(torch::kFloat).device(device));
+      AllClose(a, xla_a);
+    });
+  }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
@@ -2572,12 +2576,16 @@ TEST_F(AtenXlaTensorTest, TestARange) {
 
 TEST_F(AtenXlaTensorTest, TestARangeOut) {
   torch::Tensor a = torch::randn({4}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b = torch::arange_out(a, 0, 4, 1);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = torch::arange_out(xla_a, 0, 4, 1);
-    AllClose(b, xla_b);
-  });
+  for (auto& ranges : std::vector<std::vector<float>>{{0.0, 100.0, 0.5},
+                                                      {0.0, -100.0, -0.5}}) {
+    torch::Tensor b = torch::arange_out(a, ranges[0], ranges[1], ranges[2]);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b =
+          torch::arange_out(xla_a, ranges[0], ranges[1], ranges[2]);
+      AllClose(b, xla_b);
+    });
+  }
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::arange_out", cpp_test::GetIgnoredCounters());
