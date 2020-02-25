@@ -54,20 +54,17 @@ wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
 sudo apt-get -qq update
 sudo apt-get -qq install clang-8 clang++-8
 
-# XLA build requires Bazel
-# We use bazelisk to avoid updating Bazel version manually.
-sudo add-apt-repository ppa:longsleep/golang-backports
-sudo apt-get update
-sudo apt-get -qq install golang-go
-go get github.com/bazelbuild/bazelisk
-export PATH=$PATH:$(go env GOPATH)/bin
-sudo ln -s `which bazelisk` /usr/bin/bazel
-
-# Install bazels3cache for cloud cache
 sudo apt-get -qq install npm
 npm config set strict-ssl false
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
 sudo apt-get install -qq nodejs
+
+# XLA build requires Bazel
+# We use bazelisk to avoid updating Bazel version manually.
+sudo npm install -g @bazel/bazelisk
+sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
+
+# Install bazels3cache for cloud cache
 sudo npm install -g bazels3cache
 BAZELS3CACHE="$(which bazels3cache)"
 if [ -z "${BAZELS3CACHE}" ]; then
