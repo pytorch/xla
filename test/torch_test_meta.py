@@ -214,7 +214,6 @@ disabled_torch_tests = {
     'test_inplace', # FIXME! XLA allows adding int and double inplace
     'test_indexing', # FIXME! XLA allows int to double type promotion
     'test_alternate_result', # expecting a different runtime error
-    'test_alpha_mismatch', # FIXME! XLA allows torch.add(int32, int32, alpha=float)
     'test_lt_with_type_promotion',  # compareing XLA tensor with CPU tensor, will fix pytorch test
     'test_half',  # half support
 }
