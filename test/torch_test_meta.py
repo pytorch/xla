@@ -51,6 +51,7 @@ disabled_torch_tests = {
     'test_eig_with_eigvec_xla_float64',  # Precision: tensor(1.1798, dtype=torch.float64) not less than or equal to 0.001
 
     # TestTorchDeviceType
+    'test_addmm_sizes',  # FIXME: very slow compile
     'test_clamp',  # slow
     'test_lu_unpack',  # very slow compile
     'test_view',  # doesn't raise
