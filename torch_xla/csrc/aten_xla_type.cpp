@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/aten_xla_type.h"
 
 #include <ATen/Context.h>
+#include <ATen/native/BinaryOps.h>
 
 #include <mutex>
 
@@ -281,6 +282,7 @@ at::Tensor& AtenXlaType::acos_(at::Tensor& self) {
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
+  at::native::alpha_check(at::result_type(self, other), alpha);
   auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::add(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
@@ -296,6 +298,7 @@ at::Tensor AtenXlaType::add(const at::Tensor& self, at::Scalar other,
 at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Tensor& other,
                               at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
+  at::native::alpha_check(at::result_type(self, other), alpha);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::add_(self_tensor,
                   bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()),
@@ -2625,6 +2628,7 @@ at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
+  at::native::alpha_check(at::result_type(self, other), alpha);
   auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
   return bridge::AtenFromXlaTensor(
       XLATensor::sub(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
@@ -2641,6 +2645,7 @@ at::Tensor AtenXlaType::sub(const at::Tensor& self, at::Scalar other,
 at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Tensor& other,
                               at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
+  at::native::alpha_check(at::result_type(self, other), alpha);
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::sub_(self_tensor,
