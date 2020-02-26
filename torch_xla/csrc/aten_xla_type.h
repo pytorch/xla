@@ -13,7 +13,7 @@ class AtenXlaType {
   // ATEN API ovverrides in alphabetical order.
   // Note: The C++ signatures must match the ones listed within the following
   // pytorch folder file:
-  //   build/aten/src/ATen/RegistrationDeclarations.h
+  //   torch/csrc/autograd/generated/RegistrationDeclarations.h
   /////////////////////////////////////////////////////////////////////////////
   static at::Tensor& __ilshift__(at::Tensor& self, at::Scalar other);
 
