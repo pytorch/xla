@@ -1083,8 +1083,10 @@ void XrtComputationClient::ReleaseHandles(
 }
 
 void XrtComputationClient::StartHandleReleaser() {
-  int64 num_threads = sys_util::GetEnvInt("XLA_HANDLE_RELEASE_THREADS",
-                                          options_.devices.size());
+  static const size_t kMinReleaserThreads = 8;
+  int64 num_threads = sys_util::GetEnvInt(
+      "XLA_HANDLE_RELEASE_THREADS",
+      std::max<size_t>(options_.devices.size(), kMinReleaserThreads));
   triggered_task_.reset(
       new util::TriggeredTask([this]() { HandleReleaser(); }, num_threads));
 }
