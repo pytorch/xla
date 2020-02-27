@@ -8,6 +8,42 @@ import shutil
 import sys
 import tempfile
 import time
+import json
+from collections import defaultdict
+
+import torch_xla.utils.gcsfs as gcsfs
+
+
+class CheckpointTagger(object):
+
+  def __init__(self, tags=None, refcount=None, remover=None):
+    self.tags = dict() if tags is None else tags
+    self._refcount = defaultdict(int) if refcount is None else refcount
+    self.set_remover(remover)
+
+  def tag(self, name, path):
+    self._refcount[path] += 1
+    old_path = self.tags.get(name)
+    if old_path is not None:
+      self._refcount[old_path] -= 1
+      if self._refcount[old_path] == 0:
+        self._refcount.pop(old_path)
+        self._remover(old_path)
+    self.tags[name] = path
+
+  def set_remover(self, remover):
+    remover = (lambda x: None) if remover is None else remover
+    assert callable(remover)
+    self._remover = remover
+
+  def save(self, filename):
+    dat = json.dumps({'tags': self.tags, 'refcount': self._refcount})
+    write_to_disk_or_gcs(dat, filename)
+
+  @classmethod
+  def load(cls, path):
+    dat = json.loads(read_from_disk_or_gcs(path))
+    return cls(tags=dat['tags'], refcount=dat['refcount'])
 
 
 class Cleaner(object):
@@ -218,6 +254,23 @@ def timed(fn, msg='', printfn=eprint):
   result = fn()
   printfn('{}{:.3f}ms'.format(msg, 1000.0 * (time.time() - s)))
   return result
+
+
+def write_to_disk_or_gcs(output_string, output_path):
+  if not output_path:
+    return
+  if output_path.startswith(gcsfs.CLOUD_STORAGE_PREFIX):
+    gcsfs.write(output_path, output_string)
+  else:
+    with open(output_path, 'w') as outfile:
+      outfile.write(output_string)
+
+
+def read_from_disk_or_gcs(path):
+  if path.startswith(gcsfs.CLOUD_STORAGE_PREFIX):
+    return gcsfs.read(path)
+  with open(path, 'r') as f:
+    return f.read()
 
 
 def parallel_work(num_workers, fn, *args):

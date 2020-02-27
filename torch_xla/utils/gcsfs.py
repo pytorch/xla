@@ -10,6 +10,7 @@ import sys
 import torch_xla
 
 GcsBlob = collections.namedtuple('GcsBlob', 'path size mtime isdir')
+CLOUD_STORAGE_PREFIX = 'gs://'
 
 
 def _mkblob(path, fstat):
