@@ -19,7 +19,7 @@ index a23696c29c..d7eb93373b 100644
                          self.precision = self._get_precision_override(test, dtype)
                          result = test(self, device_arg, dtype)
                      finally:
-@@ -242,10 +243,103 @@ class CUDATestBase(DeviceTypeTestBase):
+@@ -242,10 +243,100 @@ class CUDATestBase(DeviceTypeTestBase):
          cls.primary_device = 'cuda:{0}'.format(torch.cuda.current_device())
 
 
@@ -107,12 +107,9 @@ index a23696c29c..d7eb93373b 100644
 +        torch_xla._XLAC._xla_set_use_full_mat_mul_precision(use_full_mat_mul_precision=True)
 +
 +    # Overrides assertEqual to popular custom precision
-+    def assertEqual(self, x, y, prec=None, message='', allow_inf=False):
-+        if prec is None:
-+            prec = self.precision
-+        else:
-+            prec = max(self.precision, prec)
-+        return DeviceTypeTestBase.assertEqual(self, x, y, prec, message, allow_inf)
++    def assertEqual(self, x, y, **kwargs):
++        kwargs['prec'] = max(self.precision, kwargs.get('prec', self.precision))
++        return DeviceTypeTestBase.assertEqual(self, x, y, **kwargs)
 +
 +
  # Adds available device-type-specific test base classes
