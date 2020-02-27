@@ -476,7 +476,8 @@ class AtenXlaType {
 
   static at::Tensor leaky_relu_backward(const at::Tensor& grad_output,
                                         const at::Tensor& self,
-                                        at::Scalar negative_slope);
+                                        at::Scalar negative_slope,
+                                        bool self_is_result);
 
   static at::Tensor log(const at::Tensor& self);
 
@@ -729,7 +730,8 @@ class AtenXlaType {
                                               const at::Tensor& self,
                                               const at::Tensor& noise,
                                               at::Scalar lower,
-                                              at::Scalar upper, bool training);
+                                              at::Scalar upper, bool training,
+                                              bool self_is_result);
 
   static at::Tensor rsqrt(const at::Tensor& self);
 
