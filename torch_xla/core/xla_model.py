@@ -521,4 +521,7 @@ def rendezvous(tag, payload=b''):
     tag (string): The name of the rendezvous to join.
     payload (bytes, optional): The payload to be sent to the rendezvous.
   """
-  return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload)
+  res = torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload)
+  if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False) and is_master_ordinal(local=False):
+    print('torch_xla.core.xla_model::rendezvous', file=sys.stderr, flush=True)
+  return res

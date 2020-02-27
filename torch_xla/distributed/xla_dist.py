@@ -115,7 +115,8 @@ class DistributedExecutor(object):
          extra={'clientip': '', 'ordinal': ''})
 
     for cw_hb in self._last_heartbeats.values():
-      max_delay = max(max_delay, now - cw_hb['last_time'])
+      if cw_hb['count'] > 0:
+        max_delay = max(max_delay, now - cw_hb['last_time'])
       if count is None:
         count = cw_hb['count']
       elif count >= 0 and count != cw_hb['count']:
@@ -127,6 +128,11 @@ class DistributedExecutor(object):
     elif count > 0 and max_delay > even_health_timeout:
       self._error_queue.put(RuntimeError(
         'Client mesh is unhealthy with even heartbeats'))
+
+  def _reset_heartbeat_timeout(self):
+    now = time.time()
+    for cw_hb in self._last_heartbeats.values():
+      cw_hb['last_time'] = now
 
   def _stream_logs(self, process, client_worker):
     client_ip = client_worker.get_internal_ip()
@@ -140,6 +146,9 @@ class DistributedExecutor(object):
           # Only single thread updates each of these, so there is no race
           hb_stream['last_time'] = time.time()
           hb_stream['count'] += 1
+          continue
+        elif 'torch_xla.core.xla_model::rendezvous' in std_line:
+          self._reset_heartbeat_timeout()
           continue
         log_fn(
             std_line,
