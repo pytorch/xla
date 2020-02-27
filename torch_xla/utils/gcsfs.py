@@ -51,7 +51,7 @@ class WriteableFile(io.RawIOBase):
 
   @property
   def closed(self):
-    return self._closed
+    return self._wfile is None
 
   def fileno(self):
     raise OSError('Not supported on GCS files: {}'.format(self._path))
