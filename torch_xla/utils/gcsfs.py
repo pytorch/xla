@@ -215,3 +215,20 @@ def write(path, content):
   gcs_file = torch_xla._XLAC._xla_tffile_create(path)
   torch_xla._XLAC._xla_tffile_write(gcs_file, content)
   torch_xla._XLAC._xla_tffile_flush(gcs_file)
+
+
+def write_to_disk_or_gcs(output_string, output_path):
+  if not output_path:
+    return
+  if output_path.startswith(CLOUD_STORAGE_PREFIX):
+    write(output_path, output_string)
+  else:
+    with open(output_path, 'w') as outfile:
+      outfile.write(output_string)
+
+
+def read_from_disk_or_gcs(path):
+  if path.startswith(CLOUD_STORAGE_PREFIX):
+    return read(path)
+  with open(path, 'r') as f:
+    return f.read()
