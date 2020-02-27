@@ -105,7 +105,7 @@ class DistributedExecutor(object):
                ' training'.format(dist_var)))
 
   def _check_client_mesh_health(
-      self, uneven_health_timeout=300, even_health_timeout=1800):
+      self, uneven_health_timeout=900, even_health_timeout=1800):
     max_delay = 0.0
     count = None
     now = time.time()
