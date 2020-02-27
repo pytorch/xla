@@ -109,7 +109,7 @@ class DistributedExecutor(object):
     max_delay = 0.0
     count = None
     now = time.time()
-    if xu.getenv_as('DEBUG_LOG_HEARTBEATS', bool, False):
+    if xu.getenv_as('XLA_DEBUG_LOG_HEARTBEATS', bool, False):
       self.logger.info(
         'Worker Heartbeats: {}'.format(self._last_heartbeats),
          extra={'clientip': '', 'ordinal': ''})
