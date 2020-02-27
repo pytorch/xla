@@ -476,21 +476,30 @@ def save(data, file_or_path, master_only=True, global_master=False):
     global_master (bool, optional): When ``master_only`` is ``True`` this flag
       controls whether every host's master (if ``global_master`` is ``False``)
       saves the content, or only the global master (ordinal 0).
+      Default: False
   """
+  should_write_data = not master_only or is_master_ordinal(
+      local=not global_master)
+
+  cpu_data = _maybe_convert_to_cpu(data, convert=should_write_data)
+  if should_write_data:
+    torch.save(cpu_data, file_or_path)
+  rendezvous('torch_xla.core.xla_model.save')
+
+
+def _maybe_convert_to_cpu(data, convert=True):
 
   def convert_fn(tensors):
+    torch_xla._XLAC._xla_sync_multi(
+        tensors, devices=[], wait=True, sync_xla_data=True)
+    if not convert:
+      return tensors
     return torch_xla._XLAC._xla_get_cpu_tensors(tensors)
 
   def select_fn(v):
     return type(v) == torch.Tensor and is_xla_tensor(v)
 
-  cpu_data = ToXlaTensorArena(convert_fn, select_fn).transform(data)
-  if master_only:
-    if is_master_ordinal(local=not global_master):
-      torch.save(cpu_data, file_or_path)
-  else:
-    torch.save(cpu_data, file_or_path)
-  rendezvous('torch_xla.core.xla_model.save')
+  return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
 def send_cpu_data_to_device(data, device):
@@ -505,11 +514,11 @@ def send_cpu_data_to_device(data, device):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
-def rendezvous(tag, payload=''):
+def rendezvous(tag, payload=b''):
   """Waits for all the mesh clients to reach the named rendezvous.
 
   Args:
     tag (string): The name of the rendezvous to join.
-    payload (string, optional): The payload to be sent to the rendezvous.
+    payload (bytes, optional): The payload to be sent to the rendezvous.
   """
   return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload)

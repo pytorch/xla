@@ -52,6 +52,7 @@ function run_all_tests {
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   python3 "$CDIR/test_mp_replication.py"
   python3 "$CDIR/test_mp_rendezvous.py"
+  python3 "$CDIR/test_mp_save.py"
 }
 
 if [ "$LOGFILE" != "" ]; then
