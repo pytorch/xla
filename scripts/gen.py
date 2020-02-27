@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import collections
 import lark
+import json
 import os
 import re
 import string
@@ -24,11 +25,11 @@ class ArgTemplate(string.Template):
   idpattern = r'[a-z0-9_]+'
 
 
-FuncDef = namedtuple_with_defaults('FuncDef', 'cpp_sig, aten_sig')
+FuncDef = namedtuple_with_defaults('FuncDef', 'cpp_sig, aten_sig, leaf')
 
 FuncGen = namedtuple_with_defaults(
     'FuncGen',
-    'tree, xtree, rwxtree, func, xfunc, code, sig, rwsig, cppsig, funsig, mapsig, aten_sig'
+    'tree, xtree, rwxtree, func, xfunc, code, sig, rwsig, cppsig, funsig, mapsig, aten_sig, leaf'
 )
 
 FuncOpts = namedtuple_with_defaults(
@@ -79,7 +80,14 @@ _PARSER = lark.Lark(_GRAMMAR, parser='lalr', propagate_positions=True)
 _XPARSER = lark.Lark(
     _GRAMMAR, parser='lalr', propagate_positions=True, keep_all_tokens=True)
 
+# _FN_WHITELIST & _FN_BLACKLIST takes either name or mapsig.
 _FN_BLACKLIST = set([])
+
+_FN_WHITELIST = set([
+    'copy_(Tensor, Tensor, bool) -> Tensor',
+    'einsum',
+    'resize_',
+])
 
 _FN_BLACKLIST_REGEX = [
     # ATEN functions
@@ -860,7 +868,8 @@ def get_xla_wrapper(fndef, ctx):
       cppsig=sig,
       mapsig=mapsig,
       funsig=create_stdfunc_sig(rwxtree, rwsig),
-      aten_sig=fndef.aten_sig)
+      aten_sig=fndef.aten_sig,
+      leaf=fndef.leaf)
 
 
 def is_tensor_api(fndef):
@@ -870,9 +879,15 @@ def is_tensor_api(fndef):
   return m is not None, fndef
 
 
+def create_funcdef(fndef, jdata):
+  fields = json.loads(jdata)
+  return FuncDef(cpp_sig=fndef, aten_sig=fields['schema'], leaf=fields.get('compound', 'false') == 'false')
+
+
 def extract_functions(path):
   functions = []
   errors = []
+
   for line in open(path, 'r'):
     m = re.match(r'\s*([^\s].*); //\s+(.*)', line)
     if not m:
@@ -880,7 +895,7 @@ def extract_functions(path):
     fndef = m.group(1)
     try:
       _XPARSER.parse(fndef)
-      functions.append(FuncDef(cpp_sig=fndef, aten_sig=m.group(2)))
+      functions.append(create_funcdef(fndef, m.group(2)))
     except Exception as e:
       if is_tensor_api(fndef)[0]:
         errors.append((fndef, str(e)))
@@ -931,6 +946,8 @@ def generate_registrations(fgens, overrides):
   code += '  static auto dispatch = torch::RegisterOperators()\n'
   overridden = set()
   for fgen in fgens:
+    if not is_overrideable(fgen):
+      continue
     mapsig_key = get_mapsig_key(fgen.mapsig)
     if mapsig_key in overrides:
       override_fn = 'AtenXlaType::{}'.format(fgen.func)
@@ -947,10 +964,15 @@ def generate_registrations(fgens, overrides):
   return code + ';\n}\n', overridden
 
 
+# XLA is only able to override leaf ops and whitelisted non-leaf ops.
+def is_overrideable(fgen):
+  return fgen.leaf or fgen.mapsig in _FN_WHITELIST or fgen.func in _FN_WHITELIST
+
+
 def generate_functions(fgens):
   code = ''
   for fgen in fgens:
-    if fgen.code:
+    if fgen.code and is_overrideable(fgen):
       code += '{}\n\n'.format(fgen.code)
   return code
 
@@ -958,7 +980,7 @@ def generate_functions(fgens):
 def generate_class_functions(fgens):
   code = ''
   for fgen in fgens:
-    if fgen.code:
+    if fgen.code and is_overrideable(fgen):
       code += '  static {};\n'.format(fgen.rwsig)
   return code
 
