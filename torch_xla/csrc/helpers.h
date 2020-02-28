@@ -47,10 +47,16 @@ class XlaHelpers {
             static_cast<tensorflow::bfloat16>(scalar_value));
       case xla::PrimitiveType::S64:
         return xla::LiteralUtil::CreateR0<xla::int64>(scalar_value);
+      case xla::PrimitiveType::U64:
+        return xla::LiteralUtil::CreateR0<xla::uint64>(scalar_value);
       case xla::PrimitiveType::S32:
         return xla::LiteralUtil::CreateR0<xla::int32>(scalar_value);
+      case xla::PrimitiveType::U32:
+        return xla::LiteralUtil::CreateR0<xla::uint32>(scalar_value);
       case xla::PrimitiveType::S16:
         return xla::LiteralUtil::CreateR0<xla::int16>(scalar_value);
+      case xla::PrimitiveType::U16:
+        return xla::LiteralUtil::CreateR0<xla::uint16>(scalar_value);
       case xla::PrimitiveType::S8:
         return xla::LiteralUtil::CreateR0<xla::int8>(scalar_value);
       case xla::PrimitiveType::U8:
@@ -85,6 +91,8 @@ class XlaHelpers {
     return ScalarValue(static_cast<xla::int64>(scalar_value.toLong()), type,
                        builder);
   }
+
+  static xla::uint64 GenRngSeed();
 
   // Performa a linear interpolation between value0 and value1, by calculating:
   //   result = value0 * alpha + value1 * (1 - alpha)

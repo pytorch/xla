@@ -20,7 +20,8 @@ xla::XlaOp BuildThreshold(xla::XlaOp input, xla::XlaOp output,
 xla::XlaOp BuildRelu(xla::XlaOp input);
 
 std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, at::Scalar lower,
-                                   at::Scalar upper, bool training);
+                                   at::Scalar upper, bool training,
+                                   xla::XlaOp rng_seed);
 
 xla::XlaOp BuildRreluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                               xla::XlaOp noise, at::Scalar lower,
