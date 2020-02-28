@@ -121,7 +121,7 @@ def _write_to_disk_or_gcs(output_string, output_filename):
   if not output_filename:
     return
   try:
-    gcsfs.write_to_disk_or_gcs(output_string, output_filename)
+    gcsfs.generic_write(output_string, output_filename)
     print('Succeeded writing metrics to file: {}'.format(output_filename))
   except Exception as e:
     print('Failed writing metrics to file: {}'.format(e))

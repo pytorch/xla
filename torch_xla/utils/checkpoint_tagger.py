@@ -1,14 +1,14 @@
 from __future__ import division
 from __future__ import print_function
 
-from collections import defaultdict
+import collections
 import json
 
 class CheckpointTagger(object):
 
   def __init__(self, remover=None):
     self._tags = dict()
-    self._refcount = defaultdict(int)
+    self._refcount = collections.defaultdict(int)
     remover = (lambda x: None) if remover is None else remover
     assert callable(remover)
     self._remover = remover
@@ -23,19 +23,16 @@ class CheckpointTagger(object):
         self._remover(old_path)
     self._tags[name] = path
 
-  def dump(self):
+  def get_tag(self, tag):
+    return self._tags.get(tag)
+
+  def save_to_json(self):
     return json.dumps(self._tags)
 
   @classmethod
-  def load(cls, dat, remover=None):
+  def load_from_json(cls, str_json, remover=None):
     instance = cls(remover=remover)
-    if isinstance(dat, bytes):
-      dat = dat.decode()
-    if isinstance(dat, str):
-      try:
-        dat = json.loads(dat)
-      except json.decoder.JSONDecodeError as e:
-        raise type(e)(e.message + '\n\twas a filename passed?')
+    dat = json.loads(str_json)
     for name, path in dat.items():
       instance.tag(name, path)
     return instance
