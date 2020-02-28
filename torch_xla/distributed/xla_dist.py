@@ -106,6 +106,11 @@ class DistributedExecutor(object):
 
   def _check_client_mesh_health(
       self, uneven_health_timeout=900, even_health_timeout=1800):
+    uneven_health_timeout = xu.getenv_as(
+      'XLA_UNEVEN_HEARTBEAT_TIMEOUT', int, uneven_health_timeout)
+    even_health_timeout = xu.getenv_as(
+      'XLA_EVEN_HEARTBEAT_TIMEOUT', int, even_health_timeout)
+
     max_delay = 0.0
     count = None
     now = time.time()
