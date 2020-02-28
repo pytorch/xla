@@ -23,8 +23,9 @@ class CheckpointTagger(object):
         self._remover(old_path)
     self._tags[name] = path
 
-  def get_tag(self, tag):
-    return self._tags.get(tag)
+  @property
+  def tags(self):
+    return self._tags
 
   def save_to_json(self):
     return json.dumps(self._tags)

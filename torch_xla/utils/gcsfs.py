@@ -230,8 +230,8 @@ def generic_write(output_string, output_path):
   if output_path.startswith(CLOUD_STORAGE_PREFIX):
     write(output_path, output_string)
   else:
-    with open(output_path, 'w') as outfile:
-      outfile.write(output_string)
+    with open(output_path, 'w') as fd:
+      fd.write(output_string)
 
 
 def generic_read(path):
@@ -246,5 +246,5 @@ def generic_read(path):
   """
   if path.startswith(CLOUD_STORAGE_PREFIX):
     return read(path)
-  with open(path, 'r') as f:
-    return f.read()
+  with open(path, 'r') as fd:
+    return fd.read()
