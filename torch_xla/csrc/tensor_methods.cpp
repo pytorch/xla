@@ -1896,7 +1896,7 @@ XLATensor XLATensor::rrelu_with_noise(const XLATensor& input, XLATensor& noise,
                                       at::Scalar lower, at::Scalar upper,
                                       bool training) {
   ir::NodePtr output_node = ir::MakeNode<ir::ops::RreluWithNoise>(
-      input.GetIrValue(), lower, upper, training);
+      input.GetIrValue(), lower, upper, training, XlaHelpers::GenRngSeed());
   noise.SetIrValue(ir::Value(output_node, 1));
   return input.CreateFrom(ir::Value(output_node, 0));
 }

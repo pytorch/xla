@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -105,7 +106,8 @@ xla::XlaOp BuildLeakyRelu(xla::XlaOp input, double negative_slope_value) {
 }
 
 std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, at::Scalar lower,
-                                   at::Scalar upper, bool training) {
+                                   at::Scalar upper, bool training,
+                                   xla::XlaOp rng_seed) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
   xla::XlaOp one = xla::One(input.builder(), shape.element_type());
@@ -116,7 +118,9 @@ std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, at::Scalar lower,
         XlaHelpers::ScalarValue(lower, shape.element_type(), input.builder());
     xla::XlaOp high =
         XlaHelpers::ScalarValue(upper, shape.element_type(), input.builder());
-    xla::XlaOp slope = xla::RngUniform(low, high, shape);
+    xla::XlaOp slope = RngUniform(
+        rng_seed, xla::ShapeUtil::MakeShape(shape.element_type(), {}), low,
+        high);
     noise = xla::Select(xla::Gt(input, zero), one, slope);
     output = input * noise;
   } else {
