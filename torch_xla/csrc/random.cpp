@@ -56,7 +56,6 @@ xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
       return xla::UniformIntDistribution(seed, initial_state, GetBitGenerator(),
                                          minval, maxval, shape)
           .value;
-      break;
     default:
       XLA_ERROR() << "RngUniform not implemented for type "
                   << xla::primitive_util::LowercasePrimitiveTypeName(
