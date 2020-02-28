@@ -20,7 +20,7 @@
 #include "tensorflow/core/platform/env.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
-#include "torch/csrc/jit/pybind.h"
+#include "torch/csrc/jit/python/pybind.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type.h"
 #include "torch_xla/csrc/device.h"
@@ -258,12 +258,15 @@ py::object GetRevisions() {
   return py_dict;
 }
 
-std::vector<std::string> Rendezvous(int ordinal, const std::string& tag,
-                                    const std::string& payload) {
+std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
+                                  const std::string& payload) {
   xla::service::MeshClient* mesh_client = xla::service::MeshClient::Get();
-  std::vector<std::string> payloads;
+  std::vector<py::bytes> payloads;
   if (mesh_client != nullptr) {
-    payloads = mesh_client->Rendezvous(ordinal, tag, payload);
+    auto rendezvous_payloads = mesh_client->Rendezvous(ordinal, tag, payload);
+    for (auto& rendezvous_payload : rendezvous_payloads) {
+      payloads.push_back(rendezvous_payload);
+    }
   }
   return payloads;
 }
