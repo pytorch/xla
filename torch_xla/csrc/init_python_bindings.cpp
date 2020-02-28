@@ -20,7 +20,7 @@
 #include "tensorflow/core/platform/env.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
-#include "torch/csrc/jit/pybind.h"
+#include "torch/csrc/jit/python/pybind.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type.h"
 #include "torch_xla/csrc/device.h"
