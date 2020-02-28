@@ -105,7 +105,7 @@ class DistributedExecutor(object):
                ' training'.format(dist_var)))
 
   def _check_client_mesh_health(
-      self, uneven_health_timeout=900, even_health_timeout=1800):
+      self, uneven_health_timeout, even_health_timeout):
     max_delay = 0.0
     count = None
     now = time.time()
@@ -361,8 +361,13 @@ class DistributedExecutor(object):
       self._build_and_run_ssh([script_path], client_worker)
 
     def _regular_health_check():
+      uneven_health_timeout = xu.getenv_as(
+        'XLA_UNEVEN_HEARTBEAT_TIMEOUT', int, 900)
+      even_health_timeout = xu.getenv_as(
+        'XLA_EVEN_HEARTBEAT_TIMEOUT', int, 1800)
       while True:
-        self._check_client_mesh_health()
+        self._check_client_mesh_health(
+          uneven_health_timeout, even_health_timeout)
         time.sleep(self.HEARTBEAT_CHECK_PERIOD)
 
     threads = []
