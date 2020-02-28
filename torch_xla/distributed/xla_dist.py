@@ -115,7 +115,8 @@ class DistributedExecutor(object):
          extra={'clientip': '', 'ordinal': ''})
 
     for cw_hb in self._last_heartbeats.values():
-      max_delay = max(max_delay, now - cw_hb['last_time'])
+      if cw_hb['count'] > 0:
+        max_delay = max(max_delay, now - cw_hb['last_time'])
       if count is None:
         count = cw_hb['count']
       elif count >= 0 and count != cw_hb['count']:
