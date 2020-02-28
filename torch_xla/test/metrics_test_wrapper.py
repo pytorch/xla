@@ -55,6 +55,7 @@ import tempfile
 
 import torch_xla.debug.metrics_compare_utils as mcu
 import torch_xla.utils.gcsfs as gcsfs
+import torch_xla.utils.utils as xu
 
 try:
   import google.api_core.exceptions
@@ -72,7 +73,6 @@ Also follow the instructions in the link below to configure authentication:
   raise
 
 
-_CLOUD_STORAGE_PREFIX = 'gs://'
 _METRICS_HISTORY_DIR_NAME = 'metrics_history'
 _XLA_METRICS_FILE = 'XLA_METRICS_FILE'
 _METRICS_FILE_PATTERN = r'.*\d{4}_\d{2}_\d{2}'
@@ -117,15 +117,11 @@ def _run_subprocess(cmd):
   return metrics, sp_return_code
 
 
-def _write_to_disk(output_string, output_filename):
+def _write_to_disk_or_gcs(output_string, output_filename):
   if not output_filename:
     return
   try:
-    if output_filename.find(_CLOUD_STORAGE_PREFIX) == 0:
-      gcsfs.write(output_filename, output_string)
-    else:
-      with open(output_filename, 'w') as outfile:
-        outfile.write(output_string)
+    gcsfs.generic_write(output_string, output_filename)
     print('Succeeded writing metrics to file: {}'.format(output_filename))
   except Exception as e:
     print('Failed writing metrics to file: {}'.format(e))
@@ -213,7 +209,7 @@ if __name__ == '__main__':
     output_string = '{}\n\n{}'.format(FLAGS, metrics)
     output_filename = os.path.join(
         metrics_storage_dir, datetime.datetime.utcnow().strftime('%Y_%m_%d'))
-    _write_to_disk(output_string, output_filename)
+    _write_to_disk_or_gcs(output_string, output_filename)
 
   if regression_report:
     raise AssertionError(

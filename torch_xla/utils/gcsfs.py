@@ -11,6 +11,8 @@ import torch_xla
 
 GcsBlob = collections.namedtuple('GcsBlob', 'path size mtime isdir')
 
+CLOUD_STORAGE_PREFIX = 'gs://'
+
 
 def _mkblob(path, fstat):
   return GcsBlob(
@@ -214,3 +216,35 @@ def write(path, content):
   gcs_file = torch_xla._XLAC._xla_tffile_create(path)
   torch_xla._XLAC._xla_tffile_write(gcs_file, content)
   torch_xla._XLAC._xla_tffile_flush(gcs_file)
+
+
+def generic_write(output_string, output_path):
+  """Write a string/bytes or file into a GCS blob or local disk, depending
+  on the output_path passed in. Checks if the `output_path` starts with
+  the 'gs://' prefix, and uses `open` otherwise.
+
+  Args:
+    output_string (string): The string to be written to the output.
+    output_path (string): The GCS path or local path of the output.
+  """
+  if output_path.startswith(CLOUD_STORAGE_PREFIX):
+    write(output_path, output_string)
+  else:
+    with open(output_path, 'w') as fd:
+      fd.write(output_string)
+
+
+def generic_read(path):
+  """Reads the whole content of the provided location. Has to be a GCS path or
+  a local path.
+
+  Args:
+    path (string): The GCS path or local path to be read.
+
+  Returns:
+    The bytes stored within the GCS blob or local file.
+  """
+  if path.startswith(CLOUD_STORAGE_PREFIX):
+    return read(path)
+  with open(path, 'r') as fd:
+    return fd.read()
