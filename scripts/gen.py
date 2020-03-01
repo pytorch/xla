@@ -881,7 +881,10 @@ def is_tensor_api(fndef):
 
 def create_funcdef(fndef, jdata):
   fields = json.loads(jdata)
-  return FuncDef(cpp_sig=fndef, aten_sig=fields['schema'], leaf=fields.get('compound', 'false') == 'false')
+  return FuncDef(
+      cpp_sig=fndef,
+      aten_sig=fields['schema'],
+      leaf=fields.get('compound', 'false') == 'false')
 
 
 def extract_functions(path):
