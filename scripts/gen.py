@@ -109,6 +109,7 @@ _FN_OUT = {
     'masked_select_out': FuncOpts(),
     'pow_out': FuncOpts(),
     'nonzero_out': FuncOpts(),
+    'normal_out': FuncOpts(),
     'take_out': FuncOpts(),
     'topk_out': FuncOpts(),
 }

@@ -1301,6 +1301,64 @@ TEST_F(AtenXlaTensorTest, TestNormInDimsKeep) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestNormalTwoTensor) {
+  at::Tensor mean = at::zeros({10, 10, 10}, at::dtype(at::kFloat));
+  at::Tensor std = at::ones({10, 10, 10}, at::dtype(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_mean = bridge::CreateXlaTensor(mean, device);
+    at::Tensor xla_std = bridge::CreateXlaTensor(std, device);
+    at::Tensor xla_normal = at::normal(xla_mean, xla_std);
+    double res_mean = xla_normal.mean().item().toDouble();
+    double res_std = xla_normal.std().item().toDouble();
+    EXPECT_GT(res_mean, -0.06);
+    EXPECT_LT(res_mean, 0.06);
+    EXPECT_GT(res_std, 0.94);
+    EXPECT_LT(res_std, 1.06);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestNormalDoubleMean) {
+  at::Tensor std = at::ones({10, 10, 10}, at::dtype(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_std = bridge::CreateXlaTensor(std, device);
+    at::Tensor xla_normal = at::normal(0, xla_std);
+    double res_mean = xla_normal.mean().item().toDouble();
+    double res_std = xla_normal.std().item().toDouble();
+    EXPECT_GT(res_mean, -0.06);
+    EXPECT_LT(res_mean, 0.06);
+    EXPECT_GT(res_std, 0.94);
+    EXPECT_LT(res_std, 1.06);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestNormalDoubleStd) {
+  at::Tensor mean = at::zeros({10, 10, 10}, at::dtype(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_mean = bridge::CreateXlaTensor(mean, device);
+    at::Tensor xla_normal = at::normal(xla_mean, 1);
+    double res_mean = xla_normal.mean().item().toDouble();
+    double res_std = xla_normal.std().item().toDouble();
+    EXPECT_GT(res_mean, -0.06);
+    EXPECT_LT(res_mean, 0.06);
+    EXPECT_GT(res_std, 0.94);
+    EXPECT_LT(res_std, 1.06);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestNormalInPlace) {
+  at::Tensor a = at::zeros({10, 10, 10}, at::dtype(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    xla_a.normal_(/*mean=*/0, /*std=*/1);
+    double res_mean = xla_a.mean().item().toDouble();
+    double res_std = xla_a.std().item().toDouble();
+    EXPECT_GT(res_mean, -0.06);
+    EXPECT_LT(res_mean, 0.06);
+    EXPECT_GT(res_std, 0.94);
+    EXPECT_LT(res_std, 1.06);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestNormGeneral) {
   torch::Tensor a =
       torch::randn({4, 3, 4}, torch::TensorOptions(torch::kFloat));

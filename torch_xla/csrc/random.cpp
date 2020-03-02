@@ -63,4 +63,35 @@ xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
   }
 }
 
+xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
+                     xla::XlaOp std) {
+  xla::XlaOp initial_state = xla::Zero(seed.builder(), xla::PrimitiveType::U64);
+  switch (shape.element_type()) {
+    case xla::PrimitiveType::BF16: {
+      xla::Shape f32_shape(shape);
+      f32_shape.set_element_type(xla::PrimitiveType::F32);
+      xla::XlaOp f32_mean =
+          xla::ConvertElementType(mean, xla::PrimitiveType::F32);
+      xla::XlaOp f32_std =
+          xla::ConvertElementType(std, xla::PrimitiveType::F32);
+      xla::XlaOp rng = xla::NormalFloatingPointDistribution(
+                           seed, initial_state, GetBitGenerator(), f32_shape)
+                           .value;
+      return xla::ConvertElementType(f32_mean + rng * f32_std,
+                                     xla::PrimitiveType::BF16);
+    }
+    case xla::PrimitiveType::F32:
+    case xla::PrimitiveType::F64: {
+      xla::XlaOp rng = xla::NormalFloatingPointDistribution(
+                           seed, initial_state, GetBitGenerator(), shape)
+                           .value;
+      return mean + rng * std;
+    }
+    default:
+      XLA_ERROR() << "RngNormal not implemented for type "
+                  << xla::primitive_util::LowercasePrimitiveTypeName(
+                         shape.element_type());
+  }
+}
+
 }  // namespace torch_xla

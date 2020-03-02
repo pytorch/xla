@@ -732,6 +732,14 @@ class XLATensor {
                         c10::optional<at::ScalarType> dtype,
                         at::IntArrayRef dim, bool keepdim);
 
+  static XLATensor normal(double mean, const XLATensor& std);
+
+  static XLATensor normal(const XLATensor& mean, double std);
+
+  static XLATensor normal(const XLATensor& mean, const XLATensor& std);
+
+  static void normal_(XLATensor& input, double mean, double std);
+
   static XLATensor not_supported(std::string description, xla::Shape shape,
                                  const Device& device);
 
