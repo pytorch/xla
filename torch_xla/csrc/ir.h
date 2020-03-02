@@ -209,17 +209,12 @@ class Node {
 
   const MetaData& metadata() const { return metadata_; }
 
-  template <typename T>
-  T* user_metadata() const {
-    return dynamic_cast<T*>(user_metadata_.get());
-  }
+  UserMetaData* user_metadata() const { return user_metadata_.get(); }
 
-  template <typename T>
-  T* get_user_metadata() {
-    if (user_metadata_ == nullptr) {
-      user_metadata_ = std::make_shared<T>();
-    }
-    return user_metadata<T>();
+  std::shared_ptr<UserMetaData> SetUserMetadata(
+      std::shared_ptr<UserMetaData> user_meta) {
+    std::swap(user_metadata_, user_meta);
+    return user_meta;
   }
 
   void ReplaceOperand(size_t operand_no, NodePtr node, size_t index = 0);

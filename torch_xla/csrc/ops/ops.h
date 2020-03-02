@@ -7,7 +7,6 @@
 
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/constant.h"
-#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/scalar.h"
 
@@ -24,11 +23,6 @@ inline NodePtr ScalarOp(at::Scalar value, xla::PrimitiveType type) {
 
 inline NodePtr ConstantOp(xla::Literal value) {
   return MakeNode<Constant>(std::move(value));
-}
-
-inline NodePtr DeviceDataOp(
-    std::shared_ptr<xla::ComputationClient::Data> data) {
-  return MakeNode<DeviceData>(std::move(data));
 }
 
 inline NodePtr GenericOp(OpKind op, absl::Span<const Value> operands,
