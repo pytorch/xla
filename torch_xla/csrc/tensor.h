@@ -17,13 +17,13 @@
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/view.h"
 
 namespace torch_xla {
 
 class XLATensor {
   class DeviceContextArena;
-  class IrNodeMetaData;
   struct Data;
 
  public:
@@ -1005,7 +1005,17 @@ class XLATensor {
                          const XLATensor& other);
 
  private:
+  struct SyncTensorsConfig {
+    // Whether we want to force XLA data on the target tensors (hence trimming
+    // the IR graph above them).
+    bool force_xla_data = true;
+    // Whether when setting the XLA data, the other properties of the tensor
+    // state should be reset.
+    bool sync_xla_data = true;
+  };
+
   struct SyncTensorCollection {
+    SyncTensorsConfig config;
     std::vector<size_t> indices;
     size_t hash = 0;
     std::vector<xla::util::ExceptionCleanup> unlocker;
@@ -1046,15 +1056,6 @@ class XLATensor {
     std::string device;
     ComputationCache::TypePtr cached_computation;
     std::vector<xla::ComputationClient::DataPtr> tensors_data;
-  };
-
-  struct SyncTensorsConfig {
-    // Whether we want to force XLA data on the target tensors (hence trimming
-    // the IR graph above them).
-    bool force_xla_data = true;
-    // Whether when setting the XLA data, the other properties of the tensor
-    // state should be reset.
-    bool sync_xla_data = true;
   };
 
   // This is the core XLA tensor data structure where all the tensor data is
@@ -1122,6 +1123,8 @@ class XLATensor {
 
   void SetTensorData(at::Tensor tensor_data);
 
+  ir::Value CreateTensorNode(xla::ComputationClient::DataPtr data) const;
+
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
 
   std::shared_ptr<View> UpdateView(std::shared_ptr<View> view,
@@ -1154,8 +1157,8 @@ class XLATensor {
 
   std::vector<XLATensor> MakeOutputTensors(ir::NodePtr node) const;
 
-  static ir::Value GetIrValueForTensor(const at::Tensor& tensor,
-                                       const Device& device);
+  ir::Value GetIrValueForTensor(const at::Tensor& tensor,
+                                const Device& device) const;
 
   static ComputationCache* GetComputationCache();
 
@@ -1198,8 +1201,7 @@ class XLATensor {
       ComputationCache::TypePtr cached_computation);
 
   static std::shared_ptr<Async> ScheduleSyncTensorsGraph(
-      std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
-      SyncTensorCollection* coll,
+      std::vector<XLATensor>* tensors, SyncTensorCollection* coll,
       std::vector<xla::ComputationClient::DataPtr> parameters_data,
       std::string device, ComputationCache::TypePtr cached_computation);
 
@@ -1213,8 +1215,11 @@ class XLATensor {
       std::vector<xla::ComputationClient::DataPtr>* parameters_data);
 
   static std::shared_ptr<Async> TryRunCachedSync(
-      std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
-      SyncTensorCollection* coll);
+      std::vector<XLATensor>* tensors, SyncTensorCollection* coll);
+
+  static void BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
+                                      absl::Span<const size_t> indices,
+                                      ir::LoweringContext* lowering_ctx);
 
   static CompilationResult Compile(const std::vector<XLATensor>& tensors,
                                    absl::Span<const std::string> devices,
@@ -1223,8 +1228,6 @@ class XLATensor {
   static std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
       const SyncTensorsConfig& config);
-
-  static ir::Value CreateTensorNode(xla::ComputationClient::DataPtr data);
 
   static xla::int64 GetNextTensorId();
 
