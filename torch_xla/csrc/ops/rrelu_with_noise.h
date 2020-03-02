@@ -26,6 +26,8 @@ class RreluWithNoise : public Node {
 
   bool training() const { return training_; }
 
+  xla::uint64 seed() const { return seed_; }
+
  private:
   at::Scalar lower_;
   at::Scalar upper_;
