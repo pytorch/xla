@@ -39,7 +39,7 @@ XlaOpVector RreluWithNoise::Lower(LoweringContext* loctx) const {
 std::string RreluWithNoise::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", lower=" << lower_ << ", upper=" << upper_
-     << ", training=" << training_;
+     << ", training=" << training_ << ", seed=" << seed_;
   return ss.str();
 }
 
