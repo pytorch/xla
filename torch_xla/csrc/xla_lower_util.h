@@ -58,6 +58,8 @@ xla::XlaOp CreatePut(xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
 
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input);
 
+xla::XlaOp BuildNormal(xla::XlaOp mean, xla::XlaOp std, xla::XlaOp rng_seed);
+
 std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask);
 
 xla::XlaOp BuildMaskedScatter(xla::XlaOp input, xla::XlaOp mask,

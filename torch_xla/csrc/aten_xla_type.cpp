@@ -2156,6 +2156,47 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
       bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
 }
 
+at::Tensor AtenXlaType::normal(const at::Tensor& mean, double std,
+                               at::Generator* generator) {
+  XLA_FN_COUNTER("xla::");
+  if (generator != nullptr) {
+    return AtenXlaTypeDefault::normal(mean, std, generator);
+  }
+  return bridge::AtenFromXlaTensor(
+      XLATensor::normal(bridge::GetXlaTensor(mean), std));
+}
+
+at::Tensor AtenXlaType::normal(double mean, const at::Tensor& std,
+                               at::Generator* generator) {
+  XLA_FN_COUNTER("xla::");
+  if (generator != nullptr) {
+    return AtenXlaTypeDefault::normal(mean, std, generator);
+  }
+  return bridge::AtenFromXlaTensor(
+      XLATensor::normal(mean, bridge::GetXlaTensor(std)));
+}
+
+at::Tensor AtenXlaType::normal(const at::Tensor& mean, const at::Tensor& std,
+                               at::Generator* generator) {
+  XLA_FN_COUNTER("xla::");
+  if (generator != nullptr) {
+    return AtenXlaTypeDefault::normal(mean, std, generator);
+  }
+  return bridge::AtenFromXlaTensor(
+      XLATensor::normal(bridge::GetXlaTensor(mean), bridge::GetXlaTensor(std)));
+}
+
+at::Tensor& AtenXlaType::normal_(at::Tensor& self, double mean, double std,
+                                 at::Generator* generator) {
+  XLA_FN_COUNTER("xla::");
+  if (generator != nullptr) {
+    return AtenXlaTypeDefault::normal_(self, mean, std, generator);
+  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::normal_(self_tensor, mean, std);
+  return self;
+}
+
 at::Tensor AtenXlaType::permute(const at::Tensor& self, at::IntArrayRef dims) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::permute(

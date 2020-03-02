@@ -15,6 +15,7 @@
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -640,6 +641,11 @@ std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   return BuildConditionIndices(
       xla::Ne(input, xla::Zero(input.builder(), input_shape.element_type())));
+}
+
+xla::XlaOp BuildNormal(xla::XlaOp mean, xla::XlaOp std, xla::XlaOp rng_seed) {
+  const xla::Shape& mean_shape = XlaHelpers::ShapeOfXlaOp(mean);
+  return RngNormal(rng_seed, mean_shape, mean, std);
 }
 
 std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask) {
