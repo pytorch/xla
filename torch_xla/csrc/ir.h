@@ -293,5 +293,19 @@ NodePtr MakeNode(Args&&... args) {
   return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
+template <typename T>
+T* NodeCast(const Node* node, OpKind op) {
+  if (op != node->op()) {
+    return nullptr;
+  }
+  const T* casted;
+#ifdef NDEBUG
+  casted = static_cast<const T*>(node);
+#else
+  casted = &dynamic_cast<const T&>(*node);
+#endif
+  return const_cast<T*>(casted);
+}
+
 }  // namespace ir
 }  // namespace torch_xla

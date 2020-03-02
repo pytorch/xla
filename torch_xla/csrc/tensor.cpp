@@ -1109,8 +1109,7 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::FetchParameters(
   std::unordered_set<xla::ComputationClient::Data::OpaqueHandle> data_handles;
   auto post_order = ir::Util::ComputePostOrder(roots);
   for (auto node : post_order) {
-    const ir::ops::DeviceData* device_data =
-        dynamic_cast<const ir::ops::DeviceData*>(node);
+    const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
     if (device_data != nullptr) {
       if (data_handles.insert(device_data->data()->GetOpaqueHandle()).second) {
         parameters_data.push_back(device_data->data());

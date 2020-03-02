@@ -28,6 +28,10 @@ XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {
   return ReturnOp(loctx->GetParameter(data_), loctx);
 }
 
+DeviceData* DeviceData::Cast(const Node* node) {
+  return NodeCast<DeviceData>(node, xla_device_data);
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

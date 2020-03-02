@@ -21,6 +21,8 @@ class DeviceData : public Node {
     return data_;
   }
 
+  static DeviceData* Cast(const Node* node);
+
  private:
   std::shared_ptr<xla::ComputationClient::Data> data_;
 };
