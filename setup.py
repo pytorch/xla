@@ -243,7 +243,6 @@ library_dirs.append(lib_path)
 extra_link_args = []
 
 DEBUG = _check_env_flag('DEBUG')
-IS_WINDOWS = (platform.system() == 'Windows')
 IS_DARWIN = (platform.system() == 'Darwin')
 IS_LINUX = (platform.system() == 'Linux')
 
@@ -251,8 +250,6 @@ IS_LINUX = (platform.system() == 'Linux')
 def make_relative_rpath(path):
   if IS_DARWIN:
     return '-Wl,-rpath,@loader_path/' + path
-  elif IS_WINDOWS:
-    return ''
   else:
     return '-Wl,-rpath,$ORIGIN/' + path
 
@@ -271,11 +268,10 @@ if re.match(r'clang', os.getenv('CC', '')):
   ]
 
 if DEBUG:
-  if IS_WINDOWS:
-    extra_link_args.append('/DEBUG:FULL')
-  else:
-    extra_compile_args += ['-O0', '-g']
-    extra_link_args += ['-O0', '-g']
+  extra_compile_args += ['-O0', '-g']
+  extra_link_args += ['-O0', '-g']
+else:
+  extra_compile_args += ['-DNDEBUG']
 
 extra_link_args += ['-lxla_computation_client']
 
