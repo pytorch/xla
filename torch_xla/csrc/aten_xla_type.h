@@ -669,6 +669,18 @@ class AtenXlaType {
   static at::Tensor norm(const at::Tensor& self, c10::optional<at::Scalar> p,
                          at::IntArrayRef dim, bool keepdim);
 
+  static at::Tensor normal(const at::Tensor& mean, double std,
+                           at::Generator* generator);
+
+  static at::Tensor normal(double mean, const at::Tensor& std,
+                           at::Generator* generator);
+
+  static at::Tensor normal(const at::Tensor& mean, const at::Tensor& std,
+                           at::Generator* generator);
+
+  static at::Tensor& normal_(at::Tensor& self, double mean, double std,
+                             at::Generator* generator);
+
   static at::Tensor permute(const at::Tensor& self, at::IntArrayRef dims);
 
   static at::Tensor pow(const at::Tensor& self, at::Scalar exponent);
