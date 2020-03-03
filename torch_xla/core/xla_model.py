@@ -38,7 +38,6 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
   Returns:
     The list of device strings.
   """
-
   xla_devices = torch_xla._XLAC._xla_get_devices()
   devkind = devkind or ['TPU', 'GPU', 'CPU']
   for kind in devkind:
@@ -61,7 +60,6 @@ def xrt_world_size(defval=1):
   Returns:
     The number of devices which is taking part of the replication.
   """
-
   return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
 
@@ -78,7 +76,6 @@ def get_ordinal(defval=0):
   Returns:
     The replication ordinal of the current process.
   """
-
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
@@ -95,7 +92,6 @@ def get_local_ordinal(defval=0):
   Returns:
     The replication local ordinal of the current process.
   """
-
   ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
   if ordinal >= 0:
     return ordinal
@@ -114,7 +110,6 @@ def is_master_ordinal(local=True):
   Returns:
     A boolean indicating whether the current process is the master ordinal.
   """
-
   ordinal = get_local_ordinal() if local else get_ordinal()
   return ordinal == 0
 
@@ -137,9 +132,9 @@ def xla_device(n=None, devkind=None):
   Returns:
     A `torch.device` with the requested instance.
   """
-
   if n is None:
-    devices = get_xla_supported_devices(devkind=devkind)
+    devices = get_xla_supported_devices(
+        devkind=[devkind] if devkind is not None else None)
     assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
     # This is a utility API mainly called from tests or simple code which wants
     # to just have a single device to run on. Set the default device so that
