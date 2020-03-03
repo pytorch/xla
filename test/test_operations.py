@@ -855,7 +855,7 @@ class TestAtenXlaTensor(XlaTestCase):
         xla_output.sum() + sum(map(lambda x: x.sum(), xla_grad_input)),
         (xla_a, xla_output) + tuple(xla_m.parameters()),
         retain_graph=True)
-    self.assertEqual(grad_grad_input, xla_grad_grad_input)
+    self.assertEqual(grad_grad_input, xla_grad_grad_input, prec=1e-4)
 
   def test_clamp(self):
     a = torch.randn(3, 3)
