@@ -838,14 +838,15 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
     XLA_CHECK(self_tensor);
     self_tensor->UpdateFromTensor(CopyTensor(src, self.scalar_type()));
   } else if (!self_tensor) {
-    // TODO: Is self_tensor good enough?  I don't think so... therefore
-    // the hack below:
     std::vector<at::Tensor> tensors = {src};
     auto xla_tensors = bridge::XlaCreateTensorList(tensors);
-    // Hack in an overwrite of a const tensor.
     at::Tensor t = CopyTensor(xla_tensors.front(), self.scalar_type());
-    const_cast<at::Tensor&>(self).unsafeGetTensorImpl()->shallow_copy_from(
-        t.getIntrusivePtr());
+    // Both `self` and `t` are on CPU now, simply redispatch to the CPU
+    // copy_ implementation.
+    // Note the old way of calling shallow_copy_from only moves the storage
+    // pointer, it doesn't work if `self` is a view of existing storage as
+    // updates won't be propogated back to the storage!
+    self.copy_(t);
   } else {
     XLATensor::copy_(*self_tensor, *src_tensor);
     bridge::ReplaceXlaTensor(self, *self_tensor);
