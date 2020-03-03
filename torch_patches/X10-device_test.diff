@@ -1,25 +1,72 @@
 diff --git a/torch/testing/_internal/common_device_type.py b/torch/testing/_internal/common_device_type.py
-index 01973711e7..48e5e202ed 100644
+index 16acff7c80..0c986be795 100644
 --- a/torch/testing/_internal/common_device_type.py
 +++ b/torch/testing/_internal/common_device_type.py
-@@ -4,6 +4,7 @@ from functools import wraps
+@@ -1,11 +1,12 @@
+ import inspect
+ import threading
+-from functools import wraps
++from functools import wraps, partial
  import unittest
  import os
  import torch
+-from torch.testing._internal.common_utils import TestCase, TEST_WITH_ROCM, TEST_MKL, \
+-    skipCUDANonDefaultStreamIf
 +import copy
- from torch.testing._internal.common_utils import TestCase, TEST_WITH_ROCM, TEST_MKL, \
-     skipCUDANonDefaultStreamIf
++from torch.testing._internal.common_utils import TestCase, TEST_NUMPY, TEST_WITH_ROCM, \
++    TEST_MKL, skipCUDANonDefaultStreamIf
  
-@@ -219,7 +220,7 @@ class DeviceTypeTestBase(TestCase):
+ # Note: Generic Device-Type Testing
+ #
+@@ -121,6 +122,8 @@ from torch.testing._internal.common_utils import TestCase, TEST_WITH_ROCM, TEST_
+ # you should check if it's available and (if it is) add it to this list.
+ device_type_test_bases = []
+ 
++if TEST_NUMPY:
++    import numpy as np
+ 
+ class DeviceTypeTestBase(TestCase):
+     device_type = 'generic_device_type'
+@@ -171,13 +174,20 @@ class DeviceTypeTestBase(TestCase):
+         test_name = name + "_" + cls.device_type
+ 
+         dtypes = cls._get_dtypes(test)
++        if TEST_NUMPY:
++            origin_allclose = np.allclose
+         if dtypes is None:  # Test has no dtype variants
+             assert not hasattr(cls, test_name), "Redefinition of test {0}".format(test_name)
+ 
+             @wraps(test)
+             def instantiated_test(self, test=test):
++                if TEST_NUMPY:
++                    np.allclose = partial(np.allclose, rtol=self.precision)
+                 device_arg = cls.get_primary_device() if not hasattr(test, 'num_required_devices') else cls.get_all_devices()
+-                return test(self, device_arg)
++                result = test(self, device_arg)
++                if TEST_NUMPY:
++                    np.allclose = origin_allclose
++                return result
+ 
+             setattr(cls, test_name, instantiated_test)
+         else:  # Test has dtype variants
+@@ -192,11 +202,15 @@ class DeviceTypeTestBase(TestCase):
                      # Sets precision and runs test
                      # Note: precision is reset after the test is run
                      guard_precision = self.precision
 -                    try :
 +                    try:
                          self.precision = self._get_precision_override(test, dtype)
++                        if TEST_NUMPY:
++                            np.allclose = partial(np.allclose, rtol=self.precision)
                          result = test(self, device_arg, dtype)
                      finally:
-@@ -270,10 +271,103 @@ class CUDATestBase(DeviceTypeTestBase):
+                         self.precision = guard_precision
++                        if TEST_NUMPY:
++                            np.allclose = origin_allclose
+ 
+                     return result
+ 
+@@ -243,10 +257,103 @@ class CUDATestBase(DeviceTypeTestBase):
          cls.primary_device = 'cuda:{0}'.format(torch.cuda.current_device())
  
  
@@ -123,12 +170,12 @@ index 01973711e7..48e5e202ed 100644
  
  PYTORCH_CUDA_MEMCHECK = os.getenv('PYTORCH_CUDA_MEMCHECK', '0') == '1'
  
-@@ -320,7 +414,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
+@@ -292,7 +399,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
                  assert inspect.isfunction(test), "Couldn't extract function from '{0}'".format(name)
  
                  # Instantiates the device-specific tests
 -                device_type_test_class.instantiate_test(name, test)
 +                device_type_test_class.instantiate_test(name, copy.deepcopy(test))
              else:  # Ports non-test member
-                 assert name not in device_type_test_class.__dict__, "Redefinition of directly defined member {0}".format(name)
+                 assert not hasattr(device_type_test_class, name), "Redefinition of non-test member {0}".format(name)
  
