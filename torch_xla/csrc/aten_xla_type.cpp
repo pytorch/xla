@@ -91,6 +91,18 @@ std::tuple<XLATensor, XLATensor> GetPromotedXlaTensorsForBinaryOp(
   return std::make_tuple(tensor1, tensor2);
 }
 
+void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
+                                const at::Tensor& other) {
+  at::ScalarType resultType = at::result_type(self, other);
+  XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
+}
+
+void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
+                                const at::Scalar& other) {
+  at::ScalarType resultType = at::result_type(self, other);
+  XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
+}
+
 void AtenInitialize() {
   TF_VLOG(1) << "PyTorch GIT revision: " << TORCH_GITREV;
   TF_VLOG(1) << "XLA GIT revision: " << XLA_GITREV;
@@ -111,6 +123,7 @@ at::Tensor& AtenXlaType::__ilshift__(at::Tensor& self, at::Scalar other) {
 at::Tensor& AtenXlaType::__ilshift__(at::Tensor& self,
                                      const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::__ilshift__(self_tensor, bridge::GetXlaTensor(other));
   return self;
@@ -118,6 +131,7 @@ at::Tensor& AtenXlaType::__ilshift__(at::Tensor& self,
 
 at::Tensor& AtenXlaType::__irshift__(at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::__irshift__(self_tensor, other);
   return self;
@@ -126,6 +140,7 @@ at::Tensor& AtenXlaType::__irshift__(at::Tensor& self, at::Scalar other) {
 at::Tensor& AtenXlaType::__irshift__(at::Tensor& self,
                                      const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::__irshift__(self_tensor, bridge::GetXlaTensor(other));
   return self;
@@ -299,6 +314,7 @@ at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Tensor& other,
                               at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
   at::native::alpha_check(at::result_type(self, other), alpha);
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::add_(self_tensor,
                   bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()),
@@ -309,6 +325,7 @@ at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Tensor& other,
 at::Tensor& AtenXlaType::add_(at::Tensor& self, at::Scalar other,
                               at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::add_(self_tensor, other, alpha);
   return self;
@@ -482,6 +499,7 @@ at::Tensor AtenXlaType::atan2(const at::Tensor& self, const at::Tensor& other) {
 
 at::Tensor& AtenXlaType::atan2_(at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::atan2_(self_tensor, bridge::GetXlaTensor(other));
   return self;
@@ -634,6 +652,7 @@ at::Tensor& AtenXlaType::bitwise_and_out(at::Tensor& out,
                                          const at::Tensor& self,
                                          at::Scalar other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(out, self, other);
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::bitwise_and_out(out_tensor, bridge::GetXlaTensor(self), other);
   return out;
@@ -643,6 +662,7 @@ at::Tensor& AtenXlaType::bitwise_and_out(at::Tensor& out,
                                          const at::Tensor& self,
                                          const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(out, self, other);
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::bitwise_and_out(out_tensor, bridge::GetXlaTensor(self),
                              bridge::GetXlaTensor(other));
@@ -661,6 +681,7 @@ at::Tensor& AtenXlaType::bitwise_not_out(at::Tensor& out,
 at::Tensor& AtenXlaType::bitwise_or_out(at::Tensor& out, const at::Tensor& self,
                                         at::Scalar other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(out, self, other);
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::bitwise_or_out(out_tensor, bridge::GetXlaTensor(self), other);
   return out;
@@ -669,6 +690,7 @@ at::Tensor& AtenXlaType::bitwise_or_out(at::Tensor& out, const at::Tensor& self,
 at::Tensor& AtenXlaType::bitwise_or_out(at::Tensor& out, const at::Tensor& self,
                                         const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(out, self, other);
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::bitwise_or_out(out_tensor, bridge::GetXlaTensor(self),
                             bridge::GetXlaTensor(other));
@@ -679,6 +701,7 @@ at::Tensor& AtenXlaType::bitwise_xor_out(at::Tensor& out,
                                          const at::Tensor& self,
                                          at::Scalar other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(out, self, other);
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::bitwise_xor_out(out_tensor, bridge::GetXlaTensor(self), other);
   return out;
@@ -688,6 +711,7 @@ at::Tensor& AtenXlaType::bitwise_xor_out(at::Tensor& out,
                                          const at::Tensor& self,
                                          const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(out, self, other);
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::bitwise_xor_out(out_tensor, bridge::GetXlaTensor(self),
                              bridge::GetXlaTensor(other));
@@ -935,6 +959,7 @@ at::Tensor AtenXlaType::div(const at::Tensor& self, at::Scalar other) {
 
 at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::div_(self_tensor,
                   bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()));
@@ -943,6 +968,7 @@ at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other) {
 
 at::Tensor& AtenXlaType::div_(at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::div_(self_tensor, other);
   return self;
@@ -1201,6 +1227,7 @@ at::Tensor AtenXlaType::fmod(const at::Tensor& self, at::Scalar other) {
 
 at::Tensor& AtenXlaType::fmod_(at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::fmod_(self_tensor, bridge::GetXlaTensor(other));
   return self;
@@ -1208,6 +1235,7 @@ at::Tensor& AtenXlaType::fmod_(at::Tensor& self, const at::Tensor& other) {
 
 at::Tensor& AtenXlaType::fmod_(at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::fmod_(self_tensor, other);
   return self;
@@ -1878,6 +1906,7 @@ at::Tensor AtenXlaType::mul(const at::Tensor& self, at::Scalar other) {
 
 at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::mul_(self_tensor,
                   bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice()));
@@ -1886,6 +1915,7 @@ at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) {
 
 at::Tensor& AtenXlaType::mul_(at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::mul_(self_tensor, other);
   return self;
@@ -2688,6 +2718,7 @@ at::Tensor AtenXlaType::sub(const at::Tensor& self, at::Scalar other,
 at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Tensor& other,
                               at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   at::native::alpha_check(at::result_type(self, other), alpha);
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -2700,6 +2731,7 @@ at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Tensor& other,
 at::Tensor& AtenXlaType::sub_(at::Tensor& self, at::Scalar other,
                               at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
+  CheckBinaryOpTypePromotion(self, self, other);
   CheckSubOperandTypes(self.scalar_type(), GetScalarType(other));
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::sub_(self_tensor, other, alpha);
