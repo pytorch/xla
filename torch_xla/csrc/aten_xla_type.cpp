@@ -105,6 +105,18 @@ void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
   XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
 }
 
+void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
+                                const at::Tensor& other) {
+  at::ScalarType resultType = at::result_type(self, other);
+  XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
+}
+
+void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
+                                const at::Scalar& other) {
+  at::ScalarType resultType = at::result_type(self, other);
+  XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
+}
+
 void AtenInitialize() {
   TF_VLOG(1) << "PyTorch GIT revision: " << TORCH_GITREV;
   TF_VLOG(1) << "XLA GIT revision: " << XLA_GITREV;
