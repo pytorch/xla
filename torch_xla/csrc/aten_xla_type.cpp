@@ -94,13 +94,13 @@ std::tuple<XLATensor, XLATensor> GetPromotedXlaTensorsForBinaryOp(
 void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
                                 const at::Tensor& other) {
   at::ScalarType resultType = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
+  XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
 }
 
 void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
                                 const at::Scalar& other) {
   at::ScalarType resultType = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
+  XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
 }
 
 void AtenInitialize() {
