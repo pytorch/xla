@@ -19,9 +19,9 @@ class ConstantPadNd : public Node {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  at::Scalar value() const { return value_; }
+  const at::Scalar& value() const { return value_; }
 
-  const std::vector<xla::int64> pad() const { return pad_; }
+  const std::vector<xla::int64>& pad() const { return pad_; }
 
  private:
   std::vector<xla::int64> pad_;

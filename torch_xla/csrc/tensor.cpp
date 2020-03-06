@@ -684,12 +684,16 @@ View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
 std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
                                             ir::Value ir_value) const {
   if (ir_value.shape().dimensions() != view->shape().dimensions()) {
-    XLA_CHECK_EQ(xla::util::Multiply<xla::int64>(ir_value.shape().dimensions()),
-                 xla::util::Multiply<xla::int64>(view->shape().dimensions()))
-        << ir_value.shape() << " vs. " << view->shape();
-    ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.shape(),
-                       view->shape());
-    view = view->CreateSubView(view_info.shape, view_info);
+    if (xla::util::Multiply<xla::int64>(ir_value.shape().dimensions()) ==
+        xla::util::Multiply<xla::int64>(view->shape().dimensions())) {
+      ViewInfo view_info(ViewInfo::Type::kReshape, ir_value.shape(),
+                         view->shape());
+      view = view->CreateSubView(view_info.shape, view_info);
+    } else {
+      ir_value = ir::MakeNode<ir::ops::Expand>(
+          ir_value,
+          xla::util::ToVector<xla::int64>(view->shape().dimensions()));
+    }
   }
   view->Update(std::move(ir_value));
   return view;
@@ -748,17 +752,16 @@ void XLATensor::SetTensor(at::Tensor tensor) {
   data()->view = nullptr;
   data()->xla_data = nullptr;
   AssignIrValue(ir::Value());
-  data()->generation += 1;
 }
 
 void XLATensor::UpdateFromTensor(at::Tensor tensor) {
   SetTensorData(tensor);
+  data()->xla_data = nullptr;
+  AssignIrValue(ir::Value());
   if (data()->view != nullptr) {
     ir::Value ir_value = GetIrValueForTensor(tensor, GetDevice());
     data()->view = UpdateView(data()->view, std::move(ir_value));
   }
-  data()->xla_data = nullptr;
-  AssignIrValue(ir::Value());
 }
 
 void XLATensor::UpdateFromTensorOut(at::Tensor tensor) {

@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
 
+#include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -13,16 +14,20 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const Value& input,
+xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
+                    absl::Span<const xla::int64> pad) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  return xla::Pad(input,
+                  XlaHelpers::ScalarValue(value, input_shape.element_type(),
+                                          input.builder()),
+                  XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad));
+}
+
+xla::Shape NodeOutputShape(const Value& input, const at::Scalar& value,
                            absl::Span<const xla::int64> pad) {
-  xla::PrimitiveType input_element_type = input.shape().element_type();
   auto lower_for_shape_fn =
-      [input_element_type,
-       pad](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    xla::XlaOp xla_input = operands[0];
-    return xla::Pad(xla_input,
-                    xla::Zero(xla_input.builder(), input_element_type),
-                    XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad));
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return LowerPad(operands[0], value, pad);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
@@ -32,7 +37,7 @@ xla::Shape NodeOutputShape(const Value& input,
 ConstantPadNd::ConstantPadNd(const Value& input, std::vector<xla::int64> pad,
                              at::Scalar value)
     : Node(ir::OpKind(at::aten::constant_pad_nd), OpList{input},
-           [&]() { return NodeOutputShape(input, pad); },
+           [&]() { return NodeOutputShape(input, value, pad); },
            /*num_outputs=*/1, xla::util::MHash(pad, ScalarHash(value))),
       pad_(std::move(pad)),
       value_(value) {}
@@ -42,14 +47,9 @@ NodePtr ConstantPadNd::Clone(OpList operands) const {
 }
 
 XlaOpVector ConstantPadNd::Lower(LoweringContext* loctx) const {
-  Output input = operand(0);
-  xla::XlaOp xla_input = loctx->GetOutputOp(input);
-  xla::XlaOp xla_output = xla::Pad(
-      xla_input,
-      XlaHelpers::ScalarValue(value_, input.node->shape().element_type(),
-                              loctx->builder()),
-      XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad_));
-  return ReturnOp(xla_output, loctx);
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp output = LowerPad(input, value_, pad_);
+  return ReturnOp(output, loctx);
 }
 
 std::string ConstantPadNd::ToString() const {
