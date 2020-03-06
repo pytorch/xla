@@ -106,7 +106,7 @@ class DistributedExecutor(object):
 
   def _check_client_mesh_health(
       self, uneven_health_timeout, even_health_timeout):
-    max_delay = 0.0
+    min_delay = max(uneven_health_timeout, even_health_timeout) + 1
     count = None
     now = time.time()
     if xu.getenv_as('XLA_DEBUG_LOG_HEARTBEATS', bool, False):
@@ -115,16 +115,16 @@ class DistributedExecutor(object):
          extra={'clientip': '', 'ordinal': ''})
 
     for cw_hb in self._last_heartbeats.values():
-      max_delay = max(max_delay, now - cw_hb['last_time'])
+      min_delay = min(min_delay, now - cw_hb['last_time'])
       if count is None:
         count = cw_hb['count']
       elif count >= 0 and count != cw_hb['count']:
         count = -1
 
-    if count < 0 and max_delay > uneven_health_timeout:
+    if count < 0 and min_delay > uneven_health_timeout:
       self._error_queue.put(RuntimeError(
         'Client mesh is unhealthy with uneven heartbeats'))
-    elif count > 0 and max_delay > even_health_timeout:
+    elif count > 0 and min_delay > even_health_timeout:
       self._error_queue.put(RuntimeError(
         'Client mesh is unhealthy with even heartbeats'))
 
