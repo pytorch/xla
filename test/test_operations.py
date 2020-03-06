@@ -1352,6 +1352,14 @@ class TestAtenXlaTensor(XlaTestCase):
         torch.randn(2, 2).to(torch.bfloat16)
     ], test_fn)
 
+  def test_inplace_copy_different_sizes(self):
+
+    def test_fn(t, r):
+      t.copy_(r)
+      return t
+
+    self.runAtenTest([torch.rand(2, 4), torch.zeros(2, 1)], test_fn)
+
   def test_view_and_copy_(self):
     xla_device = xm.xla_device()
     x = torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5], device='cpu')

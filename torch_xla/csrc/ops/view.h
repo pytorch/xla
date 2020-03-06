@@ -1,13 +1,13 @@
 #pragma once
 
-#include "absl/types/span.h"
+#include <vector>
+
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 namespace ir {
 namespace ops {
 
-// IR node for a tensor view.
 class View : public Node {
  public:
   View(const Value& input, std::vector<xla::int64> output_size);
@@ -19,7 +19,6 @@ class View : public Node {
   const std::vector<xla::int64>& output_size() const { return output_size_; }
 
  private:
-  // The possibly incomplete output size.
   std::vector<xla::int64> output_size_;
 };
 

@@ -212,10 +212,10 @@ XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
 
 xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfigFromNdPadding(
     absl::Span<const xla::int64> padding) {
-  xla::PaddingConfig padding_config;
   XLA_CHECK_EQ(padding.size() % 2, 0)
       << "Padding specification must have even length";
   XLA_CHECK(!padding.empty()) << "Padding specification cannot be empty";
+  xla::PaddingConfig padding_config;
   for (int i = 0; i < padding.size(); i += 2) {
     xla::PaddingConfig::PaddingConfigDimension* dims =
         padding_config.add_dimensions();
