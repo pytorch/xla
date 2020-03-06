@@ -69,7 +69,7 @@ def install_vm(version, apt_packages):
     ['pip', 'install', torch_whl],
     ['pip', 'install', torch_xla_whl],
     ['pip', 'install', torchvision_whl],
-    ['sudo', 'apt-get', 'install', apt_pkgs],
+    ['apt-get', 'install', apt_pkgs],
   ]
   for cmd in installation_cmds:
     subprocess.call(cmd)
