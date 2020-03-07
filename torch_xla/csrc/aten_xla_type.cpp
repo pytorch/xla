@@ -81,14 +81,16 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
          "`logical_not()` operator instead.";
 }
 
-std::tuple<XLATensor, XLATensor> GetPromotedXlaTensorsForBinaryOp(
-    const at::Tensor& self, const at::Tensor& other) {
+template <typename B>
+at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
+                      const B& bin_op) {
   at::ScalarType dtype = at::result_type(self, other);
-  XLATensor tensor1 = bridge::GetXlaTensor(self);
-  XLATensor tensor2 = bridge::GetOrCreateXlaTensor(other, tensor1.GetDevice());
-  tensor1.SetScalarType(dtype);
-  tensor2.SetScalarType(dtype);
-  return std::make_tuple(tensor1, tensor2);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor other_tensor =
+      bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice());
+  XLATensor result = bin_op(self_tensor, other_tensor);
+  result.SetScalarType(dtype);
+  return bridge::AtenFromXlaTensor(result);
 }
 
 void AtenInitialize() {
@@ -283,9 +285,9 @@ at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
   at::native::alpha_check(at::result_type(self, other), alpha);
-  auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::add(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
+  return DoBinaryOp(self, other, [&](XLATensor& xself, XLATensor& xother) {
+    return XLATensor::add(xself, xother, alpha);
+  });
 }
 
 at::Tensor AtenXlaType::add(const at::Tensor& self, at::Scalar other,
@@ -922,9 +924,9 @@ at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
 
 at::Tensor AtenXlaType::div(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
-  auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::div(std::get<0>(xlatensors), std::get<1>(xlatensors)));
+  return DoBinaryOp(self, other, [&](XLATensor& xself, XLATensor& xother) {
+    return XLATensor::div(xself, xother);
+  });
 }
 
 at::Tensor AtenXlaType::div(const at::Tensor& self, at::Scalar other) {
@@ -1865,9 +1867,9 @@ at::Tensor AtenXlaType::mse_loss_backward(const at::Tensor& grad_output,
 
 at::Tensor AtenXlaType::mul(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
-  auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::mul(std::get<0>(xlatensors), std::get<1>(xlatensors)));
+  return DoBinaryOp(self, other, [&](XLATensor& xself, XLATensor& xother) {
+    return XLATensor::mul(xself, xother);
+  });
 }
 
 at::Tensor AtenXlaType::mul(const at::Tensor& self, at::Scalar other) {
@@ -2420,9 +2422,9 @@ at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Tensor& other,
                              at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
-  auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::rsub(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
+  return DoBinaryOp(self, other, [&](XLATensor& xself, XLATensor& xother) {
+    return XLATensor::rsub(xself, xother, alpha);
+  });
 }
 
 at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
@@ -2672,9 +2674,9 @@ at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
   XLA_FN_COUNTER("xla::");
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
   at::native::alpha_check(at::result_type(self, other), alpha);
-  auto xlatensors = GetPromotedXlaTensorsForBinaryOp(self, other);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::sub(std::get<0>(xlatensors), std::get<1>(xlatensors), alpha));
+  return DoBinaryOp(self, other, [&](XLATensor& xself, XLATensor& xother) {
+    return XLATensor::sub(xself, xother, alpha);
+  });
 }
 
 at::Tensor AtenXlaType::sub(const at::Tensor& self, at::Scalar other,
