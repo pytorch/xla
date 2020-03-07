@@ -1962,14 +1962,21 @@ XLATensor XLATensor::rsub(const XLATensor& input, at::Scalar other,
 
 void XLATensor::copy_(XLATensor& input, XLATensor& src) {
   if (input.GetDevice() == src.GetDevice()) {
+    ir::Value copy_value;
     if (input.dtype() == src.dtype()) {
-      input.SetIrValue(src.GetIrValue());
+      copy_value = src.GetIrValue();
     } else {
-      input.SetIrValue(
-          ir::MakeNode<ir::ops::Cast>(src.GetIrValue(), input.dtype()));
+      copy_value = ir::MakeNode<ir::ops::Cast>(src.GetIrValue(), input.dtype());
     }
+    input.SetIrValue(MaybeExpand(copy_value, input.shape()));
   } else {
-    input.UpdateFromTensor(src.ToTensor());
+    auto input_shape = input.shape();
+    at::Tensor src_tensor = src.ToTensor();
+    if (!xla::util::Equal(src_tensor.sizes(), input_shape.get().dimensions())) {
+      src_tensor = src_tensor.expand(
+          xla::util::ToVector<int64_t>(input_shape.get().dimensions()));
+    }
+    input.UpdateFromTensor(std::move(src_tensor));
   }
 }
 
