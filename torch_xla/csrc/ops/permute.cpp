@@ -41,7 +41,7 @@ XlaOpVector Permute::Lower(LoweringContext* loctx) const {
 
 std::string Permute::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dims=[" << absl::StrJoin(dims_, ", ") << "]";
+  ss << Node::ToString() << ", dims=(" << absl::StrJoin(dims_, ", ") << ")";
   return ss.str();
 }
 

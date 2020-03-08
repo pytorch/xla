@@ -49,8 +49,8 @@ AsStrided::AsStrided(const Value& input, std::vector<xla::int64> size,
 
 std::string AsStrided::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", size=[" << absl::StrJoin(size_, ", ")
-     << "], storage_offset=" << storage_offset_;
+  ss << Node::ToString() << ", size=(" << absl::StrJoin(size_, ", ")
+     << "), storage_offset=" << storage_offset_;
   return ss.str();
 }
 

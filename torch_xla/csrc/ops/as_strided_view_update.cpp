@@ -58,8 +58,8 @@ AsStridedViewUpdate::AsStridedViewUpdate(const Value& target,
 
 std::string AsStridedViewUpdate::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", size=[" << absl::StrJoin(size_, ", ")
-     << "], storage_offset=" << storage_offset_;
+  ss << Node::ToString() << ", size=(" << absl::StrJoin(size_, ", ")
+     << "), storage_offset=" << storage_offset_;
   return ss.str();
 }
 

@@ -25,7 +25,7 @@ XlaOpVector Flip::Lower(LoweringContext* loctx) const {
 
 std::string Flip::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dims=[" << absl::StrJoin(dims_, ", ") << "]";
+  ss << Node::ToString() << ", dims=(" << absl::StrJoin(dims_, ", ") << ")";
   return ss.str();
 }
 

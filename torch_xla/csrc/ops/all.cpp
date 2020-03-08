@@ -47,8 +47,8 @@ XlaOpVector All::Lower(LoweringContext* loctx) const {
 
 std::string All::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dimensions=[" << absl::StrJoin(dimensions_, ", ")
-     << "], keep_reduced_dimensions=" << keep_reduced_dimensions_;
+  ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
+     << "), keep_reduced_dimensions=" << keep_reduced_dimensions_;
   return ss.str();
 }
 

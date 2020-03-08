@@ -70,8 +70,8 @@ XlaOpVector Prod::Lower(LoweringContext* loctx) const {
 
 std::string Prod::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dimensions=[" << absl::StrJoin(dimensions_, ", ")
-     << "], keep_reduced_dimensions=" << keep_reduced_dimensions_
+  ss << Node::ToString() << ", dimensions=(" << absl::StrJoin(dimensions_, ", ")
+     << "), keep_reduced_dimensions=" << keep_reduced_dimensions_
      << ", dtype=" << OptionalOr<int>(dtype_, -1);
   return ss.str();
 }

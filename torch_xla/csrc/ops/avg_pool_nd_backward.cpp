@@ -82,10 +82,10 @@ XlaOpVector AvgPoolNdBackward::Lower(LoweringContext* loctx) const {
 std::string AvgPoolNdBackward::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", spatial_dim_count=" << spatial_dim_count_
-     << ", kernel_size=[" << absl::StrJoin(kernel_size_, ", ") << "], stride=["
-     << absl::StrJoin(stride_, ", ") << "], padding=["
+     << ", kernel_size=(" << absl::StrJoin(kernel_size_, ", ") << "), stride=("
+     << absl::StrJoin(stride_, ", ") << "), padding=("
      << absl::StrJoin(padding_, ", ")
-     << "], count_include_pad=" << count_include_pad_;
+     << "), count_include_pad=" << count_include_pad_;
   return ss.str();
 }
 
