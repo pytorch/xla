@@ -36,7 +36,7 @@ XlaOpVector Resize::Lower(LoweringContext* loctx) const {
 
 std::string Resize::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", size=[" << absl::StrJoin(size_, ", ") << "]";
+  ss << Node::ToString() << ", size=(" << absl::StrJoin(size_, ", ") << ")";
   return ss.str();
 }
 
