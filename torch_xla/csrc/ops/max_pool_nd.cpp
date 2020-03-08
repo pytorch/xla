@@ -76,9 +76,9 @@ XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {
 std::string MaxPoolNd::ToString() const {
   std::stringstream ss;
   ss << Node::ToString() << ", spatial_dim_count=" << spatial_dim_count_
-     << ", kernel_size=[" << absl::StrJoin(kernel_size_, ", ") << "], stride=["
-     << absl::StrJoin(stride_, ", ") << "], padding=["
-     << absl::StrJoin(padding_, ", ") << "]";
+     << ", kernel_size=(" << absl::StrJoin(kernel_size_, ", ") << "), stride=("
+     << absl::StrJoin(stride_, ", ") << "), padding=("
+     << absl::StrJoin(padding_, ", ") << ")";
   return ss.str();
 }
 

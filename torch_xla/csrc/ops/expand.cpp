@@ -39,7 +39,7 @@ XlaOpVector Expand::Lower(LoweringContext* loctx) const {
 
 std::string Expand::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", size=[" << absl::StrJoin(size_, ", ") << "]";
+  ss << Node::ToString() << ", size=(" << absl::StrJoin(size_, ", ") << ")";
   return ss.str();
 }
 

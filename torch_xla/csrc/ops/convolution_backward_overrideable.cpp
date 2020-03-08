@@ -77,11 +77,11 @@ XlaOpVector ConvolutionBackwardOverrideable::Lower(
 
 std::string ConvolutionBackwardOverrideable::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", stride=[" << absl::StrJoin(stride_, ", ")
-     << "], padding=[" << absl::StrJoin(padding_, ", ") << "], dilation=["
-     << absl::StrJoin(dilation_, ", ") << "], transpose=" << transposed_
-     << ", output_padding=[" << absl::StrJoin(output_padding_, ", ")
-     << "], groups=" << groups_;
+  ss << Node::ToString() << ", stride=(" << absl::StrJoin(stride_, ", ")
+     << "), padding=(" << absl::StrJoin(padding_, ", ") << "), dilation=("
+     << absl::StrJoin(dilation_, ", ") << "), transpose=" << transposed_
+     << ", output_padding=(" << absl::StrJoin(output_padding_, ", ")
+     << "), groups=" << groups_;
   return ss.str();
 }
 

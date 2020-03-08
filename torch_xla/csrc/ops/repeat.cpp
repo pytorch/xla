@@ -41,8 +41,8 @@ XlaOpVector Repeat::Lower(LoweringContext* loctx) const {
 
 std::string Repeat::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", repeats=[" << absl::StrJoin(repeats_, ", ")
-     << "]";
+  ss << Node::ToString() << ", repeats=(" << absl::StrJoin(repeats_, ", ")
+     << ")";
   return ss.str();
 }
 
