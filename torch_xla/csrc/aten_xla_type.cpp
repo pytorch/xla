@@ -96,25 +96,13 @@ at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
 void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
                                 const at::Tensor& other) {
   at::ScalarType resultType = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
+  XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
 }
 
 void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
                                 const at::Scalar& other) {
   at::ScalarType resultType = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
-}
-
-void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
-                                const at::Tensor& other) {
-  at::ScalarType resultType = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
-}
-
-void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
-                                const at::Scalar& other) {
-  at::ScalarType resultType = at::result_type(self, other);
-  XLA_CHECK(at::canCast(/*from=*/resultType, /*to*/ out.scalar_type()));
+  XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
 }
 
 void AtenInitialize() {
@@ -169,8 +157,9 @@ at::Tensor AtenXlaType::__lshift__(const at::Tensor& self, at::Scalar other) {
 at::Tensor AtenXlaType::__lshift__(const at::Tensor& self,
                                    const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::__lshift__(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+  return DoBinaryOp(self, other, [&](XLATensor& xself, XLATensor& xother) {
+    return XLATensor::__lshift__(xself, xother);
+  });
 }
 
 at::Tensor AtenXlaType::__rshift__(const at::Tensor& self, at::Scalar other) {
@@ -182,8 +171,9 @@ at::Tensor AtenXlaType::__rshift__(const at::Tensor& self, at::Scalar other) {
 at::Tensor AtenXlaType::__rshift__(const at::Tensor& self,
                                    const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::__rshift__(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+  return DoBinaryOp(self, other, [&](XLATensor& xself, XLATensor& xother) {
+    return XLATensor::__rshift__(xself, xother);
+  });
 }
 
 at::Tensor AtenXlaType::_adaptive_avg_pool2d(const at::Tensor& self,
@@ -507,8 +497,9 @@ at::Tensor AtenXlaType::atan(const at::Tensor& self) {
 
 at::Tensor AtenXlaType::atan2(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::atan2(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+  return DoBinaryOp(self, other, [&](XLATensor& xself, XLATensor& xother) {
+    return XLATensor::atan2(xself, xother);
+  });
 }
 
 at::Tensor& AtenXlaType::atan2_(at::Tensor& self, const at::Tensor& other) {
@@ -1229,8 +1220,9 @@ at::Tensor& AtenXlaType::floor_(at::Tensor& self) {
 
 at::Tensor AtenXlaType::fmod(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::fmod(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
+  return DoBinaryOp(self, other, [&](XLATensor& xself, XLATensor& xother) {
+    return XLATensor::fmod(xself, xother);
+  });
 }
 
 at::Tensor AtenXlaType::fmod(const at::Tensor& self, at::Scalar other) {
