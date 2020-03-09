@@ -205,7 +205,7 @@ disabled_torch_tests = {
     # test_type_promotion.py
     # TestTypePromotion
     'test_many_promotions', # stride
-    'test_inplace', # FIXME! XLA allows adding int and double inplace
+    'test_inplace', # expecting a different runtime error
     'test_indexing', # FIXME! XLA allows int to double type promotion
     'test_alternate_result', # expecting a different runtime error
     'test_half',  # half support
