@@ -44,8 +44,8 @@ xla::Shape NodeOutputShape(const Value& input, const Value& weight,
                        operands[4], training, 0.5);
     return xla::Tuple(operands[0].builder(), values);
   };
-  return InferOutputShape({input->shape(), weight->shape(), bias->shape(),
-                           running_mean->shape(), running_var->shape()},
+  return InferOutputShape({input.shape(), weight.shape(), bias.shape(),
+                           running_mean.shape(), running_var.shape()},
                           lower_for_shape_fn);
 }
 
