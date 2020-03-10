@@ -16,8 +16,6 @@ disabled_torch_tests = {
     'test_digamma',  # Precision issue at the first assert, then NAN handling (both on TPU)
 
     # TestTensorDeviceOps
-    'test_prod_neg_dim_xla',
-    'test_prod_dim_xla',
     'test_cumprod_xla',
     'test_cumprod_neg_dim_xla',
     'test_mean_64bit_indexing_xla',  # protobuf limit exceeded
