@@ -59,7 +59,8 @@ def install_vm(version, apt_packages):
   torch_xla_whl_path = os.path.join(DIST_BUCKET, torch_xla_whl)
   torchvision_whl = TORCHVISION_WHEEL_TMPL.format(whl_version=version.wheels)
   torchvision_whl_path = os.path.join(DIST_BUCKET, torchvision_whl)
-  apt_pkgs = ' '.join(apt_packages)
+  apt_cmd = ['apt-get', 'install', '-y']
+  apt_cmd.extend(apt_packages)
 
   installation_cmds = [
     ['pip', 'uninstall', '-y', 'torch', 'torchvision'],
@@ -69,7 +70,7 @@ def install_vm(version, apt_packages):
     ['pip', 'install', torch_whl],
     ['pip', 'install', torch_xla_whl],
     ['pip', 'install', torchvision_whl],
-    ['apt-get', 'install', apt_pkgs],
+    apt_cmd,
   ]
   for cmd in installation_cmds:
     subprocess.call(cmd)
