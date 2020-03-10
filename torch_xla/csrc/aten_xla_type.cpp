@@ -81,6 +81,14 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
          "`logical_not()` operator instead.";
 }
 
+c10::optional<at::ScalarType> PromoteIntegralType(
+    at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
+  return opt_dtype.has_value()
+             ? opt_dtype.value()
+             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                                   : opt_dtype;
+}
+
 template <typename B>
 at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
                       const B& bin_op) {
@@ -2265,14 +2273,16 @@ at::Tensor AtenXlaType::prod(const at::Tensor& self,
   return bridge::AtenFromXlaTensor(XLATensor::prod(
       self_tensor,
       xla::util::Iota<xla::int64>(self_tensor.shape().get().rank()),
-      /*keep_reduced_dimensions=*/false, dtype));
+      /*keep_reduced_dimensions=*/false,
+      PromoteIntegralType(self.scalar_type(), dtype)));
 }
 
 at::Tensor AtenXlaType::prod(const at::Tensor& self, int64_t dim, bool keepdim,
                              c10::optional<at::ScalarType> dtype) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
-      XLATensor::prod(bridge::GetXlaTensor(self), {dim}, keepdim, dtype));
+      XLATensor::prod(bridge::GetXlaTensor(self), {dim}, keepdim,
+                      PromoteIntegralType(self.scalar_type(), dtype)));
 }
 
 at::Tensor& AtenXlaType::put_(at::Tensor& self, const at::Tensor& index,
