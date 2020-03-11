@@ -950,7 +950,8 @@ at::Tensor AtenXlaType::cumprod(const at::Tensor& self, int64_t dim,
     // XLA reduce-window does not support S64 mode.
     return AtenXlaTypeDefault::cumprod(self, dim, dtype);
   }
-  return bridge::AtenFromXlaTensor(XLATensor::cumprod(self_tensor, dim, dtype));
+  return bridge::AtenFromXlaTensor(XLATensor::cumprod(
+      self_tensor, dim, PromoteIntegralType(self.scalar_type(), dtype)));
 }
 
 at::Tensor AtenXlaType::cumsum(const at::Tensor& self, int64_t dim,
