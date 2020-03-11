@@ -1,5 +1,5 @@
 diff --git a/torch/testing/_internal/common_device_type.py b/torch/testing/_internal/common_device_type.py
-index 01973711e7..48e5e202ed 100644
+index 01973711e7..2e4ce21957 100644
 --- a/torch/testing/_internal/common_device_type.py
 +++ b/torch/testing/_internal/common_device_type.py
 @@ -4,6 +4,7 @@ from functools import wraps
@@ -51,37 +51,37 @@ index 01973711e7..48e5e202ed 100644
 +    @classmethod
 +    def instantiate_test(cls, name, test):
 +        test_name = name + "_" + cls.device_type
++
++        @wraps(test)
++        def disallowed_test(self, test=test):
++            raise unittest.SkipTest("skipped on XLA")
++            return test(self, cls.device_type)
++
 +        if test_name in disabled_torch_tests or test.__name__ in disabled_torch_tests:
 +            assert not hasattr(cls, test_name), "Redefinition of test {0}".format(test_name)
-+
-+            @wraps(test)
-+            def disallowed_test(self, test=test):
-+                raise unittest.SkipTest("skipped on XLA")
-+                return test(self, cls.device_type)
-+
 +            setattr(cls, test_name, disallowed_test)
 +        else:  # Test is allowed
 +            dtypes = cls._get_dtypes(test)
 +            if dtypes is None:  # Tests without dtype variants are instantiated as usual
 +                super().instantiate_test(name, test)
 +            else:  # Tests with dtype variants have unsupported dtypes skipped
-+                skipped_dtypes = [dtype for dtype in dtypes if dtype in cls.unsupported_dtypes]
-+
-+                # Skips unsupported dtypes
-+                for dtype in skipped_dtypes:
++                xla_dtypes = []
++                for dtype in dtypes:
 +                    dtype_str = str(dtype).split('.')[1]
 +                    dtype_test_name = test_name + "_" + dtype_str
-+                    reason = "XLA does not support dtype {0}".format(str(dtype))
++                    if dtype in cls.unsupported_dtypes:
++                        reason = "XLA does not support dtype {0}".format(str(dtype))
 +
-+                    @wraps(test)
-+                    def skipped_test(self, *args, reason=reason, **kwargs):
-+                        raise unittest.SkipTest(reason)
++                        @wraps(test)
++                        def skipped_test(self, *args, reason=reason, **kwargs):
++                            raise unittest.SkipTest(reason)
 +
-+                    assert not hasattr(cls, dtype_test_name), "Redefinition of test {0}".format(dtype_test_name)
-+                    setattr(cls, dtype_test_name, skipped_test)
-+
-+                # Instantiates supported dtypes
-+                xla_dtypes = [dtype for dtype in dtypes if dtype not in cls.unsupported_dtypes]
++                        assert not hasattr(cls, dtype_test_name), "Redefinition of test {0}".format(dtype_test_name)
++                        setattr(cls, dtype_test_name, skipped_test)
++                    elif dtype_test_name in disabled_torch_tests:
++                        setattr(cls, dtype_test_name, disallowed_test)
++                    else:
++                        xla_dtypes.append(dtype)
 +
 +                # Sets default precision for floating types to bfloat16 precision
 +                if not hasattr(test, 'precision_overrides'):
