@@ -489,6 +489,15 @@ std::vector<xla::int64> ComputeShapeStrides(const xla::Shape& shape) {
   return strides;
 }
 
+std::vector<xla::int64> ComputeArrayStrides(
+    absl::Span<const xla::int64> sizes) {
+  std::vector<xla::int64> strides(sizes.size(), 1);
+  for (xla::int64 i = sizes.size(); i > 1; --i) {
+    strides[i - 2] = strides[i - 1] * sizes[i - 1];
+  }
+  return strides;
+}
+
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type) {
   switch (literal.shape().element_type()) {

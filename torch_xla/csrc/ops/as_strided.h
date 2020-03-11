@@ -12,7 +12,7 @@ namespace ops {
 class AsStrided : public Node {
  public:
   AsStrided(const Value& input, std::vector<xla::int64> size,
-            xla::int64 storage_offset);
+            std::vector<xla::int64> stride, xla::int64 storage_offset);
 
   std::string ToString() const override;
 
@@ -22,14 +22,24 @@ class AsStrided : public Node {
 
   const std::vector<xla::int64>& size() const { return size_; }
 
+  const std::vector<xla::int64>& stride() const { return stride_; }
+
   xla::int64 storage_offset() const { return storage_offset_; }
 
-  // We only support strides which are already consistent with the size.
-  static bool StrideIsSupported(absl::Span<const xla::int64> size,
-                                absl::Span<const xla::int64> stride);
+  static bool StrideIsSupported(const xla::Shape& input_shape,
+                                absl::Span<const xla::int64> size,
+                                absl::Span<const xla::int64> stride,
+                                xla::int64 storage_offset);
+
+  static std::vector<xla::int64> GetSliceBaseIndices(
+      absl::Span<const xla::int64> stride, xla::int64 storage_offset);
+
+  static std::vector<xla::int64> GetArrayStridePermutation(
+      absl::Span<const xla::int64> stride, absl::Span<const xla::int64> size);
 
  private:
   std::vector<xla::int64> size_;
+  std::vector<xla::int64> stride_;
   xla::int64 storage_offset_;
 };
 

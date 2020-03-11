@@ -50,7 +50,7 @@ ir::Value ApplyViewInfo(ir::Value ir_value, const ViewInfo& view_info) {
       return ir::MakeNode<ir::ops::AsStrided>(
           ir_value,
           xla::util::ToVector<xla::int64>(view_info.shape.dimensions()),
-          view_info.as_strided->offset);
+          view_info.as_strided->stride, view_info.as_strided->offset);
     case ViewInfo::Type::kDiagonal:
       return ir::MakeNode<ir::ops::Diagonal>(
           ir_value, view_info.diagonal->offset, view_info.diagonal->dim1,
@@ -106,7 +106,7 @@ ir::Value ApplyUpdate(ir::Value ir_value,
             tmp_values[i - 1], result,
             xla::util::ToVector<xla::int64>(
                 view_info.source_shape.dimensions()),
-            view_info.as_strided->offset);
+            view_info.as_strided->stride, view_info.as_strided->offset);
         break;
       case ViewInfo::Type::kDiagonal:
         result = ir::MakeNode<ir::ops::DiagonalViewUpdate>(

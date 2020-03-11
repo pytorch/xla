@@ -263,10 +263,12 @@ void CheckIsIntegralOrPred(const xla::Shape& shape,
 }
 
 ViewInfo CreateAsStridedViewInfo(const xla::Shape& input_shape,
-                                 absl::Span<const xla::int64> size,
+                                 std::vector<xla::int64> size,
+                                 std::vector<xla::int64> stride,
                                  c10::optional<xla::int64> storage_offset) {
   xla::Shape result_shape = XlaHelpers::GetDynamicReshape(input_shape, size);
   AsStridedInfo as_strided_info;
+  as_strided_info.stride = std::move(stride);
   if (storage_offset) {
     as_strided_info.offset = *storage_offset;
   }
@@ -518,21 +520,24 @@ XLATensor XLATensor::argmin(const XLATensor& input) {
 
 XLATensor XLATensor::as_strided(const XLATensor& input,
                                 std::vector<xla::int64> size,
+                                std::vector<xla::int64> stride,
                                 c10::optional<xla::int64> storage_offset) {
   auto input_shape = input.shape();
-  return input.CreateViewTensor(
-      CreateAsStridedViewInfo(input_shape, size, storage_offset));
+  return input.CreateViewTensor(CreateAsStridedViewInfo(
+      input_shape, std::move(size), std::move(stride), storage_offset));
 }
 
 void XLATensor::as_strided_(XLATensor& input, std::vector<xla::int64> size,
+                            std::vector<xla::int64> stride,
                             c10::optional<xla::int64> storage_offset) {
   if (input.data()->view == nullptr) {
     input.SetIrValue(ir::MakeNode<ir::ops::AsStrided>(
-        input.GetIrValue(), std::move(size), storage_offset.value_or(0)));
+        input.GetIrValue(), std::move(size), std::move(stride),
+        storage_offset.value_or(0)));
   } else {
     auto input_shape = input.shape();
-    input.SetSubView(
-        CreateAsStridedViewInfo(input_shape, size, storage_offset));
+    input.SetSubView(CreateAsStridedViewInfo(
+        input_shape, std::move(size), std::move(stride), storage_offset));
   }
 }
 
