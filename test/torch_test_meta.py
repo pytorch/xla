@@ -150,6 +150,7 @@ disabled_torch_tests = {
     'test_scalar_check',  # runtime error
     'test_argminmax_large_axis',  # OOM, and the test is grepping "memory" in the exception message
     'test_trapz', # precision (1e-5), test use np.allClose
+    'test_random_from_to_xla_int32', # precision, TPU does not have real F64
 
     # TestViewOps
     'test_contiguous_nonview',
