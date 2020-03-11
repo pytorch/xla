@@ -341,6 +341,9 @@ xla::Shape XlaHelpers::GetDynamicReshape(
 xla::XlaOp XlaHelpers::DynamicReshape(
     xla::XlaOp input, absl::Span<const xla::int64> output_sizes) {
   const xla::Shape& input_shape = ShapeOfXlaOp(input);
+  if (output_sizes == input_shape.dimensions()) {
+    return input;
+  }
   auto info = GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
     return xla::ReshapeWithInferredDimension(input, output_sizes,
@@ -351,6 +354,10 @@ xla::XlaOp XlaHelpers::DynamicReshape(
 
 xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
                                         const xla::Shape& shape) {
+  const xla::Shape& input_shape = ShapeOfXlaOp(input);
+  if (shape.dimensions() == input_shape.dimensions()) {
+    return input;
+  }
   xla::int64 dynamic_dimension = GetDynamicDimension(shape);
   return dynamic_dimension < 0
              ? xla::Reshape(input, shape.dimensions())

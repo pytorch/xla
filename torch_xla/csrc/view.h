@@ -24,9 +24,10 @@ struct SelectInfo {
 
 struct AsStridedInfo {
   bool operator==(const AsStridedInfo& ref) const {
-    return offset == ref.offset;
+    return offset == ref.offset && stride == ref.stride;
   }
 
+  std::vector<xla::int64> stride;
   xla::int64 offset = 0;
 };
 

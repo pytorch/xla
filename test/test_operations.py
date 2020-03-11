@@ -1322,6 +1322,59 @@ class TestAtenXlaTensor(XlaTestCase):
     expected_str = 'tensor([5], device=\'' + str(xla_device) + '\')'
     self.assertEqual(str(x), expected_str)
 
+  def test_as_strided_r1(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, (5, 3), (3, 1))
+
+    self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
+
+  def test_as_strided_r1_t(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, (5, 3), (1, 5))
+
+    self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
+
+  def test_as_strided_r1_t_off(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, (5, 2, 3), (1, 15, 5), 5)
+
+    self.runAtenTest([torch.arange(35, dtype=torch.int32)], test_fn)
+
+  def test_as_strided_r2_t_update(self):
+
+    def test_fn(r):
+      a = torch.as_strided(r, (5, 2, 3), (1, 15, 5))
+      a[1, 0, 2] = -1
+      return a
+
+    self.runAtenTest([torch.arange(30, dtype=torch.int32)], test_fn)
+
+  def test_as_strided_r1_slice(self):
+
+    def test_fn(r):
+      v = r.view(5, 3)
+      return torch.as_strided(v, (4, 3), (3, 1), 3)
+
+    self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
+
+  def test_as_strided_r1_t_slice(self):
+
+    def test_fn(r):
+      v = r.view(5, 3)
+      return torch.as_strided(v, (5, 2), (1, 5), 5)
+
+    self.runAtenTest([torch.arange(15, dtype=torch.int32)], test_fn)
+
+  def test_as_strided_r1_dim1(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, (2, 1, 3, 4, 6), (12, 12, 4, 1, 24))
+
+    self.runAtenTest([torch.arange(144, dtype=torch.int32)], test_fn)
+
   def test_basic_bfloat16(self):
 
     def test_fn(s):

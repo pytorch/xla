@@ -131,6 +131,7 @@ disabled_torch_tests = {
     'test_det_logdet_slogdet',  # very slow compile
     'test_matrix_rank',  # slow
     'test_triu_tril',
+    'test_stft',  # librosa (?!?) missing
     'test_tensor_shape_empty',  # LLVM OOM in CI
     'test_cholesky_inverse',  # precision (1e-6)
     'test_cholesky_solve_batched_broadcasting',  # (TPU) 0.0039 vs 0.001

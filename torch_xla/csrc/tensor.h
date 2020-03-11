@@ -249,10 +249,12 @@ class XLATensor {
   // into the provided size.
   static XLATensor as_strided(const XLATensor& input,
                               std::vector<xla::int64> size,
+                              std::vector<xla::int64> stride,
                               c10::optional<xla::int64> storage_offset);
 
   // In-place version of the method above.
   static void as_strided_(XLATensor& input, std::vector<xla::int64> size,
+                          std::vector<xla::int64> stride,
                           c10::optional<xla::int64> storage_offset);
 
   static XLATensor asin(const XLATensor& input);
