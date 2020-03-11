@@ -123,10 +123,7 @@ void XLATensorImpl::SetupSizeProperties() {
       numel_ *= dim;
     }
     strides_.clear();
-    xla::Shape torch_shape = MakeTorchTensorLayout(shape.get().dimensions(),
-                                                   /*dynamic_dimensions=*/{},
-                                                   shape.get().element_type());
-    for (auto stride : ComputeShapeStrides(torch_shape)) {
+    for (auto stride : ComputeArrayStrides(shape.get().dimensions())) {
       strides_.push_back(stride);
     }
     generation_ = generation;

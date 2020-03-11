@@ -480,13 +480,15 @@ at::Tensor AtenXlaType::as_strided(const at::Tensor& self, at::IntArrayRef size,
                                    at::IntArrayRef stride,
                                    c10::optional<int64_t> storage_offset) {
   XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   auto xsize = XlaHelpers::I64List(size);
-  if (!ir::ops::AsStrided::StrideIsSupported(xsize,
-                                             XlaHelpers::I64List(stride))) {
+  auto xstride = XlaHelpers::I64List(stride);
+  if (!ir::ops::AsStrided::StrideIsSupported(
+          self_tensor.shape(), xsize, xstride, storage_offset.value_or(0))) {
     return AtenXlaTypeDefault::as_strided(self, size, stride, storage_offset);
   }
   return bridge::AtenFromXlaTensor(
-      XLATensor::as_strided(bridge::GetXlaTensor(self), std::move(xsize),
+      XLATensor::as_strided(self_tensor, std::move(xsize), std::move(xstride),
                             XlaHelpers::I64Optional(storage_offset)));
 }
 
@@ -494,13 +496,14 @@ at::Tensor& AtenXlaType::as_strided_(at::Tensor& self, at::IntArrayRef size,
                                      at::IntArrayRef stride,
                                      c10::optional<int64_t> storage_offset) {
   XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
   auto xsize = XlaHelpers::I64List(size);
-  if (!ir::ops::AsStrided::StrideIsSupported(xsize,
-                                             XlaHelpers::I64List(stride))) {
+  auto xstride = XlaHelpers::I64List(stride);
+  if (!ir::ops::AsStrided::StrideIsSupported(
+          self_tensor.shape(), xsize, xstride, storage_offset.value_or(0))) {
     return AtenXlaTypeDefault::as_strided_(self, size, stride, storage_offset);
   }
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor::as_strided_(self_tensor, std::move(xsize),
+  XLATensor::as_strided_(self_tensor, std::move(xsize), std::move(xstride),
                          XlaHelpers::I64Optional(storage_offset));
   return self;
 }
