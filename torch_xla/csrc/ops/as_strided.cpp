@@ -32,15 +32,13 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64> size,
                                 storage_offset + slice_size, 1, 0);
   }
 
-  std::vector<xla::int64> permutation =
-      AsStrided::GetArrayStridePermutation(stride, size);
-  std::vector<xla::int64> new_sizes =
-      xla::Permute(xla::InversePermutation(permutation), size);
+  std::vector<xla::int64> permutation = xla::InversePermutation(
+      AsStrided::GetArrayStridePermutation(stride, size));
+  std::vector<xla::int64> new_sizes = xla::Permute(permutation, size);
   xla::XlaOp reshaped_input = XlaHelpers::DynamicReshape(off_input, new_sizes);
   return xla::IsIdentityPermutation(permutation)
              ? reshaped_input
-             : xla::Transpose(reshaped_input,
-                              xla::InversePermutation(permutation));
+             : xla::Transpose(reshaped_input, permutation);
 }
 
 }  // namespace
@@ -82,16 +80,6 @@ bool AsStrided::StrideIsSupported(const xla::Shape& input_shape,
   std::vector<xla::int64> sorted_stride(stride.begin(), stride.end());
   std::sort(sorted_stride.begin(), sorted_stride.end());
   return stride.empty() || sorted_stride.front() == 1;
-}
-
-std::vector<xla::int64> AsStrided::GetSliceBaseIndices(
-    absl::Span<const xla::int64> stride, xla::int64 storage_offset) {
-  std::vector<xla::int64> indices(stride.size());
-  for (size_t i = 0; storage_offset > 0 && i < stride.size(); ++i) {
-    indices[i] = storage_offset / stride[i];
-    storage_offset %= stride[i];
-  }
-  return indices;
 }
 
 std::vector<xla::int64> AsStrided::GetArrayStridePermutation(
