@@ -30,7 +30,7 @@ function install_llvm_clang() {
 }
 
 function install_req_packages() {
-  sudo apt-get -y install python-pip git curl libopenblas-dev vim
+  sudo apt-get -y install python-pip git curl libopenblas-dev vim apt-transport-https ca-certificates
   install_bazel
 }
 
@@ -110,8 +110,8 @@ function install_torchvision_from_source() {
 }
 
 function main() {
-  install_llvm_clang
   install_req_packages
+  install_llvm_clang
   install_and_setup_conda
   build_and_install_torch
   pushd xla
