@@ -16,6 +16,7 @@ disabled_torch_tests = {
     'test_digamma',  # Precision issue at the first assert, then NAN handling (both on TPU)
 
     # TestTensorDeviceOps
+    'test_cumprod_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_mean_64bit_indexing_xla',  # protobuf limit exceeded
     'test_pow_xla',  # (TPU) 0.0043 vs 0.001
     'test_pow_xla',  # (TPU) 0.0032 vs 0.001
