@@ -31,9 +31,6 @@ class AsStrided : public Node {
                                 absl::Span<const xla::int64> stride,
                                 xla::int64 storage_offset);
 
-  static std::vector<xla::int64> GetSliceBaseIndices(
-      absl::Span<const xla::int64> stride, xla::int64 storage_offset);
-
   static std::vector<xla::int64> GetArrayStridePermutation(
       absl::Span<const xla::int64> stride, absl::Span<const xla::int64> size);
 
