@@ -213,4 +213,5 @@ disabled_torch_tests = {
     'test_indexing', # FIXME! XLA allows int to double type promotion
     'test_alternate_result', # expecting a different runtime error
     'test_half',  # half support
+    'test_true_divide', # float64 casting
 }
