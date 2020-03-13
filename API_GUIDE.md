@@ -143,6 +143,11 @@ automatically creates an XLA barrier that evalutes the graph.
 
 The model definition, optimizer definition and training loop remain the same.
 
+> **NOTE:** It is important to note that, when using multi-processing, the user can start
+retrieving and accessing XLA devices only from within the target function of
+`xmp.spawn()` (or any function which has `xmp.spawn()` as parent in the call
+stack).
+
 See the
 [full multiprocessing example](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist.py)
 for more on training a network on multiple XLA devices with multiprocessing.
