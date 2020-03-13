@@ -93,9 +93,16 @@ template <typename B>
 at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
                       const B& bin_op) {
   at::ScalarType dtype = at::result_type(self, other);
-  XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor other_tensor =
-      bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice());
+  XLATensor self_tensor;
+  XLATensor other_tensor;
+  auto self_xtensor = bridge::TryGetXlaTensor(self);
+  if (!self_xtensor) {
+    other_tensor = bridge::GetXlaTensor(other);
+    self_tensor = bridge::GetOrCreateXlaTensor(self, other_tensor.GetDevice());
+  } else {
+    self_tensor = *self_xtensor;
+    other_tensor = bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice());
+  }
   XLATensor result = bin_op(self_tensor, other_tensor);
   result.SetScalarType(dtype);
   return bridge::AtenFromXlaTensor(result);
