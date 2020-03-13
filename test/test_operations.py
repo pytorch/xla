@@ -1420,6 +1420,11 @@ class TestAtenXlaTensor(XlaTestCase):
     y[::2].copy_(x[::2])
     self.assertEqual(y, [1, 0, 3, 0, 5, 0])
 
+  def test_binaryop_order(self):
+    xla_device = xm.xla_device()
+    x = torch.rand(5, device=xla_device)
+    y = torch.rand(5, device='cpu')
+    self.assertEqual(x+y, y+x)
 
 class MNISTComparator(nn.Module):
 
