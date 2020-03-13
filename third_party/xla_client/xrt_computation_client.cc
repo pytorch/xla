@@ -1242,8 +1242,8 @@ void XrtComputationClient::InitializeDevices(
     XLA_CHECK_LE(parsed_device.id, topology_proto->num_tpu_devices_per_task());
     // The topology proto 'device_coordinates' is a linear list of
     // [num_tasks][devices_per_task][mesh_shape_size] coordinates, where the
-    // mesh coordinates are usually [x, y, c] ('x' and 'y' being the spatial
-    // chip coordinated and 'c' the core number).
+    // mesh coordinates are usually [x, y, z, c] ('x', 'y' and 'z' being the
+    // spatial chip coordinated and 'c' the core number).
     int64 base_index = parsed_device.task *
                            topology_proto->num_tpu_devices_per_task() *
                            topology_proto->mesh_shape_size() +
