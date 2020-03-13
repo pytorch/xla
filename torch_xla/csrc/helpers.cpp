@@ -355,14 +355,14 @@ xla::XlaOp XlaHelpers::DynamicReshape(
 xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
                                         const xla::Shape& shape) {
   const xla::Shape& input_shape = ShapeOfXlaOp(input);
-  if (shape.dimensions() == input_shape.dimensions()) {
-    return input;
-  }
   xla::int64 dynamic_dimension = GetDynamicDimension(shape);
-  return dynamic_dimension < 0
-             ? xla::Reshape(input, shape.dimensions())
-             : xla::ReshapeWithInferredDimension(input, shape.dimensions(),
-                                                 dynamic_dimension);
+  if (dynamic_dimension >= 0) {
+    return xla::ReshapeWithInferredDimension(input, shape.dimensions(),
+                                             dynamic_dimension);
+  }
+  return shape.dimensions() == input_shape.dimensions()
+             ? input
+             : xla::Reshape(input, shape.dimensions());
 }
 
 bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
