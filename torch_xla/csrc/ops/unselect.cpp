@@ -4,6 +4,7 @@
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -28,8 +29,8 @@ NodePtr Unselect::Clone(OpList operands) const {
 XlaOpVector Unselect::Lower(LoweringContext* loctx) const {
   xla::XlaOp target = loctx->GetOutputOp(operand(0));
   xla::XlaOp source = loctx->GetOutputOp(operand(1));
-  xla::XlaOp output =
-      BuildUnselect(target, source, dim_, start_, end_, stride_);
+  xla::XlaOp output = BuildUnselect(target, source, dim_, start_, end_,
+                                    Select::GetStride(start_, end_, stride_));
   return ReturnOp(output, loctx);
 }
 
