@@ -25,10 +25,9 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64> size,
   XLA_CHECK_LE(storage_offset + slice_size, input_element_count);
 
   xla::XlaOp off_input = input;
-  if (storage_offset > 0) {
-    xla::XlaOp r1_slice =
-        XlaHelpers::DynamicReshape(input, {input_element_count});
-    off_input = xla::SliceInDim(r1_slice, storage_offset,
+  if (storage_offset > 0 || slice_size < input_element_count) {
+    xla::XlaOp r1_input = XlaHelpers::Flatten(input);
+    off_input = xla::SliceInDim(r1_input, storage_offset,
                                 storage_offset + slice_size, 1, 0);
   }
 
