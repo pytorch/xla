@@ -8,17 +8,6 @@
 namespace torch_xla {
 namespace ir {
 namespace ops {
-namespace {
-
-xla::int64 GetStride(xla::int64 start, xla::int64 end, xla::int64 stride) {
-  if (stride == 0) {
-    XLA_CHECK_EQ(start, end);
-    stride = 1;
-  }
-  return stride;
-}
-
-}  // namespace
 
 Select::Select(const Value& input, xla::int64 dim, xla::int64 start,
                xla::int64 end, xla::int64 stride)
@@ -58,6 +47,15 @@ xla::Shape Select::MakeSelectShape(const xla::Shape& shape, xla::int64 dim,
   select_shape.set_dimensions(
       dim, (end - start + effective_stride - 1) / effective_stride);
   return select_shape;
+}
+
+xla::int64 Select::GetStride(xla::int64 start, xla::int64 end,
+                             xla::int64 stride) {
+  if (stride == 0) {
+    XLA_CHECK_EQ(start, end);
+    stride = 1;
+  }
+  return stride;
 }
 
 }  // namespace ops

@@ -29,6 +29,9 @@ class Select : public Node {
                                     xla::int64 start, xla::int64 end,
                                     xla::int64 stride);
 
+  static xla::int64 GetStride(xla::int64 start, xla::int64 end,
+                              xla::int64 stride);
+
  private:
   xla::int64 dim_;
   xla::int64 start_;
