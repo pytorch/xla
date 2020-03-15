@@ -245,6 +245,21 @@ xla::XlaOp BuildSlice(xla::XlaOp input,
   return xla::Slice(input, base_indices, limit_indices, strides);
 }
 
+xla::XlaOp DynamicStridedSlice(xla::XlaOp input,
+                               absl::Span<const xla::XlaOp> base_indices,
+                               absl::Span<const xla::int64> window_sizes,
+                               absl::Span<const xla::int64> strides) {
+  xla::XlaOp sliced_input =
+      xla::DynamicSlice(input, base_indices, window_sizes);
+  if (std::any_of(strides.begin(), strides.end(),
+                  [](xla::int64 stride) { return stride != 1; })) {
+    sliced_input =
+        xla::Slice(sliced_input, std::vector<xla::int64>(window_sizes.size()),
+                   window_sizes, strides);
+  }
+  return sliced_input;
+}
+
 xla::XlaOp BoundIndices(xla::XlaOp index, xla::XlaOp max_index) {
   const xla::Shape& index_shape = XlaHelpers::ShapeOfXlaOp(index);
   return xla::Select(

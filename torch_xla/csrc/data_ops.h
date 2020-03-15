@@ -75,6 +75,11 @@ xla::XlaOp BuildSlice(xla::XlaOp input,
                       absl::Span<const xla::int64> base_indices,
                       absl::Span<const xla::int64> sizes);
 
+xla::XlaOp DynamicStridedSlice(xla::XlaOp input,
+                               absl::Span<const xla::XlaOp> base_indices,
+                               absl::Span<const xla::int64> window_sizes,
+                               absl::Span<const xla::int64> strides);
+
 xla::XlaOp BoundIndices(xla::XlaOp index, xla::XlaOp max_index);
 
 xla::XlaOp BuildTake(xla::XlaOp input, xla::XlaOp index);
