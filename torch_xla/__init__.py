@@ -1,4 +1,5 @@
 import os
+import re
 
 
 def _setup_grpc():
@@ -12,9 +13,22 @@ def _setup_grpc():
   os.environ['TF_GRPC_DEFAULT_OPTIONS'] = ','.join(options)
 
 
+def _set_missing_flags(flags, sets):
+  for name, defval in sets:
+    insert = True
+    for fval in flags:
+      m = re.match(r'(--)?([^=]+)', fval)
+      if m and m.group(2) == name:
+        insert = False
+        break
+    if insert:
+      flags.append('--{}={}'.format(name, defval))
+  return flags
+
+
 def _setup_xla_flags():
   flags = os.environ.get('XLA_FLAGS', '').split(' ')
-  flags.append('--xla_cpu_enable_fast_math=false')
+  flags = _set_missing_flags(flags, (('xla_cpu_enable_fast_math', 'false'),))
   os.environ['XLA_FLAGS'] = ' '.join(flags)
 
 
