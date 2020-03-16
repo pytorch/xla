@@ -11,6 +11,7 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "tensorflow/cc/ops/const_op.h"
+#include "tensorflow/compiler/xla/debug_options_flags.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
@@ -926,12 +927,19 @@ const std::string& XrtComputationClient::TorchDeviceToXrtDevice(
   return device_target->second;
 }
 
+DebugOptions XrtComputationClient::GetXlaDebugOptions() const {
+  DebugOptions options = GetDebugOptionsFromFlags();
+  options.set_xla_cpu_enable_fast_math(false);
+  return options;
+}
+
 std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
     const XlaComputation& computation, absl::Span<const std::string> devices,
     const Shape* output_shape) const {
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
   auto config = xrt_computation->mutable_config();
+  *config->mutable_debug_options() = GetXlaDebugOptions();
   config->set_num_cores_per_replica(1);
   if (devices.size() > 1) {
     auto device_assignment = config->mutable_device_assignment();

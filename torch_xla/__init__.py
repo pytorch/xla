@@ -12,15 +12,8 @@ def _setup_grpc():
   os.environ['TF_GRPC_DEFAULT_OPTIONS'] = ','.join(options)
 
 
-def _setup_xla_flags():
-  flags = os.environ.get('XLA_FLAGS', '').split(' ')
-  flags.append('--xla_cpu_enable_fast_math=false')
-  os.environ['XLA_FLAGS'] = ' '.join(flags)
-
-
 # These needs to be called before the _XLAC module is loaded.
 _setup_grpc()
-_setup_xla_flags()
 
 import torch
 from .version import __version__

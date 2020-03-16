@@ -298,6 +298,8 @@ class XrtComputationClient : public ComputationClient {
   // returns.
   void HandleReleaser();
 
+  DebugOptions GetXlaDebugOptions() const;
+
   // Retrieves the mesh coordinates of a given XRT device.
   const std::vector<int>& GetDeviceMeshCoords(
       const std::string& xrt_device) const;
