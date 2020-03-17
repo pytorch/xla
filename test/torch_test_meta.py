@@ -18,7 +18,7 @@ disabled_torch_tests = {
     # TestTensorDeviceOps
     'test_block_diag_scipy',  #FIXME: RuntimeError: Error while lowering: f32[1,6]{1,0} xla::unselect, dim=1, start=2, end=2, stride=0
     'test_cumprod_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
-    'test_cumprod_neg_dim_xla', # FIXME: TPU X64Rewriter doesn't support reduce-window 
+    'test_cumprod_neg_dim_xla', # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_mean_64bit_indexing_xla',  # protobuf limit exceeded
     'test_pow_xla',  # (TPU) 0.0043 vs 0.001
     'test_pow_xla',  # (TPU) 0.0032 vs 0.001
@@ -93,6 +93,12 @@ disabled_torch_tests = {
     'test_symeig',
     'test_svd',
     'test_svd_no_singularvectors',
+    'test_svd_lowrank',
+    'test_pca_lowrank',
+    'test_logpcg_basic',
+    'test_logpcg_ortho',
+    'test_logpcg_scipy',
+    'test_logpcg_torchscript',
     'test_storage_device',  # storage
     'test_roll',
     'test_resize_as_all_dtypes_and_devices',  # uses half
