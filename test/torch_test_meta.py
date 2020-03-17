@@ -95,10 +95,10 @@ disabled_torch_tests = {
     'test_svd_no_singularvectors',
     'test_svd_lowrank',
     'test_pca_lowrank',
-    'test_logpcg_basic',
-    'test_logpcg_ortho',
-    'test_logpcg_scipy',
-    'test_logpcg_torchscript',
+    'test_lobpcg_basic',
+    'test_lobpcg_ortho',
+    'test_lobpcg_scipy',
+    'test_lobpcg_torchscript',
     'test_storage_device',  # storage
     'test_roll',
     'test_resize_as_all_dtypes_and_devices',  # uses half
