@@ -92,8 +92,6 @@ class XlaHelpers {
                        builder);
   }
 
-  static xla::uint64 GenRngSeed();
-
   // Performa a linear interpolation between value0 and value1, by calculating:
   //   result = value0 * alpha + value1 * (1 - alpha)
   static xla::XlaOp LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
