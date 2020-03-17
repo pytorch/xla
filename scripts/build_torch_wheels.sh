@@ -30,14 +30,13 @@ function install_llvm_clang() {
 }
 
 function install_req_packages() {
-  sudo apt-get -y install python-pip git curl libopenblas-dev vim apt-transport-https ca-certificates
+  sudo apt-get -y install python-pip git curl libopenblas-dev vim apt-transport-https ca-certificates sox libsox-dev
   install_bazel
 }
 
 function install_gcloud() {
   # Following: https://cloud.google.com/sdk/docs/downloads-apt-get
   echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-  sudo apt-get install -y apt-transport-https ca-certificates
   curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
   sudo apt-get update && sudo apt-get install -y google-cloud-sdk
 }
@@ -109,6 +108,15 @@ function install_torchvision_from_source() {
   popd
 }
 
+function install_torchaudio_from_source() {
+  torchaudio_repo_version="master"
+  git clone -b "${torchaudio_repo_version}" https://github.com/pytorch/audio.git
+  pushd audio
+  python setup.py bdist_wheel
+  pip install dist/.*whl
+  popd
+}
+
 function main() {
   install_req_packages
   install_llvm_clang
@@ -118,6 +126,7 @@ function main() {
   build_and_install_torch_xla
   popd
   install_torchvision_from_source
+  install_torchaudio_from_source
   install_gcloud
 }
 

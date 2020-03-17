@@ -97,7 +97,7 @@ if __name__ == '__main__':
   parser.add_argument(
       '--apt-packages',
       nargs='+',
-      default=['libomp5'],
+      default=['libomp5', 'sox', 'libsox-dev'],
       help='List of apt packages to install',
   )
   parser.add_argument(

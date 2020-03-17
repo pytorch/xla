@@ -34,6 +34,12 @@ function collect_wheels() {
   rename -v "s/^torchvision-(.*?)-cp/torchvision-${wheel_version}-cp/" *.whl
   popd
   mv /tmp/staging-wheels/* .
+  pushd /tmp/staging-wheels
+  cp /pytorch/audio/dist/*.whl .
+  rename -v "s/^torchaudio-(.*?)-cp/torchaudio-${wheel_version}-cp/" *.whl
+  popd
+  mv /tmp/staging-wheels/* .
+
 
   rm -rf /tmp/staging-wheels
 
@@ -46,5 +52,12 @@ function collect_wheels() {
   pushd /pytorch/vision/dist
   rename -v "s/^torchvision-(.*?)-cp/torchvision-${wheel_version}+$(date -u +%Y%m%d)-cp/" *.whl
   popd
-  cp /pytorch/dist/*.whl ./ && cp /pytorch/xla/dist/*.whl ./ && cp /pytorch/vision/dist/*.whl ./
+  pushd /pytorch/audio/dist
+  rename -v "s/^torchaudio-(.*?)-cp/torchaudio-${wheel_version}+$(date -u +%Y%m%d)-cp/" *.whl
+  popd
+
+  cp /pytorch/dist/*.whl ./ && \
+    cp /pytorch/xla/dist/*.whl ./ && \
+    cp /pytorch/vision/dist/*.whl ./ && \
+    cp /pytorch/audio/dist/*.whl ./
 }
