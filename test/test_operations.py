@@ -20,7 +20,7 @@ import copy
 import itertools
 import math
 from numbers import Number
-import numpy
+import numpy as np
 import random
 import re
 import torch
@@ -47,6 +47,10 @@ def _gen_tensor(*args, **kwargs):
 
 def _gen_int_tensor(*args, **kwargs):
   return torch.randint(*args, **kwargs)
+
+
+def _gen_arange_tensor(dims, dtype=torch.int32):
+  return torch.arange(np.prod(dims), dtype=dtype).view(*dims)
 
 
 def _gen_mask(size):
@@ -76,7 +80,7 @@ def _is_iterable(obj):
 def _set_rng_seed(seed):
   torch.manual_seed(seed)
   random.seed(seed)
-  numpy.random.seed(seed)
+  np.random.seed(seed)
 
 
 def _get_device_support(devname):
@@ -250,10 +254,10 @@ class XlaTestCase(unittest.TestCase):
     elif isinstance(y, torch.Tensor) and isinstance(x, Number):
       self.assertEqual(
           x, y.item(), prec=prec, message=message, allow_inf=allow_inf)
-    elif isinstance(x, torch.Tensor) and isinstance(y, numpy.bool_):
+    elif isinstance(x, torch.Tensor) and isinstance(y, np.bool_):
       self.assertEqual(
           x.item(), y, prec=prec, message=message, allow_inf=allow_inf)
-    elif isinstance(y, torch.Tensor) and isinstance(x, numpy.bool_):
+    elif isinstance(y, torch.Tensor) and isinstance(x, np.bool_):
       self.assertEqual(
           x, y.item(), prec=prec, message=message, allow_inf=allow_inf)
     elif isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor):
@@ -1375,6 +1379,13 @@ class TestAtenXlaTensor(XlaTestCase):
       return torch.as_strided(r, (2, 1, 3, 4, 6), (12, 12, 4, 1, 24))
 
     self.runAtenTest([torch.arange(144, dtype=torch.int32)], test_fn)
+
+  def test_as_strided_r3_slice(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, (3, 4, 4), (28, 7, 1))
+
+    self.runAtenTest([_gen_arange_tensor((3, 4, 7))], test_fn)
 
   def test_basic_bfloat16(self):
 
