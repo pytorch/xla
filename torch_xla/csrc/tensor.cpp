@@ -41,9 +41,13 @@ namespace torch_xla {
 namespace {
 
 struct TlsData {
-  size_t trim_counter = 0;
+  void Reset() {
+    trim_counter = 0;
+    seed_round = 0;
+  }
 
-  void Reset() { trim_counter = 0; }
+  size_t trim_counter = 0;
+  xla::uint64 seed_round = 0;
 };
 
 thread_local TlsData g_tls_data;
@@ -896,11 +900,6 @@ ir::Value XLATensor::CreateTensorNode(
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }
 
-xla::int64 XLATensor::GetNextTensorId() {
-  static std::atomic<xla::int64>* id_generator = new std::atomic<xla::int64>(1);
-  return id_generator->fetch_add(1);
-}
-
 std::vector<XLATensor> XLATensor::MakeOutputTensors(ir::NodePtr node) const {
   std::vector<XLATensor> tensors;
   tensors.reserve(node->num_outputs());
@@ -1433,6 +1432,16 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   return ScheduleSyncTensorsGraph(
       tensors, &coll, std::move(compile_result.parameters_data),
       compile_result.device.ToString(), std::move(cached_computation));
+}
+
+xla::int64 XLATensor::GetNextTensorId() {
+  static std::atomic<xla::int64>* id_generator = new std::atomic<xla::int64>(1);
+  return id_generator->fetch_add(1);
+}
+
+xla::uint64 XLATensor::GenRngSeed() {
+  static const xla::uint64 kBaseSeed = 0x78ab6952ca3893e7;
+  return ++g_tls_data.seed_round * kBaseSeed;
 }
 
 }  // namespace torch_xla

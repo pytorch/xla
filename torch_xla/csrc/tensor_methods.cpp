@@ -1763,27 +1763,26 @@ XLATensor XLATensor::norm(const XLATensor& input, c10::optional<at::Scalar> p,
 XLATensor XLATensor::normal(double mean, const XLATensor& std) {
   return std.CreateFrom(ir::MakeNode<ir::ops::Normal>(
       GetIrValueForScalar(mean, std.shape(), std.GetDevice()), std.GetIrValue(),
-      XlaHelpers::GenRngSeed()));
+      GenRngSeed()));
 }
 
 XLATensor XLATensor::normal(const XLATensor& mean, double std) {
   return mean.CreateFrom(ir::MakeNode<ir::ops::Normal>(
       mean.GetIrValue(),
-      GetIrValueForScalar(std, mean.shape(), mean.GetDevice()),
-      XlaHelpers::GenRngSeed()));
+      GetIrValueForScalar(std, mean.shape(), mean.GetDevice()), GenRngSeed()));
 }
 
 XLATensor XLATensor::normal(const XLATensor& mean, const XLATensor& std) {
   return mean.CreateFrom(ir::MakeNode<ir::ops::Normal>(
       mean.GetIrValue(), MaybeExpand(std.GetIrValue(), mean.shape()),
-      XlaHelpers::GenRngSeed()));
+      GenRngSeed()));
 }
 
 void XLATensor::normal_(XLATensor& input, double mean, double std) {
   input.SetIrValue(ir::MakeNode<ir::ops::Normal>(
       GetIrValueForScalar(mean, input.shape(), input.GetDevice()),
       GetIrValueForScalar(std, input.shape(), input.GetDevice()),
-      XlaHelpers::GenRngSeed()));
+      GenRngSeed()));
 }
 
 XLATensor XLATensor::not_supported(std::string description, xla::Shape shape,
@@ -1928,7 +1927,7 @@ XLATensor XLATensor::rrelu_with_noise(const XLATensor& input, XLATensor& noise,
                                       at::Scalar lower, at::Scalar upper,
                                       bool training) {
   ir::NodePtr output_node = ir::MakeNode<ir::ops::RreluWithNoise>(
-      input.GetIrValue(), lower, upper, training, XlaHelpers::GenRngSeed());
+      input.GetIrValue(), lower, upper, training, GenRngSeed());
   noise.SetIrValue(ir::Value(output_node, 1));
   return input.CreateFrom(ir::Value(output_node, 0));
 }

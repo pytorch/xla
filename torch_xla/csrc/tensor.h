@@ -1233,6 +1233,8 @@ class XLATensor {
 
   static xla::int64 GetNextTensorId();
 
+  static xla::uint64 GenRngSeed();
+
   std::shared_ptr<Data> data_;
 };
 

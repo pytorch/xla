@@ -1,7 +1,5 @@
 #include "torch_xla/csrc/helpers.h"
 
-#include <ATen/CPUGenerator.h>
-
 #include <limits>
 
 #include "absl/strings/str_join.h"
@@ -63,11 +61,6 @@ xla::XlaOp XlaHelpers::CreateReturnValue(
   } else {
     return xla::Tuple(builder, {});
   }
-}
-
-xla::uint64 XlaHelpers::GenRngSeed() {
-  at::CPUGenerator* gen = at::detail::getDefaultCPUGenerator();
-  return gen->random64();
 }
 
 std::vector<xla::int64> XlaHelpers::DropDimensions(
