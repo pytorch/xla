@@ -167,11 +167,11 @@ class AtenXlaType {
       at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
       c10::optional<int64_t> divisor_override);
 
-  static at::Tensor bernoulli(const at::Tensor& self, at::Generator* generator);
+  static at::Tensor bernoulli(const at::Tensor& self, at::Generator generator);
   static at::Tensor& bernoulli_(at::Tensor& self, double p,
-                                at::Generator* generator);
+                                at::Generator generator);
   static at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p,
-                                at::Generator* generator);
+                                at::Generator generator);
 
   // binary_cross_entropy is still in PyTorch TH legacy, which means both are
   // overrideable for XLA. But overriding one set is sufficient. Currently
@@ -670,16 +670,16 @@ class AtenXlaType {
                          at::IntArrayRef dim, bool keepdim);
 
   static at::Tensor normal(const at::Tensor& mean, double std,
-                           at::Generator* generator);
+                           at::Generator generator);
 
   static at::Tensor normal(double mean, const at::Tensor& std,
-                           at::Generator* generator);
+                           at::Generator generator);
 
   static at::Tensor normal(const at::Tensor& mean, const at::Tensor& std,
-                           at::Generator* generator);
+                           at::Generator generator);
 
   static at::Tensor& normal_(at::Tensor& self, double mean, double std,
-                             at::Generator* generator);
+                             at::Generator generator);
 
   static at::Tensor permute(const at::Tensor& self, at::IntArrayRef dims);
 
@@ -736,7 +736,7 @@ class AtenXlaType {
   static at::Tensor rrelu_with_noise(const at::Tensor& self,
                                      const at::Tensor& noise, at::Scalar lower,
                                      at::Scalar upper, bool training,
-                                     at::Generator* generator);
+                                     at::Generator generator);
 
   static at::Tensor rrelu_with_noise_backward(const at::Tensor& grad_output,
                                               const at::Tensor& self,
