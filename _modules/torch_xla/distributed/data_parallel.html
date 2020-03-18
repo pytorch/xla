@@ -66,11 +66,25 @@
           </li>
 
           <li>
-            <a href="https://pytorch.org/features">Features</a>
+            <div class="ecosystem-dropdown">
+              <a id="dropdownMenuButton" data-toggle="ecosystem-dropdown">
+                Ecosystem
+              </a>
+              <div class="ecosystem-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub"">
+                  <span class=dropdown-title>Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem">
+                  <span class=dropdown-title>Tools & Libraries</span>
+                  <p>Explore the ecosystem of tools and libraries</p>
+                </a>
+              </div>
+            </div>
           </li>
 
           <li>
-            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+            <a href="https://pytorch.org/mobile">Mobile</a>
           </li>
 
           <li>
@@ -86,7 +100,21 @@
           </li>
 
           <li>
-            <a href="https://pytorch.org/resources">Resources</a>
+            <div class="resources-dropdown">
+              <a id="resourcesDropdownButton" data-toggle="resources-dropdown">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources"">
+                  <span class=dropdown-title>Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class=dropdown-title>About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+              </div>
+            </div>
           </li>
 
           <li>
@@ -123,7 +151,7 @@
               
               
                 <div class="version">
-                  master (0.1 )
+                  master (0.8 )
                 </div>
               
             
@@ -222,11 +250,11 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.distributed.data_parallel</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
 
 <span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">import</span> <span class="nn">torch</span>
@@ -240,7 +268,7 @@
 
 <span class="k">class</span> <span class="nc">Context</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
 
   <span class="k">def</span> <span class="nf">getattr_or</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">defval</span><span class="p">):</span>
@@ -253,7 +281,7 @@
 
 <span class="k">class</span> <span class="nc">ThreadResult</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
 
 
@@ -269,7 +297,7 @@
 <span class="sd">      will be run on PyTorch CPU device.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
-  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">network</span><span class="p">,</span> <span class="n">device_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">network</span><span class="p">,</span> <span class="n">device_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">device_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="n">device_ids</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_xla_supported_devices</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_device_ids</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">device_ids</span><span class="p">]</span>
@@ -309,6 +337,10 @@
         <span class="s1">&#39;Exception in model function for device=</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)),</span>
         <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
     <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="c1"># Explicitly flush out stderr and stdout before exiting since</span>
+    <span class="c1"># os._exit doesn&#39;t flush them.</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
     <span class="c1"># One exception in one thread is fatal, as the other ones (assuming they</span>
     <span class="c1"># somehow did not generate the same exception) will be getting stuck in</span>
     <span class="c1"># cross replica sum operations waiting for the defunct thread and its</span>
@@ -318,13 +350,15 @@
   <span class="k">def</span> <span class="nf">_module_runner</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loop_fn</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">module</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device_ids</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
       <span class="n">xm</span><span class="o">.</span><span class="n">set_replication</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_device_ids</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
       <span class="n">result</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">loop_fn</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">context</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
       <span class="n">result</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">e</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_handle_runner_exception</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
 
-<div class="viewcode-block" id="DataParallel.__call__"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.data_parallel.DataParallel.__call__">[docs]</a>  <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loop_fn</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">fixed_batch_size</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">batchdim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="DataParallel.__call__"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.data_parallel.DataParallel.__call__">[docs]</a>  <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loop_fn</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">fixed_batch_size</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">batchdim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Runs one EPOCH of training/test.</span>
 
 <span class="sd">    Args:</span>
@@ -354,6 +388,7 @@
                   <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_contexts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
       <span class="p">]</span>
 
+    <span class="n">xm</span><span class="o">.</span><span class="n">wait_device_ops</span><span class="p">()</span>
     <span class="n">para_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">ParallelLoader</span><span class="p">(</span>
         <span class="n">loader</span><span class="p">,</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_device_ids</span><span class="p">,</span>
@@ -424,10 +459,10 @@
 
      
        <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-         <script type="text/javascript" src="../../../_static/jquery.js"></script>
-         <script type="text/javascript" src="../../../_static/underscore.js"></script>
-         <script type="text/javascript" src="../../../_static/doctools.js"></script>
-         <script type="text/javascript" src="../../../_static/language_data.js"></script>
+         <script src="../../../_static/jquery.js"></script>
+         <script src="../../../_static/underscore.js"></script>
+         <script src="../../../_static/doctools.js"></script>
+         <script src="../../../_static/language_data.js"></script>
      
 
   
@@ -482,25 +517,24 @@
             <li><a href="https://pytorch.org/features">Features</a></li>
             <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
             <li><a href="https://pytorch.org/blog/">Blog</a></li>
-            <li><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
           </ul>
         </div>
 
         <div class="footer-links-col">
           <ul>
-            <li class="list-title"><a href="https://pytorch.org/support">Support</a></li>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
             <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
             <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
             <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
             <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
-            <li><a href="https://pytorch.slack.com" target="_blank">Slack</a></li>
-            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md" target="_blank">Contributing</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
           </ul>
         </div>
 
         <div class="footer-links-col follow-us-col">
           <ul>
-            <li class="list-title">Follow Us</li>
+            <li class="list-title">Stay Connected</li>
             <li>
               <div id="mc_embed_signup">
                 <form
@@ -537,6 +571,7 @@
           <div class="footer-social-icons">
             <a href="https://www.facebook.com/pytorch" target="_blank" class="facebook"></a>
             <a href="https://twitter.com/pytorch" target="_blank" class="twitter"></a>
+            <a href="https://www.youtube.com/pytorch" target="_blank" class="youtube"></a>
           </div>
         </div>
       </div>
@@ -568,15 +603,23 @@
       <div class="main-menu">
         <ul>
           <li>
-            <a href="#">Get Started</a>
+            <a href="https://pytorch.org/get-started">Get Started</a>
           </li>
 
           <li>
-            <a href="#">Features</a>
+            <a href="https://pytorch.org/features">Features</a>
           </li>
 
           <li>
-            <a href="#">Ecosystem</a>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/hub">PyTorch Hub</a>
           </li>
 
           <li>
@@ -615,6 +658,7 @@
       sideMenus.bind();
       scrollToAnchor.bind();
       highlightNavigation.bind();
+      mainMenuDropdown.bind();
 
       // Add class to links that have code blocks, since we cannot create links in code blocks
       $("article.pytorch-article a span.pre").each(function(e) {

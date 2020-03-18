@@ -66,11 +66,25 @@
           </li>
 
           <li>
-            <a href="https://pytorch.org/features">Features</a>
+            <div class="ecosystem-dropdown">
+              <a id="dropdownMenuButton" data-toggle="ecosystem-dropdown">
+                Ecosystem
+              </a>
+              <div class="ecosystem-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub"">
+                  <span class=dropdown-title>Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem">
+                  <span class=dropdown-title>Tools & Libraries</span>
+                  <p>Explore the ecosystem of tools and libraries</p>
+                </a>
+              </div>
+            </div>
           </li>
 
           <li>
-            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+            <a href="https://pytorch.org/mobile">Mobile</a>
           </li>
 
           <li>
@@ -86,7 +100,21 @@
           </li>
 
           <li>
-            <a href="https://pytorch.org/resources">Resources</a>
+            <div class="resources-dropdown">
+              <a id="resourcesDropdownButton" data-toggle="resources-dropdown">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources"">
+                  <span class=dropdown-title>Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class=dropdown-title>About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+              </div>
+            </div>
           </li>
 
           <li>
@@ -123,7 +151,7 @@
               
               
                 <div class="version">
-                  master (0.5)
+                  master (0.8 )
                 </div>
               
             
@@ -176,7 +204,7 @@
 <li><a class="reference internal" href="#pytorch-xla-api">PyTorch/XLA API</a><ul>
 <li><a class="reference internal" href="#module-torch_xla.core.xla_model">xla_model</a></li>
 <li><a class="reference internal" href="#module-torch_xla.distributed.parallel_loader">distributed</a></li>
-<li><a class="reference internal" href="#module-torch_xla.utils.utils">utils</a></li>
+<li><a class="reference internal" href="#module-torch_xla.utils.tf_record_reader">utils</a></li>
 </ul>
 </li>
 </ul>
@@ -263,11 +291,11 @@ like other PyTorch device types. For example, here’s how to create and
 print an XLA tensor:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="kn">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 
 <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
-<span class="k">print</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-<span class="k">print</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>This code should look familiar. PyTorch/XLA uses the same interface as regular
@@ -281,18 +309,18 @@ depending on your environment.</p>
 <p>For example, XLA tensors can be added together:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
 <span class="n">t1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
-<span class="k">print</span><span class="p">(</span><span class="n">t0</span> <span class="o">+</span> <span class="n">t1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">t0</span> <span class="o">+</span> <span class="n">t1</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Or matrix multiplied:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">print</span><span class="p">(</span><span class="n">t0</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">t1</span><span class="p">))</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">t0</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">t1</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>Or used with neural network modules:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">l_in</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
 <span class="n">linear</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
 <span class="n">l_out</span> <span class="o">=</span> <span class="n">linear</span><span class="p">(</span><span class="n">l_in</span><span class="p">)</span>
-<span class="k">print</span><span class="p">(</span><span class="n">l_out</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">l_out</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Like other device types, XLA tensors only work with other XLA tensors on the
@@ -300,7 +328,7 @@ same device. So code like</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">l_in</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
 <span class="n">linear</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
 <span class="n">l_out</span> <span class="o">=</span> <span class="n">linear</span><span class="p">(</span><span class="n">l_in</span><span class="p">)</span>
-<span class="k">print</span><span class="p">(</span><span class="n">l_out</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">l_out</span><span class="p">)</span>
 <span class="c1"># Input tensor is not an XLA tensor: torch.FloatTensor</span>
 </pre></div>
 </div>
@@ -315,7 +343,7 @@ multiprocessing, or multiple threads with XLA multithreading.</p>
 <div class="section" id="running-on-a-single-xla-device">
 <h3>Running on a Single XLA Device<a class="headerlink" href="#running-on-a-single-xla-device" title="Permalink to this headline">¶</a></h3>
 <p>The following snippet shows a network training on a single XLA device:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="kn">as</span> <span class="nn">xm</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 
 <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">MNIST</span><span class="p">()</span><span class="o">.</span><span class="n">train</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
@@ -330,7 +358,7 @@ multiprocessing, or multiple threads with XLA multithreading.</p>
   <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
   <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
 
-  <span class="n">xm</span><span class="o">.</span><span class="n">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">barrier</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+  <span class="n">xm</span><span class="o">.</span><span class="n">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">barrier</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>This snippet highlights how easy it is to switch your model to run on XLA. The
@@ -346,9 +374,9 @@ how XLA creates graphs and runs operations.</p>
 <h3>Running on Multiple XLA Devices with MultiProcessing<a class="headerlink" href="#running-on-multiple-xla-devices-with-multiprocessing" title="Permalink to this headline">¶</a></h3>
 <p>PyTorch/XLA makes it easy to accelerate training by running on multiple XLA
 devices. The following snippet shows how:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="kn">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.parallel_loader</span> <span class="kn">as</span> <span class="nn">pl</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_multiprocessing</span> <span class="kn">as</span> <span class="nn">xmp</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.distributed.parallel_loader</span> <span class="k">as</span> <span class="nn">pl</span>
+<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_multiprocessing</span> <span class="k">as</span> <span class="nn">xmp</span>
 
 <span class="k">def</span> <span class="nf">_mp_fn</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
   <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
@@ -378,6 +406,12 @@ single device snippet:</p>
 automatically creates an XLA barrier that evalutes the graph.</p></li>
 </ul>
 <p>The model definition, optimizer definition and training loop remain the same.</p>
+<blockquote>
+<div><p><strong>NOTE:</strong> It is important to note that, when using multi-processing, the user can start
+retrieving and accessing XLA devices only from within the target function of
+<code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code> (or any function which has <code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code> as parent in the call
+stack).</p>
+</div></blockquote>
 <p>See the
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist.py">full multiprocessing example</a>
 for more on training a network on multiple XLA devices with multiprocessing.</p>
@@ -388,8 +422,8 @@ for more on training a network on multiple XLA devices with multiprocessing.</p>
 threads. If, however, you want to use threads then PyTorch/XLA has a
 <code class="docutils literal notranslate"><span class="pre">DataParallel</span></code> interface. The following snippet shows the same network training
 with multiple threads:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="kn">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.data_parallel</span> <span class="kn">as</span> <span class="nn">dp</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.distributed.data_parallel</span> <span class="k">as</span> <span class="nn">dp</span>
 
 <span class="n">devices</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_xla_supported_devices</span><span class="p">()</span>
 <span class="n">model_parallel</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">DataParallel</span><span class="p">(</span><span class="n">MNIST</span><span class="p">,</span> <span class="n">device_ids</span><span class="o">=</span><span class="n">devices</span><span class="p">)</span>
@@ -399,7 +433,7 @@ with multiple threads:</p>
   <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">)</span>
 
   <span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
-  <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
+  <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
     <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
     <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
@@ -451,6 +485,8 @@ controlled by the <code class="docutils literal notranslate"><span class="pre">X
 <code class="docutils literal notranslate"><span class="pre">torch.float</span></code> on TPUs.</p></li>
 <li><p>If <code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16</span></code> is set, then <code class="docutils literal notranslate"><span class="pre">torch.float</span></code> and <code class="docutils literal notranslate"><span class="pre">torch.double</span></code> are both
 <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code> on TPUs.</p></li>
+<li><p>If a PyTorch tensor has <code class="docutils literal notranslate"><span class="pre">torch.bfloat16</span></code> data type, this will be directly
+mapped to the TPU <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code> (XLA <code class="docutils literal notranslate"><span class="pre">BF16</span></code> primitive type).</p></li>
 </ul>
 <p>XLA tensors on TPUs will always report their PyTorch datatype regardless of
 the actual datatype they’re using. This conversion is automatic and opaque.
@@ -478,7 +514,7 @@ previous device or any tensors on it.</p>
 snippet:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="kn">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 
 <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
 
@@ -499,6 +535,17 @@ snippet:</p>
 <p>Per the above note on moving XLA tensors to the CPU, care must be taken when
 working with views. Instead of saving views it’s recommended that you recreate
 them after the tensors have been loaded and moved to their destination device(s).</p>
+<p>A utility API is provided to save data by taking care of previously moving it
+to CPU:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch_xla</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+
+<span class="n">xm</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="n">path</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In case of multple devices, the above API will only save the data for the master
+device ordinal (0).</p>
 <p>Directly saving XLA tensors is possible but not recommended. XLA
 tensors are always loaded back to the device they were saved from, and if
 that device is unavailable the load will fail. PyTorch/XLA, like all of PyTorch,
@@ -590,12 +637,81 @@ Default: 0</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="torch_xla.core.xla_model.get_local_ordinal">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_local_ordinal</code><span class="sig-paren">(</span><em class="sig-param">defval=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_local_ordinal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_local_ordinal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the replication local ordinal of the current process.</p>
+<p>The local ordinals range from 0 to the number of local devices minus 1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>defval</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The default value to be returned in case there is no
+replication information available.
+Default: 0</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The replication local ordinal of the current process.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
 <dt id="torch_xla.core.xla_model.is_master_ordinal">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">is_master_ordinal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#is_master_ordinal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.is_master_ordinal" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">is_master_ordinal</code><span class="sig-paren">(</span><em class="sig-param">local=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#is_master_ordinal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.is_master_ordinal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Checks whether the current process is the master ordinal (0).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>A boolean indicating whether the current process is the master ordinal.</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>local</strong> (<em>bool</em>) – Whether the local or global master ordinal should be checked.
+In case of multi-host replication, there is only one global master ordinal
+(host 0, device 0), while there are NUM_HOSTS local master ordinals.
+Default: True</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A boolean indicating whether the current process is the master ordinal.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.core.xla_model.all_reduce">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform an inplace reduce operation on the input tensors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reduce_type</strong> (<em>string</em>) – One of <code class="docutils literal notranslate"><span class="pre">sum</span></code>, <code class="docutils literal notranslate"><span class="pre">mul</span></code>, <code class="docutils literal notranslate"><span class="pre">and</span></code>, <code class="docutils literal notranslate"><span class="pre">or</span></code>, <code class="docutils literal notranslate"><span class="pre">min</span></code> and
+<code class="docutils literal notranslate"><span class="pre">max</span></code>.</p></li>
+<li><p><strong>inputs</strong> (<em>list</em>) – List of tensors to perform the all reduce op to.</p></li>
+<li><p><strong>scale</strong> (<em>python:float</em>) – A default scaling value to be applied after the reduce.
+Default: 1.0</p></li>
+<li><p><strong>groups</strong> (<em>list</em>) – Reserved.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.core.xla_model.add_step_closure">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">add_step_closure</code><span class="sig-paren">(</span><em class="sig-param">closure</em>, <em class="sig-param">args=()</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#add_step_closure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.add_step_closure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a closure to the list of the ones to be run at the end of the step.</p>
+<p>Many times during model training there is the need to print/report (print to
+console, post to tensorboard, etc…) information which require the content of
+intermediary tensors to be inspected.
+Inspecting different tensors content in different points of the model code
+requires many executions and typically causes performance issues.
+Adding a step closure will ensure that it will be run after the barrier, when
+all the live tensors will be already materialized to device data.
+Live tensors which will include the ones captured by the closure arguments.
+So using <cite>add_step_closure()</cite> will ensure a single execution will be
+performed, even when multiple closures are queued, requiring multiple tensors
+to be inspected.
+Step closures will be run sequentially in the order they have been queued.
+Note that even though using this API the execution will be optimized, it is
+advised to throttle the printing/reporting events once every N steps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>closure</strong> (<em>callable</em>) – The function to be called.</p></li>
+<li><p><strong>args</strong> (<em>tuple</em>) – The arguments to be passed to the closure.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -621,6 +737,35 @@ Default: False</p></li>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>The same value returned by the <cite>optimizer.step()</cite> call.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.core.xla_model.save">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">file_or_path</em>, <em class="sig-param">master_only=True</em>, <em class="sig-param">global_master=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves the input data into a file.</p>
+<p>The saved data is transfered to PyTorch CPU device before being saved, so a
+following <cite>torch.load()</cite> will load CPU data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – The input data to be saved. Any nested combination of Python objects
+(list, tuples, sets, dicts, …).</p></li>
+<li><p><strong>file_or_path</strong> – The destination for the data saving operation. Either a file
+path or a Python file object. If <cite>master_only</cite> is <code class="docutils literal notranslate"><span class="pre">False</span></code> the path or
+file objects must point to different destinations as otherwise all the
+writes from the same host will override each other.</p></li>
+<li><p><strong>master_only</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether only the master device should save the
+data. If False, the <cite>file_or_path</cite> argument should be a different file or
+path for each of the ordinals taking part to the replication, otherwise
+all the replicas on the same host will be writing to the same location.
+Default: True</p></li>
+<li><p><strong>global_master</strong> (<em>bool</em><em>, </em><em>optional</em>) – When <code class="docutils literal notranslate"><span class="pre">master_only</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code> this flag
+controls whether every host’s master (if <code class="docutils literal notranslate"><span class="pre">global_master</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>)
+saves the content, or only the global master (ordinal 0).
+Default: False</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -660,13 +805,16 @@ Default: 4</p></li>
 <dl class="method">
 <dt id="torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader">
 <code class="sig-name descname">per_device_loader</code><span class="sig-paren">(</span><em class="sig-param">device</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/parallel_loader.html#ParallelLoader.per_device_loader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Retrieves the loader object for the given device.</p>
+<dd><p>Retrieves the loader iterator object for the given device.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>device</strong> (<cite>torch.device</cite>) – The device whole loader is being requested.</p>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>The data loader for the <cite>device</cite>.</p>
+<dd class="field-even"><p>The loader iterator object for the <cite>device</cite>. This is not a
+<cite>torch.utils.data.DataLoader</cite> interface, but a Python iterator which
+returns the same tensor data structure as returned by the wrapped
+<cite>torch.utils.data.DataLoader</cite>, but residing on XLA devices.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -723,34 +871,64 @@ Default: 0</p></li>
 
 <span class="target" id="module-torch_xla.distributed.xla_multiprocessing"></span><dl class="function">
 <dt id="torch_xla.distributed.xla_multiprocessing.spawn">
-<code class="sig-prename descclassname">torch_xla.distributed.xla_multiprocessing.</code><code class="sig-name descname">spawn</code><span class="sig-paren">(</span><em class="sig-param">fn</em>, <em class="sig-param">args=()</em>, <em class="sig-param">nprocs=None</em>, <em class="sig-param">join=True</em>, <em class="sig-param">daemon=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#spawn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.spawn" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.distributed.xla_multiprocessing.</code><code class="sig-name descname">spawn</code><span class="sig-paren">(</span><em class="sig-param">fn</em>, <em class="sig-param">args=()</em>, <em class="sig-param">nprocs=None</em>, <em class="sig-param">join=True</em>, <em class="sig-param">daemon=False</em>, <em class="sig-param">start_method='spawn'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#spawn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.spawn" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enables multi processing based replication.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>fn</strong> – The function to be called for each device which takes part of the
-replication. The function will be called with a first argument being the
-global index of the process within the replication, followed by the
+<li><p><strong>fn</strong> (<em>callable</em>) – The function to be called for each device which takes part of
+the replication. The function will be called with a first argument being
+the global index of the process within the replication, followed by the
 arguments passed in <cite>args</cite>.</p></li>
-<li><p><strong>args</strong> – The arguments for <cite>fn</cite>.</p></li>
-<li><p><strong>nprocs</strong> – The number of processes/devices for the replication. At the moment,
-if specified, can be either 1 or the maximum number of devices.</p></li>
-<li><p><strong>join</strong> – Whether the call should block waiting for the completion of the
-processes which have being spawned.</p></li>
-<li><p><strong>daemon</strong> – Whether the processes being spawned should have the <cite>daemon</cite> flag
-set (see Python multi-processing API).</p></li>
+<li><p><strong>args</strong> (<em>tuple</em>) – The arguments for <cite>fn</cite>.
+Default: Empty tuple</p></li>
+<li><p><strong>nprocs</strong> (<em>python:int</em>) – The number of processes/devices for the replication. At the
+moment, if specified, can be either 1 or the maximum number of devices.</p></li>
+<li><p><strong>join</strong> (<em>bool</em>) – Whether the call should block waiting for the completion of the
+processes which have being spawned.
+Default: True</p></li>
+<li><p><strong>daemon</strong> (<em>bool</em>) – Whether the processes being spawned should have the <cite>daemon</cite>
+flag set (see Python multi-processing API).
+Default: False</p></li>
+<li><p><strong>start_method</strong> (<em>string</em>) – The Python <cite>multiprocessing</cite> process creation mathod.
+Default: <cite>spawn</cite></p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>The same object returned by the <cite>torch.multiprocessing.spawn</cite> API.</p>
+<dd class="field-even"><p>The same object returned by the <cite>torch.multiprocessing.spawn</cite> API. If
+<cite>nprocs</cite> is 1 the <cite>fn</cite> function will be called directly, and the API will
+not return.</p>
 </dd>
 </dl>
 </dd></dl>
 
 </div>
-<div class="section" id="module-torch_xla.utils.utils">
-<span id="utils"></span><h2>utils<a class="headerlink" href="#module-torch_xla.utils.utils" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-torch_xla.utils.tf_record_reader">
+<span id="utils"></span><h2>utils<a class="headerlink" href="#module-torch_xla.utils.tf_record_reader" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
+<dt id="torch_xla.utils.tf_record_reader.TfRecordReader">
+<em class="property">class </em><code class="sig-prename descclassname">torch_xla.utils.tf_record_reader.</code><code class="sig-name descname">TfRecordReader</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">compression=''</em>, <em class="sig-param">buffer_size=16777216</em>, <em class="sig-param">transforms=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/tf_record_reader.html#TfRecordReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.tf_record_reader.TfRecordReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads TfRecords or TfExamples.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – The path to the file containing TfRecords.</p></li>
+<li><p><strong>compression</strong> (<em>string</em><em>, </em><em>optional</em>) – The compression type. The empty string for
+no compression, otherwise <code class="docutils literal notranslate"><span class="pre">ZLIB</span></code> or <code class="docutils literal notranslate"><span class="pre">GZIP</span></code>.
+Default: No compression.</p></li>
+<li><p><strong>buffer_size</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The size of the buffer to be used to read
+TfRecords.
+Default: 16 * 1024 * 1024</p></li>
+<li><p><strong>transforms</strong> (<em>dict</em><em>, </em><em>optional</em>) – A dictionary with the key matching the
+TfExample label name, and value which is either a callable which will be
+called to tranform the matching tensor data, or <code class="docutils literal notranslate"><span class="pre">STR</span></code> for string
+conversion.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<span class="target" id="module-torch_xla.utils.utils"></span><dl class="class">
 <dt id="torch_xla.utils.utils.SampleGenerator">
 <em class="property">class </em><code class="sig-prename descclassname">torch_xla.utils.utils.</code><code class="sig-name descname">SampleGenerator</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">sample_count</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/utils.html#SampleGenerator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.utils.SampleGenerator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterator which returns multiple samples of a given input data.</p>
@@ -825,7 +1003,7 @@ set (see Python multi-processing API).</p></li>
 <li><a class="reference internal" href="#pytorch-xla-api">PyTorch/XLA API</a><ul>
 <li><a class="reference internal" href="#module-torch_xla.core.xla_model">xla_model</a></li>
 <li><a class="reference internal" href="#module-torch_xla.distributed.parallel_loader">distributed</a></li>
-<li><a class="reference internal" href="#module-torch_xla.utils.utils">utils</a></li>
+<li><a class="reference internal" href="#module-torch_xla.utils.tf_record_reader">utils</a></li>
 </ul>
 </li>
 </ul>
@@ -843,10 +1021,10 @@ set (see Python multi-processing API).</p></li>
 
      
        <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-         <script type="text/javascript" src="_static/jquery.js"></script>
-         <script type="text/javascript" src="_static/underscore.js"></script>
-         <script type="text/javascript" src="_static/doctools.js"></script>
-         <script type="text/javascript" src="_static/language_data.js"></script>
+         <script src="_static/jquery.js"></script>
+         <script src="_static/underscore.js"></script>
+         <script src="_static/doctools.js"></script>
+         <script src="_static/language_data.js"></script>
      
 
   
@@ -901,25 +1079,24 @@ set (see Python multi-processing API).</p></li>
             <li><a href="https://pytorch.org/features">Features</a></li>
             <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
             <li><a href="https://pytorch.org/blog/">Blog</a></li>
-            <li><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
           </ul>
         </div>
 
         <div class="footer-links-col">
           <ul>
-            <li class="list-title"><a href="https://pytorch.org/support">Support</a></li>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
             <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
             <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
             <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
             <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
-            <li><a href="https://pytorch.slack.com" target="_blank">Slack</a></li>
-            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md" target="_blank">Contributing</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
           </ul>
         </div>
 
         <div class="footer-links-col follow-us-col">
           <ul>
-            <li class="list-title">Follow Us</li>
+            <li class="list-title">Stay Connected</li>
             <li>
               <div id="mc_embed_signup">
                 <form
@@ -956,6 +1133,7 @@ set (see Python multi-processing API).</p></li>
           <div class="footer-social-icons">
             <a href="https://www.facebook.com/pytorch" target="_blank" class="facebook"></a>
             <a href="https://twitter.com/pytorch" target="_blank" class="twitter"></a>
+            <a href="https://www.youtube.com/pytorch" target="_blank" class="youtube"></a>
           </div>
         </div>
       </div>
@@ -987,15 +1165,23 @@ set (see Python multi-processing API).</p></li>
       <div class="main-menu">
         <ul>
           <li>
-            <a href="#">Get Started</a>
+            <a href="https://pytorch.org/get-started">Get Started</a>
           </li>
 
           <li>
-            <a href="#">Features</a>
+            <a href="https://pytorch.org/features">Features</a>
           </li>
 
           <li>
-            <a href="#">Ecosystem</a>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/hub">PyTorch Hub</a>
           </li>
 
           <li>
@@ -1034,6 +1220,7 @@ set (see Python multi-processing API).</p></li>
       sideMenus.bind();
       scrollToAnchor.bind();
       highlightNavigation.bind();
+      mainMenuDropdown.bind();
 
       // Add class to links that have code blocks, since we cannot create links in code blocks
       $("article.pytorch-article a span.pre").each(function(e) {

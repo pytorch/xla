@@ -13,9 +13,16 @@ xla_model
 .. autofunction:: xrt_world_size
 
 .. autofunction:: get_ordinal
+.. autofunction:: get_local_ordinal
 .. autofunction:: is_master_ordinal
 
+.. autofunction:: all_reduce
+
+.. autofunction:: add_step_closure
+		  
 .. autofunction:: optimizer_step
+
+.. autofunction:: save
 
 distributed
 ----------------------------------
@@ -37,7 +44,11 @@ distributed
 utils
 ----------------------------------
 
+.. automodule:: torch_xla.utils.tf_record_reader
+
+.. autoclass:: TfRecordReader
+
 .. automodule:: torch_xla.utils.utils
 
-
 .. autoclass:: SampleGenerator
+

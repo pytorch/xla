@@ -66,11 +66,25 @@
           </li>
 
           <li>
-            <a href="https://pytorch.org/features">Features</a>
+            <div class="ecosystem-dropdown">
+              <a id="dropdownMenuButton" data-toggle="ecosystem-dropdown">
+                Ecosystem
+              </a>
+              <div class="ecosystem-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub"">
+                  <span class=dropdown-title>Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem">
+                  <span class=dropdown-title>Tools & Libraries</span>
+                  <p>Explore the ecosystem of tools and libraries</p>
+                </a>
+              </div>
+            </div>
           </li>
 
           <li>
-            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+            <a href="https://pytorch.org/mobile">Mobile</a>
           </li>
 
           <li>
@@ -86,7 +100,21 @@
           </li>
 
           <li>
-            <a href="https://pytorch.org/resources">Resources</a>
+            <div class="resources-dropdown">
+              <a id="resourcesDropdownButton" data-toggle="resources-dropdown">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources"">
+                  <span class=dropdown-title>Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class=dropdown-title>About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+              </div>
+            </div>
           </li>
 
           <li>
@@ -123,7 +151,7 @@
               
               
                 <div class="version">
-                  master (0.1 )
+                  master (0.8 )
                 </div>
               
             
@@ -222,9 +250,11 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.utils.utils</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
 
+<span class="kn">from</span> <span class="nn">concurrent</span> <span class="kn">import</span> <span class="n">futures</span>
+<span class="kn">import</span> <span class="nn">copy</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">shutil</span>
 <span class="kn">import</span> <span class="nn">sys</span>
@@ -234,16 +264,16 @@
 
 <span class="k">class</span> <span class="nc">Cleaner</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">func</span>
 
-  <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">()</span>
 
 
 <span class="k">class</span> <span class="nc">TmpFolder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">cleaner</span> <span class="o">=</span> <span class="n">Cleaner</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
 
@@ -258,18 +288,18 @@
 <span class="sd">    sample_count: The maximum number of `data` samples to be returned.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
-  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">sample_count</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">sample_count</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">data</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_sample_count</span> <span class="o">=</span> <span class="n">sample_count</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">=</span> <span class="mi">0</span>
 
-  <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">SampleGenerator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sample_count</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sample_count</span>
 
-  <span class="k">def</span> <span class="nf">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
 
   <span class="k">def</span> <span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -281,7 +311,7 @@
 
 <span class="k">class</span> <span class="nc">FnDataGenerator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">gen_tensor</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">gen_tensor</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_func</span> <span class="o">=</span> <span class="n">func</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_gen_tensor</span> <span class="o">=</span> <span class="n">gen_tensor</span>
@@ -289,10 +319,10 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">=</span> <span class="n">count</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_emitted</span> <span class="o">=</span> <span class="mi">0</span>
 
-  <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count</span>
 
-  <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">FnDataGenerator</span><span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_func</span><span class="p">,</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_batch_size</span><span class="p">,</span>
@@ -300,7 +330,7 @@
         <span class="n">dims</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dims</span><span class="p">,</span>
         <span class="n">count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
 
   <span class="k">def</span> <span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -323,19 +353,70 @@
   <span class="k">return</span> <span class="n">defval</span> <span class="k">if</span> <span class="n">env</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">type</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">for_each_instance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">inst</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
-  <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="n">inst</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">_for_each_instance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">seen</span><span class="p">):</span>
+  <span class="k">if</span> <span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+    <span class="k">return</span>
+  <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+  <span class="k">if</span> <span class="n">select_fn</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="n">fn</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
   <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-      <span class="n">for_each_instance</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">inst</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
-      <span class="n">for_each_instance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">inst</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+      <span class="n">_for_each_instance</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">seen</span><span class="p">)</span>
+      <span class="n">_for_each_instance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">seen</span><span class="p">)</span>
   <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">set</span><span class="p">)):</span>
     <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
-      <span class="n">for_each_instance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">inst</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+      <span class="n">_for_each_instance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">seen</span><span class="p">)</span>
   <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">&#39;__dict__&#39;</span><span class="p">):</span>
-    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-      <span class="n">for_each_instance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">inst</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+      <span class="n">_for_each_instance</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">seen</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">for_each_instance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+  <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+  <span class="n">_for_each_instance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">seen</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_for_each_instance_rewrite</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">rwmap</span><span class="p">):</span>
+  <span class="n">rvalue</span> <span class="o">=</span> <span class="n">rwmap</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">rvalue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">rvalue</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">value</span>
+  <span class="k">if</span> <span class="n">select_fn</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="n">rwmap</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
+  <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">rwmap</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="n">k</span> <span class="o">=</span> <span class="n">_for_each_instance_rewrite</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">rwmap</span><span class="p">)</span>
+      <span class="n">result</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">_for_each_instance_rewrite</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">rwmap</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">rwmap</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+      <span class="n">result</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">_for_each_instance_rewrite</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">rwmap</span><span class="p">))</span>
+  <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+    <span class="c1"># We transform tuples to lists here, as we need to set the object mapping</span>
+    <span class="c1"># before calling into the recursion. This code might break if user code</span>
+    <span class="c1"># expects a tuple.</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">rwmap</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+      <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_for_each_instance_rewrite</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">rwmap</span><span class="p">))</span>
+  <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">&#39;__dict__&#39;</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="n">rwmap</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+      <span class="n">v</span> <span class="o">=</span> <span class="n">_for_each_instance_rewrite</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">rwmap</span><span class="p">)</span>
+      <span class="n">result</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">rwmap</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
+  <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span> <span class="nf">for_each_instance_rewrite</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+  <span class="n">rwmap</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">_for_each_instance_rewrite</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">rwmap</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="n">inputs</span><span class="p">):</span>
@@ -391,20 +472,36 @@
   <span class="k">return</span> <span class="n">result</span>
 
 
+<span class="k">def</span> <span class="nf">parallel_work</span><span class="p">(</span><span class="n">num_workers</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Executes fn in parallel threads with args and returns result list.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    num_workers: number of workers in thread pool to execute work.</span>
+<span class="sd">    fn: python function for each thread to execute.</span>
+<span class="sd">    *args: arguments used to call executor.map with.</span>
+
+<span class="sd">  Raises:</span>
+<span class="sd">    Exception: re-raises any exceptions that may have been raised by workers.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">with</span> <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">num_workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">res</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>  <span class="c1"># Iterating to re-raise any exceptions</span>
+
+
 <span class="k">class</span> <span class="nc">TimedScope</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">printfn</span><span class="o">=</span><span class="n">eprint</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">printfn</span><span class="o">=</span><span class="n">eprint</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">printfn</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="n">printfn</span> <span class="o">=</span> <span class="n">get_print_fn</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_msg</span> <span class="o">=</span> <span class="n">msg</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_printfn</span> <span class="o">=</span> <span class="n">printfn</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_error</span> <span class="o">=</span> <span class="kc">None</span>
 
-  <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
     <span class="k">return</span> <span class="bp">self</span>
 
-  <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_error</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_printfn</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}{:.3f}</span><span class="s1">ms&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_msg</span><span class="p">,</span>
                                         <span class="mf">1000.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start</span><span class="p">)))</span>
@@ -459,10 +556,10 @@
 
      
        <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-         <script type="text/javascript" src="../../../_static/jquery.js"></script>
-         <script type="text/javascript" src="../../../_static/underscore.js"></script>
-         <script type="text/javascript" src="../../../_static/doctools.js"></script>
-         <script type="text/javascript" src="../../../_static/language_data.js"></script>
+         <script src="../../../_static/jquery.js"></script>
+         <script src="../../../_static/underscore.js"></script>
+         <script src="../../../_static/doctools.js"></script>
+         <script src="../../../_static/language_data.js"></script>
      
 
   
@@ -517,25 +614,24 @@
             <li><a href="https://pytorch.org/features">Features</a></li>
             <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
             <li><a href="https://pytorch.org/blog/">Blog</a></li>
-            <li><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
           </ul>
         </div>
 
         <div class="footer-links-col">
           <ul>
-            <li class="list-title"><a href="https://pytorch.org/support">Support</a></li>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
             <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
             <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
             <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
             <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
-            <li><a href="https://pytorch.slack.com" target="_blank">Slack</a></li>
-            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md" target="_blank">Contributing</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
           </ul>
         </div>
 
         <div class="footer-links-col follow-us-col">
           <ul>
-            <li class="list-title">Follow Us</li>
+            <li class="list-title">Stay Connected</li>
             <li>
               <div id="mc_embed_signup">
                 <form
@@ -572,6 +668,7 @@
           <div class="footer-social-icons">
             <a href="https://www.facebook.com/pytorch" target="_blank" class="facebook"></a>
             <a href="https://twitter.com/pytorch" target="_blank" class="twitter"></a>
+            <a href="https://www.youtube.com/pytorch" target="_blank" class="youtube"></a>
           </div>
         </div>
       </div>
@@ -603,15 +700,23 @@
       <div class="main-menu">
         <ul>
           <li>
-            <a href="#">Get Started</a>
+            <a href="https://pytorch.org/get-started">Get Started</a>
           </li>
 
           <li>
-            <a href="#">Features</a>
+            <a href="https://pytorch.org/features">Features</a>
           </li>
 
           <li>
-            <a href="#">Ecosystem</a>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/hub">PyTorch Hub</a>
           </li>
 
           <li>
@@ -650,6 +755,7 @@
       sideMenus.bind();
       scrollToAnchor.bind();
       highlightNavigation.bind();
+      mainMenuDropdown.bind();
 
       // Add class to links that have code blocks, since we cannot create links in code blocks
       $("article.pytorch-article a span.pre").each(function(e) {

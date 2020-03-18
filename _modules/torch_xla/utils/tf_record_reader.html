@@ -1,7 +1,6 @@
 
 
 
-
 <!DOCTYPE html>
 <!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
@@ -10,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Index &mdash; PyTorch/XLA master documentation</title>
+  <title>torch_xla.utils.tf_record_reader &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -26,22 +25,22 @@
 
   
 
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
-    <link rel="index" title="Index" href="#" />
-    <link rel="search" title="Search" href="search.html" /> 
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" /> -->
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
 
   
-  <script src="_static/js/modernizr.min.js"></script>
+  <script src="../../../_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -164,7 +163,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -212,7 +211,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="index.html">
+        <a href="../../../index.html">
           
             Docs
           
@@ -220,12 +219,12 @@
       </li>
 
         
-      <li>Index</li>
+          <li><a href="../../index.html">Module code</a> &gt;</li>
+        
+      <li>torch_xla.utils.tf_record_reader</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
-        
-            
         
       </li>
     
@@ -250,141 +249,72 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
+  <h1>Source code for torch_xla.utils.tf_record_reader</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
 
-<h1 id="index">Index</h1>
-
-<div class="genindex-jumpbox">
- <a href="#_"><strong>_</strong></a>
- | <a href="#A"><strong>A</strong></a>
- | <a href="#D"><strong>D</strong></a>
- | <a href="#G"><strong>G</strong></a>
- | <a href="#I"><strong>I</strong></a>
- | <a href="#O"><strong>O</strong></a>
- | <a href="#P"><strong>P</strong></a>
- | <a href="#S"><strong>S</strong></a>
- | <a href="#T"><strong>T</strong></a>
- | <a href="#X"><strong>X</strong></a>
- 
-</div>
-<h2 id="_">_</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.data_parallel.DataParallel.__call__">__call__() (torch_xla.distributed.data_parallel.DataParallel method)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="A">A</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.add_step_closure">add_step_closure() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.all_reduce">all_reduce() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="D">D</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.data_parallel.DataParallel">DataParallel (class in torch_xla.distributed.data_parallel)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="G">G</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.get_local_ordinal">get_local_ordinal() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.get_ordinal">get_ordinal() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.core.xla_model.get_xla_supported_devices">get_xla_supported_devices() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="I">I</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.is_master_ordinal">is_master_ordinal() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="O">O</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.optimizer_step">optimizer_step() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="P">P</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.parallel_loader.ParallelLoader">ParallelLoader (class in torch_xla.distributed.parallel_loader)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader">per_device_loader() (torch_xla.distributed.parallel_loader.ParallelLoader method)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="S">S</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.utils.utils.SampleGenerator">SampleGenerator (class in torch_xla.utils.utils)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.save">save() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.distributed.xla_multiprocessing.spawn">spawn() (in module torch_xla.distributed.xla_multiprocessing)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="T">T</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.utils.tf_record_reader.TfRecordReader">TfRecordReader (class in torch_xla.utils.tf_record_reader)</a>
-</li>
-      <li><a href="index.html#module-torch_xla.core.xla_model">torch_xla.core.xla_model (module)</a>
-</li>
-      <li><a href="index.html#module-torch_xla.distributed.data_parallel">torch_xla.distributed.data_parallel (module)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#module-torch_xla.distributed.parallel_loader">torch_xla.distributed.parallel_loader (module)</a>
-</li>
-      <li><a href="index.html#module-torch_xla.distributed.xla_multiprocessing">torch_xla.distributed.xla_multiprocessing (module)</a>
-</li>
-      <li><a href="index.html#module-torch_xla.utils.tf_record_reader">torch_xla.utils.tf_record_reader (module)</a>
-</li>
-      <li><a href="index.html#module-torch_xla.utils.utils">torch_xla.utils.utils (module)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="X">X</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.xla_device">xla_device() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.xrt_world_size">xrt_world_size() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-</tr></table>
+<span class="kn">import</span> <span class="nn">torch_xla</span>
 
 
+<div class="viewcode-block" id="TfRecordReader"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.tf_record_reader.TfRecordReader">[docs]</a><span class="k">class</span> <span class="nc">TfRecordReader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Reads TfRecords or TfExamples.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    path (string): The path to the file containing TfRecords.</span>
+<span class="sd">    compression (string, optional): The compression type. The empty string for</span>
+<span class="sd">      no compression, otherwise ``ZLIB`` or ``GZIP``.</span>
+<span class="sd">      Default: No compression.</span>
+<span class="sd">    buffer_size (int, optional): The size of the buffer to be used to read</span>
+<span class="sd">      TfRecords.</span>
+<span class="sd">      Default: 16 * 1024 * 1024</span>
+<span class="sd">    transforms (dict, optional): A dictionary with the key matching the</span>
+<span class="sd">      TfExample label name, and value which is either a callable which will be</span>
+<span class="sd">      called to tranform the matching tensor data, or ``STR`` for string</span>
+<span class="sd">      conversion.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+               <span class="n">path</span><span class="p">,</span>
+               <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+               <span class="n">buffer_size</span><span class="o">=</span><span class="mi">16</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>
+               <span class="n">transforms</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_reader</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_create_tfrecord_reader</span><span class="p">(</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span> <span class="o">=</span> <span class="n">transforms</span>
+
+  <span class="k">def</span> <span class="nf">read_record</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Reads a TfRecord and returns the raw bytes.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      The raw bytes of the record, or ``None`` in case of EOF.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tfrecord_read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_reader</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">read_example</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Reads a TfExample.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      In case of EOD returns ``None``, otherwise a dictionary whose keys</span>
+<span class="sd">      are the feature names, and values the tensors containing their</span>
+<span class="sd">      data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ex</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tfexample_read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_reader</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">ex</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">ex</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_example</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_transform_example</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ex</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">ex</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="n">trs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">lbl</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">trs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">trs</span><span class="p">):</span>
+          <span class="n">ex</span><span class="p">[</span><span class="n">lbl</span><span class="p">]</span> <span class="o">=</span> <span class="n">trs</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">trs</span> <span class="o">==</span> <span class="s1">&#39;STR&#39;</span><span class="p">:</span>
+          <span class="n">ex</span><span class="p">[</span><span class="n">lbl</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">tobytes</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid transform: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">trs</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">ex</span></div>
+</pre></div>
 
              </article>
              
@@ -431,18 +361,18 @@
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-         <script src="_static/jquery.js"></script>
-         <script src="_static/underscore.js"></script>
-         <script src="_static/doctools.js"></script>
-         <script src="_static/language_data.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+         <script src="../../../_static/jquery.js"></script>
+         <script src="../../../_static/underscore.js"></script>
+         <script src="../../../_static/doctools.js"></script>
+         <script src="../../../_static/language_data.js"></script>
      
 
   
 
-  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
-  <script type="text/javascript" src="_static/js/theme.js"></script>
+  <script type="text/javascript" src="../../../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../../../_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -554,7 +484,7 @@
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="_static/images/pytorch-x.svg">
+    <img class="close-button" src="../../../_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -621,7 +551,7 @@
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="../../../_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {
