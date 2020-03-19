@@ -221,4 +221,6 @@ disabled_torch_tests = {
     'test_half',  # half support
     'test_true_divide', # float64 casting
     'test_true_divide_out',  # FIXME: wrong result
+    'test_complex_promotion',  # complex support
+    'test_complex_scalar_mult_tensor_promotion',  # complex support
 }
