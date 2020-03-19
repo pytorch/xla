@@ -73,9 +73,22 @@ xla::XlaOp LoweringContext::GetParameter(
   return it->second;
 }
 
-xla::int64 LoweringContext::AddResult(xla::XlaOp op) {
+const std::vector<xla::ComputationClient::DataPtr>&
+LoweringContext::GetParametersData() const {
+  return parameters_;
+}
+
+size_t LoweringContext::AddResult(xla::XlaOp op) {
   root_tuple_.push_back(std::move(op));
   return root_tuple_.size() - 1;
+}
+
+xla::XlaOp LoweringContext::GetResult(size_t index) const {
+  return root_tuple_.at(index);
+}
+
+void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
+  root_tuple_.at(index) = std::move(op);
 }
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::Build() {
@@ -92,7 +105,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::Build(xla::XlaOp root) {
 }
 
 void LoweringContext::AssignOutputOp(const Output& output, xla::XlaOp op) {
-  emitted_outputs_[output] = op;
+  emitted_outputs_[output] = std::move(op);
 }
 
 xla::XlaOp LoweringContext::GetOutputOp(const Output& output) {

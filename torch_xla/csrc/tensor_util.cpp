@@ -649,10 +649,13 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
     case xla::PrimitiveType::S8:
       return at::ScalarType::Char;
     case xla::PrimitiveType::S16:
+    case xla::PrimitiveType::U16:
       return at::ScalarType::Short;
     case xla::PrimitiveType::S32:
+    case xla::PrimitiveType::U32:
       return at::ScalarType::Int;
     case xla::PrimitiveType::S64:
+    case xla::PrimitiveType::U64:
       return at::ScalarType::Long;
     default:
       XLA_ERROR() << "XLA type not supported: " << xla_type;
@@ -687,6 +690,8 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
                                                    : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S64:
       return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
+    case xla::PrimitiveType::U64:
+      return Use32BitLong() ? xla::PrimitiveType::U32 : xla::PrimitiveType::U64;
     default:
       return type;
   }

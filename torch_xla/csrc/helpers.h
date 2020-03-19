@@ -4,6 +4,7 @@
 #include <c10/util/Optional.h>
 
 #include <functional>
+#include <tuple>
 #include <vector>
 
 #include "absl/types/optional.h"
@@ -237,9 +238,15 @@ class XlaHelpers {
                                                           xla::int64 dim1,
                                                           xla::int64 rank);
 
+  static xla::PrimitiveType PromoteType(xla::PrimitiveType type1,
+                                        xla::PrimitiveType type2);
+
   // Performs type promotion to make sure both operations return the same type.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteValues(xla::XlaOp op1,
                                                          xla::XlaOp op2);
+
+  static std::tuple<xla::XlaOp, xla::XlaOp, xla::XlaOp> PromoteValues(
+      xla::XlaOp op1, xla::XlaOp op2, xla::XlaOp op3);
 
   // Performs type promotion, by casting the second operation to the type of the
   // first, if different.
@@ -277,6 +284,9 @@ class XlaHelpers {
 
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);
+
+  static xla::Shape GetPromotedBinaryOpShape(const xla::Shape& shape1,
+                                             const xla::Shape& shape2);
 
   // Returns a new operations which broadcast the input operation into the
   // shape. The op_shape is the shape of the op operation, while shape should be

@@ -31,13 +31,15 @@ class LoweringContext {
 
   // Retrieves the vector holding all the tensors associated with the parameter
   // instructions which have been created.
-  const std::vector<xla::ComputationClient::DataPtr>& GetParametersData()
-      const {
-    return parameters_;
-  }
+  const std::vector<xla::ComputationClient::DataPtr>& GetParametersData() const;
 
-  // Adds the output of a given operation to the result tuple.
-  xla::int64 AddResult(xla::XlaOp op);
+  // Adds the output of a given operation to the result tuple. Returns the index
+  // of the output within the tuple.
+  size_t AddResult(xla::XlaOp op);
+
+  xla::XlaOp GetResult(size_t index) const;
+
+  void SetResult(size_t index, xla::XlaOp op);
 
   // Assigns the given XLA operation to the specified output. As outputs are
   // lowered in a post-order fashion, later nodes should always find their
