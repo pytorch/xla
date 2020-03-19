@@ -89,10 +89,8 @@ c10::optional<at::ScalarType> PromoteIntegralType(
                                                                    : opt_dtype;
 }
 
-template <typename B>
-at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
-                      const B& bin_op) {
-  at::ScalarType dtype = at::result_type(self, other);
+std::pair<XLATensor, XLATensor> GetBinaryOperands(const at::Tensor& self,
+                                                  const at::Tensor& other) {
   XLATensor self_tensor;
   XLATensor other_tensor;
   auto self_xtensor = bridge::TryGetXlaTensor(self);
@@ -103,7 +101,15 @@ at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
     self_tensor = *self_xtensor;
     other_tensor = bridge::GetOrCreateXlaTensor(other, self_tensor.GetDevice());
   }
-  XLATensor result = bin_op(self_tensor, other_tensor);
+  return std::pair<XLATensor, XLATensor>(self_tensor, other_tensor);
+}
+
+template <typename B>
+at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
+                      const B& bin_op) {
+  at::ScalarType dtype = at::result_type(self, other);
+  std::pair<XLATensor, XLATensor> operands = GetBinaryOperands(self, other);
+  XLATensor result = bin_op(operands.first, operands.second);
   result.SetScalarType(dtype);
   return bridge::AtenFromXlaTensor(result);
 }
@@ -2979,6 +2985,22 @@ at::Tensor& AtenXlaType::triu_(at::Tensor& self, int64_t diagonal) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::triu_(self_tensor, diagonal);
   return self;
+}
+
+at::Tensor AtenXlaType::true_divide(const at::Tensor& self,
+                                    const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  std::pair<XLATensor, XLATensor> operands = GetBinaryOperands(self, other);
+  XLATensor result = XLATensor::true_divide(operands.first, operands.second);
+  result.SetScalarType(at::typeMetaToScalarType(c10::get_default_dtype()));
+  return bridge::AtenFromXlaTensor(result);
+}
+
+at::Tensor AtenXlaType::true_divide(const at::Tensor& self, at::Scalar other) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor result = XLATensor::true_divide(bridge::GetXlaTensor(self), other);
+  result.SetScalarType(at::typeMetaToScalarType(c10::get_default_dtype()));
+  return bridge::AtenFromXlaTensor(result);
 }
 
 at::Tensor AtenXlaType::trunc(const at::Tensor& self) {
