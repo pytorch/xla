@@ -19,6 +19,10 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64 k,
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
 
+xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias);
+
+xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
+
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, const xla::Shape& shape);
 
 xla::XlaOp BuildDropout(xla::XlaOp input, float probability);

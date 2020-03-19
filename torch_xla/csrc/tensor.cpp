@@ -29,6 +29,7 @@
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/op_by_op_executor.h"
+#include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
@@ -473,10 +474,10 @@ xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
 }
 
 xla::Shape XLATensor::shape_with_layout() const {
-  auto tensor_shape = shape();
+  auto xla_shape = shape();
   return MakeArrayShapeFromDimensions(
-      tensor_shape.get().dimensions(), tensor_shape.get().dynamic_dimensions(),
-      tensor_shape.get().element_type(), GetDevice().hw_type);
+      xla_shape.get().dimensions(), xla_shape.get().dynamic_dimensions(),
+      xla_shape.get().element_type(), GetDevice().hw_type);
 }
 
 const Device& XLATensor::GetDevice() const { return data()->device; }
@@ -569,6 +570,15 @@ void XLATensor::SetIrValue(ir::Value ir_value) {
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
   }
+}
+
+void XLATensor::SetInPlaceIrValue(ir::Value ir_value) {
+  auto xla_shape = shape();
+  if (xla_shape.get().element_type() != ir_value.shape().element_type()) {
+    ir_value =
+        ir::MakeNode<ir::ops::Cast>(ir_value, xla_shape.get().element_type());
+  }
+  SetIrValue(std::move(ir_value));
 }
 
 void XLATensor::AssignIrValue(ir::Value ir_value) const {
@@ -1318,8 +1328,9 @@ void XLATensor::BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
       auto it = output_tensor_id_map.find(data_info->tensor_id);
       if (it != output_tensor_id_map.end()) {
         size_t output_index = it->second;
-        size_t tensor_index = indices[output_index];
-        if (parameters_data[i]->shape() == tensors[tensor_index].shape() &&
+        xla::XlaOp root = lowering_ctx->GetResult(output_index);
+        const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
+        if (parameters_data[i]->shape() == root_shape &&
             alias_map[output_index] < 0) {
           lowering_ctx->builder()->SetUpAlias(
               {static_cast<xla::int64>(output_index)}, i, {});

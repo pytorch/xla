@@ -369,9 +369,8 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64 k,
 }
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
-  const auto precision_level = XlaHelpers::mat_mul_precision();
   xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(precision_level);
+      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   // Expand cases in https://pytorch.org/docs/stable/torch.html#torch.matmul
   xla::Shape lhs_shape = XlaHelpers::ShapeOfXlaOp(lhs);
   xla::Shape rhs_shape = XlaHelpers::ShapeOfXlaOp(rhs);
@@ -414,6 +413,24 @@ xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
   }
   XLA_ERROR() << "Unsupported matmul operation: matmul(" << lhs_shape << ", "
               << rhs_shape << ")";
+}
+
+xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias) {
+  xla::PrecisionConfig precision_config =
+      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
+  xla::XlaOp dot = xla::Dot(lhs, rhs, &precision_config);
+  const xla::Shape& dot_shape = XlaHelpers::ShapeOfXlaOp(dot);
+  const xla::Shape& bias_shape = XlaHelpers::ShapeOfXlaOp(bias);
+  if (bias_shape.dimensions() != dot_shape.dimensions()) {
+    bias = BuildExpand(bias, dot_shape.dimensions());
+  }
+  return dot + bias;
+}
+
+xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs) {
+  xla::PrecisionConfig precision_config =
+      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
+  return xla::Dot(lhs, rhs, &precision_config);
 }
 
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, const xla::Shape& shape) {

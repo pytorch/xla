@@ -222,55 +222,35 @@ NodePtr Clamp(const Value& input, const Value& min, const Value& max) {
 
 NodePtr AddMatMulOp(const Value& input, const Value& weight,
                     const Value& bias) {
-  const xla::PrecisionConfig::Precision precision_level =
-      XlaHelpers::mat_mul_precision();
-  auto lower_fn = [precision_level](const Node& node,
-                                    LoweringContext* loctx) -> XlaOpVector {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     XLA_CHECK_EQ(node.operands().size(), 3) << "Unexpected number of operands";
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand(2));
-    const auto bias_sizes = XlaHelpers::SizesOfXlaOp(xla_bias);
-    xla::PrecisionConfig precision_config =
-        XlaHelpers::BuildPrecisionConfig(precision_level);
-    xla::XlaOp xla_dot = xla::Dot(xla_input, xla_weight, &precision_config);
-    const auto dot_sizes = XlaHelpers::SizesOfXlaOp(xla_dot);
-    if (bias_sizes != dot_sizes) {
-      xla_bias = BuildExpand(xla_bias, dot_sizes);
-    }
-    xla::XlaOp xla_output = xla_dot + xla_bias;
-    return node.ReturnOp(xla_output, loctx);
+    return node.ReturnOp(BuildMatMul(xla_input, xla_weight, xla_bias), loctx);
   };
   auto lower_for_shape_fn =
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
-    return xla::Dot(operands[0], operands[1]);
+    return BuildMatMul(operands[0], operands[1], operands[2]);
   };
   return GenericOp(OpKind(at::aten::addmm), {input, weight, bias},
                    [&]() {
-                     return InferOutputShape({input.shape(), weight.shape()},
-                                             lower_for_shape_fn);
+                     return InferOutputShape(
+                         {input.shape(), weight.shape(), bias.shape()},
+                         lower_for_shape_fn);
                    },
                    std::move(lower_fn));
 }
 
 NodePtr Dot(const Value& input, const Value& weight) {
-  const xla::PrecisionConfig::Precision precision_level =
-      XlaHelpers::mat_mul_precision();
-  auto lower_fn = [precision_level](const Node& node,
-                                    LoweringContext* loctx) -> XlaOpVector {
-    XLA_CHECK_EQ(node.operands().size(), 2) << "Unexpected number of operands";
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(1));
-    xla::PrecisionConfig precision_config =
-        XlaHelpers::BuildPrecisionConfig(precision_level);
-    return node.ReturnOp(xla::Dot(xla_input, xla_weight, &precision_config),
-                         loctx);
+    return node.ReturnOp(BuildDot(xla_input, xla_weight), loctx);
   };
   auto lower_for_shape_fn =
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    XLA_CHECK_EQ(operands.size(), 2) << "Unexpected number of operands";
-    return xla::Dot(operands[0], operands[1]);
+    return BuildDot(operands[0], operands[1]);
   };
   return GenericOp(OpKind(at::aten::mm), {input, weight},
                    [&]() {
@@ -284,6 +264,8 @@ NodePtr MatMul(const Value& lhs, const Value& rhs) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand(1));
+    std::tie(xla_lhs, xla_rhs) = XlaHelpers::PromoteValues(xla_lhs, xla_rhs);
+
     return node.ReturnOp(CreateMatMul(xla_lhs, xla_rhs), loctx);
   };
   auto lower_for_shape_fn =

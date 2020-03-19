@@ -296,7 +296,7 @@ ir::Value XLATensor::all_reduce_(
   std::vector<ir::Value> input_values({input.GetIrValue()});
   ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(reduce_type, input_values,
                                                       token, scale, groups);
-  input.SetIrValue(ir::Value(node, 0));
+  input.SetInPlaceIrValue(ir::Value(node, 0));
   return ir::Value(node, 1);
 }
 
@@ -312,7 +312,7 @@ ir::Value XLATensor::all_reduce(
   ir::NodePtr node = ir::MakeNode<ir::ops::AllReduce>(reduce_type, input_values,
                                                       token, scale, groups);
   for (size_t i = 0; i < inputs->size(); ++i) {
-    (*inputs)[i].SetIrValue(ir::Value(node, i));
+    (*inputs)[i].SetInPlaceIrValue(ir::Value(node, i));
   }
   return ir::Value(node, inputs->size());
 }
@@ -328,19 +328,21 @@ XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
 // ATEN operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
 void XLATensor::__ilshift__(XLATensor& input, at::Scalar other) {
-  input.SetIrValue(ir::ops::Lshift(input.GetIrValue(), other));
+  input.SetInPlaceIrValue(ir::ops::Lshift(input.GetIrValue(), other));
 }
 
 void XLATensor::__ilshift__(XLATensor& input, const XLATensor& other) {
-  input.SetIrValue(ir::ops::Lshift(input.GetIrValue(), other.GetIrValue()));
+  input.SetInPlaceIrValue(
+      ir::ops::Lshift(input.GetIrValue(), other.GetIrValue()));
 }
 
 void XLATensor::__irshift__(XLATensor& input, at::Scalar other) {
-  input.SetIrValue(ir::ops::Rshift(input.GetIrValue(), other));
+  input.SetInPlaceIrValue(ir::ops::Rshift(input.GetIrValue(), other));
 }
 
 void XLATensor::__irshift__(XLATensor& input, const XLATensor& other) {
-  input.SetIrValue(ir::ops::Rshift(input.GetIrValue(), other.GetIrValue()));
+  input.SetInPlaceIrValue(
+      ir::ops::Rshift(input.GetIrValue(), other.GetIrValue()));
 }
 
 XLATensor XLATensor::__lshift__(const XLATensor& input, at::Scalar other) {
@@ -380,7 +382,7 @@ XLATensor XLATensor::abs(const XLATensor& input) {
 }
 
 void XLATensor::abs_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Abs(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Abs(input.GetIrValue()));
 }
 
 XLATensor XLATensor::acos(const XLATensor& input) {
@@ -388,7 +390,7 @@ XLATensor XLATensor::acos(const XLATensor& input) {
 }
 
 void XLATensor::acos_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Acos(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Acos(input.GetIrValue()));
 }
 
 XLATensor XLATensor::add(const XLATensor& input, const XLATensor& other,
@@ -402,7 +404,7 @@ void XLATensor::add_(XLATensor& input, const XLATensor& other,
                      at::Scalar alpha) {
   ir::Value constant =
       GetIrValueForScalar(alpha, other.shape(), input.GetDevice());
-  input.SetIrValue(input.GetIrValue() + other.GetIrValue() * constant);
+  input.SetInPlaceIrValue(input.GetIrValue() + other.GetIrValue() * constant);
 }
 
 XLATensor XLATensor::add(const XLATensor& input, at::Scalar other,
@@ -419,7 +421,7 @@ void XLATensor::add_(XLATensor& input, at::Scalar other, at::Scalar alpha) {
       GetIrValueForScalar(other, input.shape(), input.GetDevice());
   ir::Value alpha_constant =
       GetIrValueForScalar(alpha, input.shape(), input.GetDevice());
-  input.SetIrValue(input.GetIrValue() + other_constant * alpha_constant);
+  input.SetInPlaceIrValue(input.GetIrValue() + other_constant * alpha_constant);
 }
 
 void XLATensor::addcmul_(XLATensor& input, at::Scalar value,
@@ -427,7 +429,7 @@ void XLATensor::addcmul_(XLATensor& input, at::Scalar value,
   ir::Value constant = GetIrValueForScalar(
       value, tensor1.shape().get().element_type(), input.GetDevice());
   ir::Value mul = tensor1.GetIrValue() * tensor2.GetIrValue();
-  input.SetIrValue(input.GetIrValue() + mul * constant);
+  input.SetInPlaceIrValue(input.GetIrValue() + mul * constant);
 }
 
 XLATensor XLATensor::addcdiv(const XLATensor& input, at::Scalar value,
@@ -444,7 +446,7 @@ void XLATensor::addcdiv_(XLATensor& input, at::Scalar value,
   ir::Value constant = GetIrValueForScalar(
       value, tensor1.shape().get().element_type(), input.GetDevice());
   ir::Value div = tensor1.GetIrValue() / tensor2.GetIrValue();
-  input.SetIrValue(input.GetIrValue() + div * constant);
+  input.SetInPlaceIrValue(input.GetIrValue() + div * constant);
 }
 
 XLATensor XLATensor::addcmul(const XLATensor& input, at::Scalar value,
@@ -546,7 +548,7 @@ XLATensor XLATensor::asin(const XLATensor& input) {
 }
 
 void XLATensor::asin_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Asin(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Asin(input.GetIrValue()));
 }
 
 XLATensor XLATensor::atan(const XLATensor& input) {
@@ -554,7 +556,7 @@ XLATensor XLATensor::atan(const XLATensor& input) {
 }
 
 void XLATensor::atan_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Atan(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Atan(input.GetIrValue()));
 }
 
 XLATensor XLATensor::atan2(const XLATensor& input, const XLATensor& other) {
@@ -563,7 +565,8 @@ XLATensor XLATensor::atan2(const XLATensor& input, const XLATensor& other) {
 }
 
 void XLATensor::atan2_(XLATensor& input, const XLATensor& other) {
-  input.SetIrValue(ir::ops::Atan2(input.GetIrValue(), other.GetIrValue()));
+  input.SetInPlaceIrValue(
+      ir::ops::Atan2(input.GetIrValue(), other.GetIrValue()));
 }
 
 XLATensor XLATensor::avg_pool_nd(const XLATensor& input,
@@ -606,13 +609,13 @@ XLATensor XLATensor::bernoulli(const XLATensor& input) {
 }
 
 void XLATensor::bernoulli_(XLATensor& input, double probability) {
-  input.SetIrValue(ir::ops::Bernoulli(
+  input.SetInPlaceIrValue(ir::ops::Bernoulli(
       input.GetIrValue(),
       GetIrValueForScalar(probability, input.shape(), input.GetDevice())));
 }
 
 void XLATensor::bernoulli_(XLATensor& input, const XLATensor& probability) {
-  input.SetIrValue(
+  input.SetInPlaceIrValue(
       ir::ops::Bernoulli(input.GetIrValue(), probability.GetIrValue()));
 }
 
@@ -740,7 +743,7 @@ XLATensor XLATensor::ceil(const XLATensor& input) {
 }
 
 void XLATensor::ceil_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Ceil(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Ceil(input.GetIrValue()));
 }
 
 XLATensor XLATensor::cholesky(const XLATensor& input, bool upper) {
@@ -760,7 +763,7 @@ XLATensor XLATensor::clamp(const XLATensor& input,
 void XLATensor::clamp_(XLATensor& input, c10::optional<at::Scalar> min,
                        c10::optional<at::Scalar> max) {
   MinMaxValues min_max = GetMinMaxValues(input, min, max);
-  input.SetIrValue(
+  input.SetInPlaceIrValue(
       ir::ops::Clamp(input.GetIrValue(), min_max.min, min_max.max));
 }
 
@@ -824,7 +827,7 @@ XLATensor XLATensor::cos(const XLATensor& input) {
 }
 
 void XLATensor::cos_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Cos(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Cos(input.GetIrValue()));
 }
 
 XLATensor XLATensor::cosh(const XLATensor& input) {
@@ -832,7 +835,7 @@ XLATensor XLATensor::cosh(const XLATensor& input) {
 }
 
 void XLATensor::cosh_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Cosh(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Cosh(input.GetIrValue()));
 }
 
 XLATensor XLATensor::cross(const XLATensor& input, const XLATensor& other,
@@ -895,13 +898,13 @@ XLATensor XLATensor::div(const XLATensor& input, at::Scalar other) {
 }
 
 void XLATensor::div_(XLATensor& input, const XLATensor& other) {
-  input.SetIrValue(input.GetIrValue() / other.GetIrValue());
+  input.SetInPlaceIrValue(input.GetIrValue() / other.GetIrValue());
 }
 
 void XLATensor::div_(XLATensor& input, at::Scalar other) {
   ir::Value constant =
       GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  input.SetIrValue(input.GetIrValue() / constant);
+  input.SetInPlaceIrValue(input.GetIrValue() / constant);
 }
 
 XLATensor XLATensor::eq(const XLATensor& input, at::Scalar other) {
@@ -944,7 +947,8 @@ XLATensor XLATensor::elu(const XLATensor& input, at::Scalar alpha,
 
 void XLATensor::elu_(XLATensor& input, at::Scalar alpha, at::Scalar scale,
                      at::Scalar input_scale) {
-  input.SetIrValue(ir::ops::Elu(input.GetIrValue(), alpha, scale, input_scale));
+  input.SetInPlaceIrValue(
+      ir::ops::Elu(input.GetIrValue(), alpha, scale, input_scale));
 }
 
 XLATensor XLATensor::elu_backward(const XLATensor& grad_output,
@@ -970,7 +974,7 @@ XLATensor XLATensor::erf(const XLATensor& input) {
 }
 
 void XLATensor::erf_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Erf(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Erf(input.GetIrValue()));
 }
 
 XLATensor XLATensor::erfc(const XLATensor& input) {
@@ -978,7 +982,7 @@ XLATensor XLATensor::erfc(const XLATensor& input) {
 }
 
 void XLATensor::erfc_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Erfc(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Erfc(input.GetIrValue()));
 }
 
 XLATensor XLATensor::erfinv(const XLATensor& input) {
@@ -986,7 +990,7 @@ XLATensor XLATensor::erfinv(const XLATensor& input) {
 }
 
 void XLATensor::erfinv_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Erfinv(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Erfinv(input.GetIrValue()));
 }
 
 XLATensor XLATensor::exp(const XLATensor& input) {
@@ -994,7 +998,7 @@ XLATensor XLATensor::exp(const XLATensor& input) {
 }
 
 void XLATensor::exp_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Exp(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Exp(input.GetIrValue()));
 }
 
 XLATensor XLATensor::expand(const XLATensor& input,
@@ -1010,7 +1014,7 @@ XLATensor XLATensor::expm1(const XLATensor& input) {
 }
 
 void XLATensor::expm1_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Expm1(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Expm1(input.GetIrValue()));
 }
 
 XLATensor XLATensor::eye(xla::int64 lines, xla::int64 cols,
@@ -1031,7 +1035,7 @@ void XLATensor::eye_out(XLATensor& out, xla::int64 lines, xla::int64 cols) {
 void XLATensor::fill_(XLATensor& input, at::Scalar value) {
   ir::Value constant =
       GetIrValueForScalar(value, input.shape(), input.GetDevice());
-  input.SetIrValue(std::move(constant));
+  input.SetInPlaceIrValue(std::move(constant));
 }
 
 XLATensor XLATensor::flip(const XLATensor& input,
@@ -1049,7 +1053,7 @@ XLATensor XLATensor::floor(const XLATensor& input) {
 }
 
 void XLATensor::floor_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Floor(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Floor(input.GetIrValue()));
 }
 
 XLATensor XLATensor::fmod(const XLATensor& input, const XLATensor& other) {
@@ -1064,13 +1068,14 @@ XLATensor XLATensor::fmod(const XLATensor& input, at::Scalar other) {
 }
 
 void XLATensor::fmod_(XLATensor& input, const XLATensor& other) {
-  input.SetIrValue(ir::ops::Fmod(input.GetIrValue(), other.GetIrValue()));
+  input.SetInPlaceIrValue(
+      ir::ops::Fmod(input.GetIrValue(), other.GetIrValue()));
 }
 
 void XLATensor::fmod_(XLATensor& input, at::Scalar other) {
   ir::Value constant =
       GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  input.SetIrValue(ir::ops::Fmod(input.GetIrValue(), constant));
+  input.SetInPlaceIrValue(ir::ops::Fmod(input.GetIrValue(), constant));
 }
 
 XLATensor XLATensor::frac(const XLATensor& input) {
@@ -1078,7 +1083,7 @@ XLATensor XLATensor::frac(const XLATensor& input) {
 }
 
 void XLATensor::frac_(XLATensor& input) {
-  input.SetIrValue(ir::ops::FracOp(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::FracOp(input.GetIrValue()));
 }
 
 XLATensor XLATensor::full(absl::Span<const xla::int64> size,
@@ -1350,7 +1355,7 @@ XLATensor XLATensor::leaky_relu_backward(const XLATensor& grad_output,
 }
 
 void XLATensor::leaky_relu_(XLATensor& input, double negative_slope) {
-  input.SetIrValue(
+  input.SetInPlaceIrValue(
       ir::MakeNode<ir::ops::LeakyRelu>(input.GetIrValue(), negative_slope));
 }
 
@@ -1359,7 +1364,7 @@ XLATensor XLATensor::log(const XLATensor& input) {
 }
 
 void XLATensor::log_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Log(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Log(input.GetIrValue()));
 }
 
 XLATensor XLATensor::log_base(const XLATensor& input, ir::OpKind op,
@@ -1368,7 +1373,7 @@ XLATensor XLATensor::log_base(const XLATensor& input, ir::OpKind op,
 }
 
 void XLATensor::log_base_(XLATensor& input, ir::OpKind op, double base) {
-  input.SetIrValue(ir::ops::LogBase(input.GetIrValue(), op, base));
+  input.SetInPlaceIrValue(ir::ops::LogBase(input.GetIrValue(), op, base));
 }
 
 XLATensor XLATensor::log_sigmoid(const XLATensor& input) {
@@ -1411,7 +1416,7 @@ XLATensor XLATensor::log1p(const XLATensor& input) {
 }
 
 void XLATensor::log1p_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Log1p(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Log1p(input.GetIrValue()));
 }
 
 XLATensor XLATensor::logdet(const XLATensor& input) {
@@ -1607,13 +1612,13 @@ XLATensor XLATensor::mul(const XLATensor& input, at::Scalar other) {
 }
 
 void XLATensor::mul_(XLATensor& input, const XLATensor& other) {
-  input.SetIrValue(input.GetIrValue() * other.GetIrValue());
+  input.SetInPlaceIrValue(input.GetIrValue() * other.GetIrValue());
 }
 
 void XLATensor::mul_(XLATensor& input, at::Scalar other) {
   ir::Value constant =
       GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  input.SetIrValue(input.GetIrValue() * constant);
+  input.SetInPlaceIrValue(input.GetIrValue() * constant);
 }
 
 XLATensor XLATensor::mv(const XLATensor& input, const XLATensor& vec) {
@@ -1723,7 +1728,7 @@ XLATensor XLATensor::neg(const XLATensor& input) {
 }
 
 void XLATensor::neg_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Neg(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Neg(input.GetIrValue()));
 }
 
 XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target,
@@ -1821,11 +1826,12 @@ XLATensor XLATensor::pow(at::Scalar input, const XLATensor& exponent) {
 void XLATensor::pow_(XLATensor& input, at::Scalar exponent) {
   ir::Value exponent_node =
       GetIrValueForScalar(exponent, input.shape(), input.GetDevice());
-  input.SetIrValue(ir::ops::Pow(input.GetIrValue(), exponent_node));
+  input.SetInPlaceIrValue(ir::ops::Pow(input.GetIrValue(), exponent_node));
 }
 
 void XLATensor::pow_(XLATensor& input, const XLATensor& exponent) {
-  input.SetIrValue(ir::ops::Pow(input.GetIrValue(), exponent.GetIrValue()));
+  input.SetInPlaceIrValue(
+      ir::ops::Pow(input.GetIrValue(), exponent.GetIrValue()));
 }
 
 XLATensor XLATensor::prod(const XLATensor& input,
@@ -1842,7 +1848,7 @@ XLATensor XLATensor::prod(const XLATensor& input,
 
 void XLATensor::put_(XLATensor& input, const XLATensor& index,
                      const XLATensor& source, bool accumulate) {
-  input.SetIrValue(ir::MakeNode<ir::ops::Put>(
+  input.SetInPlaceIrValue(ir::MakeNode<ir::ops::Put>(
       input.GetIrValue(), index.GetIrValue(), source.GetIrValue(), accumulate));
 }
 
@@ -1858,7 +1864,7 @@ XLATensor XLATensor::reciprocal(const XLATensor& input) {
 }
 
 void XLATensor::reciprocal_(XLATensor& input) {
-  input.SetIrValue(ir::ops::ReciprocalOp(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::ReciprocalOp(input.GetIrValue()));
 }
 
 XLATensor XLATensor::reflection_pad2d(const XLATensor& input,
@@ -1879,7 +1885,7 @@ XLATensor XLATensor::relu(const XLATensor& input) {
 }
 
 void XLATensor::relu_(XLATensor& input) {
-  input.SetIrValue(ir::ops::ReluOp(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::ReluOp(input.GetIrValue()));
 }
 
 XLATensor XLATensor::remainder(const XLATensor& input, const XLATensor& other) {
@@ -1894,13 +1900,14 @@ XLATensor XLATensor::remainder(const XLATensor& input, at::Scalar other) {
 }
 
 void XLATensor::remainder_(XLATensor& input, const XLATensor& other) {
-  input.SetIrValue(ir::ops::Remainder(input.GetIrValue(), other.GetIrValue()));
+  input.SetInPlaceIrValue(
+      ir::ops::Remainder(input.GetIrValue(), other.GetIrValue()));
 }
 
 void XLATensor::remainder_(XLATensor& input, at::Scalar other) {
   ir::Value constant =
       GetIrValueForScalar(other, input.shape(), input.GetDevice());
-  input.SetIrValue(ir::ops::Remainder(input.GetIrValue(), constant));
+  input.SetInPlaceIrValue(ir::ops::Remainder(input.GetIrValue(), constant));
 }
 
 XLATensor XLATensor::repeat(const XLATensor& input,
@@ -1945,7 +1952,7 @@ XLATensor XLATensor::rsqrt(const XLATensor& input) {
 }
 
 void XLATensor::rsqrt_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Rsqrt(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Rsqrt(input.GetIrValue()));
 }
 
 XLATensor XLATensor::rsub(const XLATensor& input, const XLATensor& other,
@@ -2017,7 +2024,7 @@ XLATensor XLATensor::sigmoid(const XLATensor& input) {
 }
 
 void XLATensor::sigmoid_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Sigmoid(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Sigmoid(input.GetIrValue()));
 }
 
 XLATensor XLATensor::sigmoid_backward(const XLATensor& grad_output,
@@ -2031,7 +2038,7 @@ XLATensor XLATensor::sign(const XLATensor& input) {
 }
 
 void XLATensor::sign_(XLATensor& input) {
-  input.SetIrValue(ir::ops::SignOp(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::SignOp(input.GetIrValue()));
 }
 
 XLATensor XLATensor::sin(const XLATensor& input) {
@@ -2039,7 +2046,7 @@ XLATensor XLATensor::sin(const XLATensor& input) {
 }
 
 void XLATensor::sin_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Sin(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Sin(input.GetIrValue()));
 }
 
 XLATensor XLATensor::sinh(const XLATensor& input) {
@@ -2047,7 +2054,7 @@ XLATensor XLATensor::sinh(const XLATensor& input) {
 }
 
 void XLATensor::sinh_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Sinh(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Sinh(input.GetIrValue()));
 }
 
 XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
@@ -2164,7 +2171,7 @@ XLATensor XLATensor::sqrt(const XLATensor& input) {
 }
 
 void XLATensor::sqrt_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Sqrt(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Sqrt(input.GetIrValue()));
 }
 
 XLATensor XLATensor::squeeze(const XLATensor& input) {
@@ -2242,7 +2249,7 @@ void XLATensor::sub_(XLATensor& input, const XLATensor& other,
                      at::Scalar alpha) {
   ir::Value constant =
       GetIrValueForScalar(alpha, other.shape(), other.GetDevice());
-  input.SetIrValue(input.GetIrValue() - other.GetIrValue() * constant);
+  input.SetInPlaceIrValue(input.GetIrValue() - other.GetIrValue() * constant);
 }
 
 XLATensor XLATensor::sub(const XLATensor& input, at::Scalar other,
@@ -2259,7 +2266,7 @@ void XLATensor::sub_(XLATensor& input, at::Scalar other, at::Scalar alpha) {
       GetIrValueForScalar(other, input.shape(), input.GetDevice());
   ir::Value alpha_constant =
       GetIrValueForScalar(alpha, input.shape(), input.GetDevice());
-  input.SetIrValue(input.GetIrValue() - other_constant * alpha_constant);
+  input.SetInPlaceIrValue(input.GetIrValue() - other_constant * alpha_constant);
 }
 
 std::tuple<XLATensor, XLATensor, XLATensor> XLATensor::svd(
@@ -2291,7 +2298,7 @@ XLATensor XLATensor::tan(const XLATensor& input) {
 }
 
 void XLATensor::tan_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Tan(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Tan(input.GetIrValue()));
 }
 
 XLATensor XLATensor::tanh(const XLATensor& input) {
@@ -2299,7 +2306,7 @@ XLATensor XLATensor::tanh(const XLATensor& input) {
 }
 
 void XLATensor::tanh_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Tanh(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Tanh(input.GetIrValue()));
 }
 
 XLATensor XLATensor::tanh_backward(const XLATensor& grad_output,
@@ -2315,7 +2322,7 @@ XLATensor XLATensor::threshold(const XLATensor& input, float threshold,
 }
 
 void XLATensor::threshold_(XLATensor& input, float threshold, float value) {
-  input.SetIrValue(
+  input.SetInPlaceIrValue(
       ir::MakeNode<ir::ops::Threshold>(input.GetIrValue(), threshold, value));
 }
 
@@ -2416,7 +2423,7 @@ XLATensor XLATensor::trunc(const XLATensor& input) {
 }
 
 void XLATensor::trunc_(XLATensor& input) {
-  input.SetIrValue(ir::ops::Trunc(input.GetIrValue()));
+  input.SetInPlaceIrValue(ir::ops::Trunc(input.GetIrValue()));
 }
 
 std::vector<XLATensor> XLATensor::unbind(const XLATensor& input,
@@ -2489,7 +2496,7 @@ XLATensor XLATensor::view(const XLATensor& input,
 void XLATensor::zero_(XLATensor& input) {
   ir::Value constant =
       GetIrValueForScalar(0.0, input.shape(), input.GetDevice());
-  input.SetIrValue(std::move(constant));
+  input.SetInPlaceIrValue(std::move(constant));
 }
 
 XLATensor XLATensor::where(const XLATensor& condition, const XLATensor& input,
