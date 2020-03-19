@@ -969,6 +969,10 @@ class XLATensor {
   // In-place version of the method above.
   static void triu_(XLATensor& input, xla::int64 diagonal);
 
+  static XLATensor true_divide(const XLATensor& input, const XLATensor& other);
+
+  static XLATensor true_divide(const XLATensor& input, at::Scalar other);
+
   static XLATensor trunc(const XLATensor& input);
   static void trunc_(XLATensor& input);
 

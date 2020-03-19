@@ -914,6 +914,11 @@ class AtenXlaType {
 
   static at::Tensor& triu_(at::Tensor& self, int64_t diagonal);
 
+  static at::Tensor true_divide(const at::Tensor& self,
+                                const at::Tensor& other);
+
+  static at::Tensor true_divide(const at::Tensor& self, at::Scalar other);
+
   static at::Tensor trunc(const at::Tensor& self);
 
   static at::Tensor& trunc_(at::Tensor& self);
