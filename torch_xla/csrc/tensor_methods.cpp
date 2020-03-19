@@ -2411,6 +2411,35 @@ void XLATensor::triu_(XLATensor& input, xla::int64 diagonal) {
   input.SetIrValue(ir::MakeNode<ir::ops::Triu>(input.GetIrValue(), diagonal));
 }
 
+XLATensor XLATensor::true_divide(const XLATensor& input,
+                                 const XLATensor& other) {
+  ir::Value input_value = input.GetIrValue();
+  ir::Value other_value = other.GetIrValue();
+  if (!xla::primitive_util::IsFloatingPointType(
+          input_value.shape().element_type())) {
+    input_value =
+        ir::MakeNode<ir::ops::Cast>(input_value, at::ScalarType::Float);
+  }
+  if (!xla::primitive_util::IsFloatingPointType(
+          other_value.shape().element_type())) {
+    other_value =
+        ir::MakeNode<ir::ops::Cast>(other_value, at::ScalarType::Float);
+  }
+  return input.CreateFrom(input_value / other_value);
+}
+
+XLATensor XLATensor::true_divide(const XLATensor& input, at::Scalar other) {
+  ir::Value input_value = input.GetIrValue();
+  ir::Value other_value =
+      GetIrValueForScalar(other, xla::PrimitiveType::F32, input.GetDevice());
+  if (!xla::primitive_util::IsFloatingPointType(
+          input_value.shape().element_type())) {
+    input_value =
+        ir::MakeNode<ir::ops::Cast>(input_value, at::ScalarType::Float);
+  }
+  return input.CreateFrom(input_value / other_value);
+}
+
 XLATensor XLATensor::trunc(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Trunc(input.GetIrValue()));
 }

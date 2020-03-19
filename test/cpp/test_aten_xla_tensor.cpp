@@ -7386,6 +7386,57 @@ TEST_F(AtenXlaTensorTest, TestTraceNarrow) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestTrueDivide) {
+  for (torch::ScalarType scalar_type1 :
+       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    at::Tensor a = isFloatingType(scalar_type1)
+                       ? torch::rand({3, 4}, torch::TensorOptions(scalar_type1))
+                       : torch::randint(0, 100, {3, 4},
+                                        torch::TensorOptions(scalar_type1));
+    for (torch::ScalarType scalar_type2 :
+         {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+          torch::kLong}) {
+      at::Tensor b =
+          isFloatingType(scalar_type2)
+              ? torch::rand({3, 4}, torch::TensorOptions(scalar_type2))
+              : torch::randint(1, 100, {3, 4},
+                               torch::TensorOptions(scalar_type2));
+      at::Tensor c = at::true_divide(a, b);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+        at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
+        at::Tensor xla_c = at::true_divide(xla_a, xla_b);
+        AllClose(c, xla_c);
+      });
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::true_divide", cpp_test::GetIgnoredCounters());
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestTrueDivideScalar) {
+  for (torch::ScalarType scalar_type :
+       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    at::Tensor a =
+        isFloatingType(scalar_type)
+            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type))
+            : torch::randint(1, 100, {3, 4}, torch::TensorOptions(scalar_type));
+    for (bool isFloat : {true, false}) {
+      at::Scalar b = isFloat ? at::Scalar(float(3)) : at::Scalar(int64_t(3));
+      at::Tensor c = at::true_divide(a, b);
+      ForEachDevice([&](const Device& device) {
+        at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+        at::Tensor xla_c = at::true_divide(xla_a, b);
+        AllClose(c, xla_c);
+      });
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::true_divide", cpp_test::GetIgnoredCounters());
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestDiagRank1) {
   int size = 7;
   torch::Tensor input =
