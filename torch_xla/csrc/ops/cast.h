@@ -1,6 +1,7 @@
 #pragma once
 
 #include <c10/core/ScalarType.h>
+#include <c10/util/Optional.h>
 
 #include "torch_xla/csrc/ir.h"
 
@@ -21,8 +22,11 @@ class Cast : public Node {
 
   xla::PrimitiveType type() const { return type_; }
 
+  const c10::optional<at::ScalarType>& dtype() const { return dtype_; };
+
  private:
   xla::PrimitiveType type_;
+  c10::optional<at::ScalarType> dtype_;
 };
 
 }  // namespace ops

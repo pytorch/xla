@@ -1,8 +1,8 @@
 diff --git a/torch/testing/_internal/common_device_type.py b/torch/testing/_internal/common_device_type.py
-index 01973711e7..9c7414242d 100644
+index 01973711e7..8b6c688d5b 100644
 --- a/torch/testing/_internal/common_device_type.py
 +++ b/torch/testing/_internal/common_device_type.py
-@@ -270,10 +270,118 @@ class CUDATestBase(DeviceTypeTestBase):
+@@ -270,10 +270,122 @@ class CUDATestBase(DeviceTypeTestBase):
          cls.primary_device = 'cuda:{0}'.format(torch.cuda.current_device())
  
  
@@ -110,6 +110,10 @@ index 01973711e7..9c7414242d 100644
 +                print('\nTest Graph (y):\n{}'.format(torch_xla._XLAC._get_xla_tensors_hlo([y])), file=sys.stderr)
 +        elif gmode:
 +            raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(gmode))
++        if type(x) == torch.Tensor:
++            x = x.cpu()
++        if type(y) == torch.Tensor:
++            y = y.cpu()
 +        return DeviceTypeTestBase.assertEqual(self, x, y, prec, message, allow_inf, **kwargs)
 +
 +
@@ -121,7 +125,7 @@ index 01973711e7..9c7414242d 100644
  
  PYTORCH_CUDA_MEMCHECK = os.getenv('PYTORCH_CUDA_MEMCHECK', '0') == '1'
  
-@@ -320,7 +428,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
+@@ -320,7 +432,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
                  assert inspect.isfunction(test), "Couldn't extract function from '{0}'".format(name)
  
                  # Instantiates the device-specific tests

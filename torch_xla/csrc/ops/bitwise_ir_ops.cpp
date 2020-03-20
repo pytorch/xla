@@ -8,17 +8,29 @@
 namespace torch_xla {
 namespace ir {
 namespace ops {
+namespace {
+
+template <typename F>
+xla::XlaOp LowerBitwise(xla::XlaOp lhs, xla::XlaOp rhs, const F& bit_op) {
+  std::tie(lhs, rhs) = XlaHelpers::PromoteValues(lhs, rhs);
+  return bit_op(lhs, rhs);
+}
+
+}  // namespace
 
 Value BitwiseAnd(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(op0 & op1, loctx);
+    xla::XlaOp result = LowerBitwise(
+        op0, op1, [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs & rhs; });
+    return node.ReturnOp(result, loctx);
   };
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return operands[0] & operands[1];
+    return LowerBitwise(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs & rhs; });
   };
-  XLA_CHECK_EQ(node1.shape().element_type(), node2.shape().element_type());
   return GenericOp(
       OpKind(at::aten::__and__), {node1, node2},
       [&]() {
@@ -31,12 +43,15 @@ Value BitwiseOr(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(op0 | op1, loctx);
+    xla::XlaOp result = LowerBitwise(
+        op0, op1, [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs | rhs; });
+    return node.ReturnOp(result, loctx);
   };
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return operands[0] | operands[1];
+    return LowerBitwise(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs | rhs; });
   };
-  XLA_CHECK_EQ(node1.shape().element_type(), node2.shape().element_type());
   return GenericOp(
       OpKind(at::aten::__or__), {node1, node2},
       [&]() {
@@ -49,12 +64,15 @@ Value BitwiseXor(const Value& node1, const Value& node2) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp op0 = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp op1 = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(op0 ^ op1, loctx);
+    xla::XlaOp result = LowerBitwise(
+        op0, op1, [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs ^ rhs; });
+    return node.ReturnOp(result, loctx);
   };
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return operands[0] ^ operands[1];
+    return LowerBitwise(
+        operands[0], operands[1],
+        [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs ^ rhs; });
   };
-  XLA_CHECK_EQ(node1.shape().element_type(), node2.shape().element_type());
   return GenericOp(
       OpKind(at::aten::__xor__), {node1, node2},
       [&]() {
