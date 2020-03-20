@@ -1,7 +1,11 @@
 #include "torch_xla/csrc/convert_ops.h"
 
+#include <climits>
+
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/literal_util.h"
+#include "tensorflow/compiler/xla/primitive_util.h"
+#include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -12,6 +16,38 @@ namespace {
 xla::XlaOp ExplicitBooleanConvert(xla::XlaOp op, xla::PrimitiveType from) {
   xla::XlaOp zero = xla::Zero(op.builder(), from);
   return xla::Ne(op, zero);
+}
+
+xla::XlaOp CreateRawMask(xla::XlaOp op, xla::PrimitiveType type,
+                         xla::int64 to_size, xla::int64 raw_to_size) {
+  xla::uint64 mask_value =
+      (static_cast<xla::uint64>(1) << raw_to_size * CHAR_BIT) - 1;
+  xla::XlaOp mask = XlaHelpers::ScalarValue(mask_value, type, op.builder());
+  if (xla::primitive_util::IsSignedIntegralType(type)) {
+    // Sign extend the truncation.
+    xla::XlaOp shift = XlaHelpers::ScalarValue<xla::int32>(
+        (to_size - raw_to_size) * CHAR_BIT, op.builder());
+    mask = (mask << shift) >> shift;
+  }
+  const xla::Shape& op_shape = XlaHelpers::ShapeOfXlaOp(op);
+  return op_shape.rank() > 0 ? xla::Broadcast(mask, op_shape.dimensions())
+                             : mask;
+}
+
+xla::XlaOp ConvertData(xla::XlaOp op, xla::PrimitiveType to,
+                       xla::PrimitiveType raw_to) {
+  if (!xla::primitive_util::IsIntegralType(to) ||
+      !xla::primitive_util::IsIntegralType(raw_to)) {
+    return op;
+  }
+  xla::int64 to_size = xla::ShapeUtil::ByteSizeOfPrimitiveType(to);
+  xla::int64 raw_to_size = xla::ShapeUtil::ByteSizeOfPrimitiveType(raw_to);
+  XLA_CHECK_GE(to_size, raw_to_size);
+  if (to_size == raw_to_size) {
+    return op;
+  }
+  xla::XlaOp mask = CreateRawMask(op, to, to_size, raw_to_size);
+  return op & mask;
 }
 
 }  // namespace
@@ -48,6 +84,13 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
     default:
       XLA_ERROR() << "Unsupported XLA type " << from;
   }
+}
+
+xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,
+                        xla::PrimitiveType to, xla::PrimitiveType raw_to,
+                        const Device* device) {
+  xla::XlaOp result = ConvertTo(op, from, to, device);
+  return to == raw_to ? result : ConvertData(result, to, raw_to);
 }
 
 xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {

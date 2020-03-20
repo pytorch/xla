@@ -354,13 +354,25 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
       TensorToBuffer<SType, xla::int16>(tensor, dest_shape, dest_buffer,
                                         dest_buffer_size, device);
       break;
+    case xla::PrimitiveType::U16:
+      TensorToBuffer<SType, xla::uint16>(tensor, dest_shape, dest_buffer,
+                                         dest_buffer_size, device);
+      break;
     case xla::PrimitiveType::S32:
       TensorToBuffer<SType, xla::int32>(tensor, dest_shape, dest_buffer,
                                         dest_buffer_size, device);
       break;
+    case xla::PrimitiveType::U32:
+      TensorToBuffer<SType, xla::uint32>(tensor, dest_shape, dest_buffer,
+                                         dest_buffer_size, device);
+      break;
     case xla::PrimitiveType::S64:
       TensorToBuffer<SType, xla::int64>(tensor, dest_shape, dest_buffer,
                                         dest_buffer_size, device);
+      break;
+    case xla::PrimitiveType::U64:
+      TensorToBuffer<SType, xla::uint64>(tensor, dest_shape, dest_buffer,
+                                         dest_buffer_size, device);
       break;
     default:
       XLA_ERROR() << "Destination shape type not supported: " << dest_shape;
@@ -516,10 +528,16 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
       return XlaLiteralToTensorHelper<xla::int8>(literal, dest_element_type);
     case xla::PrimitiveType::S16:
       return XlaLiteralToTensorHelper<xla::int16>(literal, dest_element_type);
+    case xla::PrimitiveType::U16:
+      return XlaLiteralToTensorHelper<xla::uint16>(literal, dest_element_type);
     case xla::PrimitiveType::S32:
       return XlaLiteralToTensorHelper<xla::int32>(literal, dest_element_type);
+    case xla::PrimitiveType::U32:
+      return XlaLiteralToTensorHelper<xla::uint32>(literal, dest_element_type);
     case xla::PrimitiveType::S64:
       return XlaLiteralToTensorHelper<xla::int64>(literal, dest_element_type);
+    case xla::PrimitiveType::U64:
+      return XlaLiteralToTensorHelper<xla::uint64>(literal, dest_element_type);
     default:
       XLA_ERROR() << "Unsupported literal type: " << literal.shape();
   }
@@ -662,6 +680,31 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
   }
 }
 
+xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type) {
+  switch (scalar_type) {
+    case at::ScalarType::Double:
+      return xla::PrimitiveType::F64;
+    case at::ScalarType::Float:
+      return xla::PrimitiveType::F32;
+    case at::ScalarType::BFloat16:
+      return xla::PrimitiveType::BF16;
+    case at::ScalarType::Bool:
+      return xla::PrimitiveType::PRED;
+    case at::ScalarType::Byte:
+      return xla::PrimitiveType::U8;
+    case at::ScalarType::Char:
+      return xla::PrimitiveType::S8;
+    case at::ScalarType::Short:
+      return xla::PrimitiveType::S16;
+    case at::ScalarType::Int:
+      return xla::PrimitiveType::S32;
+    case at::ScalarType::Long:
+      return xla::PrimitiveType::S64;
+    default:
+      XLA_ERROR() << "Type not supported: " << scalar_type;
+  }
+}
+
 xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
                                           const Device* device) {
   Device xla_device = GetDeviceOrCurrent(device);
@@ -678,13 +721,13 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
       return UseBF16() ? xla::PrimitiveType::BF16 : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U8:
       return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::U8
-                                                   : xla::PrimitiveType::S32;
+                                                   : xla::PrimitiveType::U32;
     case xla::PrimitiveType::S8:
       return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::S8
                                                    : xla::PrimitiveType::S32;
     case xla::PrimitiveType::U16:
       return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::U16
-                                                   : xla::PrimitiveType::S32;
+                                                   : xla::PrimitiveType::U32;
     case xla::PrimitiveType::S16:
       return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::S16
                                                    : xla::PrimitiveType::S32;

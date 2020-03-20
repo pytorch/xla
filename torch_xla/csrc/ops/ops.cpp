@@ -214,6 +214,11 @@ NodePtr Clamp(const Value& input, const Value& min, const Value& max) {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_min = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_max = loctx->GetOutputOp(node.operand(2));
+    xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
+    xla_min = ConvertTo(xla_min, XlaHelpers::TypeOfXlaOp(xla_min), input_type,
+                        /*device=*/nullptr);
+    xla_max = ConvertTo(xla_max, XlaHelpers::TypeOfXlaOp(xla_max), input_type,
+                        /*device=*/nullptr);
     return node.ReturnOp(xla::Clamp(xla_min, xla_input, xla_max), loctx);
   };
   return GenericOp(OpKind(at::aten::clamp), {input, min, max}, input.shape(),
@@ -378,13 +383,25 @@ NodePtr ARange(at::Scalar start, at::Scalar end, at::Scalar step,
       values = XlaHelpers::Range<xla::int16>(start.toShort(), end.toShort(),
                                              step.toShort());
       break;
+    case xla::PrimitiveType::U16:
+      values = XlaHelpers::Range<xla::uint16>(start.toInt(), end.toInt(),
+                                              step.toInt());
+      break;
     case xla::PrimitiveType::S32:
       values = XlaHelpers::Range<xla::int32>(start.toInt(), end.toInt(),
                                              step.toInt());
       break;
+    case xla::PrimitiveType::U32:
+      values = XlaHelpers::Range<xla::uint32>(start.toLong(), end.toLong(),
+                                              step.toLong());
+      break;
     case xla::PrimitiveType::S64:
       values = XlaHelpers::Range<xla::int64>(start.toLong(), end.toLong(),
                                              step.toLong());
+      break;
+    case xla::PrimitiveType::U64:
+      values = XlaHelpers::Range<xla::uint64>(start.toLong(), end.toLong(),
+                                              step.toLong());
       break;
     default:
       XLA_ERROR() << "XLA type not supported: " << type;
