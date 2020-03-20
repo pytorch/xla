@@ -45,7 +45,7 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '0.8')
+  version = os.getenv('TORCH_XLA_VERSION', '1.6')
   if _check_env_flag('VERSIONED_XLA_BUILD', default='0'):
     try:
       version += '+' + xla_git_sha[:7]
