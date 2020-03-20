@@ -410,7 +410,17 @@ xla::PrimitiveType XlaHelpers::PromoteType(xla::PrimitiveType type1,
   }
   if (xla::primitive_util::IsIntegralType(type1) &&
       xla::primitive_util::IsIntegralType(type2)) {
-    return size1 >= size2 ? type1 : type2;
+    if (size1 > size2) {
+      return type1;
+    }
+    if (size2 > size1) {
+      return type2;
+    }
+    // At this point, they are not the same type, they are both integers, and
+    // they have the same size. One of them must be unsigned and the other
+    // signed, convert to unsigned.
+    return xla::primitive_util::UnsignedIntegralTypeForBitWidth(
+        xla::primitive_util::BitWidth(type1));
   }
   if (type1 == xla::PrimitiveType::PRED) {
     return type2;

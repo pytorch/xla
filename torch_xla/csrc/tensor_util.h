@@ -56,6 +56,8 @@ xla::Shape CreateComputationShapeFromTensor(const at::Tensor& tensor,
 
 at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type);
 
+xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type);
+
 // Maps an XLA type to the one which can be used on the given device (or the
 // default device, id device is nullptr).
 xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,

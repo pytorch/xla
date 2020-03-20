@@ -8,8 +8,7 @@
 namespace torch_xla {
 
 // Computes binary comparison operations.
-xla::XlaOp BuildComparisonOp(c10::Symbol kind, xla::XlaOp input,
-                             xla::XlaOp other);
+xla::XlaOp BuildComparisonOp(c10::Symbol kind, xla::XlaOp lhs, xla::XlaOp rhs);
 
 // Computes the elementwise threshold of the input: if the value is below the
 // threshold, replace it with the provided value, otherwise leave it unchanged.
