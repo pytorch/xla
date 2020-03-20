@@ -129,8 +129,8 @@ xla::XlaOp BuildDiagonalViewUpdate(xla::XlaOp target, xla::XlaOp input,
 
 xla::XlaOp BuildInverse(xla::XlaOp input) {
   xla::QRDecompositionResult qr_result =
-      xla::QRDecomposition(input, /*full_matrices=*/false,
-                           XlaHelpers::mat_mul_precision())
+      xla::QRDecomposition(input, /*full_matrices=*/false, /*block_size=*/128,
+                           /*precision=*/XlaHelpers::mat_mul_precision())
           .ValueOrDie();
   return xla::TriangularSolve(qr_result.r,
                               xla::TransposeInMinorDims(qr_result.q),
