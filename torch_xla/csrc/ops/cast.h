@@ -12,7 +12,8 @@ namespace ops {
 class Cast : public Node {
  public:
   Cast(const Value& input, xla::PrimitiveType type);
-  Cast(const Value& input, at::ScalarType dtype);
+  Cast(const Value& input, at::ScalarType dtype,
+       c10::optional<at::ScalarType> stype = c10::nullopt);
 
   std::string ToString() const override;
 
@@ -24,9 +25,12 @@ class Cast : public Node {
 
   const c10::optional<at::ScalarType>& dtype() const { return dtype_; };
 
+  const c10::optional<at::ScalarType>& stype() const { return stype_; };
+
  private:
   xla::PrimitiveType type_;
   c10::optional<at::ScalarType> dtype_;
+  c10::optional<at::ScalarType> stype_;
 };
 
 }  // namespace ops

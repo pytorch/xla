@@ -2991,16 +2991,14 @@ at::Tensor AtenXlaType::true_divide(const at::Tensor& self,
                                     const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   std::pair<XLATensor, XLATensor> operands = GetBinaryOperands(self, other);
-  XLATensor result = XLATensor::true_divide(operands.first, operands.second);
-  result.SetScalarType(at::typeMetaToScalarType(c10::get_default_dtype()));
-  return bridge::AtenFromXlaTensor(result);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::true_divide(operands.first, operands.second));
 }
 
 at::Tensor AtenXlaType::true_divide(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
-  XLATensor result = XLATensor::true_divide(bridge::GetXlaTensor(self), other);
-  result.SetScalarType(at::typeMetaToScalarType(c10::get_default_dtype()));
-  return bridge::AtenFromXlaTensor(result);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::true_divide(bridge::GetXlaTensor(self), other));
 }
 
 at::Tensor AtenXlaType::trunc(const at::Tensor& self) {

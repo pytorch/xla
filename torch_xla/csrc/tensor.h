@@ -59,6 +59,7 @@ class XLATensor {
   void UpdateFromTensorOut(const XLATensor& tensor);
 
   at::ScalarType dtype() const;
+  c10::optional<at::ScalarType> dtype_optional() const;
 
   // Set logical_element_type which is visible to upstream PyTorch.
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
@@ -1142,6 +1143,10 @@ class XLATensor {
   XLATensor CreateViewTensor(ViewInfo view_info) const;
 
   XLATensor CopyTensorToDevice(const Device& device);
+
+  ir::Value MaybeCastIrValue(
+      ir::Value ir_value, const Device& device,
+      c10::optional<at::ScalarType> logical_element_type) const;
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
