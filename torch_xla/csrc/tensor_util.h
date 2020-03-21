@@ -67,6 +67,8 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
 xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
                                         const Device* device);
 
+bool RequiresRawTypeCasting(at::ScalarType scalar_type, const Device* device);
+
 xla::PrimitiveType GetShapeDimensionType(const Device* device);
 
 }  // namespace torch_xla
