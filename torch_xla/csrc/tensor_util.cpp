@@ -766,6 +766,18 @@ xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
   }
 }
 
+bool RequiresRawTypeCasting(at::ScalarType scalar_type, const Device* device) {
+  switch (scalar_type) {
+    case at::ScalarType::Byte:
+    case at::ScalarType::Char:
+    case at::ScalarType::Short:
+      return MakeXlaPrimitiveType(scalar_type, device) !=
+             TensorTypeToRawXlaType(scalar_type);
+    default:
+      return false;
+  }
+}
+
 xla::PrimitiveType GetShapeDimensionType(const Device* device) {
   Device xla_device = GetDeviceOrCurrent(device);
   return xla_device.hw_type == DeviceType::CPU ? xla::PrimitiveType::S64

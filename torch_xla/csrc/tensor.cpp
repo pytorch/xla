@@ -456,6 +456,10 @@ at::ScalarType XLATensor::dtype() const {
              : TensorTypeFromXlaType(shape().get().element_type());
 }
 
+c10::optional<at::ScalarType> XLATensor::dtype_optional() const {
+  return data()->logical_element_type;
+}
+
 xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   if (data()->view != nullptr) {
     return data()->view->shape();
@@ -732,7 +736,8 @@ std::shared_ptr<View> XLATensor::CreateView(ViewInfo view_info) const {
 }
 
 XLATensor XLATensor::CreateViewTensor(ViewInfo view_info) const {
-  return Create(CreateView(std::move(view_info)), GetDevice(), dtype());
+  return Create(CreateView(std::move(view_info)), GetDevice(),
+                dtype_optional());
 }
 
 at::Tensor XLATensor::ToTensor() {
@@ -924,32 +929,51 @@ XLATensor XLATensor::CopyTensorToDevice(const Device& device) {
   return Create(ToTensor(), device);
 }
 
+ir::Value XLATensor::MaybeCastIrValue(
+    ir::Value ir_value, const Device& device,
+    c10::optional<at::ScalarType> logical_element_type) const {
+  if (!logical_element_type) {
+    logical_element_type = dtype_optional();
+  }
+  if (logical_element_type &&
+      RequiresRawTypeCasting(*logical_element_type, &device)) {
+    ir_value = ir::MakeNode<ir::ops::Cast>(ir_value, *logical_element_type);
+  }
+  return ir_value;
+}
+
 XLATensor XLATensor::CreateFrom(ir::Value ir_value) const {
-  return Create(std::move(ir_value), GetDevice(), dtype());
+  ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
+                              /*logical_element_type=*/c10::nullopt);
+  return Create(std::move(ir_value), GetDevice(), dtype_optional());
 }
 
 XLATensor XLATensor::CreateFrom(ir::Value ir_value,
                                 const Device& device) const {
-  return Create(std::move(ir_value), device, dtype());
+  ir_value = MaybeCastIrValue(std::move(ir_value), device,
+                              /*logical_element_type=*/c10::nullopt);
+  return Create(std::move(ir_value), device, dtype_optional());
 }
 
 XLATensor XLATensor::CreateFrom(ir::Value ir_value,
                                 at::ScalarType logical_element_type) const {
+  ir_value =
+      MaybeCastIrValue(std::move(ir_value), GetDevice(), logical_element_type);
   return Create(std::move(ir_value), GetDevice(), logical_element_type);
 }
 
 XLATensor XLATensor::CreateFrom(
     ir::Value ir_value,
     c10::optional<at::ScalarType> logical_element_type_opt) const {
-  if (logical_element_type_opt) {
-    return CreateFrom(ir_value, *logical_element_type_opt);
-  } else {
-    return CreateFrom(ir_value);
-  }
+  ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
+                              logical_element_type_opt);
+  return Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
 }
 
 XLATensor XLATensor::CreateFrom(ir::Value ir_value, const Device& device,
                                 at::ScalarType logical_element_type) const {
+  ir_value =
+      MaybeCastIrValue(std::move(ir_value), device, logical_element_type);
   return Create(std::move(ir_value), device, logical_element_type);
 }
 

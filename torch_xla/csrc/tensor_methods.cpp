@@ -847,6 +847,9 @@ XLATensor XLATensor::cumprod(const XLATensor& input, xla::int64 dim,
                              c10::optional<at::ScalarType> dtype) {
   xla::int64 canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  if (!dtype) {
+    dtype = input.dtype_optional();
+  }
   return input.CreateFrom(
       ir::MakeNode<ir::ops::CumProd>(input.GetIrValue(), canonical_dim, dtype),
       dtype);
@@ -856,6 +859,9 @@ XLATensor XLATensor::cumsum(const XLATensor& input, xla::int64 dim,
                             c10::optional<at::ScalarType> dtype) {
   xla::int64 canonical_dim =
       XlaHelpers::GetCanonicalDimensionIndex(dim, input.shape().get().rank());
+  if (!dtype) {
+    dtype = input.dtype_optional();
+  }
   return input.CreateFrom(
       ir::MakeNode<ir::ops::CumSum>(input.GetIrValue(), canonical_dim, dtype),
       dtype);
@@ -1396,6 +1402,9 @@ XLATensor XLATensor::log_sigmoid_backward(const XLATensor& grad_output,
 
 XLATensor XLATensor::log_softmax(const XLATensor& input, xla::int64 dim,
                                  c10::optional<at::ScalarType> dtype) {
+  if (!dtype) {
+    dtype = input.dtype_optional();
+  }
   return input.CreateFrom(
       ir::MakeNode<ir::ops::LogSoftmax>(input.GetIrValue(),
                                         XlaHelpers::GetCanonicalDimensionIndex(
@@ -1545,6 +1554,9 @@ XLATensor XLATensor::mean(const XLATensor& input,
                           std::vector<xla::int64> dimensions,
                           bool keep_reduced_dimensions,
                           c10::optional<at::ScalarType> dtype) {
+  if (!dtype) {
+    dtype = input.dtype_optional();
+  }
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Mean>(input.GetIrValue(),
                                   XlaHelpers::GetCanonicalDimensionIndices(
@@ -1761,6 +1773,9 @@ XLATensor XLATensor::norm(const XLATensor& input, c10::optional<at::Scalar> p,
                           at::IntArrayRef dim, bool keepdim) {
   auto canonical_dims = XlaHelpers::GetCanonicalDimensionIndices(
       XlaHelpers::I64List(dim), input.shape().get().rank());
+  if (!dtype) {
+    dtype = input.dtype_optional();
+  }
   return input.CreateFrom(
       ir::ops::Norm(input.GetIrValue(), p, dtype, canonical_dims, keepdim));
 }
@@ -1784,7 +1799,7 @@ XLATensor XLATensor::normal(const XLATensor& mean, const XLATensor& std) {
 }
 
 void XLATensor::normal_(XLATensor& input, double mean, double std) {
-  input.SetIrValue(ir::MakeNode<ir::ops::Normal>(
+  input.SetInPlaceIrValue(ir::MakeNode<ir::ops::Normal>(
       GetIrValueForScalar(mean, input.shape(), input.GetDevice()),
       GetIrValueForScalar(std, input.shape(), input.GetDevice()),
       GenRngSeed()));
@@ -1838,6 +1853,9 @@ XLATensor XLATensor::prod(const XLATensor& input,
                           std::vector<xla::int64> dimensions,
                           bool keep_reduced_dimensions,
                           c10::optional<at::ScalarType> dtype) {
+  if (!dtype) {
+    dtype = input.dtype_optional();
+  }
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Prod>(input.GetIrValue(),
                                   XlaHelpers::GetCanonicalDimensionIndices(
@@ -1977,7 +1995,8 @@ void XLATensor::copy_(XLATensor& input, XLATensor& src) {
     if (input.dtype() == src.dtype()) {
       copy_value = src.GetIrValue();
     } else {
-      copy_value = ir::MakeNode<ir::ops::Cast>(src.GetIrValue(), input.dtype());
+      copy_value = ir::MakeNode<ir::ops::Cast>(src.GetIrValue(), input.dtype(),
+                                               src.dtype());
     }
     input.SetIrValue(MaybeExpand(copy_value, input.shape()));
   } else {
@@ -2093,6 +2112,9 @@ XLATensor XLATensor::smooth_l1_loss_backward(const XLATensor& grad_output,
 
 XLATensor XLATensor::softmax(const XLATensor& input, xla::int64 dim,
                              c10::optional<at::ScalarType> dtype) {
+  if (!dtype) {
+    dtype = input.dtype_optional();
+  }
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Softmax>(input.GetIrValue(),
                                      XlaHelpers::GetCanonicalDimensionIndex(
@@ -2236,6 +2258,8 @@ XLATensor XLATensor::sum(const XLATensor& input,
                          c10::optional<at::ScalarType> dtype) {
   if (at::isIntegralType(input.dtype(), /*includeBool=*/true) && !dtype) {
     dtype = at::ScalarType::Long;
+  } else if (!dtype) {
+    dtype = input.dtype_optional();
   }
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Sum>(input.GetIrValue(),
@@ -2420,31 +2444,32 @@ void XLATensor::triu_(XLATensor& input, xla::int64 diagonal) {
 
 XLATensor XLATensor::true_divide(const XLATensor& input,
                                  const XLATensor& other) {
+  at::ScalarType scalar_type =
+      at::typeMetaToScalarType(c10::get_default_dtype());
   ir::Value input_value = input.GetIrValue();
   ir::Value other_value = other.GetIrValue();
   if (!xla::primitive_util::IsFloatingPointType(
           input_value.shape().element_type())) {
-    input_value =
-        ir::MakeNode<ir::ops::Cast>(input_value, at::ScalarType::Float);
+    input_value = ir::MakeNode<ir::ops::Cast>(input_value, scalar_type);
   }
   if (!xla::primitive_util::IsFloatingPointType(
           other_value.shape().element_type())) {
-    other_value =
-        ir::MakeNode<ir::ops::Cast>(other_value, at::ScalarType::Float);
+    other_value = ir::MakeNode<ir::ops::Cast>(other_value, scalar_type);
   }
-  return input.CreateFrom(input_value / other_value);
+  return input.CreateFrom(input_value / other_value, scalar_type);
 }
 
 XLATensor XLATensor::true_divide(const XLATensor& input, at::Scalar other) {
+  at::ScalarType scalar_type =
+      at::typeMetaToScalarType(c10::get_default_dtype());
   ir::Value input_value = input.GetIrValue();
   ir::Value other_value =
       GetIrValueForScalar(other, xla::PrimitiveType::F32, input.GetDevice());
   if (!xla::primitive_util::IsFloatingPointType(
           input_value.shape().element_type())) {
-    input_value =
-        ir::MakeNode<ir::ops::Cast>(input_value, at::ScalarType::Float);
+    input_value = ir::MakeNode<ir::ops::Cast>(input_value, scalar_type);
   }
-  return input.CreateFrom(input_value / other_value);
+  return input.CreateFrom(input_value / other_value, scalar_type);
 }
 
 XLATensor XLATensor::trunc(const XLATensor& input) {
