@@ -187,6 +187,29 @@ def remove(path):
   torch_xla._XLAC._xla_tffs_remove(path)
 
 
+def rmtree(path):
+  """Removes all the GCS blobs within a given path.
+
+  Args:
+    path (string): The GCS path of the file pattern or folder. Must be
+      "gs://BUCKET_NAME/PATH" where ``BUCKET_NAME`` is the name of the GCS
+        bucket, and ``PATH`` is a `/` delimited path.
+  """
+  if path.find('*') < 0:
+    if not path.endswith('/'):
+      path += '/'
+    path += '*'
+  ex = None
+  for blob in list(path):
+    try:
+      if not blob.isdir:
+        remove(blob.path)
+    except Exception as e:
+      ex = e
+  if ex is not None:
+    raise ex
+
+
 def read(path):
   """Reads the whole content of a GCS blob.
 
@@ -219,8 +242,10 @@ def write(path, content):
 
 
 def generic_write(output_string, output_path):
-  """Write a string/bytes or file into a GCS blob or local disk, depending
-  on the output_path passed in. Checks if the `output_path` starts with
+  """Write a string/bytes or file into a GCS blob or local disk.
+
+  Depending on the output_path passed in, this API can write to local or GCS
+  file. Checks if the `output_path` starts with
   the 'gs://' prefix, and uses `open` otherwise.
 
   Args:
@@ -235,8 +260,7 @@ def generic_write(output_string, output_path):
 
 
 def generic_read(path):
-  """Reads the whole content of the provided location. Has to be a GCS path or
-  a local path.
+  """Reads the whole content of the provided location.
 
   Args:
     path (string): The GCS path or local path to be read.

@@ -389,7 +389,8 @@ py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
             (i + 1 < num_threads) ? block_size : (size - i * block_size);
 
         tensorflow::StringPiece result;
-        XLA_CHECK_OK(file->Read(offset, tsize, &result, buffer.get() + base));
+        XLA_CHECK_OK(
+            file->Read(offset + base, tsize, &result, buffer.get() + base));
       };
       xla::env::ScheduleIoClosure(mwait.Completer(std::move(reader)));
     }
