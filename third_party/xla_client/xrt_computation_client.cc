@@ -1666,30 +1666,34 @@ const XrtSession::CachedNode& XrtComputationClient::GetSubTupleNode(
 tensorflow::DataType XrtComputationClient::XlaTypeToDataType(
     PrimitiveType dtype) {
   switch (dtype) {
-    case PRED:
+    case PrimitiveType::PRED:
       return tensorflow::DT_BOOL;
-    case S8:
+    case PrimitiveType::S8:
       return tensorflow::DT_INT8;
-    case U8:
+    case PrimitiveType::U8:
       return tensorflow::DT_UINT8;
-    case S16:
+    case PrimitiveType::S16:
       return tensorflow::DT_INT16;
-    case U16:
+    case PrimitiveType::U16:
       return tensorflow::DT_UINT16;
-    case S32:
+    case PrimitiveType::S32:
       return tensorflow::DT_INT32;
-    case U32:
+    case PrimitiveType::U32:
       return tensorflow::DT_UINT32;
-    case S64:
+    case PrimitiveType::S64:
       return tensorflow::DT_INT64;
-    case U64:
+    case PrimitiveType::U64:
       return tensorflow::DT_UINT64;
-    case F32:
+    case PrimitiveType::F32:
       return tensorflow::DT_FLOAT;
-    case F64:
+    case PrimitiveType::F64:
       return tensorflow::DT_DOUBLE;
-    case BF16:
+    case PrimitiveType::BF16:
       return tensorflow::DT_BFLOAT16;
+    case PrimitiveType::C64:
+      return tensorflow::DT_COMPLEX64;
+    case PrimitiveType::C128:
+      return tensorflow::DT_COMPLEX128;
     default:
       break;
   }

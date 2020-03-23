@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/client/lib/prng.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
+#include "torch_xla/csrc/helpers.h"
 
 namespace torch_xla {
 namespace {
@@ -49,6 +50,25 @@ xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
       return xla::UniformFloatingPointDistribution(
                  seed, initial_state, GetBitGenerator(), minval, maxval, shape)
           .value;
+    case xla::PrimitiveType::C64:
+    case xla::PrimitiveType::C128: {
+      xla::XlaOp k_seed = XlaHelpers::ScalarValue<xla::uint64>(
+          17, XlaHelpers::TypeOfXlaOp(seed), seed.builder());
+      xla::Shape rng_shape(shape);
+      rng_shape.set_element_type(xla::PrimitiveType::F32);
+      xla::XlaOp rng_real =
+          xla::UniformFloatingPointDistribution(
+              seed, initial_state, GetBitGenerator(), minval, maxval, rng_shape)
+              .value;
+      xla::XlaOp rng_imag = xla::UniformFloatingPointDistribution(
+                                seed * k_seed, initial_state, GetBitGenerator(),
+                                minval, maxval, rng_shape)
+                                .value;
+      xla::XlaOp rng = xla::Complex(rng_real, rng_imag);
+      return shape.element_type() == xla::PrimitiveType::C64
+                 ? rng
+                 : xla::ConvertElementType(rng, xla::PrimitiveType::C128);
+    }
     case xla::PrimitiveType::S32:
     case xla::PrimitiveType::U32:
     case xla::PrimitiveType::S64:
@@ -85,6 +105,26 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
       xla::XlaOp rng = xla::NormalFloatingPointDistribution(
                            seed, initial_state, GetBitGenerator(), shape)
                            .value;
+      return mean + rng * std;
+    }
+    case xla::PrimitiveType::C64:
+    case xla::PrimitiveType::C128: {
+      xla::XlaOp k_seed = XlaHelpers::ScalarValue<xla::uint64>(
+          17, XlaHelpers::TypeOfXlaOp(seed), seed.builder());
+      xla::Shape rng_shape(shape);
+      rng_shape.set_element_type(xla::PrimitiveType::F32);
+      xla::XlaOp rng_real =
+          xla::NormalFloatingPointDistribution(seed, initial_state,
+                                               GetBitGenerator(), rng_shape)
+              .value;
+      xla::XlaOp rng_imag =
+          xla::NormalFloatingPointDistribution(seed * k_seed, initial_state,
+                                               GetBitGenerator(), rng_shape)
+              .value;
+      xla::XlaOp rng = xla::Complex(rng_real, rng_imag);
+      if (shape.element_type() == xla::PrimitiveType::C128) {
+        rng = xla::ConvertElementType(rng, xla::PrimitiveType::C128);
+      }
       return mean + rng * std;
     }
     default:
