@@ -400,6 +400,14 @@ xla::PrimitiveType XlaHelpers::PromoteType(xla::PrimitiveType type1,
   }
   xla::int64 size1 = xla::ShapeUtil::ByteSizeOfPrimitiveType(type1);
   xla::int64 size2 = xla::ShapeUtil::ByteSizeOfPrimitiveType(type2);
+  if (xla::primitive_util::IsComplexType(type1)) {
+    return (!xla::primitive_util::IsComplexType(type2) || size1 >= size2)
+               ? type1
+               : type2;
+  }
+  if (xla::primitive_util::IsComplexType(type2)) {
+    return type2;
+  }
   if (xla::primitive_util::IsFloatingPointType(type1)) {
     return (!xla::primitive_util::IsFloatingPointType(type2) || size1 >= size2)
                ? type1
