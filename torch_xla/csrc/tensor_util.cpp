@@ -761,6 +761,10 @@ xla::PrimitiveType MakeXlaPrimitiveType(at::ScalarType scalar_type,
       return GetDevicePrimitiveType(xla::PrimitiveType::S32, device);
     case at::ScalarType::Long:
       return GetDevicePrimitiveType(xla::PrimitiveType::S64, device);
+    case at::ScalarType::ComplexFloat:
+      return GetDevicePrimitiveType(xla::PrimitiveType::C64, device);
+    case at::ScalarType::ComplexDouble:
+      return GetDevicePrimitiveType(xla::PrimitiveType::C128, device);
     default:
       XLA_ERROR() << "Type not supported: " << scalar_type;
   }
