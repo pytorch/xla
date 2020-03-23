@@ -88,7 +88,7 @@ class DistributedExecutor(object):
     self.logger = self._get_logger()
     self.docker_container = docker_container or self.DEFAULT_CONTAINER_NAME
     self.docker_image = docker_image
-    self.docker_run_flags = list(docker_run_flags) if docker_run_flags else None
+    self.docker_run_flags = list(docker_run_flags) if docker_run_flags else []
     self.conda_env = conda_env
     self.env_vars = list(env_vars) if env_vars else []
 
