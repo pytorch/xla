@@ -445,12 +445,12 @@ class AtenXlaType {
   static at::Tensor inverse(const at::Tensor& self);
 
   static at::Tensor kl_div(const at::Tensor& self, const at::Tensor& target,
-                           int64_t reduction);
+                           int64_t reduction, bool log_target);
 
   static at::Tensor kl_div_backward(const at::Tensor& grad_output,
                                     const at::Tensor& self,
-                                    const at::Tensor& target,
-                                    int64_t reduction);
+                                    const at::Tensor& target, int64_t reduction,
+                                    bool log_target);
 
   static std::tuple<at::Tensor, at::Tensor> kthvalue(const at::Tensor& self,
                                                      int64_t k, int64_t dim,

@@ -59,15 +59,22 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
 }
 
 XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
-                        const XLATensor& target, ReductionMode reduction) {
+                        const XLATensor& target, ReductionMode reduction,
+                        bool log_target) {
   auto input_shape_ref = input.shape();
   XLATensor expanded_grad_output = XLATensor::expand(
       grad_output,
       xla::util::ToVector<xla::int64>(input_shape_ref.get().dimensions()));
-  XLATensor grad_input = XLATensor::where(
-      XLATensor::gt(target, 0),
-      XLATensor::neg(XLATensor::mul(target, expanded_grad_output)),
-      XLATensor::full_like(input, 0, input.GetDevice(), c10::nullopt));
+  XLATensor grad_input;
+  if (!log_target) {
+    grad_input = XLATensor::where(
+        XLATensor::gt(target, 0),
+        XLATensor::neg(XLATensor::mul(target, expanded_grad_output)),
+        XLATensor::full_like(input, 0, input.GetDevice(), c10::nullopt));
+  } else {
+    grad_input = XLATensor::neg(
+        XLATensor::mul(XLATensor::exp(target), expanded_grad_output));
+  }
   if (reduction == ReductionMode::kMean) {
     XLATensor dims_size = XLATensor::get_dimensions_size(
         input, XlaHelpers::GetAllDimensions(input_shape_ref));

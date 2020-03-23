@@ -1274,9 +1274,9 @@ XLATensor XLATensor::inverse(const XLATensor& input) {
 XLATensor XLATensor::kl_div_backward(const XLATensor& grad_output,
                                      const XLATensor& input,
                                      const XLATensor& target,
-                                     xla::int64 reduction) {
+                                     xla::int64 reduction, bool log_target) {
   return tensor_ops::KlDivBackward(grad_output, input, target,
-                                   GetXlaReductionMode(reduction));
+                                   GetXlaReductionMode(reduction), log_target);
 }
 
 std::tuple<XLATensor, XLATensor> XLATensor::kthvalue(const XLATensor& input,
