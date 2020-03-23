@@ -1806,16 +1806,21 @@ TEST_F(AtenXlaTensorTest, TestKlDiv) {
       torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor target =
       torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
-  for (torch::Reduction::Reduction reduction :
-       {torch::Reduction::Mean, torch::Reduction::Sum}) {
-    ForEachDevice([&](const torch::Device& device) {
-      torch::Tensor output = torch::kl_div(input, target, reduction);
-      torch::Tensor xla_input = CopyToDevice(input, device);
-      torch::Tensor xla_target = CopyToDevice(target, device);
-      torch::Tensor xla_output =
-          torch::kl_div(xla_input, xla_target, reduction);
-      AllClose(output, xla_output);
-    });
+  for (bool log_target : {true, false}) {
+    for (torch::Reduction::Reduction reduction :
+         {torch::Reduction::Mean, torch::Reduction::Sum}) {
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor output =
+            torch::kl_div(input, target, reduction, log_target);
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        torch::Tensor xla_target = CopyToDevice(target, device);
+        torch::Tensor xla_output =
+            torch::kl_div(xla_input, xla_target, reduction, log_target);
+        AllClose(output, xla_output);
+      });
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::kl_div", cpp_test::GetIgnoredCounters());
+    }
   }
 }
 

@@ -14,7 +14,8 @@ XLATensor Cross(const XLATensor& input, const XLATensor& other,
                 c10::optional<xla::int64> dim);
 
 XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
-                        const XLATensor& target, ReductionMode reduction);
+                        const XLATensor& target, ReductionMode reduction,
+                        bool log_target);
 
 XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal);
 

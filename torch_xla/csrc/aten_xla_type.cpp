@@ -1499,19 +1499,19 @@ at::Tensor AtenXlaType::inverse(const at::Tensor& self) {
 }
 
 at::Tensor AtenXlaType::kl_div(const at::Tensor& self, const at::Tensor& target,
-                               int64_t reduction) {
+                               int64_t reduction, bool log_target) {
   XLA_FN_COUNTER("xla::");
-  return at::native::kl_div(self, target, reduction);
+  return at::native::kl_div(self, target, reduction, log_target);
 }
 
 at::Tensor AtenXlaType::kl_div_backward(const at::Tensor& grad_output,
                                         const at::Tensor& self,
                                         const at::Tensor& target,
-                                        int64_t reduction) {
+                                        int64_t reduction, bool log_target) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::kl_div_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(target), reduction));
+      bridge::GetXlaTensor(target), reduction, log_target));
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::kthvalue(const at::Tensor& self,
