@@ -157,6 +157,7 @@ disabled_torch_tests = {
     'test_argminmax_large_axis',  # OOM, and the test is grepping "memory" in the exception message
     'test_trapz', # precision (1e-5), test use np.allClose
     'test_random_from_to_xla_int32', # precision, TPU does not have real F64
+    'test_floor_divide_tensor_xla_uint8', # signed -> unsigned conversion overflow
 
     # TestViewOps
     'test_contiguous_nonview',
@@ -178,6 +179,7 @@ disabled_torch_tests = {
     'test_index_put_byte_indices',  # FIXME: Indexing with uint8 tensor is no longer allowed.
     'test_getitem_scalars',  # storage
     'test_empty_ndim_index',  # expecting a different runtime error
+    'test_index_put_accumulate_large_tensor', # oom on JF
 
     # NumpyTests
     'test_trivial_fancy_out_of_bounds',  # expecting a different runtime error
