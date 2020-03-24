@@ -20,19 +20,29 @@ if which sccache > /dev/null; then
   sccache --zero-stats
 fi
 
-# Try rebasing on top of pytorch/xla master first.
+# TODO: directly use ENV_VAR when CircleCi exposes base branch.
+# Try rebasing on top of base (dest) branch first.
 # This allows us to pickup the latest fix for PT-XLA breakage.
 # Also it might improve build time as we have warm cache.
 git config --global user.email "circleci.ossci@gmail.com"
 git config --global user.name "CircleCI"
-git rebase origin/master
+sudo apt-get update && sudo apt-get -qq install jq
+PR_NUM=$(basename $CIRCLE_PULL_REQUEST)
+CIRCLE_PR_BASE_BRANCH=$(curl -s https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls/$PR_NUM | jq -r '.base.ref')
+git rebase "origin/${CIRCLE_PR_BASE_BRANCH}"
 
 PYTORCH_DIR=/tmp/pytorch
 XLA_DIR="$PYTORCH_DIR/xla"
-git clone --recursive --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
+git clone --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
 cp -r "$PWD" "$XLA_DIR"
 
 cd $PYTORCH_DIR
+# Checkout specific commit ID/branch if pinned.
+COMMITID_FILE="xla/.torch_pin"
+if [ -e "$COMMITID_FILE" ]; then
+  git checkout $(cat "$COMMITID_FILE")
+fi
+git submodule update --init --recursive
 
 # Install ninja to speedup the build
 pip install ninja
