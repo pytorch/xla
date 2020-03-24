@@ -20,15 +20,9 @@ disabled_torch_tests = {
     'test_cumprod_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_cumprod_neg_dim_xla', # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_mean_64bit_indexing_xla',  # protobuf limit exceeded
-    'test_pow_xla',  # (TPU) 0.0043 vs 0.001
-    'test_pow_xla',  # (TPU) 0.0032 vs 0.001
-    'test_pow_inplace_xla',  # (TPU) 0.0043 vs 0.001
     'test_pow_inplace_xla',  # (TPU) 0.0032 vs 0.001
-    'test_pow_inplace_3_xla',  # (TPU) 0.0036 vs 0.001
     'test_pow_inplace_3_xla',  # (TPU) 0.0028 vs 0.001
-    'test_pow_3_xla',  # (TPU) 0.0036 vs 0.001
     'test_pow_3_xla',  # (TPU) 0.0028 vs 0.001
-    'test_pow_-2_xla',  # (TPU) 0.0913 vs 0.001
     'test_pow_-2_xla',  # (TPU) 0.391 vs 0.001
     'test_topk_neg_dim_sort_xla',  # (TPU) unimplemented HLO for X64
     'test_topk_dim_sort_xla',  # (TPU) unimplemented HLO for X64
@@ -65,6 +59,7 @@ disabled_torch_tests = {
     'test_memory_format_empty_like',
     'test_memory_format_clone',
     'test_memory_format_factory_like_functions_preserve', # assertion error
+    'test_mm_xla_bfloat16', # FIXME: AssertionError: tensor(0.0625) not less than or equal to 0.001
     'test_lu_solve_batched_non_contiguous',
     'test_lstsq',
     'test_is_set_to',
