@@ -29,10 +29,16 @@ git rebase origin/master
 
 PYTORCH_DIR=/tmp/pytorch
 XLA_DIR="$PYTORCH_DIR/xla"
-git clone --recursive --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
+git clone --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
 cp -r "$PWD" "$XLA_DIR"
 
 cd $PYTORCH_DIR
+# Checkout specific commit ID/branch if pinned.
+COMMITID_FILE="xla/.torch_pin"
+if [ -e "$COMMITID_FILE" ]; then
+  git checkout $(cat "$COMMITID_FILE")
+fi
+git submodule update --init --recursive
 
 # Install ninja to speedup the build
 pip install ninja
