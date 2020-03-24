@@ -170,7 +170,6 @@ disabled_torch_tests = {
     'test_byte_mask_accumulate', # expecting a different runtime error
     'test_bool_indices', # expecting a different runtime error
     'test_index_getitem_copy_bools_slices',  # storage
-    'test_index_put_byte_indices',  # FIXME: Indexing with uint8 tensor is no longer allowed.
     'test_getitem_scalars',  # storage
     'test_empty_ndim_index',  # expecting a different runtime error
 
@@ -211,7 +210,7 @@ disabled_torch_tests = {
     # TestTypePromotion
     'test_many_promotions', # stride
     'test_inplace', # expecting a different runtime error
-    'test_indexing', # FIXME! XLA allows int to double type promotion
+    'test_indexing', # expecting a different runtime error
     'test_alternate_result', # expecting a different runtime error
     'test_half',  # half support
     'test_complex_promotion',  # complex support
