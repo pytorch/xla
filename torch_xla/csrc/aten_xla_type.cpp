@@ -1473,6 +1473,7 @@ at::Tensor& AtenXlaType::index_fill_(at::Tensor& self, int64_t dim,
 at::Tensor& AtenXlaType::index_put_(at::Tensor& self, at::TensorList indices,
                                     const at::Tensor& values, bool accumulate) {
   XLA_FN_COUNTER("xla::");
+  XLA_CHECK(self.scalar_type() == values.scalar_type());
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
