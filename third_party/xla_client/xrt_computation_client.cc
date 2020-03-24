@@ -296,7 +296,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::TransferToServer(
       size_t base_index = partitions[i];
       size_t length = (i + 1 < partitions.size())
                           ? partitions[i + 1] - base_index
-                          : partitions.size() - base_index;
+                          : tensors.size() - base_index;
       auto partitions_results =
           TransferToServerInternal(tensors.subspan(base_index, length));
       for (size_t r = 0; r < length; ++r) {
