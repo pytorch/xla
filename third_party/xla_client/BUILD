@@ -44,7 +44,6 @@ tf_cc_shared_object(
         "//tensorflow:windows": [],
         "//conditions:default": [
             "-z defs",
-            "-s",
             "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
             "$(location //tensorflow/compiler/xla/xla_client:tf_version_script.lds)",
         ],
