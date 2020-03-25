@@ -39,7 +39,7 @@ class LayoutManager {
 
   struct DimensionsHasher {
     size_t operator()(const absl::Span<const xla::int64>& dimensions) const {
-      return xla::util::MHash(dimensions);
+      return xla::util::HashReduce(xla::util::MHash(dimensions));
     }
   };
 

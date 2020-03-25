@@ -17,14 +17,14 @@ class Generic : public Node {
 
   Generic(OpKind op, absl::Span<const Value> operands, xla::Shape shape,
           LowerFn lower_fn, size_t num_outputs = 1,
-          size_t hash_seed = 0x5a2d296e9);
+          xla::hash_t hash_seed = 0x5a2d296e9);
 
   Generic(OpKind op, absl::Span<const Value> operands,
           const std::function<xla::Shape()>& shape_fn, LowerFn lower_fn,
-          size_t num_outputs = 1, size_t hash_seed = 0x5a2d296e9);
+          size_t num_outputs = 1, xla::hash_t hash_seed = 0x5a2d296e9);
 
   Generic(OpKind op, xla::Shape shape, LowerFn lower_fn, size_t num_outputs,
-          size_t hash_seed);
+          xla::hash_t hash_seed);
 
   NodePtr Clone(OpList operands) const override;
 
@@ -32,7 +32,7 @@ class Generic : public Node {
 
  private:
   LowerFn lower_fn_;
-  size_t hash_seed_;
+  xla::hash_t hash_seed_;
 };
 
 }  // namespace ops

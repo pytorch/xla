@@ -4,10 +4,13 @@
 #include <cmath>
 #include <vector>
 
+#include "absl/numeric/int128.h"
 #include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/types.h"
 
 namespace xla {
+
+using hash_t = absl::uint128;
 
 struct Percentile {
   enum class UnitOfMeaure {
