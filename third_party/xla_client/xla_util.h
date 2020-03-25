@@ -8,6 +8,7 @@
 #include "tensorflow/compiler/xla/service/hlo.pb.h"
 #include "tensorflow/compiler/xla/service/hlo_module.h"
 #include "tensorflow/compiler/xla/status_macros.h"
+#include "tensorflow/compiler/xla/xla_client/types.h"
 
 namespace xla {
 namespace util {
@@ -30,7 +31,7 @@ void CheckComputationStatus(
     const Status& status, absl::Span<const XlaComputation* const> computations,
     absl::Span<const Shape* const> output_shapes);
 
-size_t ShapeHash(const Shape& shape);
+hash_t ShapeHash(const Shape& shape);
 
 }  // namespace util
 }  // namespace xla

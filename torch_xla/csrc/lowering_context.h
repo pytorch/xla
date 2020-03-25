@@ -19,7 +19,10 @@ namespace ir {
 
 class LoweringContext {
  public:
-  explicit LoweringContext(const std::string& name) : builder_(name) {}
+  explicit LoweringContext(const std::string& name);
+  LoweringContext(const std::string& name,
+                  absl::Span<const Node* const> post_order,
+                  Util::EmissionMap emit_status);
 
   xla::XlaBuilder* builder() { return &builder_; }
 
@@ -32,6 +35,8 @@ class LoweringContext {
   // Retrieves the vector holding all the tensors associated with the parameter
   // instructions which have been created.
   const std::vector<xla::ComputationClient::DataPtr>& GetParametersData() const;
+
+  const std::vector<size_t>& GetParameterSequence() const;
 
   // Adds the output of a given operation to the result tuple. Returns the index
   // of the output within the tuple.
@@ -68,14 +73,20 @@ class LoweringContext {
   size_t GetEmittedNodeCount() const { return emit_status_.size(); }
 
  private:
+  struct Parameter {
+    xla::XlaOp param;
+    size_t index = 0;
+  };
+
   // Reports an XLA builder error for the given node.
   TF_ATTRIBUTE_NORETURN void ReportBuilderError(const Node* node,
                                                 const char* error_msg);
 
   xla::XlaBuilder builder_;
   std::vector<xla::ComputationClient::DataPtr> parameters_;
-  std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, xla::XlaOp>
+  std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, Parameter>
       parameters_map_;
+  std::vector<size_t> parameter_sequence_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
   Util::EmissionMap emit_status_;

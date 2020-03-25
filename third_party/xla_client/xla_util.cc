@@ -18,7 +18,7 @@ namespace xla {
 namespace util {
 namespace {
 
-size_t SingleShapeHash(const Shape& shape, size_t seed) {
+hash_t SingleShapeHash(const Shape& shape, hash_t seed) {
   for (auto dim : shape.layout().minor_to_major()) {
     seed = HashCombine(seed, dim);
   }
@@ -86,8 +86,8 @@ void CheckComputationStatus(
   }
 }
 
-size_t ShapeHash(const Shape& shape) {
-  size_t hash = 0xa5d2d6916;
+hash_t ShapeHash(const Shape& shape) {
+  hash_t hash = 0xa5d2d6916;
   ShapeUtil::ForEachSubshape(shape,
                              [&](const Shape& subshape, const ShapeIndex&) {
                                hash = SingleShapeHash(subshape, hash);

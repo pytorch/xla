@@ -192,8 +192,9 @@ class XrtComputationClient : public ComputationClient {
     struct Hash {
       size_t operator()(const CompilationCacheKey& entry) const {
         util::PartialHasher<std::string, 4096> hasher;
-        return tensorflow::Hash64(entry.domain.data(), entry.domain.size(),
-                                  hasher(entry.serialized_computation));
+        hash_t h = util::DataHash(entry.domain.data(), entry.domain.size());
+        return util::HashReduce(
+            util::HashCombine(h, hasher(entry.serialized_computation)));
       }
     };
 

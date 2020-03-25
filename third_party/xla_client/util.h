@@ -2,23 +2,46 @@
 #define XLA_CLIENT_UTIL_H_
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <exception>
 #include <functional>
 #include <memory>
 #include <numeric>
 #include <set>
+#include <string>
 #include <type_traits>
 #include <vector>
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/status.h"
+#include "tensorflow/compiler/xla/xla_client/types.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/lib/hash/hash.h"
 
 namespace xla {
 namespace util {
+
+hash_t HashBlock(const void* data, size_t n, const hash_t& seed);
+
+hash_t DataHash(const void* data, size_t size);
+
+size_t StdDataHash(const void* data, size_t size);
+
+size_t StdHashCombine(uintmax_t a, uintmax_t b);
+
+hash_t HashCombine(const hash_t& a, const hash_t& b);
+
+size_t HashReduce(const hash_t& a);
+
+std::string HexHash(const hash_t& a);
+
+struct HashReducer {
+  size_t operator()(const xla::hash_t& value) const {
+    return HashReduce(value);
+  }
+};
 
 template <typename F>
 Status CheckedCall(const F& fn) {
@@ -247,52 +270,44 @@ T Multiply(const S& input) {
                          std::multiplies<T>());
 }
 
-static inline size_t DataHash(const void* data, size_t size) {
-  return tensorflow::Hash64(reinterpret_cast<const char*>(data), size,
-                            0xc2b2ae3d27d4eb4f);
-}
-
-static inline size_t StringHash(const char* data) {
+static inline hash_t StringHash(const char* data) {
   return DataHash(data, std::strlen(data));
-}
-
-static inline size_t HashCombine(size_t a, size_t b) {
-  return a ^
-         (b * 0x27d4eb2f165667c5 + 0x9e3779b97f4a7c15 + (a << 6) + (a >> 2));
 }
 
 template <typename T, typename std::enable_if<
                           std::is_arithmetic<T>::value>::type* = nullptr>
-size_t Hash(const T& value) {
+hash_t Hash(const T& value) {
   return DataHash(&value, sizeof(value));
 }
 
-static inline size_t Hash(const std::string& value) {
+static inline hash_t Hash(const std::string& value) {
   return DataHash(value.data(), value.size());
 }
 
 // Forward declare to allow hashes of vectors of vectors to work.
 template <typename T>
-size_t ContainerHash(const T& values);
+hash_t ContainerHash(const T& values);
 
 template <typename T>
-size_t Hash(absl::Span<const T> values) {
+hash_t Hash(absl::Span<const T> values) {
   return ContainerHash(values);
 }
 
 template <typename T>
-size_t Hash(const std::vector<T>& values) {
+hash_t Hash(const std::vector<T>& values) {
   return ContainerHash(values);
 }
 
 template <typename T>
-size_t Hash(const std::set<T>& values) {
+hash_t Hash(const std::set<T>& values) {
   return ContainerHash(values);
 }
 
+static inline hash_t Hash(const hash_t& value) { return value; }
+
 template <typename T>
-size_t ContainerHash(const T& values) {
-  size_t h = 0x85ebca77c2b2ae63;
+hash_t ContainerHash(const T& values) {
+  hash_t h = 0x85ebca77c2b2ae63;
   for (auto& value : values) {
     h = HashCombine(h, Hash(value));
   }
@@ -300,12 +315,12 @@ size_t ContainerHash(const T& values) {
 }
 
 template <typename T = void>
-size_t MHash() {
+hash_t MHash() {
   return 0x165667b19e3779f9;
 }
 
 template <typename T, typename... Targs>
-size_t MHash(T value, Targs... Fargs) {
+hash_t MHash(T value, Targs... Fargs) {
   return HashCombine(Hash(value), MHash(Fargs...));
 }
 

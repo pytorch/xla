@@ -1413,6 +1413,23 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest([torch.rand(2, 4), torch.zeros(2, 1)], test_fn)
 
+  def test_spooky_ailing(self):
+
+    def test_fn(m):
+      a = torch.pow(3, m[4])
+      r1 = torch.empty_like(a).zero_()
+      for i in range(r1.size(0)):
+        r1[i] = math.pow(3, m[4][i])
+      s = str(r1)
+
+      b = torch.pow(3, m[:, 4])
+      r2 = torch.empty_like(b).zero_()
+      for i in range(r2.size(0)):
+        r2[i] = math.pow(3, m[i][4])
+      return r1, r2
+
+    self.runAtenTest([torch.randint(1, 4, (7, 7), dtype=torch.uint8)], test_fn)
+
   def test_view_and_copy_(self):
     xla_device = xm.xla_device()
     x = torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5], device='cpu')
@@ -1425,6 +1442,7 @@ class TestAtenXlaTensor(XlaTestCase):
     x = torch.rand(5, device=xla_device)
     y = torch.rand(5)
     self.assertEqual(x + y, y + x)
+
 
 class MNISTComparator(nn.Module):
 

@@ -93,6 +93,26 @@ def group_by_frame(graphs):
   return fgroup
 
 
+def group_by_hashes(graphs):
+  hgroup = collections.defaultdict(list)
+  for graph in graphs:
+    hgroup[graph.hashes].append(graph)
+  return hgroup
+
+
+def check_collisions(graphs):
+  hgroup = group_by_hashes(graphs)
+  for h in hgroup.keys():
+    hgraphs = hgroup[h]
+    hdict = collections.defaultdict(list)
+    for graph in hgraphs:
+      hdict[graph.key].append(graph)
+    if len(hdict) > 1:
+      print('Collision on hash: {}\nGroups:'.format(h), file=sys.stderr)
+      for glist in hdict.values():
+        print('  Ids: {}'.format([g.id for g in glist]), file=sys.stderr)
+
+
 def dict_add_instance(gmap, i):
   if i in gmap:
     gmap[i] += 1
@@ -149,11 +169,14 @@ def process_graphs(args):
               'frame-{}'.format(i - 1),
               'frame-{}'.format(i),
               prefix='  '))
+  if args.collisions_check:
+    check_collisions(graphs)
 
 
 if __name__ == '__main__':
   arg_parser = argparse.ArgumentParser()
   arg_parser.add_argument('--graphdir', type=str)
+  arg_parser.add_argument('--collisions_check', action='store_true')
   args, files = arg_parser.parse_known_args()
   args.files = files
   process_graphs(args)
