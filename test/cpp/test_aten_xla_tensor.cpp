@@ -687,8 +687,8 @@ TEST_F(AtenXlaTensorTest, TestIntegerAdd) {
           torch::randint(0, 63, {2, 2}, torch::TensorOptions(type));
       torch::Tensor b =
           torch::randint(0, 63, {2, 2}, torch::TensorOptions(type));
-      at::Scalar one =
-          at::isIntegralType(type) ? at::Scalar(int64_t(1)) : at::Scalar(1.0);
+      torch::Scalar one =
+          isIntegralType(type) ? torch::Scalar(int64_t(1)) : torch::Scalar(1.0);
       torch::Tensor c = torch::add(b, one);
 
       torch::Tensor xla_a = CopyToDevice(a, device);
@@ -2753,13 +2753,13 @@ TEST_F(AtenXlaTensorTest, TestLogSigmoid) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLogsumexp) {
-  at::Tensor a = at::rand({3, 4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor a = torch::rand({3, 4, 3}, torch::TensorOptions(torch::kFloat));
   for (auto dims : std::vector<std::vector<int64_t>>{{0, 1}, {-3, -2}}) {
     for (bool keepdim : {false, true}) {
-      at::Tensor b = at::logsumexp(a, dims, keepdim);
-      ForEachDevice([&](const Device& device) {
-        at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
-        at::Tensor xla_b = at::logsumexp(xla_a, dims, keepdim);
+      torch::Tensor b = torch::logsumexp(a, dims, keepdim);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        torch::Tensor xla_b = torch::logsumexp(xla_a, dims, keepdim);
         AllClose(b, xla_b);
       });
     }
@@ -3705,11 +3705,11 @@ TEST_F(AtenXlaTensorTest, TestIndexSelectRank0) {
 }
 
 TEST_F(AtenXlaTensorTest, TestInverse) {
-  at::Tensor a = at::randn({5, 5}, at::TensorOptions(at::kFloat));
-  at::Tensor b = at::inverse(a);
-  ForEachDevice([&](const Device& device) {
-    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
-    at::Tensor xla_b = at::inverse(xla_a);
+  torch::Tensor a = torch::randn({5, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::inverse(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::inverse(xla_a);
     AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
 }
@@ -7390,23 +7390,24 @@ TEST_F(AtenXlaTensorTest, TestTrueDivide) {
   for (torch::ScalarType scalar_type1 :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
         torch::kLong}) {
-    at::Tensor a = isFloatingType(scalar_type1)
-                       ? torch::rand({3, 4}, torch::TensorOptions(scalar_type1))
-                       : torch::randint(0, 100, {3, 4},
-                                        torch::TensorOptions(scalar_type1));
+    torch::Tensor a =
+        isFloatingType(scalar_type1)
+            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type1))
+            : torch::randint(0, 100, {3, 4},
+                             torch::TensorOptions(scalar_type1));
     for (torch::ScalarType scalar_type2 :
          {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
           torch::kLong}) {
-      at::Tensor b =
+      torch::Tensor b =
           isFloatingType(scalar_type2)
               ? torch::rand({3, 4}, torch::TensorOptions(scalar_type2))
               : torch::randint(1, 100, {3, 4},
                                torch::TensorOptions(scalar_type2));
-      at::Tensor c = at::true_divide(a, b);
-      ForEachDevice([&](const Device& device) {
-        at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
-        at::Tensor xla_b = bridge::CreateXlaTensor(b, device);
-        at::Tensor xla_c = at::true_divide(xla_a, xla_b);
+      torch::Tensor c = torch::true_divide(a, b);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        torch::Tensor xla_b = CopyToDevice(b, device);
+        torch::Tensor xla_c = torch::true_divide(xla_a, xla_b);
         AllClose(c, xla_c);
       });
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
@@ -7419,16 +7420,17 @@ TEST_F(AtenXlaTensorTest, TestTrueDivideScalar) {
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
         torch::kLong}) {
-    at::Tensor a =
+    torch::Tensor a =
         isFloatingType(scalar_type)
             ? torch::rand({3, 4}, torch::TensorOptions(scalar_type))
             : torch::randint(1, 100, {3, 4}, torch::TensorOptions(scalar_type));
     for (bool isFloat : {true, false}) {
-      at::Scalar b = isFloat ? at::Scalar(float(3)) : at::Scalar(int64_t(3));
-      at::Tensor c = at::true_divide(a, b);
-      ForEachDevice([&](const Device& device) {
-        at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
-        at::Tensor xla_c = at::true_divide(xla_a, b);
+      torch::Scalar b =
+          isFloat ? torch::Scalar(float(3)) : torch::Scalar(int64_t(3));
+      torch::Tensor c = torch::true_divide(a, b);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        torch::Tensor xla_c = torch::true_divide(xla_a, b);
         AllClose(c, xla_c);
       });
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
