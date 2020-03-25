@@ -29,6 +29,9 @@ launch_docker: &launch_docker
     echo "declare -x GITHUB_TORCH_XLA_BOT_TOKEN=${GITHUB_TORCH_XLA_BOT_TOKEN}" >> /home/circleci/project/xla_env
     echo "declare -x XRT_DEVICE_MAP=\"CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0\"" >> /home/circleci/project/xla_env
     echo "declare -x export XRT_WORKERS=\"localservice:0;grpc://localhost:40934\"" >> /home/circleci/project/xla_env
+    echo "declare -x CIRCLE_PULL_REQUEST=${CIRCLE_PULL_REQUEST}" >> /home/circleci/project/env
+    echo "declare -x CIRCLE_PROJECT_USERNAME=${CIRCLE_PROJECT_USERNAME}" >> /home/circleci/project/env
+    echo "declare -x CIRCLE_PROJECT_REPONAME=${CIRCLE_PROJECT_REPONAME}" >> /home/circleci/project/env
 
     pid=$(docker run -t -d -w $WORKDIR ${DOCKER_IMAGE})
     docker cp /home/circleci/project/. "$pid:$WORKDIR"
