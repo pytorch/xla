@@ -6,6 +6,7 @@
 #include <unordered_set>
 
 #include "absl/memory/memory.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
@@ -53,11 +54,13 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
                                            GraphFormat format) {
   std::vector<const ir::Node*> root_nodes;
   std::vector<ir::Value> root_values;
+  std::vector<size_t> root_hashes;
   if (indices != nullptr) {
     for (auto index : *indices) {
       ir::Value ir_value = tensors[index].CurrentIrValue();
       if (ir_value) {
         root_nodes.push_back(ir_value.node.get());
+        root_hashes.push_back(ir_value.hash());
         root_values.push_back(std::move(ir_value));
       }
     }
@@ -66,6 +69,7 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
       ir::Value ir_value = tensor.CurrentIrValue();
       if (ir_value) {
         root_nodes.push_back(ir_value.node.get());
+        root_hashes.push_back(ir_value.hash());
         root_values.push_back(std::move(ir_value));
       }
     }
@@ -77,6 +81,7 @@ std::string DebugUtil::GetTensorsGraphInfo(absl::Span<const XLATensor> tensors,
     ss << "  " << location.function << " (" << location.file << ":"
        << location.line << ")\n";
   }
+  ss << "\nHashes: (" << absl::StrJoin(root_hashes, ", ") << ")\n";
   std::string graph_str;
   if (format == GraphFormat::kText) {
     graph_str = ir::DumpUtil::ToText(root_nodes);
