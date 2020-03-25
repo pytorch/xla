@@ -2762,6 +2762,8 @@ TEST_F(AtenXlaTensorTest, TestLogsumexp) {
         torch::Tensor xla_b = torch::logsumexp(xla_a, dims, keepdim);
         AllClose(b, xla_b);
       });
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::logsumexp", cpp_test::GetIgnoredCounters());
     }
   }
 }
@@ -3712,6 +3714,8 @@ TEST_F(AtenXlaTensorTest, TestInverse) {
     torch::Tensor xla_b = torch::inverse(xla_a);
     AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::inverse", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestExpand) {
