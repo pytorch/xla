@@ -27,9 +27,12 @@ fi
 git config --global user.email "circleci.ossci@gmail.com"
 git config --global user.name "CircleCI"
 sudo apt-get update && sudo apt-get -qq install jq
-PR_NUM=$(basename $CIRCLE_PULL_REQUEST)
-CIRCLE_PR_BASE_BRANCH=$(curl -s https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls/$PR_NUM | jq -r '.base.ref')
-git rebase "origin/${CIRCLE_PR_BASE_BRANCH}"
+# Only rebase on runs triggered by PR checks not post-submits.
+if [[ -z "${CIRCLE_PULL_REQUEST}" ]]; then
+  PR_NUM=$(basename $CIRCLE_PULL_REQUEST)
+  CIRCLE_PR_BASE_BRANCH=$(curl -s https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls/$PR_NUM | jq -r '.base.ref')
+  git rebase "origin/${CIRCLE_PR_BASE_BRANCH}"
+fi
 
 PYTORCH_DIR=/tmp/pytorch
 XLA_DIR="$PYTORCH_DIR/xla"
