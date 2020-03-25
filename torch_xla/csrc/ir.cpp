@@ -14,7 +14,8 @@ namespace torch_xla {
 namespace ir {
 namespace {
 
-using ShapeCache = xla::util::Cache<size_t, xla::Shape>;
+using ShapeCache =
+    xla::util::Cache<xla::hash_t, xla::Shape, xla::util::HashReducer>;
 
 struct ScapeEntry {
   std::string name;
@@ -100,15 +101,15 @@ std::string Use::ToString() const {
 }
 
 size_t Output::Hasher::operator()(const Output& output) const {
-  return xla::util::HashCombine(reinterpret_cast<std::ptrdiff_t>(output.node),
-                                output.index);
+  return xla::util::StdHashCombine(
+      reinterpret_cast<std::ptrdiff_t>(output.node), output.index);
 }
 
 const xla::Shape& Output::shape() const { return node->shape(index); }
 
 const xla::Shape& Output::node_shape() const { return node->shape(); }
 
-size_t Output::hash() const {
+xla::hash_t Output::hash() const {
   return xla::util::HashCombine(node->hash(), index);
 }
 
@@ -122,7 +123,7 @@ const xla::Shape& Value::shape() const { return node->shape(index); }
 
 const xla::Shape& Value::node_shape() const { return node->shape(); }
 
-size_t Value::hash() const {
+xla::hash_t Value::hash() const {
   return xla::util::HashCombine(node->hash(), index);
 }
 
@@ -130,10 +131,12 @@ OpKind OpKind::Get(const std::string& name) {
   return OpKind(c10::Symbol::fromQualString(name));
 }
 
-size_t OpKind::hash() const { return xla::util::StringHash(op.toQualString()); }
+xla::hash_t OpKind::hash() const {
+  return xla::util::StringHash(op.toQualString());
+}
 
 Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
-           size_t hash_seed)
+           xla::hash_t hash_seed)
     : op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
@@ -149,14 +152,15 @@ Node::Node(OpKind op, OpList operands, xla::Shape shape, size_t num_outputs,
 
 Node::Node(OpKind op, OpList operands,
            const std::function<xla::Shape()>& shape_fn, size_t num_outputs,
-           size_t hash_seed)
+           xla::hash_t hash_seed)
     : Node(std::move(op), operands, xla::Shape(), num_outputs, hash_seed) {
   // Forward the constructor to the one above (with empty shape), so we have the
   // full hash information, then fetch/compute the real shape.
   shape_ = GetOpShape(shape_fn);
 }
 
-Node::Node(OpKind op, xla::Shape shape, size_t num_outputs, size_t hash_seed)
+Node::Node(OpKind op, xla::Shape shape, size_t num_outputs,
+           xla::hash_t hash_seed)
     : op_(std::move(op)),
       num_outputs_(num_outputs),
       shape_(std::move(shape)),
@@ -243,8 +247,9 @@ XlaOpVector Node::Lower(LoweringContext* loctx) const {
   XLA_ERROR() << "Lowering not implemented for node: " << *this;
 }
 
-size_t Node::GetOpHash(OpKind op, const xla::Shape& shape, size_t hash_seed) {
-  size_t h =
+xla::hash_t Node::GetOpHash(OpKind op, const xla::Shape& shape,
+                            xla::hash_t hash_seed) {
+  xla::hash_t h =
       xla::util::HashCombine(op.hash(), xla::util::Hash(shape.ToString()));
   return xla::util::HashCombine(h, hash_seed);
 }

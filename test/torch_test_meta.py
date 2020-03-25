@@ -2,6 +2,8 @@ DEFAULT_FLOATING_PRECISION = 1e-3
 
 torch_test_precisions = {
     # test_name : floating_precision,
+    'test_pow_xla_float32': 0.0035,
+    'test_pow_xla_float64': 0.0045,
 }
 
 disabled_torch_tests = {

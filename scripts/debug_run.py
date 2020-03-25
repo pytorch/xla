@@ -102,7 +102,7 @@ def grab_graphs(args):
     grab_graph_path = os.path.join(get_scripts_path(), 'grab_graphs.py')
     report = subprocess.check_output([
         grab_graph_path, '--graphdir={}'.format(get_graphdir_path(args.outdir)),
-        graphs_file
+        '--collisions_check', graphs_file
     ]).decode('utf-8')
     with open(get_graph_report_path(args.outdir), 'w') as fd:
       fd.write(report)

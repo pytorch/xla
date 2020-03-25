@@ -36,8 +36,8 @@ struct Device {
   }
 
   size_t hash() const {
-    return xla::util::HashCombine(xla::util::GetEnumValue(hw_type),
-                                  ordinal + 1);
+    return xla::util::StdHashCombine(xla::util::GetEnumValue(hw_type),
+                                     ordinal + 1);
   }
 
   DeviceType hw_type = DeviceType::CPU;

@@ -59,6 +59,17 @@ class HloMetadataSetter {
 
 }  // namespace
 
+LoweringContext::LoweringContext(const std::string& name) : builder_(name) {}
+
+LoweringContext::LoweringContext(const std::string& name,
+                                 absl::Span<const Node* const> post_order,
+                                 Util::EmissionMap emit_status)
+    : builder_(name), emit_status_(std::move(emit_status)) {
+  for (auto node : post_order) {
+    LowerNode(node);
+  }
+}
+
 xla::XlaOp LoweringContext::GetParameter(
     const std::shared_ptr<xla::ComputationClient::Data>& data) {
   xla::ComputationClient::Data::OpaqueHandle handle = data->GetOpaqueHandle();
@@ -67,15 +78,21 @@ xla::XlaOp LoweringContext::GetParameter(
     xla::XlaOp param =
         xla::Parameter(builder(), parameters_.size(), data->shape(),
                        absl::StrCat("p", parameters_.size()));
+    it = parameters_map_.emplace(handle, Parameter{param, parameters_.size()})
+             .first;
     parameters_.push_back(data);
-    it = parameters_map_.emplace(handle, param).first;
   }
-  return it->second;
+  parameter_sequence_.push_back(it->second.index);
+  return it->second.param;
 }
 
 const std::vector<xla::ComputationClient::DataPtr>&
 LoweringContext::GetParametersData() const {
   return parameters_;
+}
+
+const std::vector<size_t>& LoweringContext::GetParameterSequence() const {
+  return parameter_sequence_;
 }
 
 size_t LoweringContext::AddResult(xla::XlaOp op) {
