@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # Sample usage:
-#   python env-setup.py --version xrt==1.15.0 --apt-packages libomp5
+#   python env-setup.py --version 1.5 --apt-packages libomp5
 import argparse
 import collections
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 import re
 import requests
@@ -12,9 +12,7 @@ import threading
 
 
 VersionConfig = collections.namedtuple('VersionConfig', ['wheels', 'tpu'])
-STABLE_VERSION_MAP = {
-  'xrt==1.15.0': VersionConfig('1.15', '1.15.0'),
-}
+OLDEST_VERSION = datetime.strptime('20200318', '%Y%m%d')
 DIST_BUCKET = 'gs://tpu-pytorch/wheels'
 TORCH_WHEEL_TMPL = 'torch-{whl_version}-cp36-cp36m-linux_x86_64.whl'
 TORCH_XLA_WHEEL_TMPL = 'torch_xla-{whl_version}-cp36-cp36m-linux_x86_64.whl'
@@ -22,25 +20,30 @@ TORCHVISION_WHEEL_TMPL = 'torchvision-{whl_version}-cp36-cp36m-linux_x86_64.whl'
 
 
 def update_tpu_runtime(tpu_ip, version):
-  print('Updating TPU runtime to {} ...'.format(args.version))
+  print(f'Updating TPU runtime to {version.tpu} ...')
   url = 'http://{tpu_ip}:8475/requestversion/{tpu_version}'.format(
     tpu_ip=tpu_ip, tpu_version=version.tpu)
   print('Done updating TPU runtime: {}'.format(requests.post(url)))
 
 def get_version(version):
   if version == 'nightly':
-    return VersionConfig('nightly', 'TPU-dev{}'.format(
-      (datetime.today() - timedelta(1)).strftime('%Y%m%d')))
+    return VersionConfig('nightly', 'pytorch-nightly')
 
+  version_date = None
   try:
-    datetime.strptime(version, '%Y%m%d')
-    return VersionConfig(f'nightly+{version}', f'TPU-dev{version}')
+    version_date = datetime.strptime(version, '%Y%m%d')
   except ValueError:
     pass  # Not a dated nightly.
 
-  if version not in STABLE_VERSION_MAP:
-    raise ValueError(f'Version {version} unknown')
-  return STABLE_VERSION_MAP[version]
+  if version_date:
+    if version_date < OLDEST_VERSION:
+      raise ValueError(f'Oldest nightly version available is {OLDEST_VERSION}')
+    return VersionConfig(f'nightly+{version}', f'pytorch-dev{version}')
+
+  version_regex = re.compile('^(\d+\.)+\d+$')
+  if not version_regex.match(version):
+    raise ValueError(f'{version} is an invalid torch_xla version pattern')
+  return VersionConfig(version, f'pytorch-{version}')
 
 def parse_env_tpu_ip():
   # In both Colab and Kaggle: TPU_NAME='grpc://abc.def.ghi.jkl:8470'
@@ -91,7 +94,7 @@ if __name__ == '__main__':
   parser.add_argument(
       '--version',
       type=str,
-      default='nightly',
+      default='20200325',
       help='Versions to install (nightly, release version, or YYYYMMDD).',
   )
   parser.add_argument(
