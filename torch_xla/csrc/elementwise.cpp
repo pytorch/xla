@@ -2,6 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -172,13 +173,15 @@ xla::XlaOp BuildReciprocal(xla::XlaOp input) {
 }
 
 xla::XlaOp BuildSign(xla::XlaOp input) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp num_input = ConvertToNumeric(input);
+  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(num_input);
+  xla::XlaOp zero = xla::Zero(num_input.builder(), shape.element_type());
   xla::XlaOp sign =
       xla::primitive_util::IsUnsignedIntegralType(shape.element_type())
-          ? xla::ConvertElementType(xla::Gt(input, zero), shape.element_type())
-          : xla::Sign(input);
-  return xla::Select(xla::Ne(input, input),
+          ? xla::ConvertElementType(xla::Gt(num_input, zero),
+                                    shape.element_type())
+          : xla::Sign(num_input);
+  return xla::Select(xla::Ne(num_input, num_input),
                      xla::Broadcast(zero, shape.dimensions()), sign);
 }
 
