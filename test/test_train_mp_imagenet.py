@@ -97,8 +97,8 @@ def get_model_property(key):
 
 
 def _train_update(device, step, loss, tracker, epoch):
-  test_utils.print_training_update(
-      device, step, loss.item(), tracker.rate(), tracker.global_rate(), epoch)
+  test_utils.print_training_update(device, step, loss.item(), tracker.rate(),
+                                   tracker.global_rate(), epoch)
 
 
 def train_imagenet():
@@ -199,7 +199,7 @@ def train_imagenet():
         lr_scheduler.step()
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
-            _train_update, args=(device, step , loss, tracker, epoch))
+            _train_update, args=(device, step, loss, tracker, epoch))
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -226,9 +226,11 @@ def train_imagenet():
     accuracy = test_loop_fn(para_loader.per_device_loader(device), epoch)
     xm.master_print('Epoch {} test end {}'.format(epoch, test_utils.now()))
     max_accuracy = max(accuracy, max_accuracy)
-    test_utils.write_to_summary(writer, epoch,
-                                dict_to_write={'Accuracy/test': accuracy},
-                                write_xla_metrics=True)
+    test_utils.write_to_summary(
+        writer,
+        epoch,
+        dict_to_write={'Accuracy/test': accuracy},
+        write_xla_metrics=True)
     if FLAGS.metrics_debug:
       xm.master_print(met.metrics_report())
 
