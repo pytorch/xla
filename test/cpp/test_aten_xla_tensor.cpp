@@ -688,7 +688,7 @@ TEST_F(AtenXlaTensorTest, TestIntegerAdd) {
       torch::Tensor b =
           torch::randint(0, 63, {2, 2}, torch::TensorOptions(type));
       torch::Scalar one =
-          isIntegralType(type) ? torch::Scalar(int64_t(1)) : torch::Scalar(1.0);
+          isIntegralType(type) ? torch::Scalar(1) : torch::Scalar(1.0);
       torch::Tensor c = torch::add(b, one);
 
       torch::Tensor xla_a = CopyToDevice(a, device);
@@ -7429,8 +7429,7 @@ TEST_F(AtenXlaTensorTest, TestTrueDivideScalar) {
             ? torch::rand({3, 4}, torch::TensorOptions(scalar_type))
             : torch::randint(1, 100, {3, 4}, torch::TensorOptions(scalar_type));
     for (bool isFloat : {true, false}) {
-      torch::Scalar b =
-          isFloat ? torch::Scalar(float(3)) : torch::Scalar(int64_t(3));
+      torch::Scalar b = isFloat ? torch::Scalar(3.0) : torch::Scalar(3);
       torch::Tensor c = torch::true_divide(a, b);
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor xla_a = CopyToDevice(a, device);
