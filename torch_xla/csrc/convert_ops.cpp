@@ -95,13 +95,13 @@ xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,
 }
 
 xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {
-  Device xla_device = GetCurrentDevice();
-  return from != xla::PrimitiveType::PRED
-             ? op
-             : ConvertTo(
-                   op, from,
+  if (from == xla::PrimitiveType::PRED) {
+    Device xla_device = GetCurrentDevice();
+    op = ConvertTo(op, from,
                    GetDevicePrimitiveType(xla::PrimitiveType::U8, &xla_device),
                    &xla_device);
+  }
+  return op;
 }
 
 xla::XlaOp ConvertToNumeric(xla::XlaOp op) {
