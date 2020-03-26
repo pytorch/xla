@@ -105,7 +105,7 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
       xla::XlaOp rng = xla::NormalFloatingPointDistribution(
                            seed, initial_state, GetBitGenerator(), shape)
                            .value;
-      return mean + rng * std;
+      return XlaHelpers::PromotedAdd(mean, XlaHelpers::PromotedMul(rng, std));
     }
     case xla::PrimitiveType::C64:
     case xla::PrimitiveType::C128: {
@@ -125,7 +125,7 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
       if (shape.element_type() == xla::PrimitiveType::C128) {
         rng = xla::ConvertElementType(rng, xla::PrimitiveType::C128);
       }
-      return mean + rng * std;
+      return XlaHelpers::PromotedAdd(mean, XlaHelpers::PromotedMul(rng, std));
     }
     default:
       XLA_ERROR() << "RngNormal not implemented for type "
