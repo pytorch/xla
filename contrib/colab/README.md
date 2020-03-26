@@ -1,15 +1,12 @@
 # Colab Notebooks
 
-We have a couple of Colab notebooks here that work with Colab. The name of the
-notebooks tells which version of Colab TF/XRT they're compatible with. For
-example, `mnist-training-xrt-1-15.ipynb` has been tested to be compatible with
-`TF/XRT 1.15`. On colab, you can check the current `TF/XRT` version by running
-a snippet like:
+The following are a couple of sample colab notebooks.
 
-```
-import tensorflow as tf
-tf.__version__
-```
+## Get started with our Colab Tutorials
+* [Fast Neural Style Transfer](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/style_transfer_inference.ipynb)
+* [Training MNIST on TPUs](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/mnist-training.ipynb)
+* [Training ResNet18 on TPUs with Cifar10 dataset](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet18-training.ipynb)
+* [Inference with Pretrained ResNet50 Model](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet18-training.ipynb)
 
 *Note*: These colab notebooks typically run on small machines (the Compute VMs,
 which runs the input pipeline) and training is often bottlenecked on the small
@@ -18,9 +15,3 @@ following our GCP Tutorials:
 * [Training FairSeq Transformer on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/transformer-pytorch)
 * [Training Resnet50 on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py)
 * [Training PyTorch models on Cloud TPU Pods](https://cloud.google.com/tpu/docs/tutorials/pytorch-pod)
-
-## Get started with our Colab Tutorials
-* [Fast Neural Style Transfer](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/style_transfer_inference-xrt-1-15.ipynb)
-* [Training MNIST on TPUs](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/mnist-training-xrt-1-15.ipynb)
-* [Training ResNet18 on TPUs with Cifar10 dataset](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet18-training-xrt-1-15.ipynb)
-* [Inference with Pretrained ResNet50 Model](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet50-inference-xrt-1-15.ipynb)
