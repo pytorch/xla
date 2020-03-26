@@ -146,18 +146,14 @@ def train_mnist():
   accuracy = 0.0
   max_accuracy = 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
-    xm.master_print(
-        'Epoch {} training begin {}'.format(epoch, test_utils.now()))
+    xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
-    xm.rendezvous('epoch-train-end')
-    xm.master_print('Epoch {} training end {}'.format(epoch, test_utils.now()))
+    xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
-    xm.rendezvous('epoch-valid-end')
-    xm.master_print(
-        'Epoch {} validation end {}'.format(epoch, test_utils.now()))
+    xm.master_print('Epoch {} test end {}'.format(epoch, test_utils.now()))
     max_accuracy = max(accuracy, max_accuracy)
     test_utils.write_to_summary(writer, epoch,
                                 dict_to_write={'Accuracy/test': accuracy},

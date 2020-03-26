@@ -198,9 +198,8 @@ def train_imagenet():
       if lr_scheduler:
         lr_scheduler.step()
       if step % FLAGS.log_steps == 0:
-        step = '{}/{}'.format(step, len(train_loader))
-        args = (device, step , loss, tracker, epoch)
-        xm.add_step_closure(_train_update, args=args)
+        xm.add_step_closure(
+            _train_update, args=(device, step , loss, tracker, epoch))
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -211,25 +210,21 @@ def train_imagenet():
       correct += pred.eq(target.view_as(pred)).sum().item()
       total_samples += data.size()[0]
       if step % FLAGS.log_steps == 0:
-        step = '{}/{}'.format(step, len(test_loader))
-        test_utils.print_test_update(device, None, step=step, epoch=epoch)
+        xm.add_step_closure(
+            test_utils.print_test_update, args=(device, None, epoch, step))
     accuracy = 100.0 * correct / total_samples
     test_utils.print_test_update(device, accuracy=accuracy, epoch=epoch)
     return accuracy
 
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
-    xm.master_print(
-        'Epoch {} training begin {}'.format(epoch, test_utils.now()))
+    xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device), epoch)
-    xm.rendezvous('epoch-train-end')
-    xm.master_print('Epoch {} training end {}'.format(epoch, test_utils.now()))
+    xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device), epoch)
-    xm.rendezvous('epoch-valid-end')
-    xm.master_print(
-        'Epoch {} validation end {}'.format(epoch, test_utils.now()))
+    xm.master_print('Epoch {} test end {}'.format(epoch, test_utils.now()))
     max_accuracy = max(accuracy, max_accuracy)
     test_utils.write_to_summary(writer, epoch,
                                 dict_to_write={'Accuracy/test': accuracy},
