@@ -96,9 +96,9 @@ def get_model_property(key):
   return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
 
 
-def _train_update(device, x, loss, tracker):
-  test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
-                                   tracker.global_rate())
+def _train_update(device, step, loss, tracker, epoch):
+  test_utils.print_training_update(
+      device, step, loss.item(), tracker.rate(), tracker.global_rate(), epoch)
 
 
 def train_imagenet():
@@ -185,10 +185,10 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
 
-  def train_loop_fn(loader):
+  def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
-    for x, (data, target) in enumerate(loader):
+    for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
@@ -197,32 +197,39 @@ def train_imagenet():
       tracker.add(FLAGS.batch_size)
       if lr_scheduler:
         lr_scheduler.step()
-      if x % FLAGS.log_steps == 0:
-        xm.add_step_closure(_train_update, args=(device, x, loss, tracker))
+      if step % FLAGS.log_steps == 0:
+        step = '{}/{}'.format(step, len(train_loader))
+        args = (device, step , loss, tracker, epoch)
+        xm.add_step_closure(_train_update, args=args)
 
-  def test_loop_fn(loader):
-    total_samples = 0
-    correct = 0
+  def test_loop_fn(loader, epoch):
+    total_samples, correct = 0, 0
     model.eval()
-    for data, target in loader:
+    for step, (data, target) in enumerate(loader):
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum().item()
       total_samples += data.size()[0]
-
+      if step % FLAGS.log_steps == 0:
+        step = '{}/{}'.format(step, len(test_loader))
+        test_utils.print_test_update(device, None, step=step, epoch=epoch)
     accuracy = 100.0 * correct / total_samples
-    test_utils.print_test_update(device, accuracy)
+    test_utils.print_test_update(device, accuracy=accuracy, epoch=epoch)
     return accuracy
 
-  accuracy = 0.0
-  max_accuracy = 0.0
+  accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
+    xm.master_print(
+        'Epoch {} training begin {}'.format(epoch, test_utils.now()))
     para_loader = pl.ParallelLoader(train_loader, [device])
-    train_loop_fn(para_loader.per_device_loader(device))
-    xm.master_print('Finished training epoch {}'.format(epoch))
-
+    train_loop_fn(para_loader.per_device_loader(device), epoch)
+    xm.rendezvous('epoch-train-end')
+    xm.master_print('Epoch {} training end {}'.format(epoch, test_utils.now()))
     para_loader = pl.ParallelLoader(test_loader, [device])
-    accuracy = test_loop_fn(para_loader.per_device_loader(device))
+    accuracy = test_loop_fn(para_loader.per_device_loader(device), epoch)
+    xm.rendezvous('epoch-valid-end')
+    xm.master_print(
+        'Epoch {} validation end {}'.format(epoch, test_utils.now()))
     max_accuracy = max(accuracy, max_accuracy)
     test_utils.write_to_summary(writer, epoch,
                                 dict_to_write={'Accuracy/test': accuracy},
