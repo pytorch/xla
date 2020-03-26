@@ -961,10 +961,12 @@ def generate_registrations(fgens, overrides):
     else:
       override_fn = fgen.xfunc if fgen.code else None
     if override_fn:
+      pos = fgen.funsig.find('(')
+      overload = fgen.funsig[:pos] + ' (*)' + fgen.funsig[pos:]
       code += (
           '  .impl("{}", torch::dispatch(at::DispatchKey::XLATensorId, '
-          'CppFunction::makeUnboxedOnly(static_cast<{}>({})))\n'.format(
-              fgen.aten_sig.split("(")[0], fgen.funsig, override_fn))
+          'at::CppFunction::makeUnboxedOnly(static_cast<{}>(&{}))))\n'.format(
+              fgen.aten_sig.split("(")[0], overload, override_fn))
   return code + ';\n}\n', overridden
 
 
