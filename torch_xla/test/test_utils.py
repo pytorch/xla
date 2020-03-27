@@ -92,14 +92,12 @@ def print_training_update(device, step, loss, rate, global_rate, epoch=None):
   """
   update_data = [
       'Training', 'Device={}'.format(_get_device_spec(device)),
-      'Epoch={}'.format(epoch) if epoch else None, 'Step={}'.format(step),
-      'Loss={:.5f}'.format(loss), 'Rate={:.2f}'.format(rate),
-      'GlobalRate={:.2f}'.format(global_rate), 'Time={}'.format(now())
+      'Epoch={}'.format(epoch) if epoch is not None else None,
+      'Step={}'.format(step), 'Loss={:.5f}'.format(loss),
+      'Rate={:.2f}'.format(rate), 'GlobalRate={:.2f}'.format(global_rate),
+      'Time={}'.format(now())
   ]
-  print(
-      '|',
-      ' '.join(item for item in update_data if item is not None),
-      flush=True)
+  print('|', ' '.join(item for item in update_data if item), flush=True)
 
 
 def print_test_update(device, accuracy, epoch=None, step=None):
@@ -111,12 +109,9 @@ def print_test_update(device, accuracy, epoch=None, step=None):
   """
   update_data = [
       'Test', 'Device={}'.format(_get_device_spec(device)),
-      'Step={}'.format(step) if step else None,
-      'Epoch={}'.format(epoch) if epoch else None,
-      'Accuracy={:.2f}'.format(accuracy) if accuracy else None,
+      'Step={}'.format(step) if step is not None else None,
+      'Epoch={}'.format(epoch) if epoch is not None else None,
+      'Accuracy={:.2f}'.format(accuracy) if accuracy is not None else None,
       'Time={}'.format(now())
   ]
-  print(
-      '|',
-      ' '.join(item for item in update_data if item is not None),
-      flush=True)
+  print('|', ' '.join(item for item in update_data if item), flush=True)
