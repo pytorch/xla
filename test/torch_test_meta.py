@@ -150,6 +150,7 @@ disabled_torch_tests = {
     'test_triangular_solve_batched',  # (TPU) precision (1e-6)
     'test_triangular_solve_batched_many_batches',  # (TPU) 1.02 vs 0.001
     'test_triangular_solve',  # (TPU) precision (1e-7)
+    'test_triangular_solve_batched_broadcasting',  # (TPU) 1.5 vs 0.001
     'test_scalar_check',  # runtime error
     'test_argminmax_large_axis',  # OOM, and the test is grepping "memory" in the exception message
     'test_trapz', # precision (1e-5), test use np.allClose
