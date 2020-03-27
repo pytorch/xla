@@ -69,8 +69,8 @@ will throw an error since the torch.nn.Linear module is on the CPU.
 
 Building a new PyTorch network or converting an existing one to run on XLA
 devices requires only a few lines of XLA-specific code. The following snippets
-highlight these lines when running on a single device, multiple devices with XLA
-multiprocessing, or multiple threads with XLA multithreading.
+highlight these lines when running on a single device and multiple devices with XLA
+multiprocessing.
 
 ### Running on a Single XLA Device
 
@@ -151,47 +151,6 @@ stack).
 See the
 [full multiprocessing example](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist.py)
 for more on training a network on multiple XLA devices with multiprocessing.
-
-### Running on Multiple XLA Devices with MultiThreading
-
-Running on multiple XLA devices using processes (see above) is preferred to using
-threads. If, however, you want to use threads then PyTorch/XLA has a
-`DataParallel` interface. The following snippet shows the same network training
-with multiple threads:
-
-```python
-import torch_xla.core.xla_model as xm
-import torch_xla.distributed.data_parallel as dp
-
-devices = xm.get_xla_supported_devices()
-model_parallel = dp.DataParallel(MNIST, device_ids=devices)
-
-def train_loop_fn(model, loader, device, context):
-  loss_fn = nn.NLLLoss()
-  optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
-
-  model.train()
-  for data, target in loader:
-    optimizer.zero_grad()
-    output = model(data)
-    loss = loss_fn(output, target)
-    loss.backward()
-    xm.optimizer_step(optimizer)
-
-for epoch in range(1, num_epochs + 1):
-  model_parallel(train_loop_fn, train_loader)
-```
-
-The only differences between the multithreading and multiprocessing code are:
-
-- Multiple devices are acquired in the same process with
-`xm.get_xla_supported_devices()`.
-- The model is wrapped in `dp.DataParallel` and passed both the training loop
-and dataloader.
-
-See the
-[full multithreading example](https://github.com/pytorch/xla/blob/master/test/test_train_mnist.py)
-for more on training a network on multiple XLA devices with multithreading.
 
 ## XLA Tensor Deep Dive
 
