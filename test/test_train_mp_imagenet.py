@@ -80,20 +80,19 @@ for arg, value in default_value_dict.items():
   if getattr(FLAGS, arg) is None:
     setattr(FLAGS, arg, value)
 
-MODEL_PROPERTIES = {
+def get_model_property(key):
+  default_model_property = {
+    'img_dim': 224,
+    'model_fn': getattr(torchvision.models, FLAGS.model)
+  }
+  model_properties = {
     'inception_v3': {
         'img_dim': 299,
         'model_fn': lambda: torchvision.models.inception_v3(aux_logits=False)
     },
-    'DEFAULT': {
-        'img_dim': 224,
-        'model_fn': getattr(torchvision.models, FLAGS.model)
-    }
-}
-
-
-def get_model_property(key):
-  return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
+  }
+  model_fn = model_properties.get(FLAGS.model, default_model_property)[key]
+  return model_fn
 
 
 def _train_update(device, x, loss, tracker):
