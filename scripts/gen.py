@@ -949,7 +949,7 @@ def parse_local_overrides(path):
 
 def generate_registrations(fgens, overrides):
   code = 'void RegisterAtenTypeFunctions() {\n'
-  code += '  static auto dispatch = torch::import()\n'
+  code += '  static auto dispatch = torch::RegisterOperators()\n'
   overridden = set()
   for fgen in fgens:
     if not is_overrideable(fgen):
@@ -961,12 +961,12 @@ def generate_registrations(fgens, overrides):
     else:
       override_fn = fgen.xfunc if fgen.code else None
     if override_fn:
-      pos = fgen.funsig.find('(')
-      overload = fgen.funsig[:pos] + ' (*)' + fgen.funsig[pos:]
       code += (
-          '  .impl("{}", torch::dispatch(at::DispatchKey::XLATensorId, '
-          'at::CppFunction::makeUnboxedOnly(static_cast<{}>(&{}))))\n'.format(
-              fgen.aten_sig.split("(")[0], overload, override_fn))
+          '  .op(torch::RegisterOperators::options().schema("{}")\n      '
+          '.impl_unboxedOnlyKernel<{}, &{}>(at::DispatchKey::XLATensorId)\n'
+          '      .aliasAnalysis(c10::AliasAnalysisKind::FROM_SCHEMA))\n'.format(
+              fgen.aten_sig, fgen.funsig, override_fn, override_fn,
+              fgen.aten_sig))
   return code + ';\n}\n', overridden
 
 

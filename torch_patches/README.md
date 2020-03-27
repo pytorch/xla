@@ -1,6 +1,6 @@
 # Guidelines For Patch File Names
 
-The only files which are considered by the apply script are the ones with extension '.diff'.
+Files with extension '.diff' are consider as git patches by apply script.
 
 A file for PyTorch PR _N_ needs to be named 'N.diff'.
 
@@ -14,4 +14,18 @@ X10-optimizer.diff
 
 Patch file are alphabetically ordered, so PyTorch PR patches are always applied
 before the non PyTorch ones.
+
+
+There's a special file `torch_patches/.torch_pin`, which is used to coordinate landing PRs in
+`pytorch/pytorch` and `pytorch/xla`.
+
+To test a `pytorch/xla` PR against a `pytorch/pytorch` PR or branch,
+put the PR number or branch name in this file.
+Example:
+
+```
+#32451
+# or
+my_awesome_branch # (must live in `pytorch/pytorch`)
+```
 
