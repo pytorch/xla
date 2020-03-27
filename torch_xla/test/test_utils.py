@@ -71,13 +71,13 @@ def get_summary_writer(logdir):
   if logdir:
     from tensorboardX import SummaryWriter
     writer = SummaryWriter(log_dir=logdir)
-    write_to_summary(writer, 0, dict_to_write={
-        'TensorboardStartTimestamp': time.time()})
+    write_to_summary(
+        writer, 0, dict_to_write={'TensorboardStartTimestamp': time.time()})
     return writer
 
 
 def now(format='%H:%M:%S'):
-    return datetime.now().strftime(format)
+  return datetime.now().strftime(format)
 
 
 def print_training_update(device, step, loss, rate, global_rate, epoch=None):
@@ -91,15 +91,15 @@ def print_training_update(device, step, loss, rate, global_rate, epoch=None):
     global_rate: Float. The average examples/sec rate since training began.
   """
   update_data = [
-      'Training',
-      'Device={}'.format(_get_device_spec(device)),
-      'Epoch={}'.format(epoch) if epoch else None,
-      'Step={}'.format(step),
-      'Loss={:.5f}'.format(loss),
-      'Rate={:.2f}'.format(rate),
-      'GlobalRate={:.2f}'.format(global_rate),
-      'Time={}'.format(now())]
-  print('|', ' '.join(item for item in update_data if item), flush=True)
+      'Training', 'Device={}'.format(_get_device_spec(device)),
+      'Epoch={}'.format(epoch) if epoch else None, 'Step={}'.format(step),
+      'Loss={:.5f}'.format(loss), 'Rate={:.2f}'.format(rate),
+      'GlobalRate={:.2f}'.format(global_rate), 'Time={}'.format(now())
+  ]
+  print(
+      '|',
+      ' '.join(item for item in update_data if item is not None),
+      flush=True)
 
 
 def print_test_update(device, accuracy, epoch=None, step=None):
@@ -110,10 +110,13 @@ def print_test_update(device, accuracy, epoch=None, step=None):
     accuracy: Float.
   """
   update_data = [
-      'Test',
-      'Device={}'.format(_get_device_spec(device)),
+      'Test', 'Device={}'.format(_get_device_spec(device)),
       'Step={}'.format(step) if step else None,
       'Epoch={}'.format(epoch) if epoch else None,
       'Accuracy={:.2f}'.format(accuracy) if accuracy else None,
-      'Time={}'.format(now())]
-  print('|', ' '.join(item for item in update_data if item), flush=True)
+      'Time={}'.format(now())
+  ]
+  print(
+      '|',
+      ' '.join(item for item in update_data if item is not None),
+      flush=True)
