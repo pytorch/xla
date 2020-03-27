@@ -1,8 +1,8 @@
 diff --git a/torch/testing/_internal/common_device_type.py b/torch/testing/_internal/common_device_type.py
-index 01973711e7..9e8ab23c32 100644
+index 01973711e7..457f0bf373 100644
 --- a/torch/testing/_internal/common_device_type.py
 +++ b/torch/testing/_internal/common_device_type.py
-@@ -270,10 +270,122 @@ class CUDATestBase(DeviceTypeTestBase):
+@@ -270,10 +270,129 @@ class CUDATestBase(DeviceTypeTestBase):
          cls.primary_device = 'cuda:{0}'.format(torch.cuda.current_device())
  
  
@@ -31,6 +31,14 @@ index 01973711e7..9e8ab23c32 100644
 +    unsupported_dtypes = {torch.half, torch.complex64, torch.complex128}
 +    precision = DEFAULT_FLOATING_PRECISION
 +
++    @staticmethod
++    def _alt_lookup(d, keys, defval):
++        for k in keys:
++            value = d.get(k, None)
++            if value is not None:
++                return value
++        return defval
++
 +    # Overrides to instantiate tests that are known to run quickly
 +    # and correctly on XLA.
 +    @classmethod
@@ -50,6 +58,9 @@ index 01973711e7..9e8ab23c32 100644
 +            if dtypes is None:  # Tests without dtype variants are instantiated as usual
 +                super().instantiate_test(name, test)
 +            else:  # Tests with dtype variants have unsupported dtypes skipped
++                # Sets default precision for floating types to bfloat16 precision
++                if not hasattr(test, 'precision_overrides'):
++                    test.precision_overrides = {}
 +                xla_dtypes = []
 +                for dtype in dtypes:
 +                    dtype_str = str(dtype).split('.')[1]
@@ -67,15 +78,11 @@ index 01973711e7..9e8ab23c32 100644
 +                        setattr(cls, dtype_test_name, disallowed_test)
 +                    else:
 +                        xla_dtypes.append(dtype)
-+
-+                # Sets default precision for floating types to bfloat16 precision
-+                if not hasattr(test, 'precision_overrides'):
-+                    test.precision_overrides = {}
-+
-+                floating_precision = torch_test_precisions.get(test_name, torch_test_precisions.get(test.__name__, DEFAULT_FLOATING_PRECISION))
-+                test.precision_overrides[torch.float] = max(test.precision_overrides.get(torch.float, 0), floating_precision)
-+                test.precision_overrides[torch.double] = max(test.precision_overrides.get(torch.double, 0), floating_precision)
-+                test.precision_overrides[torch.bfloat16] = max(test.precision_overrides.get(torch.bfloat16, 0), floating_precision)
++                    if dtype in [torch.float, torch.double, torch.bfloat16]:
++                        floating_precision = XLATestBase._alt_lookup(torch_test_precisions,
++                                                                     [dtype_test_name, test_name, test.__name__],
++                                                                     DEFAULT_FLOATING_PRECISION)
++                        test.precision_overrides[dtype] = floating_precision
 +
 +                if len(xla_dtypes) != 0:
 +                    test.dtypes[cls.device_type] = xla_dtypes
@@ -125,7 +132,7 @@ index 01973711e7..9e8ab23c32 100644
  
  PYTORCH_CUDA_MEMCHECK = os.getenv('PYTORCH_CUDA_MEMCHECK', '0') == '1'
  
-@@ -320,7 +432,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
+@@ -320,7 +439,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
                  assert inspect.isfunction(test), "Couldn't extract function from '{0}'".format(name)
  
                  # Instantiates the device-specific tests
