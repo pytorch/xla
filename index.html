@@ -187,7 +187,6 @@
 <li><a class="reference internal" href="#running-models-on-xla-devices">Running Models on XLA Devices</a><ul>
 <li><a class="reference internal" href="#running-on-a-single-xla-device">Running on a Single XLA Device</a></li>
 <li><a class="reference internal" href="#running-on-multiple-xla-devices-with-multiprocessing">Running on Multiple XLA Devices with MultiProcessing</a></li>
-<li><a class="reference internal" href="#running-on-multiple-xla-devices-with-multithreading">Running on Multiple XLA Devices with MultiThreading</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#id1">XLA Tensor Deep Dive</a><ul>
@@ -338,8 +337,8 @@ same device. So code like</p>
 <h2>Running Models on XLA Devices<a class="headerlink" href="#running-models-on-xla-devices" title="Permalink to this headline">¶</a></h2>
 <p>Building a new PyTorch network or converting an existing one to run on XLA
 devices requires only a few lines of XLA-specific code. The following snippets
-highlight these lines when running on a single device, multiple devices with XLA
-multiprocessing, or multiple threads with XLA multithreading.</p>
+highlight these lines when running on a single device and multiple devices with XLA
+multiprocessing.</p>
 <div class="section" id="running-on-a-single-xla-device">
 <h3>Running on a Single XLA Device<a class="headerlink" href="#running-on-a-single-xla-device" title="Permalink to this headline">¶</a></h3>
 <p>The following snippet shows a network training on a single XLA device:</p>
@@ -415,45 +414,6 @@ stack).</p>
 <p>See the
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist.py">full multiprocessing example</a>
 for more on training a network on multiple XLA devices with multiprocessing.</p>
-</div>
-<div class="section" id="running-on-multiple-xla-devices-with-multithreading">
-<h3>Running on Multiple XLA Devices with MultiThreading<a class="headerlink" href="#running-on-multiple-xla-devices-with-multithreading" title="Permalink to this headline">¶</a></h3>
-<p>Running on multiple XLA devices using processes (see above) is preferred to using
-threads. If, however, you want to use threads then PyTorch/XLA has a
-<code class="docutils literal notranslate"><span class="pre">DataParallel</span></code> interface. The following snippet shows the same network training
-with multiple threads:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.data_parallel</span> <span class="k">as</span> <span class="nn">dp</span>
-
-<span class="n">devices</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_xla_supported_devices</span><span class="p">()</span>
-<span class="n">model_parallel</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">DataParallel</span><span class="p">(</span><span class="n">MNIST</span><span class="p">,</span> <span class="n">device_ids</span><span class="o">=</span><span class="n">devices</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">train_loop_fn</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
-  <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">NLLLoss</span><span class="p">()</span>
-  <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">)</span>
-
-  <span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
-  <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
-    <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
-    <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-    <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
-    <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
-    <span class="n">xm</span><span class="o">.</span><span class="n">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_epochs</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
-  <span class="n">model_parallel</span><span class="p">(</span><span class="n">train_loop_fn</span><span class="p">,</span> <span class="n">train_loader</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>The only differences between the multithreading and multiprocessing code are:</p>
-<ul class="simple">
-<li><p>Multiple devices are acquired in the same process with
-<code class="docutils literal notranslate"><span class="pre">xm.get_xla_supported_devices()</span></code>.</p></li>
-<li><p>The model is wrapped in <code class="docutils literal notranslate"><span class="pre">dp.DataParallel</span></code> and passed both the training loop
-and dataloader.</p></li>
-</ul>
-<p>See the
-<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mnist.py">full multithreading example</a>
-for more on training a network on multiple XLA devices with multithreading.</p>
 </div>
 </div>
 <div class="section" id="id1">
@@ -986,7 +946,6 @@ conversion.</p></li>
 <li><a class="reference internal" href="#running-models-on-xla-devices">Running Models on XLA Devices</a><ul>
 <li><a class="reference internal" href="#running-on-a-single-xla-device">Running on a Single XLA Device</a></li>
 <li><a class="reference internal" href="#running-on-multiple-xla-devices-with-multiprocessing">Running on Multiple XLA Devices with MultiProcessing</a></li>
-<li><a class="reference internal" href="#running-on-multiple-xla-devices-with-multithreading">Running on Multiple XLA Devices with MultiThreading</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#id1">XLA Tensor Deep Dive</a><ul>
