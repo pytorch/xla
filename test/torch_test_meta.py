@@ -157,6 +157,8 @@ disabled_torch_tests = {
     'test_random_from_to_xla_int32', # precision, TPU does not have real F64
     'test_randn_xla_float32', # xla doesn't support manual_seed, as_stride
     'test_randn_xla_float64', # xla doesn't support manual_seed, as_stride
+    'test_rand_xla_float32',  # xla doesn't support manual_seed, as_stride
+    'test_rand_xla_float64',  # xla doesn't support manual_seed, as_stride
 
     # TestViewOps
     'test_contiguous_nonview',
