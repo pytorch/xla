@@ -52,6 +52,9 @@ class AtenXlaType {
                                                int64_t dim,
                                                const at::Tensor& self);
 
+  static std::tuple<at::Tensor, at::Tensor> _pack_padded_sequence(
+      const at::Tensor& input, const at::Tensor& lengths, bool batch_first);
+
   static at::Tensor _s_where(const at::Tensor& condition,
                              const at::Tensor& self, const at::Tensor& other);
 

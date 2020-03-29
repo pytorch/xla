@@ -24,6 +24,7 @@ import numpy
 import random
 import re
 import torch
+import torch.autograd as ad
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -1580,6 +1581,38 @@ class TestGeneric(XlaTestCase):
                                  lambda x: isinstance(x, (int, str, float)),
                                  convert)
     self.assertEqual(len(wids), 11)
+
+  def test_data_wrapper(self):
+
+    class PackWrapper(xu.DataWrapper):
+
+      def __init__(self, pack):
+        super(PackWrapper, self).__init__()
+        self.pack = pack
+
+      def get_tensors(self):
+        return [
+            self.pack.data, self.pack.sorted_indices, self.pack.unsorted_indices
+        ]
+
+      def from_tensors(self, tensors):
+        return nn.utils.rnn.PackedSequence(tensors[0], self.pack.batch_sizes,
+                                           tensors[1], tensors[2])
+
+    batch_in = torch.tensor([[1, 2, 3], [4, 5, 0], [6, 0, 0]],
+                            dtype=torch.float32,
+                            requires_grad=True).unsqueeze(-1)
+    seq_lengths = [3, 2, 1]
+    pack = torch.nn.utils.rnn.pack_padded_sequence(
+        batch_in, seq_lengths, batch_first=True)
+
+    wpack = PackWrapper(pack)
+
+    xla_device = xm.xla_device()
+    xdata = xm.send_cpu_data_to_device(wpack, xla_device)
+    self.assertTrue(isinstance(xdata, nn.utils.rnn.PackedSequence))
+    self.assertEqual(xdata.batch_sizes.device, torch.device('cpu'))
+    self.assertEqual(xdata.data.device, xla_device)
 
 
 if __name__ == '__main__':

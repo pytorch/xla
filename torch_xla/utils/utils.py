@@ -90,6 +90,29 @@ class FnDataGenerator(object):
     return data, target
 
 
+class DataWrapper(object):
+  """Utility class to wrap data structures to be sent to device."""
+
+  def __init__(self):
+    pass
+
+  def get_tensors(self):
+    """Returns the list of CPU tensors which must be sent to device."""
+    raise NotImplementedError('The method is missing an implementation')
+
+  def from_tensors(self, tensors):
+    """Build an instance of the wrapped object given the input tensors.
+
+    The number of tensors is the same as the ones returned by the
+    `get_tensors()` API, and `tensors[i]` is the device copy of
+    `get_tensors()[i]`.
+
+    Returns:
+      The unwrapped instance of the object with tensors on device.
+    """
+    raise NotImplementedError('The method is missing an implementation')
+
+
 def as_list(t):
   return t if isinstance(t, (tuple, list)) else [t]
 
@@ -113,6 +136,9 @@ def _for_each_instance(value, select_fn, fn, seen):
       _for_each_instance(v, select_fn, fn, seen)
   elif isinstance(value, (list, tuple, set)):
     for x in value:
+      _for_each_instance(x, select_fn, fn, seen)
+  elif isinstance(value, DataWrapper):
+    for x in value.get_tensors():
       _for_each_instance(x, select_fn, fn, seen)
   elif hasattr(value, '__dict__'):
     for k in value.__dict__.keys():
@@ -151,6 +177,12 @@ def _for_each_instance_rewrite(value, select_fn, fn, rwmap):
     rwmap[id(value)] = result
     for x in value:
       result.append(_for_each_instance_rewrite(x, select_fn, fn, rwmap))
+  elif isinstance(value, DataWrapper):
+    new_tensors = []
+    for x in value.get_tensors():
+      new_tensors.append(_for_each_instance_rewrite(x, select_fn, fn, rwmap))
+    result = value.from_tensors(new_tensors)
+    rwmap[id(value)] = result
   elif hasattr(value, '__dict__'):
     result = copy.copy(value)
     rwmap[id(value)] = result

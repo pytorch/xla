@@ -269,6 +269,14 @@ at::Tensor AtenXlaType::_log_softmax_backward_data(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output), dim));
 }
 
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::_pack_padded_sequence(
+    const at::Tensor& input, const at::Tensor& lengths, bool batch_first) {
+  XLA_FN_COUNTER("xla::");
+  std::vector<at::Tensor> xla_tensors = {lengths};
+  auto cpu_tensors = bridge::XlaCreateTensorList(xla_tensors);
+  return at::native::_pack_padded_sequence(input, cpu_tensors[0], batch_first);
+}
+
 at::Tensor AtenXlaType::_s_where(const at::Tensor& condition,
                                  const at::Tensor& self,
                                  const at::Tensor& other) {
