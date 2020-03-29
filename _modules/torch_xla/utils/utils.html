@@ -342,6 +342,29 @@
     <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span>
 
 
+<span class="k">class</span> <span class="nc">DataWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Utility class to wrap data structures to be sent to device.&quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+  <span class="k">def</span> <span class="nf">get_tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the list of CPU tensors which must be sent to device.&quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;The method is missing an implementation&#39;</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">from_tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensors</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build an instance of the wrapped object given the input tensors.</span>
+
+<span class="sd">    The number of tensors is the same as the ones returned by the</span>
+<span class="sd">    `get_tensors()` API, and `tensors[i]` is the device copy of</span>
+<span class="sd">    `get_tensors()[i]`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      The unwrapped instance of the object with tensors on device.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;The method is missing an implementation&#39;</span><span class="p">)</span>
+
+
 <span class="k">def</span> <span class="nf">as_list</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
   <span class="k">return</span> <span class="n">t</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">))</span> <span class="k">else</span> <span class="p">[</span><span class="n">t</span><span class="p">]</span>
 
@@ -365,6 +388,9 @@
       <span class="n">_for_each_instance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">seen</span><span class="p">)</span>
   <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">set</span><span class="p">)):</span>
     <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+      <span class="n">_for_each_instance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">seen</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">DataWrapper</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">get_tensors</span><span class="p">():</span>
       <span class="n">_for_each_instance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">seen</span><span class="p">)</span>
   <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">&#39;__dict__&#39;</span><span class="p">):</span>
     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
@@ -403,6 +429,12 @@
     <span class="n">rwmap</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
     <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
       <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_for_each_instance_rewrite</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">rwmap</span><span class="p">))</span>
+  <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">DataWrapper</span><span class="p">):</span>
+    <span class="n">new_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">get_tensors</span><span class="p">():</span>
+      <span class="n">new_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_for_each_instance_rewrite</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">rwmap</span><span class="p">))</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">from_tensors</span><span class="p">(</span><span class="n">new_tensors</span><span class="p">)</span>
+    <span class="n">rwmap</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
   <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">&#39;__dict__&#39;</span><span class="p">):</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
     <span class="n">rwmap</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
