@@ -53,6 +53,7 @@ function run_all_tests {
   python3 "$CDIR/test_mp_replication.py"
   python3 "$CDIR/test_mp_rendezvous.py"
   python3 "$CDIR/test_mp_save.py"
+  python3 "$CDIR/test_mp_mesh_reduce.py"
 }
 
 if [ "$LOGFILE" != "" ]; then
