@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import collections
+import io
 import sys
 import os
 import re
@@ -526,3 +527,25 @@ def rendezvous(tag, payload=b''):
     payload (bytes, optional): The payload to be sent to the rendezvous.
   """
   return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload)
+
+
+def mesh_reduce(tag, data, reduce_fn):
+  """Performs an out-of-graph client mesh reduction.
+
+  Args:
+    tag (string): The name of the rendezvous to join.
+    data: The data to be reduced. The `reduce_fn` callable will receive a list
+      with the copies of the same data coming from all the mesh client processes
+      (one per core).
+    reduce_fn (callable): A function which receives a list of `data`-like
+      objects and returns the reduced result.
+  """
+  cpu_data = _maybe_convert_to_cpu(data)
+  bio = io.BytesIO()
+  torch.save(cpu_data, bio)
+  xdata = rendezvous(tag, bio.getvalue())
+  xldata = []
+  for xd in xdata:
+    xbio = io.BytesIO(xd)
+    xldata.append(torch.load(xbio))
+  return reduce_fn(xldata) if xldata else cpu_data
