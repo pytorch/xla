@@ -1,8 +1,8 @@
 diff --git a/torch/testing/_internal/common_device_type.py b/torch/testing/_internal/common_device_type.py
-index 01973711e7..457f0bf373 100644
+index 01973711e7..1a39556487 100644
 --- a/torch/testing/_internal/common_device_type.py
 +++ b/torch/testing/_internal/common_device_type.py
-@@ -270,10 +270,129 @@ class CUDATestBase(DeviceTypeTestBase):
+@@ -270,10 +270,142 @@ class CUDATestBase(DeviceTypeTestBase):
          cls.primary_device = 'cuda:{0}'.format(torch.cuda.current_device())
  
  
@@ -20,9 +20,11 @@ index 01973711e7..457f0bf373 100644
 +xla_meta = run_path(xla_meta_path)
 +assert xla_meta, "XLA metadata not found!"
 +disabled_torch_tests = xla_meta.get('disabled_torch_tests', None)
++disabled_torch_tests_tpu = xla_meta.get('disabled_torch_tests_tpu', None)
 +torch_test_precisions = xla_meta.get('torch_test_precisions', None)
 +DEFAULT_FLOATING_PRECISION = xla_meta.get('DEFAULT_FLOATING_PRECISION', None)
 +assert disabled_torch_tests is not None, "XLA tests not found!"
++assert disabled_torch_tests_tpu is not None, "XLA TPU tests not found!"
 +assert torch_test_precisions is not None, "XLA test precisions not found!"
 +assert DEFAULT_FLOATING_PRECISION is not None, "DEFAULT_FLOATING_PRECISION not found!"
 +
@@ -44,13 +46,24 @@ index 01973711e7..457f0bf373 100644
 +    @classmethod
 +    def instantiate_test(cls, name, test):
 +        test_name = name + "_" + cls.device_type
++        real_device = xm.xla_real_devices([str(xm.xla_device())])[0]
++        isTpuDevice = 'TPU' in real_device
 +
 +        @wraps(test)
 +        def disallowed_test(self, test=test):
 +            raise unittest.SkipTest("skipped on XLA")
 +            return test(self, cls.device_type)
 +
-+        if test_name in disabled_torch_tests or test.__name__ in disabled_torch_tests:
++        def test_in_disabled_list():
++            shouldSkip = test_name in disabled_torch_tests or test.__name__ in disabled_torch_tests
++            if not shouldSkip and isTpuDevice:
++                shouldSkip = test_name in disabled_torch_tests_tpu or test.__name__ in disabled_torch_tests_tpu
++            return shouldSkip
++
++        def test_with_dtype_in_disabled_list(dtype_test_name):
++            return dtype_test_name in disabled_torch_tests or (isTpuDevice and dtype_test_name in disabled_torch_tests_tpu)
++
++        if test_in_disabled_list():
 +            assert not hasattr(cls, test_name), "Redefinition of test {0}".format(test_name)
 +            setattr(cls, test_name, disallowed_test)
 +        else:  # Test is allowed
@@ -74,7 +87,7 @@ index 01973711e7..457f0bf373 100644
 +
 +                        assert not hasattr(cls, dtype_test_name), "Redefinition of test {0}".format(dtype_test_name)
 +                        setattr(cls, dtype_test_name, skipped_test)
-+                    elif dtype_test_name in disabled_torch_tests:
++                    elif test_with_dtype_in_disabled_list(dtype_test_name):
 +                        setattr(cls, dtype_test_name, disallowed_test)
 +                    else:
 +                        xla_dtypes.append(dtype)
@@ -132,7 +145,7 @@ index 01973711e7..457f0bf373 100644
  
  PYTORCH_CUDA_MEMCHECK = os.getenv('PYTORCH_CUDA_MEMCHECK', '0') == '1'
  
-@@ -320,7 +439,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
+@@ -320,7 +452,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
                  assert inspect.isfunction(test), "Couldn't extract function from '{0}'".format(name)
  
                  # Instantiates the device-specific tests
