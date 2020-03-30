@@ -1,6 +1,8 @@
 import os
 import sys
 import time
+from datetime import datetime
+
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torch_xla.debug.metrics_compare_utils as mcu
@@ -69,12 +71,16 @@ def get_summary_writer(logdir):
   if logdir:
     from tensorboardX import SummaryWriter
     writer = SummaryWriter(log_dir=logdir)
-    write_to_summary(writer, 0, dict_to_write={
-        'TensorboardStartTimestamp': time.time()})
+    write_to_summary(
+        writer, 0, dict_to_write={'TensorboardStartTimestamp': time.time()})
     return writer
 
 
-def print_training_update(device, step_num, loss, rate, global_rate):
+def now(format='%H:%M:%S'):
+  return datetime.now().strftime(format)
+
+
+def print_training_update(device, step, loss, rate, global_rate, epoch=None):
   """Prints the training metrics at a given step.
 
   Args:
@@ -84,20 +90,28 @@ def print_training_update(device, step_num, loss, rate, global_rate):
     rate: Float. The examples/sec rate for the current batch.
     global_rate: Float. The average examples/sec rate since training began.
   """
-  print(
-      '[{}]({}) Loss={:.5f} Rate={:.2f} GlobalRate={:.2f} Time={}'.format(
-          _get_device_spec(device), step_num, loss, rate, global_rate,
-          time.asctime()),
-      flush=True)
+  update_data = [
+      'Training', 'Device={}'.format(_get_device_spec(device)),
+      'Epoch={}'.format(epoch) if epoch is not None else None,
+      'Step={}'.format(step), 'Loss={:.5f}'.format(loss),
+      'Rate={:.2f}'.format(rate), 'GlobalRate={:.2f}'.format(global_rate),
+      'Time={}'.format(now())
+  ]
+  print('|', ' '.join(item for item in update_data if item), flush=True)
 
 
-def print_test_update(device, accuracy):
+def print_test_update(device, accuracy, epoch=None, step=None):
   """Prints single-core test metrics.
 
   Args:
     device: Instance of `torch.device`.
     accuracy: Float.
   """
-  print(
-      '[{}] Accuracy={:.2f}%'.format(_get_device_spec(device), accuracy),
-      flush=True)
+  update_data = [
+      'Test', 'Device={}'.format(_get_device_spec(device)),
+      'Step={}'.format(step) if step is not None else None,
+      'Epoch={}'.format(epoch) if epoch is not None else None,
+      'Accuracy={:.2f}'.format(accuracy) if accuracy is not None else None,
+      'Time={}'.format(now())
+  ]
+  print('|', ' '.join(item for item in update_data if item), flush=True)
