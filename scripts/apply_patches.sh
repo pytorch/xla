@@ -19,6 +19,7 @@ if [ -f "$TORCH_PIN" ]; then
       pushd "$PTDIR"
       git fetch origin "pull/$PRNUM/head:$PRNUM"
       git checkout "$PRNUM"
+      git submodule update --init --recursive
       popd
     fi
     set -x
@@ -27,6 +28,7 @@ if [ -f "$TORCH_PIN" ]; then
     pushd "$PTDIR"
     git fetch origin "$CID"
     git checkout "$CID"
+    git submodule update --init --recursive
     popd
   fi
 fi
