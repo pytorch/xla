@@ -119,15 +119,15 @@ def train_mnist():
     tracker = xm.RateTracker()
 
     model.train()
-    for x, (data, target) in enumerate(loader):
+    for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
       loss.backward()
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
-      if x % FLAGS.log_steps == 0:
-        xm.add_step_closure(_train_update, args=(device, x, loss, tracker))
+      if step % FLAGS.log_steps == 0:
+        xm.add_step_closure(_train_update, args=(device, step, loss, tracker))
 
   def test_loop_fn(loader):
     total_samples = 0
@@ -146,16 +146,20 @@ def train_mnist():
   accuracy = 0.0
   max_accuracy = 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
+    xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     para_loader = pl.ParallelLoader(train_loader, [device])
     train_loop_fn(para_loader.per_device_loader(device))
-    xm.master_print('Finished training epoch {}'.format(epoch))
+    xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
+    xm.master_print('Epoch {} test end {}'.format(epoch, test_utils.now()))
     max_accuracy = max(accuracy, max_accuracy)
-    test_utils.write_to_summary(writer, epoch,
-                                dict_to_write={'Accuracy/test': accuracy},
-                                write_xla_metrics=True)
+    test_utils.write_to_summary(
+        writer,
+        epoch,
+        dict_to_write={'Accuracy/test': accuracy},
+        write_xla_metrics=True)
     if FLAGS.metrics_debug:
       xm.master_print(met.metrics_report())
 
