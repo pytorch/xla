@@ -220,7 +220,7 @@ def train_imagenet():
         xm.add_step_closure(
             test_utils.print_test_update, args=(device, None, epoch, step))
     accuracy = 100.0 * correct.item() / total_samples
-    accuracy = xm.mesh_reduce('test_accuracy_mp_mesh_reduce', accuracy, np.mean)
+    accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
   accuracy, max_accuracy = 0.0, 0.0

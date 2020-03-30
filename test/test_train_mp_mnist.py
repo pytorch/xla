@@ -140,7 +140,7 @@ def train_mnist():
       total_samples += data.size()[0]
 
     accuracy = 100.0 * correct.item() / total_samples
-    accuracy = xm.mesh_reduce('test_accuracy_mp_mesh_reduce', accuracy, np.mean)
+    accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
   accuracy, max_accuracy = 0.0, 0.0
