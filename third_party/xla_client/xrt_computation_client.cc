@@ -34,7 +34,7 @@ class TensorAllocator : public tensorflow::Allocator {
   struct AllocKey {
     struct Hash {
       size_t operator()(const AllocKey& hk) const {
-        return util::HashCombine(hk.alignment, hk.num_bytes);
+        return util::StdHashCombine(hk.alignment, hk.num_bytes);
       }
     };
 

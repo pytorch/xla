@@ -102,7 +102,7 @@ def grab_graphs(args):
     grab_graph_path = os.path.join(get_scripts_path(), 'grab_graphs.py')
     report = subprocess.check_output([
         grab_graph_path, '--graphdir={}'.format(get_graphdir_path(args.outdir)),
-        graphs_file
+        '--collisions_check', graphs_file
     ]).decode('utf-8')
     with open(get_graph_report_path(args.outdir), 'w') as fd:
       fd.write(report)
@@ -164,6 +164,15 @@ def read_proc_output(logfd, offset, outfd=None):
   return offset, data
 
 
+def terminate_process(proc, term_wait=10):
+  proc.terminate()
+  try:
+    proc.wait(timeout=term_wait)
+  except subprocess.TimeoutExpired:
+    proc.kill()
+    proc.wait()
+
+
 def run_and_monitor(args):
   env = create_env(args)
   logfile = get_log_file_path(args.outdir)
@@ -177,8 +186,7 @@ def run_and_monitor(args):
     if data is None:
       time.sleep(1.0)
 
-  proc.terminate()
-  proc.wait()
+  terminate_process(proc)
   read_proc_output(logfd, offset, outfd=sys.stdout.fileno())
   os.close(logfd)
 

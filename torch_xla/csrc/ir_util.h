@@ -29,6 +29,9 @@ class Util {
   static std::vector<const Node*> ComputePostOrder(const Node* node,
                                                    EmissionMap* emap);
 
+  static std::vector<const Node*> ComputePostOrder(
+      absl::Span<const Node* const> nodes, EmissionMap* emap);
+
   // Same as above, but computes the post order on the set of nodes specified as
   // argument.
   static std::vector<const Node*> ComputePostOrder(

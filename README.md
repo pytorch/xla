@@ -49,7 +49,7 @@ Cloud TPU:
 * [Training FairSeq Transformer on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/transformer-pytorch)
 * [Training Resnet50 on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py)
 
-To start, [you create a Cloud TPU node](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py#create_tpu) with the corresponding release you wish to consume (TPU software version: ex. `pytorch-0.5`):
+To start, [you create a Cloud TPU node](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py#create_tpu) with the corresponding release you wish to consume (TPU software version: ex. `pytorch-1.5`):
 
 Once you've created a Cloud TPU node, you can train your PyTorch models by either:
 
@@ -69,7 +69,7 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
 
 2. SSH into the VM and pull a version of the docker image into the VM. The currently available versions are:
 
-    * `gcr.io/tpu-pytorch/xla:r0.5`: The current stable version.
+    * `gcr.io/tpu-pytorch/xla:r1.5`: The current stable version.
     * `gcr.io/tpu-pytorch/xla:nightly`: Nightly version.
     * `gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_20190531)`: The nightly version of the given day.
 
@@ -87,19 +87,19 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
     ```
 
     ```Shell
-    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r0.5
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:r1.5
     ```
 
 3. Where `$TPU_IP_ADDRESS` (e.g.: `10.1.1.2`) is your TPU Internal IP displayed in GCP UI, after pulling the docker image you can either:
 
     * Run the container with a single command:
       ```Shell
-      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r0.5 python /pytorch/xla/test/test_train_mnist.py
+      (vm)$ docker run --shm-size 16G -e XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470" gcr.io/tpu-pytorch/xla:r1.5 python /pytorch/xla/test/test_train_mnist.py
       ```
 
     * Run the script in an interactive shell:
       ```Shell
-      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r0.5
+      (vm)$ docker run -it --shm-size 16G gcr.io/tpu-pytorch/xla:r1.5
       (pytorch) root@CONTAINERID:/$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
       (pytorch) root@CONTAINERID:/$ python pytorch/xla/test/test_train_mnist.py
       ```
@@ -119,7 +119,7 @@ Follow these steps to train a PyTorch model with a VM Image on a Cloud TPU:
     * Click **Create** to create the instance.
 
 
-2. SSH into VM and activate the conda environment you wish to use. Each release (e.g.: `0.1`, `0.5`, `nightly`) is a separate conda environment.
+2. SSH into VM and activate the conda environment you wish to use. Each release (e.g.: `0.1`, `0.5`, `1.5`, `nightly`) is a separate conda environment.
 
     ```Shell
     (vm)$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
@@ -129,11 +129,12 @@ Follow these steps to train a PyTorch model with a VM Image on a Cloud TPU:
     base                  *  /anaconda3
     torch-xla-0.1              /anaconda3/envs/torch-xla-0.1
     torch-xla-0.5              /anaconda3/envs/torch-xla-0.5
+    torch-xla-1.5              /anaconda3/envs/torch-xla-1.5
     torch-xla-nightly          /anaconda3/envs/torch-xla-nightly
 
-    (vm)$ conda activate torch-xla-0.5
-    (torch-xla-0.5)$ cd /usr/share/torch-xla-0.5/pytorch/xla
-    (torch-xla-0.5)$ python test/test_train_mnist.py
+    (vm)$ conda activate torch-xla-1.5
+    (torch-xla-1.5)$ cd /usr/share/torch-xla-1.5/pytorch/xla
+    (torch-xla-1.5)$ python test/test_train_mnist.py
     ```
 
     To update the wheels `torch` and `torch_xla` to the latest nightly

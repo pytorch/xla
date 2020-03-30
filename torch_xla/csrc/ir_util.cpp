@@ -42,15 +42,20 @@ std::vector<const Node*> Util::ComputePostOrder(const Node* node,
 }
 
 std::vector<const Node*> Util::ComputePostOrder(
-    absl::Span<const Node* const> nodes) {
-  EmissionMap emap;
+    absl::Span<const Node* const> nodes, EmissionMap* emap) {
   std::vector<const Node*> post_order;
   for (auto node : nodes) {
-    auto node_post_order = ComputePostOrder(node, &emap);
+    auto node_post_order = ComputePostOrder(node, emap);
     post_order.insert(post_order.end(), node_post_order.begin(),
                       node_post_order.end());
   }
   return post_order;
+}
+
+std::vector<const Node*> Util::ComputePostOrder(
+    absl::Span<const Node* const> nodes) {
+  EmissionMap emap;
+  return ComputePostOrder(nodes, &emap);
 }
 
 std::vector<Value> Util::Clone(absl::Span<const Value> values,

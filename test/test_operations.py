@@ -24,6 +24,7 @@ import numpy
 import random
 import re
 import torch
+import torch.autograd as ad
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -1413,6 +1414,23 @@ class TestAtenXlaTensor(XlaTestCase):
 
     self.runAtenTest([torch.rand(2, 4), torch.zeros(2, 1)], test_fn)
 
+  def test_spooky_ailing(self):
+
+    def test_fn(m):
+      a = torch.pow(3, m[4])
+      r1 = torch.empty_like(a).zero_()
+      for i in range(r1.size(0)):
+        r1[i] = math.pow(3, m[4][i])
+      s = str(r1)
+
+      b = torch.pow(3, m[:, 4])
+      r2 = torch.empty_like(b).zero_()
+      for i in range(r2.size(0)):
+        r2[i] = math.pow(3, m[i][4])
+      return r1, r2
+
+    self.runAtenTest([torch.randint(1, 4, (7, 7), dtype=torch.uint8)], test_fn)
+
   def test_view_and_copy_(self):
     xla_device = xm.xla_device()
     x = torch.tensor([1.5, 2.5, 3.5, 4.5, 5.5, 6.5], device='cpu')
@@ -1425,6 +1443,7 @@ class TestAtenXlaTensor(XlaTestCase):
     x = torch.rand(5, device=xla_device)
     y = torch.rand(5)
     self.assertEqual(x + y, y + x)
+
 
 class MNISTComparator(nn.Module):
 
@@ -1562,6 +1581,38 @@ class TestGeneric(XlaTestCase):
                                  lambda x: isinstance(x, (int, str, float)),
                                  convert)
     self.assertEqual(len(wids), 11)
+
+  def test_data_wrapper(self):
+
+    class PackWrapper(xu.DataWrapper):
+
+      def __init__(self, pack):
+        super(PackWrapper, self).__init__()
+        self.pack = pack
+
+      def get_tensors(self):
+        return [
+            self.pack.data, self.pack.sorted_indices, self.pack.unsorted_indices
+        ]
+
+      def from_tensors(self, tensors):
+        return nn.utils.rnn.PackedSequence(tensors[0], self.pack.batch_sizes,
+                                           tensors[1], tensors[2])
+
+    batch_in = torch.tensor([[1, 2, 3], [4, 5, 0], [6, 0, 0]],
+                            dtype=torch.float32,
+                            requires_grad=True).unsqueeze(-1)
+    seq_lengths = [3, 2, 1]
+    pack = torch.nn.utils.rnn.pack_padded_sequence(
+        batch_in, seq_lengths, batch_first=True)
+
+    wpack = PackWrapper(pack)
+
+    xla_device = xm.xla_device()
+    xdata = xm.send_cpu_data_to_device(wpack, xla_device)
+    self.assertTrue(isinstance(xdata, nn.utils.rnn.PackedSequence))
+    self.assertEqual(xdata.batch_sizes.device, torch.device('cpu'))
+    self.assertEqual(xdata.data.device, xla_device)
 
 
 if __name__ == '__main__':

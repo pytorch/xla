@@ -2,6 +2,8 @@ DEFAULT_FLOATING_PRECISION = 1e-3
 
 torch_test_precisions = {
     # test_name : floating_precision,
+    'test_pow_xla_float32': 0.0035,
+    'test_pow_xla_float64': 0.0045,
 }
 
 disabled_torch_tests = {
@@ -148,13 +150,15 @@ disabled_torch_tests = {
     'test_triangular_solve_batched',  # (TPU) precision (1e-6)
     'test_triangular_solve_batched_many_batches',  # (TPU) 1.02 vs 0.001
     'test_triangular_solve',  # (TPU) precision (1e-7)
+    'test_triangular_solve_batched_broadcasting',  # (TPU) 1.5 vs 0.001
     'test_scalar_check',  # runtime error
     'test_argminmax_large_axis',  # OOM, and the test is grepping "memory" in the exception message
     'test_trapz', # precision (1e-5), test use np.allClose
     'test_random_from_to_xla_int32', # precision, TPU does not have real F64
-    'test_randn_xla_float32', # FIXME: randn(out=) not working
-    'test_randn_xla_float64', # FIXME: randn(out=) not working
-    'test_normal_xla_float64', # FIXME: mixed precision
+    'test_randn_xla_float32', # xla doesn't support manual_seed, as_stride
+    'test_randn_xla_float64', # xla doesn't support manual_seed, as_stride
+    'test_rand_xla_float32',  # xla doesn't support manual_seed, as_stride
+    'test_rand_xla_float64',  # xla doesn't support manual_seed, as_stride
 
     # TestViewOps
     'test_contiguous_nonview',
