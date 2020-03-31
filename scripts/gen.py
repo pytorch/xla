@@ -949,7 +949,7 @@ def parse_local_overrides(path):
 
 def generate_registrations(fgens, overrides):
   code = 'void RegisterAtenTypeFunctions() {\n'
-  code += '  static auto dispatch = torch::import("aten")\n'
+  code += '  static auto dispatch = torch::import()\n'
   overridden = set()
   for fgen in fgens:
     if not is_overrideable(fgen):
