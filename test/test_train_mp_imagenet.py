@@ -38,6 +38,7 @@ FLAGS = args_parse.parse_common_options(
 
 import os
 import schedulers
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -80,16 +81,17 @@ for arg, value in default_value_dict.items():
   if getattr(FLAGS, arg) is None:
     setattr(FLAGS, arg, value)
 
+
 def get_model_property(key):
   default_model_property = {
-    'img_dim': 224,
-    'model_fn': getattr(torchvision.models, FLAGS.model)
+      'img_dim': 224,
+      'model_fn': getattr(torchvision.models, FLAGS.model)
   }
   model_properties = {
-    'inception_v3': {
-        'img_dim': 299,
-        'model_fn': lambda: torchvision.models.inception_v3(aux_logits=False)
-    },
+      'inception_v3': {
+          'img_dim': 299,
+          'model_fn': lambda: torchvision.models.inception_v3(aux_logits=False)
+      },
   }
   model_fn = model_properties.get(FLAGS.model, default_model_property)[key]
   return model_fn
@@ -139,13 +141,18 @@ def train_imagenet():
             normalize,
         ]))
 
-    train_sampler = None
+    train_sampler, test_sampler = None, None
     if xm.xrt_world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
           num_replicas=xm.xrt_world_size(),
           rank=xm.get_ordinal(),
           shuffle=True)
+      test_sampler = torch.utils.data.distributed.DistributedSampler(
+          test_dataset,
+          num_replicas=xm.xrt_world_size(),
+          rank=xm.get_ordinal(),
+          shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
@@ -156,6 +163,7 @@ def train_imagenet():
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
+        sampler=test_sampler,
         drop_last=FLAGS.drop_last,
         shuffle=False,
         num_workers=FLAGS.num_workers)
@@ -206,13 +214,13 @@ def train_imagenet():
     for step, (data, target) in enumerate(loader):
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
-      correct += pred.eq(target.view_as(pred)).sum().item()
+      correct += pred.eq(target.view_as(pred)).sum()
       total_samples += data.size()[0]
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             test_utils.print_test_update, args=(device, None, epoch, step))
-    accuracy = 100.0 * correct / total_samples
-    test_utils.print_test_update(device, accuracy=accuracy, epoch=epoch)
+    accuracy = 100.0 * correct.item() / total_samples
+    accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
   accuracy, max_accuracy = 0.0, 0.0
@@ -223,7 +231,8 @@ def train_imagenet():
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device), epoch)
-    xm.master_print('Epoch {} test end {}'.format(epoch, test_utils.now()))
+    xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
+        epoch, test_utils.now(), accuracy))
     max_accuracy = max(accuracy, max_accuracy)
     test_utils.write_to_summary(
         writer,
