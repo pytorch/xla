@@ -14,7 +14,7 @@ TORCH_TEST_PRECIIONS = {
     'test_pow_xla_float64': 0.0045,
 }
 
-DISABLED_TORCH_TESTS = {
+DISABLED_TORCH_TESTS_ANY = {
     # test_torch.py
     # TestDevicePrecision
     'test_sum_cpu_device_mismatch',  # doesn't raise
@@ -23,29 +23,10 @@ DISABLED_TORCH_TESTS = {
     'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
     'test_copy_noncontig',
     'test_copy_broadcast',
-    'test_digamma',  # Precision issue at the first assert, then NAN handling (both on TPU)
 
     # TestTensorDeviceOps
     'test_block_diag_scipy',  #FIXME: RuntimeError: Error while lowering: f32[1,6]{1,0} xla::unselect, dim=1, start=2, end=2, stride=0
-    'test_cumprod_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
-    'test_cumprod_neg_dim_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_mean_64bit_indexing_xla',  # protobuf limit exceeded
-    'test_pow_inplace_xla',  # (TPU) 0.0032 vs 0.001
-    'test_pow_inplace_3_xla',  # (TPU) 0.0028 vs 0.001
-    'test_pow_3_xla',  # (TPU) 0.0028 vs 0.001
-    'test_pow_-2_xla',  # (TPU) 0.391 vs 0.001
-    'test_topk_neg_dim_sort_xla',  # (TPU) unimplemented HLO for X64
-    'test_topk_dim_sort_xla',  # (TPU) unimplemented HLO for X64
-    'test_topk_dim_desc_sort_xla',  # (TPU) unimplemented HLO for X64
-    'test_sort_xla',  # (TPU) unimplemented HLO for X64
-    'test_sort_neg_dim_xla',  # (TPU) unimplemented HLO for X64
-    'test_sort_neg_dim_descending_xla',  # (TPU) unimplemented HLO for X64
-    'test_sort_dim_xla',  # (TPU) unimplemented HLO for X64
-    'test_sort_dim_descending_xla',  # (TPU) unimplemented HLO for X64
-    'test_kthvalue_xla',  # (TPU) unimplemented HLO for X64
-    'test_kthvalue_neg_dim_xla',  # (TPU) unimplemented HLO for X64
-    'test_kthvalue_dim_xla',  # (TPU) unimplemented HLO for X64
-    'test_eig_with_eigvec_xla_float64',  # Precision: tensor(1.1798, dtype=torch.float64) not less than or equal to 0.001
 
     # TestTorchDeviceType
     'test_addmm_sizes',  # FIXME: very slow compile
@@ -147,22 +128,17 @@ DISABLED_TORCH_TESTS = {
     'test_stft',  # librosa (?!?) missing
     'test_tensor_shape_empty',  # LLVM OOM in CI
     'test_cholesky_inverse',  # precision (1e-6)
-    'test_cholesky_solve_batched_broadcasting',  # (TPU) 0.0039 vs 0.001
-    'test_cholesky_solve_batched_many_batches',  # (TPU) 0.36 vs 0.001
-    'test_cholesky_solve_batched',  # (TPU) precision (1e-5)
-    'test_cholesky_solve',  # (TPU) precision (1e-5)
-    'test_lu_solve_batched',  # (TPU) precision (1e-6)
-    'test_lu_solve',  # (TPU) precision (1e-7)
-    'test_solve_batched',  # (TPU) precision (1e-6)
-    'test_solve',  # (TPU) precison (1e-7)
-    'test_triangular_solve_batched',  # (TPU) precision (1e-6)
-    'test_triangular_solve_batched_many_batches',  # (TPU) 1.02 vs 0.001
-    'test_triangular_solve',  # (TPU) precision (1e-7)
-    'test_triangular_solve_batched_broadcasting',  # (TPU) 1.5 vs 0.001
+    'test_cholesky_solve_batched',  # precision (2e-12)
+    'test_cholesky_solve',  # precision(1e-12)
+    'test_lu_solve_batched',  # precision(1e-12)
+    'test_lu_solve',  # precision(1e-12)
+    'test_solve_batched',  # precision(1e-12)
+    'test_solve',  # precision(1e-12)
+    'test_triangular_solve_batched',  # precision(3e-12)
+    'test_triangular_solve',  # precision (4e-12)
     'test_scalar_check',  # runtime error
     'test_argminmax_large_axis',  # OOM, and the test is grepping "memory" in the exception message
     'test_trapz',  # precision (1e-5), test use np.allClose
-    'test_random_from_to_xla_int32',  # precision, TPU does not have real F64
     'test_randn_xla_float32',  # xla doesn't support manual_seed, as_stride
     'test_randn_xla_float64',  # xla doesn't support manual_seed, as_stride
     'test_rand_xla_float32',  # xla doesn't support manual_seed, as_stride
@@ -232,6 +208,48 @@ DISABLED_TORCH_TESTS = {
     'test_complex_scalar_mult_tensor_promotion',  # complex support
 }
 
+DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
+    # test_torch.py
+    # TestDevicePrecision
+    'test_digamma',  # Precision issue at the first assert, then NAN handling (both on TPU)
+
+    #TestTensorDeviceOps
+    'test_pow_inplace_xla',  # (TPU) 0.0032 vs 0.001
+    'test_pow_inplace_3_xla',  # (TPU) 0.0028 vs 0.001
+    'test_pow_3_xla',  # (TPU) 0.0028 vs 0.001
+    'test_pow_-2_xla',  # (TPU) 0.391 vs 0.001
+    'test_topk_dim_sort_xla',  # (TPU) unimplemented HLO for X64
+    'test_topk_dim_desc_sort_xla',  # (TPU) unimplemented HLO for X64
+    'test_sort_xla',  # (TPU) unimplemented HLO for X64
+    'test_sort_neg_dim_xla',  # (TPU) unimplemented HLO for X64
+    'test_sort_neg_dim_descending_xla',  # (TPU) unimplemented HLO for X64
+    'test_sort_dim_xla',  # (TPU) unimplemented HLO for X64
+    'test_sort_dim_descending_xla',  # (TPU) unimplemented HLO for X64
+    'test_kthvalue_xla',  # (TPU) unimplemented HLO for X64
+    'test_kthvalue_neg_dim_xla',  # (TPU) unimplemented HLO for X64
+    'test_kthvalue_dim_xla',  # (TPU) unimplemented HLO for X64
+    'test_eig_with_eigvec_xla_float64',  # Precision: tensor(1.1798, dtype=torch.float64) not less than or equal to 0.001
+    'test_cumprod_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
+    'test_cumprod_neg_dim_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
+    'test_topk_neg_dim_sort_xla',  # (TPU) unimplemented HLO for X64
+
+    #TestTorchDeviceType
+    'test_cholesky_solve_batched_broadcasting',  # (TPU) 0.0039 vs 0.001
+    'test_cholesky_solve_batched_many_batches',  # (TPU) 0.36 vs 0.001
+    'test_triangular_solve_batched_many_batches',  # (TPU) 1.02 vs 0.001
+    'test_triangular_solve_batched_broadcasting',  # (TPU) 1.5 vs 0.001
+    'test_random_from_to_xla_int32',  # precision, TPU does not have real F64
+}
+
+DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
+DISABLED_TORCH_TESTS_GPU = DISABLED_TORCH_TESTS_ANY
+
+DISABLED_TORCH_TESTS = {
+    'TPU': DISABLED_TORCH_TESTS_TPU,
+    'CPU': DISABLED_TORCH_TESTS_CPU,
+    'GPU': DISABLED_TORCH_TESTS_GPU,
+}
+
 
 class XLATestBase(DeviceTypeTestBase):
   device_type = 'xla'
@@ -251,13 +269,16 @@ class XLATestBase(DeviceTypeTestBase):
   @classmethod
   def instantiate_test(cls, name, test):
     test_name = name + '_' + cls.device_type
+    real_device_type = xm.xla_device_hw(str(xm.xla_device()))
+    assert real_device_type in DISABLED_TORCH_TESTS, 'Unsupported device type:' + real_device_type
+    disabled_torch_tests = DISABLED_TORCH_TESTS[real_device_type]
 
     @wraps(test)
     def disallowed_test(self, test=test):
       raise unittest.SkipTest('skipped on XLA')
       return test(self, cls.device_type)
 
-    if test_name in DISABLED_TORCH_TESTS or test.__name__ in DISABLED_TORCH_TESTS:
+    if test_name in disabled_torch_tests or test.__name__ in disabled_torch_tests:
       assert not hasattr(
           cls, test_name), 'Redefinition of test {0}'.format(test_name)
       setattr(cls, test_name, disallowed_test)
@@ -284,7 +305,7 @@ class XLATestBase(DeviceTypeTestBase):
                 cls, dtype_test_name), 'Redefinition of test {0}'.format(
                     dtype_test_name)
             setattr(cls, dtype_test_name, skipped_test)
-          elif dtype_test_name in DISABLED_TORCH_TESTS:
+          elif dtype_test_name in disabled_torch_tests:
             setattr(cls, dtype_test_name, disallowed_test)
           else:
             xla_dtypes.append(dtype)
