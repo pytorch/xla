@@ -29,6 +29,7 @@ Steps to reproduce the behavior:
 
  - reproducible on XLA backend [CPU/TPU]:
  - torch_xla version:
+ - Repro code in Colab template: https://github.com/pytorch/xla/blob/master/contrib/colab/issue-report.ipynb
  - Any other relevant information. In case of issues related to slow executions, re-compilations, etc.., it is useful to have the `tar.gz` report from https://github.com/pytorch/xla/blob/master/TROUBLESHOOTING.md#using-debug_runpy-to-collect-debug-information
 
 
