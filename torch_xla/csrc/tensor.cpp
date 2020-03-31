@@ -1066,7 +1066,7 @@ XLATensor::ComputationCache::TypePtr XLATensor::LookupCachedCompile(
     XLA_COUNTER("UncachedCompile", 1);
     return nullptr;
   }
-  TF_VLOG(4) << "Graph hash " << xla::util::HexHash(hash)
+  TF_VLOG(5) << "Graph hash " << xla::util::HexHash(hash)
              << " is computation hash "
              << xla::util::HexHash(xla::util::Hash(
                     cached_computation->computation->computation()
@@ -1434,7 +1434,7 @@ XLATensor::CompilationResult XLATensor::Compile(
           xla::ComputationClient::Get()->Compile(std::move(instances));
   TF_VLOG(3) << "Compiling IR graph hash " << xla::util::HexHash(coll.hash)
              << " on device " << coll.device << " done!";
-  TF_VLOG(4)
+  TF_VLOG(5)
       << "Graph hash " << xla::util::HexHash(coll.hash)
       << " is computation hash "
       << xla::util::HexHash(xla::util::Hash(
@@ -1461,6 +1461,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   PostOrderData po_data = RunPostOrder(*tensors, coll.indices);
   coll.hash = xla::util::HashCombine(
       coll.hash, xla::util::Hash(po_data.parameter_sequence));
+  TF_VLOG(4) << "Parameter sequence raph hash "
+             << xla::util::HexHash(coll.hash);
   std::shared_ptr<Async> async = TryRunCachedSync(tensors, &coll, &po_data);
   if (async != nullptr) {
     return async;
