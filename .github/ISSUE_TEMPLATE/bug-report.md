@@ -19,7 +19,7 @@ Steps to reproduce the behavior:
 2.
 3.
 
-<!-- If you have a code sample, error messages, stack traces, please provide it here as well -->
+<!-- If you have a code sample, error messages, stack traces, please provide it here as well. Or better use the Colab template: https://github.com/pytorch/xla/blob/master/contrib/colab/issue-report.ipynb -->
 
 ## Expected behavior
 
@@ -27,9 +27,8 @@ Steps to reproduce the behavior:
 
 ## Environment
 
- - reproducible on XLA backend [CPU/TPU]:
+ - Reproducible on XLA backend [CPU/TPU]:
  - torch_xla version:
- - Repro code in Colab template: https://github.com/pytorch/xla/blob/master/contrib/colab/issue-report.ipynb
  - Any other relevant information. In case of issues related to slow executions, re-compilations, etc.., it is useful to have the `tar.gz` report from https://github.com/pytorch/xla/blob/master/TROUBLESHOOTING.md#using-debug_runpy-to-collect-debug-information
 
 
