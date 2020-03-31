@@ -19,10 +19,13 @@ xla_model
 .. autofunction:: all_reduce
 
 .. autofunction:: add_step_closure
+.. autofunction:: wait_device_ops
 		  
 .. autofunction:: optimizer_step
 
 .. autofunction:: save
+.. autofunction:: rendezvous
+.. autofunction:: mesh_reduce
 
 distributed
 ----------------------------------
@@ -51,4 +54,19 @@ utils
 .. automodule:: torch_xla.utils.utils
 
 .. autoclass:: SampleGenerator
+
+.. autoclass:: DataWrapper
+
+.. automodule:: torch_xla.utils.gcsfs
+
+.. autofunction:: open
+.. autofunction:: list
+.. autofunction:: stat
+.. autofunction:: remove
+.. autofunction:: rmtree
+.. autofunction:: read
+.. autofunction:: write
+.. autofunction:: generic_read
+.. autofunction:: generic_write
+
 
