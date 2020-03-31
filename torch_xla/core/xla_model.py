@@ -162,6 +162,19 @@ def xla_real_devices(devices):
   return real_devices
 
 
+def xla_device_hw(device):
+  """Returns the hardware type of the given device.
+
+  Args:
+    device (string): The xla device that will be mapped to the real device.
+
+  Returns:
+    A string representation of the hardware type of the given device.
+  """
+  real_device = xla_real_devices([device])[0]
+  return real_device.split(':')[0]
+
+
 def xla_replication_devices(local_devices):
   real_devices = xla_real_devices(local_devices)
   device_types = set()
