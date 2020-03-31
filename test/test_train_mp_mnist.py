@@ -11,7 +11,7 @@ FLAGS = args_parse.parse_common_options(
 import os
 import shutil
 import sys
-import time
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -136,15 +136,14 @@ def train_mnist():
     for data, target in loader:
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
-      correct += pred.eq(target.view_as(pred)).sum().item()
+      correct += pred.eq(target.view_as(pred)).sum()
       total_samples += data.size()[0]
 
-    accuracy = 100.0 * correct / total_samples
-    test_utils.print_test_update(device, accuracy)
+    accuracy = 100.0 * correct.item() / total_samples
+    accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  accuracy = 0.0
-  max_accuracy = 0.0
+  accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     para_loader = pl.ParallelLoader(train_loader, [device])
@@ -153,7 +152,8 @@ def train_mnist():
 
     para_loader = pl.ParallelLoader(test_loader, [device])
     accuracy = test_loop_fn(para_loader.per_device_loader(device))
-    xm.master_print('Epoch {} test end {}'.format(epoch, test_utils.now()))
+    xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
+        epoch, test_utils.now(), accuracy))
     max_accuracy = max(accuracy, max_accuracy)
     test_utils.write_to_summary(
         writer,
