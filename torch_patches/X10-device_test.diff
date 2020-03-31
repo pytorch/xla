@@ -1,138 +1,24 @@
 diff --git a/torch/testing/_internal/common_device_type.py b/torch/testing/_internal/common_device_type.py
-index 01973711e7..457f0bf373 100644
+index 01973711e7..eff169dfca 100644
 --- a/torch/testing/_internal/common_device_type.py
 +++ b/torch/testing/_internal/common_device_type.py
-@@ -270,10 +270,129 @@ class CUDATestBase(DeviceTypeTestBase):
-         cls.primary_device = 'cuda:{0}'.format(torch.cuda.current_device())
- 
- 
-+import torch_xla
-+import torch_xla.core.xla_model as xm
-+
-+# Acquires XLA test metadata
-+import copy
-+import os
-+import sys
-+from runpy import run_path
-+assert 'XLA_TEST_DIR' in os.environ, "XLA_TEST_DIR environment variable must be set"
-+xla_test_path = os.environ['XLA_TEST_DIR']
-+xla_meta_path = xla_test_path + "/torch_test_meta.py"
-+xla_meta = run_path(xla_meta_path)
-+assert xla_meta, "XLA metadata not found!"
-+disabled_torch_tests = xla_meta.get('disabled_torch_tests', None)
-+torch_test_precisions = xla_meta.get('torch_test_precisions', None)
-+DEFAULT_FLOATING_PRECISION = xla_meta.get('DEFAULT_FLOATING_PRECISION', None)
-+assert disabled_torch_tests is not None, "XLA tests not found!"
-+assert torch_test_precisions is not None, "XLA test precisions not found!"
-+assert DEFAULT_FLOATING_PRECISION is not None, "DEFAULT_FLOATING_PRECISION not found!"
-+
-+class XLATestBase(DeviceTypeTestBase):
-+    device_type = 'xla'
-+    unsupported_dtypes = {torch.half, torch.complex64, torch.complex128}
-+    precision = DEFAULT_FLOATING_PRECISION
-+
-+    @staticmethod
-+    def _alt_lookup(d, keys, defval):
-+        for k in keys:
-+            value = d.get(k, None)
-+            if value is not None:
-+                return value
-+        return defval
-+
-+    # Overrides to instantiate tests that are known to run quickly
-+    # and correctly on XLA.
-+    @classmethod
-+    def instantiate_test(cls, name, test):
-+        test_name = name + "_" + cls.device_type
-+
-+        @wraps(test)
-+        def disallowed_test(self, test=test):
-+            raise unittest.SkipTest("skipped on XLA")
-+            return test(self, cls.device_type)
-+
-+        if test_name in disabled_torch_tests or test.__name__ in disabled_torch_tests:
-+            assert not hasattr(cls, test_name), "Redefinition of test {0}".format(test_name)
-+            setattr(cls, test_name, disallowed_test)
-+        else:  # Test is allowed
-+            dtypes = cls._get_dtypes(test)
-+            if dtypes is None:  # Tests without dtype variants are instantiated as usual
-+                super().instantiate_test(name, test)
-+            else:  # Tests with dtype variants have unsupported dtypes skipped
-+                # Sets default precision for floating types to bfloat16 precision
-+                if not hasattr(test, 'precision_overrides'):
-+                    test.precision_overrides = {}
-+                xla_dtypes = []
-+                for dtype in dtypes:
-+                    dtype_str = str(dtype).split('.')[1]
-+                    dtype_test_name = test_name + "_" + dtype_str
-+                    if dtype in cls.unsupported_dtypes:
-+                        reason = "XLA does not support dtype {0}".format(str(dtype))
-+
-+                        @wraps(test)
-+                        def skipped_test(self, *args, reason=reason, **kwargs):
-+                            raise unittest.SkipTest(reason)
-+
-+                        assert not hasattr(cls, dtype_test_name), "Redefinition of test {0}".format(dtype_test_name)
-+                        setattr(cls, dtype_test_name, skipped_test)
-+                    elif dtype_test_name in disabled_torch_tests:
-+                        setattr(cls, dtype_test_name, disallowed_test)
-+                    else:
-+                        xla_dtypes.append(dtype)
-+                    if dtype in [torch.float, torch.double, torch.bfloat16]:
-+                        floating_precision = XLATestBase._alt_lookup(torch_test_precisions,
-+                                                                     [dtype_test_name, test_name, test.__name__],
-+                                                                     DEFAULT_FLOATING_PRECISION)
-+                        test.precision_overrides[dtype] = floating_precision
-+
-+                if len(xla_dtypes) != 0:
-+                    test.dtypes[cls.device_type] = xla_dtypes
-+                    super().instantiate_test(name, test)
-+
-+    @classmethod
-+    def get_primary_device(cls):
-+        return cls.primary_device
-+
-+    @classmethod
-+    def setUpClass(cls):
-+        # Sets the primary test device to the xla_device (CPU or TPU)
-+        cls.primary_device = str(xm.xla_device())
-+        torch_xla._XLAC._xla_set_use_full_mat_mul_precision(use_full_mat_mul_precision=True)
-+
-+    # Overrides assertEqual to popular custom precision
-+    def assertEqual(self, x, y, prec=None, message='', allow_inf=False, **kwargs):
-+        if prec is None:
-+            prec = self.precision
-+        else:
-+            prec = max(self.precision, prec)
-+        gmode = os.environ.get('TEST_PRINT_GRAPH', '').lower()
-+        if gmode == 'text':
-+            if type(x) == torch.Tensor and xm.is_xla_tensor(x):
-+                print('\nTest Graph (x):\n{}'.format(torch_xla._XLAC._get_xla_tensors_text([x])), file=sys.stderr)
-+            if type(y) == torch.Tensor and xm.is_xla_tensor(y):
-+                print('\nTest Graph (y):\n{}'.format(torch_xla._XLAC._get_xla_tensors_text([y])), file=sys.stderr)
-+        elif gmode == 'hlo':
-+            if type(x) == torch.Tensor and xm.is_xla_tensor(x):
-+                print('\nTest Graph (x):\n{}'.format(torch_xla._XLAC._get_xla_tensors_hlo([x])), file=sys.stderr)
-+            if type(y) == torch.Tensor and xm.is_xla_tensor(y):
-+                print('\nTest Graph (y):\n{}'.format(torch_xla._XLAC._get_xla_tensors_hlo([y])), file=sys.stderr)
-+        elif gmode:
-+            raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(gmode))
-+        if type(x) == torch.Tensor:
-+            x = x.cpu()
-+        if type(y) == torch.Tensor:
-+            y = y.cpu()
-+        return DeviceTypeTestBase.assertEqual(self, x, y, prec, message, allow_inf, **kwargs)
-+
-+
- # Adds available device-type-specific test base classes
- device_type_test_bases.append(CPUTestBase)
+@@ -275,6 +275,15 @@ device_type_test_bases.append(CPUTestBase)
  if torch.cuda.is_available():
      device_type_test_bases.append(CUDATestBase)
-+device_type_test_bases.append(XLATestBase)
  
++
++_XLA_DIR = os.environ.get('XLA_TEST_DIR', None)
++if _XLA_DIR:
++    with open(os.path.join(_XLA_DIR, 'xla_test_base.py')) as fd:
++        xla_code = fd.read()
++    exec(xla_code)
++    device_type_test_bases.append(XLATestBase)
++
++
  PYTORCH_CUDA_MEMCHECK = os.getenv('PYTORCH_CUDA_MEMCHECK', '0') == '1'
  
-@@ -320,7 +439,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
+ 
+@@ -320,7 +329,7 @@ def instantiate_device_type_tests(generic_test_class, scope, except_for=None):
                  assert inspect.isfunction(test), "Couldn't extract function from '{0}'".format(name)
  
                  # Instantiates the device-specific tests
