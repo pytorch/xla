@@ -1,12 +1,20 @@
+import copy
+import os
+import sys
+import runpy
+
+import torch_xla
+import torch_xla.core.xla_model as xm
+
 DEFAULT_FLOATING_PRECISION = 1e-3
 
-torch_test_precisions = {
+TORCH_TEST_PRECIIONS = {
     # test_name : floating_precision,
     'test_pow_xla_float32': 0.0035,
     'test_pow_xla_float64': 0.0045,
 }
 
-disabled_torch_tests = {
+DISABLED_TORCH_TESTS = {
     # test_torch.py
     # TestDevicePrecision
     'test_sum_cpu_device_mismatch',  # doesn't raise
@@ -20,7 +28,7 @@ disabled_torch_tests = {
     # TestTensorDeviceOps
     'test_block_diag_scipy',  #FIXME: RuntimeError: Error while lowering: f32[1,6]{1,0} xla::unselect, dim=1, start=2, end=2, stride=0
     'test_cumprod_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
-    'test_cumprod_neg_dim_xla', # FIXME: TPU X64Rewriter doesn't support reduce-window
+    'test_cumprod_neg_dim_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_mean_64bit_indexing_xla',  # protobuf limit exceeded
     'test_pow_inplace_xla',  # (TPU) 0.0032 vs 0.001
     'test_pow_inplace_3_xla',  # (TPU) 0.0028 vs 0.001
@@ -60,8 +68,8 @@ disabled_torch_tests = {
     'test_memory_format_factory_like_functions_preserve_strides',
     'test_memory_format_empty_like',
     'test_memory_format_clone',
-    'test_memory_format_factory_like_functions_preserve', # assertion error
-    'test_mm_xla_bfloat16', # FIXME: AssertionError: tensor(0.0625) not less than or equal to 0.001
+    'test_memory_format_factory_like_functions_preserve',  # assertion error
+    'test_mm_xla_bfloat16',  # FIXME: AssertionError: tensor(0.0625) not less than or equal to 0.001
     'test_lu_solve_batched_non_contiguous',
     'test_lstsq',
     'test_is_set_to',
@@ -153,10 +161,10 @@ disabled_torch_tests = {
     'test_triangular_solve_batched_broadcasting',  # (TPU) 1.5 vs 0.001
     'test_scalar_check',  # runtime error
     'test_argminmax_large_axis',  # OOM, and the test is grepping "memory" in the exception message
-    'test_trapz', # precision (1e-5), test use np.allClose
-    'test_random_from_to_xla_int32', # precision, TPU does not have real F64
-    'test_randn_xla_float32', # xla doesn't support manual_seed, as_stride
-    'test_randn_xla_float64', # xla doesn't support manual_seed, as_stride
+    'test_trapz',  # precision (1e-5), test use np.allClose
+    'test_random_from_to_xla_int32',  # precision, TPU does not have real F64
+    'test_randn_xla_float32',  # xla doesn't support manual_seed, as_stride
+    'test_randn_xla_float64',  # xla doesn't support manual_seed, as_stride
     'test_rand_xla_float32',  # xla doesn't support manual_seed, as_stride
     'test_rand_xla_float64',  # xla doesn't support manual_seed, as_stride
 
@@ -170,12 +178,12 @@ disabled_torch_tests = {
     # test_indexing.py
     # TestIndexing
     'test_setitem_expansion_error',  # expecting a different runtime error
-    'test_multiple_byte_mask', # expecting a different runtime error
-    'test_empty_slice', # stride
-    'test_byte_tensor_assignment', # expecting a different runtime error
-    'test_byte_mask', # expecting a different runtime error
-    'test_byte_mask_accumulate', # expecting a different runtime error
-    'test_bool_indices', # expecting a different runtime error
+    'test_multiple_byte_mask',  # expecting a different runtime error
+    'test_empty_slice',  # stride
+    'test_byte_tensor_assignment',  # expecting a different runtime error
+    'test_byte_mask',  # expecting a different runtime error
+    'test_byte_mask_accumulate',  # expecting a different runtime error
+    'test_bool_indices',  # expecting a different runtime error
     'test_index_getitem_copy_bools_slices',  # storage
     'test_getitem_scalars',  # storage
     'test_empty_ndim_index',  # expecting a different runtime error
@@ -195,10 +203,10 @@ disabled_torch_tests = {
     # TestNNDeviceType
     'test_embedding_backward',  # sparse
     'test_embedding_dense_grad',  # slow
-    'test_EmbeddingBag_per_sample_weights_and_new_offsets', # FIXME! UndefinedTensorImpl::_singleton
-    'test_batchnorm_grad', # FIXME! UndefinedTensorImpl::_singleton
+    'test_EmbeddingBag_per_sample_weights_and_new_offsets',  # FIXME! UndefinedTensorImpl::_singleton
+    'test_batchnorm_grad',  # FIXME! UndefinedTensorImpl::_singleton
     'test_pool_invalid_size',  # expecting a different runtime error
-    'test_nonlinearity_propagate_nan', # relu6 with a nan tensor returns a tensor([0.]) instead of a nan tensor
+    'test_nonlinearity_propagate_nan',  # relu6 with a nan tensor returns a tensor([0.]) instead of a nan tensor
     'test_InstanceNorm3d_general',  # precision (1e-2)
     'test_InstanceNorm2d_general',  # precision (1e-2)
     'test_InstanceNorm1d_general',  # precision (1e-2)
@@ -215,11 +223,130 @@ disabled_torch_tests = {
 
     # test_type_promotion.py
     # TestTypePromotion
-    'test_many_promotions', # stride
-    'test_inplace', # expecting a different runtime error
-    'test_indexing', # expecting a different runtime error
-    'test_alternate_result', # expecting a different runtime error
+    'test_many_promotions',  # stride
+    'test_inplace',  # expecting a different runtime error
+    'test_indexing',  # expecting a different runtime error
+    'test_alternate_result',  # expecting a different runtime error
     'test_half',  # half support
     'test_complex_promotion',  # complex support
     'test_complex_scalar_mult_tensor_promotion',  # complex support
 }
+
+
+class XLATestBase(DeviceTypeTestBase):
+  device_type = 'xla'
+  unsupported_dtypes = {torch.half, torch.complex64, torch.complex128}
+  precision = DEFAULT_FLOATING_PRECISION
+
+  @staticmethod
+  def _alt_lookup(d, keys, defval):
+    for k in keys:
+      value = d.get(k, None)
+      if value is not None:
+        return value
+    return defval
+
+  # Overrides to instantiate tests that are known to run quickly
+  # and correctly on XLA.
+  @classmethod
+  def instantiate_test(cls, name, test):
+    test_name = name + '_' + cls.device_type
+
+    @wraps(test)
+    def disallowed_test(self, test=test):
+      raise unittest.SkipTest('skipped on XLA')
+      return test(self, cls.device_type)
+
+    if test_name in DISABLED_TORCH_TESTS or test.__name__ in DISABLED_TORCH_TESTS:
+      assert not hasattr(
+          cls, test_name), 'Redefinition of test {0}'.format(test_name)
+      setattr(cls, test_name, disallowed_test)
+    else:  # Test is allowed
+      dtypes = cls._get_dtypes(test)
+      if dtypes is None:  # Tests without dtype variants are instantiated as usual
+        super().instantiate_test(name, test)
+      else:  # Tests with dtype variants have unsupported dtypes skipped
+        # Sets default precision for floating types to bfloat16 precision
+        if not hasattr(test, 'precision_overrides'):
+          test.precision_overrides = {}
+        xla_dtypes = []
+        for dtype in dtypes:
+          dtype_str = str(dtype).split('.')[1]
+          dtype_test_name = test_name + '_' + dtype_str
+          if dtype in cls.unsupported_dtypes:
+            reason = 'XLA does not support dtype {0}'.format(str(dtype))
+
+            @wraps(test)
+            def skipped_test(self, *args, reason=reason, **kwargs):
+              raise unittest.SkipTest(reason)
+
+            assert not hasattr(
+                cls, dtype_test_name), 'Redefinition of test {0}'.format(
+                    dtype_test_name)
+            setattr(cls, dtype_test_name, skipped_test)
+          elif dtype_test_name in DISABLED_TORCH_TESTS:
+            setattr(cls, dtype_test_name, disallowed_test)
+          else:
+            xla_dtypes.append(dtype)
+          if dtype in [torch.float, torch.double, torch.bfloat16]:
+            floating_precision = XLATestBase._alt_lookup(
+                TORCH_TEST_PRECIIONS,
+                [dtype_test_name, test_name, test.__name__],
+                DEFAULT_FLOATING_PRECISION)
+            test.precision_overrides[dtype] = floating_precision
+
+        if len(xla_dtypes) != 0:
+          test.dtypes[cls.device_type] = xla_dtypes
+          super().instantiate_test(name, test)
+
+  @classmethod
+  def get_primary_device(cls):
+    return cls.primary_device
+
+  @classmethod
+  def setUpClass(cls):
+    # Sets the primary test device to the xla_device (CPU or TPU)
+    cls.primary_device = str(xm.xla_device())
+    torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
+        use_full_mat_mul_precision=True)
+
+  # Overrides assertEqual to popular custom precision
+  def assertEqual(self, x, y, prec=None, message='', allow_inf=False, **kwargs):
+    if prec is None:
+      prec = self.precision
+    else:
+      prec = max(self.precision, prec)
+    gmode = os.environ.get('TEST_PRINT_GRAPH', '').lower()
+    if gmode == 'text':
+      if type(x) == torch.Tensor and xm.is_xla_tensor(x):
+        print(
+            '\nTest Graph (x):\n{}'.format(
+                torch_xla._XLAC._get_xla_tensors_text([x])),
+            file=sys.stderr)
+      if type(y) == torch.Tensor and xm.is_xla_tensor(y):
+        print(
+            '\nTest Graph (y):\n{}'.format(
+                torch_xla._XLAC._get_xla_tensors_text([y])),
+            file=sys.stderr)
+    elif gmode == 'hlo':
+      if type(x) == torch.Tensor and xm.is_xla_tensor(x):
+        print(
+            '\nTest Graph (x):\n{}'.format(
+                torch_xla._XLAC._get_xla_tensors_hlo([x])),
+            file=sys.stderr)
+      if type(y) == torch.Tensor and xm.is_xla_tensor(y):
+        print(
+            '\nTest Graph (y):\n{}'.format(
+                torch_xla._XLAC._get_xla_tensors_hlo([y])),
+            file=sys.stderr)
+    elif gmode:
+      raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(gmode))
+    if type(x) == torch.Tensor:
+      x = x.cpu()
+    if type(y) == torch.Tensor:
+      y = y.cpu()
+    return DeviceTypeTestBase.assertEqual(self, x, y, prec, message, allow_inf,
+                                          **kwargs)
+
+
+TEST_CLASS = XLATestBase
