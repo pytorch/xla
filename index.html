@@ -677,6 +677,18 @@ advised to throttle the printing/reporting events once every N steps.</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="torch_xla.core.xla_model.wait_device_ops">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">wait_device_ops</code><span class="sig-paren">(</span><em class="sig-param">devices=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#wait_device_ops"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.wait_device_ops" title="Permalink to this definition">¶</a></dt>
+<dd><p>Waits for all the async operations on the given devices to complete.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>devices</strong> (<em>string...</em><em>, </em><em>optional</em>) – The devices whose async ops need to be waited
+for. If empty, all the local devices will be waited for.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
 <dt id="torch_xla.core.xla_model.optimizer_step">
 <code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">optimizer_step</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">barrier=False</em>, <em class="sig-param">optimizer_args={}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#optimizer_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.optimizer_step" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run the provided optimizer step and issue the XLA device step computation.</p>
@@ -725,6 +737,38 @@ Default: True</p></li>
 controls whether every host’s master (if <code class="docutils literal notranslate"><span class="pre">global_master</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>)
 saves the content, or only the global master (ordinal 0).
 Default: False</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.core.xla_model.rendezvous">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">rendezvous</code><span class="sig-paren">(</span><em class="sig-param">tag</em>, <em class="sig-param">payload=b''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#rendezvous"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.rendezvous" title="Permalink to this definition">¶</a></dt>
+<dd><p>Waits for all the mesh clients to reach the named rendezvous.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tag</strong> (<em>string</em>) – The name of the rendezvous to join.</p></li>
+<li><p><strong>payload</strong> (<em>bytes</em><em>, </em><em>optional</em>) – The payload to be sent to the rendezvous.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.core.xla_model.mesh_reduce">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">mesh_reduce</code><span class="sig-paren">(</span><em class="sig-param">tag</em>, <em class="sig-param">data</em>, <em class="sig-param">reduce_fn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#mesh_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.mesh_reduce" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs an out-of-graph client mesh reduction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tag</strong> (<em>string</em>) – The name of the rendezvous to join.</p></li>
+<li><p><strong>data</strong> – The data to be reduced. The <cite>reduce_fn</cite> callable will receive a list
+with the copies of the same data coming from all the mesh client processes
+(one per core).</p></li>
+<li><p><strong>reduce_fn</strong> (<em>callable</em>) – A function which receives a list of <cite>data</cite>-like
+objects and returns the reduced result.</p></li>
 </ul>
 </dd>
 </dl>
@@ -898,6 +942,160 @@ conversion.</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> – The data which should be returned at each iterator step.</p></li>
 <li><p><strong>sample_count</strong> – The maximum number of <cite>data</cite> samples to be returned.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="torch_xla.utils.utils.DataWrapper">
+<em class="property">class </em><code class="sig-prename descclassname">torch_xla.utils.utils.</code><code class="sig-name descname">DataWrapper</code><a class="reference internal" href="_modules/torch_xla/utils/utils.html#DataWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.utils.DataWrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility class to wrap data structures to be sent to device.</p>
+</dd></dl>
+
+<span class="target" id="module-torch_xla.utils.gcsfs"></span><dl class="function">
+<dt id="torch_xla.utils.gcsfs.open">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">open</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">mode='r'</em>, <em class="sig-param">encoding='utf-8'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#open"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.open" title="Permalink to this definition">¶</a></dt>
+<dd><p>Opens a Google Cloud Storage (GCS) file for reading or writing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – The GCS path of the file. Must be “gs://BUCKET_NAME/PATH”
+where <code class="docutils literal notranslate"><span class="pre">BUCKET_NAME</span></code> is the name of the GCS bucket, and <code class="docutils literal notranslate"><span class="pre">PATH</span></code> is a <cite>/</cite>
+delimited path.</p></li>
+<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – The open mode, similar to the <code class="docutils literal notranslate"><span class="pre">open()</span></code> API.
+Default: ‘r’</p></li>
+<li><p><strong>encoding</strong> (<em>string</em><em>, </em><em>optional</em>) – The character encoding to be used to decode
+bytes into strings when opening in text mode.
+Default: ‘utf-8’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The GCS file object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.gcsfs.list">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">list</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists the content of a GCS bucket.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – The GCS path of the file. Must be “gs://BUCKET_NAME/PATH”
+where <code class="docutils literal notranslate"><span class="pre">BUCKET_NAME</span></code> is the name of the GCS bucket, and <code class="docutils literal notranslate"><span class="pre">PATH</span></code> is a <cite>/</cite>
+delimited path.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list of <code class="docutils literal notranslate"><span class="pre">GcsBlob</span></code> objects.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.gcsfs.stat">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">stat</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#stat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.stat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetches the information of a GCS file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – The GCS path of the file. Must be “gs://BUCKET_NAME/PATH”
+where <code class="docutils literal notranslate"><span class="pre">BUCKET_NAME</span></code> is the name of the GCS bucket, and <code class="docutils literal notranslate"><span class="pre">PATH</span></code> is a <cite>/</cite>
+delimited path.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">GcsBlob</span></code> object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.gcsfs.remove">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">remove</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#remove"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.remove" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes a GCS blob.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – The GCS path of the file. Must be “gs://BUCKET_NAME/PATH”
+where <code class="docutils literal notranslate"><span class="pre">BUCKET_NAME</span></code> is the name of the GCS bucket, and <code class="docutils literal notranslate"><span class="pre">PATH</span></code> is a <cite>/</cite>
+delimited path.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.gcsfs.rmtree">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">rmtree</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#rmtree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.rmtree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes all the GCS blobs within a given path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – <p>The GCS path of the file pattern or folder. Must be
+“gs://BUCKET_NAME/PATH” where <code class="docutils literal notranslate"><span class="pre">BUCKET_NAME</span></code> is the name of the GCS</p>
+<blockquote>
+<div><p>bucket, and <code class="docutils literal notranslate"><span class="pre">PATH</span></code> is a <cite>/</cite> delimited path.</p>
+</div></blockquote>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.gcsfs.read">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">read</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads the whole content of a GCS blob.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – The GCS path of the file. Must be “gs://BUCKET_NAME/PATH”
+where <code class="docutils literal notranslate"><span class="pre">BUCKET_NAME</span></code> is the name of the GCS bucket, and <code class="docutils literal notranslate"><span class="pre">PATH</span></code> is a <cite>/</cite>
+delimited path.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The bytes stored within the GCS blob.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.gcsfs.write">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">write</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">content</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a string/bytes or file into a GCS blob.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – The GCS path of the file. Must be “gs://BUCKET_NAME/PATH”
+where <code class="docutils literal notranslate"><span class="pre">BUCKET_NAME</span></code> is the name of the GCS bucket, and <code class="docutils literal notranslate"><span class="pre">PATH</span></code> is a <cite>/</cite>
+delimited path.</p></li>
+<li><p><strong>content</strong> (<em>string</em><em>, </em><em>bytes</em><em> or </em><em>file object</em>) – The content to be written into
+<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.gcsfs.generic_read">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">generic_read</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#generic_read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.generic_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads the whole content of the provided location.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – The GCS path or local path to be read.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The bytes stored within the GCS blob or local file.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.gcsfs.generic_write">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">generic_write</code><span class="sig-paren">(</span><em class="sig-param">output_string</em>, <em class="sig-param">output_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#generic_write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.generic_write" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a string/bytes or file into a GCS blob or local disk.</p>
+<p>Depending on the output_path passed in, this API can write to local or GCS
+file. Checks if the <cite>output_path</cite> starts with
+the ‘gs://’ prefix, and uses <cite>open</cite> otherwise.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_string</strong> (<em>string</em>) – The string to be written to the output.</p></li>
+<li><p><strong>output_path</strong> (<em>string</em>) – The GCS path or local path of the output.</p></li>
 </ul>
 </dd>
 </dl>
