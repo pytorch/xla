@@ -677,14 +677,14 @@
   <span class="n">_TLS</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="kc">None</span>
 
 
-<div class="viewcode-block" id="wait_device_ops"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.wait_device_ops">[docs]</a><span class="k">def</span> <span class="nf">wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="p">[]):</span>
+<span class="k">def</span> <span class="nf">wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="p">[]):</span>
   <span class="sd">&quot;&quot;&quot;Waits for all the async operations on the given devices to complete.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    devices (string..., optional): The devices whose async ops need to be waited</span>
 <span class="sd">      for. If empty, all the local devices will be waited for.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="n">devices</span><span class="p">)</span></div>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="n">devices</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">):</span>
@@ -784,17 +784,17 @@
   <span class="k">return</span> <span class="n">ToXlaTensorArena</span><span class="p">(</span><span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="rendezvous"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.rendezvous">[docs]</a><span class="k">def</span> <span class="nf">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Waits for all the mesh clients to reach the named rendezvous.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    tag (string): The name of the rendezvous to join.</span>
 <span class="sd">    payload (bytes, optional): The payload to be sent to the rendezvous.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_rendezvous</span><span class="p">(</span><span class="n">get_ordinal</span><span class="p">(),</span> <span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span></div>
+  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_rendezvous</span><span class="p">(</span><span class="n">get_ordinal</span><span class="p">(),</span> <span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="mesh_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.mesh_reduce">[docs]</a><span class="k">def</span> <span class="nf">mesh_reduce</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">reduce_fn</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">mesh_reduce</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">reduce_fn</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs an out-of-graph client mesh reduction.</span>
 
 <span class="sd">  Args:</span>
@@ -813,7 +813,7 @@
   <span class="k">for</span> <span class="n">xd</span> <span class="ow">in</span> <span class="n">xdata</span><span class="p">:</span>
     <span class="n">xbio</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">xd</span><span class="p">)</span>
     <span class="n">xldata</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">xbio</span><span class="p">))</span>
-  <span class="k">return</span> <span class="n">reduce_fn</span><span class="p">(</span><span class="n">xldata</span><span class="p">)</span> <span class="k">if</span> <span class="n">xldata</span> <span class="k">else</span> <span class="n">cpu_data</span></div>
+  <span class="k">return</span> <span class="n">reduce_fn</span><span class="p">(</span><span class="n">xldata</span><span class="p">)</span> <span class="k">if</span> <span class="n">xldata</span> <span class="k">else</span> <span class="n">cpu_data</span>
 </pre></div>
 
              </article>
