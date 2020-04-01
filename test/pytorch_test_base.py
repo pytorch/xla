@@ -143,6 +143,7 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_randn_xla_float64',  # xla doesn't support manual_seed, as_stride
     'test_rand_xla_float32',  # xla doesn't support manual_seed, as_stride
     'test_rand_xla_float64',  # xla doesn't support manual_seed, as_stride
+    'test_normal_xla_float64'  # AssertionError: 0.22364577306378963 not less than or equal to 0.2
 
     # TestViewOps
     'test_contiguous_nonview',
@@ -163,6 +164,7 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_index_getitem_copy_bools_slices',  # storage
     'test_getitem_scalars',  # storage
     'test_empty_ndim_index',  # expecting a different runtime error
+    'test_index_put_byte_indices_xla',  # expecting a different runtime error
 
     # NumpyTests
     'test_trivial_fancy_out_of_bounds',  # expecting a different runtime error
