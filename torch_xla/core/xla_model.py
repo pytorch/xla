@@ -538,6 +538,10 @@ def rendezvous(tag, payload=b''):
   Args:
     tag (string): The name of the rendezvous to join.
     payload (bytes, optional): The payload to be sent to the rendezvous.
+
+  Returns:
+    The payloads exchanged by all the other cores, with the payload of core
+    ordinal `i` at position `i` in the returned tuple.
   """
   return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload)
 
@@ -552,6 +556,9 @@ def mesh_reduce(tag, data, reduce_fn):
       (one per core).
     reduce_fn (callable): A function which receives a list of `data`-like
       objects and returns the reduced result.
+
+  Returns:
+    The reduced value.
   """
   cpu_data = _maybe_convert_to_cpu(data)
   bio = io.BytesIO()
