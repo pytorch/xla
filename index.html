@@ -767,6 +767,10 @@ Default: False</p></li>
 <li><p><strong>payload</strong> (<em>bytes</em><em>, </em><em>optional</em>) – The payload to be sent to the rendezvous.</p></li>
 </ul>
 </dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The payloads exchanged by all the other cores, with the payload of core
+ordinal <cite>i</cite> at position <cite>i</cite> in the returned tuple.</p>
+</dd>
 </dl>
 </dd></dl>
 
@@ -784,6 +788,9 @@ with the copies of the same data coming from all the mesh client processes
 <li><p><strong>reduce_fn</strong> (<em>callable</em>) – A function which receives a list of <cite>data</cite>-like
 objects and returns the reduced result.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The reduced value.</p>
 </dd>
 </dl>
 </dd></dl>

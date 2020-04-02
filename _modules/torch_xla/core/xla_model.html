@@ -790,6 +790,10 @@
 <span class="sd">  Args:</span>
 <span class="sd">    tag (string): The name of the rendezvous to join.</span>
 <span class="sd">    payload (bytes, optional): The payload to be sent to the rendezvous.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The payloads exchanged by all the other cores, with the payload of core</span>
+<span class="sd">    ordinal `i` at position `i` in the returned tuple.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_rendezvous</span><span class="p">(</span><span class="n">get_ordinal</span><span class="p">(),</span> <span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span></div>
 
@@ -804,6 +808,9 @@
 <span class="sd">      (one per core).</span>
 <span class="sd">    reduce_fn (callable): A function which receives a list of `data`-like</span>
 <span class="sd">      objects and returns the reduced result.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The reduced value.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">cpu_data</span> <span class="o">=</span> <span class="n">_maybe_convert_to_cpu</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
   <span class="n">bio</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
