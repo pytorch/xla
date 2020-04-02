@@ -359,7 +359,7 @@ def _get_all_reduce_token():
   return token
 
 
-def all_reduce(reduce_type, inputs, scale=1.0, groups=[]):
+def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
   """Perform an inplace reduce operation on the input tensors.
 
   Args:
@@ -368,10 +368,14 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=[]):
     inputs (list): List of tensors to perform the all reduce op to.
     scale (float): A default scaling value to be applied after the reduce.
       Default: 1.0
-    groups (list): Reserved.
+    groups (list, optional): A list of list, representing the replica groups for
+      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
   """
   _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce(
-      reduce_type, inputs, _get_all_reduce_token(), scale, groups)
+      reduce_type, inputs, _get_all_reduce_token(), scale, groups or [])
 
 
 def add_step_closure(closure, args=()):
@@ -435,20 +439,25 @@ def wait_device_ops(devices=[]):
   torch_xla._XLAC._xla_wait_device_ops(devices=devices)
 
 
-def reduce_gradients(optimizer):
+def reduce_gradients(optimizer, groups=None):
   """Reduces all the gradients handled by an optimizer.
 
   Args:
     optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance
       containing the gradients to be reduced.
+    groups (list, optional): A list of list, representing the replica groups for
+      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
   """
   count = torch_xla._XLAC._xla_get_replication_devices_count()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
-    all_reduce('sum', gradients, scale=1.0 / count)
+    all_reduce('sum', gradients, scale=1.0 / count, groups=groups)
 
 
-def optimizer_step(optimizer, barrier=False, optimizer_args={}):
+def optimizer_step(optimizer, barrier=False, optimizer_args={}, groups=None):
   """Run the provided optimizer step and issue the XLA device step computation.
 
   Args:
@@ -462,11 +471,16 @@ def optimizer_step(optimizer, barrier=False, optimizer_args={}):
       Default: False
     optimizer_args (dict, optional): Named arguments dictionary for the
       `optimizer.step()` call.
+    groups (list, optional): A list of list, representing the replica groups for
+      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
 
   Returns:
     The same value returned by the `optimizer.step()` call.
   """
-  reduce_gradients(optimizer)
+  reduce_gradients(optimizer, groups=groups)
   loss = optimizer.step(**optimizer_args)
   if barrier:
     mark_step()
