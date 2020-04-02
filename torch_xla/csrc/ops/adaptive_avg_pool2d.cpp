@@ -42,8 +42,8 @@ XlaOpVector AdaptiveAvgPool2d::Lower(LoweringContext* loctx) const {
 
 std::string AdaptiveAvgPool2d::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", output_size=["
-     << absl::StrJoin(output_size_, ", ") << "]";
+  ss << Node::ToString() << ", output_size=("
+     << absl::StrJoin(output_size_, ", ") << ")";
   return ss.str();
 }
 

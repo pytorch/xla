@@ -46,8 +46,8 @@ XlaOpVector Split::Lower(LoweringContext* loctx) const {
 
 std::string Split::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", split_sizes=["
-     << absl::StrJoin(split_sizes_, ", ") << "], dim=" << dim_;
+  ss << Node::ToString() << ", split_sizes=("
+     << absl::StrJoin(split_sizes_, ", ") << "), dim=" << dim_;
   return ss.str();
 }
 
