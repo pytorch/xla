@@ -1252,8 +1252,8 @@ void XLATensor::SyncLiveTensorsGraph(const Device* device,
                                      absl::Span<const std::string> devices,
                                      bool wait) {
   auto tensors = GetLiveTensors(device);
-  TF_VLOG(4) << tensors.size() << " live tensors: devices=["
-             << absl::StrJoin(devices, ",") << "]";
+  TF_VLOG(4) << tensors.size() << " live tensors: devices=("
+             << absl::StrJoin(devices, ",") << ")";
   SyncTensorsGraph(&tensors, devices, wait, /*sync_xla_data=*/true);
 }
 
