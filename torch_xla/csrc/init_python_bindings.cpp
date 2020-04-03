@@ -124,20 +124,40 @@ AllReduceType GetReduceType(const std::string& reduce_type) {
   XLA_ERROR() << "Unknown AllReduce type: " << reduce_type;
 }
 
+std::vector<std::vector<xla::int64>> CreateReduceGroups(
+    const py::list& groups) {
+  std::vector<std::vector<xla::int64>> replica_groups;
+  for (auto& group : groups) {
+    replica_groups.emplace_back();
+    for (auto& replica_id : group.cast<py::list>()) {
+      replica_groups.back().push_back(replica_id.cast<xla::int64>());
+    }
+  }
+  return replica_groups;
+}
+
 std::shared_ptr<ir::Value> AllReduceInPlace(
     const std::string& reduce_type, const std::vector<at::Tensor>& tensors,
     const std::shared_ptr<ir::Value>& token, double scale,
-    const py::list& groups) {
-  std::vector<std::vector<xla::int64>> crs_groups;
-  for (auto& group : groups) {
-    crs_groups.emplace_back();
-    for (auto& replica_id : group.cast<py::list>()) {
-      crs_groups.back().push_back(replica_id.cast<xla::int64>());
-    }
-  }
+    const std::vector<std::vector<xla::int64>>& replica_groups) {
   std::vector<XLATensor> xtensors = GetXlaTensors(tensors, /*want_all=*/true);
   return std::make_shared<ir::Value>(XLATensor::all_reduce(
-      &xtensors, *token, GetReduceType(reduce_type), scale, crs_groups));
+      &xtensors, *token, GetReduceType(reduce_type), scale, replica_groups));
+}
+
+std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllToAll(
+    const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
+    xla::int64 split_dimension, xla::int64 concat_dimension,
+    xla::int64 split_count,
+    const std::vector<std::vector<xla::int64>>& replica_groups) {
+  XLATensor result;
+  ir::Value new_token;
+  std::tie(result, new_token) = XLATensor::all_to_all(
+      bridge::GetXlaTensor(input), *token, split_dimension, concat_dimension,
+      split_count, replica_groups);
+  return std::pair<at::Tensor, std::shared_ptr<ir::Value>>(
+      bridge::AtenFromXlaTensor(std::move(result)),
+      std::make_shared<ir::Value>(new_token));
 }
 
 void SyncTensors(const std::vector<at::Tensor>& tensors,
@@ -531,13 +551,36 @@ void InitXlaModuleBindings(py::module m) {
                               const std::vector<at::Tensor>& tensors,
                               const std::shared_ptr<ir::Value>& token,
                               double scale, const py::list& groups) {
+    std::vector<std::vector<xla::int64>> replica_groups =
+        CreateReduceGroups(groups);
     std::shared_ptr<ir::Value> new_token;
     {
       NoGilSection nogil;
-      new_token = AllReduceInPlace(reduce_type, tensors, token, scale, groups);
+      new_token =
+          AllReduceInPlace(reduce_type, tensors, token, scale, replica_groups);
     }
     return new_token;
   });
+  m.def("_xla_all_to_all",
+        [](const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
+           xla::int64 split_dimension, xla::int64 concat_dimension,
+           xla::int64 split_count, const py::list& groups) {
+          std::vector<std::vector<xla::int64>> replica_groups =
+              CreateReduceGroups(groups);
+          at::Tensor result;
+          std::shared_ptr<ir::Value> new_token;
+          {
+            NoGilSection nogil;
+            std::tie(result, new_token) =
+                AllToAll(input, token, split_dimension, concat_dimension,
+                         split_count, replica_groups);
+          }
+          auto result_tuple = py::tuple(2);
+          result_tuple[0] = torch::autograd::make_variable(
+              result, /*requires_grad=*/input.requires_grad());
+          result_tuple[1] = new_token;
+          return result_tuple;
+        });
   m.def("_xla_set_default_device", [](const std::string& device) {
     return SetCurrentThreadDevice(device);
   });
