@@ -151,14 +151,15 @@ def xla_real_devices(devices):
   xla_devices = torch_xla._XLAC._xla_get_devices()
   real_devices = []
   for device in devices:
-    m = re.match(r'xla:(\d+)$', device)
+    device_str = str(device)
+    m = re.match(r'xla:(\d+)$', device_str)
     if m:
       real_devices.append(xla_devices[int(m.group(1))])
       continue
-    xdev = parse_xla_device(device)
+    xdev = parse_xla_device(device_str)
     if not xdev:
-      raise RuntimeError('Invalid device format: {}'.format(device))
-    real_devices.append(device)
+      raise RuntimeError('Invalid device format: {}'.format(device_str))
+    real_devices.append(device_str)
   return real_devices
 
 
@@ -360,7 +361,7 @@ def _get_all_reduce_token():
 
 
 def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
-  """Perform an inplace reduce operation on the input tensors.
+  """Performs an inplace reduce operation on the input tensors.
 
   Args:
     reduce_type (string): One of ``sum``, ``mul``, ``and``, ``or``, ``min`` and
@@ -376,6 +377,36 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
   """
   _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce(
       reduce_type, inputs, _get_all_reduce_token(), scale, groups or [])
+
+
+def all_to_all(value,
+               split_dimension,
+               concat_dimension,
+               split_count,
+               groups=None):
+  """Performs an XLA `AllToAll()` operation on the input tensor.
+
+  See: https://www.tensorflow.org/xla/operation_semantics#alltoall
+
+  Args:
+    value (torch.Tensor): The input tensor.
+    split_dimension (int): The dimension upon which the split should happen.
+    concat_dimension (int): The dimension upon which the concat should happen.
+    split_count (int): The split count.
+    groups (list, optional): A list of list, representing the replica groups for
+      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
+
+  Returns:
+    The result `torch.Tensor` of the `all_to_all()` operation.
+  """
+  result = torch_xla._XLAC._xla_all_to_all(value, _get_all_reduce_token(),
+                                           split_dimension, concat_dimension,
+                                           split_count, groups or [])
+  _TLS.all_reduce_token = result[1]
+  return result[0]
 
 
 def add_step_closure(closure, args=()):

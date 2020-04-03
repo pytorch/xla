@@ -7,8 +7,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 def _mp_fn(index):
   device = xm.xla_device()
-  real_device = xm.xla_real_devices([str(device)])[0]
-  if real_device.startswith('TPU:'):
+  if xm.xla_device_hw(device) == 'TPU':
     ones = torch.ones((2, 3))
     twos = ones + 1.0
     xones = ones.to(device)
@@ -17,13 +16,12 @@ def _mp_fn(index):
 
     if (not xones.cpu().allclose(ones * float(xm.xrt_world_size())) or
         not xtwos.cpu().allclose(twos * float(xm.xrt_world_size()))):
-      print('CrossReplicaSum produced wrong reductions')
+      print('CrossReplicaSum produced wrong reductions', file=sys.stderr)
       print(xones, file=sys.stderr)
       sys.exit(1)
   else:
     print(
-        'Default device {} is not a TPU device'.format(real_device),
-        file=sys.stderr)
+        'Default device {} is not a TPU device'.format(device), file=sys.stderr)
 
 
 if __name__ == '__main__':
