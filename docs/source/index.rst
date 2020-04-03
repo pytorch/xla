@@ -30,10 +30,6 @@ distributed
 .. autoclass:: ParallelLoader
 	       :members: per_device_loader
 
-.. automodule:: torch_xla.distributed.data_parallel
-.. autoclass:: DataParallel
-	       :members: __call__
-
 .. automodule:: torch_xla.distributed.xla_multiprocessing
 .. autofunction:: spawn
 
