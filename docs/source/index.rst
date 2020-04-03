@@ -15,6 +15,7 @@ xla_model
 .. autofunction:: is_master_ordinal
 .. autofunction:: xrt_world_size
 .. autofunction:: all_reduce
+.. autofunction:: all_to_all
 .. autofunction:: add_step_closure
 .. autofunction:: wait_device_ops
 .. autofunction:: optimizer_step

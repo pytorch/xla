@@ -118,4 +118,10 @@ xla::XlaOp CastToScalarType(xla::XlaOp input,
   return ConvertToNumeric(input, XlaHelpers::TypeOfXlaOp(input));
 }
 
+xla::XlaOp MaybeConvertTo(xla::XlaOp input, xla::PrimitiveType type) {
+  return XlaHelpers::TypeOfXlaOp(input) != type
+             ? xla::ConvertElementType(input, type)
+             : input;
+}
+
 }  // namespace torch_xla

@@ -19,6 +19,7 @@
 #include "torch_xla/csrc/ops/adaptive_avg_pool2d.h"
 #include "torch_xla/csrc/ops/all.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
+#include "torch_xla/csrc/ops/all_to_all.h"
 #include "torch_xla/csrc/ops/any.h"
 #include "torch_xla/csrc/ops/arg_max.h"
 #include "torch_xla/csrc/ops/arg_min.h"
@@ -315,6 +316,16 @@ ir::Value XLATensor::all_reduce(
     (*inputs)[i].SetInPlaceIrValue(ir::Value(node, i));
   }
   return ir::Value(node, inputs->size());
+}
+
+std::pair<XLATensor, ir::Value> XLATensor::all_to_all(
+    const XLATensor& input, const ir::Value& token, xla::int64 split_dimension,
+    xla::int64 concat_dimension, xla::int64 split_count,
+    const std::vector<std::vector<xla::int64>>& groups) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::AllToAll>(
+      input.GetIrValue(), token, split_dimension, concat_dimension, split_count,
+      groups);
+  return {input.CreateFrom(ir::Value(node, 0)), ir::Value(node, 1)};
 }
 
 XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
