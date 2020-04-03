@@ -131,15 +131,15 @@ MinMaxValues GetMinMaxValues(const XLATensor& tensor,
                              c10::optional<at::Scalar> max) {
   XLA_CHECK(min || max)
       << "At least one of \'min\' or \'max\' must not be None";
-  auto shape = tensor.shape();
-  XlaHelpers::MinMax min_max =
-      XlaHelpers::MinMaxValues(shape.get().element_type());
+  xla::PrimitiveType raw_element_type = TensorTypeToRawXlaType(tensor.dtype());
+  XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(raw_element_type);
   if (!min) {
     min = min_max.min;
   }
   if (!max) {
     max = min_max.max;
   }
+  auto shape = tensor.shape();
   return {XLATensor::GetIrValueForScalar(*min, shape.get().element_type(),
                                          tensor.GetDevice()),
           XLATensor::GetIrValueForScalar(*max, shape.get().element_type(),
