@@ -647,7 +647,7 @@ Default: 1</p>
 <dl class="function">
 <dt id="torch_xla.core.xla_model.all_reduce">
 <code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
-<dd><p>Perform an inplace reduce operation on the input tensors.</p>
+<dd><p>Performs an inplace reduce operation on the input tensors.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -665,6 +665,34 @@ all the replicas in it.</p>
 </div></blockquote>
 </p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.core.xla_model.all_to_all">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_to_all</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">split_dimension</em>, <em class="sig-param">concat_dimension</em>, <em class="sig-param">split_count</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_to_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_to_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs an XLA <cite>AllToAll()</cite> operation on the input tensor.</p>
+<p>See: <a class="reference external" href="https://www.tensorflow.org/xla/operation_semantics#alltoall">https://www.tensorflow.org/xla/operation_semantics#alltoall</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>torch.Tensor</em>) – The input tensor.</p></li>
+<li><p><strong>split_dimension</strong> (<em>python:int</em>) – The dimension upon which the split should happen.</p></li>
+<li><p><strong>concat_dimension</strong> (<em>python:int</em>) – The dimension upon which the concat should happen.</p></li>
+<li><p><strong>split_count</strong> (<em>python:int</em>) – The split count.</p></li>
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
+the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
+<blockquote>
+<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
+the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
+all the replicas in it.</p>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The result <cite>torch.Tensor</cite> of the <cite>all_to_all()</cite> operation.</p>
 </dd>
 </dl>
 </dd></dl>

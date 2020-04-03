@@ -403,14 +403,15 @@
   <span class="n">xla_devices</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_devices</span><span class="p">()</span>
   <span class="n">real_devices</span> <span class="o">=</span> <span class="p">[]</span>
   <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">:</span>
-    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;xla:(\d+)$&#39;</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+    <span class="n">device_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;xla:(\d+)$&#39;</span><span class="p">,</span> <span class="n">device_str</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
       <span class="n">real_devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xla_devices</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))])</span>
       <span class="k">continue</span>
-    <span class="n">xdev</span> <span class="o">=</span> <span class="n">parse_xla_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">xdev</span> <span class="o">=</span> <span class="n">parse_xla_device</span><span class="p">(</span><span class="n">device_str</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">xdev</span><span class="p">:</span>
-      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid device format: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
-    <span class="n">real_devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid device format: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">device_str</span><span class="p">))</span>
+    <span class="n">real_devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">device_str</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">real_devices</span>
 
 
@@ -612,7 +613,7 @@
 
 
 <div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Perform an inplace reduce operation on the input tensors.</span>
+  <span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensors.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    reduce_type (string): One of ``sum``, ``mul``, ``and``, ``or``, ``min`` and</span>
@@ -628,6 +629,36 @@
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">_TLS</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span>
       <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">_get_all_reduce_token</span><span class="p">(),</span> <span class="n">scale</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span></div>
+
+
+<div class="viewcode-block" id="all_to_all"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_to_all">[docs]</a><span class="k">def</span> <span class="nf">all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span>
+               <span class="n">split_dimension</span><span class="p">,</span>
+               <span class="n">concat_dimension</span><span class="p">,</span>
+               <span class="n">split_count</span><span class="p">,</span>
+               <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs an XLA `AllToAll()` operation on the input tensor.</span>
+
+<span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#alltoall</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    value (torch.Tensor): The input tensor.</span>
+<span class="sd">    split_dimension (int): The dimension upon which the split should happen.</span>
+<span class="sd">    concat_dimension (int): The dimension upon which the concat should happen.</span>
+<span class="sd">    split_count (int): The split count.</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The result `torch.Tensor` of the `all_to_all()` operation.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">_get_all_reduce_token</span><span class="p">(),</span>
+                                           <span class="n">split_dimension</span><span class="p">,</span> <span class="n">concat_dimension</span><span class="p">,</span>
+                                           <span class="n">split_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
+  <span class="n">_TLS</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">()):</span>
