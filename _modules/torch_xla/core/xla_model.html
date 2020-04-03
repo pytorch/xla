@@ -611,7 +611,7 @@
   <span class="k">return</span> <span class="n">token</span>
 
 
-<div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">[]):</span>
+<div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Perform an inplace reduce operation on the input tensors.</span>
 
 <span class="sd">  Args:</span>
@@ -620,10 +620,14 @@
 <span class="sd">    inputs (list): List of tensors to perform the all reduce op to.</span>
 <span class="sd">    scale (float): A default scaling value to be applied after the reduce.</span>
 <span class="sd">      Default: 1.0</span>
-<span class="sd">    groups (list): Reserved.</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">_TLS</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span>
-      <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">_get_all_reduce_token</span><span class="p">(),</span> <span class="n">scale</span><span class="p">,</span> <span class="n">groups</span><span class="p">)</span></div>
+      <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">_get_all_reduce_token</span><span class="p">(),</span> <span class="n">scale</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span></div>
 
 
 <div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">()):</span>
@@ -687,20 +691,25 @@
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="n">devices</span><span class="p">)</span></div>
 
 
-<span class="k">def</span> <span class="nf">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Reduces all the gradients handled by an optimizer.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance</span>
 <span class="sd">      containing the gradients to be reduced.</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">count</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_replication_devices_count</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
     <span class="n">gradients</span> <span class="o">=</span> <span class="n">_fetch_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
-    <span class="n">all_reduce</span><span class="p">(</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span> <span class="n">gradients</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">count</span><span class="p">)</span>
+    <span class="n">all_reduce</span><span class="p">(</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span> <span class="n">gradients</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">count</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="optimizer_step"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.optimizer_step">[docs]</a><span class="k">def</span> <span class="nf">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">barrier</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">optimizer_args</span><span class="o">=</span><span class="p">{}):</span>
+<div class="viewcode-block" id="optimizer_step"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.optimizer_step">[docs]</a><span class="k">def</span> <span class="nf">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">barrier</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">optimizer_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Run the provided optimizer step and issue the XLA device step computation.</span>
 
 <span class="sd">  Args:</span>
@@ -714,11 +723,16 @@
 <span class="sd">      Default: False</span>
 <span class="sd">    optimizer_args (dict, optional): Named arguments dictionary for the</span>
 <span class="sd">      `optimizer.step()` call.</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The same value returned by the `optimizer.step()` call.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
+  <span class="n">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span>
   <span class="n">loss</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="o">**</span><span class="n">optimizer_args</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">barrier</span><span class="p">:</span>
     <span class="n">mark_step</span><span class="p">()</span>

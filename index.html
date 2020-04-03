@@ -646,7 +646,7 @@ Default: 1</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.all_reduce">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform an inplace reduce operation on the input tensors.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -656,7 +656,14 @@ Default: 1</p>
 <li><p><strong>inputs</strong> (<em>list</em>) – List of tensors to perform the all reduce op to.</p></li>
 <li><p><strong>scale</strong> (<em>python:float</em>) – A default scaling value to be applied after the reduce.
 Default: 1.0</p></li>
-<li><p><strong>groups</strong> (<em>list</em>) – Reserved.</p></li>
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
+the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
+<blockquote>
+<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
+the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
+all the replicas in it.</p>
+</div></blockquote>
+</p></li>
 </ul>
 </dd>
 </dl>
@@ -704,7 +711,7 @@ for. If empty, all the local devices will be waited for.</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.optimizer_step">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">optimizer_step</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">barrier=False</em>, <em class="sig-param">optimizer_args={}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#optimizer_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.optimizer_step" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">optimizer_step</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">barrier=False</em>, <em class="sig-param">optimizer_args={}</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#optimizer_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.optimizer_step" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run the provided optimizer step and issue the XLA device step computation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -719,6 +726,14 @@ data loader iterator <cite>next()</cite> call.
 Default: False</p></li>
 <li><p><strong>optimizer_args</strong> (<em>dict</em><em>, </em><em>optional</em>) – Named arguments dictionary for the
 <cite>optimizer.step()</cite> call.</p></li>
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
+the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
+<blockquote>
+<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
+the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
+all the replicas in it.</p>
+</div></blockquote>
+</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
