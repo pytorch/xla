@@ -415,6 +415,12 @@ xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
               << rhs_shape << ")";
 }
 
+xla::XlaOp BuildGer(xla::XlaOp lhs, xla::XlaOp rhs) {
+  xla::XlaOp lhs_reshaped = BuildUnsqueeze(lhs, 1);
+  xla::XlaOp rhs_reshaped = BuildUnsqueeze(rhs, 0);
+  return BuildDot(lhs_reshaped, rhs_reshaped);
+}
+
 xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias) {
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());

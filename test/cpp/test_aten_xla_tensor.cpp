@@ -2888,6 +2888,21 @@ TEST_F(AtenXlaTensorTest, TestTensorDot) {
   ExpectCounterChanged("xla::mm", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestGer) {
+  torch::Tensor a = torch::rand({4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::ger(a, b);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = torch::ger(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::ger", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestMv) {
   torch::Tensor a = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3}, torch::TensorOptions(torch::kFloat));

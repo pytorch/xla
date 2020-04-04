@@ -19,6 +19,8 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64 k,
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
 
+xla::XlaOp BuildGer(xla::XlaOp lhs, xla::XlaOp rhs);
+
 xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias);
 
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
