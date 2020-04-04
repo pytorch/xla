@@ -889,54 +889,6 @@ returns the same tensor data structure as returned by the wrapped
 
 </dd></dl>
 
-<span class="target" id="module-torch_xla.distributed.data_parallel"></span><dl class="class">
-<dt id="torch_xla.distributed.data_parallel.DataParallel">
-<em class="property">class </em><code class="sig-prename descclassname">torch_xla.distributed.data_parallel.</code><code class="sig-name descname">DataParallel</code><span class="sig-paren">(</span><em class="sig-param">network</em>, <em class="sig-param">device_ids=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/data_parallel.html#DataParallel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.data_parallel.DataParallel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Enable the execution of a model network in replicated mode using threads.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>network</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.Module</span></code> or callable) – The model’s network. Either
-a subclass of <cite>torch.nn.Module</cite> or a callable returning a subclass of
-<cite>torch.nn.Module</cite>.</p></li>
-<li><p><strong>device_ids</strong> (string… or <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.device</span></code>…) – The list of devices on
-which the replication should happen. If the list is empty, the network
-will be run on PyTorch CPU device.</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="method">
-<dt id="torch_xla.distributed.data_parallel.DataParallel.__call__">
-<code class="sig-name descname">__call__</code><span class="sig-paren">(</span><em class="sig-param">loop_fn</em>, <em class="sig-param">loader</em>, <em class="sig-param">fixed_batch_size=False</em>, <em class="sig-param">batchdim=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/data_parallel.html#DataParallel.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.data_parallel.DataParallel.__call__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Runs one EPOCH of training/test.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>loop_fn</strong> (<em>callable</em>) – The function which will be called on each thread
-assigned to each device taking part of the replication. The function
-will be called with the <cite>def loop_fn(model, device_loader, device,
-context)</cite> signature. Where <cite>model</cite> is the per device network as passed
-to the <cite>DataParallel</cite> contructor. The <cite>device_loader</cite> is the
-<cite>ParallelLoader</cite> which will be returning samples for the current
-<cite>device</cite>. And the <cite>context</cite> is a per thread/device context which has the
-lifetime of the <cite>DataParallel</cite> object, and can be used by the <cite>loop_fn</cite>
-to store objects which needs to persist across different EPOCH.</p></li>
-<li><p><strong>fixed_batch_size</strong> (<em>bool</em><em>, </em><em>optional</em>) – Argument passed to the <cite>ParallelLoader</cite>
-constructor.
-Default: False</p></li>
-<li><p><strong>batchdim</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The dimension in the samples returned by the
-<cite>loader</cite> holding the batch size.
-Default: 0</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>A list with the values returned by the <cite>loop_fn</cite> on each device.</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
 <span class="target" id="module-torch_xla.distributed.xla_multiprocessing"></span><dl class="function">
 <dt id="torch_xla.distributed.xla_multiprocessing.spawn">
 <code class="sig-prename descclassname">torch_xla.distributed.xla_multiprocessing.</code><code class="sig-name descname">spawn</code><span class="sig-paren">(</span><em class="sig-param">fn</em>, <em class="sig-param">args=()</em>, <em class="sig-param">nprocs=None</em>, <em class="sig-param">join=True</em>, <em class="sig-param">daemon=False</em>, <em class="sig-param">start_method='spawn'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#spawn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.spawn" title="Permalink to this definition">¶</a></dt>
