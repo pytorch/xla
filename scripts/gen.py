@@ -102,6 +102,7 @@ _FN_OUT = {
     'clamp_out': FuncOpts(),
     'div_out': FuncOpts(),
     'gather_out': FuncOpts(),
+    'ger_out': FuncOpts(),
     'kthvalue_out': FuncOpts(),
     'index_select_out': FuncOpts(),
     'inverse_out': FuncOpts(),

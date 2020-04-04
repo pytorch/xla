@@ -225,6 +225,24 @@ NodePtr Clamp(const Value& input, const Value& min, const Value& max) {
                    std::move(lower_fn));
 }
 
+NodePtr Ger(const Value& input, const Value& other) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(BuildGer(xla_input, xla_other), loctx);
+  };
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildGer(operands[0], operands[1]);
+  };
+  return GenericOp(OpKind(at::aten::ger), {input, other},
+                   [&]() {
+                     return InferOutputShape({input.shape(), other.shape()},
+                                             lower_for_shape_fn);
+                   },
+                   std::move(lower_fn));
+}
+
 NodePtr AddMatMulOp(const Value& input, const Value& weight,
                     const Value& bias) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {

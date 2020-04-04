@@ -1166,6 +1166,10 @@ XLATensor XLATensor::gelu_backward(const XLATensor& grad,
       ir::ops::GeluBackward(grad.GetIrValue(), input.GetIrValue()));
 }
 
+XLATensor XLATensor::ger(const XLATensor& input, const XLATensor& vec2) {
+  return input.CreateFrom(ir::ops::Ger(input.GetIrValue(), vec2.GetIrValue()));
+}
+
 XLATensor XLATensor::gt(const XLATensor& input, at::Scalar other) {
   return DispatchComparisonOp(at::aten::gt, input, other);
 }

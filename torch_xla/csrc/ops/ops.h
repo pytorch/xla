@@ -134,6 +134,8 @@ NodePtr Trunc(const Value& input);
 
 NodePtr FracOp(const Value& input);
 
+NodePtr Ger(const Value& input, const Value& other);
+
 NodePtr AddMatMulOp(const Value& input, const Value& weight, const Value& bias);
 
 NodePtr Dot(const Value& input, const Value& weight);
