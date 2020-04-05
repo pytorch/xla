@@ -1461,7 +1461,7 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   PostOrderData po_data = RunPostOrder(*tensors, coll.indices);
   coll.hash = xla::util::HashCombine(
       coll.hash, xla::util::Hash(po_data.parameter_sequence));
-  TF_VLOG(4) << "Parameter sequence raph hash "
+  TF_VLOG(4) << "Parameter sequence graph hash "
              << xla::util::HexHash(coll.hash);
   std::shared_ptr<Async> async = TryRunCachedSync(tensors, &coll, &po_data);
   if (async != nullptr) {

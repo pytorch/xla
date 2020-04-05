@@ -1,3 +1,4 @@
+import locale
 import os
 import shutil
 import sys
@@ -33,26 +34,28 @@ def _global_cleanup():
     pass
 
 
-def _create_content(content=None, size=None):
+def _create_content(mode, content=None, size=None):
   if content is None:
     content = os.urandom(size)
-  elif isinstance(content, str):
-    content = content.decode('utf-8')
-  return content
+  encoding = locale.getpreferredencoding()
+  if mode.find('b') >= 0:
+    return content if isinstance(content, bytes) else content.decode(encoding)
+  else:
+    return content if isinstance(content, str) else content.encode(encoding)
 
 
-def _create_gcs_file(path, content=None, size=None, cleanup=None):
-  content = _create_content(content=content, size=size)
-  with gcs.open(path, mode='w') as fd:
+def _create_gcs_file(path, mode, content=None, size=None, cleanup=None):
+  content = _create_content(mode, content=content, size=size)
+  with gcs.open(path, mode=mode) as fd:
     fd.write(content)
   if cleanup is not None:
     cleanup.append(lambda: gcs.remove(path))
   return content
 
 
-def _create_file(path, content=None, size=None, cleanup=None):
-  content = _create_content(content=content, size=size)
-  with open(path, mode='w') as fd:
+def _create_file(path, mode, content=None, size=None, cleanup=None):
+  content = _create_content(mode, content=content, size=size)
+  with open(path, mode=mode) as fd:
     fd.write(content)
   if cleanup is not None:
     cleanup.append(lambda: os.remove(path))
@@ -75,8 +78,21 @@ class GcsTest(unittest.TestCase):
     SIZE = 10000000  # 10MB
     FNAME = 'test_write_compare'
     gcs_path = _gcs_test_path(name=FNAME)
-    content = _create_gcs_file(gcs_path, size=SIZE, cleanup=self._cleanup)
+    content = _create_gcs_file(gcs_path, 'wb', size=SIZE, cleanup=self._cleanup)
     rcontent = gcs.read(gcs_path)
+    self.assertEqual(len(content), len(rcontent))
+    self.assertEqual(type(content), type(rcontent))
+    self.assertEqual(content, rcontent)
+
+  def test_text_write_compare(self):
+    CONTENT = """ABC
+CD E
+FZXY
+"""
+    FNAME = 'test_text_write_compare'
+    gcs_path = _gcs_test_path(name=FNAME)
+    content = _create_gcs_file(gcs_path, 'w', content=CONTENT, cleanup=self._cleanup)
+    rcontent = gcs.read(gcs_path).decode(locale.getpreferredencoding())
     self.assertEqual(len(content), len(rcontent))
     self.assertEqual(type(content), type(rcontent))
     self.assertEqual(content, rcontent)
@@ -85,7 +101,7 @@ class GcsTest(unittest.TestCase):
     SIZE = 10000000  # 10MB
     FNAME = 'test_list'
     gcs_path = _gcs_test_path(name=FNAME)
-    content = _create_gcs_file(gcs_path, size=SIZE, cleanup=self._cleanup)
+    content = _create_gcs_file(gcs_path, 'wb', size=SIZE, cleanup=self._cleanup)
     self.assertEqual(len(content), SIZE)
     blobs = gcs.list(gcs_path)
     self.assertEqual(len(blobs), 1)

@@ -1,8 +1,10 @@
 from __future__ import division
 from __future__ import print_function
 
+import builtins
 import collections
 import io
+import locale
 import os
 import re
 import tempfile
@@ -30,9 +32,10 @@ def _slurp_file(path):
 
 class WriteableFile(io.RawIOBase):
 
-  def __init__(self, path, init_data=None, append=False):
+  def __init__(self, path, init_data=None, append=False, encoding=None):
     super(WriteableFile, self).__init__()
     self._path = path
+    self._encoding = encoding
     self._wfile = tempfile.NamedTemporaryFile()
     if init_data is not None:
       self._wfile.write(init_data)
@@ -50,6 +53,9 @@ class WriteableFile(io.RawIOBase):
     self._wfile.seek(0, os.SEEK_SET)
     write(self._path, self._wfile.read())
     self._wfile.seek(offset, os.SEEK_SET)
+
+  def _get_bytes(self, data):
+    return data if isinstance(data, bytes) else data.encode(self._encoding)
 
   @property
   def closed(self):
@@ -101,7 +107,7 @@ class WriteableFile(io.RawIOBase):
     return self._wfile.readinto(bbuf)
 
   def write(self, bbuf):
-    return self._wfile.write(bbuf)
+    return self._wfile.write(self._get_bytes(bbuf))
 
   def __enter__(self):
     return self
@@ -110,7 +116,7 @@ class WriteableFile(io.RawIOBase):
     self.close()
 
 
-def open(path, mode='r', encoding='utf-8'):
+def open(path, mode='r', encoding=None):
   """Opens a Google Cloud Storage (GCS) file for reading or writing.
 
   Args:
@@ -121,23 +127,27 @@ def open(path, mode='r', encoding='utf-8'):
       Default: 'r'
     encoding (string, optional): The character encoding to be used to decode
       bytes into strings when opening in text mode.
-      Default: 'utf-8'
+      Default: None
 
   Returns:
     The GCS file object.
   """
+  binary = mode.find('b') >= 0
+  if encoding is None:
+    encoding = locale.getpreferredencoding()
   if mode.startswith('w'):
-    return WriteableFile(path)
+    return WriteableFile(path, encoding=encoding)
   if mode.startswith('a') or mode.startswith('r+'):
     try:
       data = _slurp_file(path)
     except:
       data = None
-    return WriteableFile(path, init_data=data, append=mode.startswith('a'))
+    return WriteableFile(
+        path, init_data=data, append=mode.startswith('a'), encoding=encoding)
   data = _slurp_file(path)
-  if mode.find('t') >= 0:
-    return io.StringIO(data.decode(encoding))
-  return io.BytesIO(data)
+  if binary:
+    return io.BytesIO(data)
+  return io.StringIO(data.decode(encoding))
 
 
 def list(path):
@@ -239,6 +249,27 @@ def write(path, content):
   gcs_file = torch_xla._XLAC._xla_tffile_create(path)
   torch_xla._XLAC._xla_tffile_write(gcs_file, content)
   torch_xla._XLAC._xla_tffile_flush(gcs_file)
+
+
+def generic_open(path, mode='r', encoding=None):
+  """Opens a file (GCS or not) for reding or writing.
+
+  Args:
+    path (string): The path of the file to be opened. If a GCS path, it must be
+      "gs://BUCKET_NAME/PATH" where ``BUCKET_NAME`` is the name of the GCS
+        bucket, and ``PATH`` is a `/` delimited path.
+    mode (string, optional): The open mode, similar to the ``open()`` API.
+      Default: 'r'
+    encoding (string, optional): The character encoding to be used to decode
+      bytes into strings when opening in text mode.
+      Default: None
+
+  Returns:
+    The opened file object.
+  """
+  if path.startswith(CLOUD_STORAGE_PREFIX):
+    return open(path, mode=mode, encoding=encoding)
+  return builtins.open(path, mode=mode, encoding=encoding)
 
 
 def generic_write(output_string, output_path):
