@@ -18,12 +18,14 @@ launch_docker: &launch_docker
     docker pull ${DOCKER_IMAGE}
     sudo pkill -SIGHUP dockerd
     WORKDIR=/var/lib/jenkins/workspace
+    echo "source ~/.bashrc" >> /home/circleci/project/env
     echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" >> /home/circleci/project/env
     echo "declare -x AWS_ACCESS_KEY_ID=${CIRCLECI_AWS_ACCESS_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
     echo "declare -x AWS_SECRET_ACCESS_KEY=${CIRCLECI_AWS_SECRET_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
     echo "declare -x XLA_CLANG_CACHE_S3_BUCKET_NAME=${XLA_CLANG_CACHE_S3_BUCKET_NAME}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_JOB=${CIRCLE_JOB}" >> /home/circleci/project/env
     echo "declare -x MAX_JOBS=8" >> /home/circleci/project/env
+    echo "source ~/.bashrc" >> /home/circleci/project/xla_env
     echo "declare -x CC=clang-8 CXX=clang++-8" >> /home/circleci/project/xla_env
     echo "declare -x XLA_USE_XRT=1" >> /home/circleci/project/xla_env
     echo "declare -x GITHUB_TORCH_XLA_BOT_TOKEN=${GITHUB_TORCH_XLA_BOT_TOKEN}" >> /home/circleci/project/xla_env
@@ -119,28 +121,27 @@ jobs:
     - run:
         <<: *run_clang_format
 
-  pytorch_xla_linux_xenial_py3_6_clang_7:
+  pytorch_xla_linux_debian11:
     environment:
-      DOCKER_IMAGE: "308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/pytorch-linux-xenial-py3.6-clang7:347"
+      DOCKER_IMAGE: "docker.io/dlibenzi/pytorch_xla_ci_debian_11"
     <<: *linux_default
 
-  pytorch_xla_linux_xenial_py3_6_clang_7_and_push_doc:
+  pytorch_xla_linux_debian11_and_push_doc:
     environment:
-      DOCKER_IMAGE: "308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/pytorch-linux-xenial-py3.6-clang7:347"
+      DOCKER_IMAGE: "docker.io/dlibenzi/pytorch_xla_ci_debian_11"
     <<: *push_doc
-
 
 workflows:
   version: 2
   build:
     jobs:
       - linter_check
-      - pytorch_xla_linux_xenial_py3_6_clang_7:
+      - pytorch_xla_linux_debian11:
           filters:
             branches:
               ignore:
                 - master
-      - pytorch_xla_linux_xenial_py3_6_clang_7_and_push_doc:
+      - pytorch_xla_linux_debian11_and_push_doc:
           filters:
             branches:
               only: master
