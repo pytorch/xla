@@ -303,6 +303,11 @@ hash_t Hash(const std::set<T>& values) {
   return ContainerHash(values);
 }
 
+template <typename T, typename S>
+hash_t Hash(const std::pair<T, S>& values) {
+  return HashCombine(Hash(values.first), Hash(values.second));
+}
+
 static inline hash_t Hash(const hash_t& value) { return value; }
 
 template <typename T>

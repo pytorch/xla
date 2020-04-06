@@ -136,6 +136,18 @@ std::vector<std::vector<xla::int64>> CreateReduceGroups(
   return replica_groups;
 }
 
+std::vector<std::pair<xla::int64, xla::int64>> CreateSourceTargetPairs(
+    const py::list& pairs) {
+  std::vector<std::pair<xla::int64, xla::int64>> source_target_pairs;
+  for (auto& pair : pairs) {
+    const auto& pylist_pair = pair.cast<py::list>();
+    XLA_CHECK_EQ(len(pylist_pair), 2);
+    source_target_pairs.push_back(
+        {pylist_pair[0].cast<xla::int64>(), pylist_pair[1].cast<xla::int64>()});
+  }
+  return source_target_pairs;
+}
+
 std::shared_ptr<ir::Value> AllReduceInPlace(
     const std::string& reduce_type, const std::vector<at::Tensor>& tensors,
     const std::shared_ptr<ir::Value>& token, double scale,
@@ -155,6 +167,18 @@ std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllToAll(
   std::tie(result, new_token) = XLATensor::all_to_all(
       bridge::GetXlaTensor(input), *token, split_dimension, concat_dimension,
       split_count, replica_groups);
+  return std::pair<at::Tensor, std::shared_ptr<ir::Value>>(
+      bridge::AtenFromXlaTensor(std::move(result)),
+      std::make_shared<ir::Value>(new_token));
+}
+
+std::pair<at::Tensor, std::shared_ptr<ir::Value>> CollectivePermute(
+    const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
+    const std::vector<std::pair<xla::int64, xla::int64>>& source_target_pairs) {
+  XLATensor result;
+  ir::Value new_token;
+  std::tie(result, new_token) = XLATensor::collective_permute(
+      bridge::GetXlaTensor(input), *token, source_target_pairs);
   return std::pair<at::Tensor, std::shared_ptr<ir::Value>>(
       bridge::AtenFromXlaTensor(std::move(result)),
       std::make_shared<ir::Value>(new_token));
@@ -574,6 +598,24 @@ void InitXlaModuleBindings(py::module m) {
             std::tie(result, new_token) =
                 AllToAll(input, token, split_dimension, concat_dimension,
                          split_count, replica_groups);
+          }
+          auto result_tuple = py::tuple(2);
+          result_tuple[0] = torch::autograd::make_variable(
+              result, /*requires_grad=*/input.requires_grad());
+          result_tuple[1] = new_token;
+          return result_tuple;
+        });
+  m.def("_xla_collective_permute",
+        [](const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
+           const py::list& pairs) {
+          std::vector<std::pair<xla::int64, xla::int64>> source_target_pairs =
+              CreateSourceTargetPairs(pairs);
+          at::Tensor result;
+          std::shared_ptr<ir::Value> new_token;
+          {
+            NoGilSection nogil;
+            std::tie(result, new_token) =
+                CollectivePermute(input, token, source_target_pairs);
           }
           auto result_tuple = py::tuple(2);
           result_tuple[0] = torch::autograd::make_variable(

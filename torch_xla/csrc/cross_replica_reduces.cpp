@@ -150,4 +150,19 @@ AllToAllResult BuildAllToAll(
   return {reduce_result, chained_token};
 }
 
+CollectivePermuteResult BuildCollectivePermute(
+    xla::XlaOp input, xla::XlaOp token,
+    const std::vector<std::pair<xla::int64, xla::int64>>& source_target_pairs) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp affine_token = MaybeConvertTo(token, input_shape.element_type());
+  // TODO: This is missing layout pinning ATM. If XLA scheduling is not exactly
+  // the same (graphs on cores differ), XLA could assign different layouts and
+  // things will break.
+  xla::XlaOp result =
+      xla::CollectivePermute(input + affine_token, source_target_pairs);
+  xla::XlaOp chained_token = MaybeConvertTo(
+      affine_token * SliceOneToken(result), XlaHelpers::TypeOfXlaOp(token));
+  return {result, chained_token};
+}
+
 }  // namespace torch_xla
