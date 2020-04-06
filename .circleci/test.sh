@@ -2,9 +2,12 @@
 
 set -ex
 
-cd /tmp/pytorch/xla
-
 source ./xla_env
+
+conda activate base
+export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
+
+cd /tmp/pytorch/xla
 
 echo "Running Python Tests"
 ./test/run_tests.sh
