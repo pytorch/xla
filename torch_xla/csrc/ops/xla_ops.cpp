@@ -7,6 +7,7 @@ namespace ops {
 const OpKindWrapper xla_all_to_all("xla::all_to_all");
 const OpKindWrapper xla_as_strided_view_update("xla::as_strided_view_update");
 const OpKindWrapper xla_cast("xla::cast");
+const OpKindWrapper xla_collective_permute("xla::collective_permute");
 const OpKindWrapper xla_cross_replica_sum("xla::cross_replica_sum");
 const OpKindWrapper xla_device_data("xla::device_data");
 const OpKindWrapper xla_diagonal_view_update("xla::diagonal_view_update");
