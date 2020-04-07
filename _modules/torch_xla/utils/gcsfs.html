@@ -253,8 +253,10 @@
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
 
+<span class="kn">import</span> <span class="nn">builtins</span>
 <span class="kn">import</span> <span class="nn">collections</span>
 <span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">locale</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">tempfile</span>
@@ -282,9 +284,10 @@
 
 <span class="k">class</span> <span class="nc">WriteableFile</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">RawIOBase</span><span class="p">):</span>
 
-  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">init_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">append</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">init_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">append</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="nb">super</span><span class="p">(</span><span class="n">WriteableFile</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_path</span> <span class="o">=</span> <span class="n">path</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span> <span class="o">=</span> <span class="n">encoding</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_wfile</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">init_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">init_data</span><span class="p">)</span>
@@ -302,6 +305,9 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">_wfile</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_SET</span><span class="p">)</span>
     <span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wfile</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_wfile</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_SET</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_get_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">data</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoding</span><span class="p">)</span>
 
   <span class="nd">@property</span>
   <span class="k">def</span> <span class="nf">closed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -353,7 +359,7 @@
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wfile</span><span class="o">.</span><span class="n">readinto</span><span class="p">(</span><span class="n">bbuf</span><span class="p">)</span>
 
   <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bbuf</span><span class="p">):</span>
-    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">bbuf</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_bytes</span><span class="p">(</span><span class="n">bbuf</span><span class="p">))</span>
 
   <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span>
@@ -362,7 +368,7 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="open"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.open">[docs]</a><span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="open"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.open">[docs]</a><span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Opens a Google Cloud Storage (GCS) file for reading or writing.</span>
 
 <span class="sd">  Args:</span>
@@ -373,23 +379,27 @@
 <span class="sd">      Default: &#39;r&#39;</span>
 <span class="sd">    encoding (string, optional): The character encoding to be used to decode</span>
 <span class="sd">      bytes into strings when opening in text mode.</span>
-<span class="sd">      Default: &#39;utf-8&#39;</span>
+<span class="sd">      Default: None</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The GCS file object.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">binary</span> <span class="o">=</span> <span class="n">mode</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+  <span class="k">if</span> <span class="n">encoding</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">encoding</span> <span class="o">=</span> <span class="n">locale</span><span class="o">.</span><span class="n">getpreferredencoding</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">WriteableFile</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">WriteableFile</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">mode</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;r+&#39;</span><span class="p">):</span>
     <span class="k">try</span><span class="p">:</span>
       <span class="n">data</span> <span class="o">=</span> <span class="n">_slurp_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="k">except</span><span class="p">:</span>
       <span class="n">data</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="n">WriteableFile</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">init_data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">append</span><span class="o">=</span><span class="n">mode</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">WriteableFile</span><span class="p">(</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">init_data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">append</span><span class="o">=</span><span class="n">mode</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span>
   <span class="n">data</span> <span class="o">=</span> <span class="n">_slurp_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-  <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">))</span>
-  <span class="k">return</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
+  <span class="k">if</span> <span class="n">binary</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="list"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.list">[docs]</a><span class="k">def</span> <span class="nf">list</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
@@ -491,6 +501,27 @@
   <span class="n">gcs_file</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tffile_create</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tffile_write</span><span class="p">(</span><span class="n">gcs_file</span><span class="p">,</span> <span class="n">content</span><span class="p">)</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tffile_flush</span><span class="p">(</span><span class="n">gcs_file</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="generic_open"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.generic_open">[docs]</a><span class="k">def</span> <span class="nf">generic_open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Opens a file (GCS or not) for reding or writing.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    path (string): The path of the file to be opened. If a GCS path, it must be</span>
+<span class="sd">      &quot;gs://BUCKET_NAME/PATH&quot; where ``BUCKET_NAME`` is the name of the GCS</span>
+<span class="sd">        bucket, and ``PATH`` is a `/` delimited path.</span>
+<span class="sd">    mode (string, optional): The open mode, similar to the ``open()`` API.</span>
+<span class="sd">      Default: &#39;r&#39;</span>
+<span class="sd">    encoding (string, optional): The character encoding to be used to decode</span>
+<span class="sd">      bytes into strings when opening in text mode.</span>
+<span class="sd">      Default: None</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The opened file object.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">CLOUD_STORAGE_PREFIX</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">builtins</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="generic_write"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.generic_write">[docs]</a><span class="k">def</span> <span class="nf">generic_write</span><span class="p">(</span><span class="n">output_string</span><span class="p">,</span> <span class="n">output_path</span><span class="p">):</span>

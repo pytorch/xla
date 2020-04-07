@@ -51,6 +51,7 @@ utils
 .. autofunction:: rmtree
 .. autofunction:: read
 .. autofunction:: write
+.. autofunction:: generic_open
 .. autofunction:: generic_read
 .. autofunction:: generic_write
 

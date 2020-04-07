@@ -971,7 +971,7 @@ conversion.</p></li>
 
 <span class="target" id="module-torch_xla.utils.gcsfs"></span><dl class="function">
 <dt id="torch_xla.utils.gcsfs.open">
-<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">open</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">mode='r'</em>, <em class="sig-param">encoding='utf-8'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#open"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.open" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">open</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">mode='r'</em>, <em class="sig-param">encoding=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#open"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.open" title="Permalink to this definition">¶</a></dt>
 <dd><p>Opens a Google Cloud Storage (GCS) file for reading or writing.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -983,7 +983,7 @@ delimited path.</p></li>
 Default: ‘r’</p></li>
 <li><p><strong>encoding</strong> (<em>string</em><em>, </em><em>optional</em>) – The character encoding to be used to decode
 bytes into strings when opening in text mode.
-Default: ‘utf-8’</p></li>
+Default: None</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1082,6 +1082,32 @@ delimited path.</p></li>
 <li><p><strong>content</strong> (<em>string</em><em>, </em><em>bytes</em><em> or </em><em>file object</em>) – The content to be written into
 <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.gcsfs.generic_open">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">generic_open</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">mode='r'</em>, <em class="sig-param">encoding=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#generic_open"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.generic_open" title="Permalink to this definition">¶</a></dt>
+<dd><p>Opens a file (GCS or not) for reding or writing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>string</em>) – <p>The path of the file to be opened. If a GCS path, it must be
+“gs://BUCKET_NAME/PATH” where <code class="docutils literal notranslate"><span class="pre">BUCKET_NAME</span></code> is the name of the GCS</p>
+<blockquote>
+<div><p>bucket, and <code class="docutils literal notranslate"><span class="pre">PATH</span></code> is a <cite>/</cite> delimited path.</p>
+</div></blockquote>
+</p></li>
+<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – The open mode, similar to the <code class="docutils literal notranslate"><span class="pre">open()</span></code> API.
+Default: ‘r’</p></li>
+<li><p><strong>encoding</strong> (<em>string</em><em>, </em><em>optional</em>) – The character encoding to be used to decode
+bytes into strings when opening in text mode.
+Default: None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The opened file object.</p>
 </dd>
 </dl>
 </dd></dl>
