@@ -241,6 +241,7 @@ DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
     'test_triangular_solve_batched_many_batches',  # (TPU) 1.02 vs 0.001
     'test_triangular_solve_batched_broadcasting',  # (TPU) 1.5 vs 0.001
     'test_random_from_to_xla_int32',  # precision, TPU does not have real F64
+    'test_uniform_from_to_xla_float64', # float64 limit, TPU does not have real F64
 }
 
 DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
