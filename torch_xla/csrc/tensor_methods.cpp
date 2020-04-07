@@ -108,6 +108,7 @@
 #include "torch_xla/csrc/ops/triangular_solve.h"
 #include "torch_xla/csrc/ops/tril.h"
 #include "torch_xla/csrc/ops/triu.h"
+#include "torch_xla/csrc/ops/uniform.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
 #include "torch_xla/csrc/ops/upsample_bilinear2d.h"
 #include "torch_xla/csrc/ops/upsample_bilinear2d_backward.h"
@@ -2514,6 +2515,17 @@ std::vector<XLATensor> XLATensor::unbind(const XLATensor& input,
     slices.push_back(select(input, dim, index));
   }
   return slices;
+}
+
+void XLATensor::uniform_(XLATensor& input, double from, double to) {
+  XLA_CHECK_LE(from, to);
+  auto input_shape = input.shape();
+  input.SetInPlaceIrValue(ir::MakeNode<ir::ops::Uniform>(
+      GetIrValueForScalar(from, input_shape.get().element_type(),
+                          input.GetDevice()),
+      GetIrValueForScalar(to, input_shape.get().element_type(),
+                          input.GetDevice()),
+      input_shape, GenRngSeed()));
 }
 
 XLATensor XLATensor::unsqueeze(const XLATensor& input, xla::int64 dim) {
