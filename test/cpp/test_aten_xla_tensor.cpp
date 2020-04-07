@@ -1359,6 +1359,23 @@ TEST_F(AtenXlaTensorTest, TestNormalInPlace) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestUniformInPlace) {
+  const double eps = 1e-3;
+  at::Tensor a = at::zeros({10, 10, 10}, at::dtype(at::kFloat));
+  ForEachDevice([&](const Device& device) {
+    at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+    xla_a.uniform_(/*from=*/0, /*to=*/1);
+    at::Tensor cpu_a = ToCpuTensor(xla_a);
+    double res_min = cpu_a.min().item().toDouble();
+    double res_max = cpu_a.max().item().toDouble();
+    EXPECT_GT(res_min, 0.0 - eps);
+    EXPECT_LT(res_max, 1.0 + eps);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::uniform.*", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestNormGeneral) {
   torch::Tensor a =
       torch::randn({4, 3, 4}, torch::TensorOptions(torch::kFloat));

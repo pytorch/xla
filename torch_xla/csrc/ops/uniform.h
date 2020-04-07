@@ -6,9 +6,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Normal : public Node {
+class Uniform : public Node {
  public:
-  Normal(const Value& mean, const Value& std, xla::uint64 seed);
+  Uniform(const Value& from, const Value& to, const xla::Shape& rng_shape,
+          xla::uint64 seed);
 
   std::string ToString() const override;
 

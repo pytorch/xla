@@ -3036,6 +3036,17 @@ std::vector<at::Tensor> AtenXlaType::unbind(const at::Tensor& self,
       XLATensor::unbind(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor& AtenXlaType::uniform_(at::Tensor& self, double from, double to,
+                                  at::Generator generator) {
+  XLA_FN_COUNTER("xla::");
+  if (generator.defined()) {
+    return AtenXlaTypeDefault::uniform_(self, from, to, generator);
+  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::uniform_(self_tensor, from, to);
+  return self;
+}
+
 at::Tensor AtenXlaType::unsqueeze(const at::Tensor& self, int64_t dim) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
