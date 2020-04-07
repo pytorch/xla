@@ -930,6 +930,9 @@ class AtenXlaType {
 
   static std::vector<at::Tensor> unbind(const at::Tensor& self, int64_t dim);
 
+  static at::Tensor& uniform_(at::Tensor& self, double from, double to,
+                              at::Generator generator);
+
   static at::Tensor unsqueeze(const at::Tensor& self, int64_t dim);
 
   static at::Tensor& unsqueeze_(at::Tensor& self, int64_t dim);
