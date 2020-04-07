@@ -656,14 +656,11 @@ Default: 1</p>
 <li><p><strong>inputs</strong> (<em>list</em>) – List of tensors to perform the all reduce op to.</p></li>
 <li><p><strong>scale</strong> (<em>python:float</em>) – A default scaling value to be applied after the reduce.
 Default: 1.0</p></li>
-<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
-the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
-<blockquote>
-<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
-the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
-all the replicas in it.</p>
-</div></blockquote>
-</p></li>
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – A list of list, representing the replica groups for
+the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite>
+defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with the
+<cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with all
+the replicas in it.</p></li>
 </ul>
 </dd>
 </dl>
@@ -681,18 +678,37 @@ all the replicas in it.</p>
 <li><p><strong>split_dimension</strong> (<em>python:int</em>) – The dimension upon which the split should happen.</p></li>
 <li><p><strong>concat_dimension</strong> (<em>python:int</em>) – The dimension upon which the concat should happen.</p></li>
 <li><p><strong>split_count</strong> (<em>python:int</em>) – The split count.</p></li>
-<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
-the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
-<blockquote>
-<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
-the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
-all the replicas in it.</p>
-</div></blockquote>
-</p></li>
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – A list of list, representing the replica groups for
+the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite>
+defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with the
+<cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with all
+the replicas in it.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>The result <cite>torch.Tensor</cite> of the <cite>all_to_all()</cite> operation.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.core.xla_model.collective_permute">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">collective_permute</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">pairs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#collective_permute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.collective_permute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a XLA <cite>CollectivePermute()</cite> operation on the input tensor.</p>
+<p>See: <a class="reference external" href="https://www.tensorflow.org/xla/operation_semantics#collectivepermute">https://www.tensorflow.org/xla/operation_semantics#collectivepermute</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>torch.Tensor</em>) – The input tensor.</p></li>
+<li><p><strong>pairs</strong> (<em>list</em>) – A list of (source_replica_id, target_replica_id) pairs,
+representing the sender and receiver for the <cite>collective_permute()</cite>
+operation. Example: <cite>[[0, 1], [1, 2], [2, 0]]</cite> defines three pairs. The
+tensor will be send from replidca 0 to replidca 1, replidca 1 to replidca
+2, and replidca 2 to replidca 0.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The result <cite>torch.Tensor</cite> of the <cite>collective_permute()</cite> operation.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -754,14 +770,11 @@ data loader iterator <cite>next()</cite> call.
 Default: False</p></li>
 <li><p><strong>optimizer_args</strong> (<em>dict</em><em>, </em><em>optional</em>) – Named arguments dictionary for the
 <cite>optimizer.step()</cite> call.</p></li>
-<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
-the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
-<blockquote>
-<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
-the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
-all the replicas in it.</p>
-</div></blockquote>
-</p></li>
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – A list of list, representing the replica groups for
+the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite>
+defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with the
+<cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with all
+the replicas in it.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>

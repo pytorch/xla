@@ -623,9 +623,9 @@
 <span class="sd">      Default: 1.0</span>
 <span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
 <span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
-<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
-<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
-<span class="sd">        all the replicas in it.</span>
+<span class="sd">      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with the</span>
+<span class="sd">      `[4, 5, 6, 7]` replicas. If `None` there will be only one group with all</span>
+<span class="sd">      the replicas in it.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">_TLS</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span>
       <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">_get_all_reduce_token</span><span class="p">(),</span> <span class="n">scale</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span></div>
@@ -647,9 +647,9 @@
 <span class="sd">    split_count (int): The split count.</span>
 <span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
 <span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
-<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
-<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
-<span class="sd">        all the replicas in it.</span>
+<span class="sd">      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with the</span>
+<span class="sd">      `[4, 5, 6, 7]` replicas. If `None` there will be only one group with all</span>
+<span class="sd">      the replicas in it.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The result `torch.Tensor` of the `all_to_all()` operation.</span>
@@ -657,6 +657,29 @@
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">_get_all_reduce_token</span><span class="p">(),</span>
                                            <span class="n">split_dimension</span><span class="p">,</span> <span class="n">concat_dimension</span><span class="p">,</span>
                                            <span class="n">split_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
+  <span class="n">_TLS</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="collective_permute"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.collective_permute">[docs]</a><span class="k">def</span> <span class="nf">collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">pairs</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs a XLA `CollectivePermute()` operation on the input tensor.</span>
+
+<span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#collectivepermute</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    value (torch.Tensor): The input tensor.</span>
+<span class="sd">    pairs (list): A list of (source_replica_id, target_replica_id) pairs,</span>
+<span class="sd">      representing the sender and receiver for the `collective_permute()`</span>
+<span class="sd">      operation. Example: `[[0, 1], [1, 2], [2, 0]]` defines three pairs. The</span>
+<span class="sd">      tensor will be send from replidca 0 to replidca 1, replidca 1 to replidca</span>
+<span class="sd">      2, and replidca 2 to replidca 0.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The result `torch.Tensor` of the `collective_permute()` operation.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span>
+                                                   <span class="n">_get_all_reduce_token</span><span class="p">(),</span>
+                                                   <span class="n">pairs</span><span class="p">)</span>
   <span class="n">_TLS</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
@@ -730,9 +753,9 @@
 <span class="sd">      containing the gradients to be reduced.</span>
 <span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
 <span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
-<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
-<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
-<span class="sd">        all the replicas in it.</span>
+<span class="sd">      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with the</span>
+<span class="sd">      `[4, 5, 6, 7]` replicas. If `None` there will be only one group with all</span>
+<span class="sd">      the replicas in it.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">count</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_replication_devices_count</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -756,9 +779,9 @@
 <span class="sd">      `optimizer.step()` call.</span>
 <span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
 <span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
-<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
-<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
-<span class="sd">        all the replicas in it.</span>
+<span class="sd">      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with the</span>
+<span class="sd">      `[4, 5, 6, 7]` replicas. If `None` there will be only one group with all</span>
+<span class="sd">      the replicas in it.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The same value returned by the `optimizer.step()` call.</span>
