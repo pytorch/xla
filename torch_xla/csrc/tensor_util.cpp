@@ -655,6 +655,19 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
   return literal;
 }
 
+std::vector<at::Tensor> XlaDataToTensors(
+    absl::Span<const xla::ComputationClient::DataPtr> xla_data,
+    at::ScalarType dest_element_type) {
+  std::vector<xla::Literal> literals =
+      xla::ComputationClient::Get()->TransferFromServer(xla_data);
+  std::vector<at::Tensor> tensors;
+  tensors.reserve(literals.size());
+  for (auto& literal : literals) {
+    tensors.push_back(MakeTensorFromXlaLiteral(literal, dest_element_type));
+  }
+  return tensors;
+}
+
 xla::hash_t TensorHash(const at::Tensor& tensor) {
   at::Tensor ctensor = tensor.contiguous();
   int64_t size = ctensor.numel() * ctensor.element_size();

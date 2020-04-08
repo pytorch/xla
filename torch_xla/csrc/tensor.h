@@ -48,14 +48,14 @@ class XLATensor {
 
   xla::int64 size(xla::int64 dim) const;
 
-  at::Tensor ToTensor();
+  at::Tensor ToTensor(bool detached);
 
   void ShallowCopyTo(XLATensor* dest) const;
 
   // Assigns the tensor value to the XLA tensor.
   void SetTensor(at::Tensor tensor);
 
-  void UpdateFromTensor(at::Tensor tensor);
+  void UpdateFromTensor(at::Tensor tensor, bool sync);
   void UpdateFromTensorOut(at::Tensor tensor);
   void UpdateFromTensorOut(const XLATensor& tensor);
 

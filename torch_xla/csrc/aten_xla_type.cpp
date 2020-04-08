@@ -916,17 +916,12 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
   auto self_tensor = bridge::TryGetXlaTensor(self);
   auto src_tensor = bridge::TryGetXlaTensor(src);
   if (!src_tensor) {
+    static bool sync_update =
+        xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
     XLA_CHECK(self_tensor);
-    self_tensor->UpdateFromTensor(CopyTensor(src, self.scalar_type()));
+    self_tensor->UpdateFromTensor(src, /*sync=*/sync_update);
   } else if (!self_tensor) {
-    // TODO: Is self_tensor good enough?  I don't think so... therefore
-    // the hack below:
-    std::vector<at::Tensor> tensors = {src};
-    auto xla_tensors = bridge::XlaCreateTensorList(tensors);
-    // Hack in an overwrite of a const tensor.
-    at::Tensor t = CopyTensor(xla_tensors.front(), self.scalar_type());
-    const_cast<at::Tensor&>(self).unsafeGetTensorImpl()->shallow_copy_from(
-        t.getIntrusivePtr());
+    self.copy_(src_tensor->ToTensor(/*detached=*/true));
   } else {
     XLATensor::copy_(*self_tensor, *src_tensor);
     bridge::ReplaceXlaTensor(self, *self_tensor);

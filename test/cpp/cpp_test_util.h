@@ -52,7 +52,8 @@ static inline void AllClose(at::Tensor tensor, at::Tensor xla_tensor,
 
 static inline void AllClose(at::Tensor tensor, XLATensor& xla_tensor,
                             double rtol = 1e-5, double atol = 1e-8) {
-  EXPECT_TRUE(CloseValues(tensor, xla_tensor.ToTensor(), rtol, atol));
+  EXPECT_TRUE(
+      CloseValues(tensor, xla_tensor.ToTensor(/*detached=*/false), rtol, atol));
 }
 
 static inline void AllEqual(at::Tensor tensor, at::Tensor xla_tensor) {

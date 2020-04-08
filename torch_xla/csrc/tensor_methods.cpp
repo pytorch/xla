@@ -2026,12 +2026,12 @@ void XLATensor::copy_(XLATensor& input, XLATensor& src) {
     input.SetIrValue(MaybeExpand(copy_value, input.shape()));
   } else {
     auto input_shape = input.shape();
-    at::Tensor src_tensor = src.ToTensor();
+    at::Tensor src_tensor = src.ToTensor(/*detached=*/true);
     if (!xla::util::Equal(src_tensor.sizes(), input_shape.get().dimensions())) {
       src_tensor = src_tensor.expand(
           xla::util::ToVector<int64_t>(input_shape.get().dimensions()));
     }
-    input.UpdateFromTensor(std::move(src_tensor));
+    input.UpdateFromTensor(std::move(src_tensor), /*sync=*/false);
   }
 }
 

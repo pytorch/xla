@@ -225,7 +225,7 @@ at::Tensor XlaToAtenTensor(XLATensor xla_tensor,
   if (tensor_options.has_device()) {
     XLA_CHECK_NE(tensor_options.device().type(), at::kXLA);
   }
-  at::Tensor tensor = xla_tensor.ToTensor();
+  at::Tensor tensor = xla_tensor.ToTensor(/*detached=*/false);
   // We need to copy the tensor since it is cached within the XLATensor, and
   // returning it directly might expose it to in place changes. Which there was
   // COW option :)

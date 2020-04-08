@@ -9,9 +9,9 @@ at::Tensor CopyTensor(const at::Tensor& ref) {
 }
 
 // Same as above, with an additional cast.
-at::Tensor CopyTensor(const at::Tensor& ref, at::ScalarType dest_type) {
-  return ref.to(ref.options().dtype(dest_type), /*non_blocking=*/false,
-                /*copy=*/true);
+at::Tensor CopyTensor(const at::Tensor& ref, at::ScalarType dest_type,
+                      bool copy) {
+  return ref.to(ref.options().dtype(dest_type), /*non_blocking=*/false, copy);
 }
 
 at::ScalarType GetScalarType(at::Scalar scalar) {

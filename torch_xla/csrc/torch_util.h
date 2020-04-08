@@ -10,7 +10,8 @@ namespace torch_xla {
 at::Tensor CopyTensor(const at::Tensor& ref);
 
 // Same as above, with an additional cast.
-at::Tensor CopyTensor(const at::Tensor& ref, at::ScalarType dest_type);
+at::Tensor CopyTensor(const at::Tensor& ref, at::ScalarType dest_type,
+                      bool copy = true);
 
 // Return at::ScalarType from at::Scalar
 at::ScalarType GetScalarType(at::Scalar scalar);
