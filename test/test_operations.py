@@ -458,7 +458,7 @@ class XlaTestCase(unittest.TestCase):
     if device is None:
       device = xm.xla_device()
     tensors = xu.as_list(tensors)
-    xla_tensors = [x.to(device) for x in tensors]
+    xla_tensors = [x.to(device).detach().requires_grad_(x.requires_grad) for x in tensors]
     results = xu.as_list(fn(*tensors))
     xla_results = xu.as_list(fn(*xla_tensors))
     self.maybePrintGraph(xla_results)
@@ -468,7 +468,6 @@ class XlaTestCase(unittest.TestCase):
           self.makeComparable(at),
           rel_err=rel_err,
           abs_err=abs_err)
-
 
 class TestToXlaTensorArena(XlaTestCase):
 
@@ -935,6 +934,141 @@ class TestAtenXlaTensor(XlaTestCase):
     with self.assertRaisesRegex(
         RuntimeError, r'unspecified dimension size -1 can be any value'):
       empty.view(3, 0, -1, 0)
+
+  def test_view_1718(self):
+    def test_fn(device):
+      torch.manual_seed(0)
+      linear = nn.Linear(8, 16).to(device=device)
+      batch = torch.rand(4, 8).to(device=device)
+      x = linear(batch)
+      x[:, :4] = 0
+      loss = x.sum()
+      loss.backward()
+      return loss, linear.weight.grad
+
+    cpu_loss, cpu_weight_grad = test_fn('cpu')
+    xla_loss, xla_weight_grad = test_fn(xm.xla_device())
+    self.assertEqual(cpu_loss, xla_loss)
+    self.assertEqual(cpu_weight_grad, xla_weight_grad)
+
+  def test_inplace_view_backprop_base(self):
+    root = torch.randn(2, 2, device=xm.xla_device(), requires_grad=True)
+    x = root.clone()
+    v1 = x.narrow(0, 0, 1)
+    v1.mul_(2)
+    x.sum().backward()
+    self.assertEqual(root.grad.tolist(), [[2, 2], [1, 1]])
+
+  def test_inplace_view_backprop_view_of_view(self):
+    root = torch.randn(2, 2, device=xm.xla_device(), requires_grad=True)
+    x = root.clone()
+    v1 = x.narrow(0, 0, 1)
+    v2 = x.narrow(0, 0, 1)
+    v1.mul_(2)
+    v2.sum().backward()
+    self.assertEqual(root.grad.tolist(), [[2, 2], [0, 0]])
+
+  def test_inplace_view_of_view(self):
+    # modify view-of-view and backprop through base
+    root = torch.randn(2, 2, device=xm.xla_device(), requires_grad=True)
+    x = root.clone()
+    v1 = x.narrow(0, 0, 1)
+    v2 = v1.narrow(1, 1, 1)
+    v2.mul_(2)
+    x.sum().backward()
+    self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1]])
+
+  def test_inplace_view_gradcheck(self):
+    # gradcheck modifications to views
+    a = torch.randn(4, 4, requires_grad=True)
+    b = torch.randn(2, 2, requires_grad=True)
+
+    def test_fn(root, b):
+        x = root.clone()
+        x.narrow(1, 2, 2).narrow(0, 1, 2).mul_(b)
+        x.narrow(1, 0, 2).narrow(0, 1, 2).mul_(b)
+        x.sum().backward()
+        return x
+
+    self.runAtenTest((a, b), test_fn)
+
+  def test_inplace_view_makes_base_require_grad(self):
+    # in-place modification to view makes base require grad
+    a = torch.randn(4, 4, requires_grad=False)
+    b = torch.randn(4, 2, requires_grad=True)
+
+    def func(root, b):
+      x = root.clone()
+      self.assertFalse(x.requires_grad)
+      x.narrow(1, 2, 2).mul_(b)
+      self.assertTrue(x.requires_grad)
+      x.sum().backward()
+      self.assertTrue(root.grad is None)
+      return b.grad
+
+    self.runAtenTest((a, b), func)
+
+  def test_inplace_view_backprop_view(self):
+    # modify view and backprop through view
+    xla_device = xm.xla_device()
+    a = torch.tensor([2., 5.], device=xla_device, requires_grad=False)
+    b = torch.tensor([3.], device=xla_device, requires_grad=True)
+    res = a.narrow(0, 1, 1).mul_(b)
+    res.sum().backward()
+    self.assertEqual(b.grad.tolist(), [5])
+    self.assertIsNone(a.grad)
+
+  def test_inplace_view_modify_base(self):
+    # Test that an in-place operation on a base that forced it to require
+    # grad also forces any previous views to require grad and backprop
+    # correctly
+    r = torch.ones(1, requires_grad=True)
+    x = torch.ones(5)
+
+    def fn(r, x):
+        v = x.select(0, 1)
+        self.assertFalse(v.requires_grad)
+        self.assertIsNone(v.grad_fn)
+        x.add_(r)  # v is now dependent on r due to the in-place op on x
+        self.assertTrue(v.requires_grad)
+        v.sum().backward()
+        return r.grad
+
+    self.runAtenTest((r, x), fn)
+
+  def test_inplace_view_python(self):
+      # in-place modifications of Python-autograd created view
+      a = torch.randn(4, 4, requires_grad=True)
+      b = torch.randn(2, 2, requires_grad=True)
+
+      class PyAdd(torch.autograd.Function):
+          @staticmethod
+          def forward(ctx, x, y):
+              ctx.mark_dirty(x)
+              x.add_(y)
+              return x
+
+          @staticmethod
+          def backward(ctx, grad):
+              return grad, grad
+
+      def func(root, b):
+          x = root.clone()
+          PyAdd.apply(x.narrow(1, 2, 2).narrow(0, 1, 2), b)
+          PyAdd.apply(x.narrow(1, 0, 2).narrow(0, 1, 2), b)
+          x.sum().backward()
+          return root.grad, b.grad
+
+      self.runAtenTest((a, b), func)
+
+  def test_inplace_view_non_contig(self):
+      root = torch.ones(2, 3, 2, device=xm.xla_device()).select(2, 1).t().requires_grad_(True)
+      x = root.clone()
+      v1 = x.narrow(0, 0, 1)
+      v2 = v1.narrow(1, 1, 1)
+      v2.mul_(2)
+      x.sum().backward()
+      self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1], [1, 1]])
 
   def test_pred_type(self):
     xla_device = xm.xla_device()
