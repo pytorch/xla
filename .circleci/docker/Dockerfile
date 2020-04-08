@@ -4,6 +4,7 @@ FROM debian:bullseye
 RUN apt-get update && apt-get install -y --no-install-recommends \
          python3 \
          build-essential \
+         wget \
          cmake \
          git \
          curl \
@@ -14,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
          libopenblas-dev \
          libjpeg-dev \
          libpng-dev && \
-     rm -rf /var/lib/apt/lists/*
+         rm -rf /var/lib/apt/lists/*
 
 # Set Python 3 as default.
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
@@ -25,8 +26,8 @@ RUN useradd jenkins && \
     chown jenkins /home/jenkins
 RUN echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-RUN mkdir /opt/conda /opt/cargo /opt/rustup /workspace && \
-    chown jenkins /opt/conda /opt/cargo /opt/rustup /workspace
+RUN mkdir -p /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins && \
+    chown jenkins /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins
 USER jenkins
 WORKDIR /workspace
 
@@ -48,9 +49,9 @@ RUN . $CARGO_HOME/env && \
 ENV PATH $CARGO_HOME/bin:$PATH
 
 # Installs and configures Conda.
-RUN curl -o miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh  && \
+RUN wget -O miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
      chmod +x miniconda.sh && \
-     ./miniconda.sh -b -p /opt/conda -u && \
+     ./miniconda.sh -b -u -p /opt/conda && \
      rm miniconda.sh && \
      /opt/conda/bin/conda install -y numpy pyyaml scipy ipython mkl mkl-include ninja cython typing
 ENV PATH /opt/conda/bin:$PATH
