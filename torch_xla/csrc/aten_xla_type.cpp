@@ -921,7 +921,11 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
     XLA_CHECK(self_tensor);
     self_tensor->UpdateFromTensor(src, /*sync=*/sync_update);
   } else if (!self_tensor) {
-    self.copy_(src_tensor->ToTensor(/*detached=*/true));
+    at::Tensor tensor = src_tensor->ToTensor(/*detached=*/true);
+    at::Tensor typed_tensor =
+        CopyTensor(tensor, self.scalar_type(), /*copy=*/false);
+    const_cast<at::Tensor&>(self).unsafeGetTensorImpl()->shallow_copy_from(
+        typed_tensor.getIntrusivePtr());
   } else {
     XLATensor::copy_(*self_tensor, *src_tensor);
     bridge::ReplaceXlaTensor(self, *self_tensor);
