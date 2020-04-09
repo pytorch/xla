@@ -236,6 +236,10 @@ DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
     'test_cumprod_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_cumprod_neg_dim_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_topk_neg_dim_sort_xla',  # (TPU) unimplemented HLO for X64
+    'test_clamp_min_xla_float64', # float64 limit, TPU does not have real F64
+    'test_clamp_min_inplace_xla_float64', # float64 limit, TPU does not have real F64
+    'test_clamp_max_xla_float64', # float64 limit, TPU does not have real F64
+    'test_clamp_max_inplace_xla_float64',# float64 limit, TPU does not have real F64
 
     #TestTorchDeviceType
     'test_cholesky_solve_batched_broadcasting',  # (TPU) 0.0039 vs 0.001
@@ -244,7 +248,7 @@ DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
     'test_triangular_solve_batched_broadcasting',  # (TPU) 1.5 vs 0.001
     'test_random_from_to_xla_int32',  # precision, TPU does not have real F64
     'test_uniform_from_to_xla_float64', # float64 limit, TPU does not have real F64
-    'test_topk_integral_xla_int64', # s64_tensor.sort() is currently not supported on TPU
+    'test_topk_integral_xla_int64', # (TPU) unimplemented HLO for X64
 }
 
 DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
@@ -284,7 +288,7 @@ class XLATestBase(DeviceTypeTestBase):
       raise unittest.SkipTest('skipped on XLA')
       return test(self, cls.device_type)
 
-    if test_name in disabled_torch_tests or test.__name__ in disabled_torch_tests:
+    if test_name in disabled_torch_tests or name in disabled_torch_tests:
       assert not hasattr(
           cls, test_name), 'Redefinition of test {0}'.format(test_name)
       setattr(cls, test_name, disallowed_test)
