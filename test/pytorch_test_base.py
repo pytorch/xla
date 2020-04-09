@@ -5,6 +5,7 @@ import runpy
 
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.utils.utils as xu
 
 DEFAULT_FLOATING_PRECISION = 1e-3
 
@@ -144,7 +145,7 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_rand_xla_float64',  # xla doesn't support manual_seed, as_stride
     'test_normal_xla_float64',  # AssertionError: 0.22364577306378963 not less than or equal to 0.2
     'test_uniform_from_to',  # Checks for error strings.
-    'test_bucketization', # test expect an non-contiguous tensor but xla permute op will return a contigous tensor
+    'test_bucketization',  # test expect an non-contiguous tensor but xla permute op will return a contigous tensor
 
     # TestViewOps
     'test_contiguous_nonview',
@@ -340,6 +341,19 @@ class XLATestBase(DeviceTypeTestBase):
     torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
         use_full_mat_mul_precision=True)
 
+  def prepare_for_compare(self, tx, ty):
+    print_tensors = xu.getenv_as('TEST_PRINT_TENSORS', bool, defval=False)
+    x, y = tx, ty
+    if type(x) == torch.Tensor:
+      x = tx.to(device='cpu')
+      if print_tensors:
+        print('Tensor X ({}):\n{}'.format(tx.device, x), file=sys.stderr)
+    if type(y) == torch.Tensor:
+      y = ty.to(device='cpu')
+      if print_tensors:
+        print('Tensor Y ({}):\n{}'.format(ty.device, y), file=sys.stderr)
+    return x, y
+
   # Overrides assertEqual to popular custom precision
   def assertEqual(self, x, y, prec=None, message='', allow_inf=False, **kwargs):
     if prec is None:
@@ -371,10 +385,7 @@ class XLATestBase(DeviceTypeTestBase):
             file=sys.stderr)
     elif gmode:
       raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(gmode))
-    if type(x) == torch.Tensor:
-      x = x.cpu()
-    if type(y) == torch.Tensor:
-      y = y.cpu()
+    x, y = self.prepare_for_compare(x, y)
     return DeviceTypeTestBase.assertEqual(self, x, y, prec, message, allow_inf,
                                           **kwargs)
 
