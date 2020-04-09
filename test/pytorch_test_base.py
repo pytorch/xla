@@ -21,7 +21,6 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_solve_methods_arg_device',  # doesn't raise
     'test_min_max_nan',  # XLA min/max ignores Nans.
     'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
-    'test_copy_noncontig',
     'test_copy_broadcast',
 
     # TestTensorDeviceOps
