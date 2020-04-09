@@ -136,6 +136,17 @@ void CheckBinaryOpTypePromotion(const at::Tensor& out, const at::Tensor& self,
   XLA_CHECK(at::canCast(/*from=*/resultType, /*to=*/out.scalar_type()));
 }
 
+at::Tensor NarrowAs(at::Tensor input, at::IntArrayRef sizes) {
+  for (size_t i = 0; i < sizes.size(); ++i) {
+    int64_t dim_size = input.size(i);
+    XLA_CHECK_GE(dim_size, sizes[i]);
+    if (sizes[i] < dim_size) {
+      input = input.narrow(i, 0, sizes[i]);
+    }
+  }
+  return input;
+}
+
 void AtenInitialize() {
   TF_VLOG(1) << "PyTorch GIT revision: " << TORCH_GITREV;
   TF_VLOG(1) << "XLA GIT revision: " << XLA_GITREV;
@@ -924,8 +935,9 @@ at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
     at::Tensor tensor = src_tensor->ToTensor(/*detached=*/true);
     at::Tensor typed_tensor =
         CopyTensor(tensor, self.scalar_type(), /*copy=*/false);
-    const_cast<at::Tensor&>(self).unsafeGetTensorImpl()->shallow_copy_from(
-        typed_tensor.getIntrusivePtr());
+    at::Tensor self_narrowed = NarrowAs(self, typed_tensor.sizes());
+    XLA_CHECK(self_narrowed.is_alias_of(self));
+    self_narrowed.copy_(typed_tensor);
   } else {
     XLATensor::copy_(*self_tensor, *src_tensor);
     bridge::ReplaceXlaTensor(self, *self_tensor);
