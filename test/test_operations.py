@@ -131,15 +131,18 @@ def _zeros_like(tensor_list):
   return zeros_tensors
 
 
-def _prepare_tensors_for_diff(a, b):
-  a = a.cpu()
-  b = b.cpu()
+def _prepare_tensors_for_diff(ta, tb):
+  a = ta.to(device='cpu')
+  b = tb.to(device='cpu')
   if a.dtype == torch.float16 or a.dtype == torch.bfloat16:
     a = a.to(torch.float32)
   if b.dtype == torch.float16 or b.dtype == torch.bfloat16:
     b = b.to(torch.float32)
   if b.dtype != a.dtype:
     b = b.to(a.dtype)
+  if xu.getenv_as('TEST_PRINT_TENSORS', bool, defval=False):
+    print('Tensor A ({}):\n{}'.format(ta.device, a), file=sys.stderr)
+    print('Tensor B ({}):\n{}'.format(tb.device, b), file=sys.stderr)
   return a, b
 
 
