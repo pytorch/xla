@@ -143,8 +143,9 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_randn_xla_float64',  # xla doesn't support manual_seed, as_stride
     'test_rand_xla_float32',  # xla doesn't support manual_seed, as_stride
     'test_rand_xla_float64',  # xla doesn't support manual_seed, as_stride
-    'test_normal_xla_float64',  # AssertionError: 0.22364577306378963 not less than or equal to 0.2
+    'test_normal',  # AssertionError: 0.22364577306378963 not less than or equal to 0.2
     'test_uniform_from_to',  # Checks for error strings.
+    'test_index_fill_xla', # half support
 
     # TestViewOps
     'test_contiguous_nonview',
