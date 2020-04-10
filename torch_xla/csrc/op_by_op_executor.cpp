@@ -35,7 +35,7 @@ const xla::Shape& GetParameterShape(const ir::Output& operand,
   // See comment in GetOutputIndex() about device data WRT computation outpout
   // shape handling.
   const ir::ops::DeviceData* device_data =
-      dynamic_cast<const ir::ops::DeviceData*>(operand.node);
+      ir::ops::DeviceData::Cast(operand.node);
   return device_data != nullptr
              ? input_shape
              : xla::ShapeUtil::GetTupleElementShape(input_shape, operand.index);
@@ -118,8 +118,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   for (size_t i = 0; i < post_order.size(); ++i) {
     const ir::Node* node = post_order[i];
     xla::ComputationClient::ExecuteChainedOp& cxop = chained_exec_ops[i];
-    const ir::ops::DeviceData* device_data =
-        dynamic_cast<const ir::ops::DeviceData*>(node);
+    const ir::ops::DeviceData* device_data = ir::ops::DeviceData::Cast(node);
     if (device_data != nullptr) {
       cxop.device_data = device_data->data();
       ops_shapes[i] = &cxop.device_data->shape();
