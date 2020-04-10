@@ -101,7 +101,7 @@ TEST_F(TensorTest, TestIntegerAdd) {
       XLATensor dev_b = XLATensor::Create(b, device);
       XLATensor dev_c = XLATensor::add(dev_a, dev_b, one);
 
-      EXPECT_TRUE(EqualValues(c, dev_c.ToTensor()));
+      EXPECT_TRUE(EqualValues(c, dev_c.ToTensor(/*detached=*/false)));
     }
   });
 }

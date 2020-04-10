@@ -21,6 +21,10 @@ std::vector<xla::int64> ComputeArrayStrides(absl::Span<const xla::int64> sizes);
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type);
 
+std::vector<at::Tensor> XlaDataToTensors(
+    absl::Span<const xla::ComputationClient::DataPtr> xla_data,
+    at::ScalarType dest_element_type);
+
 // Uploads an ATEN tensor data to the device and fetches the corresponding
 // device data handle.
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,

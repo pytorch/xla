@@ -5,6 +5,7 @@ import runpy
 
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.utils.utils as xu
 
 DEFAULT_FLOATING_PRECISION = 1e-3
 
@@ -21,7 +22,6 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_solve_methods_arg_device',  # doesn't raise
     'test_min_max_nan',  # XLA min/max ignores Nans.
     'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
-    'test_copy_noncontig',
     'test_copy_broadcast',
 
     # TestTensorDeviceOps
@@ -235,6 +235,10 @@ DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
     'test_cumprod_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_cumprod_neg_dim_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_topk_neg_dim_sort_xla',  # (TPU) unimplemented HLO for X64
+    'test_clamp_min_xla_float64', # float64 limit, TPU does not have real F64
+    'test_clamp_min_inplace_xla_float64', # float64 limit, TPU does not have real F64
+    'test_clamp_max_xla_float64', # float64 limit, TPU does not have real F64
+    'test_clamp_max_inplace_xla_float64',# float64 limit, TPU does not have real F64
 
     #TestTorchDeviceType
     'test_cholesky_solve_batched_broadcasting',  # (TPU) 0.0039 vs 0.001
@@ -243,6 +247,7 @@ DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
     'test_triangular_solve_batched_broadcasting',  # (TPU) 1.5 vs 0.001
     'test_random_from_to_xla_int32',  # precision, TPU does not have real F64
     'test_uniform_from_to_xla_float64', # float64 limit, TPU does not have real F64
+    'test_topk_integral_xla_int64', # (TPU) unimplemented HLO for X64
 }
 
 DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
@@ -282,7 +287,7 @@ class XLATestBase(DeviceTypeTestBase):
       raise unittest.SkipTest('skipped on XLA')
       return test(self, cls.device_type)
 
-    if test_name in disabled_torch_tests or test.__name__ in disabled_torch_tests:
+    if test_name in disabled_torch_tests or name in disabled_torch_tests:
       assert not hasattr(
           cls, test_name), 'Redefinition of test {0}'.format(test_name)
       setattr(cls, test_name, disallowed_test)
@@ -335,6 +340,19 @@ class XLATestBase(DeviceTypeTestBase):
     torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
         use_full_mat_mul_precision=True)
 
+  def prepare_for_compare(self, tx, ty):
+    print_tensors = xu.getenv_as('TEST_PRINT_TENSORS', bool, defval=False)
+    x, y = tx, ty
+    if type(x) == torch.Tensor:
+      x = tx.to(device='cpu')
+      if print_tensors:
+        print('Tensor X ({}):\n{}'.format(tx.device, x), file=sys.stderr)
+    if type(y) == torch.Tensor:
+      y = ty.to(device='cpu')
+      if print_tensors:
+        print('Tensor Y ({}):\n{}'.format(ty.device, y), file=sys.stderr)
+    return x, y
+
   # Overrides assertEqual to popular custom precision
   def assertEqual(self, x, y, prec=None, message='', allow_inf=False, **kwargs):
     if prec is None:
@@ -366,10 +384,7 @@ class XLATestBase(DeviceTypeTestBase):
             file=sys.stderr)
     elif gmode:
       raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(gmode))
-    if type(x) == torch.Tensor:
-      x = x.cpu()
-    if type(y) == torch.Tensor:
-      y = y.cpu()
+    x, y = self.prepare_for_compare(x, y)
     return DeviceTypeTestBase.assertEqual(self, x, y, prec, message, allow_inf,
                                           **kwargs)
 
