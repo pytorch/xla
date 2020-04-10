@@ -145,7 +145,6 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_rand_xla_float64',  # xla doesn't support manual_seed, as_stride
     'test_normal_xla_float64',  # AssertionError: 0.22364577306378963 not less than or equal to 0.2
     'test_uniform_from_to',  # Checks for error strings.
-    'test_bucketization',  # test expect an non-contiguous tensor but xla permute op will return a contigous tensor
 
     # TestViewOps
     'test_contiguous_nonview',
