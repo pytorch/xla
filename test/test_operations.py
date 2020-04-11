@@ -653,6 +653,22 @@ class TestSelect(XlaTestCase):
     self.assertEqual(tx, sx.data.cpu())
 
 
+class TestDynamicShape(XlaTestCase):
+
+  def test_nonzero_shape(self):
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
+        torch.nonzero(x, as_tuple=False), 0)
+    self.assertEqual(x_dim0_shape.item(), 4)
+
+  def test_masked_select_shape(self):
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    mask = x.ge(2)
+    x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
+        torch.masked_select(x, mask), 0)
+    self.assertEqual(x_dim0_shape.item(), 3)
+
+
 class TestAtenXlaTensor(XlaTestCase):
 
   def test_get_real_xla_devices(self):
