@@ -173,7 +173,7 @@ class XlaDataCacheArena {
     bool operator()(const at::Tensor& tensor1,
                     const at::Tensor& tensor2) const {
       return tensor1.scalar_type() == tensor2.scalar_type() &&
-             tensor1.equal(tensor2);
+             TensorCompare(tensor1, tensor2);
     }
   };
 
