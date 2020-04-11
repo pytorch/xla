@@ -25,6 +25,8 @@ std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const xla::ComputationClient::DataPtr> xla_data,
     at::ScalarType dest_element_type);
 
+bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
+
 // Uploads an ATEN tensor data to the device and fetches the corresponding
 // device data handle.
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,
