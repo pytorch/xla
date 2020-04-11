@@ -428,6 +428,15 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
   }
 }
 
+bool TensorMemoryCompare(const at::Tensor& t1, const at::Tensor& t2) {
+  int64_t num_elements = t1.numel();
+  if (num_elements != t2.numel() || t1.scalar_type() != t2.scalar_type()) {
+    return false;
+  }
+  return std::memcmp(t1.contiguous().data_ptr(), t2.contiguous().data_ptr(),
+                     num_elements * t1.itemsize()) == 0;
+}
+
 void PopulateTensorBuffer(const at::Tensor& tensor,
                           const xla::Shape& dest_shape, void* dest_buffer,
                           size_t dest_buffer_size, const Device& device) {
@@ -609,6 +618,18 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                                        dest_element_type);
     default:
       XLA_ERROR() << "Unsupported literal type: " << literal.shape();
+  }
+}
+
+bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2) {
+  switch (t1.scalar_type()) {
+    case at::ScalarType::ComplexFloat:
+    case at::ScalarType::ComplexDouble:
+      // TODO: remove this once pytorch implemented the native Complex tensor
+      // equal.
+      return TensorMemoryCompare(t1, t2);
+    default:
+      return t1.equal(t2);
   }
 }
 
