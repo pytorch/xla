@@ -37,6 +37,13 @@ distributed
 utils
 ----------------------------------
 
+.. automodule:: torch_xla.utils.metrics
+.. autofunction:: counter_names
+.. autofunction:: counter_value
+.. autofunction:: metric_names
+.. autofunction:: metric_data
+.. autofunction:: metrics_report
+  
 .. automodule:: torch_xla.utils.tf_record_reader
 .. autoclass:: TfRecordReader
 
