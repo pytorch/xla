@@ -27,7 +27,7 @@ shift $(($OPTIND - 1))
 
 export TRIM_GRAPH_SIZE=$MAX_GRAPH_SIZE
 export TRIM_GRAPH_CHECK_FREQUENCY=$GRAPH_CHECK_FREQUENCY
-export PYTORCH_TEST_PATH=$CDIR
+export TORCH_TEST_DEVICES="$CDIR/pytorch_test_base.py"
 export PYTORCH_TEST_WITH_SLOW=1
 
 function run_opbyop {
