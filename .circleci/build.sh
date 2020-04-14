@@ -1,8 +1,11 @@
 #!/bin/bash
 
+set -ex
+
 source ./env
 
-set -ex
+conda activate base
+export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
 
 SCCACHE="$(which sccache)"
 if [ -z "${SCCACHE}" ]; then
@@ -27,9 +30,12 @@ fi
 git config --global user.email "circleci.ossci@gmail.com"
 git config --global user.name "CircleCI"
 sudo apt-get update && sudo apt-get -qq install jq
-PR_NUM=$(basename $CIRCLE_PULL_REQUEST)
-CIRCLE_PR_BASE_BRANCH=$(curl -s https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls/$PR_NUM | jq -r '.base.ref')
-git rebase "origin/${CIRCLE_PR_BASE_BRANCH}"
+# Only rebase on runs triggered by PR checks not post-submits.
+if [[ ! -z "${CIRCLE_PULL_REQUEST}" ]]; then
+  PR_NUM=$(basename $CIRCLE_PULL_REQUEST)
+  CIRCLE_PR_BASE_BRANCH=$(curl -s https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls/$PR_NUM | jq -r '.base.ref')
+  git rebase "origin/${CIRCLE_PR_BASE_BRANCH}"
+fi
 
 PYTORCH_DIR=/tmp/pytorch
 XLA_DIR="$PYTORCH_DIR/xla"
@@ -59,14 +65,11 @@ python setup.py build develop
 sccache --show-stats
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
-sudo add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main"
-wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
 sudo apt-get -qq update
 sudo apt-get -qq install clang-8 clang++-8
 
 sudo apt-get -qq install npm
 npm config set strict-ssl false
-curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
 sudo apt-get install -qq nodejs
 
 # XLA build requires Bazel
