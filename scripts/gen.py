@@ -965,7 +965,7 @@ def generate_registrations(fgens, overrides):
       pos = fgen.funsig.find('(')
       overload = fgen.funsig[:pos] + ' (*)' + fgen.funsig[pos:]
       code += (
-          '  .impl("{}", torch::dispatch(at::DispatchKey::XLATensorId, '
+          '  .impl("{}", torch::dispatch(at::DispatchKey::XLA, '
           'at::CppFunction::makeUnboxedOnly(static_cast<{}>(&{}))))\n'.format(
               fgen.aten_sig.split('(')[0], overload, override_fn))
   return code + ';\n}\n', overridden

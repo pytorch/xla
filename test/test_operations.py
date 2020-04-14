@@ -131,15 +131,18 @@ def _zeros_like(tensor_list):
   return zeros_tensors
 
 
-def _prepare_tensors_for_diff(a, b):
-  a = a.cpu()
-  b = b.cpu()
+def _prepare_tensors_for_diff(ta, tb):
+  a = ta.to(device='cpu')
+  b = tb.to(device='cpu')
   if a.dtype == torch.float16 or a.dtype == torch.bfloat16:
     a = a.to(torch.float32)
   if b.dtype == torch.float16 or b.dtype == torch.bfloat16:
     b = b.to(torch.float32)
   if b.dtype != a.dtype:
     b = b.to(a.dtype)
+  if xu.getenv_as('TEST_PRINT_TENSORS', bool, defval=False):
+    print('Tensor A ({}):\n{}'.format(ta.device, a), file=sys.stderr)
+    print('Tensor B ({}):\n{}'.format(tb.device, b), file=sys.stderr)
   return a, b
 
 
@@ -649,6 +652,22 @@ class TestSelect(XlaTestCase):
     self.assertEqual(tx, sx.data.cpu())
 
 
+class TestDynamicShape(XlaTestCase):
+
+  def test_nonzero_shape(self):
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
+        torch.nonzero(x, as_tuple=False), 0)
+    self.assertEqual(x_dim0_shape.item(), 4)
+
+  def test_masked_select_shape(self):
+    x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
+    mask = x.ge(2)
+    x_dim0_shape = torch_xla._XLAC._get_xla_tensor_dimension_size(
+        torch.masked_select(x, mask), 0)
+    self.assertEqual(x_dim0_shape.item(), 3)
+
+
 class TestAtenXlaTensor(XlaTestCase):
 
   def test_get_real_xla_devices(self):
@@ -977,6 +996,16 @@ class TestAtenXlaTensor(XlaTestCase):
     v2.mul_(2)
     x.sum().backward()
     self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1]])
+
+  def test_inplace_view_multiple_outputs(self):
+    root = torch.arange(9., device=xm.xla_device()).reshape(3, 3).requires_grad_()
+    x = root.clone()
+    v1 = x.unbind()
+    with self.assertRaises(RuntimeError):
+      v1[0].mul_(2)
+    v2 = v1[0].narrow(0, 0, 2)
+    with self.assertRaises(RuntimeError):
+      v2.mul_(2)
 
   def test_inplace_view_gradcheck(self):
     # gradcheck modifications to views

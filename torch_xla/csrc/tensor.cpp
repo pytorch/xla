@@ -173,7 +173,7 @@ class XlaDataCacheArena {
     bool operator()(const at::Tensor& tensor1,
                     const at::Tensor& tensor2) const {
       return tensor1.scalar_type() == tensor2.scalar_type() &&
-             tensor1.equal(tensor2);
+             TensorCompare(tensor1, tensor2);
     }
   };
 
@@ -740,17 +740,33 @@ XLATensor XLATensor::CreateViewTensor(ViewInfo view_info) const {
                 dtype_optional());
 }
 
-at::Tensor XLATensor::ToTensor() {
+at::Tensor XLATensor::ToTensor(bool detached) {
+  at::Tensor tensor;
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR Node
     // is available on the tensor.
-    std::vector<xla::Literal> literals =
-        xla::ComputationClient::Get()->TransferFromServer({GetXlaData()});
-    tensor_data = MakeTensorFromXlaLiteral(literals.front(), dtype());
-    SetTensorData(*tensor_data);
+    std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());
+    tensor = std::move(tensors.front());
+    if (!detached) {
+      SetTensorData(tensor);
+    }
+  } else {
+    tensor = *tensor_data;
+    if (detached) {
+      if (data()->ir_value || data()->xla_data != nullptr ||
+          data()->view != nullptr) {
+        // If we have other authoritive sources, just drop our reference and
+        // transfer it to the caller.
+        data()->tensor_data = c10::nullopt;
+      } else {
+        // Otherwise we need to make a copy to prevent the caller changing our
+        // version.
+        tensor = CopyTensor(tensor);
+      }
+    }
   }
-  return *tensor_data;
+  return tensor;
 }
 
 void XLATensor::ShallowCopyTo(XLATensor* dest) const {
@@ -769,13 +785,19 @@ void XLATensor::SetTensor(at::Tensor tensor) {
   AssignIrValue(ir::Value());
 }
 
-void XLATensor::UpdateFromTensor(at::Tensor tensor) {
-  SetTensorData(tensor);
-  data()->xla_data = nullptr;
-  AssignIrValue(ir::Value());
-  if (data()->view != nullptr) {
-    ir::Value ir_value = GetIrValueForTensor(tensor, GetDevice());
-    data()->view = UpdateView(data()->view, std::move(ir_value));
+void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
+  if (sync) {
+    at::Tensor typed_tensor = CopyTensor(tensor, dtype(), /*copy=*/false);
+    SetIrValue(GetIrValueForTensor(typed_tensor, GetDevice()));
+  } else {
+    at::Tensor coyped_tensor = CopyTensor(tensor, dtype());
+    SetTensorData(coyped_tensor);
+    data()->xla_data = nullptr;
+    AssignIrValue(ir::Value());
+    if (data()->view != nullptr) {
+      ir::Value ir_value = GetIrValueForTensor(coyped_tensor, GetDevice());
+      data()->view = UpdateView(data()->view, std::move(ir_value));
+    }
   }
 }
 
@@ -784,7 +806,7 @@ void XLATensor::UpdateFromTensorOut(at::Tensor tensor) {
       xla::ShapeUtil::ElementsIn(shape()) != tensor.numel()) {
     data()->view = nullptr;
   }
-  UpdateFromTensor(std::move(tensor));
+  UpdateFromTensor(std::move(tensor), /*sync=*/false);
 }
 
 void XLATensor::UpdateFromTensorOut(const XLATensor& tensor) {
@@ -927,7 +949,7 @@ std::vector<XLATensor> XLATensor::MakeOutputTensors(ir::NodePtr node) const {
 
 XLATensor XLATensor::CopyTensorToDevice(const Device& device) {
   // TODO: This can be optimized via proper XRT/XLA computation.
-  return Create(ToTensor(), device);
+  return Create(ToTensor(/*detached=*/true), device);
 }
 
 ir::Value XLATensor::MaybeCastIrValue(
@@ -1388,7 +1410,7 @@ XLATensor::CompilationResult XLATensor::Compile(
     xla::XlaOp root = lowering_ctx.GetOutputOp(ir_value);
     lowering_ctx.AddResult(root);
   }
-  if (enable_aliasing && coll.config.force_xla_data) {
+  if (enable_aliasing && coll.config.sync_xla_data) {
     // We can only alias at the step barrier, when force_xla_data is true.
     // Consider the case:
     //   1. Tensor A(DEVICE_DATA)
