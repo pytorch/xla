@@ -642,9 +642,9 @@ at::Tensor AtenXlaType::avg_pool3d_backward(
 }
 
 at::Tensor AtenXlaType::bernoulli(const at::Tensor& self,
-                                  at::Generator generator) {
+                                  c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
-  if (generator.defined()) {
+  if (generator.has_value() && generator->defined()) {
     return AtenXlaTypeDefault::bernoulli(self, generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -652,9 +652,9 @@ at::Tensor AtenXlaType::bernoulli(const at::Tensor& self,
 }
 
 at::Tensor& AtenXlaType::bernoulli_(at::Tensor& self, double p,
-                                    at::Generator generator) {
+                                    c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
-  if (generator.defined()) {
+  if (generator.has_value() && generator->defined()) {
     return AtenXlaTypeDefault::bernoulli_(self, p, generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -663,9 +663,9 @@ at::Tensor& AtenXlaType::bernoulli_(at::Tensor& self, double p,
 }
 
 at::Tensor& AtenXlaType::bernoulli_(at::Tensor& self, const at::Tensor& p,
-                                    at::Generator generator) {
+                                    c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
-  if (generator.defined()) {
+  if (generator.has_value() && generator->defined()) {
     return AtenXlaTypeDefault::bernoulli_(self, p, generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -2260,9 +2260,9 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
 }
 
 at::Tensor AtenXlaType::normal(const at::Tensor& mean, double std,
-                               at::Generator generator) {
+                               c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
-  if (generator.defined()) {
+  if (generator.has_value() && generator->defined()) {
     return AtenXlaTypeDefault::normal(mean, std, generator);
   }
   return bridge::AtenFromXlaTensor(
@@ -2270,9 +2270,9 @@ at::Tensor AtenXlaType::normal(const at::Tensor& mean, double std,
 }
 
 at::Tensor AtenXlaType::normal(double mean, const at::Tensor& std,
-                               at::Generator generator) {
+                               c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
-  if (generator.defined()) {
+  if (generator.has_value() && generator->defined()) {
     return AtenXlaTypeDefault::normal(mean, std, generator);
   }
   return bridge::AtenFromXlaTensor(
@@ -2280,9 +2280,9 @@ at::Tensor AtenXlaType::normal(double mean, const at::Tensor& std,
 }
 
 at::Tensor AtenXlaType::normal(const at::Tensor& mean, const at::Tensor& std,
-                               at::Generator generator) {
+                               c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
-  if (generator.defined()) {
+  if (generator.has_value() && generator->defined()) {
     return AtenXlaTypeDefault::normal(mean, std, generator);
   }
   return bridge::AtenFromXlaTensor(
@@ -2290,9 +2290,9 @@ at::Tensor AtenXlaType::normal(const at::Tensor& mean, const at::Tensor& std,
 }
 
 at::Tensor& AtenXlaType::normal_(at::Tensor& self, double mean, double std,
-                                 at::Generator generator) {
+                                 c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
-  if (generator.defined()) {
+  if (generator.has_value() && generator->defined()) {
     return AtenXlaTypeDefault::normal_(self, mean, std, generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -2478,13 +2478,11 @@ at::Tensor& AtenXlaType::resize_(
   return self;
 }
 
-at::Tensor AtenXlaType::rrelu_with_noise(const at::Tensor& self,
-                                         const at::Tensor& noise,
-                                         at::Scalar lower, at::Scalar upper,
-                                         bool training,
-                                         at::Generator generator) {
+at::Tensor AtenXlaType::rrelu_with_noise(
+    const at::Tensor& self, const at::Tensor& noise, at::Scalar lower,
+    at::Scalar upper, bool training, c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
-  if (generator.defined()) {
+  if (generator.has_value() && generator->defined()) {
     // The fallback path for rrelu_with_noise when training=true is wrong
     XLA_CHECK_EQ(training, false);
     return AtenXlaTypeDefault::rrelu_with_noise(self, noise, lower, upper,
@@ -3035,9 +3033,9 @@ std::vector<at::Tensor> AtenXlaType::unbind(const at::Tensor& self,
 }
 
 at::Tensor& AtenXlaType::uniform_(at::Tensor& self, double from, double to,
-                                  at::Generator generator) {
+                                  c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
-  if (generator.defined()) {
+  if (generator.has_value() && generator->defined()) {
     return AtenXlaTypeDefault::uniform_(self, from, to, generator);
   }
   XLATensor self_tensor = bridge::GetXlaTensor(self);
