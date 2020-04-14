@@ -1,0 +1,31 @@
+
+url: "http://pytorch.org/xlaa"
+name: PyTorch/XLA
+baseurl: ""
+relative_permalinks: false
+timezone: America/Los_Angeles
+sass:
+    sass_dir: _sass # default
+    style: compressed
+safe: true
+highlighter: rouge
+markdown: kramdown
+future: true
+include:
+    - _static
+    - _images
+    - _modules
+    - _sources
+exclude:
+    - node_modules
+    - README.md
+    - CNAME
+    - Gemfile
+    - Gemfile.lock
+    - package.json
+
+plugins:
+    - jekyll-paginate-v2
+    - jekyll-redirect-from
+    - jekyll-autoprefixer
+    - jekyll-feed
