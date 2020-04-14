@@ -144,4 +144,6 @@ workflows:
       - pytorch_xla_linux_debian11_and_push_doc:
           filters:
             branches:
-              only: master
+              only:
+                - master
+                - /release\/.*/
