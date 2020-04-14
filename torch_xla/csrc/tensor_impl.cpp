@@ -51,7 +51,7 @@ C10_REGISTER_GUARD_IMPL(XLA, XLAGuardImpl);
 }  // namespace
 
 XLATensorImpl::XLATensorImpl(XLATensor tensor)
-    : c10::TensorImpl(c10::XLATensorId(), GetTypeMeta(tensor),
+    : c10::TensorImpl(c10::DispatchKey::XLA, GetTypeMeta(tensor),
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(std::move(tensor)) {}
 
