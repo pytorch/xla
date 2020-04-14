@@ -16,6 +16,7 @@ git config --global user.email "torchxla@gmail.com"
 git config --global user.name "torchxlabot"
 GH_PAGES_BRANCH=gh-pages
 GH_PAGES_DIR=gh-pages-tmp
+CURRENT_COMMIT=`git rev-parse HEAD`
 BRANCH_NAME=`git rev-parse --abbrev-ref HEAD`
 if [[ "$BRANCH_NAME" == release/* ]]; then
   SUBDIR_NAME=$BRANCH_NAME
@@ -36,7 +37,6 @@ if [[ $git_status ]]; then
   sudo apt-get -qq install expect
   git add .
 
-  CURRENT_COMMIT=`git rev-parse HEAD`
   COMMIT_MSG="Update doc from commit $CURRENT_COMMIT"
   git commit -m "$COMMIT_MSG"
   set +x
