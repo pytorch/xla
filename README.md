@@ -209,6 +209,12 @@ post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalabl
 
 ## <a name="API"></a> API & Best Practices
 
+In general PyTorch/XLA follows PyTorch APIs, some additional torch_xla specific APIs are available at:
+
+[Documentation for the latest release](https://pytorch.org/xla)
+
+[Documentation for master branch](https://pytorch.org/xla/master)
+
 See the [API Guide](API_GUIDE.md) for best practices when writing networks that
 run on Cloud TPUs and Cloud TPU Pods.
 
