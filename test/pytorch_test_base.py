@@ -212,6 +212,7 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_half',  # half support
     'test_complex_promotion',  # complex support
     'test_complex_scalar_mult_tensor_promotion',  # complex support
+    'test_hardsigmoid_grad_xla',  # FIXEME: accessing storage
 }
 
 DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
