@@ -200,6 +200,8 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # runtime error
     'test_softshrink_negative',  # runtime error
     'test_nll_loss_empty_tensor_reduction_mean',  # floating point division 0 by 0, expecting nan but get 0
+    'test_fold',  # The gradient check code errors out on type() call, and code is slow on XLA
+    'test_unfold',  # The gradient check code errors out on type() call, and code is slow on XLA
 
     # test_type_promotion.py
     # TestTypePromotion
