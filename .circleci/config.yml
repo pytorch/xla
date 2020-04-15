@@ -15,18 +15,20 @@ launch_docker: &launch_docker
     export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_FOR_ECR_READ_WRITE}
     sudo pip install awscli==1.16.35 -qqq
     eval $(aws ecr get-login --region us-east-1 --no-include-email)
+    pyenv local 3.5.2
+    pip install --upgrade pip
+    pip install pyyaml
+    DOCKER_IMAGE=$(python "/home/circleci/project/.circleci/parse_docker_image.py")
     docker pull ${DOCKER_IMAGE}
     sudo pkill -SIGHUP dockerd
     WORKDIR=/var/lib/jenkins/workspace
-    echo "source ~/.bashrc" >> /home/circleci/project/env
     echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" >> /home/circleci/project/env
     echo "declare -x AWS_ACCESS_KEY_ID=${CIRCLECI_AWS_ACCESS_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
     echo "declare -x AWS_SECRET_ACCESS_KEY=${CIRCLECI_AWS_SECRET_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
     echo "declare -x XLA_CLANG_CACHE_S3_BUCKET_NAME=${XLA_CLANG_CACHE_S3_BUCKET_NAME}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_JOB=${CIRCLE_JOB}" >> /home/circleci/project/env
     echo "declare -x MAX_JOBS=8" >> /home/circleci/project/env
-    echo "source ~/.bashrc" >> /home/circleci/project/xla_env
-    echo "declare -x CC=clang-8 CXX=clang++-8" >> /home/circleci/project/xla_env
+    echo "declare -x CC=clang-9 CXX=clang++-9" >> /home/circleci/project/xla_env
     echo "declare -x XLA_USE_XRT=1" >> /home/circleci/project/xla_env
     echo "declare -x GITHUB_TORCH_XLA_BOT_TOKEN=${GITHUB_TORCH_XLA_BOT_TOKEN}" >> /home/circleci/project/xla_env
     echo "declare -x XRT_DEVICE_MAP=\"CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0\"" >> /home/circleci/project/xla_env
@@ -121,14 +123,10 @@ jobs:
     - run:
         <<: *run_clang_format
 
-  pytorch_xla_linux_debian11:
-    environment:
-      DOCKER_IMAGE: "docker.io/dlibenzi/pytorch_xla_ci_debian_11"
+  pytorch_xla_linux_bionic_py3_6_clang9_build:
     <<: *linux_default
 
-  pytorch_xla_linux_debian11_and_push_doc:
-    environment:
-      DOCKER_IMAGE: "docker.io/dlibenzi/pytorch_xla_ci_debian_11"
+  pytorch_xla_linux_bionic_py3_6_clang9_build_and_push_doc:
     <<: *push_doc
 
 workflows:
@@ -136,12 +134,12 @@ workflows:
   build:
     jobs:
       - linter_check
-      - pytorch_xla_linux_debian11:
+      - pytorch_xla_linux_bionic_py3_6_clang9_build:
           filters:
             branches:
               ignore:
                 - master
-      - pytorch_xla_linux_debian11_and_push_doc:
+      - pytorch_xla_linux_bionic_py3_6_clang9_build_and_push_doc:
           filters:
             branches:
               only:

@@ -4,7 +4,6 @@ set -ex
 
 source ./xla_env
 
-conda activate base
 export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
 
 cd /tmp/pytorch/xla
