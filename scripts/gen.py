@@ -949,8 +949,7 @@ def parse_local_overrides(path):
 
 
 def generate_registrations(fgens, overrides):
-  code = 'void RegisterAtenTypeFunctions() {\n'
-  code += '  static auto dispatch = torch::import()\n'
+  code = 'TORCH_LIBRARY_IMPL(aten, XLA, m) {\n'
   overridden = set()
   for fgen in fgens:
     if not is_overrideable(fgen):
@@ -965,10 +964,9 @@ def generate_registrations(fgens, overrides):
       pos = fgen.funsig.find('(')
       overload = fgen.funsig[:pos] + ' (*)' + fgen.funsig[pos:]
       code += (
-          '  .impl("{}", torch::dispatch(at::DispatchKey::XLA, '
-          'at::CppFunction::makeUnboxedOnly(static_cast<{}>(&{}))))\n'.format(
+          '  m.impl_UNBOXED("{}", static_cast<{}>(&{}));\n'.format(
               fgen.aten_sig.split('(')[0], overload, override_fn))
-  return code + ';\n}\n', overridden
+  return code + '\n}\n', overridden
 
 
 # XLA is only able to override leaf ops and whitelisted non-leaf ops.
