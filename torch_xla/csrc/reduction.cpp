@@ -372,7 +372,8 @@ xla::XlaOp BuildArgMax(xla::XlaOp input, xla::int64 dim, bool keepdim) {
   }
   xla::XlaOp result = xla::ArgMaxTwoPass(
       operand,
-      GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
+      GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim,
+      /*tie_low=*/false);
   if (keepdim) {
     auto dimensions = xla::util::ToVector<xla::int64>(shape->dimensions());
     dimensions[dim] = 1;
@@ -392,7 +393,8 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, xla::int64 dim, bool keepdim) {
   }
   xla::XlaOp result = xla::ArgMinTwoPass(
       operand,
-      GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
+      GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim,
+      /*tie_low=*/false);
   if (keepdim) {
     auto dimensions = xla::util::ToVector<xla::int64>(shape->dimensions());
     dimensions[dim] = 1;
