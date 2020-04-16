@@ -4,7 +4,7 @@ set -ex
 
 source ./env
 
-conda activate base
+# System default cmake 3.10 cannot find mkl, so point it to the right place.
 export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
 
 SCCACHE="$(which sccache)"
@@ -66,11 +66,8 @@ sccache --show-stats
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
 sudo apt-get -qq update
-sudo apt-get -qq install clang-8 clang++-8
 
-sudo apt-get -qq install npm
-npm config set strict-ssl false
-sudo apt-get install -qq nodejs
+sudo apt-get -qq install npm nodejs
 
 # XLA build requires Bazel
 # We use bazelisk to avoid updating Bazel version manually.
