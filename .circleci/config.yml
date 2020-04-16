@@ -123,10 +123,10 @@ jobs:
     - run:
         <<: *run_clang_format
 
-  pytorch_xla_linux_bionic_py3_6_clang9_build:
+  pytorch_xla_linux_bionic_py3_6_clang9_build_test:
     <<: *linux_default
 
-  pytorch_xla_linux_bionic_py3_6_clang9_build_and_push_doc:
+  pytorch_xla_linux_bionic_py3_6_clang9_build_test_and_push_doc:
     <<: *push_doc
 
 workflows:
@@ -134,12 +134,12 @@ workflows:
   build:
     jobs:
       - linter_check
-      - pytorch_xla_linux_bionic_py3_6_clang9_build:
+      - pytorch_xla_linux_bionic_py3_6_clang9_build_test:
           filters:
             branches:
               ignore:
                 - master
-      - pytorch_xla_linux_bionic_py3_6_clang9_build_and_push_doc:
+      - pytorch_xla_linux_bionic_py3_6_clang9_build_test_and_push_doc:
           filters:
             branches:
               only:
