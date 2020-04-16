@@ -165,6 +165,10 @@ struct MeshService::Impl {
   Impl(const std::string& address, grpc::Config config)
       : impl(std::move(config)) {
     ::grpc::ServerBuilder builder;
+    int64 max_msg_size =
+        sys_util::GetEnvInt("XRT_MESH_MAX_MSGSIZE", 1024 * 1024 * 1024);
+    builder.SetMaxReceiveMessageSize(max_msg_size);
+    builder.SetMaxSendMessageSize(max_msg_size);
     builder.AddListeningPort(address, ::grpc::InsecureServerCredentials());
     builder.RegisterService(&impl);
     server = builder.BuildAndStart();
