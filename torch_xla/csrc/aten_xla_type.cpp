@@ -140,7 +140,6 @@ void AtenInitialize() {
   TF_VLOG(1) << "PyTorch GIT revision: " << TORCH_GITREV;
   TF_VLOG(1) << "XLA GIT revision: " << XLA_GITREV;
 
-  RegisterAtenTypeFunctions();
   XLATensorImpl::AtenInitialize();
 }
 
