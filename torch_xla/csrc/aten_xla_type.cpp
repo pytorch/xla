@@ -109,8 +109,7 @@ at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
                       const B& bin_op) {
   at::ScalarType dtype = at::result_type(self, other);
   std::pair<XLATensor, XLATensor> operands = GetBinaryOperands(self, other);
-  XLATensor result = bin_op(operands.first, operands.second);
-  result.SetScalarType(dtype);
+  XLATensor result = bin_op(operands.first, operands.second, dtype);
   return bridge::AtenFromXlaTensor(result);
 }
 
@@ -119,8 +118,7 @@ at::Tensor DoBinaryOp(const at::Tensor& self, const at::Scalar& other,
                       const B& bin_op) {
   at::ScalarType dtype = at::result_type(self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  XLATensor result = bin_op(self_tensor, other);
-  result.SetScalarType(dtype);
+  XLATensor result = bin_op(self_tensor, other, dtype);
   return bridge::AtenFromXlaTensor(result);
 }
 
@@ -181,8 +179,9 @@ at::Tensor& AtenXlaType::__irshift__(at::Tensor& self,
 at::Tensor AtenXlaType::__lshift__(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const at::Scalar& other) {
-                      return XLATensor::__lshift__(xself, other);
+                    [&](const XLATensor& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return XLATensor::__lshift__(xself, other, dtype);
                     });
 }
 
@@ -190,16 +189,18 @@ at::Tensor AtenXlaType::__lshift__(const at::Tensor& self,
                                    const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother) {
-                      return XLATensor::__lshift__(xself, xother);
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::__lshift__(xself, xother, dtype);
                     });
 }
 
 at::Tensor AtenXlaType::__rshift__(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const at::Scalar& other) {
-                      return XLATensor::__rshift__(xself, other);
+                    [&](const XLATensor& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return XLATensor::__rshift__(xself, other, dtype);
                     });
 }
 
@@ -207,8 +208,9 @@ at::Tensor AtenXlaType::__rshift__(const at::Tensor& self,
                                    const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother) {
-                      return XLATensor::__rshift__(xself, xother);
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::__rshift__(xself, xother, dtype);
                     });
 }
 
@@ -347,8 +349,9 @@ at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
   XLA_FN_COUNTER("xla::");
   at::native::alpha_check(at::result_type(self, other), alpha);
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother) {
-                      return XLATensor::add(xself, xother, alpha);
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::add(xself, xother, alpha, dtype);
                     });
 }
 
@@ -356,8 +359,9 @@ at::Tensor AtenXlaType::add(const at::Tensor& self, at::Scalar other,
                             at::Scalar alpha) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const at::Scalar& other) {
-                      return XLATensor::add(xself, other, alpha);
+                    [&](const XLATensor& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return XLATensor::add(xself, other, alpha, dtype);
                     });
 }
 
@@ -548,8 +552,9 @@ at::Tensor AtenXlaType::atan(const at::Tensor& self) {
 at::Tensor AtenXlaType::atan2(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother) {
-                      return XLATensor::atan2(xself, xother);
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::atan2(xself, xother, dtype);
                     });
 }
 
@@ -1002,16 +1007,18 @@ at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
 at::Tensor AtenXlaType::div(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother) {
-                      return XLATensor::div(xself, xother);
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::div(xself, xother, dtype);
                     });
 }
 
 at::Tensor AtenXlaType::div(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const at::Scalar& other) {
-                      return XLATensor::div(xself, other);
+                    [&](const XLATensor& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return XLATensor::div(xself, other, dtype);
                     });
 }
 
@@ -1274,16 +1281,18 @@ at::Tensor& AtenXlaType::floor_(at::Tensor& self) {
 at::Tensor AtenXlaType::fmod(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother) {
-                      return XLATensor::fmod(xself, xother);
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::fmod(xself, xother, dtype);
                     });
 }
 
 at::Tensor AtenXlaType::fmod(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const at::Scalar& other) {
-                      return XLATensor::fmod(xself, other);
+                    [&](const XLATensor& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return XLATensor::fmod(xself, other, dtype);
                     });
 }
 
@@ -1963,16 +1972,18 @@ at::Tensor AtenXlaType::mse_loss_backward(const at::Tensor& grad_output,
 at::Tensor AtenXlaType::mul(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother) {
-                      return XLATensor::mul(xself, xother);
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::mul(xself, xother, dtype);
                     });
 }
 
 at::Tensor AtenXlaType::mul(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const at::Scalar& other) {
-                      return XLATensor::mul(xself, other);
+                    [&](const XLATensor& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return XLATensor::mul(xself, other, dtype);
                     });
 }
 
@@ -2523,8 +2534,9 @@ at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Tensor& other,
   XLA_FN_COUNTER("xla::");
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother) {
-                      return XLATensor::rsub(xself, xother, alpha);
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::rsub(xself, xother, alpha, dtype);
                     });
 }
 
@@ -2776,8 +2788,9 @@ at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
   at::native::alpha_check(at::result_type(self, other), alpha);
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother) {
-                      return XLATensor::sub(xself, xother, alpha);
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::sub(xself, xother, alpha, dtype);
                     });
 }
 
@@ -2786,8 +2799,9 @@ at::Tensor AtenXlaType::sub(const at::Tensor& self, at::Scalar other,
   XLA_FN_COUNTER("xla::");
   CheckSubOperandTypes(self.scalar_type(), GetScalarType(other));
   return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const at::Scalar& other) {
-                      return XLATensor::sub(xself, other, alpha);
+                    [&](const XLATensor& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return XLATensor::sub(xself, other, alpha, dtype);
                     });
 }
 

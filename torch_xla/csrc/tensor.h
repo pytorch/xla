@@ -201,11 +201,19 @@ class XLATensor {
   static void __irshift__(XLATensor& input, at::Scalar other);
   static void __irshift__(XLATensor& input, const XLATensor& other);
 
-  static XLATensor __lshift__(const XLATensor& input, at::Scalar other);
-  static XLATensor __lshift__(const XLATensor& input, const XLATensor& other);
+  static XLATensor __lshift__(
+      const XLATensor& input, at::Scalar other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+  static XLATensor __lshift__(
+      const XLATensor& input, const XLATensor& other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
-  static XLATensor __rshift__(const XLATensor& input, at::Scalar other);
-  static XLATensor __rshift__(const XLATensor& input, const XLATensor& other);
+  static XLATensor __rshift__(
+      const XLATensor& input, at::Scalar other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+  static XLATensor __rshift__(
+      const XLATensor& input, const XLATensor& other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensor _adaptive_avg_pool2d(const XLATensor& input,
                                         std::vector<xla::int64> output_size);
@@ -219,11 +227,13 @@ class XLATensor {
   static XLATensor acos(const XLATensor& input);
   static void acos_(XLATensor& input);
 
-  static XLATensor add(const XLATensor& input, const XLATensor& other,
-                       at::Scalar alpha);
+  static XLATensor add(
+      const XLATensor& input, const XLATensor& other, at::Scalar alpha,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   static void add_(XLATensor& input, const XLATensor& other, at::Scalar alpha);
-  static XLATensor add(const XLATensor& input, at::Scalar other,
-                       at::Scalar alpha);
+  static XLATensor add(
+      const XLATensor& input, at::Scalar other, at::Scalar alpha,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   static void add_(XLATensor& input, at::Scalar other, at::Scalar alpha);
 
   static XLATensor addcdiv(const XLATensor& input, at::Scalar value,
@@ -274,7 +284,9 @@ class XLATensor {
   static XLATensor atan(const XLATensor& input);
   static void atan_(XLATensor& input);
 
-  static XLATensor atan2(const XLATensor& input, const XLATensor& other);
+  static XLATensor atan2(
+      const XLATensor& input, const XLATensor& other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   static void atan2_(XLATensor& input, const XLATensor& other);
 
   static XLATensor avg_pool_nd(const XLATensor& input,
@@ -407,8 +419,12 @@ class XLATensor {
   static XLATensor diagonal(const XLATensor& input, xla::int64 offset,
                             xla::int64 dim1, xla::int64 dim2);
 
-  static XLATensor div(const XLATensor& input, const XLATensor& other);
-  static XLATensor div(const XLATensor& input, at::Scalar other);
+  static XLATensor div(
+      const XLATensor& input, const XLATensor& other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+  static XLATensor div(
+      const XLATensor& input, at::Scalar other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   static void div_(XLATensor& input, const XLATensor& other);
   static void div_(XLATensor& input, at::Scalar other);
 
@@ -470,8 +486,12 @@ class XLATensor {
   static XLATensor floor(const XLATensor& input);
   static void floor_(XLATensor& input);
 
-  static XLATensor fmod(const XLATensor& input, const XLATensor& other);
-  static XLATensor fmod(const XLATensor& input, at::Scalar other);
+  static XLATensor fmod(
+      const XLATensor& input, const XLATensor& other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+  static XLATensor fmod(
+      const XLATensor& input, at::Scalar other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   static void fmod_(XLATensor& input, const XLATensor& other);
   static void fmod_(XLATensor& input, at::Scalar other);
 
@@ -694,8 +714,12 @@ class XLATensor {
                                      const XLATensor& target,
                                      xla::int64 reduction);
 
-  static XLATensor mul(const XLATensor& input, const XLATensor& other);
-  static XLATensor mul(const XLATensor& input, at::Scalar other);
+  static XLATensor mul(
+      const XLATensor& input, const XLATensor& other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+  static XLATensor mul(
+      const XLATensor& input, at::Scalar other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   static void mul_(XLATensor& input, const XLATensor& other);
   static void mul_(XLATensor& input, at::Scalar other);
 
@@ -819,11 +843,12 @@ class XLATensor {
   static XLATensor rsqrt(const XLATensor& input);
   static void rsqrt_(XLATensor& input);
 
-  static XLATensor rsub(const XLATensor& input, const XLATensor& other,
-                        at::Scalar alpha);
-
-  static XLATensor rsub(const XLATensor& input, at::Scalar other,
-                        at::Scalar alpha);
+  static XLATensor rsub(
+      const XLATensor& input, const XLATensor& other, at::Scalar alpha,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+  static XLATensor rsub(
+      const XLATensor& input, at::Scalar other, at::Scalar alpha,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static void copy_(XLATensor& input, XLATensor& src);
 
@@ -911,11 +936,13 @@ class XLATensor {
                        std::vector<xla::int64> dimensions,
                        bool keep_reduced_dimensions, bool unbiased);
 
-  static XLATensor sub(const XLATensor& input, const XLATensor& other,
-                       at::Scalar alpha);
+  static XLATensor sub(
+      const XLATensor& input, const XLATensor& other, at::Scalar alpha,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   static void sub_(XLATensor& input, const XLATensor& other, at::Scalar alpha);
-  static XLATensor sub(const XLATensor& input, at::Scalar other,
-                       at::Scalar alpha);
+  static XLATensor sub(
+      const XLATensor& input, at::Scalar other, at::Scalar alpha,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
   static void sub_(XLATensor& input, at::Scalar other, at::Scalar alpha);
 
   static XLATensor sum(const XLATensor& input,
