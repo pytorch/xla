@@ -26,11 +26,21 @@ xla::BitGeneratorTy GetBitGenerator() {
   XLA_ERROR() << "Unknow random bit generator: " << *bit_generator;
 }
 
+xla::XlaOp MakeSeed(xla::XlaOp seed) {
+  const xla::Shape& rng_shape = XlaHelpers::ShapeOfXlaOp(seed);
+  if (rng_shape.element_type() == xla::PrimitiveType::U64) {
+    return seed;
+  }
+  return xla::ConvertElementType(seed, xla::PrimitiveType::U64);
+}
+
 }  // namespace
 
 xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
                       xla::XlaOp minval, xla::XlaOp maxval) {
-  xla::XlaOp initial_state = xla::Zero(seed.builder(), xla::PrimitiveType::U64);
+  xla::XlaOp rng_seed = MakeSeed(seed);
+  xla::XlaOp initial_state =
+      xla::Zero(rng_seed.builder(), xla::PrimitiveType::U64);
   switch (shape.element_type()) {
     case xla::PrimitiveType::BF16: {
       xla::Shape f32_shape(shape);
@@ -40,29 +50,30 @@ xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
       xla::XlaOp f32_maxval =
           xla::ConvertElementType(maxval, xla::PrimitiveType::F32);
       xla::XlaOp rng = xla::UniformFloatingPointDistribution(
-                           seed, initial_state, GetBitGenerator(), f32_minval,
-                           f32_maxval, f32_shape)
+                           rng_seed, initial_state, GetBitGenerator(),
+                           f32_minval, f32_maxval, f32_shape)
                            .value;
       return xla::ConvertElementType(rng, xla::PrimitiveType::BF16);
     }
     case xla::PrimitiveType::F32:
     case xla::PrimitiveType::F64:
-      return xla::UniformFloatingPointDistribution(
-                 seed, initial_state, GetBitGenerator(), minval, maxval, shape)
+      return xla::UniformFloatingPointDistribution(rng_seed, initial_state,
+                                                   GetBitGenerator(), minval,
+                                                   maxval, shape)
           .value;
     case xla::PrimitiveType::C64:
     case xla::PrimitiveType::C128: {
       xla::XlaOp k_seed = XlaHelpers::ScalarValue<xla::uint64>(
-          17, XlaHelpers::TypeOfXlaOp(seed), seed.builder());
+          17, XlaHelpers::TypeOfXlaOp(rng_seed), rng_seed.builder());
       xla::Shape rng_shape(shape);
       rng_shape.set_element_type(xla::PrimitiveType::F32);
-      xla::XlaOp rng_real =
-          xla::UniformFloatingPointDistribution(
-              seed, initial_state, GetBitGenerator(), minval, maxval, rng_shape)
-              .value;
-      xla::XlaOp rng_imag = xla::UniformFloatingPointDistribution(
-                                seed * k_seed, initial_state, GetBitGenerator(),
+      xla::XlaOp rng_real = xla::UniformFloatingPointDistribution(
+                                rng_seed, initial_state, GetBitGenerator(),
                                 minval, maxval, rng_shape)
+                                .value;
+      xla::XlaOp rng_imag = xla::UniformFloatingPointDistribution(
+                                rng_seed * k_seed, initial_state,
+                                GetBitGenerator(), minval, maxval, rng_shape)
                                 .value;
       xla::XlaOp rng = xla::Complex(rng_real, rng_imag);
       return shape.element_type() == xla::PrimitiveType::C64
@@ -73,8 +84,9 @@ xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
     case xla::PrimitiveType::U32:
     case xla::PrimitiveType::S64:
     case xla::PrimitiveType::U64:
-      return xla::UniformIntDistribution(seed, initial_state, GetBitGenerator(),
-                                         minval, maxval, shape)
+      return xla::UniformIntDistribution(rng_seed, initial_state,
+                                         GetBitGenerator(), minval, maxval,
+                                         shape)
           .value;
     default:
       XLA_ERROR() << "RngUniform not implemented for type "
@@ -85,7 +97,9 @@ xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
 
 xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
                      xla::XlaOp std) {
-  xla::XlaOp initial_state = xla::Zero(seed.builder(), xla::PrimitiveType::U64);
+  xla::XlaOp rng_seed = MakeSeed(seed);
+  xla::XlaOp initial_state =
+      xla::Zero(rng_seed.builder(), xla::PrimitiveType::U64);
   switch (shape.element_type()) {
     case xla::PrimitiveType::BF16: {
       xla::Shape f32_shape(shape);
@@ -94,31 +108,32 @@ xla::XlaOp RngNormal(xla::XlaOp seed, const xla::Shape& shape, xla::XlaOp mean,
           xla::ConvertElementType(mean, xla::PrimitiveType::F32);
       xla::XlaOp f32_std =
           xla::ConvertElementType(std, xla::PrimitiveType::F32);
-      xla::XlaOp rng = xla::NormalFloatingPointDistribution(
-                           seed, initial_state, GetBitGenerator(), f32_shape)
-                           .value;
+      xla::XlaOp rng =
+          xla::NormalFloatingPointDistribution(rng_seed, initial_state,
+                                               GetBitGenerator(), f32_shape)
+              .value;
       return xla::ConvertElementType(f32_mean + rng * f32_std,
                                      xla::PrimitiveType::BF16);
     }
     case xla::PrimitiveType::F32:
     case xla::PrimitiveType::F64: {
       xla::XlaOp rng = xla::NormalFloatingPointDistribution(
-                           seed, initial_state, GetBitGenerator(), shape)
+                           rng_seed, initial_state, GetBitGenerator(), shape)
                            .value;
       return XlaHelpers::PromotedAdd(mean, XlaHelpers::PromotedMul(rng, std));
     }
     case xla::PrimitiveType::C64:
     case xla::PrimitiveType::C128: {
       xla::XlaOp k_seed = XlaHelpers::ScalarValue<xla::uint64>(
-          17, XlaHelpers::TypeOfXlaOp(seed), seed.builder());
+          17, XlaHelpers::TypeOfXlaOp(rng_seed), rng_seed.builder());
       xla::Shape rng_shape(shape);
       rng_shape.set_element_type(xla::PrimitiveType::F32);
       xla::XlaOp rng_real =
-          xla::NormalFloatingPointDistribution(seed, initial_state,
+          xla::NormalFloatingPointDistribution(rng_seed, initial_state,
                                                GetBitGenerator(), rng_shape)
               .value;
       xla::XlaOp rng_imag =
-          xla::NormalFloatingPointDistribution(seed * k_seed, initial_state,
+          xla::NormalFloatingPointDistribution(rng_seed * k_seed, initial_state,
                                                GetBitGenerator(), rng_shape)
               .value;
       xla::XlaOp rng = xla::Complex(rng_real, rng_imag);

@@ -348,6 +348,10 @@ class XLATestBase(DeviceTypeTestBase):
     torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
         use_full_mat_mul_precision=True)
 
+  def setUp(self):
+    super().setUp()
+    xm.set_rng_seed(101)
+
   def prepare_for_compare(self, tx, ty):
     print_tensors = xu.getenv_as('TEST_PRINT_TENSORS', bool, defval=False)
     x, y = tx, ty

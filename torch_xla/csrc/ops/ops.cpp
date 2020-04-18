@@ -610,20 +610,6 @@ NodePtr MinUnary(const Value& input) {
                    std::move(lower_fn));
 }
 
-NodePtr Bernoulli(const Value& input, const Value& probability) {
-  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
-    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    xla::XlaOp xla_probability = loctx->GetOutputOp(node.operand(1));
-    xla::XlaOp result =
-        BuildBernoulli(xla_probability, XlaHelpers::ShapeOfXlaOp(xla_input));
-    return node.ReturnOp(result, loctx);
-  };
-  NodePtr probability_expanded = MakeNode<Expand>(
-      probability, xla::util::ToVector<xla::int64>(input.shape().dimensions()));
-  return GenericOp(OpKind(at::aten::bernoulli), {input, probability_expanded},
-                   input.shape(), std::move(lower_fn));
-}
-
 NodePtr Take(const Value& input, const Value& index) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));

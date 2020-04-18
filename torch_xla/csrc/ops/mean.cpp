@@ -25,7 +25,7 @@ xla::XlaOp LowerMean(xla::XlaOp input,
 }
 
 xla::Shape NodeOutputShape(const Value& input,
-                           std::vector<xla::int64>& dimensions,
+                           const std::vector<xla::int64>& dimensions,
                            bool keep_reduced_dimensions,
                            const c10::optional<at::ScalarType>& dtype) {
   auto lower_for_shape_fn =

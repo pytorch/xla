@@ -371,9 +371,9 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
       Default: 1.0
     groups (list, optional): A list of list, representing the replica groups for
       the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with the
-      `[4, 5, 6, 7]` replicas. If `None` there will be only one group with all
-      the replicas in it.
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
   """
   _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce(
       reduce_type, inputs, _get_all_reduce_token(), scale, groups or [])
@@ -395,9 +395,9 @@ def all_to_all(value,
     split_count (int): The split count.
     groups (list, optional): A list of list, representing the replica groups for
       the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with the
-      `[4, 5, 6, 7]` replicas. If `None` there will be only one group with all
-      the replicas in it.
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
 
   Returns:
     The result `torch.Tensor` of the `all_to_all()` operation.
@@ -419,8 +419,8 @@ def collective_permute(value, pairs):
     pairs (list): A list of (source_replica_id, target_replica_id) pairs,
       representing the sender and receiver for the `collective_permute()`
       operation. Example: `[[0, 1], [1, 2], [2, 0]]` defines three pairs. The
-      tensor will be send from replidca 0 to replidca 1, replidca 1 to replidca
-      2, and replidca 2 to replidca 0.
+        tensor will be send from replidca 0 to replidca 1, replidca 1 to
+        replidca 2, and replidca 2 to replidca 0.
 
   Returns:
     The result `torch.Tensor` of the `collective_permute()` operation.
@@ -501,9 +501,9 @@ def reduce_gradients(optimizer, groups=None):
       containing the gradients to be reduced.
     groups (list, optional): A list of list, representing the replica groups for
       the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with the
-      `[4, 5, 6, 7]` replicas. If `None` there will be only one group with all
-      the replicas in it.
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
   """
   count = torch_xla._XLAC._xla_get_replication_devices_count()
   if count > 1:
@@ -527,9 +527,9 @@ def optimizer_step(optimizer, barrier=False, optimizer_args={}, groups=None):
       `optimizer.step()` call.
     groups (list, optional): A list of list, representing the replica groups for
       the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-      defines two groups, one with the `[0, 1, 2, 3]` replicas and one with the
-      `[4, 5, 6, 7]` replicas. If `None` there will be only one group with all
-      the replicas in it.
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
 
   Returns:
     The same value returned by the `optimizer.step()` call.
@@ -637,3 +637,16 @@ def mesh_reduce(tag, data, reduce_fn):
     xbio = io.BytesIO(xd)
     xldata.append(torch.load(xbio))
   return reduce_fn(xldata) if xldata else cpu_data
+
+
+def set_rng_seed(seed, device=None):
+  """Sets the random number generator seed.
+
+  Args:
+    seed (integer): The seed to be set.
+    device (string, optional): The device where the seed needs to be set. If
+      missing the default device seed will be set.
+  """
+  if device is None:
+    device = torch_xla._XLAC._xla_get_default_device()
+  torch_xla._XLAC._xla_set_rng_seed(seed, str(device) if device else '')

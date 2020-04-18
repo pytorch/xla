@@ -3345,11 +3345,12 @@ TEST_F(AtenXlaTensorTest, TestBernoulliScalarProbInPlace) {
 
 TEST_F(AtenXlaTensorTest, TestBernoulliTensorProbInPlace) {
   torch::Tensor input = torch::zeros(1000, torch::TensorOptions(torch::kFloat));
+  torch::Tensor prob =
+      torch::scalar_tensor(0.1, torch::TensorOptions(torch::kFloat));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
-    torch::Tensor prob =
-        torch::scalar_tensor(0.1, torch::TensorOptions(torch::kFloat));
-    xla_input.bernoulli_(CopyToDevice(prob, device));
+    torch::Tensor xla_prob = CopyToDevice(prob, device);
+    xla_input.bernoulli_(xla_prob);
     double frac = xla_input.sum().item().toDouble() / input.numel();
     EXPECT_GT(frac, 0.06);
     EXPECT_LT(frac, 0.14);
@@ -3375,15 +3376,14 @@ TEST_F(AtenXlaTensorTest, TestDropout) {
 }
 
 TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
+  torch::Tensor a = torch::rand({17, 21}, torch::TensorOptions(torch::kFloat));
   ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor a =
-        torch::rand({17, 21}, torch::TensorOptions(torch::kFloat));
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::dropout_(xla_a, 0.1, /*train=*/true);
     double prob =
         static_cast<double>(xla_a.cpu().ne(0.0f).sum().item().toDouble()) /
         a.numel();
-    EXPECT_GT(prob, 0.86);
+    EXPECT_GT(prob, 0.85);
     EXPECT_LT(prob, 0.94);
   });
 

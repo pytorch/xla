@@ -206,6 +206,12 @@ void StepMarker(const std::string& device_str,
   XLATensor::MarkStep(device);
 }
 
+void SetRngSeed(xla::uint64 seed, const std::string& device_str) {
+  auto opt_device = GetOptionalDevice(device_str);
+  const Device* device = opt_device ? &opt_device.value() : nullptr;
+  XLATensor::SetRngSeed(device, seed);
+}
+
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
   std::vector<XLATensor> xtensors = GetXlaTensors(tensors, /*want_all=*/false);
   return XLATensor::DumpHloComputation(xtensors);
@@ -627,6 +633,11 @@ void InitXlaModuleBindings(py::module m) {
     return SetCurrentThreadDevice(device);
   });
   m.def("_xla_get_default_device", []() { return GetCurrentThreadDevice(); });
+  m.def("_xla_set_rng_seed",
+        [](xla::uint64 seed, const std::string& device) {
+          SetRngSeed(seed, device);
+        },
+        py::arg("seed") = 101, py::arg("device") = "");
   m.def("_xla_sync_multi",
         [](const std::vector<at::Tensor>& tensors,
            const std::vector<std::string>& devices, bool wait,
