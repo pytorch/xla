@@ -103,6 +103,7 @@ _FN_OUT = {
     'div_out': FuncOpts(),
     'gather_out': FuncOpts(),
     'ger_out': FuncOpts(),
+    'hardsigmoid_out': FuncOpts(),
     'kthvalue_out': FuncOpts(),
     'index_select_out': FuncOpts(),
     'inverse_out': FuncOpts(),

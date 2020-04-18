@@ -202,6 +202,7 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_nll_loss_empty_tensor_reduction_mean',  # floating point division 0 by 0, expecting nan but get 0
     'test_fold',  # The gradient check code errors out on type() call, and code is slow on XLA
     'test_unfold',  # The gradient check code errors out on type() call, and code is slow on XLA
+    'test_hardsigmoid_grad_xla',  # gradient check is slow
 
     # test_type_promotion.py
     # TestTypePromotion
@@ -212,7 +213,6 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_half',  # half support
     'test_complex_promotion',  # complex support
     'test_complex_scalar_mult_tensor_promotion',  # complex support
-    'test_hardsigmoid_grad_xla',  # FIXEME: accessing storage
 }
 
 DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {

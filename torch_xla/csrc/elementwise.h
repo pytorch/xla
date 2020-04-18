@@ -27,6 +27,8 @@ xla::XlaOp BuildRreluBackward(xla::XlaOp grad_output, xla::XlaOp input,
                               at::Scalar upper, bool training);
 
 xla::XlaOp BuildHardshrink(xla::XlaOp input, at::Scalar lambda);
+xla::XlaOp BuildHardSigmoid(xla::XlaOp input);
+xla::XlaOp BuildHardSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input);
 xla::XlaOp BuildSoftshrink(xla::XlaOp input, at::Scalar lambda);
 xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                at::Scalar lambda);
