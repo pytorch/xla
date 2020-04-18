@@ -589,6 +589,13 @@ class XLATensor {
                                        const XLATensor& input,
                                        at::Scalar lambda);
 
+  static XLATensor hardsigmoid(const XLATensor& input);
+
+  static void hardsigmoid_(XLATensor& input);
+
+  static XLATensor hardsigmoid_backward(const XLATensor& grad_output,
+                                        const XLATensor& input);
+
   static XLATensor hardtanh_backward(const XLATensor& grad_output,
                                      const XLATensor& input, at::Scalar min_val,
                                      at::Scalar max_val);

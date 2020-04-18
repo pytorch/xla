@@ -412,6 +412,13 @@ class AtenXlaType {
                                         const at::Tensor& self,
                                         at::Scalar lambda);
 
+  static at::Tensor hardsigmoid(const at::Tensor& self);
+
+  static at::Tensor& hardsigmoid_(at::Tensor& self);
+
+  static at::Tensor hardsigmoid_backward(const at::Tensor& grad_output,
+                                         const at::Tensor& self);
+
   static at::Tensor hardtanh(const at::Tensor& self, at::Scalar min_val,
                              at::Scalar max_val);
 
