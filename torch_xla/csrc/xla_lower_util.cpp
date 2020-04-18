@@ -15,6 +15,7 @@
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -439,22 +440,22 @@ xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs) {
   return xla::Dot(lhs, rhs, &precision_config);
 }
 
-xla::XlaOp BuildBernoulli(xla::XlaOp probability, const xla::Shape& shape) {
+xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
+                          xla::PrimitiveType type) {
   const xla::Shape& probability_shape = XlaHelpers::ShapeOfXlaOp(probability);
   xla::XlaOp zero =
       xla::Zero(probability.builder(), probability_shape.element_type());
   xla::XlaOp one =
       xla::One(probability.builder(), probability_shape.element_type());
-  xla::XlaOp noise = xla::RngUniform(zero, one, probability_shape);
-  return xla::ConvertElementType(xla::Lt(noise, probability),
-                                 shape.element_type());
+  xla::XlaOp noise = RngUniform(seed, probability_shape, zero, one);
+  return xla::ConvertElementType(xla::Lt(noise, probability), type);
 }
 
-xla::XlaOp BuildDropout(xla::XlaOp input, float probability) {
+xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp prob =
       XlaHelpers::ScalarBroadcast<float>(probability, shape, input.builder());
-  xla::XlaOp mask = BuildBernoulli(prob, shape);
+  xla::XlaOp mask = BuildBernoulli(prob, seed, shape.element_type());
   if (probability > 0.0f) {
     mask = mask / prob;
   }

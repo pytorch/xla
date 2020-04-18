@@ -28,6 +28,7 @@
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/op_by_op_executor.h"
+#include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/expand.h"
@@ -41,13 +42,9 @@ namespace torch_xla {
 namespace {
 
 struct TlsData {
-  void Reset() {
-    trim_counter = 0;
-    seed_round = 0;
-  }
+  void Reset() { trim_counter = 0; }
 
   size_t trim_counter = 0;
-  xla::uint64 seed_round = 0;
 };
 
 thread_local TlsData g_tls_data;
@@ -207,6 +204,13 @@ XlaDataCacheArena::XlaDataCache* GetXlaDataCache(const Device& device) {
   return arena->Get(device);
 }
 
+ir::Value IrValueFromScalar(at::Scalar value, at::ScalarType scalar_type,
+                            const Device& device) {
+  at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
+  xla::ComputationClient::DataPtr device_data = TensorToXlaData(tensor, device);
+  return ir::MakeNode<ir::ops::DeviceData>(std::move(device_data));
+}
+
 xla::ComputationClient::DataPtr GetDeviceData(const at::Tensor& tensor,
                                               const Device& device) {
   XlaDataCacheArena::XlaDataCache* cache = GetXlaDataCache(device);
@@ -255,7 +259,8 @@ class XLATensor::DeviceContextArena {
   struct DeviceContext {
     std::mutex lock;
     std::map<xla::int64, std::weak_ptr<Data>> tensors_data;
-    std::set<xla::hash_t> sync_hashes;
+    xla::uint64 seed = 101;
+    ir::Value seed_ir_value;
   };
 
  public:
@@ -293,18 +298,40 @@ class XLATensor::DeviceContextArena {
     return tensors;
   }
 
-  void ClearProfileData(const Device* device) {
+  ir::Value GetRngSeed(const Device& device) {
+    static const at::ScalarType kSeedType = at::ScalarType::Long;
+    DeviceContext* devctx = GetDeviceContext(device);
+    std::lock_guard<std::mutex> lock(devctx->lock);
+    if (!devctx->seed_ir_value) {
+      devctx->seed_ir_value = IrValueFromScalar(
+          static_cast<int64_t>(devctx->seed), kSeedType, device);
+    }
+    // Compose new seeds from the root seed, to avoid creating too many XLA
+    // computation parameters which might overflow the TPU capacity.
+    ir::Value k =
+        ir::ops::ScalarOp(214013, MakeXlaPrimitiveType(kSeedType, &device));
+    ir::Value b =
+        ir::ops::ScalarOp(2531011, MakeXlaPrimitiveType(kSeedType, &device));
+    devctx->seed_ir_value = b + k * devctx->seed_ir_value;
+    return devctx->seed_ir_value;
+  }
+
+  void SetRngSeed(const Device* device, xla::uint64 seed) {
     auto fn = [&](DeviceContext* devctx) {
       std::lock_guard<std::mutex> lock(devctx->lock);
-      devctx->sync_hashes.clear();
+      devctx->seed = seed;
+      devctx->seed_ir_value = ir::Value();
     };
     ForAllDeviceContexts(fn, device);
   }
 
-  void AddSyncedHash(const Device& device, const xla::hash_t& hash) {
-    DeviceContext* devctx = GetDeviceContext(device);
-    std::lock_guard<std::mutex> lock(devctx->lock);
-    devctx->sync_hashes.insert(hash);
+  void StepRngSeed(const Device* device) {
+    auto fn = [&](DeviceContext* devctx) {
+      std::lock_guard<std::mutex> lock(devctx->lock);
+      devctx->seed = 2531011 + devctx->seed * 214013;
+      devctx->seed_ir_value = ir::Value();
+    };
+    ForAllDeviceContexts(fn, device);
   }
 
  private:
@@ -1281,7 +1308,7 @@ void XLATensor::SyncLiveTensorsGraph(const Device* device,
 
 void XLATensor::MarkStep(const Device* device) {
   XLA_COUNTER("MarkStep", 1);
-  DeviceContextArena::Get()->ClearProfileData(device);
+  DeviceContextArena::Get()->StepRngSeed(device);
   ir::ScopePusher::ResetScopes();
   g_tls_data.Reset();
 }
@@ -1509,9 +1536,12 @@ xla::int64 XLATensor::GetNextTensorId() {
   return id_generator->fetch_add(1);
 }
 
-xla::uint64 XLATensor::GenRngSeed() {
-  static const xla::uint64 kBaseSeed = 0x78ab6952ca3893e7;
-  return ++g_tls_data.seed_round * kBaseSeed;
+ir::Value XLATensor::GetRngSeed(const Device& device) {
+  return DeviceContextArena::Get()->GetRngSeed(device);
+}
+
+void XLATensor::SetRngSeed(const Device* device, xla::uint64 seed) {
+  DeviceContextArena::Get()->SetRngSeed(device, seed);
 }
 
 }  // namespace torch_xla

@@ -4,20 +4,12 @@
 
 #include <iostream>
 
+#include "tensorflow/compiler/xla/xla_client/types.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 namespace ir {
 namespace ops {
-
-inline std::ostream& operator<<(std::ostream& ostrm, at::Scalar s) {
-  return ostrm << (s.isFloatingPoint() ? s.toDouble() : s.toLong());
-}
-
-inline size_t ScalarHash(at::Scalar s) {
-  return s.isFloatingPoint() ? std::hash<double>()(s.toDouble())
-                             : std::hash<long>()(s.toLong());
-}
 
 // Differently from Constant, this is a scalar value broadcasted to a shape.
 // Even though a Constant could have been used, for simple scalars broadcasted
@@ -39,6 +31,10 @@ class Scalar : public Node {
  private:
   at::Scalar value_;
 };
+
+xla::hash_t ScalarHash(at::Scalar s);
+
+std::ostream& operator<<(std::ostream& ostrm, at::Scalar s);
 
 }  // namespace ops
 }  // namespace ir

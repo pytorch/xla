@@ -23,6 +23,7 @@ xla_model
 .. autofunction:: save
 .. autofunction:: rendezvous
 .. autofunction:: mesh_reduce
+.. autofunction:: set_rng_seed
 
 distributed
 ----------------------------------

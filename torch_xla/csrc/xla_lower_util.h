@@ -25,9 +25,10 @@ xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias);
 
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 
-xla::XlaOp BuildBernoulli(xla::XlaOp probability, const xla::Shape& shape);
+xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
+                          xla::PrimitiveType type);
 
-xla::XlaOp BuildDropout(xla::XlaOp input, float probability);
+xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed);
 
 std::vector<xla::XlaOp> CreateBroadcastTensors(
     absl::Span<const xla::XlaOp> operands);

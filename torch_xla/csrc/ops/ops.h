@@ -184,8 +184,6 @@ NodePtr MaxUnary(const Value& input);
 
 NodePtr MinUnary(const Value& input);
 
-NodePtr Bernoulli(const Value& input, const Value& probability);
-
 NodePtr Take(const Value& input, const Value& index);
 
 NodePtr LogDet(const Value& input);

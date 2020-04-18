@@ -6,13 +6,16 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "torch_xla/csrc/aten_xla_type.h"
+#include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
 namespace cpp_test {
 
 void XlaTest::SetUp() {
   at::manual_seed(42);
+  XLATensor::SetRngSeed(GetDefaultDevice(), 42);
   start_msnap_ = absl::make_unique<MetricsSnapshot>();
 }
 

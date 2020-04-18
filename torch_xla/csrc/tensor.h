@@ -109,6 +109,10 @@ class XLATensor {
                                        const xla::Shape& shape,
                                        const Device& device);
 
+  static ir::Value GetRngSeed(const Device& device);
+
+  static void SetRngSeed(const Device* device, xla::uint64 seed);
+
   // Dispatches a comparison operator, setting the logical type of the result
   // appropriately.
   static XLATensor DispatchComparisonOp(c10::Symbol kind,
@@ -1290,8 +1294,6 @@ class XLATensor {
       const SyncTensorsConfig& config);
 
   static xla::int64 GetNextTensorId();
-
-  static xla::uint64 GenRngSeed();
 
   std::shared_ptr<Data> data_;
 };
