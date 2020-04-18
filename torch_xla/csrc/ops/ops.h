@@ -109,6 +109,10 @@ NodePtr Not(const Value& input);
 
 NodePtr TransposeOp(const Value& input, xla::int64 dim0, xla::int64 dim1);
 
+NodePtr HardSigmoid(const Value& input);
+
+NodePtr HardSigmoidBackward(const Value& grad_output, const Value& input);
+
 std::tuple<NodePtr, NodePtr> LogSigmoid(const Value& input);
 
 NodePtr LogSigmoidBackward(const Value& grad_output, const Value& input,

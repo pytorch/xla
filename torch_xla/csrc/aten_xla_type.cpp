@@ -1408,6 +1408,26 @@ at::Tensor AtenXlaType::hardshrink(const at::Tensor& self, at::Scalar lambda) {
       XLATensor::hardshrink(bridge::GetXlaTensor(self), lambda));
 }
 
+at::Tensor AtenXlaType::hardsigmoid(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::hardsigmoid(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::hardsigmoid_(at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::hardsigmoid_(self_tensor);
+  return self;
+}
+
+at::Tensor AtenXlaType::hardsigmoid_backward(const at::Tensor& grad_output,
+                                             const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::hardsigmoid_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::hardshrink_backward(const at::Tensor& grad_out,
                                             const at::Tensor& self,
                                             at::Scalar lambda) {

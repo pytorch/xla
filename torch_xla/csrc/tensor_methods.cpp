@@ -1392,6 +1392,20 @@ XLATensor XLATensor::hardshrink_backward(const XLATensor& grad_out,
       input.GetIrValue(), lambda));
 }
 
+XLATensor XLATensor::hardsigmoid(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::HardSigmoid(input.GetIrValue()));
+}
+
+void XLATensor::hardsigmoid_(XLATensor& input) {
+  input.SetIrValue(ir::ops::HardSigmoid(input.GetIrValue()));
+}
+
+XLATensor XLATensor::hardsigmoid_backward(const XLATensor& grad_output,
+                                          const XLATensor& input) {
+  return input.CreateFrom(ir::ops::HardSigmoidBackward(grad_output.GetIrValue(),
+                                                       input.GetIrValue()));
+}
+
 XLATensor XLATensor::hardtanh_backward(const XLATensor& grad_output,
                                        const XLATensor& input,
                                        at::Scalar min_val, at::Scalar max_val) {
