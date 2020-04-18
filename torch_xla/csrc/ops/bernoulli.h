@@ -6,10 +6,9 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-class Uniform : public Node {
+class Bernoulli : public Node {
  public:
-  Uniform(const Value& from, const Value& to, const Value& seed,
-          const xla::Shape& rng_shape);
+  Bernoulli(const Value& probability, const Value& seed, xla::Shape shape);
 
   NodePtr Clone(OpList operands) const override;
 

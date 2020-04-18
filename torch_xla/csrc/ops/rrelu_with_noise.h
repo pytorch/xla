@@ -11,8 +11,8 @@ namespace ops {
 
 class RreluWithNoise : public Node {
  public:
-  RreluWithNoise(const Value& input, at::Scalar lower, at::Scalar upper,
-                 bool training, xla::uint64 seed);
+  RreluWithNoise(const Value& input, const Value& seed, at::Scalar lower,
+                 at::Scalar upper, bool training);
 
   std::string ToString() const override;
 
@@ -26,13 +26,10 @@ class RreluWithNoise : public Node {
 
   bool training() const { return training_; }
 
-  xla::uint64 seed() const { return seed_; }
-
  private:
   at::Scalar lower_;
   at::Scalar upper_;
   bool training_;
-  xla::uint64 seed_;
 };
 
 }  // namespace ops
