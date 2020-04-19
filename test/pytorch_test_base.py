@@ -145,7 +145,7 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_rand_xla_float64',  # xla doesn't support manual_seed, as_stride
     'test_normal',  # AssertionError: 0.22364577306378963 not less than or equal to 0.2
     'test_uniform_from_to',  # Checks for error strings.
-    'test_index_fill_xla', # half support
+    'test_index_fill_xla',  # half support
 
     # TestViewOps
     'test_contiguous_nonview',
@@ -239,10 +239,10 @@ DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
     'test_cumprod_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_cumprod_neg_dim_xla',  # FIXME: TPU X64Rewriter doesn't support reduce-window
     'test_topk_neg_dim_sort_xla',  # (TPU) unimplemented HLO for X64
-    'test_clamp_min_xla_float64', # float64 limit, TPU does not have real F64
-    'test_clamp_min_inplace_xla_float64', # float64 limit, TPU does not have real F64
-    'test_clamp_max_xla_float64', # float64 limit, TPU does not have real F64
-    'test_clamp_max_inplace_xla_float64',# float64 limit, TPU does not have real F64
+    'test_clamp_min_xla_float64',  # float64 limit, TPU does not have real F64
+    'test_clamp_min_inplace_xla_float64',  # float64 limit, TPU does not have real F64
+    'test_clamp_max_xla_float64',  # float64 limit, TPU does not have real F64
+    'test_clamp_max_inplace_xla_float64',  # float64 limit, TPU does not have real F64
 
     #TestTorchDeviceType
     'test_cholesky_solve_batched_broadcasting',  # (TPU) 0.0039 vs 0.001
@@ -250,12 +250,12 @@ DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
     'test_triangular_solve_batched_many_batches',  # (TPU) 1.02 vs 0.001
     'test_triangular_solve_batched_broadcasting',  # (TPU) 1.5 vs 0.001
     'test_random_from_to_xla_int32',  # precision, TPU does not have real F64
-    'test_uniform_from_to_xla_float64', # float64 limit, TPU does not have real F64
-    'test_topk_integral_xla_int64', # (TPU) unimplemented HLO for X64
+    'test_uniform_from_to_xla_float64',  # float64 limit, TPU does not have real F64
+    'test_topk_integral_xla_int64',  # (TPU) unimplemented HLO for X64
 
     # test_indexing.py
     # TestIndexing
-    'test_index_put_accumulate_large_tensor_xla', # memory limit exceeded on v2-8
+    'test_index_put_accumulate_large_tensor_xla',  # memory limit exceeded on v2-8
 }
 
 DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
@@ -361,12 +361,27 @@ class XLATestBase(DeviceTypeTestBase):
         print('Tensor Y ({}):\n{}'.format(ty.device, y), file=sys.stderr)
     return x, y
 
-  # Overrides assertEqual to popular custom precision
-  def assertEqual(self, x, y, prec=None, message='', allow_inf=False, **kwargs):
+  def _override_prec(self, args, name):
+    prec = args.get(name, None)
     if prec is None:
-      prec = self.precision
+      args[name] = self.precision
     else:
-      prec = max(self.precision, prec)
+      args[name] = max(self.precision, prec)
+    return args
+
+  def _rewrite_compare_args(self, kwargs):
+    rwargs = copy.copy(kwargs)
+    rwargs = self._override_prec(rwargs, 'rtol')
+    rwargs = self._override_prec(rwargs, 'atol')
+    return rwargs
+
+  # Overrides assertEqual to popular custom precision
+  def assertEqual(self, x, y, *args, **kwargs):
+    if not args:
+      kwargs = self._rewrite_compare_args(kwargs)
+    elif isinstance(args[0], (float, int)):
+      args[0] - max(args[0], self.precision)
+
     gmode = os.environ.get('TEST_PRINT_GRAPH', '').lower()
     if gmode == 'text':
       if type(x) == torch.Tensor and xm.is_xla_tensor(x):
@@ -393,8 +408,7 @@ class XLATestBase(DeviceTypeTestBase):
     elif gmode:
       raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(gmode))
     x, y = self.prepare_for_compare(x, y)
-    return DeviceTypeTestBase.assertEqual(self, x, y, prec, message, allow_inf,
-                                          **kwargs)
+    return DeviceTypeTestBase.assertEqual(self, x, y, *args, **kwargs)
 
 
 TEST_CLASS = XLATestBase
