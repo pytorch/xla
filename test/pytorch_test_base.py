@@ -384,7 +384,7 @@ class XLATestBase(DeviceTypeTestBase):
     if not args:
       kwargs = self._rewrite_compare_args(kwargs)
     elif isinstance(args[0], (float, int)):
-      args[0] - max(args[0], self.precision)
+      args = [max(args[0], self.precision)] + list(args[1:])
 
     gmode = os.environ.get('TEST_PRINT_GRAPH', '').lower()
     if gmode == 'text':
