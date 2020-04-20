@@ -1690,6 +1690,8 @@ tensorflow::DataType XrtComputationClient::XlaTypeToDataType(
       return tensorflow::DT_DOUBLE;
     case PrimitiveType::BF16:
       return tensorflow::DT_BFLOAT16;
+    case PrimitiveType::F16:
+      return tensorflow::DT_HALF;
     case PrimitiveType::C64:
       return tensorflow::DT_COMPLEX64;
     case PrimitiveType::C128:

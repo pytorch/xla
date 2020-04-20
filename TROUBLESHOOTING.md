@@ -192,6 +192,9 @@ only be enabled for debugging.
 * ```XLA_USE_BF16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _BiFloat16_
   when sending to the _TPU_ device.
 
+* ```XLA_USE_F16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _Float16_
+  (_PyTorch_ _Half_ type) when sending to devices which supports them.
+
 * ```XLA_USE_32BIT_LONG```: If set to 1, maps _PyTorch_ _Long_ types to _XLA_ 32bit type.
   On the versions of the TPU HW at the time of writing, 64bit integer computations are
   expensive, so setting this flag might help. It should be verified by the user that truncating
