@@ -45,7 +45,11 @@ class XlaHelpers {
         return xla::LiteralUtil::CreateR0<float>(scalar_value);
       case xla::PrimitiveType::BF16:
         return xla::LiteralUtil::CreateR0<tensorflow::bfloat16>(
-            static_cast<tensorflow::bfloat16>(scalar_value));
+            static_cast<tensorflow::bfloat16>(
+                static_cast<float>(scalar_value)));
+      case xla::PrimitiveType::F16:
+        return xla::LiteralUtil::CreateR0<xla::half>(
+            static_cast<xla::half>(static_cast<float>(scalar_value)));
       case xla::PrimitiveType::S64:
         return xla::LiteralUtil::CreateR0<xla::int64>(scalar_value);
       case xla::PrimitiveType::U64:
