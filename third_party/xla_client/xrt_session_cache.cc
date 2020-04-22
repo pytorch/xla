@@ -6,8 +6,11 @@
 namespace xla {
 
 XrtSessionCache::XrtSessionCache(tensorflow::ConfigProto config,
-                                 std::function<void(XrtSession*)> initfn)
-    : config_(std::move(config)), initfn_(std::move(initfn)) {}
+                                 std::function<void(XrtSession*)> initfn,
+                                 std::string local_target)
+    : config_(std::move(config)),
+      initfn_(std::move(initfn)),
+      local_target_(std::move(local_target)) {}
 
 XrtSessionCache::Ref XrtSessionCache::GetSession(const std::string& target) {
   std::lock_guard<std::mutex> lock(lock_);
@@ -41,7 +44,9 @@ std::shared_ptr<XrtSession> XrtSessionCache::CreateSession(
   tensorflow::SessionOptions session_options;
   session_options.env = tensorflow::Env::Default();
   session_options.target = target;
-  session_options.config = config_;
+  if (target != local_target_) {
+    session_options.config = config_;
+  }
 
   tensorflow::RPCOptions* rpc_options =
       session_options.config.mutable_rpc_options();
