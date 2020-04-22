@@ -382,7 +382,9 @@ class XLATestBase(DeviceTypeTestBase):
 
   # Overrides assertEqual to popular custom precision
   def assertEqual(self, x, y, *args, **kwargs):
-    if not args:
+    # HACK: Handle the dual nature of the assertEqual() PyTorch API whose first
+    # argument can be prec (floating) or msg (string).
+    if not args or isinstance(args[0], str):
       kwargs = self._rewrite_compare_args(kwargs)
     elif isinstance(args[0], (float, int)):
       args = [max(args[0], self.precision)] + list(args[1:])
