@@ -30,6 +30,7 @@ DISABLED_TORCH_TESTS_ANY = {
 
     # TestTorchDeviceType
     'test_addmm_sizes',  # FIXME: very slow compile
+    'test_addcmul',  # FIXME: complex dtype
     'test_clamp',  # slow
     'test_lu_unpack',  # very slow compile
     'test_view',  # doesn't raise
