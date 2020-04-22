@@ -17,7 +17,7 @@ message Worker {
 }
 
 message Config {
-  required tensorflow.tpu.TopologyProto proto = 1;
+  optional tensorflow.tpu.TopologyProto proto = 1;
   repeated Worker workers = 2;
   required int64 mesh_size = 3;
 }

@@ -7,7 +7,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 def _mp_fn(index):
   device = xm.xla_device()
-  if xm.xla_device_hw(device) == 'TPU':
+  if xm.xla_device_hw(device) != 'CPU':
     ones = torch.ones((2, 3))
     twos = ones + 1.0
     xones = ones.to(device)
@@ -21,7 +21,8 @@ def _mp_fn(index):
       sys.exit(1)
   else:
     print(
-        'Default device {} is not a TPU device'.format(device), file=sys.stderr)
+        'Default device {} does not support replication'.format(device),
+        file=sys.stderr)
 
 
 if __name__ == '__main__':

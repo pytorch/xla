@@ -67,7 +67,8 @@ class XrtSessionCache {
   using SessionMap = std::map<std::string, Ref>;
 
   XrtSessionCache(tensorflow::ConfigProto config,
-                  std::function<void(XrtSession*)> initfn);
+                  std::function<void(XrtSession*)> initfn,
+                  std::string local_target);
 
   const tensorflow::ConfigProto& GetConfig() const { return config_; }
 
@@ -88,6 +89,7 @@ class XrtSessionCache {
 
   tensorflow::ConfigProto config_;
   std::function<void(XrtSession*)> initfn_;
+  std::string local_target_;
   std::mutex lock_;
   std::map<std::string, std::deque<std::shared_ptr<XrtSession>>> session_map_;
 };

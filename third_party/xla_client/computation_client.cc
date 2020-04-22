@@ -20,27 +20,8 @@
 namespace xla {
 namespace {
 
-struct Device {
-  std::string kind;
-  int ordinal = 0;
-};
-
-Device ParseDevice(const std::string& device) {
-  std::vector<std::string> parts = absl::StrSplit(device, ':');
-  XLA_CHECK_EQ(parts.size(), 2) << device;
-  return {parts[0], std::stoi(parts[1])};
-}
-
 ComputationClient* CreateClient() {
   return ComputationClient::Create().release();
-}
-
-XrtComputationClient::Worker ParseWorker(const std::string& worker) {
-  std::vector<std::string> parts = absl::StrSplit(worker, ':');
-  XLA_CHECK(parts.size() == 1 || parts.size() == 2) << worker;
-  return parts.size() == 1
-             ? XrtComputationClient::Worker(parts[0], 0)
-             : XrtComputationClient::Worker(parts[0], std::stoi(parts[1]));
 }
 
 std::string MakeGrpcEndPoint(const std::string& server) {
@@ -80,7 +61,7 @@ bool IsLocalDevice(const XrtComputationClient::Worker& worker,
   if (mp_device.empty()) {
     return true;
   }
-  Device device = ParseDevice(mp_device);
+  XrtComputationClient::Device device(mp_device);
   std::string task_device_key =
       BuildTaskDeviceKey(parsed_device.task, device.kind);
   auto it = dev_task_map.find(task_device_key);
@@ -95,7 +76,7 @@ std::map<std::string, int> BuildDeviceTaskMap(
   // device ordinal assigned for that task+devkind couple.
   std::map<std::string, int> dev_task_map;
   for (auto& device_xrt_device : options.global_device_map) {
-    Device global_device = ParseDevice(device_xrt_device.first);
+    XrtComputationClient::Device global_device(device_xrt_device.first);
     tensorflow::DeviceNameUtils::ParsedName parsed_device =
         ParseXrtDevice(device_xrt_device.second);
     std::string task_device_key =
@@ -110,7 +91,7 @@ void PopulateLocalDevices(XrtComputationClient::Options* options) {
   std::string local_worker = sys_util::GetEnvString("XRT_LOCAL_WORKER", "");
   XrtComputationClient::Worker worker("", -1);
   if (!local_worker.empty()) {
-    worker = ParseWorker(local_worker);
+    worker = XrtComputationClient::ParseWorker(local_worker);
   }
   auto dev_task_map = BuildDeviceTaskMap(*options);
   std::map<std::string, int> min_ordinals;
@@ -124,7 +105,7 @@ void PopulateLocalDevices(XrtComputationClient::Options* options) {
     }
     options->devices.insert(device_xrt_device.first);
 
-    Device global_device = ParseDevice(device_xrt_device.first);
+    XrtComputationClient::Device global_device(device_xrt_device.first);
     util::InsertCombined(&min_ordinals, global_device.kind,
                          global_device.ordinal,
                          [](int a, int b) { return std::min(a, b); });
@@ -192,7 +173,8 @@ bool ParseMeshConfig(
   XLA_CHECK(!local_worker_env.empty())
       << "In a mesh client setup the XRT_LOCAL_WORKER must be specified";
 
-  XrtComputationClient::Worker local_worker = ParseWorker(local_worker_env);
+  XrtComputationClient::Worker local_worker =
+      XrtComputationClient::ParseWorker(local_worker_env);
 
   TF_LOG(INFO) << "Fetching mesh configuration for worker " << local_worker.name
                << ":" << local_worker.task_no << " from mesh service at "
@@ -207,7 +189,7 @@ bool ParseMeshConfig(
     options->workers_map.emplace(worker, config_worker.address());
 
     for (auto& device : config_worker.devices()) {
-      Device local_device = ParseDevice(device.local_name());
+      XrtComputationClient::Device local_device(device.local_name());
       options->global_device_map.emplace(
           device.global_name(),
           GetXrtDevicePath(worker.name, worker.task_no, local_device.kind,
@@ -223,32 +205,33 @@ bool ParseMeshConfig(
   return true;
 }
 
+bool ParseEnvDevices(XrtComputationClient::Options* options) {
+  std::string device_spec = sys_util::GetEnvString("XRT_DEVICE_MAP", "");
+  std::string workers_spec = sys_util::GetEnvString("XRT_WORKERS", "");
+  if (!device_spec.empty() && !workers_spec.empty()) {
+    for (const auto& device_target : absl::StrSplit(device_spec, '|')) {
+      std::vector<std::string> parts = absl::StrSplit(device_target, ';');
+      XLA_CHECK_EQ(parts.size(), 2) << device_target;
+      options->global_device_map.emplace(parts[0], parts[1]);
+    }
+    for (const auto& name_target : absl::StrSplit(workers_spec, '|')) {
+      std::vector<std::string> parts = absl::StrSplit(name_target, ';');
+      XLA_CHECK_EQ(parts.size(), 2) << name_target;
+      options->workers_map.emplace(XrtComputationClient::ParseWorker(parts[0]),
+                                   MakeGrpcEndPoint(parts[1]));
+    }
+  }
+  return !options->global_device_map.empty();
+}
+
 }  // namespace
 
 std::unique_ptr<ComputationClient> ComputationClient::Create() {
   XrtComputationClient::Options options;
   std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
-  if (!ParseEnvBasedTpuClusterConfig(&options) &&
+  if (!ParseEnvDevices(&options) && !ParseEnvBasedTpuClusterConfig(&options) &&
       !ParseMeshConfig(&options, &topology_proto)) {
-    std::string device_spec = sys_util::GetEnvString(
-        "XRT_DEVICE_MAP",
-        "TPU:0;/job:tpu_worker/replica:0/task:0/device:TPU:0");
-    for (const auto& device_target : absl::StrSplit(device_spec, '|')) {
-      std::vector<std::string> parts = absl::StrSplit(device_target, ';');
-      XLA_CHECK_EQ(parts.size(), 2) << device_target;
-      if (options.default_device.empty()) {
-        options.default_device = parts[0];
-      }
-      options.global_device_map.emplace(parts[0], parts[1]);
-    }
-    std::string workers_spec = sys_util::GetEnvString(
-        "XRT_WORKERS", "tpu_worker:0;grpc://localhost:51000");
-    for (const auto& name_target : absl::StrSplit(workers_spec, '|')) {
-      std::vector<std::string> parts = absl::StrSplit(name_target, ';');
-      XLA_CHECK_EQ(parts.size(), 2) << name_target;
-      options.workers_map.emplace(ParseWorker(parts[0]),
-                                  MakeGrpcEndPoint(parts[1]));
-    }
+    XLA_ERROR() << "Missing XLA configuration";
   }
   PopulateLocalDevices(&options);
   return std::unique_ptr<ComputationClient>(
