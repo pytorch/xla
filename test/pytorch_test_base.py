@@ -253,7 +253,7 @@ DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
     'test_random_from_to_xla_int32',  # precision, TPU does not have real F64
     'test_uniform_from_to_xla_float64',  # float64 limit, TPU does not have real F64
     'test_topk_integral_xla_int64',  # (TPU) unimplemented HLO for X64
-    'test_float_to_int_conversion_finite_xla' # different behavior than numpy when casting float_max/min to int types
+    'test_float_to_int_conversion_finite_xla', # different behavior than numpy when casting float_max/min to int types
 
     # test_indexing.py
     # TestIndexing
