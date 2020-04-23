@@ -378,12 +378,12 @@ xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
   if ((lhs_shape.rank() == 1 && rhs_shape.rank() == 1) ||
       (lhs_shape.rank() == 2 && rhs_shape.rank() == 2) ||
       (lhs_shape.rank() == 2 && rhs_shape.rank() == 1)) {
-    return xla::Dot(lhs, rhs);
+    return BuildDot(lhs, rhs);
   }
   if (lhs_shape.rank() == 1 && rhs_shape.rank() == 2) {
     xla::XlaOp reshaped_lhs =
         XlaHelpers::DynamicReshape(lhs, {1, lhs_shape.dimensions(0)});
-    return XlaHelpers::DynamicReshape(xla::Dot(reshaped_lhs, rhs),
+    return XlaHelpers::DynamicReshape(BuildDot(reshaped_lhs, rhs),
                                       {rhs_shape.dimensions(1)});
   }
   if (lhs_shape.rank() >= 1 && rhs_shape.rank() >= 1 &&
@@ -423,9 +423,7 @@ xla::XlaOp BuildGer(xla::XlaOp lhs, xla::XlaOp rhs) {
 }
 
 xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias) {
-  xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
-  xla::XlaOp dot = xla::Dot(lhs, rhs, &precision_config);
+  xla::XlaOp dot = BuildDot(lhs, rhs);
   const xla::Shape& dot_shape = XlaHelpers::ShapeOfXlaOp(dot);
   const xla::Shape& bias_shape = XlaHelpers::ShapeOfXlaOp(bias);
   if (bias_shape.dimensions() != dot_shape.dimensions()) {
