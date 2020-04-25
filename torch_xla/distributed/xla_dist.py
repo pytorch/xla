@@ -80,11 +80,6 @@ class DistributedExecutor(object):
                env_vars=None):
     self._cluster = cluster
     self._initialize()
-    client_master_ip = ClusterResolver.get_instance_metadata(
-      'instance/network-interfaces/0/ip')
-    self._client_master = next(filter(
-      lambda cw: cw.get_internal_ip() == client_master_ip,
-      self._cluster.get_client_workers()))
     self.logger = self._get_logger()
     self.docker_container = docker_container or self.DEFAULT_CONTAINER_NAME
     self.docker_image = docker_image
@@ -232,7 +227,8 @@ class DistributedExecutor(object):
             'c_tpu_worker:{}'.format(worker_idx),
         'XRT_MESH_SERVICE_ADDRESS':
             '{}:{}'.format(
-              self._client_master.get_internal_ip(), self.MESH_SERVICE_PORT),
+              self._cluster.get_client_master().get_internal_ip(),
+              self.MESH_SERVICE_PORT),
         'XRT_SHARD_WORLD_SIZE':
             len(self._cluster.get_client_workers()),
         'XRT_SHARD_ORDINAL':
@@ -240,7 +236,7 @@ class DistributedExecutor(object):
         'XLA_EMIT_STEPLOG': 1,
     }
     # Only for master
-    if client_worker == self._client_master:
+    if client_worker == self._cluster.get_client_master():
       xrt_server_config = [
           'c_tpu_worker;{worker_idx};{worker_ip}:{worker_port}'.format(
               worker_idx=idx,
