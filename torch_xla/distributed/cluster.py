@@ -31,7 +31,8 @@ class Cluster(object):
                client_workers,
                service_workers,
                check_client_machine_type=True,
-               check_service_machine_type=True):
+               check_service_machine_type=True,
+               client_master_ip=None):
     """Creates a cluster object.
 
     Args:
@@ -41,6 +42,8 @@ class Cluster(object):
         same machine type.
       check_service_machine_type: whether to check if service workers all have
         the same machine type.
+      client_master_ip: the ip of client worker to set as master. If not
+        provided, the VM running the current process is the master.
     """
     for client_worker in client_workers:
       if not isinstance(client_worker, ClientWorker):
@@ -55,6 +58,19 @@ class Cluster(object):
     self._check_client_machine_type = check_client_machine_type
     self._check_service_machine_type = check_service_machine_type
 
+    if not client_master_ip:
+      client_master_ip = ClusterResolver.get_instance_metadata(
+        'instance/network-interfaces/0/ip')
+    self._client_master = next(filter(
+      lambda cw: cw.get_internal_ip() == client_master_ip,
+      self._client_workers))
+
+    # Put client master at front of client worker list.
+    self._client_workers.remove(self._client_master)
+    self._client_workers.insert(0, self._client_master)
+
+  def get_client_master(self):
+    return self._client_master
 
   def get_client_workers(self):
     return self._client_workers
