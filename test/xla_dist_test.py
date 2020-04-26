@@ -38,7 +38,8 @@ class ClusterTest(unittest.TestCase):
         ServiceWorker('10.0.0.3', '8470', 'v3-32', 'europe-west4-a',
                       'pytorch-0.2'),
     ]
-    cluster = Cluster(client_workers, service_workers)
+    cluster = Cluster(
+      client_workers, service_workers, client_master_ip='10.0.0.0')
     cluster.validate()  # Does not raise exception
 
   def test_create_bad_client_workers(self):
@@ -53,7 +54,8 @@ class ClusterTest(unittest.TestCase):
     ]
     self.assertRaisesRegex(
         ValueError, 'client_workers argument must be a list of ClientWorker',
-        Cluster, client_workers, service_workers)
+        Cluster, client_workers, service_workers,
+        client_master_ip='10.0.0.1')
 
   def test_create_bad_service_workers(self):
     client_workers = [
@@ -62,7 +64,7 @@ class ClusterTest(unittest.TestCase):
     ]
     self.assertRaisesRegex(
         ValueError, 'service_workers argument must be a list of ServiceWorker',
-        Cluster, client_workers, client_workers)
+        Cluster, client_workers, client_workers, client_master_ip='10.0.0.1')
 
   def test_validate_machine_type_client_cluster(self):
     client_workers = [
@@ -77,10 +79,12 @@ class ClusterTest(unittest.TestCase):
     ]
 
     no_check_cluster = Cluster(
-        client_workers, service_workers, check_client_machine_type=False)
+        client_workers, service_workers, check_client_machine_type=False,
+        client_master_ip='10.0.0.0')
     no_check_cluster.validate()  # Does not raise exception
 
-    check_cluster = Cluster(client_workers, service_workers)
+    check_cluster = Cluster(
+      client_workers, service_workers, client_master_ip='10.0.0.0')
     self.assertRaisesRegex(
         RuntimeError, 'All client_workers must have the same machine_type',
         check_cluster.validate)
@@ -98,10 +102,12 @@ class ClusterTest(unittest.TestCase):
     ]
 
     no_check_cluster = Cluster(
-        client_workers, service_workers, check_service_machine_type=False)
+        client_workers, service_workers, check_service_machine_type=False,
+        client_master_ip='10.0.0.0')
     no_check_cluster.validate()  # Does not raise exception
 
-    check_cluster = Cluster(client_workers, service_workers)
+    check_cluster = Cluster(
+      client_workers, service_workers, client_master_ip='10.0.0.0')
     self.assertRaisesRegex(
         RuntimeError, 'All service_workers must have the same machine_type',
         check_cluster.validate)
@@ -117,7 +123,8 @@ class ClusterTest(unittest.TestCase):
         ServiceWorker('10.0.0.1', '8470', 'v3-8', 'europe-west4-a',
                       'pytorch-0.2'),
     ]
-    cluster = Cluster(client_workers, service_workers)
+    cluster = Cluster(
+      client_workers, service_workers, client_master_ip='10.0.0.0')
     self.assertRaisesRegex(RuntimeError, 'All workers must be in the same zone',
                            cluster.validate)
 
@@ -137,14 +144,15 @@ class ClusterTest(unittest.TestCase):
         ServiceWorker('10.0.0.3', '8470', 'v3-32', 'europe-west4-a',
                       'pytorch-0.2'),
     ]
-    cluster = Cluster(client_workers, service_workers)
+    cluster = Cluster(
+      client_workers, service_workers, client_master_ip='10.0.0.0')
     self.assertRaisesRegex(
         RuntimeError,
         'The client_workers and service_workers must have a 1:1 mapping',
         cluster.validate)
 
-  def test_validate_empty_workers(self):
-    cluster = Cluster([], [])
+  def test_validate_empty_workers(self, mock_im):
+    cluster = Cluster([], [], client_master_ip='10.0.0.0')
     self.assertRaisesRegex(
         RuntimeError,
         'Both client_workers and service_workers should not be empty',
@@ -167,7 +175,8 @@ class ClusterTest(unittest.TestCase):
         ServiceWorker('10.0.0.3', '8470', 'v3-32', 'europe-west4-a',
                       'pytorch-0.2'),
     ]
-    cluster = Cluster(client_workers, service_workers)
+    cluster = Cluster(
+      client_workers, service_workers, client_master_ip='10.0.0.0')
     self.assertRaisesRegex(
         RuntimeError, 'All service workers must have the same runtime_version.*',
         cluster.validate)
@@ -178,6 +187,7 @@ def mock_request_metadata(cls, metadata):
       'project/project-id': 'fake-project',
       'instance/zone': 'project/fake-project/zones/fake-zone',
       'instance/name': 'fake-ig-a',
+      'instance/network-interfaces/0/ip': '10.0.0.0',
   }
   return fake_metadata[metadata]
 
@@ -654,7 +664,9 @@ class ClusterResolverTest(unittest.TestCase):
             runtime_version='pytorch-nightly',
             tpu='fake-pod') for ip in range(4)
     ]
-    expected = Cluster(expected_client_workers, expected_service_workers)
+    expected = Cluster(
+      expected_client_workers, expected_service_workers,
+      client_master_ip='10.0.0.0')
     self.assertEqual(expected, cluster)
 
   def test_bad_cluster(self):
