@@ -706,15 +706,32 @@ ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
       value, MakeXlaPrimitiveType(GetScalarType(value), &device), device);
 }
 
+ir::Value XLATensor::GetIrValueForScalar(
+    at::Scalar value, xla::PrimitiveType type,
+    absl::Span<const xla::int64> dimensions, const Device& device) {
+  ir::Value ir_value = GetIrValueForScalar(value, type, device);
+  if (!dimensions.empty()) {
+    ir_value = ir::MakeNode<ir::ops::Expand>(
+        ir_value, xla::util::ToVector<xla::int64>(dimensions));
+  }
+  return ir_value;
+}
+
 ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
                                          const xla::Shape& shape,
                                          const Device& device) {
-  ir::Value ir_value = GetIrValueForScalar(value, shape.element_type(), device);
-  if (shape.rank() > 0) {
-    ir_value = ir::MakeNode<ir::ops::Expand>(
-        ir_value, xla::util::ToVector<xla::int64>(shape.dimensions()));
-  }
-  return ir_value;
+  return GetIrValueForScalar(value, shape.element_type(), shape.dimensions(),
+                             device);
+}
+
+ir::Value XLATensor::GetIrValueForScalar(
+    at::Scalar value, const xla::Shape& shape,
+    c10::optional<at::ScalarType> logical_element_type, const Device& device) {
+  xla::PrimitiveType type =
+      logical_element_type
+          ? MakeXlaPrimitiveType(*logical_element_type, &device)
+          : shape.element_type();
+  return GetIrValueForScalar(value, type, shape.dimensions(), device);
 }
 
 View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
