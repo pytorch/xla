@@ -73,6 +73,9 @@ XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
       literal.Set<xla::bfloat16>({},
                                  static_cast<xla::bfloat16>(value_.toDouble()));
       break;
+    case xla::PrimitiveType::F16:
+      literal.Set<xla::half>({}, static_cast<xla::half>(value_.toDouble()));
+      break;
     case xla::PrimitiveType::C64:
       literal.Set<xla::complex64>({}, xla::complex64(value_.toComplexFloat()));
       break;
