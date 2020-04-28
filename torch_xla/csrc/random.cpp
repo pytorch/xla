@@ -15,8 +15,16 @@ namespace {
 
 xla::BitGeneratorTy GetBitGenerator() {
   static const std::string* bit_generator = new std::string(
-      xla::sys_util::GetEnvString("XLA_RNG_BIT_GENERATOR", "philox"));
-  if (*bit_generator == "philox") {
+      xla::sys_util::GetEnvString("XLA_RNG_BIT_GENERATOR", "default"));
+  if (*bit_generator == "default") {
+    return [](xla::XlaOp key, xla::XlaOp state, const xla::Shape& shape) {
+      state = xla::ConcatScalars(key.builder(), {key, state});
+      xla::XlaOp result =
+          xla::RngBitGenerator(xla::RandomAlgorithm::RNG_DEFAULT, state, shape);
+      return xla::RngOutput{/*value=*/xla::GetTupleElement(result, 1),
+                            /*state=*/xla::GetTupleElement(result, 0)};
+    };
+  } else if (*bit_generator == "philox") {
     return [](xla::XlaOp key, xla::XlaOp state, const xla::Shape& shape) {
       std::tie(state, key) = xla::ScramblePhiloxKey(key);
       return xla::PhiloxBitGenerator(key, state, shape);
