@@ -256,6 +256,7 @@
 <span class="kn">import</span> <span class="nn">collections</span>
 <span class="kn">import</span> <span class="nn">contextlib</span>
 <span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">socket</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">torch.multiprocessing</span>
@@ -264,39 +265,83 @@
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
 
-<span class="n">TpuConfigEntry</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;TpuConfigEntry&#39;</span><span class="p">,</span>
-                                        <span class="s1">&#39;worker_name ordinal host_port&#39;</span><span class="p">)</span>
+<span class="n">PreForkConfig</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;PreForkConfig&#39;</span><span class="p">,</span> <span class="s1">&#39;dev_kind num_devices&#39;</span><span class="p">)</span>
+<span class="n">WorkerConfigEntry</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;WorkerConfigEntry&#39;</span><span class="p">,</span>
+                                           <span class="s1">&#39;worker_name ordinal host_port&#39;</span><span class="p">)</span>
+
+<span class="n">_LOCAL_WORKER</span> <span class="o">=</span> <span class="s1">&#39;localservice&#39;</span>
+<span class="n">_NCCL_COMM_ID</span> <span class="o">=</span> <span class="s1">&#39;NCCL_COMM_ID&#39;</span>
+<span class="n">_CUDA_VISIBLE_DEVICES</span> <span class="o">=</span> <span class="s1">&#39;CUDA_VISIBLE_DEVICES&#39;</span>
 
 
-<span class="k">def</span> <span class="nf">_find_free_tcp_port</span><span class="p">():</span>
-  <span class="k">with</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">closing</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span>
-                                        <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">))</span> <span class="k">as</span> <span class="n">s</span><span class="p">:</span>
-    <span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">getsockname</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+<span class="k">def</span> <span class="nf">_get_free_tcp_ports</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+  <span class="n">ports</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">closing</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span>
+                                          <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">))</span> <span class="k">as</span> <span class="n">s</span><span class="p">:</span>
+      <span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+      <span class="n">ports</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">getsockname</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+  <span class="k">return</span> <span class="n">ports</span>
 
 
-<span class="k">def</span> <span class="nf">_is_tpu_config</span><span class="p">():</span>
-  <span class="k">for</span> <span class="n">env</span> <span class="ow">in</span> <span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">]:</span>
+<span class="k">def</span> <span class="nf">_is_xla_config</span><span class="p">():</span>
+  <span class="k">for</span> <span class="n">env</span> <span class="ow">in</span> <span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="n">xenv</span><span class="o">.</span><span class="n">GPU_NUM_DEVICES</span><span class="p">]:</span>
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
       <span class="k">return</span> <span class="kc">True</span>
   <span class="k">return</span> <span class="kc">False</span>
 
 
+<span class="k">def</span> <span class="nf">_get_world_size</span><span class="p">():</span>
+  <span class="c1"># We cannot use the xla_model.py API here, as the features used in that module</span>
+  <span class="c1"># needs the setup provided by this one.</span>
+  <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_create_gpu_devices</span><span class="p">(</span><span class="n">num_gpus</span><span class="p">):</span>
+  <span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">_get_world_size</span><span class="p">()):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_gpus</span><span class="p">):</span>
+      <span class="n">gindex</span> <span class="o">=</span> <span class="n">h</span> <span class="o">*</span> <span class="n">num_gpus</span> <span class="o">+</span> <span class="n">i</span>
+      <span class="c1"># We use CUDA_VISIBLE_DEVICES to limit the set of CUDA devices per process</span>
+      <span class="c1"># to 1, and its device index is always 0. We use the task to disambiguate</span>
+      <span class="c1"># TF devices.</span>
+      <span class="n">tfdevice</span> <span class="o">=</span> <span class="s1">&#39;/job:</span><span class="si">{}</span><span class="s1">/replica:0/task:</span><span class="si">{}</span><span class="s1">/device:XLA_GPU:0&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+          <span class="n">_LOCAL_WORKER</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
+      <span class="n">devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;GPU:</span><span class="si">{}</span><span class="s1">;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gindex</span><span class="p">,</span> <span class="n">tfdevice</span><span class="p">))</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">DEVICE_MAP</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_parse_workers_config</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+  <span class="c1"># XRT_WORKERS=&#39;worker:0;ismz9:25822&#39;</span>
+  <span class="n">workers</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">OrderedDict</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;|&#39;</span><span class="p">):</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\w+):(\d+);((grpc://)?[\w.]+:\d+)&#39;</span><span class="p">,</span> <span class="n">worker</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Bad worker syntax: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="p">))</span>
+    <span class="n">workers</span><span class="p">[</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))]</span> <span class="o">=</span> <span class="n">WorkerConfigEntry</span><span class="p">(</span>
+        <span class="n">worker_name</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">ordinal</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span> <span class="n">host_port</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">workers</span>
+
+
 <span class="k">def</span> <span class="nf">_parse_tpu_config</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
   <span class="c1"># XRT_TPU_CONFIG=&#39;tpu_worker;0;ismz9:25822&#39;</span>
-  <span class="n">parsed</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">workers</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">OrderedDict</span><span class="p">()</span>
   <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;|&#39;</span><span class="p">):</span>
-    <span class="n">parts</span> <span class="o">=</span> <span class="n">worker</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\w+);(\d+);([\w.]+:\d+)&#39;</span><span class="p">,</span> <span class="n">worker</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Bad worker syntax: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="p">))</span>
-    <span class="n">parsed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-        <span class="n">TpuConfigEntry</span><span class="p">(</span>
-            <span class="n">worker_name</span><span class="o">=</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ordinal</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">host_port</span><span class="o">=</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
-  <span class="k">return</span> <span class="n">parsed</span>
+    <span class="n">workers</span><span class="p">[</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))]</span> <span class="o">=</span> <span class="n">WorkerConfigEntry</span><span class="p">(</span>
+        <span class="n">worker_name</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">ordinal</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span> <span class="n">host_port</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">workers</span>
 
 
 <span class="k">def</span> <span class="nf">_get_devices_per_worker</span><span class="p">():</span>
-  <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_NUM_DEVICES</span><span class="p">,</span> <span class="s1">&#39;8&#39;</span><span class="p">))</span>
+  <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_NUM_DEVICES</span><span class="p">,</span> <span class="s1">&#39;8&#39;</span><span class="p">)),</span> <span class="s1">&#39;TPU&#39;</span>
+  <span class="n">num_gpus</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">GPU_NUM_DEVICES</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">num_gpus</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">num_gpus</span><span class="p">),</span> <span class="s1">&#39;GPU&#39;</span>
+  <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Missing TPU or GPU configuration&#39;</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_get_multiprocessing_device</span><span class="p">():</span>
@@ -305,64 +350,125 @@
 
 <span class="k">def</span> <span class="nf">_get_local_worker_index</span><span class="p">():</span>
   <span class="n">worker</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-  <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">worker</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span> <span class="k">if</span> <span class="n">worker</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">0</span>
+  <span class="k">if</span> <span class="n">worker</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="mi">0</span>
+  <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\w+):(\d+)&#39;</span><span class="p">,</span> <span class="n">worker</span><span class="p">)</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Bad worker syntax: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="p">))</span>
+  <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
 
 
-<span class="k">def</span> <span class="nf">_local_index_to_global</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
-  <span class="k">return</span> <span class="n">_get_local_worker_index</span><span class="p">()</span> <span class="o">*</span> <span class="n">_get_devices_per_worker</span><span class="p">()</span> <span class="o">+</span> <span class="n">index</span>
+<span class="k">def</span> <span class="nf">_local_index_to_global</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">num_devices</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">_get_local_worker_index</span><span class="p">()</span> <span class="o">*</span> <span class="n">num_devices</span> <span class="o">+</span> <span class="n">index</span>
 
 
 <span class="k">def</span> <span class="nf">_setup_world_size</span><span class="p">(</span><span class="n">num_devices</span><span class="p">):</span>
   <span class="c1"># We cannot call into xla_model code at this point, as we do not know whether</span>
   <span class="c1"># the called code would trigger XLA library initializations (which we must</span>
   <span class="c1"># not do at this point). So we avoid calling into xm.xrt_world_size().</span>
-  <span class="n">world_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">))</span> <span class="o">*</span> <span class="n">num_devices</span>
+  <span class="n">world_size</span> <span class="o">=</span> <span class="n">_get_world_size</span><span class="p">()</span> <span class="o">*</span> <span class="n">num_devices</span>
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">world_size</span><span class="p">)</span>
 
 
+<span class="k">def</span> <span class="nf">_setup_workers</span><span class="p">(</span><span class="n">num_devices</span><span class="p">):</span>
+  <span class="n">world_size</span> <span class="o">=</span> <span class="n">_get_world_size</span><span class="p">()</span>
+  <span class="n">workers_env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORKERS</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="n">workers</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">if</span> <span class="n">workers_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">wcfg</span> <span class="o">=</span> <span class="n">_parse_workers_config</span><span class="p">(</span><span class="n">workers_env</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">world_size</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span>
+        <span class="n">wcfg</span><span class="p">),</span> <span class="s1">&#39;World size (</span><span class="si">{}</span><span class="s1">) must match the configured workers (</span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">world_size</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">wcfg</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">h</span><span class="p">,</span> <span class="n">worker</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">wcfg</span><span class="p">):</span>
+      <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(.*):(\d+)$&#39;</span><span class="p">,</span> <span class="n">worker</span><span class="o">.</span><span class="n">host_port</span><span class="p">)</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Bad worker HOST:PORT format: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">worker</span><span class="o">.</span><span class="n">host_port</span><span class="p">))</span>
+      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_gpus</span><span class="p">):</span>
+        <span class="n">gindex</span> <span class="o">=</span> <span class="n">h</span> <span class="o">*</span> <span class="n">num_gpus</span> <span class="o">+</span> <span class="n">i</span>
+        <span class="n">workers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">;grpc://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="o">.</span><span class="n">worker_name</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span>
+                                                   <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                                                   <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span> <span class="o">+</span> <span class="n">i</span><span class="p">))</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">world_size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;Cannot use more than one host without </span><span class="si">{}</span><span class="s1"> &#39;</span>
+                             <span class="s1">&#39;configuration: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                 <span class="n">xenv</span><span class="o">.</span><span class="n">WORKERS</span><span class="p">,</span> <span class="n">world_size</span><span class="p">)</span>
+    <span class="n">ports</span> <span class="o">=</span> <span class="n">_get_free_tcp_ports</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">getfqdn</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">wid</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_devices</span><span class="p">):</span>
+      <span class="n">workers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">;grpc://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_LOCAL_WORKER</span><span class="p">,</span> <span class="n">wid</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span>
+                                                 <span class="n">ports</span><span class="p">[</span><span class="n">wid</span><span class="p">]))</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORKERS</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">workers</span><span class="p">)</span>
+
+
 <span class="k">def</span> <span class="nf">_pre_fork_setup</span><span class="p">(</span><span class="n">num_devices</span><span class="p">):</span>
+  <span class="n">dev_count</span><span class="p">,</span> <span class="n">dev_kind</span> <span class="o">=</span> <span class="n">_get_devices_per_worker</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">num_devices</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">num_devices</span> <span class="o">=</span> <span class="n">_get_devices_per_worker</span><span class="p">()</span>
-  <span class="k">elif</span> <span class="n">num_devices</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">_get_devices_per_worker</span><span class="p">()]:</span>
+    <span class="n">num_devices</span> <span class="o">=</span> <span class="n">dev_count</span>
+  <span class="k">elif</span> <span class="n">num_devices</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">dev_count</span><span class="p">]:</span>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
         <span class="s1">&#39;The number of devices must be either 1 or </span><span class="si">{}</span><span class="s1">, got </span><span class="si">{}</span><span class="s1"> instead&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-            <span class="n">_get_devices_per_worker</span><span class="p">(),</span> <span class="n">num_devices</span><span class="p">))</span>
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">SERVICE_ADDRESS</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
-    <span class="c1"># In multi-processing mode, even if there is only one TPU host, we still</span>
+            <span class="n">dev_count</span><span class="p">,</span> <span class="n">num_devices</span><span class="p">))</span>
+  <span class="k">if</span> <span class="n">num_devices</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">SERVICE_ADDRESS</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="c1"># In multi-processing mode, even if there is only one XLA host, we still</span>
     <span class="c1"># bring up the mesh service.</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">SERVICE_ADDRESS</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;localhost:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-        <span class="n">_find_free_tcp_port</span><span class="p">())</span>
-  <span class="k">return</span> <span class="n">num_devices</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">SERVICE_ADDRESS</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">getfqdn</span><span class="p">(),</span>
+                                                      <span class="n">_get_free_tcp_ports</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+  <span class="k">if</span> <span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;GPU&#39;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">_NCCL_COMM_ID</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+      <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">_NCCL_COMM_ID</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">getfqdn</span><span class="p">(),</span>
+                                                 <span class="n">_get_free_tcp_ports</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">_setup_workers</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+    <span class="n">_create_gpu_devices</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">PreForkConfig</span><span class="p">(</span><span class="n">dev_kind</span><span class="o">=</span><span class="n">dev_kind</span><span class="p">,</span> <span class="n">num_devices</span><span class="o">=</span><span class="n">num_devices</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_prepare_env_for_index</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">num_devices</span><span class="p">):</span>
-  <span class="n">_setup_world_size</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
-  <span class="n">gindex</span> <span class="o">=</span> <span class="n">_local_index_to_global</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_setup_gpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">):</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">MP_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;GPU:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gindex</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_LOCAL_WORKER</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
+  <span class="c1"># Every process is restricted to 1 GPU device, which in such process will be</span>
+  <span class="c1"># named XLA_GPU:0.</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">_CUDA_VISIBLE_DEVICES</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_setup_tpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">tpu_env_config</span><span class="p">):</span>
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">MP_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;TPU:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gindex</span><span class="p">)</span>
-  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">ORDINAL</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">gindex</span><span class="p">)</span>
-  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_ORDINAL</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
     <span class="c1"># The local worker can be missing for a 1 TPU host setup. Make sure we</span>
     <span class="c1"># always have one.</span>
-    <span class="n">tpu_config</span> <span class="o">=</span> <span class="n">_parse_tpu_config</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">])</span>
-    <span class="n">worker</span> <span class="o">=</span> <span class="n">tpu_config</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">tpu_config</span> <span class="o">=</span> <span class="n">_parse_tpu_config</span><span class="p">(</span><span class="n">tpu_env_config</span><span class="p">)</span>
+    <span class="n">worker</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">tpu_config</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="o">.</span><span class="n">worker_name</span><span class="p">,</span>
                                                    <span class="n">worker</span><span class="o">.</span><span class="n">ordinal</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">gindex</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
     <span class="c1"># In multi-processing mode, only the process handling the first device of</span>
     <span class="c1"># the master worker, will do TPU mesh initialization.</span>
     <span class="k">del</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_prepare_env_for_index</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">):</span>
+  <span class="n">_setup_world_size</span><span class="p">(</span><span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span><span class="p">)</span>
+  <span class="n">gindex</span> <span class="o">=</span> <span class="n">_local_index_to_global</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">ORDINAL</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">gindex</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_ORDINAL</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span><span class="p">:</span>
+    <span class="n">_setup_tpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">])</span>
+  <span class="k">elif</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;GPU&#39;</span><span class="p">:</span>
+    <span class="n">_setup_gpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">gindex</span>
 
 
 <span class="k">def</span> <span class="nf">_setup_replication</span><span class="p">():</span>
+  <span class="c1"># At this point xla_model.py APIs are allowed as the setup is already</span>
+  <span class="c1"># completed.</span>
   <span class="k">if</span> <span class="n">xm</span><span class="o">.</span><span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
     <span class="n">xm</span><span class="o">.</span><span class="n">set_replication</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)])</span>
 
 
-<span class="k">def</span> <span class="nf">_start_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">num_devices</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
-  <span class="n">gindex</span> <span class="o">=</span> <span class="n">_prepare_env_for_index</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">num_devices</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_start_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+  <span class="n">gindex</span> <span class="o">=</span> <span class="n">_prepare_env_for_index</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">)</span>
   <span class="c1"># Calling _setup_replication() will trigger XLA library initialization, so the</span>
   <span class="c1"># environment must be fully setup before doing so.</span>
   <span class="n">_setup_replication</span><span class="p">()</span>
@@ -377,6 +483,16 @@
     <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
     <span class="n">exit_code</span> <span class="o">=</span> <span class="mi">17</span>
   <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">exit_code</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_run_direct</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">nprocs</span><span class="p">,</span> <span class="n">join</span><span class="p">,</span> <span class="n">daemon</span><span class="p">,</span> <span class="n">start_method</span><span class="p">):</span>
+  <span class="n">nprocs</span> <span class="o">=</span> <span class="n">nprocs</span> <span class="ow">or</span> <span class="mi">1</span>
+  <span class="k">if</span> <span class="n">nprocs</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">fn</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span>
+        <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">,</span> <span class="n">nprocs</span><span class="o">=</span><span class="n">nprocs</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="n">join</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="n">daemon</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="spawn"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.spawn">[docs]</a><span class="k">def</span> <span class="nf">spawn</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span>
@@ -410,25 +526,18 @@
 <span class="sd">    `nprocs` is 1 the `fn` function will be called directly, and the API will</span>
 <span class="sd">    not return.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_xla_config</span><span class="p">():</span>
+    <span class="c1"># If this is not an XLA setup, jump to normal multi-processing.</span>
+    <span class="k">return</span> <span class="n">_run_direct</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">nprocs</span><span class="p">,</span> <span class="n">join</span><span class="p">,</span> <span class="n">daemon</span><span class="p">,</span> <span class="n">start_method</span><span class="p">)</span>
 
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_tpu_config</span><span class="p">():</span>
-    <span class="c1"># If this is not an TPU setup, jump to normal multi-processing.</span>
-    <span class="n">nprocs</span> <span class="o">=</span> <span class="n">nprocs</span> <span class="ow">or</span> <span class="mi">1</span>
-    <span class="k">if</span> <span class="n">nprocs</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-      <span class="n">fn</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
-      <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span>
-          <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">,</span> <span class="n">nprocs</span><span class="o">=</span><span class="n">nprocs</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="n">join</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="n">daemon</span><span class="p">)</span>
-
-  <span class="n">nprocs</span> <span class="o">=</span> <span class="n">_pre_fork_setup</span><span class="p">(</span><span class="n">nprocs</span><span class="p">)</span>
-  <span class="k">if</span> <span class="n">nprocs</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-    <span class="n">_start_fn</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">nprocs</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+  <span class="n">pf_cfg</span> <span class="o">=</span> <span class="n">_pre_fork_setup</span><span class="p">(</span><span class="n">nprocs</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">_start_fn</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">start_processes</span><span class="p">(</span>
         <span class="n">_start_fn</span><span class="p">,</span>
-        <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">nprocs</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">),</span>
-        <span class="n">nprocs</span><span class="o">=</span><span class="n">nprocs</span><span class="p">,</span>
+        <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">),</span>
+        <span class="n">nprocs</span><span class="o">=</span><span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span><span class="p">,</span>
         <span class="n">join</span><span class="o">=</span><span class="n">join</span><span class="p">,</span>
         <span class="n">daemon</span><span class="o">=</span><span class="n">daemon</span><span class="p">,</span>
         <span class="n">start_method</span><span class="o">=</span><span class="n">start_method</span><span class="p">)</span></div>
