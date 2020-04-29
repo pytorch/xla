@@ -672,6 +672,7 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
 
 bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2) {
   switch (t1.scalar_type()) {
+    case at::ScalarType::Half:
     case at::ScalarType::ComplexFloat:
     case at::ScalarType::ComplexDouble:
       // TODO: remove this once pytorch implemented the native Complex tensor
