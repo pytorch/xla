@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
@@ -23,7 +24,7 @@ xla::Shape NodeOutputShape(const Value& input, int dim) {
   auto lower_for_shape_fn =
       [dim](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
-    return LowerSqueeze(operands[0], dim);
+    return LowerSqueeze(XlaHelpers::MakeArray(operands[0]), dim);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
@@ -42,7 +43,7 @@ NodePtr Squeeze::Clone(OpList operands) const {
 
 XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp output = LowerSqueeze(input, dim_);
+  xla::XlaOp output = LowerSqueeze(XlaHelpers::MakeArray(input), dim_);
   return ReturnOp(output, loctx);
 }
 

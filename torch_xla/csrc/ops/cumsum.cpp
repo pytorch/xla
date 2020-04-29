@@ -50,7 +50,10 @@ NodePtr CumSum::Clone(OpList operands) const {
 
 XlaOpVector CumSum::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(LowerCumSum(input, dim_, dtype_), loctx);
+  xla::Shape input_shape;
+  xla::XlaOp output =
+      LowerCumSum(XlaHelpers::MakeArray(input, &input_shape), dim_, dtype_);
+  return ReturnOp(XlaHelpers::MaybeReshapeAs(output, input_shape), loctx);
 }
 
 std::string CumSum::ToString() const {

@@ -16,8 +16,13 @@ xla::Shape NodeOutputShape(const Value& input, const Value& index,
                            xla::int64 dim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return xla::TorchGather(operands[0], operands[1], dim,
-                            IsSparseGather(operands[0], operands[1], dim));
+    xla::Shape input_shape;
+    xla::XlaOp array_input = XlaHelpers::MakeArray(operands[0], &input_shape);
+    xla::XlaOp array_index = XlaHelpers::MakeArray(operands[1]);
+    xla::XlaOp output =
+        xla::TorchGather(array_input, array_index, dim,
+                         IsSparseGather(array_input, array_index, dim));
+    return XlaHelpers::MaybeReshapeToScalar(output, input_shape);
   };
   return InferOutputShape({input.shape(), index.shape()}, lower_for_shape_fn);
 }
@@ -35,11 +40,15 @@ NodePtr Gather::Clone(OpList operands) const {
 }
 
 XlaOpVector Gather::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp index = loctx->GetOutputOp(operand(1));
-  return ReturnOp(
-      xla::TorchGather(input, index, dim_, IsSparseGather(input, index, dim_)),
-      loctx);
+  xla::Shape input_shape;
+  xla::XlaOp array_input =
+      XlaHelpers::MakeArray(loctx->GetOutputOp(operand(0)), &input_shape);
+  xla::XlaOp array_index =
+      XlaHelpers::MakeArray(loctx->GetOutputOp(operand(1)));
+  xla::XlaOp output =
+      xla::TorchGather(array_input, array_index, dim_,
+                       IsSparseGather(array_input, array_index, dim_));
+  return ReturnOp(XlaHelpers::MaybeReshapeToScalar(output, input_shape), loctx);
 }
 
 std::string Gather::ToString() const {

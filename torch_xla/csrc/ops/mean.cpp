@@ -30,7 +30,11 @@ xla::Shape NodeOutputShape(const Value& input,
                            const c10::optional<at::ScalarType>& dtype) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return LowerMean(operands[0], dimensions, keep_reduced_dimensions, dtype);
+    xla::Shape input_shape;
+    xla::XlaOp output = LowerMean(
+        XlaHelpers::MaybeMakeArray(operands[0], dimensions, &input_shape),
+        dimensions, keep_reduced_dimensions, dtype);
+    return XlaHelpers::MaybeReshapeToScalar(output, input_shape);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
@@ -57,9 +61,12 @@ NodePtr Mean::Clone(OpList operands) const {
 }
 
 XlaOpVector Mean::Lower(LoweringContext* loctx) const {
+  xla::Shape input_shape;
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(
-      LowerMean(input, dimensions_, keep_reduced_dimensions_, dtype_), loctx);
+  xla::XlaOp output =
+      LowerMean(XlaHelpers::MaybeMakeArray(input, dimensions_, &input_shape),
+                dimensions_, keep_reduced_dimensions_, dtype_);
+  return ReturnOp(XlaHelpers::MaybeReshapeToScalar(output, input_shape), loctx);
 }
 
 std::string Mean::ToString() const {

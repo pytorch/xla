@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/topk.h"
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -14,8 +15,12 @@ xla::Shape NodeOutputShape(const Value& input, xla::int64 k, xla::int64 dim,
                            bool largest, bool sorted) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    xla::Shape input_shape;
+    std::vector<xla::XlaOp> outputs =
+        CreateTopK(XlaHelpers::MakeArray(operands[0], &input_shape), k, dim,
+                   largest, sorted);
     return xla::Tuple(operands[0].builder(),
-                      CreateTopK(operands[0], k, dim, largest, sorted));
+                      XlaHelpers::MaybeReshapeToScalar(outputs, input_shape));
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
@@ -37,8 +42,12 @@ NodePtr TopK::Clone(OpList operands) const {
 }
 
 XlaOpVector TopK::Lower(LoweringContext* loctx) const {
+  xla::Shape input_shape;
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOps(CreateTopK(input, k_, dim_, largest_, sorted_), loctx);
+  std::vector<xla::XlaOp> outputs = CreateTopK(
+      XlaHelpers::MakeArray(input, &input_shape), k_, dim_, largest_, sorted_);
+  return ReturnOps(XlaHelpers::MaybeReshapeToScalar(outputs, input_shape),
+                   loctx);
 }
 
 std::string TopK::ToString() const {

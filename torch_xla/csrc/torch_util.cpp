@@ -27,4 +27,9 @@ at::ScalarType GetScalarType(at::Scalar scalar) {
   XLA_ERROR() << "Unknown type for scalar";
 }
 
+int64_t GetSizeInDimNoScalar(const at::Tensor& input, int64_t dim) {
+  int64_t wrapped_dim = at::maybe_wrap_dim(dim, input.dim());
+  return (input.dim() == 0 && wrapped_dim == 0) ? 1 : input.size(dim);
+}
+
 }  // namespace torch_xla

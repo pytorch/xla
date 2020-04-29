@@ -153,6 +153,16 @@ class XlaHelpers {
 
   static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
 
+  static xla::XlaOp MaybeReshapeAs(xla::XlaOp input, const xla::Shape& shape);
+
+  // Reshape the input to scalar if origional_shape is scalar.
+  static xla::XlaOp MaybeReshapeToScalar(xla::XlaOp input,
+                                         const xla::Shape& origional_shape);
+
+  // Reshape each input to scalar if origional_shape is scalar.
+  static std::vector<xla::XlaOp> MaybeReshapeToScalar(
+      std::vector<xla::XlaOp> inputs, const xla::Shape& origional_shape);
+
   static bool SameStaticDimensions(const xla::Shape& shape1,
                                    const xla::Shape& shape2);
 
@@ -170,6 +180,15 @@ class XlaHelpers {
     return opt ? c10::optional<xla::int64>(*opt) : c10::nullopt;
   }
 
+  // Reshape input as a 1d array if it is a scalar.
+  static xla::XlaOp MakeArray(xla::XlaOp input,
+                              xla::Shape* input_shape = nullptr);
+
+  // Reshape input as a 1d array if it is a scalar and dimensions are not empty.
+  static xla::XlaOp MaybeMakeArray(
+      xla::XlaOp input, const absl::Span<const xla::int64>& dimensions,
+      xla::Shape* input_shape = nullptr);
+
   // Creates an XLA padding configuration from a n-dimensional padding list.
   static xla::PaddingConfig MakeXlaPaddingConfigFromNdPadding(
       absl::Span<const xla::int64> padding);
@@ -180,7 +199,8 @@ class XlaHelpers {
       absl::Span<const xla::int64> drop_dims);
 
   // Get the canonical dimension index in the [0, rank) interval. Negative
-  // indices are interpreted as follows: -1 is rank-1, -2 is rank-2 etc.
+  // indices are interpreted as follows: -1 is rank-1, -2 is rank-2 etc. Rank=0
+  // (Scalar value) is interpreted as rank=1 (1d array).
   static xla::int64 GetCanonicalDimensionIndex(xla::int64 dim, xla::int64 rank);
 
   // Same as above, for multiple dimensions.

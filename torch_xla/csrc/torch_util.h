@@ -16,6 +16,10 @@ at::Tensor CopyTensor(const at::Tensor& ref, at::ScalarType dest_type,
 // Return at::ScalarType from at::Scalar
 at::ScalarType GetScalarType(at::Scalar scalar);
 
+// Return the size of the input tensor in the given dimension. Scalar tensor is
+// interpreted as 1d tensor.
+int64_t GetSizeInDimNoScalar(const at::Tensor& input, int64_t dim);
+
 template <typename T, typename S>
 T OptionalOr(const c10::optional<S>& value, T defval) {
   return value ? static_cast<T>(*value) : defval;

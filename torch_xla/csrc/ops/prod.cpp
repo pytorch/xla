@@ -34,9 +34,14 @@ xla::Shape NodeOutputShape(const Value& input,
                            std::vector<xla::int64>& dimensions,
                            bool keep_reduced_dimensions,
                            c10::optional<at::ScalarType> dtype) {
+  xla::Shape input_shape;
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return LowerProd(operands[0], dimensions, keep_reduced_dimensions, dtype);
+    xla::Shape input_shape;
+    xla::XlaOp output = LowerProd(
+        XlaHelpers::MaybeMakeArray(operands[0], dimensions, &input_shape),
+        dimensions, keep_reduced_dimensions, dtype);
+    return XlaHelpers::MaybeReshapeToScalar(output, input_shape);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
@@ -63,9 +68,12 @@ NodePtr Prod::Clone(OpList operands) const {
 }
 
 XlaOpVector Prod::Lower(LoweringContext* loctx) const {
+  xla::Shape input_shape;
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(
-      LowerProd(input, dimensions_, keep_reduced_dimensions_, dtype_), loctx);
+  xla::XlaOp output =
+      LowerProd(XlaHelpers::MaybeMakeArray(input, dimensions_, &input_shape),
+                dimensions_, keep_reduced_dimensions_, dtype_);
+  return ReturnOp(XlaHelpers::MaybeReshapeToScalar(output, input_shape), loctx);
 }
 
 std::string Prod::ToString() const {

@@ -1347,6 +1347,33 @@ class TestAtenXlaTensor(XlaTestCase):
         [torch.randn(0, 1, 2, 0),
          torch.tensor([], dtype=torch.long)], test_fn)
 
+  def test_scalar_tensor_0dim(self):
+    a = torch.tensor(2.1)
+    b = torch.tensor(0)
+    self.runAtenTest(a, lambda x: torch.cumprod(x, 0))
+    self.runAtenTest(a, lambda x: torch.cumsum(x, 0))
+    self.runAtenTest(a, lambda x: torch.squeeze(x, 0))
+    self.runAtenTest(a, lambda x: torch.topk(x, 1))
+    self.runAtenTest(a, lambda x: torch.argmax(x, 0))
+    self.runAtenTest(a, lambda x: torch.argmin(x, 0))
+    self.runAtenTest(a, lambda x: torch.sort(x))
+    self.runAtenTest([a, b], lambda x, y: torch.gather(x, 0, y))
+    self.runAtenTest([a, b], lambda x, y: torch.index_add(x, 0, y, x))
+    self.runAtenTest([a, b], lambda x, y: torch.index_copy(x, 0, y, x))
+    self.runAtenTest([a, b], lambda x, y: torch.index_fill(x, 0, y, 2))
+    self.runAtenTest([a, b], lambda x, y: torch.index_select(x, 0, y))
+    self.runAtenTest([a, b], lambda x, y: torch.scatter_add(x, 0, y, x))
+    self.runAtenTest([a, b], lambda x, y: torch.scatter(x, 0, y, x))
+    for keepdim in [True, False]:
+      self.runAtenTest(a, lambda x: torch.kthvalue(x, 1, keepdim=keepdim))
+      self.runAtenTest(a, lambda x: torch.logsumexp(x, 0, keepdim=keepdim))
+      self.runAtenTest(a, lambda x: torch.max(x, 0, keepdim=keepdim))
+      self.runAtenTest(a, lambda x: torch.mean(x, 0, keepdim=keepdim))
+      self.runAtenTest(a, lambda x: torch.min(x, 0, keepdim=keepdim))
+      self.runAtenTest(a, lambda x: torch.norm(x, 2, 0, keepdim=keepdim))
+      self.runAtenTest(a, lambda x: torch.prod(x, 0, keepdim=keepdim))
+      self.runAtenTest(a, lambda x: torch.sum(x, 0, keepdim=keepdim))
+
   def test_scatter_add_small_target(self):
 
     def test_fn(t, s, i):

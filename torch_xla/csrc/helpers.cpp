@@ -81,6 +81,7 @@ std::vector<xla::int64> XlaHelpers::DropDimensions(
 
 xla::int64 XlaHelpers::GetCanonicalDimensionIndex(xla::int64 dim,
                                                   xla::int64 rank) {
+  rank = (rank == 0) ? 1 : rank;
   xla::int64 min_shape_dim = -rank;
   xla::int64 max_shape_dim = rank - 1;
   XLA_CHECK(min_shape_dim <= dim && dim <= max_shape_dim)
@@ -201,6 +202,24 @@ XlaHelpers::MinMax XlaHelpers::MinMaxValues(xla::PrimitiveType type) {
     default:
       XLA_ERROR() << "Unsupported XLA type " << type;
   }
+}
+
+xla::XlaOp XlaHelpers::MakeArray(xla::XlaOp input, xla::Shape* input_shape) {
+  xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
+  *input_shape_tmp = ShapeOfXlaOp(input);
+  if (input_shape_tmp->rank() > 0) {
+    return input;
+  }
+  return xla::Reshape(input, {1});
+}
+
+xla::XlaOp XlaHelpers::MaybeMakeArray(
+    xla::XlaOp input, const absl::Span<const xla::int64>& dimensions,
+    xla::Shape* input_shape) {
+  if (dimensions.size()) {
+    return MakeArray(input, input_shape);
+  }
+  return input;
 }
 
 xla::PaddingConfig XlaHelpers::MakeXlaPaddingConfigFromNdPadding(
@@ -356,6 +375,31 @@ xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
   return shape.dimensions() == input_shape.dimensions()
              ? input
              : xla::Reshape(input, shape.dimensions());
+}
+
+xla::XlaOp XlaHelpers::MaybeReshapeAs(xla::XlaOp input,
+                                      const xla::Shape& shape) {
+  const xla::Shape& input_shape = ShapeOfXlaOp(input);
+  return shape.dimensions() == input_shape.dimensions()
+             ? input
+             : xla::Reshape(input, shape.dimensions());
+}
+
+xla::XlaOp XlaHelpers::MaybeReshapeToScalar(xla::XlaOp input,
+                                            const xla::Shape& origional_shape) {
+  return (origional_shape.dimensions().size() == 0)
+             ? XlaHelpers::MaybeReshapeAs(input, origional_shape)
+             : input;
+}
+
+std::vector<xla::XlaOp> XlaHelpers::MaybeReshapeToScalar(
+    std::vector<xla::XlaOp> inputs, const xla::Shape& origional_shape) {
+  if (origional_shape.dimensions().size() == 0) {
+    for (xla::XlaOp& input : inputs) {
+      input = XlaHelpers::MaybeReshapeAs(input, origional_shape);
+    }
+  }
+  return inputs;
 }
 
 bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,

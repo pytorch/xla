@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/arg_min.h"
 
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
@@ -13,7 +14,10 @@ namespace {
 xla::Shape NodeOutputShape(const Value& input, xla::int64 dim, bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildArgMin(operands[0], dim, keepdim);
+    xla::Shape input_shape;
+    xla::XlaOp output = BuildArgMin(
+        XlaHelpers::MakeArray(operands[0], &input_shape), dim, keepdim);
+    return XlaHelpers::MaybeReshapeToScalar(output, input_shape);
   };
   return InferOutputShape({input.shape()}, lower_for_shape_fn);
 }
@@ -33,7 +37,10 @@ NodePtr ArgMin::Clone(OpList operands) const {
 
 XlaOpVector ArgMin::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(BuildArgMin(input, dim_, keepdim_), loctx);
+  xla::Shape input_shape;
+  xla::XlaOp output =
+      BuildArgMin(XlaHelpers::MakeArray(input, &input_shape), dim_, keepdim_);
+  return ReturnOp(XlaHelpers::MaybeReshapeToScalar(output, input_shape), loctx);
 }
 
 std::string ArgMin::ToString() const {

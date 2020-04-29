@@ -147,7 +147,6 @@ DISABLED_TORCH_TESTS_ANY = {
     'test_normal',  # AssertionError: 0.22364577306378963 not less than or equal to 0.2
     'test_uniform_from_to',  # Checks for error strings.
     'test_index_fill_xla',  # half support
-    'test_dim_arg_reduction_scalar_xla', # access dim 0 of scalar tensors
 
     # TestViewOps
     'test_contiguous_nonview',
