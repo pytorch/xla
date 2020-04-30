@@ -111,7 +111,7 @@ find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
 If your PR touches the Python source files, please run the following command before submmiting a PR.
 
 ```Shell
-#TODO:
+yapf -i *.py test/ scripts/ torch_xla/
 ```
 
 ### Running the Tests
