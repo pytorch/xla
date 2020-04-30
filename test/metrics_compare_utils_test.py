@@ -146,7 +146,6 @@ class MetricsCompareUtilsTest(unittest.TestCase):
             return False
     return True
 
-
   def test_get_data_points_from_metrics_reports(self):
     correct_dict = {
         'InboundData__TotalSamples': [1728.0, 73216.0, 73216.0],
@@ -161,7 +160,9 @@ class MetricsCompareUtilsTest(unittest.TestCase):
         'InboundData__Percentile_95_mb': [1.54, 1.54, 1.54],
         'InboundData__Percentile_99_mb': [1.54, 1.54, 1.54],
         'TransferToServerTime__TotalSamples': [2616.0, 247016.0, 247016.0],
-        'TransferToServerTime__Accumulator_sec': [89.615, 407467.495546299, 1.0],
+        'TransferToServerTime__Accumulator_sec': [
+            89.615, 407467.495546299, 1.0
+        ],
         'TransferToServerTime__Percentile_1_sec': [300.003, 300.003, 300.003],
         'TransferToServerTime__Percentile_5_sec': [300.004, 300.004, 300.004],
         'TransferToServerTime__Percentile_10_sec': [300.01, 300.01, 300.01],
@@ -188,54 +189,60 @@ class MetricsCompareUtilsTest(unittest.TestCase):
         'UniqueCounter__Value': [None, None, 9000]
     }
 
-    self.assertTrue(self._dict_almost_equal(
-        mcu.get_data_points_from_metrics_reports(
-            [_REPORT_1, _REPORT_2, _REPORT_3]),
-        correct_dict))
-
+    self.assertTrue(
+        self._dict_almost_equal(
+            mcu.get_data_points_from_metrics_reports(
+                [_REPORT_1, _REPORT_2, _REPORT_3]), correct_dict))
 
   def test_compare_metrics_reports_no_difference(self):
     data_points = mcu.get_data_points_from_metrics_reports(
         [_REPORT_3, _REPORT_3, _REPORT_3])
     metrics_difference_report = mcu.compare_metrics(
-        data_points, _REPORT_3,
-        config={'base_expression': 'v == v_mean'})
+        data_points, _REPORT_3, config={'base_expression': 'v == v_mean'})
 
     # The latest metrics match the previous ones exactly, so the difference
     # report should be empty.
     self.assertEqual(metrics_difference_report, '')
 
-
   def test_compare_metrics_reports_value_difference_tolerance_loose(self):
     data_points = mcu.get_data_points_from_metrics_reports(
         [_REPORT_3, _REPORT_3, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES])
     metrics_difference_report = mcu.compare_metrics(
-        data_points, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES,
+        data_points,
+        _REPORT_3_SLIGHTLY_DIFFERENT_VALUES,
         config={'base_expression': 'v <= v_mean + (v_stddev * 2.0)'})
 
     # Since the tolerance is 2.0, the small differences in values are not
     # big enough to trigger lines in the difference report.
     self.assertEqual(metrics_difference_report, '')
 
-
   def test_compare_metrics_reports_value_difference_tolerance_strict(self):
     data_points = mcu.get_data_points_from_metrics_reports(
         [_REPORT_3, _REPORT_3, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES])
     metrics_difference_report = mcu.compare_metrics(
-        data_points, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES,
+        data_points,
+        _REPORT_3_SLIGHTLY_DIFFERENT_VALUES,
         config={'base_expression': 'v == v_mean'})
 
     # Since the tolerance is 0.0, even a tiny difference leads to a line in
     # the metrics_difference_report.
-    expected_report = 'InboundData__Accumulator_mb failed its expression check. Expression: v == v_mean.  Mean: 68083.33333333333.  Stddev: 4714.045207910317.  Actual Value: 74750.0\nInboundData__TotalSamples failed its expression check. Expression: v == v_mean.  Mean: 72144.0.  Stddev: 1516.0369388639579.  Actual Value: 70000.0\nUniqueCounter__Value failed its expression check. Expression: v == v_mean.  Mean: 9333.0.  Stddev: 470.93311627024065.  Actual Value: 9999\n'
+    expected_report = ('InboundData__Accumulator_mb failed its expression '
+                       'check. Expression: v == v_mean.  Mean: '
+                       '68083.33333333333.  Stddev: 4714.045207910317.  Actual '
+                       'Value: 74750.0\nInboundData__TotalSamples failed its '
+                       'expression check. Expression: v == v_mean.  Mean: '
+                       '72144.0.  Stddev: 1516.0369388639579.  Actual Value: '
+                       '70000.0\nUniqueCounter__Value failed its expression '
+                       'check. Expression: v == v_mean.  Mean: 9333.0.  Stddev:'
+                       ' 470.93311627024065.  Actual Value: 9999\n')
     self.assertEqual(metrics_difference_report, expected_report)
-
 
   def test_compare_metrics_reports_value_difference_tolerance_custom(self):
     data_points = mcu.get_data_points_from_metrics_reports(
         [_REPORT_3, _REPORT_3, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES])
     metrics_difference_report = mcu.compare_metrics(
-        data_points, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES,
+        data_points,
+        _REPORT_3_SLIGHTLY_DIFFERENT_VALUES,
         config={
             'base_expression': 'True',
             'InboundData__Accumulator_mb_expression': 'v < v_mean',
@@ -244,24 +251,32 @@ class MetricsCompareUtilsTest(unittest.TestCase):
 
     # 2 of 3 differing values have custom tolerances and therefore should pass.
     # The third uses the default tolerance of 0.0, so it will generate a line.
-    expected_report = 'InboundData__Accumulator_mb failed its expression check. Expression: v < v_mean.  Mean: 68083.33333333333.  Stddev: 4714.045207910317.  Actual Value: 74750.0\nUniqueCounter__Value failed its expression check. Expression: v < v_mean.  Mean: 9333.0.  Stddev: 470.93311627024065.  Actual Value: 9999\n'
+    expected_report = ('InboundData__Accumulator_mb failed its expression '
+                       'check. Expression: v < v_mean.  Mean: '
+                       '68083.33333333333.  Stddev: 4714.045207910317.  Actual '
+                       'Value: 74750.0\nUniqueCounter__Value failed its '
+                       'expression check. Expression: v < v_mean.  Mean: '
+                       '9333.0.  Stddev: 470.93311627024065.  Actual Value: '
+                       '9999\n')
     self.assertEqual(metrics_difference_report, expected_report)
- 
 
   def test_compare_metrics_reports_new_counters(self):
     data_points = mcu.get_data_points_from_metrics_reports(
         [_REPORT_3, _REPORT_3, _REPORT_3_SLIGHTLY_DIFFERENT_VALUES])
     metrics_difference_report = mcu.compare_metrics(
-        data_points, _REPORT_3_WITH_NEW_COUNTERS,
+        data_points,
+        _REPORT_3_WITH_NEW_COUNTERS,
         config={'base_expression': 'v <= v_mean + (v_stddev * 2.0)'})
 
     # Since the tolerance is 2.0, the small differences in values are not
     # big enough to trigger lines in the difference report.
-    expected_report = 'Found new aten counter: aten::_local_scalar_dense__Value: 73216\n'
+    expected_report = ('Found new aten counter: '
+                       'aten::_local_scalar_dense__Value: 73216\n')
     self.assertEqual(metrics_difference_report, expected_report)
 
   def test_parse_real_metrics(self):
-    print("Testing against TPU. If this hangs, check that $XRT_TPU_CONFIG is set")
+    print(
+        'Testing against TPU. If this hangs, check that $XRT_TPU_CONFIG is set')
     x = torch.rand(3, 5, device=xm.xla_device())
     x = torch.flatten(x, 1)
     x = torch.roll(x, 1, 0)
@@ -272,7 +287,7 @@ class MetricsCompareUtilsTest(unittest.TestCase):
     data_points = mcu.get_data_points_from_metrics_reports([metrics])
     self.assertIn('CompileTime__Percentile_99_sec', data_points.keys())
     self.assertIn('CompileTime__TotalSamples', data_points.keys())
-  
+
 
 if __name__ == '__main__':
   test = unittest.main()

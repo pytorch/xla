@@ -39,7 +39,7 @@ class ClusterTest(unittest.TestCase):
                       'pytorch-0.2'),
     ]
     cluster = Cluster(
-      client_workers, service_workers, client_master_ip='10.0.0.0')
+        client_workers, service_workers, client_master_ip='10.0.0.0')
     cluster.validate()  # Does not raise exception
 
   def test_create_bad_client_workers(self):
@@ -53,8 +53,11 @@ class ClusterTest(unittest.TestCase):
                       'pytorch-0.2'),
     ]
     self.assertRaisesRegex(
-        ValueError, 'client_workers argument must be a list of ClientWorker',
-        Cluster, client_workers, service_workers,
+        ValueError,
+        'client_workers argument must be a list of ClientWorker',
+        Cluster,
+        client_workers,
+        service_workers,
         client_master_ip='10.0.0.1')
 
   def test_create_bad_service_workers(self):
@@ -63,8 +66,12 @@ class ClusterTest(unittest.TestCase):
             '10.0.0.1', 'n1-standard-16', 'europe-west4-a', hostname='test'),
     ]
     self.assertRaisesRegex(
-        ValueError, 'service_workers argument must be a list of ServiceWorker',
-        Cluster, client_workers, client_workers, client_master_ip='10.0.0.1')
+        ValueError,
+        'service_workers argument must be a list of ServiceWorker',
+        Cluster,
+        client_workers,
+        client_workers,
+        client_master_ip='10.0.0.1')
 
   def test_validate_machine_type_client_cluster(self):
     client_workers = [
@@ -79,12 +86,14 @@ class ClusterTest(unittest.TestCase):
     ]
 
     no_check_cluster = Cluster(
-        client_workers, service_workers, check_client_machine_type=False,
+        client_workers,
+        service_workers,
+        check_client_machine_type=False,
         client_master_ip='10.0.0.0')
     no_check_cluster.validate()  # Does not raise exception
 
     check_cluster = Cluster(
-      client_workers, service_workers, client_master_ip='10.0.0.0')
+        client_workers, service_workers, client_master_ip='10.0.0.0')
     self.assertRaisesRegex(
         RuntimeError, 'All client_workers must have the same machine_type',
         check_cluster.validate)
@@ -102,12 +111,14 @@ class ClusterTest(unittest.TestCase):
     ]
 
     no_check_cluster = Cluster(
-        client_workers, service_workers, check_service_machine_type=False,
+        client_workers,
+        service_workers,
+        check_service_machine_type=False,
         client_master_ip='10.0.0.0')
     no_check_cluster.validate()  # Does not raise exception
 
     check_cluster = Cluster(
-      client_workers, service_workers, client_master_ip='10.0.0.0')
+        client_workers, service_workers, client_master_ip='10.0.0.0')
     self.assertRaisesRegex(
         RuntimeError, 'All service_workers must have the same machine_type',
         check_cluster.validate)
@@ -124,7 +135,7 @@ class ClusterTest(unittest.TestCase):
                       'pytorch-0.2'),
     ]
     cluster = Cluster(
-      client_workers, service_workers, client_master_ip='10.0.0.0')
+        client_workers, service_workers, client_master_ip='10.0.0.0')
     self.assertRaisesRegex(RuntimeError, 'All workers must be in the same zone',
                            cluster.validate)
 
@@ -145,7 +156,7 @@ class ClusterTest(unittest.TestCase):
                       'pytorch-0.2'),
     ]
     cluster = Cluster(
-      client_workers, service_workers, client_master_ip='10.0.0.0')
+        client_workers, service_workers, client_master_ip='10.0.0.0')
     self.assertRaisesRegex(
         RuntimeError,
         'The client_workers and service_workers must have a 1:1 mapping',
@@ -176,9 +187,10 @@ class ClusterTest(unittest.TestCase):
                       'pytorch-0.2'),
     ]
     cluster = Cluster(
-      client_workers, service_workers, client_master_ip='10.0.0.0')
+        client_workers, service_workers, client_master_ip='10.0.0.0')
     self.assertRaisesRegex(
-        RuntimeError, 'All service workers must have the same runtime_version.*',
+        RuntimeError,
+        'All service workers must have the same runtime_version.*',
         cluster.validate)
 
 
@@ -281,8 +293,7 @@ def build_mock_batch_call():
 def gen_fake_instances_get_entry(instance_name, machine_type, internal_ip,
                                  status):
   return {
-      'machineType':
-          f'{PROJECT_ZONE_PREFIX}/machineTypes/{machine_type}',
+      'machineType': f'{PROJECT_ZONE_PREFIX}/machineTypes/{machine_type}',
       'metadata': {
           'fingerprint': 'abc',
           'items': [{
@@ -298,15 +309,12 @@ def gen_fake_instances_get_entry(instance_name, machine_type, internal_ip,
           }],
           'kind': 'compute#metadata',
       },
-      'selfLink':
-          f'{PROJECT_ZONE_PREFIX}/instances/{instance_name}',
+      'selfLink': f'{PROJECT_ZONE_PREFIX}/instances/{instance_name}',
       'networkInterfaces': [{
           'networkIP': internal_ip,
       }],
-      'status':
-          status,
-      'zone':
-          PROJECT_ZONE_PREFIX,
+      'status': status,
+      'zone': PROJECT_ZONE_PREFIX,
   }
 
 
@@ -368,8 +376,7 @@ class ClusterResolverTest(unittest.TestCase):
     }
     compute_service = build_mock_compute_service(instance_resp_map,
                                                  list_instances_map)
-    self.mock_discovery.side_effect = build_mock_services_fn(
-        compute_service)
+    self.mock_discovery.side_effect = build_mock_services_fn(compute_service)
 
     # Act
     cr = ClusterResolver(['fake-tpu'])
@@ -396,8 +403,7 @@ class ClusterResolverTest(unittest.TestCase):
     }
     compute_service = build_mock_compute_service(instance_resp_map,
                                                  list_instances_map)
-    self.mock_discovery.side_effect = build_mock_services_fn(
-        compute_service)
+    self.mock_discovery.side_effect = build_mock_services_fn(compute_service)
 
     # Act
     vms = ['fake-ig-a', 'fake-ig-b', 'fake-ig-c', 'fake-ig-d']
@@ -428,8 +434,7 @@ class ClusterResolverTest(unittest.TestCase):
     }
     compute_service = build_mock_compute_service(instance_resp_map,
                                                  list_instances_map)
-    self.mock_discovery.side_effect = build_mock_services_fn(
-        compute_service)
+    self.mock_discovery.side_effect = build_mock_services_fn(compute_service)
 
     # Act
     cr = ClusterResolver(['fake-tpu'])
@@ -468,8 +473,7 @@ class ClusterResolverTest(unittest.TestCase):
     }
     compute_service = build_mock_compute_service(instance_resp_map,
                                                  list_instances_map)
-    self.mock_discovery.side_effect = build_mock_services_fn(
-        compute_service)
+    self.mock_discovery.side_effect = build_mock_services_fn(compute_service)
 
     # Act
     cr = ClusterResolver(['fake-tpu'])
@@ -481,16 +485,20 @@ class ClusterResolverTest(unittest.TestCase):
 
   def test_healthy_pod_service_cluster(self):
     tpu_map = {
-      'fake-pod': {
-        'state': 'READY',
-        'health': 'HEALTHY',
-        'runtime_version': 'pytorch-nightly',
-        'accelerator_type': 'v3-32',
-        'network_endpoints': [
-          {'ipAddress': f'10.0.0.{ip}', 'port': '8470'}
-          for ip in range(4)
-        ],
-      }
+        'fake-pod': {
+            'state':
+                'READY',
+            'health':
+                'HEALTHY',
+            'runtime_version':
+                'pytorch-nightly',
+            'accelerator_type':
+                'v3-32',
+            'network_endpoints': [{
+                'ipAddress': f'10.0.0.{ip}',
+                'port': '8470'
+            } for ip in range(4)],
+        }
     }
     self.mock_ctc.side_effect = build_mock_cloud_tpu_client_library(tpu_map)
 
@@ -514,13 +522,20 @@ class ClusterResolverTest(unittest.TestCase):
     self.mock_discovery.side_effect = build_mock_services_fn(
         noop_compute_service)
     tpu_map = {
-      f'fake-tpu-{ip}': {
-        'state': 'READY',
-        'health': 'HEALTHY',
-        'runtime_version': 'pytorch-nightly',
-        'accelerator_type': 'v3-8',
-        'network_endpoints': [{'ipAddress': f'10.0.0.{ip}', 'port': '8470'}],
-      } for ip in range(256)
+        f'fake-tpu-{ip}': {
+            'state':
+                'READY',
+            'health':
+                'HEALTHY',
+            'runtime_version':
+                'pytorch-nightly',
+            'accelerator_type':
+                'v3-8',
+            'network_endpoints': [{
+                'ipAddress': f'10.0.0.{ip}',
+                'port': '8470'
+            }],
+        } for ip in range(256)
     }
     self.mock_ctc.side_effect = build_mock_cloud_tpu_client_library(tpu_map)
 
@@ -541,16 +556,20 @@ class ClusterResolverTest(unittest.TestCase):
 
   def test_unhealthy_pod_service_cluster(self):
     tpu_map = {
-      'fake-pod': {
-        'state': 'READY',
-        'health': 'UNHEALTHY_TENSORFLOW',
-        'runtime_version': 'pytorch-nightly',
-        'accelerator_type': 'v3-128',
-        'network_endpoints': [
-          {'ipAddress': f'10.0.0.{ip}', 'port': '8470'}
-          for ip in range(16)
-        ],
-      }
+        'fake-pod': {
+            'state':
+                'READY',
+            'health':
+                'UNHEALTHY_TENSORFLOW',
+            'runtime_version':
+                'pytorch-nightly',
+            'accelerator_type':
+                'v3-128',
+            'network_endpoints': [{
+                'ipAddress': f'10.0.0.{ip}',
+                'port': '8470'
+            } for ip in range(16)],
+        }
     }
     self.mock_ctc.side_effect = build_mock_cloud_tpu_client_library(tpu_map)
 
@@ -565,21 +584,27 @@ class ClusterResolverTest(unittest.TestCase):
         noop_compute_service)
 
     tpu_map = {
-      f'fake-tpu-{ip}': {
-        'state': 'READY',
-        'health': 'HEALTHY',
-        'runtime_version': 'pytorch-nightly',
-        'accelerator_type': 'v3-8',
-        'network_endpoints': [{'ipAddress': f'10.0.0.{ip}', 'port': '8470'}],
-      } for ip in range(3)
+        f'fake-tpu-{ip}': {
+            'state':
+                'READY',
+            'health':
+                'HEALTHY',
+            'runtime_version':
+                'pytorch-nightly',
+            'accelerator_type':
+                'v3-8',
+            'network_endpoints': [{
+                'ipAddress': f'10.0.0.{ip}',
+                'port': '8470'
+            }],
+        } for ip in range(3)
     }
     tpu_map['fake-tpu-3'] = {
-      'state': 'CREATING',
-      'runtime_version': 'pytorch-nightly',
-      'accelerator_type': 'v3-8',
+        'state': 'CREATING',
+        'runtime_version': 'pytorch-nightly',
+        'accelerator_type': 'v3-8',
     }
     self.mock_ctc.side_effect = build_mock_cloud_tpu_client_library(tpu_map)
-
 
     tpus = list(tpu_map.keys())
     cr = ClusterResolver(tpus)
@@ -591,15 +616,18 @@ class ClusterResolverTest(unittest.TestCase):
     self.mock_discovery.side_effect = build_mock_services_fn(
         noop_compute_service)
     tpu_map = {
-      'fake-pod': {
-        'state': 'READY',
-        'runtime_version': 'pytorch-nightly',
-        'accelerator_type': 'v3-32',
-        'network_endpoints': [
-          {'ipAddress': f'10.0.0.{ip}', 'port': '8470'}
-          for ip in range(4)
-        ],
-      }
+        'fake-pod': {
+            'state':
+                'READY',
+            'runtime_version':
+                'pytorch-nightly',
+            'accelerator_type':
+                'v3-32',
+            'network_endpoints': [{
+                'ipAddress': f'10.0.0.{ip}',
+                'port': '8470'
+            } for ip in range(4)],
+        }
     }
     self.mock_ctc.side_effect = build_mock_cloud_tpu_client_library(tpu_map)
 
@@ -627,20 +655,23 @@ class ClusterResolverTest(unittest.TestCase):
     }
     compute_service = build_mock_compute_service(instance_resp_map,
                                                  list_instances_map)
-    self.mock_discovery.side_effect = build_mock_services_fn(
-        compute_service)
+    self.mock_discovery.side_effect = build_mock_services_fn(compute_service)
 
     tpu_map = {
-      'fake-pod': {
-        'state': 'READY',
-        'health': 'HEALTHY',
-        'runtime_version': 'pytorch-nightly',
-        'accelerator_type': 'v3-32',
-        'network_endpoints': [
-          {'ipAddress': f'10.0.0.{ip}', 'port': '8470'}
-          for ip in range(4)
-        ],
-      }
+        'fake-pod': {
+            'state':
+                'READY',
+            'health':
+                'HEALTHY',
+            'runtime_version':
+                'pytorch-nightly',
+            'accelerator_type':
+                'v3-32',
+            'network_endpoints': [{
+                'ipAddress': f'10.0.0.{ip}',
+                'port': '8470'
+            } for ip in range(4)],
+        }
     }
     self.mock_ctc.side_effect = build_mock_cloud_tpu_client_library(tpu_map)
 
@@ -665,8 +696,9 @@ class ClusterResolverTest(unittest.TestCase):
             tpu='fake-pod') for ip in range(4)
     ]
     expected = Cluster(
-      expected_client_workers, expected_service_workers,
-      client_master_ip='10.0.0.0')
+        expected_client_workers,
+        expected_service_workers,
+        client_master_ip='10.0.0.0')
     self.assertEqual(expected, cluster)
 
   def test_bad_cluster(self):
@@ -688,20 +720,23 @@ class ClusterResolverTest(unittest.TestCase):
     }
     compute_service = build_mock_compute_service(instance_resp_map,
                                                  list_instances_map)
-    self.mock_discovery.side_effect = build_mock_services_fn(
-        compute_service)
+    self.mock_discovery.side_effect = build_mock_services_fn(compute_service)
 
     tpu_map = {
-      'fake-pod': {
-        'state': 'READY',
-        'health': 'HEALTHY',
-        'runtime_version': 'pytorch-nightly',
-        'accelerator_type': 'v3-32',
-        'network_endpoints': [
-          {'ipAddress': f'10.0.0.{ip}', 'port': '8470'}
-          for ip in range(4)
-        ],
-      }
+        'fake-pod': {
+            'state':
+                'READY',
+            'health':
+                'HEALTHY',
+            'runtime_version':
+                'pytorch-nightly',
+            'accelerator_type':
+                'v3-32',
+            'network_endpoints': [{
+                'ipAddress': f'10.0.0.{ip}',
+                'port': '8470'
+            } for ip in range(4)],
+        }
     }
     self.mock_ctc.side_effect = build_mock_cloud_tpu_client_library(tpu_map)
 
