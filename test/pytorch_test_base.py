@@ -1,3 +1,4 @@
+import collections
 import copy
 import os
 import sys
@@ -17,23 +18,18 @@ TORCH_TEST_PRECIIONS = {
 
 DISABLED_TORCH_TESTS_ANY = {
     # test_torch.py
-    'TestDevicePrecisionXLA':
-    {
+    'TestDevicePrecisionXLA': {
         'test_sum_cpu_device_mismatch',  # doesn't raise
         'test_solve_methods_arg_device',  # doesn't raise
         'test_min_max_nan',  # XLA min/max ignores Nans.
         'test_min_max_binary_op_nan',  # XLA min/max ignores Nans.
         'test_copy_broadcast',
     },
-
-    'TestTensorDeviceOpsXLA':
-    {
+    'TestTensorDeviceOpsXLA': {
         'test_block_diag_scipy',  #FIXME: RuntimeError: Error while lowering: f32[1,6]{1,0} xla::unselect, dim=1, start=2, end=2, stride=0
         'test_mean_64bit_indexing_xla',  # protobuf limit exceeded
     },
-
-    'TestTorchDeviceTypeXLA':
-    {
+    'TestTorchDeviceTypeXLA': {
         'test_addmm_sizes',  # FIXME: very slow compile
         'test_addcmul',  # FIXME: complex dtype
         'test_clamp',  # slow
@@ -153,11 +149,9 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_normal',  # AssertionError: 0.22364577306378963 not less than or equal to 0.2
         'test_uniform_from_to',  # Checks for error strings.
         'test_index_fill_xla',  # half support
-        'test_dim_arg_reduction_scalar_xla', # access dim 0 of scalar tensors
+        'test_dim_arg_reduction_scalar_xla',  # access dim 0 of scalar tensors
     },
-
-    'TestViewOpsXLA':
-    {
+    'TestViewOpsXLA': {
         'test_contiguous_nonview',
         'test_expand_as_view',
         'test_expand_view',
@@ -166,8 +160,7 @@ DISABLED_TORCH_TESTS_ANY = {
     },
 
     # test_indexing.py
-    'TestIndexingXLA':
-    {
+    'TestIndexingXLA': {
         'test_setitem_expansion_error',  # expecting a different runtime error
         'test_multiple_byte_mask',  # expecting a different runtime error
         'test_empty_slice',  # stride
@@ -180,9 +173,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_empty_ndim_index',  # expecting a different runtime error
         'test_index_put_byte_indices_xla',  # expecting a different runtime error
     },
-
-    'NumpyTestsXLA':
-    {
+    'NumpyTestsXLA': {
         'test_trivial_fancy_out_of_bounds',  # expecting a different runtime error
         'test_boolean_assignment_value_mismatch',  # expecting a different runtime error
         'test_empty_tuple_index',  # storage
@@ -195,8 +186,7 @@ DISABLED_TORCH_TESTS_ANY = {
     },
 
     # test_nn.py
-    'TestNNDeviceTypeXLA':
-    {
+    'TestNNDeviceTypeXLA': {
         'test_embedding_backward',  # sparse
         'test_embedding_dense_grad',  # slow
         'test_EmbeddingBag_per_sample_weights_and_new_offsets',  # FIXME! UndefinedTensorImpl::_singleton
@@ -222,8 +212,7 @@ DISABLED_TORCH_TESTS_ANY = {
     },
 
     # test_type_promotion.py
-    'TestTypePromotionXLA':
-    {
+    'TestTypePromotionXLA': {
         'test_many_promotions',  # stride
         'test_inplace',  # expecting a different runtime error
         'test_indexing',  # expecting a different runtime error
@@ -237,13 +226,10 @@ DISABLED_TORCH_TESTS_ANY = {
 # DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
 DISABLED_TORCH_TESTS_TPU_ONLY = {
     # test_torch.py
-    'TestDevicePrecisionXLA':
-    {
+    'TestDevicePrecisionXLA': {
         'test_digamma',  # Precision issue at the first assert, then NAN handling (both on TPU)
     },
-
-    'TestTensorDeviceOpsXLA':
-    {
+    'TestTensorDeviceOpsXLA': {
         'test_pow_inplace_xla',  # (TPU) 0.0032 vs 0.001
         'test_pow_inplace_3_xla',  # (TPU) 0.0028 vs 0.001
         'test_pow_3_xla',  # (TPU) 0.0028 vs 0.001
@@ -267,9 +253,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_clamp_max_xla_float64',  # float64 limit, TPU does not have real F64
         'test_clamp_max_inplace_xla_float64',  # float64 limit, TPU does not have real F64
     },
-
-    'TestTorchDeviceTypeXLA':
-    {
+    'TestTorchDeviceTypeXLA': {
         'test_cholesky_solve_batched_broadcasting',  # (TPU) 0.0039 vs 0.001
         'test_cholesky_solve_batched_many_batches',  # (TPU) 0.36 vs 0.001
         'test_triangular_solve_batched_many_batches',  # (TPU) 1.02 vs 0.001
@@ -277,22 +261,28 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_random_from_to_xla_int32',  # precision, TPU does not have real F64
         'test_uniform_from_to_xla_float64',  # float64 limit, TPU does not have real F64
         'test_topk_integral_xla_int64',  # (TPU) unimplemented HLO for X64
-        'test_float_to_int_conversion_finite_xla', # different behavior than numpy when casting float_max/min to int types
+        'test_float_to_int_conversion_finite_xla',  # different behavior than numpy when casting float_max/min to int types
     },
 
     # test_indexing.py
-    'TestIndexingXLA':
-    {
+    'TestIndexingXLA': {
         'test_index_put_accumulate_large_tensor_xla',  # memory limit exceeded on v2-8
     },
 }
 
-def union_of_disabled_tests(d1, d2):
-    return {k : d1.get(k, set()) | d2.get(k, set()) for k in (d1.keys() | d2.keys())}
+
+def union_of_disabled_tests(sets):
+  union = collections.defaultdict(set)
+  for s in sets:
+    for k, v in s.items():
+      union[k] = union[k] | v
+  return union
+
 
 DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
 DISABLED_TORCH_TESTS_GPU = DISABLED_TORCH_TESTS_ANY
-DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_TPU_ONLY)
+DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(
+    [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_TPU_ONLY])
 
 DISABLED_TORCH_TESTS = {
     'TPU': DISABLED_TORCH_TESTS_TPU,
@@ -329,7 +319,8 @@ class XLATestBase(DeviceTypeTestBase):
       raise unittest.SkipTest('skipped on XLA')
       return test(self, cls.device_type)
 
-    if test_name in disabled_torch_tests[class_name] or name in disabled_torch_tests[class_name]:
+    if test_name in disabled_torch_tests[
+        class_name] or name in disabled_torch_tests[class_name]:
       assert not hasattr(
           cls, test_name), 'Redefinition of test {0}'.format(test_name)
       setattr(cls, test_name, disallowed_test)
