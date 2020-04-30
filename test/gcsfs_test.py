@@ -91,7 +91,8 @@ FZXY
 """
     FNAME = 'test_text_write_compare'
     gcs_path = _gcs_test_path(name=FNAME)
-    content = _create_gcs_file(gcs_path, 'w', content=CONTENT, cleanup=self._cleanup)
+    content = _create_gcs_file(
+        gcs_path, 'w', content=CONTENT, cleanup=self._cleanup)
     rcontent = gcs.read(gcs_path).decode(locale.getpreferredencoding())
     self.assertEqual(len(content), len(rcontent))
     self.assertEqual(type(content), type(rcontent))

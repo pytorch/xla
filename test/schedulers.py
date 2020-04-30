@@ -5,27 +5,33 @@ from torch.optim.lr_scheduler import _LRScheduler
 
 class WarmupAndExponentialDecayScheduler(_LRScheduler):
   """Update the learning rate of wrapped optimizer based on epoch and step.
-  
+
   Args:
     optimizer: Instance of torch.optim.Optimizer. Learning rate will be changed.
     num_steps_per_epoch: int, the number of steps required to finish 1 epoch.
     divide_every_n_epochs: After this number of epochs, learning rate will be
-        divided by the `divisor` param.
-    divisor: The learning rate will be divided by this amount when
-        epoch % divide_every_n_epochs == 0 (epoch 0 is excluded).
+      divided by the `divisor` param.
+    divisor: The learning rate will be divided by this amount when epoch %
+      divide_every_n_epochs == 0 (epoch 0 is excluded).
     num_warmup_epochs: Float. Learning rate will ramp up from 0 to max learning
-        rate over this many epochs. Note that partial epochs are allowed,
-        e.g. 0.5 epochs.
+      rate over this many epochs. Note that partial epochs are allowed, e.g. 0.5
+      epochs.
     min_delta_to_update_lr: If the new learning rate does not differ much from
-        the learning rate of the previous step, don't bother updating the
-        optimizer's learning rate.
+      the learning rate of the previous step, don't bother updating the
+      optimizer's learning rate.
     summary_writer: Instance of `torch.utils.tensorboard.SummaryWriter`. If
-        provided, learning rate will be logged during calls to step if step
-        is called with write_to_summary=True. If summary_writer is None, then
-        no logging happens.
+      provided, learning rate will be logged during calls to step if step is
+      called with write_to_summary=True. If summary_writer is None, then no
+      logging happens.
   """
-  def __init__(self, optimizer, num_steps_per_epoch, divide_every_n_epochs=20,
-               divisor=5, num_warmup_epochs=0.9, min_delta_to_update_lr=1e-6,
+
+  def __init__(self,
+               optimizer,
+               num_steps_per_epoch,
+               divide_every_n_epochs=20,
+               divisor=5,
+               num_warmup_epochs=0.9,
+               min_delta_to_update_lr=1e-6,
                summary_writer=None):
     self._num_steps_per_epoch = num_steps_per_epoch
     self._divide_every_n_epochs = divide_every_n_epochs
@@ -55,7 +61,7 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
     else:
       # Normal epoch. Use an exponential decay determined by init params.
       lr = self._max_lr / (
-          self._divisor ** (epoch // self._divide_every_n_epochs))
+          self._divisor**(epoch // self._divide_every_n_epochs))
 
     # _LRScheduler expects a list of learning rates like this.
     return [lr for _ in self.base_lrs]
@@ -64,7 +70,7 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
     current_lr = self.get_lr()[0]
 
     # Outside of warmup epochs, we use the same learning rate for every step
-    # in an epoch. Don't bother updating learning rate if it hasn't changed. 
+    # in an epoch. Don't bother updating learning rate if it hasn't changed.
     if abs(current_lr - self._previous_lr) >= self._min_delta_to_update_lr:
       super(WarmupAndExponentialDecayScheduler, self).step()
       self._previous_lr = current_lr
@@ -75,12 +81,15 @@ class WarmupAndExponentialDecayScheduler(_LRScheduler):
     # log the learning rate at every step. For non-warmup epochs, log only
     # the first step since the entire epoch will use the same learning rate.
     if self._summary_writer:
-      if self._is_warmup_epoch() or (
-          self._step_count % self._num_steps_per_epoch == 0):
+      if self._is_warmup_epoch() or (self._step_count %
+                                     self._num_steps_per_epoch == 0):
         test_utils.write_to_summary(
-          self._summary_writer, self._step_count,
-          dict_to_write={'LearningRate': self.optimizer.param_groups[0]['lr']},
-          write_xla_metrics=False)
+            self._summary_writer,
+            self._step_count,
+            dict_to_write={
+                'LearningRate': self.optimizer.param_groups[0]['lr']
+            },
+            write_xla_metrics=False)
 
 
 def wrap_optimizer_with_scheduler(optimizer,
@@ -93,16 +102,16 @@ def wrap_optimizer_with_scheduler(optimizer,
 
   Args:
     optimizer: Instance of `torch.optim.Optimizer`. Will be modified by the
-        scheduler to overwrite the learning rate.
+      scheduler to overwrite the learning rate.
     scheduler_type: string, type of learning rate scheduler to use. If None,
-        this method returns None.
+      this method returns None.
     scheduler_divisor: int, required for WarmupAndExponentialDecayScheduler.
     scheduler_divide_every_n_epochs: int, required for
-        WarmupAndExponentialDecayScheduler.
+      WarmupAndExponentialDecayScheduler.
     num_steps_per_epoch: int, the number of steps that occur in each epoch.
-        Required for WarmupAndExponentialDecayScheduler.
+      Required for WarmupAndExponentialDecayScheduler.
     summary_writer: Instance of `torch.utils.tensorboard.SummaryWriter` that
-        will be passed into the scheduler to log learning rate during training.
+      will be passed into the scheduler to log learning rate during training.
 
   Raises:
     ValueError if the requested scheduler_type is unrecognized or if any
@@ -122,9 +131,10 @@ def wrap_optimizer_with_scheduler(optimizer,
       raise ValueError('num_steps_per_epoch is required for '
                        'WarmupAndExponentialDecayScheduler.')
     return WarmupAndExponentialDecayScheduler(
-            optimizer, num_steps_per_epoch,
-            divide_every_n_epochs=scheduler_divide_every_n_epochs,
-            divisor=scheduler_divisor, summary_writer=summary_writer)
+        optimizer,
+        num_steps_per_epoch,
+        divide_every_n_epochs=scheduler_divide_every_n_epochs,
+        divisor=scheduler_divisor,
+        summary_writer=summary_writer)
   else:
     raise ValueError('Unknown scheduler_type: {}'.format(scheduler_type))
-

@@ -964,9 +964,8 @@ def generate_registrations(fgens, overrides):
     if override_fn:
       pos = fgen.funsig.find('(')
       overload = fgen.funsig[:pos] + ' (*)' + fgen.funsig[pos:]
-      code += (
-          '  m.impl_UNBOXED("{}", static_cast<{}>(&{}));\n'.format(
-              fgen.aten_sig.split('(')[0].split('::')[1], overload, override_fn))
+      code += ('  m.impl_UNBOXED("{}", static_cast<{}>(&{}));\n'.format(
+          fgen.aten_sig.split('(')[0].split('::')[1], overload, override_fn))
   return code + '\n}\n', overridden
 
 
