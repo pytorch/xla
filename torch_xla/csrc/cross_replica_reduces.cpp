@@ -138,12 +138,12 @@ AllToAllResult BuildAllToAll(
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp affine_token = MaybeConvertTo(token, input_shape.element_type());
-  // TODO: This is missing layout pinning ATM. If XLA scheduling is not exactly
-  // the same (graphs on cores differ), XLA could assign different layouts and
-  // things will break.
+  xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
+      input_shape.dimensions(), input_shape.dynamic_dimensions(),
+      input_shape.element_type(), GetCurrentDevice().hw_type);
   xla::XlaOp reduce_result =
       xla::AllToAll(input + affine_token, split_dimension, concat_dimension,
-                    split_count, reduce_groups);
+                    split_count, reduce_groups, reduce_shape.layout());
   xla::XlaOp chained_token =
       MaybeConvertTo(affine_token * SliceOneToken(reduce_result),
                      XlaHelpers::TypeOfXlaOp(token));
