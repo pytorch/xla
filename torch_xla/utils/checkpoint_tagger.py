@@ -4,6 +4,7 @@ from __future__ import print_function
 import collections
 import json
 
+
 class CheckpointTagger(object):
 
   def __init__(self, remover=None):

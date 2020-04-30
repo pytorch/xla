@@ -111,7 +111,31 @@ run_clang_format: &run_clang_format
       echo "${git_status}"
       exit 1
     else
-      echo "PASSED"
+      echo "PASSED C++ format"
+    fi
+
+run_yapf: &run_yapf
+  name: Run yapf
+  command: |
+    pyenv global 3.7.0
+    pip install --upgrade pip
+    pip install yapf
+
+    git_status=$(git status --porcelain)
+    if [[ $git_status ]]; then
+      echo "Checkout code is not clean"
+      echo "${git_status}"
+      exit 1
+    fi
+
+    yapf -i -r *.py test/ scripts/ torch_xla/
+    git_status=$(git status --porcelain)
+    if [[ $git_status ]]; then
+      echo "yapf is not happy, please run `yapf -i /PATH/TO/foo.py` to the following files"
+      echo "${git_status}"
+      exit 1
+    else
+      echo "PASSED Python format"
     fi
 
 jobs:
@@ -122,6 +146,8 @@ jobs:
     - checkout
     - run:
         <<: *run_clang_format
+    - run:
+        <<: *run_yapf
 
   pytorch_xla_linux_bionic_py3_6_clang9_build_test:
     <<: *linux_default

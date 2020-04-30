@@ -192,8 +192,8 @@ def xla_replication_devices(local_devices):
   if len(kind_devices) != len(local_devices):
     # Replication can only happen among all devices of one kind.
     raise RuntimeError(
-        'Cannot replicate if number of devices ({}) is different from {}'
-        .format(len(local_devices), len(kind_devices)))
+        'Cannot replicate if number of devices ({}) is different from {}'.
+        format(len(local_devices), len(kind_devices)))
   replication_devices = []
   for device in torch_xla._XLAC._xla_get_all_devices():
     xdev = parse_xla_device(device)
@@ -333,9 +333,8 @@ def check_view_sharing(obj):
         if aid in aliases:
           oobj = aliases[aid]
           raise RuntimeError(
-              'Tensor ID {} ({}) is sharing a view with tensor ID {} ({})'
-              .format(tid, tensor_info(obj), tensor_id(oobj),
-                      tensor_info(oobj)))
+              'Tensor ID {} ({}) is sharing a view with tensor ID {} ({})'.
+              format(tid, tensor_info(obj), tensor_id(oobj), tensor_info(oobj)))
         aliases[aid] = obj
 
   xu.for_each_instance(obj, lambda x: type(x) == torch.Tensor, check_object)

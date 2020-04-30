@@ -30,6 +30,7 @@ def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
     concat += token
   return concat
 
+
 class DistributedExecutor(object):
 
   SCRIPT_PATH_TMPL = '/tmp/{pid}/dist_training_ptxla_{worker}.sh'
@@ -51,8 +52,8 @@ class DistributedExecutor(object):
     logger.setLevel(logging.INFO)
     logger.propagate = False
     formatter = logging.Formatter(
-      fmt='%(asctime)-12s %(clientip)s [%(ordinal)s] %(message)s',
-      datefmt='%Y-%m-%d %H:%M:%S')
+        fmt='%(asctime)-12s %(clientip)s [%(ordinal)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
     sh = logging.StreamHandler()
     sh.setLevel(logging.INFO)
     sh.setFormatter(formatter)
@@ -62,11 +63,10 @@ class DistributedExecutor(object):
   def _initialize(self):
     """Initializes members that need to be cleanly initialized for each run."""
     self._last_heartbeats = {
-      cw.get_internal_ip(): {
-        'last_time': time.time(),
-        'count': 0,
-      }
-      for cw in self._cluster.get_client_workers()
+        cw.get_internal_ip(): {
+            'last_time': time.time(),
+            'count': 0,
+        } for cw in self._cluster.get_client_workers()
     }
     self._error_queue = multiprocessing.Queue()
     self._last_heartbeat_check_time = 0
@@ -99,15 +99,18 @@ class DistributedExecutor(object):
                ' will interfere with the values set for distributed'
                ' training'.format(dist_var)))
 
-  def _check_client_mesh_health(
-      self, uneven_health_timeout, even_health_timeout):
+  def _check_client_mesh_health(self, uneven_health_timeout,
+                                even_health_timeout):
     min_delay = max(uneven_health_timeout, even_health_timeout) + 1
     count = None
     now = time.time()
     if xu.getenv_as('XLA_DEBUG_LOG_HEARTBEATS', bool, False):
       self.logger.info(
-        'Worker Heartbeats: {}'.format(self._last_heartbeats),
-         extra={'clientip': '', 'ordinal': ''})
+          'Worker Heartbeats: {}'.format(self._last_heartbeats),
+          extra={
+              'clientip': '',
+              'ordinal': ''
+          })
 
     for cw_hb in self._last_heartbeats.values():
       min_delay = min(min_delay, now - cw_hb['last_time'])
@@ -117,11 +120,11 @@ class DistributedExecutor(object):
         count = -1
 
     if count < 0 and min_delay > uneven_health_timeout:
-      self._error_queue.put(RuntimeError(
-        'Client mesh is unhealthy with uneven heartbeats'))
+      self._error_queue.put(
+          RuntimeError('Client mesh is unhealthy with uneven heartbeats'))
     elif count > 0 and min_delay > even_health_timeout:
-      self._error_queue.put(RuntimeError(
-        'Client mesh is unhealthy with even heartbeats'))
+      self._error_queue.put(
+          RuntimeError('Client mesh is unhealthy with even heartbeats'))
 
   def _stream_logs(self, process, client_worker):
     client_ip = client_worker.get_internal_ip()
@@ -136,21 +139,20 @@ class DistributedExecutor(object):
           hb_stream['last_time'] = time.time()
           hb_stream['count'] += 1
           continue
-        log_fn(
-            std_line,
-            extra={
-                'clientip': client_ip,
-                'ordinal': ordinal
-            })
+        log_fn(std_line, extra={'clientip': client_ip, 'ordinal': ordinal})
 
     stdout = threading.Thread(
-        target=_stream_output, daemon=True, args=(
+        target=_stream_output,
+        daemon=True,
+        args=(
             process.stdout,
             self.logger.info,
         ))
     stdout.start()
     stderr = threading.Thread(
-        target=_stream_output, daemon=True, args=(
+        target=_stream_output,
+        daemon=True,
+        args=(
             process.stderr,
             self.logger.error,
         ))
@@ -193,9 +195,10 @@ class DistributedExecutor(object):
       self._stream_logs(proc, client_worker)
     proc.wait()
     if proc.returncode == 255:
-      self._error_queue.put(RuntimeError(
-        'Client mesh is unhealthy due to dead client worker: {}'.format(
-          client_worker)))
+      self._error_queue.put(
+          RuntimeError(
+              'Client mesh is unhealthy due to dead client worker: {}'.format(
+                  client_worker)))
     return proc.returncode
 
   def _build_and_run_ssh(self, remote_cmd, client_worker, shell=True, log=True):
@@ -226,14 +229,14 @@ class DistributedExecutor(object):
         'XRT_LOCAL_WORKER':
             'c_tpu_worker:{}'.format(worker_idx),
         'XRT_MESH_SERVICE_ADDRESS':
-            '{}:{}'.format(
-              self._cluster.get_client_master().get_internal_ip(),
-              self.MESH_SERVICE_PORT),
+            '{}:{}'.format(self._cluster.get_client_master().get_internal_ip(),
+                           self.MESH_SERVICE_PORT),
         'XRT_SHARD_WORLD_SIZE':
             len(self._cluster.get_client_workers()),
         'XRT_SHARD_ORDINAL':
             worker_idx,
-        'XLA_EMIT_STEPLOG': 1,
+        'XLA_EMIT_STEPLOG':
+            1,
     }
     # Only for master
     if client_worker == self._cluster.get_client_master():
@@ -241,9 +244,8 @@ class DistributedExecutor(object):
           'c_tpu_worker;{worker_idx};{worker_ip}:{worker_port}'.format(
               worker_idx=idx,
               worker_ip=service_worker.get_internal_ip(),
-              worker_port=service_worker.get_port())
-          for idx, service_worker in enumerate(
-            self._cluster.get_service_workers())
+              worker_port=service_worker.get_port()) for idx, service_worker in
+          enumerate(self._cluster.get_service_workers())
       ]
       xrt_tpu_config = '|'.join(xrt_server_config)
       env_vars['XRT_TPU_CONFIG'] = '{}'.format(xrt_tpu_config)
@@ -308,7 +310,9 @@ class DistributedExecutor(object):
         _gcloud_scp(local_path, remote_path, client_worker)
         continue
       thread = threading.Thread(
-          target=_gcloud_scp, daemon=True, args=(
+          target=_gcloud_scp,
+          daemon=True,
+          args=(
               local_path,
               remote_path,
               client_worker,
@@ -328,9 +332,9 @@ class DistributedExecutor(object):
       if self.docker_image:
         rm_container = ['docker', 'rm', '-f', self.docker_container]
         self._build_and_run_ssh(rm_container, client_worker, log=False)
-      rm_pgroup = ('kill -9 -$(ps xao pid,pgid,cmd | grep "bash -c \\"{}\\""'
-                   ' | grep -v grep | awk "{{print \$2}}")').format(
-                     remote_script)
+      rm_pgroup = (
+          'kill -9 -$(ps xao pid,pgid,cmd | grep "bash -c \\"{}\\""'
+          ' | grep -v grep | awk "{{print \$2}}")').format(remote_script)
       self._build_and_run_ssh(rm_pgroup, client_worker, log=False)
 
     threads = []
@@ -357,13 +361,13 @@ class DistributedExecutor(object):
       self._build_and_run_ssh([script_path], client_worker)
 
     def _regular_health_check():
-      uneven_health_timeout = xu.getenv_as(
-        'XLA_UNEVEN_HEARTBEAT_TIMEOUT', int, 900)
-      even_health_timeout = xu.getenv_as(
-        'XLA_EVEN_HEARTBEAT_TIMEOUT', int, 1800)
+      uneven_health_timeout = xu.getenv_as('XLA_UNEVEN_HEARTBEAT_TIMEOUT', int,
+                                           900)
+      even_health_timeout = xu.getenv_as('XLA_EVEN_HEARTBEAT_TIMEOUT', int,
+                                         1800)
       while True:
-        self._check_client_mesh_health(
-          uneven_health_timeout, even_health_timeout)
+        self._check_client_mesh_health(uneven_health_timeout,
+                                       even_health_timeout)
         time.sleep(self.HEARTBEAT_CHECK_PERIOD)
 
     threads = []
@@ -388,8 +392,11 @@ class DistributedExecutor(object):
       self._start_run(script_map)
     except KeyboardInterrupt:
       self.logger.warning(
-        'Child process received Ctrl^C. Exiting...',
-        extra={'clientip': '', 'ordinal': ''})
+          'Child process received Ctrl^C. Exiting...',
+          extra={
+              'clientip': '',
+              'ordinal': ''
+          })
       sys.exit(128 + signal.SIGINT)
 
   def run(self, cmd):
@@ -398,10 +405,16 @@ class DistributedExecutor(object):
       try:
         self.logger.info(
             'Command to distribute: {}'.format(concat_cmd_list(cmd)),
-            extra={'clientip': '', 'ordinal': ''})
+            extra={
+                'clientip': '',
+                'ordinal': ''
+            })
         self.logger.info(
             f'Cluster configuration: {self._cluster}',
-            extra={'clientip': '', 'ordinal': ''})
+            extra={
+                'clientip': '',
+                'ordinal': ''
+            })
 
         script_map = self._prepare_scripts(cmd)
         proc = multiprocessing.Process(target=self._run_cmd, args=(script_map,))
@@ -416,7 +429,10 @@ class DistributedExecutor(object):
           if not self._error_queue.empty():
             # Potential HostError on GCE VM: kill all, wait, and restart
             self.logger.warning(
-              self._error_queue.get(), extra={'clientip': '', 'ordinal': ''})
+                self._error_queue.get(), extra={
+                    'clientip': '',
+                    'ordinal': ''
+                })
             break
 
           proc.join(10)
@@ -429,13 +445,20 @@ class DistributedExecutor(object):
         trials += 1
       except KeyboardInterrupt:
         self.logger.info(
-          'Cleaning up processes (takes a couple of seconds)',
-          extra={'clientip': '', 'ordinal': ''})
+            'Cleaning up processes (takes a couple of seconds)',
+            extra={
+                'clientip': '',
+                'ordinal': ''
+            })
         self._cleanup(script_map)
         sys.exit(128 + signal.SIGINT)
 
     self.logger.info(
-      'Max number of retries reached.', extra={'clientip': '', 'ordinal': ''})
+        'Max number of retries reached.', extra={
+            'clientip': '',
+            'ordinal': ''
+        })
+
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(
@@ -446,10 +469,7 @@ if __name__ == '__main__':
 
   cluster_group = parser.add_argument_group('Cluster Setup')
   cluster_group.add_argument(
-      '--tpu',
-      type=str,
-      required=True,
-      help='Name of the Cloud TPU pod.')
+      '--tpu', type=str, required=True, help='Name of the Cloud TPU pod.')
   cluster_group.add_argument(
       '--vm',
       action='append',
