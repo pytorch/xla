@@ -1,6 +1,7 @@
 from __future__ import division
 from __future__ import print_function
 
+
 class Worker(object):
 
   def __init__(self, internal_ip, machine_type, zone):
@@ -73,8 +74,13 @@ class ClientWorker(Worker):
 
 class ServiceWorker(Worker):
 
-  def __init__(
-      self, internal_ip, port, machine_type, zone, runtime_version, tpu=None):
+  def __init__(self,
+               internal_ip,
+               port,
+               machine_type,
+               zone,
+               runtime_version,
+               tpu=None):
     super(ServiceWorker, self).__init__(internal_ip, machine_type, zone)
     self._port = int(port)
     if not isinstance(runtime_version, str):

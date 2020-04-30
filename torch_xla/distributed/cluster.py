@@ -60,10 +60,10 @@ class Cluster(object):
 
     if not client_master_ip:
       client_master_ip = ClusterResolver.get_instance_metadata(
-        'instance/network-interfaces/0/ip')
-    self._client_master = next(filter(
-      lambda cw: cw.get_internal_ip() == client_master_ip,
-      self._client_workers))
+          'instance/network-interfaces/0/ip')
+    self._client_master = next(
+        filter(lambda cw: cw.get_internal_ip() == client_master_ip,
+               self._client_workers))
 
     # Put client master at front of client worker list.
     self._client_workers.remove(self._client_master)
@@ -108,8 +108,8 @@ class Cluster(object):
       }
       if len(client_machine_types) != 1:
         raise RuntimeError(
-            'All client_workers must have the same machine_type, got: {}'
-            .format(client_machine_types))
+            'All client_workers must have the same machine_type, got: {}'.
+            format(client_machine_types))
 
     if self._check_service_machine_type:
       server_machine_types = {
@@ -117,14 +117,16 @@ class Cluster(object):
       }
       if len(server_machine_types) != 1:
         raise RuntimeError(
-            'All service_workers must have the same machine_type, got: {}'
-            .format(server_machine_types))
+            'All service_workers must have the same machine_type, got: {}'.
+            format(server_machine_types))
 
-    runtime_versions = {worker._runtime_version for worker in self._service_workers}
+    runtime_versions = {
+        worker._runtime_version for worker in self._service_workers
+    }
     if len(runtime_versions) != 1:
       raise RuntimeError(
-          'All service workers must have the same runtime_version, got: {}'.format(
-              zones))
+          'All service workers must have the same runtime_version, got: {}'.
+          format(zones))
 
   def __eq__(self, other):
     return (self._client_workers == other._client_workers and
@@ -162,18 +164,21 @@ class Cluster(object):
     if tpus:
       xu.parallel_work(len(tpus), wait_for_healthy_service_worker, tpus)
 
-  def wait_for_healthy_client(
-      self, dist_executor, timeout=1200, interval=10):
+  def wait_for_healthy_client(self, dist_executor, timeout=1200, interval=10):
 
     def wait_for_healthy_client_worker(client_worker):
       heartbeart_check = [
-        'echo', 'client_worker', '$(hostname)', 'is', 'healthy']
+          'echo', 'client_worker', '$(hostname)', 'is', 'healthy'
+      ]
       check_timeout = time.time() + timeout
 
       def _healthy_client_worker():
         proc = multiprocessing.Process(
-          target=dist_executor._build_and_run_ssh,
-          args=(heartbeart_check, client_worker,))
+            target=dist_executor._build_and_run_ssh,
+            args=(
+                heartbeart_check,
+                client_worker,
+            ))
         proc.daemon = True
         proc.start()
         proc.join(interval)
@@ -186,19 +191,19 @@ class Cluster(object):
 
       while not _healthy_client_worker():
         logging.warning(
-          'Waiting for client_worker "{}" to become healthy'.format(
-            client_worker))
+            'Waiting for client_worker "{}" to become healthy'.format(
+                client_worker))
         if time.time() + interval > check_timeout:
           raise RuntimeError(
-            'Timed out waiting for client_worker {} to become healthy'.format(
-              client_worker))
+              'Timed out waiting for client_worker {} to become healthy'.format(
+                  client_worker))
 
       logging.warning('client_worker "{}" is healthy.'.format(client_worker))
 
     xu.parallel_work(
-      len(self._client_workers),
-      wait_for_healthy_client_worker,
-      self._client_workers)
+        len(self._client_workers), wait_for_healthy_client_worker,
+        self._client_workers)
+
 
 class ClusterResolver(object):
   """Cluster Resolver for Client VM and Cloud TPU mesh."""
@@ -349,11 +354,11 @@ class ClusterResolver(object):
       if ctc.state() != 'READY':
         raise RuntimeError(
             ('TPU {tpu_name} is not READY yet. '
-              'Re-run when all TPUs are READY').format(tpu_name=tpu_name))
+             'Re-run when all TPUs are READY').format(tpu_name=tpu_name))
       if ctc.health() != 'HEALTHY':
         raise RuntimeError(
             ('TPU {tpu_name} is not HEALTHY yet. '
-              'Re-run when all TPUs are HEALTHY').format(tpu_name=tpu_name))
+             'Re-run when all TPUs are HEALTHY').format(tpu_name=tpu_name))
 
       runtime_version = ctc.runtime_version()
       machine_type = ctc.accelerator_type()
@@ -362,12 +367,12 @@ class ClusterResolver(object):
 
       for endpoint in network_endpoints:
         worker = ServiceWorker(
-          internal_ip=endpoint['ipAddress'],
-          port=endpoint['port'],
-          machine_type=machine_type,
-          zone=zone,
-          runtime_version=runtime_version,
-          tpu=tpu_name)
+            internal_ip=endpoint['ipAddress'],
+            port=endpoint['port'],
+            machine_type=machine_type,
+            zone=zone,
+            runtime_version=runtime_version,
+            tpu=tpu_name)
         workers.append(worker)
 
     xu.parallel_work(len(self._tpus), add_service_worker, self._tpus)

@@ -62,9 +62,8 @@ def _metric_str_to_number(metric_str):
     total_mb += disk_gd.get('bytes') * 1e-6
     return total_mb, 'mb'
 
-  raise ValueError('Unknown metric_str format: {}'.format(
-      metric_str))
-  
+  raise ValueError('Unknown metric_str format: {}'.format(metric_str))
+
 
 def parse_metrics_report(report):
   """Convert a string metrics report to a dict of parsed values.
@@ -86,15 +85,15 @@ def parse_metrics_report(report):
   data_points = {}
 
   # Parse metrics into data points.
-  metric_match_gd = [m.groupdict() for m in re.finditer(_METRIC_REGEX, report)] 
+  metric_match_gd = [m.groupdict() for m in re.finditer(_METRIC_REGEX, report)]
   for gd in metric_match_gd:
     metric_name = gd.pop('metric_name')
     for k, v in gd.items():
       parsed_v, units = _metric_str_to_number(v)
-      full_key = '{}__{}{}{}'.format(
-        metric_name, k, '_' if units else '', units)
+      full_key = '{}__{}{}{}'.format(metric_name, k, '_' if units else '',
+                                     units)
       data_points[full_key] = parsed_v
- 
+
   # Parse counters into data points.
   counters_matches = re.findall(_COUNTER_REGEX, report)
   # Each match tuple is of the form (name, counter value).
@@ -143,7 +142,9 @@ def _compute_aggregates(data_points):
   return aggregates
 
 
-def compare_metrics(data_points, metrics_report,
+def compare_metrics(
+    data_points,
+    metrics_report,
     config={'base_expression': 'v <= v_mean + (v_stddev * 2.0)'}):
   """Compare metrics_report to historical averages and report differences.
 
@@ -193,7 +194,7 @@ def compare_metrics(data_points, metrics_report,
       eval_vars = {'v': v, 'v_mean': v_mean, 'v_stddev': v_stddev}
       if eval(expression, None, eval_vars) == False:
         difference_report += ('{} failed its expression check. '
-            'Expression: {}.  Mean: {}.  Stddev: {}.  '
-            'Actual Value: {}\n'.format(
-                k, expression, v_mean, v_stddev, v))
+                              'Expression: {}.  Mean: {}.  Stddev: {}.  '
+                              'Actual Value: {}\n'.format(
+                                  k, expression, v_mean, v_stddev, v))
   return difference_report
