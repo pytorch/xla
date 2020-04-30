@@ -441,5 +441,9 @@ class XLATestBase(DeviceTypeTestBase):
     x, y = self.prepare_for_compare(x, y)
     return DeviceTypeTestBase.assertEqual(self, x, y, *args, **kwargs)
 
+  def compareTensors(self, a, b, *args, **kwargs):
+    a, b = self.prepare_for_compare(a, b)
+    return DeviceTypeTestBase.compareTensors(self, a, b, *args, **kwargs)
+
 
 TEST_CLASS = XLATestBase
