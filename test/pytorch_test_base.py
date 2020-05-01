@@ -55,6 +55,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_min_max_binary_op_nan',
         'test_mm_xla_bfloat16',  # FIXME: AssertionError: tensor(0.0625) not less than or equal to 0.001
         'test_lu_solve_batched_non_contiguous',
+        'test_linspace_xla',  # Takes forever due to inlined sliced equality tests over 1M elements.
         'test_lstsq',
         'test_is_set_to',
         'test_inverse',
