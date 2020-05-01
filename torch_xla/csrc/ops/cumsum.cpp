@@ -55,8 +55,10 @@ XlaOpVector CumSum::Lower(LoweringContext* loctx) const {
 
 std::string CumSum::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_
-     << ", dtype=" << OptionalOr<int>(dtype_, -1);
+  ss << Node::ToString() << ", dim=" << dim_;
+  if (dtype_) {
+    ss << ", dtype=" << *dtype_;
+  }
   return ss.str();
 }
 
