@@ -119,7 +119,7 @@ run_yapf: &run_yapf
   command: |
     pyenv global 3.7.0
     pip install --upgrade pip
-    pip install yapf
+    pip install yapf==0.30.0
 
     git_status=$(git status --porcelain)
     if [[ $git_status ]]; then
