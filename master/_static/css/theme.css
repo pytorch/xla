@@ -11393,6 +11393,13 @@ a:hover {
   border-color: #979797;
   color: #ffffff;
 }
+#tutorial-cards-container .pagination .page {
+  border: 1px solid #dee2e6;
+  padding: 0.5rem 0.75rem;
+}
+#tutorial-cards-container .pagination .active .page {
+  background-color: #dee2e6;
+}
 
 article.pytorch-article .tutorials-callout-container {
   padding-bottom: 50px;
