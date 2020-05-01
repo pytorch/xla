@@ -569,7 +569,7 @@ std::string XLATensor::DumpHloComputation(
       ir_values.push_back(std::move(ir_value));
     }
   }
-  return ir::DumpUtil::ToHlo(ir_values);
+  return !ir_values.empty() ? ir::DumpUtil::ToHlo(ir_values) : std::string();
 }
 
 void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data) {
