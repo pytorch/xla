@@ -21,4 +21,7 @@ T OptionalOr(const c10::optional<S>& value, T defval) {
   return value ? static_cast<T>(*value) : defval;
 }
 
+// Unwraps tensor to target dtype if it's a wrapped number.
+at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype);
+
 }  // namespace torch_xla
