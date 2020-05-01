@@ -81,14 +81,12 @@ function build_and_install_torch() {
   git submodule update --init --recursive
   # Apply patches to PT which are required by the XLA support.
   $(dirname $0)/apply_patches.sh
-  export NO_CUDA=1
   python setup.py bdist_wheel
   pip install dist/*.whl
 }
 
 function build_and_install_torch_xla() {
   git submodule update --init --recursive
-  export NO_CUDA=1
   if [ "${RELEASE_VERSION}" = "nightly" ]; then
     export VERSIONED_XLA_BUILD=1
   else
