@@ -151,6 +151,9 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_uniform_from_to',  # Checks for error strings.
         'test_index_fill_xla',  # half support
         'test_dim_arg_reduction_scalar_xla',  # access dim 0 of scalar tensors
+        'test_storage',  # Storage
+        'test_deepcopy',  # Storage
+        'teeet_deepcopy_scalar',  # Storage
     },
     'TestViewOpsXLA': {
         'test_contiguous_nonview',
