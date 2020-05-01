@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/ops/cumprod.h"
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -17,8 +18,8 @@ xla::XlaOp LowerCumProd(xla::XlaOp input, xla::int64 dim,
                         c10::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input = CastToScalarType(input, dtype);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(casted_input);
-  xla::XlaOp init = XlaHelpers::ScalarValue<float>(
-      1, input_shape.element_type(), casted_input.builder());
+  xla::XlaOp init =
+      xla::One(casted_input.builder(), input_shape.element_type());
   xla::XlaComputation reducer =
       XlaHelpers::CreateMulComputation(input_shape.element_type());
   return BuildCumulativeComputation(casted_input, dim, reducer, init);
@@ -55,8 +56,10 @@ XlaOpVector CumProd::Lower(LoweringContext* loctx) const {
 
 std::string CumProd::ToString() const {
   std::stringstream ss;
-  ss << Node::ToString() << ", dim=" << dim_
-     << ", dtype=" << OptionalOr<int>(dtype_, -1);
+  ss << Node::ToString() << ", dim=" << dim_;
+  if (dtype_) {
+    ss << ", dtype=" << *dtype_;
+  }
   return ss.str();
 }
 
