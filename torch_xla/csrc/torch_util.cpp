@@ -27,4 +27,9 @@ at::ScalarType GetScalarType(at::Scalar scalar) {
   XLA_ERROR() << "Unknown type for scalar";
 }
 
+at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype) {
+  return tensor.unsafeGetTensorImpl()->is_wrapped_number() ? tensor.to(dtype)
+                                                           : tensor;
+}
+
 }  // namespace torch_xla

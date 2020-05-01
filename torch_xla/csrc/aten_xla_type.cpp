@@ -108,7 +108,8 @@ template <typename B>
 at::Tensor DoBinaryOp(const at::Tensor& self, const at::Tensor& other,
                       const B& bin_op) {
   at::ScalarType dtype = at::result_type(self, other);
-  std::pair<XLATensor, XLATensor> operands = GetBinaryOperands(self, other);
+  std::pair<XLATensor, XLATensor> operands =
+      GetBinaryOperands(self, UnwrapNumber(other, dtype));
   XLATensor result = bin_op(operands.first, operands.second, dtype);
   return bridge::AtenFromXlaTensor(result);
 }

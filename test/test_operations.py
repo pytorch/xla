@@ -1494,6 +1494,20 @@ class TestAtenXlaTensor(XlaTestCase):
     expected_str = 'tensor([5], device=\'' + str(xla_device) + '\')'
     self.assertEqual(str(x), expected_str)
 
+    def test_type_promotion_issue_1929(self):
+
+      def test_fn(m, x):
+        x = torch.matmul(x, m)
+        x *= 0.5
+        loss = x.sum()
+        loss.backward()
+        return m.grad
+
+      self.runAtenTest([
+          torch.rand(5, 10, requires_grad=True),
+          torch.rand(8, 5, requires_grad=True)
+      ], test_fn)
+
   def test_as_strided_r1(self):
 
     def test_fn(r):
