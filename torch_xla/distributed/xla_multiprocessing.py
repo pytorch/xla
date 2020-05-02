@@ -33,7 +33,7 @@ def _get_free_tcp_ports(n=1):
 
 
 def _is_xla_config():
-  for env in [xenv.TPU_CONFIG, xenv.GPU_NUM_DEVICES]:
+  for env in [xenv.TPU_CONFIG, xenv.LOCAL_WORKER, xenv.GPU_NUM_DEVICES]:
     if os.environ.get(env, None) is not None:
       return True
   return False
