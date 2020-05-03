@@ -235,9 +235,8 @@ def _start_fn(index, pf_cfg, fn, args):
 
 def _run_direct(fn, args, nprocs, join, daemon, start_method):
   nprocs = nprocs or 1
-  if nprocs == 1:
+  if nprocs == 1 and join:
     fn(0, *args)
-    sys.exit(0)
   else:
     return torch.multiprocessing.spawn(
         fn, args=args, nprocs=nprocs, join=join, daemon=daemon)
