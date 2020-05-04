@@ -540,6 +540,54 @@
         <span class="n">join</span><span class="o">=</span><span class="n">join</span><span class="p">,</span>
         <span class="n">daemon</span><span class="o">=</span><span class="n">daemon</span><span class="p">,</span>
         <span class="n">start_method</span><span class="o">=</span><span class="n">start_method</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MpModelWrapper"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpModelWrapper">[docs]</a><span class="k">class</span> <span class="nc">MpModelWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Wraps a model to minimize host memory usage when `fork` method is used.</span>
+
+<span class="sd">  This class should be used together with the `spawn(..., start_method=&#39;fork&#39;)`</span>
+<span class="sd">  API to minimize the use of host memory.</span>
+<span class="sd">  Instead of creating models on each multiprocessing process, hence replicating</span>
+<span class="sd">  the model&#39;s initial host memory, the model is created once at global scope,</span>
+<span class="sd">  and then moved into each device inside the `spawn()` target function.</span>
+<span class="sd">  Example::</span>
+
+<span class="sd">    WRAPPED_MODEL = MpModelWrapper(MyNetwork())</span>
+
+<span class="sd">    def _mp_fn(index, ...):</span>
+<span class="sd">      device = xm.xla_device()</span>
+<span class="sd">      model = WRAPPED_MODEL.to(device)</span>
+<span class="sd">      ...</span>
+
+<span class="sd">    xmp.spwan(_mp_fn, ..., start_method=&#39;fork&#39;)</span>
+
+<span class="sd">  This method has two advantages. First if uses only one copy of the memory</span>
+<span class="sd">  pages to host the original model weights, and second it serializes the move</span>
+<span class="sd">  of the wrapped model into each device, by lowering the load onto the system</span>
+<span class="sd">  memory during the process.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a new `MpModelWrapper` object.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      model (torch.nn.Module): The model to be wrapped. Should be on PyTorch CPU</span>
+<span class="sd">        device (which is the default when creating new models).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">model</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<div class="viewcode-block" id="MpModelWrapper.to"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to">[docs]</a>  <span class="k">def</span> <span class="nf">to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Retrieves the model moved onto the specified device.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      device (torch.device): The device where the model should be moved onto.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">      The model on the specified device.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span></div></div>
 </pre></div>
 
              </article>

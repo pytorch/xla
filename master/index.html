@@ -962,6 +962,46 @@ not return.</p>
 </dl>
 </dd></dl>
 
+<dl class="class">
+<dt id="torch_xla.distributed.xla_multiprocessing.MpModelWrapper">
+<em class="property">class </em><code class="sig-prename descclassname">torch_xla.distributed.xla_multiprocessing.</code><code class="sig-name descname">MpModelWrapper</code><span class="sig-paren">(</span><em class="sig-param">model</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpModelWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpModelWrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wraps a model to minimize host memory usage when <cite>fork</cite> method is used.</p>
+<p>This class should be used together with the <cite>spawn(…, start_method=’fork’)</cite>
+API to minimize the use of host memory.
+Instead of creating models on each multiprocessing process, hence replicating
+the model’s initial host memory, the model is created once at global scope,
+and then moved into each device inside the <cite>spawn()</cite> target function.
+Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">WRAPPED_MODEL</span> <span class="o">=</span> <span class="n">MpModelWrapper</span><span class="p">(</span><span class="n">MyNetwork</span><span class="p">())</span>
+
+<span class="k">def</span> <span class="nf">_mp_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="o">...</span><span class="p">):</span>
+  <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+  <span class="n">model</span> <span class="o">=</span> <span class="n">WRAPPED_MODEL</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="o">...</span>
+
+<span class="n">xmp</span><span class="o">.</span><span class="n">spwan</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">start_method</span><span class="o">=</span><span class="s1">&#39;fork&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This method has two advantages. First if uses only one copy of the memory
+pages to host the original model weights, and second it serializes the move
+of the wrapped model into each device, by lowering the load onto the system
+memory during the process.</p>
+<dl class="method">
+<dt id="torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to">
+<code class="sig-name descname">to</code><span class="sig-paren">(</span><em class="sig-param">device</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpModelWrapper.to"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the model moved onto the specified device.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>device</strong> (<em>torch.device</em>) – The device where the model should be moved onto.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The model on the specified device.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="module-torch_xla.utils.tf_record_reader">
 <span id="utils"></span><h2>utils<a class="headerlink" href="#module-torch_xla.utils.tf_record_reader" title="Permalink to this headline">¶</a></h2>
