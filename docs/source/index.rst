@@ -34,6 +34,8 @@ distributed
 
 .. automodule:: torch_xla.distributed.xla_multiprocessing
 .. autofunction:: spawn
+.. autoclass:: MpModelWrapper
+	       :members: to
 
 utils
 ----------------------------------
