@@ -972,7 +972,7 @@ Instead of creating models on each multiprocessing process, hence replicating
 the model’s initial host memory, the model is created once at global scope,
 and then moved into each device inside the <cite>spawn()</cite> target function.
 Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">WRAPPED_MODEL</span> <span class="o">=</span> <span class="n">MpModelWrapper</span><span class="p">(</span><span class="n">MyNetwork</span><span class="p">())</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">WRAPPED_MODEL</span> <span class="o">=</span> <span class="n">xmp</span><span class="o">.</span><span class="n">MpModelWrapper</span><span class="p">(</span><span class="n">MyNetwork</span><span class="p">())</span>
 
 <span class="k">def</span> <span class="nf">_mp_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="o">...</span><span class="p">):</span>
   <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>

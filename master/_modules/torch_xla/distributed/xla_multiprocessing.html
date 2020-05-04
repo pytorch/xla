@@ -552,7 +552,7 @@
 <span class="sd">  and then moved into each device inside the `spawn()` target function.</span>
 <span class="sd">  Example::</span>
 
-<span class="sd">    WRAPPED_MODEL = MpModelWrapper(MyNetwork())</span>
+<span class="sd">    WRAPPED_MODEL = xmp.MpModelWrapper(MyNetwork())</span>
 
 <span class="sd">    def _mp_fn(index, ...):</span>
 <span class="sd">      device = xm.xla_device()</span>
