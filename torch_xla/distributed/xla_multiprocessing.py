@@ -300,7 +300,7 @@ class MpModelWrapper(object):
   and then moved into each device inside the `spawn()` target function.
   Example::
 
-    WRAPPED_MODEL = MpModelWrapper(MyNetwork())
+    WRAPPED_MODEL = xmp.MpModelWrapper(MyNetwork())
 
     def _mp_fn(index, ...):
       device = xm.xla_device()
