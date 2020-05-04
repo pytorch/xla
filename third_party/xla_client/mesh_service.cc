@@ -16,10 +16,12 @@
 #include <unordered_map>
 
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.grpc.pb.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
+#include "tensorflow/compiler/xla/xla_client/nccl_distributed.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -64,6 +66,11 @@ class MeshServiceImpl : public grpc::MeshService::Service {
   ::grpc::Status Rendezvous(::grpc::ServerContext* context,
                             const grpc::RendezvousRequest* request,
                             grpc::RendezvousResponse* response) override;
+
+  ::grpc::Status GetNcclUniqueUid(
+      ::grpc::ServerContext* context,
+      const grpc::GetNcclUniqueUidRequest* request,
+      grpc::GetNcclUniqueUidResponse* response) override;
 
  private:
   class RendezvousData {
@@ -134,6 +141,7 @@ class MeshServiceImpl : public grpc::MeshService::Service {
 ::grpc::Status MeshServiceImpl::GetConfig(::grpc::ServerContext* context,
                                           const grpc::GetConfigRequest* request,
                                           grpc::GetConfigResponse* response) {
+  TF_VLOG(3) << "Got config fetch request: peer=" << context->peer();
   response->mutable_config()->CopyFrom(config_);
   return ::grpc::Status::OK;
 }
@@ -157,6 +165,20 @@ class MeshServiceImpl : public grpc::MeshService::Service {
   }
   ReleaseRendezvous(request->tag(), rendezvous);
   return status;
+}
+
+::grpc::Status MeshServiceImpl::GetNcclUniqueUid(
+    ::grpc::ServerContext* context,
+    const grpc::GetNcclUniqueUidRequest* request,
+    grpc::GetNcclUniqueUidResponse* response) {
+  std::vector<int64> replicas;
+  for (auto& replica : request->replicas()) {
+    replicas.push_back(replica);
+  }
+  TF_VLOG(3) << "Got NCCL UID fetch request: replicas=("
+             << absl::StrJoin(replicas, ", ") << "), peer=" << context->peer();
+  response->set_uid(nccl_detail::GetNcclUniqueUid(replicas));
+  return ::grpc::Status::OK;
 }
 
 }  // namespace
@@ -251,6 +273,28 @@ std::vector<std::string> MeshClient::Rendezvous(
     rv_payloads.push_back(rv_payload);
   }
   return rv_payloads;
+}
+
+std::string MeshClient::GetNcclUniqueUid(
+    absl::Span<const int64> replicas) const {
+  ::grpc::ClientContext context;
+  grpc::GetNcclUniqueUidRequest reqeust;
+  grpc::GetNcclUniqueUidResponse response;
+  for (auto& replica : replicas) {
+    reqeust.add_replicas(replica);
+  }
+
+  TF_VLOG(3) << "Waiting for NCCL UID: replicas=("
+             << absl::StrJoin(replicas, ", ") << ")";
+  ::grpc::Status status =
+      impl_->stub->GetNcclUniqueUid(&context, reqeust, &response);
+  TF_VLOG(3) << "NCCL UID wait complete: " << absl::StrJoin(replicas, ", ")
+             << ")";
+  if (!status.ok()) {
+    XLA_ERROR() << "Failed to get NCCL UID (" << absl::StrJoin(replicas, ", ")
+                << "): " << status;
+  }
+  return response.uid();
 }
 
 }  // namespace service

@@ -319,6 +319,8 @@ class XrtComputationClient : public ComputationClient {
   void CreateMeshService(const std::string& address,
                          const tensorflow::tpu::TopologyProto* topology_proto);
 
+  void SetupGpuRuntime();
+
   std::vector<DataPtr> GetComputationResults(
       const tensorflow::Tensor& xrt_result, const Shape& result_shape,
       const std::string& device);

@@ -22,6 +22,7 @@
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/compiler/xla/xla_client/xrt_local_service.h"
+#include "tensorflow/compiler/xrt/xrt_util.h"
 #include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/util/device_name_utils.h"
 
@@ -1291,7 +1292,18 @@ void XrtComputationClient::InitializeDevices(
     if (device.ordinal == 0) {
       CreateMeshService(mesh_service_address, topology_proto.get());
     }
+    SetupGpuRuntime();
   }
+}
+
+void XrtComputationClient::SetupGpuRuntime() {
+  struct NcclUniqueIdFactory : public tensorflow::NcclUniqueIdFactory {
+    std::string GetUniqueId(absl::Span<const xla::int64> replicas) override {
+      return service::MeshClient::Get()->GetNcclUniqueUid(replicas);
+    }
+  };
+
+  tensorflow::SetNcclUniqueIdFactory(std::make_shared<NcclUniqueIdFactory>());
 }
 
 void XrtComputationClient::CreateMeshService(
