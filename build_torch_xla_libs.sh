@@ -20,14 +20,14 @@ if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
   VERBOSE="-s"
 fi
 
-XLA_CUDA_CFG=
-if [[ "$XLA_CUDA" == "1" ]]; then
-  XLA_CUDA_CFG="--config=cuda"
-fi
-
 OPTS=(--cxxopt="-std=c++14")
 if [[ "$CC" =~ ^clang ]]; then
   OPTS+=(--cxxopt="-Wno-c++11-narrowing")
+fi
+
+if [[ "$XLA_CUDA" == "1" ]]; then
+  OPTS+=(--cxxopt="-DXLA_CUDA=1")
+  OPTS+=(--config=cuda)
 fi
 
 if [ "$CMD" == "clean" ]; then

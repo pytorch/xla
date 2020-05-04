@@ -39,7 +39,16 @@ message RendezvousResponse {
   repeated bytes payloads = 1;
 }
 
+message GetNcclUniqueUidRequest {
+  repeated int64 replicas = 1;
+}
+
+message GetNcclUniqueUidResponse {
+  required bytes uid = 1;
+}
+
 service MeshService {
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse) {}
   rpc Rendezvous(RendezvousRequest) returns (RendezvousResponse) {}
+  rpc GetNcclUniqueUid(GetNcclUniqueUidRequest) returns (GetNcclUniqueUidResponse) {}
 }
