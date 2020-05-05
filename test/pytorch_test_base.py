@@ -227,7 +227,6 @@ DISABLED_TORCH_TESTS_ANY = {
     }
 }
 
-# DISABLED_TORCH_TESTS_TPU = DISABLED_TORCH_TESTS_ANY | {
 DISABLED_TORCH_TESTS_TPU_ONLY = {
     # test_torch.py
     'TestDevicePrecisionXLA': {
@@ -275,6 +274,13 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
     },
 }
 
+DISABLED_TORCH_TESTS_GPU_ONLY = {
+    # test_torch.py
+    'TestTorchDeviceTypeXLA': {
+        'test_float_to_int_conversion_finite_xla',  # different behavior than numpy when casting float_max/min to int types
+    },
+}
+
 
 def union_of_disabled_tests(sets):
   union = collections.defaultdict(set)
@@ -285,7 +291,8 @@ def union_of_disabled_tests(sets):
 
 
 DISABLED_TORCH_TESTS_CPU = DISABLED_TORCH_TESTS_ANY
-DISABLED_TORCH_TESTS_GPU = DISABLED_TORCH_TESTS_ANY
+DISABLED_TORCH_TESTS_GPU = union_of_disabled_tests(
+    [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_GPU_ONLY])
 DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(
     [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_TPU_ONLY])
 
