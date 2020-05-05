@@ -701,6 +701,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
   xrt::XRTChainedExecuteConfig config;
   config.set_core_index_in_replica(0);
   config.set_rng_seed(rng_seed_);
+  config.set_replica_id(Device(device).ordinal);
 
   xrt::XRTChainedExecutePlan plan;
   std::vector<xla::Shape> result_shapes;
@@ -1021,6 +1022,8 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     exec_config.set_release_compilation_handle(false);
     exec_config.set_return_exploded_tuple(explode_tuple);
     exec_config.set_rng_seed(rng_seed_);
+    exec_config.set_replica_id(Device(devices[i]).ordinal);
+
     feed_inputs->insert(
         {cached_node.holders[1], exec_config.SerializeAsString()});
     feed_inputs->insert({cached_node.holders[2], inputs});
@@ -1052,6 +1055,8 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     exec_config.set_release_compilation_handle(false);
     exec_config.set_return_exploded_tuple(explode_tuple);
     exec_config.set_rng_seed(rng_seed_);
+    exec_config.set_replica_id(Device(devices[i]).ordinal);
+
     feed_inputs->insert(
         {cached_node.holders[1], exec_config.SerializeAsString()});
     feed_inputs->insert({cached_node.holders[2], inputs});
