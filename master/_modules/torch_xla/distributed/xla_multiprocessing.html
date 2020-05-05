@@ -270,7 +270,6 @@
                                            <span class="s1">&#39;worker_name ordinal host_port&#39;</span><span class="p">)</span>
 
 <span class="n">_LOCAL_WORKER</span> <span class="o">=</span> <span class="s1">&#39;localservice&#39;</span>
-<span class="n">_NCCL_COMM_ID</span> <span class="o">=</span> <span class="s1">&#39;NCCL_COMM_ID&#39;</span>
 <span class="n">_CUDA_VISIBLE_DEVICES</span> <span class="o">=</span> <span class="s1">&#39;CUDA_VISIBLE_DEVICES&#39;</span>
 
 
@@ -415,9 +414,6 @@
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">SERVICE_ADDRESS</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">getfqdn</span><span class="p">(),</span>
                                                       <span class="n">_get_free_tcp_ports</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
   <span class="k">if</span> <span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;GPU&#39;</span><span class="p">:</span>
-    <span class="k">if</span> <span class="n">_NCCL_COMM_ID</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
-      <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">_NCCL_COMM_ID</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">getfqdn</span><span class="p">(),</span>
-                                                 <span class="n">_get_free_tcp_ports</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
     <span class="n">_setup_workers</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
     <span class="n">_create_gpu_devices</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">PreForkConfig</span><span class="p">(</span><span class="n">dev_kind</span><span class="o">=</span><span class="n">dev_kind</span><span class="p">,</span> <span class="n">num_devices</span><span class="o">=</span><span class="n">num_devices</span><span class="p">)</span>
