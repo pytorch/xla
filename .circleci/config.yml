@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 update_submodule: &update_submodule
   name: Update Submodule
@@ -6,22 +6,28 @@ update_submodule: &update_submodule
     git submodule sync
     git submodule update --recursive --init
 
-launch_docker: &launch_docker
-  name: Launch Docker Container
+setup_base_docker: &setup_base_docker
+  name: Setup Base Docker Image
+  command: |
+    set -e
+    pyenv local 3.5.2
+    pip install --upgrade pip
+    pip install pyyaml -qqq
+    DOCKER_IMAGE=$(python "/home/circleci/project/.circleci/parse_docker_image.py")
+    echo "export DOCKER_IMAGE=${DOCKER_IMAGE}" >> $BASH_ENV
+    echo "export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
+    echo "export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
+    echo "export WORKDIR=/var/lib/jenkins/workspace" >> $BASH_ENV
+    sudo pip install awscli==1.16.35 -qqq
+
+launch_docker_and_build: &launch_docker_and_build
+  name: Launch Docker Container and Build
   no_output_timeout: "1h"
   command: |
     set -e
-    export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_ECR_READ_WRITE}
-    export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_FOR_ECR_READ_WRITE}
-    sudo pip install awscli==1.16.35 -qqq
     eval $(aws ecr get-login --region us-east-1 --no-include-email)
-    pyenv local 3.5.2
-    pip install --upgrade pip
-    pip install pyyaml
-    DOCKER_IMAGE=$(python "/home/circleci/project/.circleci/parse_docker_image.py")
-    docker pull ${DOCKER_IMAGE}
+    time docker pull ${DOCKER_IMAGE} >/dev/null
     sudo pkill -SIGHUP dockerd
-    WORKDIR=/var/lib/jenkins/workspace
     echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" >> /home/circleci/project/env
     echo "declare -x AWS_ACCESS_KEY_ID=${CIRCLECI_AWS_ACCESS_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
     echo "declare -x AWS_SECRET_ACCESS_KEY=${CIRCLECI_AWS_SECRET_KEY_FOR_SCCACHE_AND_XLA_BAZEL_S3_BUCKET_V1}" >> /home/circleci/project/env
@@ -42,7 +48,31 @@ launch_docker: &launch_docker
     docker exec -u jenkins ${pid} sudo chown -R jenkins ${WORKDIR}
     echo ${pid} > .docker_pid
 
-linux_default: &linux_default
+    # Build
+    docker exec -u jenkins $(cat .docker_pid) .circleci/build.sh
+
+    # Push built docker image
+    output_image=${DOCKER_IMAGE}-${CIRCLE_SHA1}
+    export COMMIT_DOCKER_IMAGE=$output_image-xla
+    docker commit "$pid" ${COMMIT_DOCKER_IMAGE}
+    time docker push ${COMMIT_DOCKER_IMAGE}
+
+download_docker: &download_docker
+  name: Download Docker Container
+  no_output_timeout: "1h"
+  command: |
+    set -e
+    output_image=${DOCKER_IMAGE}-${CIRCLE_SHA1}
+    export COMMIT_DOCKER_IMAGE=$output_image-xla
+    echo "DOCKER_IMAGE: "${COMMIT_DOCKER_IMAGE}
+
+    sudo pip install awscli==1.16.35 -qqq
+    eval $(aws ecr get-login --region us-east-1 --no-include-email)
+    time docker pull ${COMMIT_DOCKER_IMAGE} >/dev/null
+    pid=$(docker run -t -d -w $WORKDIR ${COMMIT_DOCKER_IMAGE})
+    echo ${pid} > .docker_pid
+
+run_build: &run_build
   resource_class: large
   machine:
     image: default
@@ -51,19 +81,29 @@ linux_default: &linux_default
   - run:
       <<: *update_submodule
   - run:
-      <<: *launch_docker
+      <<: *setup_base_docker
   - run:
-      name: Build
-      no_output_timeout: "1h"
-      command: |
-        docker exec -u jenkins $(cat .docker_pid) .circleci/build.sh
+      <<: *launch_docker_and_build
+
+run_test: &run_test
+  resource_class: large
+  machine:
+    image: default
+  steps:
+  - checkout
+  - run:
+      <<: *update_submodule
+  - run:
+      <<: *setup_base_docker
+  - run:
+      <<: *download_docker
   - run:
       name: Test
       no_output_timeout: "1h"
       command: |
         docker exec -u jenkins $(cat .docker_pid) .circleci/test.sh
 
-push_doc: &push_doc
+run_test_and_push_doc: &run_test_and_push_doc
   resource_class: large
   machine:
     image: default
@@ -72,12 +112,9 @@ push_doc: &push_doc
   - run:
       <<: *update_submodule
   - run:
-      <<: *launch_docker
+      <<: *setup_base_docker
   - run:
-      name: Build
-      no_output_timeout: "1h"
-      command: |
-        docker exec -u jenkins $(cat .docker_pid) .circleci/build.sh
+      <<: *download_docker
   - run:
       name: Test
       no_output_timeout: "1h"
@@ -149,23 +186,31 @@ jobs:
     - run:
         <<: *run_yapf
 
-  pytorch_xla_linux_bionic_py3_6_clang9_build_test:
-    <<: *linux_default
+  pytorch_xla_linux_bionic_py3_6_clang9_build:
+    <<: *run_build
 
-  pytorch_xla_linux_bionic_py3_6_clang9_build_test_and_push_doc:
-    <<: *push_doc
+  pytorch_xla_linux_bionic_py3_6_clang9_test:
+    <<: *run_test
+
+  pytorch_xla_linux_bionic_py3_6_clang9_test_and_push_doc:
+    <<: *run_test_and_push_doc
 
 workflows:
   version: 2
   build:
     jobs:
       - linter_check
-      - pytorch_xla_linux_bionic_py3_6_clang9_build_test:
+      - pytorch_xla_linux_bionic_py3_6_clang9_build
+      - pytorch_xla_linux_bionic_py3_6_clang9_test:
+          requires:
+            - pytorch_xla_linux_bionic_py3_6_clang9_build
           filters:
             branches:
               ignore:
                 - master
-      - pytorch_xla_linux_bionic_py3_6_clang9_build_test_and_push_doc:
+      - pytorch_xla_linux_bionic_py3_6_clang9_test_and_push_doc:
+          requires:
+            - pytorch_xla_linux_bionic_py3_6_clang9_build
           filters:
             branches:
               only:
