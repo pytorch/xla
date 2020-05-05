@@ -18,7 +18,6 @@ WorkerConfigEntry = collections.namedtuple('WorkerConfigEntry',
                                            'worker_name ordinal host_port')
 
 _LOCAL_WORKER = 'localservice'
-_NCCL_COMM_ID = 'NCCL_COMM_ID'
 _CUDA_VISIBLE_DEVICES = 'CUDA_VISIBLE_DEVICES'
 
 
@@ -163,9 +162,6 @@ def _pre_fork_setup(num_devices):
     os.environ[xenv.SERVICE_ADDRESS] = '{}:{}'.format(socket.getfqdn(),
                                                       _get_free_tcp_ports()[0])
   if dev_kind == 'GPU':
-    if _NCCL_COMM_ID not in os.environ:
-      os.environ[_NCCL_COMM_ID] = '{}:{}'.format(socket.getfqdn(),
-                                                 _get_free_tcp_ports()[0])
     _setup_workers(num_devices)
     _create_gpu_devices(num_devices)
   return PreForkConfig(dev_kind=dev_kind, num_devices=num_devices)
