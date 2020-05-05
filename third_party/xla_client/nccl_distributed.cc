@@ -39,7 +39,9 @@ std::string NcclUidManager::GetNcclUniqueUid(absl::Span<const int64> replicas) {
   if (it == replicas_uid_map_.end()) {
     ncclUniqueId id;
     ncclResult_t r = ncclGetUniqueId(&id);
-    XLA_CHECK_EQ(r, ncclSuccess);
+    XLA_CHECK_EQ(r, ncclSuccess)
+        << "NCCL UID generation failed: replicas=(" << replicas_str
+        << "), error: " << ncclGetErrorString(r);
     it = replicas_uid_map_
              .emplace(std::move(replicas_str),
                       std::string(id.internal, NCCL_UNIQUE_ID_BYTES))
