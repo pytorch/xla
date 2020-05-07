@@ -425,6 +425,10 @@
   <span class="c1"># Every process is restricted to 1 GPU device, which in such process will be</span>
   <span class="c1"># named XLA_GPU:0.</span>
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">_CUDA_VISIBLE_DEVICES</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+  <span class="c1"># We have expanded the GPU devices in the device map already, in</span>
+  <span class="c1"># _create_gpu_devices(), so delete the key from the environment as it</span>
+  <span class="c1"># otherwise triggers device generation again in computation_client.cc.</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">GPU_NUM_DEVICES</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_setup_tpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">tpu_env_config</span><span class="p">):</span>
@@ -436,10 +440,10 @@
     <span class="n">worker</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">tpu_config</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="o">.</span><span class="n">worker_name</span><span class="p">,</span>
                                                    <span class="n">worker</span><span class="o">.</span><span class="n">ordinal</span><span class="p">)</span>
-  <span class="k">if</span> <span class="n">gindex</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+  <span class="k">if</span> <span class="n">gindex</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
     <span class="c1"># In multi-processing mode, only the process handling the first device of</span>
     <span class="c1"># the master worker, will do TPU mesh initialization.</span>
-    <span class="k">del</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">]</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_prepare_env_for_index</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">):</span>
