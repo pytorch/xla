@@ -15,6 +15,7 @@
 #include "tensorflow/cc/ops/const_op.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
+#include "tensorflow/compiler/xla/xla_client/env_vars.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
@@ -698,10 +699,19 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
       GetSessionForXrtDevice(session_cache_.get(), xrt_device, &session_map);
   tensorflow::Scope device_scope = session->root()->WithDevice(xrt_device);
 
-  xrt::XRTChainedExecuteConfig config;
-  config.set_core_index_in_replica(0);
-  config.set_rng_seed(rng_seed_);
-  config.set_replica_id(Device(device).ordinal);
+  xrt::XRTChainedExecuteConfig exec_config;
+  exec_config.set_core_index_in_replica(0);
+  exec_config.set_rng_seed(rng_seed_);
+  xrt::CommonExecutionConfig* cmn_config = exec_config.mutable_common_config();
+  Device current_device(device);
+  cmn_config->set_replica_id(current_device.ordinal);
+  cmn_config->set_run_id(1);
+  for (auto& devstr : options_.devices) {
+    Device local_device(devstr);
+    if (local_device.kind == current_device.kind) {
+      cmn_config->add_local_replica_mapping(local_device.ordinal);
+    }
+  }
 
   xrt::XRTChainedExecutePlan plan;
   std::vector<xla::Shape> result_shapes;
@@ -749,7 +759,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
   const XrtSession::CachedNode& cached_node =
       GetExecuteChainedNode(session, device_scope, effective_device);
   feed_inputs.insert({cached_node.holders[0], plan.SerializeAsString()});
-  feed_inputs.insert({cached_node.holders[1], config.SerializeAsString()});
+  feed_inputs.insert({cached_node.holders[1], exec_config.SerializeAsString()});
 
   std::vector<tensorflow::Tensor> outputs;
   util::CheckComputationStatus(
@@ -1022,7 +1032,17 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     exec_config.set_release_compilation_handle(false);
     exec_config.set_return_exploded_tuple(explode_tuple);
     exec_config.set_rng_seed(rng_seed_);
-    exec_config.set_replica_id(Device(devices[i]).ordinal);
+    xrt::CommonExecutionConfig* cmn_config =
+        exec_config.mutable_common_config();
+    Device current_device(devices[i]);
+    cmn_config->set_replica_id(current_device.ordinal);
+    cmn_config->set_run_id(1);
+    for (auto& devstr : options_.devices) {
+      Device local_device(devstr);
+      if (local_device.kind == current_device.kind) {
+        cmn_config->add_local_replica_mapping(local_device.ordinal);
+      }
+    }
 
     feed_inputs->insert(
         {cached_node.holders[1], exec_config.SerializeAsString()});
@@ -1055,7 +1075,17 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     exec_config.set_release_compilation_handle(false);
     exec_config.set_return_exploded_tuple(explode_tuple);
     exec_config.set_rng_seed(rng_seed_);
-    exec_config.set_replica_id(Device(devices[i]).ordinal);
+    xrt::CommonExecutionConfig* cmn_config =
+        exec_config.mutable_common_config();
+    Device current_device(devices[i]);
+    cmn_config->set_replica_id(current_device.ordinal);
+    cmn_config->set_run_id(1);
+    for (auto& devstr : options_.devices) {
+      Device local_device(devstr);
+      if (local_device.kind == current_device.kind) {
+        cmn_config->add_local_replica_mapping(local_device.ordinal);
+      }
+    }
 
     feed_inputs->insert(
         {cached_node.holders[1], exec_config.SerializeAsString()});
@@ -1290,7 +1320,7 @@ void XrtComputationClient::InitializeDevices(
   // Create the mesh service only if we have more than one worker, or if
   // multi-processing is active.
   std::string mesh_service_address =
-      sys_util::GetEnvString("XRT_MESH_SERVICE_ADDRESS", "");
+      sys_util::GetEnvString(env::kEnvMeshService, "");
   std::string mp_device = GetMultiProcessingDevice();
   if (!mesh_service_address.empty() && !mp_device.empty()) {
     Device device(mp_device);
@@ -1344,7 +1374,7 @@ void XrtComputationClient::CreateMeshService(
       device->set_global_name(worker_device.global_name);
     }
   }
-  config.set_mesh_size(sys_util::GetEnvInt("XRT_SHARD_WORLD_SIZE", 1));
+  config.set_mesh_size(sys_util::GetEnvInt(env::kEnvWorldSize, 1));
 
   TF_VLOG(1) << "Creating mesh service bound to " << address;
   mesh_service_ =
@@ -1796,7 +1826,7 @@ XrtComputationClient::Worker XrtComputationClient::ParseWorker(
 }
 
 std::string XrtComputationClient::GetLocalTarget(const Options& options) {
-  std::string local_worker = sys_util::GetEnvString("XRT_LOCAL_WORKER", "");
+  std::string local_worker = sys_util::GetEnvString(env::kEnvLocalWorker, "");
   std::string local_target;
   if (!local_worker.empty()) {
     XrtComputationClient::Worker worker = ParseWorker(local_worker);
@@ -1812,7 +1842,7 @@ std::string XrtComputationClient::GetLocalTarget(const Options& options) {
 
 void XrtComputationClient::MaybeCreateLocalService(const Options& options) {
   std::string grpc_root("grpc://");
-  std::string local_worker = sys_util::GetEnvString("XRT_LOCAL_WORKER", "");
+  std::string local_worker = sys_util::GetEnvString(env::kEnvLocalWorker, "");
   XrtComputationClient::Worker worker("", -1);
   if (!local_worker.empty()) {
     worker = ParseWorker(local_worker);
@@ -1844,7 +1874,7 @@ void XrtComputationClient::MaybeCreateLocalService(const Options& options) {
 }
 
 std::string XrtComputationClient::GetMultiProcessingDevice() {
-  return sys_util::GetEnvString("XRT_MULTI_PROCESSING_DEVICE", "");
+  return sys_util::GetEnvString(env::kEnvMpDevice, "");
 }
 
 }  // namespace xla

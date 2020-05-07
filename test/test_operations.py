@@ -1673,7 +1673,7 @@ class TestModelComparator(XlaTestCase):
     xla_x = x.to(xla_device)
     xla_model(xla_x)
 
-    report = mc.compare(save_dir1.name, save_dir2.name, rtol=1e-03, atol=1e-04)
+    report = mc.compare(save_dir1.name, save_dir2.name, rtol=1e-03, atol=1e-03)
     if report:
       print(report)
     self.assertEqual(len(report), 0)
