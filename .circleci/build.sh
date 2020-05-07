@@ -3,6 +3,7 @@
 set -ex
 
 source ./env
+source .circleci/common.sh
 
 # System default cmake 3.10 cannot find mkl, so point it to the right place.
 export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
@@ -37,10 +38,7 @@ if [[ ! -z "${CIRCLE_PULL_REQUEST}" ]]; then
   git rebase "origin/${CIRCLE_PR_BASE_BRANCH}"
 fi
 
-PYTORCH_DIR=/tmp/pytorch
-XLA_DIR="$PYTORCH_DIR/xla"
-git clone --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
-cp -r "$PWD" "$XLA_DIR"
+clone_pytorch
 
 cd $PYTORCH_DIR
 # Checkout specific commit ID/branch if pinned.
