@@ -3,6 +3,7 @@
 #include <string>
 
 #include "absl/types/span.h"
+#include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -20,7 +21,8 @@ class DumpUtil {
   static std::string PostOrderToText(absl::Span<const Node* const> post_order,
                                      absl::Span<const Node* const> roots);
 
-  static std::string ToHlo(absl::Span<const Value> values);
+  static std::string ToHlo(absl::Span<const Value> values,
+                           const Device& device);
 };
 
 }  // namespace ir
