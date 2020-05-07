@@ -169,8 +169,7 @@ class XlaDataCacheArena {
   struct TensorComparer {
     bool operator()(const at::Tensor& tensor1,
                     const at::Tensor& tensor2) const {
-      return tensor1.scalar_type() == tensor2.scalar_type() &&
-             TensorCompare(tensor1, tensor2);
+      return TensorCompare(tensor1, tensor2);
     }
   };
 
@@ -219,6 +218,7 @@ xla::ComputationClient::DataPtr GetDeviceData(const at::Tensor& tensor,
     at::Tensor tensor_copy = CopyTensor(tensor);
     device_data = TensorToXlaData(tensor_copy, device);
     cache->Add(std::move(tensor_copy), device_data);
+    XLA_COUNTER("DeviceDataCacheMiss", 1);
   }
   return device_data;
 }
@@ -569,7 +569,8 @@ std::string XLATensor::DumpHloComputation(
       ir_values.push_back(std::move(ir_value));
     }
   }
-  return !ir_values.empty() ? ir::DumpUtil::ToHlo(ir_values) : std::string();
+  return !ir_values.empty() ? ir::DumpUtil::ToHlo(ir_values, GetCurrentDevice())
+                            : std::string();
 }
 
 void XLATensor::SetXlaData(xla::ComputationClient::DataPtr xla_data) {
@@ -1447,7 +1448,8 @@ XLATensor::CompilationResult XLATensor::Compile(
     PostOrderData* po_data) {
   static const bool enable_aliasing =
       xla::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
-  ir::LoweringContext lowering_ctx("SyncTensorsGraph", po_data->post_order,
+  ir::LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
+                                   po_data->post_order,
                                    std::move(po_data->emission_map));
   for (auto index : coll.indices) {
     ir::Value ir_value = tensors[index].CurrentIrValue();

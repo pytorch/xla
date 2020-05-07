@@ -59,12 +59,15 @@ class HloMetadataSetter {
 
 }  // namespace
 
-LoweringContext::LoweringContext(const std::string& name) : builder_(name) {}
+LoweringContext::LoweringContext(const std::string& name, Device device)
+    : builder_(name), device_(std::move(device)) {}
 
-LoweringContext::LoweringContext(const std::string& name,
+LoweringContext::LoweringContext(const std::string& name, Device device,
                                  absl::Span<const Node* const> post_order,
                                  Util::EmissionMap emit_status)
-    : builder_(name), emit_status_(std::move(emit_status)) {
+    : builder_(name),
+      device_(std::move(device)),
+      emit_status_(std::move(emit_status)) {
   for (auto node : post_order) {
     LowerNode(node);
   }

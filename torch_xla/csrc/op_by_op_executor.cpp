@@ -57,7 +57,7 @@ xla::hash_t ComputeNodeKey(const ir::Node* node,
 xla::XlaComputation BuildNodeComputation(
     const ir::Node* node, absl::Span<const xla::Shape* const> input_shapes,
     const Device& device) {
-  ir::LoweringContext loctx("BuildNodeComputation");
+  ir::LoweringContext loctx("BuildNodeComputation", device);
   const auto& operands = node->operands();
   for (size_t i = 0; i < operands.size(); ++i) {
     xla::XlaOp param = xla::Parameter(
