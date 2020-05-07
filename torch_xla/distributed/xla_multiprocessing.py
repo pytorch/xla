@@ -173,6 +173,10 @@ def _setup_gpu_worker(index, gindex, pf_cfg):
   # Every process is restricted to 1 GPU device, which in such process will be
   # named XLA_GPU:0.
   os.environ[_CUDA_VISIBLE_DEVICES] = str(index)
+  # We have expanded the GPU devices in the device map already, in
+  # _create_gpu_devices(), so delete the key from the environment as it
+  # otherwise triggers device generation again in computation_client.cc.
+  os.environ.pop(xenv.GPU_NUM_DEVICES, None)
 
 
 def _setup_tpu_worker(index, gindex, pf_cfg, tpu_env_config):
@@ -184,10 +188,10 @@ def _setup_tpu_worker(index, gindex, pf_cfg, tpu_env_config):
     worker = list(tpu_config.values())[0]
     os.environ[xenv.LOCAL_WORKER] = '{}:{}'.format(worker.worker_name,
                                                    worker.ordinal)
-  if gindex > 0 and xenv.TPU_CONFIG in os.environ:
+  if gindex > 0:
     # In multi-processing mode, only the process handling the first device of
     # the master worker, will do TPU mesh initialization.
-    del os.environ[xenv.TPU_CONFIG]
+    os.environ.pop(xenv.TPU_CONFIG, None)
 
 
 def _prepare_env_for_index(index, pf_cfg):

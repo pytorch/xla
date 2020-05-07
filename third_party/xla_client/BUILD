@@ -70,6 +70,7 @@ cc_library(
     name = "computation_client_impl",
     srcs = [
         "computation_client.cc",
+        "env_vars.cc",
         "mesh_service.cc",
         "metrics.cc",
         "metrics_reader.cc",
@@ -91,6 +92,7 @@ cc_library(
         "cache.h",
         "computation_client.h",
         "debug_macros.h",
+        "env_vars.h",
         "mesh_service.h",
         "metrics.h",
         "metrics_reader.h",
