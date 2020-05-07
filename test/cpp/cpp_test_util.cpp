@@ -198,7 +198,7 @@ std::string GetTensorDotGraph(at::Tensor tensor) {
 
 std::string GetTensorHloGraph(at::Tensor tensor) {
   XLATensor xtensor = bridge::GetXlaTensor(tensor);
-  return ir::DumpUtil::ToHlo({xtensor.GetIrValue()});
+  return ir::DumpUtil::ToHlo({xtensor.GetIrValue()}, xtensor.GetDevice());
 }
 
 ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device) {
@@ -208,7 +208,7 @@ ir::Value GetTensorIrValue(const at::Tensor& tensor, const Device& device) {
 
 std::vector<xla::ComputationClient::DataPtr> Execute(
     absl::Span<const ir::Value> roots, const Device& device) {
-  ir::LoweringContext lowering_ctx("Execute");
+  ir::LoweringContext lowering_ctx("Execute", device);
   for (auto node : roots) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(node);
     lowering_ctx.AddResult(root);

@@ -469,15 +469,6 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
   }
 }
 
-bool TensorMemoryCompare(const at::Tensor& t1, const at::Tensor& t2) {
-  int64_t num_elements = t1.numel();
-  if (num_elements != t2.numel() || t1.scalar_type() != t2.scalar_type()) {
-    return false;
-  }
-  return std::memcmp(t1.contiguous().data_ptr(), t2.contiguous().data_ptr(),
-                     num_elements * t1.itemsize()) == 0;
-}
-
 void PopulateTensorBuffer(const at::Tensor& tensor,
                           const xla::Shape& dest_shape, void* dest_buffer,
                           size_t dest_buffer_size, const Device& device) {
@@ -671,9 +662,16 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
 }
 
 bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2) {
-  // Use TensorMemoryCompare until pytorch equal resolve the issue of
-  // non-deterministic ATEN compare of NAN.
-  return TensorMemoryCompare(t1, t2);
+  if (t1.scalar_type() != t2.scalar_type() || t1.sizes() != t2.sizes()) {
+    return false;
+  }
+  // PyTorch currently has an issue comparing tensors which have NaN values in
+  // it. The compare is not deterministic. So we do memory compare here until
+  // the PyTorch equal() API is fixed.
+  at::Tensor contiguous_t1 = t1.contiguous();
+  at::Tensor contiguous_t2 = t2.contiguous();
+  return std::memcmp(contiguous_t1.data_ptr(), contiguous_t2.data_ptr(),
+                     contiguous_t1.numel() * contiguous_t1.itemsize()) == 0;
 }
 
 xla::ComputationClient::DataPtr TensorToXlaData(const at::Tensor& tensor,

@@ -23,7 +23,8 @@ XlaOpVector Put::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp index = loctx->GetOutputOp(operand(1));
   xla::XlaOp source = loctx->GetOutputOp(operand(2));
-  return ReturnOp(CreatePut(input, index, source, accumulate_), loctx);
+  return ReturnOp(CreatePut(loctx->device(), input, index, source, accumulate_),
+                  loctx);
 }
 
 std::string Put::ToString() const {

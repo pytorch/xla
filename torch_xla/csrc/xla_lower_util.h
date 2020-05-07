@@ -5,6 +5,7 @@
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
 
@@ -57,11 +58,12 @@ using XlaOpCombiner = std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>;
 XlaOpCombiner NumericAddCombiner();
 
 // Used to lower scatter and scatter_add.
-xla::XlaOp CreateScatter(xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
-                         xla::int64 dim, const XlaOpCombiner& combiner);
+xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
+                         xla::XlaOp index, xla::XlaOp source, xla::int64 dim,
+                         const XlaOpCombiner& combiner);
 
-xla::XlaOp CreatePut(xla::XlaOp input, xla::XlaOp index, xla::XlaOp source,
-                     bool accumulate);
+xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
+                     xla::XlaOp source, bool accumulate);
 
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input);
 
