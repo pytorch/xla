@@ -376,7 +376,7 @@ class DistributedExecutor(object):
 
     threading.Thread(target=_regular_health_check, daemon=True).start()
     xu.parallel_work(
-      len(script_map), _run_script, script_map.values(), script_map.keys())
+        len(script_map), _run_script, script_map.values(), script_map.keys())
 
   def _run_cmd(self, script_map):
     try:
