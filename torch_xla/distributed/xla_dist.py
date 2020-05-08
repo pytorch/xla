@@ -353,8 +353,12 @@ class DistributedExecutor(object):
 
   def _start_run(self, script_map):
 
-    def _run_script(script_path, client_worker):
-      self._build_and_run_ssh([script_path], client_worker)
+    def _run_script(script_paths, client_worker):
+      script_path = script_paths['remote_path']
+      exit_code = self._build_and_run_ssh([script_path], client_worker)
+      if exit_code != 0:
+        raise RuntimeError(
+            'Remote command exitted with code: {}'.format(exit_code))
 
     def _regular_health_check():
       uneven_health_timeout = xu.getenv_as(
@@ -366,21 +370,9 @@ class DistributedExecutor(object):
           uneven_health_timeout, even_health_timeout)
         time.sleep(self.HEARTBEAT_CHECK_PERIOD)
 
-    threads = []
-    for client_worker in script_map:
-      thread = threading.Thread(
-          target=_run_script,
-          daemon=True,
-          args=(
-              script_map[client_worker]['remote_path'],
-              client_worker,
-          ))
-      thread.start()
-      threads.append(thread)
-
     threading.Thread(target=_regular_health_check, daemon=True).start()
-    for thread in threads:
-      thread.join()
+    xu.parallel_work(
+      len(script_map), _run_script, script_map.values(), script_map.keys())
 
   def _run_cmd(self, script_map):
     try:
