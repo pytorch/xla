@@ -246,6 +246,9 @@ class XrtComputationClient : public ComputationClient {
 
   const std::string& TorchDeviceToXrtDevice(const std::string& device) const;
 
+  template <typename T>
+  void SetupExecConfig(const Device& device, T* exec_config) const;
+
   std::unique_ptr<xrt::XLAComputation> CreateXrtComputation(
       const XlaComputation& computation, absl::Span<const std::string> devices,
       const Shape* output_shape) const;
