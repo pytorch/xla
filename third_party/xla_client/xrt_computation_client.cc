@@ -680,6 +680,27 @@ XrtComputationClient::ExecuteParallel(
                          feed_inputs);
 }
 
+template <typename T>
+void XrtComputationClient::SetupExecConfig(const Device& device,
+                                           T* exec_config) const {
+  exec_config->set_core_index_in_replica(0);
+  exec_config->set_rng_seed(rng_seed_);
+  if (device.kind != "TPU") {
+    // TPU ignores those fields, and given that the device list can be in the
+    // thousands for POD scale, we avoid wasting time filling it up.
+    xrt::CommonExecutionConfig* cmn_config =
+        exec_config->mutable_common_config();
+    cmn_config->set_replica_id(device.ordinal);
+    cmn_config->set_run_id(1);
+    for (auto& devstr : options_.devices) {
+      Device local_device(devstr);
+      if (local_device.kind == device.kind) {
+        cmn_config->add_local_replica_mapping(local_device.ordinal);
+      }
+    }
+  }
+}
+
 std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChained(
     absl::Span<const ExecuteChainedOp> ops, const std::string& device) {
   static int64 split_mode = sys_util::GetEnvInt("XRT_SPLIT_CHAINED_EXEC", 0);
@@ -700,18 +721,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
   tensorflow::Scope device_scope = session->root()->WithDevice(xrt_device);
 
   xrt::XRTChainedExecuteConfig exec_config;
-  exec_config.set_core_index_in_replica(0);
-  exec_config.set_rng_seed(rng_seed_);
-  xrt::CommonExecutionConfig* cmn_config = exec_config.mutable_common_config();
-  Device current_device(device);
-  cmn_config->set_replica_id(current_device.ordinal);
-  cmn_config->set_run_id(1);
-  for (auto& devstr : options_.devices) {
-    Device local_device(devstr);
-    if (local_device.kind == current_device.kind) {
-      cmn_config->add_local_replica_mapping(local_device.ordinal);
-    }
-  }
+  SetupExecConfig(Device(device), &exec_config);
 
   xrt::XRTChainedExecutePlan plan;
   std::vector<xla::Shape> result_shapes;
@@ -1027,22 +1037,10 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
         {cached_node.holders[0], xrt_computation->get_handle()});
 
     xrt::XRTExecutionConfig exec_config;
-    exec_config.set_core_index_in_replica(0);
     exec_config.set_release_input_handles(false);
     exec_config.set_release_compilation_handle(false);
     exec_config.set_return_exploded_tuple(explode_tuple);
-    exec_config.set_rng_seed(rng_seed_);
-    xrt::CommonExecutionConfig* cmn_config =
-        exec_config.mutable_common_config();
-    Device current_device(devices[i]);
-    cmn_config->set_replica_id(current_device.ordinal);
-    cmn_config->set_run_id(1);
-    for (auto& devstr : options_.devices) {
-      Device local_device(devstr);
-      if (local_device.kind == current_device.kind) {
-        cmn_config->add_local_replica_mapping(local_device.ordinal);
-      }
-    }
+    SetupExecConfig(Device(devices[i]), &exec_config);
 
     feed_inputs->insert(
         {cached_node.holders[1], exec_config.SerializeAsString()});
@@ -1070,22 +1068,10 @@ std::vector<tensorflow::Output> XrtComputationClient::CreateExecuteOps(
     feed_inputs->insert({cached_node.holders[0], computation.get_handle()});
 
     xrt::XRTExecutionConfig exec_config;
-    exec_config.set_core_index_in_replica(0);
     exec_config.set_release_input_handles(false);
     exec_config.set_release_compilation_handle(false);
     exec_config.set_return_exploded_tuple(explode_tuple);
-    exec_config.set_rng_seed(rng_seed_);
-    xrt::CommonExecutionConfig* cmn_config =
-        exec_config.mutable_common_config();
-    Device current_device(devices[i]);
-    cmn_config->set_replica_id(current_device.ordinal);
-    cmn_config->set_run_id(1);
-    for (auto& devstr : options_.devices) {
-      Device local_device(devstr);
-      if (local_device.kind == current_device.kind) {
-        cmn_config->add_local_replica_mapping(local_device.ordinal);
-      }
-    }
+    SetupExecConfig(Device(devices[i]), &exec_config);
 
     feed_inputs->insert(
         {cached_node.holders[1], exec_config.SerializeAsString()});
