@@ -36,6 +36,8 @@ if [[ ! -z "${CIRCLE_PULL_REQUEST}" ]]; then
   PR_NUM=$(basename $CIRCLE_PULL_REQUEST)
   CIRCLE_PR_BASE_BRANCH=$(curl -s https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls/$PR_NUM | jq -r '.base.ref')
   git rebase "origin/${CIRCLE_PR_BASE_BRANCH}"
+  git submodule deinit -f .
+  git submodule update --init --recursive
 fi
 
 clone_pytorch
