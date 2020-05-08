@@ -16,5 +16,5 @@ which runs the input pipeline) and training is often bottlenecked on the small
 Compute VM machines. For optimal performance create a GCP VM and TPU pair
 following our GCP Tutorials:
 * [Training FairSeq Transformer on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/transformer-pytorch)
-* [Training Resnet50 on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py)
+* [Training Resnet50 on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/resnet-pytorch)
 * [Training PyTorch models on Cloud TPU Pods](https://cloud.google.com/tpu/docs/tutorials/pytorch-pod)
