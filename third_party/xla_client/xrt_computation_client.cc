@@ -1577,8 +1577,7 @@ const XrtSession::CachedNode& XrtComputationClient::GetCompileNode(
     std::vector<tensorflow::ops::Placeholder> holders(
         {tensorflow::ops::Placeholder(scope, tensorflow::DT_STRING)});
     cache->Add(std::make_shared<XrtSession::CachedNode>(
-        tensorflow::ops::XRTCompile(scope, holders[0]).handle,
-        std::move(holders)));
+        tensorflow::ops::XRTCompile(scope, holders[0]).handle, holders));
   }
   return cache->Get();
 }
@@ -1600,7 +1599,7 @@ const XrtSession::CachedNode& XrtComputationClient::GetExecuteNode(
     cache->Add(std::make_shared<XrtSession::CachedNode>(
         tensorflow::ops::XRTExecute(scope, holders[0], holders[1],
                                     {tensorflow::Output(holders[2])}),
-        std::move(holders)));
+        holders));
   }
   return cache->Get();
 }
@@ -1618,7 +1617,7 @@ const XrtSession::CachedNode& XrtComputationClient::GetExecuteChainedNode(
          tensorflow::ops::Placeholder(scope, tensorflow::DT_STRING)});
     cache->Add(std::make_shared<XrtSession::CachedNode>(
         tensorflow::ops::XRTExecuteChained(scope, holders[0], holders[1]),
-        std::move(holders)));
+        holders));
   }
   return cache->Get();
 }
@@ -1634,8 +1633,7 @@ const XrtSession::CachedNode& XrtComputationClient::GetReadNode(
     std::vector<tensorflow::ops::Placeholder> holders(
         {tensorflow::ops::Placeholder(scope, tensorflow::DT_INT64)});
     cache->Add(std::make_shared<XrtSession::CachedNode>(
-        tensorflow::ops::XRTReadLiteral(scope, holders[0]),
-        std::move(holders)));
+        tensorflow::ops::XRTReadLiteral(scope, holders[0]), holders));
   }
   return cache->Get();
 }
@@ -1665,7 +1663,7 @@ const XrtSession::CachedNode& XrtComputationClient::GetAllocateNode(
     cache->Add(std::make_shared<XrtSession::CachedNode>(
         tensorflow::ops::XRTAllocateFromTensor(scope, {holders[0].output},
                                                {tensor_shape}, alloc_attrs),
-        std::move(holders)));
+        holders));
   }
   return cache->Get();
 }
@@ -1683,7 +1681,7 @@ XrtComputationClient::GetReleaseAllocationHandleNode(
         {tensorflow::ops::Placeholder(scope, tensorflow::DT_INT64)});
     cache->Add(std::make_shared<XrtSession::CachedNode>(
         tensorflow::ops::XRTReleaseAllocationHandle(scope, holders[0]),
-        std::move(holders)));
+        holders));
   }
   return cache->Get();
 }
@@ -1700,7 +1698,7 @@ const XrtSession::CachedNode& XrtComputationClient::GetReleaseCompileHandleNode(
         {tensorflow::ops::Placeholder(scope, tensorflow::DT_INT64)});
     cache->Add(std::make_shared<XrtSession::CachedNode>(
         tensorflow::ops::XRTReleaseCompilationHandle(scope, holders[0]),
-        std::move(holders)));
+        holders));
   }
   return cache->Get();
 }
@@ -1719,8 +1717,7 @@ const XrtSession::CachedNode& XrtComputationClient::GetSubTupleNode(
              scope, tensorflow::DT_INT32,
              tensorflow::ops::Placeholder::Shape({1}))});
     cache->Add(std::make_shared<XrtSession::CachedNode>(
-        tensorflow::ops::XRTSubTuple(scope, holders[0], holders[1]),
-        std::move(holders)));
+        tensorflow::ops::XRTSubTuple(scope, holders[0], holders[1]), holders));
   }
   return cache->Get();
 }
