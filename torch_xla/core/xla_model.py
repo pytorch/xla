@@ -8,6 +8,7 @@ import re
 import threading
 import time
 import torch
+import torch.nn.functional as F
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
@@ -376,6 +377,30 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
   """
   _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce(
       reduce_type, inputs, _get_all_reduce_token(), scale, groups or [])
+
+
+def all_gather(value, dim=0):
+  """Performs an all-gather operation along a given dimension.
+
+  Args:
+    value (torch.Tensor): The input tensor.
+    dim (int): The gather dimension.
+      Default: 0
+  Returns:
+    A tensor which has, in the ``dim`` dimension, all the values from the
+    participating replicas.
+  """
+  if dim < 0:
+    dim = value.dim() + dim
+  size = value.size(dim)
+  padding = [0] * (2 * value.dim())
+  idx = value.dim() - 1 - dim
+  ordinal = get_ordinal()
+  padding[2 * idx] = ordinal * size
+  padding[2 * idx + 1] = (xrt_world_size() - 1 - ordinal) * size
+  padded = F.pad(value, padding)
+  all_reduce('sum', [padded])
+  return padded
 
 
 def all_to_all(value,
