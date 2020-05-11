@@ -42,6 +42,7 @@ class DistributedExecutor(object):
       'XRT_SHARD_WORLD_SIZE',
       'XRT_SHARD_ORDINAL',
       'XLA_EMIT_STEPLOG',
+      'TPU_NUM_DEVICES',
   ]
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   MAX_TPU_RETRY = 50
@@ -237,6 +238,8 @@ class DistributedExecutor(object):
             worker_idx,
         'XLA_EMIT_STEPLOG':
             1,
+        'TPU_NUM_DEVICES':
+            8,
     }
     # Only for master
     if client_worker == self._cluster.get_client_master():
