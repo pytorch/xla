@@ -8,10 +8,28 @@ RELEASE_VERSION=$2  # rX.Y or nightly
 DEFAULT_PYTHON_VERSION=3.6
 DEBIAN_FRONTEND=noninteractive
 
+function maybe_append {
+  local LINE="$1"
+  local FILE="$2"
+  if [ ! -r "$FILE" ]; then
+    if [ -w "$(dirname $FILE)" ]; then
+      echo "$LINE" > "$FILE"
+    else
+      sudo bash -c "echo '$LINE' > \"$FILE\""
+    fi
+  elif [ "$(grep -F "$LINE" $FILE)" == "" ]; then
+    if [ -w "$FILE" ]; then
+      echo "$LINE" >> "$FILE"
+    else
+      sudo bash -c "echo '$LINE' >> \"$FILE\""
+    fi
+  fi
+}
+
 function setup_system {
-  sudo bash -c 'echo "APT::Acquire::Retries \"10\";" > /etc/apt/apt.conf.d/80-failparams'
-  sudo bash -c 'echo "APT::Acquire::http::Timeout \"180\";" >> /etc/apt/apt.conf.d/80-failparams'
-  sudo bash -c 'echo "APT::Acquire::ftp::Timeout \"180\";" >> /etc/apt/apt.conf.d/80-failparams'
+  maybe_append 'APT::Acquire::Retries "10";' /etc/apt/apt.conf.d/80-failparams
+  maybe_append 'APT::Acquire::http::Timeout "180";' /etc/apt/apt.conf.d/80-failparams
+  maybe_append 'APT::Acquire::ftp::Timeout "180";' /etc/apt/apt.conf.d/80-failparams
 }
 
 function install_cudnn {
@@ -22,8 +40,10 @@ function install_cudnn {
   local CUDNN_FILE="cudnn.tar.gz"
   if [[ "$CUDNN_TGZ_PATH" == gs://* ]]; then
     gsutil cp "$CUDNN_TGZ_PATH" "$CUDNN_FILE"
-  else
+  elif [[ "$CUDNN_TGZ_PATH" == http* ]]; then
     wget -O "$CUDNN_FILE" "$CUDNN_TGZ_PATH"
+  else
+    ln -s "$CUDNN_TGZ_PATH" "$CUDNN_FILE"
   fi
   tar xvf "$CUDNN_FILE"
   sudo cp cuda/include/cudnn.h /usr/local/cuda/include
@@ -45,6 +65,8 @@ function maybe_install_cuda {
     if [ ! -f "/usr/local/cuda/include/cudnn.h" ]; then
       install_cudnn
     fi
+    export TF_CUDA_PATHS="/usr/local/cuda,/usr"
+    maybe_append 'export TF_CUDA_PATHS="/usr/local/cuda,/usr"' ~/.bashrc
   fi
 }
 
@@ -86,13 +108,13 @@ function debian_version {
 function install_llvm_clang() {
   local DEBVER=$(debian_version)
   if ! apt-get install -y -s clang-8 > /dev/null 2>&1 ; then
-    sudo bash -c "echo \"deb http://apt.llvm.org/${DEBVER}/ llvm-toolchain-${DEBVER}-8 main\" >> /etc/apt/sources.list"
-    sudo bash -c "echo \"deb-src http://apt.llvm.org/${DEBVER}/ llvm-toolchain-${DEBVER}-8 main\" >> /etc/apt/sources.list"
+    maybe_append "deb http://apt.llvm.org/${DEBVER}/ llvm-toolchain-${DEBVER}-8 main" /etc/apt/sources.list
+    maybe_append "deb-src http://apt.llvm.org/${DEBVER}/ llvm-toolchain-${DEBVER}-8 main" /etc/apt/sources.list
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
     sudo apt-get update
   fi
   sudo apt-get install -y clang-8 clang++-8
-  echo 'export CC=clang-8 CXX=clang++-8' >> ~/.bashrc
+  maybe_append 'export CC=clang-8 CXX=clang++-8' ~/.bashrc
   export CC=clang-8 CXX=clang++-8
 }
 
@@ -103,11 +125,13 @@ function install_req_packages() {
 }
 
 function install_gcloud() {
-  # Following: https://cloud.google.com/sdk/docs/downloads-apt-get
-  echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-  sudo apt-get install -y apt-transport-https ca-certificates
-  curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
-  sudo apt-get update && sudo apt-get install -y google-cloud-sdk
+  if [ "$(which gcloud)" == "" ]; then
+    # Following: https://cloud.google.com/sdk/docs/downloads-apt-get
+    maybe_append "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" /etc/apt/sources.list.d/google-cloud-sdk.list
+    sudo apt-get install -y apt-transport-https ca-certificates
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+    sudo apt-get update && sudo apt-get install -y google-cloud-sdk
+  fi
 }
 
 function install_and_setup_conda() {
@@ -118,7 +142,7 @@ function install_and_setup_conda() {
     sh "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh" -b
     rm -f "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
   fi
-  echo ". $HOME/anaconda3/etc/profile.d/conda.sh" >> ~/.bashrc
+  maybe_append ". $HOME/anaconda3/etc/profile.d/conda.sh" ~/.bashrc
   source "$HOME/anaconda3/etc/profile.d/conda.sh"
   ENVNAME="pytorch"
   if conda env list | awk '{print $1}' | grep "^$ENVNAME$"; then
