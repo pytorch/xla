@@ -670,6 +670,25 @@ all the replicas in it.</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="torch_xla.core.xla_model.all_gather">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_gather</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">dim=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_gather" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs an all-gather operation along a given dimension.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>torch.Tensor</em>) – The input tensor.</p></li>
+<li><p><strong>dim</strong> (<em>python:int</em>) – The gather dimension.
+Default: 0</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A tensor which has, in the <code class="docutils literal notranslate"><span class="pre">dim</span></code> dimension, all the values from the
+participating replicas.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
 <dt id="torch_xla.core.xla_model.all_to_all">
 <code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_to_all</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">split_dimension</em>, <em class="sig-param">concat_dimension</em>, <em class="sig-param">split_count</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_to_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_to_all" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an XLA <cite>AllToAll()</cite> operation on the input tensor.</p>
