@@ -83,8 +83,9 @@ def _parse_tpu_config(config):
 
 
 def _get_devices_per_worker():
-  if os.environ.get(xenv.TPU_CONFIG, None) is not None:
-    return int(os.environ.get(xenv.TPU_NUM_DEVICES, '8')), 'TPU'
+  num_tpus = os.environ.get(xenv.TPU_NUM_DEVICES, None)
+  if os.environ.get(xenv.TPU_CONFIG, None) is not None or num_tpus is not None:
+    return int(num_tpus or '8'), 'TPU'
   num_gpus = os.environ.get(xenv.GPU_NUM_DEVICES, None)
   if num_gpus is not None:
     return int(num_gpus), 'GPU'
