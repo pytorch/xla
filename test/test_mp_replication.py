@@ -12,7 +12,7 @@ def _mp_fn(index):
     twos = ones + 1.0
     xones = ones.to(device)
     xtwos = twos.to(device)
-    xm.all_reduce('sum', [xones, xtwos])
+    xm.all_reduce(xm.REDUCE_SUM, [xones, xtwos])
 
     if (not xones.cpu().allclose(ones * float(xm.xrt_world_size())) or
         not xtwos.cpu().allclose(twos * float(xm.xrt_world_size()))):
