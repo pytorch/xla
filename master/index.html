@@ -651,8 +651,8 @@ Default: 1</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>reduce_type</strong> (<em>string</em>) – One of <code class="docutils literal notranslate"><span class="pre">sum</span></code>, <code class="docutils literal notranslate"><span class="pre">mul</span></code>, <code class="docutils literal notranslate"><span class="pre">and</span></code>, <code class="docutils literal notranslate"><span class="pre">or</span></code>, <code class="docutils literal notranslate"><span class="pre">min</span></code> and
-<code class="docutils literal notranslate"><span class="pre">max</span></code>.</p></li>
+<li><p><strong>reduce_type</strong> (<em>string</em>) – One of <code class="docutils literal notranslate"><span class="pre">REDUCE_SUM</span></code>, <code class="docutils literal notranslate"><span class="pre">REDUCE_MUL</span></code>, <code class="docutils literal notranslate"><span class="pre">REDUCE_AND</span></code>,
+<code class="docutils literal notranslate"><span class="pre">REDUCE_OR</span></code>, <code class="docutils literal notranslate"><span class="pre">REDUCE_MIN</span></code> and <code class="docutils literal notranslate"><span class="pre">REDUCE_MIN</span></code>.</p></li>
 <li><p><strong>inputs</strong> (<em>list</em>) – List of tensors to perform the all reduce op to.</p></li>
 <li><p><strong>scale</strong> (<em>python:float</em>) – A default scaling value to be applied after the reduce.
 Default: 1.0</p></li>
