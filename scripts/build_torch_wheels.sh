@@ -67,6 +67,10 @@ function maybe_install_cuda {
     fi
     export TF_CUDA_PATHS="/usr/local/cuda,/usr"
     maybe_append 'export TF_CUDA_PATHS="/usr/local/cuda,/usr"' ~/.bashrc
+    if [ "$TF_CUDA_COMPUTE_CAPABILITIES" == "" ]; then
+      export TF_CUDA_COMPUTE_CAPABILITIES="7.0"
+    fi
+    maybe_append "export TF_CUDA_COMPUTE_CAPABILITIES=\"$TF_CUDA_COMPUTE_CAPABILITIES\"" ~/.bashrc
   fi
 }
 
