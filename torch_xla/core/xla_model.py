@@ -15,6 +15,13 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.keyd_queue as kq
 
+REDUCE_SUM = 'sum'
+REDUCE_MUL = 'mul'
+REDUCE_AND = 'and'
+REDUCE_OR = 'or'
+REDUCE_MIN = 'min'
+REDUCE_MIN = 'max'
+
 _TLS = threading.local()
 
 
@@ -364,8 +371,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
   """Performs an inplace reduce operation on the input tensors.
 
   Args:
-    reduce_type (string): One of ``sum``, ``mul``, ``and``, ``or``, ``min`` and
-      ``max``.
+    reduce_type (string): One of ``REDUCE_SUM``, ``REDUCE_MUL``, ``REDUCE_AND``,
+      ``REDUCE_OR``, ``REDUCE_MIN`` and ``REDUCE_MIN``.
     inputs (list): List of tensors to perform the all reduce op to.
     scale (float): A default scaling value to be applied after the reduce.
       Default: 1.0
@@ -399,7 +406,7 @@ def all_gather(value, dim=0):
   padding[2 * idx] = ordinal * size
   padding[2 * idx + 1] = (xrt_world_size() - 1 - ordinal) * size
   padded = F.pad(value, padding)
-  all_reduce('sum', [padded])
+  all_reduce(REDUCE_SUM, [padded])
   return padded
 
 
@@ -532,7 +539,7 @@ def reduce_gradients(optimizer, groups=None):
   count = torch_xla._XLAC._xla_get_replication_devices_count()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
-    all_reduce('sum', gradients, scale=1.0 / count, groups=groups)
+    all_reduce(REDUCE_SUM, gradients, scale=1.0 / count, groups=groups)
 
 
 def optimizer_step(optimizer, barrier=False, optimizer_args={}, groups=None):
