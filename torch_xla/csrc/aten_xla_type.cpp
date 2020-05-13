@@ -2503,6 +2503,38 @@ at::Tensor AtenXlaType::repeat(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(repeats)));
 }
 
+at::Tensor AtenXlaType::replication_pad1d(const at::Tensor& self,
+                                          at::IntArrayRef padding) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::replication_pad1d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(padding)));
+}
+
+at::Tensor AtenXlaType::replication_pad1d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef padding) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::replication_pad1d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      XlaHelpers::I64List(padding)));
+}
+
+at::Tensor AtenXlaType::replication_pad2d(const at::Tensor& self,
+                                          at::IntArrayRef padding) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::replication_pad2d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(padding)));
+}
+
+at::Tensor AtenXlaType::replication_pad2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef padding) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::replication_pad2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      XlaHelpers::I64List(padding)));
+}
+
 at::Tensor& AtenXlaType::resize_(
     at::Tensor& self, at::IntArrayRef size,
     c10::optional<at::MemoryFormat> /* memory_format */) {
