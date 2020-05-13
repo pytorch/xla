@@ -123,6 +123,10 @@ class XlaHelpers {
     return xla::util::Iota<xla::int64>(shape.rank());
   }
 
+  static xla::XlaOp BroadcastDimensions(xla::XlaOp input,
+                                        absl::Span<const xla::int64> dimensions,
+                                        absl::Span<const xla::int64> sizes);
+
   static xla::XlaOp CreateReturnValue(xla::XlaBuilder* builder,
                                       const std::vector<xla::XlaOp>& outputs);
 
