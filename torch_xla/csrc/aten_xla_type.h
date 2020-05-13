@@ -743,6 +743,18 @@ class AtenXlaType {
 
   static at::Tensor repeat(const at::Tensor& self, at::IntArrayRef repeats);
 
+  static at::Tensor replication_pad1d(const at::Tensor& self,
+                                      at::IntArrayRef padding);
+  static at::Tensor replication_pad1d_backward(const at::Tensor& grad_output,
+                                               const at::Tensor& self,
+                                               at::IntArrayRef padding);
+
+  static at::Tensor replication_pad2d(const at::Tensor& self,
+                                      at::IntArrayRef padding);
+  static at::Tensor replication_pad2d_backward(const at::Tensor& grad_output,
+                                               const at::Tensor& self,
+                                               at::IntArrayRef padding);
+
   static at::Tensor& resize_(at::Tensor& self, at::IntArrayRef size,
                              c10::optional<at::MemoryFormat> memory_format);
 

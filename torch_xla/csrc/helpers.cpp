@@ -27,6 +27,17 @@ xla::XlaOp ConvertBinaryOpResult(xla::XlaOp op1, xla::XlaOp op2,
   return result;
 }
 
+xla::XlaComputation CreateComputation(
+    const std::string& name, xla::PrimitiveType type,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& op) {
+  xla::XlaBuilder builder(name);
+  xla::XlaOp x =
+      xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
+  xla::XlaOp y =
+      xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
+  return ConsumeValue(builder.Build(op(x, y)));
+}
+
 }  // namespace
 
 xla::PrecisionConfig::Precision XlaHelpers::s_mat_mul_precision =
@@ -41,15 +52,16 @@ xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
   return precision_config;
 }
 
-xla::XlaComputation CreateComputation(
-    const std::string& name, xla::PrimitiveType type,
-    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& op) {
-  xla::XlaBuilder builder(name);
-  xla::XlaOp x =
-      xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
-  xla::XlaOp y =
-      xla::Parameter(&builder, 1, xla::ShapeUtil::MakeShape(type, {}), "y");
-  return ConsumeValue(builder.Build(op(x, y)));
+xla::XlaOp XlaHelpers::BroadcastDimensions(
+    xla::XlaOp input, absl::Span<const xla::int64> dimensions,
+    absl::Span<const xla::int64> sizes) {
+  XLA_CHECK_EQ(dimensions.size(), sizes.size());
+  std::vector<xla::int64> bcast_sizes = SizesOfXlaOp(input);
+  for (size_t i = 0; i < dimensions.size(); ++i) {
+    bcast_sizes.at(dimensions[i]) = sizes[i];
+  }
+  return xla::BroadcastInDim(input, bcast_sizes,
+                             GetAllDimensions(bcast_sizes.size()));
 }
 
 xla::XlaOp XlaHelpers::CreateReturnValue(

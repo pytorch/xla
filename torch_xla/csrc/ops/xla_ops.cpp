@@ -15,6 +15,9 @@ const OpKindWrapper xla_generic_slice("xla::generic_slice");
 const OpKindWrapper xla_get_dimensions_size("xla::xla_get_dimensions_size");
 const OpKindWrapper xla_moving_average("xla::moving_average");
 const OpKindWrapper xla_not_supported("xla::not_supported");
+const OpKindWrapper xla_replication_pad("xla::replication_pad");
+const OpKindWrapper xla_replication_pad_backward(
+    "xla::replication_pad_backward");
 const OpKindWrapper xla_select("xla::select");
 const OpKindWrapper xla_tensor_data("xla::tensor_data");
 const OpKindWrapper xla_token("xla::token");
