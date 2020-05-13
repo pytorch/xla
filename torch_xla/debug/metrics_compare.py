@@ -10,7 +10,6 @@ import collections
 
 import torch_xla.debug.metrics_compare_utils as mcu
 
-
 TITLE = ['KEY', 'Val1', 'Val2', 'PCT_CHANGE']
 REPORT_FIRST_LINE = 'Metric: CompileTime'
 COUNTERS = 'Counters'
@@ -60,12 +59,13 @@ def print_absent_key_info(report1, report2):
 
 
 def print_separator():
-    print('\n' + '-'*80 + '\n')
+  print('\n' + '-' * 80 + '\n')
 
 
 def sort_counters(report1, report2):
-  delta = {key: (-val1+report2[key])/val1 * 100
-           for key, val1 in report1.items()}
+  delta = {
+      key: (-val1 + report2[key]) / val1 * 100 for key, val1 in report1.items()
+  }
   delta = sorted(delta.items(), key=lambda item: abs(item[1]), reverse=True)
   delta = [(key, report1[key], report2[key], pct_change)
            for key, pct_change in delta
@@ -80,17 +80,19 @@ def percentile_priority(key, priorities):
 
 
 def sort_percentiles(report1, report2):
-  delta = {key: (-val1+report2[key])/val1 * 100
-           for key, val1 in report1.items()}
+  delta = {
+      key: (-val1 + report2[key]) / val1 * 100 for key, val1 in report1.items()
+  }
   priorities = collections.defaultdict(list)
   for key, d in delta.items():
     priorities[key.split('__')[0]].append(abs(d))
   else:
     for key, ps in priorities.items():
       priorities[key] = sum(ps) / float(len(ps))
-  delta = sorted(delta.items(),
-                 key=lambda item: percentile_priority(item[0], priorities),
-                 reverse=True)
+  delta = sorted(
+      delta.items(),
+      key=lambda item: percentile_priority(item[0], priorities),
+      reverse=True)
   delta = [(key, report1[key], report2[key], pct_change)
            for key, pct_change in delta
            if percentile_priority(key, priorities)[0] > args.threshold]
@@ -113,7 +115,8 @@ def split_counters_percentiles(report):
   counters, percentiles = {}, {}
   for key, val in report.items():
     # counters, metrics totals and acucmulators
-    if key.endswith('__Value') or key.endswith('__TotalSamples') or '__Accumulator' in key:
+    if key.endswith('__Value') or key.endswith(
+        '__TotalSamples') or '__Accumulator' in key:
       counters[key] = val
     else:
       percentiles[key] = val
@@ -140,7 +143,9 @@ def print_pct_changes(args, report1, report2, descr):
   sorted_dat = sort_metrics(report1, report2, descr)
   formatted_dat = format_dat(sorted_dat)
   topn = getattr(args, 'topn_{}'.format(descr).lower())
-  print('Changes sorted by pct -- {} -- min threshold {} -- max rows {}\n'.format(descr, args.threshold, topn))
+  print(
+      'Changes sorted by pct -- {} -- min threshold {} -- max rows {}\n'.format(
+          descr, args.threshold, topn))
   pretty_format = get_pretty_row_format(formatted_dat)
   print(pretty_format.format(*TITLE))
   for i, row_args in enumerate(formatted_dat):
