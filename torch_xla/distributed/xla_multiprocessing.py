@@ -185,6 +185,7 @@ def _setup_tpu_worker(index, gindex, pf_cfg, tpu_env_config):
   if xenv.LOCAL_WORKER not in os.environ:
     # The local worker can be missing for a 1 TPU host setup. Make sure we
     # always have one.
+    assert (tpu_env_config is not None), 'tpu_env_config must not be None'
     tpu_config = _parse_tpu_config(tpu_env_config)
     worker = list(tpu_config.values())[0]
     os.environ[xenv.LOCAL_WORKER] = '{}:{}'.format(worker.worker_name,
