@@ -76,7 +76,7 @@ function maybe_install_cuda {
 }
 
 function maybe_install_sources {
-  if [ ! -d "torch" ]; then
+  if [ ! -d "pytorch" ]; then
     sudo apt-get install -y git
     git clone --recursive https://github.com/pytorch/pytorch.git
     cd pytorch
