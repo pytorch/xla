@@ -202,7 +202,7 @@ def _prepare_env_for_index(index, pf_cfg):
   os.environ[xenv.LOCAL_ORDINAL] = str(index)
 
   if pf_cfg.dev_kind == 'TPU':
-    _setup_tpu_worker(index, gindex, pf_cfg, os.environ[xenv.TPU_CONFIG])
+    _setup_tpu_worker(index, gindex, pf_cfg, os.environ.get(xenv.TPU_CONFIG, None))
   elif pf_cfg.dev_kind == 'GPU':
     _setup_gpu_worker(index, gindex, pf_cfg)
   return gindex
