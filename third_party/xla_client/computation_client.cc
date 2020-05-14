@@ -258,8 +258,8 @@ bool ParseEnvDevices(XrtComputationClient::Options* options) {
 std::unique_ptr<ComputationClient> ComputationClient::Create() {
   XrtComputationClient::Options options;
   std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
-  if (!ParseEnvDeviceCounts(&options) && !ParseEnvDevices(&options) &&
-      !ParseEnvBasedTpuClusterConfig(&options) &&
+  if (!ParseEnvBasedTpuClusterConfig(&options) &&
+      !ParseEnvDeviceCounts(&options) && !ParseEnvDevices(&options) &&
       !ParseMeshConfig(&options, &topology_proto)) {
     XLA_ERROR() << "Missing XLA configuration";
   }

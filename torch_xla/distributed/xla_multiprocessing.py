@@ -192,8 +192,11 @@ def _setup_tpu_worker(index, gindex, pf_cfg, tpu_env_config):
                                                    worker.ordinal)
   if gindex > 0:
     # In multi-processing mode, only the process handling the first device of
-    # the master worker, will do TPU mesh initialization.
+    # the master worker, will do TPU mesh initialization, so we need to remove
+    # the environment configs which would prevent the client to be falling in
+    # the mesh client config path.
     os.environ.pop(xenv.TPU_CONFIG, None)
+    os.environ.pop(xenv.TPU_NUM_DEVICES, None)
 
 
 def _prepare_env_for_index(index, pf_cfg):
