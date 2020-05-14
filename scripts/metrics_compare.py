@@ -27,6 +27,7 @@ def parse_args():
   parser.add_argument('--skip-1', type=int, default=0)
   parser.add_argument('--skip-2', type=int, default=0)
   parser.add_argument('--threshold', '-t', type=float, default=50.0)
+  parser.add_argument('--no-humanize', '-r', action='store_true')
   return parser.parse_args()
 
 
@@ -133,16 +134,24 @@ def format_row(k, v1, v2, p):
     k = k.replace('__Percentile_', '.P').replace('__Accumulator', '.Total')
     if k.endswith('_sec'):
       k = k.replace('_sec', '')
-      v1 = humanize.naturaldelta(
-          timedelta(seconds=v1),
-          minimum_unit='microseconds').replace('seconds', 'sec')
-      v2 = humanize.naturaldelta(
-          timedelta(seconds=v2),
-          minimum_unit='microseconds').replace('seconds', 'sec')
+      if not args.no_humanize:
+        v1 = humanize.naturaldelta(
+            timedelta(seconds=v1),
+            minimum_unit='microseconds').replace('seconds', 'sec')
+        v2 = humanize.naturaldelta(
+            timedelta(seconds=v2),
+            minimum_unit='microseconds').replace('seconds', 'sec')
+      else:
+        v1 = '{:.4f}'.format(v1)
+        v2 = '{:.4f}'.format(v2)
     elif k.endswith('_mb'):
       k = k.replace('_mb', '')
-      v1 = humanize.naturalsize(v1)
-      v2 = humanize.naturalsize(v2)
+      if not args.no_humanize:
+        v1 = humanize.naturalsize(v1)
+        v2 = humanize.naturalsize(v2)
+      else:
+        v1 = '{:.4f}'.format(v1)
+        v2 = '{:.4f}'.format(v2)
     else:
       v1 = '{:.4f}'.format(v1)
       v2 = '{:.4f}'.format(v2)
