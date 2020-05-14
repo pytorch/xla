@@ -7,6 +7,8 @@ summary of differences, sorted by the percent change.
 import sys
 import argparse
 import collections
+import humanize
+from datetime import timedelta
 
 import torch_xla.debug.metrics_compare_utils as mcu
 
@@ -76,7 +78,7 @@ def sort_counters(report1, report2):
 def percentile_priority(key, priorities):
   metric, p = key.split('__')
   p = int(p.split('_')[1])
-  return (priorities[metric], -p)
+  return (priorities[metric], metric, -p)
 
 
 def sort_percentiles(report1, report2):
@@ -129,8 +131,19 @@ def format_row(k, v1, v2, p):
     v1, v2 = int(v1), int(v2)
   elif '__Percentile_' in k or '__Accumulator' in k:
     k = k.replace('__Percentile_', '.P').replace('__Accumulator', '.Total')
-    v1 = '{:.4f}'.format(v1)
-    v2 = '{:.4f}'.format(v2)
+    if k.endswith('_sec'):
+      k = k.replace('_sec', '')
+      v1 = humanize.naturaldelta(timedelta(seconds=v1), minimum_unit='microseconds').replace('seconds', 'sec')
+      v2 = humanize.naturaldelta(timedelta(seconds=v2), minimum_unit='microseconds').replace('seconds', 'sec')
+    elif k.endswith('_mb'):
+      k = k.replace('_mb', '')
+      v1 = humanize.naturalsize(v1)
+      v2 = humanize.naturalsize(v2)
+    else:
+      v1 = '{:.4f}'.format(v1)
+      v2 = '{:.4f}'.format(v2)
+    if '.Total' not in k and not k.endswith('P1'):
+      k = k.split('.')[-1]
   p = '{:.1f}'.format(p)
   return k, v1, v2, p
 
