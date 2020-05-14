@@ -133,8 +133,12 @@ def format_row(k, v1, v2, p):
     k = k.replace('__Percentile_', '.P').replace('__Accumulator', '.Total')
     if k.endswith('_sec'):
       k = k.replace('_sec', '')
-      v1 = humanize.naturaldelta(timedelta(seconds=v1), minimum_unit='microseconds').replace('seconds', 'sec')
-      v2 = humanize.naturaldelta(timedelta(seconds=v2), minimum_unit='microseconds').replace('seconds', 'sec')
+      v1 = humanize.naturaldelta(
+          timedelta(seconds=v1),
+          minimum_unit='microseconds').replace('seconds', 'sec')
+      v2 = humanize.naturaldelta(
+          timedelta(seconds=v2),
+          minimum_unit='microseconds').replace('seconds', 'sec')
     elif k.endswith('_mb'):
       k = k.replace('_mb', '')
       v1 = humanize.naturalsize(v1)
