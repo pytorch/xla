@@ -198,6 +198,6 @@ def main(args):
   print_comparison_summary(args, report1, report2)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   args = parse_args()
   main(args)
