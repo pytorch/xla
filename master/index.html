@@ -862,6 +862,31 @@ ordinal <cite>i</cite> at position <cite>i</cite> in the returned tuple.</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="torch_xla.core.xla_model.do_on_ordinals">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">do_on_ordinals</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">data=()</em>, <em class="sig-param">ordinals=(0</em>, <em class="sig-param">)</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#do_on_ordinals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.do_on_ordinals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs a function only on a given set of ordinals.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target</strong> (<em>callable</em>) – The function to be run on <cite>ordinals</cite>.</p></li>
+<li><p><strong>data</strong> – Any input data for the <cite>target</cite> function which contains tensors. All
+the XLA tensors used by the <cite>target</cite> function must be passed in this
+argument. Every other data used by the function can be captured by the
+Python interpreter as usual.
+Default: ()</p></li>
+<li><p><strong>ordinals</strong> (<em>list</em><em>, </em><em>python:int</em>) – The list/set of ordinals where the <cite>target</cite> function
+should run.
+Default: (0,)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>In the ordinals that ran the <cite>target</cite> function, the function return value,
+otherwise <cite>None</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
 <dt id="torch_xla.core.xla_model.mesh_reduce">
 <code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">mesh_reduce</code><span class="sig-paren">(</span><em class="sig-param">tag</em>, <em class="sig-param">data</em>, <em class="sig-param">reduce_fn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#mesh_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.mesh_reduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an out-of-graph client mesh reduction.</p>

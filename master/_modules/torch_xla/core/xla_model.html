@@ -897,6 +897,34 @@
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_rendezvous</span><span class="p">(</span><span class="n">get_ordinal</span><span class="p">(),</span> <span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="do_on_ordinals"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.do_on_ordinals">[docs]</a><span class="k">def</span> <span class="nf">do_on_ordinals</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">(),</span> <span class="n">ordinals</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,)):</span>
+  <span class="sd">&quot;&quot;&quot;Runs a function only on a given set of ordinals.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    target (callable): The function to be run on `ordinals`.</span>
+<span class="sd">    data: Any input data for the `target` function which contains tensors. All</span>
+<span class="sd">      the XLA tensors used by the `target` function must be passed in this</span>
+<span class="sd">      argument. Every other data used by the function can be captured by the</span>
+<span class="sd">      Python interpreter as usual.</span>
+<span class="sd">      Default: ()</span>
+<span class="sd">    ordinals (list, int): The list/set of ordinals where the `target` function</span>
+<span class="sd">      should run.</span>
+<span class="sd">      Default: (0,)</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    In the ordinals that ran the `target` function, the function return value,</span>
+<span class="sd">    otherwise `None`.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">running</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span> <span class="ow">in</span> <span class="n">ordinals</span>
+  <span class="n">cpu_data</span> <span class="o">=</span> <span class="n">_maybe_convert_to_cpu</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="n">running</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">running</span><span class="p">:</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">target</span><span class="p">(</span><span class="n">cpu_data</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
+  <span class="n">rendezvous</span><span class="p">(</span><span class="s1">&#39;torch_xla.core.xla_model.do_on_ordinals&#39;</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">result</span></div>
+
+
 <div class="viewcode-block" id="mesh_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.mesh_reduce">[docs]</a><span class="k">def</span> <span class="nf">mesh_reduce</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">reduce_fn</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs an out-of-graph client mesh reduction.</span>
 
