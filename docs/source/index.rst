@@ -23,6 +23,7 @@ xla_model
 .. autofunction:: optimizer_step
 .. autofunction:: save
 .. autofunction:: rendezvous
+.. autofunction:: do_on_ordinals
 .. autofunction:: mesh_reduce
 .. autofunction:: set_rng_seed
 

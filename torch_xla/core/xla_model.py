@@ -645,6 +645,34 @@ def rendezvous(tag, payload=b''):
   return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload)
 
 
+def do_on_ordinals(target, data=(), ordinals=(0,)):
+  """Runs a function only on a given set of ordinals.
+
+  Args:
+    target (callable): The function to be run on `ordinals`.
+    data: Any input data for the `target` function which contains tensors. All
+      the XLA tensors used by the `target` function must be passed in this
+      argument. Every other data used by the function can be captured by the
+      Python interpreter as usual.
+      Default: ()
+    ordinals (list, int): The list/set of ordinals where the `target` function
+      should run.
+      Default: (0,)
+
+  Returns:
+    In the ordinals that ran the `target` function, the function return value,
+    otherwise `None`.
+  """
+  running = get_ordinal() in ordinals
+  cpu_data = _maybe_convert_to_cpu(data, convert=running)
+  if running:
+    result = target(cpu_data)
+  else:
+    result = None
+  rendezvous('torch_xla.core.xla_model.do_on_ordinals')
+  return result
+
+
 def mesh_reduce(tag, data, reduce_fn):
   """Performs an out-of-graph client mesh reduction.
 
