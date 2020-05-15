@@ -342,3 +342,37 @@ class MpModelWrapper(object):
     with self._lock:
       self._model.to(device)
     return self._model
+
+
+class MpSerialExecutor(object):
+  """Utility to run a function in a serialized fashion among multi-core processes.
+
+  Example::
+
+    # At global scope.
+    SERIAL_EXEC = xmp.MpSerialExecutor()
+
+    def load_dataset(path):
+      return maybe_download_and_load(path)
+
+    def _mp_fn(index, ...):
+      # Avoid all cores downloading the same data with the serial executor.
+      dataset = SERIAL_EXEC.run(lambda: load_dataset('/tmp/mnist-data'))
+      ...
+
+    xmp.spwan(_mp_fn, ...)
+  """
+
+  def __init__(self):
+    self._lock = torch.multiprocessing.Lock()
+
+  def run(self, fn):
+    """Runs the provided function serialized WRT each per-core process.
+
+    Args:
+      fn (callable): The function to run in a serialized fashion.
+    Returns:
+      The `fn` return value.
+    """
+    with self._lock:
+      return fn()
