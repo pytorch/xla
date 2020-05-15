@@ -444,8 +444,11 @@
                                                    <span class="n">worker</span><span class="o">.</span><span class="n">ordinal</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">gindex</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
     <span class="c1"># In multi-processing mode, only the process handling the first device of</span>
-    <span class="c1"># the master worker, will do TPU mesh initialization.</span>
+    <span class="c1"># the master worker, will do TPU mesh initialization, so we need to remove</span>
+    <span class="c1"># the environment configs which would prevent the client to be falling in</span>
+    <span class="c1"># the mesh client config path.</span>
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_NUM_DEVICES</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_prepare_env_for_index</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">):</span>
