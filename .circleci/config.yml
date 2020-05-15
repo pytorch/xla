@@ -13,8 +13,10 @@ setup_base_docker: &setup_base_docker
     pyenv local 3.5.2
     pip install --upgrade pip
     pip install pyyaml -qqq
+    # TODO: Figure out how to pass this directly from upstream pytorch repository
+    DOCKER_TAG=b8cbcbc72ed49debd616f53a36a9c02479ae95c7
     DOCKER_IMAGE=$(python "/home/circleci/project/.circleci/parse_docker_image.py")
-    echo "export DOCKER_IMAGE=${DOCKER_IMAGE}" >> $BASH_ENV
+    echo "export DOCKER_IMAGE=${DOCKER_IMAGE}:${DOCKER_TAG}" >> $BASH_ENV
     echo "export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
     echo "export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
     echo "export WORKDIR=/var/lib/jenkins/workspace" >> $BASH_ENV
