@@ -631,18 +631,21 @@ def send_cpu_data_to_device(data, device):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
-def rendezvous(tag, payload=b''):
+def rendezvous(tag, payload=b'', replicas=[]):
   """Waits for all the mesh clients to reach the named rendezvous.
 
   Args:
     tag (string): The name of the rendezvous to join.
     payload (bytes, optional): The payload to be sent to the rendezvous.
+    replicas (list, int): The replica ordinals taking part of the rendezvous.
+      Empty means all replicas in the mesh.
+      Default: []
 
   Returns:
     The payloads exchanged by all the other cores, with the payload of core
     ordinal `i` at position `i` in the returned tuple.
   """
-  return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload)
+  return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload, replicas)
 
 
 def do_on_ordinals(target, data=(), ordinals=(0,)):

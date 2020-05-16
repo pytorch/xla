@@ -309,14 +309,18 @@ py::object GetRevisions() {
 }
 
 std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
-                                  const std::string& payload) {
+                                  const std::string& payload,
+                                  const std::vector<xla::int64>& replicas) {
   xla::service::MeshClient* mesh_client = xla::service::MeshClient::Get();
   std::vector<py::bytes> payloads;
   if (mesh_client != nullptr) {
-    auto rendezvous_payloads = mesh_client->Rendezvous(ordinal, tag, payload);
+    auto rendezvous_payloads =
+        mesh_client->Rendezvous(ordinal, tag, payload, replicas);
     for (auto& rendezvous_payload : rendezvous_payloads) {
       payloads.push_back(rendezvous_payload);
     }
+  } else {
+    XLA_CHECK(replicas.empty() || (replicas.size() == 1 && replicas[0] == 0));
   }
   return payloads;
 }
@@ -568,8 +572,9 @@ void InitXlaModuleBindings(py::module m) {
     return xla::ComputationClient::Get()->GetReplicationDevices().size();
   });
   m.def("_xla_rendezvous",
-        [](int ordinal, const std::string& tag, const std::string& payload) {
-          return Rendezvous(ordinal, tag, payload);
+        [](int ordinal, const std::string& tag, const std::string& payload,
+           const std::vector<xla::int64>& replicas) {
+          return Rendezvous(ordinal, tag, payload, replicas);
         });
 
   py::class_<ir::Value, std::shared_ptr<ir::Value>>(m, "IrValue");
