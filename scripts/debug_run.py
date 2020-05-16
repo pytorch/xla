@@ -88,6 +88,7 @@ def create_env(args):
   env['XLA_HLO_DEBUG'] = '1'
   env['TF_CPP_LOG_THREAD_ID'] = '1'
   env['TF_CPP_VMODULE'] = build_vmodule(args, _DEFAULT_VMODULE)
+  env['TF_CPP_MIN_LOG_LEVEL'] = '0'
   env['XLA_SAVE_TENSORS_FILE'] = get_graphs_file_path(args.outdir)
   if args.hlo:
     env['XLA_SAVE_TENSORS_FMT'] = 'hlo'
