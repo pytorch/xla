@@ -38,6 +38,8 @@ distributed
 .. autofunction:: spawn
 .. autoclass:: MpModelWrapper
 	       :members: to
+.. autoclass:: MpSerialExecutor
+	       :members: run
 
 utils
 ----------------------------------

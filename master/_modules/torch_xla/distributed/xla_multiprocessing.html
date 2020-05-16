@@ -594,6 +594,40 @@
     <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span></div></div>
+
+
+<div class="viewcode-block" id="MpSerialExecutor"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor">[docs]</a><span class="k">class</span> <span class="nc">MpSerialExecutor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Utility to run a function in a serialized fashion among multi-core processes.</span>
+
+<span class="sd">  Example::</span>
+
+<span class="sd">    # At global scope.</span>
+<span class="sd">    SERIAL_EXEC = xmp.MpSerialExecutor()</span>
+
+<span class="sd">    def load_dataset(path):</span>
+<span class="sd">      return maybe_download_and_load(path)</span>
+
+<span class="sd">    def _mp_fn(index, ...):</span>
+<span class="sd">      # Avoid all cores downloading the same data with the serial executor.</span>
+<span class="sd">      dataset = SERIAL_EXEC.run(lambda: load_dataset(&#39;/tmp/mnist-data&#39;))</span>
+<span class="sd">      ...</span>
+
+<span class="sd">    xmp.spwan(_mp_fn, ...)</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<div class="viewcode-block" id="MpSerialExecutor.run"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run">[docs]</a>  <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Runs the provided function serialized WRT each per-core process.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      fn (callable): The function to run in a serialized fashion.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">      The `fn` return value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">fn</span><span class="p">()</span></div></div>
 </pre></div>
 
              </article>

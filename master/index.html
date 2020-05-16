@@ -1046,6 +1046,41 @@ memory during the process.</p>
 
 </dd></dl>
 
+<dl class="class">
+<dt id="torch_xla.distributed.xla_multiprocessing.MpSerialExecutor">
+<em class="property">class </em><code class="sig-prename descclassname">torch_xla.distributed.xla_multiprocessing.</code><code class="sig-name descname">MpSerialExecutor</code><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpSerialExecutor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility to run a function in a serialized fashion among multi-core processes.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># At global scope.</span>
+<span class="n">SERIAL_EXEC</span> <span class="o">=</span> <span class="n">xmp</span><span class="o">.</span><span class="n">MpSerialExecutor</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">load_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">maybe_download_and_load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_mp_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="o">...</span><span class="p">):</span>
+  <span class="c1"># Avoid all cores downloading the same data with the serial executor.</span>
+  <span class="n">dataset</span> <span class="o">=</span> <span class="n">SERIAL_EXEC</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;/tmp/mnist-data&#39;</span><span class="p">))</span>
+  <span class="o">...</span>
+
+<span class="n">xmp</span><span class="o">.</span><span class="n">spwan</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param">fn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpSerialExecutor.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs the provided function serialized WRT each per-core process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fn</strong> (<em>callable</em>) – The function to run in a serialized fashion.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The <cite>fn</cite> return value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="module-torch_xla.utils.tf_record_reader">
 <span id="utils"></span><h2>utils<a class="headerlink" href="#module-torch_xla.utils.tf_record_reader" title="Permalink to this headline">¶</a></h2>
