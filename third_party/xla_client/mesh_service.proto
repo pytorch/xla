@@ -33,6 +33,7 @@ message RendezvousRequest {
   required string tag = 1;
   required bytes payload = 2;
   required uint32 ordinal = 3;
+  repeated uint32 replicas = 4;
 }
 
 message RendezvousResponse {
@@ -40,7 +41,7 @@ message RendezvousResponse {
 }
 
 message GetNcclUniqueUidRequest {
-  repeated int64 replicas = 1;
+  repeated uint32 replicas = 1;
 }
 
 message GetNcclUniqueUidResponse {
