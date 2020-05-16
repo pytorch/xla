@@ -12,7 +12,9 @@
 #include <atomic>
 #include <chrono>
 #include <iostream>
+#include <map>
 #include <mutex>
+#include <set>
 #include <unordered_map>
 
 #include "absl/strings/str_cat.h"
@@ -75,20 +77,13 @@ class MeshServiceImpl : public grpc::MeshService::Service {
  private:
   class RendezvousData {
    public:
-    explicit RendezvousData(size_t count)
-        : mwait_(count), release_count_(0), payloads_(count) {}
+    explicit RendezvousData(size_t count, const std::set<int64>& replicas)
+        : count_(count),
+          replicas_(replicas),
+          mwait_(count),
+          release_count_(0) {}
 
     bool Release() { return release_count_.fetch_add(1) == 0; }
-
-    void SetPayload(size_t ordinal, std::string payload) {
-      std::lock_guard<std::mutex> lock(lock_);
-      if (ordinal >= payloads_.size()) {
-        status_ = ::grpc::Status(::grpc::StatusCode::INVALID_ARGUMENT,
-                                 absl::StrCat("Invalid ordinal: ", ordinal));
-      } else {
-        payloads_[ordinal] = std::move(payload);
-      }
-    }
 
     ::grpc::Status Wait() {
       ::grpc::Status status =
@@ -100,25 +95,50 @@ class MeshServiceImpl : public grpc::MeshService::Service {
       return status;
     }
 
-    void Done() { mwait_.Done(); }
+    void Complete(int64 ordinal, std::string payload,
+                  const std::set<int64>& replicas) {
+      std::lock_guard<std::mutex> lock(lock_);
+      if ((!replicas_.empty() && replicas_.count(ordinal) == 0) ||
+          (replicas_.empty() && ordinal >= count_)) {
+        status_ = ::grpc::Status(::grpc::StatusCode::INVALID_ARGUMENT,
+                                 absl::StrCat("Invalid ordinal: ", ordinal));
+      } else if (replicas != replicas_) {
+        status_ = ::grpc::Status(
+            ::grpc::StatusCode::INVALID_ARGUMENT,
+            absl::StrCat("Mismatching replicas: (",
+                         absl::StrJoin(replicas_, ", "), ") vs. (",
+                         absl::StrJoin(replicas, ", "), ")"));
+      } else {
+        auto insert_result = payloads_.emplace(ordinal, std::move(payload));
+        if (!insert_result.second) {
+          status_ =
+              ::grpc::Status(::grpc::StatusCode::INVALID_ARGUMENT,
+                             absl::StrCat("Duplicate ordinal: ", ordinal));
+        }
+      }
+      mwait_.Done();
+    }
 
-    const std::vector<std::string>& Payloads() const { return payloads_; };
+    const std::map<int64, std::string>& Payloads() const { return payloads_; };
 
    private:
+    size_t count_;
+    std::set<int64> replicas_;
     std::mutex lock_;
     util::MultiWait mwait_;
     std::atomic<size_t> release_count_;
-    std::vector<std::string> payloads_;
+    std::map<int64, std::string> payloads_;
     ::grpc::Status status_;
   };
 
-  std::shared_ptr<RendezvousData> GetRendezvous(const std::string& tag) {
+  std::shared_ptr<RendezvousData> GetRendezvous(
+      const std::string& tag, const std::set<int64>& replicas) {
     std::lock_guard<std::mutex> lock(lock_);
     auto it = rendezvous_map_.find(tag);
     if (it == rendezvous_map_.end()) {
+      size_t count = replicas.empty() ? config_.mesh_size() : replicas.size();
       it = rendezvous_map_
-               .emplace(tag,
-                        std::make_shared<RendezvousData>(config_.mesh_size()))
+               .emplace(tag, std::make_shared<RendezvousData>(count, replicas))
                .first;
     }
     return it->second;
@@ -149,18 +169,19 @@ class MeshServiceImpl : public grpc::MeshService::Service {
 ::grpc::Status MeshServiceImpl::Rendezvous(
     ::grpc::ServerContext* context, const grpc::RendezvousRequest* request,
     grpc::RendezvousResponse* response) {
-  auto rendezvous = GetRendezvous(request->tag());
-  rendezvous->SetPayload(request->ordinal(), request->payload());
-  rendezvous->Done();
+  std::set<int64> replicas(request->replicas().begin(),
+                           request->replicas().end());
+  auto rendezvous = GetRendezvous(request->tag(), replicas);
+  rendezvous->Complete(request->ordinal(), request->payload(), replicas);
   TF_VLOG(3) << "Entering rendezvous: ordinal=" << request->ordinal()
-             << " tag=" << request->tag() << " peer=" << context->peer();
+             << ", tag=" << request->tag() << ", peer=" << context->peer();
   ::grpc::Status status = rendezvous->Wait();
   TF_VLOG(3) << "Exiting rendezvous: ordinal=" << request->ordinal()
-             << " tag=" << request->tag() << " peer=" << context->peer()
-             << " status=" << status;
+             << ", tag=" << request->tag() << ", peer=" << context->peer()
+             << ", status=" << status;
   if (status.ok()) {
-    for (auto& payload : rendezvous->Payloads()) {
-      response->add_payloads(payload);
+    for (auto& ordinal_payload : rendezvous->Payloads()) {
+      response->add_payloads(ordinal_payload.second);
     }
   }
   ReleaseRendezvous(request->tag(), rendezvous);
@@ -245,9 +266,9 @@ const std::string& MeshClient::address() const { return impl_->address; }
 
 grpc::Config MeshClient::GetConfig() const {
   ::grpc::ClientContext context;
-  grpc::GetConfigRequest reqeust;
+  grpc::GetConfigRequest request;
   grpc::GetConfigResponse response;
-  ::grpc::Status status = impl_->stub->GetConfig(&context, reqeust, &response);
+  ::grpc::Status status = impl_->stub->GetConfig(&context, request, &response);
   if (!status.ok()) {
     XLA_ERROR() << "Failed to retrieve mesh configuration: " << status;
   }
@@ -255,15 +276,19 @@ grpc::Config MeshClient::GetConfig() const {
 }
 
 std::vector<std::string> MeshClient::Rendezvous(
-    int ordinal, const std::string& tag, const std::string& payload) const {
+    int ordinal, const std::string& tag, const std::string& payload,
+    absl::Span<const int64> replicas) const {
   ::grpc::ClientContext context;
-  grpc::RendezvousRequest reqeust;
+  grpc::RendezvousRequest request;
   grpc::RendezvousResponse response;
-  reqeust.set_tag(tag);
-  reqeust.set_payload(payload);
-  reqeust.set_ordinal(ordinal);
+  request.set_tag(tag);
+  request.set_payload(payload);
+  request.set_ordinal(ordinal);
+  for (auto& replica : replicas) {
+    request.add_replicas(replica);
+  }
   TF_VLOG(3) << "Waiting for rendezvous: ordinal=" << ordinal << " tag=" << tag;
-  ::grpc::Status status = impl_->stub->Rendezvous(&context, reqeust, &response);
+  ::grpc::Status status = impl_->stub->Rendezvous(&context, request, &response);
   TF_VLOG(3) << "Rendezvous wait complete: " << tag;
   if (!status.ok()) {
     XLA_ERROR() << "Failed to meet rendezvous '" << tag << "': " << status;
@@ -278,16 +303,16 @@ std::vector<std::string> MeshClient::Rendezvous(
 std::string MeshClient::GetNcclUniqueUid(
     absl::Span<const int64> replicas) const {
   ::grpc::ClientContext context;
-  grpc::GetNcclUniqueUidRequest reqeust;
+  grpc::GetNcclUniqueUidRequest request;
   grpc::GetNcclUniqueUidResponse response;
   for (auto& replica : replicas) {
-    reqeust.add_replicas(replica);
+    request.add_replicas(replica);
   }
 
   TF_VLOG(3) << "Waiting for NCCL UID: replicas=("
              << absl::StrJoin(replicas, ", ") << ")";
   ::grpc::Status status =
-      impl_->stub->GetNcclUniqueUid(&context, reqeust, &response);
+      impl_->stub->GetNcclUniqueUid(&context, request, &response);
   TF_VLOG(3) << "NCCL UID wait complete: " << absl::StrJoin(replicas, ", ")
              << ")";
   if (!status.ok()) {
