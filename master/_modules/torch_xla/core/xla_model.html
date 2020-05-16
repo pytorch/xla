@@ -883,18 +883,21 @@
   <span class="k">return</span> <span class="n">ToXlaTensorArena</span><span class="p">(</span><span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="rendezvous"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.rendezvous">[docs]</a><span class="k">def</span> <span class="nf">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="rendezvous"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.rendezvous">[docs]</a><span class="k">def</span> <span class="nf">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">replicas</span><span class="o">=</span><span class="p">[]):</span>
   <span class="sd">&quot;&quot;&quot;Waits for all the mesh clients to reach the named rendezvous.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    tag (string): The name of the rendezvous to join.</span>
 <span class="sd">    payload (bytes, optional): The payload to be sent to the rendezvous.</span>
+<span class="sd">    replicas (list, int): The replica ordinals taking part of the rendezvous.</span>
+<span class="sd">      Empty means all replicas in the mesh.</span>
+<span class="sd">      Default: []</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The payloads exchanged by all the other cores, with the payload of core</span>
 <span class="sd">    ordinal `i` at position `i` in the returned tuple.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_rendezvous</span><span class="p">(</span><span class="n">get_ordinal</span><span class="p">(),</span> <span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span></div>
+  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_rendezvous</span><span class="p">(</span><span class="n">get_ordinal</span><span class="p">(),</span> <span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="do_on_ordinals"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.do_on_ordinals">[docs]</a><span class="k">def</span> <span class="nf">do_on_ordinals</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">(),</span> <span class="n">ordinals</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,)):</span>

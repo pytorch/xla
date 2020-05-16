@@ -845,13 +845,16 @@ Default: False</p></li>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.rendezvous">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">rendezvous</code><span class="sig-paren">(</span><em class="sig-param">tag</em>, <em class="sig-param">payload=b''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#rendezvous"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.rendezvous" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">rendezvous</code><span class="sig-paren">(</span><em class="sig-param">tag</em>, <em class="sig-param">payload=b''</em>, <em class="sig-param">replicas=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#rendezvous"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.rendezvous" title="Permalink to this definition">¶</a></dt>
 <dd><p>Waits for all the mesh clients to reach the named rendezvous.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>tag</strong> (<em>string</em>) – The name of the rendezvous to join.</p></li>
 <li><p><strong>payload</strong> (<em>bytes</em><em>, </em><em>optional</em>) – The payload to be sent to the rendezvous.</p></li>
+<li><p><strong>replicas</strong> (<em>list</em><em>, </em><em>python:int</em>) – The replica ordinals taking part of the rendezvous.
+Empty means all replicas in the mesh.
+Default: []</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
