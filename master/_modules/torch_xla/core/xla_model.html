@@ -620,12 +620,13 @@
 
 
 <div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensors.</span>
+  <span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensor(s).</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    reduce_type (string): One of ``REDUCE_SUM``, ``REDUCE_MUL``, ``REDUCE_AND``,</span>
 <span class="sd">      ``REDUCE_OR``, ``REDUCE_MIN`` and ``REDUCE_MIN``.</span>
-<span class="sd">    inputs (list): List of tensors to perform the all reduce op to.</span>
+<span class="sd">    inputs: Either a single `torch.Tensor` or a list of `torch.Tensor` to</span>
+<span class="sd">      perform the all reduce op to.</span>
 <span class="sd">    scale (float): A default scaling value to be applied after the reduce.</span>
 <span class="sd">      Default: 1.0</span>
 <span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
@@ -633,9 +634,22 @@
 <span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
 <span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
 <span class="sd">        all the replicas in it.</span>
+<span class="sd">  Returns:</span>
+<span class="sd">    If a single `torch.Tensor` is passed, the return value is a `torch.Tensor`</span>
+<span class="sd">    holding the reduced value (across the replicas). If a list/tuple is passed,</span>
+<span class="sd">    this function performs an inplace all-reduce op on the input tensors, and</span>
+<span class="sd">    returns the list/tuple itself.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">_TLS</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span>
-      <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">_get_all_reduce_token</span><span class="p">(),</span> <span class="n">scale</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span></div>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span>
+                                             <span class="n">_get_all_reduce_token</span><span class="p">(),</span> <span class="n">scale</span><span class="p">,</span>
+                                             <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
+    <span class="n">_TLS</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">_TLS</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce_inplace</span><span class="p">(</span>
+        <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">_get_all_reduce_token</span><span class="p">(),</span> <span class="n">scale</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
+    <span class="k">return</span> <span class="n">inputs</span></div>
 
 
 <div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
@@ -657,9 +671,7 @@
   <span class="n">ordinal</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span>
   <span class="n">padding</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">ordinal</span> <span class="o">*</span> <span class="n">size</span>
   <span class="n">padding</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ordinal</span><span class="p">)</span> <span class="o">*</span> <span class="n">size</span>
-  <span class="n">padded</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">padding</span><span class="p">)</span>
-  <span class="n">all_reduce</span><span class="p">(</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="p">[</span><span class="n">padded</span><span class="p">])</span>
-  <span class="k">return</span> <span class="n">padded</span></div>
+  <span class="k">return</span> <span class="n">all_reduce</span><span class="p">(</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">padding</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="all_to_all"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_to_all">[docs]</a><span class="k">def</span> <span class="nf">all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span>
