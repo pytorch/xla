@@ -157,6 +157,20 @@ std::shared_ptr<ir::Value> AllReduceInPlace(
       &xtensors, *token, GetReduceType(reduce_type), scale, replica_groups));
 }
 
+std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllReduce(
+    const std::string& reduce_type, const at::Tensor& input,
+    const std::shared_ptr<ir::Value>& token, double scale,
+    const std::vector<std::vector<xla::int64>>& replica_groups) {
+  XLATensor result;
+  ir::Value new_token;
+  std::tie(result, new_token) =
+      XLATensor::all_reduce(bridge::GetXlaTensor(input), *token,
+                            GetReduceType(reduce_type), scale, replica_groups);
+  return std::pair<at::Tensor, std::shared_ptr<ir::Value>>(
+      bridge::AtenFromXlaTensor(std::move(result)),
+      std::make_shared<ir::Value>(new_token));
+}
+
 std::pair<at::Tensor, std::shared_ptr<ir::Value>> AllToAll(
     const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
     xla::int64 split_dimension, xla::int64 concat_dimension,
@@ -582,10 +596,10 @@ void InitXlaModuleBindings(py::module m) {
     ir::NodePtr node = ir::MakeNode<ir::ops::Token>();
     return std::make_shared<ir::Value>(node);
   });
-  m.def("_xla_all_reduce", [](const std::string& reduce_type,
-                              const std::vector<at::Tensor>& tensors,
-                              const std::shared_ptr<ir::Value>& token,
-                              double scale, const py::list& groups) {
+  m.def("_xla_all_reduce_inplace", [](const std::string& reduce_type,
+                                      const std::vector<at::Tensor>& tensors,
+                                      const std::shared_ptr<ir::Value>& token,
+                                      double scale, const py::list& groups) {
     std::vector<std::vector<xla::int64>> replica_groups =
         CreateReduceGroups(groups);
     std::shared_ptr<ir::Value> new_token;
@@ -596,6 +610,25 @@ void InitXlaModuleBindings(py::module m) {
     }
     return new_token;
   });
+  m.def("_xla_all_reduce",
+        [](const std::string& reduce_type, const at::Tensor& input,
+           const std::shared_ptr<ir::Value>& token, double scale,
+           const py::list& groups) {
+          std::vector<std::vector<xla::int64>> replica_groups =
+              CreateReduceGroups(groups);
+          at::Tensor result;
+          std::shared_ptr<ir::Value> new_token;
+          {
+            NoGilSection nogil;
+            std::tie(result, new_token) =
+                AllReduce(reduce_type, input, token, scale, replica_groups);
+          }
+          auto result_tuple = py::tuple(2);
+          result_tuple[0] = torch::autograd::make_variable(
+              result, /*requires_grad=*/input.requires_grad());
+          result_tuple[1] = new_token;
+          return result_tuple;
+        });
   m.def("_xla_all_to_all",
         [](const at::Tensor& input, const std::shared_ptr<ir::Value>& token,
            xla::int64 split_dimension, xla::int64 concat_dimension,

@@ -368,12 +368,13 @@ def _get_all_reduce_token():
 
 
 def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
-  """Performs an inplace reduce operation on the input tensors.
+  """Performs an inplace reduce operation on the input tensor(s).
 
   Args:
     reduce_type (string): One of ``REDUCE_SUM``, ``REDUCE_MUL``, ``REDUCE_AND``,
       ``REDUCE_OR``, ``REDUCE_MIN`` and ``REDUCE_MIN``.
-    inputs (list): List of tensors to perform the all reduce op to.
+    inputs: Either a single `torch.Tensor` or a list of `torch.Tensor` to
+      perform the all reduce op to.
     scale (float): A default scaling value to be applied after the reduce.
       Default: 1.0
     groups (list, optional): A list of list, representing the replica groups for
@@ -381,9 +382,22 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
         defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
         the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
         all the replicas in it.
+  Returns:
+    If a single `torch.Tensor` is passed, the return value is a `torch.Tensor`
+    holding the reduced value (across the replicas). If a list/tuple is passed,
+    this function performs an inplace all-reduce op on the input tensors, and
+    returns the list/tuple itself.
   """
-  _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce(
-      reduce_type, inputs, _get_all_reduce_token(), scale, groups or [])
+  if isinstance(inputs, torch.Tensor):
+    result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs,
+                                             _get_all_reduce_token(), scale,
+                                             groups or [])
+    _TLS.all_reduce_token = result[1]
+    return result[0]
+  else:
+    _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
+        reduce_type, inputs, _get_all_reduce_token(), scale, groups or [])
+    return inputs
 
 
 def all_gather(value, dim=0):
@@ -405,9 +419,7 @@ def all_gather(value, dim=0):
   ordinal = get_ordinal()
   padding[2 * idx] = ordinal * size
   padding[2 * idx + 1] = (xrt_world_size() - 1 - ordinal) * size
-  padded = F.pad(value, padding)
-  all_reduce(REDUCE_SUM, [padded])
-  return padded
+  return all_reduce(REDUCE_SUM, F.pad(value, padding))
 
 
 def all_to_all(value,
