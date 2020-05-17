@@ -1,8 +1,8 @@
 diff --git a/torch/nn/utils/clip_grad.py b/torch/nn/utils/clip_grad.py
-index ec5f62179e..0d5bd34e25 100644
+index ec5f62179e..34572bfc2d 100644
 --- a/torch/nn/utils/clip_grad.py
 +++ b/torch/nn/utils/clip_grad.py
-@@ -28,10 +28,10 @@ def clip_grad_norm_(parameters, max_norm, norm_type=2):
+@@ -28,10 +28,11 @@ def clip_grad_norm_(parameters, max_norm, norm_type=2):
          total_norm = max(p.grad.detach().abs().max() for p in parameters)
      else:
          total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type) for p in parameters]), norm_type)
@@ -12,8 +12,9 @@ index ec5f62179e..0d5bd34e25 100644
 -            p.grad.detach().mul_(clip_coef)
 +    device = parameters[0].device if parameters else torch.device('cpu')
 +    clip_coef = torch.tensor(max_norm, device=device) / (total_norm + 1e-6)
++    clip_value = torch.where(clip_coef < 1, clip_coef, torch.tensor(1., device=device))
 +    for p in parameters:
-+        p.grad.detach().mul_(torch.where(clip_coef < 1, clip_coef, torch.tensor(1., device=device)))
++        p.grad.detach().mul_(clip_value)
      return total_norm
  
  
