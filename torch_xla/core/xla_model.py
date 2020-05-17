@@ -20,7 +20,7 @@ REDUCE_MUL = 'mul'
 REDUCE_AND = 'and'
 REDUCE_OR = 'or'
 REDUCE_MIN = 'min'
-REDUCE_MIN = 'max'
+REDUCE_MAX = 'max'
 
 _TLS = threading.local()
 
