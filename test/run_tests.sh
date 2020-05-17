@@ -53,6 +53,7 @@ function run_all_tests {
   python3 "$CDIR/test_mp_replication.py"
   python3 "$CDIR/test_mp_all_to_all.py"
   python3 "$CDIR/test_mp_collective_permute.py"
+  python3 "$CDIR/test_mp_all_gather.py"
   python3 "$CDIR/test_mp_rendezvous.py"
   python3 "$CDIR/test_mp_save.py"
   python3 "$CDIR/test_mp_mesh_reduce.py"
