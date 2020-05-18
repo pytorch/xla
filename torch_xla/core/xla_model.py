@@ -175,12 +175,14 @@ def xla_device_hw(device):
   """Returns the hardware type of the given device.
 
   Args:
-    device (string): The xla device that will be mapped to the real device.
+    device (string or torch.device): The xla device that will be mapped to the
+      real device.
 
   Returns:
-    A string representation of the hardware type of the given device.
+    A string representation of the hardware type (`CPU`, `TPU`, `GPU`) of the
+    given device.
   """
-  real_device = xla_real_devices([device])[0]
+  real_device = xla_real_devices([str(device)])[0]
   return real_device.split(':')[0]
 
 
