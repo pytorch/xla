@@ -28,6 +28,11 @@ xla_model
 .. autofunction:: set_rng_state
 .. autofunction:: get_rng_state
 
+.. automodule:: torch_xla.core.functions
+.. autofunction:: all_reduce
+.. autofunction:: all_gather
+.. autofunction:: nms
+		
 distributed
 ----------------------------------
 

@@ -515,6 +515,28 @@ void RemoveTfFile(const std::string& path) {
   XLA_CHECK_OK(env->DeleteFile(path));
 }
 
+py::object XlaNms(const at::Tensor& boxes, const at::Tensor& scores,
+                  const at::Tensor& score_threshold,
+                  const at::Tensor& iou_threshold, xla::int64 output_size) {
+  at::Tensor selected_indices;
+  at::Tensor num_valid;
+  {
+    NoGilSection nogil;
+    auto nms_result = XLATensor::nms(
+        bridge::GetXlaTensor(boxes), bridge::GetXlaTensor(scores),
+        bridge::GetXlaTensor(score_threshold),
+        bridge::GetXlaTensor(iou_threshold), output_size);
+    selected_indices = bridge::AtenFromXlaTensor(std::move(nms_result.first));
+    num_valid = bridge::AtenFromXlaTensor(std::move(nms_result.second));
+  }
+  auto result_tuple = py::tuple(2);
+  result_tuple[0] =
+      torch::autograd::make_variable(selected_indices, /*requires_grad=*/false);
+  result_tuple[1] =
+      torch::autograd::make_variable(num_valid, /*requires_grad=*/false);
+  return result_tuple;
+}
+
 void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
@@ -523,6 +545,12 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor, int dim) {
           return GetXlaTensorDimensionSize(tensor, dim);
         });
+  m.def("_xla_nms", [](const at::Tensor& boxes, const at::Tensor& scores,
+                       const at::Tensor& score_threshold,
+                       const at::Tensor& iou_threshold,
+                       xla::int64 output_size) {
+    return XlaNms(boxes, scores, score_threshold, iou_threshold, output_size);
+  });
   m.def("_get_xla_tensors_dot",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
           auto coverter = [](absl::Span<const ir::Node* const> nodes) {
