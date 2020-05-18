@@ -113,7 +113,7 @@ if __name__ == '__main__':
   parser.add_argument(
       '--version',
       type=str,
-      default='20200325',
+      default='20200515',
       help='Versions to install (nightly, release version, or YYYYMMDD).',
   )
   parser.add_argument(
