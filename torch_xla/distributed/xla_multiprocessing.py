@@ -271,7 +271,7 @@ def spawn(fn,
     daemon (bool): Whether the processes being spawned should have the `daemon`
       flag set (see Python multi-processing API).
       Default: False
-    start_method (string): The Python `multiprocessing` process creation mathod.
+    start_method (string): The Python `multiprocessing` process creation method.
       Default: `spawn`
 
   Returns:
