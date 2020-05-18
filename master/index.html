@@ -569,10 +569,12 @@ that kind.</p></li>
 <dd><p>Returns the hardware type of the given device.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>device</strong> (<em>string</em>) – The xla device that will be mapped to the real device.</p>
+<dd class="field-odd"><p><strong>device</strong> (<em>string</em><em> or </em><em>torch.device</em>) – The xla device that will be mapped to the
+real device.</p>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>A string representation of the hardware type of the given device.</p>
+<dd class="field-even"><p>A string representation of the hardware type (<cite>CPU</cite>, <cite>TPU</cite>, <cite>GPU</cite>) of the
+given device.</p>
 </dd>
 </dl>
 </dd></dl>
