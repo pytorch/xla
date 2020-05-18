@@ -27,6 +27,11 @@ xla_model
 .. autofunction:: mesh_reduce
 .. autofunction:: set_rng_seed
 
+.. automodule:: torch_xla.core.functions
+.. autofunction:: all_reduce
+.. autofunction:: all_gather
+.. autofunction:: nms
+		
 distributed
 ----------------------------------
 

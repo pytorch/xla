@@ -35,6 +35,7 @@ import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
+import torch_xla.core.functions as xf
 import torchvision
 import unittest
 
@@ -1698,6 +1699,32 @@ class TestGeneric(XlaTestCase):
     t = _gen_tensor(2, 2, requires_grad=True)
     dt = xm.send_cpu_data_to_device([t], xla_device)
     self.assertTrue(dt[0].requires_grad)
+
+  def test_nms(self):
+    BOXES = (
+        (0, 0, 3, 2),
+        (3, 3, 11, 7),
+        (2, 2, 5, 7),
+        (7, 4, 15, 12),
+    )
+    SCORES = (0.9, 0.5, 0.95, 0.4)
+    SCORE_THRESHOLD = 0.1
+    IOU_THRESHOLD = 0.08
+
+    xla_device = xm.xla_device()
+    boxes = torch.tensor(BOXES, dtype=torch.float).to(xla_device)
+    scores = torch.tensor(SCORES, dtype=torch.float).to(xla_device)
+    score_threshold = torch.tensor(
+        SCORE_THRESHOLD, dtype=torch.float).to(xla_device)
+    iou_threshold = torch.tensor(
+        IOU_THRESHOLD, dtype=torch.float).to(xla_device)
+
+    selected_indices, num_valid = xf.nms(boxes, scores, score_threshold,
+                                         iou_threshold, len(BOXES))
+
+    self.assertEqual(selected_indices,
+                     torch.tensor([2, 0, 3, 1], dtype=torch.int32))
+    self.assertEqual(num_valid.item(), 3)
 
   def test_util_foreach_api(self):
 

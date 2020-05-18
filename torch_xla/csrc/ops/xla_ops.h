@@ -38,6 +38,7 @@ extern const OpKindWrapper xla_diagonal_view_update;
 extern const OpKindWrapper xla_generic_slice;
 extern const OpKindWrapper xla_get_dimensions_size;
 extern const OpKindWrapper xla_moving_average;
+extern const OpKindWrapper xla_nms;
 extern const OpKindWrapper xla_not_supported;
 extern const OpKindWrapper xla_replication_pad;
 extern const OpKindWrapper xla_replication_pad_backward;

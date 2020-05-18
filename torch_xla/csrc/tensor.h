@@ -781,6 +781,12 @@ class XLATensor {
                                      xla::int64 reduction, int ignore_index,
                                      const XLATensor& total_weight);
 
+  static std::pair<XLATensor, XLATensor> nms(const XLATensor& boxes,
+                                             const XLATensor& scores,
+                                             const XLATensor& score_threshold,
+                                             const XLATensor& iou_threshold,
+                                             xla::int64 output_size);
+
   static XLATensor nonzero(const XLATensor& input);
 
   static XLATensor norm(const XLATensor& input, c10::optional<at::Scalar> p,
