@@ -920,16 +920,31 @@ objects and returns the reduced result.</p></li>
 </dd></dl>
 
 <dl class="function">
-<dt id="torch_xla.core.xla_model.set_rng_seed">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">set_rng_seed</code><span class="sig-paren">(</span><em class="sig-param">seed</em>, <em class="sig-param">device=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#set_rng_seed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.set_rng_seed" title="Permalink to this definition">¶</a></dt>
-<dd><p>Sets the random number generator seed.</p>
+<dt id="torch_xla.core.xla_model.set_rng_state">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">set_rng_state</code><span class="sig-paren">(</span><em class="sig-param">seed</em>, <em class="sig-param">device=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#set_rng_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.set_rng_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the random number generator state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>seed</strong> (<em>python:integer</em>) – The seed to be set.</p></li>
-<li><p><strong>device</strong> (<em>string</em><em>, </em><em>optional</em>) – The device where the seed needs to be set. If
-missing the default device seed will be set.</p></li>
+<li><p><strong>seed</strong> (<em>python:integer</em>) – The state to be set.</p></li>
+<li><p><strong>device</strong> (<em>string</em><em>, </em><em>optional</em>) – The device where the RNG state needs to be set.
+If missing the default device seed will be set.</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.core.xla_model.get_rng_state">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_rng_state</code><span class="sig-paren">(</span><em class="sig-param">seed</em>, <em class="sig-param">device=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_rng_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_rng_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the current running random number generator state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>device</strong> (<em>string</em><em>, </em><em>optional</em>) – The device whose RNG state needs to be retrieved.
+If missing the default device seed will be set.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The RNG state, as integer.</p>
 </dd>
 </dl>
 </dd></dl>

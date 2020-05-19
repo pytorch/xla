@@ -967,17 +967,32 @@
   <span class="k">return</span> <span class="n">reduce_fn</span><span class="p">(</span><span class="n">xldata</span><span class="p">)</span> <span class="k">if</span> <span class="n">xldata</span> <span class="k">else</span> <span class="n">cpu_data</span></div>
 
 
-<div class="viewcode-block" id="set_rng_seed"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.set_rng_seed">[docs]</a><span class="k">def</span> <span class="nf">set_rng_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Sets the random number generator seed.</span>
+<div class="viewcode-block" id="set_rng_state"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.set_rng_state">[docs]</a><span class="k">def</span> <span class="nf">set_rng_state</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Sets the random number generator state.</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    seed (integer): The seed to be set.</span>
-<span class="sd">    device (string, optional): The device where the seed needs to be set. If</span>
-<span class="sd">      missing the default device seed will be set.</span>
+<span class="sd">    seed (integer): The state to be set.</span>
+<span class="sd">    device (string, optional): The device where the RNG state needs to be set.</span>
+<span class="sd">      If missing the default device seed will be set.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">()</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_rng_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">if</span> <span class="n">device</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_rng_state"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_rng_state">[docs]</a><span class="k">def</span> <span class="nf">get_rng_state</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Gets the current running random number generator state.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    device (string, optional): The device whose RNG state needs to be retrieved.</span>
+<span class="sd">      If missing the default device seed will be set.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The RNG state, as integer.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_rng_seed</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">if</span> <span class="n">device</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span></div>
 </pre></div>
 
              </article>
