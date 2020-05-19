@@ -50,6 +50,13 @@ c10::optional<Device> GetOptionalDevice(const std::string& device_str) {
   return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
 }
 
+Device GetDeviceOrCurrent(const std::string& device_str) {
+  if (device_str.empty()) {
+    return GetCurrentDevice();
+  }
+  return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
+}
+
 std::string GetTensorsDump(
     const std::vector<at::Tensor>& tensors,
     const std::function<std::string(absl::Span<const ir::Node* const>)>&
@@ -224,6 +231,10 @@ void SetRngSeed(xla::uint64 seed, const std::string& device_str) {
   auto opt_device = GetOptionalDevice(device_str);
   const Device* device = opt_device ? &opt_device.value() : nullptr;
   XLATensor::SetRngSeed(device, seed);
+}
+
+xla::uint64 GetRngSeed(const std::string& device_str) {
+  return XLATensor::GetRunningSeed(GetDeviceOrCurrent(device_str));
 }
 
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
@@ -676,6 +687,9 @@ void InitXlaModuleBindings(py::module m) {
           SetRngSeed(seed, device);
         },
         py::arg("seed") = 101, py::arg("device") = "");
+  m.def("_xla_get_rng_seed",
+        [](const std::string& device) { return GetRngSeed(device); },
+        py::arg("device") = "");
   m.def("_xla_sync_multi",
         [](const std::vector<at::Tensor>& tensors,
            const std::vector<std::string>& devices, bool wait,
