@@ -16,6 +16,16 @@ at::Tensor CopyTensor(const at::Tensor& ref, at::ScalarType dest_type,
 // Return at::ScalarType from at::Scalar
 at::ScalarType GetScalarType(at::Scalar scalar);
 
+template <typename T>
+at::Scalar MakeIntScalar(T value) {
+  return at::Scalar(static_cast<int64_t>(value));
+}
+
+template <typename T>
+at::Scalar MakeFloatScalar(T value) {
+  return at::Scalar(static_cast<double>(value));
+}
+
 template <typename T, typename S>
 T OptionalOr(const c10::optional<S>& value, T defval) {
   return value ? static_cast<T>(*value) : defval;

@@ -388,7 +388,7 @@ class XLATestBase(DeviceTypeTestBase):
 
   def setUp(self):
     super().setUp()
-    xm.set_rng_seed(101)
+    xm.set_rng_state(101)
 
   def prepare_for_compare(self, tx, ty):
     print_tensors = xu.getenv_as('TEST_PRINT_TENSORS', bool, defval=False)

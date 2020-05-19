@@ -715,14 +715,29 @@ def mesh_reduce(tag, data, reduce_fn):
   return reduce_fn(xldata) if xldata else cpu_data
 
 
-def set_rng_seed(seed, device=None):
-  """Sets the random number generator seed.
+def set_rng_state(seed, device=None):
+  """Sets the random number generator state.
 
   Args:
-    seed (integer): The seed to be set.
-    device (string, optional): The device where the seed needs to be set. If
-      missing the default device seed will be set.
+    seed (integer): The state to be set.
+    device (string, optional): The device where the RNG state needs to be set.
+      If missing the default device seed will be set.
   """
   if device is None:
     device = torch_xla._XLAC._xla_get_default_device()
   torch_xla._XLAC._xla_set_rng_seed(seed, str(device) if device else '')
+
+
+def get_rng_state(seed, device=None):
+  """Gets the current running random number generator state.
+
+  Args:
+    device (string, optional): The device whose RNG state needs to be retrieved.
+      If missing the default device seed will be set.
+
+  Returns:
+    The RNG state, as integer.
+  """
+  if device is None:
+    device = torch_xla._XLAC._xla_get_default_device()
+  return torch_xla._XLAC._xla_get_rng_seed(str(device) if device else '')

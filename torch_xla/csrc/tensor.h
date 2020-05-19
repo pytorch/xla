@@ -118,6 +118,8 @@ class XLATensor {
 
   static void SetRngSeed(const Device* device, xla::uint64 seed);
 
+  static xla::uint64 GetRunningSeed(const Device& device);
+
   // Dispatches a comparison operator, setting the logical type of the result
   // appropriately.
   static XLATensor DispatchComparisonOp(c10::Symbol kind,

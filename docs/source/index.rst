@@ -25,7 +25,8 @@ xla_model
 .. autofunction:: rendezvous
 .. autofunction:: do_on_ordinals
 .. autofunction:: mesh_reduce
-.. autofunction:: set_rng_seed
+.. autofunction:: set_rng_state
+.. autofunction:: get_rng_state
 
 distributed
 ----------------------------------
