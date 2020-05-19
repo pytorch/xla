@@ -260,6 +260,7 @@ class XLATensor::DeviceContextArena {
     std::mutex lock;
     std::map<xla::int64, std::weak_ptr<Data>> tensors_data;
     xla::uint64 seed = 101;
+    xla::uint64 running_seed = 101;
     ir::Value seed_ir_value;
   };
 
@@ -300,26 +301,38 @@ class XLATensor::DeviceContextArena {
 
   ir::Value GetRngSeed(const Device& device) {
     static const at::ScalarType kSeedType = at::ScalarType::Long;
+    static const xla::uint64 kSeedMul = 214013;
+    static const xla::uint64 kSeedAdd = 2531011;
     DeviceContext* devctx = GetDeviceContext(device);
     std::lock_guard<std::mutex> lock(devctx->lock);
     if (!devctx->seed_ir_value) {
-      devctx->seed_ir_value = IrValueFromScalar(
-          static_cast<int64_t>(devctx->seed), kSeedType, device);
+      devctx->seed_ir_value =
+          IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device);
     }
+    // Keep the running seed as scalar as well, so we can return it directly
+    // without executing graphs.
+    devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
     // Compose new seeds from the root seed, to avoid creating too many XLA
     // computation parameters which might overflow the TPU capacity.
-    ir::Value k =
-        ir::ops::ScalarOp(214013, MakeXlaPrimitiveType(kSeedType, &device));
-    ir::Value b =
-        ir::ops::ScalarOp(2531011, MakeXlaPrimitiveType(kSeedType, &device));
+    ir::Value k = ir::ops::ScalarOp(MakeIntScalar(kSeedMul),
+                                    MakeXlaPrimitiveType(kSeedType, &device));
+    ir::Value b = ir::ops::ScalarOp(MakeIntScalar(kSeedAdd),
+                                    MakeXlaPrimitiveType(kSeedType, &device));
     devctx->seed_ir_value = b + k * devctx->seed_ir_value;
     return devctx->seed_ir_value;
+  }
+
+  xla::uint64 GetRunningSeed(const Device& device) {
+    DeviceContext* devctx = GetDeviceContext(device);
+    std::lock_guard<std::mutex> lock(devctx->lock);
+    return devctx->running_seed;
   }
 
   void SetRngSeed(const Device* device, xla::uint64 seed) {
     auto fn = [&](DeviceContext* devctx) {
       std::lock_guard<std::mutex> lock(devctx->lock);
       devctx->seed = seed;
+      devctx->running_seed = devctx->seed;
       devctx->seed_ir_value = ir::Value();
     };
     ForAllDeviceContexts(fn, device);
@@ -328,7 +341,8 @@ class XLATensor::DeviceContextArena {
   void StepRngSeed(const Device* device) {
     auto fn = [&](DeviceContext* devctx) {
       std::lock_guard<std::mutex> lock(devctx->lock);
-      devctx->seed = 2531011 + devctx->seed * 214013;
+      devctx->seed = 1012031 + devctx->seed * 7012063;
+      devctx->running_seed = devctx->seed;
       devctx->seed_ir_value = ir::Value();
     };
     ForAllDeviceContexts(fn, device);
@@ -1562,6 +1576,10 @@ ir::Value XLATensor::GetRngSeed(const Device& device) {
 
 void XLATensor::SetRngSeed(const Device* device, xla::uint64 seed) {
   DeviceContextArena::Get()->SetRngSeed(device, seed);
+}
+
+xla::uint64 XLATensor::GetRunningSeed(const Device& device) {
+  return DeviceContextArena::Get()->GetRunningSeed(device);
 }
 
 }  // namespace torch_xla

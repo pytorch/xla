@@ -77,7 +77,7 @@ def _set_rng_seed(seed):
   torch.manual_seed(seed)
   random.seed(seed)
   numpy.random.seed(seed)
-  xm.set_rng_seed(seed)
+  xm.set_rng_state(seed)
 
 
 def _get_device_support(devname):
