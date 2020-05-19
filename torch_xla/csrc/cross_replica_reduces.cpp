@@ -9,6 +9,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
+#include "torch_xla/csrc/token_handler.h"
 
 namespace torch_xla {
 namespace {
@@ -80,14 +81,6 @@ std::vector<xla::ReplicaGroup> CreateReduceGroups(
   return reduce_groups;
 }
 
-xla::XlaOp SliceOneToken(xla::XlaOp input) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  if (input_shape.rank() == 0) {
-    return input;
-  }
-  return xla::SliceInDim(input, 0, 1, 1, 0);
-}
-
 }  // namespace
 
 std::vector<xla::XlaOp> BuildAllReduce(
@@ -137,32 +130,27 @@ AllToAllResult BuildAllToAll(
     const std::vector<std::vector<xla::int64>>& groups) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp affine_token = MaybeConvertTo(token, input_shape.element_type());
   xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
       input_shape.dimensions(), input_shape.dynamic_dimensions(),
       input_shape.element_type(), GetCurrentDevice().hw_type);
-  xla::XlaOp reduce_result =
-      xla::AllToAll(input + affine_token, split_dimension, concat_dimension,
-                    split_count, reduce_groups, reduce_shape.layout());
-  xla::XlaOp chained_token =
-      MaybeConvertTo(affine_token * SliceOneToken(reduce_result),
-                     XlaHelpers::TypeOfXlaOp(token));
-  return {reduce_result, chained_token};
+  TokenHandler token_handler(token);
+  xla::XlaOp reduce_result = xla::AllToAll(
+      token_handler.GetInput(input, &input_shape), split_dimension,
+      concat_dimension, split_count, reduce_groups, reduce_shape.layout());
+  return {reduce_result, token_handler.GetNewToken(reduce_result)};
 }
 
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
     const std::vector<std::pair<xla::int64, xla::int64>>& source_target_pairs) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  xla::XlaOp affine_token = MaybeConvertTo(token, input_shape.element_type());
+  TokenHandler token_handler(token);
   // TODO: This is missing layout pinning ATM. If XLA scheduling is not exactly
   // the same (graphs on cores differ), XLA could assign different layouts and
   // things will break.
-  xla::XlaOp result =
-      xla::CollectivePermute(input + affine_token, source_target_pairs);
-  xla::XlaOp chained_token = MaybeConvertTo(
-      affine_token * SliceOneToken(result), XlaHelpers::TypeOfXlaOp(token));
-  return {result, chained_token};
+  xla::XlaOp result = xla::CollectivePermute(
+      token_handler.GetInput(input, &input_shape), source_target_pairs);
+  return {result, token_handler.GetNewToken(result)};
 }
 
 }  // namespace torch_xla
