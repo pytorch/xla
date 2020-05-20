@@ -949,6 +949,81 @@ If missing the default device seed will be set.</p>
 </dl>
 </dd></dl>
 
+<span class="target" id="module-torch_xla.core.functions"></span><dl class="function">
+<dt id="torch_xla.core.functions.all_reduce">
+<code class="sig-prename descclassname">torch_xla.core.functions.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">value</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/functions.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.functions.all_reduce" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs an inplace reduce operation on the input tensor.</p>
+<p>This is the same as <cite>xm.all_reduce()</cite> but supports autograd differentiation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reduce_type</strong> (<em>string</em>) – One of <code class="docutils literal notranslate"><span class="pre">REDUCE_SUM</span></code>, <code class="docutils literal notranslate"><span class="pre">REDUCE_MUL</span></code>, <code class="docutils literal notranslate"><span class="pre">REDUCE_AND</span></code>,
+<code class="docutils literal notranslate"><span class="pre">REDUCE_OR</span></code>, <code class="docutils literal notranslate"><span class="pre">REDUCE_MIN</span></code> and <code class="docutils literal notranslate"><span class="pre">REDUCE_MIN</span></code>.</p></li>
+<li><p><strong>value</strong> (<em>torch.Tensor</em>) – The to perform the all reduce op to.</p></li>
+<li><p><strong>scale</strong> (<em>python:float</em>) – A default scaling value to be applied after the reduce.
+Default: 1.0</p></li>
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
+the <cite>all_reduce()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
+<blockquote>
+<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
+the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
+all the replicas in it.</p>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The reduced value across the selected replicas.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.core.functions.all_gather">
+<code class="sig-prename descclassname">torch_xla.core.functions.</code><code class="sig-name descname">all_gather</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">dim=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/functions.html#all_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.functions.all_gather" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs an all-gather operation along a given dimension.</p>
+<p>This is the same as <cite>xm.all_gather()</cite> but supports autograd differentiation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>torch.Tensor</em>) – The input tensor.</p></li>
+<li><p><strong>dim</strong> (<em>python:int</em>) – The gather dimension.
+Default: 0</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A tensor which has, in the <code class="docutils literal notranslate"><span class="pre">dim</span></code> dimension, all the values from the
+participating replicas.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.core.functions.nms">
+<code class="sig-prename descclassname">torch_xla.core.functions.</code><code class="sig-name descname">nms</code><span class="sig-paren">(</span><em class="sig-param">boxes</em>, <em class="sig-param">scores</em>, <em class="sig-param">score_threshold</em>, <em class="sig-param">iou_threshold</em>, <em class="sig-param">output_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/functions.html#nms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.functions.nms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a Non Maximal Suppression operation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>boxes</strong> (<em>torch.Tensor</em>) – A <cite>torch.Tensor</cite> of shape <cite>[N, 4]</cite> listing the boxes
+coordinates in <cite>(y0, x0, y1, x1)</cite> form.</p></li>
+<li><p><strong>scores</strong> (<em>torch.Tensor</em>) – A <cite>torch.Tensor</cite> of shape <cite>[N]</cite> listing the scores
+of each box.</p></li>
+<li><p><strong>score_threshold</strong> (<em>torch.Tensor</em>) – The minimum score for a box to qualify as
+valid.</p></li>
+<li><p><strong>iou_threshold</strong> (<em>torch.Tensor</em>) – The minimum IOU (Intersection Over Union)
+score to trigger overlap logic.</p></li>
+<li><p><strong>output_size</strong> (<em>python:int</em>) – The maximum number of returned indices (must be lower or
+equal to N).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A tuple of <cite>torch.Tensor</cite> with the first element being the selected box
+indices, and the second element being the number of valid boxes.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </div>
 <div class="section" id="module-torch_xla.distributed.parallel_loader">
 <span id="distributed"></span><h2>distributed<a class="headerlink" href="#module-torch_xla.distributed.parallel_loader" title="Permalink to this headline">¶</a></h2>
