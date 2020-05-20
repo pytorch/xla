@@ -218,7 +218,7 @@ def _setup_replication():
   # completed.
   if xm.xrt_world_size() > 1:
     device = xm.xla_device()
-    xm.set_replication(str(device), [str(device)])
+    xm.set_replication(device, [device])
 
 
 def _start_fn(index, pf_cfg, fn, args):
