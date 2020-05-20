@@ -884,12 +884,6 @@ xla::PrimitiveType GetDevicePrimitiveType(xla::PrimitiveType type,
         return xla::PrimitiveType::F16;
       }
       return UseBF16() ? xla::PrimitiveType::BF16 : xla::PrimitiveType::F32;
-    case xla::PrimitiveType::U8:
-      return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::U8
-                                                   : xla::PrimitiveType::U32;
-    case xla::PrimitiveType::S8:
-      return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::S8
-                                                   : xla::PrimitiveType::S32;
     case xla::PrimitiveType::U16:
       return xla_device.hw_type != DeviceType::TPU ? xla::PrimitiveType::U16
                                                    : xla::PrimitiveType::U32;
