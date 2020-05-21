@@ -602,7 +602,7 @@ def optimizer_step(optimizer, barrier=False, optimizer_args={}, groups=None):
 def save(data, file_or_path, master_only=True, global_master=False):
   """Saves the input data into a file.
 
-  The saved data is transfered to PyTorch CPU device before being saved, so a
+  The saved data is transferred to PyTorch CPU device before being saved, so a
   following `torch.load()` will load CPU data.
 
   Args:
