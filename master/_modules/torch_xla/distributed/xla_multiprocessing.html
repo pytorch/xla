@@ -470,7 +470,7 @@
   <span class="c1"># completed.</span>
   <span class="k">if</span> <span class="n">xm</span><span class="o">.</span><span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
-    <span class="n">xm</span><span class="o">.</span><span class="n">set_replication</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)])</span>
+    <span class="n">xm</span><span class="o">.</span><span class="n">set_replication</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="p">[</span><span class="n">device</span><span class="p">])</span>
 
 
 <span class="k">def</span> <span class="nf">_start_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
