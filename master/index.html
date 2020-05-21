@@ -402,7 +402,7 @@ single device snippet:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code> creates the processes that each run an XLA device.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ParallelLoader</span></code> loads the training data onto each device.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">xm.optimizer_step(optimizer)</span></code> no longer needs a barrier. ParallelLoader
-automatically creates an XLA barrier that evalutes the graph.</p></li>
+automatically creates an XLA barrier that evaluates the graph.</p></li>
 </ul>
 <p>The model definition, optimizer definition and training loop remain the same.</p>
 <blockquote>
@@ -504,7 +504,7 @@ to CPU:</p>
 <span class="n">xm</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="n">path</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>In case of multple devices, the above API will only save the data for the master
+<p>In case of multiple devices, the above API will only save the data for the master
 device ordinal (0).</p>
 <p>Directly saving XLA tensors is possible but not recommended. XLA
 tensors are always loaded back to the device they were saved from, and if
@@ -827,7 +827,7 @@ all the replicas in it.</p>
 <dt id="torch_xla.core.xla_model.save">
 <code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">file_or_path</em>, <em class="sig-param">master_only=True</em>, <em class="sig-param">global_master=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.save" title="Permalink to this definition">¶</a></dt>
 <dd><p>Saves the input data into a file.</p>
-<p>The saved data is transfered to PyTorch CPU device before being saved, so a
+<p>The saved data is transferred to PyTorch CPU device before being saved, so a
 following <cite>torch.load()</cite> will load CPU data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
