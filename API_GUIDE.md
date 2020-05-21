@@ -139,7 +139,7 @@ single device snippet:
 - `xmp.spawn()` creates the processes that each run an XLA device.
 - `ParallelLoader` loads the training data onto each device.
 - `xm.optimizer_step(optimizer)` no longer needs a barrier. ParallelLoader
-automatically creates an XLA barrier that evalutes the graph.
+automatically creates an XLA barrier that evaluates the graph.
 
 The model definition, optimizer definition and training loop remain the same.
 
@@ -248,7 +248,7 @@ import torch_xla.core.xla_model as xm
 xm.save(model.state_dict(), path)
 ```
 
-In case of multple devices, the above API will only save the data for the master
+In case of multiple devices, the above API will only save the data for the master
 device ordinal (0).
 
 Directly saving XLA tensors is possible but not recommended. XLA
