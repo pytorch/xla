@@ -216,11 +216,12 @@ def xla_replication_devices(local_devices):
 
 def unlazy(tensors):
   """Blocks the program until `tensors` are materialized.
-    This API is for benchmarking, don't use it in real models.
+
+  This API is for benchmarking, don't use it in real models.
 
   Args:
     tensors (List[torch.Tensor]): List of `torch.Tensor`s to materialize.
-      For each Tensor `t` in the list, `t.device` must be `xla` device.
+      For each Tensor `t` in the list, `t.device` must be an `xla` device.
   """
   torch_xla._XLAC._xla_sync_multi(tensors, devices=[], wait=True)
 
