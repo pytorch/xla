@@ -111,7 +111,7 @@ class DataParallel(object):
         assigned to each device taking part of the replication. The function
         will be called with the `def loop_fn(model, device_loader, device,
         context)` signature. Where `model` is the per device network as passed
-        to the `DataParallel` contructor. The `device_loader` is the
+        to the `DataParallel` constructor. The `device_loader` is the
         `ParallelLoader` which will be returning samples for the current
         `device`. And the `context` is a per thread/device context which has the
         lifetime of the `DataParallel` object, and can be used by the `loop_fn`
