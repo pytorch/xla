@@ -266,6 +266,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_topk_integral_xla_int64',  # (TPU) unimplemented HLO for X64
         'test_float_to_int_conversion_finite_xla',  # different behavior than numpy when casting float_max/min to int types
         'test_block_diag_scipy',  # failed to handle np.complex128 as input to tensor.
+        'test_logcumsumexp_xla',  # # precision (1e-5), test use torch.allClose
         'test_remainder_fmod_large_dividend_xla',  # precision, remainder with 1e9 gives incorrect answer
     },
 
