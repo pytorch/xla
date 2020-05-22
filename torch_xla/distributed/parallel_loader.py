@@ -173,3 +173,29 @@ class ParallelLoader(object):
       for data in batch:
         dqueue.queue.put(data)
     dqueue.queue.close_write()
+
+
+class MpDeviceLoader(object):
+  """Wraps an existing PyTorch DataLoader with background data upload.
+
+  This class should only be using with multi-processing data parallelism.
+
+  Args:
+    loader (:class:`torch.utils.data.DataLoader`): The PyTorch DataLoader to be
+      wrapped.
+    device (`torch.device`...): The device where the data has to be sent.
+    kwargs: Named arguments for the `ParallelLoader` constructor.
+  """
+
+  def __init__(self, loader, device, **kwargs):
+    self._loader = loader
+    self._device = device
+    self._parallel_loader_kwargs = kwargs
+
+  def __iter__(self):
+    parallel_loader = ParallelLoader(self._loader, [self._device],
+                                     **self._parallel_loader_kwargs)
+    return parallel_loader.per_device_loader(self._device)
+
+  def __len__(self):
+    return len(self._loader)
