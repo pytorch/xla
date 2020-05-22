@@ -223,14 +223,14 @@ def train_imagenet():
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
+  train_device_loader = pl.MpDeviceLoader(train_loader, device)
+  test_device_loader = pl.MpDeviceLoader(test_loader, device)
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    para_loader = pl.ParallelLoader(train_loader, [device])
-    train_loop_fn(para_loader.per_device_loader(device), epoch)
+    train_loop_fn(train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
-    para_loader = pl.ParallelLoader(test_loader, [device])
-    accuracy = test_loop_fn(para_loader.per_device_loader(device), epoch)
+    accuracy = test_loop_fn(test_device_loader, epoch)
     xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
         epoch, test_utils.now(), accuracy))
     max_accuracy = max(accuracy, max_accuracy)
