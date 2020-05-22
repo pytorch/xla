@@ -468,11 +468,12 @@
 
 <span class="k">def</span> <span class="nf">unlazy</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Blocks the program until `tensors` are materialized.</span>
-<span class="sd">    This API is for benchmarking, don&#39;t use it in real models.</span>
+
+<span class="sd">  This API is for benchmarking, don&#39;t use it in real models.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    tensors (List[torch.Tensor]): List of `torch.Tensor`s to materialize.</span>
-<span class="sd">      For each Tensor `t` in the list, `t.device` must be `xla` device.</span>
+<span class="sd">      For each Tensor `t` in the list, `t.device` must be an `xla` device.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_sync_multi</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="p">[],</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
