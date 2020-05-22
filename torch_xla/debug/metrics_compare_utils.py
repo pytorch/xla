@@ -89,13 +89,14 @@ def parse_metrics_report(report, dehumanize=True):
   # Parse metrics into data points.
   metric_match_gd = [m.groupdict() for m in re.finditer(_METRIC_REGEX, report)]
   server_metric_match_gd = [
-      m.groupdict() for m in re.finditer(_SERVER_METRIC_REGEX, report)]
+      m.groupdict() for m in re.finditer(_SERVER_METRIC_REGEX, report)
+  ]
   for gd in itertools.chain(metric_match_gd, server_metric_match_gd):
     metric_name = gd.pop('metric_name')
     for k, v in gd.items():
       parsed_v, units = _metric_str_to_number(v)
-      full_key = '{}__{}{}{}'.format(
-        metric_name, k, '_' if units else '', units)
+      full_key = '{}__{}{}{}'.format(metric_name, k, '_' if units else '',
+                                     units)
       data_points[full_key] = parsed_v if dehumanize else v
 
   # Parse counters into data points.
