@@ -697,7 +697,7 @@ def do_on_ordinals(target, data=(), ordinals=(0,)):
   running = get_ordinal() in ordinals
   cpu_data = _maybe_convert_to_cpu(data, convert=running)
   if running:
-    result = target(cpu_data)
+    result = target(*cpu_data)
   else:
     result = None
   rendezvous('torch_xla.core.xla_model.do_on_ordinals')
