@@ -119,6 +119,7 @@
 #include "torch_xla/csrc/ops/upsample_bilinear2d_backward.h"
 #include "torch_xla/csrc/ops/upsample_nearest2d.h"
 #include "torch_xla/csrc/ops/upsample_nearest2d_backward.h"
+#include "torch_xla/csrc/ops/user_computation.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/shape_builder.h"
 #include "torch_xla/csrc/tensor.h"
@@ -348,6 +349,19 @@ XLATensor XLATensor::get_dimensions_size(const XLATensor& input,
   return input.CreateFrom(ir::MakeNode<ir::ops::GetDimensionsSize>(
                               input.GetIrValue(), std::move(dimensions)),
                           at::ScalarType::Int);
+}
+
+std::vector<XLATensor> XLATensor::user_computation(
+    const std::string& opname, absl::Span<const XLATensor> inputs,
+    ComputationPtr computation) {
+  XLA_CHECK(!inputs.empty());
+  std::vector<ir::Value> input_values;
+  for (auto& input : inputs) {
+    input_values.push_back(input.GetIrValue());
+  }
+  ir::NodePtr node = ir::MakeNode<ir::ops::UserComputation>(
+      ir::OpKind::Get(opname), input_values, std::move(computation));
+  return inputs.front().MakeOutputTensors(node);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -29,6 +29,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
+import torch_xla.core.xla_builder as xb
+import torch_xla.core.xla_op_registry as xor
 import torch_xla.distributed.data_parallel as dp
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
@@ -459,6 +461,15 @@ class XlaTestCase(unittest.TestCase):
       else:
         raise RuntimeError('Invalid TEST_PRINT_GRAPH value: {}'.format(env))
 
+  def compareResults(self, results, xla_results, rel_err=1e-2, abs_err=1e-5):
+    self.maybePrintGraph(xla_results)
+    for at, xt in zip(results, xla_results):
+      self.assertEqualRel(
+          self.makeComparable(xt),
+          self.makeComparable(at),
+          rel_err=rel_err,
+          abs_err=abs_err)
+
   def runAtenTest(self, tensors, fn, device=None, rel_err=1e-2, abs_err=1e-5):
     if device is None:
       device = xm.xla_device()
@@ -468,13 +479,7 @@ class XlaTestCase(unittest.TestCase):
     ]
     results = xu.as_list(fn(*tensors))
     xla_results = xu.as_list(fn(*xla_tensors))
-    self.maybePrintGraph(xla_results)
-    for at, xt in zip(results, xla_results):
-      self.assertEqualRel(
-          self.makeComparable(xt),
-          self.makeComparable(at),
-          rel_err=rel_err,
-          abs_err=abs_err)
+    self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
 
 
 class TestToXlaTensorArena(XlaTestCase):
@@ -1678,6 +1683,46 @@ class TestModelComparator(XlaTestCase):
     if report:
       print(report)
     self.assertEqual(len(report), 0)
+
+
+class TestOpBuilder(XlaTestCase):
+
+  def runOpBuilderTest(self,
+                       name,
+                       tensors,
+                       opfn,
+                       aten_fn=None,
+                       device=None,
+                       rel_err=1e-2,
+                       abs_err=1e-5):
+    op = xor.register(name, opfn)
+    if device is None:
+      device = xm.xla_device()
+    if aten_fn is None:
+      aten_fn = opfn
+    tensors = xu.as_list(tensors)
+    xla_tensors = [
+        x.to(device).detach().requires_grad_(x.requires_grad) for x in tensors
+    ]
+    results = xu.as_list(aten_fn(*tensors))
+    xla_results = xu.as_list(op(*xla_tensors))
+    self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
+
+  def test_add(self):
+
+    def op_fn(a, b, **kwargs):
+      return a + b
+
+    self.runOpBuilderTest(
+        'test_add', [torch.randn(2, 2), torch.randn(2, 2)], op_fn)
+
+  def test_mul(self):
+
+    def op_fn(a, b, **kwargs):
+      return a * b
+
+    self.runOpBuilderTest(
+        'test_mul', [torch.randn(2, 2), torch.randn(2, 2)], op_fn)
 
 
 class TestGeneric(XlaTestCase):
