@@ -7,6 +7,7 @@
 #include <thread>
 #include <vector>
 
+#include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
@@ -15,6 +16,7 @@
 #include "tensorflow/compiler/xla/xla_client/record_reader.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
 #include "tensorflow/core/platform/env.h"
@@ -23,6 +25,7 @@
 #include "torch/csrc/jit/python/pybind.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type.h"
+#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -33,6 +36,7 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/version.h"
+#include "torch_xla/csrc/xla_op_builder.h"
 
 namespace torch_xla {
 namespace {
@@ -537,6 +541,36 @@ py::object XlaNms(const at::Tensor& boxes, const at::Tensor& scores,
   return result_tuple;
 }
 
+std::vector<at::Tensor> XlaUserComputation(
+    const std::string& opname, const std::vector<at::Tensor>& inputs,
+    ComputationPtr computation) {
+  std::vector<XLATensor> xinputs = GetXlaTensors(inputs, /*want_all=*/true);
+  std::vector<XLATensor> xresults =
+      XLATensor::user_computation(opname, xinputs, std::move(computation));
+  std::vector<at::Tensor> results;
+  for (auto& xresult : xresults) {
+    at::Tensor tensor = bridge::AtenFromXlaTensor(std::move(xresult));
+    results.push_back(
+        torch::autograd::make_variable(tensor, /*requires_grad=*/false));
+  }
+  return results;
+}
+
+ComputationPtr CreateComputation(const std::string& name, xla::XlaOp root) {
+  xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
+  return std::make_shared<Computation>(name, std::move(computation));
+}
+
+xla::Shape GetTensorShape(const at::Tensor& tensor,
+                          const std::string& device_str) {
+  auto xtensor = bridge::TryGetXlaTensor(tensor);
+  if (xtensor) {
+    return xtensor->shape();
+  }
+  Device device = GetDeviceOrCurrent(device_str);
+  return CreateComputationShapeFromTensor(tensor, &device);
+}
+
 void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
@@ -551,6 +585,16 @@ void InitXlaModuleBindings(py::module m) {
                        xla::int64 output_size) {
     return XlaNms(boxes, scores, score_threshold, iou_threshold, output_size);
   });
+  m.def("_xla_user_computation",
+        [](const std::string& opname, const std::vector<at::Tensor>& inputs,
+           const ComputationPtr& computation) {
+          std::vector<at::Tensor> results;
+          {
+            NoGilSection nogil;
+            results = XlaUserComputation(opname, inputs, computation);
+          }
+          return results;
+        });
   m.def("_get_xla_tensors_dot",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
           auto coverter = [](absl::Span<const ir::Node* const> nodes) {
@@ -838,6 +882,53 @@ void InitXlaModuleBindings(py::module m) {
     NoGilSection nogil;
     RemoveTfFile(path);
   });
+
+  py::class_<xla::XlaBuilder, op_builder::BuilderPtr>(m, "XlaBuilder");
+  py::class_<op_builder::Op, op_builder::OpPtr>(m, "XlaOp");
+  py::class_<Computation, ComputationPtr>(m, "XlaComputation");
+  m.def("_xla_op_create_builder", [](const std::string& name) {
+    return std::make_shared<xla::XlaBuilder>(name);
+  });
+  m.def("_xla_op_tensor_shape",
+        [](const at::Tensor& tensor, const std::string& device) {
+          xla::Shape tensor_shape = GetTensorShape(tensor, device);
+          return op_builder::ShapeToPyShape(tensor_shape);
+        });
+  m.def("_xla_op_param", [](op_builder::BuilderPtr builder, xla::int64 param_no,
+                            py::object py_shape) {
+    xla::Shape shape = op_builder::PyShapeToShape(py_shape);
+    xla::XlaOp param = xla::Parameter(builder.get(), param_no, shape,
+                                      absl::StrCat("p", param_no));
+    return std::make_shared<op_builder::Op>(std::move(builder),
+                                            std::move(param));
+  });
+  m.def("_xla_op_build", [](const std::string& name, op_builder::OpPtr root) {
+    ComputationPtr computation;
+    {
+      NoGilSection nogil;
+      computation = CreateComputation(name, root->op);
+    }
+    return computation;
+  });
+  m.def("_xla_computation_text", [](const ComputationPtr& computation) {
+    std::string hlo_text;
+    {
+      NoGilSection nogil;
+      hlo_text = ConsumeValue(
+          xla::util::GetComputationHloText(computation->computation()));
+    }
+    return hlo_text;
+  });
+  m.def("_xla_op_shape", [](op_builder::OpPtr op) {
+    const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(op->op);
+    return op_builder::ShapeToPyShape(shape);
+  });
+  m.def("_xla_op_builder", [](op_builder::OpPtr op) { return op->builder; });
+  m.def("_xla_op_create",
+        [](op_builder::BuilderPtr builder, const std::string& opname,
+           const std::vector<op_builder::OpPtr>& operands, py::dict args) {
+          return op_builder::CreateOp(builder, opname, operands, args);
+        });
 }
 
 }  // namespace
