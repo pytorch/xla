@@ -1223,8 +1223,7 @@ at::Tensor AtenXlaType::expand(const at::Tensor& self, at::IntArrayRef size,
 
 at::Tensor AtenXlaType::exp2(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::exp2(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(XLATensor::exp2(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor& AtenXlaType::exp2_(at::Tensor& self) {
