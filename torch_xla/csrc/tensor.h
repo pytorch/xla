@@ -14,6 +14,7 @@
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
+#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
@@ -202,6 +203,10 @@ class XLATensor {
 
   static XLATensor get_dimensions_size(const XLATensor& input,
                                        std::vector<xla::int64> dimensions);
+
+  static std::vector<XLATensor> user_computation(
+      const std::string& opname, absl::Span<const XLATensor> inputs,
+      ComputationPtr computation);
 
   //////////////////////////////////////////////////////////////////////////////
   // ATEN operators follows here, listed in alphabetical order.
