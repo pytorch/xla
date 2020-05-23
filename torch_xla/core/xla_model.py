@@ -229,7 +229,7 @@ def unlazy(tensors):
 def set_replication(device, devices):
   device = str(device)
   devices = [str(x) for x in devices]
-  if len(devices) > 1:
+  if devices:
     replication_devices = xla_replication_devices(devices)
     torch_xla._XLAC._xla_set_replication_devices(replication_devices)
     _TLS.device_index = devices.index(device)
