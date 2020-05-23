@@ -81,6 +81,8 @@ NodePtr Max(const Value& input, const Value& other);
 
 NodePtr Exp(const Value& input);
 
+NodePtr Exp2(const Value& input);
+
 NodePtr Expm1(const Value& input);
 
 NodePtr Erf(const Value& input);

@@ -347,6 +347,10 @@ class AtenXlaType {
 
   static at::Tensor& exp_(at::Tensor& self);
 
+  static at::Tensor exp2(const at::Tensor& self);
+
+  static at::Tensor& exp2_(at::Tensor& self);
+
   static at::Tensor expand(const at::Tensor& self, at::IntArrayRef size,
                            bool implicit);
 

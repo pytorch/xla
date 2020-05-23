@@ -1054,6 +1054,14 @@ void XLATensor::exp_(XLATensor& input) {
   input.SetInPlaceIrValue(ir::ops::Exp(input.GetIrValue()));
 }
 
+XLATensor XLATensor::exp2(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Exp2(input.GetIrValue()));
+}
+
+void XLATensor::exp2_(XLATensor& input) {
+  input.SetInPlaceIrValue(ir::ops::Exp2(input.GetIrValue()));
+}
+
 XLATensor XLATensor::expand(const XLATensor& input,
                             std::vector<xla::int64> size) {
   auto input_shape = input.shape();

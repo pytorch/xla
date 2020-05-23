@@ -476,6 +476,9 @@ class XLATensor {
   static XLATensor exp(const XLATensor& input);
   static void exp_(XLATensor& input);
 
+  static XLATensor exp2(const XLATensor& input);
+  static void exp2_(XLATensor& input);
+
   static XLATensor expand(const XLATensor& input, std::vector<xla::int64> size);
 
   static XLATensor expm1(const XLATensor& input);

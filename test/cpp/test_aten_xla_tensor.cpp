@@ -5003,6 +5003,16 @@ TEST_F(AtenXlaTensorTest, TestExp) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestExp2) {
+  torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::exp2(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::exp2(xla_a);
+    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestExpm1) {
   torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::expm1(a);
