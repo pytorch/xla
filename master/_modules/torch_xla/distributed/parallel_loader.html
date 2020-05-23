@@ -425,6 +425,32 @@
       <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
         <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">close_write</span><span class="p">()</span></div>
+
+
+<span class="k">class</span> <span class="nc">MpDeviceLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Wraps an existing PyTorch DataLoader with background data upload.</span>
+
+<span class="sd">  This class should only be using with multi-processing data parallelism.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    loader (:class:`torch.utils.data.DataLoader`): The PyTorch DataLoader to be</span>
+<span class="sd">      wrapped.</span>
+<span class="sd">    device (`torch.device`...): The device where the data has to be sent.</span>
+<span class="sd">    kwargs: Named arguments for the `ParallelLoader` constructor.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">loader</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_device</span> <span class="o">=</span> <span class="n">device</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader_kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+
+  <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">parallel_loader</span> <span class="o">=</span> <span class="n">ParallelLoader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">],</span>
+                                     <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader_kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">parallel_loader</span><span class="o">.</span><span class="n">per_device_loader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">)</span>
 </pre></div>
 
              </article>
