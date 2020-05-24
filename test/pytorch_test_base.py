@@ -1,6 +1,7 @@
 import collections
 import copy
 import os
+import re
 import sys
 import runpy
 
@@ -285,6 +286,35 @@ DISABLED_TORCH_TESTS_GPU_ONLY = {
 }
 
 
+class MatchSet(object):
+
+  def __init__(self):
+    self.exact = set()
+    self.regex = set()
+
+
+def prepare_match_set(s):
+  ps = dict()
+  for k, v in s.items():
+    mset = MatchSet()
+    for m in v:
+      if re.match(r'\w+$', m):
+        mset.exact.add(m)
+      else:
+        mset.regex.add(m)
+    ps[k] = mset
+  return ps
+
+
+def match_name(name, mset):
+  if name in mset.exact:
+    return True
+  for m in mset.regex:
+    if re.match(m, name):
+      return True
+  return False
+
+
 def union_of_disabled_tests(sets):
   union = collections.defaultdict(set)
   for s in sets:
@@ -300,9 +330,9 @@ DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(
     [DISABLED_TORCH_TESTS_ANY, DISABLED_TORCH_TESTS_TPU_ONLY])
 
 DISABLED_TORCH_TESTS = {
-    'TPU': DISABLED_TORCH_TESTS_TPU,
-    'CPU': DISABLED_TORCH_TESTS_CPU,
-    'GPU': DISABLED_TORCH_TESTS_GPU,
+    'TPU': prepare_match_set(DISABLED_TORCH_TESTS_TPU),
+    'CPU': prepare_match_set(DISABLED_TORCH_TESTS_CPU),
+    'GPU': prepare_match_set(DISABLED_TORCH_TESTS_GPU),
 }
 
 
@@ -334,8 +364,8 @@ class XLATestBase(DeviceTypeTestBase):
       raise unittest.SkipTest('skipped on XLA')
       return test(self, cls.device_type)
 
-    if test_name in disabled_torch_tests[
-        class_name] or name in disabled_torch_tests[class_name]:
+    if (match_name(test_name, disabled_torch_tests[class_name]) or
+        match_name(name, disabled_torch_tests[class_name])):
       assert not hasattr(
           cls, test_name), 'Redefinition of test {0}'.format(test_name)
       setattr(cls, test_name, disallowed_test)
@@ -362,7 +392,7 @@ class XLATestBase(DeviceTypeTestBase):
                 cls, dtype_test_name), 'Redefinition of test {0}'.format(
                     dtype_test_name)
             setattr(cls, dtype_test_name, skipped_test)
-          elif dtype_test_name in disabled_torch_tests[class_name]:
+          elif match_name(dtype_test_name, disabled_torch_tests[class_name]):
             setattr(cls, dtype_test_name, disallowed_test)
           else:
             xla_dtypes.append(dtype)
