@@ -742,7 +742,7 @@ def set_rng_state(seed, device=None):
   torch_xla._XLAC._xla_set_rng_seed(seed, str(device) if device else '')
 
 
-def get_rng_state(seed, device=None):
+def get_rng_state(device=None):
   """Gets the current running random number generator state.
 
   Args:
