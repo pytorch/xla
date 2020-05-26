@@ -354,6 +354,9 @@ class AtenXlaType {
 
   static at::Tensor& expm1_(at::Tensor& self);
 
+  static at::Tensor& exponential_(at::Tensor& self, double lambd,
+                                  c10::optional<at::Generator> generator);
+
   static at::Tensor& eye_out(at::Tensor& out, int64_t n);
 
   static at::Tensor& eye_out(at::Tensor& out, int64_t n, int64_t m);

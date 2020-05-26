@@ -45,6 +45,7 @@
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/exponential.h"
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
@@ -1068,6 +1069,14 @@ XLATensor XLATensor::expm1(const XLATensor& input) {
 
 void XLATensor::expm1_(XLATensor& input) {
   input.SetInPlaceIrValue(ir::ops::Expm1(input.GetIrValue()));
+}
+
+void XLATensor::exponential_(XLATensor& input, double lambd) {
+  auto input_shape = input.shape();
+  input.SetInPlaceIrValue(ir::MakeNode<ir::ops::Exponential>(
+      GetIrValueForScalar(lambd, input_shape.get().element_type(),
+                          input.GetDevice()),
+      GetRngSeed(input.GetDevice()), input_shape.get()));
 }
 
 XLATensor XLATensor::eye(xla::int64 lines, xla::int64 cols,
