@@ -452,6 +452,17 @@ xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
   return xla::ConvertElementType(xla::Lt(noise, probability), type);
 }
 
+xla::XlaOp BuildExponential(xla::XlaOp lambda, xla::XlaOp seed,
+                            xla::PrimitiveType type) {
+  static const float kEpsValue = 1e-5;
+  const xla::Shape& lambda_shape = XlaHelpers::ShapeOfXlaOp(lambda);
+  xla::XlaOp zero = xla::Zero(lambda.builder(), lambda_shape.element_type());
+  xla::XlaOp one_minus_eps = XlaHelpers::ScalarValue<float>(
+      1.0 - kEpsValue, lambda_shape.element_type(), lambda.builder());
+  xla::XlaOp rng = RngUniform(seed, lambda_shape, zero, one_minus_eps);
+  return xla::Neg(xla::Log1p(xla::Neg(rng)) * xla::Reciprocal(lambda));
+}
+
 xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp prob =

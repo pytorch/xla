@@ -29,6 +29,9 @@ xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
                           xla::PrimitiveType type);
 
+xla::XlaOp BuildExponential(xla::XlaOp lambda, xla::XlaOp seed,
+                            xla::PrimitiveType type);
+
 xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed);
 
 std::vector<xla::XlaOp> CreateBroadcastTensors(

@@ -1234,6 +1234,18 @@ at::Tensor& AtenXlaType::expm1_(at::Tensor& self) {
   return self;
 }
 
+at::Tensor& AtenXlaType::exponential_(at::Tensor& self, double lambd,
+                                      c10::optional<at::Generator> generator) {
+  XLA_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::exponential_(self, lambd, generator);
+  }
+  XLA_CHECK_GE(lambd, 0.0);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::exponential_(self_tensor, lambd);
+  return self;
+}
+
 at::Tensor& AtenXlaType::eye_out(at::Tensor& out, int64_t n) {
   XLA_FN_COUNTER("xla::");
   XLATensor out_tensor = bridge::GetXlaTensor(out);

@@ -481,6 +481,8 @@ class XLATensor {
   static XLATensor expm1(const XLATensor& input);
   static void expm1_(XLATensor& input);
 
+  static void exponential_(XLATensor& input, double lambd);
+
   // Returns a 2-D tensor with ones on the diagonal and zeros elsewhere.
   static XLATensor eye(xla::int64 lines, xla::int64 cols, const Device& device,
                        at::ScalarType element_type);
