@@ -191,6 +191,9 @@ class Op(object):
   def transpose(self, permutation):
     return mkop('Transpose', (self.op,), permutation=permutation)
 
+  def clamp(self, min_value, max_value):
+    return mkop('Clamp', (self.op, min_value.op, max_value.op))
+
   def acos(self):
     return mkop('Acos', (self.op,))
 
