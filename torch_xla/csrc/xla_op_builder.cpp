@@ -413,6 +413,11 @@ xla::XlaOp Iota(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
   return xla::Iota(builder.get(), shape, iota_dimension);
 }
 
+xla::XlaOp Clamp(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
+                 py::dict args) {
+  return xla::Clamp(operands.at(1)->op, operands.at(0)->op, operands.at(2)->op);
+}
+
 xla::XlaOp Convert(const BuilderPtr& builder,
                    const std::vector<OpPtr>& operands, py::dict args) {
   std::string type = args["to_type"].cast<std::string>();
@@ -446,6 +451,7 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(BroadcastInDim);
   XLA_OPADD(Call);
   XLA_OPADD(Ceil);
+  XLA_OPADD(Clamp);
   XLA_OPADD(Constant);
   XLA_OPADD(Conv);
   XLA_OPADD(Convert);
