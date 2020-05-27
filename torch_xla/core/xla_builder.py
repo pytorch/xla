@@ -170,6 +170,21 @@ class Op(object):
         padding=padding,
         precision_config=precision_config)
 
+  def conv_with_general_padding(self,
+                                kernel,
+                                window_strides,
+                                padding,
+                                feature_group_count=1,
+                                batch_group_count=1,
+                                precision_config=None):
+    return mkop(
+        'ConvWithGeneralPadding', (self.op, kernel.op),
+        window_strides=window_strides,
+        feature_group_count=feature_group_count,
+        batch_group_count=batch_group_count,
+        padding=padding,
+        precision_config=precision_config)
+
   def cast(self, to_type):
     return mkop('Convert', (self.op,), to_type=to_type)
 
@@ -193,6 +208,12 @@ class Op(object):
 
   def clamp(self, min_value, max_value):
     return mkop('Clamp', (self.op, min_value.op, max_value.op))
+
+  def get_tuple_element(self, index):
+    return mkop('GetTupleElement', (self.op,), index=index)
+
+  def rev(self, dimensions):
+    return mkop('Rev', (self.op,), dimensions=dimensions)
 
   def acos(self):
     return mkop('Acos', (self.op,))
@@ -266,6 +287,13 @@ class Op(object):
   @classmethod
   def tuple(cls, ops, builder=None):
     return mkop('Tuple', [x.op for x in ops], builder=builder)
+
+  @classmethod
+  def concat_in_dim(cls, ops, dimension, builder=None):
+    return mkop(
+        'ConcatInDim', [x.op for x in ops],
+        builder=builder,
+        dimension=dimension)
 
   @classmethod
   def call(cls, computation, ops, builder=None):

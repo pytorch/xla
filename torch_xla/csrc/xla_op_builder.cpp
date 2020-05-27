@@ -209,6 +209,17 @@ xla::PaddingConfig ParsePaddingConfig(py::tuple cfg) {
   return pad_config;
 }
 
+template <typename T>
+std::vector<std::pair<T, T>> ParsePairList(py::tuple plist) {
+  std::vector<std::pair<T, T>> pairs;
+  for (auto& p : plist) {
+    py::tuple pt = p.cast<py::tuple>();
+    XLA_CHECK_EQ(pt.size(), 2);
+    pairs.emplace_back(pt[0].cast<T>(), pt[1].cast<T>());
+  }
+  return pairs;
+}
+
 xla::XlaOp Pad(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                py::dict args) {
   xla::PaddingConfig pad_config = ParsePaddingConfig(args["config"]);
@@ -230,6 +241,22 @@ xla::Padding ParseConvPadding(const std::string& padding_str) {
     return xla::Padding::kValid;
   }
   XLA_ERROR() << "Invalid padding: " << padding_str;
+}
+
+xla::XlaOp ConvWithGeneralPadding(const BuilderPtr& builder,
+                                  const std::vector<OpPtr>& operands,
+                                  py::dict args) {
+  std::vector<xla::int64> window_strides =
+      GetTupleVector<xla::int64>(args["window_strides"]);
+  xla::int64 feature_group_count =
+      ArgOrDefault<xla::int64>(args, "feature_group_count", 1);
+  xla::int64 batch_group_count =
+      ArgOrDefault<xla::int64>(args, "batch_group_count", 1);
+  auto padding = ParsePairList<xla::int64>(args["padding"]);
+  xla::PrecisionConfig precision_config = DotPrecisonConfig(args);
+  return xla::ConvWithGeneralPadding(
+      operands.at(0)->op, operands.at(1)->op, window_strides, padding,
+      feature_group_count, batch_group_count, &precision_config);
 }
 
 xla::XlaOp Conv(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
@@ -418,12 +445,32 @@ xla::XlaOp Clamp(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
   return xla::Clamp(operands.at(1)->op, operands.at(0)->op, operands.at(2)->op);
 }
 
+xla::XlaOp Rev(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
+               py::dict args) {
+  std::vector<xla::int64> dimensions =
+      GetTupleVector<xla::int64>(args["dimensions"]);
+  return xla::Rev(operands.at(0)->op, dimensions);
+}
+
+xla::XlaOp ConcatInDim(const BuilderPtr& builder,
+                       const std::vector<OpPtr>& operands, py::dict args) {
+  xla::int64 dimension = args["dimension"].cast<xla::int64>();
+  std::vector<xla::XlaOp> ops = ExtractXlaOps(operands);
+  return xla::ConcatInDim(builder.get(), ops, dimension);
+}
+
 xla::XlaOp Convert(const BuilderPtr& builder,
                    const std::vector<OpPtr>& operands, py::dict args) {
   std::string type = args["to_type"].cast<std::string>();
   xla::PrimitiveType xla_type =
       ConsumeValue(xla::primitive_util::StringToPrimitiveType(type));
   return MaybeConvertTo(operands.at(0)->op, xla_type);
+}
+
+xla::XlaOp GetTupleElement(const BuilderPtr& builder,
+                           const std::vector<OpPtr>& operands, py::dict args) {
+  xla::int64 index = args["index"].cast<xla::int64>();
+  return xla::GetTupleElement(operands.at(0)->op, index);
 }
 
 xla::XlaOp BitcastConvert(const BuilderPtr& builder,
@@ -452,9 +499,11 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(Call);
   XLA_OPADD(Ceil);
   XLA_OPADD(Clamp);
+  XLA_OPADD(ConcatInDim);
   XLA_OPADD(Constant);
   XLA_OPADD(Conv);
   XLA_OPADD(Convert);
+  XLA_OPADD(ConvWithGeneralPadding);
   XLA_OPADD(Cos);
   XLA_OPADD(Cosh);
   XLA_OPADD(Div);
@@ -471,6 +520,7 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(Floor);
   XLA_OPADD(Gather);
   XLA_OPADD(Ge);
+  XLA_OPADD(GetTupleElement);
   XLA_OPADD(Gt);
   XLA_OPADD(Iota);
   XLA_OPADD(Le);
@@ -489,6 +539,7 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(Reduce);
   XLA_OPADD(Rem);
   XLA_OPADD(Reshape);
+  XLA_OPADD(Rev);
   XLA_OPADD(Rsqrt);
   XLA_OPADD(Scatter);
   XLA_OPADD(Select);
