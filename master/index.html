@@ -1125,7 +1125,7 @@ Example:</p>
   <span class="n">model</span> <span class="o">=</span> <span class="n">WRAPPED_MODEL</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
   <span class="o">...</span>
 
-<span class="n">xmp</span><span class="o">.</span><span class="n">spwan</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">start_method</span><span class="o">=</span><span class="s1">&#39;fork&#39;</span><span class="p">)</span>
+<span class="n">xmp</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">start_method</span><span class="o">=</span><span class="s1">&#39;fork&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>This method has two advantages. First if uses only one copy of the memory
@@ -1164,7 +1164,7 @@ memory during the process.</p>
   <span class="n">dataset</span> <span class="o">=</span> <span class="n">SERIAL_EXEC</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;/tmp/mnist-data&#39;</span><span class="p">))</span>
   <span class="o">...</span>
 
-<span class="n">xmp</span><span class="o">.</span><span class="n">spwan</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="n">xmp</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
 </pre></div>
 </div>
 <dl class="method">
