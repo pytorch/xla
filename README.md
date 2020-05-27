@@ -38,7 +38,7 @@ semantics and functions, is available at [PyTorch.org](http://pytorch.org/xla/).
 Google Cloud Platform lets you deploy PyTorch networks running on Cloud TPUs.
 This guide is split into two parts:
 
-* [Runnining on a single Cloud TPU](#CloudSingle)
+* [Running on a single Cloud TPU](#CloudSingle)
 * [Running on a Cloud TPU Pod](#Pod)
 
 ## <a name="CloudSingle"></a> Running on a Single Cloud TPU
