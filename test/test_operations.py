@@ -1694,7 +1694,8 @@ class TestOpBuilder(XlaTestCase):
                        aten_fn=None,
                        device=None,
                        rel_err=1e-2,
-                       abs_err=1e-5):
+                       abs_err=1e-5,
+                       kwargs=dict()):
     op = xor.register(name, opfn)
     if device is None:
       device = xm.xla_device()
@@ -1704,8 +1705,8 @@ class TestOpBuilder(XlaTestCase):
     xla_tensors = [
         x.to(device).detach().requires_grad_(x.requires_grad) for x in tensors
     ]
-    results = xu.as_list(aten_fn(*tensors))
-    xla_results = xu.as_list(op(*xla_tensors))
+    results = xu.as_list(aten_fn(*tensors, **kwargs))
+    xla_results = xu.as_list(op(*xla_tensors, **kwargs))
     self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
 
   def test_add(self):
@@ -1723,6 +1724,43 @@ class TestOpBuilder(XlaTestCase):
 
     self.runOpBuilderTest(
         'test_mul', [torch.randn(2, 2), torch.randn(2, 2)], op_fn)
+
+  def test_conditional(self):
+
+    def op_fn(k, a, b, k0=None):
+
+      def btrue(x):
+        a = x.get_tuple_element(0)
+        b = x.get_tuple_element(1)
+        return a + b
+
+      def bfalse(x):
+        a = x.get_tuple_element(0)
+        b = x.get_tuple_element(1)
+        return a - b
+
+      cond = k > xb.Op.scalar(k.builder(), k0)
+      return cond.mkconditional((a, b), btrue, bfalse)
+
+    def aten_fn(k, a, b, k0=None):
+      return a + b if k.item() > k0 else a - b
+
+    self.runOpBuilderTest(
+        'test_conditional',
+        [torch.tensor(0.2),
+         torch.randn(2, 2),
+         torch.randn(2, 2)],
+        op_fn,
+        aten_fn=aten_fn,
+        kwargs={'k0': 0.1})
+    self.runOpBuilderTest(
+        'test_conditional',
+        [torch.tensor(0.2),
+         torch.randn(2, 2),
+         torch.randn(2, 2)],
+        op_fn,
+        aten_fn=aten_fn,
+        kwargs={'k0': 0.9})
 
 
 class TestGeneric(XlaTestCase):

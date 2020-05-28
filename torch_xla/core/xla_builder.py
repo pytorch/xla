@@ -1,6 +1,7 @@
 from __future__ import division
 from __future__ import print_function
 
+import torch
 import torch_xla
 
 
@@ -185,6 +186,109 @@ class Op(object):
         padding=padding,
         precision_config=precision_config)
 
+  def conv_with_general_dimensions(self,
+                                   kernel,
+                                   window_strides,
+                                   input_batch_dimension,
+                                   input_feature_dimension,
+                                   kernel_input_feature_dimension,
+                                   kernel_output_feature_dimension,
+                                   output_batch_dimension,
+                                   output_feature_dimension,
+                                   input_spatial_dimensions,
+                                   kernel_spatial_dimensions,
+                                   output_spatial_dimensions,
+                                   padding='valid',
+                                   feature_group_count=1,
+                                   batch_group_count=1,
+                                   precision_config=None):
+    return mkop(
+        'ConvWithGeneralDimensions', (self.op, kernel.op),
+        window_strides=window_strides,
+        input_batch_dimension=input_batch_dimension,
+        input_feature_dimension=input_feature_dimension,
+        kernel_input_feature_dimension=kernel_input_feature_dimension,
+        kernel_output_feature_dimension=kernel_output_feature_dimension,
+        output_batch_dimension=output_batch_dimension,
+        output_feature_dimension=output_feature_dimension,
+        input_spatial_dimensions=input_spatial_dimensions,
+        kernel_spatial_dimensions=kernel_spatial_dimensions,
+        output_spatial_dimensions=output_spatial_dimensions,
+        feature_group_count=feature_group_count,
+        batch_group_count=batch_group_count,
+        padding=padding,
+        precision_config=precision_config)
+
+  def conv_general(self,
+                   kernel,
+                   window_strides,
+                   padding,
+                   input_batch_dimension,
+                   input_feature_dimension,
+                   kernel_input_feature_dimension,
+                   kernel_output_feature_dimension,
+                   output_batch_dimension,
+                   output_feature_dimension,
+                   input_spatial_dimensions,
+                   kernel_spatial_dimensions,
+                   output_spatial_dimensions,
+                   feature_group_count=1,
+                   batch_group_count=1,
+                   precision_config=None):
+    return mkop(
+        'ConvGeneral', (self.op, kernel.op),
+        window_strides=window_strides,
+        padding=padding,
+        input_batch_dimension=input_batch_dimension,
+        input_feature_dimension=input_feature_dimension,
+        kernel_input_feature_dimension=kernel_input_feature_dimension,
+        kernel_output_feature_dimension=kernel_output_feature_dimension,
+        output_batch_dimension=output_batch_dimension,
+        output_feature_dimension=output_feature_dimension,
+        input_spatial_dimensions=input_spatial_dimensions,
+        kernel_spatial_dimensions=kernel_spatial_dimensions,
+        output_spatial_dimensions=output_spatial_dimensions,
+        feature_group_count=feature_group_count,
+        batch_group_count=batch_group_count,
+        precision_config=precision_config)
+
+  def conv_general_dilated(self,
+                           kernel,
+                           window_strides,
+                           padding,
+                           lhs_dilation,
+                           rhs_dilation,
+                           input_batch_dimension,
+                           input_feature_dimension,
+                           kernel_input_feature_dimension,
+                           kernel_output_feature_dimension,
+                           output_batch_dimension,
+                           output_feature_dimension,
+                           input_spatial_dimensions,
+                           kernel_spatial_dimensions,
+                           output_spatial_dimensions,
+                           feature_group_count=1,
+                           batch_group_count=1,
+                           precision_config=None):
+    return mkop(
+        'ConvGeneralDilated', (self.op, kernel.op),
+        window_strides=window_strides,
+        padding=padding,
+        lhs_dilation=lhs_dilation,
+        rhs_dilation=rhs_dilation,
+        input_batch_dimension=input_batch_dimension,
+        input_feature_dimension=input_feature_dimension,
+        kernel_input_feature_dimension=kernel_input_feature_dimension,
+        kernel_output_feature_dimension=kernel_output_feature_dimension,
+        output_batch_dimension=output_batch_dimension,
+        output_feature_dimension=output_feature_dimension,
+        input_spatial_dimensions=input_spatial_dimensions,
+        kernel_spatial_dimensions=kernel_spatial_dimensions,
+        output_spatial_dimensions=output_spatial_dimensions,
+        feature_group_count=feature_group_count,
+        batch_group_count=batch_group_count,
+        precision_config=precision_config)
+
   def cast(self, to_type):
     return mkop('Convert', (self.op,), to_type=to_type)
 
@@ -211,6 +315,22 @@ class Op(object):
 
   def get_tuple_element(self, index):
     return mkop('GetTupleElement', (self.op,), index=index)
+
+  def conditional(self, true_operand, false_operand, true_computation,
+                  false_computation):
+    return mkop(
+        'Conditional', (self.op, true_operand.op, false_operand.op),
+        true_computation=true_computation,
+        false_computation=false_computation)
+
+  def mkconditional(self, ops, true_fn, false_fn, **kwargs):
+    input_tuple = Op.tuple(ops)
+    true_computation = create_computation('CondTrue', true_fn,
+                                          (input_tuple.shape(),), **kwargs)
+    false_computation = create_computation('CondFalse', false_fn,
+                                           (input_tuple.shape(),), **kwargs)
+    return self.conditional(input_tuple, input_tuple, true_computation,
+                            false_computation)
 
   def rev(self, dimensions):
     return mkop('Rev', (self.op,), dimensions=dimensions)
@@ -305,6 +425,10 @@ class Op(object):
     return mkleaf('Constant', builder, value=value)
 
   @classmethod
+  def scalar(cls, builder, value, dtype=None):
+    return mkleaf('Constant', builder, value=torch.tensor(value, dtype=dtype))
+
+  @classmethod
   def iota(cls, builder, shape, iota_dimension):
     return mkleaf('Iota', builder, shape=shape, iota_dimension=iota_dimension)
 
@@ -322,7 +446,7 @@ def create_builder(name):
 
 
 def mkshape(stype, dims):
-  return (str(stype), tuple(dims))
+  return {'type': str(stype), 'sizes': tuple(dims)}
 
 
 def mkop(name, ops, **kwargs):
