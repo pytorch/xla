@@ -49,9 +49,9 @@ class MNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
-def _train_update(device, x, loss, tracker):
+def _train_update(device, x, loss, tracker, writer):
   test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
-                                   tracker.global_rate())
+                                   tracker.global_rate(), summary_writer=writer)
 
 
 def train_mnist():
@@ -127,7 +127,8 @@ def train_mnist():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if step % FLAGS.log_steps == 0:
-        xm.add_step_closure(_train_update, args=(device, step, loss, tracker))
+        xm.add_step_closure(
+            _train_update, args=(device, step, loss, tracker, writer))
 
   def test_loop_fn(loader):
     total_samples = 0

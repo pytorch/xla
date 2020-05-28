@@ -200,7 +200,8 @@ def train_imagenet():
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
         test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
-                                         tracker.global_rate())
+                                         tracker.global_rate(),
+                                         summary_writer=writer)
       if lr_scheduler:
         lr_scheduler.step()
 
