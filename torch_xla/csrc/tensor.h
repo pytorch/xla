@@ -1223,7 +1223,8 @@ class XLATensor {
 
   void SetTensorData(at::Tensor tensor_data);
 
-  ir::Value CreateTensorNode(xla::ComputationClient::DataPtr data) const;
+  ir::Value CreateTensorNode(xla::ComputationClient::DataPtr data,
+                             bool read_only) const;
 
   View::IrNode GetViewUpdate(const std::shared_ptr<View>& view) const;
 

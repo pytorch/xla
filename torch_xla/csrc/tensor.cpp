@@ -384,9 +384,11 @@ class XLATensor::DeviceContextArena {
 };
 
 struct DeviceDataInfo : public xla::ComputationClient::Data::Info {
-  explicit DeviceDataInfo(xla::int64 tensor_id) : tensor_id(tensor_id) {}
+  DeviceDataInfo(xla::int64 tensor_id, bool read_only)
+      : tensor_id(tensor_id), read_only(read_only) {}
 
   xla::int64 tensor_id = 0;
+  bool read_only = false;
 };
 
 XLATensor::Data::~Data() { DeviceContextArena::Get()->UnregisterTensor(this); }
@@ -659,7 +661,7 @@ ir::Value XLATensor::GetIrValue() const {
     // will still collapse them all into a single XLA parameter op). So call
     // which wants the XLA data will still find it, w/out having to fetch it via
     // a computation client from-server call.
-    AssignIrValue(CreateTensorNode(xla_data));
+    AssignIrValue(CreateTensorNode(xla_data, /*read_only=*/false));
     return data()->ir_value;
   }
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
@@ -689,6 +691,7 @@ c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
 ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
                                          const Device& device) const {
   xla::ComputationClient::DataPtr data;
+  bool read_only = false;
   if (tensor.dim() == 0 && tensor.numel() == 1) {
     at::Scalar value = tensor.item();
     if (IsSpecialScalar(value)) {
@@ -697,11 +700,12 @@ ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
           MakeXlaPrimitiveType(tensor.scalar_type(), &device));
     }
     data = GetDeviceData(tensor, device);
+    read_only = true;
   } else {
     XLA_TIMED("IrValueTensorToXlaData");
     data = TensorToXlaData(tensor, device);
   }
-  return CreateTensorNode(std::move(data));
+  return CreateTensorNode(std::move(data), read_only);
 }
 
 ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
@@ -712,6 +716,8 @@ ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
   }
   xla::ComputationClient::DataPtr data =
       GetDeviceData(value, TensorTypeFromXlaType(type), device);
+  data->SetInfo(
+      std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }
 
@@ -992,9 +998,9 @@ std::vector<XLATensor> XLATensor::CreateTensors(
   return xla_tensors;
 }
 
-ir::Value XLATensor::CreateTensorNode(
-    xla::ComputationClient::DataPtr data) const {
-  data->SetInfo(std::make_shared<DeviceDataInfo>(GetUniqueId()));
+ir::Value XLATensor::CreateTensorNode(xla::ComputationClient::DataPtr data,
+                                      bool read_only) const {
+  data->SetInfo(std::make_shared<DeviceDataInfo>(GetUniqueId(), read_only));
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }
 
@@ -1436,7 +1442,7 @@ void XLATensor::BuildInputOutputAliases(const std::vector<XLATensor>& tensors,
   for (size_t i = 0; i < parameters_data.size(); ++i) {
     DeviceDataInfo* data_info =
         dynamic_cast<DeviceDataInfo*>(parameters_data[i]->info());
-    if (data_info != nullptr) {
+    if (data_info != nullptr && !data_info->read_only) {
       auto it = output_tensor_id_map.find(data_info->tensor_id);
       if (it != output_tensor_id_map.end()) {
         size_t output_index = it->second;
