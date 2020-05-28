@@ -15,17 +15,18 @@ def _get_device_spec(device):
 
 
 def write_to_summary(summary_writer,
-                     global_step,
+                     global_step=None,
                      dict_to_write={},
                      write_xla_metrics=False):
-  """Writes scalars to a SummaryWriter.
+  """Writes scalars to a Tensorboard SummaryWriter.
 
   Optionally writes XLA perf metrics.
 
   Args:
-    summary_writer (Tensorboard SummaryWriter): The SummaryWriter to write to.
+    summary_writer (SummaryWriter): The Tensorboard SummaryWriter to write to.
       If None, no summary files will be written.
-    global_step (int): The global step value for these data points.
+    global_step (int, optional): The global step value for these data points.
+      If None, global_step will not be set for this datapoint.
     dict_to_write (dict, optional): Dict where key is the scalar name and value
       is the scalar value to be written to Tensorboard.
     write_xla_metrics (bool, optional): If true, this method will retrieve XLA
@@ -50,8 +51,8 @@ def close_summary_writer(summary_writer):
   """Flush and close a SummaryWriter.
 
   Args:
-    summary_writer: instance of Tensorboard SummaryWriter or None. If None, no
-      action is taken.
+    summary_writer (SummaryWriter, optional): The Tensorboard SummaryWriter to
+      close and flush. If None, no action is taken.
   """
   if summary_writer is not None:
     summary_writer.flush()
@@ -62,7 +63,7 @@ def get_summary_writer(logdir):
   """Initialize a Tensorboard SummaryWriter.
 
   Args:
-    logdir: Str. File location where logs will be written or None. If None, no
+    logdir (str): File location where logs will be written or None. If None, no
       writer is created.
 
   Returns:
@@ -80,15 +81,19 @@ def now(format='%H:%M:%S'):
   return datetime.now().strftime(format)
 
 
-def print_training_update(device, step, loss, rate, global_rate, epoch=None):
+def print_training_update(device, step, loss, rate, global_rate, epoch=None,
+                          summary_writer=None):
   """Prints the training metrics at a given step.
 
   Args:
-    device: Instance of `torch.device`.
-    step_num: Integer. Current step number.
-    loss: Float. Current loss.
-    rate: Float. The examples/sec rate for the current batch.
-    global_rate: Float. The average examples/sec rate since training began.
+    device (torch.device): The device where these statistics came from.
+    step_num (int): Current step number.
+    loss (float): Current loss.
+    rate (float): The examples/sec rate for the current batch.
+    global_rate (float): The average examples/sec rate since training began.
+    epoch (int, optional): The epoch number.
+    summary_writer (SummaryWriter, optional): If provided, this method will
+      write some of the provided statistics to Tensorboard.
   """
   update_data = [
       'Training', 'Device={}'.format(_get_device_spec(device)),
@@ -98,6 +103,11 @@ def print_training_update(device, step, loss, rate, global_rate, epoch=None):
       'Time={}'.format(now())
   ]
   print('|', ' '.join(item for item in update_data if item), flush=True)
+  if summary_writer:
+    write_to_summary(summary_writer, dict_to_write={
+        'examples/sec': rate,
+        'average_examples/sec': global_rate,
+    })
 
 
 def print_test_update(device, accuracy, epoch=None, step=None):
