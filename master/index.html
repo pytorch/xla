@@ -506,6 +506,21 @@ to CPU:</p>
 </div>
 <p>In case of multiple devices, the above API will only save the data for the master
 device ordinal (0).</p>
+<p>In case where memory is limited compare to the size of the model parameters, an
+API is provided that reduces the memory pressure on the host:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.utils.serialization</span> <span class="k">as</span> <span class="nn">xser</span>
+
+<span class="n">xser</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="n">path</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Such API streams XLA tensors to CPU one at a time, reducing the amount of host
+memory used, but it requires a matching load API to restore:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.utils.serialization</span> <span class="k">as</span> <span class="nn">xser</span>
+
+<span class="n">state_dict</span> <span class="o">=</span> <span class="n">xser</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">)</span>
+</pre></div>
+</div>
 <p>Directly saving XLA tensors is possible but not recommended. XLA
 tensors are always loaded back to the device they were saved from, and if
 that device is unavailable the load will fail. PyTorch/XLA, like all of PyTorch,
