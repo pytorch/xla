@@ -828,7 +828,10 @@ all the replicas in it.</p>
 <code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">file_or_path</em>, <em class="sig-param">master_only=True</em>, <em class="sig-param">global_master=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.save" title="Permalink to this definition">¶</a></dt>
 <dd><p>Saves the input data into a file.</p>
 <p>The saved data is transferred to PyTorch CPU device before being saved, so a
-following <cite>torch.load()</cite> will load CPU data.</p>
+following <cite>torch.load()</cite> will load CPU data.
+Care must be taken when working with views. Instead of saving views it’s
+recommended that you recreate them after the tensors have been loaded and
+moved to their destination device(s).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1228,6 +1231,51 @@ conversion.</p></li>
 <dt id="torch_xla.utils.utils.DataWrapper">
 <em class="property">class </em><code class="sig-prename descclassname">torch_xla.utils.utils.</code><code class="sig-name descname">DataWrapper</code><a class="reference internal" href="_modules/torch_xla/utils/utils.html#DataWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.utils.DataWrapper" title="Permalink to this definition">¶</a></dt>
 <dd><p>Utility class to wrap data structures to be sent to device.</p>
+</dd></dl>
+
+<span class="target" id="module-torch_xla.utils.serialization"></span><dl class="function">
+<dt id="torch_xla.utils.serialization.save">
+<code class="sig-prename descclassname">torch_xla.utils.serialization.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">path</em>, <em class="sig-param">master_only=True</em>, <em class="sig-param">global_master=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/serialization.html#save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.serialization.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves the input data into a file.</p>
+<p>The saved data is transferred to PyTorch CPU device before being saved, so a
+following <cite>torch.load()</cite> will load CPU data.
+Care must be taken when working with views. Instead of saving views it’s
+recommended that you recreate them after the tensors have been loaded and
+moved to their destination device(s).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – The input data to be saved. Any nested combination of Python objects
+(list, tuples, sets, dicts, …).</p></li>
+<li><p><strong>path</strong> – The destination file for the data saving operation. If <cite>master_only</cite>
+is <code class="docutils literal notranslate"><span class="pre">False</span></code> the path must point to different destinations as otherwise
+all the writes from the same host will override each other.</p></li>
+<li><p><strong>master_only</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether only the master device should save the
+data. If False, the <cite>path</cite> argument should be a different path for each of
+the ordinals taking part to the replication, otherwise all the replicas on
+the same host will be writing to the same location.
+Default: True</p></li>
+<li><p><strong>global_master</strong> (<em>bool</em><em>, </em><em>optional</em>) – When <code class="docutils literal notranslate"><span class="pre">master_only</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code> this flag
+controls whether every host’s master (if <code class="docutils literal notranslate"><span class="pre">global_master</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>)
+saves the content, or only the global master (ordinal 0).
+Default: False</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.serialization.load">
+<code class="sig-prename descclassname">torch_xla.utils.serialization.</code><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/serialization.html#load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.serialization.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads data previously saved with the <cite>save()</cite> API.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – The path passed to the <cite>save()</cite> API.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The loaded data.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <span class="target" id="module-torch_xla.utils.gcsfs"></span><dl class="function">

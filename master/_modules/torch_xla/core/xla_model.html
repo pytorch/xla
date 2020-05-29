@@ -857,6 +857,9 @@
 
 <span class="sd">  The saved data is transferred to PyTorch CPU device before being saved, so a</span>
 <span class="sd">  following `torch.load()` will load CPU data.</span>
+<span class="sd">  Care must be taken when working with views. Instead of saving views it&#39;s</span>
+<span class="sd">  recommended that you recreate them after the tensors have been loaded and</span>
+<span class="sd">  moved to their destination device(s).</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    data: The input data to be saved. Any nested combination of Python objects</span>
