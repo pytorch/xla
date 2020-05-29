@@ -424,6 +424,16 @@ xla::XlaOp Conditional(const BuilderPtr& builder,
                           false_computation->computation());
 }
 
+xla::XlaOp While(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
+                 py::dict args) {
+  ComputationPtr condition_computation =
+      args["condition_computation"].cast<ComputationPtr>();
+  ComputationPtr body_computation =
+      args["body_computation"].cast<ComputationPtr>();
+  return xla::While(condition_computation->computation(),
+                    body_computation->computation(), operands.at(0)->op);
+}
+
 xla::XlaOp Select(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                   py::dict args) {
   return xla::Select(operands.at(0)->op, operands.at(1)->op,
@@ -656,6 +666,7 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(Tanh);
   XLA_OPADD(Transpose);
   XLA_OPADD(Tuple);
+  XLA_OPADD(While);
   XLA_OPADD(Xor);
 
 #undef XLA_OPADD
