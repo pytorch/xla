@@ -36,6 +36,7 @@ import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
+import torch_xla.utils.serialization as xser
 import torch_xla.core.xla_model as xm
 import torch_xla.core.functions as xf
 import torchvision
@@ -1483,6 +1484,18 @@ class TestAtenXlaTensor(XlaTestCase):
     cpu_model.load_state_dict(state_dict)
     loaded_model = cpu_model.to(xla_device)
     self.assertEqual(model.state_dict(), loaded_model.state_dict())
+
+  def test_serialization_api(self):
+    with tempfile.TemporaryDirectory() as tmpdir:
+      path = os.path.join(tmpdir, 'data.pt')
+      xla_device = xm.xla_device()
+      model = XlaMNIST().to(xla_device)
+      xser.save(model.state_dict(), path)
+      state_dict = xser.load(path)
+      cpu_model = XlaMNIST()
+      cpu_model.load_state_dict(state_dict)
+      loaded_model = cpu_model.to(xla_device)
+      self.assertEqual(model.state_dict(), loaded_model.state_dict())
 
   def test_deepcopy(self):
     xla_device = xm.xla_device()

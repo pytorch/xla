@@ -64,6 +64,10 @@ utils
 .. autoclass:: SampleGenerator
 .. autoclass:: DataWrapper
 
+.. automodule:: torch_xla.utils.serialization
+.. autofunction:: save
+.. autofunction:: load
+
 .. automodule:: torch_xla.utils.gcsfs
 .. autofunction:: open
 .. autofunction:: list

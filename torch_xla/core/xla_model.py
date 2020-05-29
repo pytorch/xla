@@ -605,6 +605,9 @@ def save(data, file_or_path, master_only=True, global_master=False):
 
   The saved data is transferred to PyTorch CPU device before being saved, so a
   following `torch.load()` will load CPU data.
+  Care must be taken when working with views. Instead of saving views it's
+  recommended that you recreate them after the tensors have been loaded and
+  moved to their destination device(s).
 
   Args:
     data: The input data to be saved. Any nested combination of Python objects
