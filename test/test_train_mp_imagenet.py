@@ -97,9 +97,15 @@ def get_model_property(key):
   return model_fn
 
 
-def _train_update(device, step, loss, tracker, epoch):
-  test_utils.print_training_update(device, step, loss.item(), tracker.rate(),
-                                   tracker.global_rate(), epoch)
+def _train_update(device, step, loss, tracker, epoch, writer):
+  test_utils.print_training_update(
+      device,
+      step,
+      loss.item(),
+      tracker.rate(),
+      tracker.global_rate(),
+      epoch,
+      summary_writer=writer)
 
 
 def train_imagenet():
@@ -206,7 +212,7 @@ def train_imagenet():
         lr_scheduler.step()
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
-            _train_update, args=(device, step, loss, tracker, epoch))
+            _train_update, args=(device, step, loss, tracker, epoch, writer))
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
