@@ -1742,14 +1742,10 @@ class TestOpBuilder(XlaTestCase):
 
     def op_fn(k, a, b, k0=None):
 
-      def btrue(x):
-        a = x.get_tuple_element(0)
-        b = x.get_tuple_element(1)
+      def btrue(a, b):
         return a + b
 
-      def bfalse(x):
-        a = x.get_tuple_element(0)
-        b = x.get_tuple_element(1)
+      def bfalse(a, b):
         return a - b
 
       cond = k > xb.Op.scalar(k.builder(), k0)
@@ -1774,6 +1770,34 @@ class TestOpBuilder(XlaTestCase):
         op_fn,
         aten_fn=aten_fn,
         kwargs={'k0': 0.9})
+
+  def test_while(self):
+
+    def op_fn(a, b, limit=None):
+
+      def cond(counter, a, b):
+        return counter < xb.Op.scalar(
+            counter.builder(), limit, dtype=torch.int32)
+
+      def body(counter, a, b):
+        next_counter = counter + xb.Op.scalar(
+            counter.builder(), 1, dtype=torch.int32)
+        return xb.Op.tuple((next_counter, a + b, b))
+
+      zero = xb.Op.scalar(a.builder(), 0, dtype=torch.int32)
+      w = xb.Op.mkwhile((zero, a, b), cond, body)
+      return w.get_tuple_element(1)
+
+    def aten_fn(a, b, limit=None):
+      for _ in range(0, limit):
+        a = a + b
+      return a
+
+    self.runOpBuilderTest(
+        'test_while', [torch.randn(2, 2), torch.randn(2, 2)],
+        op_fn,
+        aten_fn=aten_fn,
+        kwargs={'limit': 10})
 
 
 class TestGeneric(XlaTestCase):
