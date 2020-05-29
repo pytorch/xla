@@ -171,6 +171,7 @@ def train_imagenet():
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
   torchvision_model = get_model_property('model_fn')
   model_parallel = dp.DataParallel(torchvision_model, device_ids=devices)
+  writer = test_utils.get_summary_writer(FLAGS.logdir)
 
   def train_loop_fn(model, loader, device, context):
     loss_fn = nn.CrossEntropyLoss()
@@ -199,8 +200,13 @@ def train_imagenet():
       xm.optimizer_step(optimizer)
       tracker.add(FLAGS.batch_size)
       if x % FLAGS.log_steps == 0:
-        test_utils.print_training_update(device, x, loss.item(), tracker.rate(),
-                                         tracker.global_rate())
+        test_utils.print_training_update(
+            device,
+            x,
+            loss.item(),
+            tracker.rate(),
+            tracker.global_rate(),
+            summary_writer=writer)
       if lr_scheduler:
         lr_scheduler.step()
 
@@ -219,7 +225,6 @@ def train_imagenet():
     return accuracy
 
   accuracy = 0.0
-  writer = test_utils.get_summary_writer(FLAGS.logdir)
   num_devices = len(
       xm.xla_replication_devices(devices)) if len(devices) > 1 else 1
   num_training_steps_per_epoch = train_dataset_len // (
