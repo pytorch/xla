@@ -251,6 +251,25 @@ xm.save(model.state_dict(), path)
 In case of multiple devices, the above API will only save the data for the master
 device ordinal (0).
 
+In case where memory is limited compare to the size of the model parameters, an
+API is provided that reduces the memory pressure on the host:
+
+```python
+import torch_xla.utils.serialization as xser
+
+xser.save(model.state_dict(), path)
+```
+
+Such API streams XLA tensors to CPU one at a time, reducing the amount of host
+memory used, but it requires a matching load API to restore:
+
+```python
+import torch_xla.utils.serialization as xser
+
+state_dict = xser.load(path)
+model.load_state_dict(state_dict)
+```
+
 Directly saving XLA tensors is possible but not recommended. XLA
 tensors are always loaded back to the device they were saved from, and if
 that device is unavailable the load will fail. PyTorch/XLA, like all of PyTorch,
