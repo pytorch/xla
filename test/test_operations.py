@@ -1748,7 +1748,7 @@ class TestOpBuilder(XlaTestCase):
       def bfalse(a, b):
         return a - b
 
-      cond = k > xb.Op.scalar(k.builder(), k0)
+      cond = k > xb.Op.scalar(k.builder(), k0, dtype=k.shape().dtype)
       return cond.mkconditional((a, b), btrue, bfalse)
 
     def aten_fn(k, a, b, k0=None):
@@ -1777,14 +1777,14 @@ class TestOpBuilder(XlaTestCase):
 
       def cond(counter, a, b):
         return counter < xb.Op.scalar(
-            counter.builder(), limit, dtype=torch.int32)
+            counter.builder(), limit, dtype=xb.Type.S32)
 
       def body(counter, a, b):
         next_counter = counter + xb.Op.scalar(
-            counter.builder(), 1, dtype=torch.int32)
+            counter.builder(), 1, dtype=xb.Type.S32)
         return xb.Op.tuple((next_counter, a + b, b))
 
-      zero = xb.Op.scalar(a.builder(), 0, dtype=torch.int32)
+      zero = xb.Op.scalar(a.builder(), 0, dtype=xb.Type.S32)
       w = xb.Op.mkwhile((zero, a, b), cond, body)
       return w.get_tuple_element(1)
 
