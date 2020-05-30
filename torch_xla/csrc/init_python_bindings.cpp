@@ -561,6 +561,14 @@ ComputationPtr CreateComputation(const std::string& name, xla::XlaOp root) {
   return std::make_shared<Computation>(name, std::move(computation));
 }
 
+ComputationPtr CreateComputationFromProto(const std::string& name,
+                                          const std::string& module_proto) {
+  xla::HloModuleProto proto;
+  proto.ParseFromString(module_proto);
+  xla::XlaComputation computation(std::move(proto));
+  return std::make_shared<Computation>(name, std::move(computation));
+}
+
 xla::Shape GetTensorShape(const at::Tensor& tensor,
                           const std::string& device_str) {
   auto xtensor = bridge::TryGetXlaTensor(tensor);
@@ -910,6 +918,15 @@ void InitXlaModuleBindings(py::module m) {
     }
     return computation;
   });
+  m.def("_xla_op_computation_from_module_proto",
+        [](const std::string& name, const std::string& module_proto) {
+          ComputationPtr computation;
+          {
+            NoGilSection nogil;
+            computation = CreateComputationFromProto(name, module_proto);
+          }
+          return computation;
+        });
   m.def("_xla_computation_text", [](const ComputationPtr& computation) {
     std::string hlo_text;
     {

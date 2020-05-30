@@ -47,6 +47,8 @@ XLA_UNARY_OP(Acos);
 XLA_UNARY_OP(Asin);
 XLA_UNARY_OP(Atan);
 XLA_UNARY_OP(Ceil);
+XLA_UNARY_OP(Clz);
+XLA_UNARY_OP(Conj);
 XLA_UNARY_OP(Cos);
 XLA_UNARY_OP(Cosh);
 XLA_UNARY_OP(Erf);
@@ -55,14 +57,17 @@ XLA_UNARY_OP(ErfInv);
 XLA_UNARY_OP(Exp);
 XLA_UNARY_OP(Expm1);
 XLA_UNARY_OP(Floor);
+XLA_UNARY_OP(Imag);
 XLA_UNARY_OP(Log);
 XLA_UNARY_OP(Log1p);
 XLA_UNARY_OP(Neg);
 XLA_UNARY_OP(Not);
 XLA_UNARY_OP(Sqrt);
+XLA_UNARY_OP(Real);
 XLA_UNARY_OP(Rsqrt);
 XLA_UNARY_OP(Sin);
 XLA_UNARY_OP(Sinh);
+XLA_UNARY_OP(Square);
 XLA_UNARY_OP(Tan);
 XLA_UNARY_OP(Tanh);
 
@@ -93,6 +98,15 @@ std::vector<T> GetTupleVector(py::tuple tuple) {
     values.push_back(v.cast<T>());
   }
   return values;
+}
+
+template <typename T>
+py::tuple MakeTuple(const T& container) {
+  py::tuple py_tuple(container.size());
+  for (size_t i = 0; i < container.size(); ++i) {
+    py_tuple[i] = py::cast(container[i]);
+  }
+  return py_tuple;
 }
 
 template <typename T>
@@ -127,6 +141,16 @@ std::vector<xla::XlaOp> GetOpVector(py::tuple tuple) {
     ops.push_back(op.cast<OpPtr>()->op);
   }
   return ops;
+}
+
+xla::Padding ParsePadding(const std::string& padding_str) {
+  if (padding_str == "same") {
+    return xla::Padding::kSame;
+  }
+  if (padding_str == "valid") {
+    return xla::Padding::kValid;
+  }
+  XLA_ERROR() << "Invalid padding: " << padding_str;
 }
 
 xla::XlaOp Reshape(const BuilderPtr& builder,
@@ -241,16 +265,6 @@ xla::XlaOp Transpose(const BuilderPtr& builder,
   return xla::Transpose(operands.at(0)->op, permutation);
 }
 
-xla::Padding ParseConvPadding(const std::string& padding_str) {
-  if (padding_str == "same") {
-    return xla::Padding::kSame;
-  }
-  if (padding_str == "valid") {
-    return xla::Padding::kValid;
-  }
-  XLA_ERROR() << "Invalid padding: " << padding_str;
-}
-
 xla::ConvolutionDimensionNumbers ParseConvolutionDimensionNumbers(
     py::dict args) {
   xla::ConvolutionDimensionNumbers dimension_numbers;
@@ -293,7 +307,7 @@ xla::XlaOp ConvWithGeneralDimensions(const BuilderPtr& builder,
       ArgOrDefault<xla::int64>(args, "feature_group_count", 1);
   xla::int64 batch_group_count =
       ArgOrDefault<xla::int64>(args, "batch_group_count", 1);
-  xla::Padding padding = ParseConvPadding(args["padding"].cast<std::string>());
+  xla::Padding padding = ParsePadding(args["padding"].cast<std::string>());
   xla::ConvolutionDimensionNumbers dimension_numbers =
       ParseConvolutionDimensionNumbers(args);
   xla::PrecisionConfig precision_config = DotPrecisonConfig(args);
@@ -352,7 +366,7 @@ xla::XlaOp Conv(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
       ArgOrDefault<xla::int64>(args, "feature_group_count", 1);
   xla::int64 batch_group_count =
       ArgOrDefault<xla::int64>(args, "batch_group_count", 1);
-  xla::Padding padding = ParseConvPadding(args["padding"].cast<std::string>());
+  xla::Padding padding = ParsePadding(args["padding"].cast<std::string>());
   xla::PrecisionConfig precision_config = DotPrecisonConfig(args);
   return xla::Conv(operands.at(0)->op, operands.at(1)->op, window_strides,
                    padding, feature_group_count, batch_group_count,
@@ -404,6 +418,38 @@ xla::XlaOp Reduce(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
   ComputationPtr computation = args["computation"].cast<ComputationPtr>();
   return xla::Reduce(operands.at(0)->op, operands.at(1)->op,
                      computation->computation(), dimensions);
+}
+
+xla::XlaOp ReduceAll(const BuilderPtr& builder,
+                     const std::vector<OpPtr>& operands, py::dict args) {
+  ComputationPtr computation = args["computation"].cast<ComputationPtr>();
+  return xla::ReduceAll(operands.at(0)->op, operands.at(1)->op,
+                        computation->computation());
+}
+
+xla::XlaOp ReduceWindow(const BuilderPtr& builder,
+                        const std::vector<OpPtr>& operands, py::dict args) {
+  std::vector<xla::int64> window_dimensions =
+      GetTupleVector<xla::int64>(args["window_dimensions"]);
+  std::vector<xla::int64> window_strides =
+      GetTupleVector<xla::int64>(args["window_strides"]);
+  ComputationPtr computation = args["computation"].cast<ComputationPtr>();
+  xla::Padding padding = ParsePadding(args["padding"].cast<std::string>());
+  return xla::ReduceWindow(operands.at(0)->op, operands.at(1)->op,
+                           computation->computation(), window_dimensions,
+                           window_strides, padding);
+}
+
+xla::XlaOp Map(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
+               py::dict args) {
+  std::vector<xla::int64> dimensions =
+      GetTupleVector<xla::int64>(args["dimensions"]);
+  ComputationPtr computation = args["computation"].cast<ComputationPtr>();
+  std::vector<xla::XlaOp> static_operands =
+      GetOpVector(args["static_operands"].cast<py::tuple>());
+  std::vector<xla::XlaOp> ops = ExtractXlaOps(operands);
+  return xla::Map(builder.get(), ops, computation->computation(), dimensions,
+                  static_operands);
 }
 
 xla::XlaOp Call(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
@@ -530,6 +576,23 @@ xla::XlaOp Scatter(const BuilderPtr& builder,
                       dimension_numbers, indices_are_sorted, unique_indices);
 }
 
+xla::XlaOp SelectAndScatter(const BuilderPtr& builder,
+                            const std::vector<OpPtr>& operands, py::dict args) {
+  ComputationPtr select_computation =
+      args["select_computation"].cast<ComputationPtr>();
+  ComputationPtr scatter_computation =
+      args["scatter_computation"].cast<ComputationPtr>();
+  std::vector<xla::int64> window_dimensions =
+      GetTupleVector<xla::int64>(args["window_dimensions"]);
+  std::vector<xla::int64> window_strides =
+      GetTupleVector<xla::int64>(args["window_strides"]);
+  xla::Padding padding = ParsePadding(args["padding"].cast<std::string>());
+  return xla::SelectAndScatter(
+      operands.at(0)->op, select_computation->computation(), window_dimensions,
+      window_strides, padding, operands.at(1)->op, operands.at(2)->op,
+      scatter_computation->computation());
+}
+
 xla::XlaOp Sort(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                 py::dict args) {
   bool is_stable = ArgOrDefault<bool>(args, "is_stable", false);
@@ -579,6 +642,19 @@ xla::XlaOp GetTupleElement(const BuilderPtr& builder,
   return xla::GetTupleElement(operands.at(0)->op, index);
 }
 
+xla::XlaOp GetDimensionSize(const BuilderPtr& builder,
+                            const std::vector<OpPtr>& operands, py::dict args) {
+  xla::int64 dimension = args["dimension"].cast<xla::int64>();
+  return xla::GetDimensionSize(operands.at(0)->op, dimension);
+}
+
+xla::XlaOp SetDimensionSize(const BuilderPtr& builder,
+                            const std::vector<OpPtr>& operands, py::dict args) {
+  xla::int64 dimension = args["dimension"].cast<xla::int64>();
+  return xla::SetDimensionSize(operands.at(0)->op, operands.at(1)->op,
+                               dimension);
+}
+
 xla::XlaOp BitcastConvert(const BuilderPtr& builder,
                           const std::vector<OpPtr>& operands, py::dict args) {
   std::string type = args["to_type"].cast<std::string>();
@@ -605,7 +681,9 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(Call);
   XLA_OPADD(Ceil);
   XLA_OPADD(Clamp);
+  XLA_OPADD(Clz);
   XLA_OPADD(ConcatInDim);
+  XLA_OPADD(Conj);
   XLA_OPADD(Conditional);
   XLA_OPADD(Constant);
   XLA_OPADD(Conv);
@@ -630,13 +708,16 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(Floor);
   XLA_OPADD(Gather);
   XLA_OPADD(Ge);
+  XLA_OPADD(GetDimensionSize);
   XLA_OPADD(GetTupleElement);
   XLA_OPADD(Gt);
+  XLA_OPADD(Imag);
   XLA_OPADD(Iota);
   XLA_OPADD(Le);
   XLA_OPADD(Log);
   XLA_OPADD(Log1p);
   XLA_OPADD(Lt);
+  XLA_OPADD(Map);
   XLA_OPADD(Max);
   XLA_OPADD(Min);
   XLA_OPADD(Mul);
@@ -646,13 +727,18 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(Or);
   XLA_OPADD(Pad);
   XLA_OPADD(Pow);
+  XLA_OPADD(Real);
   XLA_OPADD(Reduce);
+  XLA_OPADD(ReduceAll);
+  XLA_OPADD(ReduceWindow);
   XLA_OPADD(Rem);
   XLA_OPADD(Reshape);
   XLA_OPADD(Rev);
   XLA_OPADD(Rsqrt);
   XLA_OPADD(Scatter);
   XLA_OPADD(Select);
+  XLA_OPADD(SelectAndScatter);
+  XLA_OPADD(SetDimensionSize);
   XLA_OPADD(ShiftLeft);
   XLA_OPADD(ShifRight);
   XLA_OPADD(Sin);
@@ -661,6 +747,7 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(SliceInDim);
   XLA_OPADD(Sort);
   XLA_OPADD(Sqrt);
+  XLA_OPADD(Square);
   XLA_OPADD(Sub);
   XLA_OPADD(Tan);
   XLA_OPADD(Tanh);
@@ -692,11 +779,10 @@ py::object ShapeToPyShape(const xla::Shape& shape) {
   py::dict py_shape;
   py_shape["type"] = py::cast(
       xla::primitive_util::LowercasePrimitiveTypeName(shape.element_type()));
-  auto sizes = py::tuple(shape.rank());
-  for (xla::int64 i = 0; i < shape.rank(); ++i) {
-    sizes[i] = py::cast(shape.dimensions(i));
+  py_shape["sizes"] = MakeTuple(shape.dimensions());
+  if (shape.is_dynamic()) {
+    py_shape["dynamic_dimensions"] = MakeTuple(shape.dynamic_dimensions());
   }
-  py_shape["sizes"] = sizes;
   return py_shape;
 }
 
@@ -715,6 +801,11 @@ xla::Shape PyShapeToShape(py::object shape) {
       GetTupleVector<xla::int64>(py_shape["sizes"].cast<py::tuple>());
   xla::PrimitiveType xla_type =
       ConsumeValue(xla::primitive_util::StringToPrimitiveType(type));
+  if (py_shape.contains("dynamic_dimensions")) {
+    std::vector<bool> dynamic_dimensions =
+        GetTupleVector<bool>(py_shape["dynamic_dimensions"]);
+    return xla::ShapeUtil::MakeShape(xla_type, dimensions, dynamic_dimensions);
+  }
   return xla::ShapeUtil::MakeShape(xla_type, dimensions);
 }
 
