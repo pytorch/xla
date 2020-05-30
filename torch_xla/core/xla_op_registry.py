@@ -52,6 +52,9 @@ class Op(object):
 def register(name, opfn):
   """Registers a PyTorch operation with an XLA lowering function.
 
+  Python based XLA operations should be preferably registered globally, in order
+  to amortize the lowering cost, but this is not a requirement.
+
   Example::
 
     import torch
@@ -59,17 +62,20 @@ def register(name, opfn):
     import torch_xla.core.xla_op_registry as xor
     import torch_xla.core.xla_model as xm
 
-    def slice_and_add(a, b, **kwargs):
-      sa = a.slice_in_dim(start_index=0, limit_index=1, dimno=0)
-      sb = b.slice_in_dim(start_index=1, limit_index=2, dimno=0)
+    def slice_and_add(a, b, dimno=0):
+      sa = a.slice_in_dim(start_index=0, limit_index=1, dimno=dimno)
+      sb = b.slice_in_dim(start_index=1, limit_index=2, dimno=dimno)
       return sa + sb
 
-    xadd = xor.register('slice_and_add', slice_and_add)
-    device = xm.xla_device()
-    x = torch.randn(2, 2).to(device)
-    y = torch.randn(2, 2).to(device)
-    z = xadd(x, y)
-    print(z.cpu())
+    # Register XLA function globally for better lowering cost savings.
+    SLICE_AND_ADD = xor.register('slice_and_add', slice_and_add)
+
+    def user_computation_test():
+      device = xm.xla_device()
+      x = torch.randn(2, 2).to(device)
+      y = torch.randn(2, 2).to(device)
+      z = SLICE_AND_ADD(x, y, dimno=0)
+      print(z.cpu())
 
   Args:
     name (str): The name of the operation.
