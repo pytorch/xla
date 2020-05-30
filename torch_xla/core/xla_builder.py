@@ -5,6 +5,102 @@ import torch
 import torch_xla
 
 
+class Type:
+  F32 = 'f32'
+  F64 = 'f64'
+  BF16 = 'bf16'
+  F16 = 'f16'
+  U8 = 'u8'
+  S8 = 's8'
+  U16 = 'u16'
+  S16 = 's16'
+  U32 = 'u32'
+  S32 = 's32'
+  U64 = 'u64'
+  S64 = 's64'
+  C64 = 'c64'
+  C128 = 'c128'
+  PRED = 'pred'
+
+
+_XLA_PT_TYPE_MAP = {
+    Type.F32: torch.float32,
+    Type.F64: torch.float64,
+    Type.BF16: torch.bfloat16,
+    Type.F16: torch.float16,
+    Type.U8: torch.uint8,
+    Type.S8: torch.int8,
+    Type.U16: torch.int16,
+    Type.S16: torch.int16,
+    Type.U32: torch.int32,
+    Type.S32: torch.int32,
+    Type.U64: torch.int64,
+    Type.S64: torch.int64,
+    Type.C64: torch.complex64,
+    Type.C128: torch.complex128,
+    Type.PRED: torch.bool,
+}
+
+
+class Shape(object):
+  """Wraps a core XLA shape object to provide a more friendly API."""
+
+  def __init__(self, shape):
+    self._shape = shape
+
+  @classmethod
+  def create(cls, dtype, sizes, dynamic_dimensions=None):
+    if dynamic_dimensions is None:
+      return Shape({'type': str(dtype), 'sizes': tuple(sizes)})
+    return Shape({
+        'type': str(dtype),
+        'sizes': tuple(sizes),
+        'dynamic_dimensions': tuple(dynamic_dimensions)
+    })
+
+  @property
+  def shape(self):
+    return self._shape
+
+  def is_tuple(self):
+    return isinstance(self._shape, (list, tuple))
+
+  def tuple_size(self):
+    assert self.is_tuple()
+    return len(self._shape)
+
+  def tuple_shape(self, index):
+    assert self.is_tuple()
+    return self._shape[index]
+
+  def is_dynamic(self):
+    assert not self.is_tuple()
+    return 'dynamic_dimensions' in self._shape
+
+  def as_scalar(self):
+    return Shape.create(self.dtype, ())
+
+  @property
+  def rank(self):
+    assert not self.is_tuple()
+    return len(self._shape['sizes'])
+
+  @property
+  def sizes(self):
+    assert not self.is_tuple()
+    return self._shape['sizes']
+
+  @property
+  def dynamic_dimensions(self):
+    assert not self.is_tuple()
+    return self._shape.get('dynamic_dimensions', None)
+
+  @property
+  def dtype(self):
+    assert not self.is_tuple()
+    return self._shape['type']
+
+
 class Op(object):
   """Wraps an `xla::XlaOp` XLA core operation and provide APIs to build them.
 
@@ -25,7 +121,7 @@ class Op(object):
     self.op = op
 
   def shape(self):
-    return torch_xla._XLAC._xla_op_shape(self.op)
+    return Shape(torch_xla._XLAC._xla_op_shape(self.op))
 
   def builder(self):
     return torch_xla._XLAC._xla_op_builder(self.op)
@@ -312,11 +408,56 @@ class Op(object):
   def pad(self, value, config):
     return mkop('Pad', (self.op, value.op), config=config)
 
+  def select_and_scatter(self,
+                         source,
+                         init_value,
+                         window_dimensions,
+                         window_strides,
+                         select_computation,
+                         scatter_computation,
+                         padding='valid'):
+    scalar_shape = self.shape().as_scalar()
+    select_computation = Op.make_computation('Select', select_computation,
+                                             (scalar_shape, scalar_shape))
+    scatter_computation = Op.make_computation('Scatter', scatter_computation,
+                                              (scalar_shape, scalar_shape))
+    return mkop(
+        'SelectAndScatter', (self.op, source.op, init_value.op),
+        window_dimensions=window_dimensions,
+        window_strides=window_strides,
+        select_computation=select_computation,
+        scatter_computation=scatter_computation)
+
   def reduce(self, init_value, computation, dimensions):
+    scalar_shape = self.shape().as_scalar()
+    computation = Op.make_computation('Reduce', computation,
+                                      (scalar_shape, scalar_shape))
     return mkop(
         'Reduce', (self.op, init_value.op),
         computation=computation,
         dimensions=dimensions)
+
+  def reduce_all(self, init_value, computation):
+    scalar_shape = self.shape().as_scalar()
+    computation = Op.make_computation('ReduceAll', computation,
+                                      (scalar_shape, scalar_shape))
+    return mkop('ReduceAll', (self.op, init_value.op), computation=computation)
+
+  def reduce_window(self,
+                    init_value,
+                    computation,
+                    window_dimensions,
+                    window_strides,
+                    padding='valid'):
+    scalar_shape = self.shape().as_scalar()
+    computation = Op.make_computation('ReduceWindow', computation,
+                                      (scalar_shape, scalar_shape))
+    return mkop(
+        'ReduceWindow', (self.op, init_value.op),
+        computation=computation,
+        window_dimensions=window_dimensions,
+        window_strides=window_strides,
+        padding=padding)
 
   def select(self, true_value, false_value):
     return mkop('Select', (self.op, true_value.op, false_value.op))
@@ -332,6 +473,10 @@ class Op(object):
 
   def conditional(self, true_operand, false_operand, true_computation,
                   false_computation):
+    true_computation = Op.make_computation('CondTrue', true_computation,
+                                           (true_operand,))
+    false_computation = Op.make_computation('CondFalse', false_computation,
+                                            (false_operand,))
     return mkop(
         'Conditional', (self.op, true_operand.op, false_operand.op),
         true_computation=true_computation,
@@ -340,28 +485,37 @@ class Op(object):
   @classmethod
   def wrap_function(cls, fn):
 
-    def wrapper(x, **kwargs):
-      shape = x.shape()
-      n = len(shape) if isinstance(shape, (tuple, list)) else 1
-      xops = [x.get_tuple_element(i) for i in range(0, n)]
-      result = fn(*xops, **kwargs)
+    def wrapper(*args, **kwargs):
+      if len(args) == 1:
+        arg = args[0]
+        shape = arg.shape()
+        if shape.is_tuple():
+          args = [
+              arg.get_tuple_element(i) for i in range(0, shape.tuple_size())
+          ]
+      result = fn(*args, **kwargs)
       return Op.tuple(result) if isinstance(result, (tuple, list)) else result
 
     return wrapper
 
+  @classmethod
+  def make_computation(cls, name, computation, args_or_shapes, **kwargs):
+    if not callable(computation):
+      return computation
+    shapes = []
+    for arg in args_or_shapes:
+      shapes.append(arg if isinstance(arg, Shape) else arg.shape())
+    return create_computation(name, Op.wrap_function(computation), shapes,
+                              **kwargs)
+
   def mkconditional(self, ops, true_fn, false_fn, **kwargs):
-    true_wrapper = Op.wrap_function(true_fn)
-    false_wrapper = Op.wrap_function(false_fn)
     input_tuple = Op.tuple(ops)
-    input_shape = input_tuple.shape()
-    true_computation = create_computation('CondTrue', true_wrapper,
-                                          (input_shape,), **kwargs)
-    false_computation = create_computation('CondFalse', false_wrapper,
-                                           (input_shape,), **kwargs)
-    return self.conditional(input_tuple, input_tuple, true_computation,
-                            false_computation)
+    return self.conditional(input_tuple, input_tuple, true_fn, false_fn)
 
   def while_loop(self, condition_computation, body_computation):
+    condition_computation = Op.make_computation('Condition',
+                                                condition_computation, (self,))
+    body_computation = Op.make_computation('Body', body_computation, (self,))
     return mkop(
         'While', (self.op,),
         condition_computation=condition_computation,
@@ -369,17 +523,15 @@ class Op(object):
 
   @classmethod
   def mkwhile(self, ops, condition_fn, body_fn, **kwargs):
-    condition_wrapper = Op.wrap_function(condition_fn)
-    body_wrapper = Op.wrap_function(body_fn)
     input_tuple = Op.tuple(ops)
-    input_shape = input_tuple.shape()
-    condition_computation = create_computation('Condition', condition_wrapper,
-                                               (input_shape,), **kwargs)
-    body_computation = create_computation('Body', body_wrapper, (input_shape,),
-                                          **kwargs)
     return input_tuple.while_loop(
-        condition_computation=condition_computation,
-        body_computation=body_computation)
+        condition_computation=condition_fn, body_computation=body_fn)
+
+  def get_dimension_size(self, dimension):
+    return mkop('GetDimensionSize', (self.op,), dimension=dimension)
+
+  def set_dimension_size(self, size, dimension):
+    return mkop('SetDimensionSize', (self.op, size.op), dimension=dimension)
 
   def rev(self, dimensions):
     return mkop('Rev', (self.op,), dimensions=dimensions)
@@ -429,6 +581,18 @@ class Op(object):
   def sqrt(self):
     return mkop('Sqrt', (self.op,))
 
+  def real(self):
+    return mkop('Real', (self.op,))
+
+  def imag(self):
+    return mkop('Imag', (self.op,))
+
+  def clz(self):
+    return mkop('Clz', (self.op,))
+
+  def conj(self):
+    return mkop('Conj', (self.op,))
+
   def rsqrt(self):
     return mkop('Rsqrt', (self.op,))
 
@@ -453,21 +617,41 @@ class Op(object):
   def min(self, other):
     return mkop('Min', (self.op, other.op))
 
+  def scalar_like(self, value):
+    shape = self.shape()
+    v = Op.scalar(self.builder(), value, dtype=shape.dtype)
+    return v.broadcast(shape.sizes)
+
+  def zeros_like(self):
+    return self.scalar_like(0)
+
+  def ones_like(self):
+    return self.scalar_like(1)
+
+  @classmethod
+  def _extract_xla_ops(cls, ops):
+    return [x.op for x in ops]
+
   @classmethod
   def tuple(cls, ops, builder=None):
-    return mkop('Tuple', [x.op for x in ops], builder=builder)
+    return mkop('Tuple', Op._extract_xla_ops(ops), builder=builder)
 
   @classmethod
   def concat_in_dim(cls, ops, dimension, builder=None):
     return mkop(
-        'ConcatInDim', [x.op for x in ops],
+        'ConcatInDim',
+        Op._extract_xla_ops(ops),
         builder=builder,
         dimension=dimension)
 
   @classmethod
   def call(cls, computation, ops, builder=None):
+    computation = Op.make_computation('Call', computation, ops)
     return mkop(
-        'Call', [x.op for x in ops], computation=computation, builder=builder)
+        'Call',
+        Op._extract_xla_ops(ops),
+        computation=computation,
+        builder=builder)
 
   @classmethod
   def constant(cls, builder, value):
@@ -475,27 +659,54 @@ class Op(object):
 
   @classmethod
   def scalar(cls, builder, value, dtype=None):
-    return mkleaf('Constant', builder, value=torch.tensor(value, dtype=dtype))
+    return mkleaf(
+        'Constant',
+        builder,
+        value=torch.tensor(value, dtype=cls.to_torch_type(dtype)))
+
+  @classmethod
+  def zero(cls, builder, dtype=None):
+    return cls.scalar(builder, 0, dtype=dtype)
+
+  @classmethod
+  def one(cls, builder, dtype=None):
+    return cls.scalar(builder, 1, dtype=dtype)
 
   @classmethod
   def iota(cls, builder, shape, iota_dimension):
-    return mkleaf('Iota', builder, shape=shape, iota_dimension=iota_dimension)
+    return mkleaf(
+        'Iota', builder, shape=shape.shape, iota_dimension=iota_dimension)
 
   @classmethod
   def sort(cls, ops, comparator, dimension=None, is_stable=None):
     return mkop(
-        'Sort', [x.op for x in ops],
+        'Sort',
+        Op._extract_xla_ops(ops),
         comparator=comparator,
         dimension=dimension,
         is_stable=is_stable)
+
+  @classmethod
+  def map(cls, ops, computation, dimensions, static_operands=(), builder=None):
+    return mkop(
+        'Map',
+        Op._extract_xla_ops(ops),
+        builder=builder,
+        computation=computation,
+        dimensions=dimensions,
+        static_operands=Op._extract_xla_ops(static_operands))
+
+  @classmethod
+  def to_torch_type(cls, dtype):
+    return _XLA_PT_TYPE_MAP[dtype] if dtype else torch.float32
 
 
 def create_builder(name):
   return torch_xla._XLAC._xla_op_create_builder(name)
 
 
-def mkshape(stype, dims):
-  return {'type': str(stype), 'sizes': tuple(dims)}
+def mkshape(dtype, sizes, dynamic_dimensions=None):
+  return Shape.create(dtype, sizes, dynamic_dimensions=dynamic_dimensions)
 
 
 def mkop(name, ops, **kwargs):
@@ -511,13 +722,15 @@ def mkleaf(name, builder, **kwargs):
 
 
 def mkparam(builder, param_no, shape):
-  return Op(torch_xla._XLAC._xla_op_param(builder, param_no, shape))
+  return Op(torch_xla._XLAC._xla_op_param(builder, param_no, shape.shape))
 
 
 def tensor_shape(tensor, device=''):
   if isinstance(tensor, (list, tuple)):
-    return [torch_xla._XLAC._xla_op_tensor_shape(t, device) for t in tensor]
-  return torch_xla._XLAC._xla_op_tensor_shape(tensor, device)
+    return [
+        Shape(torch_xla._XLAC._xla_op_tensor_shape(t, device)) for t in tensor
+    ]
+  return Shape(torch_xla._XLAC._xla_op_tensor_shape(tensor, device))
 
 
 def create_computation(name, fn, shapes, **kwargs):
@@ -529,6 +742,10 @@ def create_computation(name, fn, shapes, **kwargs):
 
   root = fn(*params, **kwargs)
   return root.build(name)
+
+
+def computation_from_module_proto(name, proto):
+  return torch_xla._XLAC._xla_op_computation_from_module_proto(name, proto)
 
 
 def get_computation_hlo(computation):
