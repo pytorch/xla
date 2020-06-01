@@ -5,6 +5,8 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [
           'build',
+          '--build-arg', 'base_image=${_DOCKER_BASE_IMAGE}',
+          '--build-arg', 'cuda=${_CUDA}',
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
           '--build-arg', 'cloud_build=true',
           '--build-arg', 'release_version=${_RELEASE_VERSION}',
@@ -26,6 +28,8 @@ steps:
   args: ['-c', 'source /pytorch/xla/docker/common.sh && collect_wheels ${_RELEASE_VERSION}']
 
 substitutions:
+    _DOCKER_BASE_IMAGE: 'debian:stretch'
+    _CUDA: '0'
     _PYTHON_VERSION: '3.6'
     _RELEASE_VERSION: 'nightly'  # or rX.Y
     _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
