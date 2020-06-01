@@ -105,3 +105,48 @@ def nms(boxes, scores, score_threshold, iou_threshold, output_size):
   """
   return torch_xla._XLAC._xla_nms(boxes, scores, score_threshold, iou_threshold,
                                   output_size)
+
+
+def distributed_mm(w, x, split=1):
+  """Performs a matrix multiplication with sharded weight.
+
+  Args:
+    w (torch.Tensor): The sharded weight, RHS of the matrix multiplication
+      operation. The weight shape is `N x Ko` where `Ko` is the shard
+      dimension size. Each ordinal will have its own copy of the weight.
+    x (torch.Tensor): The input tensor, LHS of the matrix multiplication
+      operation. The input shape is `WG x M` where `WG = Ko * WORLD_SIZE`.
+    split (int): The number of splits for the `M` dimension of `x`. Since
+      there is an `all_gather()` on such dimension, if `M` is big, a split
+      might be required in order to fit device memory.
+      Default: 1
+  Returns:
+    The result of the distributed matrix multiplication operation.
+  """
+  ordinal = xm.get_ordinal()
+  # w = N x Ko
+  # WG = Ko * WORLD_SIZE
+  # x = WG x M
+  assert x.size(0) // xm.xrt_world_size() == w.size(1)
+  splits = []
+  if split != 1:
+    size = x.size(1)
+    assert size % split == 0
+    split_size = size // split
+    splits = torch.split(x, split_size, dim=1)
+  else:
+    splits.append(x)
+  results = []
+  for xs in splits:
+    # xg = WG x (M * WORLD_SIZE)
+    xg = all_gather(xs, dim=1)
+    # xgn = Ko x (M * WORLD_SIZE)
+    xgn = torch.narrow(xg, 0, ordinal * w.size(1), w.size(1))
+    # wxg = N x (M * WORLD_SIZE)
+    wxg = w @ xgn
+    # rwxg = N x (M * WORLD_SIZE)
+    rwxg = all_reduce(xm.REDUCE_SUM, wxg)
+    # wx = N x M
+    wx = torch.narrow(rwxg, 1, ordinal * xs.size(1), xs.size(1))
+    results.append(wx)
+  return torch.cat(results, dim=1) if len(results) > 1 else results[0]
