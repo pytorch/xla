@@ -131,6 +131,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_matrix_rank',  # slow
         'test_triu_tril',
         'test_stft',  # librosa (?!?) missing
+        'test_strided_mismatched_stride_shape',  # Checking runtime error
         'test_tensor_shape_empty',  # LLVM OOM in CI
         'test_cholesky_inverse',  # precision (1e-6)
         'test_cholesky_solve_batched',  # precision (2e-12)
