@@ -11,6 +11,8 @@ function run_deployment_tests() {
 }
 
 function collect_wheels() {
+  sudo apt-get install -y rename
+
   release_version=$1
   wheel_version="${release_version}"
   if [ "${release_version}" != "nightly" ]; then

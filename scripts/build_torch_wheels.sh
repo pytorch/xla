@@ -63,11 +63,11 @@ function maybe_install_cuda {
       sudo sh "${CUDA_FILE}" --silent --toolkit
       rm -f "${CUDA_FILE}"
     fi
-    if [ ! -f "/usr/local/cuda/include/cudnn.h" ]; then
+    if [ ! -f "/usr/local/cuda/include/cudnn.h" ] && [ ! -f "/usr/include/cudnn.h" ]; then
       install_cudnn
     fi
-    export TF_CUDA_PATHS="/usr/local/cuda,/usr"
-    maybe_append 'export TF_CUDA_PATHS="/usr/local/cuda,/usr"' ~/.bashrc
+    export TF_CUDA_PATHS="/usr/local/cuda,/usr/include,/usr"
+    maybe_append 'export TF_CUDA_PATHS="/usr/local/cuda,/usr/include,/usr"' ~/.bashrc
     if [ "$TF_CUDA_COMPUTE_CAPABILITIES" == "" ]; then
       export TF_CUDA_COMPUTE_CAPABILITIES="7.0"
     fi
