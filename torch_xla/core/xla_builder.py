@@ -6,6 +6,20 @@ import torch_xla
 
 
 class Op(object):
+  """Wraps an `xla::XlaOp` XLA core operation and provide APIs to build them.
+
+  The APIs exposed by this class are close to an exact match of the API
+  documented here:
+
+    https://www.tensorflow.org/xla/operation_semantics
+
+  And here:
+
+    https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/xla/client/xla_builder.h
+
+  Args:
+    op (_XLAC.XlaOp): The core XLA operation wrapped.
+  """
 
   def __init__(self, op):
     self.op = op
@@ -323,14 +337,49 @@ class Op(object):
         true_computation=true_computation,
         false_computation=false_computation)
 
+  @classmethod
+  def wrap_function(cls, fn):
+
+    def wrapper(x, **kwargs):
+      shape = x.shape()
+      n = len(shape) if isinstance(shape, (tuple, list)) else 1
+      xops = [x.get_tuple_element(i) for i in range(0, n)]
+      result = fn(*xops, **kwargs)
+      return Op.tuple(result) if isinstance(result, (tuple, list)) else result
+
+    return wrapper
+
   def mkconditional(self, ops, true_fn, false_fn, **kwargs):
+    true_wrapper = Op.wrap_function(true_fn)
+    false_wrapper = Op.wrap_function(false_fn)
     input_tuple = Op.tuple(ops)
-    true_computation = create_computation('CondTrue', true_fn,
-                                          (input_tuple.shape(),), **kwargs)
-    false_computation = create_computation('CondFalse', false_fn,
-                                           (input_tuple.shape(),), **kwargs)
+    input_shape = input_tuple.shape()
+    true_computation = create_computation('CondTrue', true_wrapper,
+                                          (input_shape,), **kwargs)
+    false_computation = create_computation('CondFalse', false_wrapper,
+                                           (input_shape,), **kwargs)
     return self.conditional(input_tuple, input_tuple, true_computation,
                             false_computation)
+
+  def while_loop(self, condition_computation, body_computation):
+    return mkop(
+        'While', (self.op,),
+        condition_computation=condition_computation,
+        body_computation=body_computation)
+
+  @classmethod
+  def mkwhile(self, ops, condition_fn, body_fn, **kwargs):
+    condition_wrapper = Op.wrap_function(condition_fn)
+    body_wrapper = Op.wrap_function(body_fn)
+    input_tuple = Op.tuple(ops)
+    input_shape = input_tuple.shape()
+    condition_computation = create_computation('Condition', condition_wrapper,
+                                               (input_shape,), **kwargs)
+    body_computation = create_computation('Body', body_wrapper, (input_shape,),
+                                          **kwargs)
+    return input_tuple.while_loop(
+        condition_computation=condition_computation,
+        body_computation=body_computation)
 
   def rev(self, dimensions):
     return mkop('Rev', (self.op,), dimensions=dimensions)
