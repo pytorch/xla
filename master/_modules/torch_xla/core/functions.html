@@ -357,6 +357,51 @@
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_nms</span><span class="p">(</span><span class="n">boxes</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">score_threshold</span><span class="p">,</span> <span class="n">iou_threshold</span><span class="p">,</span>
                                   <span class="n">output_size</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">distributed_mm</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs a matrix multiplication with sharded weight.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    w (torch.Tensor): The sharded weight, RHS of the matrix multiplication</span>
+<span class="sd">      operation. The weight shape is `N x Ko` where `Ko` is the shard</span>
+<span class="sd">      dimension size. Each ordinal will have its own copy of the weight.</span>
+<span class="sd">    x (torch.Tensor): The input tensor, LHS of the matrix multiplication</span>
+<span class="sd">      operation. The input shape is `WG x M` where `WG = Ko * WORLD_SIZE`.</span>
+<span class="sd">    split (int): The number of splits for the `M` dimension of `x`. Since</span>
+<span class="sd">      there is an `all_gather()` on such dimension, if `M` is big, a split</span>
+<span class="sd">      might be required in order to fit device memory.</span>
+<span class="sd">      Default: 1</span>
+<span class="sd">  Returns:</span>
+<span class="sd">    The result of the distributed matrix multiplication operation.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">ordinal</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_ordinal</span><span class="p">()</span>
+  <span class="c1"># w = N x Ko</span>
+  <span class="c1"># WG = Ko * WORLD_SIZE</span>
+  <span class="c1"># x = WG x M</span>
+  <span class="k">assert</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">//</span> <span class="n">xm</span><span class="o">.</span><span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">==</span> <span class="n">w</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+  <span class="n">splits</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">if</span> <span class="n">split</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">size</span> <span class="o">%</span> <span class="n">split</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="n">split_size</span> <span class="o">=</span> <span class="n">size</span> <span class="o">//</span> <span class="n">split</span>
+    <span class="n">splits</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">split_size</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">splits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+  <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">xs</span> <span class="ow">in</span> <span class="n">splits</span><span class="p">:</span>
+    <span class="c1"># xg = WG x (M * WORLD_SIZE)</span>
+    <span class="n">xg</span> <span class="o">=</span> <span class="n">all_gather</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># xgn = Ko x (M * WORLD_SIZE)</span>
+    <span class="n">xgn</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="n">xg</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ordinal</span> <span class="o">*</span> <span class="n">w</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">w</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+    <span class="c1"># wxg = N x (M * WORLD_SIZE)</span>
+    <span class="n">wxg</span> <span class="o">=</span> <span class="n">w</span> <span class="o">@</span> <span class="n">xgn</span>
+    <span class="c1"># rwxg = N x (M * WORLD_SIZE)</span>
+    <span class="n">rwxg</span> <span class="o">=</span> <span class="n">all_reduce</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">wxg</span><span class="p">)</span>
+    <span class="c1"># wx = N x M</span>
+    <span class="n">wx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">narrow</span><span class="p">(</span><span class="n">rwxg</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ordinal</span> <span class="o">*</span> <span class="n">xs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">xs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wx</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </pre></div>
 
              </article>
