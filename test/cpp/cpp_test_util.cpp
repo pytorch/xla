@@ -129,16 +129,39 @@ bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
   return equal;
 }
 
-void ForEachDevice(const std::function<void(const Device&)>& devfn) {
+void ForEachDevice(absl::Span<const DeviceType> device_types,
+                   const std::function<void(const Device&)>& devfn) {
   const Device* device = GetDefaultDevice();
-  bridge::SetCurrentDevice(*device);
-  devfn(*device);
+  if (device_types.empty() ||
+      std::find(device_types.begin(), device_types.end(), device->hw_type) !=
+          device_types.end()) {
+    bridge::SetCurrentDevice(*device);
+    devfn(*device);
+  } else {
+    GTEST_SKIP();
+  }
+}
+
+void ForEachDevice(absl::Span<const DeviceType> device_types,
+                   const std::function<void(const torch::Device&)>& devfn) {
+  const Device* device = GetDefaultDevice();
+  if (device_types.empty() ||
+      std::find(device_types.begin(), device_types.end(), device->hw_type) !=
+          device_types.end()) {
+    torch::Device torch_device = bridge::XlaDeviceToAtenDevice(*device);
+    bridge::SetCurrentDevice(torch_device);
+    devfn(torch_device);
+  } else {
+    GTEST_SKIP();
+  }
+}
+
+void ForEachDevice(const std::function<void(const Device&)>& devfn) {
+  ForEachDevice({}, devfn);
 }
 
 void ForEachDevice(const std::function<void(const torch::Device&)>& devfn) {
-  torch::Device device = bridge::AtenDefaultDevice();
-  bridge::SetCurrentDevice(device);
-  devfn(device);
+  ForEachDevice({}, devfn);
 }
 
 bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
@@ -162,27 +185,29 @@ bool CloseValues(at::Tensor tensor1, at::Tensor tensor2, double rtol,
 }
 
 void WithAllDevices(
-    DeviceType device_type,
+    absl::Span<const DeviceType> device_types,
     const std::function<void(const std::vector<Device>&,
                              const std::vector<Device>&)>& devfn) {
-  std::vector<Device> devices;
-  std::vector<Device> all_devices;
-  for (const auto& device_str :
-       xla::ComputationClient::Get()->GetLocalDevices()) {
-    Device device(device_str);
-    if (device.hw_type == device_type) {
-      devices.push_back(device);
+  for (auto device_type : device_types) {
+    std::vector<Device> devices;
+    std::vector<Device> all_devices;
+    for (const auto& device_str :
+         xla::ComputationClient::Get()->GetLocalDevices()) {
+      Device device(device_str);
+      if (device.hw_type == device_type) {
+        devices.push_back(device);
+      }
     }
-  }
-  for (const auto& device_str :
-       xla::ComputationClient::Get()->GetAllDevices()) {
-    Device device(device_str);
-    if (device.hw_type == device_type) {
-      all_devices.push_back(device);
+    for (const auto& device_str :
+         xla::ComputationClient::Get()->GetAllDevices()) {
+      Device device(device_str);
+      if (device.hw_type == device_type) {
+        all_devices.push_back(device);
+      }
     }
-  }
-  if (!devices.empty()) {
-    devfn(devices, all_devices);
+    if (!devices.empty()) {
+      devfn(devices, all_devices);
+    }
   }
 }
 
