@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/pooling.h"
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/pooling.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -196,8 +197,7 @@ xla::XlaOp BuildMaxPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
   const xla::Shape& input_shape =
       XlaHelpers::ShapeOfXlaOp(batch_input_info.batch_input);
-  xla::XlaOp init_value =
-      XlaHelpers::ScalarValue<float>(0, input_shape.element_type(), builder);
+  xla::XlaOp init_value = xla::Zero(builder, input_shape.element_type());
   xla::XlaComputation select = CreateGeComputation(input_shape.element_type());
   xla::XlaComputation scatter =
       XlaHelpers::CreateAddComputation(input_shape.element_type());

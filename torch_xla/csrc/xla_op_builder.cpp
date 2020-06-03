@@ -6,6 +6,7 @@
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "tensorflow/compiler/xla/client/lib/pooling.h"
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
@@ -593,6 +594,44 @@ xla::XlaOp SelectAndScatter(const BuilderPtr& builder,
       scatter_computation->computation());
 }
 
+xla::XlaOp SelectAndScatterWithGeneralPadding(
+    const BuilderPtr& builder, const std::vector<OpPtr>& operands,
+    py::dict args) {
+  ComputationPtr select_computation =
+      args["select_computation"].cast<ComputationPtr>();
+  ComputationPtr scatter_computation =
+      args["scatter_computation"].cast<ComputationPtr>();
+  std::vector<xla::int64> window_dimensions =
+      GetTupleVector<xla::int64>(args["window_dimensions"]);
+  std::vector<xla::int64> window_strides =
+      GetTupleVector<xla::int64>(args["window_strides"]);
+  auto padding = ParsePairList<xla::int64>(args["padding"]);
+  return xla::SelectAndScatterWithGeneralPadding(
+      operands.at(0)->op, select_computation->computation(), window_dimensions,
+      window_strides, padding, operands.at(1)->op, operands.at(2)->op,
+      scatter_computation->computation());
+}
+
+xla::TensorFormat ParseTensorFormat(py::dict args) {
+  xla::int64 batch_dimension = args["batch_dimension"].cast<xla::int64>();
+  xla::int64 feature_dimension = args["feature_dimension"].cast<xla::int64>();
+  std::vector<xla::int64> spatial_dimensions =
+      GetTupleVector<xla::int64>(args["spatial_dimensions"]);
+  return xla::TensorFormat(batch_dimension, feature_dimension,
+                           spatial_dimensions);
+}
+
+xla::XlaOp MaxPool(const BuilderPtr& builder,
+                   const std::vector<OpPtr>& operands, py::dict args) {
+  std::vector<xla::int64> kernel_size =
+      GetTupleVector<xla::int64>(args["kernel_size"]);
+  std::vector<xla::int64> stride = GetTupleVector<xla::int64>(args["stride"]);
+  xla::Padding padding = ParsePadding(args["padding"].cast<std::string>());
+  xla::TensorFormat data_format = ParseTensorFormat(args);
+  return xla::MaxPool(operands.at(0)->op, kernel_size, stride, padding,
+                      data_format);
+}
+
 xla::XlaOp Sort(const BuilderPtr& builder, const std::vector<OpPtr>& operands,
                 py::dict args) {
   bool is_stable = ArgOrDefault<bool>(args, "is_stable", false);
@@ -719,6 +758,7 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(Lt);
   XLA_OPADD(Map);
   XLA_OPADD(Max);
+  XLA_OPADD(MaxPool);
   XLA_OPADD(Min);
   XLA_OPADD(Mul);
   XLA_OPADD(Ne);
@@ -738,6 +778,7 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(Scatter);
   XLA_OPADD(Select);
   XLA_OPADD(SelectAndScatter);
+  XLA_OPADD(SelectAndScatterWithGeneralPadding);
   XLA_OPADD(SetDimensionSize);
   XLA_OPADD(ShiftLeft);
   XLA_OPADD(ShifRight);
