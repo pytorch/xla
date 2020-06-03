@@ -100,6 +100,7 @@ disabled_torch_tests = {
     'test_lobpcg_scipy',
     'test_lobpcg_torchscript',
     'test_storage_device',  # storage
+    'test_strided_mismatched_stride_shape',  # check runtime error
     'test_roll',
     'test_resize_as_all_dtypes_and_devices',  # uses half
     'test_resize_all_dtypes_and_devices',  # uses half
