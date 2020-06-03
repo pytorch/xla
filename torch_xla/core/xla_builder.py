@@ -426,7 +426,42 @@ class Op(object):
         window_dimensions=window_dimensions,
         window_strides=window_strides,
         select_computation=select_computation,
-        scatter_computation=scatter_computation)
+        scatter_computation=scatter_computation,
+        padding=padding)
+
+  def select_and_scatter_with_general_padding(self, source, init_value,
+                                              window_dimensions, window_strides,
+                                              select_computation,
+                                              scatter_computation, padding):
+    scalar_shape = self.shape().as_scalar()
+    select_computation = Op.make_computation('Select', select_computation,
+                                             (scalar_shape, scalar_shape))
+    scatter_computation = Op.make_computation('Scatter', scatter_computation,
+                                              (scalar_shape, scalar_shape))
+    return mkop(
+        'SelectAndScatterWithGeneralPadding',
+        (self.op, source.op, init_value.op),
+        window_dimensions=window_dimensions,
+        window_strides=window_strides,
+        select_computation=select_computation,
+        scatter_computation=scatter_computation,
+        padding=padding)
+
+  def max_pool(self,
+               kernel_size,
+               stride,
+               batch_dimension,
+               feature_dimension,
+               spatial_dimensions,
+               padding='valid'):
+    return mkop(
+        'MaxPool', (self.op,),
+        kernel_size=kernel_size,
+        stride=stride,
+        batch_dimension=batch_dimension,
+        feature_dimension=feature_dimension,
+        spatial_dimensions=spatial_dimensions,
+        padding=padding)
 
   def reduce(self, init_value, computation, dimensions):
     scalar_shape = self.shape().as_scalar()
