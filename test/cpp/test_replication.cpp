@@ -86,10 +86,11 @@ void TestSingleReplication(const std::vector<Device>& devices,
 class ReplicationTest : public AtenXlaTensorTestBase {};
 
 TEST_F(ReplicationTest, TestNSingleReplication) {
-  WithAllDevices(DeviceType::TPU, [&](const std::vector<Device>& devices,
-                                      const std::vector<Device>& all_devices) {
-    TestSingleReplication(devices, all_devices);
-  });
+  WithAllDevices({DeviceType::TPU, DeviceType::GPU},
+                 [&](const std::vector<Device>& devices,
+                     const std::vector<Device>& all_devices) {
+                   TestSingleReplication(devices, all_devices);
+                 });
 }
 
 }  // namespace cpp_test
