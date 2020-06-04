@@ -5,11 +5,17 @@
 
 namespace torch_xla {
 
+struct MaxPoolResult {
+  xla::XlaOp result;
+  xla::XlaOp indices;
+};
+
 // Computes max pooling for the given input.
-xla::XlaOp BuildMaxPoolNd(xla::XlaOp input, xla::int64 spatial_dim_count,
-                          absl::Span<const xla::int64> kernel_size,
-                          absl::Span<const xla::int64> stride,
-                          absl::Span<const xla::int64> padding, bool ceil_mode);
+MaxPoolResult BuildMaxPoolNd(xla::XlaOp input, xla::int64 spatial_dim_count,
+                             absl::Span<const xla::int64> kernel_size,
+                             absl::Span<const xla::int64> stride,
+                             absl::Span<const xla::int64> padding,
+                             bool ceil_mode);
 
 // Computes the gradient for max pooling.
 xla::XlaOp BuildMaxPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
