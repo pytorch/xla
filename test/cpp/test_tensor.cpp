@@ -284,13 +284,13 @@ TEST_F(TensorTest, TestMaxPool2D) {
                          /*ceil_mode=*/false);
       ForEachDevice([&](const Device& device) {
         XLATensor dev_input = XLATensor::Create(input, device);
-        XLATensor dev_output = XLATensor::max_pool_nd(
+        auto dev_output = XLATensor::max_pool_nd(
             dev_input,
             /*spatial_dim_count=*/2,
             /*kernel_size=*/{kernel_size, kernel_size},
             /*stride=*/{stride, stride},
             /*padding=*/{padding, padding}, /*ceil_mode=*/false);
-        AllClose(output, dev_output);
+        AllClose(output, std::get<0>(dev_output));
       });
     }
   }
@@ -308,14 +308,14 @@ TEST_F(TensorTest, TestMaxPool2DNonSquare) {
           /*ceil_mode=*/false);
       ForEachDevice([&](const Device& device) {
         XLATensor dev_input = XLATensor::Create(input, device);
-        XLATensor dev_output = XLATensor::max_pool_nd(
+        auto dev_output = XLATensor::max_pool_nd(
             dev_input,
             /*spatial_dim_count=*/2,
             /*kernel_size=*/{kernel_size, kernel_size + 1},
             /*stride=*/{stride, stride + 1},
             /*padding=*/{padding, padding + 1},
             /*ceil_mode=*/false);
-        AllClose(output, dev_output);
+        AllClose(output, std::get<0>(dev_output));
       });
     }
   }
