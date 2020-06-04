@@ -11,7 +11,10 @@ def parse_config_yml():
         for job in configs['workflows']['build']['jobs']:
             if base_config in job:
                 if job[base_config]['name'] == name:
-                    print(job[base_config]['docker_image'])
+                    # FIXME: remove this hack once we add cuda job to pytorch/pytorch CI
+                    image = job[base_config]['docker_image']
+                    image = image.replace('bionic', 'bionic-cuda10.2-cudnn7')
+                    print(image)
                     return
 
 if __name__ == '__main__':

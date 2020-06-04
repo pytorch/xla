@@ -8,17 +8,7 @@ update_submodule: &update_submodule
 
 setup_base_docker: &setup_base_docker
   name: Setup Base Docker Image
-  command: |
-    set -e
-    pyenv local 3.5.2
-    pip install --upgrade pip
-    pip install pyyaml -qqq
-    DOCKER_IMAGE=$(python "/home/circleci/project/.circleci/parse_docker_image.py")
-    echo "export DOCKER_IMAGE=${DOCKER_IMAGE}" >> $BASH_ENV
-    echo "export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
-    echo "export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
-    echo "export WORKDIR=/var/lib/jenkins/workspace" >> $BASH_ENV
-    sudo pip install awscli==1.16.35 -qqq
+  command: .circleci/setup_ci_environment.sh
 
 launch_docker_and_build: &launch_docker_and_build
   name: Launch Docker Container and Build
@@ -36,9 +26,9 @@ launch_docker_and_build: &launch_docker_and_build
     echo "declare -x MAX_JOBS=8" >> /home/circleci/project/env
     echo "declare -x CC=clang-9 CXX=clang++-9" >> /home/circleci/project/xla_env
     echo "declare -x XLA_USE_XRT=1" >> /home/circleci/project/xla_env
+    echo "declare -x XLA_CUDA=1" >> /home/circleci/project/xla_env
+    echo "declare -x USE_CUDA=0" >> /home/circleci/project/env
     echo "declare -x GITHUB_TORCH_XLA_BOT_TOKEN=${GITHUB_TORCH_XLA_BOT_TOKEN}" >> /home/circleci/project/xla_env
-    echo "declare -x XRT_DEVICE_MAP=\"CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0\"" >> /home/circleci/project/xla_env
-    echo "declare -x export XRT_WORKERS=\"localservice:0;grpc://localhost:40934\"" >> /home/circleci/project/xla_env
     echo "declare -x CIRCLE_PULL_REQUEST=${CIRCLE_PULL_REQUEST}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_PROJECT_USERNAME=${CIRCLE_PROJECT_USERNAME}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_PROJECT_REPONAME=${CIRCLE_PROJECT_REPONAME}" >> /home/circleci/project/env
@@ -69,13 +59,17 @@ download_docker: &download_docker
     sudo pip install awscli==1.16.35 -qqq
     eval $(aws ecr get-login --region us-east-1 --no-include-email)
     time docker pull ${COMMIT_DOCKER_IMAGE} >/dev/null
-    pid=$(docker run -t -d -w $WORKDIR ${COMMIT_DOCKER_IMAGE})
+    if [ -n "${USE_CUDA_DOCKER_RUNTIME:-}" ]; then
+      pid=$(docker run --runtime=nvidia -t -d -w $WORKDIR ${COMMIT_DOCKER_IMAGE})
+    else
+      pid=$(docker run -t -d -w $WORKDIR ${COMMIT_DOCKER_IMAGE})
+    fi
     echo ${pid} > .docker_pid
 
 run_build: &run_build
-  resource_class: large
+  resource_class: xlarge
   machine:
-    image: default
+    image: ubuntu-1604:201903-01
   steps:
   - checkout
   - run:
@@ -86,9 +80,8 @@ run_build: &run_build
       <<: *launch_docker_and_build
 
 run_test: &run_test
-  resource_class: large
   machine:
-    image: default
+    image: ubuntu-1604:201903-01
   steps:
   - checkout
   - run:
@@ -104,9 +97,8 @@ run_test: &run_test
         docker exec -u jenkins $(cat .docker_pid) .circleci/test.sh
 
 run_test_and_push_doc: &run_test_and_push_doc
-  resource_class: large
   machine:
-    image: default
+    image: ubuntu-1604:201903-01
   steps:
   - checkout
   - run:
@@ -175,6 +167,18 @@ run_yapf: &run_yapf
       echo "PASSED Python format"
     fi
 
+ci_params: &ci_params
+  parameters:
+    resource_class:
+      type: string
+      default: "large"
+    use_cuda_docker_runtime:
+      type: string
+      default: ""
+  environment:
+    USE_CUDA_DOCKER_RUNTIME: << parameters.use_cuda_docker_runtime >>
+  resource_class: << parameters.resource_class >>
+
 jobs:
   linter_check:
     machine:
@@ -190,9 +194,11 @@ jobs:
     <<: *run_build
 
   pytorch_xla_linux_bionic_py3_6_clang9_test:
+    <<: *ci_params
     <<: *run_test
 
   pytorch_xla_linux_bionic_py3_6_clang9_test_and_push_doc:
+    <<: *ci_params
     <<: *run_test_and_push_doc
 
 workflows:
@@ -202,17 +208,25 @@ workflows:
       - linter_check
       - pytorch_xla_linux_bionic_py3_6_clang9_build
       - pytorch_xla_linux_bionic_py3_6_clang9_test:
+          name: pytorch_xla_linux_bionic_py3_6_clang9_CPU_test
           requires:
             - pytorch_xla_linux_bionic_py3_6_clang9_build
           filters:
             branches:
               ignore:
                 - master
-      - pytorch_xla_linux_bionic_py3_6_clang9_test_and_push_doc:
+      - pytorch_xla_linux_bionic_py3_6_clang9_test:
+          name: pytorch_xla_linux_bionic_py3_6_clang9_GPU_test
+          resource_class: gpu.medium
+          use_cuda_docker_runtime: "1"
           requires:
             - pytorch_xla_linux_bionic_py3_6_clang9_build
-          filters:
-            branches:
-              only:
-                - master
-                - /release\/.*/
+      - pytorch_xla_linux_bionic_py3_6_clang9_test_and_push_doc:
+          name: pytorch_xla_linux_bionic_py3_6_clang9_CPU_test_and_push_doc
+          requires:
+            - pytorch_xla_linux_bionic_py3_6_clang9_build
+              #filters:
+              #branches:
+              #only:
+              #  - master
+              #  - /release\/.*/
