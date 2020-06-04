@@ -4655,17 +4655,19 @@ TEST_F(AtenXlaTensorTest, TestIndexAdd) {
               : torch::randint(100, value_sizes,
                                torch::TensorOptions(scalar_type));
       torch::Tensor result = torch::index_add(base, dim, index, value);
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor xla_base = CopyToDevice(base, device);
-        torch::Tensor xla_index = CopyToDevice(index, device);
-        torch::Tensor xla_value = CopyToDevice(value, device);
-        torch::Tensor xla_result =
-            torch::index_add(xla_base, dim, xla_index, xla_value);
-        AllEqual(result, xla_result);
-      });
+      ForEachDevice(
+          {DeviceType::CPU, DeviceType::TPU}, [&](const torch::Device& device) {
+            torch::Tensor xla_base = CopyToDevice(base, device);
+            torch::Tensor xla_index = CopyToDevice(index, device);
+            torch::Tensor xla_value = CopyToDevice(value, device);
+            torch::Tensor xla_result =
+                torch::index_add(xla_base, dim, xla_index, xla_value);
+            AllEqual(result, xla_result);
 
-      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
+            ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+            ExpectCounterChanged("xla::index_add_",
+                                 cpp_test::GetIgnoredCounters());
+          });
     }
   }
 }
@@ -4677,36 +4679,39 @@ TEST_F(AtenXlaTensorTest, TestIndexAddInPlace) {
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
         torch::kLong}) {
     for (int dim = -rank; dim < rank; ++dim) {
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor base =
-            isFloatingType(scalar_type)
-                ? torch::rand({5, 3, 7}, torch::TensorOptions(scalar_type))
-                : torch::randint(100, {5, 3, 7},
-                                 torch::TensorOptions(scalar_type));
-        torch::Tensor index =
-            torch::randint(0, base.size(dim), {index_size},
-                           torch::TensorOptions(torch::kLong));
-        std::vector<int64_t> value_sizes(base.sizes().begin(),
-                                         base.sizes().end());
-        int canonical_dim = dim < 0 ? dim + rank : dim;
-        value_sizes[canonical_dim] = index_size;
-        torch::Tensor value =
-            isFloatingType(scalar_type)
-                ? torch::rand(value_sizes, torch::TensorOptions(scalar_type))
-                : torch::randint(100, value_sizes,
-                                 torch::TensorOptions(scalar_type));
-        torch::Tensor xla_base = CopyToDevice(base.clone(), device);
-        torch::Tensor result = base.index_add_(dim, index, value);
-        torch::Tensor xla_index = CopyToDevice(index, device);
-        torch::Tensor xla_value = CopyToDevice(value, device);
-        torch::Tensor xla_result =
-            xla_base.index_add_(dim, xla_index, xla_value);
-        AllEqual(result, xla_result);
-        AllEqual(base, xla_base);
-      });
+      ForEachDevice(
+          {DeviceType::CPU, DeviceType::TPU}, [&](const torch::Device& device) {
+            torch::Tensor base =
+                isFloatingType(scalar_type)
+                    ? torch::rand({5, 3, 7}, torch::TensorOptions(scalar_type))
+                    : torch::randint(100, {5, 3, 7},
+                                     torch::TensorOptions(scalar_type));
+            torch::Tensor index =
+                torch::randint(0, base.size(dim), {index_size},
+                               torch::TensorOptions(torch::kLong));
+            std::vector<int64_t> value_sizes(base.sizes().begin(),
+                                             base.sizes().end());
+            int canonical_dim = dim < 0 ? dim + rank : dim;
+            value_sizes[canonical_dim] = index_size;
+            torch::Tensor value =
+                isFloatingType(scalar_type)
+                    ? torch::rand(value_sizes,
+                                  torch::TensorOptions(scalar_type))
+                    : torch::randint(100, value_sizes,
+                                     torch::TensorOptions(scalar_type));
+            torch::Tensor xla_base = CopyToDevice(base.clone(), device);
+            torch::Tensor result = base.index_add_(dim, index, value);
+            torch::Tensor xla_index = CopyToDevice(index, device);
+            torch::Tensor xla_value = CopyToDevice(value, device);
+            torch::Tensor xla_result =
+                xla_base.index_add_(dim, xla_index, xla_value);
+            AllEqual(result, xla_result);
+            AllEqual(base, xla_base);
 
-      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_add_", cpp_test::GetIgnoredCounters());
+            ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+            ExpectCounterChanged("xla::index_add_",
+                                 cpp_test::GetIgnoredCounters());
+          });
     }
   }
 }
@@ -4771,17 +4776,19 @@ TEST_F(AtenXlaTensorTest, TestIndexCopy) {
               : torch::randint(100, value_sizes,
                                torch::TensorOptions(scalar_type));
       torch::Tensor result = torch::index_copy(base, dim, index, value);
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor xla_base = CopyToDevice(base, device);
-        torch::Tensor xla_index = CopyToDevice(index, device);
-        torch::Tensor xla_value = CopyToDevice(value, device);
-        torch::Tensor xla_result =
-            torch::index_copy(xla_base, dim, xla_index, xla_value);
-        AllEqual(result, xla_result);
-      });
+      ForEachDevice(
+          {DeviceType::CPU, DeviceType::TPU}, [&](const torch::Device& device) {
+            torch::Tensor xla_base = CopyToDevice(base, device);
+            torch::Tensor xla_index = CopyToDevice(index, device);
+            torch::Tensor xla_value = CopyToDevice(value, device);
+            torch::Tensor xla_result =
+                torch::index_copy(xla_base, dim, xla_index, xla_value);
+            AllEqual(result, xla_result);
 
-      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_copy_", cpp_test::GetIgnoredCounters());
+            ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+            ExpectCounterChanged("xla::index_copy_",
+                                 cpp_test::GetIgnoredCounters());
+          });
     }
   }
 }
@@ -4793,36 +4800,39 @@ TEST_F(AtenXlaTensorTest, TestIndexCopyInPlace) {
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
         torch::kLong}) {
     for (int dim = -rank; dim < rank; ++dim) {
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor base =
-            isFloatingType(scalar_type)
-                ? torch::rand({5, 3, 7}, torch::TensorOptions(scalar_type))
-                : torch::randint(100, {5, 3, 7},
-                                 torch::TensorOptions(scalar_type));
-        torch::Tensor index =
-            torch::randint(0, base.size(dim), {index_size},
-                           torch::TensorOptions(torch::kLong));
-        std::vector<int64_t> value_sizes(base.sizes().begin(),
-                                         base.sizes().end());
-        int canonical_dim = dim < 0 ? dim + rank : dim;
-        value_sizes[canonical_dim] = index_size;
-        torch::Tensor value =
-            isFloatingType(scalar_type)
-                ? torch::rand(value_sizes, torch::TensorOptions(scalar_type))
-                : torch::randint(100, value_sizes,
-                                 torch::TensorOptions(scalar_type));
-        torch::Tensor xla_base = CopyToDevice(base.clone(), device);
-        torch::Tensor result = base.index_copy_(dim, index, value);
-        torch::Tensor xla_index = CopyToDevice(index, device);
-        torch::Tensor xla_value = CopyToDevice(value, device);
-        torch::Tensor xla_result =
-            xla_base.index_copy_(dim, xla_index, xla_value);
-        AllEqual(result, xla_result);
-        AllEqual(base, xla_base);
-      });
+      ForEachDevice(
+          {DeviceType::CPU, DeviceType::TPU}, [&](const torch::Device& device) {
+            torch::Tensor base =
+                isFloatingType(scalar_type)
+                    ? torch::rand({5, 3, 7}, torch::TensorOptions(scalar_type))
+                    : torch::randint(100, {5, 3, 7},
+                                     torch::TensorOptions(scalar_type));
+            torch::Tensor index =
+                torch::randint(0, base.size(dim), {index_size},
+                               torch::TensorOptions(torch::kLong));
+            std::vector<int64_t> value_sizes(base.sizes().begin(),
+                                             base.sizes().end());
+            int canonical_dim = dim < 0 ? dim + rank : dim;
+            value_sizes[canonical_dim] = index_size;
+            torch::Tensor value =
+                isFloatingType(scalar_type)
+                    ? torch::rand(value_sizes,
+                                  torch::TensorOptions(scalar_type))
+                    : torch::randint(100, value_sizes,
+                                     torch::TensorOptions(scalar_type));
+            torch::Tensor xla_base = CopyToDevice(base.clone(), device);
+            torch::Tensor result = base.index_copy_(dim, index, value);
+            torch::Tensor xla_index = CopyToDevice(index, device);
+            torch::Tensor xla_value = CopyToDevice(value, device);
+            torch::Tensor xla_result =
+                xla_base.index_copy_(dim, xla_index, xla_value);
+            AllEqual(result, xla_result);
+            AllEqual(base, xla_base);
 
-      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::index_copy_", cpp_test::GetIgnoredCounters());
+            ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+            ExpectCounterChanged("xla::index_copy_",
+                                 cpp_test::GetIgnoredCounters());
+          });
     }
   }
 }
@@ -8432,21 +8442,26 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
                     /*groups=*/groups,
                     /*dilation=*/{dilation, dilation + 1});
               };
-              ForEachDevice([&](const torch::Device& device) {
-                torch::Tensor input = torch::rand(
-                    {4, out_channels, 14, 14},
-                    torch::TensorOptions(torch::kFloat).requires_grad(true));
-                torch::Tensor weight = torch::rand(
-                    {out_channels, in_channels / groups, kernel_size,
-                     kernel_size},
-                    torch::TensorOptions(torch::kFloat).requires_grad(true));
-                torch::Tensor bias =
-                    with_bias ? torch::rand({in_channels},
-                                            torch::TensorOptions(torch::kFloat)
-                                                .requires_grad(true))
-                              : torch::Tensor();
-                TestBackward({input, weight, bias}, device, testfn);
-              });
+              ForEachDevice(
+                  {DeviceType::CPU, DeviceType::TPU},
+                  [&](const torch::Device& device) {
+                    torch::Tensor input =
+                        torch::rand({4, out_channels, 14, 14},
+                                    torch::TensorOptions(torch::kFloat)
+                                        .requires_grad(true));
+                    torch::Tensor weight =
+                        torch::rand({out_channels, in_channels / groups,
+                                     kernel_size, kernel_size},
+                                    torch::TensorOptions(torch::kFloat)
+                                        .requires_grad(true));
+                    torch::Tensor bias =
+                        with_bias
+                            ? torch::rand({in_channels},
+                                          torch::TensorOptions(torch::kFloat)
+                                              .requires_grad(true))
+                            : torch::Tensor();
+                    TestBackward({input, weight, bias}, device, testfn);
+                  });
             }
           };
         }
@@ -8474,21 +8489,25 @@ TEST_F(AtenXlaTensorTest, TestConv3DBackward) {
                                    groups);
             };
 
-            ForEachDevice([&](const torch::Device& device) {
-              torch::Tensor bias =
-                  with_bias ? torch::rand({out_channels},
-                                          torch::TensorOptions(torch::kDouble))
-                            : torch::Tensor();
-              TestBackward({torch::rand({4, in_channels, 14, 14, 14},
-                                        torch::TensorOptions(torch::kDouble)
-                                            .requires_grad(true)),
-                            torch::rand({out_channels, in_channels / groups,
-                                         kernel_size, kernel_size, kernel_size},
-                                        torch::TensorOptions(torch::kDouble)
-                                            .requires_grad(true)),
-                            bias},
-                           device, testfn);
-            });
+            ForEachDevice(
+                {DeviceType::CPU, DeviceType::TPU},
+                [&](const torch::Device& device) {
+                  torch::Tensor bias =
+                      with_bias
+                          ? torch::rand({out_channels},
+                                        torch::TensorOptions(torch::kDouble))
+                          : torch::Tensor();
+                  TestBackward(
+                      {torch::rand({4, in_channels, 14, 14, 14},
+                                   torch::TensorOptions(torch::kDouble)
+                                       .requires_grad(true)),
+                       torch::rand({out_channels, in_channels / groups,
+                                    kernel_size, kernel_size, kernel_size},
+                                   torch::TensorOptions(torch::kDouble)
+                                       .requires_grad(true)),
+                       bias},
+                      device, testfn);
+                });
           }
         };
       }
@@ -8518,21 +8537,26 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv3DBackward) {
                     /*groups=*/groups,
                     /*dilation=*/{dilation, dilation + 1, dilation});
               };
-              ForEachDevice([&](const torch::Device& device) {
-                torch::Tensor input = torch::rand(
-                    {4, out_channels, 14, 14, 14},
-                    torch::TensorOptions(torch::kDouble).requires_grad(true));
-                torch::Tensor weight = torch::rand(
-                    {out_channels, in_channels / groups, kernel_size,
-                     kernel_size, kernel_size},
-                    torch::TensorOptions(torch::kDouble).requires_grad(true));
-                torch::Tensor bias =
-                    with_bias ? torch::rand({in_channels},
-                                            torch::TensorOptions(torch::kDouble)
-                                                .requires_grad(true))
-                              : torch::Tensor();
-                TestBackward({input, weight, bias}, device, testfn);
-              });
+              ForEachDevice(
+                  {DeviceType::CPU, DeviceType::TPU},
+                  [&](const torch::Device& device) {
+                    torch::Tensor input =
+                        torch::rand({4, out_channels, 14, 14, 14},
+                                    torch::TensorOptions(torch::kDouble)
+                                        .requires_grad(true));
+                    torch::Tensor weight =
+                        torch::rand({out_channels, in_channels / groups,
+                                     kernel_size, kernel_size, kernel_size},
+                                    torch::TensorOptions(torch::kDouble)
+                                        .requires_grad(true));
+                    torch::Tensor bias =
+                        with_bias
+                            ? torch::rand({in_channels},
+                                          torch::TensorOptions(torch::kDouble)
+                                              .requires_grad(true))
+                            : torch::Tensor();
+                    TestBackward({input, weight, bias}, device, testfn);
+                  });
             }
           };
         }
