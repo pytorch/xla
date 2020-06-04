@@ -1844,23 +1844,12 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
     return AtenXlaTypeDefault::max_pool2d_with_indices(
         self, kernel_size, stride, padding, dilation, ceil_mode);
   }
-  // TODO(asuhan): Here we return a placeholder tensor for the indices we hope
-  // to never evaluate, which works for the backward of max_pool2d. However, the
-  // user could request the indices to be returned, in which case we'd throw. We
-  // need to either provide a lowering or improve our infrastructure to be able
-  // to route to ATen the evaluation of outputs we hope to be unused.
-  XLATensor result = XLATensor::max_pool_nd(
+  auto outputs = XLATensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), ceil_mode);
-  xla::Shape indices_shape = result.shape();
-  indices_shape.set_element_type(
-      GetDevicePrimitiveType(xla::PrimitiveType::S64, &result.GetDevice()));
-  XLATensor indices_not_supported = XLATensor::not_supported(
-      "aten::max_pool2d_with_indices.indices", indices_shape,
-      bridge::GetXlaTensor(self).GetDevice());
-  return std::make_tuple(bridge::AtenFromXlaTensor(result),
-                         bridge::AtenFromXlaTensor(indices_not_supported));
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
 at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
@@ -1908,23 +1897,12 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool3d_with_indices(
     return AtenXlaTypeDefault::max_pool3d_with_indices(
         self, kernel_size, stride, padding, dilation, ceil_mode);
   }
-  // TODO(asuhan): Here we return a placeholder tensor for the indices we hope
-  // to never evaluate, which works for the backward of max_pool3d. However, the
-  // user could request the indices to be returned, in which case we'd throw. We
-  // need to either provide a lowering or improve our infrastructure to be able
-  // to route to ATen the evaluation of outputs we hope to be unused.
-  XLATensor result = XLATensor::max_pool_nd(
+  auto outputs = XLATensor::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
       XlaHelpers::I64List(padding), ceil_mode);
-  xla::Shape indices_shape = result.shape();
-  indices_shape.set_element_type(
-      GetDevicePrimitiveType(xla::PrimitiveType::S64, &result.GetDevice()));
-  XLATensor indices_not_supported = XLATensor::not_supported(
-      "aten::max_pool3d_with_indices.indices", indices_shape,
-      bridge::GetXlaTensor(self).GetDevice());
-  return std::make_tuple(bridge::AtenFromXlaTensor(result),
-                         bridge::AtenFromXlaTensor(indices_not_supported));
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
 at::Tensor AtenXlaType::mean(const at::Tensor& self,
