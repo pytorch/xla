@@ -2,6 +2,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import shutil
 
 import torch
 import torch_xla
@@ -38,6 +39,8 @@ def _rewrite_data(path, data, save_tensors):
   def select_fn(v):
     return type(v) == torch.Tensor and xm.is_xla_tensor(v)
 
+  if os.path.isdir(path):
+    shutil.rmtree(path)
   os.mkdir(path)
   return xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
