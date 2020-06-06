@@ -375,9 +375,9 @@
   <span class="k">return</span> <span class="n">ordinal</span> <span class="o">==</span> <span class="mi">0</span></div>
 
 
-<span class="k">def</span> <span class="nf">master_print</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">fd</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">local</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">master_print</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">fd</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">local</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
   <span class="k">if</span> <span class="n">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="n">local</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">fd</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">fd</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="n">flush</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="xla_device"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xla_device">[docs]</a><span class="k">def</span> <span class="nf">xla_device</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">devkind</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
