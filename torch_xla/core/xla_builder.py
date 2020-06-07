@@ -253,6 +253,7 @@ class Op(object):
   def scatter(self,
               scatter_indices,
               updates,
+              computation,
               update_window_dims,
               inserted_window_dims,
               index_vector_dim,
@@ -260,6 +261,7 @@ class Op(object):
               unique_indices=None):
     return mkop(
         'Scatter', (self.op, scatter_indices.op, updates.op),
+        computation=computation,
         update_window_dims=update_window_dims,
         inserted_window_dims=inserted_window_dims,
         index_vector_dim=index_vector_dim,
