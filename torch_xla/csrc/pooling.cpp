@@ -4,11 +4,13 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/loops.h"
 #include "tensorflow/compiler/xla/client/lib/pooling.h"
+#include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
 namespace {
@@ -256,7 +258,6 @@ xla::XlaOp ComputeMaxPoolIndices(
   // We loop through every window and compute the index. The slow code will only
   // be executed if the caller actually uses the indices, and only if the reduce
   // windows overlap.
-  const xla::Shape& padded_input_shape = XlaHelpers::ShapeOfXlaOp(padded_input);
   xla::XlaOp iota = CreatePoolIndicesIota(input_shape, padded_input.builder());
   xla::XlaOp padded_iota =
       xla::Pad(iota, xla::MaxValue(padded_input.builder(), kIndicesType),
@@ -418,6 +419,49 @@ xla::XlaOp BuildMaxPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
   return RemoveTrivialBatch(/*batch=*/batch_result,
                             /*original_rank=*/batch_input_info.original_rank,
                             /*spatial_dim_count=*/spatial_dim_count);
+}
+
+xla::XlaOp BuildMaxUnpoolNd(const Device& device, xla::XlaOp input,
+                            xla::XlaOp indices,
+                            absl::Span<const xla::int64> output_size) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  XLA_CHECK_EQ(input_shape.rank(), 2 + output_size.size());
+
+  xla::Shape zeros_shape = xla::ShapeUtil::MakeShape(
+      input_shape.element_type(),
+      {input_shape.dimensions(0), input_shape.dimensions(1),
+       xla::util::Multiply<xla::int64>(output_size)});
+  xla::XlaOp zeros = xla::Zeros(input.builder(), zeros_shape);
+  xla::XlaOp flat_input =
+      XlaHelpers::FlattenDimRange(input, 2, output_size.size());
+  xla::XlaOp flat_indices =
+      XlaHelpers::FlattenDimRange(indices, 2, output_size.size());
+
+  auto combiner_fn = [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp { return y; };
+  xla::XlaOp scatter_result =
+      CreateScatter(device, zeros, flat_indices, flat_input,
+                    /*dim=*/2, combiner_fn);
+
+  std::vector<xla::int64> result_sizes(
+      {input_shape.dimensions(0), input_shape.dimensions(1)});
+  result_sizes.insert(result_sizes.end(), output_size.begin(),
+                      output_size.end());
+  return XlaHelpers::DynamicReshape(scatter_result, result_sizes);
+}
+
+xla::XlaOp BuildMaxUnpoolNdBackward(xla::XlaOp grad_output, xla::XlaOp input,
+                                    xla::XlaOp indices,
+                                    absl::Span<const xla::int64> output_size) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp flat_grad_output =
+      XlaHelpers::FlattenDimRange(grad_output, 2, output_size.size());
+  xla::XlaOp flat_indices =
+      XlaHelpers::FlattenDimRange(indices, 2, output_size.size());
+  xla::XlaOp gather_result = xla::TorchGather(
+      flat_grad_output, flat_indices, /*dim=*/2,
+      IsSparseGather(flat_grad_output, flat_indices, /*dim=*/2));
+
+  return XlaHelpers::DynamicReshapeAs(gather_result, input_shape);
 }
 
 xla::XlaOp BuildAvgPoolNd(xla::XlaOp input, xla::int64 spatial_dim_count,

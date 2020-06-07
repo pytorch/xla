@@ -229,6 +229,10 @@ class XlaHelpers {
   static xla::XlaOp Flatten(xla::XlaOp input,
                             xla::Shape* input_shape = nullptr);
 
+  static xla::XlaOp FlattenDimRange(xla::XlaOp input, xla::int64 start,
+                                    xla::int64 range,
+                                    xla::Shape* input_shape = nullptr);
+
   // Gathers the input using the order specified by the permutation. For each i,
   // output[i] = input[permutation[i]]. The given permutation must be the same
   // size as the input.
