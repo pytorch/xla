@@ -556,6 +556,14 @@ xla::ScatterDimensionNumbers ParseScatterDimensionNumbers(py::dict args) {
       dimension_numbers.add_inserted_window_dims(dim.cast<xla::int64>());
     }
   }
+  absl::optional<py::tuple> arg_scatter_dims_to_operand_dims =
+      ArgOptional<py::tuple>(args, "scatter_dims_to_operand_dims");
+  if (arg_scatter_dims_to_operand_dims) {
+    for (auto& dim : *arg_scatter_dims_to_operand_dims) {
+      dimension_numbers.add_scatter_dims_to_operand_dims(
+          dim.cast<xla::int64>());
+    }
+  }
   absl::optional<xla::int64> arg_index_vector_dim =
       ArgOptional<xla::int64>(args, "index_vector_dim");
   if (arg_index_vector_dim) {

@@ -256,6 +256,7 @@ class Op(object):
               computation,
               update_window_dims,
               inserted_window_dims,
+              scatter_dims_to_operand_dims,
               index_vector_dim,
               indices_are_sorted=None,
               unique_indices=None):
@@ -264,6 +265,7 @@ class Op(object):
         computation=computation,
         update_window_dims=update_window_dims,
         inserted_window_dims=inserted_window_dims,
+        scatter_dims_to_operand_dims=scatter_dims_to_operand_dims,
         index_vector_dim=index_vector_dim,
         indices_are_sorted=indices_are_sorted,
         unique_indices=unique_indices)
