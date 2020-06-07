@@ -713,6 +713,14 @@ class XLATensor {
                                         std::vector<xla::int64> padding,
                                         bool ceil_mode);
 
+  static XLATensor max_unpool(const XLATensor& input, const XLATensor& indices,
+                              std::vector<xla::int64> output_size);
+
+  static XLATensor max_unpool_backward(const XLATensor& grad_output,
+                                       const XLATensor& input,
+                                       const XLATensor& indices,
+                                       std::vector<xla::int64> output_size);
+
   static XLATensor mean(const XLATensor& input,
                         std::vector<xla::int64> dimensions,
                         bool keep_reduced_dimensions,

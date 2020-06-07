@@ -2,6 +2,7 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
 
@@ -39,6 +40,14 @@ xla::XlaOp BuildAvgPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
                                   absl::Span<const xla::int64> stride,
                                   absl::Span<const xla::int64> padding,
                                   bool ceil_mode, bool count_include_pad);
+
+xla::XlaOp BuildMaxUnpoolNd(const Device& device, xla::XlaOp input,
+                            xla::XlaOp indices,
+                            absl::Span<const xla::int64> output_size);
+
+xla::XlaOp BuildMaxUnpoolNdBackward(xla::XlaOp grad_output, xla::XlaOp input,
+                                    xla::XlaOp indices,
+                                    absl::Span<const xla::int64> output_size);
 
 // Computes adaptive average pooling for the given input and output size.
 xla::XlaOp BuildAdaptiveAvgPool2d(xla::XlaOp input,

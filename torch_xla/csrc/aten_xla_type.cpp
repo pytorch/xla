@@ -1906,6 +1906,50 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool3d_with_indices(
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
 }
 
+at::Tensor AtenXlaType::max_unpool2d(const at::Tensor& self,
+                                     const at::Tensor& indices,
+                                     at::IntArrayRef output_size) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::max_unpool(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(indices),
+      xla::util::ToVector<xla::int64>(output_size)));
+}
+
+at::Tensor AtenXlaType::max_unpool2d_backward(const at::Tensor& grad_output,
+                                              const at::Tensor& self,
+                                              const at::Tensor& indices,
+                                              at::IntArrayRef output_size) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::max_unpool_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(indices),
+      xla::util::ToVector<xla::int64>(output_size)));
+}
+
+at::Tensor AtenXlaType::max_unpool3d(const at::Tensor& self,
+                                     const at::Tensor& indices,
+                                     at::IntArrayRef output_size,
+                                     at::IntArrayRef stride,
+                                     at::IntArrayRef padding) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::max_unpool(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(indices),
+      xla::util::ToVector<xla::int64>(output_size)));
+}
+
+at::Tensor AtenXlaType::max_unpool3d_backward(const at::Tensor& grad_output,
+                                              const at::Tensor& self,
+                                              const at::Tensor& indices,
+                                              at::IntArrayRef output_size,
+                                              at::IntArrayRef stride,
+                                              at::IntArrayRef padding) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(XLATensor::max_unpool_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      bridge::GetXlaTensor(indices),
+      xla::util::ToVector<xla::int64>(output_size)));
+}
+
 at::Tensor AtenXlaType::mean(const at::Tensor& self,
                              c10::optional<at::ScalarType> dtype) {
   XLA_FN_COUNTER("xla::");
