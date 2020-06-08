@@ -5533,7 +5533,7 @@ TEST_F(AtenXlaTensorTest, TestCelu) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::elu", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::celu", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCeluInPlace) {
@@ -5549,7 +5549,7 @@ TEST_F(AtenXlaTensorTest, TestCeluInPlace) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::elu_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::celu_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestGelu) {

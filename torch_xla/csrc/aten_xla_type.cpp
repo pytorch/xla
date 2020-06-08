@@ -810,6 +810,16 @@ at::Tensor& AtenXlaType::ceil_(at::Tensor& self) {
   return self;
 }
 
+at::Tensor AtenXlaType::celu(const at::Tensor& self, at::Scalar alpha) {
+  XLA_FN_COUNTER("xla::");
+  return aten_tensor_ops::celu(self, alpha);
+}
+
+at::Tensor& AtenXlaType::celu_(at::Tensor& self, at::Scalar alpha) {
+  XLA_FN_COUNTER("xla::");
+  return aten_tensor_ops::celu_(self, alpha);
+}
+
 at::Tensor AtenXlaType::cholesky(const at::Tensor& self, bool upper) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
