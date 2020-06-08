@@ -157,6 +157,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_storage',  # Storage
         'test_deepcopy',  # Storage
         'teeet_deepcopy_scalar',  # Storage
+        'test_scatter_different_types',  # Expecting a runtime error
     },
     'TestViewOpsXLA': {
         'test_contiguous_nonview',
