@@ -145,7 +145,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_triangular_solve',  # precision (4e-12)
         'test_scalar_check',  # runtime error
         'test_argminmax_large_axis',  # OOM, and the test is grepping "memory" in the exception message
-        'test_trapz',  # precision (1e-5), test use np.allClose
         'test_randn_xla_float32',  # xla doesn't support manual_seed, as_stride
         'test_randn_xla_float64',  # xla doesn't support manual_seed, as_stride
         'test_rand_xla_float32',  # xla doesn't support manual_seed, as_stride
@@ -271,7 +270,6 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_topk_integral_xla_int64',  # (TPU) unimplemented HLO for X64
         'test_float_to_int_conversion_finite_xla',  # different behavior than numpy when casting float_max/min to int types
         'test_block_diag_scipy',  # failed to handle np.complex128 as input to tensor.
-        'test_logcumsumexp_xla',  # precision (1e-5), test use torch.allClose
         'test_remainder_fmod_large_dividend_xla',  # precision, remainder with 1e9 gives incorrect answer
         'test_logical_not_out_xla',  # constant with type f16 and f64 is not supported
     },
