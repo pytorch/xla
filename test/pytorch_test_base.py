@@ -290,6 +290,7 @@ DISABLED_TORCH_TESTS_GPU_ONLY = {
     },
     'TestTensorDeviceOpsXLA': {
         'test_svd_square_xla',  # FIXME: wrong result
+        'test_svd_square_col_maj_xla',  # FIXME: flaky
     },
 }
 
