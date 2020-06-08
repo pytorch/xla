@@ -1467,8 +1467,44 @@ TEST_F(AtenXlaTensorTest, TestGroupNorm) {
     });
 
     ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::native_batch_norm",
+    ExpectCounterChanged("xla::native_group_norm",
                          cpp_test::GetIgnoredCounters());
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestGroupNormBackward) {
+  int num_channels = 6;
+  torch::Tensor input =
+      torch::rand({20, num_channels, 10, 10},
+                  torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor weight = torch::rand(
+      {num_channels}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor bias = torch::rand(
+      {num_channels}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  double eps = 1e-05;
+  for (bool undef_weight : {true, false}) {
+    for (int num_groups : {3, 6, 1}) {
+      auto testfn =
+          [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+        return torch::group_norm(
+            /*input=*/inputs[0], num_groups, inputs[1], inputs[2],
+            /*eps=*/eps,
+            /*cudnn_enabled=*/false);
+      };
+      torch::Tensor undef;
+      ForEachDevice([&](const torch::Device& device) {
+        TestBackward(
+            {input, undef_weight ? undef : weight, undef_weight ? undef : bias},
+            device, testfn,
+            /*rtol=*/1e-3, /*atol=*/1e-4);
+      });
+
+      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_group_norm",
+                           cpp_test::GetIgnoredCounters());
+      ExpectCounterChanged("xla::native_group_norm_backward",
+                           cpp_test::GetIgnoredCounters());
+    }
   }
 }
 
