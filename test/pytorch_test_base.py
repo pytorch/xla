@@ -53,6 +53,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_memory_format_empty_like',
         'test_memory_format_clone',
         'test_memory_format_factory_like_functions_preserve',  # assertion error
+        'test_memory_format_proparation_rules',  # assert memory format
         'test_min_max_binary_op_nan',
         'test_minmax_illegal_dtype',  # Checking runtime error
         'test_mm_xla_bfloat16',  # FIXME: AssertionError: tensor(0.0625) not less than or equal to 0.001
