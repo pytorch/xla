@@ -7,7 +7,6 @@ summary of differences, sorted by the percent change.
 import sys
 import argparse
 import collections
-import humanize
 from datetime import timedelta
 
 import torch_xla.debug.metrics_compare_utils as mcu
@@ -74,9 +73,15 @@ def print_separator():
 
 
 def sort_counters(report1, report2):
-  delta = {
-      key: (-val1 + report2[key]) / val1 * 100 for key, val1 in report1.items()
-  }
+  delta = {}
+  for key, val1 in report1.items():
+    if isinstance(val1, tuple):
+      v1, v2 = val1[0], report2[key][0]
+      #v1, v2 = int(val1[0]), int(report2[key][0])
+    else:
+      v1, v2 = val1, report2[key]
+      #v1, v2 = int(val1), int(report2[key])
+    delta[key] = (-v1 + v2) / v1 * 100
   delta = sorted(delta.items(), key=lambda item: abs(item[1]), reverse=True)
   delta = [(key, report1[key], report2[key], pct_change)
            for key, pct_change in delta
@@ -92,7 +97,8 @@ def percentile_priority(key, priorities):
 
 def sort_percentiles(report1, report2):
   delta = {
-      key: (-val1 + report2[key]) / val1 * 100 for key, val1 in report1.items()
+      key: (-val1 + report2[key][0]) / val1 * 100
+      for key, (val1, val2) in report1.items()
   }
   priorities = collections.defaultdict(list)
   hipri = args.show or HIGH_PRI_KEYS
@@ -141,34 +147,21 @@ def split_counters_percentiles(report):
 
 
 def format_row(k, v1, v2, p):
+  # v1, v2 are of the form:
+  #    (parsed_int, humanized_str)
   if k.endswith('__Value') or k.endswith('__TotalSamples'):
     k = k.replace('__Value', '').replace('__TotalSamples', '.Count')
+    if isinstance(v1, tuple):
+      v1, v2 = int(v1[0]), int(v2[0])
     v1, v2 = int(v1), int(v2)
   elif '__Percentile_' in k or '__Accumulator' in k:
     k = k.replace('__Percentile_', '.P').replace('__Accumulator', '.Total')
-    if k.endswith('_sec'):
-      k = k.replace('_sec', '')
-      if not args.no_humanize:
-        v1 = humanize.naturaldelta(
-            timedelta(seconds=v1),
-            minimum_unit='microseconds').replace('seconds', 'sec')
-        v2 = humanize.naturaldelta(
-            timedelta(seconds=v2),
-            minimum_unit='microseconds').replace('seconds', 'sec')
-      else:
-        v1 = '{:.4f}'.format(v1)
-        v2 = '{:.4f}'.format(v2)
-    elif k.endswith('_mb'):
-      k = k.replace('_mb', '')
-      if not args.no_humanize:
-        v1 = humanize.naturalsize(v1)
-        v2 = humanize.naturalsize(v2)
-      else:
-        v1 = '{:.4f}'.format(v1)
-        v2 = '{:.4f}'.format(v2)
+    if not args.no_humanize:
+      v1 = v1[1]
+      v2 = v2[1]
     else:
-      v1 = '{:.4f}'.format(v1)
-      v2 = '{:.4f}'.format(v2)
+      v1 = '{:.4f}'.format(v1[0])
+      v2 = '{:.4f}'.format(v2[0])
   p = '{:.1f}'.format(p)
   return k, v1, v2, p
 
@@ -205,8 +198,8 @@ def print_comparison_summary(args, report1, report2):
 def main(args):
   report1 = extract_report(args.filepath1, args.skip_1)
   report2 = extract_report(args.filepath2, args.skip_2)
-  report1 = mcu.parse_metrics_report(report1)
-  report2 = mcu.parse_metrics_report(report2)
+  report1 = mcu.parse_metrics_report(report1, dehumanize=False)
+  report2 = mcu.parse_metrics_report(report2, dehumanize=False)
   print_comparison_summary(args, report1, report2)
 
 
