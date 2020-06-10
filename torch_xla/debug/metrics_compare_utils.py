@@ -97,7 +97,7 @@ def parse_metrics_report(report, dehumanize=True):
       parsed_v, units = _metric_str_to_number(v)
       full_key = '{}__{}{}{}'.format(metric_name, k, '_' if units else '',
                                      units)
-      data_points[full_key] = parsed_v if dehumanize else v
+      data_points[full_key] = parsed_v if dehumanize else (parsed_v, v)
 
   # Parse counters into data points.
   counters_matches = re.findall(_COUNTER_REGEX, report)
