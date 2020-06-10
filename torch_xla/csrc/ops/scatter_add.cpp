@@ -26,9 +26,9 @@ XlaOpVector ScatterAdd::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp index = loctx->GetOutputOp(operand(1));
   xla::XlaOp src = loctx->GetOutputOp(operand(2));
-  return ReturnOp(CreateScatter(loctx->device(), input, index, src, dim_,
-                                NumericAddCombiner()),
-                  loctx);
+  ScatterOptions options(NumericAddCombiner());
+  return ReturnOp(
+      CreateScatter(loctx->device(), input, index, src, dim_, options), loctx);
 }
 
 std::string ScatterAdd::ToString() const {

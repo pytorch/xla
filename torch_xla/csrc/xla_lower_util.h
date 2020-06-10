@@ -60,10 +60,18 @@ using XlaOpCombiner = std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>;
 
 XlaOpCombiner NumericAddCombiner();
 
-// Used to lower scatter and scatter_add.
+struct ScatterOptions {
+  explicit ScatterOptions(XlaOpCombiner combiner)
+      : combiner(std::move(combiner)) {}
+
+  XlaOpCombiner combiner;
+  absl::optional<xla::XlaOp> init_value;
+  bool indices_are_unique = true;
+};
+
 xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
                          xla::XlaOp index, xla::XlaOp source, xla::int64 dim,
-                         const XlaOpCombiner& combiner);
+                         const ScatterOptions& options);
 
 xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
                      xla::XlaOp source, bool accumulate);
