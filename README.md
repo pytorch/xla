@@ -70,8 +70,9 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
 2. SSH into the VM and pull a version of the docker image into the VM. The currently available versions are:
 
     * `gcr.io/tpu-pytorch/xla:r1.5`: The current stable version.
-    * `gcr.io/tpu-pytorch/xla:nightly`: Nightly version.
-    * `gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_20190531)`: The nightly version of the given day.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.6`: Nightly version using Python 3.6.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.7`: Nightly version using Python 3.7.
+    * `gcr.io/tpu-pytorch/xla:nightly_3.6_YYYYMMDD (e.g.: gcr.io/tpu-pytorch/xla:nightly_3.6_20190531)`: The nightly version of the given day. You can replace `3.6` with `3.7` if desired.
 
     At this time is recommended to use nightly versions and eventually switch to the stable version in case there are issues with nightly.
     Remember to create a TPU with `pytorch-nightly` version when using nightly.
@@ -79,11 +80,11 @@ Follow these steps to train a PyTorch model with Docker on a Cloud TPU:
     To pull the dockers run one of the following commands:
 
     ```Shell
-    (vm)$ docker pull gcr.io/tpu-pytorch/xla:nightly
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:nightly_3.6
     ```
 
     ```Shell
-    (vm)$ docker pull gcr.io/tpu-pytorch/xla:nightly_YYYYMMDD
+    (vm)$ docker pull gcr.io/tpu-pytorch/xla:nightly_3.6_YYYYMMDD
     ```
 
     ```Shell
@@ -193,7 +194,7 @@ Training on pods can be broken down to largely 3 different steps:
 * Or, to distribute training as a docker container:
 ```
 (torch-xla-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
-(torch-xla-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:nightly --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+(torch-xla-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --docker-image=gcr.io/tpu-pytorch/xla:nightly_3.6 --docker-run-flag=--rm=true --docker-run-flag=--shm-size=50GB --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
 ```
 
 ### List of VMs
