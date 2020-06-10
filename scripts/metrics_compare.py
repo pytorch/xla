@@ -88,7 +88,12 @@ def sort_percentiles(report1, report2):
   }
   priorities = collections.defaultdict(list)
   for key, d in delta.items():
-    priorities[key.split('__')[0]].append(abs(d))
+    m = key.split('__')[0]
+    if m in ['CompileTime', 'ExecuteTime']:
+      p = 2**20 - (m == 'CompileTime')
+    else:
+      p = abs(d)
+    priorities[key.split('__')[0]].append(p)
   else:
     for key, ps in priorities.items():
       priorities[key] = sum(ps) / float(len(ps))
@@ -155,8 +160,6 @@ def format_row(k, v1, v2, p):
     else:
       v1 = '{:.4f}'.format(v1)
       v2 = '{:.4f}'.format(v2)
-    if '.Total' not in k and not k.endswith('P1'):
-      k = k.split('.')[-1]
   p = '{:.1f}'.format(p)
   return k, v1, v2, p
 
