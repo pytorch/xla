@@ -432,21 +432,32 @@ xla::XlaOp BuildMaxUnpoolNd(const Device& device, xla::XlaOp input,
       {input_shape.dimensions(0), input_shape.dimensions(1),
        xla::util::Multiply<xla::int64>(output_size)});
   xla::XlaOp zeros = xla::Zeros(input.builder(), zeros_shape);
+  xla::XlaOp init_value =
+      xla::Broadcast(xla::MinValue(input.builder(), input_shape.element_type()),
+                     zeros_shape.dimensions());
   xla::XlaOp flat_input =
       XlaHelpers::FlattenDimRange(input, 2, output_size.size());
   xla::XlaOp flat_indices =
       XlaHelpers::FlattenDimRange(indices, 2, output_size.size());
 
-  auto combiner_fn = [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp { return y; };
+  auto combiner_fn = [](xla::XlaOp x, xla::XlaOp y) -> xla::XlaOp {
+    return xla::Max(x, y);
+  };
+  ScatterOptions options(combiner_fn);
+  options.indices_are_unique = false;
+  options.init_value =
+      xla::MinValue(input.builder(), input_shape.element_type());
   xla::XlaOp scatter_result =
-      CreateScatter(device, zeros, flat_indices, flat_input,
-                    /*dim=*/2, combiner_fn);
+      CreateScatter(device, init_value, flat_indices, flat_input,
+                    /*dim=*/2, options);
+  xla::XlaOp result =
+      xla::Select(xla::Ne(scatter_result, init_value), scatter_result, zeros);
 
   std::vector<xla::int64> result_sizes(
       {input_shape.dimensions(0), input_shape.dimensions(1)});
   result_sizes.insert(result_sizes.end(), output_size.begin(),
                       output_size.end());
-  return XlaHelpers::DynamicReshape(scatter_result, result_sizes);
+  return XlaHelpers::DynamicReshape(result, result_sizes);
 }
 
 xla::XlaOp BuildMaxUnpoolNdBackward(xla::XlaOp grad_output, xla::XlaOp input,
