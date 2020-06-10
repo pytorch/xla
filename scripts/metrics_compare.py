@@ -29,7 +29,13 @@ def parse_args():
   parser.add_argument('--skip-2', type=int, default=0)
   parser.add_argument('--threshold', '-t', type=float, default=50.0)
   parser.add_argument('--no-humanize', '-r', action='store_true')
-  parser.add_argument('--show', '-s', nargs='+', type=str, help='Metrics to always show', default=None)
+  parser.add_argument(
+      '--show',
+      '-s',
+      nargs='+',
+      type=str,
+      help='Metrics to always show',
+      default=None)
   return parser.parse_args()
 
 
