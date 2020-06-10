@@ -128,7 +128,6 @@ std::pair<xla::XlaOp, xla::XlaOp> DotBroadcast(xla::XlaOp lhs,
   return std::make_pair(broadcasted_lhs, broadcasted_rhs);
 }
 
-// Builds the computation for the given combiner.
 xla::XlaComputation MakeScatterComputation(
     const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner,
     xla::PrimitiveType element_type) {
@@ -193,9 +192,8 @@ bool ScatterRequiresPadding(const xla::Shape& input_shape,
   return requires_padding;
 }
 
-xla::XlaOp XlaDenseScatter(
-    xla::XlaOp input, xla::XlaOp index, xla::XlaOp src, xla::int64 dim,
-    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& combiner) {
+xla::XlaOp XlaDenseScatter(xla::XlaOp input, xla::XlaOp index, xla::XlaOp src,
+                           xla::int64 dim, const ScatterOptions& options) {
   // Contribute back this code to xla::TorchScatterDense() once this has reached
   // a stable implementation.
   xla::XlaBuilder* builder = input.builder();
@@ -216,37 +214,46 @@ xla::XlaOp XlaDenseScatter(
       sizes.push_back(index_shape.dimensions(i));
     }
 
+    xla::XlaOp init_value =
+        options.init_value
+            ? *options.init_value
+            : xla::Zero(input.builder(), input_shape.element_type());
+    xla::XlaComputation reduce_computation =
+        options.combiner != nullptr
+            ? MakeScatterComputation(options.combiner,
+                                     input_shape.element_type())
+            : xla::CreateScalarIdentityWithZeroComputation(
+                  input_shape.element_type(), builder);
     xla::XlaOp mask = xla::Eq(
         xla::BroadcastInDim(index, sizes, index_broacast_dims),
         xla::Iota(builder,
                   xla::ShapeUtil::MakeShape(index_shape.element_type(), sizes),
                   dim));
-    xla::XlaOp selected_src = xla::Select(
-        mask, xla::BroadcastInDim(src, sizes, index_broacast_dims),
-        xla::Zeros(builder, xla::ShapeUtil::MakeShape(
-                                input_shape.element_type(), sizes)));
-    xla::XlaOp masked_src = xla::Reduce(
-        selected_src, xla::Zero(builder, input_shape.element_type()),
-        xla::CreateScalarIdentityWithZeroComputation(input_shape.element_type(),
-                                                     builder),
-        {dim + 1});
-    if (XlaHelpers::SameStaticDimensions(index_shape, input_shape)) {
+    xla::XlaOp selected_src =
+        xla::Select(mask, xla::BroadcastInDim(src, sizes, index_broacast_dims),
+                    xla::Broadcast(init_value, sizes));
+    xla::XlaOp masked_src =
+        xla::Reduce(selected_src, init_value, reduce_computation, {dim + 1});
+    if (options.indices_are_unique &&
+        XlaHelpers::SameStaticDimensions(index_shape, input_shape)) {
       // If the index shape is the same as the input shape, the input shape will
       // be fully covered (since scatter indices must be unique), so there is no
       // need for masking.
-      return combiner != nullptr ? combiner(input, masked_src) : masked_src;
+      return options.combiner != nullptr ? options.combiner(input, masked_src)
+                                         : masked_src;
     }
     xla::XlaOp reduced_mask = xla::Reduce(
         mask, xla::ConstantR0<bool>(builder, false),
         xla::CreateScalarOrComputation(xla::PrimitiveType::PRED, builder),
         {dim + 1});
     if (ScatterRequiresPadding(input_shape, index_shape, dim)) {
-      masked_src = PadToSize(masked_src, input_shape.dimensions());
+      masked_src = PadToSize(masked_src, input_shape.dimensions(), init_value);
       reduced_mask = PadToSize(reduced_mask, input_shape.dimensions());
     }
     xla::XlaOp result;
-    if (combiner != nullptr) {
-      result = xla::Select(reduced_mask, combiner(input, masked_src), input);
+    if (options.combiner != nullptr) {
+      result =
+          xla::Select(reduced_mask, options.combiner(input, masked_src), input);
     } else {
       result = xla::Select(reduced_mask, masked_src, input);
     }
@@ -614,7 +621,7 @@ XlaOpCombiner NumericAddCombiner() {
 
 xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
                          xla::XlaOp index, xla::XlaOp source, xla::int64 dim,
-                         const XlaOpCombiner& combiner) {
+                         const ScatterOptions& options) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::Shape index_shape = XlaHelpers::ShapeOfXlaOp(index);
   const xla::Shape& source_shape = XlaHelpers::ShapeOfXlaOp(source);
@@ -625,7 +632,7 @@ xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
     source_op = BuildSlice(source_op, base_indices, index_shape.dimensions());
   }
   if (ShouldUseDenseScatter(device, input_shape, index_shape)) {
-    return XlaDenseScatter(input, index, source_op, dim, combiner);
+    return XlaDenseScatter(input, index, source_op, dim, options);
   }
 
   xla::ShapeUtil::AppendMajorDimension(1, &index_shape);
@@ -649,7 +656,7 @@ xla::XlaOp CreateScatter(const Device& device, xla::XlaOp input,
   }
   return xla::Scatter(
       input, scatter_indices, source_op,
-      MakeScatterComputation(combiner, input_shape.element_type()),
+      MakeScatterComputation(options.combiner, input_shape.element_type()),
       scatter_dnums);
 }
 
@@ -668,8 +675,9 @@ xla::XlaOp CreatePut(const Device& device, xla::XlaOp input, xla::XlaOp index,
   if (accumulate) {
     combiner = NumericAddCombiner();
   }
+  ScatterOptions options(std::move(combiner));
   xla::XlaOp r1_scatter = CreateScatter(device, r1_input, bound_index,
-                                        r1_source, /*dim=*/0, combiner);
+                                        r1_source, /*dim=*/0, options);
   return XlaHelpers::DynamicReshapeAs(r1_scatter, input_shape);
 }
 
