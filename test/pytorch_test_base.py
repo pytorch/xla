@@ -259,7 +259,6 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_clamp_min_inplace_xla_float64',  # float64 limit, TPU does not have real F64
         'test_clamp_max_xla_float64',  # float64 limit, TPU does not have real F64
         'test_clamp_max_inplace_xla_float64',  # float64 limit, TPU does not have real F64
-        'test_cross_xla_uint8',  # TODO: remove after uint8 change merged
     },
     'TestTorchDeviceTypeXLA': {
         'test_cholesky_solve_batched_broadcasting',  # (TPU) 0.0039 vs 0.001
