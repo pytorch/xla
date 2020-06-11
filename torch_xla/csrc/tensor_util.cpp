@@ -130,6 +130,20 @@ struct Caster<xla::half> {
   }
 };
 template <>
+struct Caster<c10::complex<float>> {
+  template <typename D>
+  D cast(const c10::complex<float>& value) const {
+    return static_cast<D>(value.real());
+  }
+};
+template <>
+struct Caster<c10::complex<double>> {
+  template <typename D>
+  D cast(const c10::complex<double>& value) const {
+    return static_cast<D>(value.real());
+  }
+};
+template <>
 struct Caster<std::complex<float>> {
   template <typename D>
   D cast(const std::complex<float>& value) const {
@@ -194,6 +208,14 @@ struct NeedCast<at::Half> {
   static constexpr bool value = true;
 };
 template <>
+struct NeedCast<c10::complex<float>> {
+  static constexpr bool value = true;
+};
+template <>
+struct NeedCast<c10::complex<double>> {
+  static constexpr bool value = true;
+};
+template <>
 struct NeedCast<std::complex<float>> {
   static constexpr bool value = true;
 };
@@ -243,16 +265,16 @@ void CopyData<tensorflow::bfloat16, at::BFloat16>(tensorflow::bfloat16* dest,
   CheckedMemcpy<tensorflow::bfloat16, at::BFloat16>(dest, source, n);
 }
 template <>
-void CopyData<std::complex<float>, std::complex<float>>(
-    std::complex<float>* dest, const std::complex<float>* source, xla::int64 n,
+void CopyData<c10::complex<float>, c10::complex<float>>(
+    c10::complex<float>* dest, const c10::complex<float>* source, xla::int64 n,
     const CopyCasted&) {
-  std::memcpy(dest, source, n * sizeof(std::complex<float>));
+  std::memcpy(dest, source, n * sizeof(c10::complex<float>));
 }
 template <>
-void CopyData<std::complex<double>, std::complex<double>>(
-    std::complex<double>* dest, const std::complex<double>* source,
+void CopyData<c10::complex<double>, c10::complex<double>>(
+    c10::complex<double>* dest, const c10::complex<double>* source,
     xla::int64 n, const CopyCasted&) {
-  std::memcpy(dest, source, n * sizeof(std::complex<double>));
+  std::memcpy(dest, source, n * sizeof(c10::complex<double>));
 }
 
 std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
@@ -514,11 +536,11 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
                                    dest_buffer_size, device);
       break;
     case at::ScalarType::ComplexFloat:
-      TensorToBufferSType<std::complex<float>>(tensor, dest_shape, dest_buffer,
+      TensorToBufferSType<c10::complex<float>>(tensor, dest_shape, dest_buffer,
                                                dest_buffer_size, device);
       break;
     case at::ScalarType::ComplexDouble:
-      TensorToBufferSType<std::complex<double>>(tensor, dest_shape, dest_buffer,
+      TensorToBufferSType<c10::complex<double>>(tensor, dest_shape, dest_buffer,
                                                 dest_buffer_size, device);
       break;
     default:
@@ -589,10 +611,10 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
     case at::ScalarType::Half:
       return XlaLiteralToTensor<SType, at::Half>(literal, dest_element_type);
     case at::ScalarType::ComplexFloat:
-      return XlaLiteralToTensor<SType, std::complex<float>>(literal,
+      return XlaLiteralToTensor<SType, c10::complex<float>>(literal,
                                                             dest_element_type);
     case at::ScalarType::ComplexDouble:
-      return XlaLiteralToTensor<SType, std::complex<double>>(literal,
+      return XlaLiteralToTensor<SType, c10::complex<double>>(literal,
                                                              dest_element_type);
     default:
       XLA_ERROR() << "Unsupported scalar type: " << dest_element_type;
@@ -755,9 +777,9 @@ xla::hash_t TensorHash(const at::Tensor& tensor) {
     case at::ScalarType::Half:
       return xla::util::DataHash(ctensor.data_ptr<at::Half>(), size);
     case at::ScalarType::ComplexFloat:
-      return xla::util::DataHash(ctensor.data_ptr<std::complex<float>>(), size);
+      return xla::util::DataHash(ctensor.data_ptr<c10::complex<float>>(), size);
     case at::ScalarType::ComplexDouble:
-      return xla::util::DataHash(ctensor.data_ptr<std::complex<double>>(),
+      return xla::util::DataHash(ctensor.data_ptr<c10::complex<double>>(),
                                  size);
     default:
       XLA_ERROR() << "Unsupported scalar type: " << ctensor.scalar_type();
