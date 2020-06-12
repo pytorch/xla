@@ -123,9 +123,9 @@ def is_master_ordinal(local=True):
   return ordinal == 0
 
 
-def master_print(s, fd=sys.stdout, local=True, flush=False):
+def master_print(*args, fd=sys.stdout, local=True, flush=False):
   if is_master_ordinal(local=local):
-    print(s, file=fd, flush=flush)
+    print(*args, file=fd, flush=flush)
 
 
 def xla_device(n=None, devkind=None):
