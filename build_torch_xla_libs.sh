@@ -20,6 +20,11 @@ if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
   VERBOSE="-s"
 fi
 
+MAX_JOBS=
+if [[ "$XLA_CUDA" == "1" ]] && [[ "$CLOUD_BUILD" == "true" ]]; then
+  MAX_JOBS="--jobs=16"
+fi
+
 OPTS=(--cxxopt="-std=c++14")
 if [[ "$CC" =~ ^clang ]]; then
   OPTS+=(--cxxopt="-Wno-c++11-narrowing")
@@ -38,7 +43,7 @@ else
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
-  bazel build $VERBOSE --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" $XLA_CUDA_CFG \
+  bazel build $MAX_JOBS $VERBOSE --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" $XLA_CUDA_CFG \
     //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
 
   popd
