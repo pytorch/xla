@@ -21,6 +21,9 @@ ENV USE_CUDA "0"
 ENV XLA_CUDA "${cuda}"
 ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
 
+# Whether the build is running on GCB
+ENV CLOUD_BUILD "${cloud_build}"
+
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with
 # cloud build. Otherwise, just use local.
