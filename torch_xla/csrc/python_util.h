@@ -1,10 +1,10 @@
 #pragma once
 
-#include <c10/util/Optional.h>
-
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "absl/types/optional.h"
 
 namespace torch_xla {
 
@@ -14,7 +14,7 @@ struct SourceLocation {
   int line = -1;
 };
 
-c10::optional<SourceLocation> GetPythonFrameTop();
+absl::optional<SourceLocation> GetPythonFrameTop();
 
 std::vector<SourceLocation> GetPythonFrames();
 

@@ -7,14 +7,14 @@
 
 namespace torch_xla {
 
-c10::optional<SourceLocation> GetPythonFrameTop() {
+absl::optional<SourceLocation> GetPythonFrameTop() {
   if (!Py_IsInitialized()) {
-    return c10::nullopt;
+    return absl::nullopt;
   }
   pybind11::gil_scoped_acquire gil;
   PyFrameObject* frame = PyEval_GetFrame();
   if (frame == nullptr) {
-    return c10::nullopt;
+    return absl::nullopt;
   }
   SourceLocation loc;
   loc.line = PyCode_Addr2Line(frame->f_code, frame->f_lasti);
