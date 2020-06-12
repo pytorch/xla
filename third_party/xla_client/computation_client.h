@@ -245,6 +245,8 @@ class ComputationClient {
 
   virtual std::map<std::string, Metric> GetMetrics() const = 0;
 
+  virtual void PrepareToExit() = 0;
+
   // Utility API around the vector based Compile() API to compile a single
   // computation.
   ComputationPtr Compile(XlaComputation computation,

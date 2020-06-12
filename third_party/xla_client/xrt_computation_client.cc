@@ -1532,6 +1532,13 @@ std::map<std::string, Metric> XrtComputationClient::GetMetrics() const {
   return metrics_data;
 }
 
+void XrtComputationClient::PrepareToExit() {
+  if (triggered_task_ != nullptr) {
+    size_t run_id = triggered_task_->Activate();
+    triggered_task_->WaitForRun(run_id);
+  }
+}
+
 void XrtComputationClient::InitSession(XrtSession* session) const {
   struct InitNode {
     int count;
