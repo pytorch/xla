@@ -135,6 +135,14 @@ struct Caster<c10::complex<float>> {
   D cast(const c10::complex<float>& value) const {
     return static_cast<D>(value.real());
   }
+  template <>
+  std::complex<float> cast(const c10::complex<float>& value) const {
+    return std::complex<float>(value.real(), value.imag());
+  }
+  template <>
+  std::complex<double> cast(const c10::complex<float>& value) const {
+    return std::complex<double>(value.real(), value.imag());
+  }
 };
 template <>
 struct Caster<c10::complex<double>> {
@@ -142,12 +150,28 @@ struct Caster<c10::complex<double>> {
   D cast(const c10::complex<double>& value) const {
     return static_cast<D>(value.real());
   }
+  template <>
+  std::complex<float> cast(const c10::complex<double>& value) const {
+    return std::complex<float>(value.real(), value.imag());
+  }
+  template <>
+  std::complex<double> cast(const c10::complex<double>& value) const {
+    return std::complex<double>(value.real(), value.imag());
+  }
 };
 template <>
 struct Caster<std::complex<float>> {
   template <typename D>
   D cast(const std::complex<float>& value) const {
     return static_cast<D>(value.real());
+  }
+  template <>
+  c10::complex<float> cast(const std::complex<float>& value) const {
+    return c10::complex<float>(value.real(), value.imag());
+  }
+  template <>
+  c10::complex<double> cast(const std::complex<float>& value) const {
+    return c10::complex<double>(value.real(), value.imag());
   }
 };
 template <>
@@ -263,18 +287,6 @@ void CopyData<tensorflow::bfloat16, at::BFloat16>(tensorflow::bfloat16* dest,
                                                   xla::int64 n,
                                                   const CopyCasted&) {
   CheckedMemcpy<tensorflow::bfloat16, at::BFloat16>(dest, source, n);
-}
-template <>
-void CopyData<c10::complex<float>, c10::complex<float>>(
-    c10::complex<float>* dest, const c10::complex<float>* source, xla::int64 n,
-    const CopyCasted&) {
-  std::memcpy(dest, source, n * sizeof(c10::complex<float>));
-}
-template <>
-void CopyData<c10::complex<double>, c10::complex<double>>(
-    c10::complex<double>* dest, const c10::complex<double>* source,
-    xla::int64 n, const CopyCasted&) {
-  std::memcpy(dest, source, n * sizeof(c10::complex<double>));
 }
 
 std::vector<xla::int64> GetIterationDimensions(const xla::Shape& shape) {
