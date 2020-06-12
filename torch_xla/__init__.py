@@ -46,8 +46,15 @@ _setup_default_env()
 _setup_grpc()
 _setup_xla_flags()
 
+import atexit
 import torch
 from .version import __version__
 import _XLAC
 
+
+def _prepare_to_exit():
+  _XLAC._prepare_to_exit()
+
+
 _XLAC._initialize_aten_bindings()
+atexit.register(_prepare_to_exit)
