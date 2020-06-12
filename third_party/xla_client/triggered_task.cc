@@ -32,7 +32,7 @@ size_t TriggeredTask::Activate() {
     std::lock_guard<std::mutex> lock(mutex_);
     notify = !activated_;
     activated_ = true;
-    run_id = run_id_ + (running_ > 0);
+    run_id = run_id_ + running_;
   }
   if (notify) {
     cv_.notify_one();

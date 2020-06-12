@@ -29,7 +29,8 @@ struct DeviceCountDefaults {
 };
 
 ComputationClient* CreateClient() {
-  return ComputationClient::Create().release();
+  auto client = ComputationClient::Create();
+  return client.release();
 }
 
 std::string MakeGrpcEndPoint(const std::string& server) {

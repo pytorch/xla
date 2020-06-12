@@ -190,6 +190,8 @@ class XrtComputationClient : public ComputationClient {
 
   std::map<std::string, Metric> GetMetrics() const override;
 
+  void PrepareToExit() override;
+
   static Worker ParseWorker(const std::string& worker);
 
   static std::string GetMultiProcessingDevice();
