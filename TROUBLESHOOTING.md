@@ -174,6 +174,9 @@ only be enabled for debugging.
 * ```XLA_METRICS_FILE```: If set, the path to a local file where the internal metrics will be
   saved at every step. Metrics will be appended to the file, if already existing.
 
+* ```XLA_SAVE_HLO_FILE```: If set, the path to a local file where, in case of compilation/execution
+  error, the offending HLO graph will be saved.
+
 * ```XLA_GET_TENSORS_OPBYOP```: Enables pure _OpByOp_ dispatch. The _PyTorch/XLA_ software tries to
   fuse together many _PyTorch_ operations into a single computation graph, but sometimes, either
   for debugging, or in case the _PyTorch_ code have a very dynamic nature (in shapes or graph
