@@ -35,7 +35,7 @@ substitutions:
     _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
 options:
     machineType: 'N1_HIGHCPU_32'
-timeout: 15000s
+timeout: 18000s
 artifacts:
   objects:
     location: 'gs://tpu-pytorch/wheels'
