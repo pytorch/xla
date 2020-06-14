@@ -28,6 +28,9 @@ struct DeviceCountDefaults {
   int num_cpus = 1;
 };
 
+std::atomic<ComputationClient*> g_computation_client(nullptr);
+std::once_flag g_computation_client_once;
+
 ComputationClient* CreateClient() {
   auto client = ComputationClient::Create();
   return client.release();
@@ -304,8 +307,13 @@ int64 ComputationClient::GetDeviceOrdinal(const std::string& device) {
 }
 
 ComputationClient* ComputationClient::Get() {
-  static ComputationClient* computation_client = CreateClient();
-  return computation_client;
+  std::call_once(g_computation_client_once,
+                 [&]() { g_computation_client = CreateClient(); });
+  return g_computation_client.load();
+}
+
+ComputationClient* ComputationClient::GetIfInitialized() {
+  return g_computation_client.load();
 }
 
 metrics::Metric* ComputationClient::TransferToServerMetric() {

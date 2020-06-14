@@ -61,7 +61,12 @@ Device GetDeviceOrCurrent(const std::string& device_str) {
   return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
 }
 
-void PrepareToExit() { xla::ComputationClient::Get()->PrepareToExit(); }
+void PrepareToExit() {
+  xla::ComputationClient* client = xla::ComputationClient::GetIfInitialized();
+  if (client != nullptr) {
+    client->PrepareToExit();
+  }
+}
 
 std::string GetTensorsDump(
     const std::vector<at::Tensor>& tensors,
