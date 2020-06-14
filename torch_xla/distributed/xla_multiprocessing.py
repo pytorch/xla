@@ -4,6 +4,7 @@ from __future__ import print_function
 import collections
 import contextlib
 import os
+import psutil
 import re
 import socket
 import sys
@@ -19,6 +20,26 @@ WorkerConfigEntry = collections.namedtuple('WorkerConfigEntry',
 
 _LOCAL_WORKER = 'localservice'
 _CUDA_VISIBLE_DEVICES = 'CUDA_VISIBLE_DEVICES'
+
+
+def _is_xla_process(proc):
+  for mm in proc.memory_maps():
+    if mm.path.find('_XLAC') >= 0:
+      return True
+  return False
+
+
+def _clear_stray_processes():
+  INIT_PID = 1
+  curr_proc = psutil.Process()
+  for proc in psutil.process_iter():
+    if (proc.pid != curr_proc.pid and proc.ppid() == INIT_PID and
+        proc.username() == curr_proc.username() and _is_xla_process(proc)):
+      try:
+        proc.kill()
+        proc.wait()
+      except:
+        pass
 
 
 def _get_free_tcp_ports(n=1):
@@ -283,6 +304,7 @@ def spawn(fn,
     # If this is not an XLA setup, jump to normal multi-processing.
     return _run_direct(fn, args, nprocs, join, daemon, start_method)
 
+  _clear_stray_processes()
   pf_cfg = _pre_fork_setup(nprocs)
   if pf_cfg.num_devices == 1:
     _start_fn(0, pf_cfg, fn, args)
