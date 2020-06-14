@@ -268,6 +268,8 @@ class ComputationClient {
   // Returns the ComputationClient singleton.
   static ComputationClient* Get();
 
+  static ComputationClient* GetIfInitialized();
+
  protected:
   // Metrics common to all client intrfaces.
   static metrics::Metric* TransferToServerMetric();
