@@ -158,6 +158,17 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_deepcopy',  # Storage
         'teeet_deepcopy_scalar',  # Storage
         'test_scatter_different_types',  # Expecting a runtime error
+        'test_bernoulli_mem_overlap',  # doesn't raise
+        'test_cat_mem_overlap',  # doesn't raise
+        'test_gather_mem_overlap',  # doesn't raise
+        'test_index_put_mem_overlap',  # doesn't raise
+        'test_index_select_mem_overlap',  # doesn't raise
+        'test_linlogspace_mem_overlap',  # doesn't raise
+        'test_masked_fill_mem_overlap',  # doesn't raise
+        'test_masked_scatter_mem_overlap',  # doesn't raise
+        'test_masked_select_mem_overlap',  # doesn't raise
+        'test_scatter_mem_overlap',  # doesn't raise
+        'test_index_mem_overlap',  # doesn't raise
     },
     'TestViewOpsXLA': {
         'test_contiguous_nonview',
