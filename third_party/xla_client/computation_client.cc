@@ -17,6 +17,7 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 #include "tensorflow/core/platform/net.h"
+#include "tensorflow/core/platform/stacktrace_handler.h"
 #include "tensorflow/core/util/device_name_utils.h"
 
 namespace xla {
@@ -32,6 +33,9 @@ std::atomic<ComputationClient*> g_computation_client(nullptr);
 std::once_flag g_computation_client_once;
 
 ComputationClient* CreateClient() {
+  if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
+    tensorflow::testing::InstallStacktraceHandler();
+  }
   auto client = ComputationClient::Create();
   return client.release();
 }
