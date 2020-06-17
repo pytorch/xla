@@ -166,6 +166,7 @@ _TYPE_NSMAP = {
     'IntArrayRef': 'at::IntArrayRef',
     'ArrayRef': 'at::ArrayRef',
     'Generator': 'at::Generator',
+    'Layout': 'at::Layout',
     'ScalarType': 'at::ScalarType',
     'TensorOptions': 'at::TensorOptions',
     'SparseTensorRef': 'at::SparseTensorRef',
@@ -584,10 +585,14 @@ def get_reference_param(params, fnopts=None):
   for p in params:
     ptype = param_type(p)
     cptype = type_core(ptype)
+    # Unwrap core type within c10::optional<>
+    if cptype == 'c10::optional':
+      cptype = type_core(tuple_type_list(ptype)[0])
     pname = param_name(p)
     if get_optional(fnopts, 'ref_param') == pname:
       return p
-    if not other and (cptype == 'TensorOptions' or cptype == 'TensorList'):
+    if not other and (cptype == 'TensorOptions' or cptype == 'TensorList' or
+                      cptype == 'Device'):
       other = p
     if cptype != 'Tensor':
       continue
@@ -819,9 +824,19 @@ def generate_aten_to_xla(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
       xla_ref_param = param_vars[-1]
   code += tfetcher.generate_fetches()
   result_assign = generate_result_assignment(tree, _RESULT_NAME)
-  code += '  {}{};\n'.format(
-      result_assign, get_handling_function(ctx, fname, xla_ref_param,
-                                           param_vars))
+  # TODO(https://github.com/pytorch/xla/issues/2240):
+  # This hack should be removed soon once we update aten signatures.
+  target_options = ['dtype', 'layout', 'device', 'pin_memory']
+  if set(target_options).issubset(set(param_vars)):
+    code += '  at::TensorOptions options = at::TensorOptions().device(device).layout(layout).pinned_memory(pin_memory).dtype(dtype);\n'
+    code += '  {}{};\n'.format(
+        result_assign,
+        get_handling_function(ctx, fname, xla_ref_param, param_vars))
+    code = code.replace(', '.join(target_options), 'options')
+  else:
+    code += '  {}{};\n'.format(
+        result_assign,
+        get_handling_function(ctx, fname, xla_ref_param, param_vars))
   code += tfetcher.generate_updates()
   if result_assign:
     code += ('  static_cast<void>({}); // Avoid warnings in case not '
