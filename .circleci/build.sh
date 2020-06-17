@@ -7,6 +7,7 @@ source .circleci/common.sh
 
 # System default cmake 3.10 cannot find mkl, so point it to the right place.
 export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
+conda install -y cmake
 
 SCCACHE="$(which sccache)"
 if [ -z "${SCCACHE}" ]; then
