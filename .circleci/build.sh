@@ -83,18 +83,7 @@ if [ -z "${BAZELS3CACHE}" ]; then
 fi
 
 echo "Installing torchvision at branch master"
-rm -rf vision
-# TODO: This git clone is bad, it means pushes to torchvision can break
-# PyTorch CI
-git clone https://github.com/pytorch/vision --quiet
-pushd vision
-# python setup.py install with a tqdm dependency is broken in the
-# Travis Python nightly (but not in latest Python nightlies, so
-# this should be a transient requirement...)
-# See https://github.com/pytorch/pytorch/issues/7525
-#time python setup.py install
-pip install -q --user .
-popd
+install_torchvision
 
 bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
 
