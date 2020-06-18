@@ -139,13 +139,13 @@ struct Caster<c10::complex<float>> {
 
 template <>
 std::complex<float> Caster<c10::complex<float>>::cast<std::complex<float>>(
-  const c10::complex<float>& value) const {
+    const c10::complex<float>& value) const {
   return std::complex<float>(value.real(), value.imag());
 }
 
 template <>
 std::complex<double> Caster<c10::complex<float>>::cast<std::complex<double>>(
-  const c10::complex<float>& value) const {
+    const c10::complex<float>& value) const {
   return std::complex<double>(value.real(), value.imag());
 }
 
@@ -157,16 +157,15 @@ struct Caster<c10::complex<double>> {
   }
 };
 
-
 template <>
 std::complex<float> Caster<c10::complex<double>>::cast<std::complex<float>>(
-  const c10::complex<double>& value) const {
+    const c10::complex<double>& value) const {
   return std::complex<float>(value.real(), value.imag());
 }
 
 template <>
 std::complex<double> Caster<c10::complex<double>>::cast<std::complex<double>>(
-  const c10::complex<double>& value) const {
+    const c10::complex<double>& value) const {
   return std::complex<double>(value.real(), value.imag());
 }
 
@@ -180,12 +179,12 @@ struct Caster<std::complex<float>> {
 
 template <>
 c10::complex<float> Caster<std::complex<float>>::cast<c10::complex<float>>(
-  const std::complex<float>& value) const {
+    const std::complex<float>& value) const {
   return c10::complex<float>(value.real(), value.imag());
 }
 template <>
 c10::complex<double> Caster<std::complex<float>>::cast<c10::complex<double>>(
-  const std::complex<float>& value) const {
+    const std::complex<float>& value) const {
   return c10::complex<double>(value.real(), value.imag());
 }
 
