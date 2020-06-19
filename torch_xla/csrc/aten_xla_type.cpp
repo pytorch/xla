@@ -1781,11 +1781,6 @@ at::Tensor& AtenXlaType::masked_scatter_(at::Tensor& self,
                                          const at::Tensor& source) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  // Only the XLA TPU backend for now implements the dynamic dimension setting
-  // required by the masked_scatter_ implementation.
-  if (self_tensor.GetDevice().hw_type != DeviceType::TPU) {
-    return AtenXlaTypeDefault::masked_scatter_(self, mask, source);
-  }
   XLATensor::masked_scatter_(self_tensor, bridge::GetXlaTensor(mask),
                              bridge::GetXlaTensor(source));
   return self;
@@ -1795,13 +1790,6 @@ at::Tensor AtenXlaType::masked_select(const at::Tensor& self,
                                       const at::Tensor& mask) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  // Initially make XLA handled masked_select() handling experimental, and
-  // opt-in. Only the XLA TPU backend for now implements the dynamic dimension
-  // setting required by the masked_select implementation.
-  if (!DebugUtil::ExperimentEnabled("masked_select") ||
-      self_tensor.GetDevice().hw_type != DeviceType::TPU) {
-    return AtenXlaTypeDefault::masked_select(self, mask);
-  }
   return bridge::AtenFromXlaTensor(
       XLATensor::masked_select(self_tensor, bridge::GetXlaTensor(mask)));
 }
@@ -2252,13 +2240,6 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
 at::Tensor AtenXlaType::nonzero(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  // Initially make XLA handled nonzero() handling experimental, and opt-in.
-  // Only the XLA TPU backend for now implements the dynamic dimension setting
-  // required by the nonzero implementation.
-  if (!DebugUtil::ExperimentEnabled("nonzero") ||
-      self_tensor.GetDevice().hw_type != DeviceType::TPU) {
-    return AtenXlaTypeDefault::nonzero(self);
-  }
   return bridge::AtenFromXlaTensor(XLATensor::nonzero(self_tensor));
 }
 
