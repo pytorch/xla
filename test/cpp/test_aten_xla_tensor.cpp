@@ -6140,6 +6140,43 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2D) {
           });
 
           ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool2d",
+                               cpp_test::GetIgnoredCounters());
+        }
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMaxPool2DWithIndices) {
+  torch::Tensor input =
+      torch::rand({1, 64, 112, 112}, torch::TensorOptions(torch::kFloat));
+  int kernel_size = 3;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      // Test ceil_mode=true through the CPU interop.
+      for (bool ceil_mode : {false, true}) {
+        // Test dilation through the CPU interop.
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          auto outputs = torch::max_pool2d_with_indices(
+              input, /*kernel_size=*/{kernel_size, kernel_size},
+              /*stride=*/{stride, stride},
+              /*padding=*/{padding, padding}, /*dilation=*/{dilation, dilation},
+              /*ceil_mode=*/ceil_mode);
+          ForEachDevice([&](const torch::Device& device) {
+            torch::Tensor xla_input = CopyToDevice(input, device);
+            auto xla_outputs = torch::max_pool2d_with_indices(
+                xla_input,
+                /*kernel_size=*/{kernel_size, kernel_size},
+                /*stride=*/{stride, stride},
+                /*padding=*/{padding, padding},
+                /*dilation=*/{dilation, dilation},
+                /*ceil_mode=*/ceil_mode);
+            AllClose(std::get<0>(outputs), std::get<0>(xla_outputs));
+            AllClose(std::get<1>(outputs), std::get<1>(xla_outputs));
+          });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
           ExpectCounterChanged("xla::max_pool2d_with_indices",
                                cpp_test::GetIgnoredCounters());
         }
@@ -6177,7 +6214,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DNonSquare) {
           });
 
           ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-          ExpectCounterChanged("xla::max_pool2d_with_indices",
+          ExpectCounterChanged("xla::max_pool2d",
                                cpp_test::GetIgnoredCounters());
         }
       }
@@ -6211,6 +6248,45 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3D) {
                 /*dilation=*/{dilation, dilation, dilation},
                 /*ceil_mode=*/ceil_mode);
             AllClose(output, xla_output);
+          });
+
+          ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+          ExpectCounterChanged("xla::max_pool3d",
+                               cpp_test::GetIgnoredCounters());
+        }
+      }
+    }
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestMaxPool3DWithIndices) {
+  torch::Tensor input =
+      torch::rand({1, 64, 16, 16, 16}, torch::TensorOptions(torch::kFloat));
+  int kernel_size = 3;
+  for (int stride = 1; stride <= 2; ++stride) {
+    for (int padding = 0; padding <= 1; ++padding) {
+      // Test ceil_mode=true through the CPU interop.
+      for (bool ceil_mode : {false, true}) {
+        // Test dilation through the CPU interop.
+        for (int dilation = 1; dilation <= 2; ++dilation) {
+          auto outputs = torch::max_pool3d_with_indices(
+              input, /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+              /*stride=*/{stride, stride, stride},
+              /*padding=*/{padding, padding, padding},
+              /*dilation=*/{dilation, dilation, dilation},
+              /*ceil_mode=*/ceil_mode);
+          ForEachDevice([&](const torch::Device& device) {
+            torch::Tensor xla_input = CopyToDevice(input, device);
+            auto xla_outputs = torch::max_pool3d_with_indices(
+                xla_input,
+                /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+                /*stride=*/{stride, stride, stride},
+                /*padding=*/{padding, padding, padding},
+                /*dilation=*/{dilation, dilation, dilation},
+                /*ceil_mode=*/ceil_mode);
+
+            AllClose(std::get<0>(outputs), std::get<0>(xla_outputs));
+            AllClose(std::get<1>(outputs), std::get<1>(xla_outputs));
           });
 
           ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
@@ -6251,7 +6327,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DIncompleteAttributes) {
           });
 
           ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-          ExpectCounterChanged("xla::max_pool3d_with_indices",
+          ExpectCounterChanged("xla::max_pool3d",
                                cpp_test::GetIgnoredCounters());
         }
       }
@@ -6289,7 +6365,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNonSquare) {
           });
 
           ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-          ExpectCounterChanged("xla::max_pool3d_with_indices",
+          ExpectCounterChanged("xla::max_pool3d",
                                cpp_test::GetIgnoredCounters());
         }
       }
@@ -6325,7 +6401,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DNoBatch) {
           });
 
           ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-          ExpectCounterChanged("xla::max_pool2d_with_indices",
+          ExpectCounterChanged("xla::max_pool2d",
                                cpp_test::GetIgnoredCounters());
         }
       }
@@ -6362,7 +6438,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatch) {
           });
 
           ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-          ExpectCounterChanged("xla::max_pool3d_with_indices",
+          ExpectCounterChanged("xla::max_pool3d",
                                cpp_test::GetIgnoredCounters());
         }
       }
@@ -8699,8 +8775,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
         });
 
         ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-        ExpectCounterChanged("xla::max_pool2d_with_indices",
-                             cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool2d", cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -8731,10 +8806,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DBackward) {
         });
 
         ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-        ExpectCounterChanged("xla::max_pool3d_with_indices",
-                             cpp_test::GetIgnoredCounters());
-        ExpectCounterChanged("xla::max_pool3d_with_indices_backward",
-                             cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool3d", cpp_test::GetIgnoredCounters());
       }
     }
   }
@@ -8792,10 +8864,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
         });
 
         ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-        ExpectCounterChanged("xla::max_pool3d_with_indices",
-                             cpp_test::GetIgnoredCounters());
-        ExpectCounterChanged("xla::max_pool3d_with_indices_backward",
-                             cpp_test::GetIgnoredCounters());
+        ExpectCounterChanged("xla::max_pool3d", cpp_test::GetIgnoredCounters());
       }
     }
   }
