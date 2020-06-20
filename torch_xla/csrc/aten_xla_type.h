@@ -556,12 +556,12 @@ class AtenXlaType {
                                                       int64_t dim,
                                                       bool keepdim);
 
-  static std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
-      const at::Tensor& self, at::IntArrayRef kernel_size,
-      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
-      bool ceil_mode);
+  static at::Tensor max_pool2d(const at::Tensor& self,
+                               at::IntArrayRef kernel_size,
+                               at::IntArrayRef stride, at::IntArrayRef padding,
+                               at::IntArrayRef dilation, bool ceil_mode);
 
-  static std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(
+  static std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
       const at::Tensor& self, at::IntArrayRef kernel_size,
       at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
       bool ceil_mode);
@@ -571,6 +571,16 @@ class AtenXlaType {
       at::IntArrayRef kernel_size, at::IntArrayRef stride,
       at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode,
       const at::Tensor& indices);
+
+  static at::Tensor max_pool3d(const at::Tensor& self,
+                               at::IntArrayRef kernel_size,
+                               at::IntArrayRef stride, at::IntArrayRef padding,
+                               at::IntArrayRef dilation, bool ceil_mode);
+
+  static std::tuple<at::Tensor, at::Tensor> max_pool3d_with_indices(
+      const at::Tensor& self, at::IntArrayRef kernel_size,
+      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+      bool ceil_mode);
 
   static at::Tensor max_pool3d_with_indices_backward(
       const at::Tensor& grad_output, const at::Tensor& self,

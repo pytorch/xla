@@ -80,10 +80,19 @@ _PARSER = lark.Lark(_GRAMMAR, parser='lalr', propagate_positions=True)
 _XPARSER = lark.Lark(
     _GRAMMAR, parser='lalr', propagate_positions=True, keep_all_tokens=True)
 
-# _FN_WHITELIST & _FN_BLACKLIST takes either name or mapsig.
+# _FN_WHITELIST/_FN_FULL_OVERRIDE/_FN_BLACKLIST takes either name or mapsig.
 _FN_BLACKLIST = set([])
 
-_FN_WHITELIST = set([
+# List of non-leaf ops we want to override both forward + backward.
+# TODO(https://github.com/pytorch/pytorch/issues/39959)
+_FN_FULL_OVERRIDE = set([
+    'max_pool2d(Tensor, IntArrayRef, IntArrayRef, IntArrayRef, IntArrayRef, bool) -> Tensor',
+    'max_pool3d(Tensor, IntArrayRef, IntArrayRef, IntArrayRef, IntArrayRef, bool) -> Tensor',
+])
+
+# List of non-leaf ops we want to override forward.
+# TODO(#1362, #1364)
+_FN_WHITELIST = _FN_FULL_OVERRIDE | set([
     'copy_(Tensor, Tensor, bool) -> Tensor',
     'einsum',
     'resize_',
@@ -951,8 +960,20 @@ def parse_local_overrides(path):
   return overrides
 
 
+def generate_unboxed(aten_sig, overload, override_fn):
+  code = '  m.impl_UNBOXED("{}", static_cast<{}>(&{}));\n'.format(
+      aten_sig.split('(')[0].split('::')[1], overload, override_fn)
+  return code
+
+
 def generate_registrations(fgens, overrides):
-  code = 'TORCH_LIBRARY_IMPL(aten, XLA, m) {\n'
+  aten_code = 'TORCH_LIBRARY_IMPL(aten, XLA, m) {\n'
+  preautograd_code = """TORCH_LIBRARY_IMPL(_, XLAPreAutograd, m) {
+  m.fallback(torch::CppFunction::makeFallthrough());
+}
+
+TORCH_LIBRARY_IMPL(aten, XLAPreAutograd, m) {
+"""
   overridden = set()
   for fgen in fgens:
     if not is_overrideable(fgen):
@@ -966,9 +987,12 @@ def generate_registrations(fgens, overrides):
     if override_fn:
       pos = fgen.funsig.find('(')
       overload = fgen.funsig[:pos] + ' (*)' + fgen.funsig[pos:]
-      code += ('  m.impl_UNBOXED("{}", static_cast<{}>(&{}));\n'.format(
-          fgen.aten_sig.split('(')[0].split('::')[1], overload, override_fn))
-  return code + '\n}\n', overridden
+      unboxed = generate_unboxed(fgen.aten_sig, overload, override_fn)
+      if fgen.mapsig in _FN_FULL_OVERRIDE:
+        preautograd_code += unboxed
+      else:
+        aten_code += unboxed
+  return aten_code + '\n}\n' + preautograd_code + '\n}\n', overridden
 
 
 # XLA is only able to override leaf ops and whitelisted non-leaf ops.

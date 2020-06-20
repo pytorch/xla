@@ -9,6 +9,7 @@
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_tensor_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type_default.h"
@@ -56,13 +57,6 @@ struct XlaOptions {
   c10::optional<Device> device;
   c10::optional<at::ScalarType> scalar_type;
 };
-
-// Returns true if dilation is non-trivial (not 1) in at least one dimension.
-bool IsNonTrivialDilation(at::IntArrayRef dilation) {
-  return std::any_of(
-      dilation.begin(), dilation.end(),
-      [](const int64_t dim_dilation) { return dim_dilation != 1; });
-}
 
 bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,
                        at::ScalarType tensor_type, at::ScalarType type) {
@@ -1836,6 +1830,16 @@ std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::max_out(
   return std::forward_as_tuple(max, max_values);
 }
 
+at::Tensor AtenXlaType::max_pool2d(const at::Tensor& self,
+                                   at::IntArrayRef kernel_size,
+                                   at::IntArrayRef stride,
+                                   at::IntArrayRef padding,
+                                   at::IntArrayRef dilation, bool ceil_mode) {
+  XLA_FN_COUNTER("xla::");
+  return aten_autograd_ops::MaxPool2dAutogradFunction::apply(
+      self, kernel_size, stride, padding, dilation, ceil_mode);
+}
+
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::max_pool2d_with_indices(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool ceil_mode) {
@@ -1869,6 +1873,16 @@ at::Tensor AtenXlaType::max_pool2d_with_indices_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       /*spatial_dim_count=*/2, XlaHelpers::I64List(kernel_size),
       XlaHelpers::I64List(stride), XlaHelpers::I64List(padding), ceil_mode));
+}
+
+at::Tensor AtenXlaType::max_pool3d(const at::Tensor& self,
+                                   at::IntArrayRef kernel_size,
+                                   at::IntArrayRef stride,
+                                   at::IntArrayRef padding,
+                                   at::IntArrayRef dilation, bool ceil_mode) {
+  XLA_FN_COUNTER("xla::");
+  return aten_autograd_ops::MaxPool3dAutogradFunction::apply(
+      self, kernel_size, stride, padding, dilation, ceil_mode);
 }
 
 at::Tensor AtenXlaType::max_pool3d_with_indices_backward(
