@@ -54,12 +54,12 @@ class ErrorGenerator {
   while (TF_PREDICT_FALSE(!(condition))) \
   TF_ERROR_STREAM() << "Check failed: " #condition " "
 
-#define TF_CHECK_OP_LOG(name, op, val1, val2)                         \
-  while (::tensorflow::internal::CheckOpString _result =              \
-             ::tensorflow::internal::name##Impl(                      \
-                 ::tensorflow::internal::GetReferenceableValue(val1), \
-                 ::tensorflow::internal::GetReferenceableValue(val2), \
-                 #val1 " " #op " " #val2))                            \
+#define TF_CHECK_OP_LOG(name, op, val1, val2)                  \
+  while (::tensorflow::internal::CheckOpString _result{        \
+      ::tensorflow::internal::name##Impl(                      \
+          ::tensorflow::internal::GetReferenceableValue(val1), \
+          ::tensorflow::internal::GetReferenceableValue(val2), \
+          #val1 " " #op " " #val2)})                           \
   TF_ERROR_STREAM() << *(_result.str_)
 
 #define TF_CHECK_OP(name, op, val1, val2) TF_CHECK_OP_LOG(name, op, val1, val2)
