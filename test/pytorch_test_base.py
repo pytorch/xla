@@ -228,6 +228,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_fold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_unfold',  # The gradient check code errors out on type() call, and code is slow on XLA
         'test_hardsigmoid_grad_xla',  # gradient check is slow
+        'test_leaky_relu_inplace_overlap_xla',  # doesn't raise
+        'test_threshold_inplace_overlap_xla',  # doesn't raise
     },
 
     # test_type_promotion.py
