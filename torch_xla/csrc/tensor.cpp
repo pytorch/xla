@@ -1397,8 +1397,7 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
   auto async = std::make_shared<Async>(std::move(coll), std::move(tensors_data),
                                        std::move(roots), devices);
 
-  auto syncfn = [async]() -> xla::Status {
-    xla::Status status;
+  auto syncfn = [async]() -> int {
     try {
       TF_VLOG(3) << "Executing (OpByOp) IR graph hash "
                  << xla::util::HexHash(async->coll.hash) << " on device "
@@ -1420,8 +1419,9 @@ XLATensor::OpByOpAsync XLATensor::SyncTensorsGraphOpByOp(
       for (auto& unlocker : async->coll.unlocker) {
         unlocker.SetStatus(exptr);
       }
+      throw;
     }
-    return status;
+    return 0;
   };
   OpByOpAsync async_op(std::move(syncfn));
   return async_op.Schedule();

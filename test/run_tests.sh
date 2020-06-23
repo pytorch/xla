@@ -33,11 +33,6 @@ export XLA_DUMP_FATAL_STACK=1
 
 function run_test {
   "$@"
-  # For reasons at this time unknow, only on FB CircleCI, it seems like a rapid
-  # cleanup+init sequence of intialization of CUDA drivers, causes the
-  # initialization to fail.
-  # Big HACK here until a further investigation can happen.
-  sleep 3
 }
 
 function run_opbyop {
