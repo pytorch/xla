@@ -62,14 +62,16 @@ def compare_tensors(tensor1, tensor2, rtol=1e-05, atol=1e-08, max_diffs=25):
   for i in range(0, len(values1)):
     v1 = values1[i]
     v2 = values2[i]
+    r = max(abs(v1), abs(v2)) * rtol
     error = abs(v1 - v2)
-    if error > atol + rtol * abs(v2):
+    if error > max(r, atol):
       diffs.append((error, i, v1, v2))
 
   top_diffs = sorted(diffs, key=lambda x: x[0], reverse=True)[:max_diffs]
   report = ''
-  for _, i, v1, v2 in top_diffs:
-    report += '{}: {} vs. {}\n'.format(_index_of(sizes1, i), v1, v2)
+  for error, i, v1, v2 in top_diffs:
+    report += '{}: {} vs. {}\terror={}\n'.format(
+        _index_of(sizes1, i), v1, v2, error)
   if len(diffs) > max_diffs:
     report += '... aborting after {} differences\n'.format(max_diffs)
   return report
