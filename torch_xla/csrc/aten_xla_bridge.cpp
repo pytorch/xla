@@ -178,6 +178,13 @@ c10::optional<Device> GetXlaDevice(const c10::Device& device) {
   return AtenDeviceToXlaDevice(device);
 }
 
+c10::optional<Device> GetXlaDevice(const c10::optional<c10::Device>& device) {
+  if (!device) {
+    return c10::nullopt;
+  }
+  return GetXlaDevice(*device);
+}
+
 Device AtenDeviceToXlaDevice(const c10::Device& device) {
   XLA_CHECK_EQ(device.type(), at::kXLA) << device;
   int ordinal = device.has_index() ? device.index() : -1;
