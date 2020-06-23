@@ -1676,10 +1676,13 @@ class MNISTComparator(nn.Module):
 class TestModelComparator(XlaTestCase):
 
   def test(self):
+    SEED = 42
+
     xla_device = xm.xla_device()
     x = _gen_tensor(8, 1, 28, 28)
+    xla_x = x.to(xla_device)
 
-    torch.manual_seed(42)
+    _set_rng_seed(SEED)
     model = MNISTComparator()
     save_dir1 = xu.TmpFolder()
     mc.configure(save_dir1.name)
@@ -1687,9 +1690,8 @@ class TestModelComparator(XlaTestCase):
 
     save_dir2 = xu.TmpFolder()
     mc.configure(save_dir2.name)
-    torch.manual_seed(42)
+    _set_rng_seed(SEED)
     xla_model = MNISTComparator().to(xla_device)
-    xla_x = x.to(xla_device)
     xla_model(xla_x)
 
     report = mc.compare(save_dir1.name, save_dir2.name, rtol=1e-03, atol=1e-03)
