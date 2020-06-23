@@ -56,19 +56,22 @@ def compare_tensors(tensor1, tensor2, rtol=1e-05, atol=1e-08, max_diffs=25):
   if sizes1 != sizes2:
     return 'Tensors have different shape: {} vs. {}\n'.format(sizes1, sizes2)
 
-  report = ''
-  diffno = 0
   values1 = tensor1.flatten().tolist()
   values2 = tensor2.flatten().tolist()
+  diffs = []
   for i in range(0, len(values1)):
     v1 = values1[i]
     v2 = values2[i]
-    if abs(v1 - v2) > atol + rtol * abs(v2):
-      if diffno >= max_diffs:
-        report += '... aborting after {} differences\n'.format(diffno)
-        break
-      report += '{}: {} vs. {}\n'.format(_index_of(sizes1, i), v1, v2)
-      diffno += 1
+    error = abs(v1 - v2)
+    if error > atol + rtol * abs(v2):
+      diffs.append((error, i, v1, v2))
+
+  top_diffs = sorted(diffs, key=lambda x: x[0], reverse=True)[:max_diffs]
+  report = ''
+  for _, i, v1, v2 in top_diffs:
+    report += '{}: {} vs. {}\n'.format(_index_of(sizes1, i), v1, v2)
+  if len(diffs) > max_diffs:
+    report += '... aborting after {} differences\n'.format(max_diffs)
   return report
 
 
