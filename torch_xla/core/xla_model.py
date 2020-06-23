@@ -416,7 +416,7 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
     return inputs
 
 
-def all_gather(value, dim=0):
+def all_gather(value, dim=0, groups=None):
   """Performs an all-gather operation along a given dimension.
 
   Args:
@@ -427,15 +427,29 @@ def all_gather(value, dim=0):
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
+
+  def get_pad_indices(groups):
+    ordinal = get_ordinal()
+    if groups is None:
+      return ordinal, xrt_world_size() - 1 - ordinal
+    for group in groups:
+      try:
+        i = group.index(ordinal)
+        return i, len(group) - 1 - i
+      except ValueError:
+        continue
+    else:
+      raise ValueError('Variable `groups` does not cover the world_size')
+
   if dim < 0:
     dim = value.dim() + dim
   size = value.size(dim)
   padding = [0] * (2 * value.dim())
   idx = value.dim() - 1 - dim
-  ordinal = get_ordinal()
-  padding[2 * idx] = ordinal * size
-  padding[2 * idx + 1] = (xrt_world_size() - 1 - ordinal) * size
-  return all_reduce(REDUCE_SUM, F.pad(value, padding))
+  left, right = get_pad_indices(groups)
+  padding[2 * idx] = left * size
+  padding[2 * idx + 1] = right * size
+  return all_reduce(REDUCE_SUM, F.pad(value, padding), groups=groups)
 
 
 def all_to_all(value,
