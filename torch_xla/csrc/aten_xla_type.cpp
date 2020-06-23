@@ -34,14 +34,29 @@
 namespace torch_xla {
 namespace {
 
-Device GetXlaDeviceOrCurrent(const c10::optional<c10::Device>& device) {
-  auto xla_device_opt = bridge::GetXlaDevice(device);
-  return xla_device_opt ? *xla_device_opt : GetCurrentDevice();
-}
+struct XlaOptions {
+  XlaOptions(const at::TensorOptions& options,
+             c10::optional<Device> device_opt = c10::nullopt,
+             c10::optional<at::ScalarType> scalar_type_opt = c10::nullopt)
+      : device(std::move(device_opt)), scalar_type(std::move(scalar_type_opt)) {
+    if (options.has_device()) {
+      device = bridge::AtenDeviceToXlaDevice(options.device());
+    }
+    if (options.has_dtype()) {
+      scalar_type = c10::typeMetaToScalarType(options.dtype());
+    }
+  }
 
-at::ScalarType GetScalarTypeOrFloat(c10::optional<at::ScalarType> scalar_type) {
-  return scalar_type ? *scalar_type : at::ScalarType::Float;
-}
+  Device get_device() const { return device ? *device : GetCurrentDevice(); }
+
+  at::ScalarType get_scalar_type(
+      at::ScalarType defval = at::ScalarType::Float) const {
+    return scalar_type ? *scalar_type : defval;
+  }
+
+  c10::optional<Device> device;
+  c10::optional<at::ScalarType> scalar_type;
+};
 
 bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,
                        at::ScalarType tensor_type, at::ScalarType type) {
@@ -1097,9 +1112,7 @@ at::Tensor AtenXlaType::embedding_dense_backward(const at::Tensor& grad_output,
 }
 
 at::Tensor AtenXlaType::empty(
-    at::IntArrayRef size, c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout, c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory,
+    at::IntArrayRef size, const at::TensorOptions& options,
     c10::optional<at::MemoryFormat> /* memory_format */) {
   XLA_FN_COUNTER("xla::");
   // PT empty*() are optimizations to avoid initializing the data when it is
@@ -1107,19 +1120,17 @@ at::Tensor AtenXlaType::empty(
   // does not actually end up doing any memory initialization, we use that and
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
-  return bridge::AtenFromXlaTensor(XLATensor::full(
-      XlaHelpers::I64List(size), 0, GetXlaDeviceOrCurrent(device),
-      GetScalarTypeOrFloat(dtype)));
+  XlaOptions xla_options(options);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::full(XlaHelpers::I64List(size), 0, xla_options.get_device(),
+                      xla_options.get_scalar_type()));
 }
 
 at::Tensor AtenXlaType::empty_strided(at::IntArrayRef size,
                                       at::IntArrayRef stride,
-                                      c10::optional<at::ScalarType> dtype,
-                                      c10::optional<at::Layout> layout,
-                                      c10::optional<at::Device> device,
-                                      c10::optional<bool> pin_memory) {
+                                      const at::TensorOptions& options) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor t = empty(size, dtype, layout, device, pin_memory, c10::nullopt);
+  at::Tensor t = empty(size, options, c10::nullopt);
   return as_strided(t, size, stride, /*storage_offset=*/0);
 }
 
