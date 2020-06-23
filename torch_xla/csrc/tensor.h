@@ -1285,7 +1285,7 @@ class XLATensor {
       std::vector<XLATensor>* tensors);
 
   // Runs an asynchronous syn operation using the op-by-op executor.
-  using OpByOpAsync = xla::util::AsyncTask<xla::Status>;
+  using OpByOpAsync = xla::util::AsyncTask<int>;
   static OpByOpAsync SyncTensorsGraphOpByOp(
       std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
       const SyncTensorsConfig& config);
