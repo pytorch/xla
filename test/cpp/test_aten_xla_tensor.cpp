@@ -8663,25 +8663,21 @@ TEST_F(AtenXlaTensorTest, TestConv3DBackward) {
                                    groups);
             };
 
-            ForEachDevice(
-                {DeviceType::CPU, DeviceType::TPU},
-                [&](const torch::Device& device) {
-                  torch::Tensor bias =
-                      with_bias
-                          ? torch::rand({out_channels},
-                                        torch::TensorOptions(torch::kDouble))
-                          : torch::Tensor();
-                  TestBackward(
-                      {torch::rand({4, in_channels, 14, 14, 14},
-                                   torch::TensorOptions(torch::kDouble)
-                                       .requires_grad(true)),
-                       torch::rand({out_channels, in_channels / groups,
-                                    kernel_size, kernel_size, kernel_size},
-                                   torch::TensorOptions(torch::kDouble)
-                                       .requires_grad(true)),
-                       bias},
-                      device, testfn);
-                });
+            ForEachDevice([&](const torch::Device& device) {
+              torch::Tensor bias =
+                  with_bias ? torch::rand({out_channels},
+                                          torch::TensorOptions(torch::kDouble))
+                            : torch::Tensor();
+              TestBackward({torch::rand({4, in_channels, 14, 14, 14},
+                                        torch::TensorOptions(torch::kDouble)
+                                            .requires_grad(true)),
+                            torch::rand({out_channels, in_channels / groups,
+                                         kernel_size, kernel_size, kernel_size},
+                                        torch::TensorOptions(torch::kDouble)
+                                            .requires_grad(true)),
+                            bias},
+                           device, testfn);
+            });
           }
         };
       }
@@ -8711,26 +8707,21 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv3DBackward) {
                     /*groups=*/groups,
                     /*dilation=*/{dilation, dilation + 1, dilation});
               };
-              ForEachDevice(
-                  {DeviceType::CPU, DeviceType::TPU},
-                  [&](const torch::Device& device) {
-                    torch::Tensor input =
-                        torch::rand({4, out_channels, 14, 14, 14},
-                                    torch::TensorOptions(torch::kDouble)
-                                        .requires_grad(true));
-                    torch::Tensor weight =
-                        torch::rand({out_channels, in_channels / groups,
-                                     kernel_size, kernel_size, kernel_size},
-                                    torch::TensorOptions(torch::kDouble)
-                                        .requires_grad(true));
-                    torch::Tensor bias =
-                        with_bias
-                            ? torch::rand({in_channels},
-                                          torch::TensorOptions(torch::kDouble)
-                                              .requires_grad(true))
-                            : torch::Tensor();
-                    TestBackward({input, weight, bias}, device, testfn);
-                  });
+              ForEachDevice([&](const torch::Device& device) {
+                torch::Tensor input = torch::rand(
+                    {4, out_channels, 14, 14, 14},
+                    torch::TensorOptions(torch::kDouble).requires_grad(true));
+                torch::Tensor weight = torch::rand(
+                    {out_channels, in_channels / groups, kernel_size,
+                     kernel_size, kernel_size},
+                    torch::TensorOptions(torch::kDouble).requires_grad(true));
+                torch::Tensor bias =
+                    with_bias ? torch::rand({in_channels},
+                                            torch::TensorOptions(torch::kDouble)
+                                                .requires_grad(true))
+                              : torch::Tensor();
+                TestBackward({input, weight, bias}, device, testfn);
+              });
             }
           };
         }
