@@ -380,8 +380,6 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64 k,
 }
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
-  xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   // Expand cases in https://pytorch.org/docs/stable/torch.html#torch.matmul
   xla::Shape lhs_shape = XlaHelpers::ShapeOfXlaOp(lhs);
   xla::Shape rhs_shape = XlaHelpers::ShapeOfXlaOp(rhs);
@@ -420,6 +418,8 @@ xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
     dims.add_lhs_contracting_dimensions(lhs_shape.rank() - 1);
     dims.add_rhs_contracting_dimensions(lhs_shape.rank() - 2);
 
+    xla::PrecisionConfig precision_config =
+        XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
     return xla::DotGeneral(reshaped_lhs, reshaped_rhs, dims, &precision_config);
   }
   XLA_ERROR() << "Unsupported matmul operation: matmul(" << lhs_shape << ", "

@@ -160,9 +160,8 @@ class XlaHelpers {
   static bool SameStaticDimensions(const xla::Shape& shape1,
                                    const xla::Shape& shape2);
 
-  // Creates a convolution or dot precision configuration.
   static xla::PrecisionConfig BuildPrecisionConfig(
-      const xla::PrecisionConfig::Precision conv_precision);
+      xla::PrecisionConfig::Precision conv_precision, int num_arguments = 2);
 
   // Converts an iterable container to a vector XLA int64's.
   template <typename S>
