@@ -44,11 +44,10 @@ xla::PrecisionConfig::Precision XlaHelpers::s_mat_mul_precision =
     xla::PrecisionConfig::DEFAULT;
 
 xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
-    const xla::PrecisionConfig::Precision conv_precision) {
+    xla::PrecisionConfig::Precision conv_precision, int num_arguments) {
   xla::PrecisionConfig precision_config;
-  // Dot and convolution take two operators.
-  precision_config.mutable_operand_precision()->Resize(
-      /*new_size=*/2, conv_precision);
+  precision_config.mutable_operand_precision()->Resize(num_arguments,
+                                                       conv_precision);
   return precision_config;
 }
 
