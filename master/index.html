@@ -695,7 +695,7 @@ returns the list/tuple itself.</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.all_gather">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_gather</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">dim=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_gather" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_gather</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">dim=0</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_gather" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an all-gather operation along a given dimension.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -703,6 +703,14 @@ returns the list/tuple itself.</p>
 <li><p><strong>value</strong> (<em>torch.Tensor</em>) – The input tensor.</p></li>
 <li><p><strong>dim</strong> (<em>python:int</em>) – The gather dimension.
 Default: 0</p></li>
+<li><p><strong>groups</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>A list of list, representing the replica groups for
+the <cite>all_gather()</cite> operation. Example: <cite>[[0, 1, 2, 3], [4, 5, 6, 7]]</cite></p>
+<blockquote>
+<div><p>defines two groups, one with the <cite>[0, 1, 2, 3]</cite> replicas and one with
+the <cite>[4, 5, 6, 7]</cite> replicas. If <cite>None</cite> there will be only one group with
+all the replicas in it.</p>
+</div></blockquote>
+</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>

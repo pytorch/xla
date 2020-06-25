@@ -668,13 +668,18 @@
     <span class="k">return</span> <span class="n">inputs</span></div>
 
 
-<div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs an all-gather operation along a given dimension.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    value (torch.Tensor): The input tensor.</span>
 <span class="sd">    dim (int): The gather dimension.</span>
 <span class="sd">      Default: 0</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_gather()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
 <span class="sd">  Returns:</span>
 <span class="sd">    A tensor which has, in the ``dim`` dimension, all the values from the</span>
 <span class="sd">    participating replicas.</span>
@@ -683,11 +688,19 @@
     <span class="n">dim</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">+</span> <span class="n">dim</span>
   <span class="n">size</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
   <span class="n">padding</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">())</span>
-  <span class="n">idx</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">dim</span>
   <span class="n">ordinal</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span>
-  <span class="n">padding</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">ordinal</span> <span class="o">*</span> <span class="n">size</span>
-  <span class="n">padding</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ordinal</span><span class="p">)</span> <span class="o">*</span> <span class="n">size</span>
-  <span class="k">return</span> <span class="n">all_reduce</span><span class="p">(</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">padding</span><span class="p">))</span></div>
+  <span class="k">if</span> <span class="n">groups</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">ordinal</span><span class="p">,</span> <span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ordinal</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">ordinals</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
+        <span class="n">ordinals</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">i</span><span class="p">)</span>
+    <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">ordinals</span><span class="p">[</span><span class="n">ordinal</span><span class="p">]</span>
+  <span class="n">idx</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">dim</span>
+  <span class="n">padding</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">left</span> <span class="o">*</span> <span class="n">size</span>
+  <span class="n">padding</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">right</span> <span class="o">*</span> <span class="n">size</span>
+  <span class="k">return</span> <span class="n">all_reduce</span><span class="p">(</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">padding</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="all_to_all"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_to_all">[docs]</a><span class="k">def</span> <span class="nf">all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span>
