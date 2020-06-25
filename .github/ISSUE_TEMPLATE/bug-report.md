@@ -24,6 +24,8 @@ https://github.com/pytorch/xla/blob/master/TROUBLESHOOTING.md#using-debug_runpy-
 
 Things to avoid in repros is the need to download datasets which require setting up keys or other login information, like Kaggle downloads for example.
 
+Another example are Colab which mount user's Google Drive storages.
+
 Using a fake data generator could be a solution, in case the dataset cannot be easily downloaded without setting up credentials:
 
 https://github.com/pytorch/xla/blob/784b4d4f21751a54be0029a95f47d3896561c2a9/test/test_train_mp_mnist.py#L65
