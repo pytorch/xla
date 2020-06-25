@@ -20,6 +20,8 @@ class MeshService {
 
   ~MeshService();
 
+  void Shutdown();
+
  private:
   std::unique_ptr<Impl> impl_;
 };
