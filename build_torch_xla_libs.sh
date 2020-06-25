@@ -26,7 +26,7 @@ if [[ "$XLA_CUDA" == "1" ]] && [[ "$CLOUD_BUILD" == "true" ]]; then
 fi
 
 OPTS=(--cxxopt="-std=c++14")
-if [ $(basename -- $CC) =~ ^clang ]; then
+if [[ $(basename -- $CC) =~ ^clang ]]; then
   OPTS+=(--cxxopt="-Wno-c++11-narrowing")
 fi
 
