@@ -293,17 +293,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
     },
 }
 
-DISABLED_TORCH_TESTS_GPU_ONLY = {
-    # test_torch.py
-    'TestTorchDeviceTypeXLA': {
-        'test_float_to_int_conversion_finite_xla',  # different behavior than numpy when casting float_max/min to int types
-        'test_logcumsumexp_xla',  # FIXME: replace torch.allclose in pytorch test
-    },
-    'TestTensorDeviceOpsXLA': {
-        'test_svd_square_xla',  # FIXME: wrong result
-        'test_svd_square_col_maj_xla',  # FIXME: flaky
-    },
-}
+DISABLED_TORCH_TESTS_GPU_ONLY = {}
 
 
 class MatchSet(object):
