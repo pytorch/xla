@@ -13,6 +13,23 @@ assignees: ''
 
 ## To Reproduce
 
+<!--
+It is really important for the team to have a quick repro, which requires no setup work.
+
+The quicker is the repro to be run, the higher the chances the bug will be addressed sooner.
+
+The best way to create quick repros is to create a Colab based on the following template:
+
+https://github.com/pytorch/xla/blob/master/TROUBLESHOOTING.md#using-debug_runpy-to-collect-debug-information
+
+Things to avoid in repros is the need to download datasets which require setting up keys or other login information, like Kaggle downloads for example.
+
+Using a fake data generator could be a solution, in case the dataset cannot be easily downloaded without setting up credentials:
+
+https://github.com/pytorch/xla/blob/784b4d4f21751a54be0029a95f47d3896561c2a9/test/test_train_mp_mnist.py#L65
+
+-->
+
 Steps to reproduce the behavior:
 
 1.
@@ -29,7 +46,6 @@ Steps to reproduce the behavior:
 
  - Reproducible on XLA backend [CPU/TPU]:
  - torch_xla version:
- - Any other relevant information. In case of issues related to slow executions, re-compilations, etc.., it is useful to have the `tar.gz` report from https://github.com/pytorch/xla/blob/master/TROUBLESHOOTING.md#using-debug_runpy-to-collect-debug-information
 
 
 ## Additional context
