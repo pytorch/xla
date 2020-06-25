@@ -1533,9 +1533,16 @@ std::map<std::string, Metric> XrtComputationClient::GetMetrics() const {
 }
 
 void XrtComputationClient::PrepareToExit() {
+  if (mesh_service_ != nullptr) {
+    TF_VLOG(1) << "Shutting down mesh service ...";
+    mesh_service_->Shutdown();
+    TF_VLOG(1) << "Shutting down mesh service ... done!";
+  }
   if (triggered_task_ != nullptr) {
+    TF_VLOG(1) << "Waiting XRT handle releaser thread ...";
     size_t run_id = triggered_task_->Activate();
     triggered_task_->WaitForRun(run_id);
+    TF_VLOG(1) << "Waiting XRT handle releaser thread ... done!";
   }
 }
 

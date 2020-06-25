@@ -226,6 +226,11 @@ MeshService::MeshService(const std::string& address, grpc::Config config)
 
 MeshService::~MeshService() {}
 
+void MeshService::Shutdown() {
+  impl_->server->Shutdown();
+  impl_->server->Wait();
+}
+
 struct MeshClient::Impl {
   explicit Impl(const std::string& address) : address(address) {
     channel =
