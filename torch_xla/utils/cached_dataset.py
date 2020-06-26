@@ -25,6 +25,16 @@ class CachedDataset(torch.utils.data.Dataset):
 
   The `CachedDataset` can be used to train the CPU/RAM resources required to
   process a raw dataset, with storage/network resources.
+  Example::
+
+    train_dataset = datasets.MNIST(
+        os.path.join(FLAGS.datadir, str(xm.get_ordinal())),
+        train=True,
+        download=True,
+        transform=transforms.Compose(
+            [transforms.ToTensor(),
+             transforms.Normalize((0.1307,), (0.3081,))]))
+    train_dataset = CachedDataset(train_dataset, FLAGS.dscache_dir)
 
   Args:
     data_set (torch.utils.data.Dataset): The raw `torch.utils.data.Dataset` to be
