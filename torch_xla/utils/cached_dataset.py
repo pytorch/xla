@@ -23,7 +23,7 @@ def _index_split(index, split_size, split_count):
 class CachedDataset(torch.utils.data.Dataset):
   """Wraps an existing `torch.utils.data.Dataset` by providing file caching.
 
-  The `CachedDataset` can be used to train the CPU/RAM resources required to
+  The `CachedDataset` can be used to trade the CPU/RAM resources required to
   process a raw dataset, with storage/network resources.
   Example::
 
