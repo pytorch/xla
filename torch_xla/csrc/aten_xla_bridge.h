@@ -49,6 +49,9 @@ c10::optional<Device> GetXlaDevice(const at::TensorOptions& tensor_options);
 
 c10::optional<Device> GetXlaDevice(const c10::Device& device);
 
+c10::optional<Device> GetXlaDevice(
+    const c10::optional<c10::Device>& device = c10::nullopt);
+
 Device AtenDeviceToXlaDevice(const c10::Device& device);
 
 c10::Device XlaDeviceToAtenDevice(const Device& device);
