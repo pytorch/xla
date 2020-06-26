@@ -277,6 +277,16 @@
 
 <span class="sd">  The `CachedDataset` can be used to train the CPU/RAM resources required to</span>
 <span class="sd">  process a raw dataset, with storage/network resources.</span>
+<span class="sd">  Example::</span>
+
+<span class="sd">    train_dataset = datasets.MNIST(</span>
+<span class="sd">        os.path.join(FLAGS.datadir, str(xm.get_ordinal())),</span>
+<span class="sd">        train=True,</span>
+<span class="sd">        download=True,</span>
+<span class="sd">        transform=transforms.Compose(</span>
+<span class="sd">            [transforms.ToTensor(),</span>
+<span class="sd">             transforms.Normalize((0.1307,), (0.3081,))]))</span>
+<span class="sd">    train_dataset = CachedDataset(train_dataset, FLAGS.dscache_dir)</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    data_set (torch.utils.data.Dataset): The raw `torch.utils.data.Dataset` to be</span>
