@@ -316,12 +316,13 @@ def generic_read(path):
       return fd.read()
 
 
-def generic_glob(path):
+def generic_glob(path, recursive=False):
   """Lists all the names within a specified path.
 
   Args:
     path (string): The path to be listed (can have wildcards), either local
       file system, or GCS.
+    recursive (bool): Whether the glob operation should recurse into subdirectories.
 
   Returns:
     The names list within the provided path.
@@ -329,4 +330,4 @@ def generic_glob(path):
   if path.startswith(CLOUD_STORAGE_PREFIX):
     return torch_xla._XLAC._xla_tffs_list(path)
   else:
-    return glob.glob(path)
+    return glob.glob(path, recursive=recursive)
