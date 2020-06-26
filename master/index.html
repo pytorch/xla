@@ -1460,7 +1460,7 @@ Default: None</p></li>
 
 <dl class="function">
 <dt id="torch_xla.utils.gcsfs.generic_write">
-<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">generic_write</code><span class="sig-paren">(</span><em class="sig-param">output_string</em>, <em class="sig-param">output_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#generic_write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.generic_write" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">generic_write</code><span class="sig-paren">(</span><em class="sig-param">output_string</em>, <em class="sig-param">output_path</em>, <em class="sig-param">makedirs=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#generic_write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.generic_write" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write a string/bytes or file into a GCS blob or local disk.</p>
 <p>Depending on the output_path passed in, this API can write to local or GCS
 file. Checks if the <cite>output_path</cite> starts with
@@ -1470,6 +1470,34 @@ the ‘gs://’ prefix, and uses <cite>open</cite> otherwise.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>output_string</strong> (<em>string</em>) – The string to be written to the output.</p></li>
 <li><p><strong>output_path</strong> (<em>string</em>) – The GCS path or local path of the output.</p></li>
+<li><p><strong>makedirs</strong> (<em>bool</em>) – Whether the <cite>path</cite> parent folders should be created if
+missing.
+Default: False</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<span class="target" id="module-torch_xla.utils.cached_dataset"></span><dl class="class">
+<dt id="torch_xla.utils.cached_dataset.CachedDataset">
+<em class="property">class </em><code class="sig-prename descclassname">torch_xla.utils.cached_dataset.</code><code class="sig-name descname">CachedDataset</code><span class="sig-paren">(</span><em class="sig-param">data_set</em>, <em class="sig-param">path</em>, <em class="sig-param">max_files_per_folder=1000</em>, <em class="sig-param">compress=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/cached_dataset.html#CachedDataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.cached_dataset.CachedDataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wraps an existing <cite>torch.utils.data.Dataset</cite> by providing file caching.</p>
+<p>The <cite>CachedDataset</cite> can be used to train the CPU/RAM resources required to
+process a raw dataset, with storage/network resources.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_set</strong> (<em>torch.utils.data.Dataset</em>) – The raw <cite>torch.utils.data.Dataset</cite> to be
+cached.</p></li>
+<li><p><strong>path</strong> (<em>string</em>) – The path where the dataset samples should be stored/loaded.
+The <cite>path</cite> needs to be writeable, unless all the samples are already stored.
+The <cite>path</cite> can be a GCS path (prefixed with <cite>gs://</cite>).</p></li>
+<li><p><strong>max_files_per_folder</strong> (<em>python:int</em>) – The maximum amount of files to be stored within a
+single folder.
+Default: 1000</p></li>
+<li><p><strong>compress</strong> (<em>bool</em>) – Whether the saved samples should be compressed. Compression
+saves space at the expense of CPU required to compress/decompress.
+Default: True</p></li>
 </ul>
 </dd>
 </dl>
