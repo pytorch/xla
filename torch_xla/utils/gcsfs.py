@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import builtins
 import collections
+import glob
 import io
 import locale
 import os
@@ -269,10 +270,11 @@ def generic_open(path, mode='r', encoding=None):
   """
   if path.startswith(CLOUD_STORAGE_PREFIX):
     return open(path, mode=mode, encoding=encoding)
-  return builtins.open(path, mode=mode, encoding=encoding)
+  else:
+    return builtins.open(path, mode=mode, encoding=encoding)
 
 
-def generic_write(output_string, output_path):
+def generic_write(output_string, output_path, makedirs=False):
   """Write a string/bytes or file into a GCS blob or local disk.
 
   Depending on the output_path passed in, this API can write to local or GCS
@@ -282,11 +284,19 @@ def generic_write(output_string, output_path):
   Args:
     output_string (string): The string to be written to the output.
     output_path (string): The GCS path or local path of the output.
+    makedirs (bool): Whether the `path` parent folders should be created if
+      missing.
+      Default: False
   """
   if output_path.startswith(CLOUD_STORAGE_PREFIX):
     write(output_path, output_string)
   else:
-    with open(output_path, 'w') as fd:
+    if makedirs:
+      dpath = os.path.dirname(output_path)
+      if not os.path.isdir(dpath):
+        os.makedirs(dpath, exist_ok=True)
+    mode = 'wb' if isinstance(output_string, bytes) else 'wt'
+    with builtins.open(output_path, mode=mode) as fd:
       fd.write(output_string)
 
 
@@ -301,5 +311,22 @@ def generic_read(path):
   """
   if path.startswith(CLOUD_STORAGE_PREFIX):
     return read(path)
-  with open(path, 'r') as fd:
-    return fd.read()
+  else:
+    with builtins.open(path, mode='rb') as fd:
+      return fd.read()
+
+
+def generic_glob(path):
+  """Lists all the names within a specified path.
+
+  Args:
+    path (string): The path to be listed (can have wildcards), either local
+      file system, or GCS.
+
+  Returns:
+    The names list within the provided path.
+  """
+  if path.startswith(CLOUD_STORAGE_PREFIX):
+    return torch_xla._XLAC._xla_tffs_list(path)
+  else:
+    return glob.glob(path)

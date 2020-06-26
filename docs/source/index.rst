@@ -80,4 +80,6 @@ utils
 .. autofunction:: generic_read
 .. autofunction:: generic_write
 
+.. automodule:: torch_xla.utils.cached_dataset
+.. autoclass:: CachedDataset
 
