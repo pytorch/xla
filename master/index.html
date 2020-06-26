@@ -1482,7 +1482,7 @@ Default: False</p></li>
 <dt id="torch_xla.utils.cached_dataset.CachedDataset">
 <em class="property">class </em><code class="sig-prename descclassname">torch_xla.utils.cached_dataset.</code><code class="sig-name descname">CachedDataset</code><span class="sig-paren">(</span><em class="sig-param">data_set</em>, <em class="sig-param">path</em>, <em class="sig-param">max_files_per_folder=1000</em>, <em class="sig-param">compress=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/cached_dataset.html#CachedDataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.cached_dataset.CachedDataset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Wraps an existing <cite>torch.utils.data.Dataset</cite> by providing file caching.</p>
-<p>The <cite>CachedDataset</cite> can be used to train the CPU/RAM resources required to
+<p>The <cite>CachedDataset</cite> can be used to trade the CPU/RAM resources required to
 process a raw dataset, with storage/network resources.
 Example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">train_dataset</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">MNIST</span><span class="p">(</span>
