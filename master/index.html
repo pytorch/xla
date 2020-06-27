@@ -1495,6 +1495,19 @@ Example:</p>
 <span class="n">train_dataset</span> <span class="o">=</span> <span class="n">CachedDataset</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">,</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">dscache_dir</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>The <cite>CachedDataset</cite> will transparently cache the original <cite>Dataset</cite> samples,
+so that every run after the first, will not trigger any more CPU/RAM usage
+related to the raw samples processing.
+Once a <cite>CachedDataset</cite> is fully cached, it can be exported (ie, tar.gz) and
+used in different machines.
+Just unpack the tar.gz and pass <cite>None</cite> as original <cite>Dataset</cite>:
+Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">train_dataset</span> <span class="o">=</span> <span class="n">CachedDataset</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">dscache_dir</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To fully cache <cite>CachedDataset</cite> just run the <cite>warmup()</cite> API.
+A <cite>CachedDataset</cite> saved on GCS has the advantage to be able to be used from
+different machines without explicit exporting.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">

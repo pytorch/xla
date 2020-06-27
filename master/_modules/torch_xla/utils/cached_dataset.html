@@ -307,6 +307,20 @@
 <span class="sd">             transforms.Normalize((0.1307,), (0.3081,))]))</span>
 <span class="sd">    train_dataset = CachedDataset(train_dataset, FLAGS.dscache_dir)</span>
 
+<span class="sd">  The `CachedDataset` will transparently cache the original `Dataset` samples,</span>
+<span class="sd">  so that every run after the first, will not trigger any more CPU/RAM usage</span>
+<span class="sd">  related to the raw samples processing.</span>
+<span class="sd">  Once a `CachedDataset` is fully cached, it can be exported (ie, tar.gz) and</span>
+<span class="sd">  used in different machines.</span>
+<span class="sd">  Just unpack the tar.gz and pass `None` as original `Dataset`:</span>
+<span class="sd">  Example::</span>
+
+<span class="sd">    train_dataset = CachedDataset(None, FLAGS.dscache_dir)</span>
+
+<span class="sd">  To fully cache `CachedDataset` just run the `warmup()` API.</span>
+<span class="sd">  A `CachedDataset` saved on GCS has the advantage to be able to be used from</span>
+<span class="sd">  different machines without explicit exporting.</span>
+
 <span class="sd">  Args:</span>
 <span class="sd">    data_set (torch.utils.data.Dataset): The raw `torch.utils.data.Dataset` to be</span>
 <span class="sd">      cached. It can be set to `None` in case all the input samples are stored</span>
