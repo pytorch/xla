@@ -568,12 +568,13 @@
       <span class="k">return</span> <span class="n">fd</span><span class="o">.</span><span class="n">read</span><span class="p">()</span></div>
 
 
-<span class="k">def</span> <span class="nf">generic_glob</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">generic_glob</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Lists all the names within a specified path.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The path to be listed (can have wildcards), either local</span>
 <span class="sd">      file system, or GCS.</span>
+<span class="sd">    recursive (bool): Whether the glob operation should recurse into subdirectories.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The names list within the provided path.</span>
@@ -581,7 +582,7 @@
   <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">CLOUD_STORAGE_PREFIX</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tffs_list</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="n">recursive</span><span class="p">)</span>
 </pre></div>
 
              </article>

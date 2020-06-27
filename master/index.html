@@ -1486,7 +1486,7 @@ Default: False</p></li>
 process a raw dataset, with storage/network resources.
 Example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">train_dataset</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">MNIST</span><span class="p">(</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">FLAGS</span><span class="o">.</span><span class="n">datadir</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">get_ordinal</span><span class="p">())),</span>
+    <span class="n">FLAGS</span><span class="o">.</span><span class="n">datadir</span><span class="p">,</span>
     <span class="n">train</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">transform</span><span class="o">=</span><span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">(</span>
@@ -1499,7 +1499,8 @@ Example:</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data_set</strong> (<em>torch.utils.data.Dataset</em>) – The raw <cite>torch.utils.data.Dataset</cite> to be
-cached.</p></li>
+cached. It can be set to <cite>None</cite> in case all the input samples are stored
+within the <cite>path</cite> folder.</p></li>
 <li><p><strong>path</strong> (<em>string</em>) – The path where the dataset samples should be stored/loaded.
 The <cite>path</cite> needs to be writeable, unless all the samples are already stored.
 The <cite>path</cite> can be a GCS path (prefixed with <cite>gs://</cite>).</p></li>
