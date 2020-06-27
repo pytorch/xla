@@ -226,9 +226,13 @@ def _start_fn(index, pf_cfg, fn, args):
   # Calling _setup_replication() will trigger XLA library initialization, so the
   # environment must be fully setup before doing so.
   _setup_replication()
+  fn(gindex, *args)
+
+
+def _mp_start_fn(index, pf_cfg, fn, args):
   exit_code = 0
   try:
-    fn(gindex, *args)
+    _start_fn(index, pf_cfg, fn, args)
   except Exception as e:
     print(
         'Exception in device={}: {}'.format(_get_multiprocessing_device(),
@@ -288,7 +292,7 @@ def spawn(fn,
     _start_fn(0, pf_cfg, fn, args)
   else:
     return torch.multiprocessing.start_processes(
-        _start_fn,
+        _mp_start_fn,
         args=(pf_cfg, fn, args),
         nprocs=pf_cfg.num_devices,
         join=join,
