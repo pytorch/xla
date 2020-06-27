@@ -55,6 +55,20 @@ class CachedDataset(torch.utils.data.Dataset):
              transforms.Normalize((0.1307,), (0.3081,))]))
     train_dataset = CachedDataset(train_dataset, FLAGS.dscache_dir)
 
+  The `CachedDataset` will transparently cache the original `Dataset` samples,
+  so that every run after the first, will not trigger any more CPU/RAM usage
+  related to the raw samples processing.
+  Once a `CachedDataset` is fully cached, it can be exported (ie, tar.gz) and
+  used in different machines.
+  Just unpack the tar.gz and pass `None` as original `Dataset`:
+  Example::
+
+    train_dataset = CachedDataset(None, FLAGS.dscache_dir)
+
+  To fully cache `CachedDataset` just run the `warmup()` API.
+  A `CachedDataset` saved on GCS has the advantage to be able to be used from
+  different machines without explicit exporting.
+
   Args:
     data_set (torch.utils.data.Dataset): The raw `torch.utils.data.Dataset` to be
       cached. It can be set to `None` in case all the input samples are stored
