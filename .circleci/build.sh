@@ -84,7 +84,7 @@ python setup.py build develop
 sccache --show-stats
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
-if ! comamnd -v node; then
+if ! command -v node; then
   curl -L https://git.io/n-install | bash -s -- -y lts
   export PATH="$PATH:$HOME/n/bin"
   NPM_SUDO=0

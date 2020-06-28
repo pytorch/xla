@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-set -e
-set -x
+
+set -euo pipefail
 
 DIST_BUCKET="gs://tpu-pytorch/wheels"
 TORCH_WHEEL="torch-nightly-cp36-cp36m-linux_x86_64.whl"

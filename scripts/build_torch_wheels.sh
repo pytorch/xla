@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e  # Fail on any error.
+set -euo pipefail
 set -x  # Display commands being run.
 
 PYTHON_VERSION=$1

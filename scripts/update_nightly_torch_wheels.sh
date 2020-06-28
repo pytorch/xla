@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-set -e
-set -x
+
+set -euo pipefail
 
 # Activate torch-xla-nightly conda env if not already in it
 if [ "$CONDA_DEFAULT_ENV" != "torch-xla-nightly" ]; then

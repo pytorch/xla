@@ -1,4 +1,7 @@
-set -e
+#!/usr/bin/env bash
+
+set -euo pipefail
+
 pyenv local 3.5.2
 pip install --upgrade pip
 pip install pyyaml -qqq
@@ -67,4 +70,3 @@ if [ -n "${USE_CUDA_DOCKER_RUNTIME:-}" ]; then
   sudo /bin/bash "$DRIVER_FN" -s --no-drm || (sudo cat /var/log/nvidia-installer.log && false)
   nvidia-smi
 fi
-
