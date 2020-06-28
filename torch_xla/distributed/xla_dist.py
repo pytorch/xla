@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 import threading
+import torch_xla.core.xla_env_vars as xenv
 from torch_xla.distributed.cluster import ClusterResolver
 import torch_xla.utils.utils as xu
 
@@ -36,13 +37,13 @@ class DistributedExecutor(object):
   SCRIPT_PATH_TMPL = '/tmp/{pid}/dist_training_ptxla_{worker}.sh'
   MESH_SERVICE_PORT = 8477  # Use single port to disallow concurrent runs
   DIST_ENV_VARS = [
-      'XRT_TPU_CONFIG',
-      'XRT_LOCAL_WORKER',
-      'XRT_MESH_SERVICE_ADDRESS',
-      'XRT_SHARD_WORLD_SIZE',
-      'XRT_SHARD_ORDINAL',
+      xenv.TPU_CONFIG,
+      xenv.LOCAL_WORKER,
+      xenv.SERVICE_ADDRESS,
+      xenv.WORLD_SIZE,
+      xenv.ORDINAL,
+      xenv.TPU_NUM_DEVICES,
       'XLA_EMIT_STEPLOG',
-      'TPU_NUM_DEVICES',
   ]
   DEFAULT_CONTAINER_NAME = 'pytorchtpudistrunner'
   MAX_TPU_RETRY = 50
@@ -227,19 +228,19 @@ class DistributedExecutor(object):
   def _env_vars_cmd(self, worker_idx):
     client_worker = self._cluster.get_client_workers()[worker_idx]
     env_vars = {
-        'XRT_LOCAL_WORKER':
+        xenv.LOCAL_WORKER:
             'c_tpu_worker:{}'.format(worker_idx),
-        'XRT_MESH_SERVICE_ADDRESS':
+        xenv.SERVICE_ADDRESS:
             '{}:{}'.format(self._cluster.get_client_master().get_internal_ip(),
                            self.MESH_SERVICE_PORT),
-        'XRT_SHARD_WORLD_SIZE':
+        xenv.WORLD_SIZE:
             len(self._cluster.get_client_workers()),
-        'XRT_SHARD_ORDINAL':
+        xenv.ORDINAL:
             worker_idx,
+        xenv.TPU_NUM_DEVICES:
+            8,
         'XLA_EMIT_STEPLOG':
             1,
-        'TPU_NUM_DEVICES':
-            8,
     }
     # Only for master
     if client_worker == self._cluster.get_client_master():
@@ -251,7 +252,7 @@ class DistributedExecutor(object):
           enumerate(self._cluster.get_service_workers())
       ]
       xrt_tpu_config = '|'.join(xrt_server_config)
-      env_vars['XRT_TPU_CONFIG'] = '{}'.format(xrt_tpu_config)
+      env_vars[xenv.TPU_CONFIG] = '{}'.format(xrt_tpu_config)
 
     export_cmd = []
     for k in env_vars:

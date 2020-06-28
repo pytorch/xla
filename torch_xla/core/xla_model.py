@@ -24,6 +24,70 @@ REDUCE_MAX = 'max'
 
 _TLS = threading.local()
 
+_TORCH_DIST_GROUPS = dict()
+_TORCH_DIST_LOCK = threading.Lock()
+
+
+class CollectiveContext(object):
+
+  def __init__(self, groups=None):
+    self.replica_devcount = torch_xla._XLAC._xla_get_replication_devices_count()
+    self.world_size = xrt_world_size()
+    self.ordinal = get_ordinal()
+    if self.world_size > self.replica_devcount:
+      # This is the sea-of-devices path.
+      self.requires_interhost_reduce = self.world_size > 1
+      # If groups are enabled we avoid using the two level reduce (first among the
+      # fast interconnected cores, then using the torch.distributed support).
+      # The intercore_group is always empty, which means all cores, but in the not
+      # empty groups case, it won't be used as requires_intercore_reduce is False.
+      self.intercore_group = []
+      if groups:
+        self.requires_intercore_reduce = False
+        if self.requires_interhost_reduce:
+          self.interhost_group = _make_group_for_ordinal(self.ordinal, groups)
+          self.is_reduce_host = True
+      else:
+        self.requires_intercore_reduce = self.replica_devcount > 1
+        if self.requires_interhost_reduce:
+          self.interhost_group, ranks = _make_interhost_group(
+              self.replica_devcount, self.world_size)
+          self.is_reduce_host = self.ordinal in ranks
+    else:
+      # Standard replication path.
+      self.requires_intercore_reduce = self.replica_devcount > 1
+      self.requires_interhost_reduce = False
+      self.intercore_group = groups or []
+
+
+def _get_group(ranks):
+  import torch.distributed as dist
+
+  with _TORCH_DIST_LOCK:
+    pg = _TORCH_DIST_GROUPS.get(ranks, None)
+    if not pg:
+      pg = dist.new_group(ranks=ranks)
+      _TORCH_DIST_GROUPS[ranks] = pg
+    return pg
+
+
+def _make_group_for_ordinal(ordinal, groups):
+  for g in groups:
+    if ordinal in g:
+      return _get_group(sorted(g))
+  raise RuntimeError('Ordinal {} not found in groups {}'.format(
+      ordinal, groups))
+
+
+def _make_interhost_group(replica_devcount, world_size):
+  # Every host in a sea-of-devices case handles replica_devcount devices.
+  # The replica device index 0 of each host does the inter-host replication
+  # using torch.distributed.
+  # The XLA CPU is a special case where there is one process per XLA CPU device,
+  # which is also a virtual host within a physical host.
+  ranks = tuple(range(0, world_size, replica_devcount))
+  return _get_group(ranks), ranks
+
 
 def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
@@ -383,7 +447,64 @@ def _get_all_reduce_token():
   return token
 
 
-def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
+def _torch_all_reduce(reduce_type, inputs, group=None):
+  import torch.distributed as dist
+
+  if reduce_type == REDUCE_SUM:
+    reduce_op = dist.ReduceOp.SUM
+  elif reduce_type == REDUCE_MUL:
+    reduce_op = dist.ReduceOp.PRODUCT
+  elif reduce_type == REDUCE_MIN:
+    reduce_op = dist.ReduceOp.MIN
+  elif reduce_type == REDUCE_MAX:
+    reduce_op = dist.ReduceOp.MAX
+  elif reduce_type == REDUCE_OR:
+    reduce_op = dist.ReduceOp.BOR
+  elif reduce_type == REDUCE_AND:
+    reduce_op = dist.ReduceOp.BAND
+  else:
+    raise RuntimeError('Invalid reduce type: {}'.format(reduce_type))
+
+  results = []
+  async_op = None
+  for tensor in inputs:
+    # Use async flag to overlap pytorch reduce ops with XLA tensor fetches.
+    cpu_tensor = torch_xla._XLAC._xla_get_cpu_tensors([tensor])[0]
+    results.append(cpu_tensor)
+    if async_op is not None:
+      async_op.wait()
+    async_op = dist.all_reduce(
+        cpu_tensor, reduce_op, async_op=True, group=group)
+  if async_op is not None:
+    async_op.wait()
+  return results
+
+
+def _host_all_reduce(reduce_type, inputs, cctx, scale=None):
+  # Barrier must happen on all devices.
+  torch_xla._XLAC._xla_sync_multi(
+      inputs, devices=[], wait=True, sync_xla_data=True)
+
+  # Here we use the torch.distributed reductions only on one device in the
+  # replication set, and then use in graph fast interconnect reduction to
+  # transfer the result to all replication devices.
+  # One core per fast interconnect replica group does the torch.distributed
+  # reduction and post the result, while the others post zeros.
+  if cctx.is_reduce_host:
+    results = _torch_all_reduce(reduce_type, inputs, group=cctx.interhost_group)
+    for i in range(0, len(inputs)):
+      inputs[i].copy_(results[i])
+      if scale is not None:
+        inputs[i].mul_(scale)
+  else:
+    for tensor in inputs:
+      tensor.zero_()
+  if cctx.requires_intercore_reduce:
+    _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
+        REDUCE_SUM, inputs, _get_all_reduce_token(), 1.0, [])
+
+
+def all_reduce(reduce_type, inputs, scale=1.0, groups=None, cctx=None):
   """Performs an inplace reduce operation on the input tensor(s).
 
   Args:
@@ -404,16 +525,38 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
     this function performs an inplace all-reduce op on the input tensors, and
     returns the list/tuple itself.
   """
-  if isinstance(inputs, torch.Tensor):
-    result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs,
-                                             _get_all_reduce_token(), scale,
-                                             groups or [])
-    _TLS.all_reduce_token = result[1]
-    return result[0]
+  # In a sea-of-devices case we use two level of reductions. One using the fast
+  # device interconnect, and then using the torch.distributed reduction API to
+  # reduce across the detached hosts.
+  # One special case is XLA CPU devices, which do not support in graph reductions,
+  # so in that case we create differente processes having a single replication
+  # device. That will skip the in graph reductions and use the torch.distributed
+  # support across all XLA CPU devices.
+  if cctx is None:
+    cctx = CollectiveContext(groups=groups)
+  if cctx.requires_intercore_reduce:
+    if isinstance(inputs, torch.Tensor):
+      result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs,
+                                               _get_all_reduce_token(), scale,
+                                               cctx.intercore_group)
+      _TLS.all_reduce_token = result[1]
+      results = [result[0]]
+    else:
+      _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
+          reduce_type, inputs, _get_all_reduce_token(), scale,
+          cctx.intercore_group)
+      results = inputs
   else:
-    _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
-        reduce_type, inputs, _get_all_reduce_token(), scale, groups or [])
-    return inputs
+    if isinstance(inputs, torch.Tensor):
+      results = [inputs.clone()]
+    else:
+      results = inputs
+
+  if cctx.requires_interhost_reduce:
+    assert groups is None, 'Groups are not supported in sea-of-devices mode'
+    hscale = scale if cctx.replica_devcount <= 1 and scale != 1.0 else None
+    _host_all_reduce(reduce_type, results, cctx, scale=hscale)
+  return results[0] if isinstance(inputs, torch.Tensor) else results
 
 
 def all_gather(value, dim=0, groups=None):
@@ -577,10 +720,12 @@ def reduce_gradients(optimizer, groups=None):
         the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
         all the replicas in it.
   """
-  count = torch_xla._XLAC._xla_get_replication_devices_count()
+  cctx = CollectiveContext()
+  count = max(cctx.replica_devcount, cctx.world_size)
   if count > 1:
     gradients = _fetch_gradients(optimizer)
-    all_reduce(REDUCE_SUM, gradients, scale=1.0 / count, groups=groups)
+    all_reduce(
+        REDUCE_SUM, gradients, scale=1.0 / count, groups=groups, cctx=cctx)
 
 
 def optimizer_step(optimizer, barrier=False, optimizer_args={}, groups=None):

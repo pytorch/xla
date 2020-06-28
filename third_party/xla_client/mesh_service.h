@@ -34,7 +34,9 @@ class MeshClient {
 
   const std::string& address() const;
 
-  grpc::Config GetConfig() const;
+  grpc::Config GetConfig(int ordinal) const;
+
+  void SetConfig(int ordinal, const grpc::Config& config) const;
 
   std::vector<std::string> Rendezvous(int ordinal, const std::string& tag,
                                       const std::string& payload,

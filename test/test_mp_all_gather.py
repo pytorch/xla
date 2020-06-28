@@ -7,12 +7,13 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 def _mp_fn(index):
   device = xm.xla_device()
-  if xm.xla_device_hw(device) != 'CPU':
+  world_size = xm.xrt_world_size()
+  if world_size > 1:
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = xm.all_gather(ordinal_tensor)
 
     cpu_result = result.cpu()
-    expected = torch.arange(0, xm.xrt_world_size(), dtype=torch.float)
+    expected = torch.arange(0, world_size, dtype=torch.float)
     if not cpu_result.allclose(expected):
       print('xm.all_gather() produced wrong reductions', file=sys.stderr)
       print('[{}] {}'.format(index, cpu_result), file=sys.stderr)

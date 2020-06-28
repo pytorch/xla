@@ -23,10 +23,19 @@ message Config {
 }
 
 message GetConfigRequest {
+  required uint32 ordinal = 1;
 }
 
 message GetConfigResponse {
   required Config config = 1;
+}
+
+message SetConfigRequest {
+  required uint32 ordinal = 1;
+  required Config config = 2;
+}
+
+message SetConfigResponse {
 }
 
 message RendezvousRequest {
@@ -50,6 +59,7 @@ message GetNcclUniqueUidResponse {
 
 service MeshService {
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse) {}
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse) {}
   rpc Rendezvous(RendezvousRequest) returns (RendezvousResponse) {}
   rpc GetNcclUniqueUid(GetNcclUniqueUidRequest) returns (GetNcclUniqueUidResponse) {}
 }

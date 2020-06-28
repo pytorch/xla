@@ -149,8 +149,7 @@ void AddXrtHostDevices(const std::string& worker_name, int task_no,
        sys_util::GetEnvInt(env::kEnvNumTpu, device_counts.num_tpus)},
       {"GPU", "XLA_GPU",
        sys_util::GetEnvInt(env::kEnvNumGpu, device_counts.num_gpus)},
-      {"CPU", "XLA_CPU",
-       sys_util::GetEnvInt(env::kEnvNumCpu, device_counts.num_cpus)},
+      {"CPU", "XLA_CPU", device_counts.num_cpus},
   };
   options->workers_map.emplace(
       XrtComputationClient::Worker(worker_name, task_no),
@@ -199,11 +198,13 @@ bool ParseMeshConfig(
 
   XrtComputationClient::Worker local_worker =
       XrtComputationClient::ParseWorker(local_worker_env);
+  int host_ordinal = sys_util::GetEnvInt(env::kEnvHostOrdinal, 0);
 
   TF_LOG(INFO) << "Fetching mesh configuration for worker " << local_worker.name
-               << ":" << local_worker.task_no << " from mesh service at "
+               << " (host_ordinal=" << host_ordinal
+               << "):" << local_worker.task_no << " from mesh service at "
                << client->address();
-  service::grpc::Config config = client->GetConfig();
+  service::grpc::Config config = client->GetConfig(host_ordinal);
   TF_VLOG(3) << "Mesh Config: " << config.DebugString();
 
   std::string mp_device = XrtComputationClient::GetMultiProcessingDevice();
@@ -230,13 +231,14 @@ bool ParseMeshConfig(
 }
 
 bool ParseEnvDeviceCounts(XrtComputationClient::Options* options) {
-  int num_tpus = sys_util::GetEnvInt(env::kEnvNumTpu, -1);
-  int num_gpus = sys_util::GetEnvInt(env::kEnvNumGpu, -1);
-  if (num_tpus > 0 || num_gpus > 0) {
+  DeviceCountDefaults device_counts;
+  device_counts.num_tpus = sys_util::GetEnvInt(env::kEnvNumTpu, 0);
+  device_counts.num_gpus = sys_util::GetEnvInt(env::kEnvNumGpu, 0);
+  if (device_counts.num_tpus > 0 || device_counts.num_gpus > 0) {
     std::map<std::string, int> device_ordinals;
     std::string host_port =
         absl::StrCat("localhost:", tensorflow::internal::PickUnusedPortOrDie());
-    AddXrtHostDevices("localservice", 0, host_port, DeviceCountDefaults(),
+    AddXrtHostDevices("localservice", 0, host_port, device_counts,
                       &device_ordinals, options);
   }
   return !options->global_device_map.empty();
