@@ -478,9 +478,13 @@
   <span class="c1"># Calling _setup_replication() will trigger XLA library initialization, so the</span>
   <span class="c1"># environment must be fully setup before doing so.</span>
   <span class="n">_setup_replication</span><span class="p">()</span>
+  <span class="n">fn</span><span class="p">(</span><span class="n">gindex</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_mp_start_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
   <span class="n">exit_code</span> <span class="o">=</span> <span class="mi">0</span>
   <span class="k">try</span><span class="p">:</span>
-    <span class="n">fn</span><span class="p">(</span><span class="n">gindex</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="n">_start_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
   <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span>
         <span class="s1">&#39;Exception in device=</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_get_multiprocessing_device</span><span class="p">(),</span>
@@ -540,7 +544,7 @@
     <span class="n">_start_fn</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">start_processes</span><span class="p">(</span>
-        <span class="n">_start_fn</span><span class="p">,</span>
+        <span class="n">_mp_start_fn</span><span class="p">,</span>
         <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">),</span>
         <span class="n">nprocs</span><span class="o">=</span><span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span><span class="p">,</span>
         <span class="n">join</span><span class="o">=</span><span class="n">join</span><span class="p">,</span>
