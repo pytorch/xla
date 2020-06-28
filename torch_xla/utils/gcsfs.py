@@ -252,6 +252,18 @@ def write(path, content):
   torch_xla._XLAC._xla_tffile_flush(gcs_file)
 
 
+def is_gcs_path(path):
+  """Checks whether a path is a GCS path.
+
+  Args:
+    path (string): The path to be checked.
+
+  Returns:
+    Whether `path` is a GCS path.
+  """
+  return path.startswith(CLOUD_STORAGE_PREFIX)
+
+
 def generic_open(path, mode='r', encoding=None):
   """Opens a file (GCS or not) for reding or writing.
 
@@ -268,35 +280,34 @@ def generic_open(path, mode='r', encoding=None):
   Returns:
     The opened file object.
   """
-  if path.startswith(CLOUD_STORAGE_PREFIX):
+  if is_gcs_path(path):
     return open(path, mode=mode, encoding=encoding)
   else:
     return builtins.open(path, mode=mode, encoding=encoding)
 
 
-def generic_write(output_string, output_path, makedirs=False):
+def generic_write(output_string, path, makedirs=False):
   """Write a string/bytes or file into a GCS blob or local disk.
 
-  Depending on the output_path passed in, this API can write to local or GCS
-  file. Checks if the `output_path` starts with
-  the 'gs://' prefix, and uses `open` otherwise.
+  Depending on the path passed in, this API can write to local or GCS file.
+  Checks if the `path` starts with the 'gs://' prefix, and uses `open` otherwise.
 
   Args:
     output_string (string): The string to be written to the output.
-    output_path (string): The GCS path or local path of the output.
+    path (string): The GCS path or local path of the output.
     makedirs (bool): Whether the `path` parent folders should be created if
       missing.
       Default: False
   """
-  if output_path.startswith(CLOUD_STORAGE_PREFIX):
-    write(output_path, output_string)
+  if is_gcs_path(path):
+    write(path, output_string)
   else:
     if makedirs:
-      dpath = os.path.dirname(output_path)
+      dpath = os.path.dirname(path)
       if not os.path.isdir(dpath):
         os.makedirs(dpath, exist_ok=True)
     mode = 'wb' if isinstance(output_string, bytes) else 'wt'
-    with builtins.open(output_path, mode=mode) as fd:
+    with builtins.open(path, mode=mode) as fd:
       fd.write(output_string)
 
 
@@ -309,7 +320,7 @@ def generic_read(path):
   Returns:
     The bytes stored within the GCS blob or local file.
   """
-  if path.startswith(CLOUD_STORAGE_PREFIX):
+  if is_gcs_path(path):
     return read(path)
   else:
     with builtins.open(path, mode='rb') as fd:
@@ -327,7 +338,7 @@ def generic_glob(path, recursive=False):
   Returns:
     The names list within the provided path.
   """
-  if path.startswith(CLOUD_STORAGE_PREFIX):
+  if is_gcs_path(path):
     return torch_xla._XLAC._xla_tffs_list(path)
   else:
     return glob.glob(path, recursive=recursive)

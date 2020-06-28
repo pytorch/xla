@@ -79,6 +79,7 @@ utils
 .. autofunction:: generic_open
 .. autofunction:: generic_read
 .. autofunction:: generic_write
+.. autofunction:: is_gcs_path
 
 .. automodule:: torch_xla.utils.cached_dataset
 .. autoclass:: CachedDataset

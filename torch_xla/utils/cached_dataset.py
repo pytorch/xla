@@ -1,11 +1,12 @@
 from __future__ import division
 from __future__ import print_function
 
+import json
 import io
 import os
-import re
 import torch
 import torch_xla
+import torch_xla.core.xla_model as xm
 import torch_xla.utils.gcsfs as gcs
 
 
@@ -26,17 +27,16 @@ def _index_split(index, split_size, split_count):
   return parts
 
 
-def _infer_sample_count(path):
-  files = set()
-  maxid = -1
-  for fpath in gcs.generic_glob(os.path.join(path, '**'), recursive=True):
-    fname = os.path.basename(fpath)
-    m = re.match(r'(\d+)\.pt$', fname)
-    if m:
-      files.add(fpath)
-      maxid = max(maxid, int(m.group(1)))
-  assert maxid + 1 == len(files)
-  return maxid + 1
+def _save_metadata(path, **kwargs):
+  mpath = os.path.join(path, 'METADATA')
+  jdata = json.dumps(kwargs)
+  gcs.generic_write(jdata, mpath, makedirs=True)
+
+
+def _load_metadata(path):
+  mpath = os.path.join(path, 'METADATA')
+  jdata = gcs.generic_read(mpath).decode()
+  return json.loads(jdata)
 
 
 class CachedDataset(torch.utils.data.Dataset):
@@ -77,10 +77,13 @@ class CachedDataset(torch.utils.data.Dataset):
       The `path` needs to be writeable, unless all the samples are already stored.
       The `path` can be a GCS path (prefixed with `gs://`).
     max_files_per_folder (int): The maximum amount of files to be stored within a
-      single folder.
+      single folder. If `data_set` is `None` this value is ignored and taken from
+      the cached metadata.
       Default: 1000
     compress (bool): Whether the saved samples should be compressed. Compression
       saves space at the expense of CPU required to compress/decompress.
+      If `data_set` is `None` this value is ignored and taken from the cached
+      metadata.
       Default: True
   """
 
@@ -88,11 +91,23 @@ class CachedDataset(torch.utils.data.Dataset):
     super(CachedDataset, self).__init__()
     self._data_set = data_set
     self._path = path
-    self._max_files_per_folder = max_files_per_folder
-    self._compress = compress
-    self._count = len(
-        data_set) if data_set is not None else _infer_sample_count(path)
-    self._split_count = len(_index_split(self._count, max_files_per_folder, 0))
+    if data_set is not None:
+      self._max_files_per_folder = max_files_per_folder
+      self._compress = compress
+      self._count = len(data_set)
+      if xm.is_master_ordinal(local=not gcs.is_gcs_path(path)):
+        _save_metadata(
+            path,
+            count=self._count,
+            compress=self._compress,
+            max_files_per_folder=self._max_files_per_folder)
+    else:
+      meta = _load_metadata(path)
+      self._max_files_per_folder = meta['max_files_per_folder']
+      self._count = meta['count']
+      self._compress = meta['compress']
+    self._split_count = len(
+        _index_split(self._count, self._max_files_per_folder, 0))
 
   def _index_path(self, index):
     return os.path.join(
