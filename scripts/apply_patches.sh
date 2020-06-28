@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -euo pipefail
 
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 XDIR=$CDIR/..

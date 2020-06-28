@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -euo pipefail
 
 source ./xla_env
 

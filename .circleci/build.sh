@@ -20,7 +20,7 @@ else
   source "$VENV"'/bin/activate'
   pip install -U pip
   pip install -U setuptools wheel
-  pip install mkl
+  pip install mkl pyyaml
 fi
 
 SCCACHE="$(which sccache)"

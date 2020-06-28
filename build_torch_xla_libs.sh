@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -euo pipefail
 
 CMD="${1:-install}"
 

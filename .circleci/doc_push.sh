@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -euo pipefail
 
 cd /tmp/pytorch/xla
 
