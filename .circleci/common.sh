@@ -9,6 +9,11 @@ function setup_env() {
 
 function clone_pytorch() {
   setup_env
-  git clone --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
-  cp -r "$PWD" "$XLA_DIR"
+    
+  if [ -d "$PYTORCH_DIR"'/.git' ]; then
+    GIT_DIR="$PYTORCH_DIR"'/.git' GIT_WORK_TREE="$PYTORCH_DIR" git pull
+  else
+    git clone --quiet --depth=10 https://github.com/pytorch/pytorch "$PYTORCH_DIR"
+    cp -r "$PWD" "$XLA_DIR"
+  fi
 }

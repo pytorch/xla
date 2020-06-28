@@ -43,7 +43,7 @@ fi
 # Try rebasing on top of base (dest) branch first.
 # This allows us to pickup the latest fix for PT-XLA breakage.
 # Also it might improve build time as we have warm cache.
-if ! git config --global --get user.email &>/dev/null; then
+if ! git config --global --get user.email; then
   git config --global user.email "circleci.ossci@gmail.com"
   git config --global user.name "CircleCI"
 fi
@@ -61,7 +61,7 @@ fi
 
 clone_pytorch
 
-cd "$PYTORCH_DIR"
+pushd "$PYTORCH_DIR"
 # Checkout specific commit ID/branch if pinned.
 COMMITID_FILE="xla/.torch_pin"
 if [ -e "$COMMITID_FILE" ]; then
@@ -84,20 +84,25 @@ python setup.py build develop
 sccache --show-stats
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
-if ! command -v node; then
+NPM_SUDO=0
+NPM_SUDO_CMD=''
+NODE_LOCATION=$(command -v node)
+
+if [ ! -z "$NODE_LOCATION" ]; then
+  if [ $(stat -c '%U' "$NODE_LOCATION") != "$USER" ]; then
+    NPM_SUDO=1
+    NPM_SUDO_CMD='sudo '
+  fi
+else
   curl -L https://git.io/n-install | bash -s -- -y lts
   export PATH="$PATH:$HOME/n/bin"
-  NPM_SUDO=0
-  NPM_SUDO_CMD=''
-else
-  NPM_SUDO=1
-  NPM_SUDO_CMD='sudo '
 fi
 
 # XLA build requires Bazel
 # We use bazelisk to avoid updating Bazel version manually.
 eval "${NPM_SUDO_CMD}" npm install -g @bazel/bazelisk
-sudo ln -s "$(command -v bazelisk)" /usr/local/bin/bazel
+target='/usr/local/bin/bazel'
+[ -f "$target" ] || sudo ln -s "$(command -v bazelisk)" "$target"
 
 # Install bazels3cache for cloud cache
 eval "${NPM_SUDO_CMD}" npm install -g bazels3cache
@@ -112,22 +117,37 @@ rm -rf vision
 # TODO: This git clone is bad, it means pushes to torchvision can break
 # PyTorch CI
 git clone --quiet --depth=10 https://github.com/pytorch/vision
+
 pushd vision
+
 # python setup.py install with a tqdm dependency is broken in the
 # Travis Python nightly (but not in latest Python nightlies, so
 # this should be a transient requirement...)
 # See https://github.com/pytorch/pytorch/issues/7525
 #time python setup.py install
-pip install -q --user .
-popd
+[ -z "$VENV" ] && pip_args=('--user') || pip_args=();
+pip install -q "${pip_args[@]}" -r '../requirements.txt'
+pip install -q "${pip_args[@]}" .
 
-bazels3cache --bucket="${XLA_CLANG_CACHE_S3_BUCKET_NAME}" --maxEntrySizeBytes='0' --logging.level='verbose'
+popd
 
 # install XLA
 pushd "$XLA_DIR"
-# Use cloud cache to build when available.
-sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' build_torch_xla_libs.sh
+
+if [ ! -z "${XLA_CLANG_CACHE_S3_BUCKET_NAME-}" ]; then
+  bazels3cache --bucket="${XLA_CLANG_CACHE_S3_BUCKET_NAME}" --maxEntrySizeBytes='0' --logging.level='verbose'
+
+  # Use cloud cache to build when available.
+  sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' build_torch_xla_libs.sh
+fi
 
 source ./xla_env
+#export XLA_DEBUG=0
+#export XLA_BAZEL_VERBOSE=0
+#export XLA_CUDA=0
+#export CLOUD_BUILD='false'
+#export CC="$(command -v cc)"
 python setup.py install
+popd
+
 popd
