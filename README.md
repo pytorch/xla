@@ -47,7 +47,7 @@ The following tutorials are available to help you train models on a single
 Cloud TPU:
 
 * [Training FairSeq Transformer on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/transformer-pytorch)
-* [Training Resnet50 on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py)
+* [Training Resnet50 on Cloud TPUs](https://cloud.google.com/tpu/docs/tutorials/resnet-pytorch)
 
 To start, [you create a Cloud TPU node](https://cloud.google.com/tpu/docs/tutorials/resnet-alpha-py#create_tpu) with the corresponding release you wish to consume (TPU software version: ex. `pytorch-1.5`):
 
