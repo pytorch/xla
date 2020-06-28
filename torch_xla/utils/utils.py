@@ -2,9 +2,11 @@ from __future__ import division
 from __future__ import print_function
 
 from concurrent import futures
+import contextlib
 import copy
 import os
 import shutil
+import socket
 import sys
 import tempfile
 import time
@@ -250,6 +252,16 @@ def timed(fn, msg='', printfn=eprint):
   result = fn()
   printfn('{}{:.3f}ms'.format(msg, 1000.0 * (time.time() - s)))
   return result
+
+
+def get_free_tcp_ports(n=1):
+  ports = []
+  for _ in range(0, n):
+    with contextlib.closing(socket.socket(socket.AF_INET,
+                                          socket.SOCK_STREAM)) as s:
+      s.bind(('', 0))
+      ports.append(s.getsockname()[1])
+  return ports
 
 
 def parallel_work(num_workers, fn, *args):

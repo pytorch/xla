@@ -1289,9 +1289,19 @@ void XrtComputationClient::InitializeDevices(
       sys_util::GetEnvString(env::kEnvMeshService, "");
   std::string mp_device = GetMultiProcessingDevice();
   if (!mesh_service_address.empty() && !mp_device.empty()) {
+    int host_ordinal = sys_util::GetEnvInt(env::kEnvHostOrdinal, -1);
     Device device(mp_device);
-    if (device.ordinal == 0) {
-      CreateMeshService(mesh_service_address, topology_proto.get());
+    if (host_ordinal <= 0) {
+      if (device.ordinal == 0) {
+        CreateMeshService(mesh_service_address, topology_proto.get());
+      }
+    } else {
+      // Here we are in the sea-of-devices case.
+      if (device.ordinal == 0) {
+        service::grpc::Config config =
+            CreateMeshServiceConfig(topology_proto.get());
+        service::MeshClient::Get()->SetConfig(host_ordinal, config);
+      }
     }
     SetupGpuRuntime();
   }
@@ -1307,15 +1317,15 @@ void XrtComputationClient::SetupGpuRuntime() {
   tensorflow::SetNcclUniqueIdFactory(std::make_shared<NcclUniqueIdFactory>());
 }
 
-void XrtComputationClient::CreateMeshService(
-    const std::string& address,
-    const tensorflow::tpu::TopologyProto* topology_proto) {
+service::grpc::Config XrtComputationClient::CreateMeshServiceConfig(
+    const tensorflow::tpu::TopologyProto* topology_proto) const {
   struct Device {
     std::string local_name;
     std::string global_name;
   };
 
   service::grpc::Config config;
+  config.set_mesh_size(sys_util::GetEnvInt(env::kEnvWorldSize, 1));
   if (topology_proto != nullptr) {
     config.mutable_proto()->CopyFrom(*topology_proto);
   }
@@ -1340,7 +1350,13 @@ void XrtComputationClient::CreateMeshService(
       device->set_global_name(worker_device.global_name);
     }
   }
-  config.set_mesh_size(sys_util::GetEnvInt(env::kEnvWorldSize, 1));
+  return config;
+}
+
+void XrtComputationClient::CreateMeshService(
+    const std::string& address,
+    const tensorflow::tpu::TopologyProto* topology_proto) {
+  service::grpc::Config config = CreateMeshServiceConfig(topology_proto);
 
   TF_VLOG(1) << "Creating mesh service bound to " << address;
   mesh_service_ =

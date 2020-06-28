@@ -14,6 +14,7 @@ extern const char* const kEnvWorkers;
 extern const char* const kEnvMeshService;
 extern const char* const kEnvWorldSize;
 extern const char* const kEnvMpDevice;
+extern const char* const kEnvHostOrdinal;
 
 }  // namespace env
 }  // namespace xla
