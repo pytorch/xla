@@ -9,7 +9,8 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 def _mp_fn(index):
   device = xm.xla_device()
 
-  if xm.xla_device_hw(device) != 'CPU':
+  world_size = xm.xrt_world_size()
+  if world_size > 1:
     torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
         use_full_mat_mul_precision=True)
     torch.manual_seed(11)
@@ -18,7 +19,7 @@ def _mp_fn(index):
     N = 3
     M = 4
     KO = 2
-    wsize = KO * xm.xrt_world_size()
+    wsize = KO * world_size
     wg = torch.randn(N, wsize, device=device, requires_grad=True)
     w = torch.narrow(wg, 1, index * KO, KO)
     x = torch.randn(wsize, M, device=device)

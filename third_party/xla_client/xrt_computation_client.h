@@ -321,6 +321,9 @@ class XrtComputationClient : public ComputationClient {
   void InitializeDevices(
       std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto);
 
+  service::grpc::Config CreateMeshServiceConfig(
+      const tensorflow::tpu::TopologyProto* topology_proto) const;
+
   void CreateMeshService(const std::string& address,
                          const tensorflow::tpu::TopologyProto* topology_proto);
 
