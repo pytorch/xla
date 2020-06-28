@@ -235,7 +235,7 @@ def set_replication(device, devices):
     _TLS.device_index = devices.index(device)
   else:
     torch_xla._XLAC._xla_set_replication_devices([])
-    _TLS.device_index = devices.index(device) if devices else 0
+    _TLS.device_index = 0
   _TLS.device = device
   _TLS.all_reduce_token = None
   torch_xla._XLAC._xla_set_default_device(device)
