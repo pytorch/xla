@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -exo pipefail
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 LOGFILE=/tmp/pytorch_py_test.log

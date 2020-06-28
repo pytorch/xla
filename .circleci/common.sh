@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -ex
+set -euo pipefail
 
 function setup_env() {
-  export PYTORCH_DIR=/tmp/pytorch
-  export XLA_DIR="$PYTORCH_DIR/xla"
+  export PYTORCH_DIR='/tmp/pytorch'
+  export XLA_DIR="$PYTORCH_DIR"'/xla'
 }
 
 function clone_pytorch() {

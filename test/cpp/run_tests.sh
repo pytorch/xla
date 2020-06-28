@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -ex
 RUNDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 BUILDDIR="$RUNDIR/build"

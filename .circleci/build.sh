@@ -1,12 +1,27 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -ex
+set -euo pipefail
 
-source ./env
-source .circleci/common.sh
+declare -r REPO_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
+
+source "$REPO_ROOT"'/env'
+
+"$REPO_ROOT"'/.circleci/install_deps.sh'
+
+source "$REPO_ROOT"'/.circleci/pkg_mgr.sh'
+source "$REPO_ROOT"'/.circleci/common.sh'
 
 # System default cmake 3.10 cannot find mkl, so point it to the right place.
-export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
+if command -v conda &>/dev/null; then
+  export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
+else
+  [ -z "${VENV-}" ] && VENV="$HOME"'/.venvs/xla-venv'
+  [ ! -d "$VENV" ] && mkdir -p "$VENV" && python3 -m venv "$VENV"
+  source "$VENV"'/bin/activate'
+  pip install -U pip
+  pip install -U setuptools wheel
+  pip install mkl
+fi
 
 SCCACHE="$(which sccache)"
 if [ -z "${SCCACHE}" ]; then
@@ -28,21 +43,25 @@ fi
 # Try rebasing on top of base (dest) branch first.
 # This allows us to pickup the latest fix for PT-XLA breakage.
 # Also it might improve build time as we have warm cache.
-git config --global user.email "circleci.ossci@gmail.com"
-git config --global user.name "CircleCI"
-sudo apt-get update && sudo apt-get -qq install jq
+if ! git config --global --get user.email &>/dev/null; then
+  git config --global user.email "circleci.ossci@gmail.com"
+  git config --global user.name "CircleCI"
+fi
+
+eval "${SUDO}"' '"${PKG_MGR_EXEC}"' install jq curl'
+
 # Only rebase on runs triggered by PR checks not post-submits.
-if [[ ! -z "${CIRCLE_PULL_REQUEST}" ]]; then
+if [[ -z "${CIRCLE_PROJECT_USERNAME-}" && ! -z "${CIRCLE_PULL_REQUEST-}" ]]; then
   PR_NUM=$(basename $CIRCLE_PULL_REQUEST)
   CIRCLE_PR_BASE_BRANCH=$(curl -s https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls/$PR_NUM | jq -r '.base.ref')
-  git rebase "origin/${CIRCLE_PR_BASE_BRANCH}"
+  git rebase 'origin/'"${CIRCLE_PR_BASE_BRANCH}"
   git submodule deinit -f .
   git submodule update --init --recursive
 fi
 
 clone_pytorch
 
-cd $PYTORCH_DIR
+cd "$PYTORCH_DIR"
 # Checkout specific commit ID/branch if pinned.
 COMMITID_FILE="xla/.torch_pin"
 if [ -e "$COMMITID_FILE" ]; then
@@ -65,28 +84,34 @@ python setup.py build develop
 sccache --show-stats
 
 # Bazel doesn't work with sccache gcc. https://github.com/bazelbuild/bazel/issues/3642
-sudo apt-get -qq update
-
-sudo apt-get -qq install npm nodejs
+if ! comamnd -v node; then
+  curl -L https://git.io/n-install | bash -s -- -y lts
+  export PATH="$PATH:$HOME/n/bin"
+  NPM_SUDO=0
+  NPM_SUDO_CMD=''
+else
+  NPM_SUDO=1
+  NPM_SUDO_CMD='sudo '
+fi
 
 # XLA build requires Bazel
 # We use bazelisk to avoid updating Bazel version manually.
-sudo npm install -g @bazel/bazelisk
-sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
+eval "${NPM_SUDO_CMD}" npm install -g @bazel/bazelisk
+sudo ln -s "$(command -v bazelisk)" /usr/local/bin/bazel
 
 # Install bazels3cache for cloud cache
-sudo npm install -g bazels3cache
+eval "${NPM_SUDO_CMD}" npm install -g bazels3cache
 BAZELS3CACHE="$(which bazels3cache)"
 if [ -z "${BAZELS3CACHE}" ]; then
-  echo "Unable to find bazels3cache..."
+  >&2 echo 'Unable to find bazels3cache...'
   exit 1
 fi
 
-echo "Installing torchvision at branch master"
+>&2 echo 'Installing torchvision at branch master'
 rm -rf vision
 # TODO: This git clone is bad, it means pushes to torchvision can break
 # PyTorch CI
-git clone https://github.com/pytorch/vision --quiet
+git clone --quiet --depth=10 https://github.com/pytorch/vision
 pushd vision
 # python setup.py install with a tqdm dependency is broken in the
 # Travis Python nightly (but not in latest Python nightlies, so
@@ -96,7 +121,7 @@ pushd vision
 pip install -q --user .
 popd
 
-bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
+bazels3cache --bucket="${XLA_CLANG_CACHE_S3_BUCKET_NAME}" --maxEntrySizeBytes='0' --logging.level='verbose'
 
 # install XLA
 pushd "$XLA_DIR"

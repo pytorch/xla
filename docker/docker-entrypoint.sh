@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Explicitly source bashrc even when running commands directly.
 # Since commands run as a separate subshell, we need to source manually.
