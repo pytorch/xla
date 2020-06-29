@@ -223,7 +223,9 @@ std::vector<Sample> MetricData::Samples(double* accumulator,
 Metric::Metric(std::string name, MetricReprFn repr_fn, size_t max_samples)
     : name_(std::move(name)),
       repr_fn_(std::move(repr_fn)),
-      max_samples_(max_samples),
+      max_samples_(max_samples != 0
+                       ? max_samples
+                       : sys_util::GetEnvInt("XLA_METRICS_SAMPLES", 1024)),
       data_(nullptr) {}
 
 double Metric::Accumulator() const { return GetData()->Accumulator(); }
