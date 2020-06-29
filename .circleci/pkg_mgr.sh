@@ -2,8 +2,11 @@
 
 function get_pkg_mgr() {
   export SUDO='sudo '
+  export PKG_MGR_INSTALL_CMD='install'
+
   if PKG_MGR_EXEC="$(command -v apt-get 2>/dev/null)"; then
     export PKG_MGR='apt-get'
+    export PKG_MGR_INSTALL_CMD='install -y'
   elif PKG_MGR_EXEC="$(command -v dnf 2>/dev/null)"; then
     export PKG_MGR='dnf'
   elif PKG_MGR_EXEC="$(command -v zypper 2>/dev/null)"; then

@@ -23,10 +23,18 @@ else
   pip install mkl pyyaml
 fi
 
-SCCACHE="$(which sccache)"
+SCCACHE="$(command -v sccache)"
+if [ -z "${SCCACHE}" ]; then
+  SCCACHE_VERSION='0.2.13'
+  target='/tmp/sccache-x86_64-unknown-linux-musl.tar.gz'
+  curl -L 'https://github.com/mozilla/sccache/releases/download/'"$SCCACHE_VERSION"'/sccache-'"$SCCACHE_VERSION"'-x86_64-unknown-linux-musl.tar.gz' -o "$target"
+  sudo tar --strip-components 1 -C '/usr/local/bin' -xvzf '/tmp/sccache-x86_64-unknown-linux-musl.tar.gz' 'sccache-'"$SCCACHE_VERSION"'-x86_64-unknown-linux-musl/sccache'
+fi
+
+SCCACHE="$(command -v sccache)"
 if [ -z "${SCCACHE}" ]; then
   echo "Unable to find sccache..."
-  exit 1
+  >&2 exit 1
 fi
 
 if which sccache > /dev/null; then
@@ -48,7 +56,7 @@ if ! git config --global --get user.email; then
   git config --global user.name "CircleCI"
 fi
 
-eval "${SUDO}"' '"${PKG_MGR_EXEC}"' install jq curl'
+eval "${SUDO}"' '"${PKG_MGR_EXEC}"' '"${PKG_MGR_INSTALL_CMD}"' jq curl'
 
 # Only rebase on runs triggered by PR checks not post-submits.
 if [[ -z "${CIRCLE_PROJECT_USERNAME-}" && ! -z "${CIRCLE_PULL_REQUEST-}" ]]; then
