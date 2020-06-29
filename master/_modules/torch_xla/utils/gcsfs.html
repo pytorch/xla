@@ -504,6 +504,18 @@
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tffile_flush</span><span class="p">(</span><span class="n">gcs_file</span><span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="is_gcs_path"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.is_gcs_path">[docs]</a><span class="k">def</span> <span class="nf">is_gcs_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Checks whether a path is a GCS path.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    path (string): The path to be checked.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Whether `path` is a GCS path.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">return</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">CLOUD_STORAGE_PREFIX</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="generic_open"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.generic_open">[docs]</a><span class="k">def</span> <span class="nf">generic_open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Opens a file (GCS or not) for reding or writing.</span>
 
@@ -520,35 +532,34 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The opened file object.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">CLOUD_STORAGE_PREFIX</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">is_gcs_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="k">return</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">builtins</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="generic_write"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.generic_write">[docs]</a><span class="k">def</span> <span class="nf">generic_write</span><span class="p">(</span><span class="n">output_string</span><span class="p">,</span> <span class="n">output_path</span><span class="p">,</span> <span class="n">makedirs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="generic_write"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.generic_write">[docs]</a><span class="k">def</span> <span class="nf">generic_write</span><span class="p">(</span><span class="n">output_string</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">makedirs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Write a string/bytes or file into a GCS blob or local disk.</span>
 
-<span class="sd">  Depending on the output_path passed in, this API can write to local or GCS</span>
-<span class="sd">  file. Checks if the `output_path` starts with</span>
-<span class="sd">  the &#39;gs://&#39; prefix, and uses `open` otherwise.</span>
+<span class="sd">  Depending on the path passed in, this API can write to local or GCS file.</span>
+<span class="sd">  Checks if the `path` starts with the &#39;gs://&#39; prefix, and uses `open` otherwise.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    output_string (string): The string to be written to the output.</span>
-<span class="sd">    output_path (string): The GCS path or local path of the output.</span>
+<span class="sd">    path (string): The GCS path or local path of the output.</span>
 <span class="sd">    makedirs (bool): Whether the `path` parent folders should be created if</span>
 <span class="sd">      missing.</span>
 <span class="sd">      Default: False</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">output_path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">CLOUD_STORAGE_PREFIX</span><span class="p">):</span>
-    <span class="n">write</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">output_string</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">is_gcs_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="n">write</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">output_string</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="k">if</span> <span class="n">makedirs</span><span class="p">:</span>
-      <span class="n">dpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+      <span class="n">dpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
       <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">dpath</span><span class="p">):</span>
         <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">dpath</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;wb&#39;</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output_string</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="s1">&#39;wt&#39;</span>
-    <span class="k">with</span> <span class="n">builtins</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">fd</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">builtins</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">fd</span><span class="p">:</span>
       <span class="n">fd</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output_string</span><span class="p">)</span></div>
 
 
@@ -561,7 +572,7 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The bytes stored within the GCS blob or local file.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">CLOUD_STORAGE_PREFIX</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">is_gcs_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="k">with</span> <span class="n">builtins</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fd</span><span class="p">:</span>
@@ -579,7 +590,7 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The names list within the provided path.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">CLOUD_STORAGE_PREFIX</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">is_gcs_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tffs_list</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="n">recursive</span><span class="p">)</span>

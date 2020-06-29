@@ -1460,20 +1460,33 @@ Default: None</p></li>
 
 <dl class="function">
 <dt id="torch_xla.utils.gcsfs.generic_write">
-<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">generic_write</code><span class="sig-paren">(</span><em class="sig-param">output_string</em>, <em class="sig-param">output_path</em>, <em class="sig-param">makedirs=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#generic_write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.generic_write" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">generic_write</code><span class="sig-paren">(</span><em class="sig-param">output_string</em>, <em class="sig-param">path</em>, <em class="sig-param">makedirs=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#generic_write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.generic_write" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write a string/bytes or file into a GCS blob or local disk.</p>
-<p>Depending on the output_path passed in, this API can write to local or GCS
-file. Checks if the <cite>output_path</cite> starts with
-the ‘gs://’ prefix, and uses <cite>open</cite> otherwise.</p>
+<p>Depending on the path passed in, this API can write to local or GCS file.
+Checks if the <cite>path</cite> starts with the ‘gs://’ prefix, and uses <cite>open</cite> otherwise.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>output_string</strong> (<em>string</em>) – The string to be written to the output.</p></li>
-<li><p><strong>output_path</strong> (<em>string</em>) – The GCS path or local path of the output.</p></li>
+<li><p><strong>path</strong> (<em>string</em>) – The GCS path or local path of the output.</p></li>
 <li><p><strong>makedirs</strong> (<em>bool</em>) – Whether the <cite>path</cite> parent folders should be created if
 missing.
 Default: False</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="torch_xla.utils.gcsfs.is_gcs_path">
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">is_gcs_path</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#is_gcs_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.is_gcs_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks whether a path is a GCS path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>string</em>) – The path to be checked.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Whether <cite>path</cite> is a GCS path.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1518,10 +1531,13 @@ within the <cite>path</cite> folder.</p></li>
 The <cite>path</cite> needs to be writeable, unless all the samples are already stored.
 The <cite>path</cite> can be a GCS path (prefixed with <cite>gs://</cite>).</p></li>
 <li><p><strong>max_files_per_folder</strong> (<em>python:int</em>) – The maximum amount of files to be stored within a
-single folder.
+single folder. If <cite>data_set</cite> is <cite>None</cite> this value is ignored and taken from
+the cached metadata.
 Default: 1000</p></li>
 <li><p><strong>compress</strong> (<em>bool</em>) – Whether the saved samples should be compressed. Compression
 saves space at the expense of CPU required to compress/decompress.
+If <cite>data_set</cite> is <cite>None</cite> this value is ignored and taken from the cached
+metadata.
 Default: True</p></li>
 </ul>
 </dd>
