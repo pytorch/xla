@@ -164,11 +164,12 @@ std::string StripPrefix(const std::string& value, const std::string& prefix) {
 tensorflow::DeviceNameUtils::ParsedName ParseFullXrtDevice(
     const std::string& device) {
   tensorflow::DeviceNameUtils::ParsedName parsed_device;
-  XLA_CHECK(
-      tensorflow::DeviceNameUtils::ParseFullName(device, &parsed_device) &&
-      parsed_device.has_job && parsed_device.has_task && parsed_device.has_id &&
-      parsed_device.has_type)
+  XLA_CHECK(tensorflow::DeviceNameUtils::ParseFullName(device, &parsed_device))
       << device;
+  XLA_CHECK(parsed_device.has_job && parsed_device.has_task &&
+            parsed_device.has_id && parsed_device.has_type)
+      << "Missing device information (" << device << "): "
+      << tensorflow::DeviceNameUtils::ParsedNameToString(parsed_device);
   return parsed_device;
 }
 
