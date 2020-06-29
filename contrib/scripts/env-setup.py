@@ -20,11 +20,18 @@ TORCH_XLA_WHEEL_TMPL = 'torch_xla-{whl_version}-cp{py_version}-cp{py_version}m-l
 TORCHVISION_WHEEL_TMPL = 'torchvision-{whl_version}-cp{py_version}-cp{py_version}m-linux_x86_64.whl'
 
 
-def update_tpu_runtime(tpu_ip, version):
+def update_tpu_runtime(tpu_name, version):
   print(f'Updating TPU runtime to {version.tpu} ...')
-  url = 'http://{tpu_ip}:8475/requestversion/{tpu_version}'.format(
-      tpu_ip=tpu_ip, tpu_version=version.tpu)
-  print('Done updating TPU runtime: {}'.format(requests.post(url)))
+
+  try:
+    import cloud_tpu_client
+  except ImportError:
+    subprocess.call(['pip', 'install', 'cloud-tpu-client'])
+    import cloud_tpu_client
+
+  client = cloud_tpu_client.Client(tpu_name)
+  client.configure_tpu_version(version.tpu)
+  print('Done updating TPU runtime')
 
 
 def get_py_version():
@@ -54,18 +61,7 @@ def get_version(version):
   return VersionConfig(version, f'pytorch-{version}', get_py_version())
 
 
-def parse_env_tpu_ip():
-  # In both Colab and Kaggle: TPU_NAME='grpc://abc.def.ghi.jkl:8470'
-  tpu_addr = os.environ.get('TPU_NAME', None)
-  tpu_ip_regex = re.compile('grpc://(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):8470')
-  m_tpu_ip = tpu_ip_regex.match(tpu_addr)
-  if not m_tpu_ip:
-    raise ValueError('TPU not found.')
-
-  return m_tpu_ip.group(1)
-
-
-def install_vm(version, apt_packages):
+def install_vm(version, apt_packages, is_root=False):
   torch_whl = TORCH_WHEEL_TMPL.format(
       whl_version=version.wheels, py_version=version.py_version)
   torch_whl_path = os.path.join(DIST_BUCKET, torch_whl)
@@ -77,6 +73,10 @@ def install_vm(version, apt_packages):
   torchvision_whl_path = os.path.join(DIST_BUCKET, torchvision_whl)
   apt_cmd = ['apt-get', 'install', '-y']
   apt_cmd.extend(apt_packages)
+
+  if not is_root:
+    # Colab/Kaggle run as root, but not GCE VMs so we need privilege
+    apt_cmd.insert(0, 'sudo')
 
   installation_cmds = [
       ['pip', 'uninstall', '-y', 'torch', 'torchvision'],
@@ -94,17 +94,15 @@ def install_vm(version, apt_packages):
 
 def run_setup(args):
   version = get_version(args.version)
-  tpu_ip = args.tpu_ip if args.tpu_ip else parse_env_tpu_ip()
-
   # Update TPU
   print('Updating TPU and VM. This may take around 2 minutes.')
   update = threading.Thread(
       target=update_tpu_runtime, args=(
-          tpu_ip,
+          args.tpu,
           version,
       ))
   update.start()
-  install_vm(version, args.apt_packages)
+  install_vm(version, args.apt_packages, is_root=not args.tpu)
   update.join()
 
 
@@ -123,9 +121,9 @@ if __name__ == '__main__':
       help='List of apt packages to install',
   )
   parser.add_argument(
-      '--tpu-ip',
+      '--tpu',
       type=str,
-      help='TPU internal ip address',
+      help='[GCP] Name of the TPU (same zone, project as VM running script)',
   )
   args = parser.parse_args()
   run_setup(args)
