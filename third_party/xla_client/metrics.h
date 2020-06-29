@@ -91,7 +91,7 @@ std::string MetricFnTime(double value);
 class Metric {
  public:
   explicit Metric(std::string name, MetricReprFn repr_fn = MetricFnValue,
-                  size_t max_samples = 1024);
+                  size_t max_samples = 0);
 
   const std::string& Name() const { return name_; }
 
