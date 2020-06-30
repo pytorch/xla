@@ -48,6 +48,7 @@ _setup_xla_flags()
 
 import atexit
 import torch
+from ._patched_functions import _apply_patches
 from .version import __version__
 import _XLAC
 
@@ -58,3 +59,4 @@ def _prepare_to_exit():
 
 _XLAC._initialize_aten_bindings()
 atexit.register(_prepare_to_exit)
+_apply_patches()
