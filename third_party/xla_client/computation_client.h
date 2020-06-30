@@ -153,6 +153,11 @@ class ComputationClient {
     std::vector<Input> inputs;
   };
 
+  struct MemoryInfo {
+    int64 kb_free = 0;
+    int64 kb_total = 0;
+  };
+
   static std::unique_ptr<ComputationClient> Create();
 
   virtual ~ComputationClient() {}
@@ -244,6 +249,8 @@ class ComputationClient {
   virtual void SetRngSeed(size_t seed) = 0;
 
   virtual std::map<std::string, Metric> GetMetrics() const = 0;
+
+  virtual MemoryInfo GetMemoryInfo(const std::string& device) = 0;
 
   virtual void PrepareToExit() = 0;
 

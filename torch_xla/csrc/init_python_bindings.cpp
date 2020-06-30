@@ -587,6 +587,19 @@ xla::Shape GetTensorShape(const at::Tensor& tensor,
   return CreateComputationShapeFromTensor(tensor, &device);
 }
 
+py::dict GetMemoryInfo(const std::string& device_str) {
+  xla::ComputationClient::MemoryInfo mem_info;
+  {
+    NoGilSection nogil;
+    Device device = GetDeviceOrCurrent(device_str);
+    mem_info = xla::ComputationClient::Get()->GetMemoryInfo(device.ToString());
+  }
+  auto py_dict = py::dict();
+  py_dict["kb_free"] = mem_info.kb_free;
+  py_dict["kb_total"] = mem_info.kb_total;
+  return py_dict;
+}
+
 void InitXlaModuleBindings(py::module m) {
   m.def("_initialize_aten_bindings",
         []() { AtenXlaType::InitializeAtenBindings(); });
@@ -824,6 +837,9 @@ void InitXlaModuleBindings(py::module m) {
           return GetLiveTensorsReport(nodes_threshold, device);
         },
         py::arg("nodes_threshold") = 100, py::arg("device") = "");
+  m.def("_xla_memory_info", [](const std::string& device) -> py::object {
+    return GetMemoryInfo(device);
+  });
   m.def("_xla_set_use_full_mat_mul_precision",
         [](bool use_full_mat_mul_precision) {
           XlaHelpers::set_mat_mul_precision(

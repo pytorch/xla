@@ -771,3 +771,16 @@ def get_rng_state(device=None):
   if device is None:
     device = torch_xla._XLAC._xla_get_default_device()
   return torch_xla._XLAC._xla_get_rng_seed(str(device) if device else '')
+
+
+def get_memory_info(device):
+  """Retrieves the device memory information.
+
+  Args:
+    device (string): The device whose memory information are requested.
+
+  Returns:
+    A dictionary with `kb_free` (free memory in KB) and `kb_total` (total
+    memory in KB) keys.
+  """
+  return torch_xla._XLAC._xla_memory_info(str(device))
