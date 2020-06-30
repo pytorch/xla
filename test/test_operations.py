@@ -1447,9 +1447,6 @@ class TestAtenXlaTensor(XlaTestCase):
       nested = Nested(b, c)
       self.assertRaises(RuntimeError, lambda: xm.check_view_sharing(nested))
 
-      with tempfile.TemporaryFile() as tf:
-        self.assertRaises(RuntimeError, lambda: torch.save([b, c], tf))
-
       d = a
       xm.check_view_sharing([a, d])
 
