@@ -33,10 +33,14 @@ substitutions:
     _PYTHON_VERSION: '3.6'
     _RELEASE_VERSION: 'nightly'  # or rX.Y
     _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
+    _UPLOAD_SUBDIR: ''
 options:
     machineType: 'N1_HIGHCPU_32'
+    dynamic_substitutions: true
+    substitution_option: 'ALLOW_LOOSE'
 timeout: 18000s
 artifacts:
   objects:
-    location: 'gs://tpu-pytorch/wheels'
+    # CUDA wheels exported under `wheels/cuda/<cuda_version>`
+    location: 'gs://tpu-pytorch/wheels/$_UPLOAD_SUBDIR'
     paths: ['/**/*.whl']

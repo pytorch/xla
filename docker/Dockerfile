@@ -1,4 +1,4 @@
-# Use nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04 or later for CUDA.
+# Use nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04 or later for CUDA.
 # Warning: All ARGs placed before FROM will only be scoped up unitl FROM statement.
 # https://github.com/docker/cli/blob/3c7ede6a68941f64c3a154c9a753eb7a9b1c2c3e/docs/reference/builder.md#understand-how-arg-and-from-interact
 ARG base_image="debian:stretch"
