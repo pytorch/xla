@@ -975,6 +975,21 @@ If missing the default device seed will be set.</p>
 </dl>
 </dd></dl>
 
+<dl class="function">
+<dt id="torch_xla.core.xla_model.get_memory_info">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_memory_info</code><span class="sig-paren">(</span><em class="sig-param">device</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_memory_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_memory_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the device memory information.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>device</strong> (<em>string</em>) – The device whose memory information are requested.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A dictionary with <cite>kb_free</cite> (free memory in KB) and <cite>kb_total</cite> (total
+memory in KB) keys.</p>
+</dd>
+</dl>
+</dd></dl>
+
 <span class="target" id="module-torch_xla.core.functions"></span><dl class="function">
 <dt id="torch_xla.core.functions.all_reduce">
 <code class="sig-prename descclassname">torch_xla.core.functions.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">value</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/functions.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.functions.all_reduce" title="Permalink to this definition">¶</a></dt>
