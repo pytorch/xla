@@ -127,14 +127,13 @@ def _setup_workers(num_devices):
     assert world_size == len(
         wcfg), 'World size ({}) must match the configured workers ({})'.format(
             world_size, len(wcfg))
-    for h, this_worker in enumerate(wcfg):
-      worker = wcfg[this_worker]
+    for h, worker in enumerate(wcfg):
       m = re.match(r'(.*):(\d+)$', worker.host_port)
       if not m:
         raise RuntimeError('Bad worker HOST:PORT format: {}'.format(
             worker.host_port))
-      for i in range(0, num_devices):
-        gindex = h * num_devices + i
+      for i in range(0, num_gpus):
+        gindex = h * num_gpus + i
         workers.append('{}:{};grpc://{}:{}'.format(worker.worker_name, gindex,
                                                    m.group(1),
                                                    int(m.group(2)) + i))
