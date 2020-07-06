@@ -1,6 +1,7 @@
 import inspect
 import torch
 import torch.nn as nn
+from torch._six import inf
 
 
 def _patch(fn, newfn):
