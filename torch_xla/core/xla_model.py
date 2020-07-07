@@ -15,6 +15,8 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.keyd_queue as kq
 
+_DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
+
 REDUCE_SUM = 'sum'
 REDUCE_MUL = 'mul'
 REDUCE_AND = 'and'
@@ -60,7 +62,7 @@ class CollectiveContext(object):
       self.intercore_group = groups or []
 
 
-def _get_group(ranks):
+def _get_torch_dist_group(ranks):
   import torch.distributed as dist
 
   with _TORCH_DIST_LOCK:
@@ -74,7 +76,7 @@ def _get_group(ranks):
 def _make_group_for_ordinal(ordinal, groups):
   for g in groups:
     if ordinal in g:
-      return _get_group(sorted(g))
+      return _get_torch_dist_group(sorted(g))
   raise RuntimeError('Ordinal {} not found in groups {}'.format(
       ordinal, groups))
 
@@ -86,7 +88,7 @@ def _make_interhost_group(replica_devcount, world_size):
   # The XLA CPU is a special case where there is one process per XLA CPU device,
   # which is also a virtual host within a physical host.
   ranks = tuple(range(0, world_size, replica_devcount))
-  return _get_group(ranks), ranks
+  return _get_torch_dist_group(ranks), ranks
 
 
 def is_xla_tensor(tensor):
@@ -111,7 +113,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
   Returns:
     The list of device strings.
   """
-  xla_devices = torch_xla._XLAC._xla_get_devices()
+  xla_devices = _DEVICES.value
   devkind = devkind or ['TPU', 'GPU', 'CPU']
   for kind in devkind:
     kind_devices = []
@@ -199,8 +201,7 @@ def xla_device(n=None, devkind=None):
     n (int, optional): The specific instance (ordinal) to be returned. If
       specified, the specific XLA device instance will be returned. Otherwise
       the first device of `devkind` will be returned.
-    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`
-      (the 'GPU' XLA device is currently not implemented).
+    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`.
 
   Returns:
     A `torch.device` with the requested instance.
@@ -219,20 +220,16 @@ def xla_device(n=None, devkind=None):
   return torch.device(device)
 
 
+def _xla_real_device(device):
+  device_str = str(device)
+  m = re.match(r'xla:(\d+)$', device_str)
+  if not m:
+    raise RuntimeError('Invalid device format: {}'.format(device_str))
+  return _DEVICES.value[int(m.group(1))]
+
+
 def xla_real_devices(devices):
-  xla_devices = torch_xla._XLAC._xla_get_devices()
-  real_devices = []
-  for device in devices:
-    device_str = str(device)
-    m = re.match(r'xla:(\d+)$', device_str)
-    if m:
-      real_devices.append(xla_devices[int(m.group(1))])
-      continue
-    xdev = parse_xla_device(device_str)
-    if not xdev:
-      raise RuntimeError('Invalid device format: {}'.format(device_str))
-    real_devices.append(device_str)
-  return real_devices
+  return [_xla_real_device(device) for device in devices]
 
 
 def xla_device_hw(device):
@@ -246,7 +243,7 @@ def xla_device_hw(device):
     A string representation of the hardware type (`CPU`, `TPU`, `GPU`) of the
     given device.
   """
-  real_device = xla_real_devices([str(device)])[0]
+  real_device = _xla_real_device(device)
   return real_device.split(':')[0]
 
 
