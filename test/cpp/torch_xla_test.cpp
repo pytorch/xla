@@ -15,7 +15,7 @@ namespace cpp_test {
 
 void XlaTest::SetUp() {
   at::manual_seed(42);
-  XLATensor::SetRngSeed(GetDefaultDevice(), 42);
+  XLATensor::SetRngSeed(GetCurrentDevice(), 42);
   start_msnap_ = absl::make_unique<MetricsSnapshot>();
 }
 

@@ -328,24 +328,20 @@ class XLATensor::DeviceContextArena {
     return devctx->running_seed;
   }
 
-  void SetRngSeed(const Device* device, xla::uint64 seed) {
-    auto fn = [&](DeviceContext* devctx) {
-      std::lock_guard<std::mutex> lock(devctx->lock);
-      devctx->seed = seed;
-      devctx->running_seed = devctx->seed;
-      devctx->seed_ir_value = ir::Value();
-    };
-    ForAllDeviceContexts(fn, device);
+  void SetRngSeed(const Device& device, xla::uint64 seed) {
+    DeviceContext* devctx = GetDeviceContext(device);
+    std::lock_guard<std::mutex> lock(devctx->lock);
+    devctx->seed = seed;
+    devctx->running_seed = devctx->seed;
+    devctx->seed_ir_value = ir::Value();
   }
 
-  void StepRngSeed(const Device* device) {
-    auto fn = [&](DeviceContext* devctx) {
-      std::lock_guard<std::mutex> lock(devctx->lock);
-      devctx->seed = 1012031 + devctx->seed * 7012063;
-      devctx->running_seed = devctx->seed;
-      devctx->seed_ir_value = ir::Value();
-    };
-    ForAllDeviceContexts(fn, device);
+  void MarkStep(const Device& device) {
+    DeviceContext* devctx = GetDeviceContext(device);
+    std::lock_guard<std::mutex> lock(devctx->lock);
+    devctx->seed = 1012031 + devctx->seed * 7012063;
+    devctx->running_seed = devctx->seed;
+    devctx->seed_ir_value = ir::Value();
   }
 
  private:
@@ -1345,9 +1341,9 @@ void XLATensor::SyncLiveTensorsGraph(const Device* device,
   SyncTensorsGraph(&tensors, devices, wait, /*sync_xla_data=*/true);
 }
 
-void XLATensor::MarkStep(const Device* device) {
+void XLATensor::MarkStep(const Device& device) {
   XLA_COUNTER("MarkStep", 1);
-  DeviceContextArena::Get()->StepRngSeed(device);
+  DeviceContextArena::Get()->MarkStep(device);
   ir::ScopePusher::ResetScopes();
   g_tls_data.Reset();
 }
@@ -1580,7 +1576,7 @@ ir::Value XLATensor::GetRngSeed(const Device& device) {
   return DeviceContextArena::Get()->GetRngSeed(device);
 }
 
-void XLATensor::SetRngSeed(const Device* device, xla::uint64 seed) {
+void XLATensor::SetRngSeed(const Device& device, xla::uint64 seed) {
   DeviceContextArena::Get()->SetRngSeed(device, seed);
 }
 

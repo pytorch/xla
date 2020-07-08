@@ -24,10 +24,30 @@ REDUCE_OR = 'or'
 REDUCE_MIN = 'min'
 REDUCE_MAX = 'max'
 
-_TLS = threading.local()
-
 _TORCH_DIST_GROUPS = dict()
 _TORCH_DIST_LOCK = threading.Lock()
+
+_DEVICE_CONTEXTS = dict()
+_DEVICE_CONTEXTS_LOCK = threading.Lock()
+
+
+class DeviceContext(object):
+
+  def __init__(self, device):
+    self.device = device
+
+
+def _get_device_context(device=None):
+  if device is None:
+    device = torch_xla._XLAC._xla_get_default_device()
+  else:
+    device = str(device)
+  with _DEVICE_CONTEXTS_LOCK:
+    devctx = _DEVICE_CONTEXTS.get(device, None)
+    if devctx is None:
+      devctx = DeviceContext(device)
+      _DEVICE_CONTEXTS[device] = devctx
+    return devctx
 
 
 class CollectiveContext(object):
@@ -170,7 +190,7 @@ def get_local_ordinal(defval=0):
   ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
   if ordinal >= 0:
     return ordinal
-  return getattr(_TLS, 'device_index', defval)
+  return getattr(_get_device_context(), 'device_index', defval)
 
 
 def is_master_ordinal(local=True):
@@ -289,16 +309,16 @@ def unlazy(tensors):
 
 def set_replication(device, devices):
   device = str(device)
+  devctx = _get_device_context(device=device)
   devices = [str(x) for x in devices]
   if devices:
     replication_devices = xla_replication_devices(devices)
     torch_xla._XLAC._xla_set_replication_devices(replication_devices)
-    _TLS.device_index = devices.index(device)
+    devctx.device_index = devices.index(device)
   else:
     torch_xla._XLAC._xla_set_replication_devices([])
-    _TLS.device_index = 0
-  _TLS.device = device
-  _TLS.all_reduce_token = None
+    devctx.device_index = 0
+  devctx.all_reduce_token = None
   torch_xla._XLAC._xla_set_default_device(device)
 
 
@@ -437,11 +457,12 @@ def _fetch_gradients(optimizer):
 
 
 def _get_all_reduce_token():
-  token = getattr(_TLS, 'all_reduce_token', None)
+  devctx = _get_device_context()
+  token = getattr(devctx, 'all_reduce_token', None)
   if token is None:
     token = torch_xla._XLAC._xla_create_token()
-    _TLS.all_reduce_token = token
-  return token
+    devctx.all_reduce_token = token
+  return token, devctx
 
 
 def _torch_all_reduce(reduce_type, inputs, group=None):
@@ -497,8 +518,9 @@ def _host_all_reduce(reduce_type, inputs, cctx, scale=None):
     for tensor in inputs:
       tensor.zero_()
   if cctx.requires_intercore_reduce:
-    _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
-        REDUCE_SUM, inputs, _get_all_reduce_token(), 1.0, [])
+    token, devctx = _get_all_reduce_token()
+    devctx.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
+        REDUCE_SUM, inputs, token, 1.0, [])
 
 
 def all_reduce(reduce_type, inputs, scale=1.0, groups=None, cctx=None):
@@ -532,16 +554,15 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, cctx=None):
   if cctx is None:
     cctx = CollectiveContext(groups=groups)
   if cctx.requires_intercore_reduce:
+    token, devctx = _get_all_reduce_token()
     if isinstance(inputs, torch.Tensor):
-      result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs,
-                                               _get_all_reduce_token(), scale,
-                                               cctx.intercore_group)
-      _TLS.all_reduce_token = result[1]
+      result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, token,
+                                               scale, cctx.intercore_group)
+      devctx.all_reduce_token = result[1]
       results = [result[0]]
     else:
-      _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
-          reduce_type, inputs, _get_all_reduce_token(), scale,
-          cctx.intercore_group)
+      devctx.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
+          reduce_type, inputs, token, scale, cctx.intercore_group)
       results = inputs
   else:
     if isinstance(inputs, torch.Tensor):
@@ -614,10 +635,11 @@ def all_to_all(value,
   Returns:
     The result `torch.Tensor` of the `all_to_all()` operation.
   """
-  result = torch_xla._XLAC._xla_all_to_all(value, _get_all_reduce_token(),
-                                           split_dimension, concat_dimension,
-                                           split_count, groups or [])
-  _TLS.all_reduce_token = result[1]
+  token, devctx = _get_all_reduce_token()
+  result = torch_xla._XLAC._xla_all_to_all(value, token, split_dimension,
+                                           concat_dimension, split_count,
+                                           groups or [])
+  devctx.all_reduce_token = result[1]
   return result[0]
 
 
@@ -637,10 +659,9 @@ def collective_permute(value, pairs):
   Returns:
     The result `torch.Tensor` of the `collective_permute()` operation.
   """
-  result = torch_xla._XLAC._xla_collective_permute(value,
-                                                   _get_all_reduce_token(),
-                                                   pairs)
-  _TLS.all_reduce_token = result[1]
+  token, devctx = _get_all_reduce_token()
+  result = torch_xla._XLAC._xla_collective_permute(value, token, pairs)
+  devctx.all_reduce_token = result[1]
   return result[0]
 
 
@@ -666,19 +687,22 @@ def add_step_closure(closure, args=()):
     closure (callable): The function to be called.
     args (tuple): The arguments to be passed to the closure.
   """
-  step_closures = getattr(_TLS, 'step_closures', None)
+  devctx = _get_device_context()
+  step_closures = getattr(devctx, 'step_closures', None)
   if step_closures is None:
     step_closures = []
-    _TLS.step_closures = step_closures
+    devctx.step_closures = step_closures
   step_closures.append(lambda a=args: closure(*a))
 
 
 def _run_step_closures():
-  step_closures = getattr(_TLS, 'step_closures', None)
+  devctx = _get_device_context()
+  step_closures = getattr(devctx, 'step_closures', None)
   if step_closures is not None:
-    _TLS.step_closures = []
+    devctx.step_closures = []
     for closure in step_closures:
       closure()
+  return devctx
 
 
 def mark_step():
@@ -691,8 +715,8 @@ def mark_step():
   # same values from different threads.
   if is_master_ordinal():
     ms.save_metrics()
-  _run_step_closures()
-  _TLS.all_reduce_token = None
+  devctx = _run_step_closures()
+  devctx.all_reduce_token = None
 
 
 def wait_device_ops(devices=[]):
