@@ -267,6 +267,8 @@
 <span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.keyd_queue</span> <span class="k">as</span> <span class="nn">kq</span>
 
+<span class="n">_DEVICES</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">LazyProperty</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_devices</span><span class="p">())</span>
+
 <span class="n">REDUCE_SUM</span> <span class="o">=</span> <span class="s1">&#39;sum&#39;</span>
 <span class="n">REDUCE_MUL</span> <span class="o">=</span> <span class="s1">&#39;mul&#39;</span>
 <span class="n">REDUCE_AND</span> <span class="o">=</span> <span class="s1">&#39;and&#39;</span>
@@ -312,7 +314,7 @@
       <span class="bp">self</span><span class="o">.</span><span class="n">intercore_group</span> <span class="o">=</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[]</span>
 
 
-<span class="k">def</span> <span class="nf">_get_group</span><span class="p">(</span><span class="n">ranks</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_get_torch_dist_group</span><span class="p">(</span><span class="n">ranks</span><span class="p">):</span>
   <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
 
   <span class="k">with</span> <span class="n">_TORCH_DIST_LOCK</span><span class="p">:</span>
@@ -326,7 +328,7 @@
 <span class="k">def</span> <span class="nf">_make_group_for_ordinal</span><span class="p">(</span><span class="n">ordinal</span><span class="p">,</span> <span class="n">groups</span><span class="p">):</span>
   <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
     <span class="k">if</span> <span class="n">ordinal</span> <span class="ow">in</span> <span class="n">g</span><span class="p">:</span>
-      <span class="k">return</span> <span class="n">_get_group</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">g</span><span class="p">))</span>
+      <span class="k">return</span> <span class="n">_get_torch_dist_group</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">g</span><span class="p">))</span>
   <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Ordinal </span><span class="si">{}</span><span class="s1"> not found in groups </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
       <span class="n">ordinal</span><span class="p">,</span> <span class="n">groups</span><span class="p">))</span>
 
@@ -338,7 +340,7 @@
   <span class="c1"># The XLA CPU is a special case where there is one process per XLA CPU device,</span>
   <span class="c1"># which is also a virtual host within a physical host.</span>
   <span class="n">ranks</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">world_size</span><span class="p">,</span> <span class="n">replica_devcount</span><span class="p">))</span>
-  <span class="k">return</span> <span class="n">_get_group</span><span class="p">(</span><span class="n">ranks</span><span class="p">),</span> <span class="n">ranks</span>
+  <span class="k">return</span> <span class="n">_get_torch_dist_group</span><span class="p">(</span><span class="n">ranks</span><span class="p">),</span> <span class="n">ranks</span>
 
 
 <span class="k">def</span> <span class="nf">is_xla_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">):</span>
@@ -363,7 +365,7 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The list of device strings.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">xla_devices</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_devices</span><span class="p">()</span>
+  <span class="n">xla_devices</span> <span class="o">=</span> <span class="n">_DEVICES</span><span class="o">.</span><span class="n">value</span>
   <span class="n">devkind</span> <span class="o">=</span> <span class="n">devkind</span> <span class="ow">or</span> <span class="p">[</span><span class="s1">&#39;TPU&#39;</span><span class="p">,</span> <span class="s1">&#39;GPU&#39;</span><span class="p">,</span> <span class="s1">&#39;CPU&#39;</span><span class="p">]</span>
   <span class="k">for</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">devkind</span><span class="p">:</span>
     <span class="n">kind_devices</span> <span class="o">=</span> <span class="p">[]</span>
@@ -451,8 +453,7 @@
 <span class="sd">    n (int, optional): The specific instance (ordinal) to be returned. If</span>
 <span class="sd">      specified, the specific XLA device instance will be returned. Otherwise</span>
 <span class="sd">      the first device of `devkind` will be returned.</span>
-<span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`</span>
-<span class="sd">      (the &#39;GPU&#39; XLA device is currently not implemented).</span>
+<span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    A `torch.device` with the requested instance.</span>
@@ -471,20 +472,16 @@
   <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span></div>
 
 
+<span class="k">def</span> <span class="nf">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
+  <span class="n">device_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;xla:(\d+)$&#39;</span><span class="p">,</span> <span class="n">device_str</span><span class="p">)</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid device format: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">device_str</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">_DEVICES</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))]</span>
+
+
 <span class="k">def</span> <span class="nf">xla_real_devices</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
-  <span class="n">xla_devices</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_devices</span><span class="p">()</span>
-  <span class="n">real_devices</span> <span class="o">=</span> <span class="p">[]</span>
-  <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">:</span>
-    <span class="n">device_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;xla:(\d+)$&#39;</span><span class="p">,</span> <span class="n">device_str</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
-      <span class="n">real_devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xla_devices</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))])</span>
-      <span class="k">continue</span>
-    <span class="n">xdev</span> <span class="o">=</span> <span class="n">parse_xla_device</span><span class="p">(</span><span class="n">device_str</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">xdev</span><span class="p">:</span>
-      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid device format: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">device_str</span><span class="p">))</span>
-    <span class="n">real_devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">device_str</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">real_devices</span>
+  <span class="k">return</span> <span class="p">[</span><span class="n">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="xla_device_hw"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xla_device_hw">[docs]</a><span class="k">def</span> <span class="nf">xla_device_hw</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
@@ -498,7 +495,7 @@
 <span class="sd">    A string representation of the hardware type (`CPU`, `TPU`, `GPU`) of the</span>
 <span class="sd">    given device.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">real_device</span> <span class="o">=</span> <span class="n">xla_real_devices</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="n">real_device</span> <span class="o">=</span> <span class="n">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">real_device</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
 
 

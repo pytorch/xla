@@ -273,6 +273,19 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">()</span>
 
 
+<span class="k">class</span> <span class="nc">LazyProperty</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gen_fn</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_gen_fn</span> <span class="o">=</span> <span class="n">gen_fn</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span> <span class="nf">value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gen_fn</span><span class="p">()</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_gen_fn</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span>
+
+
 <span class="k">class</span> <span class="nc">TmpFolder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
