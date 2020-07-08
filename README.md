@@ -233,3 +233,6 @@ bug reports, feature requests, build issues, etc. are all welcome!
 ## <a name="Contributing"></a> Contributing
 
 See the [contribution guide](CONTRIBUTING.md).
+
+## Disclaimer 
+This repository is jointly operated and maintained by Google, Facebook and a number of individual contributors listed in the [CONTRIBUTORS](https://github.com/pytorch/xla/graphs/contributors) file. For questions directed at Facebook, please send an email to opensource@fb.com. For questions directed at Google, please send an email to pytorch-xla@googlegroups.com. For all other questions, please open up an issue in this repository [here](https://github.com/pytorch/xla/issues).
