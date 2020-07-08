@@ -32,8 +32,6 @@ namespace {
 
 static const char* const kLocalService = "localservice";
 
-thread_local std::vector<std::string> g_replication_devices;
-
 // A simple Tensorflow Allocator which caches Tensor allocations in order to
 // avoid paying the kernel's clear_page_c() price.
 class TensorAllocator : public tensorflow::Allocator {
@@ -1393,13 +1391,15 @@ std::vector<std::string> XrtComputationClient::GetAllDevices() const {
 }
 
 void XrtComputationClient::SetReplicationDevices(
-    std::vector<std::string> devices) {
-  g_replication_devices = std::move(devices);
+    std::shared_ptr<std::vector<std::string>> devices) {
+  std::lock_guard<std::mutex> lock(lock_);
+  replication_devices_ = std::move(devices);
 }
 
-const std::vector<std::string>& XrtComputationClient::GetReplicationDevices()
-    const {
-  return g_replication_devices;
+std::shared_ptr<std::vector<std::string>>
+XrtComputationClient::GetReplicationDevices() {
+  std::lock_guard<std::mutex> lock(lock_);
+  return replication_devices_;
 }
 
 void XrtComputationClient::SetRngSeed(size_t seed) { rng_seed_ = seed; }

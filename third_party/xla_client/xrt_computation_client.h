@@ -182,9 +182,10 @@ class XrtComputationClient : public ComputationClient {
 
   std::vector<std::string> GetAllDevices() const override;
 
-  void SetReplicationDevices(std::vector<std::string> devices) override;
+  void SetReplicationDevices(
+      std::shared_ptr<std::vector<std::string>> devices) override;
 
-  const std::vector<std::string>& GetReplicationDevices() const override;
+  std::shared_ptr<std::vector<std::string>> GetReplicationDevices() override;
 
   void SetRngSeed(size_t seed) override;
 
@@ -505,6 +506,7 @@ class XrtComputationClient : public ComputationClient {
   // The mesh service which is used to coordinate all the client hosts which are
   // feeding different TPU devices in a POD (or slice) training.
   std::unique_ptr<service::MeshService> mesh_service_;
+  std::shared_ptr<std::vector<std::string>> replication_devices_;
 };
 
 }  // namespace xla
