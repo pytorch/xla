@@ -115,6 +115,7 @@
 #include "torch_xla/csrc/ops/triangular_solve.h"
 #include "torch_xla/csrc/ops/tril.h"
 #include "torch_xla/csrc/ops/triu.h"
+#include "torch_xla/csrc/ops/unfold.h"
 #include "torch_xla/csrc/ops/uniform.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
 #include "torch_xla/csrc/ops/upsample_bilinear2d.h"
@@ -2652,6 +2653,18 @@ std::vector<XLATensor> XLATensor::unbind(const XLATensor& input,
     slices.push_back(select(input, dim, index));
   }
   return slices;
+}
+
+XLATensor XLATensor::unfold(const XLATensor& input, int64_t dimension,
+                            int64_t size, int64_t step) {
+  xla::int64 canonical_dim = XlaHelpers::GetCanonicalDimensionIndex(
+      dimension, input.shape().get().rank());
+  XLA_CHECK_LE(size, input.shape().get().dimensions()[canonical_dim])
+      << "maximum size for tensor at dimension " << canonical_dim << " is "
+      << input.shape().get().dimensions()[canonical_dim] << " but size is "
+      << size;
+  return input.CreateFrom(ir::MakeNode<ir::ops::Unfold>(
+      input.GetIrValue(), canonical_dim, size, step));
 }
 
 void XLATensor::uniform_(XLATensor& input, double from, double to) {

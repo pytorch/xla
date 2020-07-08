@@ -81,6 +81,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_bincount',
         'test_view_all_dtypes_and_devices',  # uses half
         'test_unfold_all_devices_and_dtypes',  # uses half
+        'test_unfold_scalars_xla',  # treat scalar as tensor
         'test_tensor_pow_tensor',  # lowering
         'test_tensor_factories_empty',  # uses half
         'test_symeig',

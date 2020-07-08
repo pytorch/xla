@@ -663,6 +663,19 @@ class TestSelect(XlaTestCase):
     self.assertEqual(tx, sx.data.cpu())
 
 
+class TestUnfold(XlaTestCase):
+
+  def test_unfold(self):
+    x = _gen_tensor(5, 6, 7, device=xm.xla_device())
+    t = x.data.cpu()
+    for dim in [-1, 0, 2]:
+      for size in [2, 4]:
+        for step in [1, 2, 3]:
+          sx = x.unfold(dim, size, step)
+          tx = t.unfold(dim, size, step)
+          self.assertEqual(tx, sx.data.cpu())
+
+
 class TestDynamicShape(XlaTestCase):
 
   def test_nonzero_shape(self):

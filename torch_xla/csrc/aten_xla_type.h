@@ -1002,6 +1002,9 @@ class AtenXlaType {
 
   static std::vector<at::Tensor> unbind(const at::Tensor& self, int64_t dim);
 
+  static at::Tensor unfold(const at::Tensor& self, int64_t dimension,
+                           int64_t size, int64_t step);
+
   static at::Tensor& uniform_(at::Tensor& self, double from, double to,
                               c10::optional<at::Generator> generator);
 

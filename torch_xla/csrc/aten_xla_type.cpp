@@ -3113,6 +3113,13 @@ std::vector<at::Tensor> AtenXlaType::unbind(const at::Tensor& self,
       XLATensor::unbind(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor AtenXlaType::unfold(const at::Tensor& self, int64_t dimension,
+                               int64_t size, int64_t step) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::unfold(bridge::GetXlaTensor(self), dimension, size, step));
+}
+
 at::Tensor& AtenXlaType::uniform_(at::Tensor& self, double from, double to,
                                   c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");

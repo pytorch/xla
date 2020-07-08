@@ -1070,6 +1070,9 @@ class XLATensor {
   // removed.
   static std::vector<XLATensor> unbind(const XLATensor& input, xla::int64 dim);
 
+  static XLATensor unfold(const XLATensor& input, int64_t dimension,
+                          int64_t size, int64_t step);
+
   static void uniform_(XLATensor& input, double from, double to);
 
   // Insert a dimension of size one at the specified position.

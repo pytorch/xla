@@ -75,6 +75,30 @@ std::vector<xla::int64> GetCompleteShape(
   return complete_output_sizes;
 }
 
+xla::XlaOp sliceKernelWithStep(
+    xla::XlaOp kernel, xla::int64 step, xla::int64 slice_dim,
+    xla::int64 slice_limit_index,
+    absl::Span<const xla::int64> single_kernel_shape) {
+  if (step == 1) {
+    return kernel;
+  }
+  // Kernel shape should be
+  // [output_feature][input_features][kernel_spatial_dims]. output_feature is
+  // the product of all kernel_spatial_dim_size. Reshape the kernel to
+  // [kernel_spatial_dims][input_features][kernel_spatial_dims] and use slice to
+  // drops some filters when step > 1.
+  std::vector<xla::int64> temp_kernel_shape(single_kernel_shape.begin(),
+                                            single_kernel_shape.end());
+  temp_kernel_shape.push_back(1);
+  temp_kernel_shape.insert(temp_kernel_shape.end(), single_kernel_shape.begin(),
+                           single_kernel_shape.end());
+  xla::XlaOp reshaped_kernel = xla::Reshape(kernel, temp_kernel_shape);
+
+  xla::XlaOp sliced_kernel =
+      xla::SliceInDim(reshaped_kernel, 0, slice_limit_index, step, slice_dim);
+  return sliced_kernel;
+}
+
 xla::XlaOp BuildView(xla::XlaOp input,
                      absl::Span<const xla::int64> output_sizes) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
@@ -319,6 +343,101 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,
   xla::XlaOp padded_source = xla::Pad(source, zero, padding_config);
   xla::XlaOp mask = xla::Pad(source_true, pred_zero, padding_config);
   return xla::Select(mask, padded_source, target);
+}
+
+xla::XlaOp BuildUnfold(xla::XlaOp input, xla::int64 dimension, xla::int64 size,
+                       xla::int64 step) {
+  xla::Shape input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  int input_spatial_dim_rank = input_shape.rank();
+  std::vector<xla::int64> transpose_permutation;
+  if (dimension != input_spatial_dim_rank - 1) {
+    // We use convolution to implement the unfold so we need the dimension to
+    // be the most minor dimension(convolution is performed in a fixed
+    // dimension order). Transpose the input before performing the convolution.
+    transpose_permutation = xla::util::Iota<xla::int64>(input_spatial_dim_rank);
+    std::swap(transpose_permutation[dimension], transpose_permutation.back());
+    input = xla::Transpose(input, transpose_permutation);
+    input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  }
+
+  // We want to create n kernels with a `1` and many `0` in each kernel. n is
+  // the number of the output. For example if we have Input = [1,2,3], dimension
+  // = 0, size = 2, step = 1, the kernel will be [1,0] and [0,1]. When the
+  // convolution is performed, first kernel will move along the dimension 0
+  // twice and output [1,2], second kernel will output [2,3]. Same idea applys
+  // to higher dimension input but we need to reshape the kernel to be the same
+  // dimension as the input. Kernel will have the same size as input except in
+  // the last dimension.
+  xla::int64 single_kernel_size = 1;
+  // [output_feature][input_features][kernel_spatial_dims]
+  std::vector<xla::int64> expected_kernel_shape(input_spatial_dim_rank + 2, 1);
+  // [batch_size][input_feature][input_spatial_dims]
+  std::vector<xla::int64> input_conv_shape(input_spatial_dim_rank + 2, 1);
+  for (int i = 0; i < input_spatial_dim_rank - 1; i++) {
+    expected_kernel_shape[i + 2] = input_shape.dimensions(i);
+    input_conv_shape[i + 2] = input_shape.dimensions(i);
+    single_kernel_size *= input_conv_shape[i + 2];
+  }
+  input_conv_shape[input_spatial_dim_rank + 1] =
+      input_shape.dimensions(input_spatial_dim_rank - 1);
+  expected_kernel_shape[input_spatial_dim_rank + 1] =
+      input_shape.dimensions(input_spatial_dim_rank - 1) - size + 1;
+  single_kernel_size *= expected_kernel_shape[input_spatial_dim_rank + 1];
+  // single_kernel_shape does not include the [output_feature][input_features].
+  std::vector<xla::int64> single_kernel_shape(expected_kernel_shape.begin() + 2,
+                                              expected_kernel_shape.end());
+  std::vector<xla::int64> res_shape(single_kernel_shape.begin(),
+                                    single_kernel_shape.end());
+  res_shape.push_back(size);
+  // For a kernel with size n, there are n different permutaion with a single
+  // `1` in the kernel. We will assume step == 1 here.
+  xla::int64 num_kernel = single_kernel_size;
+  expected_kernel_shape[0] = num_kernel;
+
+  // Use iota to generate identity matrix.
+  xla::Shape iota_kernel_shape =
+      xla::ShapeUtil::MakeShape(xla::S32, {num_kernel, 1, single_kernel_size});
+  xla::XlaOp kernel = xla::ConvertElementType(
+      xla::Eq(sliceKernelWithStep(
+                  xla::Iota(input.builder(), iota_kernel_shape, 0), step,
+                  input_spatial_dim_rank - 1,
+                  expected_kernel_shape[input_spatial_dim_rank + 1],
+                  absl::Span<const xla::int64>(single_kernel_shape)),
+              sliceKernelWithStep(
+                  xla::Iota(input.builder(), iota_kernel_shape, 2), step,
+                  input_spatial_dim_rank - 1,
+                  expected_kernel_shape[input_spatial_dim_rank + 1],
+                  absl::Span<const xla::int64>(single_kernel_shape))),
+      xla::F32);
+
+  if (step > 1) {
+    const xla::Shape& sliced_kernel_shape = XlaHelpers::ShapeOfXlaOp(kernel);
+    res_shape[input_spatial_dim_rank - 1] =
+        sliced_kernel_shape.dimensions(input_spatial_dim_rank - 1);
+    num_kernel = 1;
+    for (int i = 0; i < input_spatial_dim_rank; i++) {
+      num_kernel *= sliced_kernel_shape.dimensions(i);
+    }
+    expected_kernel_shape[0] = num_kernel;
+  }
+
+  kernel = xla::Reshape(kernel, expected_kernel_shape);
+  input = xla::Reshape(input, input_conv_shape);
+  std::vector<xla::int64> window_strides(input_spatial_dim_rank, 1);
+  // XLA:CPU currently only supports F16, F32, F64, C64, C128 for convolution
+  // convert the input to F32 as a workaround.
+  xla::XlaOp res =
+      xla::Reshape(xla::Conv(xla::ConvertElementType(input, xla::F32), kernel,
+                             window_strides, xla::Padding::kValid),
+                   res_shape);
+
+  if (dimension != input_spatial_dim_rank - 1) {
+    // Transpose the result back to the origional permuataion. Note that result
+    // has one more dimension than the input.
+    transpose_permutation.push_back(input_spatial_dim_rank);
+    res = xla::Transpose(res, transpose_permutation);
+  }
+  return xla::ConvertElementType(res, input_shape.element_type());
 }
 
 xla::XlaOp BuildReflectionPad2d(xla::XlaOp input,
