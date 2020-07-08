@@ -242,9 +242,10 @@ class ComputationClient {
 
   virtual std::vector<std::string> GetAllDevices() const = 0;
 
-  virtual void SetReplicationDevices(std::vector<std::string> devices) = 0;
+  virtual void SetReplicationDevices(
+      std::shared_ptr<std::vector<std::string>> devices) = 0;
 
-  virtual const std::vector<std::string>& GetReplicationDevices() const = 0;
+  virtual std::shared_ptr<std::vector<std::string>> GetReplicationDevices() = 0;
 
   virtual void SetRngSeed(size_t seed) = 0;
 
@@ -266,7 +267,7 @@ class ComputationClient {
   // device will be returned. Otherwise a vector with the devices content will
   // be returned.
   std::vector<std::string> GetCompilationDevices(
-      const std::string& device, absl::Span<const std::string> devices) const;
+      const std::string& device, absl::Span<const std::string> devices);
 
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.

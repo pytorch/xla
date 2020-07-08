@@ -117,7 +117,7 @@ class XLATensor {
 
   static ir::Value GetRngSeed(const Device& device);
 
-  static void SetRngSeed(const Device* device, xla::uint64 seed);
+  static void SetRngSeed(const Device& device, xla::uint64 seed);
 
   static xla::uint64 GetRunningSeed(const Device& device);
 
@@ -160,7 +160,7 @@ class XLATensor {
 
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
-  static void MarkStep(const Device* device);
+  static void MarkStep(const Device& device);
 
   // Waits for all the outstanding operations on all the supplied devices.
   // If devices is empty, the wait will happen for all local devices.
