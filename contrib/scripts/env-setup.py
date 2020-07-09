@@ -12,12 +12,22 @@ import subprocess
 import threading
 
 VersionConfig = collections.namedtuple('VersionConfig',
-                                       ['wheels', 'tpu', 'py_version'])
+                                       ['wheels', 'tpu', 'py_version', 'cuda_version'])
+DEFAULT_CUDA_VERSION = '10.2'
 OLDEST_VERSION = datetime.strptime('20200318', '%Y%m%d')
+OLDEST_GPU_VERSION = datetime.strptime('20200707', '%Y%m%d')
 DIST_BUCKET = 'gs://tpu-pytorch/wheels'
 TORCH_WHEEL_TMPL = 'torch-{whl_version}-cp{py_version}-cp{py_version}m-linux_x86_64.whl'
 TORCH_XLA_WHEEL_TMPL = 'torch_xla-{whl_version}-cp{py_version}-cp{py_version}m-linux_x86_64.whl'
 TORCHVISION_WHEEL_TMPL = 'torchvision-{whl_version}-cp{py_version}-cp{py_version}m-linux_x86_64.whl'
+
+
+def is_gpu_runtime():
+  return os.environ.get('COLAB_GPU', 0) == 1
+
+
+def is_tpu_runtime():
+  return 'TPU_NAME' in os.environ
 
 
 def update_tpu_runtime(tpu_name, version):
@@ -39,9 +49,17 @@ def get_py_version():
   return version_tuple[0] + version_tuple[1]  # major_version + minor_version
 
 
+def get_cuda_version():
+  if is_gpu_runtime():
+    # cuda available, install cuda wheels
+    return DEFAULT_CUDA_VERSION
+
+
 def get_version(version):
+  cuda_version = get_cuda_version()
   if version == 'nightly':
-    return VersionConfig('nightly', 'pytorch-nightly', get_py_version())
+    return VersionConfig(
+      'nightly', 'pytorch-nightly', get_py_version(), cuda_version)
 
   version_date = None
   try:
@@ -50,27 +68,35 @@ def get_version(version):
     pass  # Not a dated nightly.
 
   if version_date:
-    if version_date < OLDEST_VERSION:
+    if cuda_version and version_date < OLDEST_GPU_VERSION:
+      raise ValueError(
+        f'Oldest nightly version build with CUDA available is {OLDEST_GPU_VERSION}')
+    elif not cuda_version and version_date < OLDEST_VERSION:
       raise ValueError(f'Oldest nightly version available is {OLDEST_VERSION}')
     return VersionConfig(f'nightly+{version}', f'pytorch-dev{version}',
-                         get_py_version())
+                         get_py_version(), cuda_version)
 
   version_regex = re.compile('^(\d+\.)+\d+$')
   if not version_regex.match(version):
     raise ValueError(f'{version} is an invalid torch_xla version pattern')
-  return VersionConfig(version, f'pytorch-{version}', get_py_version())
+  return VersionConfig(
+    version, f'pytorch-{version}', get_py_version(), cuda_version)
 
 
 def install_vm(version, apt_packages, is_root=False):
+  dist_bucket = DIST_BUCKET
+  if version.cuda_version:
+    dist_bucket = os.path.join(
+      DIST_BUCKET, 'cuda/{}'.format(version.cuda_version.replace('.', '')))
   torch_whl = TORCH_WHEEL_TMPL.format(
       whl_version=version.wheels, py_version=version.py_version)
-  torch_whl_path = os.path.join(DIST_BUCKET, torch_whl)
+  torch_whl_path = os.path.join(dist_bucket, torch_whl)
   torch_xla_whl = TORCH_XLA_WHEEL_TMPL.format(
       whl_version=version.wheels, py_version=version.py_version)
-  torch_xla_whl_path = os.path.join(DIST_BUCKET, torch_xla_whl)
+  torch_xla_whl_path = os.path.join(dist_bucket, torch_xla_whl)
   torchvision_whl = TORCHVISION_WHEEL_TMPL.format(
       whl_version=version.wheels, py_version=version.py_version)
-  torchvision_whl_path = os.path.join(DIST_BUCKET, torchvision_whl)
+  torchvision_whl_path = os.path.join(dist_bucket, torchvision_whl)
   apt_cmd = ['apt-get', 'install', '-y']
   apt_cmd.extend(apt_packages)
 
@@ -95,15 +121,20 @@ def install_vm(version, apt_packages, is_root=False):
 def run_setup(args):
   version = get_version(args.version)
   # Update TPU
-  print('Updating TPU and VM. This may take around 2 minutes.')
-  update = threading.Thread(
-      target=update_tpu_runtime, args=(
-          args.tpu,
-          version,
-      ))
-  update.start()
+  print('Updating... This may take around 2 minutes.')
+
+  if is_tpu_runtime():
+    update = threading.Thread(
+        target=update_tpu_runtime, args=(
+            args.tpu,
+            version,
+        ))
+    update.start()
+
   install_vm(version, args.apt_packages, is_root=not args.tpu)
-  update.join()
+
+  if is_tpu_runtime():
+    update.join()
 
 
 if __name__ == '__main__':
