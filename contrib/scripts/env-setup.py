@@ -51,9 +51,8 @@ def get_py_version():
 
 def get_cuda_version():
   if is_gpu_runtime():
+    # cuda available, install cuda wheels
     return DEFAULT_CUDA_VERSION
-
-  return None  # cuda not available, install non cuda wheels
 
 
 def get_version(version):
