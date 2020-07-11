@@ -37,7 +37,7 @@ def update_tpu_runtime(tpu_name, version):
   try:
     import cloud_tpu_client
   except ImportError:
-    subprocess.call(['pip', 'install', 'cloud-tpu-client'])
+    subprocess.call([sys.executable, '-m', 'pip', 'install', 'cloud-tpu-client'])
     import cloud_tpu_client
 
   client = cloud_tpu_client.Client(tpu_name)
