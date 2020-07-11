@@ -10,6 +10,7 @@ import re
 import requests
 import subprocess
 import threading
+import sys
 
 VersionConfig = collections.namedtuple('VersionConfig',
                                        ['wheels', 'tpu', 'py_version', 'cuda_version'])
@@ -105,13 +106,13 @@ def install_vm(version, apt_packages, is_root=False):
     apt_cmd.insert(0, 'sudo')
 
   installation_cmds = [
-      ['pip', 'uninstall', '-y', 'torch', 'torchvision'],
+      [sys.executable, '-m', 'pip', 'uninstall', '-y', 'torch', 'torchvision'],
       ['gsutil', 'cp', torch_whl_path, '.'],
       ['gsutil', 'cp', torch_xla_whl_path, '.'],
       ['gsutil', 'cp', torchvision_whl_path, '.'],
-      ['pip', 'install', torch_whl],
-      ['pip', 'install', torch_xla_whl],
-      ['pip', 'install', torchvision_whl],
+      [sys.executable, '-m', 'pip', 'install', torch_whl],
+      [sys.executable, '-m', 'pip', 'install', torch_xla_whl],
+      [sys.executable, '-m', 'pip', 'install', torchvision_whl],
       apt_cmd,
   ]
   for cmd in installation_cmds:
