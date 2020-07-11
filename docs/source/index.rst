@@ -85,3 +85,15 @@ utils
 .. automodule:: torch_xla.utils.cached_dataset
 .. autoclass:: CachedDataset
 
+
+test
+----------------------------------
+
+.. automodule:: torch_xla.utils.test_utils
+.. autofunction:: mp_test
+.. autofunction:: write_to_summary
+.. autofunction:: close_summary_writer
+.. autofunction:: get_summary_writer
+.. autofunction:: print_training_update
+.. autofunction:: print_test_update
+
