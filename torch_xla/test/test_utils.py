@@ -1,12 +1,43 @@
+from datetime import datetime
+import multiprocessing
 import os
 import sys
 import time
-from datetime import datetime
+import unittest
 
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torch_xla.debug.metrics_compare_utils as mcu
 import torch_xla.utils.utils as xu
+
+
+def mp_test(func):
+  """Wraps a `unittest.TestCase` function running it within an isolated process.
+
+  Example::
+
+    import torch_xla.test.test_utils as xtu
+    import unittest
+
+    class MyTest(unittest.TestCase):
+
+      @xtu.mp_test
+      def test_basic(self):
+        ...
+
+  Args:
+    func (callable): The `unittest.TestCase` function to be wrapped.
+  """
+
+  def wrapper(*args, **kwargs):
+    proc = multiprocessing.Process(target=func, args=args, kwargs=kwargs)
+    proc.start()
+    proc.join()
+    if isinstance(args[0], unittest.TestCase):
+      args[0].assertEqual(proc.exitcode, 0)
+    return proc.exitcode
+
+  return wrapper
 
 
 def _get_device_spec(device):

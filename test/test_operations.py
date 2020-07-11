@@ -35,6 +35,7 @@ import torch_xla.distributed.data_parallel as dp
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
+import torch_xla.test.test_utils as xtu
 import torch_xla.utils.utils as xu
 import torch_xla.utils.serialization as xser
 import torch_xla.core.xla_model as xm
@@ -1797,6 +1798,14 @@ class TestOpBuilder(XlaTestCase):
         op_fn,
         aten_fn=aten_fn,
         kwargs={'limit': 10})
+
+
+class MpDecoratorTest(XlaTestCase):
+
+  @xtu.mp_test
+  def test_mp_decorator(self):
+    xla_device = xm.xla_device()
+    self.assertTrue(xla_device.type == 'xla')
 
 
 class TestGeneric(XlaTestCase):
