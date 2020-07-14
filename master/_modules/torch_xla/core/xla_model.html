@@ -712,7 +712,7 @@
   <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_device_context</span><span class="p">()</span>
   <span class="n">token</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="s1">&#39;all_reduce_token&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_create_token</span><span class="p">()</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_create_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
     <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">token</span>
   <span class="k">return</span> <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span>
 
