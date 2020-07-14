@@ -15,6 +15,8 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.keyd_queue as kq
 
+_DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
+
 REDUCE_SUM = 'sum'
 REDUCE_MUL = 'mul'
 REDUCE_AND = 'and'
@@ -22,7 +24,27 @@ REDUCE_OR = 'or'
 REDUCE_MIN = 'min'
 REDUCE_MAX = 'max'
 
-_TLS = threading.local()
+_DEVICE_CONTEXTS = dict()
+_DEVICE_CONTEXTS_LOCK = threading.Lock()
+
+
+class DeviceContext(object):
+
+  def __init__(self, device):
+    self.device = device
+
+
+def _get_device_context(device=None):
+  if device is None:
+    device = torch_xla._XLAC._xla_get_default_device()
+  else:
+    device = str(device)
+  with _DEVICE_CONTEXTS_LOCK:
+    devctx = _DEVICE_CONTEXTS.get(device, None)
+    if devctx is None:
+      devctx = DeviceContext(device)
+      _DEVICE_CONTEXTS[device] = devctx
+    return devctx
 
 
 def is_xla_tensor(tensor):
@@ -47,7 +69,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
   Returns:
     The list of device strings.
   """
-  xla_devices = torch_xla._XLAC._xla_get_devices()
+  xla_devices = _DEVICES.value
   devkind = devkind or ['TPU', 'GPU', 'CPU']
   for kind in devkind:
     kind_devices = []
@@ -104,7 +126,7 @@ def get_local_ordinal(defval=0):
   ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
   if ordinal >= 0:
     return ordinal
-  return getattr(_TLS, 'device_index', defval)
+  return getattr(_get_device_context(), 'device_index', defval)
 
 
 def is_master_ordinal(local=True):
@@ -135,8 +157,7 @@ def xla_device(n=None, devkind=None):
     n (int, optional): The specific instance (ordinal) to be returned. If
       specified, the specific XLA device instance will be returned. Otherwise
       the first device of `devkind` will be returned.
-    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`
-      (the 'GPU' XLA device is currently not implemented).
+    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`.
 
   Returns:
     A `torch.device` with the requested instance.
@@ -155,20 +176,16 @@ def xla_device(n=None, devkind=None):
   return torch.device(device)
 
 
+def _xla_real_device(device):
+  device_str = str(device)
+  m = re.match(r'xla:(\d+)$', device_str)
+  if not m:
+    raise RuntimeError('Invalid device format: {}'.format(device_str))
+  return _DEVICES.value[int(m.group(1))]
+
+
 def xla_real_devices(devices):
-  xla_devices = torch_xla._XLAC._xla_get_devices()
-  real_devices = []
-  for device in devices:
-    device_str = str(device)
-    m = re.match(r'xla:(\d+)$', device_str)
-    if m:
-      real_devices.append(xla_devices[int(m.group(1))])
-      continue
-    xdev = parse_xla_device(device_str)
-    if not xdev:
-      raise RuntimeError('Invalid device format: {}'.format(device_str))
-    real_devices.append(device_str)
-  return real_devices
+  return [_xla_real_device(device) for device in devices]
 
 
 def xla_device_hw(device):
@@ -182,7 +199,7 @@ def xla_device_hw(device):
     A string representation of the hardware type (`CPU`, `TPU`, `GPU`) of the
     given device.
   """
-  real_device = xla_real_devices([str(device)])[0]
+  real_device = _xla_real_device(device)
   return real_device.split(':')[0]
 
 
@@ -228,16 +245,16 @@ def unlazy(tensors):
 
 def set_replication(device, devices):
   device = str(device)
+  devctx = _get_device_context(device=device)
   devices = [str(x) for x in devices]
   if devices:
     replication_devices = xla_replication_devices(devices)
     torch_xla._XLAC._xla_set_replication_devices(replication_devices)
-    _TLS.device_index = devices.index(device)
+    devctx.device_index = devices.index(device)
   else:
     torch_xla._XLAC._xla_set_replication_devices([])
-    _TLS.device_index = devices.index(device) if devices else 0
-  _TLS.device = device
-  _TLS.all_reduce_token = None
+    devctx.device_index = 0
+  devctx.all_reduce_token = None
   torch_xla._XLAC._xla_set_default_device(device)
 
 
@@ -376,11 +393,12 @@ def _fetch_gradients(optimizer):
 
 
 def _get_all_reduce_token():
-  token = getattr(_TLS, 'all_reduce_token', None)
+  devctx = _get_device_context()
+  token = getattr(devctx, 'all_reduce_token', None)
   if token is None:
     token = torch_xla._XLAC._xla_create_token()
-    _TLS.all_reduce_token = token
-  return token
+    devctx.all_reduce_token = token
+  return token, devctx
 
 
 def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
@@ -404,16 +422,18 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
     this function performs an inplace all-reduce op on the input tensors, and
     returns the list/tuple itself.
   """
+  token, devctx = _get_all_reduce_token()
   if isinstance(inputs, torch.Tensor):
-    result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs,
-                                             _get_all_reduce_token(), scale,
+    result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, token, scale,
                                              groups or [])
-    _TLS.all_reduce_token = result[1]
-    return result[0]
+    devctx.all_reduce_token = result[1]
+    results = [result[0]]
   else:
-    _TLS.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
-        reduce_type, inputs, _get_all_reduce_token(), scale, groups or [])
-    return inputs
+    devctx.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
+        reduce_type, inputs, token, scale, groups or [])
+    results = inputs
+
+  return results[0] if isinstance(inputs, torch.Tensor) else results
 
 
 def all_gather(value, dim=0, groups=None):
@@ -474,10 +494,11 @@ def all_to_all(value,
   Returns:
     The result `torch.Tensor` of the `all_to_all()` operation.
   """
-  result = torch_xla._XLAC._xla_all_to_all(value, _get_all_reduce_token(),
-                                           split_dimension, concat_dimension,
-                                           split_count, groups or [])
-  _TLS.all_reduce_token = result[1]
+  token, devctx = _get_all_reduce_token()
+  result = torch_xla._XLAC._xla_all_to_all(value, token, split_dimension,
+                                           concat_dimension, split_count,
+                                           groups or [])
+  devctx.all_reduce_token = result[1]
   return result[0]
 
 
@@ -497,10 +518,9 @@ def collective_permute(value, pairs):
   Returns:
     The result `torch.Tensor` of the `collective_permute()` operation.
   """
-  result = torch_xla._XLAC._xla_collective_permute(value,
-                                                   _get_all_reduce_token(),
-                                                   pairs)
-  _TLS.all_reduce_token = result[1]
+  token, devctx = _get_all_reduce_token()
+  result = torch_xla._XLAC._xla_collective_permute(value, token, pairs)
+  devctx.all_reduce_token = result[1]
   return result[0]
 
 
@@ -526,19 +546,22 @@ def add_step_closure(closure, args=()):
     closure (callable): The function to be called.
     args (tuple): The arguments to be passed to the closure.
   """
-  step_closures = getattr(_TLS, 'step_closures', None)
+  devctx = _get_device_context()
+  step_closures = getattr(devctx, 'step_closures', None)
   if step_closures is None:
     step_closures = []
-    _TLS.step_closures = step_closures
+    devctx.step_closures = step_closures
   step_closures.append(lambda a=args: closure(*a))
 
 
 def _run_step_closures():
-  step_closures = getattr(_TLS, 'step_closures', None)
+  devctx = _get_device_context()
+  step_closures = getattr(devctx, 'step_closures', None)
   if step_closures is not None:
-    _TLS.step_closures = []
+    devctx.step_closures = []
     for closure in step_closures:
       closure()
+  return devctx
 
 
 def mark_step():
@@ -551,8 +574,8 @@ def mark_step():
   # same values from different threads.
   if is_master_ordinal():
     ms.save_metrics()
-  _run_step_closures()
-  _TLS.all_reduce_token = None
+  devctx = _run_step_closures()
+  devctx.all_reduce_token = None
 
 
 def wait_device_ops(devices=[]):

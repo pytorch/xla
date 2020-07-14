@@ -91,9 +91,7 @@ std::string SetCurrentThreadDevice(const std::string& device_str) {
 }
 
 std::string GetCurrentThreadDevice() {
-  std::stringstream ss;
-  ss << bridge::GetCurrentAtenDevice();
-  return ss.str();
+  return bridge::GetCurrentAtenDevice().str();
 }
 
 std::vector<std::string> GetXlaDevices(
@@ -233,15 +231,13 @@ void SyncLiveTensors(const std::string& device_str,
 
 void StepMarker(const std::string& device_str,
                 const std::vector<std::string>& devices, bool wait) {
-  auto opt_device = GetOptionalDevice(device_str);
-  const Device* device = opt_device ? &opt_device.value() : nullptr;
-  XLATensor::SyncLiveTensorsGraph(device, devices, wait);
+  Device device = GetDeviceOrCurrent(device_str);
+  XLATensor::SyncLiveTensorsGraph(&device, devices, wait);
   XLATensor::MarkStep(device);
 }
 
 void SetRngSeed(xla::uint64 seed, const std::string& device_str) {
-  auto opt_device = GetOptionalDevice(device_str);
-  const Device* device = opt_device ? &opt_device.value() : nullptr;
+  Device device = GetDeviceOrCurrent(device_str);
   XLATensor::SetRngSeed(device, seed);
 }
 
@@ -677,13 +673,21 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_set_replication_devices",
         [](const std::vector<std::string>& devices) {
-          xla::ComputationClient::Get()->SetReplicationDevices(devices);
+          auto replication_devices =
+              std::make_shared<std::vector<std::string>>(devices);
+          xla::ComputationClient::Get()->SetReplicationDevices(
+              std::move(replication_devices));
         });
   m.def("_xla_get_replication_devices", []() {
-    return xla::ComputationClient::Get()->GetReplicationDevices();
+    auto replication_devices =
+        xla::ComputationClient::Get()->GetReplicationDevices();
+    return replication_devices != nullptr ? *replication_devices
+                                          : std::vector<std::string>();
   });
   m.def("_xla_get_replication_devices_count", []() {
-    return xla::ComputationClient::Get()->GetReplicationDevices().size();
+    auto replication_devices =
+        xla::ComputationClient::Get()->GetReplicationDevices();
+    return replication_devices != nullptr ? replication_devices->size() : 0;
   });
   m.def("_xla_rendezvous",
         [](int ordinal, const std::string& tag, const std::string& payload,
