@@ -396,7 +396,7 @@ def _get_all_reduce_token():
   devctx = _get_device_context()
   token = getattr(devctx, 'all_reduce_token', None)
   if token is None:
-    token = torch_xla._XLAC._xla_create_token()
+    token = torch_xla._XLAC._xla_create_token(devctx.device)
     devctx.all_reduce_token = token
   return token, devctx
 

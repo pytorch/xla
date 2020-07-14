@@ -30,7 +30,6 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ir_util.h"
-#include "torch_xla/csrc/ops/token.h"
 #include "torch_xla/csrc/python_util.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -302,6 +301,19 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
     xla_tensors.push_back(bridge::AtenFromXlaTensor(std::move(xla_tensor)));
   }
   return xla_tensors;
+}
+
+std::shared_ptr<ir::Value> CreateToken(const std::string& device_str) {
+  // This should be using xla::CreateToken() once we have added Token support to
+  // XLA AllReduce(). Meanwhile we use a constant as token, and we handle it
+  // accordingly in cross_replica_reduces.cpp.
+  // This needs to be device data (hence coming in as XLA computation parameter)
+  // as otherwise the XLA compiler passes will remove it, vanishing its
+  // sequencing effects.
+  Device device = GetDeviceOrCurrent(device_str);
+  ir::Value ir_value =
+      XLATensor::GetDeviceDataIrValue(0.0, xla::PrimitiveType::F32, device);
+  return std::make_shared<ir::Value>(std::move(ir_value));
 }
 
 at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor, xla::int64 dim) {
@@ -696,10 +708,8 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   py::class_<ir::Value, std::shared_ptr<ir::Value>>(m, "IrValue");
-  m.def("_xla_create_token", []() {
-    ir::NodePtr node = ir::MakeNode<ir::ops::Token>();
-    return std::make_shared<ir::Value>(node);
-  });
+  m.def("_xla_create_token",
+        [](const std::string& device) { return CreateToken(device); });
   m.def("_xla_all_reduce_inplace", [](const std::string& reduce_type,
                                       const std::vector<at::Tensor>& tensors,
                                       const std::shared_ptr<ir::Value>& token,
