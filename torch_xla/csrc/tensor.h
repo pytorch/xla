@@ -100,6 +100,9 @@ class XLATensor {
   // Applies the queue of operations in preparation for using the data.
   void ApplyPendingGraph();
 
+  static ir::Value GetDeviceDataIrValue(at::Scalar value,
+                                        xla::PrimitiveType type,
+                                        const Device& device);
   static ir::Value GetIrValueForScalar(at::Scalar value,
                                        xla::PrimitiveType type,
                                        const Device& device);
