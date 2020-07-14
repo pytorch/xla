@@ -424,8 +424,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None):
   """
   token, devctx = _get_all_reduce_token()
   if isinstance(inputs, torch.Tensor):
-    result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, token,
-                                             scale, groups or [])
+    result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, token, scale,
+                                             groups or [])
     devctx.all_reduce_token = result[1]
     results = [result[0]]
   else:
