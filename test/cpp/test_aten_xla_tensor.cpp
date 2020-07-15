@@ -8606,7 +8606,7 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
     for (int padding = 0; padding <= 1; ++padding) {
       for (int dilation = 1; dilation <= 2; ++dilation) {
         for (int output_padding = 0;
-             output_padding < std::min(stride, dilation); ++output_padding) {
+             output_padding < std::max(stride, dilation); ++output_padding) {
           for (bool with_bias : {true, false}) {
             for (int groups :
                  {1, 2, 4}) {  // covers normal, grouped, depthwise conv.
@@ -8693,7 +8693,7 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv3DBackward) {
     for (int padding = 0; padding <= 1; ++padding) {
       for (int dilation = 1; dilation <= 2; ++dilation) {
         for (int output_padding = 0;
-             output_padding < std::min(stride, dilation); ++output_padding) {
+             output_padding < std::max(stride, dilation); ++output_padding) {
           for (bool with_bias : {true, false}) {
             for (int groups :
                  {1, 2, 4}) {  // covers normal, grouped, depthwise conv.
