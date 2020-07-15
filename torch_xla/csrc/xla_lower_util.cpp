@@ -298,6 +298,7 @@ xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
   if (!pad_value) {
     pad_value = xla::Zero(input.builder(), input_shape.element_type());
   }
+  bool has_padding = false;
   xla::PaddingConfig padding_config;
   for (size_t i = 0; i < size.size(); i++) {
     auto* dims = padding_config.add_dimensions();
@@ -305,8 +306,9 @@ xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
     dims->set_interior_padding(0);
     XLA_CHECK_GE(size[i], input_shape.dimensions(i));
     dims->set_edge_padding_high(size[i] - input_shape.dimensions(i));
+    has_padding = has_padding || dims->edge_padding_high() > 0;
   }
-  return xla::Pad(input, *pad_value, padding_config);
+  return has_padding ? xla::Pad(input, *pad_value, padding_config) : input;
 }
 
 std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64 k,
