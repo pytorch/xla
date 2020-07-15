@@ -704,17 +704,23 @@ ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
   return CreateTensorNode(std::move(data), read_only);
 }
 
+ir::Value XLATensor::GetDeviceDataIrValue(at::Scalar value,
+                                          xla::PrimitiveType type,
+                                          const Device& device) {
+  xla::ComputationClient::DataPtr data =
+      GetDeviceData(value, TensorTypeFromXlaType(type), device);
+  data->SetInfo(
+      std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
+  return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
+}
+
 ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
                                          xla::PrimitiveType type,
                                          const Device& device) {
   if (IsSpecialScalar(value)) {
     return ir::ops::ScalarOp(std::move(value), type);
   }
-  xla::ComputationClient::DataPtr data =
-      GetDeviceData(value, TensorTypeFromXlaType(type), device);
-  data->SetInfo(
-      std::make_shared<DeviceDataInfo>(/*tensor_id=*/-1, /*read_only=*/true));
-  return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
+  return GetDeviceDataIrValue(value, type, device);
 }
 
 ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
