@@ -304,9 +304,8 @@ xla::XlaOp PadToSize(xla::XlaOp input, absl::Span<const xla::int64> size,
     auto* dims = padding_config.add_dimensions();
     dims->set_edge_padding_low(0);
     dims->set_interior_padding(0);
-    XLA_CHECK_GE(size[i], input_shape.dimensions(i));
     dims->set_edge_padding_high(size[i] - input_shape.dimensions(i));
-    has_padding = has_padding || dims->edge_padding_high() > 0;
+    has_padding = has_padding || dims->edge_padding_high() != 0;
   }
   return has_padding ? xla::Pad(input, *pad_value, padding_config) : input;
 }
