@@ -737,8 +737,9 @@ std::vector<xla::ComputationClient::DataPtr> CreateTensorsData(
     Device device(devices[i]);
     xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
     auto populate_fn =
-        [&, i](const xla::ComputationClient::TensorSource& source_tensor,
-               void* dest_buffer, size_t dest_buffer_size) {
+        [&, i, device](
+            const xla::ComputationClient::TensorSource& source_tensor,
+            void* dest_buffer, size_t dest_buffer_size) {
           PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
                                dest_buffer_size, device);
         };
