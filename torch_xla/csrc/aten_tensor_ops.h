@@ -4,6 +4,10 @@
 
 namespace aten_tensor_ops {
 
+at::Tensor celu(const at::Tensor& self, at::Scalar alpha);
+
+at::Tensor& celu_(at::Tensor& self, at::Scalar alpha);
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm(
     const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
     int64_t N, int64_t C, int64_t HxW, int64_t group, double eps);
