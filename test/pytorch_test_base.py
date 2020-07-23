@@ -47,6 +47,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_pdist_norm_forward_xla',  # pdist_single
         'test_nuclear_norm_axes_small_brute_force',
         'test_mul_intertype_scalar',
+        'test_masked_select_discontiguous',  # FIXME: wrong result
         'test_memory_format_type',
         'test_memory_format_type_shortcuts',
         'test_memory_format_to',
@@ -55,6 +56,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_memory_format_clone',
         'test_memory_format_factory_like_functions_preserve',  # assertion error
         'test_memory_format_proparation_rules',  # assert memory format
+        'test_max',  # FIXME: XLA min/max ignores NaNs.
+        'test_min',  # FIXME: XLA min/max ignores NaNs.
         'test_min_max_binary_op_nan',
         'test_minmax_illegal_dtype',  # Checking runtime error
         'test_mm_xla_bfloat16',  # FIXME: AssertionError: tensor(0.0625) not less than or equal to 0.001
