@@ -450,7 +450,7 @@ TEST_F(TensorTest, TestConv2D) {
                                            kernel_size, kernel_size},
                                           at::TensorOptions(at::kFloat));
 
-                at::Tensor output = at::native::_convolution(
+                at::Tensor output = at::_convolution(
                     input, weight, with_bias ? bias : no_bias,
                     /*stride=*/{stride, stride},
                     /*padding=*/{padding, padding},
@@ -518,7 +518,7 @@ TEST_F(TensorTest, TestConv2DNonSquare) {
                                            kernel_size, kernel_size},
                                           at::TensorOptions(at::kFloat));
 
-                at::Tensor output = at::native::_convolution(
+                at::Tensor output = at::_convolution(
                     input, weight, with_bias ? bias : no_bias,
                     /*stride=*/{stride, stride + 1},
                     /*padding=*/{padding, padding + 1},
@@ -588,7 +588,7 @@ TEST_F(TensorTest, TestConv3D) {
                                     kernel_size, kernel_size, kernel_size},
                                    at::TensorOptions(at::kFloat));
 
-                at::Tensor output = at::native::_convolution(
+                at::Tensor output = at::_convolution(
                     input, weight, with_bias ? bias : no_bias,
                     /*stride=*/{stride, stride, stride},
                     /*padding=*/{padding, padding, padding},
@@ -659,7 +659,7 @@ TEST_F(TensorTest, TestConv3DNonSquare) {
                                     kernel_size, kernel_size, kernel_size},
                                    at::TensorOptions(at::kFloat));
 
-                at::Tensor output = at::native::_convolution(
+                at::Tensor output = at::_convolution(
                     input, weight, with_bias ? bias : no_bias,
                     /*stride=*/{stride, stride + 1, stride + 1},
                     /*padding=*/{padding, padding + 1, padding + 1},
