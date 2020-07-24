@@ -96,6 +96,15 @@ XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device) {
   return xtensor ? *xtensor : XLATensor::Create(tensor, device);
 }
 
+XLATensor GetOrCreateXlaTensor(c10::optional<at::Tensor> tensor,
+                               const Device& device) {
+  if (!IsDefined(tensor)) {
+    return XLATensor();
+  }
+  auto xtensor = TryGetXlaTensor(*tensor);
+  return xtensor ? *xtensor : XLATensor::Create(*tensor, device);
+}
+
 std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors) {
   std::vector<at::Tensor> aten_xla_tensors(tensors.size());
   std::vector<XLATensor> xla_tensors;

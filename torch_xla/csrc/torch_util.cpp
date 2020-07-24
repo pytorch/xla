@@ -32,4 +32,8 @@ at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype) {
                                                            : tensor;
 }
 
+bool IsDefined(c10::optional<at::Tensor> tensor) {
+  return tensor.has_value() && tensor.value().defined();
+}
+
 }  // namespace torch_xla

@@ -660,7 +660,7 @@ at::Tensor& AtenXlaType::bernoulli_(at::Tensor& self, const at::Tensor& p,
 
 at::Tensor AtenXlaType::binary_cross_entropy(const at::Tensor& self,
                                              const at::Tensor& target,
-                                             const at::Tensor& weight,
+                                             c10::optional<at::Tensor> weight,
                                              int64_t reduction) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -672,7 +672,8 @@ at::Tensor AtenXlaType::binary_cross_entropy(const at::Tensor& self,
 
 at::Tensor AtenXlaType::binary_cross_entropy_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& target, const at::Tensor& weight, int64_t reduction) {
+    const at::Tensor& target, c10::optional<at::Tensor> weight,
+    int64_t reduction) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor weight_tensor =
@@ -683,11 +684,13 @@ at::Tensor AtenXlaType::binary_cross_entropy_backward(
 }
 
 at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
-    const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
-    const at::Tensor& pos_weight, int64_t reduction) {
+    const at::Tensor& self, const at::Tensor& target,
+    c10::optional<at::Tensor> weight, c10::optional<at::Tensor> pos_weight,
+    int64_t reduction) {
   XLA_FN_COUNTER("xla::");
-  return at::native::binary_cross_entropy_with_logits(self, target, weight,
-                                                      pos_weight, reduction);
+  return at::native::binary_cross_entropy_with_logits(
+      self, target, IsDefined(weight) ? *weight : at::Tensor(),
+      IsDefined(pos_weight) ? *pos_weight : at::Tensor(), reduction);
 }
 
 at::Tensor& AtenXlaType::bitwise_and_out(at::Tensor& out,
@@ -864,14 +867,15 @@ at::Tensor AtenXlaType::constant_pad_nd(const at::Tensor& self,
 
 // This functions covers the whole convolution lowering.
 at::Tensor AtenXlaType::convolution_overrideable(
-    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-    at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
-    bool transposed, at::IntArrayRef output_padding, int64_t groups) {
+    const at::Tensor& input, const at::Tensor& weight,
+    c10::optional<at::Tensor> bias, at::IntArrayRef stride,
+    at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
+    at::IntArrayRef output_padding, int64_t groups) {
   XLA_FN_COUNTER("xla::");
-  if (bias.defined()) {
+  if (IsDefined(bias)) {
     return bridge::AtenFromXlaTensor(XLATensor::convolution_overrideable(
         bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight),
-        bridge::GetXlaTensor(bias), XlaHelpers::I64List(stride),
+        bridge::GetXlaTensor(*bias), XlaHelpers::I64List(stride),
         XlaHelpers::I64List(padding), XlaHelpers::I64List(dilation), transposed,
         XlaHelpers::I64List(output_padding), groups));
   } else {
@@ -2101,9 +2105,10 @@ at::Tensor AtenXlaType::narrow_copy(const at::Tensor& self, int64_t dim,
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_batch_norm(
-    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-    const at::Tensor& running_mean, const at::Tensor& running_var,
-    bool training, double momentum, double eps) {
+    const at::Tensor& input, c10::optional<at::Tensor> weight,
+    c10::optional<at::Tensor> bias, c10::optional<at::Tensor> running_mean,
+    c10::optional<at::Tensor> running_var, bool training, double momentum,
+    double eps) {
   XLA_FN_COUNTER("xla::");
   XLATensor input_tensor = bridge::GetXlaTensor(input);
   const Device& device = input_tensor.GetDevice();
@@ -2123,9 +2128,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_batch_norm(
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::native_batch_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input,
-    const at::Tensor& weight, const at::Tensor& running_mean,
-    const at::Tensor& running_var, const at::Tensor& save_mean,
-    const at::Tensor& save_invstd, bool train, double eps,
+    c10::optional<at::Tensor> weight, c10::optional<at::Tensor> running_mean,
+    c10::optional<at::Tensor> running_var, c10::optional<at::Tensor> save_mean,
+    c10::optional<at::Tensor> save_invstd, bool train, double eps,
     std::array<bool, 3> output_mask) {
   XLA_FN_COUNTER("xla::");
   XLATensor grad_out_tensor = bridge::GetXlaTensor(grad_out);
@@ -2133,8 +2138,8 @@ AtenXlaType::native_batch_norm_backward(
   auto gradients = XLATensor::native_batch_norm_backward(
       bridge::GetXlaTensor(grad_out), bridge::GetXlaTensor(input),
       bridge::GetOrCreateXlaTensor(weight, device),
-      bridge::GetXlaTensor(save_mean), bridge::GetXlaTensor(save_invstd), train,
-      eps);
+      bridge::GetOrCreateXlaTensor(save_mean, device),
+      bridge::GetOrCreateXlaTensor(save_invstd, device), train, eps);
   at::Tensor undefined;
   return std::make_tuple(
       output_mask[0] ? bridge::AtenFromXlaTensor(std::get<0>(gradients))
@@ -2146,8 +2151,9 @@ AtenXlaType::native_batch_norm_backward(
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_group_norm(
-    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-    int64_t N, int64_t C, int64_t HxW, int64_t group, double eps) {
+    const at::Tensor& input, c10::optional<at::Tensor> weight,
+    c10::optional<at::Tensor> bias, int64_t N, int64_t C, int64_t HxW,
+    int64_t group, double eps) {
   XLA_FN_COUNTER("xla::");
   return aten_tensor_ops::native_group_norm(input, weight, bias, N, C, HxW,
                                             group, eps);
@@ -2156,16 +2162,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_group_norm(
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::native_group_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input, const at::Tensor& mean,
-    const at::Tensor& rstd, const at::Tensor& weight, int64_t N, int64_t C,
-    int64_t HxW, int64_t group, std::array<bool, 3> output_mask) {
+    const at::Tensor& rstd, c10::optional<at::Tensor> weight, int64_t N,
+    int64_t C, int64_t HxW, int64_t group, std::array<bool, 3> output_mask) {
   XLA_FN_COUNTER("xla::");
   return aten_tensor_ops::native_group_norm_backward(
       grad_out, input, mean, rstd, weight, N, C, HxW, group, output_mask);
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_layer_norm(
-    const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-    int64_t M, int64_t N, double eps) {
+    const at::Tensor& input, c10::optional<at::Tensor> weight,
+    c10::optional<at::Tensor> bias, int64_t M, int64_t N, double eps) {
   XLA_FN_COUNTER("xla::");
   return aten_tensor_ops::native_layer_norm(input, weight, bias, M, N, eps);
 }
@@ -2173,8 +2179,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_layer_norm(
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::native_layer_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input, const at::Tensor& mean,
-    const at::Tensor& rstd, const at::Tensor& weight, int64_t M, int64_t N,
-    std::array<bool, 3> output_mask) {
+    const at::Tensor& rstd, c10::optional<at::Tensor> weight, int64_t M,
+    int64_t N, std::array<bool, 3> output_mask) {
   XLA_FN_COUNTER("xla::");
   return aten_tensor_ops::native_layer_norm_backward(
       grad_out, input, mean, rstd, weight, M, N, output_mask);
@@ -2224,14 +2230,14 @@ at::Tensor& AtenXlaType::neg_(at::Tensor& self) {
 
 at::Tensor AtenXlaType::nll_loss_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& target, const at::Tensor& weight, int64_t reduction,
-    int64_t ignore_index, const at::Tensor& total_weight) {
+    const at::Tensor& target, c10::optional<at::Tensor> weight,
+    int64_t reduction, int64_t ignore_index, const at::Tensor& total_weight) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor weight_tensor =
       bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice());
   XLATensor total_weight_tensor;
-  if (weight.defined()) {
+  if (IsDefined(weight)) {
     total_weight_tensor =
         bridge::GetOrCreateXlaTensor(total_weight, self_tensor.GetDevice());
   }
@@ -2242,8 +2248,8 @@ at::Tensor AtenXlaType::nll_loss_backward(
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
-    const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
-    int64_t reduction, int64_t ignore_index) {
+    const at::Tensor& self, const at::Tensor& target,
+    c10::optional<at::Tensor> weight, int64_t reduction, int64_t ignore_index) {
   XLA_FN_COUNTER("xla::");
   at::Tensor total_weight = at::ones({}, at::TensorOptions(self.dtype()));
   XLATensor self_tensor = bridge::GetXlaTensor(self);

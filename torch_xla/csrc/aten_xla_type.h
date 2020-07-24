@@ -183,17 +183,16 @@ class AtenXlaType {
   // When it's moved to Aten in the future, we should only keep one set here.
   static at::Tensor binary_cross_entropy(const at::Tensor& self,
                                          const at::Tensor& target,
-                                         const at::Tensor& weight,
+                                         c10::optional<at::Tensor> weight,
                                          int64_t reduction);
-  static at::Tensor binary_cross_entropy_backward(const at::Tensor& grad_output,
-                                                  const at::Tensor& self,
-                                                  const at::Tensor& target,
-                                                  const at::Tensor& weight,
-                                                  int64_t reduction);
+  static at::Tensor binary_cross_entropy_backward(
+      const at::Tensor& grad_output, const at::Tensor& self,
+      const at::Tensor& target, c10::optional<at::Tensor> weight,
+      int64_t reduction);
 
   static at::Tensor binary_cross_entropy_with_logits(
       const at::Tensor& self, const at::Tensor& target,
-      const at::Tensor& weight, const at::Tensor& pos_weight,
+      c10::optional<at::Tensor> weight, c10::optional<at::Tensor> pos_weight,
       int64_t reduction);
 
   static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
@@ -258,9 +257,10 @@ class AtenXlaType {
       int64_t groups, std::array<bool, 3> output_mask);
 
   static at::Tensor convolution_overrideable(
-      const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-      at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
-      bool transposed, at::IntArrayRef output_padding, int64_t groups);
+      const at::Tensor& input, const at::Tensor& weight,
+      c10::optional<at::Tensor> bias, at::IntArrayRef stride,
+      at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
+      at::IntArrayRef output_padding, int64_t groups);
 
   static at::Tensor& copy_(at::Tensor& self, const at::Tensor& src,
                            bool non_blocking);
@@ -666,40 +666,44 @@ class AtenXlaType {
                                 int64_t start, int64_t length);
 
   static std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm(
-      const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-      const at::Tensor& running_mean, const at::Tensor& running_var,
-      bool training, double momentum, double eps);
+      const at::Tensor& input, c10::optional<at::Tensor> weight,
+      c10::optional<at::Tensor> bias, c10::optional<at::Tensor> running_mean,
+      c10::optional<at::Tensor> running_var, bool training, double momentum,
+      double eps);
 
   static std::tuple<at::Tensor, at::Tensor, at::Tensor>
   native_batch_norm_backward(const at::Tensor& grad_out,
-                             const at::Tensor& input, const at::Tensor& weight,
-                             const at::Tensor& running_mean,
-                             const at::Tensor& running_var,
-                             const at::Tensor& save_mean,
-                             const at::Tensor& save_invstd, bool train,
+                             const at::Tensor& input,
+                             c10::optional<at::Tensor> weight,
+                             c10::optional<at::Tensor> running_mean,
+                             c10::optional<at::Tensor> running_var,
+                             c10::optional<at::Tensor> save_mean,
+                             c10::optional<at::Tensor> save_invstd, bool train,
                              double eps, std::array<bool, 3> output_mask);
 
   static std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm(
-      const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-      int64_t N, int64_t C, int64_t HxW, int64_t group, double eps);
+      const at::Tensor& input, c10::optional<at::Tensor> weight,
+      c10::optional<at::Tensor> bias, int64_t N, int64_t C, int64_t HxW,
+      int64_t group, double eps);
 
   static std::tuple<at::Tensor, at::Tensor, at::Tensor>
   native_group_norm_backward(const at::Tensor& grad_out,
                              const at::Tensor& input, const at::Tensor& mean,
-                             const at::Tensor& rstd, const at::Tensor& weight,
-                             int64_t N, int64_t C, int64_t HxW, int64_t group,
+                             const at::Tensor& rstd,
+                             c10::optional<at::Tensor> weight, int64_t N,
+                             int64_t C, int64_t HxW, int64_t group,
                              std::array<bool, 3> output_mask);
 
   static std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(
-      const at::Tensor& input, const at::Tensor& weight, const at::Tensor& bias,
-      int64_t M, int64_t N, double eps);
+      const at::Tensor& input, c10::optional<at::Tensor> weight,
+      c10::optional<at::Tensor> bias, int64_t M, int64_t N, double eps);
 
   static std::tuple<at::Tensor, at::Tensor, at::Tensor>
   native_layer_norm_backward(const at::Tensor& grad_out,
                              const at::Tensor& input, const at::Tensor& mean,
-                             const at::Tensor& rstd, const at::Tensor& weight,
-                             int64_t M, int64_t N,
-                             std::array<bool, 3> output_mask);
+                             const at::Tensor& rstd,
+                             c10::optional<at::Tensor> weight, int64_t M,
+                             int64_t N, std::array<bool, 3> output_mask);
 
   static at::Tensor ne(const at::Tensor& self, at::Scalar other);
 
@@ -716,13 +720,14 @@ class AtenXlaType {
   static at::Tensor nll_loss_backward(const at::Tensor& grad_output,
                                       const at::Tensor& self,
                                       const at::Tensor& target,
-                                      const at::Tensor& weight,
+                                      c10::optional<at::Tensor> weight,
                                       int64_t reduction, int64_t ignore_index,
                                       const at::Tensor& total_weight);
 
   static std::tuple<at::Tensor, at::Tensor> nll_loss_forward(
       const at::Tensor& self, const at::Tensor& target,
-      const at::Tensor& weight, int64_t reduction, int64_t ignore_index);
+      c10::optional<at::Tensor> weight, int64_t reduction,
+      int64_t ignore_index);
 
   static at::Tensor nonzero(const at::Tensor& self);
 
