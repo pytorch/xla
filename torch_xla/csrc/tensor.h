@@ -793,6 +793,17 @@ class XLATensor {
                             const XLATensor& weight, xla::int64 reduction,
                             int ignore_index);
 
+  static XLATensor nll_loss2d(const XLATensor& input, const XLATensor& target,
+                              const XLATensor& weight, xla::int64 reduction,
+                              int ignore_index);
+
+  static XLATensor nll_loss2d_backward(const XLATensor& grad_output,
+                                       const XLATensor& input,
+                                       const XLATensor& target,
+                                       const XLATensor& weight,
+                                       xla::int64 reduction, int ignore_index,
+                                       const XLATensor& total_weight);
+
   static XLATensor nll_loss_backward(const XLATensor& grad_output,
                                      const XLATensor& input,
                                      const XLATensor& target,
