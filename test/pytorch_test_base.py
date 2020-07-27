@@ -35,6 +35,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_addcmul',  # FIXME: complex dtype
         'test_clamp',  # slow
         'test_clamp_propagates_nans_xla',  # XLA min/max ignores Nans.
+        'test_discontiguous_out_cumsum',  # Checking contiguity
         'test_lu_unpack',  # very slow compile
         'test_view',  # doesn't raise
         'test_sub_typing',  # doesn't raise
@@ -47,6 +48,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_pdist_norm_forward_xla',  # pdist_single
         'test_nuclear_norm_axes_small_brute_force',
         'test_mul_intertype_scalar',
+        'test_masked_select_discontiguous',  # FIXME: wrong result
         'test_memory_format_type',
         'test_memory_format_type_shortcuts',
         'test_memory_format_to',
@@ -55,6 +57,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_memory_format_clone',
         'test_memory_format_factory_like_functions_preserve',  # assertion error
         'test_memory_format_proparation_rules',  # assert memory format
+        'test_max',  # FIXME: XLA min/max ignores NaNs.
+        'test_min',  # FIXME: XLA min/max ignores NaNs.
         'test_min_max_binary_op_nan',
         'test_minmax_illegal_dtype',  # Checking runtime error
         'test_mm_xla_bfloat16',  # FIXME: AssertionError: tensor(0.0625) not less than or equal to 0.001
@@ -284,7 +288,6 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_block_diag_scipy',  # failed to handle np.complex128 as input to tensor.
         'test_remainder_fmod_large_dividend_xla',  # precision, remainder with 1e9 gives incorrect answer
         'test_logical_not_out_xla',  # constant with type f16 and f64 is not supported
-        'test_scatter_add_non_unique_index_xla',  # Ran out of memory in memory space vmem
     },
 
     # test_indexing.py

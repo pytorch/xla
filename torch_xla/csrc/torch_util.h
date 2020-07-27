@@ -35,7 +35,8 @@ T OptionalOr(const c10::optional<S>& value, T defval) {
 at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype);
 
 // Checks whether a c10::optional<Tensor> is defined.
-// =>  t.has_value() && t.value().defined()
-bool IsDefined(c10::optional<at::Tensor> tensor);
+inline bool IsDefined(const c10::optional<at::Tensor>& tensor) {
+  return tensor.has_value() && tensor.value().defined();
+}
 
 }  // namespace torch_xla
