@@ -35,6 +35,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_addcmul',  # FIXME: complex dtype
         'test_clamp',  # slow
         'test_clamp_propagates_nans_xla',  # XLA min/max ignores Nans.
+        'test_discontiguous_out_cumsum',  # Checking contiguity
         'test_lu_unpack',  # very slow compile
         'test_view',  # doesn't raise
         'test_sub_typing',  # doesn't raise
