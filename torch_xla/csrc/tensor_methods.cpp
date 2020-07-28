@@ -78,6 +78,8 @@
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/nll_loss.h"
+#include "torch_xla/csrc/ops/nll_loss2d.h"
+#include "torch_xla/csrc/ops/nll_loss2d_backward.h"
 #include "torch_xla/csrc/ops/nll_loss_backward.h"
 #include "torch_xla/csrc/ops/nms.h"
 #include "torch_xla/csrc/ops/nonzero.h"
@@ -1861,6 +1863,26 @@ XLATensor XLATensor::nll_loss(const XLATensor& input, const XLATensor& target,
                               int ignore_index) {
   return input.CreateFrom(ir::MakeNode<ir::ops::NllLoss>(
       input.GetIrValue(), target.GetIrValue(), GetOptionalIrValue(weight),
+      GetXlaReductionMode(reduction), ignore_index));
+}
+
+XLATensor XLATensor::nll_loss2d(const XLATensor& input, const XLATensor& target,
+                                const XLATensor& weight, xla::int64 reduction,
+                                int ignore_index) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::NllLoss2d>(
+      input.GetIrValue(), target.GetIrValue(), GetOptionalIrValue(weight),
+      GetXlaReductionMode(reduction), ignore_index));
+}
+
+XLATensor XLATensor::nll_loss2d_backward(const XLATensor& grad_output,
+                                         const XLATensor& input,
+                                         const XLATensor& target,
+                                         const XLATensor& weight,
+                                         xla::int64 reduction, int ignore_index,
+                                         const XLATensor& total_weight) {
+  return input.CreateFrom(ir::MakeNode<ir::ops::NllLoss2dBackward>(
+      grad_output.GetIrValue(), input.GetIrValue(), target.GetIrValue(),
+      GetOptionalIrValue(weight), GetOptionalIrValue(total_weight),
       GetXlaReductionMode(reduction), ignore_index));
 }
 

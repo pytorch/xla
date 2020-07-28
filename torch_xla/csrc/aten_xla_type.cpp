@@ -2222,6 +2222,40 @@ at::Tensor& AtenXlaType::neg_(at::Tensor& self) {
   return self;
 }
 
+at::Tensor AtenXlaType::nll_loss2d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& target, const at::Tensor& weight, int64_t reduction,
+    int64_t ignore_index, const at::Tensor& total_weight) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor weight_tensor =
+      bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice());
+  XLATensor total_weight_tensor;
+  if (weight.defined()) {
+    total_weight_tensor =
+        bridge::GetOrCreateXlaTensor(total_weight, self_tensor.GetDevice());
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::nll_loss2d_backward(
+      bridge::GetXlaTensor(grad_output), self_tensor,
+      bridge::GetXlaTensor(target), weight_tensor, reduction, ignore_index,
+      total_weight_tensor));
+}
+
+std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss2d_forward(
+    const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
+    int64_t reduction, int64_t ignore_index) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor total_weight =
+      XLATensor::full({}, 1, self_tensor.GetDevice(), self_tensor.dtype());
+  return std::make_tuple(
+      bridge::AtenFromXlaTensor(XLATensor::nll_loss2d(
+          self_tensor, bridge::GetXlaTensor(target),
+          bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice()),
+          reduction, ignore_index)),
+      bridge::AtenFromXlaTensor(total_weight));
+}
+
 at::Tensor AtenXlaType::nll_loss_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     const at::Tensor& target, const at::Tensor& weight, int64_t reduction,
@@ -2245,14 +2279,15 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss_forward(
     const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
     int64_t reduction, int64_t ignore_index) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor total_weight = at::ones({}, at::TensorOptions(self.dtype()));
   XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor total_weight =
+      XLATensor::full({}, 1, self_tensor.GetDevice(), self_tensor.dtype());
   return std::make_tuple(
       bridge::AtenFromXlaTensor(XLATensor::nll_loss(
           self_tensor, bridge::GetXlaTensor(target),
           bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice()),
           reduction, ignore_index)),
-      total_weight);
+      bridge::AtenFromXlaTensor(total_weight));
 }
 
 at::Tensor AtenXlaType::nonzero(const at::Tensor& self) {
