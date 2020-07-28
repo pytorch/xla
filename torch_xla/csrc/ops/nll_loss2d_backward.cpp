@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/ops/nll_loss_backward.h"
+#include "torch_xla/csrc/ops/nll_loss2d_backward.h"
 
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -39,12 +39,12 @@ xla::Shape NodeOutputShape(const Value& grad_output, const Value& logits,
 
 }  // namespace
 
-NllLossBackward::NllLossBackward(const Value& grad_output, const Value& logits,
-                                 const Value& labels,
-                                 const absl::optional<Value>& weight,
-                                 const absl::optional<Value>& total_weight,
-                                 ReductionMode reduction, int ignore_index)
-    : Node(ir::OpKind(at::aten::nll_loss_backward),
+NllLoss2dBackward::NllLoss2dBackward(const Value& grad_output,
+                                     const Value& logits, const Value& labels,
+                                     const absl::optional<Value>& weight,
+                                     const absl::optional<Value>& total_weight,
+                                     ReductionMode reduction, int ignore_index)
+    : Node(ir::OpKind(at::aten::nll_loss2d_backward),
            xla::util::GetValuesVector<Value>({grad_output, logits, labels},
                                              {&weight, &total_weight}),
            [&]() {
@@ -56,19 +56,19 @@ NllLossBackward::NllLossBackward(const Value& grad_output, const Value& logits,
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 
-NodePtr NllLossBackward::Clone(OpList operands) const {
+NodePtr NllLoss2dBackward::Clone(OpList operands) const {
   absl::optional<Value> weight;
   absl::optional<Value> total_weight;
   if (operands.size() > 3) {
     weight = operands.at(3);
     total_weight = operands.at(4);
   }
-  return MakeNode<NllLossBackward>(operands.at(0), operands.at(1),
-                                   operands.at(2), weight, total_weight,
-                                   reduction_, ignore_index_);
+  return MakeNode<NllLoss2dBackward>(operands.at(0), operands.at(1),
+                                     operands.at(2), weight, total_weight,
+                                     reduction_, ignore_index_);
 }
 
-XlaOpVector NllLossBackward::Lower(LoweringContext* loctx) const {
+XlaOpVector NllLoss2dBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp grad_output = loctx->GetOutputOp(operand(0));
   xla::XlaOp logits = loctx->GetOutputOp(operand(1));
   xla::XlaOp labels = loctx->GetOutputOp(operand(2));
@@ -83,7 +83,7 @@ XlaOpVector NllLossBackward::Lower(LoweringContext* loctx) const {
                   loctx);
 }
 
-std::string NllLossBackward::ToString() const {
+std::string NllLoss2dBackward::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
      << ", reduction=" << xla::util::GetEnumValue(reduction_)

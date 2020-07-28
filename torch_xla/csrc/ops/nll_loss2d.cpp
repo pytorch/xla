@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/ops/nll_loss.h"
+#include "torch_xla/csrc/ops/nll_loss2d.h"
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -33,10 +33,10 @@ xla::Shape NodeOutputShape(const Value& logits, const Value& labels,
 
 }  // namespace
 
-NllLoss::NllLoss(const Value& logits, const Value& labels,
-                 const absl::optional<Value>& weight, ReductionMode reduction,
-                 int ignore_index)
-    : Node(ir::OpKind(at::aten::nll_loss),
+NllLoss2d::NllLoss2d(const Value& logits, const Value& labels,
+                     const absl::optional<Value>& weight,
+                     ReductionMode reduction, int ignore_index)
+    : Node(ir::OpKind(at::aten::nll_loss2d),
            xla::util::GetValuesVector<Value>({logits, labels}, {&weight}),
            [&]() {
              return NodeOutputShape(logits, labels, weight, reduction,
@@ -47,16 +47,16 @@ NllLoss::NllLoss(const Value& logits, const Value& labels,
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 
-NodePtr NllLoss::Clone(OpList operands) const {
+NodePtr NllLoss2d::Clone(OpList operands) const {
   absl::optional<Value> weight;
   if (operands.size() > 2) {
     weight = operands.at(2);
   }
-  return MakeNode<NllLoss>(operands.at(0), operands.at(1), weight, reduction_,
-                           ignore_index_);
+  return MakeNode<NllLoss2d>(operands.at(0), operands.at(1), weight, reduction_,
+                             ignore_index_);
 }
 
-XlaOpVector NllLoss::Lower(LoweringContext* loctx) const {
+XlaOpVector NllLoss2d::Lower(LoweringContext* loctx) const {
   xla::XlaOp logits = loctx->GetOutputOp(operand(0));
   xla::XlaOp labels = loctx->GetOutputOp(operand(1));
   xla::XlaOp weight;
@@ -67,7 +67,7 @@ XlaOpVector NllLoss::Lower(LoweringContext* loctx) const {
       BuildNllLoss(logits, labels, weight, ignore_index_, reduction_), loctx);
 }
 
-std::string NllLoss::ToString() const {
+std::string NllLoss2d::ToString() const {
   std::stringstream ss;
   ss << Node::ToString()
      << ", reduction=" << xla::util::GetEnumValue(reduction_)

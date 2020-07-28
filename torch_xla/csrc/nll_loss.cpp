@@ -70,24 +70,27 @@ xla::XlaOp LabelsToOneHot(xla::XlaBuilder* builder, xla::int64 depth, int axis,
                      xla::Broadcast(off_value, output_dimensions));
 }
 
-WeightScale GetMaskedWeight(const absl::optional<xla::XlaOp>& weight,
-                            const xla::Shape& logits_shape, xla::XlaOp labels,
-                            xla::XlaOp one_hot_labels, int ignore_index) {
+WeightScale GetMaskedWeight(xla::XlaOp weight, const xla::Shape& logits_shape,
+                            xla::XlaOp labels, xla::XlaOp one_hot_labels,
+                            int axis, int ignore_index) {
   const xla::Shape& labels_shape = XlaHelpers::ShapeOfXlaOp(labels);
   xla::XlaOp valid_bitmap = xla::Ne(
       labels, XlaHelpers::ScalarValue<xla::int64>(
                   ignore_index, labels_shape.element_type(), labels.builder()));
   xla::XlaOp xweight;
-  if (weight) {
-    xweight = xla::BroadcastInDim(*weight, logits_shape.dimensions(), {1});
+  if (!weight.IsUninitialized()) {
+    xweight = xla::BroadcastInDim(weight, logits_shape.dimensions(), {1});
   } else {
     xweight =
         XlaHelpers::ScalarBroadcast<float>(1.0, logits_shape, labels.builder());
   }
   xla::XlaOp zeros =
       XlaHelpers::ScalarBroadcast<float>(0.0, logits_shape, labels.builder());
-  xla::XlaOp xvalid_bitmap =
-      xla::BroadcastInDim(valid_bitmap, logits_shape.dimensions(), {0});
+  std::vector<xla::int64> broadcast_dims(labels_shape.rank());
+  std::iota(broadcast_dims.begin(), broadcast_dims.begin() + axis, 0);
+  std::iota(broadcast_dims.begin() + axis, broadcast_dims.end(), axis + 1);
+  xla::XlaOp xvalid_bitmap = xla::BroadcastInDim(
+      valid_bitmap, logits_shape.dimensions(), broadcast_dims);
   xla::XlaOp result_weight =
       xla::Select(xvalid_bitmap, xweight, zeros) * one_hot_labels;
 
@@ -103,8 +106,7 @@ WeightScale GetMaskedWeight(const absl::optional<xla::XlaOp>& weight,
 }  // namespace
 
 // Builds the NLLLoss for log-probabilities "logits" and class indices "labels".
-xla::XlaOp BuildNllLoss(xla::XlaOp logits, xla::XlaOp labels,
-                        const absl::optional<xla::XlaOp>& weight,
+xla::XlaOp BuildNllLoss(xla::XlaOp logits, xla::XlaOp labels, xla::XlaOp weight,
                         int ignore_index, ReductionMode reduction_mode) {
   const int classes_axis = 1;
   const xla::Shape& logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
@@ -119,8 +121,8 @@ xla::XlaOp BuildNllLoss(xla::XlaOp logits, xla::XlaOp labels,
       /*off_value=*/zero,
       /*ignore_index=*/ignore_index);
   xla::XlaOp mul = xla::Neg(one_hot_labels) * logits;
-  WeightScale weight_scale = GetMaskedWeight(weight, logits_shape, labels,
-                                             one_hot_labels, ignore_index);
+  WeightScale weight_scale = GetMaskedWeight(
+      weight, logits_shape, labels, one_hot_labels, classes_axis, ignore_index);
   mul = mul * weight_scale.weight;
   xla::XlaComputation add_func =
       XlaHelpers::CreateAddComputation(logits_shape.element_type());
@@ -137,10 +139,8 @@ xla::XlaOp BuildNllLoss(xla::XlaOp logits, xla::XlaOp labels,
 // Builds the NLLLoss gradient for log-probabilities "logits" and class indices
 // "labels".
 xla::XlaOp BuildNllLossBackward(xla::XlaOp grad_output, xla::XlaOp logits,
-                                xla::XlaOp labels,
-                                const absl::optional<xla::XlaOp>& weight,
-                                const absl::optional<xla::XlaOp>& total_weight,
-                                int ignore_index,
+                                xla::XlaOp labels, xla::XlaOp weight,
+                                xla::XlaOp total_weight, int ignore_index,
                                 ReductionMode reduction_mode) {
   const int classes_axis = 1;
   const xla::Shape& logits_shape = XlaHelpers::ShapeOfXlaOp(logits);
@@ -159,10 +159,13 @@ xla::XlaOp BuildNllLossBackward(xla::XlaOp grad_output, xla::XlaOp logits,
   xla::XlaOp grad = grad_output;
   if (grad_output_shape.rank() == 1) {
     grad = xla::BroadcastInDim(grad, logits_shape.dimensions(), {0});
+  } else if (grad_output_shape.rank() == 3) {
+    // nll_loss_2d case
+    grad = xla::BroadcastInDim(grad, logits_shape.dimensions(), {0, 2, 3});
   }
   xla::XlaOp result = xla::Neg(one_hot_labels) * grad;
-  WeightScale weight_scale = GetMaskedWeight(weight, logits_shape, labels,
-                                             one_hot_labels, ignore_index);
+  WeightScale weight_scale = GetMaskedWeight(
+      weight, logits_shape, labels, one_hot_labels, classes_axis, ignore_index);
   result = result * weight_scale.weight;
   if (reduction_mode != ReductionMode::kMean) {
     return result;
