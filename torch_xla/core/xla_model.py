@@ -619,6 +619,9 @@ def all_to_all(value,
                groups=None):
   """Performs an XLA `AllToAll()` operation on the input tensor.
 
+  WARNING: This function is not very reliable, may produce wrong results under
+           certain inputs. Use it at your own risk.
+
   See: https://www.tensorflow.org/xla/operation_semantics#alltoall
 
   Args:
@@ -645,6 +648,9 @@ def all_to_all(value,
 
 def collective_permute(value, pairs):
   """Performs a XLA `CollectivePermute()` operation on the input tensor.
+
+  WARNING: This function is not very reliable, may produce wrong results under
+           certain inputs. Use it at your own risk.
 
   See: https://www.tensorflow.org/xla/operation_semantics#collectivepermute
 
