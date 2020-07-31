@@ -297,8 +297,6 @@ class AtenXlaType {
 
   static at::Tensor dot(const at::Tensor& self, const at::Tensor& tensor);
 
-  static at::Tensor einsum(std::string equation, at::TensorList tensors);
-
   static at::Tensor elu(const at::Tensor& self, at::Scalar alpha,
                         at::Scalar scale, at::Scalar input_scale);
 
