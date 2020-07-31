@@ -34,4 +34,9 @@ T OptionalOr(const c10::optional<S>& value, T defval) {
 // Unwraps tensor to target dtype if it's a wrapped number.
 at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype);
 
+// Checks whether a c10::optional<Tensor> is defined.
+inline bool IsDefined(const c10::optional<at::Tensor>& tensor) {
+  return tensor.has_value() && tensor.value().defined();
+}
+
 }  // namespace torch_xla

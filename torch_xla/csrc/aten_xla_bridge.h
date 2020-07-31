@@ -32,8 +32,16 @@ std::vector<XLATensor> GetXlaTensors(absl::Span<const at::Tensor> tensors);
 // otherwise creates a new XLA tensor type with tensor as data.
 XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device);
 
+XLATensor GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
+                               const Device& device);
+
 // Creates a vector of at::Tensor objects extracted from a list of XLA tensors.
 std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors);
+
+// Creates a vector of c10::optional<at::Tensor> objects extracted from a list
+// of optional XLA tensors.
+std::vector<c10::optional<at::Tensor>> XlaCreateOptTensorList(
+    const std::vector<c10::optional<at::Tensor>>& tensors);
 
 void XlaUpdateTensors(absl::Span<const at::Tensor> dest_xla_tensors,
                       absl::Span<const at::Tensor> source_cpu_tensors,
@@ -42,6 +50,8 @@ void XlaUpdateTensors(absl::Span<const at::Tensor> dest_xla_tensors,
 // Tries to extract the device out of the XLA tensor. Returns nullopt if the
 // input is not an XLA tensor.
 c10::optional<Device> GetXlaDevice(const at::Tensor& tensor);
+
+c10::optional<Device> GetXlaDevice(const c10::optional<at::Tensor>& tensor);
 
 c10::optional<Device> GetXlaDevice(const at::TensorList& tensors);
 

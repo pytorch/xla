@@ -96,6 +96,15 @@ XLATensor GetOrCreateXlaTensor(const at::Tensor& tensor, const Device& device) {
   return xtensor ? *xtensor : XLATensor::Create(tensor, device);
 }
 
+XLATensor GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
+                               const Device& device) {
+  if (!IsDefined(tensor)) {
+    return XLATensor();
+  }
+  auto xtensor = TryGetXlaTensor(*tensor);
+  return xtensor ? *xtensor : XLATensor::Create(*tensor, device);
+}
+
 std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors) {
   std::vector<at::Tensor> aten_xla_tensors(tensors.size());
   std::vector<XLATensor> xla_tensors;
@@ -125,6 +134,28 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::TensorList& tensors) {
   return aten_xla_tensors;
 }
 
+std::vector<c10::optional<at::Tensor>> XlaCreateOptTensorList(
+    const std::vector<c10::optional<at::Tensor>>& tensors) {
+  std::vector<c10::optional<at::Tensor>> opt_aten_xla_tensors(tensors.size());
+  std::vector<at::Tensor> materialized_tensors;
+  std::vector<bool> to_translate(tensors.size());
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    auto tensor = tensors[i];
+    if (tensor.has_value()) {
+      to_translate[i] = true;
+      materialized_tensors.push_back(*tensor);
+    }
+  }
+  auto aten_materialzied_tensors = XlaCreateTensorList(materialized_tensors);
+  for (size_t i = 0, defined_pos = 0; i < tensors.size(); ++i) {
+    if (to_translate[i]) {
+      opt_aten_xla_tensors[i] =
+          std::move(aten_materialzied_tensors[defined_pos++]);
+    }
+  }
+  return opt_aten_xla_tensors;
+}
+
 void XlaUpdateTensors(absl::Span<const at::Tensor> dest_xla_tensors,
                       absl::Span<const at::Tensor> source_cpu_tensors,
                       absl::Span<const size_t> indices) {
@@ -152,6 +183,13 @@ c10::optional<Device> GetXlaDevice(const at::Tensor& tensor) {
     return c10::nullopt;
   }
   return xtensor->GetDevice();
+}
+
+c10::optional<Device> GetXlaDevice(const c10::optional<at::Tensor>& tensor) {
+  if (!tensor.has_value()) {
+    return c10::nullopt;
+  }
+  return GetXlaDevice(*tensor);
 }
 
 c10::optional<Device> GetXlaDevice(const at::TensorList& tensors) {
