@@ -864,12 +864,15 @@
   <span class="k">return</span> <span class="n">all_reduce</span><span class="p">(</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">padding</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="all_to_all"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_to_all">[docs]</a><span class="k">def</span> <span class="nf">all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span>
+<span class="k">def</span> <span class="nf">all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span>
                <span class="n">split_dimension</span><span class="p">,</span>
                <span class="n">concat_dimension</span><span class="p">,</span>
                <span class="n">split_count</span><span class="p">,</span>
                <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs an XLA `AllToAll()` operation on the input tensor.</span>
+
+<span class="sd">  WARNING: This function is not very reliable, may produce wrong results under</span>
+<span class="sd">           certain inputs. Use it at your own risk.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#alltoall</span>
 
@@ -892,11 +895,14 @@
                                            <span class="n">concat_dimension</span><span class="p">,</span> <span class="n">split_count</span><span class="p">,</span>
                                            <span class="n">groups</span> <span class="ow">or</span> <span class="p">[])</span>
   <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="collective_permute"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.collective_permute">[docs]</a><span class="k">def</span> <span class="nf">collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">pairs</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">pairs</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Performs a XLA `CollectivePermute()` operation on the input tensor.</span>
+
+<span class="sd">  WARNING: This function is not very reliable, may produce wrong results under</span>
+<span class="sd">           certain inputs. Use it at your own risk.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#collectivepermute</span>
 
@@ -914,7 +920,7 @@
   <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">pairs</span><span class="p">)</span>
   <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">()):</span>
