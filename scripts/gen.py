@@ -291,7 +291,10 @@ class TensorFetcher(object):
   def __init__(self, var_name):
     self.var_name = var_name
     self.tvar_name = '{}_tensors'.format(self.var_name)
+    self.optvar_name = '{}_opt'.format(var_name)
+    self.toptvar_name = '{}_tensors'.format(self.optvar_name)
     self.tensors = []
+    self.opt_tensors = []
     self.writeable = []
 
   def add(self, name, writeable):
@@ -300,12 +303,22 @@ class TensorFetcher(object):
     self.tensors.append(name)
     return '{}[{}]'.format(self.var_name, len(self.tensors) - 1)
 
+  def add_opt(self, name):
+    self.opt_tensors.append(name)
+    return '{}[{}]'.format(self.optvar_name, len(self.opt_tensors) - 1)
+
   def generate_fetches(self):
     code = ''
     code += '  std::vector<at::Tensor> {} = {{{}}};\n'.format(
         self.tvar_name, ', '.join(self.tensors))
     code += ('  auto {} = bridge::XlaCreateTensorList({});\n').format(
         self.var_name, self.tvar_name)
+    # Handles conversion of c10::optional<at::Tensor> if exists
+    if self.opt_tensors:
+      code += '  std::vector<c10::optional<at::Tensor>> {} = {{{}}};\n'.format(
+          self.toptvar_name, ', '.join(self.opt_tensors))
+      code += ('  auto {} = bridge::XlaCreateOptTensorList({});\n').format(
+          self.optvar_name, self.toptvar_name)
     return code
 
   def generate_updates(self):
@@ -503,10 +516,13 @@ def extract_list(t, l):
   return l
 
 
-def tuple_type_list(t):
+def get_template_type_list(t):
   assert isinstance(t, lark.tree.Tree)
-  c = t.children[0]
-  assert isinstance(c, lark.tree.Tree) and c.data == 'core_type'
+  # Skipping type qualifiers if exists.
+  # E.g. const c10::optional<T>
+  for c in t.children:
+    if isinstance(c, lark.tree.Tree) and c.data == 'core_type':
+      break
   c = c.children[0]
   assert isinstance(c, lark.tree.Tree) and c.data == 'template'
   types = []
@@ -595,7 +611,7 @@ def get_reference_param(params, fnopts=None):
     cptype = type_core(ptype)
     # Unwrap core type within c10::optional<>
     if cptype == 'c10::optional':
-      cptype = type_core(tuple_type_list(ptype)[0])
+      cptype = type_core(get_template_type_list(ptype)[0])
     pname = param_name(p)
     if get_optional(fnopts, 'ref_param') == pname:
       return p
@@ -612,7 +628,7 @@ def get_reference_param(params, fnopts=None):
 
 def get_tuple_return(rtype, rtype_str, rname, params, param_vars, ref_param,
                      fnopts):
-  types = tuple_type_list(rtype)
+  types = get_template_type_list(rtype)
   retstr = '{}('.format(rtype_str)
   for i, ttype in enumerate(types):
     if i > 0:
@@ -761,7 +777,7 @@ def generate_aten_out(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
   rtype = tree.children[0]
   num_outputs = None
   if type_core(rtype) == 'std::tuple':
-    num_outputs = len(tuple_type_list(rtype))
+    num_outputs = len(get_template_type_list(rtype))
 
   code = '{} {{\n'.format(sig)
   code += generate_entry_debug_code(tree, fname, params)
@@ -820,6 +836,13 @@ def generate_aten_to_xla(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
       gcode, xname = rewrite_tensor_options(fname, pname)
       code += gcode
       param_vars.append(xname)
+    elif cptype == 'c10::optional':
+      wrapped_type = type_core(get_template_type_list(ptype)[0])
+      if wrapped_type == 'Tensor':
+        xname = tfetcher.add_opt(pname)
+        param_vars.append(xname)
+      else:
+        param_vars.append(pname)
     elif cptype != 'Tensor':
       param_vars.append(pname)
     elif type_is_const(ptype):
