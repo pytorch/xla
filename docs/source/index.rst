@@ -16,8 +16,6 @@ xla_model
 .. autofunction:: xrt_world_size
 .. autofunction:: all_reduce
 .. autofunction:: all_gather
-.. autofunction:: all_to_all
-.. autofunction:: collective_permute
 .. autofunction:: add_step_closure
 .. autofunction:: wait_device_ops
 .. autofunction:: optimizer_step
