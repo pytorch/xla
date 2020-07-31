@@ -94,7 +94,6 @@ _FN_FULL_OVERRIDE = set([
 # TODO(#1362, #1364)
 _FN_WHITELIST = _FN_FULL_OVERRIDE | set([
     'copy_(Tensor, Tensor, bool) -> Tensor',
-    'einsum',
 ])
 
 _FN_BLACKLIST_REGEX = [
