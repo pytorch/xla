@@ -43,7 +43,6 @@
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
-#include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/exponential.h"
 #include "torch_xla/csrc/ops/flip.h"
@@ -998,17 +997,6 @@ void XLATensor::eq_(XLATensor& input, const XLATensor& other) {
   ir::NodePtr cmp_result = ir::ops::ComparisonOp(
       at::aten::eq, input.GetIrValue(), other.GetIrValue());
   input.SetIrValue(ir::MakeNode<ir::ops::Cast>(cmp_result, input.dtype()));
-}
-
-XLATensor XLATensor::einsum(const std::string& equation,
-                            absl::Span<const XLATensor> tensors) {
-  std::vector<ir::Value> tensor_ir_values;
-  for (const auto& tensor : tensors) {
-    tensor_ir_values.push_back(tensor.GetIrValue());
-  }
-  XLA_CHECK_EQ(tensors.size(), 2);
-  return tensors[0].CreateFrom(
-      ir::MakeNode<ir::ops::Einsum>(equation, tensor_ir_values));
 }
 
 XLATensor XLATensor::elu(const XLATensor& input, at::Scalar alpha,

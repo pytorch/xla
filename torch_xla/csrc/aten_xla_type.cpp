@@ -17,7 +17,6 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
-#include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
@@ -1046,17 +1045,6 @@ at::Tensor AtenXlaType::dot(const at::Tensor& self, const at::Tensor& tensor) {
   }
   return bridge::AtenFromXlaTensor(XLATensor::matmul(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
-}
-
-at::Tensor AtenXlaType::einsum(std::string equation, at::TensorList tensors) {
-  XLA_FN_COUNTER("xla::");
-  if (tensors.size() != 2 ||
-      !ir::ops::Einsum::SupportsEquation(equation, tensors[0].dim(),
-                                         tensors[1].dim())) {
-    return at::native::einsum(equation, tensors);
-  }
-  return bridge::AtenFromXlaTensor(
-      XLATensor::einsum(equation, bridge::GetXlaTensors(tensors)));
 }
 
 at::Tensor AtenXlaType::elu(const at::Tensor& self, at::Scalar alpha,
