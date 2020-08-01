@@ -2220,14 +2220,14 @@ at::Tensor& AtenXlaType::neg_(at::Tensor& self) {
 
 at::Tensor AtenXlaType::nll_loss2d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& target, const at::Tensor& weight, int64_t reduction,
-    int64_t ignore_index, const at::Tensor& total_weight) {
+    const at::Tensor& target, const c10::optional<at::Tensor>& weight,
+    int64_t reduction, int64_t ignore_index, const at::Tensor& total_weight) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor weight_tensor =
       bridge::GetOrCreateXlaTensor(weight, self_tensor.GetDevice());
   XLATensor total_weight_tensor;
-  if (weight.defined()) {
+  if (IsDefined(weight)) {
     total_weight_tensor =
         bridge::GetOrCreateXlaTensor(total_weight, self_tensor.GetDevice());
   }
@@ -2238,8 +2238,9 @@ at::Tensor AtenXlaType::nll_loss2d_backward(
 }
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::nll_loss2d_forward(
-    const at::Tensor& self, const at::Tensor& target, const at::Tensor& weight,
-    int64_t reduction, int64_t ignore_index) {
+    const at::Tensor& self, const at::Tensor& target,
+    const c10::optional<at::Tensor>& weight, int64_t reduction,
+    int64_t ignore_index) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor total_weight =
