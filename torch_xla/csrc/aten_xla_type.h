@@ -719,13 +719,14 @@ class AtenXlaType {
   static at::Tensor nll_loss2d_backward(const at::Tensor& grad_output,
                                         const at::Tensor& self,
                                         const at::Tensor& target,
-                                        const at::Tensor& weight,
+                                        const c10::optional<at::Tensor>& weight,
                                         int64_t reduction, int64_t ignore_index,
                                         const at::Tensor& total_weight);
 
   static std::tuple<at::Tensor, at::Tensor> nll_loss2d_forward(
       const at::Tensor& self, const at::Tensor& target,
-      const at::Tensor& weight, int64_t reduction, int64_t ignore_index);
+      const c10::optional<at::Tensor>& weight, int64_t reduction,
+      int64_t ignore_index);
 
   static at::Tensor nll_loss_backward(const at::Tensor& grad_output,
                                       const at::Tensor& self,
