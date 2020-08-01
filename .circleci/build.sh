@@ -8,6 +8,9 @@ source .circleci/common.sh
 # System default cmake 3.10 cannot find mkl, so point it to the right place.
 export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
 
+# Disable the use of CXX 11 ABI to avoid symbol mismatch with `libxla_computation_client.so`
+export CFLAGS="${CFLAGS} -D_GLIBCXX_USE_CXX11_ABI=0" CXXFLAGS="${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=0"
+
 SCCACHE="$(which sccache)"
 if [ -z "${SCCACHE}" ]; then
   echo "Unable to find sccache..."
