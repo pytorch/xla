@@ -33,6 +33,10 @@ launch_docker_and_build: &launch_docker_and_build
     echo "declare -x CIRCLE_PROJECT_USERNAME=${CIRCLE_PROJECT_USERNAME}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_PROJECT_REPONAME=${CIRCLE_PROJECT_REPONAME}" >> /home/circleci/project/env
 
+    # Disable the use of CXX 11 ABI to avoid symbol mismatch with `libxla_computation_client.so`
+    echo "declare -x CFLAGS=-D_GLIBCXX_USE_CXX11_ABI=0" >> /home/circleci/project/env
+    echo "declare -x CXXFLAGS=-D_GLIBCXX_USE_CXX11_ABI=0" >> /home/circleci/project/env
+
     pid=$(docker run -t -d -w $WORKDIR ${DOCKER_IMAGE})
     docker cp /home/circleci/project/. "$pid:$WORKDIR"
     docker exec -u jenkins ${pid} sudo chown -R jenkins ${WORKDIR}
