@@ -7,13 +7,9 @@ namespace xla {
 namespace util {
 
 void MultiWait::Done() {
-  bool notify = false;
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    completed_count_ += 1;
-    notify = completed_count_ >= count_;
-  }
-  if (notify) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  completed_count_ += 1;
+  if (completed_count_ == count_) {
     cv_.notify_all();
   }
 }
