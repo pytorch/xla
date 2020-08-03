@@ -30,6 +30,11 @@ function setup_system {
   maybe_append 'APT::Acquire::Retries "10";' /etc/apt/apt.conf.d/80-failparams
   maybe_append 'APT::Acquire::http::Timeout "180";' /etc/apt/apt.conf.d/80-failparams
   maybe_append 'APT::Acquire::ftp::Timeout "180";' /etc/apt/apt.conf.d/80-failparams
+
+  if [ "$CXX_ABI" == "0" ]; then
+    export CFLAGS="${CFLAGS} -D_GLIBCXX_USE_CXX11_ABI=0"
+    export CXXFLAGS="${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=0"
+  fi
 }
 
 function install_cudnn {
@@ -211,14 +216,9 @@ function main() {
   install_req_packages
   install_llvm_clang
   install_and_setup_conda
-
-  # Upstream PyTorch is released with CXX11 ABI disabled
-  # so to avoid symbol mismatch errors we must do the same.
-  export CFLAGS="${CFLAGS} -D_GLIBCXX_USE_CXX11_ABI=0" CXXFLAGS="${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=0"
   build_and_install_torch
   pushd xla
   build_and_install_torch_xla
-
   popd
   install_torchvision_from_source
   install_gcloud

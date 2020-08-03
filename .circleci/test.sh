@@ -2,7 +2,6 @@
 
 set -ex
 
-source ./env
 source ./xla_env
 
 if [ -x "$(command -v nvidia-smi)" ]; then
