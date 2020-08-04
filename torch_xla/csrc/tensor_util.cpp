@@ -423,15 +423,16 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
     std::vector<xla::int64> iter_dims = GetIterationDimensions(dest_shape);
     std::vector<CopyPartition> parts =
         CreateCopyPartitions(dest_shape.dimensions(), iter_dims.front());
-    xla::util::MultiWait mwait(parts.size());
+    auto mwait = std::make_shared<xla::util::MultiWait>(parts.size());
     for (size_t i = 0; i < parts.size(); ++i) {
       auto copy_fn = [&, i]() {
         SlicedCopy<SType, DType>(dest_shape.dimensions(), src_data, src_strides,
                                  dest_data, dest_strides, iter_dims, parts[i]);
       };
-      xla::env::ScheduleClosure(mwait.Completer(std::move(copy_fn)));
+      xla::env::ScheduleClosure(
+          xla::util::MultiWait::Completer(mwait, std::move(copy_fn)));
     }
-    mwait.Wait();
+    mwait->Wait();
   }
 }
 

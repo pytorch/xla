@@ -480,7 +480,7 @@ py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
         std::min<size_t>(num_threads, std::thread::hardware_concurrency());
     size_t block_size = size / num_threads;
 
-    xla::util::MultiWait mwait(num_threads);
+    auto mwait = std::make_shared<xla::util::MultiWait>(num_threads);
     for (size_t i = 0; i < num_threads; ++i) {
       auto reader = [&, i]() {
         uint64_t base = static_cast<uint64_t>(i) * block_size;
@@ -491,9 +491,10 @@ py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
         XLA_CHECK_OK(
             file->Read(offset + base, tsize, &result, buffer.get() + base));
       };
-      xla::env::ScheduleIoClosure(mwait.Completer(std::move(reader)));
+      xla::env::ScheduleIoClosure(
+          xla::util::MultiWait::Completer(mwait, std::move(reader)));
     }
-    mwait.Wait();
+    mwait->Wait();
   }
   return py::bytes(buffer.get(), size);
 }
