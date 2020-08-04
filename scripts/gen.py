@@ -80,7 +80,7 @@ _PARSER = lark.Lark(_GRAMMAR, parser='lalr', propagate_positions=True)
 _XPARSER = lark.Lark(
     _GRAMMAR, parser='lalr', propagate_positions=True, keep_all_tokens=True)
 
-# _FN_FULL_OVERRIDE/_FN_FULL_OVERRIDE/_FN_BLACKLIST takes either name or mapsig.
+# _FN_FULL_OVERRIDE/_FN_BLACKLIST takes either name or mapsig.
 _FN_BLACKLIST = set([])
 
 # List of non-leaf ops we want to override both forward + backward.
