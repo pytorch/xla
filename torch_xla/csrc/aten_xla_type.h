@@ -261,9 +261,6 @@ class AtenXlaType {
       at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
       at::IntArrayRef output_padding, int64_t groups);
 
-  static at::Tensor& copy_(at::Tensor& self, const at::Tensor& src,
-                           bool non_blocking);
-
   static at::Tensor cos(const at::Tensor& self);
 
   static at::Tensor& cos_(at::Tensor& self);
