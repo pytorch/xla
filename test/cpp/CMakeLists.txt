@@ -10,6 +10,12 @@ file(GLOB PTXLA_LIBDIRS "${PTXLA_DIR}/build/lib.*")
 list(GET PTXLA_LIBDIRS 0 PTXLA_LIBDIR)
 message("Selected PT/XLA library folder ${PTXLA_LIBDIR}")
 
+execute_process(COMMAND
+  python -c "import torch; print(int(torch._C._GLIBCXX_USE_CXX11_ABI))"
+  OUTPUT_VARIABLE PT_CXX_ABI
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 project(ptxla_test)
 
 find_package(PythonLibs)
@@ -29,7 +35,9 @@ ExternalProject_Add(
   INSTALL_COMMAND ""
   LOG_DOWNLOAD ON
   LOG_CONFIGURE ON
-  LOG_BUILD ON)
+  LOG_BUILD ON
+  CMAKE_ARGS
+    "-DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=${PT_CXX_ABI}")
 
 ExternalProject_Get_Property(googletest SOURCE_DIR)
 
@@ -51,6 +59,7 @@ set(TORCH_XLA_TEST_SOURCES
 add_executable(test_ptxla ${TORCH_XLA_TEST_SOURCES})
 
 set(TGT_OPTS
+  -D_GLIBCXX_USE_CXX11_ABI=${PT_CXX_ABI}
   -Wno-sign-compare
   -Wno-deprecated-declarations
   -Wno-return-type
