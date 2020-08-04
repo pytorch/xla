@@ -30,6 +30,11 @@ function setup_system {
   maybe_append 'APT::Acquire::Retries "10";' /etc/apt/apt.conf.d/80-failparams
   maybe_append 'APT::Acquire::http::Timeout "180";' /etc/apt/apt.conf.d/80-failparams
   maybe_append 'APT::Acquire::ftp::Timeout "180";' /etc/apt/apt.conf.d/80-failparams
+
+  if [ "$CXX_ABI" == "0" ]; then
+    export CFLAGS="${CFLAGS} -D_GLIBCXX_USE_CXX11_ABI=0"
+    export CXXFLAGS="${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=0"
+  fi
 }
 
 function install_cudnn {
