@@ -43,7 +43,6 @@ done
 shift $(($OPTIND - 1))
 
 export XLA_EXPERIMENTAL
-export CXXFLAGS="$CXXFLAGS -D_GLIBCXX_USE_CXX11_ABI=$(python -c 'import torch; print(int(torch._C._GLIBCXX_USE_CXX11_ABI))')"
 
 rm -rf "$BUILDDIR"
 mkdir "$BUILDDIR" 2>/dev/null
