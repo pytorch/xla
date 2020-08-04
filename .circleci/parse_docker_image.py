@@ -3,7 +3,7 @@ from urllib.request import urlopen
 
 base_config = 'pytorch_linux_build'
 name = 'pytorch_xla_linux_bionic_py3_6_clang9_build'
-url = 'https://raw.githubusercontent.com/pytorch/pytorch/master/.circleci/config.yml'
+url = 'https://raw.githubusercontent.com/pytorch/pytorch/release/1.6/.circleci/config.yml'
 
 def parse_config_yml():
     with urlopen(url) as file:
