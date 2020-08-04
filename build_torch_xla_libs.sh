@@ -2,6 +2,20 @@
 
 set -ex
 
+OPTS=()
+
+while getopts "O:" OPTION
+do
+    case $OPTION in
+       O)
+           for i in ${OPTARG}; do
+               OPTS+=("--cxxopt=${i}")
+           done
+           ;;
+    esac
+done
+shift $(($OPTIND - 1))
+
 CMD="${1:-install}"
 
 cd "$(dirname "$0")"
@@ -25,7 +39,7 @@ if [[ "$XLA_CUDA" == "1" ]] && [[ "$CLOUD_BUILD" == "true" ]]; then
   MAX_JOBS="--jobs=16"
 fi
 
-OPTS=(--cxxopt="-std=c++14")
+OPTS+=(--cxxopt="-std=c++14")
 if [[ $(basename -- $CC) =~ ^clang ]]; then
   OPTS+=(--cxxopt="-Wno-c++11-narrowing")
 fi
@@ -43,8 +57,8 @@ else
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
-  bazel build $MAX_JOBS $VERBOSE --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" $XLA_CUDA_CFG \
-    //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
+  bazel build $MAX_JOBS $VERBOSE --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
+    $XLA_CUDA_CFG //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
 
   popd
   mkdir -p torch_xla/lib

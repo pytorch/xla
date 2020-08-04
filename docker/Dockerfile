@@ -9,6 +9,7 @@ ARG cloud_build="false"
 ARG release_version="nightly"
 ARG cuda="0"
 ARG cuda_compute="7.0,7.5"
+ARG cxx_abi="0"
 
 RUN apt-get update
 RUN apt-get install -y git sudo python-pip python3-pip
@@ -23,6 +24,9 @@ ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
 
 # Whether the build is running on GCB
 ENV CLOUD_BUILD "${cloud_build}"
+
+# Whether to build torch and torch_xla libraries with CXX ABI
+ENV CXX_ABI "${cxx_abi}"
 
 # To get around issue of Cloud Build with recursive submodule update
 # clone recursively from pytorch/xla if building docker image with
