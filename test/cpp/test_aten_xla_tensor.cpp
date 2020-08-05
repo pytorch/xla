@@ -48,7 +48,7 @@ TEST_F(AtenXlaTensorTest, TestTo) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_copy_from", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestIsFloatingPoint) {
@@ -2571,7 +2571,7 @@ TEST_F(AtenXlaTensorTest, TestZerosLikeOptions) {
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_copy_from", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestZeros) {
@@ -2626,7 +2626,7 @@ TEST_F(AtenXlaTensorTest, TestOnesLikeOptions) {
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_copy_from", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFull) {
@@ -2670,7 +2670,7 @@ TEST_F(AtenXlaTensorTest, TestFullLikeOptions) {
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_copy_from", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestARange) {
@@ -3069,6 +3069,23 @@ TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
     torch::Tensor xla_b = CopyToDevice(b, device);
     torch::Tensor xla_c = torch::einsum(equation, {xla_a, xla_b});
     AllClose(c, xla_c);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestEinsumOuterBackward) {
+  torch::Tensor a =
+      torch::rand({5}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor b =
+      torch::rand({5}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  std::string equation = "i,j->ij";
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::einsum(equation, inputs);
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward({a, b}, device, testfn, /*rtol=*/1e-3, /*atol=*/1e-4);
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
@@ -7100,7 +7117,7 @@ TEST_F(AtenXlaTensorTest, TestContiguous) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::copy_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_copy_from", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSqueezeAll) {
