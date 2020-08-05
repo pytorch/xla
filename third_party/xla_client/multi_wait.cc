@@ -45,30 +45,26 @@ void MultiWait::Reset(size_t count) {
 }
 
 std::function<void()> MultiWait::Completer(std::function<void()> func) {
-  auto completer = [this, func = std::move(func)]() {
-    try {
-      func();
-    } catch (...) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      exptr_ = std::current_exception();
-    }
-    Done();
-  };
+  auto completer = [this, func = std::move(func)]() { Complete(func); };
   return completer;
 }
 
 std::function<void()> MultiWait::Completer(std::shared_ptr<MultiWait> mwait,
                                            std::function<void()> func) {
   auto completer = [mwait = std::move(mwait), func = std::move(func)]() {
-    try {
-      func();
-    } catch (...) {
-      std::lock_guard<std::mutex> lock(mwait->mutex_);
-      mwait->exptr_ = std::current_exception();
-    }
-    mwait->Done();
+    mwait->Complete(func);
   };
   return completer;
+}
+
+void MultiWait::Complete(const std::function<void()>& func) {
+  try {
+    func();
+  } catch (...) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    exptr_ = std::current_exception();
+  }
+  Done();
 }
 
 }  // namespace util
