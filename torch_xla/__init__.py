@@ -33,8 +33,12 @@ def _maybe_select_tpu_version():
           f'TPU has started up successfully with version pytorch-{version}')
 
   try:
+    tpu_name = os.environ.get('TPU_NAME', '')  # Kaggle/Colab set this
+    if not tpu_name:
+      return
+
     import cloud_tpu_client
-    client = cloud_tpu_client.Client()
+    client = cloud_tpu_client.Client(tpu_name)
     client.configure_tpu_version(f'pytorch-{version}', restart_type='ifNeeded')
     # client.wait_for_healthy() API doesn't work as we dont have TPU API access
     _wait_for_open(version)
@@ -42,8 +46,6 @@ def _maybe_select_tpu_version():
     logging.warning((
         'Not selecting corresponding TPU runtime since cloud_tpu_client is not '
         'installed. Ignore if not running on Colab/Kaggle TPU.'))
-  except ValueError:
-    pass  # Not on Colab/Kaggle TPU runtime
   except Exception:
     # This path is hit, when we get throttled by the verison changer
     # when we import torch_xla from xmp.spawn-ed processes.
