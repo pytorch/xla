@@ -149,7 +149,8 @@ void AddXrtHostDevices(const std::string& worker_name, int task_no,
        sys_util::GetEnvInt(env::kEnvNumTpu, device_counts.num_tpus)},
       {"GPU", "XLA_GPU",
        sys_util::GetEnvInt(env::kEnvNumGpu, device_counts.num_gpus)},
-      {"CPU", "XLA_CPU", device_counts.num_cpus},
+      {"CPU", "XLA_CPU",
+       sys_util::GetEnvInt(env::kEnvNumCpu, device_counts.num_gpus)},
   };
   options->workers_map.emplace(
       XrtComputationClient::Worker(worker_name, task_no),
@@ -234,7 +235,9 @@ bool ParseEnvDeviceCounts(XrtComputationClient::Options* options) {
   DeviceCountDefaults device_counts;
   device_counts.num_tpus = sys_util::GetEnvInt(env::kEnvNumTpu, 0);
   device_counts.num_gpus = sys_util::GetEnvInt(env::kEnvNumGpu, 0);
-  if (device_counts.num_tpus > 0 || device_counts.num_gpus > 0) {
+  device_counts.num_cpus = sys_util::GetEnvInt(env::kEnvNumCpu, 0);
+  if (device_counts.num_tpus > 0 || device_counts.num_gpus > 0
+                 || device_counts.num_cpus > 0) {
     std::map<std::string, int> device_ordinals;
     std::string host_port =
         absl::StrCat("localhost:", tensorflow::internal::PickUnusedPortOrDie());

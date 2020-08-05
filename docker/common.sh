@@ -1,11 +1,10 @@
 #!/bin/bash
 
 function run_deployment_tests() {
-  export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
-  export XRT_WORKERS="localservice:0;grpc://localhost:40934"
+  export CPU_NUM_DEVICES=4
   export CC=clang-8 CXX=clang++-8
 
-  time python /pytorch/xla/test/test_train_mnist.py
+  time python /pytorch/xla/test/test_train_mp_mnist.py
   time bash /pytorch/xla/test/run_tests.sh
   time bash /pytorch/xla/test/cpp/run_tests.sh
 }

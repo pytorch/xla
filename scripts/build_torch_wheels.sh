@@ -102,6 +102,7 @@ function install_bazel() {
   ./"$BAZEL_FILE" --user
   rm -f "$BAZEL_FILE"
   popd
+  maybe_append 'PATH="$PATH:$HOME/bin"' ~/.bashrc
   export PATH="$PATH:$HOME/bin"
 }
 
