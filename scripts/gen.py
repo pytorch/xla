@@ -80,7 +80,7 @@ _PARSER = lark.Lark(_GRAMMAR, parser='lalr', propagate_positions=True)
 _XPARSER = lark.Lark(
     _GRAMMAR, parser='lalr', propagate_positions=True, keep_all_tokens=True)
 
-# _FN_WHITELIST/_FN_FULL_OVERRIDE/_FN_BLACKLIST takes either name or mapsig.
+# _FN_FULL_OVERRIDE/_FN_BLACKLIST takes either name or mapsig.
 _FN_BLACKLIST = set([])
 
 # List of non-leaf ops we want to override both forward + backward.
@@ -88,12 +88,6 @@ _FN_BLACKLIST = set([])
 _FN_FULL_OVERRIDE = set([
     'max_pool2d(Tensor, IntArrayRef, IntArrayRef, IntArrayRef, IntArrayRef, bool) -> Tensor',
     'max_pool3d(Tensor, IntArrayRef, IntArrayRef, IntArrayRef, IntArrayRef, bool) -> Tensor',
-])
-
-# List of non-leaf ops we want to override forward.
-# TODO(#1362, #1364)
-_FN_WHITELIST = _FN_FULL_OVERRIDE | set([
-    'copy_(Tensor, Tensor, bool) -> Tensor',
 ])
 
 _FN_BLACKLIST_REGEX = [
@@ -1033,7 +1027,7 @@ TORCH_LIBRARY_IMPL(aten, XLAPreAutograd, m) {
 
 # XLA is only able to override leaf ops and whitelisted non-leaf ops.
 def is_overrideable(fgen):
-  return fgen.leaf or fgen.mapsig in _FN_WHITELIST or fgen.func in _FN_WHITELIST
+  return fgen.leaf or fgen.mapsig in _FN_FULL_OVERRIDE or fgen.func in _FN_FULL_OVERRIDE
 
 
 def generate_functions(fgens):

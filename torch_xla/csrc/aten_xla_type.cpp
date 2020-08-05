@@ -223,7 +223,22 @@ at::Tensor AtenXlaType::_adaptive_avg_pool2d_backward(
 at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
                                    const at::Tensor& dst, bool non_blocking) {
   XLA_FN_COUNTER("xla::");
-  copy_(const_cast<at::Tensor&>(dst), self, non_blocking);
+  auto dst_tensor = bridge::TryGetXlaTensor(dst);
+  auto self_tensor = bridge::TryGetXlaTensor(self);
+  if (!self_tensor) {
+    static bool sync_update =
+        xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
+    XLA_CHECK(dst_tensor);
+    dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
+  } else if (!dst_tensor) {
+    at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
+    at::Tensor typed_tensor =
+        CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
+    dst.resize_as_(typed_tensor).copy_(typed_tensor);
+  } else {
+    XLATensor::copy_(*dst_tensor, *self_tensor);
+    bridge::ReplaceXlaTensor(dst, *dst_tensor);
+  }
   return dst;
 }
 
@@ -905,28 +920,6 @@ AtenXlaType::convolution_backward_overrideable(
                      : at::Tensor(),
       output_mask[2] ? bridge::AtenFromXlaTensor(std::get<2>(gradients))
                      : at::Tensor());
-}
-
-at::Tensor& AtenXlaType::copy_(at::Tensor& self, const at::Tensor& src,
-                               bool non_blocking) {
-  XLA_FN_COUNTER("xla::");
-  auto self_tensor = bridge::TryGetXlaTensor(self);
-  auto src_tensor = bridge::TryGetXlaTensor(src);
-  if (!src_tensor) {
-    static bool sync_update =
-        xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
-    XLA_CHECK(self_tensor);
-    self_tensor->UpdateFromTensor(src, /*sync=*/sync_update);
-  } else if (!self_tensor) {
-    at::Tensor tensor = src_tensor->ToTensor(/*detached=*/true);
-    at::Tensor typed_tensor =
-        CopyTensor(tensor, self.scalar_type(), /*copy=*/false);
-    self.resize_as_(typed_tensor).copy_(typed_tensor);
-  } else {
-    XLATensor::copy_(*self_tensor, *src_tensor);
-    bridge::ReplaceXlaTensor(self, *self_tensor);
-  }
-  return self;
 }
 
 at::Tensor AtenXlaType::cos(const at::Tensor& self) {
