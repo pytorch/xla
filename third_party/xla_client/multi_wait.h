@@ -43,6 +43,8 @@ class MultiWait {
                                          std::function<void()> func);
 
  private:
+  void Complete(const std::function<void()>& func);
+
   std::mutex mutex_;
   std::condition_variable cv_;
   size_t count_ = 0;
