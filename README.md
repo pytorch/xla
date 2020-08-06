@@ -210,7 +210,7 @@ Here are the steps:
 
 #### Create the empty persistent disk
 ```
-gcloud compute disks create --size=200GB --zone=$ZONE $PD_NAME --project=$PROJECT
+gcloud compute disks create --size=200GB --zone=$ZONE $PD_NAME --project=$PROJECT_ID
 ```
 
 #### Create a VM to populate the persistent disk and SSH into it
@@ -227,7 +227,7 @@ gcloud compute ssh pd-filler --zone=$ZONE
 ```
 
 #### SSH into your VM and populate the persistent disk
-(Run this from your pd-filler VM)
+(Run this from your `pd-filler` VM)
 ```
 sudo mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/sdb
 sudo mkdir -p /mnt/disks/dataset
@@ -249,9 +249,11 @@ gcloud compute instances delete zcain-vm --zone=$ZONE
 Create the instance group for distributed training using instructions from the tutorial linked above.
 
 Once all the VMs are up, run this command to attach the PD to the VMs:
+
 `for instance in $(gcloud --project=${PROJECT_ID} compute instance-groups managed list-instances ${INST_GROUP_NAME} --zone=${ZONE} --format='value(NAME)[terminator=" "]'); do gcloud compute instances attach-disk "$instance" --disk $PD_NAME --zone ${ZONE} --mode=ro; done`
 
 Then run this command to mount the PD in the filesystem:
+
 `COMMAND='sudo mkdir -p /mnt/disks/dataset && sudo mount -o discard,defaults /dev/sdb /mnt/disks/dataset && sudo chmod a+w /mnt/disks/dataset; df -h'; for instance in $(gcloud --project=${PROJECT_ID} compute instance-groups managed list-instances ${INST_GROUP_NAME} --zone=${ZONE} --format='value(NAME)[terminator=" "]'); do gcloud compute ssh --project=${PROJECT_ID} --zone=europe-west4-a "$instance" --command="$COMMAND" --quiet; done`
 
 At this point, the VMs should have access to the `/mnt/disks/dataset` directory from the PD and you can refer to this directory when starting the distributed training job.
