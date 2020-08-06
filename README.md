@@ -242,7 +242,7 @@ exit
 #### Detach the disk and clean up the PD filler VM
 ```
 gcloud compute instances detach-disk pd-filler --disk $PD_NAME --zone $ZONE
-gcloud compute instances delete zcain-vm --zone=$ZONE
+gcloud compute instances delete pd-filler --zone=$ZONE
 ```
 
 #### Attach your instance group to the PD
@@ -257,6 +257,8 @@ Then run this command to mount the PD in the filesystem:
 `COMMAND='sudo mkdir -p /mnt/disks/dataset && sudo mount -o discard,defaults /dev/sdb /mnt/disks/dataset && sudo chmod a+w /mnt/disks/dataset; df -h'; for instance in $(gcloud --project=${PROJECT_ID} compute instance-groups managed list-instances ${INST_GROUP_NAME} --zone=${ZONE} --format='value(NAME)[terminator=" "]'); do gcloud compute ssh --project=${PROJECT_ID} --zone=${ZONE} "$instance" --command="$COMMAND" --quiet; done`
 
 At this point, the VMs should have access to the `/mnt/disks/dataset` directory from the PD and you can refer to this directory when starting the distributed training job.
+
+**Note** that these commands assume you are using an instance group for distributed training. If you decide to create your VMs individually, you'll need to run `gcloud compute instances attach-disk` for each VM and then SSH into each VM to run the dataset mounting command.
 
 ### Learn more
 To learn more about TPU Pods check out this [blog
