@@ -33,8 +33,9 @@ def _maybe_select_tpu_version():
           f'TPU has started up successfully with version pytorch-{version}')
 
   try:
-    tpu_name = os.environ.get('TPU_NAME', '')  # Kaggle/Colab set this
-    if not tpu_name:
+    tpu_name = os.environ.get('TPU_NAME', '')
+    if not tpu_name.startswith('grpc://'):
+      # Not colab/kaggle
       return
 
     import cloud_tpu_client
