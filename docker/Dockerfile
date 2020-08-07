@@ -10,6 +10,8 @@ ARG release_version="nightly"
 ARG cuda="0"
 ARG cuda_compute="7.0,7.5"
 ARG cxx_abi="0"
+ARG xla_commit=""
+ARG pytorch_commit=""
 
 RUN apt-get update
 RUN apt-get install -y git sudo python-pip python3-pip
@@ -40,6 +42,15 @@ RUN if [ "${cloud_build}" = true ]; then github_branch="${release_version}" && \
   git clone -b "${github_branch}" --recursive https://github.com/pytorch/xla && \
   cd / && \
   git clone -b "${github_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
+
+RUN if [ -n "$xla_commit" ]; then cd /pytorch && \
+  rm -rf xla && \
+  git clone https://github.com/pytorch/xla --recursive && \
+  cd xla && \
+  git fetch origin $xla_commit && \
+  git checkout $xla_commit; fi
+
+RUN if [ -n "$pytorch_commit" ]; then echo "$pytorch_commit" >> /pytorch/xla/.torch_pin; fi
 
 RUN cd /pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${release_version}
 

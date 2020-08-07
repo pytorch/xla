@@ -1,0 +1,47 @@
+name: Create Bisection Image
+
+# TODO: Switch from pull/push-triggered to timer-triggered.
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+env:
+  PROJECT_ID: ${{ secrets.GKE_PROJECT }}
+  IMAGE: gcr.io/${{ secrets.GKE_PROJECT }}/tpu-testing-image
+
+jobs:
+  build-image-for-bisection:
+    name: build-image-for-bisection
+    runs-on: ubuntu-latest
+
+    - name: Checkout Pytorch/XLA
+      uses: actions/checkout@v2
+      with:
+        repository: pytorch/xla
+        path: main
+
+    - name: Setup gcloud CLI
+      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      with:
+        version: '290.0.1'
+        service_account_key: ${{ secrets.GKE_SA_KEY_BASE64 }}
+        project_id: ${{ secrets.GKE_PROJECT }}
+        export_default_credentials: true
+
+    # Configure Docker to use the gcloud command-line tool as a credential helper for authentication.
+    # TODO: Remove the sample commits below. These are just for testing.
+    - name: Configure Docker
+      run: |-
+        gcloud --quiet auth configure-docker
+      shell: bash
+    - name: Build and Push Docker Image
+      run: |
+        cd main/docker
+        docker build --tag "$IMAGE:$GITHUB_RUN_ID" -f Dockerfile --build-arg "xla_commit=344ab71d81e52e0b155976508f478a0fa13227e9" --build-arg "pytorch_commit=eb3bf96f957dcbab26335c7862921ebd0760418a" .
+        docker push "$IMAGE:$GITHUB_RUN_ID"
+      shell: bash
+
