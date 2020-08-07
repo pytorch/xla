@@ -18,6 +18,7 @@ jobs:
     name: build-image-for-bisection
     runs-on: ubuntu-latest
 
+    steps:
     - name: Checkout Pytorch/XLA
       uses: actions/checkout@v2
       with:
