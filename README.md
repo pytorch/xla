@@ -197,12 +197,70 @@ Training on pods can be broken down to largely 3 different steps:
 ```
 
 ### List of VMs
-If you up to not use an [instance group](#create-your-instance-group), you can decide to use a list of VM instances that you may have already created (or can create individually). Make sure that you create all the VM instances in the same zone as the TPU node, and also make sure that the VMs have the same configuration (datasets, VM size, disk size, etc.). Then you can [start distributed training](#start-distributed-training) after creating your TPU pod. The difference is in the `python -m torch_xla.distributed.xla_dist` command. For example, to use a list of VMs run the following command (ex. conda with v3-32):
+If you prefer to not use an [instance group](#create-your-instance-group), you can decide to use a list of VM instances that you may have already created (or can create individually). Make sure that you create all the VM instances in the same zone as the TPU node, and also make sure that the VMs have the same configuration (datasets, VM size, disk size, etc.). Then you can [start distributed training](#start-distributed-training) after creating your TPU pod. The difference is in the `python -m torch_xla.distributed.xla_dist` command. For example, to use a list of VMs run the following command (ex. conda with v3-32):
 ```
 (torch-xla-nightly)$ cd /usr/share/torch-xla-nightly/pytorch/xla
 (torch-xla-nightly)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --vm $VM1 --vm $VM2 --vm $VM3 --vm $VM4 --conda-env=torch-xla-nightly --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
 ```
 
+### Datasets for distributed training
+As mentioned in the tutorial linked above, one option is to take your VM that you used for single-VM training and create a disk image from it that includes the dataset. If that doesn't work, we recommend saving your dataset to a [persistent disk (PD)](https://cloud.google.com/persistent-disk) and then having each of your distributed training VMs read from that PD.
+
+Here are the steps:
+
+#### Create the empty persistent disk
+```
+gcloud compute disks create --size=200GB --zone=$ZONE $PD_NAME --project=$PROJECT_ID
+```
+
+#### Create a VM to populate the persistent disk and SSH into it
+```
+gcloud compute instances create pd-filler \
+--zone=$ZONE \
+--machine-type=n1-standard-16  \
+--image-family=torch-xla \
+--image-project=ml-images  \
+--boot-disk-size=200GB \
+--scopes=https://www.googleapis.com/auth/cloud-platform
+--disk=name=$PD_NAME,auto-delete=no
+gcloud compute ssh pd-filler --zone=$ZONE
+```
+
+#### SSH into your VM and populate the persistent disk
+(Run this from your `pd-filler` VM)
+```
+sudo mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/sdb
+sudo mkdir -p /mnt/disks/dataset
+sudo mount -o discard,defaults /dev/sdb /mnt/disks/dataset
+sudo chmod a+w /mnt/disks/dataset
+sudo chown -R $USER /mnt/disks/dataset
+<populate disk>
+sudo umount /mnt/disks/dataset
+exit
+```
+
+#### Detach the disk and clean up the PD filler VM
+```
+gcloud compute instances detach-disk pd-filler --disk $PD_NAME --zone $ZONE
+gcloud compute instances delete pd-filler --zone=$ZONE
+```
+
+#### Attach your instance group to the PD
+Create the instance group for distributed training using instructions from the tutorial linked above.
+
+Once all the VMs are up, run this command to attach the PD to the VMs:
+
+`for instance in $(gcloud --project=${PROJECT_ID} compute instance-groups managed list-instances ${INST_GROUP_NAME} --zone=${ZONE} --format='value(NAME)[terminator=" "]'); do gcloud compute instances attach-disk "$instance" --disk $PD_NAME --zone ${ZONE} --mode=ro; done`
+
+Then run this command to mount the PD in the filesystem:
+
+`COMMAND='sudo mkdir -p /mnt/disks/dataset && sudo mount -o discard,defaults /dev/sdb /mnt/disks/dataset && sudo chmod a+w /mnt/disks/dataset; df -h'; for instance in $(gcloud --project=${PROJECT_ID} compute instance-groups managed list-instances ${INST_GROUP_NAME} --zone=${ZONE} --format='value(NAME)[terminator=" "]'); do gcloud compute ssh --project=${PROJECT_ID} --zone=${ZONE} "$instance" --command="$COMMAND" --quiet; done`
+
+At this point, the VMs should have access to the `/mnt/disks/dataset` directory from the PD and you can refer to this directory when starting the distributed training job.
+
+**Note** that these commands assume you are using an instance group for distributed training. If you decide to create your VMs individually, you'll need to run `gcloud compute instances attach-disk` for each VM and then SSH into each VM to run the dataset mounting command.
+
+### Learn more
 To learn more about TPU Pods check out this [blog
 post](https://cloud.google.com/blog/products/ai-machine-learning/googles-scalable-supercomputers-for-machine-learning-cloud-tpu-pods-are-now-publicly-available-in-beta). For more information regarding system architecture, please refer to the
 [Cloud TPU System Architecture](https://cloud.google.com/tpu/docs/system-architecture) page.
