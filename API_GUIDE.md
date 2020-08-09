@@ -92,7 +92,8 @@ for data, target in train_loader:
   loss = loss_fn(output, target)
   loss.backward()
 
-  xm.optimizer_step(optimizer, barrier=True)
+  optimizer.step()
+  xm.mark_step()
 ```
 
 This snippet highlights how easy it is to switch your model to run on XLA. The
@@ -116,13 +117,13 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 def _mp_fn(index):
   device = xm.xla_device()
-  para_loader = pl.ParallelLoader(train_loader, [device])
+  mp_device_loader = pl.MpDeviceLoader(train_loader, device)
 
   model = MNIST().train().to(device)
   loss_fn = nn.NLLLoss()
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
 
-  for data, target in para_loader.per_device_loader(device):
+  for data, target in mp_device_loader:
     optimizer.zero_grad()
     output = model(data)
     loss = loss_fn(output, target)
