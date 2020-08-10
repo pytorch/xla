@@ -10,8 +10,7 @@ on:
       - master
 
 env:
-  PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-  IMAGE: gcr.io/${{ secrets.GKE_PROJECT }}/tpu-testing-image
+  IMAGE: gcr.io/${{ secrets.GCP_PROJECT }}/tpu-testing-image
 
 jobs:
   build-image-for-bisection:
@@ -29,8 +28,8 @@ jobs:
       uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
       with:
         version: '290.0.1'
-        service_account_key: ${{ secrets.GKE_SA_KEY_BASE64 }}
-        project_id: ${{ secrets.GKE_PROJECT }}
+        service_account_key: ${{ secrets.GCP_SA_KEY_BASE64 }}
+        project_id: ${{ secrets.GCP_PROJECT }}
         export_default_credentials: true
 
     # Configure Docker to use the gcloud command-line tool as a credential helper for authentication.
