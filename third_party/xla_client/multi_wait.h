@@ -3,6 +3,7 @@
 
 #include <condition_variable>
 #include <functional>
+#include <memory>
 #include <mutex>
 
 #include "tensorflow/compiler/xla/types.h"
@@ -31,10 +32,19 @@ class MultiWait {
 
   // Creates a completer functor which signals the mult wait object once func
   // has completed. Handles exceptions by signaling the multi wait with the
-  // proper status value.
+  // proper status value. This API returns a function which captures a MultiWait
+  // reference, so care must be taken such that the reference remains valid for
+  // the whole lifetime of the returned function.
   std::function<void()> Completer(std::function<void()> func);
 
+  // Similar as the above API, but with explicit capture of the MultiWait shared
+  // pointer.
+  static std::function<void()> Completer(std::shared_ptr<MultiWait> mwait,
+                                         std::function<void()> func);
+
  private:
+  void Complete(const std::function<void()>& func);
+
   std::mutex mutex_;
   std::condition_variable cv_;
   size_t count_ = 0;
