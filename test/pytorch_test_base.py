@@ -63,6 +63,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_min',  # FIXME: XLA min/max ignores NaNs.
         'test_min_max_binary_op_nan',
         'test_minmax_illegal_dtype',  # Checking runtime error
+        'test_argminmax_multiple',  # FIXME: XLA argmin/argmax returns last index when there're multiple values.
         'test_mm_xla_bfloat16',  # FIXME: AssertionError: tensor(0.0625) not less than or equal to 0.001
         'test_lu_solve_batched_non_contiguous',
         'test_linspace_xla',  # Takes forever due to inlined sliced equality tests over 1M elements.
