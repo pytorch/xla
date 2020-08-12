@@ -9,7 +9,7 @@ steps:
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
           '--build-arg', 'cloud_build=true',
           '--build-arg', 'release_version=${_RELEASE_VERSION}',
-          '-t', 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}',
+          '-t', 'gcr.io/tpu-pytorch/xla_debug:${_IMAGE_NAME}',
           '-f', 'docker/Dockerfile', '.'
         ]
   timeout: 14400s
