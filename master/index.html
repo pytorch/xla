@@ -358,7 +358,8 @@ multiprocessing.</p>
   <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
   <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
 
-  <span class="n">xm</span><span class="o">.</span><span class="n">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">barrier</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>This snippet highlights how easy it is to switch your model to run on XLA. The
@@ -380,13 +381,13 @@ devices. The following snippet shows how:</p>
 
 <span class="k">def</span> <span class="nf">_mp_fn</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
   <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
-  <span class="n">para_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">ParallelLoader</span><span class="p">(</span><span class="n">train_loader</span><span class="p">,</span> <span class="p">[</span><span class="n">device</span><span class="p">])</span>
+  <span class="n">mp_device_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span><span class="n">train_loader</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
 
   <span class="n">model</span> <span class="o">=</span> <span class="n">MNIST</span><span class="p">()</span><span class="o">.</span><span class="n">train</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
   <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">NLLLoss</span><span class="p">()</span>
   <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">)</span>
 
-  <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">para_loader</span><span class="o">.</span><span class="n">per_device_loader</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">mp_device_loader</span><span class="p">:</span>
     <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
     <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
