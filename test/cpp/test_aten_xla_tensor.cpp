@@ -2092,7 +2092,8 @@ TEST_F(AtenXlaTensorTest, TestArgMinDimKeep) {
   ExpectCounterChanged("xla::argmin", cpp_test::GetIgnoredCounters());
 }
 
-TEST_F(AtenXlaTensorTest, TestArgMinSameValue) {
+// TODO(#2415)
+TEST_F(AtenXlaTensorTest, DISABLED_TestArgMinSameValue) {
   torch::Tensor a = torch::ones({4, 4, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::argmin(a);
   ForEachDevice([&](const torch::Device& device) {
@@ -2163,7 +2164,8 @@ TEST_F(AtenXlaTensorTest, TestArgMaxDimKeep) {
   ExpectCounterChanged("xla::argmax", cpp_test::GetIgnoredCounters());
 }
 
-TEST_F(AtenXlaTensorTest, TestArgMaxSameValue) {
+// TODO(#2415)
+TEST_F(AtenXlaTensorTest, DISABLED_TestArgMaxSameValue) {
   torch::Tensor a = torch::ones({4, 4, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::argmax(a, c10::nullopt, /*keepdim=*/false);
   ForEachDevice([&](const torch::Device& device) {
