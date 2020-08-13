@@ -99,8 +99,8 @@ for data, target in train_loader:
 This snippet highlights how easy it is to switch your model to run on XLA. The
 model definition, dataloader, optimizer and training loop can work on any device.
 The only XLA-specific code is a couple lines that acquire the XLA device and
-step the optimizer with a <b>barrier</b>. Calling
-`xm.optimizer_step(optimizer, barrier=True)` at the end of each training
+mark the step. Calling
+`xm.mark_step()` at the end of each training
 iteration causes XLA to execute its current graph and update the model's
 parameters. See [XLA Tensor Deep Dive](#xla-tensor-deep-dive) for more on
 how XLA creates graphs and runs operations.
@@ -138,9 +138,8 @@ There are three differences between this multidevice snippet and the previous
 single device snippet:
 
 - `xmp.spawn()` creates the processes that each run an XLA device.
-- `ParallelLoader` loads the training data onto each device.
-- `xm.optimizer_step(optimizer)` no longer needs a barrier. ParallelLoader
-automatically creates an XLA barrier that evaluates the graph.
+- `MpDeviceLoader` loads the training data onto each device.
+- `xm.optimizer_step(optimizer)` consolidates the gradients between cores and issues the XLA device step computation.
 
 The model definition, optimizer definition and training loop remain the same.
 
