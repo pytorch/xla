@@ -99,7 +99,7 @@ for data, target in train_loader:
 This snippet highlights how easy it is to switch your model to run on XLA. The
 model definition, dataloader, optimizer and training loop can work on any device.
 The only XLA-specific code is a couple lines that acquire the XLA device and
-step the optimizer. Calling
+mark the step. Calling
 `xm.mark_step()` at the end of each training
 iteration causes XLA to execute its current graph and update the model's
 parameters. See [XLA Tensor Deep Dive](#xla-tensor-deep-dive) for more on
@@ -139,7 +139,7 @@ single device snippet:
 
 - `xmp.spawn()` creates the processes that each run an XLA device.
 - `MpDeviceLoader` loads the training data onto each device.
-- `xm.optimizer_step(optimizer)` creates an XLA barrier that evaluates the graph and update the model's parameters.
+- `xm.optimizer_step(optimizer)` consolidates the gradients between cores and issues the XLA device step computation.
 
 The model definition, optimizer definition and training loop remain the same.
 
