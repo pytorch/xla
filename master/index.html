@@ -365,8 +365,8 @@ multiprocessing.</p>
 <p>This snippet highlights how easy it is to switch your model to run on XLA. The
 model definition, dataloader, optimizer and training loop can work on any device.
 The only XLA-specific code is a couple lines that acquire the XLA device and
-step the optimizer with a <span class="raw-html-m2r"><b>barrier</b></span>. Calling
-<code class="docutils literal notranslate"><span class="pre">xm.optimizer_step(optimizer,</span> <span class="pre">barrier=True)</span></code> at the end of each training
+mark the step. Calling
+<code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> at the end of each training
 iteration causes XLA to execute its current graph and update the model’s
 parameters. See <a class="reference external" href="#xla-tensor-deep-dive">XLA Tensor Deep Dive</a> for more on
 how XLA creates graphs and runs operations.</p>
@@ -402,9 +402,8 @@ devices. The following snippet shows how:</p>
 single device snippet:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code> creates the processes that each run an XLA device.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ParallelLoader</span></code> loads the training data onto each device.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">xm.optimizer_step(optimizer)</span></code> no longer needs a barrier. ParallelLoader
-automatically creates an XLA barrier that evaluates the graph.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MpDeviceLoader</span></code> loads the training data onto each device.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xm.optimizer_step(optimizer)</span></code> consolidates the gradients between cores and issues the XLA device step computation.</p></li>
 </ul>
 <p>The model definition, optimizer definition and training loop remain the same.</p>
 <blockquote>
