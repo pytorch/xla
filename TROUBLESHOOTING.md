@@ -194,8 +194,8 @@ only be enabled for debugging.
 
 * ```XLA_USE_BF16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _BiFloat16_
   when sending to the _TPU_ device. Note that when using `XLA_USE_BF16=1` tensor arithmetic will
-  be done in reduced precision and so tensors such as loss values and other metrics will not be
-  useful if accumulated over time. For example:
+  be done in reduced precision and so tensors will not be accurate if accumulated over time.
+  For example:
   
   ```
   # In reduced bfloat16 precision
@@ -205,8 +205,8 @@ only be enabled for debugging.
   >>> torch.tensor(4096) + torch.tensor(1)
   tensor(4097)
   ```
-  So to get accurate loss and other metric values, user manual mixed precision where weights
-  and metrics stay in FP32.
+  So to get accurate metrics such as average loss value over many steps, use manual mixed
+  precision where metrics stay in FP32.
 
 * ```XLA_USE_F16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _Float16_
   (_PyTorch_ _Half_ type) when sending to devices which supports them.
