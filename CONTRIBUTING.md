@@ -29,7 +29,7 @@ To build from source:
   following:
 
   ```Shell
-  docker build -t torch-xla -f docker/Dockerfile .
+  docker build -t torch-xla -f docker/pytorch/Dockerfile .
   ```
 
 ### Building With Script
