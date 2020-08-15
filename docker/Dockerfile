@@ -46,7 +46,7 @@ RUN cd /pytorch && bash xla/scripts/build_torch_wheels.sh ${python_version} ${re
 # Use conda environment on startup or when running scripts.
 RUN echo "conda activate pytorch" >> ~/.bashrc
 RUN echo "export TF_CPP_LOG_THREAD_ID=1" >> ~/.bashrc
-ENV PATH /root/anaconda3/envs/pytorch/bin/:$PATH
+ENV PATH /root/anaconda3/envs/pytorch/bin/:/root/bin:$PATH
 
 # Define entrypoint and cmd
 COPY docker/docker-entrypoint.sh /usr/local/bin
