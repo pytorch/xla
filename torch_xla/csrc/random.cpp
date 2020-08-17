@@ -45,7 +45,8 @@ xla::XlaOp MakeSeed(xla::XlaOp seed) {
 
 xla::XlaOp MakeUniformBoundaryValue(xla::XlaOp val) {
   xla::PrimitiveType element_type = XlaHelpers::TypeOfXlaOp(val);
-  if (element_type == xla::PrimitiveType::BF16) {
+  if (element_type == xla::PrimitiveType::BF16 ||
+      element_type == xla::PrimitiveType::F16) {
     return xla::ConvertElementType(val, xla::PrimitiveType::F32);
   } else if (xla::primitive_util::IsComplexType(element_type)) {
     return xla::Real(val);
@@ -56,7 +57,8 @@ xla::XlaOp MakeUniformBoundaryValue(xla::XlaOp val) {
 xla::Shape MakeRngShape(const xla::Shape& shape) {
   xla::PrimitiveType element_type = shape.element_type();
   xla::Shape rng_shape(shape);
-  if (element_type == xla::PrimitiveType::BF16) {
+  if (element_type == xla::PrimitiveType::BF16 ||
+      element_type == xla::PrimitiveType::F16) {
     rng_shape.set_element_type(xla::PrimitiveType::F32);
   } else if (xla::primitive_util::IsComplexType(element_type)) {
     rng_shape.set_element_type(
@@ -76,12 +78,13 @@ xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
   xla::XlaOp initial_state =
       xla::Zero(rng_seed.builder(), xla::PrimitiveType::U64);
   switch (shape.element_type()) {
+    case xla::PrimitiveType::F16:
     case xla::PrimitiveType::BF16: {
       xla::XlaOp rng = xla::UniformFloatingPointDistribution(
                            rng_seed, initial_state, GetBitGenerator(),
                            rng_minval, rng_maxval, rng_shape)
                            .value;
-      return xla::ConvertElementType(rng, xla::PrimitiveType::BF16);
+      return xla::ConvertElementType(rng, shape.element_type());
     }
     case xla::PrimitiveType::F32:
     case xla::PrimitiveType::F64:
