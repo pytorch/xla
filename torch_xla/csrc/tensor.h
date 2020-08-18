@@ -693,7 +693,9 @@ class XLATensor {
 
   static XLATensor matmul(const XLATensor& input, const XLATensor& other);
 
-  static XLATensor max(const XLATensor& input, const XLATensor& other);
+  static XLATensor max(
+      const XLATensor& input, const XLATensor& other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensor max(const XLATensor& input);
 
@@ -729,7 +731,9 @@ class XLATensor {
                         bool keep_reduced_dimensions,
                         c10::optional<at::ScalarType> dtype);
 
-  static XLATensor min(const XLATensor& input, const XLATensor& other);
+  static XLATensor min(
+      const XLATensor& input, const XLATensor& other,
+      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
   static XLATensor min(const XLATensor& input);
 

@@ -110,6 +110,8 @@ _FN_OUT = {
     'inverse_out': FuncOpts(),
     'log_out': FuncOpts(),
     'masked_select_out': FuncOpts(),
+    'maximum_out': FuncOpts(),
+    'minimum_out': FuncOpts(),
     'pow_out': FuncOpts(),
     'prod_out': FuncOpts(),
     'nonzero_out': FuncOpts(),
