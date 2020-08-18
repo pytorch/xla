@@ -386,7 +386,7 @@
 <span class="sd">    The list of device strings.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">xla_devices</span> <span class="o">=</span> <span class="n">_DEVICES</span><span class="o">.</span><span class="n">value</span>
-  <span class="n">devkind</span> <span class="o">=</span> <span class="n">devkind</span> <span class="ow">or</span> <span class="p">[</span><span class="s1">&#39;TPU&#39;</span><span class="p">,</span> <span class="s1">&#39;GPU&#39;</span><span class="p">,</span> <span class="s1">&#39;CPU&#39;</span><span class="p">]</span>
+  <span class="n">devkind</span> <span class="o">=</span> <span class="p">[</span><span class="n">devkind</span><span class="p">]</span> <span class="k">if</span> <span class="n">devkind</span> <span class="k">else</span> <span class="p">[</span><span class="s1">&#39;TPU&#39;</span><span class="p">,</span> <span class="s1">&#39;GPU&#39;</span><span class="p">,</span> <span class="s1">&#39;CPU&#39;</span><span class="p">]</span>
   <span class="k">for</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">devkind</span><span class="p">:</span>
     <span class="n">kind_devices</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">device</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">xla_devices</span><span class="p">):</span>
@@ -480,7 +480,7 @@
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">(</span>
-        <span class="n">devkind</span><span class="o">=</span><span class="p">[</span><span class="n">devkind</span><span class="p">]</span> <span class="k">if</span> <span class="n">devkind</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">devkind</span><span class="o">=</span><span class="n">devkind</span> <span class="k">if</span> <span class="n">devkind</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">assert</span> <span class="n">devices</span><span class="p">,</span> <span class="s1">&#39;No devices of </span><span class="si">{}</span><span class="s1"> kind&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">devkind</span> <span class="ow">or</span> <span class="s1">&#39;ANY&#39;</span><span class="p">)</span>
     <span class="c1"># This is a utility API mainly called from tests or simple code which wants</span>
     <span class="c1"># to just have a single device to run on. Set the default device so that</span>
@@ -531,7 +531,7 @@
         <span class="s1">&#39;Cannot replicate across different device types: devices=</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">local_devices</span><span class="p">,</span> <span class="n">real_devices</span><span class="p">))</span>
   <span class="n">device_type</span> <span class="o">=</span> <span class="n">device_types</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-  <span class="n">kind_devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="p">[</span><span class="n">device_type</span><span class="p">])</span>
+  <span class="n">kind_devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="n">device_type</span><span class="p">)</span>
   <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kind_devices</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">local_devices</span><span class="p">):</span>
     <span class="c1"># Replication can only happen among all devices of one kind.</span>
     <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
