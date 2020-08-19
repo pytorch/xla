@@ -28,5 +28,5 @@ substitutions:
     _CUDA: '0'
     _PYTHON_VERSION: '3.6'
     _RELEASE_VERSION: 'nightly'  # or rX.Y
-    _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}_$(date -u +%Y%m%d_%H_%M)'
+    _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}_$(date +%s)'
 timeout: 18000s
