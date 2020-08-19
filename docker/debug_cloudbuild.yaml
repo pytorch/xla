@@ -2,7 +2,7 @@
 # Builds and pushes gcr.io/tpu-pytorch/xla_debug image.
 steps:
 - name: 'ubuntu'
-  args: ['bash', '-c', 'echo ${_IMAGE_NAME)']
+  args: ['bash', '-c', 'echo ${_TAG_NAME)']
 - name: 'gcr.io/cloud-builders/docker'
   args: [
           'build',
@@ -11,7 +11,7 @@ steps:
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
           '--build-arg', 'cloud_build=true',
           '--build-arg', 'release_version=${_RELEASE_VERSION}',
-          '-t', 'gcr.io/tpu-pytorch/xla_debug:${_IMAGE_NAME}',
+          '-t', 'gcr.io/tpu-pytorch/xla_debug:${_TAG_NAME}',
           '-f', 'docker/Dockerfile', '.'
         ]
   timeout: 14400s
@@ -28,5 +28,5 @@ substitutions:
     _CUDA: '0'
     _PYTHON_VERSION: '3.6'
     _RELEASE_VERSION: 'nightly'  # or rX.Y
-    _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}_$(date +%s)'
+    _TAG_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
 timeout: 18000s
