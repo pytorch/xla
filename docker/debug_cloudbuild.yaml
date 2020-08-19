@@ -1,8 +1,6 @@
 # Cloud Build Configuration which:
 # Builds and pushes gcr.io/tpu-pytorch/xla_debug image.
 steps:
-- name: 'ubuntu'
-  args: ['bash', '-c', 'echo ${_TAG_NAME)']
 - name: 'gcr.io/cloud-builders/docker'
   args: [
           'build',
