@@ -151,7 +151,7 @@
               
               
                 <div class="version">
-                  master (1.6+63ff8fb )
+                  1.6
                 </div>
               
             
@@ -663,7 +663,7 @@ Default: 1</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.all_reduce">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">cctx=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an inplace reduce operation on the input tensor(s).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1461,15 +1461,16 @@ Default: None</p></li>
 
 <dl class="function">
 <dt id="torch_xla.utils.gcsfs.generic_write">
-<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">generic_write</code><span class="sig-paren">(</span><em class="sig-param">output_string</em>, <em class="sig-param">path</em>, <em class="sig-param">makedirs=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#generic_write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.generic_write" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.utils.gcsfs.</code><code class="sig-name descname">generic_write</code><span class="sig-paren">(</span><em class="sig-param">output_string</em>, <em class="sig-param">output_path</em>, <em class="sig-param">makedirs=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/gcsfs.html#generic_write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.gcsfs.generic_write" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write a string/bytes or file into a GCS blob or local disk.</p>
-<p>Depending on the path passed in, this API can write to local or GCS file.
-Checks if the <cite>path</cite> starts with the ‘gs://’ prefix, and uses <cite>open</cite> otherwise.</p>
+<p>Depending on the output_path passed in, this API can write to local or GCS
+file. Checks if the <cite>output_path</cite> starts with
+the ‘gs://’ prefix, and uses <cite>open</cite> otherwise.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>output_string</strong> (<em>string</em>) – The string to be written to the output.</p></li>
-<li><p><strong>path</strong> (<em>string</em>) – The GCS path or local path of the output.</p></li>
+<li><p><strong>output_path</strong> (<em>string</em>) – The GCS path or local path of the output.</p></li>
 <li><p><strong>makedirs</strong> (<em>bool</em>) – Whether the <cite>path</cite> parent folders should be created if
 missing.
 Default: False</p></li>
@@ -1486,7 +1487,7 @@ Default: False</p></li>
 process a raw dataset, with storage/network resources.
 Example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">train_dataset</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">MNIST</span><span class="p">(</span>
-    <span class="n">FLAGS</span><span class="o">.</span><span class="n">datadir</span><span class="p">,</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">FLAGS</span><span class="o">.</span><span class="n">datadir</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">get_ordinal</span><span class="p">())),</span>
     <span class="n">train</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">transform</span><span class="o">=</span><span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">(</span>
@@ -1495,36 +1496,19 @@ Example:</p>
 <span class="n">train_dataset</span> <span class="o">=</span> <span class="n">CachedDataset</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">,</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">dscache_dir</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The <cite>CachedDataset</cite> will transparently cache the original <cite>Dataset</cite> samples,
-so that every run after the first, will not trigger any more CPU/RAM usage
-related to the raw samples processing.
-Once a <cite>CachedDataset</cite> is fully cached, it can be exported (ie, tar.gz) and
-used in different machines.
-Just unpack the tar.gz and pass <cite>None</cite> as original <cite>Dataset</cite>:
-Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">train_dataset</span> <span class="o">=</span> <span class="n">CachedDataset</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">FLAGS</span><span class="o">.</span><span class="n">dscache_dir</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>To fully cache <cite>CachedDataset</cite> just run the <cite>warmup()</cite> API.
-A <cite>CachedDataset</cite> saved on GCS has the advantage to be able to be used from
-different machines without explicit exporting.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data_set</strong> (<em>torch.utils.data.Dataset</em>) – The raw <cite>torch.utils.data.Dataset</cite> to be
-cached. It can be set to <cite>None</cite> in case all the input samples are stored
-within the <cite>path</cite> folder.</p></li>
+cached.</p></li>
 <li><p><strong>path</strong> (<em>string</em>) – The path where the dataset samples should be stored/loaded.
 The <cite>path</cite> needs to be writeable, unless all the samples are already stored.
 The <cite>path</cite> can be a GCS path (prefixed with <cite>gs://</cite>).</p></li>
 <li><p><strong>max_files_per_folder</strong> (<em>python:int</em>) – The maximum amount of files to be stored within a
-single folder. If <cite>data_set</cite> is <cite>None</cite> this value is ignored and taken from
-the cached metadata.
+single folder.
 Default: 1000</p></li>
 <li><p><strong>compress</strong> (<em>bool</em>) – Whether the saved samples should be compressed. Compression
 saves space at the expense of CPU required to compress/decompress.
-If <cite>data_set</cite> is <cite>None</cite> this value is ignored and taken from the cached
-metadata.
 Default: True</p></li>
 </ul>
 </dd>

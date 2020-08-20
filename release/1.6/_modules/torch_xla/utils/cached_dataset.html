@@ -151,7 +151,7 @@
               
               
                 <div class="version">
-                  master (1.6+63ff8fb )
+                  1.6
                 </div>
               
             
@@ -253,42 +253,23 @@
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
 
-<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">io</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.gcsfs</span> <span class="k">as</span> <span class="nn">gcs</span>
 
 
 <span class="k">def</span> <span class="nf">_index_split</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">split_size</span><span class="p">,</span> <span class="n">split_count</span><span class="p">):</span>
   <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
-  <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-    <span class="k">if</span> <span class="n">parts</span><span class="p">:</span>
-      <span class="n">part</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span> <span class="o">%</span> <span class="n">split_size</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="n">part</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.pt&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
-    <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">part</span><span class="p">)</span>
+  <span class="k">while</span> <span class="n">index</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">findex</span> <span class="o">=</span> <span class="n">index</span> <span class="o">%</span> <span class="n">split_size</span> <span class="k">if</span> <span class="n">parts</span> <span class="k">else</span> <span class="n">index</span>
+    <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">findex</span><span class="p">))</span>
     <span class="n">index</span> <span class="o">=</span> <span class="n">index</span> <span class="o">//</span> <span class="n">split_size</span>
-    <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-      <span class="k">break</span>
   <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">split_count</span><span class="p">:</span>
     <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;0&#39;</span><span class="p">)</span>
   <span class="n">parts</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
   <span class="k">return</span> <span class="n">parts</span>
-
-
-<span class="k">def</span> <span class="nf">_save_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-  <span class="n">mpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;METADATA&#39;</span><span class="p">)</span>
-  <span class="n">jdata</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
-  <span class="n">gcs</span><span class="o">.</span><span class="n">generic_write</span><span class="p">(</span><span class="n">jdata</span><span class="p">,</span> <span class="n">mpath</span><span class="p">,</span> <span class="n">makedirs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">_load_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-  <span class="n">mpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;METADATA&#39;</span><span class="p">)</span>
-  <span class="n">jdata</span> <span class="o">=</span> <span class="n">gcs</span><span class="o">.</span><span class="n">generic_read</span><span class="p">(</span><span class="n">mpath</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
-  <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">jdata</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="CachedDataset"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.cached_dataset.CachedDataset">[docs]</a><span class="k">class</span> <span class="nc">CachedDataset</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
@@ -299,7 +280,7 @@
 <span class="sd">  Example::</span>
 
 <span class="sd">    train_dataset = datasets.MNIST(</span>
-<span class="sd">        FLAGS.datadir,</span>
+<span class="sd">        os.path.join(FLAGS.datadir, str(xm.get_ordinal())),</span>
 <span class="sd">        train=True,</span>
 <span class="sd">        download=True,</span>
 <span class="sd">        transform=transforms.Compose(</span>
@@ -307,35 +288,17 @@
 <span class="sd">             transforms.Normalize((0.1307,), (0.3081,))]))</span>
 <span class="sd">    train_dataset = CachedDataset(train_dataset, FLAGS.dscache_dir)</span>
 
-<span class="sd">  The `CachedDataset` will transparently cache the original `Dataset` samples,</span>
-<span class="sd">  so that every run after the first, will not trigger any more CPU/RAM usage</span>
-<span class="sd">  related to the raw samples processing.</span>
-<span class="sd">  Once a `CachedDataset` is fully cached, it can be exported (ie, tar.gz) and</span>
-<span class="sd">  used in different machines.</span>
-<span class="sd">  Just unpack the tar.gz and pass `None` as original `Dataset`:</span>
-<span class="sd">  Example::</span>
-
-<span class="sd">    train_dataset = CachedDataset(None, FLAGS.dscache_dir)</span>
-
-<span class="sd">  To fully cache `CachedDataset` just run the `warmup()` API.</span>
-<span class="sd">  A `CachedDataset` saved on GCS has the advantage to be able to be used from</span>
-<span class="sd">  different machines without explicit exporting.</span>
-
 <span class="sd">  Args:</span>
 <span class="sd">    data_set (torch.utils.data.Dataset): The raw `torch.utils.data.Dataset` to be</span>
-<span class="sd">      cached. It can be set to `None` in case all the input samples are stored</span>
-<span class="sd">      within the `path` folder.</span>
+<span class="sd">      cached.</span>
 <span class="sd">    path (string): The path where the dataset samples should be stored/loaded.</span>
 <span class="sd">      The `path` needs to be writeable, unless all the samples are already stored.</span>
 <span class="sd">      The `path` can be a GCS path (prefixed with `gs://`).</span>
 <span class="sd">    max_files_per_folder (int): The maximum amount of files to be stored within a</span>
-<span class="sd">      single folder. If `data_set` is `None` this value is ignored and taken from</span>
-<span class="sd">      the cached metadata.</span>
+<span class="sd">      single folder.</span>
 <span class="sd">      Default: 1000</span>
 <span class="sd">    compress (bool): Whether the saved samples should be compressed. Compression</span>
 <span class="sd">      saves space at the expense of CPU required to compress/decompress.</span>
-<span class="sd">      If `data_set` is `None` this value is ignored and taken from the cached</span>
-<span class="sd">      metadata.</span>
 <span class="sd">      Default: True</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
@@ -343,35 +306,24 @@
     <span class="nb">super</span><span class="p">(</span><span class="n">CachedDataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data_set</span> <span class="o">=</span> <span class="n">data_set</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_path</span> <span class="o">=</span> <span class="n">path</span>
-    <span class="k">if</span> <span class="n">data_set</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_max_files_per_folder</span> <span class="o">=</span> <span class="n">max_files_per_folder</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_compress</span> <span class="o">=</span> <span class="n">compress</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_set</span><span class="p">)</span>
-      <span class="k">if</span> <span class="n">xm</span><span class="o">.</span><span class="n">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="ow">not</span> <span class="n">gcs</span><span class="o">.</span><span class="n">is_gcs_path</span><span class="p">(</span><span class="n">path</span><span class="p">)):</span>
-        <span class="n">_save_metadata</span><span class="p">(</span>
-            <span class="n">path</span><span class="p">,</span>
-            <span class="n">count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="p">,</span>
-            <span class="n">compress</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_compress</span><span class="p">,</span>
-            <span class="n">max_files_per_folder</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_max_files_per_folder</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="n">meta</span> <span class="o">=</span> <span class="n">_load_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_max_files_per_folder</span> <span class="o">=</span> <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;max_files_per_folder&#39;</span><span class="p">]</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">=</span> <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;count&#39;</span><span class="p">]</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_compress</span> <span class="o">=</span> <span class="n">meta</span><span class="p">[</span><span class="s1">&#39;compress&#39;</span><span class="p">]</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_split_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
-        <span class="n">_index_split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_files_per_folder</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_max_files_per_folder</span> <span class="o">=</span> <span class="n">max_files_per_folder</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_compress</span> <span class="o">=</span> <span class="n">compress</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_set</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_split_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">_index_split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_count</span><span class="p">,</span> <span class="n">max_files_per_folder</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
 
   <span class="k">def</span> <span class="nf">_index_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">,</span>
         <span class="o">*</span><span class="n">_index_split</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_files_per_folder</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split_count</span><span class="p">))</span>
 
-  <span class="k">def</span> <span class="nf">_save_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">_save_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
     <span class="n">bio</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
     <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">bio</span><span class="p">,</span> <span class="n">_use_new_zipfile_serialization</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_compress</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_path</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
     <span class="n">gcs</span><span class="o">.</span><span class="n">generic_write</span><span class="p">(</span><span class="n">bio</span><span class="o">.</span><span class="n">getvalue</span><span class="p">(),</span> <span class="n">path</span><span class="p">,</span> <span class="n">makedirs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">_load_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">_load_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_path</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
       <span class="n">data</span> <span class="o">=</span> <span class="n">gcs</span><span class="o">.</span><span class="n">generic_read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
       <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
@@ -386,15 +338,10 @@
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count</span>
 
   <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_path</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_sample</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_sample</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_set</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-            <span class="s1">&#39;Source dataset not provided and sample </span><span class="si">{}</span><span class="s1"> is missing from cache folder </span><span class="si">{}</span><span class="s1">&#39;</span>
-            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">))</span>
       <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_set</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_save_sample</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_save_sample</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">data</span></div>
 </pre></div>
 
