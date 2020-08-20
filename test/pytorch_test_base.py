@@ -58,7 +58,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_memory_format_empty_like',
         'test_memory_format_clone',
         'test_memory_format_factory_like_functions_preserve',  # assertion error
-        'test_memory_format_proparation_rules',  # assert memory format
+        'test_memory_format_proparation_rules',  # FIXME: remove later
+        'test_memory_format_propagation_rules',  # assert memory format
         'test_max',  # FIXME: XLA min/max ignores NaNs.
         'test_min',  # FIXME: XLA min/max ignores NaNs.
         'test_min_max_binary_op_nan',
@@ -142,6 +143,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_triu_tril',
         'test_stft',  # librosa (?!?) missing
         'test_strided_mismatched_stride_shape',  # Checking runtime error
+        'test_strides_propagation',  # Strides
         'test_tensor_shape_empty',  # LLVM OOM in CI
         'test_cholesky_inverse',  # precision (1e-6)
         'test_cholesky_solve_batched',  # precision (2e-12)
