@@ -389,39 +389,49 @@ class XLATestBase(DeviceTypeTestBase):
           cls, test_name), 'Redefinition of test {0}'.format(test_name)
       setattr(cls, test_name, disallowed_test)
     else:  # Test is allowed
-      dtypes = cls._get_dtypes(test)
-      if dtypes is None:  # Tests without dtype variants are instantiated as usual
+      dtype_combinations = cls._get_dtypes(test)
+      if dtype_combinations is None:  # Tests without dtype variants are instantiated as usual
         super().instantiate_test(name, test)
       else:  # Tests with dtype variants have unsupported dtypes skipped
         # Sets default precision for floating types to bfloat16 precision
         if not hasattr(test, 'precision_overrides'):
           test.precision_overrides = {}
         xla_dtypes = []
-        for dtype in dtypes:
-          dtype_str = str(dtype).split('.')[1]
-          dtype_test_name = test_name + '_' + dtype_str
-          if dtype in cls.unsupported_dtypes:
-            reason = 'XLA does not support dtype {0}'.format(str(dtype))
+        for dtype_combination in dtype_combinations:
+          if type(dtype_combination) == torch.dtype:
+            dtype_combination = (dtype_combination,)
+          dtype_test_name = test_name
+          skipped = False
+          for dtype in dtype_combination:
+            dtype_test_name += '_' + str(dtype).split('.')[1]
+          for dtype in dtype_combination:
+            if dtype in cls.unsupported_dtypes:
+              reason = 'XLA does not support dtype {0}'.format(str(dtype))
 
-            @wraps(test)
-            def skipped_test(self, *args, reason=reason, **kwargs):
-              raise unittest.SkipTest(reason)
+              @wraps(test)
+              def skipped_test(self, *args, reason=reason, **kwargs):
+                raise unittest.SkipTest(reason)
 
-            assert not hasattr(
-                cls, dtype_test_name), 'Redefinition of test {0}'.format(
-                    dtype_test_name)
-            setattr(cls, dtype_test_name, skipped_test)
-          elif match_name(dtype_test_name, disabled_torch_tests[class_name]):
+              assert not hasattr(
+                  cls, dtype_test_name), 'Redefinition of test {0}'.format(
+                      dtype_test_name)
+              setattr(cls, dtype_test_name, skipped_test)
+              skipped = True
+              break
+            if dtype in [torch.float, torch.double, torch.bfloat16]:
+              floating_precision = XLATestBase._alt_lookup(
+                  TORCH_TEST_PRECIIONS,
+                  [dtype_test_name, test_name, test.__name__],
+                  DEFAULT_FLOATING_PRECISION)
+              test.precision_overrides[dtype] = floating_precision
+
+          if match_name(dtype_test_name, disabled_torch_tests[class_name]):
+            skipped = True
             setattr(cls, dtype_test_name, disallowed_test)
-          else:
-            xla_dtypes.append(dtype)
-          if dtype in [torch.float, torch.double, torch.bfloat16]:
-            floating_precision = XLATestBase._alt_lookup(
-                TORCH_TEST_PRECIIONS,
-                [dtype_test_name, test_name, test.__name__],
-                DEFAULT_FLOATING_PRECISION)
-            test.precision_overrides[dtype] = floating_precision
-
+          if not skipped:
+            xla_dtypes.append(
+                dtype_combination
+                if len(dtype_combination) > 1 else dtype_combination[0])
         if len(xla_dtypes) != 0:
           test.dtypes[cls.device_type] = xla_dtypes
           super().instantiate_test(name, test)
