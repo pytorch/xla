@@ -58,7 +58,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_memory_format_empty_like',
         'test_memory_format_clone',
         'test_memory_format_factory_like_functions_preserve',  # assertion error
-        'test_memory_format_proparation_rules',  # FIXME: remove later
         'test_memory_format_propagation_rules',  # assert memory format
         'test_max',  # FIXME: XLA min/max ignores NaNs.
         'test_min',  # FIXME: XLA min/max ignores NaNs.
