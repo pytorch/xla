@@ -324,51 +324,102 @@ TEST_F(AtenXlaTensorTest, TestMulScalarInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestDiv) {
-  torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor b = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
-  torch::Tensor c = torch::div(a, b);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = CopyToDevice(b, device);
-    torch::Tensor xla_c = torch::div(xla_a, xla_b);
-    AllClose(c, xla_c);
-  });
+  for (torch::ScalarType scalar_type1 :
+       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    torch::Tensor a =
+        isFloatingType(scalar_type1)
+            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type1))
+            : torch::randint(0, 100, {3, 4},
+                             torch::TensorOptions(scalar_type1));
+    for (torch::ScalarType scalar_type2 :
+         {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+          torch::kLong}) {
+      torch::Tensor b =
+          isFloatingType(scalar_type2)
+              ? torch::rand({3, 4}, torch::TensorOptions(scalar_type2))
+              : torch::randint(1, 100, {3, 4},
+                               torch::TensorOptions(scalar_type2));
+      torch::Tensor c = torch::div(a, b);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        torch::Tensor xla_b = CopyToDevice(b, device);
+        torch::Tensor xla_c = torch::div(xla_a, xla_b);
+        AllClose(c, xla_c);
+      });
+    }
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::div", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDivInPlace) {
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor b = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
-    torch::Tensor xla_b = CopyToDevice(b, device);
-    torch::Tensor c = a.div_(b);
-    torch::Tensor xla_c = xla_a.div_(xla_b);
-    AllClose(a, xla_a);
-    AllClose(c, xla_c);
-  });
+  for (torch::ScalarType scalar_type1 : {torch::kFloat}) {
+    torch::Tensor a =
+        isFloatingType(scalar_type1)
+            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type1))
+            : torch::randint(0, 100, {3, 4},
+                             torch::TensorOptions(scalar_type1));
+    for (torch::ScalarType scalar_type2 : {torch::kFloat}) {
+      torch::Tensor b =
+          isFloatingType(scalar_type2)
+              ? torch::rand({3, 4}, torch::TensorOptions(scalar_type2))
+              : torch::randint(1, 100, {3, 4},
+                               torch::TensorOptions(scalar_type2));
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        torch::Tensor c = a.div_(b);
+        torch::Tensor xla_b = CopyToDevice(b, device);
+        torch::Tensor xla_c = xla_a.div_(xla_b);
+        ;
+        AllClose(c, xla_c);
+      });
+    }
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::div_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDivScalar) {
-  torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
-  torch::Scalar b(3);
-  torch::Tensor c = torch::div(a, b);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_c = torch::div(xla_a, b);
-    AllClose(c, xla_c);
-  });
+  for (torch::ScalarType scalar_type :
+       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    torch::Tensor a =
+        isFloatingType(scalar_type)
+            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type))
+            : torch::randint(1, 100, {3, 4}, torch::TensorOptions(scalar_type));
+    for (bool is_float : {true, false}) {
+      torch::Scalar b = is_float ? torch::Scalar(3.0) : torch::Scalar(3);
+      torch::Tensor c = torch::div(a, b);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        torch::Tensor xla_c = torch::div(xla_a, b);
+        AllClose(c, xla_c);
+      });
+    }
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::div", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDivScalarInPlace) {
-  torch::Scalar b(3);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor c = a.div_(b);
-    torch::Tensor xla_c = xla_a.div_(b);
-    AllClose(a, xla_a);
-    AllClose(c, xla_c);
-  });
+  for (torch::ScalarType scalar_type : {torch::kFloat}) {
+    torch::Tensor a =
+        isFloatingType(scalar_type)
+            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type))
+            : torch::randint(1, 100, {3, 4}, torch::TensorOptions(scalar_type));
+    for (bool is_float : {true, false}) {
+      torch::Scalar b = is_float ? torch::Scalar(3.0) : torch::Scalar(3);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_a = CopyToDevice(a, device);
+        torch::Tensor c = a.div_(b);
+        torch::Tensor xla_c = xla_a.div_(b);
+        AllClose(c, xla_c);
+      });
+    }
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::div_", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestRsub) {
@@ -7771,58 +7822,6 @@ TEST_F(AtenXlaTensorTest, TestTraceNarrow) {
     torch::Tensor xla_output = torch::trace(xla_input);
     AllClose(output, xla_output);
   });
-}
-
-TEST_F(AtenXlaTensorTest, TestTrueDivide) {
-  for (torch::ScalarType scalar_type1 :
-       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
-        torch::kLong}) {
-    torch::Tensor a =
-        isFloatingType(scalar_type1)
-            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type1))
-            : torch::randint(0, 100, {3, 4},
-                             torch::TensorOptions(scalar_type1));
-    for (torch::ScalarType scalar_type2 :
-         {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
-          torch::kLong}) {
-      torch::Tensor b =
-          isFloatingType(scalar_type2)
-              ? torch::rand({3, 4}, torch::TensorOptions(scalar_type2))
-              : torch::randint(1, 100, {3, 4},
-                               torch::TensorOptions(scalar_type2));
-      torch::Tensor c = torch::true_divide(a, b);
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor xla_a = CopyToDevice(a, device);
-        torch::Tensor xla_b = CopyToDevice(b, device);
-        torch::Tensor xla_c = torch::true_divide(xla_a, xla_b);
-        AllClose(c, xla_c);
-      });
-      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::true_divide", cpp_test::GetIgnoredCounters());
-    }
-  }
-}
-
-TEST_F(AtenXlaTensorTest, TestTrueDivideScalar) {
-  for (torch::ScalarType scalar_type :
-       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
-        torch::kLong}) {
-    torch::Tensor a =
-        isFloatingType(scalar_type)
-            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type))
-            : torch::randint(1, 100, {3, 4}, torch::TensorOptions(scalar_type));
-    for (bool isFloat : {true, false}) {
-      torch::Scalar b = isFloat ? torch::Scalar(3.0) : torch::Scalar(3);
-      torch::Tensor c = torch::true_divide(a, b);
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor xla_a = CopyToDevice(a, device);
-        torch::Tensor xla_c = torch::true_divide(xla_a, b);
-        AllClose(c, xla_c);
-      });
-      ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::true_divide", cpp_test::GetIgnoredCounters());
-    }
-  }
 }
 
 TEST_F(AtenXlaTensorTest, TestDiagRank1) {

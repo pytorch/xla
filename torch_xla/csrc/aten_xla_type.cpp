@@ -1025,20 +1025,16 @@ at::Tensor AtenXlaType::diagonal(const at::Tensor& self, int64_t offset,
 
 at::Tensor AtenXlaType::div(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
-  return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother,
-                        at::ScalarType dtype) {
-                      return XLATensor::div(xself, xother, dtype);
-                    });
+  at::ScalarType dtype = at::result_type(self, other);
+  auto operands = GetBinaryOperands(self, other);
+  return bridge::AtenFromXlaTensor(
+      XLATensor::div(operands.first, operands.second, dtype));
 }
 
 at::Tensor AtenXlaType::div(const at::Tensor& self, at::Scalar other) {
   XLA_FN_COUNTER("xla::");
-  return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const at::Scalar& other,
-                        at::ScalarType dtype) {
-                      return XLATensor::div(xself, other, dtype);
-                    });
+  return bridge::AtenFromXlaTensor(
+      XLATensor::div(bridge::GetXlaTensor(self), other));
 }
 
 at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other) {
@@ -3167,20 +3163,6 @@ at::Tensor& AtenXlaType::triu_(at::Tensor& self, int64_t diagonal) {
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::triu_(self_tensor, diagonal);
   return self;
-}
-
-at::Tensor AtenXlaType::true_divide(const at::Tensor& self,
-                                    const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  std::pair<XLATensor, XLATensor> operands = GetBinaryOperands(self, other);
-  return bridge::AtenFromXlaTensor(
-      XLATensor::true_divide(operands.first, operands.second));
-}
-
-at::Tensor AtenXlaType::true_divide(const at::Tensor& self, at::Scalar other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::true_divide(bridge::GetXlaTensor(self), other));
 }
 
 at::Tensor AtenXlaType::trunc(const at::Tensor& self) {

@@ -258,6 +258,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_half',  # half support
         'test_complex_promotion',  # complex support
         'test_complex_scalar_mult_tensor_promotion',  # complex support
+        'test_div_promotion_inplace_xla',  # doesn't raise
     }
 }
 
