@@ -127,6 +127,7 @@ xla::XlaOp CreateProduct(xla::XlaOp input,
 xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
                                    const absl::optional<xla::XlaOp>& weight,
                                    ReductionMode reduction) {
+  static const float kLogBound = -100;
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp xweight;
   if (weight) {
@@ -137,8 +138,11 @@ xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
         XlaHelpers::ScalarBroadcast<float>(1.0, input_shape, target.builder());
   }
   xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
-  xla::XlaOp result = -xweight * (target * xla::Log(input) +
-                                  (one - target) * xla::Log(one - input));
+  xla::XlaOp log_bound = XlaHelpers::ScalarValue(
+      kLogBound, input_shape.element_type(), input.builder());
+  xla::XlaOp result =
+      -xweight * (target * xla::Max(xla::Log(input), log_bound) +
+                  (one - target) * xla::Max(xla::Log(one - input), log_bound));
   if (reduction == ReductionMode::kNone) {
     return result;
   }
@@ -154,6 +158,7 @@ xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
 xla::XlaOp BuildBinaryCrossEntropyBackward(
     xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp target,
     const absl::optional<xla::XlaOp>& weight, ReductionMode reduction) {
+  static const float kEpsilon = 1e-12;
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp xweight;
   if (weight) {
@@ -164,7 +169,10 @@ xla::XlaOp BuildBinaryCrossEntropyBackward(
         XlaHelpers::ScalarBroadcast<float>(1.0, input_shape, target.builder());
   }
   xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
-  xla::XlaOp result = xweight * (input - target) / input / (one - input);
+  xla::XlaOp epsilon = XlaHelpers::ScalarValue(
+      kEpsilon, input_shape.element_type(), input.builder());
+  xla::XlaOp result =
+      xweight * (input - target) / xla::Max(input * (one - input), epsilon);
   if (reduction == ReductionMode::kNone) {
     return result * grad_output;
   }

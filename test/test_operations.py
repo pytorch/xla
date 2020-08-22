@@ -664,6 +664,20 @@ class TestSelect(XlaTestCase):
     self.assertEqual(tx, sx.data.cpu())
 
 
+class TestBinaryCrossEntropyLimitValue(XlaTestCase):
+
+  def test_cross_entropy_loss(self):
+
+    def test_fn(pred, target):
+      lossfn = nn.BCELoss()
+      return lossfn(pred, target)
+
+    pred = torch.tensor(1.0)
+    target = torch.tensor(1.0)
+    for offset in [1, 0, 1e-8, 1e-7]:
+      self.runAtenTest([pred - offset, target], test_fn)
+
+
 class TestDynamicShape(XlaTestCase):
 
   def test_nonzero_shape(self):
