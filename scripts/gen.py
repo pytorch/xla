@@ -113,6 +113,7 @@ _FN_OUT = {
     'pow_out': FuncOpts(),
     'prod_out': FuncOpts(),
     'nonzero_out': FuncOpts(),
+    'round_out': FuncOpts(),
     'normal_out': FuncOpts(),
     'take_out': FuncOpts(),
     'true_divide_out': FuncOpts(),

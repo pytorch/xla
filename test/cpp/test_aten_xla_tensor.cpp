@@ -2410,6 +2410,9 @@ TEST_F(AtenXlaTensorTest, TestRound) {
     torch::Tensor xla_b = torch::round(xla_a);
     AllClose(b, xla_b);
   });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::round", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTrunc) {
