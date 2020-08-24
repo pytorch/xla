@@ -106,7 +106,6 @@ xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
                                   bool unpad = false) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::int64 num_spatial = input_shape.rank() - 2;
-  xla::PaddingConfig padding_config;
   // No padding for batch dimension and features dimension.
   std::vector<xla::int64> expected_input_sizes{input_shape.dimensions(0),
                                                input_shape.dimensions(1)};
