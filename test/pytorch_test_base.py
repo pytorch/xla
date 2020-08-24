@@ -292,6 +292,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_block_diag_scipy',  # failed to handle np.complex128 as input to tensor.
         'test_remainder_fmod_large_dividend_xla',  # precision, remainder with 1e9 gives incorrect answer
         'test_logical_not_out_xla',  # constant with type f16 and f64 is not supported
+        'test_matrix_exp_analytic_xla',  # server side crash
     },
 
     # test_indexing.py
