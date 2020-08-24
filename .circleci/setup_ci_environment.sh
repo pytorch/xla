@@ -2,10 +2,6 @@ set -e
 pyenv local 3.5.2
 pip install --upgrade pip
 pip install pyyaml -qqq
-# This corresponds to the output of $(git rev-parse HEAD:.circleci/docker) from the main pytorch repository
-DOCKER_TAG="ab1632df-fa59-40e6-8c23-98e004f61148"
-DOCKER_IMAGE="308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/pytorch-linux-bionic-cuda10.2-cudnn7-py3.6-clang9:${DOCKER_TAG}"
-echo "export DOCKER_IMAGE=${DOCKER_IMAGE}" >> $BASH_ENV
 echo "export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
 echo "export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
 echo "export WORKDIR=/var/lib/jenkins/workspace" >> $BASH_ENV
