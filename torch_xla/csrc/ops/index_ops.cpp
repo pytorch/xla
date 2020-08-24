@@ -41,8 +41,7 @@ std::vector<at::Tensor> ExpandByteTensors(const at::Tensor& self,
                                           at::TensorList indices) {
   std::vector<at::Tensor> result;
   for (auto& index : indices) {
-    if (index.type().scalarType() == at::kByte ||
-        index.type().scalarType() == at::kBool) {
+    if (index.scalar_type() == at::kByte || index.scalar_type() == at::kBool) {
       // The sizes of the ByteTensor mask must match the sizes of the
       // corresponding dimensions in self.
       for (int64_t j = 0; j < index.dim(); j++) {
