@@ -2111,6 +2111,14 @@ void XLATensor::resize_(XLATensor& input, std::vector<xla::int64> size) {
   }
 }
 
+XLATensor XLATensor::round(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Round(input.GetIrValue()));
+}
+
+void XLATensor::round_(XLATensor& input) {
+  input.SetInPlaceIrValue(ir::ops::Round(input.GetIrValue()));
+}
+
 XLATensor XLATensor::rrelu_with_noise(const XLATensor& input, XLATensor& noise,
                                       at::Scalar lower, at::Scalar upper,
                                       bool training) {

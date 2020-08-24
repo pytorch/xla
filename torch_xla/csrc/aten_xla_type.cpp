@@ -2592,6 +2592,19 @@ at::Tensor& AtenXlaType::resize_(
   return self;
 }
 
+at::Tensor AtenXlaType::round(const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(
+      XLATensor::round(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor& AtenXlaType::round_(at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::round_(self_tensor);
+  return self;
+}
+
 at::Tensor AtenXlaType::rrelu_with_noise(
     const at::Tensor& self, const at::Tensor& noise, at::Scalar lower,
     at::Scalar upper, bool training, c10::optional<at::Generator> generator) {

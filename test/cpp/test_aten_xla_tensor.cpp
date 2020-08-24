@@ -2397,6 +2397,24 @@ TEST_F(AtenXlaTensorTest, TestFloor) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestRound) {
+  torch::Tensor a = torch::cat(
+      {torch::randn({8}, torch::TensorOptions(torch::kFloat)) * 100.0,
+       // Special case: 0.5, -0.5. xla::Round impl rounds to -1/1 whereas
+       // xla::RoundToEven properly implements bankers rounding.
+       torch::tensor({-0.5, 0.5}, torch::TensorOptions(torch::kFloat))},
+      0);
+  torch::Tensor b = torch::round(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::round(xla_a);
+    AllClose(b, xla_b);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::round", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestTrunc) {
   torch::Tensor a =
       torch::randn({2, 2}, torch::TensorOptions(torch::kFloat)) * 100.0;
