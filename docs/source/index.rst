@@ -95,3 +95,4 @@ test
 .. autofunction:: print_training_update
 .. autofunction:: print_test_update
 
+.. mdinclude:: ../../OP_LOWERING_GUIDE.md
