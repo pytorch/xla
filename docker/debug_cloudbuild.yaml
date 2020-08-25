@@ -14,6 +14,9 @@ steps:
         ]
   timeout: 14400s
 - name: 'gcr.io/cloud-builders/docker'
+  entrypoint: bash
+  args: ['-c', 'docker tag gcr.io/tpu-pytorch/xla_debug:${_TAG_NAME} gcr.io/tpu-pytorch/xla_debug:${_TAG_NAME}_$(date -u +%Y%m%d_%H_%M)']
+- name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/tpu-pytorch/xla_debug']
   timeout: 1800s
 
