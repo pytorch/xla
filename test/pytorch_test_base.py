@@ -178,6 +178,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_masked_select_mem_overlap',  # doesn't raise
         'test_scatter_mem_overlap',  # doesn't raise
         'test_index_mem_overlap',  # doesn't raise
+        'test_index_add_mem_overlap',  # doesn't raise
+        'test_shift_mem_overlap',  # doesn't raise
     },
     'TestViewOpsXLA': {
         'test_contiguous_nonview',
@@ -237,6 +239,11 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_hardsigmoid_grad_xla',  # gradient check is slow
         'test_leaky_relu_inplace_overlap_xla',  # doesn't raise
         'test_threshold_inplace_overlap_xla',  # doesn't raise
+        'test_elu_inplace_overlap_xla',  # doesn't raise
+        'test_hardswish_inplace_overlap_xla',  # doesn't raise
+        'test_silu_inplace_overlap_xla',  # doesn't raise
+        'test_softplus_inplace_overlap_xla',  # doesn't raise
+        'test_softshrink_inplace_overlap_xla',  # doesn't raise
     },
 
     # test_type_promotion.py
