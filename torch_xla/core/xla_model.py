@@ -134,7 +134,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     The list of device strings.
   """
   xla_devices = _DEVICES.value
-  devkind = devkind or ['TPU', 'GPU', 'CPU']
+  devkind = [devkind] if devkind else ['TPU', 'GPU', 'CPU']
   for kind in devkind:
     kind_devices = []
     for i, device in enumerate(xla_devices):
@@ -228,7 +228,7 @@ def xla_device(n=None, devkind=None):
   """
   if n is None:
     devices = get_xla_supported_devices(
-        devkind=[devkind] if devkind is not None else None)
+        devkind=devkind if devkind is not None else None)
     assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
     # This is a utility API mainly called from tests or simple code which wants
     # to just have a single device to run on. Set the default device so that
@@ -279,7 +279,7 @@ def xla_replication_devices(local_devices):
         'Cannot replicate across different device types: devices={}/{}'.format(
             local_devices, real_devices))
   device_type = device_types.pop()
-  kind_devices = get_xla_supported_devices(devkind=[device_type])
+  kind_devices = get_xla_supported_devices(devkind=device_type)
   if len(kind_devices) != len(local_devices):
     # Replication can only happen among all devices of one kind.
     raise RuntimeError(
