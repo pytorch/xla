@@ -1776,12 +1776,6 @@ at::Tensor AtenXlaType::masked_select(const at::Tensor& self,
       XLATensor::masked_select(self_tensor, bridge::GetXlaTensor(mask)));
 }
 
-at::Tensor AtenXlaType::max(const at::Tensor& self, const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::max(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
-}
-
 at::Tensor AtenXlaType::max(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::max(bridge::GetXlaTensor(self)));
@@ -1793,6 +1787,16 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::max(const at::Tensor& self,
   auto outputs = XLATensor::max(bridge::GetXlaTensor(self), dim, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+}
+
+at::Tensor AtenXlaType::maximum(const at::Tensor& self,
+                                const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return DoBinaryOp(self, other,
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::max(xself, xother, dtype);
+                    });
 }
 
 std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::max_out(
@@ -1959,12 +1963,6 @@ at::Tensor AtenXlaType::mean(const at::Tensor& self, at::IntArrayRef dim,
       /*keep_reduced_dimensions=*/keepdim, dtype));
 }
 
-at::Tensor AtenXlaType::min(const at::Tensor& self, const at::Tensor& other) {
-  XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::min(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
-}
-
 at::Tensor AtenXlaType::min(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::min(bridge::GetXlaTensor(self)));
@@ -1976,6 +1974,16 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::min(const at::Tensor& self,
   auto outputs = XLATensor::min(bridge::GetXlaTensor(self), dim, keepdim);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
                          bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+}
+
+at::Tensor AtenXlaType::minimum(const at::Tensor& self,
+                                const at::Tensor& other) {
+  XLA_FN_COUNTER("xla::");
+  return DoBinaryOp(self, other,
+                    [&](const XLATensor& xself, const XLATensor& xother,
+                        at::ScalarType dtype) {
+                      return XLATensor::min(xself, xother, dtype);
+                    });
 }
 
 std::tuple<at::Tensor&, at::Tensor&> AtenXlaType::min_out(

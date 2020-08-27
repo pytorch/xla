@@ -178,6 +178,12 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_masked_select_mem_overlap',  # doesn't raise
         'test_scatter_mem_overlap',  # doesn't raise
         'test_index_mem_overlap',  # doesn't raise
+        'test_maximum_minimum_complex',  # doesn't raise
+        'test_maximum_minimum_float_xla_bfloat16',  # precision
+        'test_maximum_minimum_type_promotion_xla_bfloat16*',  # doesn't raise
+        'test_maximum_minimum_type_promotion_xla_float16*',  # doesn't raise
+        'test_maximum_minimum_type_promotion_xla_*_bfloat16',  # doesn't raise
+        'test_maximum_minimum_type_promotion_xla_*_float16',  # doesn't raise
         'test_index_add_mem_overlap',  # doesn't raise
         'test_shift_mem_overlap',  # doesn't raise
     },
@@ -308,7 +314,12 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
     },
 }
 
-DISABLED_TORCH_TESTS_GPU_ONLY = {}
+DISABLED_TORCH_TESTS_GPU_ONLY = {
+    # test_torch.py
+    'TestTorchDeviceTypeXLA': {
+        'test_maximum_minimum_float_nan_and_inf',  # maximum(nan,inf) = inf on GPU
+    },
+}
 
 
 class MatchSet(object):

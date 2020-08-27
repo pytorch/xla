@@ -547,12 +547,12 @@ class AtenXlaType {
   static at::Tensor masked_select(const at::Tensor& self,
                                   const at::Tensor& mask);
 
-  static at::Tensor max(const at::Tensor& self, const at::Tensor& other);
-
   static at::Tensor max(const at::Tensor& self);
 
   static std::tuple<at::Tensor, at::Tensor> max(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
+
+  static at::Tensor maximum(const at::Tensor& self, const at::Tensor& other);
 
   static std::tuple<at::Tensor&, at::Tensor&> max_out(at::Tensor& max,
                                                       at::Tensor& max_values,
@@ -620,12 +620,12 @@ class AtenXlaType {
   static at::Tensor mean(const at::Tensor& self, at::IntArrayRef dim,
                          bool keepdim, c10::optional<at::ScalarType> dtype);
 
-  static at::Tensor min(const at::Tensor& self, const at::Tensor& other);
-
   static at::Tensor min(const at::Tensor& self);
 
   static std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self,
                                                 int64_t dim, bool keepdim);
+
+  static at::Tensor minimum(const at::Tensor& self, const at::Tensor& other);
 
   static std::tuple<at::Tensor&, at::Tensor&> min_out(at::Tensor& min,
                                                       at::Tensor& min_indices,

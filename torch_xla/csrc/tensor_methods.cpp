@@ -1574,8 +1574,10 @@ XLATensor XLATensor::matmul(const XLATensor& input, const XLATensor& other) {
       ir::ops::MatMul(input.GetIrValue(), other.GetIrValue()));
 }
 
-XLATensor XLATensor::max(const XLATensor& input, const XLATensor& other) {
-  return input.CreateFrom(ir::ops::Max(input.GetIrValue(), other.GetIrValue()));
+XLATensor XLATensor::max(const XLATensor& input, const XLATensor& other,
+                         c10::optional<at::ScalarType> logical_element_type) {
+  return input.CreateFrom(ir::ops::Max(input.GetIrValue(), other.GetIrValue()),
+                          logical_element_type);
 }
 
 XLATensor XLATensor::max(const XLATensor& input) {
@@ -1665,8 +1667,10 @@ XLATensor XLATensor::mean(const XLATensor& input,
       dtype);
 }
 
-XLATensor XLATensor::min(const XLATensor& input, const XLATensor& other) {
-  return input.CreateFrom(ir::ops::Min(input.GetIrValue(), other.GetIrValue()));
+XLATensor XLATensor::min(const XLATensor& input, const XLATensor& other,
+                         c10::optional<at::ScalarType> logical_element_type) {
+  return input.CreateFrom(ir::ops::Min(input.GetIrValue(), other.GetIrValue()),
+                          logical_element_type);
 }
 
 XLATensor XLATensor::min(const XLATensor& input) {
