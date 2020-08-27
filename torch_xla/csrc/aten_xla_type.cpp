@@ -1091,9 +1091,7 @@ at::Tensor AtenXlaType::embedding_dense_backward(const at::Tensor& grad_output,
 }
 
 at::Tensor AtenXlaType::empty(
-    at::IntArrayRef size, c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout, c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory,
+    at::IntArrayRef size, const at::TensorOptions& options,
     c10::optional<at::MemoryFormat> /* memory_format */) {
   XLA_FN_COUNTER("xla::");
   // PT empty*() are optimizations to avoid initializing the data when it is
@@ -1102,8 +1100,8 @@ at::Tensor AtenXlaType::empty(
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
   return bridge::AtenFromXlaTensor(XLATensor::full(
-      XlaHelpers::I64List(size), 0, GetXlaDeviceOrCurrent(device),
-      GetScalarTypeOrFloat(dtype)));
+      XlaHelpers::I64List(size), 0, GetXlaDeviceOrCurrent(options.device()),
+      GetScalarTypeOrFloat(c10::typeMetaToScalarType(options.dtype()))));
 }
 
 at::Tensor AtenXlaType::empty_strided(at::IntArrayRef size,
@@ -1113,7 +1111,12 @@ at::Tensor AtenXlaType::empty_strided(at::IntArrayRef size,
                                       c10::optional<at::Device> device,
                                       c10::optional<bool> pin_memory) {
   XLA_FN_COUNTER("xla::");
-  at::Tensor t = empty(size, dtype, layout, device, pin_memory, c10::nullopt);
+  at::TensorOptions options = at::TensorOptions()
+                                  .dtype(dtype)
+                                  .layout(layout)
+                                  .pinned_memory(pin_memory)
+                                  .device(device);
+  at::Tensor t = empty(size, options, c10::nullopt);
   return as_strided(t, size, stride, /*storage_offset=*/0);
 }
 
