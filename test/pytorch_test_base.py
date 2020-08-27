@@ -312,6 +312,11 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
     'TestIndexingXLA': {
         'test_index_put_accumulate_large_tensor_xla',  # memory limit exceeded on v2-8
     },
+
+    # test_type_promotion.py
+    'TestTypePromotionXLA': {
+        'test_bfloat16_xla',  # half support
+    }
 }
 
 DISABLED_TORCH_TESTS_GPU_ONLY = {
