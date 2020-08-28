@@ -10,8 +10,17 @@ ARG release_version="nightly"
 ARG cuda="0"
 ARG cuda_compute="7.0,7.5"
 ARG cxx_abi="0"
+# Aug 3 VM's latest commit
 ARG xla_commit="354b2429bdcc87d0ad3a516b6d7644015f8c58ad"
-ARG pytorch_commit="8850fd1952c3983793dcac4022fdc8e3913dad96"
+
+# Aug 4 VM's latest commit
+#ARG pytorch_commit="8850fd1952c3983793dcac4022fdc8e3913dad96"
+
+# Aug 4 VM's latest commit
+#ARG xla_commit="18fa011c3eba79b93ea38cf5b0946920e45b2053"
+
+# Aug 3 VM's latest commit
+ARG pytorch_commit="bfa94487b968ccb570ef8cd9547029b967e76ed0"
 
 RUN apt-get update
 RUN apt-get install -y git sudo python-pip python3-pip
