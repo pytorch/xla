@@ -443,6 +443,19 @@ xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias) {
   return dot + bias;
 }
 
+xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,
+                                     xla::XlaOp bias,
+                                     xla::XlaOp product_multiplier,
+                                     xla::XlaOp bias_multiplier) {
+  xla::XlaOp product = CreateMatMul(lhs, rhs);
+  const xla::Shape& product_shape = XlaHelpers::ShapeOfXlaOp(product);
+  const xla::Shape& bias_shape = XlaHelpers::ShapeOfXlaOp(bias);
+  if (bias_shape.dimensions() != product_shape.dimensions()) {
+    bias = BuildExpand(bias, product_shape.dimensions());
+  }
+  return product_multiplier * product + bias_multiplier * bias;
+}
+
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs) {
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());

@@ -3006,6 +3006,45 @@ TEST_F(AtenXlaTensorTest, TestMvOut) {
   ExpectCounterChanged("xla::mv_out", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestBatchAddBatchMatMul) {
+  torch::Tensor a = torch::rand({3, 6, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3, 6, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::rand({3, 4, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Scalar alpha = 0.5;
+  torch::Scalar beta = 1.5;
+  torch::Tensor d = torch::baddbmm(a, b, c, beta, alpha);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = CopyToDevice(c, device);
+    torch::Tensor xla_d = torch::baddbmm(xla_a, xla_b, xla_c, beta, alpha);
+    AllClose(d, xla_d, /*rtol=*/1e-3, /*atol=*/1e-4);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::baddbmm", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestBatchAddBatchMatMulInPlace) {
+  torch::Tensor a = torch::rand({3, 6, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({3, 6, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::rand({3, 4, 5}, torch::TensorOptions(torch::kFloat));
+  torch::Scalar alpha = 0.5;
+  torch::Scalar beta = 1.5;
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = CopyToDevice(c, device);
+    torch::Tensor d = a.baddbmm_(b, c, beta, alpha);
+    torch::Tensor xla_d = xla_a.baddbmm_(xla_b, xla_c, beta, alpha);
+    AllClose(d, xla_d, /*rtol=*/1e-3, /*atol=*/1e-4);
+    AllClose(a, xla_a, /*rtol=*/1e-3, /*atol=*/1e-4);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::baddbmm_", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestBatchMatMul) {
   torch::Tensor a = torch::rand({3, 6, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({3, 4, 5}, torch::TensorOptions(torch::kFloat));
@@ -3018,6 +3057,7 @@ TEST_F(AtenXlaTensorTest, TestBatchMatMul) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bmm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestChainMatMul) {

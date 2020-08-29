@@ -196,6 +196,9 @@ NodePtr LogDet(const Value& input);
 
 NodePtr Inverse(const Value& input);
 
+NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
+                const Value& product_multiplier, const Value& bias_multiplier);
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla
