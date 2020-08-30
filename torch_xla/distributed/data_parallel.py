@@ -45,13 +45,14 @@ class DataParallel(object):
       will be run on PyTorch CPU device.
   """
 
-  def __init__(self, network, device_ids=None):
+  def __init__(self, network, device_ids=None, **kwargs):
     if device_ids is None:
       device_ids = xm.get_xla_supported_devices()
     self._device_ids = [str(x) for x in device_ids]
     self._native_run = False
     self._models = []
     self._contexts = []
+    self._kwargs = kwargs
     module = network if isinstance(network, torch.nn.Module) else network()
     for device in device_ids:
       device_module = deepcopy(module).to(device=torch.device(device))
@@ -95,15 +96,22 @@ class DataParallel(object):
     # device.
     os._exit(17)
 
-  def _module_runner(self, loop_fn, device, module, loader, context, result):
+  def _module_runner(self, loop_fn, device, module, loader, context, result,
+                     **kwargs):
     xm.set_replication(device, self._device_ids)
     try:
-      result.result = loop_fn(module, loader, torch.device(device), context)
+      result.result = loop_fn(module, loader, torch.device(device), context,
+                              **kwargs)
     except Exception as e:
       result.result = e
       self._handle_runner_exception(device, e)
 
-  def __call__(self, loop_fn, loader, fixed_batch_size=False, batchdim=0):
+  def __call__(self,
+               loop_fn,
+               loader,
+               fixed_batch_size=False,
+               batchdim=0,
+               **kwargs):
     """Runs one EPOCH of training/test.
 
     Args:
@@ -130,7 +138,8 @@ class DataParallel(object):
       ## This is called without XLA devices available. Run in normal mode.
       return [
           loop_fn(self._models[0], enumerate(loader),
-                  torch.device(self._device_ids[0]), self._contexts[0])
+                  torch.device(self._device_ids[0]), self._contexts[0],
+                  self._kwargs)
       ]
 
     xm.wait_device_ops()
@@ -138,7 +147,8 @@ class DataParallel(object):
         loader,
         self._device_ids,
         batchdim=batchdim,
-        fixed_batch_size=fixed_batch_size)
+        fixed_batch_size=fixed_batch_size,
+        **self._kwargs)
     threads = []
     results = []
     for module, device, context in zip(self._models, self._device_ids,
@@ -147,7 +157,8 @@ class DataParallel(object):
       loader = para_loader.per_device_loader(device)
       thread = threading.Thread(
           target=self._module_runner,
-          args=(loop_fn, device, module, loader, context, result))
+          args=(loop_fn, device, module, loader, context, result),
+          kwargs=kwargs)
       thread.daemon = True
       thread.start()
       threads.append(thread)
