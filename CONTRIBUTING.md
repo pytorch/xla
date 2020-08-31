@@ -29,7 +29,8 @@ To build from source:
   following:
 
   ```Shell
-  docker build -t torch-xla -f xla/docker/Dockerfile .
+  cd xla/
+  docker build -t torch-xla -f docker/Dockerfile .
   ```
 
 ### Building With Script
@@ -142,4 +143,3 @@ If you are planning to be building from source and hence using the latest _PyTor
 it is suggested for you to select the _Nightly_ builds when you create a Cloud TPU instance.
 
 Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is working.
-
