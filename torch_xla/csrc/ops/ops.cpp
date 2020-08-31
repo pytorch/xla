@@ -670,6 +670,37 @@ NodePtr Inverse(const Value& input) {
                    std::move(lower_fn));
 }
 
+NodePtr BaddBmm(const Value& lhs, const Value& rhs, const Value& bias,
+                const Value& product_multiplier, const Value& bias_multiplier) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_lhs = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_rhs = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_bias = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_product_multiplier = loctx->GetOutputOp(node.operand(3));
+    xla::XlaOp xla_bias_multiplier = loctx->GetOutputOp(node.operand(4));
+    std::tie(xla_lhs, xla_rhs) = XlaHelpers::PromoteValues(xla_lhs, xla_rhs);
+
+    return node.ReturnOp(
+        BuildMatMulWithMultiplier(xla_lhs, xla_rhs, xla_bias,
+                                  xla_product_multiplier, xla_bias_multiplier),
+        loctx);
+  };
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildMatMulWithMultiplier(operands[0], operands[1], operands[2],
+                                     operands[3], operands[4]);
+  };
+  return GenericOp(OpKind(at::aten::baddbmm),
+                   {lhs, rhs, bias, product_multiplier, bias_multiplier},
+                   [&]() {
+                     return InferOutputShape(
+                         {lhs.shape(), rhs.shape(), bias.shape(),
+                          product_multiplier.shape(), bias_multiplier.shape()},
+                         lower_for_shape_fn);
+                   },
+                   std::move(lower_fn));
+}
+
 }  // namespace ops
 }  // namespace ir
 }  // namespace torch_xla

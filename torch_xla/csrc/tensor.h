@@ -323,6 +323,13 @@ class XLATensor {
                                         std::vector<xla::int64> padding,
                                         bool ceil_mode, bool count_include_pad);
 
+  static XLATensor baddbmm(const XLATensor& input, const XLATensor& batch1,
+                           const XLATensor& batch2, at::Scalar beta,
+                           at::Scalar alpha);
+  static void baddbmm_(XLATensor& input, const XLATensor& batch1,
+                       const XLATensor& batch2, at::Scalar beta,
+                       at::Scalar alpha);
+
   static XLATensor bernoulli(const XLATensor& input, double probability);
   static XLATensor bernoulli(const XLATensor& input);
   static void bernoulli_(XLATensor& input, double probability);

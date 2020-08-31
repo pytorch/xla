@@ -170,6 +170,13 @@ class AtenXlaType {
       at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
       c10::optional<int64_t> divisor_override);
 
+  static at::Tensor baddbmm(const at::Tensor& self, const at::Tensor& batch1,
+                            const at::Tensor& batch2, at::Scalar beta,
+                            at::Scalar alpha);
+  static at::Tensor& baddbmm_(at::Tensor& self, const at::Tensor& batch1,
+                              const at::Tensor& batch2, at::Scalar beta,
+                              at::Scalar alpha);
+
   static at::Tensor bernoulli(const at::Tensor& self,
                               c10::optional<at::Generator> generator);
   static at::Tensor& bernoulli_(at::Tensor& self, double p,
