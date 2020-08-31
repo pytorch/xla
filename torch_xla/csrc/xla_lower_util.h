@@ -24,6 +24,11 @@ xla::XlaOp BuildGer(xla::XlaOp lhs, xla::XlaOp rhs);
 
 xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias);
 
+xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,
+                                     xla::XlaOp bias,
+                                     xla::XlaOp product_multiplier,
+                                     xla::XlaOp bias_multiplier);
+
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,

@@ -186,6 +186,17 @@ void CheckDimensionSize(const XLATensor& t, xla::int64 dim,
       << " (while checking arguments for " << tag << ")";
 }
 
+void CheckBmmDimension(const std::string& tag, const XLATensor& batch1,
+                       const XLATensor& batch2) {
+  // Consistent with the checks in bmm_out_or_baddbmm_.
+  CheckRank(batch1, 3, tag, "batch1", 1);
+  CheckRank(batch2, 3, tag, "batch2", 2);
+  CheckDimensionSize(batch2, 0, /*batch_size=*/batch1.size(0), tag, "batch2",
+                     2);
+  CheckDimensionSize(batch2, 1, /*contraction_size=*/batch1.size(2), tag,
+                     "batch2", 2);
+}
+
 std::vector<xla::int64> GetExpandDimensions(
     const xla::Shape& shape, std::vector<xla::int64> dimensions) {
   XLA_CHECK_GE(dimensions.size(), shape.rank()) << shape;
@@ -656,6 +667,32 @@ XLATensor XLATensor::avg_pool_nd_backward(
       count_include_pad));
 }
 
+XLATensor XLATensor::baddbmm(const XLATensor& input, const XLATensor& batch1,
+                             const XLATensor& batch2, at::Scalar beta,
+                             at::Scalar alpha) {
+  CheckBmmDimension(/*tag=*/"baddbmm", batch1, batch2);
+  ir::Value product_multiplier = XLATensor::GetIrValueForScalar(
+      alpha, batch1.shape().get().element_type(), batch1.GetDevice());
+  ir::Value bias_multiplier = XLATensor::GetIrValueForScalar(
+      beta, input.shape().get().element_type(), input.GetDevice());
+  return input.CreateFrom(ir::ops::BaddBmm(
+      batch1.GetIrValue(), batch2.GetIrValue(), input.GetIrValue(),
+      product_multiplier, bias_multiplier));
+}
+
+void XLATensor::baddbmm_(XLATensor& input, const XLATensor& batch1,
+                         const XLATensor& batch2, at::Scalar beta,
+                         at::Scalar alpha) {
+  CheckBmmDimension(/*tag=*/"baddbmm_", batch1, batch2);
+  ir::Value product_multiplier = XLATensor::GetIrValueForScalar(
+      alpha, batch1.shape().get().element_type(), batch1.GetDevice());
+  ir::Value bias_multiplier = XLATensor::GetIrValueForScalar(
+      beta, input.shape().get().element_type(), input.GetDevice());
+  input.SetInPlaceIrValue(ir::ops::BaddBmm(
+      batch1.GetIrValue(), batch2.GetIrValue(), input.GetIrValue(),
+      product_multiplier, bias_multiplier));
+}
+
 XLATensor XLATensor::bernoulli(const XLATensor& input, double probability) {
   auto input_shape = input.shape();
   return input.CreateFrom(ir::MakeNode<ir::ops::Bernoulli>(
@@ -747,14 +784,7 @@ void XLATensor::bitwise_xor_out(XLATensor& out, const XLATensor& input,
 }
 
 XLATensor XLATensor::bmm(const XLATensor& batch1, const XLATensor& batch2) {
-  // Consistent with the checks in bmm_out_or_baddbmm_.
-  std::string tag = "bmm";
-  CheckRank(batch1, 3, tag, "batch1", 1);
-  CheckRank(batch2, 3, tag, "batch2", 2);
-  xla::int64 batch_size = batch1.size(0);
-  CheckDimensionSize(batch2, 0, batch_size, tag, "batch2", 2);
-  xla::int64 contraction_size = batch1.size(2);
-  CheckDimensionSize(batch2, 1, contraction_size, tag, "batch2", 2);
+  CheckBmmDimension(/*tag=*/"bmm", batch1, batch2);
   return matmul(batch1, batch2);
 }
 
