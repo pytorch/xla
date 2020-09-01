@@ -40,7 +40,8 @@ def _maybe_select_tpu_version():
 
     import cloud_tpu_client
     client = cloud_tpu_client.Client(tpu_name)
-    client.configure_tpu_version(f'pytorch-{__version__}', restart_type='ifNeeded')
+    client.configure_tpu_version(
+        f'pytorch-{__version__}', restart_type='ifNeeded')
     # client.wait_for_healthy() API doesn't work as we dont have TPU API access
     _wait_for_open(__version__)
   except ImportError:
