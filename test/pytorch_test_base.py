@@ -186,6 +186,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_maximum_minimum_type_promotion_xla_*_float16',  # doesn't raise
         'test_index_add_mem_overlap',  # doesn't raise
         'test_shift_mem_overlap',  # doesn't raise
+        'test_addmm_xla_bfloat16',  # precision
     },
     'TestViewOpsXLA': {
         'test_contiguous_nonview',
