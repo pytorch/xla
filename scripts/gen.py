@@ -1002,12 +1002,7 @@ def generate_unboxed(aten_sig, overload, override_fn):
 
 def generate_registrations(fgens, overrides):
   aten_code = 'TORCH_LIBRARY_IMPL(aten, XLA, m) {\n'
-  preautograd_code = """TORCH_LIBRARY_IMPL(_, AutogradXLA, m) {
-  m.fallback(torch::CppFunction::makeFallthrough());
-}
-
-TORCH_LIBRARY_IMPL(aten, AutogradXLA, m) {
-"""
+  preautograd_code = 'TORCH_LIBRARY_IMPL(aten, AutogradXLA, m) {\n'
   overridden = set()
   for fgen in fgens:
     if not is_overrideable(fgen):
