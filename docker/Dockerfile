@@ -17,7 +17,9 @@ ARG cxx_abi="0"
 #ARG pytorch_commit="8850fd1952c3983793dcac4022fdc8e3913dad96"
 
 # Aug 4 VM's latest commit
-ARG xla_commit="18fa011c3eba79b93ea38cf5b0946920e45b2053"
+#ARG xla_commit="18fa011c3eba79b93ea38cf5b0946920e45b2053"
+# Using 1 of 2 commits from Aug 3.
+ARG xla_commit="7a2f0493986803a277392ca565a883535f990a47"
 
 # Aug 3 VM's latest commit
 ARG pytorch_commit="bfa94487b968ccb570ef8cd9547029b967e76ed0"
