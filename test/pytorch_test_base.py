@@ -180,10 +180,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_index_mem_overlap',  # doesn't raise
         'test_maximum_minimum_complex',  # doesn't raise
         'test_maximum_minimum_float_xla_bfloat16',  # precision
-        'test_maximum_minimum_type_promotion_xla_bfloat16*',  # doesn't raise
-        'test_maximum_minimum_type_promotion_xla_float16*',  # doesn't raise
-        'test_maximum_minimum_type_promotion_xla_*_bfloat16',  # doesn't raise
-        'test_maximum_minimum_type_promotion_xla_*_float16',  # doesn't raise
+        'test_maximum_minimum_type_promotion_xla_.*bfloat16.*',  # doesn't raise
         'test_index_add_mem_overlap',  # doesn't raise
         'test_shift_mem_overlap',  # doesn't raise
     },
