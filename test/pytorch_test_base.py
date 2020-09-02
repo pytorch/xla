@@ -444,7 +444,9 @@ class XLATestBase(DeviceTypeTestBase):
                   TORCH_TEST_PRECIIONS,
                   [dtype_test_name, test_name, test.__name__],
                   DEFAULT_FLOATING_PRECISION)
-              test.precision_overrides[dtype] = floating_precision
+              if dtype not in test.precision_overrides or test.precision_overrides[
+                  dtype] < floating_precision:
+                test.precision_overrides[dtype] = floating_precision
 
           if match_name(dtype_test_name, disabled_torch_tests[class_name]):
             skipped = True
