@@ -55,6 +55,10 @@ class DataParallel(object):
     self._kwargs = kwargs
     module = network if isinstance(network, torch.nn.Module) else network()
     module = module.cuda()
+    img_dim = 224
+    batch_size = 128
+    module = torch.jit.trace(module,
+      torch.zeros(batch_size, 3, img_dim, img_dim, device='cuda'))
     for device in device_ids:
       device_module = deepcopy(module).to(device=torch.device(device))
       self._models.append(device_module)

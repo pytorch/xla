@@ -91,6 +91,8 @@ MODEL_PROPERTIES = {
     }
 }
 
+torch._C._jit_set_profiling_executor(False)
+
 
 def get_model_property(key):
   return MODEL_PROPERTIES.get(FLAGS.model, MODEL_PROPERTIES['DEFAULT'])[key]
