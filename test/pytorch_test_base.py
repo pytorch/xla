@@ -169,6 +169,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_masked_select_mem_overlap',  # doesn't raise
         'test_scatter_mem_overlap',  # doesn't raise
         'test_index_mem_overlap',  # doesn't raise
+        'test_topk_nonfinite_xla_float32',  # TFXLA update HLO changed for 1.6
+        'test_topk_nonfinite_xla_float64',  # TFXLA update HLO changed for 1.6
     },
     'TestViewOpsXLA': {
         'test_contiguous_nonview',

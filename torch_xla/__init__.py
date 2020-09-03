@@ -4,7 +4,7 @@ import re
 import socket
 import time
 
-from .version import __version__ as version
+from .version import __version__
 
 
 def _maybe_select_tpu_version():
@@ -40,9 +40,10 @@ def _maybe_select_tpu_version():
 
     import cloud_tpu_client
     client = cloud_tpu_client.Client(tpu_name)
-    client.configure_tpu_version(f'pytorch-{version}', restart_type='ifNeeded')
+    client.configure_tpu_version(
+        f'pytorch-{__version__}', restart_type='ifNeeded')
     # client.wait_for_healthy() API doesn't work as we dont have TPU API access
-    _wait_for_open(version)
+    _wait_for_open(__version__)
   except ImportError:
     logging.warning((
         'Not selecting corresponding TPU runtime since cloud_tpu_client is not '
@@ -50,7 +51,7 @@ def _maybe_select_tpu_version():
   except Exception:
     # This path is hit, when we get throttled by the verison changer
     # when we import torch_xla from xmp.spawn-ed processes.
-    _wait_for_open(version, log=False)
+    _wait_for_open(__version__, log=False)
 
 
 def _setup_grpc():
