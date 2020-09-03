@@ -54,6 +54,7 @@ class DataParallel(object):
     self._contexts = []
     self._kwargs = kwargs
     module = network if isinstance(network, torch.nn.Module) else network()
+    module = module.cuda()
     for device in device_ids:
       device_module = deepcopy(module).to(device=torch.device(device))
       self._models.append(device_module)

@@ -165,9 +165,7 @@ def train_imagenet():
 
   torch.manual_seed(42)
 
-  devices = (
-      xm.get_xla_supported_devices(
-          max_devices=FLAGS.num_cores) if FLAGS.num_cores != 0 else [])
+  devices = []
   # Pass [] as device_ids to run using the PyTorch/CPU engine.
   torchvision_model = get_model_property('model_fn')
   model_parallel = dp.DataParallel(torchvision_model, device_ids=devices)
@@ -192,7 +190,9 @@ def train_imagenet():
             summary_writer=writer if xm.is_master_ordinal() else None))
     tracker = xm.RateTracker()
     model.train()
-    for x, (data, target) in enumerate(loader):
+    for x, (_, (data, target)) in enumerate(loader):
+      data = data.cuda()
+      target = target.cuda()
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
@@ -214,7 +214,9 @@ def train_imagenet():
     total_samples = 0
     correct = 0
     model.eval()
-    for data, target in loader:
+    for x, (data, target) in loader:
+      data = data.cuda()
+      target = target.cuda()
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum().item()
