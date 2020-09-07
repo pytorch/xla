@@ -1,4 +1,36 @@
 #!/usr/bin/env python
+# Welcome to the PyTorch/XLA setup.py.
+#
+# Environment variables you are probably interested in:
+#
+#   DEBUG
+#     build with -O0 and -g (debug symbols)
+#
+#   TORCH_XLA_VERSION
+#     specify the version of PyTorch/XLA, rather than the hard-coded version
+#     in this file; used when we're building binaries for distribution
+#
+#   VERSIONED_XLA_BUILD
+#     creates a versioned build
+#
+#   TORCH_XLA_PACKAGE_NAME
+#     change the package name to something other than 'torch_xla'
+#
+#   COMPILE_PARALLEL=1
+#     enable parallel compile
+#
+#   BUILD_CPP_TESTS=1
+#     build the C++ tests
+#
+#   XLA_DEBUG=0
+#     build the xla/xrt client in debug mode
+#
+#   XLA_BAZEL_VERBOSE=0
+#     turn on verbose messages during the bazel build of the xla/xrt client
+#
+#   XLA_CUDA=0
+#     build the xla/xrt client with CUDA enabled
+#
 
 from __future__ import print_function
 
@@ -282,7 +314,7 @@ else:
 extra_link_args += ['-lxla_computation_client']
 
 setup(
-    name='torch_xla',
+    name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
     description='XLA bridge for PyTorch',
     url='https://github.com/pytorch/xla',
