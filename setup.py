@@ -14,7 +14,7 @@
 #     creates a versioned build
 #
 #   TORCH_XLA_PACKAGE_NAME
-#     change the package name to something ther than 'torch_xla'
+#     change the package name to something other than 'torch_xla'
 #
 #   COMPILE_PARALLEL=1
 #     enable parallel compile
