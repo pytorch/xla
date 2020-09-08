@@ -22,7 +22,7 @@ ARG cxx_abi="0"
 # Using 1 of 2 commits from Aug 3.
 #ARG xla_commit="7a2f0493986803a277392ca565a883535f990a47"
 
-# Commit on Aug 7.
+# Commit on Aug 7
 ARG xla_commit="2c732f20b5343dd1a694cd69cd15dd7f76ee1028"
 ARG pytoch_commit="b7a9bc0802b68cff07958937cfda2271155689e5"
 
