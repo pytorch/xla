@@ -63,9 +63,9 @@ RUN if [ -n "$xla_commit" ]; then cd /pytorch && rm -rf xla && \
   git clone https://github.com/pytorch/xla --recursive && \
   cd xla && \
   git fetch origin $xla_commit && \
-  git checkout $xla_commit; fi
-  #git checkout $xla_commit && \
-  #git revert 18fa011c3eba79b93ea38cf5b0946920e45b2053 --no-edit; fi
+  #git checkout $xla_commit; fi
+  git checkout $xla_commit && \
+  git revert 18fa011c3eba79b93ea38cf5b0946920e45b2053 --no-edit; fi
 
 RUN if [ -n "$pytorch_commit" ]; then echo "$pytorch_commit" >> /pytorch/xla/.torch_pin; fi
 
