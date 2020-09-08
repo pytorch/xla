@@ -1360,6 +1360,11 @@ class TestAtenXlaTensor(XlaTestCase):
     self.assertRaises(RuntimeError, lambda: torch.min(xla_a, dim=1))
     self.assertRaises(RuntimeError, lambda: torch.min(xla_a))
 
+  def test_reduction_unordered_dim(self):
+    self.runAtenTest(
+        torch.rand(4, 3, 4, 2),
+        lambda x: torch.mean(x, (-1, -3, -2), keepdim=True))
+
   def test_index_select_0dim(self):
 
     def test_fn(s, i):
