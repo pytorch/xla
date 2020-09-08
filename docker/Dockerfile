@@ -14,12 +14,17 @@ ARG cxx_abi="0"
 #ARG xla_commit="354b2429bdcc87d0ad3a516b6d7644015f8c58ad"
 
 # Aug 4 VM's latest commit
-ARG pytorch_commit="8850fd1952c3983793dcac4022fdc8e3913dad96"
+#ARG pytorch_commit="8850fd1952c3983793dcac4022fdc8e3913dad96"
 
 # Aug 4 VM's latest commit
 #ARG xla_commit="18fa011c3eba79b93ea38cf5b0946920e45b2053"
+
 # Using 1 of 2 commits from Aug 3.
-ARG xla_commit="7a2f0493986803a277392ca565a883535f990a47"
+#ARG xla_commit="7a2f0493986803a277392ca565a883535f990a47"
+
+# Commit on Aug 7.
+ARG xla_commit="2c732f20b5343dd1a694cd69cd15dd7f76ee1028"
+ARG pytoch_commit="b7a9bc0802b68cff07958937cfda2271155689e5"
 
 # Aug 3 VM's latest commit
 #ARG pytorch_commit="bfa94487b968ccb570ef8cd9547029b967e76ed0"
