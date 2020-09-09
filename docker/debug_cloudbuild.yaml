@@ -4,7 +4,7 @@ steps:
 - name: 'bash'
   args: ['ls']
 - name: 'bash'
-  args: ['docker/debug_image_cleanup.sh']
+  args: ['bash', 'docker/debug_image_cleanup.sh']
 - name: 'gcr.io/cloud-builders/docker'
   args: [
           'build',
