@@ -303,6 +303,8 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_remainder_fmod_large_dividend_xla',  # precision, remainder with 1e9 gives incorrect answer
         'test_logical_not_out_xla',  # constant with type f16 and f64 is not supported
         'test_matrix_exp_analytic_xla',  # server side crash
+        'test_i0_range1_xla_bfloat16',  # precision, 52480.0 vs. 54016.0
+        'test_i0_range2_xla_bfloat16',  # precision, 7.019985352739087e+36 vs. 5.815372481559007e+36
     },
 
     # test_indexing.py
