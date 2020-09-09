@@ -3,7 +3,7 @@
 steps:
 - name: 'bash'
   args: ['ls']
-- name: 'gcr.io/cloud-builders/gcloud'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
   args: ['bash', 'docker/debug_image_cleanup.sh']
 - name: 'gcr.io/cloud-builders/docker'
   args: [
