@@ -448,9 +448,7 @@ class XLATensor {
   static XLATensor div(
       const XLATensor& input, const XLATensor& other,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
-  static XLATensor div(
-      const XLATensor& input, at::Scalar other,
-      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+  static XLATensor div(const XLATensor& input, at::Scalar other);
   static void div_(XLATensor& input, const XLATensor& other);
   static void div_(XLATensor& input, at::Scalar other);
 
@@ -1086,10 +1084,6 @@ class XLATensor {
 
   // In-place version of the method above.
   static void triu_(XLATensor& input, xla::int64 diagonal);
-
-  static XLATensor true_divide(const XLATensor& input, const XLATensor& other);
-
-  static XLATensor true_divide(const XLATensor& input, at::Scalar other);
 
   static XLATensor trunc(const XLATensor& input);
   static void trunc_(XLATensor& input);
