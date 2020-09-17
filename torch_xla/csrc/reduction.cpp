@@ -444,6 +444,26 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
   return result;
 }
 
+xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
+                    bool unbiased, bool keep_reduced_dimensions) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  SummationResult mean_result =
+      CreateSummation(input, dimensions, /*keep_reduced_dimensions=*/true,
+                      /*scale=*/true);
+  // var = ((input - mean)^2).sum(dim) / reduced_element_count
+  xla::XlaOp diff = input - mean_result.result;
+  xla::XlaOp unscaled_result =
+      CreateSummation(diff * diff, dimensions, keep_reduced_dimensions,
+                      /*scale=*/false)
+          .result;
+  xla::XlaOp count = mean_result.rinfo.element_count.size;
+  if (unbiased) {
+    count = count - xla::One(input.builder(),
+                             XlaHelpers::ShapeOfXlaOp(count).element_type());
+  }
+  return GetScaleValue(unscaled_result, count, input_shape.element_type());
+}
+
 xla::XlaOp BuildLogsumexp(xla::XlaOp input,
                           absl::Span<const xla::int64> dimensions,
                           bool keep_reduced_dimensions) {

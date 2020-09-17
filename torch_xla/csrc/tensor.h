@@ -1115,6 +1115,10 @@ class XLATensor {
       const XLATensor& grad_output, std::vector<xla::int64> output_size,
       std::vector<xla::int64> input_size);
 
+  static XLATensor var(const XLATensor& input,
+                       std::vector<xla::int64> dimensions, bool unbiased,
+                       bool keep_reduced_dimensions);
+
   // Like reshape, but it returns a view into the original tensor.
   static XLATensor view(const XLATensor& input,
                         absl::Span<const xla::int64> output_size);
