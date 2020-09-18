@@ -2373,17 +2373,18 @@ XLATensor XLATensor::slice(const XLATensor& input, xla::int64 dim,
 
 XLATensor XLATensor::smooth_l1_loss(const XLATensor& input,
                                     const XLATensor& target,
-                                    xla::int64 reduction) {
-  return tensor_ops::SmoothL1Loss(input, target,
-                                  GetXlaReductionMode(reduction));
+                                    xla::int64 reduction, double beta) {
+  return tensor_ops::SmoothL1Loss(input, target, GetXlaReductionMode(reduction),
+                                  beta);
 }
 
 XLATensor XLATensor::smooth_l1_loss_backward(const XLATensor& grad_output,
                                              const XLATensor& input,
                                              const XLATensor& target,
-                                             xla::int64 reduction) {
+                                             xla::int64 reduction,
+                                             double beta) {
   return tensor_ops::SmoothL1LossBackward(grad_output, input, target,
-                                          GetXlaReductionMode(reduction));
+                                          GetXlaReductionMode(reduction), beta);
 }
 
 XLATensor XLATensor::softmax(const XLATensor& input, xla::int64 dim,

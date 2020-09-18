@@ -968,14 +968,14 @@ class XLATensor {
   // Computes a loss that uses a squared term if the absolute element-wise error
   // falls below 1 and an L1 term otherwise.
   static XLATensor smooth_l1_loss(const XLATensor& input,
-                                  const XLATensor& target,
-                                  xla::int64 reduction);
+                                  const XLATensor& target, xla::int64 reduction,
+                                  double beta);
 
   // Returns the gradient of the input of a smooth_l1_loss operation.
   static XLATensor smooth_l1_loss_backward(const XLATensor& grad_output,
                                            const XLATensor& input,
                                            const XLATensor& target,
-                                           xla::int64 reduction);
+                                           xla::int64 reduction, double beta);
 
   static XLATensor softmax(const XLATensor& input, xla::int64 dim,
                            c10::optional<at::ScalarType> dtype);

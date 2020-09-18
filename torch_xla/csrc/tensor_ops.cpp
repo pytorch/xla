@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 namespace tensor_ops {
@@ -95,19 +96,23 @@ XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal) {
 }
 
 XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
-                       ReductionMode reduction) {
+                       ReductionMode reduction, double beta) {
+  torch_xla::ir::ScopePusher ir_scope(at::aten::smooth_l1_loss.toQualString());
   auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
   const XLATensor& broadcasted_input = broadcasted_inputs[0];
   const XLATensor& broadcasted_target = broadcasted_inputs[1];
   at::Scalar one(1.);
+  at::Scalar beta_scalar(beta);
   XLATensor diff = XLATensor::sub(broadcasted_input, broadcasted_target, one);
   at::Scalar half(0.5);
+  at::Scalar half_beta(0.5 * beta);
   XLATensor abs_diff = XLATensor::abs(diff);
-  XLATensor squared_loss = XLATensor::mul(XLATensor::mul(diff, diff), half);
-  XLATensor l1_loss = XLATensor::sub(abs_diff, half, one);
-  XLATensor elementwise_loss =
-      XLATensor::where(XLATensor::lt(abs_diff, one), squared_loss, l1_loss);
+  XLATensor squared_loss = XLATensor::div(
+      XLATensor::mul(XLATensor::mul(diff, diff), half), beta_scalar);
+  XLATensor l1_loss = XLATensor::sub(abs_diff, half_beta, one);
+  XLATensor elementwise_loss = XLATensor::where(
+      XLATensor::lt(abs_diff, beta_scalar), squared_loss, l1_loss);
   auto all_dimensions =
       xla::util::Iota<xla::int64>((*broadcasted_input.shape()).rank());
   switch (reduction) {
@@ -127,16 +132,19 @@ XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
 
 XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
                                const XLATensor& input, const XLATensor& target,
-                               ReductionMode reduction) {
+                               ReductionMode reduction, double beta) {
+  torch_xla::ir::ScopePusher ir_scope(
+      at::aten::smooth_l1_loss_backward.toQualString());
   auto broadcasted_inputs = XLATensor::broadcast_tensors({input, target});
   XLA_CHECK_EQ(broadcasted_inputs.size(), 2);
   const XLATensor& broadcasted_input = broadcasted_inputs[0];
   const XLATensor& broadcasted_target = broadcasted_inputs[1];
   at::Scalar one(1.);
+  at::Scalar beta_scalar(beta);
   XLATensor diff = XLATensor::sub(broadcasted_input, broadcasted_target, one);
   XLATensor abs_diff = XLATensor::abs(diff);
-  XLATensor grad_squared_loss =
-      XLATensor::sub(broadcasted_input, broadcasted_target, one);
+  XLATensor grad_squared_loss = XLATensor::div(
+      XLATensor::sub(broadcasted_input, broadcasted_target, one), beta_scalar);
   XLATensor ones = XLATensor::full_like(broadcasted_input, one,
                                         broadcasted_input.GetDevice(),
                                         broadcasted_input.dtype());
@@ -145,7 +153,7 @@ XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
       XLATensor::where(XLATensor::gt(broadcasted_input, broadcasted_target),
                        ones, XLATensor::neg(ones));
   XLATensor elementwise_loss_backward = XLATensor::where(
-      XLATensor::lt(abs_diff, one), grad_squared_loss, grad_l1_loss);
+      XLATensor::lt(abs_diff, beta_scalar), grad_squared_loss, grad_l1_loss);
   switch (reduction) {
     case ReductionMode::kNone:
     case ReductionMode::kSum:
