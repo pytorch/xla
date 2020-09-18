@@ -1051,6 +1051,11 @@ class AtenXlaType {
                                                 c10::optional<double> scales_h,
                                                 c10::optional<double> scales_w);
 
+  static at::Tensor var(const at::Tensor& self, bool unbiased);
+
+  static at::Tensor var(const at::Tensor& self, at::IntArrayRef dim,
+                        bool unbiased, bool keepdim);
+
   static at::Tensor view(const at::Tensor& self, at::IntArrayRef size);
 
   static at::Tensor& zero_(at::Tensor& self);

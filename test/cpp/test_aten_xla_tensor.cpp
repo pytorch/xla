@@ -1270,6 +1270,38 @@ TEST_F(AtenXlaTensorTest, TestSumInDimsKeepCast) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestVar) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  for (bool unbiased : {true, false}) {
+    torch::Tensor b = torch::var(a, unbiased);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = torch::var(xla_a, unbiased);
+      AllClose(b, xla_b);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::var", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestVarWithDim) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  for (auto dims : std::vector<std::vector<int64_t>>{{0, 1}, {-3, -2}}) {
+    for (bool keepDim : {true, false}) {
+      for (bool unbiased : {true, false}) {
+        torch::Tensor b = torch::var(a, dims, unbiased, keepDim);
+        ForEachDevice([&](const torch::Device& device) {
+          torch::Tensor xla_a = CopyToDevice(a, device);
+          torch::Tensor xla_b = torch::var(xla_a, dims, unbiased, keepDim);
+          AllClose(b, xla_b);
+        });
+      }
+    }
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::var", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestMaxInDim) {
   torch::Tensor input =
       torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
