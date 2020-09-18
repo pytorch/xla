@@ -123,6 +123,7 @@
 #include "torch_xla/csrc/ops/upsample_nearest2d.h"
 #include "torch_xla/csrc/ops/upsample_nearest2d_backward.h"
 #include "torch_xla/csrc/ops/user_computation.h"
+#include "torch_xla/csrc/ops/var.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/shape_builder.h"
 #include "torch_xla/csrc/tensor.h"
@@ -2781,6 +2782,16 @@ XLATensor XLATensor::view(const XLATensor& input,
       XlaHelpers::GetDynamicReshape(input_shape, complete_dimensions);
   ViewInfo view_info(ViewInfo::Type::kReshape, std::move(shape), input_shape);
   return input.CreateViewTensor(std::move(view_info));
+}
+
+XLATensor XLATensor::var(const XLATensor& input,
+                         std::vector<xla::int64> dimensions, bool unbiased,
+                         bool keep_reduced_dimensions) {
+  return input.CreateFrom(
+      ir::MakeNode<ir::ops::Var>(input.GetIrValue(),
+                                 XlaHelpers::GetCanonicalDimensionIndices(
+                                     dimensions, input.shape().get().rank()),
+                                 unbiased, keep_reduced_dimensions));
 }
 
 void XLATensor::zero_(XLATensor& input) {

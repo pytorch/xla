@@ -121,6 +121,7 @@ _FN_OUT = {
     'take_out': FuncOpts(),
     'true_divide_out': FuncOpts(),
     'topk_out': FuncOpts(),
+    'var_out': FuncOpts(),
 }
 
 # List of tuples with the regex match first, and the corresponding FuncOpts()

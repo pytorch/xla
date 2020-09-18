@@ -90,6 +90,9 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
 xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
                     bool keep_reduced_dimensions);
 
+xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
+                    bool unbiased, bool keep_reduced_dimensions);
+
 xla::XlaOp BuildLogsumexp(xla::XlaOp input,
                           absl::Span<const xla::int64> dimensions,
                           bool keep_reduced_dimensions);
