@@ -246,6 +246,9 @@ class XLATensor {
   static XLATensor acos(const XLATensor& input);
   static void acos_(XLATensor& input);
 
+  static XLATensor acosh(const XLATensor& input);
+  static void acosh_(XLATensor& input);
+
   static XLATensor add(
       const XLATensor& input, const XLATensor& other, at::Scalar alpha,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
@@ -300,8 +303,14 @@ class XLATensor {
   static XLATensor asin(const XLATensor& input);
   static void asin_(XLATensor& input);
 
+  static XLATensor asinh(const XLATensor& input);
+  static void asinh_(XLATensor& input);
+
   static XLATensor atan(const XLATensor& input);
   static void atan_(XLATensor& input);
+
+  static XLATensor atanh(const XLATensor& input);
+  static void atanh_(XLATensor& input);
 
   static XLATensor atan2(
       const XLATensor& input, const XLATensor& other,

@@ -65,12 +65,15 @@ namespace ops {
   }
 
 PTXLA_UNARY_OP(Acos, at::aten::acos, xla::Acos);
+PTXLA_UNARY_OP(Acosh, at::aten::acosh, xla::Acosh);
 PTXLA_UNARY_OP(Cos, at::aten::cos, xla::Cos);
 PTXLA_UNARY_OP(Cosh, at::aten::cosh, xla::Cosh);
 PTXLA_UNARY_OP(Asin, at::aten::asin, xla::Asin);
+PTXLA_UNARY_OP(Asinh, at::aten::asinh, xla::Asinh);
 PTXLA_UNARY_OP(Sin, at::aten::sin, xla::Sin);
 PTXLA_UNARY_OP(Sinh, at::aten::sinh, xla::Sinh);
 PTXLA_UNARY_OP(Atan, at::aten::atan, xla::Atan);
+PTXLA_UNARY_OP(Atanh, at::aten::atanh, xla::Atanh);
 PTXLA_UNARY_OP(Tan, at::aten::tan, xla::Tan);
 PTXLA_UNARY_OP(Tanh, at::aten::tanh, xla::Tanh);
 PTXLA_UNARY_OP(Neg, at::aten::neg, xla::Neg);
