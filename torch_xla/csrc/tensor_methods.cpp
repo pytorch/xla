@@ -470,6 +470,14 @@ void XLATensor::acos_(XLATensor& input) {
   input.SetInPlaceIrValue(ir::ops::Acos(input.GetIrValue()));
 }
 
+XLATensor XLATensor::acosh(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Acosh(input.GetIrValue()));
+}
+
+void XLATensor::acosh_(XLATensor& input) {
+  input.SetInPlaceIrValue(ir::ops::Acosh(input.GetIrValue()));
+}
+
 XLATensor XLATensor::add(const XLATensor& input, const XLATensor& other,
                          at::Scalar alpha,
                          c10::optional<at::ScalarType> logical_element_type) {
@@ -632,12 +640,28 @@ void XLATensor::asin_(XLATensor& input) {
   input.SetInPlaceIrValue(ir::ops::Asin(input.GetIrValue()));
 }
 
+XLATensor XLATensor::asinh(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Asinh(input.GetIrValue()));
+}
+
+void XLATensor::asinh_(XLATensor& input) {
+  input.SetInPlaceIrValue(ir::ops::Asinh(input.GetIrValue()));
+}
+
 XLATensor XLATensor::atan(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Atan(input.GetIrValue()));
 }
 
 void XLATensor::atan_(XLATensor& input) {
   input.SetInPlaceIrValue(ir::ops::Atan(input.GetIrValue()));
+}
+
+XLATensor XLATensor::atanh(const XLATensor& input) {
+  return input.CreateFrom(ir::ops::Atanh(input.GetIrValue()));
+}
+
+void XLATensor::atanh_(XLATensor& input) {
+  input.SetInPlaceIrValue(ir::ops::Atanh(input.GetIrValue()));
 }
 
 XLATensor XLATensor::atan2(const XLATensor& input, const XLATensor& other,

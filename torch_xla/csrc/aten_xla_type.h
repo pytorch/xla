@@ -80,6 +80,10 @@ class AtenXlaType {
 
   static at::Tensor& acos_(at::Tensor& self);
 
+  static at::Tensor acosh(const at::Tensor& self);
+
+  static at::Tensor& acosh_(at::Tensor& self);
+
   static at::Tensor add(const at::Tensor& self, const at::Tensor& other,
                         at::Scalar alpha);
 
@@ -138,13 +142,21 @@ class AtenXlaType {
 
   static at::Tensor& asin_(at::Tensor& self);
 
+  static at::Tensor asinh(const at::Tensor& self);
+
+  static at::Tensor& asinh_(at::Tensor& self);
+
   static at::Tensor atan(const at::Tensor& self);
+
+  static at::Tensor atanh(const at::Tensor& self);
 
   static at::Tensor atan2(const at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor& atan2_(at::Tensor& self, const at::Tensor& other);
 
   static at::Tensor& atan_(at::Tensor& self);
+
+  static at::Tensor& atanh_(at::Tensor& self);
 
   static at::Tensor avg_pool2d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,

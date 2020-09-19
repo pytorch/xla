@@ -49,17 +49,23 @@ inline NodePtr GenericOp(OpKind op, xla::Shape shape, Generic::LowerFn lower_fn,
 
 NodePtr Acos(const Value& input);
 
+NodePtr Acosh(const Value& input);
+
 NodePtr Cos(const Value& input);
 
 NodePtr Cosh(const Value& input);
 
 NodePtr Asin(const Value& input);
 
+NodePtr Asinh(const Value& input);
+
 NodePtr Sin(const Value& input);
 
 NodePtr Sinh(const Value& input);
 
 NodePtr Atan(const Value& input);
+
+NodePtr Atanh(const Value& input);
 
 NodePtr Atan2(const Value& input, const Value& other);
 

@@ -98,6 +98,13 @@ _FN_BLACKLIST_REGEX = [
 
 _FN_OUT = {
     'add_out': FuncOpts(),
+    'acos_out': FuncOpts(),
+    'acosh_out': FuncOpts(),
+    'asin_out': FuncOpts(),
+    'asinh_out': FuncOpts(),
+    'atan_out': FuncOpts(),
+    'atan2_out': FuncOpts(),
+    'atanh_out': FuncOpts(),
     'baddbmm_out': FuncOpts(),
     'binary_cross_entropy_out': FuncOpts(),
     'binary_cross_entropy_backward_out': FuncOpts(),
