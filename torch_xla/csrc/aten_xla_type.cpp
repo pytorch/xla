@@ -578,6 +578,10 @@ at::Tensor AtenXlaType::atanh(const at::Tensor& self) {
 
 at::Tensor AtenXlaType::atan2(const at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  // xla::Atan2 doesn't support integer types.
+  if (!self.is_floating_point() || !other.is_floating_point()) {
+    return AtenXlaTypeDefault::atan2(self, other);
+  }
   return DoBinaryOp(self, other,
                     [&](const XLATensor& xself, const XLATensor& xother,
                         at::ScalarType dtype) {
@@ -587,6 +591,10 @@ at::Tensor AtenXlaType::atan2(const at::Tensor& self, const at::Tensor& other) {
 
 at::Tensor& AtenXlaType::atan2_(at::Tensor& self, const at::Tensor& other) {
   XLA_FN_COUNTER("xla::");
+  // xla::Atan2 doesn't support integer types.
+  if (!self.is_floating_point() || !other.is_floating_point()) {
+    return AtenXlaTypeDefault::atan2_(self, other);
+  }
   CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::atan2_(self_tensor, bridge::GetXlaTensor(other));
