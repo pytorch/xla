@@ -126,7 +126,6 @@ _FN_OUT = {
     'round_out': FuncOpts(),
     'normal_out': FuncOpts(),
     'take_out': FuncOpts(),
-    'true_divide_out': FuncOpts(),
     'topk_out': FuncOpts(),
     'var_out': FuncOpts(),
 }
