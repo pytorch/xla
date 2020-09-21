@@ -2217,6 +2217,15 @@ AtenXlaType::native_batch_norm_backward(
                      : undefined);
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_group_norm(
+    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
+    const c10::optional<at::Tensor>& bias, int64_t N, int64_t C, int64_t HxW,
+    int64_t group, double eps) {
+  XLA_FN_COUNTER("xla::");
+  return aten_tensor_ops::native_group_norm(input, weight, bias, N, C, HxW,
+                                            group, eps);
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::native_group_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input, const at::Tensor& mean,

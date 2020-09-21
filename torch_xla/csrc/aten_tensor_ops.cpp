@@ -18,6 +18,31 @@ at::Tensor& celu_(at::Tensor& self, at::Scalar alpha) {
   return at::elu_(self, alpha, at::Scalar(1.0), at::Scalar(inv_alpha));
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm(
+    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
+    const c10::optional<at::Tensor>& bias, int64_t N, int64_t C, int64_t HxW,
+    int64_t group, double eps) {
+  auto input_shape = input.sizes();
+  at::Tensor input_reshaped = input.view({1, N * group, N ? -1 : 1});
+  auto outputs = at::native_batch_norm(
+      input_reshaped, /*weight=*/{}, /*bias=*/{}, /*running_mean=*/{},
+      /*running_var=*/{}, /*training=*/true, /*momentum=*/0, eps);
+  at::Tensor out = std::get<0>(outputs);
+  out = out.view(input_shape);
+  std::vector<int64_t> affine_param_shape(input.dim(), 1);
+  affine_param_shape[1] = C;
+  if (torch_xla::IsDefined(weight) && torch_xla::IsDefined(bias)) {
+    out = bias.value()
+              .view(affine_param_shape)
+              .addcmul(out, weight.value().view(affine_param_shape), 1);
+  } else if (torch_xla::IsDefined(weight)) {
+    out = out.mul(weight.value().view(affine_param_shape));
+  } else if (torch_xla::IsDefined(bias)) {
+    out = out.add(bias.value().view(affine_param_shape));
+  }
+  return std::make_tuple(out, std::get<1>(outputs), std::get<2>(outputs));
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input, const at::Tensor& mean,
     const at::Tensor& rstd, const c10::optional<at::Tensor>& weight, int64_t N,
