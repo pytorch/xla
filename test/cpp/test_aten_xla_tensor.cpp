@@ -1550,7 +1550,7 @@ TEST_F(AtenXlaTensorTest, TestGroupNorm) {
     });
 
     ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-    ExpectCounterChanged("xla::native_group_norm",
+    ExpectCounterChanged("xla::native_batch_norm",
                          cpp_test::GetIgnoredCounters());
   }
 }
@@ -1582,9 +1582,9 @@ TEST_F(AtenXlaTensorTest, TestGroupNormBackward) {
                          device, testfn,
                          /*rtol=*/1e-3, /*atol=*/1e-4);
             ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-            ExpectCounterChanged("xla::native_group_norm",
+            ExpectCounterChanged("xla::native_batch_norm",
                                  cpp_test::GetIgnoredCounters());
-            ExpectCounterChanged("xla::native_group_norm_backward",
+            ExpectCounterChanged("xla::native_batch_norm_backward",
                                  cpp_test::GetIgnoredCounters());
           });
     }
