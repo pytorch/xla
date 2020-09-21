@@ -504,6 +504,19 @@ class Op(object):
   def transpose(self, permutation):
     return mkop('Transpose', (self.op,), permutation=permutation)
 
+  def triangualr_solve(self,
+                       b,
+                       left_side=None,
+                       lower=None,
+                       unit_diagonal=None,
+                       transpose_a=None):
+    return mkop(
+        'TriangularSolve', (self.op, b.op),
+        left_side=left_side,
+        lower=lower,
+        unit_diagonal=unit_diagonal,
+        transpose_a=transpose_a)
+
   def clamp(self, min_value, max_value):
     return mkop('Clamp', (self.op, min_value.op, max_value.op))
 
