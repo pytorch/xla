@@ -710,6 +710,18 @@ xla::XlaOp BitcastConvert(const BuilderPtr& builder,
   return xla::BitcastConvertType(operands.at(0)->op, xla_type);
 }
 
+xla::XlaOp TriangularSolve(const BuilderPtr& builder,
+                           const std::vector<OpPtr>& operands, py::dict args) {
+  bool left_side = ArgOrDefault<bool>(args, "left_side", true);
+  bool lower = ArgOrDefault<bool>(args, "lower", false);
+  bool unit_diagonal = ArgOrDefault<bool>(args, "unit_diagonal", false);
+  bool transpose_a = ArgOrDefault<bool>(args, "transpose_a", false);
+  return xla::TriangularSolve(
+      operands.at(0)->op, operands.at(1)->op, left_side, lower, unit_diagonal,
+      transpose_a ? xla::TriangularSolveOptions::TRANSPOSE
+                  : xla::TriangularSolveOptions::NO_TRANSPOSE);
+}
+
 const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XlaOpFunctionMap* fn_map = new XlaOpFunctionMap();
 
@@ -801,6 +813,7 @@ const XlaOpFunctionMap* CreateXlaOpFunctionMap() {
   XLA_OPADD(Tan);
   XLA_OPADD(Tanh);
   XLA_OPADD(Transpose);
+  XLA_OPADD(TriangularSolve);
   XLA_OPADD(Tuple);
   XLA_OPADD(While);
   XLA_OPADD(Xor);

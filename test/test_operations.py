@@ -1818,6 +1818,30 @@ class TestOpBuilder(XlaTestCase):
         aten_fn=aten_fn,
         kwargs={'limit': 10})
 
+  def test_triangular_solve(self):
+
+    def op_fn(b, A, lower, unit_diagonal, transpose_a):
+      return A.triangualr_solve(b, True, lower, unit_diagonal, transpose_a)
+
+    def aten_fn(b, A, lower, unit_diagonal, transpose_a):
+      return torch.triangular_solve(
+          b,
+          A,
+          upper=not lower,
+          unitriangular=unit_diagonal,
+          transpose=transpose_a)
+
+    self.runOpBuilderTest(
+        'test_triangular_solve',
+        [torch.randn(2, 3), torch.randn(2, 2).triu()],
+        op_fn,
+        aten_fn=aten_fn,
+        kwargs={
+            'lower': False,
+            'unit_diagonal': False,
+            'transpose_a': False
+        })
+
 
 class MpDecoratorTest(XlaTestCase):
 
