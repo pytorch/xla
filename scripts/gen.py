@@ -25,11 +25,11 @@ class ArgTemplate(string.Template):
   idpattern = r'[a-z0-9_]+'
 
 
-FuncDef = namedtuple_with_defaults('FuncDef', 'cpp_sig, aten_sig, leaf')
+FuncDef = namedtuple_with_defaults('FuncDef', 'cpp_sig, aten_sig, leaf, math')
 
 FuncGen = namedtuple_with_defaults(
     'FuncGen',
-    'tree, xtree, rwxtree, func, xfunc, code, sig, rwsig, cppsig, funsig, mapsig, aten_sig, leaf'
+    'tree, xtree, rwxtree, func, xfunc, code, sig, rwsig, cppsig, funsig, mapsig, aten_sig, leaf, math'
 )
 
 FuncOpts = namedtuple_with_defaults(
@@ -80,12 +80,12 @@ _PARSER = lark.Lark(_GRAMMAR, parser='lalr', propagate_positions=True)
 _XPARSER = lark.Lark(
     _GRAMMAR, parser='lalr', propagate_positions=True, keep_all_tokens=True)
 
-# _FN_FULL_OVERRIDE/_FN_BLACKLIST takes either name or mapsig.
+# _FN_AUTOGRAD_XLA/_FN_BLACKLIST takes either name or mapsig.
 _FN_BLACKLIST = set([])
 
 # List of non-leaf ops we want to override both forward + backward.
 # TODO(https://github.com/pytorch/pytorch/issues/39959)
-_FN_FULL_OVERRIDE = set([
+_FN_AUTOGRAD_XLA = set([
     'max_pool2d(Tensor, IntArrayRef, IntArrayRef, IntArrayRef, IntArrayRef, bool) -> Tensor',
     'max_pool3d(Tensor, IntArrayRef, IntArrayRef, IntArrayRef, IntArrayRef, bool) -> Tensor',
 ])
@@ -926,7 +926,8 @@ def get_xla_wrapper(fndef, ctx):
       mapsig=mapsig,
       funsig=create_stdfunc_sig(rwxtree, rwsig),
       aten_sig=fndef.aten_sig,
-      leaf=fndef.leaf)
+      leaf=fndef.leaf,
+      math=fndef.math)
 
 
 def is_tensor_api(fndef):
@@ -941,7 +942,8 @@ def create_funcdef(fndef, jdata):
   return FuncDef(
       cpp_sig=fndef,
       aten_sig=fields['schema'],
-      leaf=fields.get('compound', 'false') == 'false')
+      leaf=fields.get('compound', 'False') == 'False',
+      math=fields.get('has_math_kernel', 'False') == 'True')
 
 
 def extract_functions(path):
@@ -1009,10 +1011,10 @@ def generate_unboxed(aten_sig, overload, override_fn):
 
 def generate_registrations(fgens, overrides):
   aten_code = 'TORCH_LIBRARY_IMPL(aten, XLA, m) {\n'
-  preautograd_code = 'TORCH_LIBRARY_IMPL(aten, AutogradXLA, m) {\n'
+  autogradxla_code = 'TORCH_LIBRARY_IMPL(aten, AutogradXLA, m) {\n'
   overridden = set()
   for fgen in fgens:
-    if not is_overrideable(fgen):
+    if not requires_registration(fgen):
       continue
     mapsig_key = get_mapsig_key(fgen.mapsig)
     if mapsig_key in overrides:
@@ -1024,22 +1026,26 @@ def generate_registrations(fgens, overrides):
       pos = fgen.funsig.find('(')
       overload = fgen.funsig[:pos] + ' (*)' + fgen.funsig[pos:]
       unboxed = generate_unboxed(fgen.aten_sig, overload, override_fn)
-      if fgen.mapsig in _FN_FULL_OVERRIDE:
-        preautograd_code += unboxed
+      if fgen.mapsig in _FN_AUTOGRAD_XLA:
+        autogradxla_code += unboxed
       else:
         aten_code += unboxed
-  return aten_code + '\n}\n' + preautograd_code + '\n}\n', overridden
+  return aten_code + '\n}\n' + autogradxla_code + '\n}\n', overridden
 
 
-# XLA is only able to override leaf ops and whitelisted non-leaf ops.
-def is_overrideable(fgen):
-  return fgen.leaf or fgen.mapsig in _FN_FULL_OVERRIDE or fgen.func in _FN_FULL_OVERRIDE
+# XLA is required to register kernel to leaf nodes when there's no math
+# kernel provided in PyTorch core.
+# For other non-leaf nodes, PyTorch covers both forward and backward for
+# them. But XLA can still optionally override them as necessary.
+def requires_registration(fgen):
+  return (fgen.leaf and not fgen.math
+         ) or fgen.mapsig in _FN_AUTOGRAD_XLA or fgen.func in _FN_AUTOGRAD_XLA
 
 
 def generate_functions(fgens):
   code = ''
   for fgen in fgens:
-    if fgen.code and is_overrideable(fgen):
+    if fgen.code and requires_registration(fgen):
       code += '{}\n\n'.format(fgen.code)
   return code
 
@@ -1047,7 +1053,7 @@ def generate_functions(fgens):
 def generate_class_functions(fgens):
   code = ''
   for fgen in fgens:
-    if fgen.code and is_overrideable(fgen):
+    if fgen.code and requires_registration(fgen):
       code += '  static {};\n'.format(fgen.rwsig)
   return code
 
