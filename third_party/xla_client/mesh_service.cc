@@ -309,8 +309,8 @@ MeshClient* MeshClient::Get() {
 MeshClient::MeshClient(const std::string& address) : impl_(new Impl(address)) {
   int64 connect_wait_seconds =
       sys_util::GetEnvInt("XRT_MESH_CONNECT_WAIT", 300);
-  TF_LOG(INFO) << "Waiting to connect to client mesh master ("
-               << connect_wait_seconds << " seconds) " << address;
+  TF_VLOG(1) << "Waiting to connect to client mesh master ("
+             << connect_wait_seconds << " seconds) " << address;
   XLA_CHECK(impl_->channel->WaitForConnected(
       std::chrono::system_clock::now() +
       std::chrono::seconds(connect_wait_seconds)))
