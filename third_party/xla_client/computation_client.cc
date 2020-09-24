@@ -200,10 +200,10 @@ bool ParseMeshConfig(
       XrtComputationClient::ParseWorker(local_worker_env);
   int host_ordinal = sys_util::GetEnvInt(env::kEnvHostOrdinal, 0);
 
-  TF_LOG(INFO) << "Fetching mesh configuration for worker " << local_worker.name
-               << " (host_ordinal=" << host_ordinal
-               << "):" << local_worker.task_no << " from mesh service at "
-               << client->address();
+  TF_VLOG(1) << "Fetching mesh configuration for worker " << local_worker.name
+             << " (host_ordinal=" << host_ordinal
+             << "):" << local_worker.task_no << " from mesh service at "
+             << client->address();
   service::grpc::Config config = client->GetConfig(host_ordinal);
   TF_VLOG(3) << "Mesh Config: " << config.DebugString();
 

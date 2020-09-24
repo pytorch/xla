@@ -28,7 +28,7 @@ void XlaTest::TearDown() {
     std::string diffs = start_msnap_->DumpDifferences(*end_msnap_,
                                                       /*ignore_se=*/nullptr);
     if (!diffs.empty()) {
-      TF_LOG(INFO)
+      TF_VLOG(1)
           << ::testing::UnitTest::GetInstance()->current_test_info()->name()
           << " Metrics Differences:\n"
           << diffs;
@@ -43,9 +43,9 @@ void XlaTest::ExpectCounterNotChanged(
   auto changed =
       start_msnap_->CounterChanged(counter_regex, *end_msnap_, ignore_set);
   for (auto& change_counter : changed) {
-    TF_LOG(INFO) << "Counter '" << change_counter.name
-                 << "' changed: " << change_counter.before << " -> "
-                 << change_counter.after;
+    TF_VLOG(1) << "Counter '" << change_counter.name
+               << "' changed: " << change_counter.before << " -> "
+               << change_counter.after;
   }
   EXPECT_TRUE(changed.empty());
 }
