@@ -10,22 +10,13 @@ steps:
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
           '--build-arg', 'cloud_build=true',
           '--build-arg', 'release_version=${_RELEASE_VERSION}',
-          '-t', 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}',
+          '-t', 'gcr.io/tpu-pytorch/xla_zcain:${_IMAGE_NAME}',
           '-f', 'docker/Dockerfile', '.'
         ]
   timeout: 14400s
 - name: 'gcr.io/cloud-builders/docker'
-  entrypoint: bash
-  args: ['-c', 'docker tag gcr.io/tpu-pytorch/xla:${_IMAGE_NAME} gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}_$(date -u +%Y%m%d)']
-- name: 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}'
-  entrypoint: bash
-  args: ['-c', 'source /pytorch/xla/docker/common.sh && run_deployment_tests']
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/tpu-pytorch/xla']
+  args: ['push', 'gcr.io/tpu-pytorch/xla_zcain']
   timeout: 1800s
-- name: 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}'
-  entrypoint: 'bash'
-  args: ['-c', 'source /pytorch/xla/docker/common.sh && collect_wheels ${_RELEASE_VERSION}']
 
 substitutions:
     _DOCKER_BASE_IMAGE: 'debian:stretch'
@@ -39,8 +30,3 @@ options:
     dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
 timeout: 18000s
-artifacts:
-  objects:
-    # CUDA wheels exported under `wheels/cuda/<cuda_version>`
-    location: 'gs://tpu-pytorch/wheels/$_UPLOAD_SUBDIR'
-    paths: ['/**/*.whl']

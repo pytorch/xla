@@ -1890,7 +1890,7 @@ void XrtComputationClient::MaybeCreateLocalService(const Options& options) {
         XLA_CHECK_EQ(task_index, -1)
             << "Multiple workers matching the local one: '" << local_worker
             << "'";
-        job_name = worker_target.first.name;
+        job_name = absl::StrJoin(worker_target.first.name, "_worker")));
         task_index = worker_target.first.task_no;
       }
     }

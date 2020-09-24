@@ -33,8 +33,8 @@ ENV CXX_ABI "${cxx_abi}"
 # cloud build. Otherwise, just use local.
 # https://github.com/GoogleCloudPlatform/cloud-builders/issues/435
 COPY . /pytorch/xla
-RUN if [ "${cloud_build}" = true ]; then github_branch="${release_version}" && \
-  if [ "${release_version}" = "nightly" ]; then github_branch="master"; fi && \
+RUN if [ "${cloud_build}" = true ]; then github_branch="gpu-metrics-report" && \
+  if [ "${release_version}" = "nightly" ]; then github_branch="gpu-metrics-report"; fi && \
   cd /pytorch && \
   rm -rf xla && \
   git clone -b "${github_branch}" --recursive https://github.com/pytorch/xla && \
