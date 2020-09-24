@@ -97,6 +97,7 @@ _FN_BLACKLIST_REGEX = [
 ]
 
 _FN_OUT = {
+    'abs_out': FuncOpts(),
     'add_out': FuncOpts(),
     'acos_out': FuncOpts(),
     'acosh_out': FuncOpts(),
@@ -106,6 +107,7 @@ _FN_OUT = {
     'atan2_out': FuncOpts(),
     'atanh_out': FuncOpts(),
     'baddbmm_out': FuncOpts(),
+    'bernoulli_out': FuncOpts(),
     'binary_cross_entropy_out': FuncOpts(),
     'binary_cross_entropy_backward_out': FuncOpts(),
     'clamp_out': FuncOpts(),
@@ -125,6 +127,7 @@ _FN_OUT = {
     'nonzero_out': FuncOpts(),
     'round_out': FuncOpts(),
     'normal_out': FuncOpts(),
+    'std_out': FuncOpts(),
     'take_out': FuncOpts(),
     'topk_out': FuncOpts(),
     'var_out': FuncOpts(),
