@@ -7138,15 +7138,20 @@ TEST_F(AtenXlaTensorTest, TestSmoothL1Loss) {
   for (torch::Reduction::Reduction reduction :
        {torch::Reduction::None, torch::Reduction::Mean,
         torch::Reduction::Sum}) {
-    torch::Tensor output = torch::smooth_l1_loss(input, target, reduction);
-    ForEachDevice([&](const torch::Device& device) {
-      torch::Tensor xla_input = CopyToDevice(input, device);
-      torch::Tensor xla_target = CopyToDevice(target, device);
-      torch::Tensor xla_output =
-          torch::smooth_l1_loss(xla_input, xla_target, reduction);
-      AllClose(output, xla_output);
-    });
+    for (double beta : {0.25, 1.}) {
+      torch::Tensor output =
+          torch::smooth_l1_loss(input, target, reduction, beta);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        torch::Tensor xla_target = CopyToDevice(target, device);
+        torch::Tensor xla_output =
+            torch::smooth_l1_loss(xla_input, xla_target, reduction, beta);
+        AllClose(output, xla_output);
+      });
+    }
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::smooth_l1_loss", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestL1Loss) {
@@ -9515,16 +9520,21 @@ TEST_F(AtenXlaTensorTest, TestSmoothL1LossBackward) {
   for (torch::Reduction::Reduction reduction :
        {torch::Reduction::None, torch::Reduction::Mean,
         torch::Reduction::Sum}) {
-    auto testfn =
-        [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-      return torch::smooth_l1_loss(/*input=*/inputs[0], /*target=*/inputs[1],
-                                   /*reduction=*/reduction);
-    };
-    ForEachDevice([&](const torch::Device& device) {
-      TestBackward({input, target}, device, testfn, /*rtol=*/1e-5,
-                   /*atol=*/1e-8);
-    });
+    for (double beta : {0.25, 1.}) {
+      auto testfn =
+          [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+        return torch::smooth_l1_loss(/*input=*/inputs[0], /*target=*/inputs[1],
+                                     /*reduction=*/reduction, /*beta=*/beta);
+      };
+      ForEachDevice([&](const torch::Device& device) {
+        TestBackward({input, target}, device, testfn, /*rtol=*/1e-5,
+                     /*atol=*/1e-8);
+      });
+    }
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::smooth_l1_loss_backward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestViewBackward) {
