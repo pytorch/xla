@@ -2840,20 +2840,22 @@ at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
 
 at::Tensor AtenXlaType::smooth_l1_loss(const at::Tensor& self,
                                        const at::Tensor& target,
-                                       int64_t reduction) {
+                                       int64_t reduction, double beta) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::smooth_l1_loss(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(target), reduction));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::smooth_l1_loss(bridge::GetXlaTensor(self),
+                                bridge::GetXlaTensor(target), reduction, beta));
 }
 
 at::Tensor AtenXlaType::smooth_l1_loss_backward(const at::Tensor& grad_output,
                                                 const at::Tensor& self,
                                                 const at::Tensor& target,
-                                                int64_t reduction) {
+                                                int64_t reduction,
+                                                double beta) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::smooth_l1_loss_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
-      bridge::GetXlaTensor(target), reduction));
+      bridge::GetXlaTensor(target), reduction, beta));
 }
 
 at::Tensor AtenXlaType::softplus(const at::Tensor& self, at::Scalar beta,

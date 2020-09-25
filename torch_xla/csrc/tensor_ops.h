@@ -20,11 +20,11 @@ XLATensor KlDivBackward(const XLATensor& grad_output, const XLATensor& input,
 XLATensor MakeMatrixWithDiagonal(const XLATensor& input, xla::int64 diagonal);
 
 XLATensor SmoothL1Loss(const XLATensor& input, const XLATensor& target,
-                       ReductionMode reduction);
+                       ReductionMode reduction, double beta);
 
 XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
                                const XLATensor& input, const XLATensor& target,
-                               ReductionMode reduction);
+                               ReductionMode reduction, double beta);
 
 XLATensor Softplus(const XLATensor& input, at::Scalar beta,
                    at::Scalar threshold);

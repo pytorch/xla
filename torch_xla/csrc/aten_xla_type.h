@@ -899,12 +899,13 @@ class AtenXlaType {
                           int64_t end, int64_t step);
 
   static at::Tensor smooth_l1_loss(const at::Tensor& self,
-                                   const at::Tensor& target, int64_t reduction);
+                                   const at::Tensor& target, int64_t reduction,
+                                   double beta);
 
   static at::Tensor smooth_l1_loss_backward(const at::Tensor& grad_output,
                                             const at::Tensor& self,
                                             const at::Tensor& target,
-                                            int64_t reduction);
+                                            int64_t reduction, double beta);
 
   static at::Tensor softplus(const at::Tensor& self, at::Scalar beta,
                              at::Scalar threshold);
