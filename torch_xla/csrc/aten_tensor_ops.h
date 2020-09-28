@@ -4,10 +4,6 @@
 
 namespace aten_tensor_ops {
 
-at::Tensor celu(const at::Tensor& self, at::Scalar alpha);
-
-at::Tensor& celu_(at::Tensor& self, at::Scalar alpha);
-
 std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input, const at::Tensor& mean,
     const at::Tensor& rstd, const c10::optional<at::Tensor>& weight, int64_t N,
