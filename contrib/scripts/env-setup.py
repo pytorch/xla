@@ -77,7 +77,7 @@ def get_version(version):
     return VersionConfig(f'nightly+{version}', f'pytorch-dev{version}',
                          get_py_version(), cuda_version)
 
-  version_regex = re.compile('^(\d+\.)+\d+$')
+  version_regex = re.compile(r'^(\d+\.)+\d+$')
   if not version_regex.match(version):
     raise ValueError(f'{version} is an invalid torch_xla version pattern')
   return VersionConfig(
