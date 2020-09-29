@@ -90,7 +90,7 @@ class DistributedExecutor(object):
     self.env_vars = list(env_vars) if env_vars else []
 
     for env_var in self.env_vars:
-      if re.match('\w*=\w*', env_var) is None:
+      if re.match(r'\w*=\w*', env_var) is None:
         raise ValueError(
             ('Environment variable to distribute ({}) should follow '
              'the form: X=Y').format(env_var))
@@ -218,7 +218,7 @@ class DistributedExecutor(object):
     for env_var in self.DIST_ENV_VARS:
       docker_cmd.extend(['-e', env_var])
     for env_kv in self.env_vars:
-      key = re.match('(\w*)=.*', env_kv)
+      key = re.match(r'(\w*)=.*', env_kv)
       if key:
         docker_cmd.extend(['-e', key.group(1)])
     docker_cmd.append(self.docker_image)
@@ -338,7 +338,7 @@ class DistributedExecutor(object):
         self._build_and_run_ssh(rm_container, client_worker, log=False)
       rm_pgroup = (
           'kill -9 -$(ps xao pid,pgid,cmd | grep "bash -c \\"{}\\""'
-          ' | grep -v grep | awk "{{print \$2}}")').format(remote_script)
+          r' | grep -v grep | awk "{{print \$2}}")').format(remote_script)
       self._build_and_run_ssh(rm_pgroup, client_worker, log=False)
 
     threads = []
