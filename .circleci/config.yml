@@ -182,6 +182,17 @@ run_yapf: &run_yapf
       echo "PASSED Python format"
     fi
 
+assert_no_torch_pin: &assert_no_torch_pin
+  name: Make sure torch_patches/.torch_pin is removed before merging
+  command: |
+      TORCH_PIN=./torch_patches/.torch_pin
+      if [[ -f "${TORCH_PIN}" ]]; then
+        echo "Please remove ${TORCH_PIN} before landing."
+        exit 1
+      else
+        echo "No ${TORCH_PIN} found, safe to land..."
+      fi
+
 ci_params: &ci_params
   parameters:
     resource_class:
@@ -204,6 +215,14 @@ jobs:
         <<: *run_clang_format
     - run:
         <<: *run_yapf
+
+  assert_no_torch_pin:
+    machine:
+      image: ubuntu-1604:201903-01
+    steps:
+    - checkout
+    - run:
+        <<: *assert_no_torch_pin
 
   pytorch_xla_linux_bionic_py3_6_clang9_build:
     <<: *run_build
