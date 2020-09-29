@@ -216,13 +216,17 @@ jobs:
     - run:
         <<: *run_yapf
 
-  assert_no_torch_pin:
+  linter_check_no_torch_pin:
     machine:
       image: ubuntu-1604:201903-01
     steps:
     - checkout
     - run:
         <<: *assert_no_torch_pin
+    - run:
+        <<: *run_clang_format
+    - run:
+        <<: *run_yapf
 
   pytorch_xla_linux_bionic_py3_6_clang9_build:
     <<: *run_build
@@ -239,7 +243,18 @@ workflows:
   version: 2
   build:
     jobs:
-      - linter_check
+      - linter_check:
+          filters:
+            branches:
+              ignore:
+                - master
+                - /release\/.*/
+      - linter_check_no_torch_pin:
+          filters:
+            branches:
+              only:
+                - master
+                - /release\/.*/
       - pytorch_xla_linux_bionic_py3_6_clang9_build
       - pytorch_xla_linux_bionic_py3_6_clang9_test:
           name: pytorch_xla_linux_bionic_py3_6_clang9_CPU_test
@@ -249,6 +264,7 @@ workflows:
             branches:
               ignore:
                 - master
+                - /release\/.*/
       - pytorch_xla_linux_bionic_py3_6_clang9_test:
           name: pytorch_xla_linux_bionic_py3_6_clang9_GPU_test
           resource_class: gpu.medium
