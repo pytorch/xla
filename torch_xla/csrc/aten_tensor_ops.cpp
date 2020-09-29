@@ -4,20 +4,6 @@
 
 namespace aten_tensor_ops {
 
-at::Tensor celu(const at::Tensor& self, at::Scalar alpha) {
-  TORCH_CHECK(alpha.to<double>() != 0,
-              "ZeroDivisionError: alpha cannot be 0 for CELU");
-  double inv_alpha = 1. / alpha.to<double>();
-  return at::elu(self, alpha, at::Scalar(1.0), at::Scalar(inv_alpha));
-}
-
-at::Tensor& celu_(at::Tensor& self, at::Scalar alpha) {
-  TORCH_CHECK(alpha.to<double>() != 0,
-              "ZeroDivisionError: alpha cannot be 0 for CELU");
-  double inv_alpha = 1. / alpha.to<double>();
-  return at::elu_(self, alpha, at::Scalar(1.0), at::Scalar(inv_alpha));
-}
-
 std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input, const at::Tensor& mean,
     const at::Tensor& rstd, const c10::optional<at::Tensor>& weight, int64_t N,
