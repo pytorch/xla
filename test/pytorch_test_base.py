@@ -307,6 +307,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_logical_not_out_xla',  # constant with type f16 and f64 is not supported
         'test_i0_range1_xla_bfloat16',  # precision, 52480.0 vs. 54016.0
         'test_i0_range2_xla_bfloat16',  # precision, 7.019985352739087e+36 vs. 5.815372481559007e+36
+        'test_bucketization_xla',  # server side crash
     },
 
     # test_indexing.py
