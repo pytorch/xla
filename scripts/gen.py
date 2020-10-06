@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import argparse
-import collections
+import collections.abc
 import lark
 import json
 import os
@@ -13,7 +13,7 @@ import sys
 def namedtuple_with_defaults(typename, field_names, default_values=()):
   ntuple = collections.namedtuple(typename, field_names)
   ntuple.__new__.__defaults__ = (None,) * len(ntuple._fields)
-  if isinstance(default_values, collections.Mapping):
+  if isinstance(default_values, collections.abc.Mapping):
     prototype = ntuple(**default_values)
   else:
     prototype = ntuple(*default_values)
