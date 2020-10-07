@@ -226,8 +226,13 @@ xla::ComputationClient::DataPtr GetDeviceData(const at::Tensor& tensor,
 xla::ComputationClient::DataPtr GetDeviceData(at::Scalar value,
                                               at::ScalarType scalar_type,
                                               const Device& device) {
-  return GetDeviceData(at::scalar_tensor(value, at::TensorOptions(scalar_type)),
-                       device);
+  // Workaround since at::scalar_tensor doesn't support bfloat16 yet.
+  at::Tensor t = at::scalar_tensor(
+      value, at::TensorOptions(scalar_type == at::ScalarType::BFloat16
+                                   ? at::ScalarType::Float
+                                   : scalar_type));
+  if (scalar_type == at::ScalarType::BFloat16) t = t.to(scalar_type);
+  return GetDeviceData(t, device);
 }
 
 // Routing values to device data maximizes the changes for compilation cache
