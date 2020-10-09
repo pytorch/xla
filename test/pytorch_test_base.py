@@ -315,6 +315,11 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_index_put_accumulate_large_tensor_xla',  # memory limit exceeded on v2-8
     },
 
+    # test_nn.py
+    'TestNNDeviceTypeXLA': {
+        'test_embedding_bag_empty_input_xla',  # server side crash
+    },
+
     # test_type_promotion.py
     'TestTypePromotionXLA': {
         'test_bfloat16_xla',  # half support
