@@ -243,6 +243,11 @@ bool IsSpecialScalar(at::Scalar value) {
   static bool no_scalars =
       xla::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
   if (!no_scalars && (value.isIntegral() || value.isFloatingPoint())) {
+    static bool all_scalar_numbers_special =
+        xla::sys_util::GetEnvBool("XLA_ALL_NUMBERS_SPECIAL_SCALARS", false);
+    if (all_scalar_numbers_special) {
+      return true;
+    }
     double scalar_value = value.toDouble();
     return scalar_value == 0.0 || std::fabs(scalar_value) == 1.0;
   }
