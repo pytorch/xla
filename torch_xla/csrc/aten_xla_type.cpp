@@ -354,13 +354,7 @@ at::Tensor& AtenXlaType::acosh_(at::Tensor& self) {
 
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                             at::Scalar alpha) {
-  XLA_FN_COUNTER("xla::");
-  at::native::alpha_check(at::result_type(self, other), alpha);
-  return DoBinaryOp(self, other,
-                    [&](const XLATensor& xself, const XLATensor& xother,
-                        at::ScalarType dtype) {
-                      return XLATensor::add(xself, xother, alpha, dtype);
-                    });
+  return AtenXlaTypeDefault::add(self, other, alpha);
 }
 
 at::Tensor AtenXlaType::add(const at::Tensor& self, at::Scalar other,
