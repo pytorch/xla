@@ -905,7 +905,9 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
       // If we are at the current index (it means that the tensor at index
       // 'i' had an IR node to sync, use the XLA data held within the Async
       // object.
-      result_tensors_data.push_back(tensors_data[indices_index]);
+      if (!tensors[i].CurrentTensorData()) {
+        result_tensors_data.push_back(tensors_data[indices_index]);
+      }
       ++indices_index;
     } else if (!tensors[i].CurrentTensorData()) {
       xla::ComputationClient::DataPtr xla_data = tensors[i].CurrentXlaData();
