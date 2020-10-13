@@ -244,7 +244,7 @@ bool IsSpecialScalar(at::Scalar value) {
       xla::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
   if (!no_scalars && (value.isIntegral() || value.isFloatingPoint())) {
     static bool all_scalar_numbers_special =
-        xla::sys_util::GetEnvBool("XLA_ALL_NUMBERS_SPECIAL_SCALARS", false);
+        DebugUtil::ExperimentEnabled("allscalarspec");
     if (all_scalar_numbers_special) {
       return true;
     }

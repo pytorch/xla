@@ -46,6 +46,11 @@ function run_dynamic {
   XLA_EXPERIMENTAL="nonzero:masked_select" run_test "$@"
 }
 
+function run_all_scalars_special {
+  echo "Running in 'All Scalars Special' mode: $@"
+  XLA_EXPERIMENTAL="allscalarspec" run_test "$@"
+}
+
 function run_all_tests {
   run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestViewOpsXLA
   run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
@@ -57,6 +62,7 @@ function run_all_tests {
   run_dynamic python3 "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
   run_dynamic python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_opbyop python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_all_scalars_special python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test python3 "$CDIR/test_mp_replication.py"
   run_test python3 "$CDIR/test_mp_all_to_all.py"
   run_test python3 "$CDIR/test_mp_collective_permute.py"
