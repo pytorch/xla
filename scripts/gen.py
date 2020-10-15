@@ -26,11 +26,11 @@ class ArgTemplate(string.Template):
 
 
 FuncDef = namedtuple_with_defaults('FuncDef',
-                                   'cpp_sig, aten_sig, dispatch, math')
+                                   'cpp_sig, aten_sig, dispatch, default')
 
 FuncGen = namedtuple_with_defaults(
     'FuncGen',
-    'tree, xtree, rwxtree, func, xfunc, code, sig, rwsig, cppsig, funsig, mapsig, aten_sig, dispatch, math'
+    'tree, xtree, rwxtree, func, xfunc, code, sig, rwsig, cppsig, funsig, mapsig, aten_sig, dispatch, default'
 )
 
 FuncOpts = namedtuple_with_defaults(
@@ -934,7 +934,7 @@ def get_xla_wrapper(fndef, ctx):
       funsig=create_stdfunc_sig(rwxtree, rwsig),
       aten_sig=fndef.aten_sig,
       dispatch=fndef.dispatch,
-      math=fndef.math)
+      default=fndef.default)
 
 
 def is_tensor_api(fndef):
@@ -950,7 +950,7 @@ def create_funcdef(fndef, jdata):
       cpp_sig=fndef,
       aten_sig=fields['schema'],
       dispatch=fields.get('dispatch', 'False') == 'True',
-      math=fields.get('math', 'False') == 'True')
+      default=fields.get('default', 'False') == 'True')
 
 
 def extract_functions(path):
@@ -1053,7 +1053,7 @@ def generate_registrations(fgens, overrides):
 #     Backends should only use this when Autograd kernel in PyTorch codebase doesn't fit.
 #     E.g max_pool2d which enforce materializing indices for backward pass to use.
 def requires_registration(fgen, overrides):
-  requires_lowering = fgen.dispatch and not fgen.math
+  requires_lowering = fgen.dispatch and not fgen.default
   has_xla_lowering = get_mapsig_key(fgen.mapsig) in overrides
   has_autogradxla = fgen.mapsig in _FN_AUTOGRAD_XLA or fgen.func in _FN_AUTOGRAD_XLA
   return requires_lowering or has_xla_lowering or has_autogradxla
