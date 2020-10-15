@@ -678,6 +678,19 @@ class TestBinaryCrossEntropyLimitValue(XlaTestCase):
       self.runAtenTest([pred - offset, target], test_fn)
 
 
+class TestNllLossLimitValue(XlaTestCase):
+
+  def test_nll_loss(self):
+
+    def test_fn(logits, target):
+      return nn.functional.nll_loss(logits, target)
+
+    inf = float('inf')
+    logits = torch.tensor([[1., inf], [-inf, 2.]])
+    target = torch.tensor([0, 1])
+    self.runAtenTest([logits, target], test_fn)
+
+
 class TestDynamicShape(XlaTestCase):
 
   def test_nonzero_shape(self):
