@@ -9,6 +9,7 @@
 #include <mutex>
 #include <set>
 #include <stdexcept>
+#include <unordered_set>
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
@@ -899,15 +900,21 @@ std::vector<xla::ComputationClient::DataPtr> XLATensor::GatherTensorsXlaData(
     const std::vector<XLATensor>& tensors, absl::Span<const size_t> indices,
     absl::Span<const xla::ComputationClient::DataPtr> tensors_data) {
   std::vector<xla::ComputationClient::DataPtr> result_tensors_data;
+  std::unordered_map<xla::int64, size_t> uid_index_map;
   size_t indices_index = 0;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    if (indices_index < indices.size() && i == indices[indices_index]) {
+    xla::int64 tensor_id = tensors[i].GetUniqueId();
+    auto it = uid_index_map.find(tensor_id);
+    if (it != uid_index_map.end()) {
+      // Current tensor is a duplicate of a previously processed tensor that had
+      // an IR Node to sync. Get the XLA data from the tensor_data_map.
+      result_tensors_data.push_back(result_tensors_data[it->second]);
+    } else if (indices_index < indices.size() && i == indices[indices_index]) {
       // If we are at the current index (it means that the tensor at index
-      // 'i' had an IR node to sync, use the XLA data held within the Async
+      // 'i' had an IR node to sync), use the XLA data held within the Async
       // object.
-      if (!tensors[i].CurrentTensorData()) {
-        result_tensors_data.push_back(tensors_data[indices_index]);
-      }
+      uid_index_map.emplace(tensor_id, result_tensors_data.size());
+      result_tensors_data.push_back(tensors_data[indices_index]);
       ++indices_index;
     } else if (!tensors[i].CurrentTensorData()) {
       xla::ComputationClient::DataPtr xla_data = tensors[i].CurrentXlaData();
@@ -937,21 +944,8 @@ std::vector<at::Tensor> XLATensor::GetTensorsOpByOp(
       GatherTensorsXlaData(*tensors, coll.indices, async_tensors_data);
   std::vector<xla::Literal> literals =
       xla::ComputationClient::Get()->TransferFromServer(tensors_data);
-  std::vector<at::Tensor> results;
-  size_t literals_index = 0;
-  results.reserve(tensors->size());
-  for (size_t i = 0; i < tensors->size(); ++i) {
-    c10::optional<at::Tensor> tensor_data = (*tensors)[i].CurrentTensorData();
-    if (tensor_data) {
-      results.push_back(*tensor_data);
-    } else {
-      XLA_CHECK_LT(literals_index, literals.size());
-      results.push_back(MakeTensorFromXlaLiteral(literals[literals_index],
-                                                 (*tensors)[i].dtype()));
-      ++literals_index;
-    }
-  }
-  return results;
+
+  return FetchTensors(tensors, literals, &coll.indices);
 }
 
 std::vector<at::Tensor> XLATensor::GetTensors(std::vector<XLATensor>* tensors) {
@@ -977,18 +971,34 @@ std::vector<at::Tensor> XLATensor::GetTensorsFused(
               : absl::Span<const xla::ComputationClient::DataPtr>());
   std::vector<xla::Literal> literals =
       xla::ComputationClient::Get()->TransferFromServer(tensors_data);
+  return FetchTensors(tensors, literals,
+                      async != nullptr ? &async->indices : nullptr);
+}
+
+std::vector<at::Tensor> XLATensor::FetchTensors(
+    std::vector<XLATensor>* tensors, absl::Span<const xla::Literal> literals,
+    const std::vector<size_t>* indices) {
   std::vector<at::Tensor> results;
   size_t literals_index = 0;
+  size_t sync_index = 0;
   results.reserve(tensors->size());
   for (size_t i = 0; i < tensors->size(); ++i) {
-    c10::optional<at::Tensor> tensor_data = (*tensors)[i].CurrentTensorData();
-    if (tensor_data) {
-      results.push_back(*tensor_data);
-    } else {
-      XLA_CHECK_LT(literals_index, literals.size());
+    if (indices != nullptr && sync_index < indices->size() &&
+        i == (*indices)[sync_index]) {
       results.push_back(MakeTensorFromXlaLiteral(literals[literals_index],
                                                  (*tensors)[i].dtype()));
       ++literals_index;
+      ++sync_index;
+    } else {
+      c10::optional<at::Tensor> tensor_data = (*tensors)[i].CurrentTensorData();
+      if (tensor_data) {
+        results.push_back(*tensor_data);
+      } else {
+        XLA_CHECK_LT(literals_index, literals.size());
+        results.push_back(MakeTensorFromXlaLiteral(literals[literals_index],
+                                                   (*tensors)[i].dtype()));
+        ++literals_index;
+      }
     }
   }
   return results;
@@ -1099,6 +1109,7 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   std::vector<at::Tensor> at_tensors;
   std::vector<std::string> devices;
   std::vector<size_t> at_tensor_index;
+  std::unordered_set<xla::int64> tensor_ids;
   // The force_xla_data controls aliasing compilation, so effectively the same
   // graph with on/off force_xla_data should not match, hash wise.
   coll.hash = xla::util::MHash(config.force_xla_data);
@@ -1114,7 +1125,8 @@ XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
   TF_VLOG(4) << "Waiting on device barrier for device " << coll.device
              << " done!";
   for (size_t i = 0; i < tensors.size(); ++i) {
-    if (tensors[i].CurrentXlaData() == nullptr) {
+    if (tensor_ids.insert(tensors[i].GetUniqueId()).second &&
+        tensors[i].CurrentXlaData() == nullptr) {
       ir::Value ir_value = tensors[i].CurrentIrValue();
       if (ir_value) {
         if (ShouldSyncIrValue(ir_value)) {
