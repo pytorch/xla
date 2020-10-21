@@ -1338,6 +1338,10 @@ class XLATensor {
       std::vector<XLATensor>* tensors, const SyncTensorsConfig& config,
       absl::Span<const size_t> indices);
 
+  static std::vector<at::Tensor> FetchTensors(
+      std::vector<XLATensor>* tensors, absl::Span<const xla::Literal> literals,
+      const std::vector<size_t>* indices);
+
   // Schedules the execution of a sync tensors operation in background. The
   // asynchronous operation will hold the device locks by capturing the ones
   // present within the coll structure.

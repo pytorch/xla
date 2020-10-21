@@ -691,6 +691,20 @@ class TestNllLossLimitValue(XlaTestCase):
     self.runAtenTest([logits, target], test_fn)
 
 
+class TestInterOpSyncTensors(XlaTestCase):
+
+  def test_inter_op_sync(self):
+
+    def test_fn(x):
+      # logaddexp can be replaced with any op that does not have
+      # xla lowering.
+      y = torch.logaddexp(x, x)
+      return torch.masked_select(y, y.eq(0))
+
+    x = torch.tensor([1., 2., 3.])
+    self.runAtenTest([x], test_fn)
+
+
 class TestDynamicShape(XlaTestCase):
 
   def test_nonzero_shape(self):
