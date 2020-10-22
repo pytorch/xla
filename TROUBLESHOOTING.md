@@ -220,7 +220,8 @@ only be enabled for debugging.
   helping with debugging multithreaded processes.
 
 * ```TF_CPP_VMODULE```: Environment variable used for TF VLOGs and takes the
-  form of `TF_CPP_VMODULE=name=value,...`. For PyTorch/XLA using a configuration like
+  form of `TF_CPP_VMODULE=name=value,...`. Note that for VLOGs you must set
+  `TF_CPP_MIN_LOG_LEVEL=0`. For PyTorch/XLA using a configuration like
   `TF_CPP_VMODULE=tensor=5` would enable logging such as:
 
   ```
@@ -232,6 +233,10 @@ only be enabled for debugging.
   Executing IR graph hash 4211381954965020633 on device TPU:4 done!
   ...
   ```
+
+* ```TF_CPP_MIN_LOG_LEVEL```: Level to print messages for. `TF_CPP_MIN_LOG_LEVEL=0` will turn
+  on INFO logging, `TF_CPP_MIN_LOG_LEVEL=1` WARNING and so on. Our PyTorch/XLA `TF_VLOG` uses
+  `tensorflow::INFO` level by default so to see VLOGs set `TF_CPP_MIN_LOG_LEVEL=0`.
 
 ### Retrieving Stack Traces
 
