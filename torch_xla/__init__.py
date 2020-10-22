@@ -32,7 +32,17 @@ def _setup_xla_flags():
   os.environ['XLA_FLAGS'] = ' '.join(flags)
 
 
+def _set_missing_env(name, value):
+  if name not in os.environ:
+    os.environ[name] = value
+
+
+def _setup_default_env():
+  _set_missing_env('TF_CPP_MIN_LOG_LEVEL', '1')
+
+
 # These needs to be called before the _XLAC module is loaded.
+_setup_default_env()
 _setup_grpc()
 _setup_xla_flags()
 
