@@ -330,7 +330,10 @@ class AtenXlaType {
                                              bool scale_grad_by_freq);
 
   static at::Tensor empty(at::IntArrayRef size,
-                          const at::TensorOptions& options,
+                          c10::optional<at::ScalarType> dtype,
+                          c10::optional<at::Layout> layout,
+                          c10::optional<at::Device> device,
+                          c10::optional<bool> pin_memory,
                           c10::optional<at::MemoryFormat> memory_format);
 
   static at::Tensor empty_strided(at::IntArrayRef size, at::IntArrayRef stride,
