@@ -136,7 +136,16 @@ std::vector<std::pair<xla::int64, xla::int64>> CeilModePadding(
         (input_size + 2 * left_padding - kernel_size[i]) % stride[i];
     xla::int64 right_padding = left_padding;
     if (ceil_mode && output_size_rem != 0) {
-      right_padding += stride[i] - output_size_rem;
+      xla::int64 extra_padding = stride[i] - output_size_rem;
+      xla::int64 new_output_size =
+          (input_size + left_padding + right_padding + extra_padding -
+           kernel_size[i] + stride[i] - 1) /
+              stride[i] +
+          1;
+      // Ensure that the last pooling starts inside the image.
+      if ((new_output_size - 1) * stride[i] < input_size + left_padding) {
+        right_padding += extra_padding;
+      }
     }
     ceil_mode_padding.emplace_back(left_padding, right_padding);
   }
