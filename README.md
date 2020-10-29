@@ -121,7 +121,7 @@ Follow these steps to train a PyTorch model with a VM Image on a Cloud TPU:
     * Click **Create** to create the instance.
 
 
-2. SSH into VM and activate the conda environment you wish to use. Each release (e.g.: `1.5`, `1.7`, `nightly`) is a separate conda environment.
+2. SSH into VM and activate the conda environment you wish to use. Each release (e.g.: `1.6`, `1.7`, `nightly`) is a separate conda environment.
 
     ```Shell
     (vm)$ export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
