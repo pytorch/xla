@@ -138,6 +138,7 @@ void PopulateLocalDevices(XrtComputationClient::Options* options) {
 void AddXrtHostDevices(const std::string& worker_name, int task_no,
                        const std::string& server,
                        const DeviceCountDefaults& device_counts,
+                       std::map<std::string, int>* device_ordinals,
                        XrtComputationClient::Options* options) {
   struct Devices {
     const char* name;
@@ -154,10 +155,11 @@ void AddXrtHostDevices(const std::string& worker_name, int task_no,
       XrtComputationClient::Worker(worker_name, task_no),
       MakeGrpcEndPoint(server));
   for (auto& device : devices) {
-    for (int device_ordinal = 0; device_ordinal < device.count; ++device_ordinal) {
+    int& device_ordinal = (*device_ordinals)[device.name];
+    for (int j = 0; j < device.count; ++j, ++device_ordinal) {
       std::string device_name = absl::StrCat(device.name, ":", device_ordinal);
       std::string xrt_device_name =
-          GetXrtDevicePath(worker_name, task_no, device.tf_name, device_ordinal);
+          GetXrtDevicePath(worker_name, task_no, device.tf_name, j);
       options->global_device_map.emplace(device_name, xrt_device_name);
     }
   }
@@ -168,6 +170,7 @@ bool ParseEnvBasedTpuClusterConfig(XrtComputationClient::Options* options) {
   if (tpu_config.empty()) {
     return false;
   }
+  std::map<std::string, int> device_ordinals;
   std::vector<std::string> spec_parts = absl::StrSplit(tpu_config, '|');
   XLA_CHECK(!spec_parts.empty()) << tpu_config;
   DeviceCountDefaults device_counts;
@@ -176,7 +179,7 @@ bool ParseEnvBasedTpuClusterConfig(XrtComputationClient::Options* options) {
     std::vector<std::string> host_parts = absl::StrSplit(spec, ';');
     XLA_CHECK_EQ(host_parts.size(), 3) << spec;
     AddXrtHostDevices(host_parts[0], std::stoi(host_parts[1]), host_parts[2],
-                      device_counts, options);
+                      device_counts, &device_ordinals, options);
   }
   return true;
 }
@@ -232,9 +235,11 @@ bool ParseEnvDeviceCounts(XrtComputationClient::Options* options) {
   device_counts.num_tpus = sys_util::GetEnvInt(env::kEnvNumTpu, 0);
   device_counts.num_gpus = sys_util::GetEnvInt(env::kEnvNumGpu, 0);
   if (device_counts.num_tpus > 0 || device_counts.num_gpus > 0) {
+    std::map<std::string, int> device_ordinals;
     std::string host_port =
         absl::StrCat("localhost:", tensorflow::internal::PickUnusedPortOrDie());
-    AddXrtHostDevices("localservice", 0, host_port, device_counts, options);
+    AddXrtHostDevices("localservice", 0, host_port, device_counts,
+                      &device_ordinals, options);
   }
   return !options->global_device_map.empty();
 }
