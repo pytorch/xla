@@ -287,8 +287,7 @@ ir::Value IndexPutByTensors(const XLATensor& base,
 ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
                       const XLATensor& index, at::Scalar value) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
-      << "Fill index is expected to be of scalar type Long, but it is "
-      << index.dtype();
+      << "Fill index is expected to be of scalar type Long";
   XLA_CHECK_LE(index.shape().get().rank(), 1)
       << "Fill index is supposed to be a vector";
   return IndexFillOp(
@@ -300,8 +299,7 @@ ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
 ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
                       const XLATensor& index, const XLATensor& value) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
-      << "Fill index is expected to be of scalar type Long, but it is "
-      << index.dtype();
+      << "Fill index is expected to be of scalar type Long";
   XLA_CHECK_LE(index.shape().get().rank(), 1)
       << "Fill index is supposed to be a vector";
   XLA_CHECK_EQ(value.shape().get().rank(), 0)
@@ -312,11 +310,8 @@ ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
 
 ir::Value IndexAdd(const XLATensor& base, xla::int64 dim,
                    const XLATensor& index, const XLATensor& source) {
-  XLA_CHECK(index.dtype() == at::ScalarType::Long ||
-            index.dtype() == at::ScalarType::Int)
-      << "Add index is expected to be of scalar type Long or scalar type Int, "
-         "but it is "
-      << index.dtype();
+  XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
+      << "Add index is expected to be of scalar type Long";
   XLA_CHECK_LE(index.shape().get().rank(), 1)
       << "Add index is supposed to be a vector";
   return IndexAddOp(base.GetIrValue(), dim, index.GetIrValue(),
@@ -326,8 +321,7 @@ ir::Value IndexAdd(const XLATensor& base, xla::int64 dim,
 ir::Value IndexCopy(const XLATensor& base, xla::int64 dim,
                     const XLATensor& index, const XLATensor& source) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
-      << "Copy index is expected to be of scalar type Long, but it is "
-      << index.dtype();
+      << "Copy index is expected to be of scalar type Long";
   XLA_CHECK_LE(index.shape().get().rank(), 1)
       << "Copy index is supposed to be a vector";
   return IndexCopyOp(base.GetIrValue(), dim, index.GetIrValue(),
