@@ -467,7 +467,7 @@
   <span class="k">return</span> <span class="n">PreForkConfig</span><span class="p">(</span><span class="n">dev_kind</span><span class="o">=</span><span class="n">dev_kind</span><span class="p">,</span> <span class="n">num_devices</span><span class="o">=</span><span class="n">num_devices</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_setup_gpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_setup_gpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">):</span>
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">MP_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;GPU:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
       <span class="n">_get_mp_device_ordinal</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">))</span>
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_LOCAL_WORKER</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
@@ -480,7 +480,7 @@
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">GPU_NUM_DEVICES</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_setup_cpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_setup_cpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">):</span>
   <span class="n">task_no</span> <span class="o">=</span> <span class="mi">0</span>
   <span class="n">dev_index</span> <span class="o">=</span> <span class="n">_get_mp_device_ordinal</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">MP_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;CPU:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dev_index</span><span class="p">)</span>
@@ -506,7 +506,7 @@
   <span class="k">return</span> <span class="n">gindex</span> <span class="o">==</span> <span class="mi">0</span>
 
 
-<span class="k">def</span> <span class="nf">_setup_tpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">tpu_env_config</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_setup_tpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">tpu_env_config</span><span class="p">):</span>
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">MP_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;TPU:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
       <span class="n">_get_mp_device_ordinal</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">))</span>
   <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
@@ -534,8 +534,7 @@
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_ORDINAL</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
 
   <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span><span class="p">:</span>
-    <span class="n">_setup_tpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span>
-                      <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+    <span class="n">_setup_tpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
       <span class="c1"># If xenv.HOST_ORDINAL is set, we are in a sea-of-devices TPU setup, where</span>
       <span class="c1"># each host has local TPU devices, but not interconnected with the fast TPU</span>
@@ -553,9 +552,9 @@
       <span class="c1">#    to 0 in all hosts.</span>
       <span class="n">_setup_torch_distributed</span><span class="p">()</span>
   <span class="k">elif</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;GPU&#39;</span><span class="p">:</span>
-    <span class="n">_setup_gpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">)</span>
+    <span class="n">_setup_gpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
   <span class="k">elif</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;CPU&#39;</span><span class="p">:</span>
-    <span class="n">_setup_cpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">)</span>
+    <span class="n">_setup_cpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
     <span class="n">_setup_torch_distributed</span><span class="p">()</span>
   <span class="k">return</span> <span class="n">gindex</span>
 
