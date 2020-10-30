@@ -3975,25 +3975,20 @@ TEST_F(AtenXlaTensorTest, TestIndexSelect) {
         isFloatingType(scalar_type)
             ? torch::rand({3, 4}, torch::TensorOptions(scalar_type))
             : torch::randint(100, {3, 4}, torch::TensorOptions(scalar_type));
-    for (torch::ScalarType index_scalar_type : {torch::kInt, torch::kLong}) {
-      torch::Tensor b =
-          torch::empty({2}, torch::TensorOptions(index_scalar_type));
-      b[0] = 0;
-      b[1] = 2;
-      torch::Tensor c0 = torch::index_select(a, 0, b);
-      torch::Tensor c1 = torch::index_select(a, 1, b);
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor xla_a = CopyToDevice(a, device);
-        torch::Tensor xla_b = CopyToDevice(b, device);
-        torch::Tensor xla_c0 = torch::index_select(xla_a, 0, xla_b);
-        torch::Tensor xla_c1 = torch::index_select(xla_a, 1, xla_b);
-        AllEqual(c0, xla_c0);
-        AllEqual(c1, xla_c1);
-      });
-    }
+    torch::Tensor b = torch::empty({2}, torch::TensorOptions(torch::kLong));
+    b[0] = 0;
+    b[1] = 2;
+    torch::Tensor c0 = torch::index_select(a, 0, b);
+    torch::Tensor c1 = torch::index_select(a, 1, b);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = CopyToDevice(b, device);
+      torch::Tensor xla_c0 = torch::index_select(xla_a, 0, xla_b);
+      torch::Tensor xla_c1 = torch::index_select(xla_a, 1, xla_b);
+      AllEqual(c0, xla_c0);
+      AllEqual(c1, xla_c1);
+    });
   }
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::index_select", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexSelectRank0) {
@@ -4919,29 +4914,26 @@ TEST_F(AtenXlaTensorTest, TestIndexAdd) {
             : torch::randint(100, {5, 3, 7}, torch::TensorOptions(scalar_type));
     int rank = base.dim();
     for (int dim = -rank; dim < rank; ++dim) {
-      for (torch::ScalarType index_scalar_type : {torch::kInt, torch::kLong}) {
-        torch::Tensor index =
-            torch::randint(0, base.size(dim), {index_size},
-                           torch::TensorOptions(index_scalar_type));
-        std::vector<int64_t> value_sizes(base.sizes().begin(),
-                                         base.sizes().end());
-        int canonical_dim = dim < 0 ? dim + rank : dim;
-        value_sizes[canonical_dim] = index_size;
-        torch::Tensor value =
-            isFloatingType(scalar_type)
-                ? torch::rand(value_sizes, torch::TensorOptions(scalar_type))
-                : torch::randint(100, value_sizes,
-                                 torch::TensorOptions(scalar_type));
-        torch::Tensor result = torch::index_add(base, dim, index, value);
-        ForEachDevice([&](const torch::Device& device) {
-          torch::Tensor xla_base = CopyToDevice(base, device);
-          torch::Tensor xla_index = CopyToDevice(index, device);
-          torch::Tensor xla_value = CopyToDevice(value, device);
-          torch::Tensor xla_result =
-              torch::index_add(xla_base, dim, xla_index, xla_value);
-          AllClose(result, xla_result);
-        });
-      }
+      torch::Tensor index = torch::randint(0, base.size(dim), {index_size},
+                                           torch::TensorOptions(torch::kLong));
+      std::vector<int64_t> value_sizes(base.sizes().begin(),
+                                       base.sizes().end());
+      int canonical_dim = dim < 0 ? dim + rank : dim;
+      value_sizes[canonical_dim] = index_size;
+      torch::Tensor value =
+          isFloatingType(scalar_type)
+              ? torch::rand(value_sizes, torch::TensorOptions(scalar_type))
+              : torch::randint(100, value_sizes,
+                               torch::TensorOptions(scalar_type));
+      torch::Tensor result = torch::index_add(base, dim, index, value);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_base = CopyToDevice(base, device);
+        torch::Tensor xla_index = CopyToDevice(index, device);
+        torch::Tensor xla_value = CopyToDevice(value, device);
+        torch::Tensor xla_result =
+            torch::index_add(xla_base, dim, xla_index, xla_value);
+        AllClose(result, xla_result);
+      });
     }
   }
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
