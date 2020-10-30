@@ -17,13 +17,13 @@ namespace {
 using ShapeCache =
     xla::util::Cache<xla::hash_t, xla::Shape, xla::util::HashReducer>;
 
-struct ScapeEntry {
+struct ScopeEntry {
   std::string name;
   size_t saved_next_id = 1;
 };
 
 struct ScopeContext {
-  std::vector<ScapeEntry> scopes;
+  std::vector<ScopeEntry> scopes;
   size_t next_id = 1;
 };
 
