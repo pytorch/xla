@@ -83,11 +83,11 @@ std::pair<XLATensor, XLATensor> GetBinaryOperands(const at::Tensor& self,
   return std::pair<XLATensor, XLATensor>(self_tensor, other_tensor);
 }
 
-// input is in format of {N, C, H, W} and the output will be {H, W}.
-std::vector<xla::int64> getOutputSizeWithScale(
+// The input is in format of {N, C, H, W} and the output will be {H, W}.
+std::vector<xla::int64> GetOutputSizeWithScale(
     absl::Span<const xla::int64> input_size,
-    c10::optional<at::ArrayRef<double>> scale_factors,
-    c10::optional<at::IntArrayRef> output_size) {
+    const c10::optional<at::ArrayRef<double>>& scale_factors,
+    const c10::optional<at::IntArrayRef>& output_size) {
   if (!output_size) {
     XLA_CHECK(scale_factors);
     XLA_CHECK_EQ(scale_factors->size(), 2);
@@ -96,10 +96,9 @@ std::vector<xla::int64> getOutputSizeWithScale(
     xla::int64 output_h = input_size[2] * (*scale_factors)[0];
     xla::int64 output_w = input_size[3] * (*scale_factors)[1];
     return {output_h, output_w};
-  } else {
-    XLA_CHECK(!scale_factors);
-    return xla::util::ToVector<xla::int64>(*output_size);
   }
+  XLA_CHECK(!scale_factors);
+  return xla::util::ToVector<xla::int64>(*output_size);
 }
 
 template <typename B>
@@ -3311,7 +3310,7 @@ at::Tensor AtenXlaType::upsample_nearest2d(
       input_tensor.shape().get().dimensions();
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d(
       input_tensor,
-      getOutputSizeWithScale(input_dims, scale_factors, output_size)));
+      GetOutputSizeWithScale(input_dims, scale_factors, output_size)));
 }
 
 at::Tensor AtenXlaType::upsample_nearest2d_backward(
@@ -3330,7 +3329,7 @@ at::Tensor AtenXlaType::upsample_nearest2d_backward(
       xla::util::ToVector<xla::int64>(input_size);
   return bridge::AtenFromXlaTensor(XLATensor::upsample_nearest2d_backward(
       grad_output_tensor,
-      getOutputSizeWithScale(input_dim, scale_factors, output_size),
+      GetOutputSizeWithScale(input_dim, scale_factors, output_size),
       input_dim));
 }
 
