@@ -3448,6 +3448,8 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2D) {
     torch::Tensor xla_result = torch::upsample_nearest2d(xla_input, {uh, uw});
     AllClose(result, xla_result);
   });
+  ExpectCounterChanged("xla::upsample_nearest2d",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackward) {
@@ -3466,6 +3468,50 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackward) {
                      torch::TensorOptions(torch::kFloat).requires_grad(true))},
         device, testfn);
   });
+  ExpectCounterChanged("xla::upsample_nearest2d_backward",
+                       cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DWithScale) {
+  int batch_size = 2;
+  int h = 5;
+  int w = 5;
+  int chans = 2;
+  double scale_h = 2.5;
+  double scale_w = 3.4;
+  torch::Tensor input = torch::rand({batch_size, chans, h, w},
+                                    torch::TensorOptions(torch::kFloat));
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor result = torch::upsample_nearest2d(
+        input, c10::nullopt, at::ArrayRef<double>{scale_h, scale_w});
+    torch::Tensor xla_result = torch::upsample_nearest2d(
+        xla_input, c10::nullopt, at::ArrayRef<double>{scale_h, scale_w});
+    AllClose(result, xla_result);
+  });
+  ExpectCounterChanged("xla::upsample_nearest2d",
+                       cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackwardWithScale) {
+  int batch_size = 2;
+  int h = 5;
+  int w = 5;
+  int chans = 2;
+  double scale_h = 2.5;
+  double scale_w = 3.4;
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::upsample_nearest2d(inputs[0], c10::nullopt,
+                                     at::ArrayRef<double>{scale_h, scale_w});
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::rand({batch_size, chans, h, w},
+                     torch::TensorOptions(torch::kFloat).requires_grad(true))},
+        device, testfn);
+  });
+  ExpectCounterChanged("xla::upsample_nearest2d_backward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2D) {
