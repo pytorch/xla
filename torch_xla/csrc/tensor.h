@@ -234,6 +234,12 @@ class XLATensor {
       const XLATensor& input, const XLATensor& other,
       c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
+  static XLATensor adaptive_avg_pool3d(const XLATensor& input,
+                                       std::vector<xla::int64> output_size);
+
+  static XLATensor adaptive_avg_pool3d_backward(const XLATensor& grad_output,
+                                                const XLATensor& input);
+
   static XLATensor _adaptive_avg_pool2d(const XLATensor& input,
                                         std::vector<xla::int64> output_size);
 
