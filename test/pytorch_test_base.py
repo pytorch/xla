@@ -310,6 +310,7 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_i0_range2_xla_bfloat16',  # precision, 7.019985352739087e+36 vs. 5.815372481559007e+36
         'test_bucketization_xla',  # server side crash
         'test_median_real_values_xla_int64',  # TPU X64Rewriter doesn't support sort
+        'test_copysign_xla.*bfloat16.*',  # precision
     },
 
     # test_indexing.py
