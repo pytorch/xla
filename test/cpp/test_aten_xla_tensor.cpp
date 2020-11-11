@@ -1027,14 +1027,22 @@ TEST_F(AtenXlaTensorTest, TestUnaryMax) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAll) {
-  torch::Tensor a =
-      torch::randint(0, 5, {2, 3, 4}, torch::TensorOptions(torch::kByte));
-  torch::Tensor b = torch::all(a);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = torch::all(xla_a);
-    EqualValues(b, xla_b);
-  });
+  for (torch::ScalarType scalar_type :
+       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    torch::Tensor a =
+        isFloatingType(scalar_type)
+            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type))
+            : torch::randint(100, {3, 4}, torch::TensorOptions(scalar_type));
+    torch::Tensor b = torch::all(a);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = torch::all(xla_a);
+      EqualValues(b, xla_b);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::all", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAllDim) {
@@ -1066,14 +1074,22 @@ TEST_F(AtenXlaTensorTest, TestAllDimKeep) {
 }
 
 TEST_F(AtenXlaTensorTest, TestAny) {
-  torch::Tensor a =
-      torch::randint(0, 5, {2, 3, 4}, torch::TensorOptions(torch::kByte));
-  torch::Tensor b = torch::any(a);
-  ForEachDevice([&](const torch::Device& device) {
-    torch::Tensor xla_a = CopyToDevice(a, device);
-    torch::Tensor xla_b = torch::any(xla_a);
-    EqualValues(b, xla_b);
-  });
+  for (torch::ScalarType scalar_type :
+       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
+        torch::kLong}) {
+    torch::Tensor a =
+        isFloatingType(scalar_type)
+            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type))
+            : torch::randint(100, {3, 4}, torch::TensorOptions(scalar_type));
+    torch::Tensor b = torch::any(a);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = torch::any(xla_a);
+      EqualValues(b, xla_b);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::any", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAnyDim) {

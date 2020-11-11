@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
+#include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -422,6 +423,16 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
   xla::XlaOp result =
       xla::Reduce(input, init_value, CreateAllComputation(shape.element_type()),
                   dimensions);
+  bool all_reduce_dims_size_one =
+      std::all_of(dimensions.begin(), dimensions.end(),
+                  [&shape](int dim) { return shape.dimensions(dim) == 1; });
+  if (all_reduce_dims_size_one) {
+    // This is to force the result value to be 1 or 0 in the case of all reduce
+    // dimensions have size one. Reduce won't perform AllComputation in this
+    // case.
+    xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+    result = MaybeConvertTo(xla::Ne(result, zero), shape.element_type());
+  }
   if (keep_reduced_dimensions) {
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
@@ -438,6 +449,16 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const xla::int64> dimensions,
   xla::XlaOp result =
       xla::Reduce(input, init_value, CreateAnyComputation(shape.element_type()),
                   dimensions);
+  bool all_reduce_dims_size_one =
+      std::all_of(dimensions.begin(), dimensions.end(),
+                  [&shape](int dim) { return shape.dimensions(dim) == 1; });
+  if (all_reduce_dims_size_one) {
+    // This is to force the result value to be 1 or 0 in the case of all reduce
+    // dimensions have size one. Reduce won't perform AnyComputation in this
+    // case.
+    xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+    result = MaybeConvertTo(xla::Ne(result, zero), shape.element_type());
+  }
   if (keep_reduced_dimensions) {
     result = XlaHelpers::DynamicReshape(result, rinfo.new_dimensions);
   }
