@@ -3290,7 +3290,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumOuter) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mul", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumOuterBackward) {
@@ -3307,7 +3307,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumOuterBackward) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mul", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
@@ -3323,7 +3323,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumBatchMatMul) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bmm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinear) {
@@ -3341,7 +3341,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBilinear) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::bmm", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonal) {
@@ -3356,7 +3356,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerDiagonal) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::diagonal", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonal) {
@@ -3371,7 +3371,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchDiagonal) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::diagonal", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermute) {
@@ -3386,7 +3386,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerBatchPermute) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::permute", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
@@ -3402,7 +3402,7 @@ TEST_F(AtenXlaTensorTest, TestEinsumPyTorchLowerRepeatedAxis) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::view", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::mul", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestBilinear) {
