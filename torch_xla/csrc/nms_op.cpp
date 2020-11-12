@@ -235,6 +235,11 @@ NmsResult BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
   xla::XlaOp iou_threshold_mask = xla::Gt(iou, iou_threshold + square_zero);
   xla::XlaOp included_iou =
       xla::Broadcast(xla::ConstantR0<bool>(builder, true), {num_boxes});
+  if (boxes_shape.is_dynamic_dimension(0)) {
+    // Update included_iou's size to match boxes actual size.
+    included_iou = xla::SetDimensionSize(
+        included_iou, XlaHelpers::GetDimensionsSize({boxes}, {0}).size, 0);
+  }
 
   xla::XlaOp zero_s32 = xla::Zero(builder, xla::PrimitiveType::S32);
   xla::XlaOp one_s32 = xla::One(builder, xla::PrimitiveType::S32);
