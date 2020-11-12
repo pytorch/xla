@@ -1671,7 +1671,7 @@ TEST_F(AtenXlaTensorTest, TestLayerNorm) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::native_layer_norm",
+      ExpectCounterChanged("xla::native_batch_norm",
                            cpp_test::GetIgnoredCounters());
     }
   }
@@ -1706,9 +1706,9 @@ TEST_F(AtenXlaTensorTest, TestLayerNormBackward) {
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::native_layer_norm",
+      ExpectCounterChanged("xla::native_batch_norm",
                            cpp_test::GetIgnoredCounters());
-      ExpectCounterChanged("xla::native_layer_norm_backward",
+      ExpectCounterChanged("xla::native_batch_norm_backward",
                            cpp_test::GetIgnoredCounters());
     }
   }
