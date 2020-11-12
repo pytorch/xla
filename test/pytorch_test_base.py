@@ -336,6 +336,11 @@ DISABLED_TORCH_TESTS_GPU_ONLY = {
     'TestTorchDeviceTypeXLA': {
         'test_maximum_minimum_float_nan_and_inf',  # maximum(nan,inf) = inf on GPU
     },
+
+    # test_indexing.py
+    'TestIndexingXLA': {
+        'test_index_put_accumulate_large_tensor_xla',  # illegal memory access was encountered
+    },
 }
 
 
