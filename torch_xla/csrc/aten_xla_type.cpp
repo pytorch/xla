@@ -10,7 +10,6 @@
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
-#include "torch_xla/csrc/aten_tensor_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/aten_xla_type_default.h"
 #include "torch_xla/csrc/debug_util.h"
@@ -2220,26 +2219,6 @@ AtenXlaType::native_batch_norm_backward(
                      : undefined,
       output_mask[2] ? bridge::AtenFromXlaTensor(std::get<2>(gradients))
                      : undefined);
-}
-
-std::tuple<at::Tensor, at::Tensor, at::Tensor>
-AtenXlaType::native_group_norm_backward(
-    const at::Tensor& grad_out, const at::Tensor& input, const at::Tensor& mean,
-    const at::Tensor& rstd, const c10::optional<at::Tensor>& weight, int64_t N,
-    int64_t C, int64_t HxW, int64_t group, std::array<bool, 3> output_mask) {
-  XLA_FN_COUNTER("xla::");
-  return aten_tensor_ops::native_group_norm_backward(
-      grad_out, input, mean, rstd, weight, N, C, HxW, group, output_mask);
-}
-
-std::tuple<at::Tensor, at::Tensor, at::Tensor>
-AtenXlaType::native_layer_norm_backward(
-    const at::Tensor& grad_out, const at::Tensor& input, const at::Tensor& mean,
-    const at::Tensor& rstd, const c10::optional<at::Tensor>& weight, int64_t M,
-    int64_t N, std::array<bool, 3> output_mask) {
-  XLA_FN_COUNTER("xla::");
-  return aten_tensor_ops::native_layer_norm_backward(
-      grad_out, input, mean, rstd, weight, M, N, output_mask);
 }
 
 at::Tensor AtenXlaType::ne(const at::Tensor& self, at::Scalar other) {
