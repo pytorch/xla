@@ -32,30 +32,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm_backward(
                      : undefined);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(
-    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias, int64_t M, int64_t N, double eps) {
-  auto input_shape = input.sizes();
-  at::Tensor input_reshaped = input.view({1, M, -1});
-  // Unlike Batch Normalization, which applies scalar scale and bias for each
-  // entire channel/plane with the affine option, Layer Normalization applies
-  // per-element scale and bias. E.g. For input {N, C, H, W}, weight for
-  // batchnorm has shape {C} while weight for layernorm has shape {H, W} or {W}.
-  auto outputs = at::native_batch_norm(
-      input_reshaped, /*weight=*/{}, /*bias=*/{}, /*running_mean=*/{},
-      /*running_var=*/{}, /*training=*/true, /*momentum=*/0, eps);
-  at::Tensor out = std::get<0>(outputs);
-  out = out.view(input_shape);
-  if (torch_xla::IsDefined(weight) && torch_xla::IsDefined(bias)) {
-    out = bias.value().addcmul(out, weight.value(), 1);
-  } else if (torch_xla::IsDefined(weight)) {
-    out = out.mul(weight.value());
-  } else if (torch_xla::IsDefined(bias)) {
-    out = out.add(bias.value());
-  }
-  return std::make_tuple(out, std::get<1>(outputs), std::get<2>(outputs));
-}
-
 std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input, const at::Tensor& mean,
     const at::Tensor& rstd, const c10::optional<at::Tensor>& weight, int64_t M,
