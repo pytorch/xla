@@ -2232,13 +2232,6 @@ AtenXlaType::native_group_norm_backward(
       grad_out, input, mean, rstd, weight, N, C, HxW, group, output_mask);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_layer_norm(
-    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias, int64_t M, int64_t N, double eps) {
-  XLA_FN_COUNTER("xla::");
-  return aten_tensor_ops::native_layer_norm(input, weight, bias, M, N, eps);
-}
-
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 AtenXlaType::native_layer_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input, const at::Tensor& mean,
