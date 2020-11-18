@@ -910,8 +910,8 @@
 <span class="sd">    pairs (list): A list of (source_replica_id, target_replica_id) pairs,</span>
 <span class="sd">      representing the sender and receiver for the `collective_permute()`</span>
 <span class="sd">      operation. Example: `[[0, 1], [1, 2], [2, 0]]` defines three pairs. The</span>
-<span class="sd">        tensor will be send from replidca 0 to replidca 1, replidca 1 to</span>
-<span class="sd">        replidca 2, and replidca 2 to replidca 0.</span>
+<span class="sd">        tensor will be sent from replica 0 to replica 1, replica 1 to</span>
+<span class="sd">        replica 2, and replica 2 to replica 0.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The result `torch.Tensor` of the `collective_permute()` operation.</span>
