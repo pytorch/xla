@@ -292,7 +292,9 @@ def xla_replication_devices(local_devices):
       raise RuntimeError('Invalid device format: {}'.format(device))
     if xdev[0] == device_type:
       replication_devices.append(device)
-  return replication_devices
+  sorted_by_ordinal = sorted(
+      replication_devices, key=lambda device: parse_xla_device(device)[1])
+  return sorted_by_ordinal
 
 
 def unlazy(tensors):
