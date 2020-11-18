@@ -1596,7 +1596,8 @@ TEST_F(AtenXlaTensorTest, TestGroupNormBackward) {
             TestBackward({input, undef_weight ? undef : weight,
                           undef_weight ? undef : bias},
                          device, testfn,
-                         /*rtol=*/1e-3, /*atol=*/1e-4);
+                         /*rtol=*/1e-3, /*atol=*/1e-3,
+                         /*derivative_level=*/2);
             ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
             ExpectCounterChanged("xla::native_batch_norm",
                                  cpp_test::GetIgnoredCounters());
@@ -1702,7 +1703,7 @@ TEST_F(AtenXlaTensorTest, TestLayerNormBackward) {
         TestBackward(
             {input, undef_weight ? undef : weight, undef_weight ? undef : bias},
             device, testfn,
-            /*rtol=*/1e-3, /*atol=*/1e-4);
+            /*rtol=*/1e-3, /*atol=*/1e-4, /*derivative_level=*/2);
       });
 
       ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());

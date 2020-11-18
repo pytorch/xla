@@ -96,7 +96,7 @@ void TestBackward(
     const std::vector<torch::Tensor>& inputs, const torch::Device& device,
     const std::function<torch::Tensor(const std::vector<torch::Tensor>&)>&
         testfn,
-    double rtol = 1e-5, double atol = 1e-8);
+    double rtol = 1e-5, double atol = 1e-8, int derivative_level = 1);
 
 }  // namespace cpp_test
 }  // namespace torch_xla

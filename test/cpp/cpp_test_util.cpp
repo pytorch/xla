@@ -282,19 +282,26 @@ void TestBackward(
     const std::vector<torch::Tensor>& inputs, const torch::Device& device,
     const std::function<torch::Tensor(const std::vector<torch::Tensor>&)>&
         testfn,
-    double rtol, double atol) {
+    double rtol, double atol, int derivative_level) {
   std::vector<torch::Tensor> input_vars;
   std::vector<torch::Tensor> xinput_vars;
+  std::vector<torch::Tensor> inputs_w_grad;
+  std::vector<torch::Tensor> xinputs_w_grad;
   for (size_t i = 0; i < inputs.size(); ++i) {
     const torch::Tensor& input = inputs[i];
     if (input.defined()) {
-      input_vars.push_back(
-          input.clone().detach().set_requires_grad(input.requires_grad()));
+      torch::Tensor oinput =
+          input.clone().detach().set_requires_grad(input.requires_grad());
+      input_vars.push_back(oinput);
 
       torch::Tensor xinput = CopyToDevice(input, device)
                                  .detach()
                                  .set_requires_grad(input.requires_grad());
       xinput_vars.push_back(xinput);
+      if (input.requires_grad()) {
+        inputs_w_grad.push_back(oinput);
+        xinputs_w_grad.push_back(xinput);
+      }
     } else {
       input_vars.emplace_back();
       xinput_vars.emplace_back();
@@ -304,12 +311,34 @@ void TestBackward(
   torch::Tensor output = testfn(input_vars);
   torch::Tensor xoutput = testfn(xinput_vars);
   AllClose(output, xoutput, rtol, atol);
-  output.backward(torch::ones_like(output));
-  xoutput.backward(torch::ones_like(xoutput));
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    if (inputs[i].defined() && inputs[i].requires_grad()) {
-      ASSERT_TRUE(xinput_vars[i].grad().defined());
-      AllClose(input_vars[i].grad(), xinput_vars[i].grad(), rtol, atol);
+
+  std::vector<torch::Tensor> outs = {output};
+  std::vector<torch::Tensor> xouts = {xoutput};
+  for (int d = 1; d <= derivative_level; ++d) {
+    // Check grad of sum(outs) w.r.t inputs_w_grad.
+    torch::Tensor sum = torch::zeros_like(outs[0]).sum();
+    torch::Tensor xsum = torch::zeros_like(xouts[0]).sum();
+    for (int i = 0; i < outs.size(); ++i) {
+      if (outs[i].requires_grad()) {
+        sum += outs[i].sum();
+        xsum += xouts[i].sum();
+      }
+    }
+    // Calculating higher order derivative requires create_graph=true
+    bool create_graph = d != derivative_level;
+    outs = torch::autograd::grad({sum}, inputs_w_grad, /*grad_outputs=*/{},
+                                 /*retain_graph=*/c10::nullopt,
+                                 /*create_graph=*/create_graph,
+                                 /*allow_unused=*/true);
+    xouts = torch::autograd::grad({xsum}, xinputs_w_grad, /*grad_outputs=*/{},
+                                  /*retain_graph=*/c10::nullopt,
+                                  /*create_graph=*/create_graph,
+                                  /*allow_unused=*/true);
+    for (size_t i = 0; i < outs.size(); ++i) {
+      ASSERT_EQ(outs[i].defined(), xouts[i].defined());
+      if (outs[i].defined()) {
+        AllClose(outs[i], xouts[i], rtol, atol);
+      }
     }
   }
 }
