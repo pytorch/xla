@@ -658,8 +658,8 @@ def collective_permute(value, pairs):
     pairs (list): A list of (source_replica_id, target_replica_id) pairs,
       representing the sender and receiver for the `collective_permute()`
       operation. Example: `[[0, 1], [1, 2], [2, 0]]` defines three pairs. The
-        tensor will be send from replidca 0 to replidca 1, replidca 1 to
-        replidca 2, and replidca 2 to replidca 0.
+        tensor will be sent from replica 0 to replica 1, replica 1 to
+        replica 2, and replica 2 to replica 0.
 
   Returns:
     The result `torch.Tensor` of the `collective_permute()` operation.
