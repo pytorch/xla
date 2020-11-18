@@ -544,7 +544,9 @@
       <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid device format: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">xdev</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">device_type</span><span class="p">:</span>
       <span class="n">replication_devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">replication_devices</span>
+  <span class="n">sorted_by_ordinal</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+      <span class="n">replication_devices</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">device</span><span class="p">:</span> <span class="n">parse_xla_device</span><span class="p">(</span><span class="n">device</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+  <span class="k">return</span> <span class="n">sorted_by_ordinal</span>
 
 
 <span class="k">def</span> <span class="nf">unlazy</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
