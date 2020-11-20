@@ -186,7 +186,6 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_shift_mem_overlap',  # doesn't raise
         'test_matrix_exp_analytic_xla',  # server side crash
         'test_muldiv_scalar_xla_bfloat16',  # FIXME
-        'test_kthvalue_xla_.*',  # FIXME
         'test_random_from_to_bool',  # doesn't raise
         'test_random_from_to_xla',  # doesn't raise
         'test_random_to_xla',  # doesn't raise
