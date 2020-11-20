@@ -69,6 +69,29 @@ xla::Shape MakeRngShape(const xla::Shape& shape) {
 
 }  // namespace
 
+xla::XlaOp RngDiscreteUniform(xla::XlaOp seed, const xla::Shape& shape,
+                              xla::XlaOp minval, xla::XlaOp maxval) {
+  xla::PrimitiveType minval_type = XlaHelpers::TypeOfXlaOp(minval);
+  xla::PrimitiveType maxval_type = XlaHelpers::TypeOfXlaOp(maxval);
+  XLA_CHECK_EQ(minval_type, maxval_type);
+  XLA_CHECK(minval_type == xla::PrimitiveType::S64 ||
+            minval_type == xla::PrimitiveType::U64 ||
+            minval_type == xla::PrimitiveType::S32 ||
+            minval_type == xla::PrimitiveType::U32)
+      << "RngDiscreteUniform not implemented for type "
+      << xla::primitive_util::LowercasePrimitiveTypeName(minval_type);
+  xla::XlaOp rng_seed = MakeSeed(seed);
+  xla::XlaOp initial_state =
+      xla::Zero(rng_seed.builder(), xla::PrimitiveType::U64);
+  xla::Shape rng_shape(shape);
+  rng_shape.set_element_type(minval_type);
+  xla::XlaOp result =
+      xla::UniformIntDistribution(rng_seed, initial_state, GetBitGenerator(),
+                                  minval, maxval, rng_shape)
+          .value;
+  return MaybeConvertTo(result, shape.element_type());
+}
+
 xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
                       xla::XlaOp minval, xla::XlaOp maxval) {
   xla::XlaOp rng_seed = MakeSeed(seed);
