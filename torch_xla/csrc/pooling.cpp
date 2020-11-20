@@ -352,8 +352,7 @@ bool IsSupportedAdaptiveAvgPool(absl::Span<const xla::int64> input_size,
                                 absl::Span<const xla::int64> output_size,
                                 int pool_dim) {
   xla::int64 rank = input_size.size();
-  XLA_CHECK_EQ(output_size.size(), pool_dim)
-      << "Output shape MUST be" << pool_dim;
+  XLA_CHECK_EQ(output_size.size(), pool_dim);
   for (int spatial_dim = 0; spatial_dim < pool_dim; ++spatial_dim) {
     if (input_size[rank - pool_dim + spatial_dim] % output_size[spatial_dim] !=
         0) {
