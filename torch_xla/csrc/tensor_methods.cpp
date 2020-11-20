@@ -43,6 +43,7 @@
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
+#include "torch_xla/csrc/ops/discrete_uniform.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/exponential.h"
 #include "torch_xla/csrc/ops/flip.h"
@@ -2112,6 +2113,15 @@ std::tuple<XLATensor, XLATensor> XLATensor::qr(const XLATensor& input,
   ir::NodePtr node = ir::MakeNode<ir::ops::QR>(input.GetIrValue(), some);
   return std::make_tuple(input.CreateFrom(ir::Value(node, 0)),
                          input.CreateFrom(ir::Value(node, 1)));
+}
+
+void XLATensor::random_(XLATensor& input, int64_t from, int64_t to) {
+  XLA_CHECK_LE(from, to);
+  auto input_shape = input.shape();
+  input.SetInPlaceIrValue(ir::MakeNode<ir::ops::DiscreteUniform>(
+      GetIrValueForScalar(from, xla::PrimitiveType::S64, input.GetDevice()),
+      GetIrValueForScalar(to, xla::PrimitiveType::S64, input.GetDevice()),
+      GetRngSeed(input.GetDevice()), input_shape));
 }
 
 XLATensor XLATensor::reciprocal(const XLATensor& input) {

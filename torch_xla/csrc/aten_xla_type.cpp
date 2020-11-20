@@ -67,6 +67,44 @@ c10::optional<at::ScalarType> PromoteIntegralType(
                                                                    : opt_dtype;
 }
 
+bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
+  return dtype == at::ScalarType::BFloat16 || dtype == at::ScalarType::Float ||
+         dtype == at::ScalarType::Double;
+}
+
+// Return the upper limit for a given type. For floating point typesreturn
+// 2^mantissa to ensure that every value is representable.
+int64_t GetIntegerUpperLimitForType(torch::ScalarType dtype) {
+  xla::PrimitiveType xla_type = TensorTypeToRawXlaType(dtype);
+  switch (xla_type) {
+    case xla::PrimitiveType::F16:
+      return static_cast<int64_t>(1) << std::numeric_limits<xla::half>::digits;
+    case xla::PrimitiveType::BF16:
+      return static_cast<int64_t>(1)
+             << std::numeric_limits<xla::bfloat16>::digits;
+    case xla::PrimitiveType::F32:
+      return static_cast<int64_t>(1) << std::numeric_limits<float>::digits;
+    case xla::PrimitiveType::F64:
+      return static_cast<int64_t>(1) << std::numeric_limits<double>::digits;
+    default:
+      return XlaHelpers::MinMaxValues(xla_type).max.toLong();
+  }
+}
+
+void CheckRangeValues(torch::ScalarType dtype, int64_t from, int64_t to) {
+  XlaHelpers::MinMax min_max;
+  // Bound the min_max by int64 since types of "from" and "to" are int64.
+  if (IsTypeWithLargerRangeThanLong(dtype)) {
+    min_max = XlaHelpers::MinMaxValues(xla::PrimitiveType::S64);
+  } else {
+    min_max = XlaHelpers::MinMaxValues(TensorTypeToRawXlaType(dtype));
+  }
+  XLA_CHECK_GE(from, min_max.min.toLong());
+  XLA_CHECK_LE(from, min_max.max.toLong());
+  XLA_CHECK_GE(to, min_max.min.toLong());
+  XLA_CHECK_LE(to, min_max.max.toLong());
+}
+
 std::pair<XLATensor, XLATensor> GetBinaryOperands(const at::Tensor& self,
                                                   const at::Tensor& other) {
   XLATensor self_tensor;
@@ -2528,6 +2566,54 @@ std::tuple<at::Tensor, at::Tensor> AtenXlaType::qr(const at::Tensor& self,
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
+// The value generated should be within (from, to].
+at::Tensor& AtenXlaType::random_(at::Tensor& self, int64_t from,
+                                 c10::optional<int64_t> to,
+                                 c10::optional<at::Generator> generator) {
+  XLA_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::random_(self, from, to, generator);
+  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  at::ScalarType dtype = self_tensor.dtype();
+  // Prevent "to_val" from overflowing with at::ScalarType::Long.
+  int64_t inc = (dtype == at::ScalarType::Long) ? 0 : 1;
+  int64_t to_val = (to) ? *to : GetIntegerUpperLimitForType(dtype) + inc;
+  XLA_CHECK_LE(from, to_val);
+  CheckRangeValues(self_tensor.dtype(), from, to_val - 1);
+  XLATensor::random_(self_tensor, from, to_val);
+  return self;
+}
+
+// The value generated should be in (0, to].
+at::Tensor& AtenXlaType::random_(at::Tensor& self, int64_t to,
+                                 c10::optional<at::Generator> generator) {
+  XLA_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::random_(self, to, generator);
+  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLA_CHECK_GT(to, 0);
+  CheckRangeValues(self_tensor.dtype(), 0, to - 1);
+  XLATensor::random_(self_tensor, 0, to);
+  return self;
+}
+
+// The value generated should be in (self_type_min, self_type_max).
+at::Tensor& AtenXlaType::random_(at::Tensor& self,
+                                 c10::optional<at::Generator> generator) {
+  XLA_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return AtenXlaTypeDefault::random_(self, generator);
+  }
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  at::ScalarType dtype = self_tensor.dtype();
+  // Prevent "to_val" from overflowing with at::ScalarType::Long.
+  int64_t inc = (dtype == at::ScalarType::Long) ? 0 : 1;
+  XLATensor::random_(self_tensor, 0, GetIntegerUpperLimitForType(dtype) + inc);
+  return self;
+}
+
 at::Tensor AtenXlaType::reciprocal(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -3233,8 +3319,8 @@ at::Tensor AtenXlaType::upsample_bilinear2d(const at::Tensor& self,
                                             c10::optional<double> scales_w) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  // Only the XLA TPU backend for now implements the CustomCall required by our
-  // XLA lowering.
+  // Only the XLA TPU backend for now implements the CustomCall required by
+  // our XLA lowering.
   if (self_tensor.GetDevice().hw_type != DeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return AtenXlaTypeDefault::upsample_bilinear2d(
@@ -3251,8 +3337,8 @@ at::Tensor AtenXlaType::upsample_bilinear2d_backward(
     c10::optional<double> scales_h, c10::optional<double> scales_w) {
   XLA_FN_COUNTER("xla::");
   XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
-  // Only the XLA TPU backend for now implements the CustomCall required by our
-  // XLA lowering.
+  // Only the XLA TPU backend for now implements the CustomCall required by
+  // our XLA lowering.
   if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return AtenXlaTypeDefault::upsample_bilinear2d_backward(
@@ -3308,8 +3394,8 @@ at::Tensor AtenXlaType::upsample_nearest2d(const at::Tensor& self,
                                            c10::optional<double> scales_w) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
-  // Only the XLA TPU backend for now implements the CustomCall required by our
-  // XLA lowering.
+  // Only the XLA TPU backend for now implements the CustomCall required by
+  // our XLA lowering.
   if (self_tensor.GetDevice().hw_type != DeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return AtenXlaTypeDefault::upsample_nearest2d(self, output_size, scales_h,
@@ -3325,8 +3411,8 @@ at::Tensor AtenXlaType::upsample_nearest2d_backward(
     c10::optional<double> scales_w) {
   XLA_FN_COUNTER("xla::");
   XLATensor grad_output_tensor = bridge::GetXlaTensor(grad_output);
-  // Only the XLA TPU backend for now implements the CustomCall required by our
-  // XLA lowering.
+  // Only the XLA TPU backend for now implements the CustomCall required by
+  // our XLA lowering.
   if (grad_output_tensor.GetDevice().hw_type != DeviceType::TPU ||
       (scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     return AtenXlaTypeDefault::upsample_nearest2d_backward(

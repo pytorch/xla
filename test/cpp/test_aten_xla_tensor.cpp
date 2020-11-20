@@ -1475,6 +1475,52 @@ TEST_F(AtenXlaTensorTest, TestUniformInPlace) {
   ExpectCounterChanged("xla::uniform.*", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestRandomInPlace) {
+  for (auto dtype : {torch::kFloat, torch::kDouble, torch::kByte, torch::kChar,
+                     torch::kShort, torch::kInt, torch::kLong}) {
+    const double eps = 0.15;
+    torch::Tensor a = torch::zeros({10, 10, 10}, torch::TensorOptions(dtype));
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      xla_a.random_(/*from=*/0, /*to=*/10);
+      double res_mean = xla_a.sum().item().toDouble() / a.numel();
+      double res_min = xla_a.min().item().toDouble();
+      double res_max = xla_a.max().item().toDouble();
+      EXPECT_GT(res_mean, 4.5 - eps);
+      EXPECT_LT(res_mean, 4.5 + eps);
+      EXPECT_EQ(res_min, 0.0);
+      EXPECT_EQ(res_max, 9.0);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::random_", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestRandomInPlaceDefaultFrom) {
+  for (auto dtype : {torch::kFloat, torch::kDouble, torch::kByte, torch::kChar,
+                     torch::kShort, torch::kInt, torch::kLong}) {
+    const double eps = 0.15;
+    torch::Tensor a = torch::zeros({10, 10, 10}, torch::TensorOptions(dtype));
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      xla_a.random_(/*to=*/10);
+      double res_mean = xla_a.sum().item().toDouble() / a.numel();
+      double res_min = xla_a.min().item().toDouble();
+      double res_max = xla_a.max().item().toDouble();
+      EXPECT_GT(res_mean, 4.5 - eps);
+      EXPECT_LT(res_mean, 4.5 + eps);
+      EXPECT_EQ(res_min, 0.0);
+      EXPECT_EQ(res_max, 9.0);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::random_", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestNormGeneral) {
   torch::Tensor a =
       torch::randn({4, 3, 4}, torch::TensorOptions(torch::kFloat));
