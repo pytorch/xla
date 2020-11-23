@@ -249,12 +249,39 @@ at::Tensor AtenXlaType::__rshift__(const at::Tensor& self,
                     });
 }
 
+at::Tensor AtenXlaType::adaptive_avg_pool3d(const at::Tensor& self,
+                                            at::IntArrayRef output_size) {
+  XLA_FN_COUNTER("xla::");
+  auto output_size_list = XlaHelpers::I64List(output_size);
+  if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
+                                  output_size_list, /*pool_dim=*/3)) {
+    return AtenXlaTypeDefault::adaptive_avg_pool3d(self, output_size);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::adaptive_avg_pool3d(
+      bridge::GetXlaTensor(self), output_size_list));
+}
+
+at::Tensor AtenXlaType::adaptive_avg_pool3d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self) {
+  XLA_FN_COUNTER("xla::");
+  int64_t rank = grad_output.dim();
+  std::vector<xla::int64> output_size{grad_output.size(rank - 3),
+                                      grad_output.size(rank - 2),
+                                      grad_output.size(rank - 1)};
+  if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
+                                  output_size, /*pool_dim=*/3)) {
+    return AtenXlaTypeDefault::adaptive_avg_pool3d_backward(grad_output, self);
+  }
+  return bridge::AtenFromXlaTensor(XLATensor::adaptive_avg_pool3d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
+}
+
 at::Tensor AtenXlaType::_adaptive_avg_pool2d(const at::Tensor& self,
                                              at::IntArrayRef output_size) {
   XLA_FN_COUNTER("xla::");
   auto output_size_list = XlaHelpers::I64List(output_size);
-  if (!IsSupportedAdaptiveAvgPool2d(XlaHelpers::I64List(self.sizes()),
-                                    output_size_list)) {
+  if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
+                                  output_size_list, /*pool_dim=*/2)) {
     return AtenXlaTypeDefault::_adaptive_avg_pool2d(self, output_size);
   }
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d(
@@ -267,8 +294,8 @@ at::Tensor AtenXlaType::_adaptive_avg_pool2d_backward(
   int64_t rank = grad_output.dim();
   std::vector<xla::int64> output_size{grad_output.size(rank - 2),
                                       grad_output.size(rank - 1)};
-  if (!IsSupportedAdaptiveAvgPool2d(XlaHelpers::I64List(self.sizes()),
-                                    output_size)) {
+  if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
+                                  output_size, /*pool_dim=*/2)) {
     return AtenXlaTypeDefault::_adaptive_avg_pool2d_backward(grad_output, self);
   }
   return bridge::AtenFromXlaTensor(XLATensor::_adaptive_avg_pool2d_backward(
