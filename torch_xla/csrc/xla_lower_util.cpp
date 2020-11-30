@@ -749,4 +749,67 @@ xla::XlaOp BuildMaskedScatter(xla::XlaOp input, xla::XlaOp mask,
       scatter_dnums);
 }
 
+std::vector<xla::XlaOp> BuildAmpForachNonFiniteCheckAndUnscale(
+    const std::vector<xla::XlaOp>& inputs) {
+  const xla::PrimitiveType origin_type = xla::PrimitiveType::F32;
+  std::vector<xla::XlaOp> found_infs;
+  xla::XlaOp one = xla::One(inputs[0].builder(), xla::PrimitiveType::S32);
+  for (size_t i = 0; i < inputs.size() - 2; ++i) {
+    xla::XlaOp all_finite =
+        xla::ReduceAll(xla::ConvertElementType(xla::IsFinite(inputs[i]),
+                                               xla::PrimitiveType::S32),
+                       one,
+                       xla::CreateScalarAndComputation(xla::PrimitiveType::S32,
+                                                       inputs[i].builder()));
+    found_infs.push_back(one - all_finite);
+  }
+  xla::XlaOp found_inf = xla::ConvertElementType(inputs[inputs.size() - 2],
+                                                 xla::PrimitiveType::S32);
+  for (size_t i = 0; i < found_infs.size(); ++i) {
+    found_inf = xla::Or(found_inf, found_infs[i]);
+  }
+  xla::XlaOp inv_scale = inputs[inputs.size() - 1];
+  std::vector<xla::XlaOp> results;
+
+  for (size_t i = 0; i < inputs.size() - 2; ++i) {
+    results.push_back(inputs[i] * inv_scale);
+  }
+  results.push_back(xla::ConvertElementType(found_inf, origin_type));
+  return results;
+}
+
+std::vector<xla::XlaOp> BuildAmpUpdateScale(
+    const std::vector<xla::XlaOp>& inputs) {
+  const auto& growth_tracker = inputs[0];
+  xla::XlaOp one = xla::One(growth_tracker.builder(), xla::PrimitiveType::S32);
+  xla::XlaOp one_float =
+      xla::One(growth_tracker.builder(), xla::PrimitiveType::F32);
+  const auto& current_scale = inputs[1];
+  const auto& found_inf = xla::Min(
+      xla::ConvertElementType(inputs[2], xla::PrimitiveType::S32), one);
+  const auto& growth_factor = inputs[3];
+  const auto& backoff_factor = inputs[4];
+  const auto& growth_interval = inputs[5];
+
+  xla::XlaOp all_finite = one - found_inf;
+  xla::XlaOp not_achieve_interval =
+      xla::Min((growth_interval - one - growth_tracker), one);
+  xla::XlaOp new_growth_tracker =
+      (growth_tracker + one) * all_finite * not_achieve_interval;
+  xla::XlaOp new_scale =
+      current_scale *
+      xla::Max(growth_factor * xla::ConvertElementType(
+                                   all_finite * (one - not_achieve_interval),
+                                   xla::PrimitiveType::F32),
+               one_float) *
+      (backoff_factor *
+           xla::ConvertElementType(found_inf, xla::PrimitiveType::F32) +
+       xla::ConvertElementType((one - found_inf) * one,
+                               xla::PrimitiveType::F32));
+  std::vector<xla::XlaOp> results;
+  results.push_back(new_growth_tracker);
+  results.push_back(new_scale);
+  return results;
+}
+
 }  // namespace torch_xla

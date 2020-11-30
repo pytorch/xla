@@ -21,6 +21,8 @@
 #include "torch_xla/csrc/ops/all.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
+#include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
+#include "torch_xla/csrc/ops/amp_update_scale.h"
 #include "torch_xla/csrc/ops/any.h"
 #include "torch_xla/csrc/ops/arg_max.h"
 #include "torch_xla/csrc/ops/arg_min.h"
@@ -466,6 +468,50 @@ XLATensor XLATensor::_adaptive_avg_pool2d_backward(const XLATensor& grad_output,
                                                    const XLATensor& input) {
   return input.CreateFrom(ir::ops::AdaptiveAvgPool2dBackward(
       grad_output.GetIrValue(), input.GetIrValue()));
+}
+
+void XLATensor::_amp_foreach_non_finite_check_and_unscale_(
+    absl::Span<XLATensor> self, XLATensor& found_inf,
+    const XLATensor& inv_scale) {
+  std::vector<ir::Value> inputs;
+  for (const auto& x : self) {
+    inputs.push_back(x.GetIrValue());
+  }
+  inputs.push_back(found_inf.GetIrValue());
+  inputs.push_back(inv_scale.GetIrValue());
+  absl::Span<ir::Value> inputs_span{inputs};
+  ir::NodePtr node =
+      ir::MakeNode<ir::ops::AmpForachNonFiniteCheckAndUnscale>(inputs_span);
+  for (size_t i = 0; i < self.size(); ++i) {
+    self[i].SetInPlaceIrValue(ir::Value(node, i));
+  }
+  found_inf.SetInPlaceIrValue(ir::Value(node, self.size()));
+}
+
+XLATensor XLATensor::_amp_update_scale(XLATensor growth_tracker,
+                                       const XLATensor& current_scale,
+                                       const XLATensor& found_inf,
+                                       float scale_growth_factor,
+                                       float scale_backoff_factor,
+                                       int growth_interval) {
+  ir::Value scale_growth_factor_ir = GetIrValueForScalar(
+      scale_growth_factor, xla::PrimitiveType::F32, growth_tracker.GetDevice());
+  ir::Value scale_backoff_factor_ir =
+      GetIrValueForScalar(scale_backoff_factor, xla::PrimitiveType::F32,
+                          growth_tracker.GetDevice());
+  ir::Value growth_interval_ir = GetIrValueForScalar(
+      growth_interval, xla::PrimitiveType::S32, growth_tracker.GetDevice());
+  std::vector<ir::Value> inputs;
+  inputs.push_back(growth_tracker.GetIrValue());
+  inputs.push_back(current_scale.GetIrValue());
+  inputs.push_back(found_inf.GetIrValue());
+  inputs.push_back(scale_growth_factor_ir);
+  inputs.push_back(scale_backoff_factor_ir);
+  inputs.push_back(growth_interval_ir);
+  absl::Span<ir::Value> inputs_span{inputs};
+  ir::NodePtr node = ir::MakeNode<ir::ops::AmpUpdateScale>(inputs_span);
+  growth_tracker.SetInPlaceIrValue(ir::Value(node, 0));
+  return current_scale.CreateFrom(ir::Value(node, 1));
 }
 
 XLATensor XLATensor::abs(const XLATensor& input) {

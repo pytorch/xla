@@ -29,6 +29,8 @@ class OpKindWrapper {
 };
 
 extern const OpKindWrapper xla_all_to_all;
+extern const OpKindWrapper xla_amp_foreach_non_finite_check_and_unscale;
+extern const OpKindWrapper xla_amp_update_scale;
 extern const OpKindWrapper xla_as_strided_view_update;
 extern const OpKindWrapper xla_cast;
 extern const OpKindWrapper xla_collective_permute;

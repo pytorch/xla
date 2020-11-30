@@ -88,4 +88,10 @@ std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask);
 xla::XlaOp BuildMaskedScatter(xla::XlaOp input, xla::XlaOp mask,
                               xla::XlaOp source);
 
+std::vector<xla::XlaOp> BuildAmpForachNonFiniteCheckAndUnscale(
+    const std::vector<xla::XlaOp>& inputs);
+
+std::vector<xla::XlaOp> BuildAmpUpdateScale(
+    const std::vector<xla::XlaOp>& inputs);
+
 }  // namespace torch_xla

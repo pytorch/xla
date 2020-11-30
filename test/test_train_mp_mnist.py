@@ -24,6 +24,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+from torch_xla.amp import autocast, GradScaler
 
 
 class MNIST(nn.Module):
@@ -118,6 +119,7 @@ def train_mnist(flags, **kwargs):
     writer = test_utils.get_summary_writer(flags.logdir)
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
+  scaler = GradScaler()
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()

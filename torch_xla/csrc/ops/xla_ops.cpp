@@ -5,6 +5,9 @@ namespace ir {
 namespace ops {
 
 const OpKindWrapper xla_all_to_all("xla::all_to_all");
+const OpKindWrapper xla_amp_foreach_non_finite_check_and_unscale(
+    "xla::amp_foreach_non_finite_check_and_unscale");
+const OpKindWrapper xla_amp_update_scale("xla::amp_update_scale");
 const OpKindWrapper xla_as_strided_view_update("xla::as_strided_view_update");
 const OpKindWrapper xla_cast("xla::cast");
 const OpKindWrapper xla_collective_permute("xla::collective_permute");
