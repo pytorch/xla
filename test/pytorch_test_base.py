@@ -183,7 +183,10 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_maximum_minimum_float_xla_bfloat16',  # precision
         'test_maximum_minimum_type_promotion_xla_.*bfloat16.*',  # doesn't raise
         'test_index_add_mem_overlap',  # doesn't raise
+        'test_index_copy_mem_overlap',  # doesn't raise
+        'test_index_fill_mem_overlap',  # doesn't raise
         'test_shift_mem_overlap',  # doesn't raise
+        'test_take_mem_overlap',  # doesn't raise
         'test_matrix_exp_analytic_xla',  # server side crash
         'test_muldiv_scalar_xla_bfloat16',  # FIXME
         'test_random_from_to_bool',  # doesn't raise
