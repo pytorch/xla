@@ -209,11 +209,28 @@ As mentioned in the tutorial linked above, one option is to take your VM that yo
 Here are the steps:
 
 #### Create the empty persistent disk
+Choose either a regular persistent disk or a SSD persistent disk. In our
+experiments on Imagenet, SSD was significantly faster for the first epoch (e.g. 1 hour 15
+minutes for regular PD vs. 6 minutes for SSD PD) but later epochs are similar
+once the dataset has been cached into the VM.
+
+Regular PD:
 ```
 gcloud compute disks create --size=200GB --zone=$ZONE $PD_NAME --project=$PROJECT_ID
 ```
 
-#### Create a VM to populate the persistent disk and SSH into it
+SSD PD:
+```
+gcloud compute disks create --size=200GB --zone=$ZONE $PD_NAME --project=$PROJECT_ID --type=pd-ssd
+```
+
+#### Create (or reuse) a VM to populate the persistent disk and SSH into it
+To attach a disk to an existing VM:
+```
+gcloud compute instances attach-disk $VM_NAME --disk $PD_NAME --zone $ZONE --mode=rw
+```
+
+To create a new VM with a disk attached:
 ```
 gcloud compute instances create pd-filler \
 --zone=$ZONE \
@@ -221,7 +238,7 @@ gcloud compute instances create pd-filler \
 --image-family=torch-xla \
 --image-project=ml-images  \
 --boot-disk-size=200GB \
---scopes=https://www.googleapis.com/auth/cloud-platform
+--scopes=https://www.googleapis.com/auth/cloud-platform \
 --disk=name=$PD_NAME,auto-delete=no
 gcloud compute ssh pd-filler --zone=$ZONE
 ```
