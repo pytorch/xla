@@ -15,7 +15,8 @@ TORCH_TEST_PRECIIONS = {
     # test_name : floating_precision,
     'test_pow_xla_float32': 0.0035,
     'test_pow_xla_float64': 0.0045,
-    'test_var_neg_dim_xla_bfloat16': 0.01
+    'test_var_neg_dim_xla_bfloat16': 0.01,
+    'test_sum_xla_bfloat16': 0.1,
 }
 
 DISABLED_TORCH_TESTS_ANY = {
