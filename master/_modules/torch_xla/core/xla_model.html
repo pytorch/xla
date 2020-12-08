@@ -810,8 +810,8 @@
   <span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensor(s).</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    reduce_type (string): One of ``REDUCE_SUM``, ``REDUCE_MUL``, ``REDUCE_AND``,</span>
-<span class="sd">      ``REDUCE_OR``, ``REDUCE_MIN`` and ``REDUCE_MIN``.</span>
+<span class="sd">    reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,</span>
+<span class="sd">    ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and ``xm.REDUCE_MAX``.</span>
 <span class="sd">    inputs: Either a single `torch.Tensor` or a list of `torch.Tensor` to</span>
 <span class="sd">      perform the all reduce op to.</span>
 <span class="sd">    scale (float): A default scaling value to be applied after the reduce.</span>
