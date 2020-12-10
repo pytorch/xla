@@ -795,33 +795,39 @@ def generate_aten_out(ctx, tree, rwxtree, fname, sig, rwsig, params, fnopts):
   code += generate_entry_debug_code(tree, fname, params)
 
   param_vars = get_param_names(params)
+
+  out_count = num_outputs if num_outputs is not None else 1
+  # Output arguments can be either at the beginning or end.
+  if type_is_const(param_type(params[0])):
+    out_vars = param_vars[-out_count:]
+    non_out_vars = param_vars[:-out_count]
+  else:
+    out_vars = param_vars[:out_count]
+    non_out_vars = param_vars[out_count:]
   if fnopts.outfn_template is not None:
     fcall = expand_fn_template(fnopts.outfn_template, param_vars)
   else:
     m = re.match(r'(.*)_out$', fname)
     assert m is not None, fname
-    out_count = num_outputs if num_outputs is not None else 1
-    fcall = create_call('AtenXlaType::{}'.format(m.group(1)),
-                        param_vars[out_count:])
+    fcall = create_call('AtenXlaType::{}'.format(m.group(1)), non_out_vars)
 
   tmp_result = '{}_tmp'.format(fname)
   code += '  auto {} = {};\n'.format(tmp_result, fcall)
   if num_outputs is None:
-    code += generate_outfn_result_copy(param_vars[0], tmp_result)
-    code += generate_exit_debug_code(tree, fname, param_vars[0], params,
+    code += generate_outfn_result_copy(out_vars[0], tmp_result)
+    code += generate_exit_debug_code(tree, fname, out_vars[0], params,
                                      param_vars)
-    code += '  return {};\n'.format(param_vars[0])
+    code += '  return {};\n'.format(out_vars[0])
   else:
     for i in range(0, num_outputs):
       code += generate_outfn_result_copy(
-          param_vars[i], 'std::get<{}>({})'.format(i, tmp_result))
-    code += generate_exit_debug_code(tree, fname, param_vars[0:num_outputs],
-                                     params, param_vars)
+          out_vars[i], 'std::get<{}>({})'.format(i, tmp_result))
+    code += generate_exit_debug_code(tree, fname, out_vars, params, param_vars)
     code += '  return {}('.format(get_return_type_str(rwxtree, rwsig))
     for i in range(0, num_outputs):
       if i > 0:
         code += ', '
-      code += param_vars[i]
+      code += out_vars[i]
     code += ');\n'
   code += '}'
   return code
