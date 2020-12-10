@@ -110,6 +110,15 @@ def grab_graphs(args):
       fd.write(report)
 
 
+def metrics_to_tensorboard(args):
+  script_path = os.path.join(get_scripts_path(), 'metrics_to_tensorboard.py')
+  log_dir = os.path.join(args.outdir, 'tensorboard')
+  subprocess.run([
+      script_path, '--logdir={}'.format(log_dir),
+      '--imgdir={}'.format(get_metrics_imgdir_path(args.outdir))
+  ])
+
+
 def grab_metrics(args):
   metrics_file = get_first_file(get_metrics_file_path(args.outdir))
   if metrics_file is not None:
@@ -121,6 +130,7 @@ def grab_metrics(args):
     ]).decode('utf-8')
     with open(get_metrics_report_path(args.outdir), 'w') as fd:
       fd.write(report)
+    metrics_to_tensorboard(args)
 
 
 def create_temp_folder():
