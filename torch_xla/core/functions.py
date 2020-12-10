@@ -37,7 +37,7 @@ def all_reduce(reduce_type, value, scale=1.0, groups=None):
 
   Args:
     reduce_type (string): One of ``REDUCE_SUM``, ``REDUCE_MUL``, ``REDUCE_AND``,
-      ``REDUCE_OR``, ``REDUCE_MIN`` and ``REDUCE_MIN``.
+      ``REDUCE_OR``, ``REDUCE_MIN`` and ``REDUCE_MAX``.
     value (torch.Tensor): The to perform the all reduce op to.
     scale (float): A default scaling value to be applied after the reduce.
       Default: 1.0
