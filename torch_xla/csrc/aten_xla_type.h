@@ -127,8 +127,8 @@ class AtenXlaType {
 
   static at::Tensor any(const at::Tensor& self, int64_t dim, bool keepdim);
 
-  static at::Tensor& arange_out(at::Tensor& out, at::Scalar start,
-                                at::Scalar end, at::Scalar step);
+  static at::Tensor& arange_out(at::Scalar start, at::Scalar end,
+                                at::Scalar step, at::Tensor& out);
 
   static at::Tensor argmax(const at::Tensor& self, c10::optional<int64_t> dim,
                            bool keepdim);
@@ -219,25 +219,25 @@ class AtenXlaType {
       const c10::optional<at::Tensor>& weight,
       const c10::optional<at::Tensor>& pos_weight, int64_t reduction);
 
-  static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
-                                     const at::Tensor& other);
+  static at::Tensor& bitwise_and_out(const at::Tensor& self,
+                                     const at::Tensor& other, at::Tensor& out);
 
-  static at::Tensor& bitwise_and_out(at::Tensor& out, const at::Tensor& self,
-                                     at::Scalar other);
+  static at::Tensor& bitwise_and_out(const at::Tensor& self, at::Scalar other,
+                                     at::Tensor& out);
 
-  static at::Tensor& bitwise_not_out(at::Tensor& out, const at::Tensor& self);
+  static at::Tensor& bitwise_not_out(const at::Tensor& self, at::Tensor& out);
 
-  static at::Tensor& bitwise_or_out(at::Tensor& out, const at::Tensor& self,
-                                    const at::Tensor& other);
+  static at::Tensor& bitwise_or_out(const at::Tensor& self,
+                                    const at::Tensor& other, at::Tensor& out);
 
-  static at::Tensor& bitwise_or_out(at::Tensor& out, const at::Tensor& self,
-                                    at::Scalar other);
+  static at::Tensor& bitwise_or_out(const at::Tensor& self, at::Scalar other,
+                                    at::Tensor& out);
 
-  static at::Tensor& bitwise_xor_out(at::Tensor& out, const at::Tensor& self,
-                                     at::Scalar other);
+  static at::Tensor& bitwise_xor_out(const at::Tensor& self, at::Scalar other,
+                                     at::Tensor& out);
 
-  static at::Tensor& bitwise_xor_out(at::Tensor& out, const at::Tensor& self,
-                                     const at::Tensor& other);
+  static at::Tensor& bitwise_xor_out(const at::Tensor& self,
+                                     const at::Tensor& other, at::Tensor& out);
 
   static at::Tensor bmm(const at::Tensor& self, const at::Tensor& mat2);
 
@@ -382,9 +382,9 @@ class AtenXlaType {
   static at::Tensor& exponential_(at::Tensor& self, double lambd,
                                   c10::optional<at::Generator> generator);
 
-  static at::Tensor& eye_out(at::Tensor& out, int64_t n);
+  static at::Tensor& eye_out(int64_t n, at::Tensor& out);
 
-  static at::Tensor& eye_out(at::Tensor& out, int64_t n, int64_t m);
+  static at::Tensor& eye_out(int64_t n, int64_t m, at::Tensor& out);
 
   static at::Tensor& fill_(at::Tensor& self, at::Scalar value);
 
@@ -575,11 +575,10 @@ class AtenXlaType {
 
   static at::Tensor maximum(const at::Tensor& self, const at::Tensor& other);
 
-  static std::tuple<at::Tensor&, at::Tensor&> max_out(at::Tensor& max,
-                                                      at::Tensor& max_values,
-                                                      const at::Tensor& self,
-                                                      int64_t dim,
-                                                      bool keepdim);
+  static std::tuple<at::Tensor&, at::Tensor&> max_out(const at::Tensor& self,
+                                                      int64_t dim, bool keepdim,
+                                                      at::Tensor& max,
+                                                      at::Tensor& max_values);
 
   static at::Tensor max_pool2d(const at::Tensor& self,
                                at::IntArrayRef kernel_size,
@@ -648,11 +647,10 @@ class AtenXlaType {
 
   static at::Tensor minimum(const at::Tensor& self, const at::Tensor& other);
 
-  static std::tuple<at::Tensor&, at::Tensor&> min_out(at::Tensor& min,
-                                                      at::Tensor& min_indices,
-                                                      const at::Tensor& self,
-                                                      int64_t dim,
-                                                      bool keepdim);
+  static std::tuple<at::Tensor&, at::Tensor&> min_out(const at::Tensor& self,
+                                                      int64_t dim, bool keepdim,
+                                                      at::Tensor& min,
+                                                      at::Tensor& min_indices);
 
   static at::Tensor mm(const at::Tensor& self, const at::Tensor& mat2);
 
@@ -674,8 +672,8 @@ class AtenXlaType {
 
   static at::Tensor mv(const at::Tensor& self, const at::Tensor& vec);
 
-  static at::Tensor& mv_out(at::Tensor& out, const at::Tensor& self,
-                            const at::Tensor& vec);
+  static at::Tensor& mv_out(const at::Tensor& self, const at::Tensor& vec,
+                            at::Tensor& out);
 
   static at::Tensor narrow_copy(const at::Tensor& self, int64_t dim,
                                 int64_t start, int64_t length);
