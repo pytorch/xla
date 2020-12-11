@@ -55,7 +55,9 @@ XLATensorImpl::XLATensorImpl(XLATensor tensor)
                                           c10::DispatchKey::AutogradXLA},
                       GetTypeMeta(tensor),
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
-      tensor_(std::move(tensor)) {}
+      tensor_(std::move(tensor)) {
+  is_non_overlapping_and_dense_ = false;
+}
 
 void XLATensorImpl::set_tensor(XLATensor xla_tensor) {
   tensor_ = std::move(xla_tensor);
