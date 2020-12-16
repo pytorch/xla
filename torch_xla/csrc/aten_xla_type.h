@@ -890,8 +890,9 @@ class AtenXlaType {
 
   static at::Tensor& sinh_(at::Tensor& self);
 
-  static at::Tensor slice(const at::Tensor& self, int64_t dim, int64_t start,
-                          int64_t end, int64_t step);
+  static at::Tensor slice(const at::Tensor& self, int64_t dim,
+                          c10::optional<int64_t> start,
+                          c10::optional<int64_t> end, int64_t step);
 
   static at::Tensor smooth_l1_loss(const at::Tensor& self,
                                    const at::Tensor& target, int64_t reduction,

@@ -2928,10 +2928,13 @@ at::Tensor& AtenXlaType::sinh_(at::Tensor& self) {
 }
 
 at::Tensor AtenXlaType::slice(const at::Tensor& self, int64_t dim,
-                              int64_t start, int64_t end, int64_t step) {
+                              c10::optional<int64_t> start,
+                              c10::optional<int64_t> end, int64_t step) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(
-      XLATensor::slice(bridge::GetXlaTensor(self), dim, start, end, step));
+  int64_t start_val = start.has_value() ? start.value() : 0;
+  int64_t end_val = end.has_value() ? end.value() : INT64_MAX;
+  return bridge::AtenFromXlaTensor(XLATensor::slice(
+      bridge::GetXlaTensor(self), dim, start_val, end_val, step));
 }
 
 at::Tensor AtenXlaType::smooth_l1_loss(const at::Tensor& self,
