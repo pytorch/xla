@@ -33,6 +33,7 @@ FLAGS = args_parse.parse_common_options(
     momentum=None,
     lr=None,
     target_accuracy=None,
+    port=9012,
     opts=MODEL_OPTS.items(),
 )
 
@@ -50,6 +51,7 @@ import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.profiler as xp
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
@@ -196,6 +198,9 @@ def train_imagenet():
       num_steps_per_epoch=num_training_steps_per_epoch,
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
+
+  # Start up client side profiler server.
+  server = xp.start_server(FLAGS.port)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
