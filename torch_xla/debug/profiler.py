@@ -68,3 +68,50 @@ def trace(service_addr: str,
       duration_ms=duration_ms,
       num_tracing_attempts=num_tracing_attempts,
       options=options)
+
+
+class Trace(torch_xla._XLAC.profiler.TraceMe):
+  """Context manager that produces a trace event for profiling.
+
+  The traces generated can then be collected using the above profiling APIs.
+  The profiling server first needs to be started up and then can be sampled
+  either using Tensorboard profiler plugin
+  (https://github.com/tensorflow/profiler) or the
+  :func:`~torch_xla.debug.profiler.trace` method.
+
+  Note: currently only supports PyTorch/XLA client side trace events. i.e.,
+  the namespace won't group TPU worker side trace.
+
+  Example usage:
+  ```python
+  server = xp.start_server(9012)
+
+  with xp.Trace('fwd_context'):
+    model(input)
+    xm.mark_step()
+  ```
+  """
+  pass
+
+
+class StepTrace(torch_xla._XLAC.profiler.TraceMe):
+  """Context manager that produces a step trace event for profiling.
+
+  In addition to being regular traces, the generated traces will
+  help provide per-step performance statistics.
+
+  Note: currently only supports PyTorch/XLA client side trace events. i.e.,
+  the namespace won't group TPU worker side trace.
+
+  Example usage:
+  ```python
+  server = xp.start_server(9012)
+
+  for step, (input, label) in enumerate(loader):
+    with xp.StepTrace('train_step', step_num=step):
+      model(input)
+      ...
+  ```
+  """
+  def __init__(self, name: str, **kwargs):
+    super().__init__(name, _r=1, **kwargs)

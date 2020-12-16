@@ -129,14 +129,16 @@ def train_mnist(flags, **kwargs):
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
-
     model.train()
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
-      xm.optimizer_step(optimizer)
+      with xp.StepTrace('train_mnist', step_num=step):
+        with xp.Trace('build_graph'):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
+        # For profiling purposes we're moving the mark step out of iterator
+        xm.optimizer_step(optimizer, barrier=True)
       tracker.add(flags.batch_size)
       if step % flags.log_steps == 0:
         xm.add_step_closure(
@@ -156,7 +158,10 @@ def train_mnist(flags, **kwargs):
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device)
+  # For profiling we're moving the mark step out of iterator
+  # i.e., batches_per_execution=-1
+  train_device_loader = pl.MpDeviceLoader(
+      train_loader, device, batches_per_execution=-1)
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, flags.num_epochs + 1):

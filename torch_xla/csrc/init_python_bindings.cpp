@@ -27,6 +27,7 @@
 #include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
 #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
+#include "tensorflow/python/profiler/internal/traceme_wrapper.h"
 #include "torch/csrc/autograd/utils/wrap_outputs.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/jit/python/pybind.h"
@@ -666,6 +667,22 @@ void BuildProfilerSubmodule(py::module* m) {
                py::arg("service_addr"), py::arg("logdir"),
                py::arg("duration_ms") = 1000,
                py::arg("num_tracing_attempts") = 3, py::arg("options"));
+
+  py::class_<tensorflow::profiler::TraceMeWrapper> traceme_class(
+    profiler, "TraceMe", py::module_local());
+  traceme_class.def(py::init<py::str, py::kwargs>())
+      .def("__enter__", [](py::object self) -> py::object { return self; })
+      .def("__exit__",
+           [](py::object self, const py::object& ex_type,
+              const py::object& ex_value,
+              const py::object& traceback) -> py::object {
+             py::cast<tensorflow::profiler::TraceMeWrapper*>(self)->Stop();
+             return py::none();
+           })
+      .def(
+        "set_metadata", &tensorflow::profiler::TraceMeWrapper::SetMetadata)
+      .def_static(
+        "is_enabled", &tensorflow::profiler::TraceMeWrapper::IsEnabled);
 }
 
 void InitXlaModuleBindings(py::module m) {
