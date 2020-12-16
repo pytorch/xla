@@ -574,8 +574,7 @@ XLATensor XLATensor::all(const XLATensor& input,
       ir::MakeNode<ir::ops::All>(input.GetIrValue(),
                                  XlaHelpers::GetCanonicalDimensionIndices(
                                      dimensions, input.shape().get().rank()),
-                                 keep_reduced_dimensions),
-      at::ScalarType::Bool);
+                                 keep_reduced_dimensions));
 }
 
 XLATensor XLATensor::any(const XLATensor& input,
@@ -585,8 +584,7 @@ XLATensor XLATensor::any(const XLATensor& input,
       ir::MakeNode<ir::ops::Any>(input.GetIrValue(),
                                  XlaHelpers::GetCanonicalDimensionIndices(
                                      dimensions, input.shape().get().rank()),
-                                 keep_reduced_dimensions),
-      at::ScalarType::Bool);
+                                 keep_reduced_dimensions));
 }
 
 void XLATensor::arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
