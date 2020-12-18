@@ -46,9 +46,9 @@ class AtenXlaType {
   static at::Tensor _copy_from(const at::Tensor& self, const at::Tensor& dst,
                                bool non_blocking);
 
-  static at::Tensor& _index_put_impl_(at::Tensor& self, at::TensorList indices,
-                                      const at::Tensor& values, bool accumulate,
-                                      bool unsafe);
+  static at::Tensor& _index_put_impl_(
+      at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
+      const at::Tensor& values, bool accumulate, bool unsafe);
 
   static at::Tensor _log_softmax(const at::Tensor& self, int64_t dim,
                                  bool half_to_float);
@@ -457,7 +457,8 @@ class AtenXlaType {
                                       const at::Tensor& self,
                                       at::Scalar min_val, at::Scalar max_val);
 
-  static at::Tensor index(const at::Tensor& self, at::TensorList indices);
+  static at::Tensor index(const at::Tensor& self,
+                          const c10::List<c10::optional<at::Tensor>>& indices);
 
   static at::Tensor& index_add_(at::Tensor& self, int64_t dim,
                                 const at::Tensor& index,
@@ -474,8 +475,9 @@ class AtenXlaType {
                                  const at::Tensor& index,
                                  const at::Tensor& value);
 
-  static at::Tensor& index_put_(at::Tensor& self, at::TensorList indices,
-                                const at::Tensor& values, bool accumulate);
+  static at::Tensor& index_put_(
+      at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
+      const at::Tensor& values, bool accumulate);
 
   static at::Tensor index_select(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index);
