@@ -21,10 +21,11 @@
 namespace torch_xla {
 namespace {
 
-void CheckIndexTensorTypes(at::TensorList indices) {
-  for (auto& tensor : indices) {
-    if (tensor.defined()) {
-      at::ScalarType scalar_type = tensor.scalar_type();
+void CheckIndexTensorTypes(
+    const c10::List<c10::optional<at::Tensor>>& indices) {
+  for (const c10::optional<at::Tensor>& tensor : indices) {
+    if (tensor.has_value() && tensor->defined()) {
+      at::ScalarType scalar_type = tensor->scalar_type();
       if (scalar_type != at::kLong && scalar_type != at::kByte &&
           scalar_type != at::kBool) {
         XLA_ERROR() << "Tensors used as indices must be long, byte or boolean "
@@ -37,27 +38,29 @@ void CheckIndexTensorTypes(at::TensorList indices) {
 
 // Expands byte tensors (masks) into the equivalent indexing by LongTensors.
 // This is a version of at::native::expandByteTensors with style adjustments.
-std::vector<at::Tensor> ExpandByteTensors(const at::Tensor& self,
-                                          at::TensorList indices) {
+std::vector<at::Tensor> ExpandByteTensors(
+    const at::Tensor& self,
+    const c10::List<c10::optional<at::Tensor>>& indices) {
   std::vector<at::Tensor> result;
-  for (auto& index : indices) {
-    if (index.scalar_type() == at::kByte || index.scalar_type() == at::kBool) {
+  for (const c10::optional<at::Tensor>& index : indices) {
+    if (index.has_value() && (index->scalar_type() == at::kByte ||
+                              index->scalar_type() == at::kBool)) {
       // The sizes of the ByteTensor mask must match the sizes of the
       // corresponding dimensions in self.
-      for (int64_t j = 0; j < index.dim(); j++) {
+      for (int64_t j = 0; j < index->dim(); j++) {
         int64_t src_idx = result.size() + j;
-        XLA_CHECK_EQ(index.size(j), self.size(src_idx))
-            << "The shape of the mask " << index.sizes() << " at index " << j
+        XLA_CHECK_EQ(index->size(j), self.size(src_idx))
+            << "The shape of the mask " << index->sizes() << " at index " << j
             << " does not match the shape of the indexed tensor "
             << self.sizes() << " at index " << src_idx;
       }
       // Replace with nonzeros.
-      auto nonzero = index.nonzero();
-      for (int64_t j = 0; j < index.dim(); j++) {
+      auto nonzero = index->nonzero();
+      for (int64_t j = 0; j < index->dim(); j++) {
         result.emplace_back(nonzero.select(1, j));
       }
     } else {
-      result.emplace_back(index);
+      result.emplace_back(index.value_or(at::Tensor()));
     }
   }
   return result;
@@ -221,8 +224,9 @@ ir::NodePtr IndexCopyOp(const ir::Value& buffer, xla::int64 dim,
 
 }  // namespace
 
-CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
-                                         at::TensorList orig_indices) {
+CanonicalIndexInfo GetCanonicalIndexInfo(
+    const at::Tensor& base,
+    const c10::List<c10::optional<at::Tensor>>& orig_indices) {
   CheckIndexTensorTypes(orig_indices);
   // First expand ByteTensor (boolean masks) into 1 or more LongTensors, then
   // broadcast all index tensors together.

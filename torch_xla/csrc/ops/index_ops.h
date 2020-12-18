@@ -45,8 +45,9 @@ struct CanonicalIndexInfo {
 // index implementation. Input indices are reordered so that non-null indices
 // are first and the tail of null indices is dropped. The dimensions of the base
 // are reordered to be consistent with this reordering.
-CanonicalIndexInfo GetCanonicalIndexInfo(const at::Tensor& base,
-                                         at::TensorList orig_indices);
+CanonicalIndexInfo GetCanonicalIndexInfo(
+    const at::Tensor& base,
+    const c10::List<c10::optional<at::Tensor>>& orig_indices);
 
 // Expands a rank <= 1 tensor to rank 1, if necessary.
 ir::Value EnsureRank1(const ir::Value& index);

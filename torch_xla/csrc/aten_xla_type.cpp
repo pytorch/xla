@@ -324,10 +324,9 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   return dst;
 }
 
-at::Tensor& AtenXlaType::_index_put_impl_(at::Tensor& self,
-                                          at::TensorList indices,
-                                          const at::Tensor& values,
-                                          bool accumulate, bool /* unsafe */) {
+at::Tensor& AtenXlaType::_index_put_impl_(
+    at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
+    const at::Tensor& values, bool accumulate, bool /* unsafe */) {
   XLA_FN_COUNTER("xla::");
   return index_put_(self, indices, values, accumulate);
 }
@@ -1599,7 +1598,9 @@ at::Tensor AtenXlaType::hardtanh_backward(const at::Tensor& grad_output,
       max_val));
 }
 
-at::Tensor AtenXlaType::index(const at::Tensor& self, at::TensorList indices) {
+at::Tensor AtenXlaType::index(
+    const at::Tensor& self,
+    const c10::List<c10::optional<at::Tensor>>& indices) {
   XLA_FN_COUNTER("xla::");
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
@@ -1648,8 +1649,9 @@ at::Tensor& AtenXlaType::index_fill_(at::Tensor& self, int64_t dim,
   return self;
 }
 
-at::Tensor& AtenXlaType::index_put_(at::Tensor& self, at::TensorList indices,
-                                    const at::Tensor& values, bool accumulate) {
+at::Tensor& AtenXlaType::index_put_(
+    at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
+    const at::Tensor& values, bool accumulate) {
   XLA_FN_COUNTER("xla::");
   XLA_CHECK(self.scalar_type() == values.scalar_type());
   CanonicalIndexInfo canonical_index_info =
