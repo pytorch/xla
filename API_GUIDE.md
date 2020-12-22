@@ -63,7 +63,7 @@ print(l_out)
 # Input tensor is not an XLA tensor: torch.FloatTensor
 ```
 
-will throw an error since the torch.nn.Linear module is on the CPU.
+will throw an error since the `torch.nn.Linear` module is on the CPU.
 
 ## Running Models on XLA Devices
 
