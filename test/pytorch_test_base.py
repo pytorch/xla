@@ -191,6 +191,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_random_from_to_xla',  # doesn't raise
         'test_random_to_xla',  # doesn't raise
     },
+
+    # test_view_ops.py
     'TestViewOpsXLA': {
         'test_contiguous_nonview',
         'test_expand_as_view',
@@ -427,7 +429,8 @@ class XLATestBase(DeviceTypeTestBase):
       raise unittest.SkipTest('skipped on XLA')
       return test(self, cls.device_type)
 
-    if (match_name(test_name, disabled_torch_tests[class_name]) or
+    if class_name in disabled_torch_tests and (
+        match_name(test_name, disabled_torch_tests[class_name]) or
         match_name(name, disabled_torch_tests[class_name])):
       assert not hasattr(
           cls, test_name), 'Redefinition of test {0}'.format(test_name)
@@ -471,7 +474,8 @@ class XLATestBase(DeviceTypeTestBase):
                   dtype] < floating_precision:
                 test.precision_overrides[dtype] = floating_precision
 
-          if match_name(dtype_test_name, disabled_torch_tests[class_name]):
+          if class_name in disabled_torch_tests and match_name(
+              dtype_test_name, disabled_torch_tests[class_name]):
             skipped = True
             setattr(cls, dtype_test_name, disallowed_test)
           if not skipped:

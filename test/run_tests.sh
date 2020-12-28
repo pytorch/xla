@@ -47,7 +47,7 @@ function run_dynamic {
 }
 
 function run_all_tests {
-  run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestViewOpsXLA
+  run_dynamic python3 "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
   run_dynamic python3 "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
   run_test python3 "$CDIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
