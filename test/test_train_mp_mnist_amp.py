@@ -24,6 +24,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+from torch_xla.amp import autocast, GradScaler
 
 
 class MNIST(nn.Module):
@@ -118,16 +119,22 @@ def train_mnist(flags, **kwargs):
     writer = test_utils.get_summary_writer(flags.logdir)
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
+  scaler = GradScaler()
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
-      xm.optimizer_step(optimizer)
+      with autocast():
+        output = model(data)
+        loss = loss_fn(output, target)
+      scaler.scale(loss).backward()
+      gradients = xm._fetch_gradients(optimizer)
+      xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
+      scaler.step(optimizer)
+      scaler.update()
+      xm.mark_step()
       tracker.add(flags.batch_size)
       if step % flags.log_steps == 0:
         xm.add_step_closure(

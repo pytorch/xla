@@ -305,11 +305,10 @@ at::Tensor AtenXlaType::_adaptive_avg_pool2d_backward(
 void AtenXlaType::_amp_foreach_non_finite_check_and_unscale_(
     at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
   XLA_FN_COUNTER("xla::");
-  auto xla_self = bridge::GetXlaTensors(self);
-  absl::Span<XLATensor> self_tensor{xla_self};
   XLATensor found_inf_tensor = bridge::GetXlaTensor(found_inf);
   XLATensor::_amp_foreach_non_finite_check_and_unscale_(
-      self_tensor, found_inf_tensor, bridge::GetXlaTensor(inv_scale));
+      bridge::GetXlaTensors(self), found_inf_tensor,
+      bridge::GetXlaTensor(inv_scale));
 }
 
 at::Tensor AtenXlaType::_amp_update_scale(at::Tensor& growth_tracker,

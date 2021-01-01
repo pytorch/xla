@@ -749,63 +749,71 @@ xla::XlaOp BuildMaskedScatter(xla::XlaOp input, xla::XlaOp mask,
       scatter_dnums);
 }
 
-std::vector<xla::XlaOp> BuildAmpForachNonFiniteCheckAndUnscale(
-    const std::vector<xla::XlaOp>& inputs) {
-  const xla::PrimitiveType origin_type = xla::PrimitiveType::F32;
-  std::vector<xla::XlaOp> found_infs;
-  xla::XlaOp one = xla::One(inputs[0].builder(), xla::PrimitiveType::S32);
-  for (size_t i = 0; i < inputs.size() - 2; ++i) {
+std::vector<xla::XlaOp> BuildAmpForeachNonFiniteCheckAndUnscale(
+    const std::vector<xla::XlaOp>& inputs, const xla::XlaOp& found_inf_float,
+    const xla::XlaOp& inv_scale) {
+  const xla::PrimitiveType origin_type =
+      XlaHelpers::ShapeOfXlaOp(found_inf_float).element_type();
+  xla::XlaOp one = xla::One(inputs[0].builder(), xla::PrimitiveType::PRED);
+  xla::XlaOp found_inf =
+      xla::ConvertElementType(found_inf_float, xla::PrimitiveType::PRED);
+  for (size_t i = 0; i < inputs.size(); ++i) {
     xla::XlaOp all_finite =
-        xla::ReduceAll(xla::ConvertElementType(xla::IsFinite(inputs[i]),
-                                               xla::PrimitiveType::S32),
-                       one,
-                       xla::CreateScalarAndComputation(xla::PrimitiveType::S32,
+        xla::ReduceAll(xla::IsFinite(inputs[i]), one,
+                       xla::CreateScalarAndComputation(xla::PrimitiveType::PRED,
                                                        inputs[i].builder()));
-    found_infs.push_back(one - all_finite);
+    found_inf = xla::Or(found_inf, xla::Not(all_finite));
   }
-  xla::XlaOp found_inf = xla::ConvertElementType(inputs[inputs.size() - 2],
-                                                 xla::PrimitiveType::S32);
-  for (size_t i = 0; i < found_infs.size(); ++i) {
-    found_inf = xla::Or(found_inf, found_infs[i]);
-  }
-  xla::XlaOp inv_scale = inputs[inputs.size() - 1];
   std::vector<xla::XlaOp> results;
-
-  for (size_t i = 0; i < inputs.size() - 2; ++i) {
+  for (size_t i = 0; i < inputs.size(); ++i) {
     results.push_back(inputs[i] * inv_scale);
   }
   results.push_back(xla::ConvertElementType(found_inf, origin_type));
   return results;
 }
 
-std::vector<xla::XlaOp> BuildAmpUpdateScale(
-    const std::vector<xla::XlaOp>& inputs) {
-  const auto& growth_tracker = inputs[0];
+std::vector<xla::XlaOp> BuildAmpUpdateScale(const xla::XlaOp& growth_tracker,
+                                            const xla::XlaOp& current_scale,
+                                            const xla::XlaOp& found_inf_float,
+                                            double scale_growth_factor,
+                                            double scale_backoff_factor,
+                                            int scale_growth_interval) {
   xla::XlaOp one = xla::One(growth_tracker.builder(), xla::PrimitiveType::S32);
   xla::XlaOp one_float =
       xla::One(growth_tracker.builder(), xla::PrimitiveType::F32);
-  const auto& current_scale = inputs[1];
-  const auto& found_inf = xla::Min(
-      xla::ConvertElementType(inputs[2], xla::PrimitiveType::S32), one);
-  const auto& growth_factor = inputs[3];
-  const auto& backoff_factor = inputs[4];
-  const auto& growth_interval = inputs[5];
+  xla::XlaOp found_inf =
+      xla::ConvertElementType(found_inf_float, xla::PrimitiveType::PRED);
+  const auto& growth_factor = XlaHelpers::ScalarValue<float>(
+      scale_growth_factor,
+      XlaHelpers::ShapeOfXlaOp(current_scale).element_type(),
+      growth_tracker.builder());
+  const auto& backoff_factor = XlaHelpers::ScalarValue<float>(
+      scale_backoff_factor,
+      XlaHelpers::ShapeOfXlaOp(current_scale).element_type(),
+      growth_tracker.builder());
+  const auto& growth_interval = XlaHelpers::ScalarValue<int>(
+      scale_growth_interval,
+      XlaHelpers::ShapeOfXlaOp(growth_tracker).element_type(),
+      growth_tracker.builder());
 
-  xla::XlaOp all_finite = one - found_inf;
-  xla::XlaOp not_achieve_interval =
-      xla::Min((growth_interval - one - growth_tracker), one);
+  xla::XlaOp all_finite = xla::Not(found_inf);
+  xla::XlaOp not_achieve_interval = xla::ConvertElementType(
+      growth_interval - one - growth_tracker, xla::PrimitiveType::PRED);
   xla::XlaOp new_growth_tracker =
-      (growth_tracker + one) * all_finite * not_achieve_interval;
+      (growth_tracker + one) *
+      ConvertElementType(xla::And(all_finite, not_achieve_interval),
+                         xla::PrimitiveType::S32);
+  xla::XlaOp growth_factor_or_one = xla::Max(
+      growth_factor * xla::ConvertElementType(
+                          xla::And(all_finite, xla::Not(not_achieve_interval)),
+                          xla::PrimitiveType::F32),
+      one_float);
+  xla::XlaOp backoff_factor_or_one =
+      backoff_factor *
+          xla::ConvertElementType(found_inf, xla::PrimitiveType::F32) +
+      xla::ConvertElementType(all_finite, xla::PrimitiveType::F32);
   xla::XlaOp new_scale =
-      current_scale *
-      xla::Max(growth_factor * xla::ConvertElementType(
-                                   all_finite * (one - not_achieve_interval),
-                                   xla::PrimitiveType::F32),
-               one_float) *
-      (backoff_factor *
-           xla::ConvertElementType(found_inf, xla::PrimitiveType::F32) +
-       xla::ConvertElementType((one - found_inf) * one,
-                               xla::PrimitiveType::F32));
+      current_scale * growth_factor_or_one * backoff_factor_or_one;
   std::vector<xla::XlaOp> results;
   results.push_back(new_growth_tracker);
   results.push_back(new_scale);

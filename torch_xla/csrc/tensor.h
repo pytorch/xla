@@ -247,14 +247,14 @@ class XLATensor {
                                                  const XLATensor& input);
 
   static void _amp_foreach_non_finite_check_and_unscale_(
-      absl::Span<XLATensor> self, XLATensor& found_inf,
+      std::vector<XLATensor> self, XLATensor& found_inf,
       const XLATensor& inv_scale);
 
   static XLATensor _amp_update_scale(XLATensor growth_tracker,
                                      const XLATensor& current_scale,
                                      const XLATensor& found_inf,
-                                     float scale_growth_factor,
-                                     float scale_backoff_factor,
+                                     double scale_growth_factor,
+                                     double scale_backoff_factor,
                                      int growth_interval);
 
   static XLATensor abs(const XLATensor& input);

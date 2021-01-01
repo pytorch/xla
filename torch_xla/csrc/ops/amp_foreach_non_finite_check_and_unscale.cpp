@@ -12,37 +12,54 @@ namespace ir {
 namespace ops {
 namespace {
 
-xla::Shape NodeOutputShape(const OpList& inputs) {
+xla::Shape NodeOutputShape(const OpList& inputs, const Value& found_inf) {
   std::vector<xla::Shape> output_shapes;
-  output_shapes.reserve(inputs.size() - 1);
-  for (size_t i = 0; i < inputs.size() - 2; ++i) {
+  output_shapes.reserve(inputs.size() + 1);
+  for (size_t i = 0; i < inputs.size(); ++i) {
     const xla::Shape& input_shape = inputs[i].shape();
     output_shapes.push_back(input_shape);
   }
-  output_shapes.push_back(xla::ShapeUtil::MakeShape(
-      inputs[inputs.size() - 2].shape().element_type(), {}));
+  output_shapes.push_back(
+      xla::ShapeUtil::MakeShape(found_inf.shape().element_type(), {}));
   return xla::ShapeUtil::MakeTupleShape(output_shapes);
+}
+
+std::vector<Value> GetOperandList(absl::Span<const Value> operands,
+                                  const Value& found_inf,
+                                  const Value& inv_scale) {
+  std::vector<Value> operand_list(operands.begin(), operands.end());
+  operand_list.push_back(found_inf);
+  operand_list.push_back(inv_scale);
+  return operand_list;
 }
 
 }  // namespace
 
 AmpForachNonFiniteCheckAndUnscale::AmpForachNonFiniteCheckAndUnscale(
-    const OpList& inputs)
-    : Node(xla_amp_foreach_non_finite_check_and_unscale, inputs,
-           NodeOutputShape(inputs),
-           /*num_outputs=*/inputs.size() - 1) {}
+    const OpList& inputs, const Value& found_inf, const Value& inv_scale)
+    : Node(ir::OpKind(at::aten::_amp_foreach_non_finite_check_and_unscale_),
+           GetOperandList(inputs, found_inf, inv_scale),
+           NodeOutputShape(inputs, found_inf),
+           /*num_outputs=*/inputs.size() + 1) {}
 
 NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(OpList operands) const {
-  return MakeNode<AmpForachNonFiniteCheckAndUnscale>(operands);
+  std::vector<Value> operand_list(operands.begin(), operands.end() - 2);
+  size_t sz = operand_list.size();
+  return MakeNode<AmpForachNonFiniteCheckAndUnscale>(operand_list, operands[sz],
+                                                     operands[sz + 1]);
 }
 
 XlaOpVector AmpForachNonFiniteCheckAndUnscale::Lower(
     LoweringContext* loctx) const {
   std::vector<xla::XlaOp> inputs;
-  for (size_t i = 0; i < num_outputs() + 1; ++i) {
+  for (size_t i = 0; i < operands().size() - 2; ++i) {
     inputs.push_back(loctx->GetOutputOp(operand(i)));
   }
-  return ReturnOps(BuildAmpForachNonFiniteCheckAndUnscale(inputs), loctx);
+  return ReturnOps(
+      BuildAmpForeachNonFiniteCheckAndUnscale(
+          inputs, loctx->GetOutputOp(operand(operands().size() - 2)),
+          loctx->GetOutputOp(operand(operands().size() - 1))),
+      loctx);
 }
 
 }  // namespace ops

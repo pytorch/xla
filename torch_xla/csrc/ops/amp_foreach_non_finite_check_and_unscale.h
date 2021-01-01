@@ -8,7 +8,9 @@ namespace ops {
 
 class AmpForachNonFiniteCheckAndUnscale : public Node {
  public:
-  AmpForachNonFiniteCheckAndUnscale(const OpList& inputs);
+  AmpForachNonFiniteCheckAndUnscale(const OpList& inputs,
+                                    const Value& found_inf,
+                                    const Value& inv_scale);
 
   NodePtr Clone(OpList operands) const override;
 

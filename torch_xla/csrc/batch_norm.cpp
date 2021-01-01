@@ -9,11 +9,9 @@ namespace {
 
 bool IsF32BatchNormWithFP16Inputs(const xla::XlaOp& input,
                                   const xla::XlaOp& weight) {
-  xla::XlaBuilder* builder = input.builder();
-  if (builder->GetShape(input).ok() && builder->GetShape(weight).ok() &&
-      builder->GetShape(input).ValueOrDie().element_type() ==
+  if (XlaHelpers::ShapeOfXlaOp(input).element_type() ==
           xla::PrimitiveType::F16 &&
-      builder->GetShape(weight).ValueOrDie().element_type() ==
+      XlaHelpers::ShapeOfXlaOp(weight).element_type() ==
           xla::PrimitiveType::F32) {
     return true;
   }
@@ -42,6 +40,7 @@ BatchNormOutput BuildBatchNormTraining(xla::XlaOp input, xla::XlaOp weight,
                                        xla::XlaOp bias, float eps_value) {
   bool is_batchnorm_with_fp16_inputs =
       IsF32BatchNormWithFP16Inputs(input, weight);
+  // Handle the mixed precision use case.
   if (is_batchnorm_with_fp16_inputs) {
     input = xla::ConvertElementType(input, xla::PrimitiveType::F32);
   }
@@ -61,6 +60,7 @@ xla::XlaOp BuildBatchNormInference(xla::XlaOp input, xla::XlaOp weight,
                                    xla::XlaOp variance, float eps_value) {
   bool is_batchnorm_with_fp16_inputs =
       IsF32BatchNormWithFP16Inputs(input, weight);
+  // Handle the mixed precision use case.
   if (is_batchnorm_with_fp16_inputs) {
     input = xla::ConvertElementType(input, xla::PrimitiveType::F32);
   }
@@ -79,6 +79,7 @@ BatchNormGrads BuildBatchNormBackward(xla::XlaOp grad, xla::XlaOp input,
                                       float eps_value) {
   bool is_batchnorm_with_fp16_inputs =
       IsF32BatchNormWithFP16Inputs(input, weight);
+  // Handle the mixed precision use case.
   if (is_batchnorm_with_fp16_inputs) {
     input = xla::ConvertElementType(input, xla::PrimitiveType::F32);
     grad = xla::ConvertElementType(grad, xla::PrimitiveType::F32);
