@@ -1039,8 +1039,8 @@ def parse_local_overrides(path):
   return overrides
 
 
-def generate_unboxed(aten_sig, overload, override_fn):
-  code = '  m.impl_UNBOXED("{}", static_cast<{}>(&{}));\n'.format(
+def generate_impl(aten_sig, overload, override_fn):
+  code = '  m.impl("{}", static_cast<{}>(&{}));\n'.format(
       aten_sig.split('(')[0].split('::')[1], overload, override_fn)
   return code
 
@@ -1061,11 +1061,11 @@ def generate_registrations(fgens, overrides):
     if override_fn:
       pos = fgen.funsig.find('(')
       overload = fgen.funsig[:pos] + ' (*)' + fgen.funsig[pos:]
-      unboxed = generate_unboxed(fgen.aten_sig, overload, override_fn)
+      impl = generate_impl(fgen.aten_sig, overload, override_fn)
       if fgen.mapsig in _FN_AUTOGRAD_XLA:
-        autogradxla_code += unboxed
+        autogradxla_code += impl
       else:
-        aten_code += unboxed
+        aten_code += impl
   return aten_code + '\n}\n' + autogradxla_code + '\n}\n', overridden
 
 
