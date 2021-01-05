@@ -70,7 +70,7 @@ will throw an error since the `torch.nn.Linear` module is on the CPU.
 Building a new PyTorch network or converting an existing one to run on XLA
 devices requires only a few lines of XLA-specific code. The following snippets
 highlight these lines when running on a single device and multiple devices with XLA
-multiprocessing.
+multi-processing.
 
 ### Running on a Single XLA Device
 
@@ -105,7 +105,7 @@ iteration causes XLA to execute its current graph and update the model's
 parameters. See [XLA Tensor Deep Dive](#xla-tensor-deep-dive) for more on
 how XLA creates graphs and runs operations.
 
-### Running on Multiple XLA Devices with MultiProcessing
+### Running on Multiple XLA Devices with Multi-processing
 
 PyTorch/XLA makes it easy to accelerate training by running on multiple XLA
 devices. The following snippet shows how:
@@ -134,7 +134,7 @@ if __name__ == '__main__':
   xmp.spawn(_mp_fn, args=())
 ```
 
-There are three differences between this multidevice snippet and the previous
+There are three differences between this multi-device snippet and the previous
 single device snippet:
 
 - `xmp.spawn()` creates the processes that each run an XLA device.
@@ -150,7 +150,7 @@ stack).
 
 See the
 [full multiprocessing example](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist.py)
-for more on training a network on multiple XLA devices with multiprocessing.
+for more on training a network on multiple XLA devices with multi-processing.
 
 ## XLA Tensor Deep Dive
 
@@ -186,10 +186,11 @@ controlled by the `XLA_USE_BF16` environment variable:
 - If a PyTorch tensor has `torch.bfloat16` data type, this will be directly
 mapped to the TPU `bfloat16` (XLA `BF16` primitive type).
 
-XLA tensors on TPUs will always report their PyTorch datatype regardless of
+Developers should note that *XLA tensors on TPUs will always report their PyTorch datatype* regardless of
 the actual datatype they're using. This conversion is automatic and opaque.
 If an XLA tensor on a TPU is moved back to the CPU it will be converted
-from its actual datatype to its PyTorch datatype.
+from its actual datatype to its PyTorch datatype. Depending on how your code operates, this conversion triggered by
+the type of processing unit can be important.
 
 ### Memory Layout
 
@@ -201,10 +202,11 @@ better performance.
 ### Moving XLA Tensors to and from the CPU
 
 XLA tensors can be moved from the CPU to an XLA device and from an XLA device
-to the CPU. If a view is moved then the data its viewing is copied to the
+to the CPU. If a view is moved then the data its viewing is also copied to the
 other device and the view relationship is not preserved. Put another way,
 once data is copied to another device it has no relationship with its
-previous device or any tensors on it.
+previous device or any tensors on it. Again, depending on how your code operates, 
+appreciating and accommodating this transition can be important.
 
 ### Saving and Loading XLA Tensors
 
@@ -231,10 +233,10 @@ t0 = tensors[0].to(device)
 t1 = tensors[1].to(device)
 ```
 
-This lets you put the loaded tensors on any available device.
+This lets you put the loaded tensors on any available device, not just the one on which they were initialized.
 
 Per the above note on moving XLA tensors to the CPU, care must be taken when
-working with views. Instead of saving views it's recommended that you recreate
+working with views. Instead of saving views it is recommended that you recreate
 them after the tensors have been loaded and moved to their destination device(s).
 
 A utility API is provided to save data by taking care of previously moving it
@@ -251,8 +253,8 @@ xm.save(model.state_dict(), path)
 In case of multiple devices, the above API will only save the data for the master
 device ordinal (0).
 
-In case where memory is limited compare to the size of the model parameters, an
-API is provided that reduces the memory pressure on the host:
+In case where memory is limited compared to the size of the model parameters, an
+API is provided that reduces the memory footprint on the host:
 
 ```python
 import torch_xla.utils.serialization as xser
@@ -260,7 +262,7 @@ import torch_xla.utils.serialization as xser
 xser.save(model.state_dict(), path)
 ```
 
-Such API streams XLA tensors to CPU one at a time, reducing the amount of host
+This API streams XLA tensors to CPU one at a time, reducing the amount of host
 memory used, but it requires a matching load API to restore:
 
 ```python
