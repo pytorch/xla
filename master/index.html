@@ -215,7 +215,7 @@
 <li><a class="reference internal" href="#xla-tensors-are-pytorch-tensors">XLA Tensors are PyTorch Tensors</a></li>
 <li><a class="reference internal" href="#running-models-on-xla-devices">Running Models on XLA Devices</a><ul>
 <li><a class="reference internal" href="#running-on-a-single-xla-device">Running on a Single XLA Device</a></li>
-<li><a class="reference internal" href="#running-on-multiple-xla-devices-with-multiprocessing">Running on Multiple XLA Devices with MultiProcessing</a></li>
+<li><a class="reference internal" href="#running-on-multiple-xla-devices-with-multi-processing">Running on Multiple XLA Devices with Multi-processing</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#id1">XLA Tensor Deep Dive</a><ul>
@@ -377,7 +377,7 @@ same device. So code like</p>
 <p>Building a new PyTorch network or converting an existing one to run on XLA
 devices requires only a few lines of XLA-specific code. The following snippets
 highlight these lines when running on a single device and multiple devices with XLA
-multiprocessing.</p>
+multi-processing.</p>
 <div class="section" id="running-on-a-single-xla-device">
 <h3>Running on a Single XLA Device<a class="headerlink" href="#running-on-a-single-xla-device" title="Permalink to this headline">¶</a></h3>
 <p>The following snippet shows a network training on a single XLA device:</p>
@@ -409,8 +409,8 @@ iteration causes XLA to execute its current graph and update the model’s
 parameters. See <a class="reference external" href="#xla-tensor-deep-dive">XLA Tensor Deep Dive</a> for more on
 how XLA creates graphs and runs operations.</p>
 </div>
-<div class="section" id="running-on-multiple-xla-devices-with-multiprocessing">
-<h3>Running on Multiple XLA Devices with MultiProcessing<a class="headerlink" href="#running-on-multiple-xla-devices-with-multiprocessing" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="running-on-multiple-xla-devices-with-multi-processing">
+<h3>Running on Multiple XLA Devices with Multi-processing<a class="headerlink" href="#running-on-multiple-xla-devices-with-multi-processing" title="Permalink to this headline">¶</a></h3>
 <p>PyTorch/XLA makes it easy to accelerate training by running on multiple XLA
 devices. The following snippet shows how:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
@@ -436,7 +436,7 @@ devices. The following snippet shows how:</p>
   <span class="n">xmp</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">())</span>
 </pre></div>
 </div>
-<p>There are three differences between this multidevice snippet and the previous
+<p>There are three differences between this multi-device snippet and the previous
 single device snippet:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code> creates the processes that each run an XLA device.</p></li>
@@ -452,7 +452,7 @@ stack).</p>
 </div></blockquote>
 <p>See the
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist.py">full multiprocessing example</a>
-for more on training a network on multiple XLA devices with multiprocessing.</p>
+for more on training a network on multiple XLA devices with multi-processing.</p>
 </div>
 </div>
 <div class="section" id="id1">
@@ -487,10 +487,11 @@ controlled by the <code class="docutils literal notranslate"><span class="pre">X
 <li><p>If a PyTorch tensor has <code class="docutils literal notranslate"><span class="pre">torch.bfloat16</span></code> data type, this will be directly
 mapped to the TPU <code class="docutils literal notranslate"><span class="pre">bfloat16</span></code> (XLA <code class="docutils literal notranslate"><span class="pre">BF16</span></code> primitive type).</p></li>
 </ul>
-<p>XLA tensors on TPUs will always report their PyTorch datatype regardless of
+<p>Developers should note that <em>XLA tensors on TPUs will always report their PyTorch datatype</em> regardless of
 the actual datatype they’re using. This conversion is automatic and opaque.
 If an XLA tensor on a TPU is moved back to the CPU it will be converted
-from its actual datatype to its PyTorch datatype.</p>
+from its actual datatype to its PyTorch datatype. Depending on how your code operates, this conversion triggered by
+the type of processing unit can be important.</p>
 </div>
 <div class="section" id="memory-layout">
 <h3>Memory Layout<a class="headerlink" href="#memory-layout" title="Permalink to this headline">¶</a></h3>
@@ -502,10 +503,11 @@ better performance.</p>
 <div class="section" id="moving-xla-tensors-to-and-from-the-cpu">
 <h3>Moving XLA Tensors to and from the CPU<a class="headerlink" href="#moving-xla-tensors-to-and-from-the-cpu" title="Permalink to this headline">¶</a></h3>
 <p>XLA tensors can be moved from the CPU to an XLA device and from an XLA device
-to the CPU. If a view is moved then the data its viewing is copied to the
+to the CPU. If a view is moved then the data its viewing is also copied to the
 other device and the view relationship is not preserved. Put another way,
 once data is copied to another device it has no relationship with its
-previous device or any tensors on it.</p>
+previous device or any tensors on it. Again, depending on how your code operates,
+appreciating and accommodating this transition can be important.</p>
 </div>
 <div class="section" id="saving-and-loading-xla-tensors">
 <h3>Saving and Loading XLA Tensors<a class="headerlink" href="#saving-and-loading-xla-tensors" title="Permalink to this headline">¶</a></h3>
@@ -530,9 +532,9 @@ snippet:</p>
 <span class="n">t1</span> <span class="o">=</span> <span class="n">tensors</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>This lets you put the loaded tensors on any available device.</p>
+<p>This lets you put the loaded tensors on any available device, not just the one on which they were initialized.</p>
 <p>Per the above note on moving XLA tensors to the CPU, care must be taken when
-working with views. Instead of saving views it’s recommended that you recreate
+working with views. Instead of saving views it is recommended that you recreate
 them after the tensors have been loaded and moved to their destination device(s).</p>
 <p>A utility API is provided to save data by taking care of previously moving it
 to CPU:</p>
@@ -545,14 +547,14 @@ to CPU:</p>
 </div>
 <p>In case of multiple devices, the above API will only save the data for the master
 device ordinal (0).</p>
-<p>In case where memory is limited compare to the size of the model parameters, an
-API is provided that reduces the memory pressure on the host:</p>
+<p>In case where memory is limited compared to the size of the model parameters, an
+API is provided that reduces the memory footprint on the host:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.utils.serialization</span> <span class="k">as</span> <span class="nn">xser</span>
 
 <span class="n">xser</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="n">path</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Such API streams XLA tensors to CPU one at a time, reducing the amount of host
+<p>This API streams XLA tensors to CPU one at a time, reducing the amount of host
 memory used, but it requires a matching load API to restore:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.utils.serialization</span> <span class="k">as</span> <span class="nn">xser</span>
 
@@ -1651,7 +1653,7 @@ Default: True</p></li>
 <li><a class="reference internal" href="#xla-tensors-are-pytorch-tensors">XLA Tensors are PyTorch Tensors</a></li>
 <li><a class="reference internal" href="#running-models-on-xla-devices">Running Models on XLA Devices</a><ul>
 <li><a class="reference internal" href="#running-on-a-single-xla-device">Running on a Single XLA Device</a></li>
-<li><a class="reference internal" href="#running-on-multiple-xla-devices-with-multiprocessing">Running on Multiple XLA Devices with MultiProcessing</a></li>
+<li><a class="reference internal" href="#running-on-multiple-xla-devices-with-multi-processing">Running on Multiple XLA Devices with Multi-processing</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#id1">XLA Tensor Deep Dive</a><ul>
