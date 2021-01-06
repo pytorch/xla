@@ -106,11 +106,7 @@ class DataParallel(object):
       result.result = e
       self._handle_runner_exception(device, e)
 
-  def __call__(self,
-               loop_fn,
-               loader,
-               batchdim=0,
-               **kwargs):
+  def __call__(self, loop_fn, loader, batchdim=0, **kwargs):
     """Runs one EPOCH of training/test.
 
     Args:
@@ -140,10 +136,7 @@ class DataParallel(object):
 
     xm.wait_device_ops()
     para_loader = pl.ParallelLoader(
-        loader,
-        self._device_ids,
-        batchdim=batchdim,
-        **self._kwargs)
+        loader, self._device_ids, batchdim=batchdim, **self._kwargs)
     threads = []
     results = []
     for module, device, context in zip(self._models, self._device_ids,
