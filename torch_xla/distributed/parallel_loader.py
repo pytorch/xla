@@ -52,10 +52,6 @@ class ParallelLoader(object):
       % len(devices)]`.
     batchdim (int, optional): The dimension which is holding the batch size.
       Default: 0
-    fixed_batch_size (bool, optional): Ensures that all the batch sizes sent to
-      the devices are of the same size. The original `loader` iteration stops as
-      soon as a not matching batch size is found.
-      Default: False
     loader_prefetch_size (int, optional): The max capacity of the queue used by
       the thread which is reading samples from the `loader`, to be processed by
       the worker threads which upload data to the devices.
@@ -70,13 +66,11 @@ class ParallelLoader(object):
                loader,
                devices,
                batchdim=0,
-               fixed_batch_size=False,
                loader_prefetch_size=8,
                device_prefetch_size=4):
     self._loader = loader
     self._devices = [torch.device(x) for x in devices]
     self._batchdim = batchdim
-    self._fixed_batch_size = fixed_batch_size
     self._per_device_samples = len(loader) // len(devices)
     self._done = False
     self._queues = dict()
@@ -118,34 +112,15 @@ class ParallelLoader(object):
       dqueue.queue.close()
       dqueue.loader_queue.close()
 
-  def _get_batch_size(self, data, dim):
-    size = []
-
-    def fn(v):
-      csize = v.size()[dim]
-      if not size:
-        size.append(csize)
-      else:
-        assert csize == size[0]
-
-    xu.for_each_instance(data, lambda x: type(x) == torch.Tensor, fn)
-    return size[0] if size else None
-
   def _loader_worker(self):
     queues = list(self._queues.values())
     data_iter = enumerate(self._loader)
-    batch_size = None
     batch = []
     while not self._done:
       try:
         _, data = next(data_iter)
       except StopIteration:
         break
-      if self._fixed_batch_size:
-        if batch_size is None:
-          batch_size = self._get_batch_size(data, self._batchdim)
-        elif batch_size != self._get_batch_size(data, self._batchdim):
-          break
       batch.append(data)
       if len(batch) == len(self._devices):
         for queue_no, device_batch in enumerate(batch):

@@ -106,12 +106,7 @@ class DataParallel(object):
       result.result = e
       self._handle_runner_exception(device, e)
 
-  def __call__(self,
-               loop_fn,
-               loader,
-               fixed_batch_size=False,
-               batchdim=0,
-               **kwargs):
+  def __call__(self, loop_fn, loader, batchdim=0, **kwargs):
     """Runs one EPOCH of training/test.
 
     Args:
@@ -124,9 +119,6 @@ class DataParallel(object):
         `device`. And the `context` is a per thread/device context which has the
         lifetime of the `DataParallel` object, and can be used by the `loop_fn`
         to store objects which needs to persist across different EPOCH.
-      fixed_batch_size (bool, optional): Argument passed to the `ParallelLoader`
-        constructor.
-        Default: False
       batchdim (int, optional): The dimension in the samples returned by the
         `loader` holding the batch size.
         Default: 0
@@ -144,11 +136,7 @@ class DataParallel(object):
 
     xm.wait_device_ops()
     para_loader = pl.ParallelLoader(
-        loader,
-        self._device_ids,
-        batchdim=batchdim,
-        fixed_batch_size=fixed_batch_size,
-        **self._kwargs)
+        loader, self._device_ids, batchdim=batchdim, **self._kwargs)
     threads = []
     results = []
     for module, device, context in zip(self._models, self._device_ids,
