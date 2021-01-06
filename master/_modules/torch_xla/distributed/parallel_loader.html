@@ -333,10 +333,6 @@
 <span class="sd">      % len(devices)]`.</span>
 <span class="sd">    batchdim (int, optional): The dimension which is holding the batch size.</span>
 <span class="sd">      Default: 0</span>
-<span class="sd">    fixed_batch_size (bool, optional): Ensures that all the batch sizes sent to</span>
-<span class="sd">      the devices are of the same size. The original `loader` iteration stops as</span>
-<span class="sd">      soon as a not matching batch size is found.</span>
-<span class="sd">      Default: False</span>
 <span class="sd">    loader_prefetch_size (int, optional): The max capacity of the queue used by</span>
 <span class="sd">      the thread which is reading samples from the `loader`, to be processed by</span>
 <span class="sd">      the worker threads which upload data to the devices.</span>
@@ -351,13 +347,11 @@
                <span class="n">loader</span><span class="p">,</span>
                <span class="n">devices</span><span class="p">,</span>
                <span class="n">batchdim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-               <span class="n">fixed_batch_size</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                <span class="n">loader_prefetch_size</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
                <span class="n">device_prefetch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">loader</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_devices</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_batchdim</span> <span class="o">=</span> <span class="n">batchdim</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_fixed_batch_size</span> <span class="o">=</span> <span class="n">fixed_batch_size</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_per_device_samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">loader</span><span class="p">)</span> <span class="o">//</span> <span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
@@ -399,34 +393,15 @@
       <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
       <span class="n">dqueue</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-  <span class="k">def</span> <span class="nf">_get_batch_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
-    <span class="n">size</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="k">def</span> <span class="nf">fn</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
-      <span class="n">csize</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="n">dim</span><span class="p">]</span>
-      <span class="k">if</span> <span class="ow">not</span> <span class="n">size</span><span class="p">:</span>
-        <span class="n">size</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">csize</span><span class="p">)</span>
-      <span class="k">else</span><span class="p">:</span>
-        <span class="k">assert</span> <span class="n">csize</span> <span class="o">==</span> <span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-
-    <span class="n">xu</span><span class="o">.</span><span class="n">for_each_instance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">size</span> <span class="k">else</span> <span class="kc">None</span>
-
   <span class="k">def</span> <span class="nf">_loader_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="n">queues</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
     <span class="n">data_iter</span> <span class="o">=</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">)</span>
-    <span class="n">batch_size</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">:</span>
       <span class="k">try</span><span class="p">:</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">data_iter</span><span class="p">)</span>
       <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
         <span class="k">break</span>
-      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fixed_batch_size</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">batch_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-          <span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_batch_size</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batchdim</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">batch_size</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_batch_size</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batchdim</span><span class="p">):</span>
-          <span class="k">break</span>
       <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
       <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_devices</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">queue_no</span><span class="p">,</span> <span class="n">device_batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">batch</span><span class="p">):</span>

@@ -1085,7 +1085,7 @@ indices, and the second element being the number of valid boxes.</p>
 <span id="distributed"></span><h2>distributed<a class="headerlink" href="#module-torch_xla.distributed.parallel_loader" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="torch_xla.distributed.parallel_loader.ParallelLoader">
-<em class="property">class </em><code class="sig-prename descclassname">torch_xla.distributed.parallel_loader.</code><code class="sig-name descname">ParallelLoader</code><span class="sig-paren">(</span><em class="sig-param">loader</em>, <em class="sig-param">devices</em>, <em class="sig-param">batchdim=0</em>, <em class="sig-param">fixed_batch_size=False</em>, <em class="sig-param">loader_prefetch_size=8</em>, <em class="sig-param">device_prefetch_size=4</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/parallel_loader.html#ParallelLoader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.parallel_loader.ParallelLoader" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">torch_xla.distributed.parallel_loader.</code><code class="sig-name descname">ParallelLoader</code><span class="sig-paren">(</span><em class="sig-param">loader</em>, <em class="sig-param">devices</em>, <em class="sig-param">batchdim=0</em>, <em class="sig-param">loader_prefetch_size=8</em>, <em class="sig-param">device_prefetch_size=4</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/parallel_loader.html#ParallelLoader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.parallel_loader.ParallelLoader" title="Permalink to this definition">¶</a></dt>
 <dd><p>Wraps an existing PyTorch DataLoader with background data upload.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1097,10 +1097,6 @@ sent. The i-th sample returned by the <cite>loader</cite> will be sent to <cite>
 % len(devices)]</cite>.</p></li>
 <li><p><strong>batchdim</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The dimension which is holding the batch size.
 Default: 0</p></li>
-<li><p><strong>fixed_batch_size</strong> (<em>bool</em><em>, </em><em>optional</em>) – Ensures that all the batch sizes sent to
-the devices are of the same size. The original <cite>loader</cite> iteration stops as
-soon as a not matching batch size is found.
-Default: False</p></li>
 <li><p><strong>loader_prefetch_size</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The max capacity of the queue used by
 the thread which is reading samples from the <cite>loader</cite>, to be processed by
 the worker threads which upload data to the devices.
