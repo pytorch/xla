@@ -2866,6 +2866,14 @@ at::Tensor AtenXlaType::select(const at::Tensor& self, int64_t dim,
       XLATensor::select(bridge::GetXlaTensor(self), dim, index));
 }
 
+at::Tensor& AtenXlaType::silu_out(const at::Tensor& self, at::Tensor& out) {
+  XLA_FN_COUNTER("xla::");
+  XLATensor out_tensor = bridge::GetXlaTensor(out);
+  XLATensor self_tensor = bridge::GetXlaTensor(self);
+  XLATensor::silu_out(self_tensor, out_tensor);
+  return out;
+}
+
 at::Tensor AtenXlaType::sigmoid(const at::Tensor& self) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
