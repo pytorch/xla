@@ -23,6 +23,8 @@ class PerDeviceLoader(object):
   def __init__(self, loader, device):
     self._loader = loader
     self._device = device
+    self._mark_step_batch_count = loader.batches_per_execution - 1
+    self._batches_yielded = 0
 
   def __iter__(self):
     return self
@@ -34,7 +36,11 @@ class PerDeviceLoader(object):
     return self._loader.per_device_samples()
 
   def next(self):
-    xm.mark_step()
+    if self._mark_step_batch_count == self._batches_yielded:
+      self._batches_yielded = 0
+      xm.mark_step()
+    else:
+      self._batches_yielded += 1
     item = self._loader.next_item(self._device)
     if item is None:
       raise StopIteration
@@ -66,11 +72,13 @@ class ParallelLoader(object):
                loader,
                devices,
                batchdim=0,
+               batches_per_execution=1,
                loader_prefetch_size=8,
                device_prefetch_size=4):
     self._loader = loader
     self._devices = [torch.device(x) for x in devices]
     self._batchdim = batchdim
+    self._batches_per_execution = batches_per_execution
     self._per_device_samples = len(loader) // len(devices)
     self._done = False
     self._queues = dict()
@@ -111,6 +119,10 @@ class ParallelLoader(object):
     for dqueue in itervalues(self._queues):
       dqueue.queue.close()
       dqueue.loader_queue.close()
+
+  @property
+  def batches_per_execution(self):
+    return self._batches_per_execution
 
   def _loader_worker(self):
     queues = list(self._queues.values())
