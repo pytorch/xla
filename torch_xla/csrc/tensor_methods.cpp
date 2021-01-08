@@ -570,21 +570,29 @@ XLATensor XLATensor::addmm(const XLATensor& input, const XLATensor& weight,
 XLATensor XLATensor::all(const XLATensor& input,
                          std::vector<xla::int64> dimensions,
                          bool keep_reduced_dimensions) {
+  at::ScalarType result_type = input.dtype() == at::ScalarType::Byte
+                                   ? at::ScalarType::Byte
+                                   : at::ScalarType::Bool;
   return input.CreateFrom(
       ir::MakeNode<ir::ops::All>(input.GetIrValue(),
                                  XlaHelpers::GetCanonicalDimensionIndices(
                                      dimensions, input.shape().get().rank()),
-                                 keep_reduced_dimensions));
+                                 keep_reduced_dimensions),
+      result_type);
 }
 
 XLATensor XLATensor::any(const XLATensor& input,
                          std::vector<xla::int64> dimensions,
                          bool keep_reduced_dimensions) {
+  at::ScalarType result_type = input.dtype() == at::ScalarType::Byte
+                                   ? at::ScalarType::Byte
+                                   : at::ScalarType::Bool;
   return input.CreateFrom(
       ir::MakeNode<ir::ops::Any>(input.GetIrValue(),
                                  XlaHelpers::GetCanonicalDimensionIndices(
                                      dimensions, input.shape().get().rank()),
-                                 keep_reduced_dimensions));
+                                 keep_reduced_dimensions),
+      result_type);
 }
 
 void XLATensor::arange_out(XLATensor& out, at::Scalar start, at::Scalar end,
