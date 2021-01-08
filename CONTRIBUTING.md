@@ -13,20 +13,14 @@ To build from source:
 * Clone and initialize the _PyTorch_ repo as per [instructions](https://github.com/pytorch/pytorch#from-source).
 
   ```Shell
-  git clone --recursive https://github.com/pytorch/pytorch
+  git clone --recurse-submodules https://github.com/pytorch/pytorch
   cd pytorch/
-  git submodule init
-  git submodule update
   ```
 
 * Clone and initialize the _PyTorch/XLA_ repo:
 
   ```Shell
-  git clone --recursive https://github.com/pytorch/xla.git
-  cd xla
-  git submodule init
-  git submodule update
-  cd ..
+  git clone --recurse-submodules https://github.com/pytorch/xla.git
   ```
 
 ### Building Docker Image
