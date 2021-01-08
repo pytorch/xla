@@ -132,15 +132,16 @@ void XLATensorImpl::SetupSizeProperties() {
     // Fill up the basic dimension data members which the base class
     // implementation uses in its APIs.
     auto shape = tensor_.shape();
-    sizes_.clear();
+    c10::SmallVector<int64_t, 5> updated_sizes;
     numel_ = 1;
     for (auto dim : shape.get().dimensions()) {
-      sizes_.push_back(dim);
+      updated_sizes.push_back(dim);
       numel_ *= dim;
     }
-    strides_.clear();
-    for (auto stride : ComputeArrayStrides(shape.get().dimensions())) {
-      strides_.push_back(stride);
+    sizes_and_strides_.set_sizes(updated_sizes);
+    auto updated_strides = ComputeArrayStrides(shape.get().dimensions());
+    for (int i = 0; i < updated_strides.size(); i++) {
+      sizes_and_strides_.stride_at_unchecked(i) = updated_strides[i];
     }
     generation_ = generation;
   }
