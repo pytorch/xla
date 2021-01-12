@@ -206,6 +206,15 @@ NodePtr LogSigmoidBackward(const Value& grad_output, const Value& input,
   return grad_output * (Neg(max_deriv) - sign * (buffer - one) / buffer);
 }
 
+NodePtr SiLU(const Value& input) {
+  auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(xla_input * BuildSigmoid(xla_input), loctx);
+  };
+  return GenericOp(OpKind(at::aten::silu), {input}, input.shape(),
+                   std::move(lower_fn));
+}
+
 NodePtr Sigmoid(const Value& input) {
   auto lower_fn = [](const Node& node, LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));

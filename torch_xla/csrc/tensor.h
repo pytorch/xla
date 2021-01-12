@@ -956,6 +956,7 @@ class XLATensor {
   static XLATensor select(const XLATensor& input, xla::int64 dim,
                           xla::int64 index);
 
+  static void silu_out(XLATensor& input, XLATensor& out);
   static XLATensor sigmoid(const XLATensor& input);
   static void sigmoid_(XLATensor& input);
   static XLATensor sigmoid_backward(const XLATensor& grad_output,
