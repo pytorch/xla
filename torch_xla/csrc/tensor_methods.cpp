@@ -2345,6 +2345,10 @@ XLATensor XLATensor::select(const XLATensor& input, xla::int64 dim,
   return tensor_ops::Select(input, dim, index);
 }
 
+void XLATensor::silu_out(XLATensor& input, XLATensor& out) {
+  out.SetInPlaceIrValue(ir::ops::SiLU(input.GetIrValue()));
+}
+
 XLATensor XLATensor::sigmoid(const XLATensor& input) {
   return input.CreateFrom(ir::ops::Sigmoid(input.GetIrValue()));
 }
