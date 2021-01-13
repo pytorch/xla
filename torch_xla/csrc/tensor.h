@@ -965,7 +965,8 @@ class XLATensor {
   static XLATensor sign(const XLATensor& input);
   static void sign_(XLATensor& input);
 
-  static XLATensor sin(const XLATensor& input);
+  static XLATensor sin(const XLATensor& input,
+                       c10::optional<at::ScalarType> scalar_type);
   static void sin_(XLATensor& input);
 
   static XLATensor sinh(const XLATensor& input);

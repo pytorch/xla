@@ -2371,8 +2371,9 @@ void XLATensor::sign_(XLATensor& input) {
   input.SetInPlaceIrValue(ir::ops::SignOp(input.GetIrValue()));
 }
 
-XLATensor XLATensor::sin(const XLATensor& input) {
-  return input.CreateFrom(ir::ops::Sin(input.GetIrValue()));
+XLATensor XLATensor::sin(const XLATensor& input,
+                         c10::optional<at::ScalarType> scalar_type) {
+  return input.CreateFrom(ir::ops::Sin(input.GetIrValue()), scalar_type);
 }
 
 void XLATensor::sin_(XLATensor& input) {

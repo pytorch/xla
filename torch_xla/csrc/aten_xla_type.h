@@ -882,7 +882,8 @@ class AtenXlaType {
 
   static at::Tensor& sign_(at::Tensor& self);
 
-  static at::Tensor sin(const at::Tensor& self);
+  static at::Tensor sin(const at::Tensor& self,
+                        c10::optional<at::ScalarType> dtype);
 
   static at::Tensor& sin_(at::Tensor& self);
 

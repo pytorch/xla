@@ -2903,9 +2903,11 @@ at::Tensor& AtenXlaType::sign_(at::Tensor& self) {
   return self;
 }
 
-at::Tensor AtenXlaType::sin(const at::Tensor& self) {
+at::Tensor AtenXlaType::sin(const at::Tensor& self,
+                            c10::optional<at::ScalarType> dtype) {
   XLA_FN_COUNTER("xla::");
-  return bridge::AtenFromXlaTensor(XLATensor::sin(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(
+      XLATensor::sin(bridge::GetXlaTensor(self), dtype));
 }
 
 at::Tensor& AtenXlaType::sin_(at::Tensor& self) {
