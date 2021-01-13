@@ -2235,12 +2235,6 @@ at::Tensor& AtenXlaType::mv_out(const at::Tensor& self, const at::Tensor& vec,
   return out;
 }
 
-at::Tensor AtenXlaType::narrow_copy(const at::Tensor& self, int64_t dim,
-                                    int64_t start, int64_t length) {
-  XLA_FN_COUNTER("xla::");
-  return at::native::narrow_copy_dense(self, dim, start, length);
-}
-
 std::tuple<at::Tensor, at::Tensor, at::Tensor> AtenXlaType::native_batch_norm(
     const at::Tensor& input, const c10::optional<at::Tensor>& weight,
     const c10::optional<at::Tensor>& bias,

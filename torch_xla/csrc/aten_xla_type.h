@@ -677,9 +677,6 @@ class AtenXlaType {
   static at::Tensor& mv_out(const at::Tensor& self, const at::Tensor& vec,
                             at::Tensor& out);
 
-  static at::Tensor narrow_copy(const at::Tensor& self, int64_t dim,
-                                int64_t start, int64_t length);
-
   static std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm(
       const at::Tensor& input, const c10::optional<at::Tensor>& weight,
       const c10::optional<at::Tensor>& bias,
