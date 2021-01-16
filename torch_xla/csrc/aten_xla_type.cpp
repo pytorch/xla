@@ -2987,10 +2987,12 @@ at::Tensor AtenXlaType::softshrink_backward(const at::Tensor& grad_out,
 
 std::tuple<at::Tensor, at::Tensor> AtenXlaType::sort(const at::Tensor& self,
                                                      int64_t dim,
-                                                     bool descending) {
+                                                     bool descending,
+                                                     bool stable) {
   XLA_FN_COUNTER("xla::");
-  auto results = XLATensor::topk(bridge::GetXlaTensor(self), self.size(dim),
-                                 dim, descending, true);
+  auto results =
+      XLATensor::topk(bridge::GetXlaTensor(self), self.size(dim), dim,
+                      descending, /*sorted=*/false, /*stable=*/stable);
   return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }

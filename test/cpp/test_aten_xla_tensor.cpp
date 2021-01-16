@@ -936,16 +936,20 @@ TEST_F(AtenXlaTensorTest, TestSort) {
   for (int k = 1; k <= 3; ++k) {
     for (int dim = 0; dim < 3; ++dim) {
       for (bool descending : {false, true}) {
-        auto b = torch::sort(a, dim, descending);
-        ForEachDevice([&](const torch::Device& device) {
-          torch::Tensor xla_a = CopyToDevice(a, device);
-          auto xla_b = torch::sort(xla_a, dim, descending);
-          AllClose(std::get<0>(b), std::get<0>(xla_b));
-          AllEqual(std::get<1>(b), std::get<1>(xla_b));
-        });
+        for (bool stable : {false, true}) {
+          auto b = torch::sort(a, dim, descending, stable);
+          ForEachDevice([&](const torch::Device& device) {
+            torch::Tensor xla_a = CopyToDevice(a, device);
+            auto xla_b = torch::sort(xla_a, dim, descending, stable);
+            AllClose(std::get<0>(b), std::get<0>(xla_b));
+            AllEqual(std::get<1>(b), std::get<1>(xla_b));
+          });
+        }
       }
     }
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::sort", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSortDescWithMinValue) {
