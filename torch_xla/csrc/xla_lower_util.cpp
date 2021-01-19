@@ -348,7 +348,7 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, xla::int64 k,
 
 std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64 k,
                                    xla::int64 dim, bool largest,
-                                   bool /* sorted */, bool stable) {
+                                   bool /* sorted */) {
   // Here 'k' is 1 based (1...).
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   XLA_CHECK_LE(k, shape.dimensions(dim));
@@ -362,7 +362,7 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, xla::int64 k,
               : xla::CreateScalarLtComputation(
                     {shape.element_type(), xla::PrimitiveType::S32},
                     input.builder());
-  xla::XlaOp sort_result = xla::Sort({input, iota}, comparator, dim, stable);
+  xla::XlaOp sort_result = xla::Sort({input, iota}, comparator, dim);
 
   std::vector<xla::int64> start_indices(shape.rank(), 0);
   std::vector<xla::int64> limit_indices(shape.dimensions().begin(),

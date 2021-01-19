@@ -9,7 +9,7 @@ namespace ops {
 class TopK : public Node {
  public:
   TopK(const Value& input, xla::int64 k, xla::int64 dim, bool largest,
-       bool sorted, bool stable);
+       bool sorted);
 
   std::string ToString() const override;
 
@@ -25,14 +25,11 @@ class TopK : public Node {
 
   bool sorted() const { return sorted_; }
 
-  bool stable() const { return stable_; }
-
  private:
   xla::int64 k_;
   xla::int64 dim_;
   bool largest_;
   bool sorted_;
-  bool stable_;
 };
 
 }  // namespace ops
