@@ -242,11 +242,12 @@ class ClusterResolver(object):
         cache_discovery=False)
 
     if project is None:
-      self._project = self.get_instance_metadata('project/project-id')
+      self._project = ClusterResolver.get_instance_metadata(
+          'project/project-id')
     if zone is None:
-      zone_path = self.get_instance_metadata('instance/zone')
-      self._zone = self._parse_resource_url(zone_path, 'zones')
-    self._vm_master = self.get_instance_metadata('instance/name')
+      zone_path = ClusterResolver.get_instance_metadata('instance/zone')
+      self._zone = ClusterResolver._parse_resource_url(zone_path, 'zones')
+    self._vm_master = ClusterResolver.get_instance_metadata('instance/name')
 
   def _get_instance_group(self):
     """Gets the instance group that the current VM belongs to."""
@@ -260,8 +261,8 @@ class ClusterResolver(object):
       for item in resp['metadata']['items']:
         if (item['key'] == 'created-by' and
             'instanceGroupManagers' in item['value']):
-          return self._parse_resource_url(item['value'],
-                                          'instanceGroupManagers')
+          return ClusterResolver._parse_resource_url(item['value'],
+                                                     'instanceGroupManagers')
 
     raise RuntimeError(('A vm list must be passed to ClusterResolver '
                         'if not using an instance group'))
@@ -277,7 +278,8 @@ class ClusterResolver(object):
       if 'instance' not in item or 'status' not in item:
         continue
       instance_path = item['instance']
-      instances.append(self._parse_resource_url(instance_path, 'instances'))
+      instances.append(
+          ClusterResolver._parse_resource_url(instance_path, 'instances'))
 
     return instances
 
@@ -308,16 +310,17 @@ class ClusterResolver(object):
       """Callback for each request in BatchHttpRequest."""
       if exception is not None:
         raise exception
-      hostname = self._parse_resource_url(resp['selfLink'], 'instances')
+      hostname = ClusterResolver._parse_resource_url(resp['selfLink'],
+                                                     'instances')
       if resp['status'] != 'RUNNING':
         raise RuntimeError(
             ('Instance {hostname} is not running yet. '
              'Re-run when all VMs are running').format(hostname=hostname))
       worker = ClientWorker(
           internal_ip=resp['networkInterfaces'][0]['networkIP'],
-          machine_type=self._parse_resource_url(resp['machineType'],
-                                                'machineTypes'),
-          zone=self._parse_resource_url(resp['zone'], 'zones'),
+          machine_type=ClusterResolver._parse_resource_url(
+              resp['machineType'], 'machineTypes'),
+          zone=ClusterResolver._parse_resource_url(resp['zone'], 'zones'),
           hostname=hostname)
       workers.append(worker)
 
@@ -362,7 +365,7 @@ class ClusterResolver(object):
 
       runtime_version = ctc.runtime_version()
       machine_type = ctc.accelerator_type()
-      zone = self._parse_resource_url(ctc._full_name(), 'locations')
+      zone = ClusterResolver._parse_resource_url(ctc._full_name(), 'locations')
       network_endpoints = ctc.network_endpoints()
 
       for endpoint in network_endpoints:

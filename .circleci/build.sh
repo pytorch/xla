@@ -56,8 +56,9 @@ pip install ninja
 # Install the Lark parser required for the XLA->ATEN Type code generation.
 pip install lark-parser
 
-# Install hypothesis, required for running some PyTorch test suites
+# Install libraries required for running some PyTorch test suites
 pip install hypothesis
+pip install cloud-tpu-client
 
 # Install Pytorch without MKLDNN
 xla/scripts/apply_patches.sh

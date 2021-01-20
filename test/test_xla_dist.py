@@ -162,8 +162,11 @@ class ClusterTest(unittest.TestCase):
         'The client_workers and service_workers must have a 1:1 mapping',
         cluster.validate)
 
-  def test_validate_empty_workers(self, mock_im):
-    cluster = Cluster([], [], client_master_ip='10.0.0.0')
+  def test_validate_empty_workers(self):
+    client_workers = [
+        ClientWorker('10.0.0.0', 'n1-standard-16', 'europe-west4-a')
+    ]
+    cluster = Cluster(client_workers, [], client_master_ip='10.0.0.0')
     self.assertRaisesRegex(
         RuntimeError,
         'Both client_workers and service_workers should not be empty',
@@ -194,7 +197,7 @@ class ClusterTest(unittest.TestCase):
         cluster.validate)
 
 
-def mock_request_metadata(cls, metadata):
+def mock_request_metadata(metadata):
   fake_metadata = {
       'project/project-id': 'fake-project',
       'instance/zone': 'project/fake-project/zones/fake-zone',
