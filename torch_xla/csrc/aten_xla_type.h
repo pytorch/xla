@@ -918,8 +918,7 @@ class AtenXlaType {
                                         at::Scalar lambda);
 
   static std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor& self,
-                                                 int64_t dim, bool descending,
-                                                 bool stable);
+                                                 int64_t dim, bool descending);
 
   static std::vector<at::Tensor> split(const at::Tensor& self,
                                        int64_t split_size, int64_t dim);
