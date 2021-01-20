@@ -330,7 +330,7 @@ XrtComputationClient::TransferToServerInternal(
     absl::Span<const TensorSource> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
   tensorflow::profiler::TraceMe activity(
-    "TransferToServer", tensorflow::profiler::TraceMeLevel::kInfo);
+    "TransferToServerInternal", tensorflow::profiler::TraceMeLevel::kInfo);
 
   std::mutex lock;
   XrtSessionCache::SessionMap session_map;

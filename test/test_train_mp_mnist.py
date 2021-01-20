@@ -124,7 +124,7 @@ def train_mnist(flags, **kwargs):
   # Start up client side profiler server.
   server = xp.start_server(flags.port)
   # Testing purpose only: set event for synchronization.
-  if kwargs.get('worker_started', None):
+  if kwargs.get('worker_started'):
     kwargs.pop('worker_started').set()
 
   def train_loop_fn(loader):

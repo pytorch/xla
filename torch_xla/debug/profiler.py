@@ -13,11 +13,14 @@ def start_server(port: int):
   a profiler from this server.
 
   Args:
-    port (int): the port to start the profiler server on.
+    port (int): the port to start the profiler server on. An exception is
+    raised if the provided port is invalid or busy.
   Returns:
     A `ProfilerServer` instance that dictates the lifecycle of the profiler
     server. If this object is garbage collected, the profiler server is
     shut down.
+  Raises:
+    RuntimeError: Raised if the port is invalid or busy already.
   """
   return torch_xla._XLAC.profiler.start_server(port)
 
