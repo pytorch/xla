@@ -66,6 +66,7 @@ function run_all_tests {
   run_test python3 "$CDIR/test_mp_save.py"
   run_test python3 "$CDIR/test_mp_mesh_reduce.py"
   run_test python3 "$CDIR/test_xla_dist.py"
+  run_test python3 "$CDIR/test_profiler.py"
 }
 
 if [ "$LOGFILE" != "" ]; then

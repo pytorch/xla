@@ -23,6 +23,7 @@
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/lib/core/errors.h"
+#include "tensorflow/core/profiler/lib/traceme.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
@@ -1097,6 +1098,8 @@ void XLATensor::ApplyPendingGraph() {
 
 XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
     const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config) {
+  tensorflow::profiler::TraceMe activity(
+      "CollectSyncTensors", tensorflow::profiler::TraceMeLevel::kInfo);
   xla::util::Unique<Device> unique_device;
   for (size_t i = 0; i < tensors.size(); ++i) {
     unique_device.set(tensors[i].GetDevice());
@@ -1283,6 +1286,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
     std::vector<xla::ComputationClient::DataPtr> parameters_data,
     std::vector<xla::ComputationClient::DataPtr> tensors_data,
     ComputationCache::TypePtr cached_computation) {
+  tensorflow::profiler::TraceMe activity(
+      "ScheduleSyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
   std::shared_ptr<Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),
       std::move(cached_computation));
@@ -1340,6 +1345,8 @@ std::shared_ptr<XLATensor::Async> XLATensor::ScheduleSyncTensorsGraph(
 void XLATensor::SyncTensorsGraph(std::vector<XLATensor>* tensors,
                                  absl::Span<const std::string> devices,
                                  bool wait, bool sync_xla_data) {
+  tensorflow::profiler::TraceMe activity(
+      "SyncTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
   static const bool op_by_op =
       xla::sys_util::GetEnvBool("XLA_SYNC_TENSORS_OPBYOP", false);
   SyncTensorsConfig config;
@@ -1360,6 +1367,8 @@ void XLATensor::SyncTensorsGraph(std::vector<XLATensor>* tensors,
 void XLATensor::SyncLiveTensorsGraph(const Device* device,
                                      absl::Span<const std::string> devices,
                                      bool wait) {
+  tensorflow::profiler::TraceMe activity(
+      "SyncLiveTensorsGraph", tensorflow::profiler::TraceMeLevel::kInfo);
   auto tensors = GetLiveTensors(device);
   TF_VLOG(4) << tensors.size() << " live tensors: devices=("
              << absl::StrJoin(devices, ",") << ")";
@@ -1561,6 +1570,8 @@ XLATensor::CompilationResult XLATensor::Compile(
 std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
     const SyncTensorsConfig& config) {
+  tensorflow::profiler::TraceMe activity(
+      "SyncTensorsGraphInternal", tensorflow::profiler::TraceMeLevel::kInfo);
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
     return nullptr;

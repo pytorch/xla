@@ -14,6 +14,7 @@ def parse_common_options(datadir=None,
                          lr=None,
                          momentum=None,
                          target_accuracy=None,
+                         profiler_port=9012,
                          opts=None):
   parser = argparse.ArgumentParser(add_help=False)
   parser.add_argument('--datadir', type=str, default=datadir)
@@ -23,6 +24,7 @@ def parse_common_options(datadir=None,
   parser.add_argument('--num_epochs', type=int, default=num_epochs)
   parser.add_argument('--num_workers', type=int, default=num_workers)
   parser.add_argument('--log_steps', type=int, default=log_steps)
+  parser.add_argument('--profiler_port', type=int, default=profiler_port)
   parser.add_argument('--lr', type=float, default=lr)
   parser.add_argument('--momentum', type=float, default=momentum)
   parser.add_argument('--target_accuracy', type=float, default=target_accuracy)
