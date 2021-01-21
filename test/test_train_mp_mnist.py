@@ -7,7 +7,7 @@ FLAGS = args_parse.parse_common_options(
     lr=0.01,
     target_accuracy=98.0,
     num_epochs=18,
-    port=9012)
+    profiler_port=9012)
 
 import os
 import shutil
@@ -122,7 +122,7 @@ def train_mnist(flags, **kwargs):
   loss_fn = nn.NLLLoss()
 
   # Start up client side profiler server.
-  server = xp.start_server(flags.port)
+  server = xp.start_server(flags.profiler_port)
   # Testing purpose only: set event for synchronization.
   if kwargs.get('worker_started'):
     kwargs.pop('worker_started').set()

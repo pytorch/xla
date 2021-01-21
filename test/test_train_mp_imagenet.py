@@ -33,7 +33,7 @@ FLAGS = args_parse.parse_common_options(
     momentum=None,
     lr=None,
     target_accuracy=None,
-    port=9012,
+    profiler_port=9012,
     opts=MODEL_OPTS.items(),
 )
 
@@ -200,7 +200,7 @@ def train_imagenet():
   loss_fn = nn.CrossEntropyLoss()
 
   # Start up client side profiler server.
-  server = xp.start_server(FLAGS.port)
+  server = xp.start_server(FLAGS.profiler_port)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()

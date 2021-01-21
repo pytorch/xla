@@ -39,7 +39,7 @@ class ProfilerTest(unittest.TestCase):
           lr=0.01,
           num_epochs=10)
       flags.fake_data = True
-      flags.port = port
+      flags.profiler_port = port
       test_train_mp_mnist.train_mnist(flags, worker_started=worker_started)
 
     p = multiprocessing.Process(target=train_worker, daemon=True)
