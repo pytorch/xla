@@ -6,7 +6,8 @@ FLAGS = args_parse.parse_common_options(
     momentum=0.5,
     lr=0.01,
     target_accuracy=98.0,
-    num_epochs=18)
+    num_epochs=18,
+    profiler_port=9012)
 
 import os
 import shutil
@@ -22,6 +23,7 @@ import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.profiler as xp
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
@@ -58,30 +60,30 @@ def _train_update(device, x, loss, tracker, writer):
       summary_writer=writer)
 
 
-def train_mnist():
+def train_mnist(flags, **kwargs):
   torch.manual_seed(1)
 
-  if FLAGS.fake_data:
+  if flags.fake_data:
     train_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.batch_size, 1, 28,
-                          28), torch.zeros(FLAGS.batch_size,
+        data=(torch.zeros(flags.batch_size, 1, 28,
+                          28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=60000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=60000 // flags.batch_size // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.batch_size, 1, 28,
-                          28), torch.zeros(FLAGS.batch_size,
+        data=(torch.zeros(flags.batch_size, 1, 28,
+                          28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=10000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=10000 // flags.batch_size // xm.xrt_world_size())
   else:
     train_dataset = datasets.MNIST(
-        os.path.join(FLAGS.datadir, str(xm.get_ordinal())),
+        os.path.join(flags.datadir, str(xm.get_ordinal())),
         train=True,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
-        os.path.join(FLAGS.datadir, str(xm.get_ordinal())),
+        os.path.join(flags.datadir, str(xm.get_ordinal())),
         train=False,
         download=True,
         transform=transforms.Compose(
@@ -96,28 +98,34 @@ def train_mnist():
           shuffle=True)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=FLAGS.batch_size,
+        batch_size=flags.batch_size,
         sampler=train_sampler,
-        drop_last=FLAGS.drop_last,
+        drop_last=flags.drop_last,
         shuffle=False if train_sampler else True,
-        num_workers=FLAGS.num_workers)
+        num_workers=flags.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
-        batch_size=FLAGS.batch_size,
-        drop_last=FLAGS.drop_last,
+        batch_size=flags.batch_size,
+        drop_last=flags.drop_last,
         shuffle=False,
-        num_workers=FLAGS.num_workers)
+        num_workers=flags.num_workers)
 
   # Scale learning rate to num cores
-  lr = FLAGS.lr * xm.xrt_world_size()
+  lr = flags.lr * xm.xrt_world_size()
 
   device = xm.xla_device()
   model = MNIST().to(device)
   writer = None
   if xm.is_master_ordinal():
-    writer = test_utils.get_summary_writer(FLAGS.logdir)
-  optimizer = optim.SGD(model.parameters(), lr=lr, momentum=FLAGS.momentum)
+    writer = test_utils.get_summary_writer(flags.logdir)
+  optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
+
+  # Start up client side profiler server.
+  server = xp.start_server(flags.profiler_port)
+  # Testing purpose only: set event for synchronization.
+  if kwargs.get('worker_started'):
+    kwargs.pop('worker_started').set()
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
@@ -129,8 +137,8 @@ def train_mnist():
       loss = loss_fn(output, target)
       loss.backward()
       xm.optimizer_step(optimizer)
-      tracker.add(FLAGS.batch_size)
-      if step % FLAGS.log_steps == 0:
+      tracker.add(flags.batch_size)
+      if step % flags.log_steps == 0:
         xm.add_step_closure(
             _train_update, args=(device, step, loss, tracker, writer))
 
@@ -151,7 +159,7 @@ def train_mnist():
   train_device_loader = pl.MpDeviceLoader(train_loader, device)
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   accuracy, max_accuracy = 0.0, 0.0
-  for epoch in range(1, FLAGS.num_epochs + 1):
+  for epoch in range(1, flags.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     train_loop_fn(train_device_loader)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
@@ -165,7 +173,7 @@ def train_mnist():
         epoch,
         dict_to_write={'Accuracy/test': accuracy},
         write_xla_metrics=True)
-    if FLAGS.metrics_debug:
+    if flags.metrics_debug:
       xm.master_print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
@@ -174,15 +182,13 @@ def train_mnist():
 
 
 def _mp_fn(index, flags):
-  global FLAGS
-  FLAGS = flags
   torch.set_default_tensor_type('torch.FloatTensor')
-  accuracy = train_mnist()
-  if FLAGS.tidy and os.path.isdir(FLAGS.datadir):
-    shutil.rmtree(FLAGS.datadir)
-  if accuracy < FLAGS.target_accuracy:
+  accuracy = train_mnist(flags)
+  if flags.tidy and os.path.isdir(flags.datadir):
+    shutil.rmtree(flags.datadir)
+  if accuracy < flags.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
-                                                  FLAGS.target_accuracy))
+                                                  flags.target_accuracy))
     sys.exit(21)
 
 
