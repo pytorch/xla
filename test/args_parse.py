@@ -24,7 +24,11 @@ def parse_common_options(datadir=None,
   parser.add_argument('--num_epochs', type=int, default=num_epochs)
   parser.add_argument('--num_workers', type=int, default=num_workers)
   parser.add_argument('--log_steps', type=int, default=log_steps)
-  parser.add_argument('--port', type=int, default=port)
+  parser.add_argument(
+      '--port',
+      type=int,
+      default=port,
+      help='Port used to start profiler server.')
   parser.add_argument('--lr', type=float, default=lr)
   parser.add_argument('--momentum', type=float, default=momentum)
   parser.add_argument('--target_accuracy', type=float, default=target_accuracy)

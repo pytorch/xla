@@ -1098,6 +1098,8 @@ void XLATensor::ApplyPendingGraph() {
 
 XLATensor::SyncTensorCollection XLATensor::CollectSyncTensors(
     const std::vector<XLATensor>& tensors, const SyncTensorsConfig& config) {
+  tensorflow::profiler::TraceMe activity(
+      "CollectSyncTensors", tensorflow::profiler::TraceMeLevel::kInfo);
   xla::util::Unique<Device> unique_device;
   for (size_t i = 0; i < tensors.size(); ++i) {
     unique_device.set(tensors[i].GetDevice());
@@ -1568,6 +1570,8 @@ XLATensor::CompilationResult XLATensor::Compile(
 std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
     const SyncTensorsConfig& config) {
+  tensorflow::profiler::TraceMe activity(
+      "SyncTensorsGraphInternal", tensorflow::profiler::TraceMeLevel::kInfo);
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
     return nullptr;
