@@ -24,8 +24,7 @@ class ProfilerTest(unittest.TestCase):
   def _check_xspace_pb_exist(self, logdir):
     path = os.path.join(logdir, 'plugins', 'profile', '*', '*.xplane.pb')
     paths = glob.glob(path)
-    self.assertEqual(1, len(paths),
-                     f'Expected one path match: {path}')
+    self.assertEqual(1, len(paths), f'Expected one path match: {path}')
     return paths[0]
 
   def _check_trace_namespace_exists(self, path):
@@ -57,7 +56,12 @@ class ProfilerTest(unittest.TestCase):
     worker_started.wait(60)
 
     logdir = tempfile.mkdtemp()
-    xp.trace(f'localhost:{port}', logdir, num_tracing_attempts=5, delay_ms=1000)
+    xp.trace(
+        f'localhost:{port}',
+        logdir,
+        duration_ms=5000,
+        num_tracing_attempts=5,
+        delay_ms=1000)
     p.terminate()
     path = self._check_xspace_pb_exist(logdir)
     self._check_trace_namespace_exists(path)

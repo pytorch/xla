@@ -669,7 +669,7 @@ void BuildProfilerSubmodule(py::module* m) {
                py::arg("num_tracing_attempts") = 3, py::arg("options"));
 
   py::class_<tensorflow::profiler::TraceMeWrapper> traceme_class(
-    profiler, "TraceMe", py::module_local());
+      profiler, "TraceMe", py::module_local());
   traceme_class.def(py::init<py::str, py::kwargs>())
       .def("__enter__", [](py::object self) -> py::object { return self; })
       .def("__exit__",
@@ -679,10 +679,9 @@ void BuildProfilerSubmodule(py::module* m) {
              py::cast<tensorflow::profiler::TraceMeWrapper*>(self)->Stop();
              return py::none();
            })
-      .def(
-        "set_metadata", &tensorflow::profiler::TraceMeWrapper::SetMetadata)
-      .def_static(
-        "is_enabled", &tensorflow::profiler::TraceMeWrapper::IsEnabled);
+      .def("set_metadata", &tensorflow::profiler::TraceMeWrapper::SetMetadata)
+      .def_static("is_enabled",
+                  &tensorflow::profiler::TraceMeWrapper::IsEnabled);
 }
 
 void InitXlaModuleBindings(py::module m) {
