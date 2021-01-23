@@ -448,6 +448,7 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
 
   auto mwait = std::make_shared<util::MultiWait>(session_work_map.size());
   std::atomic<int64> total_size(0);
+  std::atomic<int64> num_tensors(0);
   std::vector<Literal> results(handles.size());
   for (auto& session_session_work : session_work_map) {
     XrtSession* session = session_session_work.first;
@@ -457,6 +458,7 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
       XLA_CHECK_OK(session->session()->Run(
           session_work->feed_inputs, session_work->outputs_handles, &outputs));
       XLA_CHECK_EQ(outputs.size(), session_work->outputs_handles.size());
+      num_tensors += outputs.size();
 
       for (size_t i = 0; i < outputs.size(); ++i) {
         size_t li = session_work->index_mapping[i];
@@ -471,6 +473,11 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
   }
   mwait->Wait();
   InboundDataMetric()->AddSample(total_size.load());
+  activity.AppendMetadata([&total_size, &num_tensors]() {
+    return tensorflow::profiler::TraceMeEncode(
+        {{"total_size", absl::StrCat(std::to_string(total_size), "B")},
+         {"num_tensors", std::to_string(num_tensors)}});
+  });
   return results;
 }
 
