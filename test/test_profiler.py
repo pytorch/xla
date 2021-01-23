@@ -8,7 +8,7 @@ import time
 import unittest
 
 import args_parse
-import test_train_mp_mnist
+import test_profile_mp_mnist
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 import torch_xla.utils.utils as xu
@@ -49,7 +49,7 @@ class ProfilerTest(unittest.TestCase):
           num_epochs=10)
       flags.fake_data = True
       flags.profiler_port = port
-      test_train_mp_mnist.train_mnist(flags, worker_started=worker_started)
+      test_profile_mp_mnist.train_mnist(flags, worker_started=worker_started)
 
     p = multiprocessing.Process(target=train_worker, daemon=True)
     p.start()

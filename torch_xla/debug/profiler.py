@@ -1,10 +1,22 @@
 from concurrent import futures
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
+import torch_xla.core.xla_model as xm
 from typing import Optional
 
+_TRACER_MARKED_STEP: bool = False
 
-def start_server(port: int):
+
+def set_tracer_marked_step(value: bool):
+  global _TRACER_MARKED_STEP
+  _TRACER_MARKED_STEP = value
+
+
+def get_tracer_marked_step() -> bool:
+  return _TRACER_MARKED_STEP
+
+
+def start_server(port: int) -> object:
   """Start a profiler server on the client side on provided port.
 
   Users can then use the tensorboard profiler plugin
@@ -116,3 +128,11 @@ class StepTrace(torch_xla._XLAC.profiler.TraceMe):
 
   def __init__(self, name: str, **kwargs):
     super().__init__(name, _r=1, **kwargs)
+
+  def __enter__(self):
+    set_tracer_marked_step(True)
+    super().__enter__()
+
+  def __exit__(self, type, value, traceback):
+    xm.mark_step()
+    super().__exit__(type, value, traceback)
