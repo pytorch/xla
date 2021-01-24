@@ -1,5 +1,5 @@
 set -e
-pyenv local 3.5.2
+pyenv local 3.6.5
 pip install --upgrade pip
 pip install pyyaml -qqq
 echo "export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_FOR_ECR_READ_WRITE}" >> $BASH_ENV
