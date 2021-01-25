@@ -1,3 +1,4 @@
+"""Fork of test_train_mp_mnist.py to demonstrate how to profile workloads."""
 import args_parse
 
 FLAGS = args_parse.parse_common_options(
@@ -6,7 +7,8 @@ FLAGS = args_parse.parse_common_options(
     momentum=0.5,
     lr=0.01,
     target_accuracy=98.0,
-    num_epochs=18)
+    num_epochs=18,
+    profiler_port=9012)
 
 import os
 import shutil
@@ -22,6 +24,7 @@ import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.profiler as xp
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
@@ -119,29 +122,39 @@ def train_mnist(flags, **kwargs):
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
 
+  # Start up client side profiler server.
+  server = xp.start_server(flags.profiler_port)
+  # Testing purpose only: set event for synchronization.
+  if kwargs.get('worker_started'):
+    kwargs.pop('worker_started').set()
+
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
-      xm.optimizer_step(optimizer)
-      tracker.add(flags.batch_size)
-      if step % flags.log_steps == 0:
-        xm.add_step_closure(
-            _train_update, args=(device, step, loss, tracker, writer))
+      with xp.StepTrace('train_mnist', step_num=step):
+        with xp.Trace('build_graph'):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
+        xm.optimizer_step(optimizer)
+
+        tracker.add(flags.batch_size)
+        if step % flags.log_steps == 0:
+          xm.add_step_closure(
+              _train_update, args=(device, step, loss, tracker, writer))
 
   def test_loop_fn(loader):
     total_samples = 0
     correct = 0
     model.eval()
     for data, target in loader:
-      output = model(data)
-      pred = output.max(1, keepdim=True)[1]
-      correct += pred.eq(target.view_as(pred)).sum()
-      total_samples += data.size()[0]
+      with xp.StepTrace('test_mnist'):
+        output = model(data)
+        pred = output.max(1, keepdim=True)[1]
+        correct += pred.eq(target.view_as(pred)).sum()
+        total_samples += data.size()[0]
 
     accuracy = 100.0 * correct.item() / total_samples
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)

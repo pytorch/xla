@@ -5,6 +5,7 @@ from six import iteritems, itervalues
 import threading
 import torch
 import torch_xla
+import torch_xla.debug.profiler as xp
 import torch_xla.utils.keyd_queue as kq
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
@@ -36,11 +37,16 @@ class PerDeviceLoader(object):
     return self._loader.per_device_samples()
 
   def next(self):
-    if self._mark_step_batch_count == self._batches_yielded:
-      self._batches_yielded = 0
-      xm.mark_step()
-    else:
+    if xp.get_tracer_marked_step():
+      xp.set_tracer_marked_step(False)
       self._batches_yielded += 1
+    else:
+      if self._mark_step_batch_count <= self._batches_yielded:
+        self._batches_yielded = 0
+        xm.mark_step()
+      else:
+        self._batches_yielded += 1
+
     item = self._loader.next_item(self._device)
     if item is None:
       raise StopIteration
