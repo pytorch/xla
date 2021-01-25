@@ -1,10 +1,22 @@
 from concurrent import futures
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
+import torch_xla.core.xla_model as xm
 from typing import Optional
 
+_TRACER_MARKED_STEP: bool = False
 
-def start_server(port: int):
+
+def set_tracer_marked_step(value: bool):
+  global _TRACER_MARKED_STEP
+  _TRACER_MARKED_STEP = value
+
+
+def get_tracer_marked_step() -> bool:
+  return _TRACER_MARKED_STEP
+
+
+def start_server(port: int) -> object:
   """Start a profiler server on the client side on provided port.
 
   Users can then use the tensorboard profiler plugin
@@ -68,3 +80,59 @@ def trace(service_addr: str,
       duration_ms=duration_ms,
       num_tracing_attempts=num_tracing_attempts,
       options=options)
+
+
+class Trace(torch_xla._XLAC.profiler.TraceMe):
+  """Context manager that produces a trace event for profiling.
+
+  The traces generated can then be collected using the above profiling APIs.
+  The profiling server first needs to be started up and then can be sampled
+  either using Tensorboard profiler plugin
+  (https://github.com/tensorflow/profiler) or the
+  :func:`~torch_xla.debug.profiler.trace` method.
+
+  Note: currently only supports PyTorch/XLA client side trace events. i.e.,
+  the namespace won't group TPU worker side trace.
+
+  Example usage:
+  ```python
+  server = xp.start_server(9012)
+
+  with xp.Trace('fwd_context'):
+    model(input)
+    xm.mark_step()
+  ```
+  """
+  pass
+
+
+class StepTrace(torch_xla._XLAC.profiler.TraceMe):
+  """Context manager that produces a step trace event for profiling.
+
+  In addition to being regular traces, the generated traces will
+  help provide per-step performance statistics.
+
+  Note: currently only supports PyTorch/XLA client side trace events. i.e.,
+  the namespace won't group TPU worker side trace.
+
+  Example usage:
+  ```python
+  server = xp.start_server(9012)
+
+  for step, (input, label) in enumerate(loader):
+    with xp.StepTrace('train_step', step_num=step):
+      model(input)
+      ...
+  ```
+  """
+
+  def __init__(self, name: str, **kwargs):
+    super().__init__(name, _r=1, **kwargs)
+
+  def __enter__(self):
+    set_tracer_marked_step(True)
+    super().__enter__()
+
+  def __exit__(self, type, value, traceback):
+    xm.mark_step()
+    super().__exit__(type, value, traceback)
