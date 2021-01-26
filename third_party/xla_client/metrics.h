@@ -2,6 +2,7 @@
 #define XLA_CLIENT_METRICS_H_
 
 #include <atomic>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -69,6 +70,59 @@ class CounterData {
 
  private:
   std::atomic<xla::int64> value_;
+};
+
+class MetricsArena {
+ public:
+  static MetricsArena* Get();
+
+  // Registers a new metric in the global arena.
+  void RegisterMetric(const std::string& name, MetricReprFn repr_fn,
+                      size_t max_samples, std::shared_ptr<MetricData>* data);
+
+  void RegisterCounter(const std::string& name,
+                       std::shared_ptr<CounterData>* data);
+
+  void ForEachMetric(
+      const std::function<void(const std::string&, MetricData*)>& metric_func);
+
+  void ForEachCounter(const std::function<void(const std::string&,
+                                               CounterData*)>& counter_func);
+
+  std::vector<std::string> GetMetricNames() {
+    std::vector<std::string> names;
+    std::lock_guard<std::mutex> lock(lock_);
+    for (auto& name_data : metrics_) {
+      names.push_back(name_data.first);
+    }
+    return names;
+  }
+
+  MetricData* GetMetric(const std::string& name) {
+    std::lock_guard<std::mutex> lock(lock_);
+    auto it = metrics_.find(name);
+    return it != metrics_.end() ? it->second.get() : nullptr;
+  }
+
+  std::vector<std::string> GetCounterNames() {
+    std::vector<std::string> names;
+    std::lock_guard<std::mutex> lock(lock_);
+    for (auto& name_data : counters_) {
+      names.push_back(name_data.first);
+    }
+    return names;
+  }
+
+  CounterData* GetCounter(const std::string& name) {
+    std::lock_guard<std::mutex> lock(lock_);
+    auto it = counters_.find(name);
+    return it != counters_.end() ? it->second.get() : nullptr;
+  }
+
+ private:
+  std::mutex lock_;
+  std::map<std::string, std::shared_ptr<MetricData>> metrics_;
+  std::map<std::string, std::shared_ptr<CounterData>> counters_;
 };
 
 // Emits the value in a to_string() conversion.
