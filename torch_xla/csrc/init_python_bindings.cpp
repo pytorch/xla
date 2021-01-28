@@ -36,6 +36,7 @@
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/python_util.h"
@@ -682,6 +683,13 @@ void BuildProfilerSubmodule(py::module* m) {
       .def("set_metadata", &tensorflow::profiler::TraceMeWrapper::SetMetadata)
       .def_static("is_enabled",
                   &tensorflow::profiler::TraceMeWrapper::IsEnabled);
+
+  py::class_<ir::ScopePusher, std::unique_ptr<ir::ScopePusher>>
+      scope_pusher_class(profiler, "ScopePusher");
+  profiler.def("scope_pusher",
+               [](const std::string& name) -> std::unique_ptr<ir::ScopePusher> {
+                 return absl::make_unique<ir::ScopePusher>(name);
+               });
 }
 
 void InitXlaModuleBindings(py::module m) {

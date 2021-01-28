@@ -4,6 +4,9 @@
 #include <stdexcept>
 
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
+#include "absl/strings/str_replace.h"
+#include "absl/strings/string_view.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/python_util.h"
@@ -35,11 +38,21 @@ class HloMetadataSetter {
 
   static void PopulateXlaOpMetadata(LoweringContext* loctx, const Node* node) {
     xla::OpMetadata metadata;
-    metadata.set_op_type(node->op().ToString());
+    // NOTE: we apply some string manipulation as xprof backend utility
+    // for nesting/grouping traces depends on certain op name/type
+    // patterns for classification.
+    // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/utils/tf_op_utils.cc#L55
+    std::string op_type =
+        absl::StrReplaceAll(node->op().ToString(), {{":", "_"}});
+    metadata.set_op_type(op_type);
     const ir::MetaData& nmeta = node->metadata();
+    std::string op_name_prefix;
     if (!nmeta.scope.empty()) {
-      metadata.set_op_name(nmeta.scope);
+      op_name_prefix =
+          absl::StrCat(absl::StrReplaceAll(nmeta.scope, {{":", "_"}}), "/");
     }
+    metadata.set_op_name(absl::StrCat(op_name_prefix, op_type));
+
     if (!nmeta.frame_info.empty()) {
       const SourceLocation& frame = nmeta.frame_info.front();
       std::string::size_type pos = frame.file.find_last_of('/');

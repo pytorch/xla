@@ -103,10 +103,22 @@ class Trace(torch_xla._XLAC.profiler.TraceMe):
     xm.mark_step()
   ```
   """
-  pass
+
+  def __init__(self, name: str, **kwargs):
+    self.name = name
+    super().__init__(name, **kwargs)
+
+  def __enter__(self):
+    self.scope = torch_xla._XLAC.profiler.scope_pusher(self.name)
+    super().__enter__()
+
+  def __exit__(self, type, value, traceback):
+    if getattr(self, 'scope', None):
+      del self.scope
+    super().__exit__(type, value, traceback)
 
 
-class StepTrace(torch_xla._XLAC.profiler.TraceMe):
+class StepTrace(Trace):
   """Context manager that produces a step trace event for profiling.
 
   In addition to being regular traces, the generated traces will
@@ -134,5 +146,9 @@ class StepTrace(torch_xla._XLAC.profiler.TraceMe):
     super().__enter__()
 
   def __exit__(self, type, value, traceback):
+    if getattr(self, 'scope', None):
+      # In ir.cpp ResetScopeContext we ensure that we have no remaining scope
+      # before marking step.
+      del self.scope
     xm.mark_step()
     super().__exit__(type, value, traceback)

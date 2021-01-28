@@ -41,13 +41,16 @@ class MNIST(nn.Module):
     self.fc2 = nn.Linear(50, 10)
 
   def forward(self, x):
-    x = F.relu(F.max_pool2d(self.conv1(x), 2))
-    x = self.bn1(x)
-    x = F.relu(F.max_pool2d(self.conv2(x), 2))
-    x = self.bn2(x)
-    x = torch.flatten(x, 1)
-    x = F.relu(self.fc1(x))
-    x = self.fc2(x)
+    with xp.Trace('conv1'):
+      x = F.relu(F.max_pool2d(self.conv1(x), 2))
+      x = self.bn1(x)
+    with xp.Trace('conv2'):
+      x = F.relu(F.max_pool2d(self.conv2(x), 2))
+      x = self.bn2(x)
+    with xp.Trace('dense'):
+      x = torch.flatten(x, 1)
+      x = F.relu(self.fc1(x))
+      x = self.fc2(x)
     return F.log_softmax(x, dim=1)
 
 
