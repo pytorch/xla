@@ -1497,6 +1497,13 @@ XLATensor::CompilationResult XLATensor::Compile(
     const std::vector<XLATensor>& tensors,
     absl::Span<const std::string> devices, const SyncTensorCollection& coll,
     PostOrderData* po_data) {
+  tensorflow::profiler::TraceMe activity(
+      [&] {
+        return tensorflow::profiler::TraceMeEncode(
+            "XLATensor::Compile",
+            {{"graph_hash", xla::util::HexHash(coll.hash)}});
+      },
+      tensorflow::profiler::TraceMeLevel::kInfo);
   static const bool enable_aliasing =
       xla::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
   ir::LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
