@@ -330,6 +330,7 @@
 
     <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="o">.</span><span class="n">next_item</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
       <span class="k">raise</span> <span class="ne">StopIteration</span>
     <span class="k">return</span> <span class="n">item</span>
 
