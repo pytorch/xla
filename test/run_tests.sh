@@ -42,8 +42,12 @@ function run_opbyop {
 }
 
 function run_dynamic {
-  echo "Running in DynamicShape mode: $@"
-  XLA_EXPERIMENTAL="nonzero:masked_select" run_test "$@"
+  if [[ "$TPUVM_MODE" == "1" ]]; then
+    run_test "$@"
+  else
+    echo "Running in DynamicShape mode: $@"
+    XLA_EXPERIMENTAL="nonzero:masked_select" run_test "$@"
+  fi
 }
 
 function run_all_tests {

@@ -34,6 +34,11 @@ if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
   VERBOSE="-s"
 fi
 
+TPUVM_FLAG=
+if [[ "$TPUVM_MODE" == "1" ]]; then
+  TPUVM_FLAG="--define=with_tpu_support=true"
+fi
+
 MAX_JOBS=
 if [[ "$XLA_CUDA" == "1" ]] && [[ "$CLOUD_BUILD" == "true" ]]; then
   MAX_JOBS="--jobs=16"
@@ -57,7 +62,7 @@ else
   cp -r -u -p $THIRD_PARTY_DIR/xla_client $THIRD_PARTY_DIR/tensorflow/tensorflow/compiler/xla/
 
   pushd $THIRD_PARTY_DIR/tensorflow
-  bazel build $MAX_JOBS $VERBOSE --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
+  bazel build $MAX_JOBS $VERBOSE $TPUVM_FLAG --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
     $XLA_CUDA_CFG //tensorflow/compiler/xla/xla_client:libxla_computation_client.so
 
   popd
