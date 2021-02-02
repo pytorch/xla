@@ -171,7 +171,7 @@ class DistributedExecutor(object):
         '--internal-ip',
         '--zone={}'.format(client_worker.get_zone()),
         local_path,
-        '{}:{}'.format(client_worker.get_hostname(), remote_path),
+        '{}@{}:{}'.format(os.getlogin(), client_worker.get_hostname(), remote_path),
     ]
 
   def _build_ssh_cmd(self, remote_cmd, client_worker):
@@ -184,7 +184,7 @@ class DistributedExecutor(object):
         'ssh',
         '--internal-ip',
         '--zone={}'.format(client_worker.get_zone()),
-        '{}'.format(client_worker.get_hostname()),
+        '{}@{}'.format(os.getlogin(), client_worker.get_hostname()),
         '--command',
         '\'{}\''.format(remote_cmd),
     ]
