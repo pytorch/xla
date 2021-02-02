@@ -22,7 +22,6 @@
 #include "tensorflow/compiler/xla/xla_client/unique.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
-#include "tensorflow/compiler/xla/xla_client/xrt_local_service.h"
 #include "tensorflow/compiler/xrt/xrt_util.h"
 #include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/core/profiler/lib/traceme.h"
@@ -1926,6 +1925,10 @@ std::string XrtComputationClient::GetLocalTarget(const Options& options) {
 }
 
 void XrtComputationClient::MaybeCreateLocalService(const Options& options) {
+  if (local_service_ != nullptr) {
+    TF_VLOG(1) << "Local service has been created, return";
+    return;
+  }
   std::string grpc_root("grpc://");
   std::string local_worker = sys_util::GetEnvString(env::kEnvLocalWorker, "");
   XrtComputationClient::Worker worker("", -1);
@@ -1952,9 +1955,9 @@ void XrtComputationClient::MaybeCreateLocalService(const Options& options) {
     std::string cluster_spec =
         absl::StrCat(job_name, "|", absl::StrJoin(hosts, ";"));
     TF_VLOG(2) << "Local Service Cluster Spec: " << cluster_spec;
-    XrtLocalService* service =
-        new XrtLocalService(cluster_spec, job_name, task_index);
-    service->Start();
+    local_service_ = absl::make_unique<XrtLocalService>(
+        cluster_spec, job_name, task_index);
+    local_service_->Start();
   }
 }
 
