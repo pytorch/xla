@@ -183,7 +183,8 @@ class DistributedExecutor(object):
         '-i',
         '~/.ssh/google_compute_engine',
         local_path,
-        '{}@{}:{}'.format(os.getlogin(), client_worker.get_internal_ip(), remote_path),
+        '{}@{}:{}'.format(os.getlogin(), client_worker.get_internal_ip(),
+                          remote_path),
     ]
 
   def _build_ssh_cmd(self, remote_cmd, client_worker):
