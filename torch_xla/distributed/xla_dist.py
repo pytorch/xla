@@ -162,30 +162,52 @@ class DistributedExecutor(object):
     stdout.join()
     stderr.join()
 
+  def _is_retry(self):
+    return self.trials >= 1
+
   def _build_scp_cmd(self, local_path, remote_path, client_worker):
+    if not self._is_retry():
+      return [
+          'gcloud',
+          '-q',
+          'compute',
+          'scp',
+          '--internal-ip',
+          '--zone={}'.format(client_worker.get_zone()),
+          local_path,
+          '{}:{}'.format(client_worker.get_hostname(), remote_path),
+      ]
     return [
-        'gcloud',
-        '-q',
-        'compute',
         'scp',
-        '--internal-ip',
-        '--zone={}'.format(client_worker.get_zone()),
+        '-oStrictHostKeyChecking=no',
+        '-i',
+        '~/.ssh/google_compute_engine',
         local_path,
-        '{}:{}'.format(client_worker.get_hostname(), remote_path),
+        '{}@{}:{}'.format(os.getlogin(), client_worker.get_internal_ip(),
+                          remote_path),
     ]
 
   def _build_ssh_cmd(self, remote_cmd, client_worker):
     if isinstance(remote_cmd, list):
       remote_cmd = concat_cmd_list(remote_cmd)
+    if not self._is_retry():
+      return [
+          'gcloud',
+          '-q',
+          'compute',
+          'ssh',
+          '--internal-ip',
+          '--zone={}'.format(client_worker.get_zone()),
+          '{}'.format(client_worker.get_hostname()),
+          '--command',
+          '\'{}\''.format(remote_cmd),
+      ]
     return [
-        'gcloud',
-        '-q',
-        'compute',
         'ssh',
-        '--internal-ip',
-        '--zone={}'.format(client_worker.get_zone()),
-        '{}'.format(client_worker.get_hostname()),
-        '--command',
+        '-oStrictHostKeyChecking=no',
+        '-i',
+        '~/.ssh/google_compute_engine',
+        '{}@{}'.format(os.getlogin(), client_worker.get_internal_ip()),
         '\'{}\''.format(remote_cmd),
     ]
 
@@ -396,8 +418,8 @@ class DistributedExecutor(object):
       sys.exit(128 + signal.SIGINT)
 
   def run(self, cmd):
-    trials = 0
-    while trials <= self.MAX_TPU_RETRY:
+    self.trials = 0
+    while self.trials <= self.MAX_TPU_RETRY:
       try:
         self.logger.info(
             'Command to distribute: {}'.format(concat_cmd_list(cmd)),
@@ -438,7 +460,7 @@ class DistributedExecutor(object):
         self._cleanup(script_map)
         proc.terminate()
         self._cluster.wait_for_healthy_service()
-        trials += 1
+        self.trials += 1
       except KeyboardInterrupt:
         self.logger.info(
             'Cleaning up processes (takes a couple of seconds)',
