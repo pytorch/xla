@@ -1045,6 +1045,7 @@ XLATensor XLATensor::diagonal(const XLATensor& input, xla::int64 offset,
 }
 
 XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
+                         std::string rounding_mode,
                          c10::optional<at::ScalarType> logical_element_type) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
@@ -1059,14 +1060,25 @@ XLATensor XLATensor::div(const XLATensor& input, const XLATensor& other,
   }
   ir::Value input_value = GetFloatingIrValue(input, scalar_type);
   ir::Value other_value = GetFloatingIrValue(other, scalar_type);
+  ir::Value res = input_value / other_value;
+
+  if (rounding_mode == "trunc") {
+    res = ir::ops::Trunc(res);
+  } else if (rounding_mode == "floor") {
+    res = ir::ops::Floor(res);
+  } else if (rounding_mode != "true") {
+    XLA_CHECK(false)
+        << "rounding_mode must be one of 'true', 'trunc', or 'floor'";
+  }
 
   // Promote the result to the logical_element_type if one of the
   // input and the other is float. If that is not the case logical_element_type
-  // will be non-floating-point type.
-  if (input_is_float || other_is_float) {
-    return input.CreateFrom(input_value / other_value, logical_element_type);
+  // will be non-floating-point type, we should only promote the result to that
+  // when rounding_mode is not "true"
+  if (input_is_float || other_is_float || rounding_mode != "true") {
+    return input.CreateFrom(res, logical_element_type);
   } else {
-    return input.CreateFrom(input_value / other_value, scalar_type);
+    return input.CreateFrom(res, scalar_type);
   }
 }
 
@@ -1079,12 +1091,22 @@ XLATensor XLATensor::div(const XLATensor& input, at::Scalar other) {
   return input.CreateFrom(input_value / other_value, scalar_type);
 }
 
-void XLATensor::div_(XLATensor& input, const XLATensor& other) {
+void XLATensor::div_(XLATensor& input, const XLATensor& other,
+                     std::string rounding_mode) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
   ir::Value input_value = GetFloatingIrValue(input, scalar_type);
   ir::Value other_value = GetFloatingIrValue(other, scalar_type);
-  input.SetInPlaceIrValue(input_value / other_value);
+  ir::Value res = input_value / other_value;
+  if (rounding_mode == "trunc") {
+    res = ir::ops::Trunc(res);
+  } else if (rounding_mode == "floor") {
+    res = ir::ops::Floor(res);
+  } else if (rounding_mode != "true") {
+    XLA_CHECK(false)
+        << "rounding_mode must be one of 'true', 'trunc', or 'floor'";
+  }
+  input.SetInPlaceIrValue(res);
 }
 
 void XLATensor::div_(XLATensor& input, at::Scalar other) {
