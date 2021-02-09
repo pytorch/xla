@@ -10119,13 +10119,12 @@ TEST_F(AtenXlaTensorTest, TestEarlySyncLiveTensors) {
   static bool sync =
       xla::sys_util::GetEnvBool("XLA_SYNC_BEFORE_ITEM_CALL", true);
   if (sync) {
-    ExpectCounterChanged(
-        "EarlySyncLiveTensorsCount", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("EarlySyncLiveTensorsCount",
+                         cpp_test::GetIgnoredCounters());
 
   } else {
-    ExpectCounterNotChanged(
-        "EarlySyncLiveTensorsCount", cpp_test::GetIgnoredCounters());
-
+    ExpectCounterNotChanged("EarlySyncLiveTensorsCount",
+                            cpp_test::GetIgnoredCounters());
   }
 }
 

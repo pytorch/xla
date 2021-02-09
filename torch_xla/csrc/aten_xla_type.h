@@ -1106,7 +1106,7 @@ class AtenXlaType {
 
   static at::Tensor& zero_(at::Tensor& self);
 
-  static at::Scalar _local_scalar_dense(const at::Tensor & self);
+  static at::Scalar _local_scalar_dense(const at::Tensor& self);
 };
 
 }  // namespace torch_xla
