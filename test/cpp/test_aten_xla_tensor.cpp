@@ -10108,6 +10108,25 @@ TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::_amp_update_scale",
                        cpp_test::GetIgnoredCounters());
+
+TEST_F(AtenXlaTensorTest, TestEarlySyncLiveTensors) {
+  torch::Tensor scalar_tensor =
+      torch::scalar_tensor(1., torch::TensorOptions(torch::kFloat));
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_scalar_tensor = CopyToDevice(scalar_tensor, device);
+    torch::Scalar scalar = xla_scalar_tensor.item();
+  });
+  static bool sync =
+      xla::sys_util::GetEnvBool("XLA_SYNC_BEFORE_ITEM_CALL", true);
+  if (sync) {
+    ExpectCounterChanged(
+        "EarlySyncLiveTensorsCount", cpp_test::GetIgnoredCounters());
+
+  } else {
+    ExpectCounterNotChanged(
+        "EarlySyncLiveTensorsCount", cpp_test::GetIgnoredCounters());
+
+  }
 }
 
 }  // namespace cpp_test
