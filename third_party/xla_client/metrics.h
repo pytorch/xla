@@ -89,35 +89,13 @@ class MetricsArena {
   void ForEachCounter(const std::function<void(const std::string&,
                                                CounterData*)>& counter_func);
 
-  std::vector<std::string> GetMetricNames() {
-    std::vector<std::string> names;
-    std::lock_guard<std::mutex> lock(lock_);
-    for (auto& name_data : metrics_) {
-      names.push_back(name_data.first);
-    }
-    return names;
-  }
+  std::vector<std::string> GetMetricNames();
 
-  MetricData* GetMetric(const std::string& name) {
-    std::lock_guard<std::mutex> lock(lock_);
-    auto it = metrics_.find(name);
-    return it != metrics_.end() ? it->second.get() : nullptr;
-  }
+  MetricData* GetMetric(const std::string& name);
 
-  std::vector<std::string> GetCounterNames() {
-    std::vector<std::string> names;
-    std::lock_guard<std::mutex> lock(lock_);
-    for (auto& name_data : counters_) {
-      names.push_back(name_data.first);
-    }
-    return names;
-  }
+  std::vector<std::string> GetCounterNames();
 
-  CounterData* GetCounter(const std::string& name) {
-    std::lock_guard<std::mutex> lock(lock_);
-    auto it = counters_.find(name);
-    return it != counters_.end() ? it->second.get() : nullptr;
-  }
+  CounterData* GetCounter(const std::string& name);
 
  private:
   std::mutex lock_;

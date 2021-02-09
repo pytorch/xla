@@ -11,8 +11,10 @@ namespace metrics {
 
 namespace {
 
+static const char* kAnalysisPrefix = "pt-xla-profiler";
+
 float DivToFloat(std::ldiv_t val, std::int64_t denominator) {
-  return val.quot + (float) val.rem / denominator;
+  return val.quot + (float)val.rem / denominator;
 }
 
 class MetricFrequency : public Analyzer {
@@ -38,8 +40,9 @@ class MetricFrequency : public Analyzer {
     if (DivToFloat(res, step_count) > frequency_threshold_) {
       return {
           Analysis::Symptom::kMetricTooFrequent,
-          absl::StrFormat("%s too frequent: %zu counts during %zu steps",
-                          metric_name_, metric_count, step_count),
+          absl::StrFormat("%s: %s too frequent: %zu counts during %zu steps",
+                          kAnalysisPrefix, metric_name_, metric_count,
+                          step_count),
       };
     }
     return {Analysis::Symptom::kNormal};
@@ -69,10 +72,11 @@ class MetricTime : public Analyzer {
     if (max_metric_time > threshold_nsec_) {
       return {
           Analysis::Symptom::kMetricTooSlow,
-          absl::StrFormat("%s too slow: longest instance took %f seconds. "
-                          "Please open an GitHub issue with the graph dump for "
+          absl::StrFormat("%s: %s too slow: longest instance took %s. "
+                          "Please open a GitHub issue with the graph dump for "
                           "our team to optimize.",
-                          metric_name_, max_metric_time / 1e9),
+                          kAnalysisPrefix, metric_name_,
+                          xla::metrics::MetricFnTime(max_metric_time)),
       };
     }
     return {Analysis::Symptom::kNormal};
@@ -93,7 +97,7 @@ class XrtMetricFrequency : public Analyzer {
 
   Analysis Run() override {
     // XRT GetMetrics call is relatively expensive.
-    if (++counter_ % run_every_n_ != 0) {
+    if (counter_++ != run_every_n_) {
       return {Analysis::Symptom::kNormal};
     }
     counter_ = 0;
@@ -131,11 +135,12 @@ class XrtMetricFrequency : public Analyzer {
     if (!repr.empty()) {
       return {
           Analysis::Symptom::kMetricTooFrequent,
-          absl::StrFormat("Following metrics too frequent: %sduring %zu steps. "
-                          "Note: XRT metrics follow the lifecycle of the TPU "
-                          "so you may need "
-                          "to restart the TPU for fresh metrics.",
-                          repr, step_count),
+          absl::StrFormat(
+              "%s: Following metrics too frequent: %sduring %zu steps. "
+              "Note: XRT metrics follow the lifecycle of the TPU "
+              "so you may need "
+              "to restart the TPU for fresh metrics.",
+              kAnalysisPrefix, repr, step_count),
       };
     }
     return {Analysis::Symptom::kNormal};
@@ -163,7 +168,7 @@ class UnloweredOp : public Analyzer {
     std::string repr = ss.str();
     if (!repr.empty()) {
       return {Analysis::Symptom::kUnloweredOp,
-              absl::StrCat("Op(s) not lowered: ", repr,
+              absl::StrCat(kAnalysisPrefix, ": Op(s) not lowered: ", repr,
                            " Please open a GitHub issue with the above op "
                            "lowering requests.")};
     }

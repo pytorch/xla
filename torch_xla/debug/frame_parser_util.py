@@ -1,7 +1,11 @@
 import collections
+import logging
 import os
 import re
 import sys
+
+logging.basicConfig(format='%(name)s: %(message)s')
+logger = logging.getLogger('pt-xla-profiler')
 
 
 def parse_frame_content(line):
@@ -34,22 +38,22 @@ def create_report(frames):
     report.append('')
   report.append('=' * 80)
 
-  report_str = '\n'.join(report)
   if os.environ.get('PT_XLA_DEBUG_FILE'):
-    with open(os.environ.get('PT_XLA_DEBUG_FILE'), 'w') as f:
-      f.write(report_str)
+    with open(os.environ.get('PT_XLA_DEBUG_FILE'), 'a') as f:
+      f.write('\n'.join(report))
   else:
-    print(report_str)
+    for line in '\n'.join(report).split('\n'):
+      logger.warning(line)
 
 
 def parse_frames(lines):
   frames = collections.defaultdict(int)
-  frame, skip_frames = '', False
+  frame, skip_frames = [], False
   for line in lines:
     if re.match(r'C\+\+ Frames:', line):
       skip_frames = True
       continue
-    if re.match(r'\*{3}\sEnd stack trace\s\*{3}', line):
+    elif re.match(r'\*{3}\sEnd stack trace\s\*{3}', line):
       skip_frames = False
       continue
     if skip_frames:
@@ -57,11 +61,11 @@ def parse_frames(lines):
 
     content = parse_frame_content(line)
     if content:
-      frame += content
+      frame.append(content)
       continue
     if frame:
-      frames[frame] += 1
-      frame = ''
+      frames[''.join(frame)] += 1
+      frame = []
 
   return frames
 

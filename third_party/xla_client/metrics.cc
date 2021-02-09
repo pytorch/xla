@@ -125,6 +125,36 @@ void MetricsArena::ForEachCounter(
   }
 }
 
+std::vector<std::string> MetricsArena::GetMetricNames() {
+  std::vector<std::string> names;
+  std::lock_guard<std::mutex> lock(lock_);
+  for (auto& name_data : metrics_) {
+    names.push_back(name_data.first);
+  }
+  return names;
+}
+
+MetricData* MetricsArena::GetMetric(const std::string& name) {
+  std::lock_guard<std::mutex> lock(lock_);
+  auto it = metrics_.find(name);
+  return it != metrics_.end() ? it->second.get() : nullptr;
+}
+
+std::vector<std::string> MetricsArena::GetCounterNames() {
+  std::vector<std::string> names;
+  std::lock_guard<std::mutex> lock(lock_);
+  for (auto& name_data : counters_) {
+    names.push_back(name_data.first);
+  }
+  return names;
+}
+
+CounterData* MetricsArena::GetCounter(const std::string& name) {
+  std::lock_guard<std::mutex> lock(lock_);
+  auto it = counters_.find(name);
+  return it != counters_.end() ? it->second.get() : nullptr;
+}
+
 MetricData::MetricData(MetricReprFn repr_fn, size_t max_samples)
     : repr_fn_(std::move(repr_fn)), samples_(max_samples) {}
 
