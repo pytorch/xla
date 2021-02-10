@@ -15,10 +15,12 @@
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/mesh_service.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
+#include "tensorflow/compiler/xla/xla_client/metrics_analysis.h"
 #include "tensorflow/compiler/xla/xla_client/metrics_reader.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/profiler.h"
 #include "tensorflow/compiler/xla/xla_client/record_reader.h"
+#include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
@@ -244,6 +246,19 @@ void StepMarker(const std::string& device_str,
   Device device = GetDeviceOrCurrent(device_str);
   XLATensor::SyncLiveTensorsGraph(&device, devices, wait);
   XLATensor::MarkStep(device);
+  bool debug_mode = xla::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  if (TF_PREDICT_FALSE(debug_mode)) {
+    std::string report = xla::metrics::CreatePerformanceReport();
+    if (!report.empty()) {
+      std::string fout = xla::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
+      if (TF_PREDICT_FALSE(!fout.empty())) {
+        std::ofstream out_file(fout, std::ios_base::app);
+        out_file << report;
+      } else {
+        std::cout << report;
+      }
+    }
+  }
 }
 
 void SetRngSeed(xla::uint64 seed, const std::string& device_str) {
