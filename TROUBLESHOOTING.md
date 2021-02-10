@@ -196,7 +196,7 @@ only be enabled for debugging.
   when sending to the _TPU_ device. Note that when using `XLA_USE_BF16=1` tensor arithmetic will
   be done in reduced precision and so tensors will not be accurate if accumulated over time.
   For example:
-  
+
   ```
   # In reduced bfloat16 precision
   >>> torch.tensor(4096, dtype=torch.bfloat16) + torch.tensor(1, dtype=torch.bfloat16)
@@ -237,6 +237,9 @@ only be enabled for debugging.
 * ```TF_CPP_MIN_LOG_LEVEL```: Level to print messages for. `TF_CPP_MIN_LOG_LEVEL=0` will turn
   on INFO logging, `TF_CPP_MIN_LOG_LEVEL=1` WARNING and so on. Our PyTorch/XLA `TF_VLOG` uses
   `tensorflow::INFO` level by default so to see VLOGs set `TF_CPP_MIN_LOG_LEVEL=0`.
+
+* ```XLA_DUMP_HLO_GRAPH```: If set to `=1` in case of a compilation or execution error the
+  offending HLO graph will be dumped as part of the runtime error raised by `xla_util.cc`.
 
 ### Retrieving Stack Traces
 
