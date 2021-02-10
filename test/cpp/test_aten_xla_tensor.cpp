@@ -10123,7 +10123,6 @@ TEST_F(AtenXlaTensorTest, TestEarlySyncLiveTensors) {
   if (sync) {
     ExpectCounterChanged("EarlySyncLiveTensorsCount",
                          cpp_test::GetIgnoredCounters());
-
   } else {
     ExpectCounterNotChanged("EarlySyncLiveTensorsCount",
                             cpp_test::GetIgnoredCounters());
