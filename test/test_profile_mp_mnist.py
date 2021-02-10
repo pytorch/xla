@@ -64,7 +64,11 @@ def _train_update(device, x, loss, tracker, writer):
       summary_writer=writer)
 
 
-def train_mnist(flags, **kwargs):
+def train_mnist(flags,
+                worker_started=None,
+                training_started=None,
+                dynamic_graph=False,
+                fetch_often=False):
   torch.manual_seed(1)
 
   if flags.fake_data:
@@ -128,13 +132,20 @@ def train_mnist(flags, **kwargs):
   # Start up client side profiler server.
   server = xp.start_server(flags.profiler_port)
   # Testing purpose only: set event for synchronization.
-  if kwargs.get('worker_started'):
-    kwargs.pop('worker_started').set()
+  if worker_started:
+    worker_started.set()
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
+      if dynamic_graph:
+        # testing purpose only: dynamic batch size and graph.
+        data, target = data[:-step, :, :, :], target[:-step]
+      if step >= 15 and training_started:
+        # testing purpose only: set event for synchronization.
+        training_started.set()
+
       with xp.StepTrace('train_mnist', step_num=step):
         with xp.Trace('build_graph'):
           optimizer.zero_grad()
@@ -142,7 +153,9 @@ def train_mnist(flags, **kwargs):
           loss = loss_fn(output, target)
           loss.backward()
         xm.optimizer_step(optimizer)
-
+        if fetch_often:
+          # testing purpose only: fetch XLA tensors to CPU.
+          loss_i = loss.item()
         tracker.add(flags.batch_size)
         if step % flags.log_steps == 0:
           xm.add_step_closure(
@@ -190,7 +203,7 @@ def train_mnist(flags, **kwargs):
 
 def _mp_fn(index, flags):
   torch.set_default_tensor_type('torch.FloatTensor')
-  accuracy = train_mnist(flags)
+  accuracy = train_mnist(flags, dynamic_graph=True, fetch_often=True)
   if flags.tidy and os.path.isdir(flags.datadir):
     shutil.rmtree(flags.datadir)
   if accuracy < flags.target_accuracy:

@@ -1,5 +1,6 @@
 import os
 import re
+import tempfile
 
 
 def _setup_grpc():
@@ -41,10 +42,30 @@ def _setup_default_env():
   _set_missing_env('TF_CPP_MIN_LOG_LEVEL', '1')
 
 
+_fd, _tmp_fname = -1, ''
+
+
+def _setup_debug_env():
+  fd, tmp_fname = tempfile.mkstemp('.ptxla', text=True)
+  _set_missing_env('XLA_FNTRACKER_FILE', tmp_fname)
+  return fd, tmp_fname
+
+
+def _summarize_fn_tracker():
+  if not _tmp_fname:
+    return
+  from .debug.frame_parser_util import process_frames
+  process_frames(_tmp_fname)
+  os.close(_fd)
+  os.remove(_tmp_fname)
+
+
 # These needs to be called before the _XLAC module is loaded.
 _setup_default_env()
 _setup_grpc()
 _setup_xla_flags()
+if int(os.environ.get('PT_XLA_DEBUG', '0')):
+  _fd, _tmp_fname = _setup_debug_env()
 
 import atexit
 import torch
@@ -55,6 +76,8 @@ import _XLAC
 
 def _prepare_to_exit():
   _XLAC._prepare_to_exit()
+  if int(os.environ.get('PT_XLA_DEBUG', '0')):
+    _summarize_fn_tracker()
 
 
 _XLAC._initialize_aten_bindings()
