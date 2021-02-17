@@ -279,7 +279,7 @@ class ComputationClient {
   static ComputationClient* GetIfInitialized();
 
  protected:
-  // Metrics common to all client intrfaces.
+  // Metrics common to all client interfaces.
   static metrics::Metric* TransferToServerMetric();
   static metrics::Metric* TransferToServerTransformMetric();
   static metrics::Metric* TransferFromServerMetric();
