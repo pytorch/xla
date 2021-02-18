@@ -14,6 +14,8 @@ const char* const kEnvMeshService = "XRT_MESH_SERVICE_ADDRESS";
 const char* const kEnvWorldSize = "XRT_SHARD_WORLD_SIZE";
 const char* const kEnvMpDevice = "XRT_MULTI_PROCESSING_DEVICE";
 const char* const kEnvHostOrdinal = "XRT_HOST_ORDINAL";
+const char* const kEnvShardOrdinal = "XRT_SHARD_ORDINAL";
+const char* const kEnvTpuvmMode = "TPUVM_MODE";
 
 }  // namespace env
 }  // namespace xla

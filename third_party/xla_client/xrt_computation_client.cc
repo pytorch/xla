@@ -241,7 +241,8 @@ void XrtComputationClient::XrtData::Assign(const Data& data) {
 
 XrtComputationClient::XrtComputationClient(
     Options options,
-    std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto)
+    std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto,
+    XrtLocalService* service)
     : options_(std::move(options)),
       compilation_cache_(sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 64)),
       rng_seed_(0x5a2d296e9) {
@@ -273,6 +274,9 @@ XrtComputationClient::XrtComputationClient(
                << "/replica:0/task:" << worker_target.first.task_no;
   }
   TF_VLOG(1) << "XRT default device: " << options_.default_device;
+  if (service != nullptr) {
+    local_service_ = std::unique_ptr<XrtLocalService>(service);
+  }
   if (ShouldStartLocalService(options_.devices)) {
     MaybeCreateLocalService(options_);
   }
@@ -1955,8 +1959,8 @@ void XrtComputationClient::MaybeCreateLocalService(const Options& options) {
     std::string cluster_spec =
         absl::StrCat(job_name, "|", absl::StrJoin(hosts, ";"));
     TF_VLOG(2) << "Local Service Cluster Spec: " << cluster_spec;
-    local_service_ = absl::make_unique<XrtLocalService>(
-        cluster_spec, job_name, task_index);
+    local_service_ =
+        absl::make_unique<XrtLocalService>(cluster_spec, job_name, task_index);
     local_service_->Start();
   }
 }

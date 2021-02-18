@@ -21,8 +21,8 @@ except ImportError:
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 
 # Silence noisy loggging
-logging.getLogger("oauth2client").setLevel(logging.ERROR)
-logging.getLogger("googleapiclient").setLevel(logging.ERROR)
+logging.getLogger('oauth2client').setLevel(logging.ERROR)
+logging.getLogger('googleapiclient').setLevel(logging.ERROR)
 
 
 class Cluster(object):
@@ -108,8 +108,8 @@ class Cluster(object):
       }
       if len(client_machine_types) != 1:
         raise RuntimeError(
-            'All client_workers must have the same machine_type, got: {}'.
-            format(client_machine_types))
+            'All client_workers must have the same machine_type, got: {}'
+            .format(client_machine_types))
 
     if self._check_service_machine_type:
       server_machine_types = {
@@ -117,16 +117,16 @@ class Cluster(object):
       }
       if len(server_machine_types) != 1:
         raise RuntimeError(
-            'All service_workers must have the same machine_type, got: {}'.
-            format(server_machine_types))
+            'All service_workers must have the same machine_type, got: {}'
+            .format(server_machine_types))
 
     runtime_versions = {
         worker._runtime_version for worker in self._service_workers
     }
     if len(runtime_versions) != 1:
       raise RuntimeError(
-          'All service workers must have the same runtime_version, got: {}'.
-          format(zones))
+          'All service workers must have the same runtime_version, got: {}'
+          .format(zones))
 
   def __eq__(self, other):
     return (self._client_workers == other._client_workers and
@@ -221,7 +221,7 @@ class ClusterResolver(object):
     idx = parts.index(name)
     return parts[idx + 1]
 
-  def __init__(self, tpu, vms=None, zone=None, project=None):
+  def __init__(self, tpu, vms=None, zone=None, project=None, tpuvm_mode=None):
     """Creates a new ClusterResolver object."""
 
     if not tpu:
@@ -234,6 +234,7 @@ class ClusterResolver(object):
     self._vms = vms
     self._zone = zone
     self._project = project
+    self._tpuvm_mode = tpuvm_mode
 
     self._compute_service = discovery.build(
         'compute',
@@ -382,6 +383,39 @@ class ClusterResolver(object):
 
     return workers
 
+  def get_tpuvm_client_workers(self):
+    workers = []
+
+    def add_tpuvm_client_worker(tpu_name):
+      ctc = cloud_tpu_client.Client(tpu=tpu_name)
+      tpu_name = ctc.name()
+      if ctc.state() != 'READY':
+        raise RuntimeError(
+            ('TPU {tpu_name} is not READY yet. '
+             'Re-run when all TPUs are READY').format(tpu_name=tpu_name))
+      if ctc.health() != 'HEALTHY':
+        raise RuntimeError(
+            ('TPU {tpu_name} is not HEALTHY yet. '
+             'Re-run when all TPUs are HEALTHY').format(tpu_name=tpu_name))
+
+      machine_type = ctc.accelerator_type()
+      zone = ClusterResolver._parse_resource_url(ctc._full_name(), 'locations')
+      network_endpoints = ctc.network_endpoints()
+
+      for endpoint in network_endpoints:
+        hostname = ClusterResolver._parse_resource_url(
+            endpoint['greenVmSelflink'], 'instances')
+        worker = ClientWorker(
+            internal_ip=endpoint['ipAddress'],
+            machine_type=machine_type,
+            zone=zone,
+            hostname=hostname)
+        workers.append(worker)
+
+    xu.parallel_work(len(self._tpus), add_tpuvm_client_worker, self._tpus)
+
+    return workers
+
   def get_cluster(self):
     """Gets client and server side cluster info.
 
@@ -395,8 +429,9 @@ class ClusterResolver(object):
       RuntimeError: If the VM cluster is not healthy. Also if the TPU
         cluster is not healthy.
     """
-    client_workers = self.get_client_workers()
     service_workers = self.get_service_workers()
+    client_workers = self.get_tpuvm_client_workers(
+    ) if self._tpuvm_mode else self.get_client_workers()
     cluster = Cluster(client_workers, service_workers)
     cluster.validate()
     return cluster
