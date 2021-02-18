@@ -19,8 +19,7 @@ xla::Shape NodeOutputShape(const OpList& inputs, const Value& found_inf) {
     const xla::Shape& input_shape = inputs[i].shape();
     output_shapes.push_back(input_shape);
   }
-  output_shapes.push_back(
-      xla::ShapeUtil::MakeShape(found_inf.shape().element_type(), {}));
+  output_shapes.push_back(found_inf.shape());
   return xla::ShapeUtil::MakeTupleShape(output_shapes);
 }
 

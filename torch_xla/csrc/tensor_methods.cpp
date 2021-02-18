@@ -474,11 +474,12 @@ void XLATensor::_amp_foreach_non_finite_check_and_unscale_(
     std::vector<XLATensor> self, XLATensor& found_inf,
     const XLATensor& inv_scale) {
   std::vector<ir::Value> inputs;
+  XLATensor new_inv_scale = XLATensor::max(inv_scale);
   for (const auto& x : self) {
     inputs.push_back(x.GetIrValue());
   }
   ir::NodePtr node = ir::MakeNode<ir::ops::AmpForachNonFiniteCheckAndUnscale>(
-      inputs, found_inf.GetIrValue(), inv_scale.GetIrValue());
+      inputs, found_inf.GetIrValue(), new_inv_scale.GetIrValue());
   for (size_t i = 0; i < self.size(); ++i) {
     self[i].SetInPlaceIrValue(ir::Value(node, i));
   }
