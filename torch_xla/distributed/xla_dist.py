@@ -9,6 +9,7 @@ import logging
 import multiprocessing
 import os
 import re
+import requests
 import signal
 import subprocess
 import sys
@@ -30,6 +31,15 @@ def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
       concat += delimiter
     concat += token
   return concat
+
+
+def get_metadata(key):
+  return requests.get(
+      'http://metadata.google.internal/computeMetadata'
+      '/v1/instance/attributes/{}'.format(key),
+      headers={
+          'Metadata-Flavor': 'Google'
+      }).text
 
 
 class DistributedExecutor(object):
@@ -336,6 +346,8 @@ class DistributedExecutor(object):
       script.extend(self._env_vars_cmd(i))
       # Setup environment for non-interactive non-login shell over ssh
       script.append(['.', '/etc/profile'])
+      script.append(
+          ['source', '/home/jackcao/anaconda3/etc/profile.d/conda.sh'])
       if self.docker_image:
         script.append(self._docker_run_cmd(cmd))
       else:
@@ -578,6 +590,11 @@ if __name__ == '__main__':
       help='Run the script under the tpuvm mode.')
 
   FLAGS = parser.parse_args()
+  tpuvm_mode = False
+  accel_type = get_metadata('accelerator-type')
+  if re.match(r'v[0-9]+-[0-9]+', accel_type):
+    # Only TPUVM will carry the accelerator-type metadata
+    tpuvm_mode = True
 
   if (FLAGS.docker_container or FLAGS.docker_image or
       FLAGS.docker_run_flag) and FLAGS.conda_env:
@@ -586,7 +603,7 @@ if __name__ == '__main__':
 
   # Resolve VM and TPU clusters.
   cluster_resolver = ClusterResolver(
-      FLAGS.tpu, vms=FLAGS.vm, tpuvm_mode=FLAGS.tpuvm_mode)
+      FLAGS.tpu, vms=FLAGS.vm, tpuvm_mode=tpuvm_mode)
   cluster = cluster_resolver.get_cluster()
   executor = DistributedExecutor(
       cluster,
@@ -595,5 +612,5 @@ if __name__ == '__main__':
       docker_run_flags=FLAGS.docker_run_flag,
       conda_env=FLAGS.conda_env,
       env_vars=FLAGS.env,
-      tpuvm_mode=FLAGS.tpuvm_mode)
+      tpuvm_mode=tpuvm_mode)
   executor.run(FLAGS.positional)
