@@ -9,6 +9,7 @@ import logging
 import multiprocessing
 import os
 import re
+import requests
 import signal
 import subprocess
 import sys
@@ -30,6 +31,15 @@ def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
       concat += delimiter
     concat += token
   return concat
+
+
+def get_metadata(key):
+  return requests.get(
+      'http://metadata.google.internal/computeMetadata'
+      '/v1/instance/attributes/{}'.format(key),
+      headers={
+          'Metadata-Flavor': 'Google'
+      }).text
 
 
 class DistributedExecutor(object):
@@ -79,7 +89,8 @@ class DistributedExecutor(object):
                docker_image=None,
                docker_run_flags=None,
                conda_env=None,
-               env_vars=None):
+               env_vars=None,
+               tpuvm_mode=None):
     self._cluster = cluster
     self._initialize()
     self.logger = self._get_logger()
@@ -88,6 +99,7 @@ class DistributedExecutor(object):
     self.docker_run_flags = list(docker_run_flags) if docker_run_flags else []
     self.conda_env = conda_env
     self.env_vars = list(env_vars) if env_vars else []
+    self.tpuvm_mode = tpuvm_mode
 
     for env_var in self.env_vars:
       if re.match(r'\w*=\w*', env_var) is None:
@@ -247,11 +259,47 @@ class DistributedExecutor(object):
     docker_cmd.extend(cmd)
     return docker_cmd
 
+  def _tpuvm_env_vars_cmd(self, worker_idx):
+    env_vars = {
+        xenv.TPU_CHIPS_PER_HOST_BOUNDS: '2,2,1',
+        xenv.TPUVM_MODE: 1,
+        xenv.CLOUD_TPU_TASK_ID: worker_idx,
+    }
+    accelerator_type = self._cluster.get_service_workers()[0]._machine_type
+    master_worker_network_endpoints = self._cluster.get_client_workers(
+    )[0].get_internal_ip()
+
+    accelerator_type_to_host_bounds = {
+        # v2
+        'v2-8': '1,1,1',
+        'v2-32': '2,2,1',
+        'v2-128': '4,4,1',
+        'v2-256': '4,8,1',
+        'v2-512': '8,8,1',
+        # v3
+        'v3-8': '1,1,1',
+        'v3-32': '2,2,1',
+        'v3-64': '2,4,1',
+        'v3-128': '4,4,1',
+        'v3-256': '4,8,1',
+        'v3-512': '8,8,1',
+        'v3-1024': '8,16,1',
+        'v3-2048': '16,16,1',
+    }
+
+    env_vars[xenv.TPU_HOST_BOUNDS] = accelerator_type_to_host_bounds[
+        accelerator_type]
+    env_vars[xenv.TPU_MESH_CTLER_ADDR] = '{}:{}'.format(
+        master_worker_network_endpoints, '8476')
+    env_vars[xenv.TPU_MESH_CTLER_PORT] = 8476
+    return env_vars
+
   def _env_vars_cmd(self, worker_idx):
     client_worker = self._cluster.get_client_workers()[worker_idx]
+    worker_name = 'c_localservice' if self.tpuvm_mode else 'c_tpu_worker'
     env_vars = {
         xenv.LOCAL_WORKER:
-            'c_tpu_worker:{}'.format(worker_idx),
+            '{}:{}'.format(worker_name, worker_idx),
         xenv.SERVICE_ADDRESS:
             '{}:{}'.format(self._cluster.get_client_master().get_internal_ip(),
                            self.MESH_SERVICE_PORT),
@@ -264,14 +312,19 @@ class DistributedExecutor(object):
         'XLA_EMIT_STEPLOG':
             1,
     }
+    if self.tpuvm_mode:
+      env_vars.update(self._tpuvm_env_vars_cmd(worker_idx))
+
     # Only for master
     if client_worker == self._cluster.get_client_master():
       xrt_server_config = [
-          'c_tpu_worker;{worker_idx};{worker_ip}:{worker_port}'.format(
+          '{worker_name};{worker_idx};{worker_ip}:{worker_port}'.format(
+              worker_name=worker_name,
               worker_idx=idx,
               worker_ip=service_worker.get_internal_ip(),
-              worker_port=service_worker.get_port()) for idx, service_worker in
-          enumerate(self._cluster.get_service_workers())
+              worker_port=51011
+              if self.tpuvm_mode else service_worker.get_port()) for idx,
+          service_worker in enumerate(self._cluster.get_service_workers())
       ]
       xrt_tpu_config = '|'.join(xrt_server_config)
       env_vars[xenv.TPU_CONFIG] = '{}'.format(xrt_tpu_config)
@@ -293,6 +346,8 @@ class DistributedExecutor(object):
       script.extend(self._env_vars_cmd(i))
       # Setup environment for non-interactive non-login shell over ssh
       script.append(['.', '/etc/profile'])
+      script.append(
+          ['source', '/home/jackcao/anaconda3/etc/profile.d/conda.sh'])
       if self.docker_image:
         script.append(self._docker_run_cmd(cmd))
       else:
@@ -531,6 +586,11 @@ if __name__ == '__main__':
       help='The python command to launch training including model parameters.')
 
   FLAGS = parser.parse_args()
+  tpuvm_mode = False
+  accel_type = get_metadata('accelerator-type')
+  if re.match(r'v[0-9]+-[0-9]+', accel_type):
+    # Only TPUVM will carry the accelerator-type metadata
+    tpuvm_mode = True
 
   if (FLAGS.docker_container or FLAGS.docker_image or
       FLAGS.docker_run_flag) and FLAGS.conda_env:
@@ -538,7 +598,8 @@ if __name__ == '__main__':
                      ' arguments are mutually exclusive.')
 
   # Resolve VM and TPU clusters.
-  cluster_resolver = ClusterResolver(FLAGS.tpu, vms=FLAGS.vm)
+  cluster_resolver = ClusterResolver(
+      FLAGS.tpu, vms=FLAGS.vm, tpuvm_mode=tpuvm_mode)
   cluster = cluster_resolver.get_cluster()
   executor = DistributedExecutor(
       cluster,
@@ -546,5 +607,6 @@ if __name__ == '__main__':
       docker_image=FLAGS.docker_image,
       docker_run_flags=FLAGS.docker_run_flag,
       conda_env=FLAGS.conda_env,
-      env_vars=FLAGS.env)
+      env_vars=FLAGS.env,
+      tpuvm_mode=tpuvm_mode)
   executor.run(FLAGS.positional)
