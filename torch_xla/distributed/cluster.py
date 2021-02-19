@@ -108,8 +108,8 @@ class Cluster(object):
       }
       if len(client_machine_types) != 1:
         raise RuntimeError(
-            'All client_workers must have the same machine_type, got: {}'
-            .format(client_machine_types))
+            'All client_workers must have the same machine_type, got: {}'.
+            format(client_machine_types))
 
     if self._check_service_machine_type:
       server_machine_types = {
@@ -117,16 +117,16 @@ class Cluster(object):
       }
       if len(server_machine_types) != 1:
         raise RuntimeError(
-            'All service_workers must have the same machine_type, got: {}'
-            .format(server_machine_types))
+            'All service_workers must have the same machine_type, got: {}'.
+            format(server_machine_types))
 
     runtime_versions = {
         worker._runtime_version for worker in self._service_workers
     }
     if len(runtime_versions) != 1:
       raise RuntimeError(
-          'All service workers must have the same runtime_version, got: {}'
-          .format(zones))
+          'All service workers must have the same runtime_version, got: {}'.
+          format(zones))
 
   def __eq__(self, other):
     return (self._client_workers == other._client_workers and
