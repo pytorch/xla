@@ -584,6 +584,10 @@ if __name__ == '__main__':
       nargs='+',
       type=str,
       help='The python command to launch training including model parameters.')
+  parser.add_argument(
+      '--tpuvm-mode',
+      action='store_true',
+      help='Run the script under the tpuvm mode.')
 
   FLAGS = parser.parse_args()
   tpuvm_mode = False
