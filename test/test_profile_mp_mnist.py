@@ -129,8 +129,9 @@ def train_mnist(flags,
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
 
-  # Start up client side profiler server.
-  server = xp.start_server(flags.profiler_port)
+  # Only start up profiler server once *per* host.
+  if xm.is_master_ordinal():
+    server = xp.start_server(flags.profiler_port)
   # Testing purpose only: set event for synchronization.
   if worker_started:
     worker_started.set()
