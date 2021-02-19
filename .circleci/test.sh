@@ -21,7 +21,9 @@ echo "Running Python Tests"
 echo "Running MNIST Test"
 python test/test_train_mnist.py --tidy
 if [ -x "$(command -v nvidia-smi)" ]; then
-  python test/test_train_mp_mnist_amp.py --fake_data
+  #python test/test_train_mp_mnist_amp.py --fake_data
+  echo "Running AMP on 2 GPU"
+  python test/test_train_mp_mnist_amp.py
 fi
 
 echo "Running C++ Tests"
