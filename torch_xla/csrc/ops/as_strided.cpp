@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
