@@ -21,6 +21,8 @@
 #include "torch_xla/csrc/ops/all.h"
 #include "torch_xla/csrc/ops/all_reduce.h"
 #include "torch_xla/csrc/ops/all_to_all.h"
+#include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
+#include "torch_xla/csrc/ops/amp_update_scale.h"
 #include "torch_xla/csrc/ops/any.h"
 #include "torch_xla/csrc/ops/arg_max.h"
 #include "torch_xla/csrc/ops/arg_min.h"
@@ -466,6 +468,36 @@ XLATensor XLATensor::_adaptive_avg_pool2d_backward(const XLATensor& grad_output,
                                                    const XLATensor& input) {
   return input.CreateFrom(ir::ops::AdaptiveAvgPool2dBackward(
       grad_output.GetIrValue(), input.GetIrValue()));
+}
+
+void XLATensor::_amp_foreach_non_finite_check_and_unscale_(
+    std::vector<XLATensor> self, XLATensor& found_inf,
+    const XLATensor& inv_scale) {
+  std::vector<ir::Value> inputs;
+  XLATensor new_inv_scale = XLATensor::max(inv_scale);
+  for (const auto& x : self) {
+    inputs.push_back(x.GetIrValue());
+  }
+  ir::NodePtr node = ir::MakeNode<ir::ops::AmpForachNonFiniteCheckAndUnscale>(
+      inputs, found_inf.GetIrValue(), new_inv_scale.GetIrValue());
+  for (size_t i = 0; i < self.size(); ++i) {
+    self[i].SetInPlaceIrValue(ir::Value(node, i));
+  }
+  found_inf.SetInPlaceIrValue(ir::Value(node, self.size()));
+}
+
+XLATensor XLATensor::_amp_update_scale(XLATensor growth_tracker,
+                                       const XLATensor& current_scale,
+                                       const XLATensor& found_inf,
+                                       double scale_growth_factor,
+                                       double scale_backoff_factor,
+                                       int growth_interval) {
+  ir::NodePtr node = ir::MakeNode<ir::ops::AmpUpdateScale>(
+      growth_tracker.GetIrValue(), current_scale.GetIrValue(),
+      found_inf.GetIrValue(), scale_growth_factor, scale_backoff_factor,
+      growth_interval);
+  growth_tracker.SetInPlaceIrValue(ir::Value(node, 0));
+  return current_scale.CreateFrom(ir::Value(node, 1));
 }
 
 XLATensor XLATensor::abs(const XLATensor& input) {
