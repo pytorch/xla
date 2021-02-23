@@ -21,8 +21,8 @@ except ImportError:
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 
 # Silence noisy loggging
-logging.getLogger("oauth2client").setLevel(logging.ERROR)
-logging.getLogger("googleapiclient").setLevel(logging.ERROR)
+logging.getLogger('oauth2client').setLevel(logging.ERROR)
+logging.getLogger('googleapiclient').setLevel(logging.ERROR)
 
 
 class Cluster(object):
@@ -221,7 +221,7 @@ class ClusterResolver(object):
     idx = parts.index(name)
     return parts[idx + 1]
 
-  def __init__(self, tpu, vms=None, zone=None, project=None):
+  def __init__(self, tpu, vms=None, zone=None, project=None, tpuvm_mode=None):
     """Creates a new ClusterResolver object."""
 
     if not tpu:
@@ -234,6 +234,7 @@ class ClusterResolver(object):
     self._vms = vms
     self._zone = zone
     self._project = project
+    self._tpuvm_mode = tpuvm_mode
 
     self._compute_service = discovery.build(
         'compute',
@@ -336,7 +337,7 @@ class ClusterResolver(object):
 
     return workers
 
-  def get_service_workers(self):
+  def get_tpu_workers(self, as_client_worker=False):
     """Gets TPU VM cluster info.
 
     Calls the TPU CLH to get TPU node data and returns list of TPU worker
@@ -344,14 +345,14 @@ class ClusterResolver(object):
     ClusterResolver init time, we infer these bits from GCE metadata.
 
     Returns:
-      A list of ServiceWorker.
+      A list of ServiceWorker or a list of ClientWorker.
 
     Raises:
       RuntimeError: If the TPU DNE or the TPU is in not in HEALTHY state.
     """
     workers = []
 
-    def add_service_worker(tpu_name):
+    def add_tpu_worker(tpu_name):
       ctc = cloud_tpu_client.Client(tpu=tpu_name)
       tpu_name = ctc.name()
       if ctc.state() != 'READY':
@@ -369,16 +370,25 @@ class ClusterResolver(object):
       network_endpoints = ctc.network_endpoints()
 
       for endpoint in network_endpoints:
-        worker = ServiceWorker(
-            internal_ip=endpoint['ipAddress'],
-            port=endpoint['port'],
-            machine_type=machine_type,
-            zone=zone,
-            runtime_version=runtime_version,
-            tpu=tpu_name)
+        if as_client_worker:
+          hostname = ClusterResolver._parse_resource_url(
+              endpoint['greenVmSelflink'], 'instances')
+          worker = ClientWorker(
+              internal_ip=endpoint['ipAddress'],
+              machine_type=machine_type,
+              zone=zone,
+              hostname=hostname)
+        else:
+          worker = ServiceWorker(
+              internal_ip=endpoint['ipAddress'],
+              port=endpoint['port'],
+              machine_type=machine_type,
+              zone=zone,
+              runtime_version=runtime_version,
+              tpu=tpu_name)
         workers.append(worker)
 
-    xu.parallel_work(len(self._tpus), add_service_worker, self._tpus)
+    xu.parallel_work(len(self._tpus), add_tpu_worker, self._tpus)
 
     return workers
 
@@ -395,8 +405,10 @@ class ClusterResolver(object):
       RuntimeError: If the VM cluster is not healthy. Also if the TPU
         cluster is not healthy.
     """
-    client_workers = self.get_client_workers()
-    service_workers = self.get_service_workers()
+    service_workers = self.get_tpu_workers(as_client_worker=False)
+    client_workers = self.get_tpu_workers(
+        as_client_worker=True) if self._tpuvm_mode else self.get_client_workers(
+        )
     cluster = Cluster(client_workers, service_workers)
     cluster.validate()
     return cluster
