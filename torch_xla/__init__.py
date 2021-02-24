@@ -24,14 +24,15 @@ def _maybe_select_tpu_version():
     while not _is_open(*tpu_addr.split(':')):
       if log:
         logging.warning(
-            f'Waiting for TPU to be start up with version pytorch-{version}...')
+            'Waiting for TPU to be start up with version pytorch-{}...' %
+            version)
       if time.time() > deadline:
         raise RuntimeError('Timed out waiting for TPU to start up')
       time.sleep(interval)
 
     if log:
       logging.warning(
-          f'TPU has started up successfully with version pytorch-{version}')
+          'TPU has started up successfully with version pytorch-{}' % version)
 
   try:
     tpu_name = os.environ.get('TPU_NAME', '')
@@ -42,7 +43,7 @@ def _maybe_select_tpu_version():
     import cloud_tpu_client
     client = cloud_tpu_client.Client(tpu_name)
     client.configure_tpu_version(
-        f'pytorch-{__version__}', restart_type='ifNeeded')
+        'pytorch-{}' % __version__, restart_type='ifNeeded')
     # client.wait_for_healthy() API doesn't work as we dont have TPU API access
     _wait_for_open(__version__)
   except ImportError:
