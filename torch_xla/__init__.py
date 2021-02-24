@@ -54,6 +54,7 @@ def _maybe_select_tpu_version():
     # when we import torch_xla from xmp.spawn-ed processes.
     _wait_for_open(__version__, log=False)
 
+
 def _setup_grpc():
   # Setup GRPC options to correctly talk to TPU backends.
   options = [
