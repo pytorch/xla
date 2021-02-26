@@ -91,6 +91,7 @@ class DistributedExecutor(object):
     self.conda_env = conda_env
     self.env_vars = list(env_vars) if env_vars else []
     self.tpuvm_mode = tpuvm_mode
+    self.tpu_name = self._cluster.get_service_workers()[0]._tpu
 
     for env_var in self.env_vars:
       if re.match(r'\w*=\w*', env_var) is None:
@@ -169,7 +170,7 @@ class DistributedExecutor(object):
     return self.trials >= 1
 
   def _build_scp_cmd(self, local_path, remote_path, client_worker):
-    if not self._is_retry():
+    if not self._is_retry() and not self.tpuvm_mode:
       return [
           'gcloud',
           '-q',
@@ -194,17 +195,32 @@ class DistributedExecutor(object):
     if isinstance(remote_cmd, list):
       remote_cmd = concat_cmd_list(remote_cmd)
     if not self._is_retry():
-      return [
-          'gcloud',
-          '-q',
-          'compute',
-          'ssh',
-          '--internal-ip',
-          '--zone={}'.format(client_worker.get_zone()),
-          '{}'.format(client_worker.get_hostname()),
-          '--command',
-          '\'{}\''.format(remote_cmd),
-      ]
+      if self.tpuvm_mode:
+        return [
+            'gcloud',
+            'alpha',
+            'compute',
+            'tpus',
+            'tpu-vm',
+            'ssh',
+            '{}'.format(self.tpu_name),
+            '--zone {}'.format(client_worker.get_zone()),
+            '--worker {}'.format(client_worker.get_hostname().split('-')[-1]),
+            '--command',
+            '\'{}\''.format(remote_cmd),
+        ]
+      else:
+        return [
+            'gcloud',
+            '-q',
+            'compute',
+            'ssh',
+            '--internal-ip',
+            '--zone={}'.format(client_worker.get_zone()),
+            '{}'.format(client_worker.get_hostname()),
+            '--command',
+            '\'{}\''.format(remote_cmd),
+        ]
     return [
         'ssh',
         '-oStrictHostKeyChecking=no',
