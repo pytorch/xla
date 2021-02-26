@@ -241,10 +241,10 @@ xla::XlaOp BuildConvBackwardWeight(
   tensorflow::ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   auto transpose_permutation = FilterTransposePermutation(kernel_shape.rank());
-  auto inv_transpose_permutation = xla::InversePermutation(
-      transpose_permutation);
-  xla::Shape transposed_weight_shape = xla::ShapeUtil::PermuteDimensions(
-      transpose_permutation, kernel_shape);
+  auto inv_transpose_permutation =
+      xla::InversePermutation(transpose_permutation);
+  xla::Shape transposed_weight_shape =
+      xla::ShapeUtil::PermuteDimensions(transpose_permutation, kernel_shape);
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   xla::XlaOp conv = ConsumeValue(tensorflow::MakeXlaBackpropFilterConvOp(
