@@ -9,7 +9,6 @@ import logging
 import multiprocessing
 import os
 import re
-import requests
 import signal
 import subprocess
 import sys
