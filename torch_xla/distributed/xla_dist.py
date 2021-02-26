@@ -199,6 +199,7 @@ class DistributedExecutor(object):
         return [
             'gcloud',
             'alpha',
+            '-q',
             'compute',
             'tpus',
             'tpu-vm',
