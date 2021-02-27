@@ -3,6 +3,7 @@
 #include <ATen/ExpandUtils.h>
 #include <ATen/Functions.h>
 
+#include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
