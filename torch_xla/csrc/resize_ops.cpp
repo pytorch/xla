@@ -58,7 +58,7 @@ xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
   std::vector<xla::int64> transpose_permute({0, 3, 2, 1});
   auto inv_transpose_permute = xla::InversePermutation(transpose_permute);
   xla::Shape resized_shape =
-      xla::ShapeUtil::PermuteDimensions(inv_transpose_permute, output_shape);
+      xla::ShapeUtil::PermuteDimensions(transpose_permute, output_shape);
   xla::XlaOp tinput = xla::Transpose(input, transpose_permute);
   xla::XlaOp resised =
       xla::CustomCall(input.builder(), target, {tinput}, resized_shape,
@@ -81,7 +81,7 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
   std::vector<xla::int64> transpose_permute({0, 3, 2, 1});
   auto inv_transpose_permute = xla::InversePermutation(transpose_permute);
   xla::Shape resized_shape =
-      xla::ShapeUtil::PermuteDimensions(inv_transpose_permute, output_shape);
+      xla::ShapeUtil::PermuteDimensions(transpose_permute, output_shape);
   xla::XlaOp tinput = xla::Transpose(input, transpose_permute);
   std::string backend_config =
       GetBackendConfig(align_corners, half_pixel_centers);

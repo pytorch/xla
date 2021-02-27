@@ -33,7 +33,7 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64> size,
 
   std::vector<xla::int64> permutation = xla::InversePermutation(
       AsStrided::GetArrayStridePermutation(stride, size));
-  std::vector<xla::int64> new_sizes = xla::Permute(permutation, size);
+  std::vector<xla::int64> new_sizes = xla::PermuteInverse(size, permutation);
   xla::XlaOp reshaped_input = XlaHelpers::DynamicReshape(off_input, new_sizes);
   return xla::IsIdentityPermutation(permutation)
              ? reshaped_input

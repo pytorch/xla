@@ -16,7 +16,7 @@ def get_tracer_marked_step() -> bool:
   return _TRACER_MARKED_STEP
 
 
-def start_server(port: int) -> object:
+def start_server(port: int, only_on_master: Optional[bool] = True) -> object:
   """Start a profiler server on the client side on provided port.
 
   Users can then use the tensorboard profiler plugin
@@ -26,7 +26,9 @@ def start_server(port: int) -> object:
 
   Args:
     port (int): the port to start the profiler server on. An exception is
-    raised if the provided port is invalid or busy.
+      raised if the provided port is invalid or busy.
+    only_on_master (optional(bool)): whether to only startup server from
+      local master ordinal.
   Returns:
     A `ProfilerServer` instance that dictates the lifecycle of the profiler
     server. If this object is garbage collected, the profiler server is
@@ -34,7 +36,8 @@ def start_server(port: int) -> object:
   Raises:
     RuntimeError: Raised if the port is invalid or busy already.
   """
-  return torch_xla._XLAC.profiler.start_server(port)
+  if not only_on_master or xm.is_master_ordinal():
+    return torch_xla._XLAC.profiler.start_server(port)
 
 
 def trace(service_addr: str,

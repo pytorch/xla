@@ -11,6 +11,7 @@
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/literal_util.h"
+#include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
@@ -239,7 +240,8 @@ class XlaHelpers {
   static std::vector<typename Container::value_type> Permute(
       absl::Span<const xla::int64> permutation, const Container& input) {
     using T = typename Container::value_type;
-    XLA_CHECK(xla::IsPermutation(permutation, input.size()))
+    XLA_CHECK(input.size() == permutation.size() &&
+              xla::IsPermutation(permutation))
         << "Invalid permutation specified";
     std::vector<T> output(input.size());
     for (size_t i = 0; i < permutation.size(); ++i) {

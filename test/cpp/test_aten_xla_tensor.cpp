@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "cpp_test_util.h"
+#include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -3856,7 +3857,7 @@ TEST_F(AtenXlaTensorTest, TestRandperm) {
   torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
   std::vector<xla::int64> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
                                        shuffle_cpu.data_ptr<int64_t>() + n);
-  EXPECT_TRUE(xla::IsPermutation(shuffle_data, n));
+  EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data));
   ExpectCounterNotChanged("aten::(?!randperm_out).*",
                           cpp_test::GetIgnoredCounters());
 }
