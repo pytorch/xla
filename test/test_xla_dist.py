@@ -507,7 +507,7 @@ class ClusterResolverTest(unittest.TestCase):
 
     tpus = list(tpu_map.keys())
     cr = ClusterResolver(tpus)
-    service_workers = cr.get_service_workers()
+    service_workers = cr.get_tpu_workers()
 
     expected = [
         ServiceWorker(
@@ -544,7 +544,7 @@ class ClusterResolverTest(unittest.TestCase):
 
     tpus = list(tpu_map.keys())
     cr = ClusterResolver(tpus)
-    service_workers = cr.get_service_workers()
+    service_workers = cr.get_tpu_workers()
 
     expected = [
         ServiceWorker(
@@ -579,7 +579,7 @@ class ClusterResolverTest(unittest.TestCase):
     tpus = list(tpu_map.keys())
     cr = ClusterResolver(tpus)
     self.assertRaisesRegex(RuntimeError, 'TPU fake-pod is not HEALTHY yet.*',
-                           cr.get_service_workers)
+                           cr.get_tpu_workers)
 
   def test_non_ready_sea_service_cluster(self):
     noop_compute_service = build_mock_compute_service({}, {})
@@ -612,7 +612,7 @@ class ClusterResolverTest(unittest.TestCase):
     tpus = list(tpu_map.keys())
     cr = ClusterResolver(tpus)
     self.assertRaisesRegex(RuntimeError, 'TPU fake-tpu-3 is not READY yet.*',
-                           cr.get_service_workers)
+                           cr.get_tpu_workers)
 
   def test_unknown_health_pod_service_cluster(self):
     noop_compute_service = build_mock_compute_service({}, {})
@@ -637,7 +637,7 @@ class ClusterResolverTest(unittest.TestCase):
     tpus = list(tpu_map.keys())
     cr = ClusterResolver(tpus)
     self.assertRaisesRegex(RuntimeError, 'TPU fake-pod is not HEALTHY yet.*',
-                           cr.get_service_workers)
+                           cr.get_tpu_workers)
 
   def test_healthy_cluster(self):
     list_instances_map = {
