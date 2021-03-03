@@ -14,12 +14,8 @@ namespace ops {
 namespace {
 
 std::vector<xla::XlaOp> LowerQR(xla::XlaOp input, bool some) {
-  xla::QRDecompositionResult qr_result =
-      xla::QRDecomposition(input, /*full_matrices=*/!some,
-                           /*block_size=*/128, XlaHelpers::mat_mul_precision())
-          .ValueOrDie();
-  xla::XlaOp q = qr_result.q;
-  xla::XlaOp r = qr_result.r;
+  xla::XlaOp q, r;
+  xla::QrExplicit(input, /*full_matrices=*/!some, q, r);
   return {q, r};
 }
 
