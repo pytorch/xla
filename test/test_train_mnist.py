@@ -182,6 +182,7 @@ class TrainMnist(unittest.TestCase):
     if FLAGS.tidy and os.path.isdir(FLAGS.datadir):
       shutil.rmtree(FLAGS.datadir)
 
+  @unittest.skip("Test depends on broken MNIST download. See issue #2808")
   def test_accurracy(self):
     self.assertGreaterEqual(train_mnist(), FLAGS.target_accuracy)
 
