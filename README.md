@@ -200,7 +200,7 @@ Training on pods can be broken down to largely 3 different steps:
 If you prefer to not use an [instance group](#create-your-instance-group), you can decide to use a list of VM instances that you may have already created (or can create individually). Make sure that you create all the VM instances in the same zone as the TPU node, and also make sure that the VMs have the same configuration (datasets, VM size, disk size, etc.). Then you can [start distributed training](#start-distributed-training) after creating your TPU pod. The difference is in the `python -m torch_xla.distributed.xla_dist` command. For example, to use a list of VMs run the following command (ex. conda with v3-32):
 ```
 (torch-xla-1.7)$ cd /usr/share/torch-xla-1.7/pytorch/xla
-(torch-xla-1.7)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --vm $VM1 --vm $VM2 --vm $VM3 --vm $VM4 --conda-env=torch-xla-1.7 --env=XLA_USE_BF16=1 -- python test/test_train_imagenet.py --fake_data
+(torch-xla-1.7)$ python -m torch_xla.distributed.xla_dist --tpu=$TPU_POD_NAME --vm $VM1 --vm $VM2 --vm $VM3 --vm $VM4 --conda-env=torch-xla-1.7 --env=XLA_USE_BF16=1 -- python test/test_train_mp_imagenet.py --fake_data
 ```
 
 ### Datasets for distributed training
