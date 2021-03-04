@@ -19,7 +19,7 @@ echo "Running Python Tests"
 ./test/run_tests.sh
 
 # echo "Running MNIST Test"
-# python test/test_train_mnist.py --tidy
+# python test/test_train_mp_mnist.py --tidy
 # if [ -x "$(command -v nvidia-smi)" ]; then
 #   python test/test_train_mp_mnist_amp.py --fake_data
 # fi
