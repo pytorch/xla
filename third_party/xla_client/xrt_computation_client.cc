@@ -1625,7 +1625,7 @@ void XrtComputationClient::InitSession(XrtSession* session) const {
   struct InitNode {
     int count;
     const XrtSession::CachedNode& (XrtComputationClient::*node_ctor)(
-        XrtSession*, const tensorflow::Scope&, const std::string&)const;
+        XrtSession*, const tensorflow::Scope&, const std::string&) const;
   } const init_nodes[] = {
       {16, &XrtComputationClient::GetCompileNode},
       {16, &XrtComputationClient::GetExecuteNode},
@@ -1959,8 +1959,7 @@ void XrtComputationClient::MaybeCreateLocalService(const Options& options) {
     std::string cluster_spec =
         absl::StrCat(job_name, "|", absl::StrJoin(hosts, ";"));
     TF_VLOG(2) << "Local Service Cluster Spec: " << cluster_spec;
-    local_service_ =
-        new XrtLocalService(cluster_spec, job_name, task_index);
+    local_service_ = new XrtLocalService(cluster_spec, job_name, task_index);
     local_service_->Start();
   }
 }

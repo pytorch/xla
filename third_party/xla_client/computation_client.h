@@ -161,7 +161,7 @@ class ComputationClient {
   };
 
   static std::shared_ptr<ComputationClientFactory> SetFactory(
-    std::shared_ptr<ComputationClientFactory> factory);
+      std::shared_ptr<ComputationClientFactory> factory);
 
   static std::shared_ptr<ComputationClientFactory> GetFactory();
 
