@@ -1093,13 +1093,13 @@ void InitXlaModuleBindings(py::module m) {
 }  // namespace
 
 void ptxla_StepMarker(const std::string& device_str,
-                const std::vector<std::string>& devices, bool wait) {
-    StepMarker(device_str, devices, wait);
+                      const std::vector<std::string>& devices, bool wait) {
+  StepMarker(device_str, devices, wait);
 }
 
-std::vector<XLATensor> ptxla_GetXlaTensors(const std::vector<at::Tensor>& tensors,
-                                     bool want_all) {
-    return GetXlaTensors(tensors, want_all);
+std::vector<XLATensor> ptxla_GetXlaTensors(
+    const std::vector<at::Tensor>& tensors, bool want_all) {
+  return GetXlaTensors(tensors, want_all);
 }
 
 void InitXlaBindings(py::module m) { InitXlaModuleBindings(m); }
