@@ -34,6 +34,8 @@
 
 namespace xla {
 
+class XrtComputationClientFactory;
+
 class XrtComputationClient : public ComputationClient {
   struct DeviceHandle {
     std::string device;
@@ -485,10 +487,12 @@ class XrtComputationClient : public ComputationClient {
 
   static tensorflow::ConfigProto CreateConfigProto(const Options& options);
 
+public:  // TODO move to public area. Left here temporarily for review context.
   static tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
       const std::string& job, int task_no, const std::string& worker_host_port,
       const tensorflow::ConfigProto& config);
 
+private:
   static std::string GetLocalTarget(const Options& options);
 
   // Checks whether a local GRPC service is required, and starts it if need it.
@@ -513,6 +517,43 @@ class XrtComputationClient : public ComputationClient {
   std::unique_ptr<service::MeshService> mesh_service_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
 };
+
+class ComputationClientFactory {
+protected:
+    using OptionsType = XrtComputationClient::Options;
+public:
+    virtual std::unique_ptr<ComputationClient> Create(
+        OptionsType options,
+        std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto) = 0;
+
+    virtual tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
+        const std::string& job, int task_no, const std::string& worker_host_port,
+        const tensorflow::ConfigProto& config) = 0;
+};
+
+template <typename COMPUTATION_CLIENT_TYPE>
+class TComputationClientFactory : public ComputationClientFactory {
+public:
+    virtual std::unique_ptr<ComputationClient> Create(
+        OptionsType options,
+        std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto) {
+        return std::make_unique<COMPUTATION_CLIENT_TYPE>(std::move(options),
+                                                         std::move(topology_proto));
+    }
+
+    /**
+     * @brief Temporary way to call InitializeAndFetchTopology until we
+     *        finish behaving exactly like a TPU (actually this works
+     *        except for the 1-or-8-core TPU behavior
+     */
+    virtual tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
+        const std::string& job, int task_no, const std::string& worker_host_port,
+        const tensorflow::ConfigProto& config) override {
+        return COMPUTATION_CLIENT_TYPE::InitializeAndFetchTopology(
+            job, task_no, worker_host_port, config);
+    }
+};
+
 
 }  // namespace xla
 

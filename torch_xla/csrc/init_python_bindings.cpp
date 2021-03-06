@@ -43,6 +43,7 @@
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/python_util.h"
 #include "torch_xla/csrc/tensor_impl.h"
+#include "torch_xla/csrc/tensor_sentinel.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/version.h"
@@ -244,6 +245,7 @@ void StepMarker(const std::string& device_str,
   tensorflow::profiler::TraceMe activity(
       "StepMarker", tensorflow::profiler::TraceMeLevel::kInfo);
   Device device = GetDeviceOrCurrent(device_str);
+  MarkStepScope mark_step_scope(device_str, devices);
   XLATensor::SyncLiveTensorsGraph(&device, devices, wait);
   XLATensor::MarkStep(device);
   bool debug_mode = xla::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
@@ -1089,6 +1091,16 @@ void InitXlaModuleBindings(py::module m) {
 }
 
 }  // namespace
+
+void ptxla_StepMarker(const std::string& device_str,
+                const std::vector<std::string>& devices, bool wait) {
+    StepMarker(device_str, devices, wait);
+}
+
+std::vector<XLATensor> ptxla_GetXlaTensors(const std::vector<at::Tensor>& tensors,
+                                     bool want_all) {
+    return GetXlaTensors(tensors, want_all);
+}
 
 void InitXlaBindings(py::module m) { InitXlaModuleBindings(m); }
 

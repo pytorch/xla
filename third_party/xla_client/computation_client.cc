@@ -23,6 +23,9 @@
 namespace xla {
 namespace {
 
+std::shared_ptr<ComputationClientFactory> computation_client_factory =
+    std::make_shared<TComputationClientFactory<XrtComputationClient>>();
+
 struct DeviceCountDefaults {
   int num_tpus = 0;
   int num_gpus = 0;
@@ -274,8 +277,7 @@ std::unique_ptr<ComputationClient> ComputationClient::Create() {
     XLA_ERROR() << "Missing XLA configuration";
   }
   PopulateLocalDevices(&options);
-  return std::unique_ptr<ComputationClient>(
-      new XrtComputationClient(options, std::move(topology_proto)));
+  return computation_client_factory->Create(options, std::move(topology_proto));
 }
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(

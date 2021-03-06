@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sys/syscall.h>
+
 #include <iostream>
 #include <memory>
 #include <string>
@@ -1160,6 +1162,7 @@ class XLATensor {
                          const XLATensor& other);
 
  private:
+  friend class Sentinel;
   struct SyncTensorsConfig {
     // Whether we want to force XLA data on the target tensors (hence trimming
     // the IR graph above them).
@@ -1176,6 +1179,8 @@ class XLATensor {
     std::vector<size_t> indices;
     xla::hash_t hash;
     std::vector<xla::util::ExceptionCleanup> unlocker;
+    // Save the thread that is requesting
+    pid_t requesting_tid = syscall(__NR_gettid);
     Device device;
   };
 
@@ -1380,6 +1385,9 @@ class XLATensor {
 
   static PostOrderData RunPostOrder(const std::vector<XLATensor>& tensors,
                                     absl::Span<const size_t> indices);
+
+  static PostOrderData GetPostOrderData(std::vector<XLATensor>* tensors,
+                                        SyncTensorCollection& coll);
 
   static ComputationCache::TypePtr LookupCachedCompile(
       const std::vector<XLATensor>& tensors, const xla::hash_t& hash);

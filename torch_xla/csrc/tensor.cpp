@@ -37,10 +37,13 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_sentinel.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
+std::shared_ptr<Sentinel> Sentinel::sentinel_ = std::make_shared<Sentinel>();
 namespace {
 
 struct TlsData {
@@ -1542,6 +1545,8 @@ XLATensor::CompilationResult XLATensor::Compile(
     BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
   }
 
+  Sentinel::GetSentinel()->PreProcessHlo(lowering_ctx.builder(), coll);
+
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.Build());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
   xla::Shape shape =
@@ -1574,6 +1579,33 @@ XLATensor::CompilationResult XLATensor::Compile(
           /*parameters_data=*/std::move(po_data->parameters_data)};
 }
 
+XLATensor::PostOrderData XLATensor::GetPostOrderData(
+    std::vector<XLATensor>* tensors, SyncTensorCollection& coll) {
+  auto state = Sentinel::GetSentinel()->CreateHashingState(coll.hash);
+
+  PostOrderData po_data;
+  std::size_t prev_indicess_size = 0;
+  do {
+    if (prev_indicess_size && coll.indices.empty()) {
+      // In the case that a graph rewrite resulted in no nodes,
+      // simply drop out of the loop.
+      break;
+    }
+    po_data = std::move(RunPostOrder(*tensors, coll.indices));
+
+    if (prev_indicess_size) {
+      // should have changed, right?  Otherwise, what's the point?
+      TF_CHECK_NE(prev_indicess_size, coll.indices.size());
+    }
+    prev_indicess_size = coll.indices.size();
+    TF_CHECK_NE(coll.indices.size(), 0);
+
+    coll.hash = xla::util::HashCombine(
+        coll.hash, xla::util::Hash(po_data.parameter_sequence));
+  } while (Sentinel::GetSentinel()->OnHashingComplete(*state, tensors, coll));
+  return std::move(po_data);
+}
+
 std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
     std::vector<XLATensor>* tensors, absl::Span<const std::string> devices,
     const SyncTensorsConfig& config) {
@@ -1586,9 +1618,12 @@ std::shared_ptr<XLATensor::Async> XLATensor::SyncTensorsGraphInternal(
   DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", *tensors,
                                   &coll.indices);
 
-  PostOrderData po_data = RunPostOrder(*tensors, coll.indices);
-  coll.hash = xla::util::HashCombine(
-      coll.hash, xla::util::Hash(po_data.parameter_sequence));
+  PostOrderData po_data = GetPostOrderData(tensors, coll);
+
+  if (coll.indices.empty()) {
+    return nullptr;
+  }
+
   TF_VLOG(4) << "Parameter sequence graph hash "
              << xla::util::HexHash(coll.hash);
   std::shared_ptr<Async> async = TryRunCachedSync(tensors, &coll, &po_data);
