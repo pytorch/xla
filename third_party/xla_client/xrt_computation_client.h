@@ -526,7 +526,8 @@ class ComputationClientFactory {
  public:
   virtual std::unique_ptr<ComputationClient> Create(
       OptionsType options,
-      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto) = 0;
+      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto,
+      XrtLocalService* service) = 0;
 
   virtual tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
       const std::string& job, int task_no, const std::string& worker_host_port,
@@ -536,15 +537,15 @@ class ComputationClientFactory {
 template <typename COMPUTATION_CLIENT_TYPE>
 class TComputationClientFactory : public ComputationClientFactory {
  public:
-  virtual std::unique_ptr<ComputationClient> Create(
+  std::unique_ptr<ComputationClient> Create(
       OptionsType options,
       std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto,
-      XrtLocalService* service) {
+      XrtLocalService* service) override {
     return std::make_unique<COMPUTATION_CLIENT_TYPE>(
         std::move(options), std::move(topology_proto), service);
   }
 
-  virtual tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
+  tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
       const std::string& job, int task_no, const std::string& worker_host_port,
       const tensorflow::ConfigProto& config) override {
     return COMPUTATION_CLIENT_TYPE::InitializeAndFetchTopology(
