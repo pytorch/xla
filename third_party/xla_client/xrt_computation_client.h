@@ -544,11 +544,6 @@ class TComputationClientFactory : public ComputationClientFactory {
         std::move(options), std::move(topology_proto), service);
   }
 
-  /**
-   * @brief Temporary way to call InitializeAndFetchTopology until we
-   *        finish behaving exactly like a TPU (actually this works
-   *        except for the 1-or-8-core TPU behavior
-   */
   virtual tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
       const std::string& job, int task_no, const std::string& worker_host_port,
       const tensorflow::ConfigProto& config) override {
