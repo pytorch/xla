@@ -65,7 +65,6 @@ def _train_update(device, x, loss, tracker, writer):
 
 
 def train_mnist(flags,
-                worker_started=None,
                 training_started=None,
                 dynamic_graph=False,
                 fetch_often=False):
@@ -129,11 +128,7 @@ def train_mnist(flags,
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
 
-  # Start up client side profiler server.
   server = xp.start_server(flags.profiler_port)
-  # Testing purpose only: set event for synchronization.
-  if worker_started:
-    worker_started.set()
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
@@ -141,7 +136,8 @@ def train_mnist(flags,
     for step, (data, target) in enumerate(loader):
       if dynamic_graph:
         # testing purpose only: dynamic batch size and graph.
-        data, target = data[:-step, :, :, :], target[:-step]
+        index = max(-step, -flags.batch_size + 1)  # non-empty
+        data, target = data[:-index, :, :, :], target[:-index]
       if step >= 15 and training_started:
         # testing purpose only: set event for synchronization.
         training_started.set()

@@ -139,7 +139,8 @@ class XrtComputationClient : public ComputationClient {
 
   XrtComputationClient(
       Options options,
-      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto);
+      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto,
+      XrtLocalService* service = nullptr);
 
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 
@@ -487,12 +488,12 @@ class XrtComputationClient : public ComputationClient {
 
   static tensorflow::ConfigProto CreateConfigProto(const Options& options);
 
-public:  // TODO move to public area. Left here temporarily for review context.
+ public:  // TODO move to public area. Left here temporarily for review context.
   static tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
       const std::string& job, int task_no, const std::string& worker_host_port,
       const tensorflow::ConfigProto& config);
 
-private:
+ private:
   static std::string GetLocalTarget(const Options& options);
 
   // Checks whether a local GRPC service is required, and starts it if need it.
@@ -504,7 +505,7 @@ private:
   std::unique_ptr<XrtSessionCache> session_cache_;
   std::unique_ptr<XrtSessionCache> alloc_session_cache_;
   std::unique_ptr<util::TriggeredTask> triggered_task_;
-  std::unique_ptr<XrtLocalService> local_service_;
+  XrtLocalService* local_service_ = nullptr;
   util::Cache<CompilationCacheKey, Computation, CompilationCacheKey::Hash>
       compilation_cache_;
   std::atomic<size_t> rng_seed_;
@@ -519,41 +520,42 @@ private:
 };
 
 class ComputationClientFactory {
-protected:
-    using OptionsType = XrtComputationClient::Options;
-public:
-    virtual std::unique_ptr<ComputationClient> Create(
-        OptionsType options,
-        std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto) = 0;
+ protected:
+  using OptionsType = XrtComputationClient::Options;
 
-    virtual tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
-        const std::string& job, int task_no, const std::string& worker_host_port,
-        const tensorflow::ConfigProto& config) = 0;
+ public:
+  virtual std::unique_ptr<ComputationClient> Create(
+      OptionsType options,
+      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto) = 0;
+
+  virtual tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
+      const std::string& job, int task_no, const std::string& worker_host_port,
+      const tensorflow::ConfigProto& config) = 0;
 };
 
 template <typename COMPUTATION_CLIENT_TYPE>
 class TComputationClientFactory : public ComputationClientFactory {
-public:
-    virtual std::unique_ptr<ComputationClient> Create(
-        OptionsType options,
-        std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto) {
-        return std::make_unique<COMPUTATION_CLIENT_TYPE>(std::move(options),
-                                                         std::move(topology_proto));
-    }
+ public:
+  virtual std::unique_ptr<ComputationClient> Create(
+      OptionsType options,
+      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto,
+      XrtLocalService* service) {
+    return std::make_unique<COMPUTATION_CLIENT_TYPE>(
+        std::move(options), std::move(topology_proto), service);
+  }
 
-    /**
-     * @brief Temporary way to call InitializeAndFetchTopology until we
-     *        finish behaving exactly like a TPU (actually this works
-     *        except for the 1-or-8-core TPU behavior
-     */
-    virtual tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
-        const std::string& job, int task_no, const std::string& worker_host_port,
-        const tensorflow::ConfigProto& config) override {
-        return COMPUTATION_CLIENT_TYPE::InitializeAndFetchTopology(
-            job, task_no, worker_host_port, config);
-    }
+  /**
+   * @brief Temporary way to call InitializeAndFetchTopology until we
+   *        finish behaving exactly like a TPU (actually this works
+   *        except for the 1-or-8-core TPU behavior
+   */
+  virtual tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
+      const std::string& job, int task_no, const std::string& worker_host_port,
+      const tensorflow::ConfigProto& config) override {
+    return COMPUTATION_CLIENT_TYPE::InitializeAndFetchTopology(
+        job, task_no, worker_host_port, config);
+  }
 };
-
 
 }  // namespace xla
 

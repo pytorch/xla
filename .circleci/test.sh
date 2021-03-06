@@ -18,11 +18,11 @@ cd /tmp/pytorch/xla
 echo "Running Python Tests"
 ./test/run_tests.sh
 
-echo "Running MNIST Test"
-python test/test_train_mnist.py --tidy
-if [ -x "$(command -v nvidia-smi)" ]; then
-  python test/test_train_mp_mnist_amp.py --fake_data
-fi
+# echo "Running MNIST Test"
+# python test/test_train_mp_mnist.py --tidy
+# if [ -x "$(command -v nvidia-smi)" ]; then
+#   python test/test_train_mp_mnist_amp.py --fake_data
+# fi
 
 echo "Running C++ Tests"
 pushd test/cpp
