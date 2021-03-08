@@ -182,6 +182,7 @@ _TYPE_NSMAP = {
     'Tensor': 'at::Tensor',
     'TensorList': 'at::TensorList',
     'Scalar': 'at::Scalar',
+    'ScalarList': 'at::ScalarList',
     'Storage': 'at::Storage',
     'IntList': 'at::IntList',
     'IntArrayRef': 'at::IntArrayRef',
