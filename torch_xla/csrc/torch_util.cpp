@@ -14,7 +14,7 @@ at::Tensor CopyTensor(const at::Tensor& ref, at::ScalarType dest_type,
   return ref.to(ref.options().dtype(dest_type), /*non_blocking=*/false, copy);
 }
 
-at::ScalarType GetScalarType(at::Scalar scalar) {
+at::ScalarType GetScalarType(const at::Scalar& scalar) {
   if (scalar.isFloatingPoint()) {
     return at::kDouble;
   } else if (scalar.isIntegral(/*includeBool=*/false)) {

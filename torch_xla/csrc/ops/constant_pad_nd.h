@@ -11,7 +11,7 @@ namespace ops {
 class ConstantPadNd : public Node {
  public:
   ConstantPadNd(const Value& input, std::vector<xla::int64> pad,
-                at::Scalar value);
+                const at::Scalar& value);
 
   std::string ToString() const override;
 

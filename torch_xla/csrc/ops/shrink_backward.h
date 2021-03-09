@@ -11,7 +11,7 @@ namespace ops {
 class ShrinkBackward : public Node {
  public:
   ShrinkBackward(OpKind kind, const Value& grad_output, const Value& input,
-                 at::Scalar lambda);
+                 const at::Scalar& lambda);
 
   std::string ToString() const override;
 
