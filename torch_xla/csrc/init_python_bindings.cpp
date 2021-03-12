@@ -1084,6 +1084,8 @@ void InitXlaModuleBindings(py::module m) {
            const std::vector<op_builder::OpPtr>& operands, py::dict args) {
           return op_builder::CreateOp(builder, opname, operands, args);
         });
+  m.def("_run_xrt_local_service",
+        []() { xla::ComputationClient::RunLocalService(); });
 
   BuildProfilerSubmodule(&m);
 }

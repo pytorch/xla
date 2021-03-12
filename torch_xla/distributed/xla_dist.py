@@ -35,6 +35,8 @@ def concat_cmd_list(cmd_list, delimiter=' ', quote='"'):
 class DistributedExecutor(object):
 
   SCRIPT_PATH_TMPL = '/tmp/{pid}/dist_training_ptxla_{worker}.sh'
+  XRT_RUN_SERVER_CMD = 'torch_xla.core.xrt_run_server'
+  XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
   MESH_SERVICE_PORT = 8477  # Use single port to disallow concurrent runs
   DIST_ENV_VARS = [
       xenv.TPU_CONFIG,
@@ -80,6 +82,7 @@ class DistributedExecutor(object):
                docker_run_flags=None,
                conda_env=None,
                env_vars=None,
+               restart_server=None,
                tpuvm_mode=None):
     self._cluster = cluster
     self._initialize()
@@ -90,6 +93,7 @@ class DistributedExecutor(object):
     self.conda_env = conda_env
     self.env_vars = list(env_vars) if env_vars else []
     self.tpuvm_mode = tpuvm_mode
+    self.restart_server = restart_server
     self.tpu_name = self._cluster.get_service_workers()[0]._tpu
 
     for env_var in self.env_vars:
@@ -353,6 +357,9 @@ class DistributedExecutor(object):
       script.extend(self._env_vars_cmd(i))
       # Setup environment for non-interactive non-login shell over ssh
       script.append(['.', '/etc/profile'])
+      if self.tpuvm_mode:
+        # Start the local tf server if it is not already running.
+        script.append(['python', '-m', self.XRT_RUN_SERVER_CMD])
       if self.docker_image:
         script.append(self._docker_run_cmd(cmd))
       else:
@@ -445,6 +452,11 @@ class DistributedExecutor(object):
 
     def _run_script(script_paths, client_worker):
       script_path = script_paths['remote_path']
+      if self.restart_server and self.tpuvm_mode:
+        kill_server = (
+            'kill -9 -$(ps -ef | grep {} | grep -v grep | awk "{{print \$2}}")'
+        ).format(self.XRT_RUN_SERVER_PROCESS)
+        self._build_and_run_ssh(kill_server, client_worker, log=False)
       exit_code = self._build_and_run_ssh([script_path], client_worker)
       if exit_code != 0:
         raise RuntimeError(
@@ -585,6 +597,10 @@ if __name__ == '__main__':
       type=str,
       help='List of environment variables to distribute.')
   parser.add_argument(
+      '--restart-tpuvm-pod-server',
+      action='store_true',
+      help='Restart the long running XRT local service for this training.')
+  parser.add_argument(
       'positional',
       nargs='+',
       type=str,
@@ -614,5 +630,6 @@ if __name__ == '__main__':
       docker_run_flags=FLAGS.docker_run_flag,
       conda_env=FLAGS.conda_env,
       env_vars=FLAGS.env,
+      restart_server=FLAGS.restart_tpuvm_pod_server,
       tpuvm_mode=tpuvm_mode)
   executor.run(FLAGS.positional)
