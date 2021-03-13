@@ -83,7 +83,8 @@ class DistributedExecutor(object):
                conda_env=None,
                env_vars=None,
                restart_server=None,
-               tpuvm_mode=None):
+               tpuvm_mode=None,
+               tpuvm_server_port=None):
     self._cluster = cluster
     self._initialize()
     self.logger = self._get_logger()
@@ -94,6 +95,7 @@ class DistributedExecutor(object):
     self.env_vars = list(env_vars) if env_vars else []
     self.tpuvm_mode = tpuvm_mode
     self.restart_server = restart_server
+    self.tpuvm_server_port = tpuvm_server_port
     self.tpu_name = self._cluster.get_service_workers()[0]._tpu
 
     for env_var in self.env_vars:
@@ -333,7 +335,7 @@ class DistributedExecutor(object):
               worker_name=worker_name,
               worker_idx=idx,
               worker_ip=service_worker.get_internal_ip(),
-              worker_port=51011
+              worker_port=self.tpuvm_server_port
               if self.tpuvm_mode else service_worker.get_port()) for idx,
           service_worker in enumerate(self._cluster.get_service_workers())
       ]
@@ -359,7 +361,10 @@ class DistributedExecutor(object):
       script.append(['.', '/etc/profile'])
       if self.tpuvm_mode:
         # Start the local tf server if it is not already running.
-        script.append(['python', '-m', self.XRT_RUN_SERVER_CMD])
+        script.append([
+            'python', '-m', self.XRT_RUN_SERVER_CMD,
+            str(self.tpuvm_server_port)
+        ])
       if self.docker_image:
         script.append(self._docker_run_cmd(cmd))
       else:
@@ -601,6 +606,11 @@ if __name__ == '__main__':
       action='store_true',
       help='Restart the long running XRT local service for this training.')
   parser.add_argument(
+      '--tpuvm-server-port',
+      default=51001,
+      type=int,
+      help='Port that XRT local service will be start on.')
+  parser.add_argument(
       'positional',
       nargs='+',
       type=str,
@@ -631,5 +641,6 @@ if __name__ == '__main__':
       conda_env=FLAGS.conda_env,
       env_vars=FLAGS.env,
       restart_server=FLAGS.restart_tpuvm_pod_server,
-      tpuvm_mode=tpuvm_mode)
+      tpuvm_mode=tpuvm_mode,
+      tpuvm_server_port=FLAGS.tpuvm_server_port)
   executor.run(FLAGS.positional)

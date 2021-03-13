@@ -305,10 +305,11 @@ std::vector<std::string> ComputationClient::GetCompilationDevices(
   return compilation_devices;
 }
 
-void ComputationClient::RunLocalService() {
+void ComputationClient::RunLocalService(xla::uint64 service_port) {
   try {
-    XrtLocalService* service =
-        new XrtLocalService("localservice|localhost:51011", "localservice", 0);
+    XrtLocalService* service = new XrtLocalService(
+        "localservice|localhost:" + std::to_string(service_port),
+        "localservice", 0);
     service->Start();
     service->Join();
   } catch (const std::runtime_error& error) {
