@@ -1,5 +1,4 @@
 #include "torch_xla/csrc/lazy_sentinel.h"
-#include "torch_xla/csrc/tensor_ex.h"
 
 #include <Python.h>
 
@@ -7,10 +6,10 @@
 #include <stack>
 #include <string>
 
-#include "tensorflow/compiler/xla/proxy_client/color_output.h"
-#include "tensorflow/compiler/xla/proxy_client/computation_client_manager.h"
-#include "tensorflow/compiler/xla/proxy_client/proxy_computation_client.h"
-#include "tensorflow/compiler/xla/proxy_client/proxy_name.h"
+#include "tensorflow/compiler/xla/xla_client/color_output.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client_manager.h"
+#include "tensorflow/compiler/xla/xla_client/proxy_computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/proxy_name.h"
 #include "tensorflow/compiler/xla/xla_client/metrics.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -48,6 +47,9 @@ const bool disable_proxy =
 const bool prune_tensors_if_outputs_set = true;
 
 constexpr std::size_t DEFAULT_CLEAN_STEPS_UNTIL_PROXY = 1;
+
+constexpr DeviceType kDEVICE_TYPE_TO_REDIRECT = DeviceType::TPU;
+
 
 } // namespace
 
@@ -214,7 +216,7 @@ void LazySentinel::SetAllDevices(const std::vector<std::string> &all_devices) {
   proxy_devices_.reserve(all_devices.size());
   for (const std::string &device_str : all_devices) {
     const Device device(device_str);
-    if (device.hw_type == DeviceType::WSE) {
+    if (device.hw_type == kDEVICE_TYPE_TO_REDIRECT) {
       proxy_devices_.push_back(device_str);
     }
   }
@@ -304,25 +306,6 @@ bool LazySentinel::PruneTensors(std::vector<XLATensor> *tensors,
     bool is_restricting;
     if (IsAllowedOutput(tensor, coll, &is_restricting)) {
       adjusted_indices.push_back(coll.indices[i]);
-      if (is_restricting && verbose_output_control) {
-        ColorScope clr(Color::FG_DEFAULT);
-        std::stringstream ss;
-        ss << "Allowing output";
-        if (tensor.data()->xla_data && tensor.data()->xla_data->HasValue()) {
-          ss << " HANDLE = " << tensor.data()->xla_data->GetOpaqueHandle();
-        }
-        TensorEx::print_tensor(ss.str(), tensor);
-      }
-    } else {
-      if (is_restricting &&
-          (verbose || verbose_output_control || verbose_remove_tensors)) {
-        std::stringstream ss;
-        ss << "Removing output";
-        if (tensor.data()->xla_data && tensor.data()->xla_data->HasValue()) {
-          ss << " HANDLE = " << tensor.data()->xla_data->GetOpaqueHandle();
-        }
-        TensorEx::print_tensor(ss.str(), tensor);
-      }
     }
   }
 
@@ -354,7 +337,7 @@ bool LazySentinel::IsTrainingThread(pid_t tid) {
  * )
  *
  *       An advantage of this is that if we are ever asked for the graph where
- * we donn't have to prune anything, it should still resolve to the same
+ * we don't have to prune anything, it should still resolve to the same
  * executable's adjusted hash in PreProcessHlo
  *
  *       TODO: Optimize not doing two passes when we are in the same detected
@@ -577,8 +560,7 @@ LazySentinel::NotifyScheduleSyncTensorsGraph(
             std::cout << ", handle = " << t->GetOpaqueHandle();
           }
           std::cout << " ";
-          TensorEx::print_tensor("", (*xla_tensors)[coll->indices[index++]]);
-          // std::cout << std::endl;
+          //TensorEx::print_tensor("", (*xla_tensors)[coll->indices[index++]]);
         });
   }
   return std::move(tensors);
@@ -626,11 +608,7 @@ void LazySentinel::NotifyStepMarkerBegin(
 void LazySentinel::NotifyStepMarkerEnd() {
   assert(is_in_mark_step);
 
-#if 1 // TURNED ON FOR HEADLESS TEST
-  const pid_t tid = gettid();
-  auto compile_info = GetCompileInfo(tid);
-  compile_info->output_ids_.clear();
-#endif
+  GetCompileInfo(gettid())->output_ids_.clear();
 
   is_in_mark_step = false;
   is_clean_step = false;

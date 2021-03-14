@@ -25,7 +25,7 @@ class GlobalDataHandleMapper;
 class ProxyComputationClient : public XrtComputationClient {
   typedef XrtComputationClient Super;
 
-public:
+ public:
   /**
    * @brief Create ProxyComputationClient object
    */
@@ -44,27 +44,26 @@ public:
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 
   // Transfers local tensor values to the TPU servers and fetches the handles.
-  std::vector<DataPtr>
-  TransferToServer(absl::Span<const TensorSource> tensors) override;
+  std::vector<DataPtr> TransferToServer(
+      absl::Span<const TensorSource> tensors) override;
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
-  std::vector<Literal>
-  TransferFromServer(absl::Span<const DataPtr> handles) override;
+  std::vector<Literal> TransferFromServer(
+      absl::Span<const DataPtr> handles) override;
 
   // Compiles a set of computations.
-  std::vector<ComputationPtr>
-  Compile(std::vector<CompileInstance> instances) override;
+  std::vector<ComputationPtr> Compile(
+      std::vector<CompileInstance> instances) override;
 
   // Executes computation with arguments and returns the result.
   // The passed device must match the common device of the arguments Data.
   // If options.explode_tuple is true, the output tuple will be decomposed into
   // its single elements.
-  std::vector<DataPtr>
-  ExecuteComputation(const Computation &computation,
-                     absl::Span<const DataPtr> arguments,
-                     const std::string &device,
-                     const ExecuteComputationOptions &options) override;
+  std::vector<DataPtr> ExecuteComputation(
+      const Computation &computation, absl::Span<const DataPtr> arguments,
+      const std::string &device,
+      const ExecuteComputationOptions &options) override;
 
   // Executes the computation in replicated mode.
   // The size of the arguments vector is the number of replicas to execute,
@@ -77,11 +76,11 @@ public:
   // The result[i], a vector itself, will be the result of the computation fed
   // with arguments[i]. If options.explode_tuple is true, the output tuples will
   // be decomposed into their single elements.
-  std::vector<std::vector<DataPtr>>
-  ExecuteReplicated(const Computation &computation,
-                    const std::vector<std::vector<DataPtr>> &arguments,
-                    absl::Span<const std::string> devices,
-                    const ExecuteReplicatedOptions &options) override;
+  std::vector<std::vector<DataPtr>> ExecuteReplicated(
+      const Computation &computation,
+      const std::vector<std::vector<DataPtr>> &arguments,
+      absl::Span<const std::string> devices,
+      const ExecuteReplicatedOptions &options) override;
 
   // Executes the computations in parallel. Each computation must target a
   // different device, and the the common device of arguments[i] must match
@@ -90,11 +89,11 @@ public:
   // Returns a vector of vectors of device side Data object, with result[i]
   // being the return value of computations[i]. If options.explode_tuple is
   // true, the output tuples will be decomposed into their single elements.
-  std::vector<std::vector<DataPtr>>
-  ExecuteParallel(absl::Span<const Computation *const> computations,
-                  const std::vector<std::vector<DataPtr>> &arguments,
-                  absl::Span<const std::string> devices,
-                  const ExecuteParallelOptions &options) override;
+  std::vector<std::vector<DataPtr>> ExecuteParallel(
+      absl::Span<const Computation *const> computations,
+      const std::vector<std::vector<DataPtr>> &arguments,
+      absl::Span<const std::string> devices,
+      const ExecuteParallelOptions &options) override;
 
   // Executes a serie of operations, whose results are input of other
   // operations. The ops is a valid post-order for the execution, which means
@@ -108,10 +107,9 @@ public:
   //
   // Other APIs
   //
-  static tensorflow::tpu::TopologyProto
-  InitializeAndFetchTopology(const std::string &job, int task_no,
-                             const std::string &worker_host_port,
-                             const tensorflow::ConfigProto &config);
+  static tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
+      const std::string &job, int task_no, const std::string &worker_host_port,
+      const tensorflow::ConfigProto &config);
 
   static ProxyComputationClient *Get() {
     return dynamic_cast<ProxyComputationClient *>(Super::Get());
@@ -130,7 +128,7 @@ public:
 
   void PrepareToExit() override;
 
-private:
+ private:
   /**
    * @brief
    */
@@ -193,6 +191,6 @@ private:
   std::unordered_set<uint64_t> proxy_executable_set_;
 };
 
-} // namespace xla
+}  // namespace xla
 
-#endif /// XLA_CLIENT_XLA_COMPUTATION_PROXY_H_
+#endif  /// XLA_CLIENT_XLA_COMPUTATION_PROXY_H_

@@ -6,7 +6,7 @@ namespace xla {
 
 namespace {
 bool verbose_handle_mapping = false;
-} // namespace
+}  // namespace
 
 /**
  * @brief Add data mapping to another device
@@ -45,9 +45,8 @@ void GlobalDataHandleMapper::AddMapping(
 /**
  * @brief Free device-to-device mapping
  */
-ComputationClient::DataPtr
-GlobalDataHandleMapper::FreeMapping(const std::string &device, handle_t handle,
-                                    bool free_both) {
+ComputationClient::DataPtr GlobalDataHandleMapper::FreeMapping(
+    const std::string &device, handle_t handle, bool free_both) {
   assert(!device.empty() && handle);
   std::lock_guard<std::recursive_mutex> lock(mtx_);
   const HandleAndDevice hd{handle, device};
@@ -97,9 +96,8 @@ GlobalDataHandleMapper::FreeMapping(const std::string &device, handle_t handle,
 /**
  * @brief Get cloned data mapping
  */
-ComputationClient::DataPtr
-GlobalDataHandleMapper::GetMapping(const std::string &device,
-                                   handle_t handle) const {
+ComputationClient::DataPtr GlobalDataHandleMapper::GetMapping(
+    const std::string &device, handle_t handle) const {
   assert(!device.empty() && handle);
   std::lock_guard<std::recursive_mutex> lock(mtx_);
   const HandleAndDevice hd{handle, device};
@@ -133,4 +131,4 @@ bool GlobalDataHandleMapper::HasMapping(const std::string &device,
   return handle_map_.find(src) != handle_map_.end();
 }
 
-} // namespace xla
+}  // namespace xla

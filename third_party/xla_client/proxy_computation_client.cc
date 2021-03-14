@@ -50,7 +50,7 @@ bool verbose_topology = false;
 bool verbose_handle_mapping = false;
 bool is_initialized = false;
 
-} // namespace
+}  // namespace
 
 /**
  *  _____        _
@@ -62,8 +62,8 @@ bool is_initialized = false;
  *
  *
  */
-ComputationClient::DataPtr
-ProxyComputationClient::CreateDataPlaceholder(std::string device, Shape shape) {
+ComputationClient::DataPtr ProxyComputationClient::CreateDataPlaceholder(
+    std::string device, Shape shape) {
   if (ProxyName::is_proxy_device_name(device)) {
     std::string unproxy_device = ProxyName::unproxy_device_name(device);
     return std::make_shared<XrtData>(std::move(unproxy_device),
@@ -246,8 +246,8 @@ ProxyComputationClient::TransferToServer(
 
 /// Reads the tensor literal values stored at TPU server sites, behind the
 /// supplied handles.
-std::vector<Literal>
-ProxyComputationClient::TransferFromServer(absl::Span<const DataPtr> handles) {
+std::vector<Literal> ProxyComputationClient::TransferFromServer(
+    absl::Span<const DataPtr> handles) {
   std::vector<DataPtr> all_handles(handles.begin(), handles.end());
   std::vector<Literal> results = split_types<std::vector<Literal>>(
       all_handles,
@@ -369,7 +369,6 @@ ProxyComputationClient::NormalizeDataToDevice(absl::Span<const DataPtr> tensors,
                 }
                 return results;
               } else {
-
                 for (size_t i = 0; i < local_move_tensors.size(); ++i) {
                   data_mapper_->AddMapping(results[i]->device(),
                                            results[i]->GetOpaqueHandle(),
@@ -520,8 +519,8 @@ ProxyComputationClient::MoveDataBetweenDevices(
  *
  * Compiles a set of computations.
  */
-std::vector<ComputationClient::ComputationPtr>
-ProxyComputationClient::Compile(std::vector<CompileInstance> instances) {
+std::vector<ComputationClient::ComputationPtr> ProxyComputationClient::Compile(
+    std::vector<CompileInstance> instances) {
   //
   /// TODO: ComputationPtr to return have modified HloModule and
   ///       call Super with it (no proxy) on compile failure
@@ -629,9 +628,9 @@ ProxyComputationClient::ExecuteComputation(
   } else if (!device1.empty() && device2.empty()) {
     effective_device = device1;
   } else {
-    assert(device1 == device2); /// what's this use-case?
+    assert(device1 == device2);  /// what's this use-case?
     effective_device =
-        device2; /// prefer the proxy effective_device if it's specified
+        device2;  /// prefer the proxy effective_device if it's specified
   }
 
   if (IsProxyExecutable(computation.execution_handle())) {
@@ -818,9 +817,8 @@ ProxyComputationClient::ExecuteReplicated(
   return results;
 }
 
-std::vector<ComputationClient::DataPtr>
-ProxyComputationClient::ExecuteChained(absl::Span<const ExecuteChainedOp> ops,
-                                       const std::string &device) {
+std::vector<ComputationClient::DataPtr> ProxyComputationClient::ExecuteChained(
+    absl::Span<const ExecuteChainedOp> ops, const std::string &device) {
   // Have never run this use-case, so I doubt this works for proxy :)
   if (IsEnabled() && ProxyName::is_proxy_device_name(device)) {
     return client_manager_.GetComputationClient(device)->ExecuteChained(ops,
@@ -868,4 +866,4 @@ ProxyComputationClient::InitializeAndFetchTopology(
                                          config);
 }
 
-} // namespace xla
+}  // namespace xla

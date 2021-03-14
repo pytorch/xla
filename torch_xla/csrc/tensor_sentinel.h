@@ -15,6 +15,7 @@ namespace torch_xla {
 struct HashingState {
   explicit HashingState(const xla::hash_t& start_hash)
       : start_hash_(start_hash){};
+  virtual ~HashingState() = default;
   const xla::hash_t start_hash_;
 };
 

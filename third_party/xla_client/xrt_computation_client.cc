@@ -1960,8 +1960,7 @@ void XrtComputationClient::MaybeCreateLocalService(const Options& options) {
     std::string cluster_spec =
         absl::StrCat(job_name, "|", absl::StrJoin(hosts, ";"));
     TF_VLOG(2) << "Local Service Cluster Spec: " << cluster_spec;
-    local_service_ =
-        new XrtLocalService(cluster_spec, job_name, task_index);
+    local_service_ = new XrtLocalService(cluster_spec, job_name, task_index);
     local_service_->Start();
   }
 }

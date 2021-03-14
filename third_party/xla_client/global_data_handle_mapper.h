@@ -18,7 +18,7 @@ namespace xla {
 class GlobalDataHandleMapper {
   static constexpr bool verbose = false;
 
-public:
+ public:
   typedef int64_t handle_t;
 
   GlobalDataHandleMapper() = default;
@@ -53,7 +53,7 @@ public:
    */
   bool HasMapping(const std::string &device, handle_t handle) const;
 
-private:
+ private:
   mutable std::recursive_mutex mtx_;
   using HandleAndDevice = std::pair<int64, std::string>;
   std::map<HandleAndDevice, std::set<HandleAndDevice>> handle_map_;
@@ -62,6 +62,6 @@ private:
 
 constexpr const int64 TRACE_HANDLE = -1 /* -1 is no trace */;
 
-} // namespace xla
+}  // namespace xla
 
-#endif // CEREBRASPYTORCH_GLOBAL_DATA_HANDLE_MAPPER_HH
+#endif  // CEREBRASPYTORCH_GLOBAL_DATA_HANDLE_MAPPER_HH

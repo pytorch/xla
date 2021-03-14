@@ -16,7 +16,7 @@ class ComputationClient;
 class ComputationClientFactory;
 
 class XlaClientInfo {
-public:
+ public:
   inline std::shared_ptr<xla::ServiceInterface> operator()() {
     return xla_client_;
   }
@@ -29,19 +29,19 @@ public:
   // (i.e. grpc:// for remote session)
   std::string address_;
   std::shared_ptr<ComputationClientFactory> client_factory_;
-  std::shared_ptr<xla::ServiceInterface> xla_client_; // deprecated
+  std::shared_ptr<xla::ServiceInterface> xla_client_;  // deprecated
   std::shared_ptr<ComputationClient> computation_client_;
   std::unordered_map<int, xla::DeviceHandle> device_handles_;
 };
 
 class ComputationClientManager {
-public:
+ public:
   ComputationClientManager() = default;
 
   static bool Empty();
 
-  std::shared_ptr<ComputationClient>
-  GetComputationClient(const std::string &device, bool create = true);
+  std::shared_ptr<ComputationClient> GetComputationClient(
+      const std::string &device, bool create = true);
 
   void PrepareToExit();
 
@@ -55,14 +55,14 @@ public:
       const std::string &device, const std::string &address,
       const std::shared_ptr<xla::ComputationClientFactory> client_factory);
 
-private:
-  friend class XlaComputationClient; // Temporary due to separation of code
+ private:
+  friend class XlaComputationClient;  // Temporary due to separation of code
 
   static std::recursive_mutex computation_client_map_mtx_;
   static std::unordered_map<std::string, std::shared_ptr<XlaClientInfo>>
       computation_client_info_map_;
 };
 
-} // namespace xla
+}  // namespace xla
 
-#endif // CEREBRASPYTORCH_WSE_GRPC_CLIENT_HH
+#endif  // CEREBRASPYTORCH_WSE_GRPC_CLIENT_HH

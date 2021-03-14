@@ -63,12 +63,11 @@ class ComputationClient {
   class Computation {
    public:
     Computation(XlaComputation computation, ProgramShape program_shape,
-                std::vector<std::string> devices,
-                int64 execution_handle = 0)
+                std::vector<std::string> devices, int64 execution_handle = 0)
         : computation_(std::move(computation)),
           program_shape_(std::move(program_shape)),
           devices_(std::move(devices)),
-          execution_handle_(execution_handle){}
+          execution_handle_(execution_handle) {}
 
     virtual ~Computation() {}
 
@@ -166,7 +165,7 @@ class ComputationClient {
   };
 
   static std::shared_ptr<ComputationClientFactory> SetFactory(
-    std::shared_ptr<ComputationClientFactory> factory);
+      std::shared_ptr<ComputationClientFactory> factory);
 
   static std::shared_ptr<ComputationClientFactory> GetFactory();
 

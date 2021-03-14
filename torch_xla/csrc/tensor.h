@@ -1172,6 +1172,7 @@ class XLATensor {
     bool sync_xla_data = true;
   };
 
+ public:  // left in-place for illustrative purposes
   struct SyncTensorCollection {
     SyncTensorCollection() : hash(0) {}
 
@@ -1184,6 +1185,7 @@ class XLATensor {
     Device device;
   };
 
+ private:
   struct PostOrderData {
     std::vector<const ir::Node*> post_order;
     ir::Util::EmissionMap emission_map;
@@ -1412,6 +1414,7 @@ class XLATensor {
   static xla::int64 GetNextTensorId();
 
   std::shared_ptr<Data> data_;
+  friend class LazySentinel;  // for data()
 };
 
 }  // namespace torch_xla

@@ -7,7 +7,7 @@ namespace xla {
 
 namespace {
 bool verbose_topology = false;
-} // end of anonymous namespace
+}  // end of anonymous namespace
 
 static const char *env_vars[] = {"XRT_MULTI_PROCESSING_DEVICE",
                                  "XRT_LOCAL_WORKER",
@@ -77,8 +77,7 @@ std::string join(const std::vector<std::string> &pieces,
   std::stringstream ss;
   std::size_t i = 0;
   for (const auto &s : pieces) {
-    if (i++)
-      ss << delimiter;
+    if (i++) ss << delimiter;
     ss << s;
   }
   return ss.str();
@@ -110,8 +109,7 @@ DEST_MSG *get_mutable_id(SRC_MSG_ARRAY &array, const int64_t id) {
 
 std::string get_frontend_attribute(const xla::HloModuleProto &module,
                                    const std::string &attribute_name) {
-  if (!ProxyComputationClient::IsEnabled())
-    return "";
+  if (!ProxyComputationClient::IsEnabled()) return "";
   const int64_t entry_computation_id = module.entry_computation_id();
   if (entry_computation_id) {
     const auto *computation = get_id<xla::HloComputationProto>(
@@ -156,8 +154,8 @@ std::string get_proxy_device(const xla::HloModuleProto &module) {
   return get_frontend_attribute(module, "PROXY_DEVICE");
 }
 
-std::unique_ptr<xla::HloModuleProto>
-get_proxy_hlo_module(const xla::HloModuleProto &module) {
+std::unique_ptr<xla::HloModuleProto> get_proxy_hlo_module(
+    const xla::HloModuleProto &module) {
   std::unique_ptr<xla::HloModuleProto> result;
   std::string proxy_hlo_string = get_frontend_attribute(module, "PROXY_HLO");
   if (!proxy_hlo_string.empty()) {
@@ -193,10 +191,9 @@ message TopologyProto {
   repeated int32 device_coordinates = 4;
 }
 */
-tensorflow::tpu::TopologyProto
-InitializeAndFetchTopologyLocal(const std::string &job, int task_no,
-                                const std::string &worker_host_port,
-                                const tensorflow::ConfigProto &config) {
+tensorflow::tpu::TopologyProto InitializeAndFetchTopologyLocal(
+    const std::string &job, int task_no, const std::string &worker_host_port,
+    const tensorflow::ConfigProto &config) {
   //
   // TODO: Move to TPU config op
   //
@@ -242,4 +239,4 @@ InitializeAndFetchTopologyLocal(const std::string &job, int task_no,
   return topology_proto;
 }
 
-} // namespace xla
+}  // namespace xla

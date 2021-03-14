@@ -9,11 +9,10 @@ namespace {
 const std::string PROXYABLE_DEVICE_PREFIX = "WSE:";
 constexpr char PROXYABLE_DEVICE_SUFFIX = 'P';
 
-} // namespace
+}  // namespace
 
 bool ProxyName::is_proxy_device_name(const std::string &device) {
-  if (!ProxyComputationClient::IsEnabled())
-    return false;
+  if (!ProxyComputationClient::IsEnabled()) return false;
   std::vector<std::string> parts = split(device, ':');
   assert(parts.size() == 2);
   const std::string &dev = parts[0];
@@ -49,10 +48,9 @@ std::string ProxyName::proxy_device_name(const std::string &device) {
 }
 
 bool ProxyName::is_proxyable_device(const std::string device) {
-  if (!ProxyComputationClient::IsEnabled())
-    return false;
+  if (!ProxyComputationClient::IsEnabled()) return false;
   return strncmp(device.c_str(), PROXYABLE_DEVICE_PREFIX.c_str(),
                  PROXYABLE_DEVICE_PREFIX.size()) == 0;
 }
 
-} // namespace xla
+}  // namespace xla

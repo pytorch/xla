@@ -9,25 +9,25 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/core/protobuf/tpu/topology.pb.h"
 #include "tensorflow/compiler/tf2xla/xla_op_registry.h"
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/rpc/grpc_stub.h"
 #include "tensorflow/compiler/xla/rpc/xla_service.grpc.pb.h"
 #include "tensorflow/compiler/xla/service/hlo.pb.h"
 #include "tensorflow/compiler/xla/service_interface.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
-#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
-#include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
-#include "tensorflow/compiler/xla/xla_data.pb.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/xla_client/color_output.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/global_data_handle_mapper.h"
+#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/proxy_client_util.h"
 #include "tensorflow/compiler/xla/xla_client/proxy_computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/proxy_name.h"
+#include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/xla_computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
+#include "tensorflow/compiler/xla/xla_data.pb.h"
+#include "tensorflow/core/protobuf/tpu/topology.pb.h"
 
 namespace xla {
 
@@ -51,17 +51,17 @@ bool verbose_pull = false;
  *        a local ServiceInterface client.
  */
 struct GRPCStubEx : public GRPCStub {
-public:
+ public:
   explicit GRPCStubEx(std::unique_ptr<xla::grpc::XlaService::Stub> stub)
       : GRPCStub(stub.get()) {
     stub_ownership_ = std::move(stub);
   }
 
-private:
+ private:
   std::unique_ptr<xla::grpc::XlaService::Stub> stub_ownership_;
 };
 
-} // end of anonymous namespace
+}  // end of anonymous namespace
 
 XlaComputationClient::XlaComputationClient(
     std::shared_ptr<xla::ServiceInterface> service)
@@ -216,8 +216,8 @@ void XlaComputationClient::ReleaseComputation(
  *
  *
  */
-std::shared_ptr<ServiceInterface>
-XlaComputationClient::CreateServiceClient(const std::string &address) {
+std::shared_ptr<ServiceInterface> XlaComputationClient::CreateServiceClient(
+    const std::string &address) {
   if (verbose) {
     std::cout << "Creating XLA client for server at: " << address << std::endl
               << std::flush;
@@ -228,8 +228,8 @@ XlaComputationClient::CreateServiceClient(const std::string &address) {
   return xla_service;
 }
 
-std::shared_ptr<xla::ServiceInterface>
-XlaComputationClient::GetXlaClient(const std::string &device, bool create) {
+std::shared_ptr<xla::ServiceInterface> XlaComputationClient::GetXlaClient(
+    const std::string &device, bool create) {
   assert(ProxyName::is_proxy_device_name(device));
   // TODO: Untangle this cross-dependency
   std::lock_guard<std::recursive_mutex> lk(
@@ -278,8 +278,8 @@ XlaComputationClient::GetXlaClient(const std::string &device, bool create) {
   return iter->second->xla_client_;
 }
 
-xla::DeviceHandle
-XlaComputationClient::GetDeviceHandle(const std::string &device) {
+xla::DeviceHandle XlaComputationClient::GetDeviceHandle(
+    const std::string &device) {
   if (!service_) {
     throw std::runtime_error("Failed to get XLA client for device");
   }
@@ -312,9 +312,8 @@ XlaComputationClient::GetDeviceHandle(const std::string &device) {
  *
  *
  */
-ComputationClient::DataPtr
-XlaComputationClient::TransferLiteralToServer(const std::string &device,
-                                              const Literal &literal) {
+ComputationClient::DataPtr XlaComputationClient::TransferLiteralToServer(
+    const std::string &device, const Literal &literal) {
   xla::TransferToServerRequest request;
   xla::TransferToServerResponse response;
 
@@ -335,13 +334,13 @@ XlaComputationClient::TransferLiteralToServer(const std::string &device,
   }
 
   return std::make_shared<XrtData>(this, ProxyName::unproxy_device_name(device),
-                                   device, // probably not necessary
+                                   device,  // probably not necessary
                                    literal.shape(), response.data().handle());
 }
 
 // Transfers local tensor values to the TPU servers and fetches the handles.
-std::vector<DataPtr>
-XlaComputationClient::TransferToServer(absl::Span<const TensorSource> tensors) {
+std::vector<DataPtr> XlaComputationClient::TransferToServer(
+    absl::Span<const TensorSource> tensors) {
   // TODO: Use MultiWait and send multiple in parallel
   std::vector<DataPtr> results;
   results.reserve(tensors.size());
@@ -354,8 +353,8 @@ XlaComputationClient::TransferToServer(absl::Span<const TensorSource> tensors) {
 
 // Reads the tensor literal values stored at TPU server sites, behind the
 // supplied handles.
-std::vector<Literal>
-XlaComputationClient::TransferFromServer(absl::Span<const DataPtr> handles) {
+std::vector<Literal> XlaComputationClient::TransferFromServer(
+    absl::Span<const DataPtr> handles) {
   if (verbose || verbose_transfer || verbose_pull) {
     for (const DataPtr &d : handles) {
       torch_xla::ColorScope clr(torch_xla::Color::FG_RED);
@@ -405,9 +404,8 @@ XlaComputationClient::TransferFromServer(absl::Span<const DataPtr> handles) {
  *
  * Compiles a set of computations.
  */
-std::vector<ComputationPtr>
-XlaComputationClient::Compile(std::vector<CompileInstance> instances) {
-  // WSE (true)
+std::vector<ComputationPtr> XlaComputationClient::Compile(
+    std::vector<CompileInstance> instances) {
   std::vector<ComputationClient::ComputationPtr> local_results;
   local_results.reserve(instances.size());
   for (CompileInstance &instance : instances) {
@@ -473,8 +471,8 @@ XlaComputationClient::Compile(std::vector<CompileInstance> instances) {
   return local_results;
 }
 
-xla::HloModuleProto
-XlaComputationClient::PreProcessHlo(xla::HloModuleProto &&hlo_module_proto) {
+xla::HloModuleProto XlaComputationClient::PreProcessHlo(
+    xla::HloModuleProto &&hlo_module_proto) {
   // Base-case does nothing
   return std::move(hlo_module_proto);
 }
@@ -532,7 +530,7 @@ std::vector<DataPtr> XlaComputationClient::ExecuteComputation(
 
   xla::GetShapeRequest gs_request;
 
-  std::vector<ComputationClient::DataPtr> results; // tuple results
+  std::vector<ComputationClient::DataPtr> results;  // tuple results
   std::vector<xla::GlobalDataHandle> result_handles;
 
   xla::ShapeProto response_shape;
@@ -600,4 +598,4 @@ std::vector<DataPtr> XlaComputationClient::ExecuteComputation(
   return results;
 }
 
-} // namespace xla
+}  // namespace xla

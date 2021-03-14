@@ -11,10 +11,10 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/mlir/xla/mlir_hlo_to_hlo.h"
-#include "tensorflow/compiler/xla/xla_client/xla_computation_client.h"
 #include "tensorflow/compiler/xla/rpc/xla_service.grpc.pb.h"
 #include "tensorflow/compiler/xla/service_interface.h"
 #include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/xla_computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/xrt_computation_client.h"
 
 namespace xla {
@@ -80,7 +80,7 @@ void ComputationClientManager::SetDeviceFactory(
   }
   assert(!ProxyName::is_proxy_device_name(device));
   std::shared_ptr<xla::ServiceInterface>
-      old_client; // if exists, to be destroyed out of lock scope
+      old_client;  // if exists, to be destroyed out of lock scope
   std::lock_guard<std::recursive_mutex> lk(computation_client_map_mtx_);
   if (verbose) {
     std::cout << "Setting device proxy: " << device << " -> " << address
@@ -106,7 +106,7 @@ void ComputationClientManager::SetDeviceFactory(
     if (iter->second->address_ != address) {
       // If it changed, kill the old one (if it was created at all)
       old_client =
-          iter->second->xla_client_; // keep a ref until out of lock scope
+          iter->second->xla_client_;  // keep a ref until out of lock scope
       iter->second->xla_client_.reset();
       iter->second->address_ = address;
       iter->second->client_factory_ = client_factory;
@@ -114,4 +114,4 @@ void ComputationClientManager::SetDeviceFactory(
   }
 }
 
-} // namespace xla
+}  // namespace xla

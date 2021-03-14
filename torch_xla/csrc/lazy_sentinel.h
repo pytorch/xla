@@ -1,14 +1,5 @@
 #pragma once
 
-#include "tensorflow/compiler/xla/proxy_client/color_output.h"
-#include "tensorflow/compiler/xla/proxy_client/proxy_computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/types.h"
-#include "torch_xla/csrc/aten_xla_bridge.h"
-#include "torch_xla/csrc/tensor_sentinel.h"
-
-#include "torch_xla/csrc/envfile.h"
-
 #include <sys/syscall.h>
 
 #include <map>
@@ -16,6 +7,14 @@
 #include <ostream>
 #include <sstream>
 #include <stack>
+
+#include "tensorflow/compiler/xla/xla_client/color_output.h"
+#include "tensorflow/compiler/xla/xla_client/computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/proxy_computation_client.h"
+#include "tensorflow/compiler/xla/xla_client/types.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/envfile.h"
+#include "torch_xla/csrc/tensor_sentinel.h"
 
 namespace torch_xla {
 
@@ -30,7 +29,7 @@ struct ProxyHashingState : public torch_xla::HashingState {
   std::size_t pass_ = 0;
   bool fabric_run_ = false;
   bool known_executable_ =
-      false; // optimization when we know this executable already exists
+      false;  // optimization when we know this executable already exists
 };
 
 /**
@@ -44,14 +43,14 @@ struct ProxyHashingState : public torch_xla::HashingState {
  *                     |___/
  */
 class LazySentinel : public torch_xla::Sentinel {
-public:
+ public:
   typedef xla::hash_t hash_t;
 
   /**
    * @brief Create a new hashing state object
    */
-  virtual std::shared_ptr<torch_xla::HashingState>
-  CreateHashingState(const xla::hash_t &start_hash) const override {
+  virtual std::shared_ptr<torch_xla::HashingState> CreateHashingState(
+      const xla::hash_t &start_hash) const override {
     return std::make_shared<ProxyHashingState>(start_hash);
   };
 
@@ -99,10 +98,10 @@ public:
    * occur the *first time* that a new hash is considered as "stable" and the
    * "final" hash cached from that point onwards.
    */
-  bool
-  OnHashingComplete(torch_xla::HashingState &state,
-                    std::vector<torch_xla::XLATensor> *tensors,
-                    torch_xla::XLATensor::SyncTensorCollection &coll) override;
+  bool OnHashingComplete(
+      torch_xla::HashingState &state,
+      std::vector<torch_xla::XLATensor> *tensors,
+      torch_xla::XLATensor::SyncTensorCollection &coll) override;
 
   /**
    * @brief Called just before the HLO Module is built.  This gives
@@ -130,13 +129,13 @@ public:
   // Maybe should be get last mark step device?
   static bool WasMarkStepOnProxy();
 
-  static void
-  SetDeviceProxy(const std::string &device, const std::string &address,
-                 std::shared_ptr<xla::ComputationClientFactory> client_factory);
+  static void SetDeviceProxy(
+      const std::string &device, const std::string &address,
+      std::shared_ptr<xla::ComputationClientFactory> client_factory);
 
   static bool IsInitialized();
 
-private:
+ private:
   bool IsAllowedOutput(const torch_xla::XLATensor &tensor,
                        torch_xla::XLATensor::SyncTensorCollection &coll,
                        bool *is_restricting);
@@ -165,4 +164,4 @@ using ColorScope = ::xla::torch_xla::ColorScope;
 using EnterLeave = ::xla::torch_xla::EnterLeave;
 using Color = ::xla::torch_xla::Color;
 
-} // namespace torch_xla
+}  // namespace torch_xla

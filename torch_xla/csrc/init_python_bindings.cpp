@@ -19,10 +19,12 @@
 #include "tensorflow/compiler/xla/xla_client/metrics_reader.h"
 #include "tensorflow/compiler/xla/xla_client/multi_wait.h"
 #include "tensorflow/compiler/xla/xla_client/profiler.h"
+#include "tensorflow/compiler/xla/xla_client/proxy_computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/record_reader.h"
 #include "tensorflow/compiler/xla/xla_client/sys_util.h"
 #include "tensorflow/compiler/xla/xla_client/thread_pool.h"
 #include "tensorflow/compiler/xla/xla_client/util.h"
+#include "tensorflow/compiler/xla/xla_client/xla_computation_client.h"
 #include "tensorflow/compiler/xla/xla_client/xla_util.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
@@ -41,6 +43,7 @@
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ir_util.h"
+#include "torch_xla/csrc/lazy_sentinel.h"
 #include "torch_xla/csrc/python_util.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_sentinel.h"
@@ -650,6 +653,94 @@ absl::flat_hash_map<std::string, absl::variant<int>> ConvertDictToMap(
   return map;
 }
 
+bool unregister_on_shutdown = false;
+
+std::shared_ptr<torch_xla::Sentinel> saved_sentinel{nullptr};
+std::shared_ptr<xla::ComputationClientFactory> saved_computation_client_factory{
+    nullptr};
+std::shared_ptr<torch_xla::LazySentinel> our_sentinel{nullptr};
+
+/**
+ * @brief Install the plugin
+ */
+void InitializeProxy() {
+  saved_sentinel = torch_xla::Sentinel::SetSentinel(
+      std::make_shared<torch_xla::LazySentinel>());
+  saved_computation_client_factory = xla::ComputationClient::SetFactory(
+      std::make_shared<
+          xla::TComputationClientFactory<xla::ProxyComputationClient>>());
+  std::cout << "PTWSE Plugin Initialized." << std::endl;
+}
+
+/**
+ * @brief Uninstall the plugin
+ */
+void ShutdownProxy() {
+  if (unregister_on_shutdown) {
+    if (saved_computation_client_factory) {
+      xla::ComputationClient::SetFactory(saved_computation_client_factory);
+      saved_computation_client_factory.reset();
+    }
+    if (saved_sentinel) {
+      torch_xla::Sentinel::SetSentinel(saved_sentinel);
+      saved_sentinel.reset();
+    }
+  }
+  std::cout << "PTWSE Plugin Shut down." << std::endl;
+}
+
+/**
+ * Optional graph-pruning mechanism to reduce superfluous outputs
+ */
+void SetOutputs(const std::vector<at::Tensor>& output_tensors, bool append) {
+  torch_xla::LazySentinel::SetOutputs(output_tensors, append);
+}
+
+void SetDeviceProxy(const std::string& device,
+                    const std::string& proxy_address) {
+  // Currently just using the XlaComputationClient factory
+  // XrtComputationClient needs to be disconnected from its global
+  // environment config to be used here.  Not a hard thing,
+  // but would make merges difficult.
+  // TODO: Can move the proxy address into the factory
+  std::shared_ptr<xla::ComputationClientFactory> client_factory =
+      std::make_shared<xla::XlaComputationClientFactory>(device,
+                                                         /*create_proxy=*/true);
+  torch_xla::LazySentinel::SetDeviceProxy(device, proxy_address,
+                                          std::move(client_factory));
+}
+
+void BuildProxySubmodule(py::module* m) {
+  py::module proxy = m->def_submodule("profiler", "Profiler integration");
+  proxy.def("_ptproxy_initialize", []() {
+    NoGilSection gil;
+    InitializeProxy();
+  });
+  proxy.def("_ptproxy_shutdown", []() {
+    NoGilSection gil;
+    ShutdownProxy();
+  });
+  proxy.def("_ptproxy_device_proxy_interface",
+            [](const std::string &device, const std::string &proxy_address) {
+              SetDeviceProxy(device, proxy_address);
+            },
+            py::arg("device"), py::arg("proxy_address"));
+  proxy.def("_ptproxy_set_outputs",
+            [](const std::vector<at::Tensor>& output_tensors, bool append) {
+              SetOutputs(output_tensors, append);
+            },
+            py::arg("output_tensors"), py::arg("append") = false);
+  proxy.def("_ptproxy_was_previous_mark_step_on_proxy",
+            []() { return torch_xla::LazySentinel::WasMarkStepOnProxy(); });
+
+  proxy.def("_ptproxy_is_initialized", []() {
+    NoGilSection nogil;
+    return torch_xla::LazySentinel::IsInitialized();
+  });
+  // Debug trap
+  proxy.def("_ptproxy_trap", []() { raise(SIGTRAP); });
+}
+
 void BuildProfilerSubmodule(py::module* m) {
   py::module profiler = m->def_submodule("profiler", "Profiler integration");
   py::class_<xla::profiler::ProfilerServer,
@@ -1088,6 +1179,7 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   BuildProfilerSubmodule(&m);
+  BuildProxySubmodule(&m);
 }
 
 }  // namespace

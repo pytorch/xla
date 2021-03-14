@@ -50,7 +50,8 @@ class XrtComputationClient : public ComputationClient {
   };
 
   using XrtHandlePtr = std::shared_ptr<XrtHandle>;
-public:
+
+ public:
   struct DeviceHandle {
     std::string device;
     int64 handle;

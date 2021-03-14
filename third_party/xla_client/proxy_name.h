@@ -5,7 +5,7 @@
 namespace xla {
 
 class ProxyName {
-public:
+ public:
   static bool is_proxy_device_name(const std::string &device);
 
   static std::string unproxy_device_name(const std::string &device);
@@ -15,4 +15,4 @@ public:
   static bool is_proxyable_device(const std::string device);
 };
 
-} // namespace xla
+}  // namespace xla

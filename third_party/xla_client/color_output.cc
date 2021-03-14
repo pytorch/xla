@@ -10,14 +10,13 @@ std::string join(const std::vector<std::string> &pieces,
   std::stringstream ss;
   std::size_t i = 0;
   for (const auto &s : pieces) {
-    if (i++)
-      ss << delimiter;
+    if (i++) ss << delimiter;
     ss << s;
   }
   return ss.str();
 }
 
-} // end of anonymous namespace
+}  // end of anonymous namespace
 
 static const char *prev_char(const char *original, const char *start, char c) {
   while (start > original && *start != c) {
@@ -51,5 +50,5 @@ const ::xla::torch_xla::Color EnterLeave::library_color_ =
 std::mutex EnterLeave::mtx_;
 #endif
 
-} // namespace torch_xla
-} // namespace xla
+}  // namespace torch_xla
+}  // namespace xla

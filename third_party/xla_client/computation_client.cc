@@ -287,13 +287,13 @@ bool ShouldStartLocalServerBeforeInit() {
 
 std::shared_ptr<ComputationClientFactory> ComputationClient::SetFactory(
     std::shared_ptr<ComputationClientFactory> factory) {
-    auto old_factory = computation_client_factory;
-    computation_client_factory = std::move(factory);
-    return std::move(old_factory);
+  auto old_factory = computation_client_factory;
+  computation_client_factory = std::move(factory);
+  return std::move(old_factory);
 }
 
 std::shared_ptr<ComputationClientFactory> ComputationClient::GetFactory() {
-    return computation_client_factory;
+  return computation_client_factory;
 }
 
 std::unique_ptr<ComputationClient> ComputationClient::Create() {
@@ -312,7 +312,8 @@ std::unique_ptr<ComputationClient> ComputationClient::Create() {
     XLA_ERROR() << "Missing XLA configuration";
   }
   PopulateLocalDevices(&options);
-  return computation_client_factory->Create(options, std::move(topology_proto), service);
+  return computation_client_factory->Create(options, std::move(topology_proto),
+                                            service);
 }
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(

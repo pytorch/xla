@@ -64,5 +64,5 @@ RESULT_T split_types(CONTAINER_T &all, FUNC_T predicate, CALL_T1 true_call,
   return std::move(results);
 }
 
-} // namespace torch_xla
-} // namespace xla
+}  // namespace torch_xla
+}  // namespace xla

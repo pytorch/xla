@@ -39,7 +39,7 @@ class ColorModifier {
   const Color code;
   const bool bright;
 
-public:
+ public:
   ColorModifier(Color pCode, const bool is_bright = true)
       : code(pCode), bright(is_bright) {}
 
@@ -51,7 +51,7 @@ public:
 class ColorScope {
   std::ostream &os_;
 
-public:
+ public:
   inline ColorScope(std::ostream &os, Color pCode, bool bright = true)
       : os_(os) {
     ColorModifier mod(pCode, bright);
@@ -74,7 +74,8 @@ public:
   }
 };
 
-template <typename T> inline std::string to_string(const T &obj) {
+template <typename T>
+inline std::string to_string(const T &obj) {
   std::stringstream ss;
   ss << obj;
   return std::move(ss.str());
@@ -94,7 +95,7 @@ class EnterLeave {
   const Color use_color_;
   static std::mutex mtx_;
 
-public:
+ public:
   static std::string concat(const char *s0, const char *s1, const char *s2) {
     std::string s;
     if (s0 && *s0) {
@@ -113,7 +114,9 @@ public:
   }
   inline EnterLeave(const std::string &label, bool both = true,
                     const Color use_color = Color::BG_INVALID)
-      : label_(label), thread_id_(syscall(SYS_gettid)), both_(both),
+      : label_(label),
+        thread_id_(syscall(SYS_gettid)),
+        both_(both),
         use_color_(use_color == Color::BG_INVALID ? library_color_
                                                   : use_color) {
     std::lock_guard<std::mutex> lk(mtx_);
@@ -143,45 +146,45 @@ public:
 #else
 
 class EnterLeave {
-public:
+ public:
   inline EnterLeave(const std::string &label, bool both = true) {}
 };
 
-#endif // WSE_DEBUG_LOGGING
+#endif  // WSE_DEBUG_LOGGING
 
 #ifdef WSE_DEBUG_LOGGING
 
 std::string short_fn_name(const std::string &fn_name);
 
-#define HEREC(__color$)                                                        \
-  EnterLeave __here(                                                           \
-      EnterLeave::concat(                                                      \
-          nullptr,                                                             \
-          ::xla::torch_xla::short_fn_name(__PRETTY_FUNCTION__).c_str(),        \
-          ""                                                                   \
-          ""),                                                                 \
+#define HEREC(__color$)                                                 \
+  EnterLeave __here(                                                    \
+      EnterLeave::concat(                                               \
+          nullptr,                                                      \
+          ::xla::torch_xla::short_fn_name(__PRETTY_FUNCTION__).c_str(), \
+          ""                                                            \
+          ""),                                                          \
       true, __color$)
-#define HERE()                                                                 \
-  EnterLeave __here(EnterLeave::concat(                                        \
-      nullptr, ::xla::torch_xla::short_fn_name(__PRETTY_FUNCTION__).c_str(),   \
+#define HERE()                                                               \
+  EnterLeave __here(EnterLeave::concat(                                      \
+      nullptr, ::xla::torch_xla::short_fn_name(__PRETTY_FUNCTION__).c_str(), \
       ""))
-#define HEREX()                                                                \
-  EnterLeave __here(                                                           \
-      EnterLeave::concat(                                                      \
-          nullptr,                                                             \
-          ::xla::torch_xla::short_fn_name(__PRETTY_FUNCTION__).c_str(), ""),   \
+#define HEREX()                                                              \
+  EnterLeave __here(                                                         \
+      EnterLeave::concat(                                                    \
+          nullptr,                                                           \
+          ::xla::torch_xla::short_fn_name(__PRETTY_FUNCTION__).c_str(), ""), \
       false)
-#define HEREXC(__color$)                                                       \
-  EnterLeave __here(                                                           \
-      EnterLeave::concat(                                                      \
-          nullptr,                                                             \
-          ::xla::torch_xla::short_fn_name(__PRETTY_FUNCTION__).c_str(), ""),   \
+#define HEREXC(__color$)                                                     \
+  EnterLeave __here(                                                         \
+      EnterLeave::concat(                                                    \
+          nullptr,                                                           \
+          ::xla::torch_xla::short_fn_name(__PRETTY_FUNCTION__).c_str(), ""), \
       false, __color$)
-#define HEREXCT(__color$)                                                      \
-  EnterLeave __here(                                                           \
-      EnterLeave::concat(                                                      \
-          std::to_string(this).c_str(),                                        \
-          ::xla::torch_xla::short_fn_name(__PRETTY_FUNCTION__).c_str(), ""),   \
+#define HEREXCT(__color$)                                                    \
+  EnterLeave __here(                                                         \
+      EnterLeave::concat(                                                    \
+          std::to_string(this).c_str(),                                      \
+          ::xla::torch_xla::short_fn_name(__PRETTY_FUNCTION__).c_str(), ""), \
       false, __color$)
 #else
 #define HERE() ((void)0)
@@ -190,5 +193,5 @@ std::string short_fn_name(const std::string &fn_name);
 
 #define ENDL std::endl << std::flush
 
-} // namespace torch_xla
-} // namespace xla
+}  // namespace torch_xla
+}  // namespace xla

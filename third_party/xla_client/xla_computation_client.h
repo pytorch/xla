@@ -28,7 +28,7 @@ class XlaComputationClient : public ComputationClient {
   typedef ComputationClient Super;
   using DeviceHandle = XrtComputationClient::DeviceHandle;
 
-public:
+ public:
   explicit XlaComputationClient(std::shared_ptr<xla::ServiceInterface> service);
   virtual ~XlaComputationClient() override;
 
@@ -37,27 +37,26 @@ public:
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 
   // Transfers local tensor values to the TPU servers and fetches the handles.
-  std::vector<DataPtr>
-  TransferToServer(absl::Span<const TensorSource> tensors) override;
+  std::vector<DataPtr> TransferToServer(
+      absl::Span<const TensorSource> tensors) override;
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
-  std::vector<Literal>
-  TransferFromServer(absl::Span<const DataPtr> handles) override;
+  std::vector<Literal> TransferFromServer(
+      absl::Span<const DataPtr> handles) override;
 
   // Compiles a set of computations.
-  std::vector<ComputationPtr>
-  Compile(std::vector<CompileInstance> instances) override;
+  std::vector<ComputationPtr> Compile(
+      std::vector<CompileInstance> instances) override;
 
   // Executes computation with arguments and returns the result.
   // The passed device must match the common device of the arguments Data.
   // If options.explode_tuple is true, the output tuple will be decomposed into
   // its single elements.
-  std::vector<DataPtr>
-  ExecuteComputation(const Computation &computation,
-                     absl::Span<const DataPtr> arguments,
-                     const std::string &device,
-                     const ExecuteComputationOptions &options) override;
+  std::vector<DataPtr> ExecuteComputation(
+      const Computation &computation, absl::Span<const DataPtr> arguments,
+      const std::string &device,
+      const ExecuteComputationOptions &options) override;
 
   // Executes the computation in replicated mode.
   // The size of the arguments vector is the number of replicas to execute,
@@ -70,11 +69,11 @@ public:
   // The result[i], a vector itself, will be the result of the computation fed
   // with arguments[i]. If options.explode_tuple is true, the output tuples will
   // be decomposed into their single elements.
-  std::vector<std::vector<DataPtr>>
-  ExecuteReplicated(const Computation &computation,
-                    const std::vector<std::vector<DataPtr>> &arguments,
-                    absl::Span<const std::string> devices,
-                    const ExecuteReplicatedOptions &options) override {
+  std::vector<std::vector<DataPtr>> ExecuteReplicated(
+      const Computation &computation,
+      const std::vector<std::vector<DataPtr>> &arguments,
+      absl::Span<const std::string> devices,
+      const ExecuteReplicatedOptions &options) override {
     // NOT IMPLEMENTED
     assert(false);
     return {};
@@ -87,11 +86,11 @@ public:
   // Returns a vector of vectors of device side Data object, with result[i]
   // being the return value of computations[i]. If options.explode_tuple is
   // true, the output tuples will be decomposed into their single elements.
-  std::vector<std::vector<DataPtr>>
-  ExecuteParallel(absl::Span<const Computation *const> computations,
-                  const std::vector<std::vector<DataPtr>> &arguments,
-                  absl::Span<const std::string> devices,
-                  const ExecuteParallelOptions &options) override {
+  std::vector<std::vector<DataPtr>> ExecuteParallel(
+      absl::Span<const Computation *const> computations,
+      const std::vector<std::vector<DataPtr>> &arguments,
+      absl::Span<const std::string> devices,
+      const ExecuteParallelOptions &options) override {
     // NOT IMPLEMENTED
     assert(false);
     return {};
@@ -110,8 +109,8 @@ public:
     return {};
   }
 
-  std::vector<std::vector<DataPtr>>
-  DeconstructTuple(absl::Span<const DataPtr> tuples) override {
+  std::vector<std::vector<DataPtr>> DeconstructTuple(
+      absl::Span<const DataPtr> tuples) override {
     // NOT IMPLEMENTED
     assert(false);
     return {};
@@ -194,27 +193,27 @@ public:
   //
   // TODO: REMOVE ME
   //
-  static std::shared_ptr<xla::ServiceInterface>
-  GetXlaClient(const std::string &device, bool create = true);
+  static std::shared_ptr<xla::ServiceInterface> GetXlaClient(
+      const std::string &device, bool create = true);
 
   ComputationClient::DataPtr TransferLiteralToServer(const std::string &device,
                                                      const Literal &literal);
 
-  static std::shared_ptr<xla::ServiceInterface>
-  CreateServiceClient(const std::string &address);
+  static std::shared_ptr<xla::ServiceInterface> CreateServiceClient(
+      const std::string &address);
 
   // TEMPORARY
   std::shared_ptr<xla::ServiceInterface> GetXlaClient() { return service_; }
 
-private:
+ private:
   xla::DeviceHandle GetDeviceHandle(const std::string &device);
 
   // Asynchronous data release mechanism
   // This mechanism is common among mnost interface types and
   // should possibly be shared in a base or orthogonal class
 
-  virtual xla::HloModuleProto
-  PreProcessHlo(xla::HloModuleProto &&hlo_module_proto);
+  virtual xla::HloModuleProto PreProcessHlo(
+      xla::HloModuleProto &&hlo_module_proto);
 
   void StartHandleReleaser();
   void HandleReleaser();
@@ -237,16 +236,16 @@ private:
 };
 
 class XlaComputationClientFactory : public ComputationClientFactory {
-public:
+ public:
   explicit XlaComputationClientFactory(std::string device, bool create_proxy)
       : device_(std::move(device)) {
     assert(create_proxy || !ProxyName::is_proxy_device_name(device));
   }
 
-  std::unique_ptr<ComputationClient>
-  Create(OptionsType options,
-         std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto,
-         XrtLocalService *service) override {
+  std::unique_ptr<ComputationClient> Create(
+      OptionsType options,
+      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto,
+      XrtLocalService *service) override {
     return Create();
   }
 
@@ -257,18 +256,17 @@ public:
             ProxyName::proxy_device_name(device_)));
   }
 
-  tensorflow::tpu::TopologyProto
-  InitializeAndFetchTopology(const std::string &job, int task_no,
-                             const std::string &worker_host_port,
-                             const tensorflow::ConfigProto &config) override {
+  tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
+      const std::string &job, int task_no, const std::string &worker_host_port,
+      const tensorflow::ConfigProto &config) override {
     // No meaningful topology for a basic xla client
     return tensorflow::tpu::TopologyProto();
   }
 
-private:
+ private:
   const std::string device_;
 };
 
-} // namespace xla
+}  // namespace xla
 
-#endif // XLA_CLIENT_XLA_COMPUTATION_CLIENT_H_
+#endif  // XLA_CLIENT_XLA_COMPUTATION_CLIENT_H_
