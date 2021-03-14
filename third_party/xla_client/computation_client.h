@@ -35,7 +35,7 @@ class ComputationClient {
 
     virtual ~Data() {}
 
-    const std::string& device() const { return device_; }
+    virtual const std::string& device() const { return device_; }
 
     const Shape& shape() const { return shape_; }
 
@@ -63,10 +63,12 @@ class ComputationClient {
   class Computation {
    public:
     Computation(XlaComputation computation, ProgramShape program_shape,
-                std::vector<std::string> devices)
+                std::vector<std::string> devices,
+                int64 execution_handle = 0)
         : computation_(std::move(computation)),
           program_shape_(std::move(program_shape)),
-          devices_(std::move(devices)) {}
+          devices_(std::move(devices)),
+          execution_handle_(execution_handle){}
 
     virtual ~Computation() {}
 
@@ -76,10 +78,13 @@ class ComputationClient {
 
     const std::vector<std::string>& devices() const { return devices_; }
 
+    uint64_t execution_handle() const { return execution_handle_; }
+
    private:
     XlaComputation computation_;
     ProgramShape program_shape_;
     std::vector<std::string> devices_;
+    uint64_t execution_handle_;  // optional
   };
 
   using ComputationPtr = std::shared_ptr<Computation>;
@@ -261,6 +266,8 @@ class ComputationClient {
   virtual MemoryInfo GetMemoryInfo(const std::string& device) = 0;
 
   virtual void PrepareToExit() = 0;
+
+  virtual void ReleaseDataByHandle(const std::string& device, int64 handle) = 0;
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.

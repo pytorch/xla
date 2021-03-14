@@ -37,10 +37,7 @@ namespace xla {
 class XrtComputationClientFactory;
 
 class XrtComputationClient : public ComputationClient {
-  struct DeviceHandle {
-    std::string device;
-    int64 handle;
-  };
+  friend class ProxyComputationClient;
 
   struct XrtHandle {
     XrtHandle(int64 handle, std::function<void()> releaser)
@@ -53,16 +50,30 @@ class XrtComputationClient : public ComputationClient {
   };
 
   using XrtHandlePtr = std::shared_ptr<XrtHandle>;
-
+public:
+  struct DeviceHandle {
+    std::string device;
+    int64 handle;
+  };
   struct XrtData : public Data {
     XrtData(std::string device, Shape device_shape)
         : Data(std::move(device), std::move(device_shape)) {}
-    XrtData(XrtComputationClient* self, std::string device, Shape device_shape,
+    XrtData(ComputationClient* self, std::string device, Shape device_shape,
             int64 handle)
         : Data(std::move(device), std::move(device_shape)),
           handle_ptr(std::make_shared<XrtHandle>(
               handle, [self, device = this->device(), handle]() {
-                self->ReleaseXrtData(device, handle);
+                self->ReleaseDataByHandle(device, handle);
+              })) {}
+
+    // memory on proxy device
+    XrtData(ComputationClient* self, std::string device,
+            std::string proxy_device, Shape device_shape, int64 handle)
+        : Data(std::move(device), std::move(device_shape)),
+          proxy_device_(std::move(proxy_device)),
+          handle_ptr(std::make_shared<XrtHandle>(
+              handle, [self, device = this->device(), handle]() {
+                self->ReleaseDataByHandle(device, handle);
               })) {}
 
     int64 get_handle() const { return handle_ptr->handle; }
@@ -73,6 +84,11 @@ class XrtComputationClient : public ComputationClient {
 
     bool HasValue() const override { return handle_ptr != nullptr; }
 
+    const std::string& device() const override {
+      return proxy_device_.empty() ? Data::device() : proxy_device_;
+    }
+
+    std::string proxy_device_;
     XrtHandlePtr handle_ptr;
   };
 
@@ -307,7 +323,11 @@ class XrtComputationClient : public ComputationClient {
   void ReleaseHandle(int64 handle, const std::string& device,
                      std::vector<DeviceHandle>* handles);
 
-  void ReleaseXrtData(const std::string& device, int64 handle);
+  virtual void ReleaseXrtData(const std::string& device, int64 handle);
+
+  virtual void ReleaseDataByHandle(const std::string& device, int64 handle) {
+    ReleaseXrtData(device, handle);
+  }
 
   void ReleaseXrtComputation(const std::string& compilation_device,
                              int64 handle);
@@ -529,6 +549,8 @@ class ComputationClientFactory {
       std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto,
       XrtLocalService* service) = 0;
 
+  virtual std::unique_ptr<ComputationClient> Create() = 0;
+
   virtual tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
       const std::string& job, int task_no, const std::string& worker_host_port,
       const tensorflow::ConfigProto& config) = 0;
@@ -544,6 +566,8 @@ class TComputationClientFactory : public ComputationClientFactory {
     return std::make_unique<COMPUTATION_CLIENT_TYPE>(
         std::move(options), std::move(topology_proto), service);
   }
+
+  virtual std::unique_ptr<ComputationClient> Create() { return nullptr; }
 
   tensorflow::tpu::TopologyProto InitializeAndFetchTopology(
       const std::string& job, int task_no, const std::string& worker_host_port,

@@ -23,6 +23,8 @@
 namespace xla {
 namespace {
 
+bool verbose = false;
+
 std::shared_ptr<ComputationClientFactory> computation_client_factory =
     std::make_shared<TComputationClientFactory<XrtComputationClient>>();
 
@@ -282,6 +284,17 @@ bool ShouldStartLocalServerBeforeInit() {
   return tpuvm_mode && (shard_ordinal % 8 == 0) && (world_size > 8);
 }
 }  // namespace
+
+std::shared_ptr<ComputationClientFactory> ComputationClient::SetFactory(
+    std::shared_ptr<ComputationClientFactory> factory) {
+    auto old_factory = computation_client_factory;
+    computation_client_factory = std::move(factory);
+    return std::move(old_factory);
+}
+
+std::shared_ptr<ComputationClientFactory> ComputationClient::GetFactory() {
+    return computation_client_factory;
+}
 
 std::unique_ptr<ComputationClient> ComputationClient::Create() {
   XrtComputationClient::Options options;

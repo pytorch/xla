@@ -236,6 +236,7 @@ void XrtComputationClient::XrtData::Assign(const Data& data) {
   const XrtData& xrt_data = dynamic_cast<const XrtData&>(data);
   if (&xrt_data != this) {
     handle_ptr = xrt_data.handle_ptr;
+    proxy_device_ = xrt_data.proxy_device_;
   }
 }
 
