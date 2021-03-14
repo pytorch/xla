@@ -29,8 +29,7 @@ class EnvFileMacro {
 
   static bool get_env_bool(const std::string &name, bool default_value) {
     const char *s = getenv(name.c_str());
-    if (!s || !*s)
-      return default_value;
+    if (!s || !*s) return default_value;
     return is_true(s);
   }
 
@@ -38,7 +37,8 @@ class EnvFileMacro {
   static T base_name(T const &path, T const &delims = "/\\") {
     return path.substr(path.find_last_of(delims) + 1);
   }
-  template <class T> static T remove_extension(T const &filename) {
+  template <class T>
+  static T remove_extension(T const &filename) {
     typename T::size_type const p(filename.find_last_of('.'));
     return p > 0 && p != T::npos ? filename.substr(0, p) : filename;
   }
@@ -60,7 +60,7 @@ class EnvFileMacro {
     return ss.str();
   }
 
-public:
+ public:
   /**
    * @brief Get a boolean from the environment variable based on a file name
    *        i.e. /usr/local/lib/my_file.hh -> VERBOSE_MY_FILE environment
@@ -90,7 +90,7 @@ public:
  *
  *        So, in this case:  'export VERBOSE_MY_FILE=1' causes verbose output
  */
-#define VERBOSE_FILE(__dflt)                                                   \
+#define VERBOSE_FILE(__dflt) \
   EnvFileMacro::get_file_env_bool(__FILE__, __dflt, "VERBOSE")
 
-} // namespace torch_xla
+}  // namespace torch_xla
