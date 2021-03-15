@@ -250,7 +250,7 @@ at::Tensor AtenXlaType::__rshift__(const at::Tensor& self,
 }
 
 at::Tensor AtenXlaType::_adaptive_avg_pool3d(const at::Tensor& self,
-                                            at::IntArrayRef output_size) {
+                                             at::IntArrayRef output_size) {
   XLA_FN_COUNTER("xla::");
   auto output_size_list = XlaHelpers::I64List(output_size);
   if (!IsSupportedAdaptiveAvgPool(XlaHelpers::I64List(self.sizes()),
