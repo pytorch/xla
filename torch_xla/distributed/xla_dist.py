@@ -458,9 +458,8 @@ class DistributedExecutor(object):
     def _run_script(script_paths, client_worker):
       script_path = script_paths['remote_path']
       if self.restart_server and self.tpuvm_mode:
-        kill_server = (
-            'kill -9 -$(ps -ef | grep {} | grep -v grep | awk "{{print \$2}}")'
-        ).format(self.XRT_RUN_SERVER_PROCESS)
+        kill_server = ('pkill -f "^python -m {} [0-9]+$"').format(
+            self.XRT_RUN_SERVER_PROCESS)
         self._build_and_run_ssh(kill_server, client_worker, log=False)
       exit_code = self._build_and_run_ssh([script_path], client_worker)
       if exit_code != 0:
