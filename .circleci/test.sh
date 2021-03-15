@@ -18,8 +18,8 @@ cd /tmp/pytorch/xla
 echo "Running Python Tests"
 ./test/run_tests.sh
 
-echo "Running MNIST Test"
-python test/test_train_mnist.py --tidy
+# echo "Running MNIST Test"
+# python test/test_train_mnist.py --tidy
 
 echo "Running C++ Tests"
 pushd test/cpp
