@@ -20,7 +20,8 @@ def _patch(fn, newfn):
 
 def clip_grad_norm_(parameters: _tensor_or_tensors,
                     max_norm: float,
-                    norm_type: float = 2.0) -> torch.Tensor:
+                    norm_type: float = 2.0,
+                    error_if_nonfinite: bool = True) -> torch.Tensor:
   if isinstance(parameters, torch.Tensor):
     parameters = [parameters]
   parameters = list(filter(lambda p: p.grad is not None, parameters))
@@ -36,6 +37,11 @@ def clip_grad_norm_(parameters: _tensor_or_tensors,
         torch.stack(
             [torch.norm(p.grad.detach(), norm_type) for p in parameters]),
         norm_type)
+  if error_if_nonfinite and (total_norm.isnan() or total_norm.isinf()):
+    raise RuntimeError(
+        f'The norm of order {norm_type} for a gradient from `parameters` '
+        'is non-finite, so it cannot be clipped. This error can be '
+        'disabled with `error_if_nonfinite=False`')
   clip_coef = torch.tensor(max_norm, device=device) / (total_norm + 1e-6)
   clip_value = torch.where(clip_coef < 1, clip_coef,
                            torch.tensor(1., device=device))
