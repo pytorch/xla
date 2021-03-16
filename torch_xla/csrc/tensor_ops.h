@@ -26,11 +26,11 @@ XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
                                const XLATensor& input, const XLATensor& target,
                                ReductionMode reduction, double beta);
 
-XLATensor Softplus(const XLATensor& input, at::Scalar beta,
-                   at::Scalar threshold);
+XLATensor Softplus(const XLATensor& input, const at::Scalar& beta,
+                   const at::Scalar& threshold);
 
 XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
-                           at::Scalar beta, at::Scalar threshold,
+                           const at::Scalar& beta, const at::Scalar& threshold,
                            const XLATensor& output);
 
 XLATensor Select(const XLATensor& input, xla::int64 dim, xla::int64 index);

@@ -13,12 +13,12 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-Scalar::Scalar(at::Scalar value, xla::Shape shape)
+Scalar::Scalar(const at::Scalar& value, xla::Shape shape)
     : Node(OpKind(at::prim::Constant), std::move(shape), /*num_outputs=*/1,
            ScalarHash(value)),
       value_(std::move(value)) {}
 
-Scalar::Scalar(at::Scalar value, xla::PrimitiveType type)
+Scalar::Scalar(const at::Scalar& value, xla::PrimitiveType type)
     : Node(OpKind(at::prim::Constant), xla::ShapeUtil::MakeShape(type, {}),
            /*num_outputs=*/1, ScalarHash(value)),
       value_(std::move(value)) {}
@@ -95,7 +95,7 @@ XlaOpVector Scalar::Lower(LoweringContext* loctx) const {
   return ReturnOp(op, loctx);
 }
 
-xla::hash_t ScalarHash(at::Scalar s) {
+xla::hash_t ScalarHash(const at::Scalar& s) {
   return s.isFloatingPoint() ? xla::util::Hash(s.toDouble())
                              : xla::util::Hash(s.toLong());
 }

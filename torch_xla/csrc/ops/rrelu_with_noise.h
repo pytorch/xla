@@ -11,8 +11,8 @@ namespace ops {
 
 class RreluWithNoise : public Node {
  public:
-  RreluWithNoise(const Value& input, const Value& seed, at::Scalar lower,
-                 at::Scalar upper, bool training);
+  RreluWithNoise(const Value& input, const Value& seed, const at::Scalar& lower,
+                 const at::Scalar& upper, bool training);
 
   std::string ToString() const override;
 

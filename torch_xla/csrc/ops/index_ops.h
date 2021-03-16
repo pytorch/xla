@@ -65,7 +65,7 @@ ir::Value IndexPutByTensors(const XLATensor& base,
                             absl::Span<const xla::int64> result_permutation);
 
 ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
-                      const XLATensor& index, at::Scalar value);
+                      const XLATensor& index, const at::Scalar& value);
 
 ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
                       const XLATensor& index, const XLATensor& value);

@@ -10,7 +10,7 @@ namespace ir {
 namespace ops {
 
 ShrinkBackward::ShrinkBackward(OpKind kind, const Value& grad_output,
-                               const Value& input, at::Scalar lambda)
+                               const Value& input, const at::Scalar& lambda)
     : Node(kind, {grad_output, input}, input.shape(), /*num_outputs=*/1,
            ScalarHash(lambda)),
       lambda_(std::move(lambda)) {}
