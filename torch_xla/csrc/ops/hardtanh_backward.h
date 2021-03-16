@@ -11,7 +11,7 @@ namespace ops {
 class HardtanhBackward : public Node {
  public:
   HardtanhBackward(const Value& grad_output, const Value& input,
-                   at::Scalar min_val, at::Scalar max_val);
+                   const at::Scalar& min_val, const at::Scalar& max_val);
 
   std::string ToString() const override;
 

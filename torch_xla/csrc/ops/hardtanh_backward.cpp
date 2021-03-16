@@ -10,7 +10,8 @@ namespace ir {
 namespace ops {
 
 HardtanhBackward::HardtanhBackward(const Value& grad_output, const Value& input,
-                                   at::Scalar min_val, at::Scalar max_val)
+                                   const at::Scalar& min_val,
+                                   const at::Scalar& max_val)
     : Node(OpKind(at::aten::hardtanh_backward), {grad_output, input},
            grad_output.shape(), /*num_outputs=*/1,
            xla::util::MHash(ScalarHash(min_val), ScalarHash(max_val))),

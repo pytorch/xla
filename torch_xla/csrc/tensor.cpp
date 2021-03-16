@@ -205,7 +205,7 @@ XlaDataCacheArena::XlaDataCache* GetXlaDataCache(const Device& device) {
   return arena->Get(device);
 }
 
-ir::Value IrValueFromScalar(at::Scalar value, at::ScalarType scalar_type,
+ir::Value IrValueFromScalar(const at::Scalar& value, at::ScalarType scalar_type,
                             const Device& device) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
   xla::ComputationClient::DataPtr device_data = TensorToXlaData(tensor, device);
@@ -225,7 +225,7 @@ xla::ComputationClient::DataPtr GetDeviceData(const at::Tensor& tensor,
   return device_data;
 }
 
-xla::ComputationClient::DataPtr GetDeviceData(at::Scalar value,
+xla::ComputationClient::DataPtr GetDeviceData(const at::Scalar& value,
                                               at::ScalarType scalar_type,
                                               const Device& device) {
   // Workaround since at::scalar_tensor doesn't support bfloat16 yet.
@@ -241,7 +241,7 @@ xla::ComputationClient::DataPtr GetDeviceData(at::Scalar value,
 // hits, but it can prevent the compiler to perform optimizations. So tensor
 // values which are within a given set, are routed to constant scalars if this
 // API returns true.
-bool IsSpecialScalar(at::Scalar value) {
+bool IsSpecialScalar(const at::Scalar& value) {
   static bool no_scalars =
       xla::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
   if (!no_scalars && (value.isIntegral() || value.isFloatingPoint())) {
@@ -711,7 +711,7 @@ ir::Value XLATensor::GetIrValueForTensor(const at::Tensor& tensor,
   return CreateTensorNode(std::move(data), read_only);
 }
 
-ir::Value XLATensor::GetDeviceDataIrValue(at::Scalar value,
+ir::Value XLATensor::GetDeviceDataIrValue(const at::Scalar& value,
                                           xla::PrimitiveType type,
                                           const Device& device) {
   xla::ComputationClient::DataPtr data =
@@ -721,7 +721,7 @@ ir::Value XLATensor::GetDeviceDataIrValue(at::Scalar value,
   return ir::MakeNode<ir::ops::DeviceData>(std::move(data));
 }
 
-ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
+ir::Value XLATensor::GetIrValueForScalar(const at::Scalar& value,
                                          xla::PrimitiveType type,
                                          const Device& device) {
   if (IsSpecialScalar(value)) {
@@ -730,14 +730,14 @@ ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
   return GetDeviceDataIrValue(value, type, device);
 }
 
-ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
+ir::Value XLATensor::GetIrValueForScalar(const at::Scalar& value,
                                          const Device& device) {
   return GetIrValueForScalar(
       value, MakeXlaPrimitiveType(GetScalarType(value), &device), device);
 }
 
 ir::Value XLATensor::GetIrValueForScalar(
-    at::Scalar value, xla::PrimitiveType type,
+    const at::Scalar& value, xla::PrimitiveType type,
     absl::Span<const xla::int64> dimensions, const Device& device) {
   ir::Value ir_value = GetIrValueForScalar(value, type, device);
   if (!dimensions.empty()) {
@@ -747,7 +747,7 @@ ir::Value XLATensor::GetIrValueForScalar(
   return ir_value;
 }
 
-ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
+ir::Value XLATensor::GetIrValueForScalar(const at::Scalar& value,
                                          const xla::Shape& shape,
                                          const Device& device) {
   return GetIrValueForScalar(value, shape.element_type(), shape.dimensions(),
@@ -755,7 +755,7 @@ ir::Value XLATensor::GetIrValueForScalar(at::Scalar value,
 }
 
 ir::Value XLATensor::GetIrValueForScalar(
-    at::Scalar value, const xla::Shape& shape,
+    const at::Scalar& value, const xla::Shape& shape,
     c10::optional<at::ScalarType> logical_element_type, const Device& device) {
   xla::PrimitiveType type =
       logical_element_type

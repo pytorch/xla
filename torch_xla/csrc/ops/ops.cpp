@@ -421,8 +421,8 @@ NodePtr Where(const Value& condition, const Value& input, const Value& other) {
                    input.shape(), std::move(lower_fn));
 }
 
-NodePtr ARange(at::Scalar start, at::Scalar end, at::Scalar step,
-               at::ScalarType scalar_type) {
+NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
+               const at::Scalar& step, at::ScalarType scalar_type) {
   xla::PrimitiveType type = MakeXlaPrimitiveType(scalar_type,
                                                  /*device=*/nullptr);
   XLA_CHECK_NE(step.toDouble(), 0.0);
@@ -507,7 +507,7 @@ NodePtr BroadcastTensors(absl::Span<const Value> tensors) {
       std::move(lower_fn), /*num_outputs=*/tensors.size());
 }
 
-NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
+NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
              c10::optional<at::ScalarType> dtype,
              absl::Span<const xla::int64> dims, bool keepdim) {
   ScopePusher ir_scope(at::aten::norm.toQualString());
@@ -557,8 +557,8 @@ NodePtr Identity(xla::int64 lines, xla::int64 cols,
                    xla::util::MHash(lines, cols));
 }
 
-NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
-            at::Scalar input_scale) {
+NodePtr Elu(const Value& input, const at::Scalar& alpha,
+            const at::Scalar& scale, const at::Scalar& input_scale) {
   ScopePusher ir_scope(at::aten::elu.toQualString());
   const xla::Shape& shape = input.shape();
   NodePtr scaled_input = input * ScalarOp(input_scale, shape);
@@ -571,8 +571,8 @@ NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
 }
 
 NodePtr EluBackward(const Value& grad_output, const Value& output,
-                    at::Scalar alpha, at::Scalar scale,
-                    at::Scalar input_scale) {
+                    const at::Scalar& alpha, const at::Scalar& scale,
+                    const at::Scalar& input_scale) {
   ScopePusher ir_scope(at::aten::elu_backward.toQualString());
   const xla::Shape& shape = grad_output.shape();
   NodePtr negative_output_branch =
@@ -602,7 +602,7 @@ NodePtr GeluBackward(const Value& grad, const Value& input) {
                  input * dinput * ScalarOp(kAlpha, shape));
 }
 
-NodePtr Lshift(const Value& input, at::Scalar other) {
+NodePtr Lshift(const Value& input, const at::Scalar& other) {
   ScopePusher ir_scope(at::aten::__lshift__.toQualString());
   return input * ScalarOp(pow(2, other.to<double>()), input.shape());
 }
@@ -612,7 +612,7 @@ NodePtr Lshift(const Value& input, const Value& other) {
   return input * Pow(ScalarOp(2, input.shape()), other);
 }
 
-NodePtr Rshift(const Value& input, at::Scalar other) {
+NodePtr Rshift(const Value& input, const at::Scalar& other) {
   ScopePusher ir_scope(at::aten::__rshift__.toQualString());
   return input / ScalarOp(pow(2, other.to<double>()), input.shape());
 }

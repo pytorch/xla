@@ -10,7 +10,7 @@ namespace ops {
 
 class MaskedFill : public Node {
  public:
-  MaskedFill(const Value& input, const Value& mask, at::Scalar value);
+  MaskedFill(const Value& input, const Value& mask, const at::Scalar& value);
 
   std::string ToString() const override;
 

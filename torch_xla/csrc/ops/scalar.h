@@ -17,8 +17,8 @@ namespace ops {
 // graph.
 class Scalar : public Node {
  public:
-  Scalar(at::Scalar value, xla::Shape shape);
-  Scalar(at::Scalar value, xla::PrimitiveType type);
+  Scalar(const at::Scalar& value, xla::Shape shape);
+  Scalar(const at::Scalar& value, xla::PrimitiveType type);
 
   std::string ToString() const override;
 
@@ -32,7 +32,7 @@ class Scalar : public Node {
   at::Scalar value_;
 };
 
-xla::hash_t ScalarHash(at::Scalar s);
+xla::hash_t ScalarHash(const at::Scalar& s);
 
 std::ostream& operator<<(std::ostream& ostrm, at::Scalar s);
 

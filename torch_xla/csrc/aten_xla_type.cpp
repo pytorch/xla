@@ -178,7 +178,8 @@ void AtenInitialize() {
 
 }  // namespace
 
-at::Tensor& AtenXlaType::__ilshift__(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::__ilshift__(at::Tensor& self,
+                                     const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::__ilshift__(self_tensor, other);
@@ -194,7 +195,8 @@ at::Tensor& AtenXlaType::__ilshift__(at::Tensor& self,
   return self;
 }
 
-at::Tensor& AtenXlaType::__irshift__(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::__irshift__(at::Tensor& self,
+                                     const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -211,7 +213,8 @@ at::Tensor& AtenXlaType::__irshift__(at::Tensor& self,
   return self;
 }
 
-at::Tensor AtenXlaType::__lshift__(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::__lshift__(const at::Tensor& self,
+                                   const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
                     [&](const XLATensor& xself, const at::Scalar& other,
@@ -230,7 +233,8 @@ at::Tensor AtenXlaType::__lshift__(const at::Tensor& self,
                     });
 }
 
-at::Tensor AtenXlaType::__rshift__(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::__rshift__(const at::Tensor& self,
+                                   const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
                     [&](const XLATensor& xself, const at::Scalar& other,
@@ -456,7 +460,7 @@ at::Tensor& AtenXlaType::acosh_(at::Tensor& self) {
 }
 
 at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
-                            at::Scalar alpha) {
+                            const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   at::native::alpha_check(at::result_type(self, other), alpha);
   return DoBinaryOp(self, other,
@@ -466,8 +470,8 @@ at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Tensor& other,
                     });
 }
 
-at::Tensor AtenXlaType::add(const at::Tensor& self, at::Scalar other,
-                            at::Scalar alpha) {
+at::Tensor AtenXlaType::add(const at::Tensor& self, const at::Scalar& other,
+                            const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
                     [&](const XLATensor& xself, const at::Scalar& other,
@@ -477,7 +481,7 @@ at::Tensor AtenXlaType::add(const at::Tensor& self, at::Scalar other,
 }
 
 at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Tensor& other,
-                              at::Scalar alpha) {
+                              const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   at::native::alpha_check(at::result_type(self, other), alpha);
   CheckBinaryOpTypePromotion(self, self, other);
@@ -488,8 +492,8 @@ at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Tensor& other,
   return self;
 }
 
-at::Tensor& AtenXlaType::add_(at::Tensor& self, at::Scalar other,
-                              at::Scalar alpha) {
+at::Tensor& AtenXlaType::add_(at::Tensor& self, const at::Scalar& other,
+                              const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -499,7 +503,8 @@ at::Tensor& AtenXlaType::add_(at::Tensor& self, at::Scalar other,
 
 at::Tensor AtenXlaType::addcdiv(const at::Tensor& self,
                                 const at::Tensor& tensor1,
-                                const at::Tensor& tensor2, at::Scalar value) {
+                                const at::Tensor& tensor2,
+                                const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::addcdiv(
       bridge::GetXlaTensor(self), value, bridge::GetXlaTensor(tensor1),
@@ -507,7 +512,8 @@ at::Tensor AtenXlaType::addcdiv(const at::Tensor& self,
 }
 
 at::Tensor& AtenXlaType::addcdiv_(at::Tensor& self, const at::Tensor& tensor1,
-                                  const at::Tensor& tensor2, at::Scalar value) {
+                                  const at::Tensor& tensor2,
+                                  const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::addcdiv_(self_tensor, value, bridge::GetXlaTensor(tensor1),
@@ -517,7 +523,8 @@ at::Tensor& AtenXlaType::addcdiv_(at::Tensor& self, const at::Tensor& tensor1,
 
 at::Tensor AtenXlaType::addcmul(const at::Tensor& self,
                                 const at::Tensor& tensor1,
-                                const at::Tensor& tensor2, at::Scalar value) {
+                                const at::Tensor& tensor2,
+                                const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::addcmul(
       bridge::GetXlaTensor(self), value, bridge::GetXlaTensor(tensor1),
@@ -525,7 +532,8 @@ at::Tensor AtenXlaType::addcmul(const at::Tensor& self,
 }
 
 at::Tensor& AtenXlaType::addcmul_(at::Tensor& self, const at::Tensor& tensor1,
-                                  const at::Tensor& tensor2, at::Scalar value) {
+                                  const at::Tensor& tensor2,
+                                  const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::addcmul_(self_tensor, value, bridge::GetXlaTensor(tensor1),
@@ -534,8 +542,8 @@ at::Tensor& AtenXlaType::addcmul_(at::Tensor& self, const at::Tensor& tensor1,
 }
 
 at::Tensor AtenXlaType::addmm(const at::Tensor& self, const at::Tensor& mat1,
-                              const at::Tensor& mat2, at::Scalar beta,
-                              at::Scalar alpha) {
+                              const at::Tensor& mat2, const at::Scalar& beta,
+                              const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   // xla::dot doesn't support integer types.
   if (beta.to<double>() != 1 || alpha.to<double>() != 1 ||
@@ -585,8 +593,9 @@ at::Tensor AtenXlaType::any(const at::Tensor& self, int64_t dim, bool keepdim) {
       XLATensor::any(bridge::GetXlaTensor(self), {dim}, keepdim));
 }
 
-at::Tensor& AtenXlaType::arange_out(at::Scalar start, at::Scalar end,
-                                    at::Scalar step, at::Tensor& out) {
+at::Tensor& AtenXlaType::arange_out(const at::Scalar& start,
+                                    const at::Scalar& end,
+                                    const at::Scalar& step, at::Tensor& out) {
   XLA_FN_COUNTER("xla::");
   XLATensor out_tensor = bridge::GetXlaTensor(out);
   XLATensor::arange_out(out_tensor, start, end, step, out.scalar_type());
@@ -792,8 +801,9 @@ at::Tensor AtenXlaType::avg_pool3d_backward(
 
 at::Tensor AtenXlaType::baddbmm(const at::Tensor& self,
                                 const at::Tensor& batch1,
-                                const at::Tensor& batch2, at::Scalar beta,
-                                at::Scalar alpha) {
+                                const at::Tensor& batch2,
+                                const at::Scalar& beta,
+                                const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   // xla::dot doesn't support integer types.
   if (!at::native::is_floating_point(batch1) ||
@@ -806,8 +816,9 @@ at::Tensor AtenXlaType::baddbmm(const at::Tensor& self,
 }
 
 at::Tensor& AtenXlaType::baddbmm_(at::Tensor& self, const at::Tensor& batch1,
-                                  const at::Tensor& batch2, at::Scalar beta,
-                                  at::Scalar alpha) {
+                                  const at::Tensor& batch2,
+                                  const at::Scalar& beta,
+                                  const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   // xla::dot doesn't support integer types.
   if (!at::native::is_floating_point(batch1) ||
@@ -887,7 +898,8 @@ at::Tensor AtenXlaType::binary_cross_entropy_with_logits(
 }
 
 at::Tensor& AtenXlaType::bitwise_and_out(const at::Tensor& self,
-                                         at::Scalar other, at::Tensor& out) {
+                                         const at::Scalar& other,
+                                         at::Tensor& out) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(out, self, other);
   XLATensor out_tensor = bridge::GetXlaTensor(out);
@@ -916,7 +928,8 @@ at::Tensor& AtenXlaType::bitwise_not_out(const at::Tensor& self,
 }
 
 at::Tensor& AtenXlaType::bitwise_or_out(const at::Tensor& self,
-                                        at::Scalar other, at::Tensor& out) {
+                                        const at::Scalar& other,
+                                        at::Tensor& out) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(out, self, other);
   XLATensor out_tensor = bridge::GetXlaTensor(out);
@@ -936,7 +949,8 @@ at::Tensor& AtenXlaType::bitwise_or_out(const at::Tensor& self,
 }
 
 at::Tensor& AtenXlaType::bitwise_xor_out(const at::Tensor& self,
-                                         at::Scalar other, at::Tensor& out) {
+                                         const at::Scalar& other,
+                                         at::Tensor& out) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(out, self, other);
   XLATensor out_tensor = bridge::GetXlaTensor(out);
@@ -991,41 +1005,44 @@ at::Tensor AtenXlaType::cholesky(const at::Tensor& self, bool upper) {
 }
 
 at::Tensor AtenXlaType::clamp(const at::Tensor& self,
-                              c10::optional<at::Scalar> min,
-                              c10::optional<at::Scalar> max) {
+                              const c10::optional<at::Scalar>& min,
+                              const c10::optional<at::Scalar>& max) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::clamp(bridge::GetXlaTensor(self), min, max));
 }
 
-at::Tensor& AtenXlaType::clamp_(at::Tensor& self, c10::optional<at::Scalar> min,
-                                c10::optional<at::Scalar> max) {
+at::Tensor& AtenXlaType::clamp_(at::Tensor& self,
+                                const c10::optional<at::Scalar>& min,
+                                const c10::optional<at::Scalar>& max) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::clamp_(self_tensor, min, max);
   return self;
 }
 
-at::Tensor AtenXlaType::clamp_max(const at::Tensor& self, at::Scalar max) {
+at::Tensor AtenXlaType::clamp_max(const at::Tensor& self,
+                                  const at::Scalar& max) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::clamp(bridge::GetXlaTensor(self), c10::nullopt, max));
 }
 
-at::Tensor& AtenXlaType::clamp_max_(at::Tensor& self, at::Scalar max) {
+at::Tensor& AtenXlaType::clamp_max_(at::Tensor& self, const at::Scalar& max) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::clamp_(self_tensor, c10::nullopt, max);
   return self;
 }
 
-at::Tensor AtenXlaType::clamp_min(const at::Tensor& self, at::Scalar min) {
+at::Tensor AtenXlaType::clamp_min(const at::Tensor& self,
+                                  const at::Scalar& min) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::clamp(bridge::GetXlaTensor(self), min, c10::nullopt));
 }
 
-at::Tensor& AtenXlaType::clamp_min_(at::Tensor& self, at::Scalar min) {
+at::Tensor& AtenXlaType::clamp_min_(at::Tensor& self, const at::Scalar& min) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::clamp_(self_tensor, min, c10::nullopt);
@@ -1041,7 +1058,8 @@ at::Tensor AtenXlaType::clone(
 }
 
 at::Tensor AtenXlaType::constant_pad_nd(const at::Tensor& self,
-                                        at::IntArrayRef pad, at::Scalar value) {
+                                        at::IntArrayRef pad,
+                                        const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::constant_pad_nd(
       bridge::GetXlaTensor(self), XlaHelpers::I64List(pad), value));
@@ -1175,7 +1193,7 @@ at::Tensor AtenXlaType::div(const at::Tensor& self, const at::Tensor& other,
       XLATensor::div(operands.first, operands.second, rounding_mode, dtype));
 }
 
-at::Tensor AtenXlaType::div(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::div(const at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::div(bridge::GetXlaTensor(self), other));
@@ -1196,7 +1214,7 @@ at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Tensor& other,
   return self;
 }
 
-at::Tensor& AtenXlaType::div_(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::div_(at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -1219,15 +1237,17 @@ at::Tensor AtenXlaType::dot(const at::Tensor& self, const at::Tensor& tensor) {
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
 }
 
-at::Tensor AtenXlaType::elu(const at::Tensor& self, at::Scalar alpha,
-                            at::Scalar scale, at::Scalar input_scale) {
+at::Tensor AtenXlaType::elu(const at::Tensor& self, const at::Scalar& alpha,
+                            const at::Scalar& scale,
+                            const at::Scalar& input_scale) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::elu(bridge::GetXlaTensor(self), alpha, scale, input_scale));
 }
 
-at::Tensor& AtenXlaType::elu_(at::Tensor& self, at::Scalar alpha,
-                              at::Scalar scale, at::Scalar input_scale) {
+at::Tensor& AtenXlaType::elu_(at::Tensor& self, const at::Scalar& alpha,
+                              const at::Scalar& scale,
+                              const at::Scalar& input_scale) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::elu_(self_tensor, alpha, scale, input_scale);
@@ -1235,8 +1255,9 @@ at::Tensor& AtenXlaType::elu_(at::Tensor& self, at::Scalar alpha,
 }
 
 at::Tensor AtenXlaType::elu_backward(const at::Tensor& grad_output,
-                                     at::Scalar alpha, at::Scalar scale,
-                                     at::Scalar input_scale, bool self,
+                                     const at::Scalar& alpha,
+                                     const at::Scalar& scale,
+                                     const at::Scalar& input_scale, bool self,
                                      const at::Tensor& self_or_result) {
   XLA_FN_COUNTER("xla::");
   XLA_CHECK(!self || alpha.to<double>() >= 0.0)
@@ -1296,7 +1317,7 @@ at::Tensor AtenXlaType::empty_strided(at::IntArrayRef size,
   return as_strided(t, size, stride, /*storage_offset=*/0);
 }
 
-at::Tensor AtenXlaType::eq(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::eq(const at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::eq(bridge::GetXlaTensor(self), other));
@@ -1308,7 +1329,7 @@ at::Tensor AtenXlaType::eq(const at::Tensor& self, const at::Tensor& other) {
       XLATensor::eq(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor& AtenXlaType::eq_(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::eq_(at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::eq_(self_tensor, other);
@@ -1417,7 +1438,7 @@ at::Tensor& AtenXlaType::eye_out(int64_t n, int64_t m, at::Tensor& out) {
   return out;
 }
 
-at::Tensor& AtenXlaType::fill_(at::Tensor& self, at::Scalar value) {
+at::Tensor& AtenXlaType::fill_(at::Tensor& self, const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::fill_(self_tensor, value);
@@ -1460,7 +1481,7 @@ at::Tensor AtenXlaType::fmod(const at::Tensor& self, const at::Tensor& other) {
                     });
 }
 
-at::Tensor AtenXlaType::fmod(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::fmod(const at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
                     [&](const XLATensor& xself, const at::Scalar& other,
@@ -1477,7 +1498,7 @@ at::Tensor& AtenXlaType::fmod_(at::Tensor& self, const at::Tensor& other) {
   return self;
 }
 
-at::Tensor& AtenXlaType::fmod_(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::fmod_(at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -1505,7 +1526,7 @@ at::Tensor AtenXlaType::gather(const at::Tensor& self, int64_t dim,
       bridge::GetXlaTensor(self), dim, bridge::GetXlaTensor(index)));
 }
 
-at::Tensor AtenXlaType::ge(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::ge(const at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::ge(bridge::GetXlaTensor(self), other));
@@ -1517,7 +1538,7 @@ at::Tensor AtenXlaType::ge(const at::Tensor& self, const at::Tensor& other) {
       XLATensor::ge(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor& AtenXlaType::ge_(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::ge_(at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::ge_(self_tensor, other);
@@ -1549,7 +1570,7 @@ at::Tensor AtenXlaType::ger(const at::Tensor& self, const at::Tensor& vec2) {
       XLATensor::ger(bridge::GetXlaTensor(self), bridge::GetXlaTensor(vec2)));
 }
 
-at::Tensor AtenXlaType::gt(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::gt(const at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::gt(bridge::GetXlaTensor(self), other));
@@ -1561,7 +1582,7 @@ at::Tensor AtenXlaType::gt(const at::Tensor& self, const at::Tensor& other) {
       XLATensor::gt(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor& AtenXlaType::gt_(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::gt_(at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::gt_(self_tensor, other);
@@ -1575,7 +1596,8 @@ at::Tensor& AtenXlaType::gt_(at::Tensor& self, const at::Tensor& other) {
   return self;
 }
 
-at::Tensor AtenXlaType::hardshrink(const at::Tensor& self, at::Scalar lambda) {
+at::Tensor AtenXlaType::hardshrink(const at::Tensor& self,
+                                   const at::Scalar& lambda) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::hardshrink(bridge::GetXlaTensor(self), lambda));
@@ -1603,21 +1625,22 @@ at::Tensor AtenXlaType::hardsigmoid_backward(const at::Tensor& grad_output,
 
 at::Tensor AtenXlaType::hardshrink_backward(const at::Tensor& grad_out,
                                             const at::Tensor& self,
-                                            at::Scalar lambda) {
+                                            const at::Scalar& lambda) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::hardshrink_backward(
       bridge::GetXlaTensor(grad_out), bridge::GetXlaTensor(self), lambda));
 }
 
-at::Tensor AtenXlaType::hardtanh(const at::Tensor& self, at::Scalar min_val,
-                                 at::Scalar max_val) {
+at::Tensor AtenXlaType::hardtanh(const at::Tensor& self,
+                                 const at::Scalar& min_val,
+                                 const at::Scalar& max_val) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::clamp(bridge::GetXlaTensor(self), min_val, max_val));
 }
 
-at::Tensor& AtenXlaType::hardtanh_(at::Tensor& self, at::Scalar min_val,
-                                   at::Scalar max_val) {
+at::Tensor& AtenXlaType::hardtanh_(at::Tensor& self, const at::Scalar& min_val,
+                                   const at::Scalar& max_val) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::clamp_(self_tensor, min_val, max_val);
@@ -1626,8 +1649,8 @@ at::Tensor& AtenXlaType::hardtanh_(at::Tensor& self, at::Scalar min_val,
 
 at::Tensor AtenXlaType::hardtanh_backward(const at::Tensor& grad_output,
                                           const at::Tensor& self,
-                                          at::Scalar min_val,
-                                          at::Scalar max_val) {
+                                          const at::Scalar& min_val,
+                                          const at::Scalar& max_val) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::hardtanh_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self), min_val,
@@ -1668,7 +1691,7 @@ at::Tensor& AtenXlaType::index_copy_(at::Tensor& self, int64_t dim,
 
 at::Tensor& AtenXlaType::index_fill_(at::Tensor& self, int64_t dim,
                                      const at::Tensor& index,
-                                     at::Scalar value) {
+                                     const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::index_fill_(self_tensor, dim, bridge::GetXlaTensor(index), value);
@@ -1757,7 +1780,7 @@ at::Tensor AtenXlaType::l1_loss_backward(const at::Tensor& grad_output,
       bridge::GetXlaTensor(target), reduction));
 }
 
-at::Tensor AtenXlaType::le(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::le(const at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::le(bridge::GetXlaTensor(self), other));
@@ -1769,7 +1792,7 @@ at::Tensor AtenXlaType::le(const at::Tensor& self, const at::Tensor& other) {
       XLATensor::le(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor& AtenXlaType::le_(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::le_(at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::le_(self_tensor, other);
@@ -1784,14 +1807,14 @@ at::Tensor& AtenXlaType::le_(at::Tensor& self, const at::Tensor& other) {
 }
 
 at::Tensor AtenXlaType::leaky_relu(const at::Tensor& self,
-                                   at::Scalar negative_slope) {
+                                   const at::Scalar& negative_slope) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::leaky_relu(
       bridge::GetXlaTensor(self), negative_slope.to<double>()));
 }
 
 at::Tensor& AtenXlaType::leaky_relu_(at::Tensor& self,
-                                     at::Scalar negative_slope) {
+                                     const at::Scalar& negative_slope) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::leaky_relu_(self_tensor, negative_slope.to<double>());
@@ -1800,7 +1823,7 @@ at::Tensor& AtenXlaType::leaky_relu_(at::Tensor& self,
 
 at::Tensor AtenXlaType::leaky_relu_backward(const at::Tensor& grad_output,
                                             const at::Tensor& self,
-                                            at::Scalar negative_slope,
+                                            const at::Scalar& negative_slope,
                                             bool self_is_result) {
   XLA_FN_COUNTER("xla::");
   XLA_CHECK(!self_is_result || negative_slope.to<double>() > 0.0);
@@ -1892,7 +1915,7 @@ at::Tensor AtenXlaType::logdet(const at::Tensor& self) {
       XLATensor::logdet(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor AtenXlaType::lt(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::lt(const at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::lt(bridge::GetXlaTensor(self), other));
@@ -1904,7 +1927,7 @@ at::Tensor AtenXlaType::lt(const at::Tensor& self, const at::Tensor& other) {
       XLATensor::lt(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor& AtenXlaType::lt_(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::lt_(at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::lt_(self_tensor, other);
@@ -1919,7 +1942,7 @@ at::Tensor& AtenXlaType::lt_(at::Tensor& self, const at::Tensor& other) {
 }
 
 at::Tensor& AtenXlaType::masked_fill_(at::Tensor& self, const at::Tensor& mask,
-                                      at::Scalar value) {
+                                      const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::masked_fill_(self_tensor, bridge::GetXlaTensor(mask), value);
@@ -2217,7 +2240,7 @@ at::Tensor AtenXlaType::mul(const at::Tensor& self, const at::Tensor& other) {
                     });
 }
 
-at::Tensor AtenXlaType::mul(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::mul(const at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return DoBinaryOp(self, other,
                     [&](const XLATensor& xself, const at::Scalar& other,
@@ -2235,7 +2258,7 @@ at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Tensor& other) {
   return self;
 }
 
-at::Tensor& AtenXlaType::mul_(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::mul_(at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
   XLATensor self_tensor = bridge::GetXlaTensor(self);
@@ -2317,7 +2340,7 @@ AtenXlaType::native_batch_norm_backward(
                      : undefined);
 }
 
-at::Tensor AtenXlaType::ne(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::ne(const at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::ne(bridge::GetXlaTensor(self), other));
@@ -2329,7 +2352,7 @@ at::Tensor AtenXlaType::ne(const at::Tensor& self, const at::Tensor& other) {
       XLATensor::ne(bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor& AtenXlaType::ne_(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::ne_(at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::ne_(self_tensor, other);
@@ -2440,7 +2463,7 @@ at::Tensor AtenXlaType::nonzero(const at::Tensor& self) {
 }
 
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
-                             c10::optional<at::Scalar> p,
+                             const c10::optional<at::Scalar>& p,
                              at::ScalarType dtype) {
   XLA_FN_COUNTER("xla::");
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
@@ -2452,7 +2475,7 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
       bridge::GetXlaTensor(self), p, dtype, {}, /*keepdim=*/false));
 }
 
-at::Tensor AtenXlaType::norm(const at::Tensor& self, at::Scalar p) {
+at::Tensor AtenXlaType::norm(const at::Tensor& self, const at::Scalar& p) {
   XLA_FN_COUNTER("xla::");
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
   // shapes issue.
@@ -2464,8 +2487,9 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self, at::Scalar p) {
 }
 
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
-                             c10::optional<at::Scalar> p, at::IntArrayRef dim,
-                             bool keepdim, at::ScalarType dtype) {
+                             const c10::optional<at::Scalar>& p,
+                             at::IntArrayRef dim, bool keepdim,
+                             at::ScalarType dtype) {
   XLA_FN_COUNTER("xla::");
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
   // shapes issue.
@@ -2477,8 +2501,8 @@ at::Tensor AtenXlaType::norm(const at::Tensor& self,
 }
 
 at::Tensor AtenXlaType::norm(const at::Tensor& self,
-                             c10::optional<at::Scalar> p, at::IntArrayRef dim,
-                             bool keepdim) {
+                             const c10::optional<at::Scalar>& p,
+                             at::IntArrayRef dim, bool keepdim) {
   XLA_FN_COUNTER("xla::");
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
   // shapes issue.
@@ -2536,7 +2560,8 @@ at::Tensor AtenXlaType::permute(const at::Tensor& self, at::IntArrayRef dims) {
       bridge::GetXlaTensor(self), XlaHelpers::I64List(dims)));
 }
 
-at::Tensor AtenXlaType::pow(const at::Tensor& self, at::Scalar exponent) {
+at::Tensor AtenXlaType::pow(const at::Tensor& self,
+                            const at::Scalar& exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::Pow() doesn't support integer types.
   if (!at::native::is_floating_point(self)) {
@@ -2557,7 +2582,8 @@ at::Tensor AtenXlaType::pow(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(exponent)));
 }
 
-at::Tensor AtenXlaType::pow(at::Scalar self, const at::Tensor& exponent) {
+at::Tensor AtenXlaType::pow(const at::Scalar& self,
+                            const at::Tensor& exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::Pow() doesn't support integer types.
   if (!self.isFloatingPoint()) {
@@ -2567,7 +2593,7 @@ at::Tensor AtenXlaType::pow(at::Scalar self, const at::Tensor& exponent) {
       XLATensor::pow(self, bridge::GetXlaTensor(exponent)));
 }
 
-at::Tensor& AtenXlaType::pow_(at::Tensor& self, at::Scalar exponent) {
+at::Tensor& AtenXlaType::pow_(at::Tensor& self, const at::Scalar& exponent) {
   XLA_FN_COUNTER("xla::");
   // xla::Pow() doesn't support integer types.
   if (!at::native::is_floating_point(self)) {
@@ -2720,7 +2746,8 @@ at::Tensor AtenXlaType::remainder(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor AtenXlaType::remainder(const at::Tensor& self, at::Scalar other) {
+at::Tensor AtenXlaType::remainder(const at::Tensor& self,
+                                  const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::remainder(bridge::GetXlaTensor(self), other));
@@ -2733,7 +2760,7 @@ at::Tensor& AtenXlaType::remainder_(at::Tensor& self, const at::Tensor& other) {
   return self;
 }
 
-at::Tensor& AtenXlaType::remainder_(at::Tensor& self, at::Scalar other) {
+at::Tensor& AtenXlaType::remainder_(at::Tensor& self, const at::Scalar& other) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::remainder_(self_tensor, other);
@@ -2802,8 +2829,9 @@ at::Tensor& AtenXlaType::round_(at::Tensor& self) {
 }
 
 at::Tensor AtenXlaType::rrelu_with_noise(
-    const at::Tensor& self, const at::Tensor& noise, at::Scalar lower,
-    at::Scalar upper, bool training, c10::optional<at::Generator> generator) {
+    const at::Tensor& self, const at::Tensor& noise, const at::Scalar& lower,
+    const at::Scalar& upper, bool training,
+    c10::optional<at::Generator> generator) {
   XLA_FN_COUNTER("xla::");
   if (generator.has_value() && generator->defined()) {
     // The fallback path for rrelu_with_noise when training=true is wrong
@@ -2818,8 +2846,8 @@ at::Tensor AtenXlaType::rrelu_with_noise(
 
 at::Tensor AtenXlaType::rrelu_with_noise_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& noise, at::Scalar lower, at::Scalar upper, bool training,
-    bool self_is_result) {
+    const at::Tensor& noise, const at::Scalar& lower, const at::Scalar& upper,
+    bool training, bool self_is_result) {
   XLA_FN_COUNTER("xla::");
   double negative_slope = (lower.to<double>() + upper.to<double>()) / 2;
   XLA_CHECK(!self_is_result || negative_slope > 0.0);
@@ -2843,7 +2871,7 @@ at::Tensor& AtenXlaType::rsqrt_(at::Tensor& self) {
 }
 
 at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Tensor& other,
-                             at::Scalar alpha) {
+                             const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
   return DoBinaryOp(self, other,
@@ -2853,8 +2881,8 @@ at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Tensor& other,
                     });
 }
 
-at::Tensor AtenXlaType::rsub(const at::Tensor& self, at::Scalar other,
-                             at::Scalar alpha) {
+at::Tensor AtenXlaType::rsub(const at::Tensor& self, const at::Scalar& other,
+                             const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   CheckSubOperandTypes(self.scalar_type(), GetScalarType(other));
   return bridge::AtenFromXlaTensor(
@@ -2872,7 +2900,8 @@ at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
 }
 
 at::Tensor& AtenXlaType::scatter_(at::Tensor& self, int64_t dim,
-                                  const at::Tensor& index, at::Scalar value) {
+                                  const at::Tensor& index,
+                                  const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::scatter_(self_tensor, dim, bridge::GetXlaTensor(index), value);
@@ -2990,8 +3019,8 @@ at::Tensor AtenXlaType::smooth_l1_loss_backward(const at::Tensor& grad_output,
       bridge::GetXlaTensor(target), reduction, beta));
 }
 
-at::Tensor AtenXlaType::softplus(const at::Tensor& self, at::Scalar beta,
-                                 at::Scalar threshold) {
+at::Tensor AtenXlaType::softplus(const at::Tensor& self, const at::Scalar& beta,
+                                 const at::Scalar& threshold) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::softplus(bridge::GetXlaTensor(self), beta, threshold));
@@ -2999,7 +3028,8 @@ at::Tensor AtenXlaType::softplus(const at::Tensor& self, at::Scalar beta,
 
 at::Tensor AtenXlaType::softplus_backward(const at::Tensor& grad_output,
                                           const at::Tensor& self,
-                                          at::Scalar beta, at::Scalar threshold,
+                                          const at::Scalar& beta,
+                                          const at::Scalar& threshold,
                                           const at::Tensor& output) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::softplus_backward(
@@ -3007,7 +3037,8 @@ at::Tensor AtenXlaType::softplus_backward(const at::Tensor& grad_output,
       threshold, bridge::GetXlaTensor(output)));
 }
 
-at::Tensor AtenXlaType::softshrink(const at::Tensor& self, at::Scalar lambda) {
+at::Tensor AtenXlaType::softshrink(const at::Tensor& self,
+                                   const at::Scalar& lambda) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       XLATensor::softshrink(bridge::GetXlaTensor(self), lambda));
@@ -3015,7 +3046,7 @@ at::Tensor AtenXlaType::softshrink(const at::Tensor& self, at::Scalar lambda) {
 
 at::Tensor AtenXlaType::softshrink_backward(const at::Tensor& grad_out,
                                             const at::Tensor& self,
-                                            at::Scalar lambda) {
+                                            const at::Scalar& lambda) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::softshrink_backward(
       bridge::GetXlaTensor(grad_out), bridge::GetXlaTensor(self), lambda));
@@ -3109,7 +3140,7 @@ at::Tensor AtenXlaType::std(const at::Tensor& self, at::IntArrayRef dim,
 }
 
 at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
-                            at::Scalar alpha) {
+                            const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   CheckSubOperandTypes(self.scalar_type(), other.scalar_type());
   at::native::alpha_check(at::result_type(self, other), alpha);
@@ -3120,8 +3151,8 @@ at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Tensor& other,
                     });
 }
 
-at::Tensor AtenXlaType::sub(const at::Tensor& self, at::Scalar other,
-                            at::Scalar alpha) {
+at::Tensor AtenXlaType::sub(const at::Tensor& self, const at::Scalar& other,
+                            const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   CheckSubOperandTypes(self.scalar_type(), GetScalarType(other));
   return DoBinaryOp(self, other,
@@ -3132,7 +3163,7 @@ at::Tensor AtenXlaType::sub(const at::Tensor& self, at::Scalar other,
 }
 
 at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Tensor& other,
-                              at::Scalar alpha) {
+                              const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
   at::native::alpha_check(at::result_type(self, other), alpha);
@@ -3144,8 +3175,8 @@ at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Tensor& other,
   return self;
 }
 
-at::Tensor& AtenXlaType::sub_(at::Tensor& self, at::Scalar other,
-                              at::Scalar alpha) {
+at::Tensor& AtenXlaType::sub_(at::Tensor& self, const at::Scalar& other,
+                              const at::Scalar& alpha) {
   XLA_FN_COUNTER("xla::");
   CheckBinaryOpTypePromotion(self, self, other);
   CheckSubOperandTypes(self.scalar_type(), GetScalarType(other));
@@ -3241,15 +3272,17 @@ at::Tensor AtenXlaType::tanh_backward(const at::Tensor& grad_output,
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(output)));
 }
 
-at::Tensor AtenXlaType::threshold(const at::Tensor& self, at::Scalar threshold,
-                                  at::Scalar value) {
+at::Tensor AtenXlaType::threshold(const at::Tensor& self,
+                                  const at::Scalar& threshold,
+                                  const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::threshold(
       bridge::GetXlaTensor(self), threshold.to<double>(), value.to<double>()));
 }
 
-at::Tensor& AtenXlaType::threshold_(at::Tensor& self, at::Scalar threshold,
-                                    at::Scalar value) {
+at::Tensor& AtenXlaType::threshold_(at::Tensor& self,
+                                    const at::Scalar& threshold,
+                                    const at::Scalar& value) {
   XLA_FN_COUNTER("xla::");
   XLATensor self_tensor = bridge::GetXlaTensor(self);
   XLATensor::threshold_(self_tensor, threshold.to<double>(),
@@ -3259,7 +3292,7 @@ at::Tensor& AtenXlaType::threshold_(at::Tensor& self, at::Scalar threshold,
 
 at::Tensor AtenXlaType::threshold_backward(const at::Tensor& grad_output,
                                            const at::Tensor& self,
-                                           at::Scalar threshold) {
+                                           const at::Scalar& threshold) {
   XLA_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(XLATensor::threshold_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),

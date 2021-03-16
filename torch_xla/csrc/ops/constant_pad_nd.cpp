@@ -35,7 +35,7 @@ xla::Shape NodeOutputShape(const Value& input, const at::Scalar& value,
 }  // namespace
 
 ConstantPadNd::ConstantPadNd(const Value& input, std::vector<xla::int64> pad,
-                             at::Scalar value)
+                             const at::Scalar& value)
     : Node(ir::OpKind(at::aten::constant_pad_nd), {input},
            [&]() { return NodeOutputShape(input, value, pad); },
            /*num_outputs=*/1, xla::util::MHash(pad, ScalarHash(value))),

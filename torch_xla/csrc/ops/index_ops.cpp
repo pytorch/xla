@@ -290,7 +290,7 @@ ir::Value IndexPutByTensors(const XLATensor& base,
 }
 
 ir::NodePtr IndexFill(const XLATensor& base, xla::int64 dim,
-                      const XLATensor& index, at::Scalar value) {
+                      const XLATensor& index, const at::Scalar& value) {
   XLA_CHECK_EQ(index.dtype(), at::ScalarType::Long)
       << "Fill index is expected to be of scalar type Long, but it is "
       << index.dtype();

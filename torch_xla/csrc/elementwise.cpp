@@ -10,7 +10,8 @@
 namespace torch_xla {
 namespace {
 
-xla::XlaOp Between(xla::XlaOp input, at::Scalar min_val, at::Scalar max_val) {
+xla::XlaOp Between(xla::XlaOp input, const at::Scalar& min_val,
+                   const at::Scalar& max_val) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::PrimitiveType element_type = shape.element_type();
   xla::XlaBuilder* builder = input.builder();
@@ -65,7 +66,7 @@ xla::XlaOp BuildRelu(xla::XlaOp input) {
                              0, input_shape.element_type(), input.builder()));
 }
 
-xla::XlaOp BuildHardshrink(xla::XlaOp input, at::Scalar lambda) {
+xla::XlaOp BuildHardshrink(xla::XlaOp input, const at::Scalar& lambda) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
   return xla::Select(Between(input, -lambda, lambda), zero, input);
@@ -89,7 +90,7 @@ xla::XlaOp BuildHardSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input) {
   return xla::Select(Between(input, -3.0, 3.0), grad_output / six, zero);
 }
 
-xla::XlaOp BuildSoftshrink(xla::XlaOp input, at::Scalar lambda) {
+xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda) {
   xla::XlaBuilder* builder = input.builder();
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
@@ -102,14 +103,15 @@ xla::XlaOp BuildSoftshrink(xla::XlaOp input, at::Scalar lambda) {
 }
 
 xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                               at::Scalar lambda) {
+                               const at::Scalar& lambda) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
   return xla::Select(Between(input, -lambda, lambda), zero, grad_output);
 }
 
 xla::XlaOp BuildHardtanhBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                                 at::Scalar min_val, at::Scalar max_val) {
+                                 const at::Scalar& min_val,
+                                 const at::Scalar& max_val) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(grad_output);
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
   return xla::Select(Between(input, min_val, max_val), grad_output, zero);
@@ -119,8 +121,8 @@ xla::XlaOp BuildLeakyRelu(xla::XlaOp input, double negative_slope_value) {
   return BuildLeakyReluBackward(input, input, negative_slope_value);
 }
 
-std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, at::Scalar lower,
-                                   at::Scalar upper, bool training,
+std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
+                                   const at::Scalar& upper, bool training,
                                    xla::XlaOp rng_seed) {
   const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
@@ -146,8 +148,8 @@ std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, at::Scalar lower,
 }
 
 xla::XlaOp BuildRreluBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                              xla::XlaOp noise, at::Scalar lower,
-                              at::Scalar upper, bool training) {
+                              xla::XlaOp noise, const at::Scalar& lower,
+                              const at::Scalar& upper, bool training) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
   xla::XlaOp grad_input;

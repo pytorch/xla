@@ -10,7 +10,7 @@ namespace ops {
 
 class Softshrink : public Node {
  public:
-  Softshrink(const Value& input, at::Scalar lambda);
+  Softshrink(const Value& input, const at::Scalar& lambda);
 
   std::string ToString() const override;
 

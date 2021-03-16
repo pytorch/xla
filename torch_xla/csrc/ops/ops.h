@@ -14,10 +14,10 @@ namespace torch_xla {
 namespace ir {
 namespace ops {
 
-inline NodePtr ScalarOp(at::Scalar value, xla::Shape shape) {
+inline NodePtr ScalarOp(const at::Scalar& value, xla::Shape shape) {
   return MakeNode<Scalar>(value, std::move(shape));
 }
-inline NodePtr ScalarOp(at::Scalar value, xla::PrimitiveType type) {
+inline NodePtr ScalarOp(const at::Scalar& value, xla::PrimitiveType type) {
   return MakeNode<Scalar>(value, type);
 }
 
@@ -164,33 +164,34 @@ NodePtr ComparisonOp(c10::Symbol kind, const Value& input, const Value& other);
 
 NodePtr Where(const Value& condition, const Value& input, const Value& other);
 
-NodePtr ARange(at::Scalar start, at::Scalar end, at::Scalar step,
-               at::ScalarType scalar_type);
+NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
+               const at::Scalar& step, at::ScalarType scalar_type);
 
 NodePtr BroadcastTensors(absl::Span<const Value> tensors);
 
-NodePtr Norm(const Value& input, c10::optional<at::Scalar> p,
+NodePtr Norm(const Value& input, const c10::optional<at::Scalar>& p,
              c10::optional<at::ScalarType> dtype,
              absl::Span<const xla::int64> dims, bool keepdim);
 
 NodePtr Identity(xla::int64 lines, xla::int64 cols,
                  xla::PrimitiveType element_type);
 
-NodePtr Elu(const Value& input, at::Scalar alpha, at::Scalar scale,
-            at::Scalar input_scale);
+NodePtr Elu(const Value& input, const at::Scalar& alpha,
+            const at::Scalar& scale, const at::Scalar& input_scale);
 
 NodePtr EluBackward(const Value& grad_output, const Value& output,
-                    at::Scalar alpha, at::Scalar scale, at::Scalar input_scale);
+                    const at::Scalar& alpha, const at::Scalar& scale,
+                    const at::Scalar& input_scale);
 
 NodePtr Gelu(const Value& input);
 
 NodePtr GeluBackward(const Value& grad, const Value& input);
 
-NodePtr Lshift(const Value& input, at::Scalar other);
+NodePtr Lshift(const Value& input, const at::Scalar& other);
 
 NodePtr Lshift(const Value& input, const Value& other);
 
-NodePtr Rshift(const Value& input, at::Scalar other);
+NodePtr Rshift(const Value& input, const at::Scalar& other);
 
 NodePtr Rshift(const Value& input, const Value& other);
 

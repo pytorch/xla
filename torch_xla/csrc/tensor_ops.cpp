@@ -171,8 +171,8 @@ XLATensor SmoothL1LossBackward(const XLATensor& grad_output,
   }
 }
 
-XLATensor Softplus(const XLATensor& input, at::Scalar beta,
-                   at::Scalar threshold) {
+XLATensor Softplus(const XLATensor& input, const at::Scalar& beta,
+                   const at::Scalar& threshold) {
   return XLATensor::where(
       XLATensor::gt(XLATensor::mul(input, beta), threshold), input,
       XLATensor::div(
@@ -180,7 +180,7 @@ XLATensor Softplus(const XLATensor& input, at::Scalar beta,
 }
 
 XLATensor SoftplusBackward(const XLATensor& grad_output, const XLATensor& input,
-                           at::Scalar beta, at::Scalar threshold,
+                           const at::Scalar& beta, const at::Scalar& threshold,
                            const XLATensor& output) {
   XLATensor scaled_output = XLATensor::mul(output, beta);
   XLATensor z = XLATensor::exp(scaled_output);

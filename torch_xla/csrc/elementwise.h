@@ -18,23 +18,24 @@ xla::XlaOp BuildThreshold(xla::XlaOp input, xla::XlaOp output,
 // Computes the rectified linear unit (replace negative elements with 0).
 xla::XlaOp BuildRelu(xla::XlaOp input);
 
-std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, at::Scalar lower,
-                                   at::Scalar upper, bool training,
+std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
+                                   const at::Scalar& upper, bool training,
                                    xla::XlaOp rng_seed);
 
 xla::XlaOp BuildRreluBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                              xla::XlaOp noise, at::Scalar lower,
-                              at::Scalar upper, bool training);
+                              xla::XlaOp noise, const at::Scalar& lower,
+                              const at::Scalar& upper, bool training);
 
-xla::XlaOp BuildHardshrink(xla::XlaOp input, at::Scalar lambda);
+xla::XlaOp BuildHardshrink(xla::XlaOp input, const at::Scalar& lambda);
 xla::XlaOp BuildHardSigmoid(xla::XlaOp input);
 xla::XlaOp BuildHardSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input);
-xla::XlaOp BuildSoftshrink(xla::XlaOp input, at::Scalar lambda);
+xla::XlaOp BuildSoftshrink(xla::XlaOp input, const at::Scalar& lambda);
 xla::XlaOp BuildShrinkBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                               at::Scalar lambda);
+                               const at::Scalar& lambda);
 
 xla::XlaOp BuildHardtanhBackward(xla::XlaOp grad_output, xla::XlaOp input,
-                                 at::Scalar min_val, at::Scalar max_val);
+                                 const at::Scalar& min_val,
+                                 const at::Scalar& max_val);
 
 // Computes the leaky rectified linear unit:
 // LeakyReLU(x) = max(0, input) + negative_slope ∗ min(0, input).

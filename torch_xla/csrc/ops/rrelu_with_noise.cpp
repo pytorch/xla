@@ -11,7 +11,7 @@ namespace ir {
 namespace ops {
 
 RreluWithNoise::RreluWithNoise(const Value& input, const Value& seed,
-                               at::Scalar lower, at::Scalar upper,
+                               const at::Scalar& lower, const at::Scalar& upper,
                                bool training)
     : Node(ir::OpKind(at::aten::rrelu_with_noise), {input, seed},
            xla::ShapeUtil::MakeTupleShape({input.shape(), input.shape()}),
