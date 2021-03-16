@@ -31,6 +31,9 @@ class XrtLocalService {
   // Starts the service.
   void Start();
 
+  // Joins the service.
+  void Join();
+
  private:
   std::unique_ptr<tensorflow::ServerInterface> server_;
 };
