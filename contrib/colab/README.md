@@ -10,6 +10,7 @@ The following are a couple of sample colab notebooks.
 * [Training A Simple Convolutional Network on MNIST](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/mnist-training.ipynb)
 * [Training a ResNet18 Network on CIFAR10](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet18-training.ipynb)
 * [ImageNet Inference with ResNet50](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/resnet50-inference.ipynb)
+* [PyTorch/XLA Performance Profiling](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb)
 
 *Note*: These colab notebooks typically run on small machines (the Compute VMs,
 which runs the input pipeline) and training is often bottlenecked on the small
