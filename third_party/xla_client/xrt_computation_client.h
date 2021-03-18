@@ -137,8 +137,7 @@ class XrtComputationClient : public ComputationClient {
 
   XrtComputationClient(
       Options options,
-      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto,
-      XrtLocalService* service = nullptr);
+      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto);
 
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 

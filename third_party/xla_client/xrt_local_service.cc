@@ -58,4 +58,6 @@ XrtLocalService::XrtLocalService(const std::string& cluster_spec,
 
 void XrtLocalService::Start() { TF_CHECK_OK(server_->Start()); }
 
+void XrtLocalService::Join() { TF_CHECK_OK(server_->Join()); }
+
 }  // namespace xla

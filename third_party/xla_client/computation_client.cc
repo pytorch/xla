@@ -262,34 +262,11 @@ bool ParseEnvDevices(XrtComputationClient::Options* options) {
   }
   return !options->global_device_map.empty();
 }
-
-bool ShouldStartLocalServerBeforeInit() {
-  // In the tpuvm pod setup, master process of the master tpuvm will
-  // issue a ConfigureDistributedTPU op to the local tf server. The
-  // ClientSession created to do that will have a spec including #cores / 8
-  // workers with corresponding grpc endpoints. In order to process the request,
-  // ClientSession needs to reach to each worker's tf server. Non-master workers
-  // need to start local tf servers before hanging for the mesh config.
-  // Since we only want one tf server started for each tpuvm, we check the value
-  // of shard_ordinal % 8. World_size > 8 is used to check if we are in a pod
-  // setup.
-  bool tpuvm_mode = sys_util::GetEnvBool(env::kEnvTpuvmMode, false);
-  int shard_ordinal = sys_util::GetEnvInt(env::kEnvShardOrdinal, -1);
-  int world_size = sys_util::GetEnvInt(env::kEnvWorldSize, -1);
-  return tpuvm_mode && (shard_ordinal % 8 == 0) && (world_size > 8);
-}
 }  // namespace
 
 std::unique_ptr<ComputationClient> ComputationClient::Create() {
   XrtComputationClient::Options options;
   std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
-  XrtLocalService* service = nullptr;
-  if (ShouldStartLocalServerBeforeInit()) {
-    VLOG(1) << "Creating local service for the tpuvm pod setup";
-    service =
-        new XrtLocalService("localservice|localhost:51011", "localservice", 0);
-    service->Start();
-  }
   if (!ParseEnvBasedTpuClusterConfig(&options) &&
       !ParseEnvDeviceCounts(&options) && !ParseEnvDevices(&options) &&
       !ParseMeshConfig(&options, &topology_proto)) {
@@ -297,7 +274,7 @@ std::unique_ptr<ComputationClient> ComputationClient::Create() {
   }
   PopulateLocalDevices(&options);
   return std::unique_ptr<ComputationClient>(
-      new XrtComputationClient(options, std::move(topology_proto), service));
+      new XrtComputationClient(options, std::move(topology_proto)));
 }
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
@@ -326,6 +303,23 @@ std::vector<std::string> ComputationClient::GetCompilationDevices(
                                devices.end());
   }
   return compilation_devices;
+}
+
+void ComputationClient::RunLocalService(xla::uint64 service_port) {
+  try {
+    XrtLocalService* service = new XrtLocalService(
+        "localservice|localhost:" + std::to_string(service_port),
+        "localservice", 0);
+    service->Start();
+    service->Join();
+  } catch (const std::runtime_error& error) {
+    if (std::string(error.what()).find("Couldn't open device: /dev/accel0") !=
+        std::string::npos) {
+      TF_LOG(INFO) << "Local service has been created by other process, return";
+    } else {
+      throw;
+    }
+  }
 }
 
 int64 ComputationClient::GetDeviceOrdinal(const std::string& device) {
