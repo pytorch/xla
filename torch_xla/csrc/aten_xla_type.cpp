@@ -3559,7 +3559,7 @@ at::Tensor& AtenXlaType::zero_(at::Tensor& self) {
 
 at::Scalar AtenXlaType::_local_scalar_dense(const at::Tensor& self) {
   static bool sync =
-      xla::sys_util::GetEnvBool("XLA_SYNC_BEFORE_ITEM_CALL", true);
+      xla::sys_util::GetEnvBool("XLA_SYNC_BEFORE_ITEM_CALL", false);
   if (sync) {
     // sync tensors in order to save computation when step is marked later.
     XLATensor self_tensor = bridge::GetXlaTensor(self);

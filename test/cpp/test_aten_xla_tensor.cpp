@@ -10108,6 +10108,7 @@ TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::_amp_update_scale",
                        cpp_test::GetIgnoredCounters());
+}
 
 TEST_F(AtenXlaTensorTest, TestEarlySyncLiveTensors) {
   torch::Tensor scalar_tensor =

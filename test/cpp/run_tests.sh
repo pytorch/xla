@@ -9,7 +9,7 @@ BUILD_ONLY=0
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 XLA_EXPERIMENTAL="nonzero:masked_select"
-export XLA_SYNC_BEFORE_ITEM_CALL=1
+export XLA_SYNC_BEFORE_ITEM_CALL=0
 
 if [ "$DEBUG" == "1" ]; then
   BUILDTYPE="Debug"
