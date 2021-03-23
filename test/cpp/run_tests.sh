@@ -60,8 +60,10 @@ make -j $VERB
 if [ $BUILD_ONLY -eq 0 ]; then
   if [ "$LOGFILE" != "" ]; then
     ./test_ptxla ${FILTER:+"$FILTER"} 2>$LOGFILE
+    XLA_SYNC_BEFORE_ITEM_CALL=1 ./test_ptxla --gtest_filter=AtenXlaTensorTest.TestEarlySyncLiveTensors 2>>$LOGFILE
   else
     ./test_ptxla ${FILTER:+"$FILTER"}
+    XLA_SYNC_BEFORE_ITEM_CALL=1 ./test_ptxla --gtest_filter=AtenXlaTensorTest.TestEarlySyncLiveTensors
   fi
 fi
 popd
