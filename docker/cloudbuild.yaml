@@ -6,10 +6,11 @@ steps:
   args: [
           'build',
           '--build-arg', 'base_image=${_DOCKER_BASE_IMAGE}',
+          '--build-arg', 'cloud_build=true',
           '--build-arg', 'cuda=${_CUDA}',
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
-          '--build-arg', 'cloud_build=true',
           '--build-arg', 'release_version=${_RELEASE_VERSION}',
+          '--build-arg', 'tpuvm=${_TPU_VM}',
           '-t', 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}',
           '-f', 'docker/Dockerfile', '.'
         ]
@@ -34,6 +35,7 @@ substitutions:
     _RELEASE_VERSION: 'nightly'  # or rX.Y
     _IMAGE_NAME: '${_RELEASE_VERSION}_${_PYTHON_VERSION}'
     _UPLOAD_SUBDIR: ''
+    _TPU_VM: ''
 options:
     machineType: 'N1_HIGHCPU_32'
     dynamic_substitutions: true
