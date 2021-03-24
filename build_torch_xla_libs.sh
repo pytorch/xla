@@ -34,11 +34,6 @@ if [[ "$XLA_BAZEL_VERBOSE" == "1" ]]; then
   VERBOSE="-s"
 fi
 
-TPUVM_FLAG=
-if [[ "$TPUVM_MODE" == "1" ]]; then
-  TPUVM_FLAG="--define=with_tpu_support=true"
-fi
-
 MAX_JOBS=
 if [[ "$XLA_CUDA" == "1" ]] && [[ "$CLOUD_BUILD" == "true" ]]; then
   MAX_JOBS="--jobs=16"
@@ -49,9 +44,12 @@ if [[ $(basename -- $CC) =~ ^clang ]]; then
   OPTS+=(--cxxopt="-Wno-c++11-narrowing")
 fi
 
+TPUVM_FLAG=
 if [[ "$XLA_CUDA" == "1" ]]; then
   OPTS+=(--cxxopt="-DXLA_CUDA=1")
   OPTS+=(--config=cuda)
+else
+  TPUVM_FLAG="--define=with_tpu_support=true"
 fi
 
 if [ "$CMD" == "clean" ]; then
