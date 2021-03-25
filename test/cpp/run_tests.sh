@@ -9,7 +9,6 @@ BUILD_ONLY=0
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 XLA_EXPERIMENTAL="nonzero:masked_select"
-export XLA_SYNC_BEFORE_ITEM_CALL=0
 
 if [ "$DEBUG" == "1" ]; then
   BUILDTYPE="Debug"
@@ -60,10 +59,8 @@ make -j $VERB
 if [ $BUILD_ONLY -eq 0 ]; then
   if [ "$LOGFILE" != "" ]; then
     ./test_ptxla ${FILTER:+"$FILTER"} 2>$LOGFILE
-    XLA_SYNC_BEFORE_ITEM_CALL=1 ./test_ptxla --gtest_filter=AtenXlaTensorTest.TestEarlySyncLiveTensors 2>>$LOGFILE
   else
     ./test_ptxla ${FILTER:+"$FILTER"}
-    XLA_SYNC_BEFORE_ITEM_CALL=1 ./test_ptxla --gtest_filter=AtenXlaTensorTest.TestEarlySyncLiveTensors
   fi
 fi
 popd
