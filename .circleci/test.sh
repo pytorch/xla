@@ -27,5 +27,5 @@ echo "Running Python Tests"
 echo "Running C++ Tests"
 pushd test/cpp
 ./run_tests.sh
-./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors
+./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
 popd
