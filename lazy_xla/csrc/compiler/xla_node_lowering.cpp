@@ -1,0 +1,1188 @@
+#include "lazy_xla/csrc/compiler/convert_ops.h"
+#include "lazy_xla/csrc/compiler/data_ops.h"
+#include "lazy_xla/csrc/compiler/elementwise.h"
+#include "lazy_xla/csrc/compiler/helpers.h"
+#include "lazy_xla/csrc/compiler/infer_output_shape.h"
+#include "lazy_xla/csrc/compiler/matrix.h"
+#include "lazy_xla/csrc/compiler/resize_ops.h"
+#include "lazy_xla/csrc/compiler/xla_lowering_context.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/math.h"
+#include "torch_xla/csrc/compiler/node_lowering.h"
+#include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/ops/as_strided.h"
+#include "torch_xla/csrc/ops/as_strided_view_update.h"
+#include "torch_xla/csrc/ops/bitwise_ir_ops.h"
+#include "torch_xla/csrc/ops/cast.h"
+#include "torch_xla/csrc/ops/constant.h"
+#include "torch_xla/csrc/ops/constant_pad_nd.h"
+#include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/ops/diagonal.h"
+#include "torch_xla/csrc/ops/diagonal_view_update.h"
+#include "torch_xla/csrc/ops/expand.h"
+#include "torch_xla/csrc/ops/generic_slice.h"
+#include "torch_xla/csrc/ops/get_dimensions_size.h"
+#include "torch_xla/csrc/ops/hardshrink.h"
+#include "torch_xla/csrc/ops/hardtanh_backward.h"
+#include "torch_xla/csrc/ops/leaky_relu.h"
+#include "torch_xla/csrc/ops/leaky_relu_backward.h"
+#include "torch_xla/csrc/ops/linear_interpolation.h"
+#include "torch_xla/csrc/ops/log_base.h"
+#include "torch_xla/csrc/ops/masked_fill.h"
+#include "torch_xla/csrc/ops/not_supported.h"
+#include "torch_xla/csrc/ops/ops.h"
+#include "torch_xla/csrc/ops/permute.h"
+#include "torch_xla/csrc/ops/resize.h"
+#include "torch_xla/csrc/ops/rrelu_with_noise.h"
+#include "torch_xla/csrc/ops/rrelu_with_noise_backward.h"
+#include "torch_xla/csrc/ops/scalar.h"
+#include "torch_xla/csrc/ops/select.h"
+#include "torch_xla/csrc/ops/shrink_backward.h"
+#include "torch_xla/csrc/ops/softshrink.h"
+#include "torch_xla/csrc/ops/split.h"
+#include "torch_xla/csrc/ops/squeeze.h"
+#include "torch_xla/csrc/ops/threshold.h"
+#include "torch_xla/csrc/ops/threshold_backward.h"
+#include "torch_xla/csrc/ops/unselect.h"
+#include "torch_xla/csrc/ops/unsqueeze.h"
+#include "torch_xla/csrc/ops/update_slice.h"
+#include "torch_xla/csrc/ops/upsample_bilinear2d.h"
+#include "torch_xla/csrc/ops/upsample_bilinear2d_backward.h"
+#include "torch_xla/csrc/ops/upsample_nearest2d.h"
+#include "torch_xla/csrc/ops/upsample_nearest2d_backward.h"
+#include "torch_xla/csrc/ops/view.h"
+#include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/tensor_util.h"
+
+namespace torch_xla {
+namespace compiler {
+namespace {
+
+xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
+                                    absl::Span<const xla::int64> size,
+                                    absl::Span<const xla::int64> stride,
+                                    xla::int64 storage_offset) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::int64 input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
+  xla::int64 slice_size = xla::util::Multiply<xla::int64>(size);
+  XLA_CHECK_LE(storage_offset + input_element_count, slice_size);
+
+  std::vector<xla::int64> permutation =
+      ir::ops::AsStrided::GetArrayStridePermutation(stride,
+                                                    input_shape.dimensions());
+  xla::XlaOp transposed_input = xla::IsIdentityPermutation(permutation)
+                                    ? input
+                                    : xla::Transpose(input, permutation);
+  if (storage_offset > 0 || input_element_count < slice_size) {
+    xla::XlaOp r1_input = XlaHelpers::Flatten(transposed_input);
+    xla::XlaOp r1_target = XlaHelpers::Flatten(target);
+    transposed_input = xla::DynamicUpdateSlice(
+        r1_target, r1_input,
+        {XlaHelpers::ScalarValue<xla::int64>(storage_offset, input.builder())});
+  }
+  return XlaHelpers::DynamicReshape(transposed_input, size);
+}
+
+xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64> size,
+                          absl::Span<const xla::int64> stride,
+                          xla::int64 storage_offset) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::int64 input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
+  xla::int64 slice_size = xla::util::Multiply<xla::int64>(size);
+  XLA_CHECK_LE(storage_offset + slice_size, input_element_count);
+
+  xla::XlaOp off_input = input;
+  if (storage_offset > 0 || slice_size < input_element_count) {
+    xla::XlaOp r1_input = XlaHelpers::Flatten(input);
+    off_input = xla::SliceInDim(r1_input, storage_offset,
+                                storage_offset + slice_size, 1, 0);
+  }
+
+  std::vector<xla::int64> permutation = xla::InversePermutation(
+      ir::ops::AsStrided::GetArrayStridePermutation(stride, size));
+  std::vector<xla::int64> new_sizes = xla::PermuteInverse(size, permutation);
+  xla::XlaOp reshaped_input = XlaHelpers::DynamicReshape(off_input, new_sizes);
+  return xla::IsIdentityPermutation(permutation)
+             ? reshaped_input
+             : xla::Transpose(reshaped_input, permutation);
+}
+
+xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
+                    absl::Span<const xla::int64> pad) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  return xla::Pad(
+      input,
+      XlaHelpers::ScalarValue(value, input_shape.element_type(),
+                              input.builder()),
+      torch_xla::compiler::XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad));
+}
+
+xla::XlaOp LowerSqueeze(xla::XlaOp input, int dim) {
+  if (dim == -1) {
+    return SqueezeAllTrivialDimensions(input);
+  }
+  XLA_CHECK_GE(dim, 0);
+  return SqueezeTrivialDimension(input, dim);
+}
+
+template <typename F>
+xla::XlaOp LowerBitwise(xla::XlaOp lhs, xla::XlaOp rhs, const F& bit_op) {
+  std::tie(lhs, rhs) = XlaHelpers::PromoteValues(lhs, rhs);
+  return bit_op(lhs, rhs);
+}
+
+xla::Shape InferBitwise(const ir::Node* node) {
+  const ir::Output& input0 = node->operand(0);
+  const ir::Output& input1 = node->operand(1);
+  switch (node->op().op) {
+    case at::aten::__and__: {
+      auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+        return compiler::LowerBitwise(
+            operands[0], operands[1],
+            [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs & rhs; });
+      };
+      return ir::ops::InferOutputShape({input0.shape(), input1.shape()},
+                                       shape_fn);
+    }
+    case at::aten::__or__: {
+      auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+        return compiler::LowerBitwise(
+            operands[0], operands[1],
+            [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs | rhs; });
+      };
+      return ir::ops::InferOutputShape({input0.shape(), input1.shape()},
+                                       shape_fn);
+    }
+    case at::aten::__xor__: {
+      auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+        return compiler::LowerBitwise(
+            operands[0], operands[1],
+            [](xla::XlaOp lhs, xla::XlaOp rhs) { return lhs ^ rhs; });
+      };
+      return ir::ops::InferOutputShape({input0.shape(), input1.shape()},
+                                       shape_fn);
+    }
+    default: { TF_LOG(FATAL) << "Invalid bitwise operator: " << node->op(); }
+  }
+}
+
+xla::Shape InferConstantPadNd(const ir::ops::ConstantPadNd* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return LowerPad(operands[0], node->value(), node->pad());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+xla::Shape InferExpand(const ir::ops::Expand* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildExpand(operands[0], node->size());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+xla::Shape InferPermute(const ir::ops::Permute* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 1);
+    return xla::Transpose(operands[0], node->dims());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+xla::Shape InferSplit(const ir::ops::Split* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return xla::Tuple(
+        operands[0].builder(),
+        BuildSplit(operands[0], node->split_sizes(), node->dim()));
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+xla::Shape InferSqueeze(const ir::ops::Squeeze* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 1);
+    return LowerSqueeze(operands[0], node->dim());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+xla::Shape InferUpsampleBilinear(const ir::ops::UpsampleBilinear* node) {
+  const ir::Output& input = node->operand(0);
+  return resize::GetForwardOutputShape2d(input.shape(), node->output_size());
+}
+
+xla::Shape InferUpsampleBilinearBackward(
+    const ir::ops::UpsampleBilinearBackward* node) {
+  const ir::Output& input = node->operand(0);
+  return resize::GetBackwardOutputShape2d(input.shape(), node->input_size());
+}
+
+xla::Shape InferUpsampleNearest(const ir::ops::UpsampleNearest* node) {
+  const ir::Output& input = node->operand(0);
+  return resize::GetForwardOutputShape2d(input.shape(), node->output_size());
+}
+
+xla::Shape InferUpsampleNearestBackward(
+    const ir::ops::UpsampleNearestBackward* node) {
+  const ir::Output& input = node->operand(0);
+  return resize::GetBackwardOutputShape2d(input.shape(), node->input_size());
+}
+
+xla::Shape InferGenericSlice(const ir::ops::GenericSlice* node) {
+  auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildSlice(operands[0], node->base_indices(), node->sizes());
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+xla::Shape InferUpdateSlice(const ir::ops::UpdateSlice* node) {
+  auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildUpdateSlice(operands[0], operands[1], node->base_indices());
+  };
+  const ir::Output& input = node->operand(0);
+  const ir::Output& source = node->operand(1);
+  return ir::ops::InferOutputShape({input.shape(), source.shape()}, shape_fn);
+}
+
+xla::Shape InferRelu(const ir::Node* node) {
+  auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
+    return BuildRelu(operands[0]);
+  };
+  const ir::Output& input = node->operand(0);
+  return ir::ops::InferOutputShape({input.shape()}, shape_fn);
+}
+
+xla::Shape InferComparisonOp(const ir::Node* node) {
+  c10::Symbol kind = node->op().op;
+  auto shape_fn = [kind](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildComparisonOp(kind, operands[0], operands[1]);
+  };
+  const ir::Output& input0 = node->operand(0);
+  const ir::Output& input1 = node->operand(1);
+  return ir::ops::InferOutputShape({input0.shape(), input1.shape()}, shape_fn);
+}
+
+#define DEFINE_INFER_BINARY_OP(name, xla_fn)                                  \
+  xla::Shape Infer##name(const ir::Node* node) {                              \
+    auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp { \
+      auto promoted = XlaHelpers::Promote(operands[0], operands[1]);          \
+      return xla_fn(promoted.first, promoted.second);                         \
+    };                                                                        \
+    const ir::Output& input0 = node->operand(0);                              \
+    const ir::Output& input1 = node->operand(1);                              \
+    return ir::ops::InferOutputShape({input0.shape(), input1.shape()},        \
+                                     shape_fn);                               \
+  }
+
+DEFINE_INFER_BINARY_OP(Min, xla::Min)
+DEFINE_INFER_BINARY_OP(Max, xla::Max)
+DEFINE_INFER_BINARY_OP(Pow, xla::Pow)
+DEFINE_INFER_BINARY_OP(Fmod, xla::Rem)
+DEFINE_INFER_BINARY_OP(Atan2, xla::Atan2)
+
+#undef DEFINE_INFER_BINARY_OP
+
+#define DECLARE_UNARY_OP(name) XlaOpVector Lower##name(const ir::Node* node)
+#define DECLARE_UNARY_OP2(name) \
+  XlaOpVector Lower##name(const ir::ops::name* node)
+#define DECLARE_BINARY_OP(name) XlaOpVector Lower##name(const ir::Node* node)
+
+class XlaNodeLowering : public NodeLowering {
+ public:
+  XlaNodeLowering(ir::LoweringContext* loctx) : NodeLowering(loctx) {}
+
+  bool Lower(const ir::Node* node) override;
+
+  xla::Shape Infer(const ir::Node* node) override;
+
+  xla_backend::XlaLoweringContext* loctx() {
+    return static_cast<xla_backend::XlaLoweringContext*>(loctx_);
+  }
+
+  XlaOpVector LowerToXla(const ir::Node* node);
+
+ private:
+  XlaOpVector LowerBitwise(const ir::Node* node);
+  XlaOpVector LowerAdd(const ir::Node* node);
+  XlaOpVector LowerDiv(const ir::Node* node);
+  XlaOpVector LowerMul(const ir::Node* node);
+  XlaOpVector LowerSub(const ir::Node* node);
+  XlaOpVector LowerAbs(const ir::Node* node);
+  XlaOpVector LowerCast(const ir::ops::Cast* node);
+  XlaOpVector LowerDiagonal(const ir::ops::Diagonal* node);
+  XlaOpVector LowerDiagonalViewUpdate(const ir::ops::DiagonalViewUpdate* node);
+  XlaOpVector LowerDeviceData(const ir::ops::DeviceData* node);
+  XlaOpVector LowerSelect(const ir::ops::Select* node);
+  XlaOpVector LowerUnselect(const ir::ops::Unselect* node);
+  XlaOpVector LowerGenericSlice(const ir::ops::GenericSlice* node);
+  XlaOpVector LowerUpdateSlice(const ir::ops::UpdateSlice* node);
+  XlaOpVector LowerAsStridedViewUpdate(
+      const ir::ops::AsStridedViewUpdate* node);
+  XlaOpVector LowerAsStrided(const ir::ops::AsStrided* node);
+  XlaOpVector LowerGetDimensionsSize(const ir::ops::GetDimensionsSize* node);
+  XlaOpVector LowerExpand(const ir::ops::Expand* node);
+  XlaOpVector LowerScalar(const ir::ops::Scalar* node);
+  XlaOpVector LowerLinearInterpolation(
+      const ir::ops::LinearInterpolation* node);
+  XlaOpVector LowerNotSupported(const ir::ops::NotSupported* node);
+  DECLARE_UNARY_OP(Acos);
+  DECLARE_UNARY_OP(Acosh);
+  DECLARE_UNARY_OP(Cos);
+  DECLARE_UNARY_OP(Cosh);
+  DECLARE_UNARY_OP(Asin);
+  DECLARE_UNARY_OP(Asinh);
+  DECLARE_UNARY_OP(Sin);
+  DECLARE_UNARY_OP(Sinh);
+  DECLARE_UNARY_OP(Atan);
+  DECLARE_UNARY_OP(Atanh);
+  DECLARE_UNARY_OP(Tan);
+  DECLARE_UNARY_OP(Tanh);
+  DECLARE_UNARY_OP(Neg);
+  DECLARE_UNARY_OP(Exp);
+  DECLARE_UNARY_OP(Expm1);
+  DECLARE_UNARY_OP(HardSigmoid);
+  DECLARE_UNARY_OP(HardSigmoidBackward);
+  DECLARE_UNARY_OP(Log);
+  DECLARE_UNARY_OP(Log1p);
+  DECLARE_UNARY_OP(Erf);
+  DECLARE_UNARY_OP(Erfc);
+  DECLARE_UNARY_OP(Erfinv);
+  DECLARE_UNARY_OP(Reciprocal);
+  DECLARE_UNARY_OP(Relu);
+  DECLARE_UNARY_OP(Sigmoid);
+  DECLARE_UNARY_OP(Sign);
+  DECLARE_UNARY_OP(SiLU);
+  DECLARE_UNARY_OP(Sqrt);
+  DECLARE_UNARY_OP(Rsqrt);
+  DECLARE_UNARY_OP(Ceil);
+  DECLARE_UNARY_OP(Floor);
+  DECLARE_UNARY_OP(Round);
+  DECLARE_UNARY_OP(Not);
+  DECLARE_UNARY_OP(Where);
+  DECLARE_BINARY_OP(Min);
+  DECLARE_BINARY_OP(Max);
+  DECLARE_BINARY_OP(Pow);
+  DECLARE_BINARY_OP(Fmod);
+  DECLARE_BINARY_OP(Atan2);
+  DECLARE_BINARY_OP(Eq);
+  DECLARE_BINARY_OP(Ge);
+  DECLARE_BINARY_OP(Gt);
+  DECLARE_BINARY_OP(Le);
+  DECLARE_BINARY_OP(Lt);
+  DECLARE_BINARY_OP(Ne);
+  DECLARE_UNARY_OP(Clamp);
+  DECLARE_UNARY_OP2(Constant);
+  DECLARE_UNARY_OP2(ConstantPadNd);
+  DECLARE_UNARY_OP2(Hardshrink);
+  DECLARE_UNARY_OP2(HardtanhBackward);
+  DECLARE_UNARY_OP2(LeakyRelu);
+  DECLARE_UNARY_OP2(LeakyReluBackward);
+  DECLARE_UNARY_OP2(LogBase);
+  DECLARE_UNARY_OP2(MaskedFill);
+  DECLARE_UNARY_OP2(Permute);
+  DECLARE_UNARY_OP2(Resize);
+  DECLARE_UNARY_OP2(RreluWithNoise);
+  DECLARE_UNARY_OP2(RreluWithNoiseBackward);
+  DECLARE_UNARY_OP2(Softshrink);
+  DECLARE_UNARY_OP2(Split);
+  DECLARE_UNARY_OP2(Squeeze);
+  DECLARE_UNARY_OP2(ShrinkBackward);
+  DECLARE_UNARY_OP2(Threshold);
+  DECLARE_UNARY_OP2(ThresholdBackward);
+  DECLARE_UNARY_OP2(Unsqueeze);
+  DECLARE_UNARY_OP2(View);
+};
+
+#undef DECLARE_BINARY_OP
+#undef DECLARE_UNARY_OP2
+#undef DECLARE_UNARY_OP
+
+bool XlaNodeLowering::Lower(const ir::Node* node) {
+  XlaOpVector ops = LowerToXla(node);
+  if (ops.empty()) {
+    return false;
+  }
+  XLA_CHECK_EQ(node->num_outputs(), ops.size());
+  for (size_t i = 0; i < ops.size(); ++i) {
+    loctx()->AssignOutputOp(ir::Output(node, i), ops[i]);
+  }
+  return true;
+}
+
+#define HANDLE_GENERIC_OP(name, sym) \
+  case sym: {                        \
+    return Lower##name(node);        \
+  }
+
+#define HANDLE_GENERIC_OP2(name, sym)                                       \
+  case sym: {                                                               \
+    return Lower##name(ir::NodeCast<ir::ops::name>(node, ir::OpKind(sym))); \
+  }
+
+XlaOpVector XlaNodeLowering::LowerToXla(const ir::Node* node) {
+  switch (node->op().op) {
+    HANDLE_GENERIC_OP(Add, at::aten::add)
+    HANDLE_GENERIC_OP(Div, at::aten::div)
+    HANDLE_GENERIC_OP(Mul, at::aten::mul)
+    HANDLE_GENERIC_OP(Sub, at::aten::sub)
+    HANDLE_GENERIC_OP(Bitwise, at::aten::__and__)
+    HANDLE_GENERIC_OP(Bitwise, at::aten::__or__)
+    HANDLE_GENERIC_OP(Bitwise, at::aten::__xor__)
+    HANDLE_GENERIC_OP(Abs, at::aten::abs)
+    HANDLE_GENERIC_OP(Acos, at::aten::acos)
+    HANDLE_GENERIC_OP(Acosh, at::aten::acosh)
+    HANDLE_GENERIC_OP(Cos, at::aten::cos)
+    HANDLE_GENERIC_OP(Cosh, at::aten::cosh)
+    HANDLE_GENERIC_OP(Asin, at::aten::asin)
+    HANDLE_GENERIC_OP(Asinh, at::aten::asinh)
+    HANDLE_GENERIC_OP(Sin, at::aten::sin)
+    HANDLE_GENERIC_OP(Sinh, at::aten::sinh)
+    HANDLE_GENERIC_OP(Atan, at::aten::atan)
+    HANDLE_GENERIC_OP(Atanh, at::aten::atanh)
+    HANDLE_GENERIC_OP(Tan, at::aten::tan)
+    HANDLE_GENERIC_OP(Tanh, at::aten::tanh)
+    HANDLE_GENERIC_OP(Neg, at::aten::neg)
+    HANDLE_GENERIC_OP(Exp, at::aten::exp)
+    HANDLE_GENERIC_OP(Expm1, at::aten::expm1)
+    HANDLE_GENERIC_OP(HardSigmoid, at::aten::hardsigmoid)
+    HANDLE_GENERIC_OP(HardSigmoidBackward, at::aten::hardsigmoid_backward)
+    HANDLE_GENERIC_OP(Log, at::aten::log)
+    HANDLE_GENERIC_OP(Log1p, at::aten::log1p)
+    HANDLE_GENERIC_OP(Erf, at::aten::erf)
+    HANDLE_GENERIC_OP(Erfc, at::aten::erfc)
+    HANDLE_GENERIC_OP(Erfinv, at::aten::erfinv)
+    HANDLE_GENERIC_OP(Reciprocal, at::aten::reciprocal)
+    HANDLE_GENERIC_OP(Relu, at::aten::relu)
+    HANDLE_GENERIC_OP(Sigmoid, at::aten::sigmoid)
+    HANDLE_GENERIC_OP(Sign, at::aten::sign)
+    HANDLE_GENERIC_OP(SiLU, at::aten::silu)
+    HANDLE_GENERIC_OP(Sqrt, at::aten::sqrt)
+    HANDLE_GENERIC_OP(Rsqrt, at::aten::rsqrt)
+    HANDLE_GENERIC_OP(Ceil, at::aten::ceil)
+    HANDLE_GENERIC_OP(Floor, at::aten::floor)
+    HANDLE_GENERIC_OP(Round, at::aten::round)
+    HANDLE_GENERIC_OP(Not, at::aten::bitwise_not)
+    HANDLE_GENERIC_OP(Where, at::aten::where)
+    HANDLE_GENERIC_OP(Min, at::aten::min)
+    HANDLE_GENERIC_OP(Max, at::aten::max)
+    HANDLE_GENERIC_OP(Pow, at::aten::pow)
+    HANDLE_GENERIC_OP(Fmod, at::aten::fmod)
+    HANDLE_GENERIC_OP(Atan2, at::aten::atan2)
+    HANDLE_GENERIC_OP(Eq, at::aten::eq)
+    HANDLE_GENERIC_OP(Ge, at::aten::ge)
+    HANDLE_GENERIC_OP(Gt, at::aten::gt)
+    HANDLE_GENERIC_OP(Le, at::aten::le)
+    HANDLE_GENERIC_OP(Lt, at::aten::lt)
+    HANDLE_GENERIC_OP(Ne, at::aten::ne)
+    HANDLE_GENERIC_OP(Clamp, at::aten::clamp)
+    HANDLE_GENERIC_OP2(AsStrided, at::aten::as_strided)
+    HANDLE_GENERIC_OP2(Diagonal, at::aten::diagonal)
+    HANDLE_GENERIC_OP2(Expand, at::aten::expand)
+    HANDLE_GENERIC_OP2(Hardshrink, at::aten::hardshrink)
+    HANDLE_GENERIC_OP2(HardtanhBackward, at::aten::hardtanh_backward)
+    HANDLE_GENERIC_OP2(ConstantPadNd, at::aten::constant_pad_nd)
+    HANDLE_GENERIC_OP2(LeakyRelu, at::aten::leaky_relu)
+    HANDLE_GENERIC_OP2(LeakyReluBackward, at::aten::leaky_relu_backward)
+    HANDLE_GENERIC_OP2(LogBase, at::aten::log2)
+    HANDLE_GENERIC_OP2(LogBase, at::aten::log10)
+    HANDLE_GENERIC_OP2(MaskedFill, at::aten::masked_fill)
+    HANDLE_GENERIC_OP2(Permute, at::aten::permute)
+    HANDLE_GENERIC_OP2(Resize, at::aten::resize)
+    HANDLE_GENERIC_OP2(RreluWithNoise, at::aten::rrelu_with_noise)
+    HANDLE_GENERIC_OP2(RreluWithNoiseBackward,
+                       at::aten::rrelu_with_noise_backward)
+    HANDLE_GENERIC_OP2(ShrinkBackward, at::aten::hardshrink_backward)
+    HANDLE_GENERIC_OP2(ShrinkBackward, at::aten::softshrink_backward)
+    HANDLE_GENERIC_OP2(Softshrink, at::aten::softshrink)
+    HANDLE_GENERIC_OP2(Split, at::aten::split)
+    HANDLE_GENERIC_OP2(Squeeze, at::aten::squeeze)
+    HANDLE_GENERIC_OP2(Threshold, at::aten::threshold)
+    HANDLE_GENERIC_OP2(ThresholdBackward, at::aten::threshold_backward)
+    HANDLE_GENERIC_OP2(Unsqueeze, at::aten::unsqueeze)
+    HANDLE_GENERIC_OP2(View, at::aten::view)
+    case at::prim::Constant: {
+      // TODO(asuhan): rework to remove ambiguity between Scalar and Constant
+      // nodes to make dynamic_cast unnecessary.
+      auto scalar_node = dynamic_cast<const ir::ops::Scalar*>(node);
+      if (scalar_node) {
+        return LowerScalar(scalar_node);
+      }
+      auto constant_node = dynamic_cast<const ir::ops::Constant*>(node);
+      XLA_CHECK(constant_node);
+      return LowerConstant(constant_node);
+    }
+    default: {
+      if (node->op() == *ir::ops::xla_cast) {
+        return LowerCast(ir::NodeCast<ir::ops::Cast>(node, *ir::ops::xla_cast));
+      }
+      if (node->op() == *ir::ops::xla_device_data) {
+        return LowerDeviceData(
+            ir::NodeCast<ir::ops::DeviceData>(node, *ir::ops::xla_device_data));
+      }
+      if (node->op() == *ir::ops::xla_select) {
+        return LowerSelect(
+            ir::NodeCast<ir::ops::Select>(node, *ir::ops::xla_select));
+      }
+      if (node->op() == *ir::ops::xla_unselect) {
+        return LowerUnselect(
+            ir::NodeCast<ir::ops::Unselect>(node, *ir::ops::xla_unselect));
+      }
+      if (node->op() == *ir::ops::xla_generic_slice) {
+        return LowerGenericSlice(ir::NodeCast<ir::ops::GenericSlice>(
+            node, *ir::ops::xla_generic_slice));
+      }
+      if (node->op() == *ir::ops::xla_update_slice) {
+        return LowerUpdateSlice(ir::NodeCast<ir::ops::UpdateSlice>(
+            node, *ir::ops::xla_update_slice));
+      }
+      if (node->op() == *ir::ops::xla_as_strided_view_update) {
+        return LowerAsStridedViewUpdate(
+            ir::NodeCast<ir::ops::AsStridedViewUpdate>(
+                node, *ir::ops::xla_as_strided_view_update));
+      }
+      if (node->op() == *ir::ops::xla_diagonal_view_update) {
+        return LowerDiagonalViewUpdate(
+            ir::NodeCast<ir::ops::DiagonalViewUpdate>(
+                node, *ir::ops::xla_diagonal_view_update));
+      }
+      if (node->op() == *ir::ops::xla_get_dimensions_size) {
+        return LowerGetDimensionsSize(ir::NodeCast<ir::ops::GetDimensionsSize>(
+            node, *ir::ops::xla_get_dimensions_size));
+      }
+      if (node->op() == *ir::ops::xla_moving_average) {
+        return LowerLinearInterpolation(
+            ir::NodeCast<ir::ops::LinearInterpolation>(
+                node, *ir::ops::xla_moving_average));
+      }
+      if (node->op() == *ir::ops::xla_not_supported) {
+        return LowerNotSupported(ir::NodeCast<ir::ops::NotSupported>(
+            node, *ir::ops::xla_not_supported));
+      }
+      break;
+    }
+  }
+  return {};
+}
+
+#undef HANDLE_GENERIC_OP2
+#undef HANDLE_GENERIC_OP
+
+XlaOpVector XlaNodeLowering::LowerAdd(const ir::Node* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
+  return {XlaHelpers::PromotedAdd(op0, op1)};
+}
+
+XlaOpVector XlaNodeLowering::LowerDiv(const ir::Node* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
+  return {XlaHelpers::PromotedDiv(op0, op1)};
+}
+
+XlaOpVector XlaNodeLowering::LowerMul(const ir::Node* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
+  return {XlaHelpers::PromotedMul(op0, op1)};
+}
+
+XlaOpVector XlaNodeLowering::LowerSub(const ir::Node* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
+  return {XlaHelpers::PromotedSub(op0, op1)};
+}
+
+XlaOpVector XlaNodeLowering::LowerBitwise(const ir::Node* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp op0 = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp op1 = loctx()->GetOutputOp(node->operand(1));
+  std::tie(op0, op1) = XlaHelpers::PromoteValues(op0, op1);
+  switch (node->op().op) {
+    case at::aten::__and__: {
+      return {op0 & op1};
+    }
+    case at::aten::__or__: {
+      return {op0 | op1};
+    }
+    case at::aten::__xor__: {
+      return {op0 ^ op1};
+    }
+    default: { TF_LOG(FATAL) << "Invalid bitwise operator: " << node->op(); }
+  }
+}
+
+XlaOpVector XlaNodeLowering::LowerAbs(const ir::Node* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
+  return {torch_xla::BuildAbs(xla_input)};
+}
+
+XlaOpVector XlaNodeLowering::LowerCast(const ir::ops::Cast* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::PrimitiveType raw_from =
+      node->stype() ? torch_xla::TensorTypeToRawXlaType(*node->stype())
+                    : input_shape.element_type();
+  xla::PrimitiveType raw_to =
+      node->dtype() ? torch_xla::TensorTypeToRawXlaType(*node->dtype())
+                    : node->type();
+  return {torch_xla::ConvertToRaw(input, input_shape.element_type(), raw_from,
+                                  node->type(), raw_to,
+                                  /*device=*/nullptr)};
+}
+
+XlaOpVector XlaNodeLowering::LowerDiagonal(const ir::ops::Diagonal* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {torch_xla::BuildDiagonal(input, node->offset(), node->dim1(),
+                                   node->dim2())};
+}
+
+XlaOpVector XlaNodeLowering::LowerDiagonalViewUpdate(
+    const ir::ops::DiagonalViewUpdate* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp target = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildDiagonalViewUpdate(target, input, node->offset(), node->dim1(),
+                                  node->dim2())};
+}
+
+XlaOpVector XlaNodeLowering::LowerDeviceData(const ir::ops::DeviceData* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  return {loctx()->GetParameter(node->data())};
+}
+
+XlaOpVector XlaNodeLowering::LowerSelect(const ir::ops::Select* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {xla::SliceInDim(
+      input, node->start(), node->end(),
+      ir::ops::Select::GetStride(node->start(), node->end(), node->stride()),
+      node->dim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerUnselect(const ir::ops::Unselect* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp target = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp source = loctx()->GetOutputOp(node->operand(1));
+  return {BuildUnselect(
+      target, source, node->dim(), node->start(), node->end(),
+      ir::ops::Select::GetStride(node->start(), node->end(), node->stride()))};
+}
+
+XlaOpVector XlaNodeLowering::LowerGenericSlice(
+    const ir::ops::GenericSlice* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildSlice(input, node->base_indices(), node->sizes())};
+}
+
+XlaOpVector XlaNodeLowering::LowerUpdateSlice(
+    const ir::ops::UpdateSlice* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp source = loctx()->GetOutputOp(node->operand(1));
+  return {BuildUpdateSlice(input, source, node->base_indices())};
+}
+
+XlaOpVector XlaNodeLowering::LowerAsStridedViewUpdate(
+    const ir::ops::AsStridedViewUpdate* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp target = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {compiler::LowerAsStridedViewUpdate(
+      target, input, node->size(), node->stride(), node->storage_offset())};
+}
+
+XlaOpVector XlaNodeLowering::LowerAsStrided(const ir::ops::AsStrided* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {compiler::LowerAsStrided(input, node->size(), node->stride(),
+                                   node->storage_offset())};
+}
+
+XlaOpVector XlaNodeLowering::LowerGetDimensionsSize(
+    const ir::ops::GetDimensionsSize* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {XlaHelpers::GetDimensionsSize({input}, node->dimensions()).size};
+}
+
+XlaOpVector XlaNodeLowering::LowerExpand(const ir::ops::Expand* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildExpand(input, node->size())};
+}
+
+XlaOpVector XlaNodeLowering::LowerScalar(const ir::ops::Scalar* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  using ir::ops::operator<<;
+  xla::Literal literal(
+      xla::ShapeUtil::MakeShape(node->shape().element_type(), {}));
+  switch (node->shape().element_type()) {
+    case xla::PrimitiveType::PRED:
+      literal.Set<bool>({}, static_cast<bool>(node->value().toInt()));
+      break;
+    case xla::PrimitiveType::S8:
+      literal.Set<xla::int8>({},
+                             static_cast<xla::int8>(node->value().toChar()));
+      break;
+    case xla::PrimitiveType::U8:
+      literal.Set<xla::uint8>({},
+                              static_cast<xla::uint8>(node->value().toByte()));
+      break;
+    case xla::PrimitiveType::S16:
+      literal.Set<xla::int16>({},
+                              static_cast<xla::int16>(node->value().toShort()));
+      break;
+    case xla::PrimitiveType::U16:
+      literal.Set<xla::uint16>(
+          {}, static_cast<xla::uint16>(node->value().toShort()));
+      break;
+    case xla::PrimitiveType::S32:
+      literal.Set<xla::int32>({},
+                              static_cast<xla::int32>(node->value().toInt()));
+      break;
+    case xla::PrimitiveType::U32:
+      literal.Set<xla::uint32>({},
+                               static_cast<xla::uint32>(node->value().toInt()));
+      break;
+    case xla::PrimitiveType::S64:
+      literal.Set<xla::int64>({},
+                              static_cast<xla::int64>(node->value().toLong()));
+      break;
+    case xla::PrimitiveType::U64:
+      literal.Set<xla::uint64>(
+          {}, static_cast<xla::uint64>(node->value().toLong()));
+      break;
+    case xla::PrimitiveType::F32:
+      literal.Set<float>({}, static_cast<float>(node->value().toDouble()));
+      break;
+    case xla::PrimitiveType::F64:
+      literal.Set<double>({}, node->value().toDouble());
+      break;
+    case xla::PrimitiveType::BF16:
+      literal.Set<xla::bfloat16>(
+          {}, static_cast<xla::bfloat16>(node->value().toDouble()));
+      break;
+    case xla::PrimitiveType::F16:
+      literal.Set<xla::half>({},
+                             static_cast<xla::half>(node->value().toDouble()));
+      break;
+    case xla::PrimitiveType::C64:
+      literal.Set<xla::complex64>(
+          {}, xla::complex64(node->value().toComplexFloat()));
+      break;
+    case xla::PrimitiveType::C128:
+      literal.Set<xla::complex128>(
+          {}, xla::complex128(node->value().toComplexDouble()));
+      break;
+    default:
+      XLA_ERROR() << "Unable to lower scalar " << node->value() << " of shape "
+                  << node->shape();
+  }
+
+  xla::XlaOp op = xla::ConstantLiteral(loctx()->builder(), literal);
+  if (node->shape().rank() > 0) {
+    op = xla::Broadcast(op, node->shape().dimensions());
+  }
+  return {op};
+}
+
+XlaOpVector XlaNodeLowering::LowerLinearInterpolation(
+    const ir::ops::LinearInterpolation* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp value = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp new_value = loctx()->GetOutputOp(node->operand(1));
+  return {XlaHelpers::LinearInterpolation(value, new_value, node->alpha())};
+}
+
+XlaOpVector XlaNodeLowering::LowerNotSupported(
+    const ir::ops::NotSupported* node) {
+  XLA_ERROR() << "Node not supported: " << node->ToString();
+}
+
+XlaOpVector XlaNodeLowering::LowerWhere(const ir::Node* node) {
+  xla::XlaOp xla_condition = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp xla_other = loctx()->GetOutputOp(node->operand(2));
+  xla::XlaOp pred_condition =
+      ConvertTo(xla_condition, XlaHelpers::TypeOfXlaOp(xla_condition),
+                xla::PrimitiveType::PRED, /*device=*/nullptr);
+  auto promoted_branches = XlaHelpers::PromoteShapes(xla_input, xla_other);
+  return {xla::Select(pred_condition, promoted_branches.first,
+                      promoted_branches.second)};
+}
+
+XlaOpVector XlaNodeLowering::LowerClamp(const ir::Node* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp xla_min = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp xla_max = loctx()->GetOutputOp(node->operand(2));
+  xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
+  xla_min = ConvertTo(xla_min, XlaHelpers::TypeOfXlaOp(xla_min), input_type,
+                      /*device=*/nullptr);
+  xla_max = ConvertTo(xla_max, XlaHelpers::TypeOfXlaOp(xla_max), input_type,
+                      /*device=*/nullptr);
+  return {xla::Clamp(xla_min, xla_input, xla_max)};
+}
+
+XlaOpVector XlaNodeLowering::LowerLeakyRelu(const ir::ops::LeakyRelu* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildLeakyRelu(input, node->negative_slope())};
+}
+
+XlaOpVector XlaNodeLowering::LowerLeakyReluBackward(
+    const ir::ops::LeakyReluBackward* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildLeakyReluBackward(grad_output, input, node->negative_slope())};
+}
+
+XlaOpVector XlaNodeLowering::LowerLogBase(const ir::ops::LogBase* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp result = xla::Log(xla_input);
+  xla::XlaOp ln_base = XlaHelpers::ScalarValue<float>(
+      1.0 / std::log(node->base()), node->shape().element_type(),
+      xla_input.builder());
+  return {result * ln_base};
+}
+
+XlaOpVector XlaNodeLowering::LowerMaskedFill(const ir::ops::MaskedFill* node) {
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp mask = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp zero =
+      xla::Zero(loctx()->builder(), XlaHelpers::TypeOfXlaOp(mask));
+  xla::XlaOp mask_pred = xla::Ne(mask, zero);
+  // Input shape is the same as output shape.
+  const xla::Shape& input_shape = node->shape();
+  xla::XlaOp value = xla::Broadcast(
+      XlaHelpers::ScalarValue(node->value(), input_shape.element_type(),
+                              input.builder()),
+      input_shape.dimensions());
+  return {xla::Select(mask_pred, value, input)};
+}
+
+XlaOpVector XlaNodeLowering::LowerPermute(const ir::ops::Permute* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {xla::Transpose(input, node->dims())};
+}
+
+XlaOpVector XlaNodeLowering::LowerResize(const ir::ops::Resize* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildResize(input, node->size())};
+}
+
+XlaOpVector XlaNodeLowering::LowerRreluWithNoise(
+    const ir::ops::RreluWithNoise* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 2);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp rng_seed = loctx()->GetOutputOp(node->operand(1));
+  return {BuildRrelu(input, node->lower(), node->upper(), node->training(),
+                     rng_seed)};
+}
+
+XlaOpVector XlaNodeLowering::LowerRreluWithNoiseBackward(
+    const ir::ops::RreluWithNoiseBackward* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  xla::XlaOp noise = loctx()->GetOutputOp(node->operand(2));
+  return {BuildRreluBackward(grad_output, input, noise, node->lower(),
+                             node->upper(), node->training())};
+}
+
+XlaOpVector XlaNodeLowering::LowerSiLU(const ir::Node* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
+  return {xla_input * BuildSigmoid(xla_input)};
+}
+
+XlaOpVector XlaNodeLowering::LowerSoftshrink(const ir::ops::Softshrink* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildSoftshrink(input, node->lambda())};
+}
+
+XlaOpVector XlaNodeLowering::LowerSplit(const ir::ops::Split* node) {
+  XLA_CHECK_EQ(node->num_outputs(), node->split_sizes().size());
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildSplit(input, node->split_sizes(), node->dim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerSqueeze(const ir::ops::Squeeze* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {compiler::LowerSqueeze(input, node->dim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerShrinkBackward(
+    const ir::ops::ShrinkBackward* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildShrinkBackward(grad_output, input, node->lambda())};
+}
+
+XlaOpVector XlaNodeLowering::LowerThreshold(const ir::ops::Threshold* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildThreshold(input, input, node->threshold(), node->value())};
+}
+
+XlaOpVector XlaNodeLowering::LowerThresholdBackward(
+    const ir::ops::ThresholdBackward* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildThreshold(input, grad_output, node->threshold(), 0)};
+}
+
+XlaOpVector XlaNodeLowering::LowerUnsqueeze(const ir::ops::Unsqueeze* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildUnsqueeze(input, node->dim())};
+}
+
+XlaOpVector XlaNodeLowering::LowerView(const ir::ops::View* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildView(input, node->output_size())};
+}
+
+XlaOpVector XlaNodeLowering::LowerConstant(const ir::ops::Constant* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  return {xla::ConstantLiteral(loctx()->builder(), node->value())};
+}
+
+XlaOpVector XlaNodeLowering::LowerConstantPadNd(
+    const ir::ops::ConstantPadNd* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {LowerPad(input, node->value(), node->pad())};
+}
+
+XlaOpVector XlaNodeLowering::LowerHardshrink(const ir::ops::Hardshrink* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
+  return {BuildHardshrink(input, node->lambda())};
+}
+
+XlaOpVector XlaNodeLowering::LowerHardtanhBackward(
+    const ir::ops::HardtanhBackward* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildHardtanhBackward(grad_output, input, node->min_val(),
+                                node->max_val())};
+}
+
+XlaOpVector XlaNodeLowering::LowerHardSigmoidBackward(const ir::Node* node) {
+  XLA_CHECK_EQ(node->num_outputs(), 1);
+  xla::XlaOp xla_grad_output = loctx()->GetOutputOp(node->operand(0));
+  xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(1));
+  return {BuildHardSigmoidBackward(xla_grad_output, xla_input)};
+}
+
+#define DEFINE_UNARY_OP(name, xla_fn)                              \
+  XlaOpVector XlaNodeLowering::Lower##name(const ir::Node* node) { \
+    XLA_CHECK_EQ(node->num_outputs(), 1);                          \
+    xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0)); \
+    return {xla_fn(xla_input)};                                    \
+  }
+
+#define DEFINE_BINARY_OP(name, xla_fn)                              \
+  XlaOpVector XlaNodeLowering::Lower##name(const ir::Node* node) {  \
+    XLA_CHECK_EQ(node->num_outputs(), 1);                           \
+    xla::XlaOp xla_input0 = loctx()->GetOutputOp(node->operand(0)); \
+    xla::XlaOp xla_input1 = loctx()->GetOutputOp(node->operand(1)); \
+    auto promoted = XlaHelpers::Promote(xla_input0, xla_input1);    \
+    return {xla_fn(promoted.first, promoted.second)};               \
+  }
+
+#define DEFINE_COMPARISON_OP(name, kind)                           \
+  XlaOpVector XlaNodeLowering::Lower##name(const ir::Node* node) { \
+    XLA_CHECK_EQ(node->num_outputs(), 1);                          \
+    xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0)); \
+    xla::XlaOp xla_other = loctx()->GetOutputOp(node->operand(1)); \
+    return {BuildComparisonOp(kind, xla_input, xla_other)};        \
+  }
+
+DEFINE_UNARY_OP(Acos, xla::Acos)
+DEFINE_UNARY_OP(Acosh, xla::Acosh)
+DEFINE_UNARY_OP(Cos, xla::Cos)
+DEFINE_UNARY_OP(Cosh, xla::Cosh)
+DEFINE_UNARY_OP(Asin, xla::Asin)
+DEFINE_UNARY_OP(Asinh, xla::Asinh)
+DEFINE_UNARY_OP(Sin, xla::Sin)
+DEFINE_UNARY_OP(Sinh, xla::Sinh)
+DEFINE_UNARY_OP(Atan, xla::Atan)
+DEFINE_UNARY_OP(Atanh, xla::Atanh)
+DEFINE_UNARY_OP(Tan, xla::Tan)
+DEFINE_UNARY_OP(Tanh, xla::Tanh)
+DEFINE_UNARY_OP(Neg, xla::Neg)
+DEFINE_UNARY_OP(Exp, xla::Exp)
+DEFINE_UNARY_OP(Expm1, xla::Expm1)
+DEFINE_UNARY_OP(HardSigmoid, torch_xla::BuildHardSigmoid)
+DEFINE_UNARY_OP(Log, xla::Log)
+DEFINE_UNARY_OP(Log1p, xla::Log1p)
+DEFINE_UNARY_OP(Erf, xla::Erf)
+DEFINE_UNARY_OP(Erfc, xla::Erfc)
+DEFINE_UNARY_OP(Erfinv, xla::ErfInv)
+DEFINE_UNARY_OP(Reciprocal, torch_xla::BuildReciprocal)
+DEFINE_UNARY_OP(Relu, torch_xla::BuildRelu)
+DEFINE_UNARY_OP(Sigmoid, torch_xla::BuildSigmoid)
+DEFINE_UNARY_OP(Sign, torch_xla::BuildSign)
+DEFINE_UNARY_OP(Sqrt, xla::Sqrt)
+DEFINE_UNARY_OP(Rsqrt, xla::Rsqrt)
+DEFINE_UNARY_OP(Ceil, xla::Ceil)
+DEFINE_UNARY_OP(Floor, xla::Floor)
+DEFINE_UNARY_OP(Round, xla::RoundToEven)
+DEFINE_UNARY_OP(Not, xla::Not)
+DEFINE_BINARY_OP(Min, xla::Min)
+DEFINE_BINARY_OP(Max, xla::Max)
+DEFINE_BINARY_OP(Pow, xla::Pow)
+DEFINE_BINARY_OP(Fmod, xla::Rem)
+DEFINE_BINARY_OP(Atan2, xla::Atan2)
+DEFINE_COMPARISON_OP(Eq, at::aten::eq)
+DEFINE_COMPARISON_OP(Ge, at::aten::ge)
+DEFINE_COMPARISON_OP(Gt, at::aten::gt)
+DEFINE_COMPARISON_OP(Le, at::aten::le)
+DEFINE_COMPARISON_OP(Lt, at::aten::lt)
+DEFINE_COMPARISON_OP(Ne, at::aten::ne)
+
+#undef DEFINE_COMPARISON_OP
+#undef DEFINE_BINARY_OP
+#undef DEFINE_UNARY_OP
+
+xla::Shape XlaNodeLowering::Infer(const ir::Node* node) {
+  const ir::OpKind& kind = node->op();
+  switch (kind.op) {
+    case at::aten::__and__:
+    case at::aten::__or__:
+    case at::aten::__xor__: {
+      return InferBitwise(node);
+    }
+    case at::aten::min: {
+      return InferMin(node);
+    }
+    case at::aten::max: {
+      return InferMax(node);
+    }
+    case at::aten::pow: {
+      return InferPow(node);
+    }
+    case at::aten::fmod: {
+      return InferFmod(node);
+    }
+    case at::aten::atan2: {
+      return InferAtan2(node);
+    }
+    case at::aten::relu: {
+      return InferRelu(node);
+    }
+    case at::aten::eq:
+    case at::aten::ge:
+    case at::aten::gt:
+    case at::aten::le:
+    case at::aten::lt:
+    case at::aten::ne: {
+      return InferComparisonOp(node);
+    }
+    case at::aten::constant_pad_nd: {
+      return InferConstantPadNd(ir::NodeCast<ir::ops::ConstantPadNd>(
+          node, ir::OpKind(at::aten::constant_pad_nd)));
+    }
+    case at::aten::expand: {
+      return InferExpand(
+          ir::NodeCast<ir::ops::Expand>(node, ir::OpKind(at::aten::expand)));
+    }
+    case at::aten::permute: {
+      return InferPermute(
+          ir::NodeCast<ir::ops::Permute>(node, ir::OpKind(at::aten::permute)));
+    }
+    case at::aten::split: {
+      return InferSplit(
+          ir::NodeCast<ir::ops::Split>(node, ir::OpKind(at::aten::split)));
+    }
+    case at::aten::squeeze: {
+      return InferSqueeze(
+          ir::NodeCast<ir::ops::Squeeze>(node, ir::OpKind(at::aten::squeeze)));
+    }
+    case at::aten::upsample_bilinear2d: {
+      return InferUpsampleBilinear(ir::NodeCast<ir::ops::UpsampleBilinear>(
+          node, ir::OpKind(at::aten::upsample_bilinear2d)));
+    }
+    case at::aten::upsample_bilinear2d_backward: {
+      return InferUpsampleBilinearBackward(
+          ir::NodeCast<ir::ops::UpsampleBilinearBackward>(
+              node, ir::OpKind(at::aten::upsample_bilinear2d_backward)));
+    }
+    case at::aten::upsample_nearest2d: {
+      return InferUpsampleNearest(ir::NodeCast<ir::ops::UpsampleNearest>(
+          node, ir::OpKind(at::aten::upsample_nearest2d)));
+    }
+    case at::aten::upsample_nearest2d_backward: {
+      return InferUpsampleNearestBackward(
+          ir::NodeCast<ir::ops::UpsampleNearestBackward>(
+              node, ir::OpKind(at::aten::upsample_nearest2d_backward)));
+    }
+    default: {
+      if (kind == *ir::ops::xla_generic_slice) {
+        return InferGenericSlice(ir::NodeCast<ir::ops::GenericSlice>(
+            node, *ir::ops::xla_generic_slice));
+      }
+      if (kind == *ir::ops::xla_update_slice) {
+        return InferUpdateSlice(ir::NodeCast<ir::ops::UpdateSlice>(
+            node, *ir::ops::xla_update_slice));
+      }
+      TF_LOG(FATAL) << "Shape inference not supported for operator: " << kind;
+    }
+  }
+}
+
+}  // namespace
+
+std::unique_ptr<NodeLowering> NodeLowering::Create(ir::LoweringContext* loctx) {
+  return std::make_unique<compiler::XlaNodeLowering>(loctx);
+}
+
+NodeLowering* NodeLowering::Get() {
+  static XlaNodeLowering* xla_node_lowering = new XlaNodeLowering(nullptr);
+  return xla_node_lowering;
+}
+
+namespace xla_backend {
+
+XlaOpVector LowerNodeToXla(const ir::Node* node, XlaLoweringContext* loctx) {
+  auto node_lowering = NodeLowering::Create(loctx);
+  XlaNodeLowering* xla_node_lowering =
+      static_cast<XlaNodeLowering*>(node_lowering.get());
+  return xla_node_lowering->LowerToXla(node);
+}
+
+}  // namespace xla_backend
+
+NodeLowering* GetXlaNodeLowering() { return NodeLowering::Get(); }
+
+std::unique_ptr<NodeLowering> CreateXlaNodeLowering(ir::LoweringContext* loctx) {
+  return NodeLowering::Create(loctx);
+}
+
+}  // namespace compiler
+}  // namespace torch_xla
