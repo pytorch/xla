@@ -1,14 +1,14 @@
 #include "lazy_xla/csrc/compiler/matrix.h"
 
+#include "lazy_xla/csrc/compiler/convert_ops.h"
+#include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/qr.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "lazy_xla/csrc/compiler/convert_ops.h"
-#include "lazy_xla/csrc/compiler/helpers.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace {
 
 struct DiagonalMask {
@@ -117,4 +117,4 @@ xla::XlaOp BuildDiagonalViewUpdate(xla::XlaOp target, xla::XlaOp input,
   return result;
 }
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

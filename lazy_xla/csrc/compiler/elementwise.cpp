@@ -1,12 +1,12 @@
 #include "lazy_xla/csrc/compiler/elementwise.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
+#include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "torch_xla/csrc/tensor_util.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace {
 
 xla::XlaOp Between(xla::XlaOp input, const at::Scalar& min_val,
@@ -201,4 +201,4 @@ xla::XlaOp BuildAbs(xla::XlaOp input) {
   return xla::Abs(input);
 }
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

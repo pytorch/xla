@@ -1,9 +1,9 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
+#include "lazy_xla/csrc/compiler/debug_macros.h"
+#include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/permutation_util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "lazy_xla/csrc/compiler/helpers.h"
 
 using namespace torch::jit::tensorexpr;
 
@@ -51,8 +51,10 @@ XlaOp BinaryOp(XlaOp lhs, XlaOp rhs,
   if (!broadcast_dimensions.empty()) {
     TF_LOG(FATAL) << "Not implemented yet.";
   }
-  std::tie(lhs, rhs) = torch_xla::compiler::XlaHelpers::PromoteShapes(lhs, rhs);
-  const auto& shape = torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(lhs);
+  std::tie(lhs, rhs) =
+      torch_lazy_tensors::compiler::XlaHelpers::PromoteShapes(lhs, rhs);
+  const auto& shape =
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(lhs);
   return XlaOp(Compute(name, lhs.dims(),
                        [&](const std::vector<VarHandle>& indices) {
                          const auto expr_indices = VarsToExprs(indices);
@@ -68,8 +70,10 @@ XlaOp BinaryOp(XlaOp lhs, XlaOp rhs,
                                               const ExprHandle&)>& bin_op,
                const std::string& name,
                absl::Span<const int64> broadcast_dimensions) {
-  std::tie(lhs, rhs) = torch_xla::compiler::XlaHelpers::PromoteShapes(lhs, rhs);
-  const auto& shape = torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(lhs);
+  std::tie(lhs, rhs) =
+      torch_lazy_tensors::compiler::XlaHelpers::PromoteShapes(lhs, rhs);
+  const auto& shape =
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(lhs);
   return BinaryOp(lhs, rhs, bin_op, name, broadcast_dimensions,
                   shape.element_type());
 }
@@ -87,7 +91,7 @@ XlaOp UnaryOp(XlaOp input,
 
 std::tuple<XlaOp, XlaOp, PrimitiveType> PromoteToInteger(XlaOp x, XlaOp y) {
   const auto element_type =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(x).element_type();
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(x).element_type();
   XLA_CHECK(element_type == PrimitiveType::S32 ||
             element_type == PrimitiveType::PRED)
       << "Element type not supported for bitwise " << element_type;
@@ -143,7 +147,7 @@ std::vector<ExprHandle> MultiDimToLinearIndex(
 }
 
 std::vector<DimArg> LinearizedSize(absl::Span<const int64> sizes) {
-  int element_count = util::Multiply<int>(sizes);
+  int element_count = lazy_tensors::util::Multiply<int>(sizes);
   return std::vector<DimArg>{ExprHandle(element_count)};
 }
 
@@ -231,7 +235,7 @@ XlaOp XlaOp::Div(XlaOp lhs, XlaOp rhs,
 
 XlaOp XlaOp::Reshape(XlaOp operand, absl::Span<const int64> new_sizes) {
   const auto& source_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   auto new_shape =
       std::make_unique<Shape>(source_shape.element_type(), new_sizes);
   if (operand.outputs_.size() == 1 && operand.outputs_.front().expr) {
@@ -321,7 +325,7 @@ size_t XlaBuilder::AddTuple(XlaOp tuple, absl::Span<const XlaOp> elements) {
   std::vector<Shape> element_shapes;
   for (const XlaOp& element : elements) {
     element_shapes.push_back(
-        torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(element));
+        torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(element));
   }
   shapes_.emplace_back(new Shape(absl::MakeSpan(element_shapes)));
   tuple.set_id(id);
@@ -343,7 +347,7 @@ std::shared_ptr<KernelArena> XlaBuilder::kernel_arena() const {
 
 XlaOp Parameter(XlaBuilder* builder, int64 parameter_number, const Shape& shape,
                 const std::string& name) {
-  int numel = util::Multiply<int>(shape.dimensions());
+  int numel = lazy_tensors::util::Multiply<int>(shape.dimensions());
   std::vector<ExprHandle> sizes{ExprHandle(numel)};
   Dtype param_type(PrimitiveToScalarType(shape.element_type()));
   return XlaOp(
@@ -407,7 +411,7 @@ XlaOp Broadcast(XlaOp operand, absl::Span<const int64> broadcast_sizes) {
   std::vector<int64> output_sizes(broadcast_sizes.begin(),
                                   broadcast_sizes.end());
   const auto& operand_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   auto operand_sizes = operand_shape.dimensions();
   output_sizes.insert(output_sizes.end(), operand_sizes.begin(),
                       operand_sizes.end());
@@ -430,7 +434,7 @@ XlaOp Broadcast(XlaOp operand, absl::Span<const int64> broadcast_sizes) {
 XlaOp BroadcastInDim(XlaOp operand, const absl::Span<const int64> out_dim_size,
                      const absl::Span<const int64> broadcast_dimensions) {
   const auto& input_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   XLA_CHECK_EQ(broadcast_dimensions.size(), input_shape.rank());
   XLA_CHECK_EQ(input_shape.rank(), out_dim_size.size());
   return XlaOp(
@@ -453,7 +457,8 @@ XlaOp BroadcastInDim(XlaOp operand, const absl::Span<const int64> out_dim_size,
 
 XlaOp Pad(XlaOp operand, XlaOp padding_value,
           const PaddingConfig& padding_config) {
-  const auto& shape = torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+  const auto& shape =
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   const auto& padding_dimensions = padding_config.dimensions();
   XLA_CHECK_EQ(padding_dimensions.size(), shape.rank());
   std::vector<int64> output_sizes;
@@ -467,7 +472,9 @@ XlaOp Pad(XlaOp operand, XlaOp padding_value,
         padding_dimensions[dim_idx]->edge_padding_high());
   }
   XLA_CHECK_EQ(
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(padding_value).rank(), 0);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(padding_value)
+          .rank(),
+      0);
   return XlaOp(
       Compute("pad", LinearizedSize(output_sizes),
               [&](const VarHandle& index) {
@@ -507,7 +514,8 @@ XlaOp Reshape(XlaOp operand, absl::Span<const int64> new_sizes) {
 XlaOp SliceInDim(XlaOp operand, int64 start_index, int64 limit_index,
                  int64 stride, int64 dimno) {
   XLA_CHECK_EQ(stride, 1) << "Only stride 1 supported for now";
-  const auto& shape = torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+  const auto& shape =
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   std::vector<int64> output_sizes;
   output_sizes.reserve(shape.rank());
   for (size_t dim_idx = 0; dim_idx < shape.rank(); ++dim_idx) {
@@ -539,10 +547,10 @@ XlaOp SliceInDim(XlaOp operand, int64 start_index, int64 limit_index,
 XlaOp DynamicUpdateSlice(XlaOp operand, XlaOp update,
                          absl::Span<const XlaOp> start_indices) {
   const auto& operand_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   const auto output_sizes = operand_shape.dimensions();
   const auto update_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(update);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(update);
   return XlaOp(
       Compute("dynamic_update_slice", LinearizedSize(output_sizes),
               [&](const VarHandle& index) {
@@ -552,10 +560,11 @@ XlaOp DynamicUpdateSlice(XlaOp operand, XlaOp update,
                 std::vector<ExprHandle> update_indices;
                 update_indices.reserve(update_shape.rank());
                 for (size_t i = 0; i < indices.size(); ++i) {
-                  XLA_CHECK_EQ(torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(
-                                   start_indices[i])
-                                   .rank(),
-                               0);
+                  XLA_CHECK_EQ(
+                      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(
+                          start_indices[i])
+                          .rank(),
+                      0);
                   const auto start_index =
                       cast<int>(start_indices[i].call({ExprHandle(0)}));
                   is_update = is_update & cast<int>(indices[i] >= start_index);
@@ -588,9 +597,10 @@ XlaOp Slice(XlaOp operand, absl::Span<const int64> start_indices,
 
 XlaOp Select(XlaOp pred, XlaOp on_true, XlaOp on_false) {
   std::tie(on_true, on_false) =
-      torch_xla::compiler::XlaHelpers::PromoteShapes(on_true, on_false);
+      torch_lazy_tensors::compiler::XlaHelpers::PromoteShapes(on_true,
+                                                              on_false);
   const auto& on_true_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(on_true);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(on_true);
   const auto out_dims = on_true.dims();
   return XlaOp(Compute("select", out_dims,
                        [&](const std::vector<VarHandle>& indices) {
@@ -746,7 +756,7 @@ XlaOp Log1p(XlaOp operand) {
 
 XlaOp Sign(XlaOp operand) {
   const auto& operand_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   const auto zero =
       Broadcast(Zero(operand.builder(), operand_shape.element_type()),
                 operand_shape.dimensions());
@@ -796,7 +806,7 @@ XlaOp Pow(XlaOp lhs, XlaOp rhs, absl::Span<const int64> broadcast_dimensions) {
 
 XlaOp ConvertElementType(XlaOp operand, PrimitiveType new_element_type) {
   const auto& operand_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   return UnaryOp(
       operand,
       [&](const ExprHandle& operand) {
@@ -809,13 +819,13 @@ XlaOp ConvertElementType(XlaOp operand, PrimitiveType new_element_type) {
 
 XlaOp Neg(XlaOp operand) {
   const auto& operand_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   return Zero(operand.builder(), operand_shape.element_type()) - operand;
 }
 
 XlaOp Transpose(XlaOp operand, absl::Span<const int64> permutation) {
   const auto& operand_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   const auto operand_sizes = operand_shape.dimensions();
   std::vector<int64> output_sizes;
   output_sizes.reserve(operand_sizes.size());
@@ -837,7 +847,7 @@ XlaOp Transpose(XlaOp operand, absl::Span<const int64> permutation) {
 XlaOp Clamp(XlaOp min, XlaOp operand, XlaOp max) {
   const auto out_dims = operand.dims();
   const auto& operand_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   return XlaOp(Compute("clamp", out_dims,
                        [&](const std::vector<VarHandle>& indices) {
                          const auto expr_indices = VarsToExprs(indices);
@@ -903,7 +913,7 @@ XlaOp UnaryOp(XlaOp input,
               const std::function<ExprHandle(const ExprHandle&)>& unary_op,
               const std::string& name) {
   const auto& input_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(input);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(input);
   return UnaryOp(input, unary_op, name, std::make_unique<Shape>(input_shape));
 }
 
@@ -912,7 +922,7 @@ Tensor* Compute(const std::string& func_name, XlaOp operand,
                 const std::function<std::vector<ExprHandle>(
                     const std::vector<ExprHandle>&)>& to_input_indices) {
   const auto operand_shape =
-      torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(operand);
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(operand);
   return Compute(func_name, LinearizedSize(/*sizes=*/output_sizes),
                  [&](const VarHandle& index) {
                    auto output_indices = LinearToMultiDimIndex(

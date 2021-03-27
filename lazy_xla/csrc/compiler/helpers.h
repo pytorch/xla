@@ -9,16 +9,16 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "lazy_tensors/compiler/xla/xla_client/util.h"
+#include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 #include "torch_xla/csrc/helpers.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace compiler {
 
 // Miscellaneous helpers for XLA lowering.
@@ -39,8 +39,13 @@ class XlaHelpers {
   template <class T>
   static xla::XlaOp ScalarValue(T scalar_value, xla::PrimitiveType type,
                                 xla::XlaBuilder* builder) {
-    return xla::ConstantLiteral(
-        builder, torch_xla::XlaHelpers::ScalarLiteral(scalar_value, type));
+    lazy_tensors::Literal literal =
+        torch_lazy_tensors::XlaHelpers::ScalarLiteral(
+            scalar_value, LazyTensorPrimitiveType(type));
+    XLA_CHECK_EQ(literal.shape().rank(), 0);
+    xla::Literal xla_literal(XlaShape(literal.shape()));
+    xla_literal.Set({}, literal.data<T>()[0]);
+    return xla::ConstantLiteral(builder, xla_literal);
   }
 
   static xla::XlaOp ScalarValue(at::Scalar scalar_value,
@@ -52,6 +57,75 @@ class XlaHelpers {
     XLA_CHECK(scalar_value.isIntegral()) << "Scalar type not supported";
     return ScalarValue(static_cast<xla::int64>(scalar_value.toLong()), type,
                        builder);
+  }
+
+#define HANDLE_TYPE(type)                 \
+  case lazy_tensors::PrimitiveType::type: \
+    return xla::PrimitiveType::type;
+
+  static xla::PrimitiveType XlaPrimitiveType(lazy_tensors::PrimitiveType type) {
+    switch (type) {
+      HANDLE_TYPE(PRED)
+      HANDLE_TYPE(S8)
+      HANDLE_TYPE(S16)
+      HANDLE_TYPE(S32)
+      HANDLE_TYPE(S64)
+      HANDLE_TYPE(U8)
+      HANDLE_TYPE(U16)
+      HANDLE_TYPE(U32)
+      HANDLE_TYPE(U64)
+      HANDLE_TYPE(F16)
+      HANDLE_TYPE(F32)
+      HANDLE_TYPE(BF16)
+      HANDLE_TYPE(F64)
+      HANDLE_TYPE(C64)
+      HANDLE_TYPE(C128)
+      HANDLE_TYPE(TUPLE)
+      HANDLE_TYPE(INVALID)
+      default: { TF_LOG(FATAL) << "Invalid primitive type."; }
+    }
+  }
+
+#undef HANDLE_TYPE
+
+#define HANDLE_TYPE(type)        \
+  case xla::PrimitiveType::type: \
+    return lazy_tensors::PrimitiveType::type;
+
+  static lazy_tensors::PrimitiveType LazyTensorPrimitiveType(
+      xla::PrimitiveType type) {
+    switch (type) {
+      HANDLE_TYPE(PRED)
+      HANDLE_TYPE(S8)
+      HANDLE_TYPE(S16)
+      HANDLE_TYPE(S32)
+      HANDLE_TYPE(S64)
+      HANDLE_TYPE(U8)
+      HANDLE_TYPE(U16)
+      HANDLE_TYPE(U32)
+      HANDLE_TYPE(U64)
+      HANDLE_TYPE(F16)
+      HANDLE_TYPE(F32)
+      HANDLE_TYPE(BF16)
+      HANDLE_TYPE(F64)
+      HANDLE_TYPE(C64)
+      HANDLE_TYPE(C128)
+      HANDLE_TYPE(TUPLE)
+      HANDLE_TYPE(INVALID)
+      default: { TF_LOG(FATAL) << "Invalid primitive type."; }
+    }
+  }
+
+#undef HANDLE_TYPE
+
+  static xla::Shape XlaShape(const lazy_tensors::Shape& shape) {
+    return xla::Shape(XlaPrimitiveType(shape.element_type()),
+                      shape.dimensions());
+  }
+
+  static lazy_tensors::Shape LazyTensorsShape(const xla::Shape& shape) {
+    return lazy_tensors::Shape(LazyTensorPrimitiveType(shape.element_type()),
+                               shape.dimensions());
   }
 
   // Performa a linear interpolation between value0 and value1, by calculating:
@@ -197,4 +271,4 @@ class XlaHelpers {
 };
 
 }  // namespace compiler
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

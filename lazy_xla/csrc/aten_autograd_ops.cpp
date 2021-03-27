@@ -5,7 +5,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/torch_util.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 
 bool IsNonTrivialDilation(at::IntArrayRef dilation) {
   return std::any_of(
@@ -122,4 +122,4 @@ torch::autograd::variable_list MaxPool3dAutogradFunction::backward(
 }
 
 }  // namespace aten_autograd_ops
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

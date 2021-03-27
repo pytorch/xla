@@ -2,7 +2,7 @@
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 
 class TokenHandler {
  public:
@@ -16,4 +16,4 @@ class TokenHandler {
   xla::XlaOp token_;
 };
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

@@ -8,7 +8,7 @@
 
 // Collection of XLA lowerings for operations which only involve some form of
 // data movement and no computation.
-namespace torch_xla {
+namespace torch_lazy_tensors {
 
 bool IsSparseGather(xla::XlaOp input, xla::XlaOp index, xla::int64 dim);
 
@@ -61,4 +61,4 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,
 xla::XlaOp PadInDim(xla::XlaOp input, xla::int64 dim, xla::int64 pad_lo,
                     xla::int64 pad_hi, const xla::XlaOp* pad_value = nullptr);
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

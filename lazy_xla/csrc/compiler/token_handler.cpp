@@ -1,11 +1,11 @@
 #include "lazy_xla/csrc/compiler/token_handler.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/shape_util.h"
 #include "lazy_xla/csrc/compiler/convert_ops.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/shape_util.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace {
 
 xla::XlaOp SliceOneToken(xla::XlaOp input) {
@@ -48,4 +48,4 @@ xla::XlaOp TokenHandler::GetNewToken(xla::XlaOp result) {
   return token_;
 }
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

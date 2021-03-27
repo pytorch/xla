@@ -5,10 +5,10 @@
 
 #include "absl/strings/str_join.h"
 #include "absl/types/span.h"
+#include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "tensorflow/compiler/xla/layout.h"
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
 
 namespace xla {
 

@@ -2,10 +2,10 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "lazy_tensors/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
 #include "torch/csrc/jit/tensorexpr/types.h"
 
@@ -28,7 +28,7 @@ class ShapeIndex {
 class ShapeUtil {
  public:
   static int64 ElementsIn(const Shape& shape) {
-    return util::Multiply<xla::int64>(shape.dimensions());
+    return lazy_tensors::util::Multiply<xla::int64>(shape.dimensions());
   }
 
   static int64 ByteSizeOfPrimitiveType(PrimitiveType primitive_type) {
@@ -164,9 +164,7 @@ inline torch::jit::tensorexpr::ScalarType PrimitiveToScalarType(
     case xla::PrimitiveType::PRED: {
       return torch::jit::tensorexpr::ScalarType::Bool;
     }
-    default: {
-      TF_LOG(FATAL) << "Not implemented yet.";
-    }
+    default: { TF_LOG(FATAL) << "Not implemented yet."; }
   }
 }
 

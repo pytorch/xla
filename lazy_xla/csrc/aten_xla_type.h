@@ -2,7 +2,7 @@
 
 #include <ATen/Tensor.h>
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 
 // Base ATEN Type class where the XLA specific overrides should be defined.
 class AtenXlaType {
@@ -547,4 +547,4 @@ class AtenXlaType {
   static at::Tensor& zero_(at::Tensor& self);
 };
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

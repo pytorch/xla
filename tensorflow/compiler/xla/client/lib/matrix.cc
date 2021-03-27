@@ -7,7 +7,7 @@ using namespace torch::jit::tensorexpr;
 namespace xla {
 
 XlaOp GetMatrixDiagonal(XlaOp x, int k) {
-  const auto& shape = torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(x);
+  const auto& shape = torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(x);
   int64 rank = shape.rank();
   XLA_CHECK_GE(rank, 2);
   std::vector<int64> output_sizes;

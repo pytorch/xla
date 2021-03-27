@@ -4,13 +4,13 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
+#include "lazy_tensors/compiler/xla/xla_client/computation_client.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
 #include "lazy_xla/csrc/compiler/nnc_computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
 #include "torch_xla/csrc/compiler/node_lowering.h"
 #include "torch_xla/csrc/lowering_context.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace compiler {
 namespace xla_backend {
 namespace {
@@ -32,7 +32,8 @@ class HloMetadataSetter {
 
  private:
   static bool ShouldPopulateXlaOpMetadata() {
-    static bool op_metadata = xla::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
+    static bool op_metadata =
+        lazy_tensors::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
     return op_metadata;
   }
 
@@ -71,11 +72,17 @@ class HloMetadataSetter {
   XlaLoweringContext* loctx_ = nullptr;
 };
 
+xla::ShapeIndex XlaShapeIndex(const lazy_tensors::ShapeIndex& shape_index) {
+  XLA_CHECK_EQ(shape_index.size(), 1);
+  return {shape_index[0]};
+}
+
 }  // namespace
 
-const xla::Shape& XlaLoweringContext::GetResultShape(size_t index) const {
+lazy_tensors::Shape XlaLoweringContext::GetResultShape(size_t index) const {
   xla::XlaOp root = GetResult(index);
-  return compiler::XlaHelpers::ShapeOfXlaOp(root);
+  return compiler::XlaHelpers::LazyTensorsShape(
+      compiler::XlaHelpers::ShapeOfXlaOp(root));
 }
 
 size_t XlaLoweringContext::AddResult(const ir::Output& output) {
@@ -89,35 +96,41 @@ void XlaLoweringContext::LowerNodeToResult(const ir::Node* node) {
 }
 
 void XlaLoweringContext::AddParameter(const ir::Output& output, size_t index,
-                                      const xla::Shape& shape,
+                                      const lazy_tensors::Shape& shape,
                                       const std::string& name) {
-  AssignOutputOp(output, xla::Parameter(builder(), index, shape, name));
+  AssignOutputOp(output,
+                 xla::Parameter(builder(), index,
+                                compiler::XlaHelpers::XlaShape(shape), name));
 }
 
-xla::StatusOr<std::shared_ptr<xla::GenericComputation>>
+lazy_tensors::StatusOr<std::shared_ptr<lazy_tensors::GenericComputation>>
 XlaLoweringContext::Build() {
   if (!root_tuple_.empty()) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
-    return std::shared_ptr<xla::GenericComputation>(
+    return std::shared_ptr<lazy_tensors::GenericComputation>(
         new xla::GenericComputationXla(ConsumeValue(builder()->Build(root))));
   }
-  return std::shared_ptr<xla::GenericComputation>(
+  return std::shared_ptr<lazy_tensors::GenericComputation>(
       new xla::GenericComputationXla(ConsumeValue(builder()->Build())));
 }
 
-void XlaLoweringContext::SetUpAlias(const xla::ShapeIndex& output_index,
-                                    xla::int64 param_number,
-                                    const xla::ShapeIndex& param_index) {
-  builder()->SetUpAlias(output_index, param_number, param_index);
+void XlaLoweringContext::SetUpAlias(
+    const lazy_tensors::ShapeIndex& output_index,
+    lazy_tensors::int64 param_number,
+    const lazy_tensors::ShapeIndex& param_index) {
+  builder()->SetUpAlias(XlaShapeIndex(output_index), param_number,
+                        XlaShapeIndex(param_index));
 }
 
 xla::XlaOp XlaLoweringContext::GetParameter(
-    const std::shared_ptr<xla::ComputationClient::Data>& data) {
-  xla::ComputationClient::Data::OpaqueHandle handle = data->GetOpaqueHandle();
+    const std::shared_ptr<lazy_tensors::ComputationClient::Data>& data) {
+  lazy_tensors::ComputationClient::Data::OpaqueHandle handle =
+      data->GetOpaqueHandle();
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
     xla::XlaOp param =
-        xla::Parameter(builder(), parameters_.size(), data->shape(),
+        xla::Parameter(builder(), parameters_.size(),
+                       compiler::XlaHelpers::XlaShape(data->shape()),
                        absl::StrCat("p", parameters_.size()));
     it = parameters_map_.emplace(handle, Parameter{param, parameters_.size()})
              .first;
@@ -209,4 +222,4 @@ std::unique_ptr<LoweringContext> LoweringContext::Create(
 }
 
 }  // namespace ir
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

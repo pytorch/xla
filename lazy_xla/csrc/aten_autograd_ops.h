@@ -1,6 +1,6 @@
 #pragma once
 #include <torch/script.h>
-namespace torch_xla {
+namespace torch_lazy_tensors {
 
 // Returns true if dilation is non-trivial (not 1) in at least one dimension.
 bool IsNonTrivialDilation(at::IntArrayRef dilation);
@@ -34,4 +34,4 @@ struct MaxPool3dAutogradFunction
 };
 
 }  // namespace aten_autograd_ops
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

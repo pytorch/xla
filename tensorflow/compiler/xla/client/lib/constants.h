@@ -1,7 +1,7 @@
 #pragma once
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
 
 namespace xla {
 
@@ -65,7 +65,8 @@ XlaOp ConstantR0WithType(XlaBuilder* builder, PrimitiveType type, T value) {
 template <typename T>
 XlaOp ScalarLike(XlaOp prototype, T value) {
   XlaBuilder* builder = prototype.builder();
-  const Shape& shape = torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(prototype);
+  const Shape& shape =
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(prototype);
   return ConstantR0WithType(builder, shape.element_type(), value);
 }
 

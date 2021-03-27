@@ -2,15 +2,15 @@
 
 #include <climits>
 
+#include "lazy_xla/csrc/compiler/debug_macros.h"
+#include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "lazy_xla/csrc/compiler/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace {
 
 xla::XlaOp ExplicitBooleanConvert(xla::XlaOp op, xla::PrimitiveType from) {
@@ -98,9 +98,11 @@ xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,
 xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {
   if (from == xla::PrimitiveType::PRED) {
     Device xla_device = GetCurrentDevice();
-    op = ConvertTo(op, from,
-                   GetDevicePrimitiveType(xla::PrimitiveType::U8, &xla_device),
-                   &xla_device);
+    op =
+        ConvertTo(op, from,
+                  compiler::XlaHelpers::XlaPrimitiveType(GetDevicePrimitiveType(
+                      lazy_tensors::PrimitiveType::U8, &xla_device)),
+                  &xla_device);
   }
   return op;
 }
@@ -114,7 +116,9 @@ xla::XlaOp CastToScalarType(xla::XlaOp input,
   if (dtype) {
     Device xla_device = GetCurrentDevice();
     return ConvertTo(input, compiler::XlaHelpers::TypeOfXlaOp(input),
-                     MakeXlaPrimitiveType(*dtype, &xla_device), &xla_device);
+                     compiler::XlaHelpers::XlaPrimitiveType(
+                         MakeXlaPrimitiveType(*dtype, &xla_device)),
+                     &xla_device);
   }
   return ConvertToNumeric(input, compiler::XlaHelpers::TypeOfXlaOp(input));
 }
@@ -125,4 +129,4 @@ xla::XlaOp MaybeConvertTo(xla::XlaOp input, xla::PrimitiveType type) {
              : input;
 }
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

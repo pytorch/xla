@@ -7,7 +7,7 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/device.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 
 xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
                      xla::PrimitiveType to, const Device* device);
@@ -27,4 +27,4 @@ xla::XlaOp CastToScalarType(xla::XlaOp input,
 
 xla::XlaOp MaybeConvertTo(xla::XlaOp input, xla::PrimitiveType type);
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

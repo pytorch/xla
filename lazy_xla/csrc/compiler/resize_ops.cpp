@@ -1,16 +1,16 @@
 #include "lazy_xla/csrc/compiler/resize_ops.h"
 
 #include "absl/strings/str_cat.h"
+#include "lazy_tensors/compiler/xla/xla_client/sys_util.h"
+#include "lazy_tensors/compiler/xla/xla_client/util.h"
+#include "lazy_xla/csrc/compiler/debug_macros.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/shape_builder.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace resize {
 namespace {
 
@@ -26,8 +26,9 @@ double ResizeFactor(const xla::Shape& input_shape,
 
 }  // namespace
 
-xla::Shape GetForwardOutputShape2d(const xla::Shape& input_shape,
-                                   absl::Span<const xla::int64> output_size) {
+lazy_tensors::Shape GetForwardOutputShape2d(
+    const lazy_tensors::Shape& input_shape,
+    absl::Span<const xla::int64> output_size) {
   XLA_CHECK_EQ(output_size.size(), 2);
   return ShapeBuilder(input_shape.element_type())
       .Add(input_shape, 0)
@@ -37,9 +38,11 @@ xla::Shape GetForwardOutputShape2d(const xla::Shape& input_shape,
       .Build();
 }
 
-xla::Shape GetBackwardOutputShape2d(const xla::Shape& input_shape,
-                                    absl::Span<const xla::int64> input_size) {
-  return xla::ShapeUtil::MakeShape(input_shape.element_type(), input_size);
+lazy_tensors::Shape GetBackwardOutputShape2d(
+    const lazy_tensors::Shape& input_shape,
+    absl::Span<const xla::int64> input_size) {
+  return lazy_tensors::ShapeUtil::MakeShape(input_shape.element_type(),
+                                            input_size);
 }
 
 xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
@@ -70,7 +73,7 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
                            const xla::Shape& output_shape, bool align_corners,
                            bool half_pixel_centers) {
   static double resiple_split_factor =
-      xla::sys_util::GetEnvDouble("XLA_RESIZE_SPLIT_FACTOR", 3.0);
+      lazy_tensors::sys_util::GetEnvDouble("XLA_RESIZE_SPLIT_FACTOR", 3.0);
   const xla::Shape& input_shape = compiler::XlaHelpers::ShapeOfXlaOp(input);
   if (input_shape.dimensions(2) == output_shape.dimensions(2) &&
       input_shape.dimensions(3) == output_shape.dimensions(3)) {
@@ -100,4 +103,4 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
 }
 
 }  // namespace resize
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

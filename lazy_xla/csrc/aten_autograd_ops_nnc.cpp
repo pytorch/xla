@@ -4,7 +4,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/torch_util.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace aten_autograd_ops_nnc {
 
 torch::Tensor MaxPool2dAutogradFunctionNNC::forward(
@@ -81,4 +81,4 @@ torch::autograd::variable_list MaxPool3dAutogradFunctionNNC::backward(
 }
 
 }  // namespace aten_autograd_ops_nnc
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

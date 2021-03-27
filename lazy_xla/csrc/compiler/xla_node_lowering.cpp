@@ -54,7 +54,7 @@
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace compiler {
 namespace {
 
@@ -64,7 +64,7 @@ xla::XlaOp LowerAsStridedViewUpdate(xla::XlaOp target, xla::XlaOp input,
                                     xla::int64 storage_offset) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::int64 input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
-  xla::int64 slice_size = xla::util::Multiply<xla::int64>(size);
+  xla::int64 slice_size = lazy_tensors::util::Multiply<xla::int64>(size);
   XLA_CHECK_LE(storage_offset + input_element_count, slice_size);
 
   std::vector<xla::int64> permutation =
@@ -88,7 +88,7 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64> size,
                           xla::int64 storage_offset) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::int64 input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
-  xla::int64 slice_size = xla::util::Multiply<xla::int64>(size);
+  xla::int64 slice_size = lazy_tensors::util::Multiply<xla::int64>(size);
   XLA_CHECK_LE(storage_offset + slice_size, input_element_count);
 
   xla::XlaOp off_input = input;
@@ -110,11 +110,11 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const xla::int64> size,
 xla::XlaOp LowerPad(xla::XlaOp input, const at::Scalar& value,
                     absl::Span<const xla::int64> pad) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  return xla::Pad(
-      input,
-      XlaHelpers::ScalarValue(value, input_shape.element_type(),
-                              input.builder()),
-      torch_xla::compiler::XlaHelpers::MakeXlaPaddingConfigFromNdPadding(pad));
+  return xla::Pad(input,
+                  XlaHelpers::ScalarValue(value, input_shape.element_type(),
+                                          input.builder()),
+                  torch_lazy_tensors::compiler::XlaHelpers::
+                      MakeXlaPaddingConfigFromNdPadding(pad));
 }
 
 xla::XlaOp LowerSqueeze(xla::XlaOp input, int dim) {
@@ -131,7 +131,7 @@ xla::XlaOp LowerBitwise(xla::XlaOp lhs, xla::XlaOp rhs, const F& bit_op) {
   return bit_op(lhs, rhs);
 }
 
-xla::Shape InferBitwise(const ir::Node* node) {
+lazy_tensors::Shape InferBitwise(const ir::Node* node) {
   const ir::Output& input0 = node->operand(0);
   const ir::Output& input1 = node->operand(1);
   switch (node->op().op) {
@@ -166,7 +166,7 @@ xla::Shape InferBitwise(const ir::Node* node) {
   }
 }
 
-xla::Shape InferConstantPadNd(const ir::ops::ConstantPadNd* node) {
+lazy_tensors::Shape InferConstantPadNd(const ir::ops::ConstantPadNd* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerPad(operands[0], node->value(), node->pad());
   };
@@ -174,7 +174,7 @@ xla::Shape InferConstantPadNd(const ir::ops::ConstantPadNd* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
-xla::Shape InferExpand(const ir::ops::Expand* node) {
+lazy_tensors::Shape InferExpand(const ir::ops::Expand* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildExpand(operands[0], node->size());
   };
@@ -182,7 +182,7 @@ xla::Shape InferExpand(const ir::ops::Expand* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
-xla::Shape InferPermute(const ir::ops::Permute* node) {
+lazy_tensors::Shape InferPermute(const ir::ops::Permute* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return xla::Transpose(operands[0], node->dims());
@@ -191,7 +191,7 @@ xla::Shape InferPermute(const ir::ops::Permute* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
-xla::Shape InferSplit(const ir::ops::Split* node) {
+lazy_tensors::Shape InferSplit(const ir::ops::Split* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return xla::Tuple(
         operands[0].builder(),
@@ -201,7 +201,7 @@ xla::Shape InferSplit(const ir::ops::Split* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
-xla::Shape InferSqueeze(const ir::ops::Squeeze* node) {
+lazy_tensors::Shape InferSqueeze(const ir::ops::Squeeze* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1);
     return LowerSqueeze(operands[0], node->dim());
@@ -210,29 +210,30 @@ xla::Shape InferSqueeze(const ir::ops::Squeeze* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
-xla::Shape InferUpsampleBilinear(const ir::ops::UpsampleBilinear* node) {
+lazy_tensors::Shape InferUpsampleBilinear(
+    const ir::ops::UpsampleBilinear* node) {
   const ir::Output& input = node->operand(0);
   return resize::GetForwardOutputShape2d(input.shape(), node->output_size());
 }
 
-xla::Shape InferUpsampleBilinearBackward(
+lazy_tensors::Shape InferUpsampleBilinearBackward(
     const ir::ops::UpsampleBilinearBackward* node) {
   const ir::Output& input = node->operand(0);
   return resize::GetBackwardOutputShape2d(input.shape(), node->input_size());
 }
 
-xla::Shape InferUpsampleNearest(const ir::ops::UpsampleNearest* node) {
+lazy_tensors::Shape InferUpsampleNearest(const ir::ops::UpsampleNearest* node) {
   const ir::Output& input = node->operand(0);
   return resize::GetForwardOutputShape2d(input.shape(), node->output_size());
 }
 
-xla::Shape InferUpsampleNearestBackward(
+lazy_tensors::Shape InferUpsampleNearestBackward(
     const ir::ops::UpsampleNearestBackward* node) {
   const ir::Output& input = node->operand(0);
   return resize::GetBackwardOutputShape2d(input.shape(), node->input_size());
 }
 
-xla::Shape InferGenericSlice(const ir::ops::GenericSlice* node) {
+lazy_tensors::Shape InferGenericSlice(const ir::ops::GenericSlice* node) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildSlice(operands[0], node->base_indices(), node->sizes());
   };
@@ -240,7 +241,7 @@ xla::Shape InferGenericSlice(const ir::ops::GenericSlice* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
-xla::Shape InferUpdateSlice(const ir::ops::UpdateSlice* node) {
+lazy_tensors::Shape InferUpdateSlice(const ir::ops::UpdateSlice* node) {
   auto shape_fn = [node](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildUpdateSlice(operands[0], operands[1], node->base_indices());
   };
@@ -249,7 +250,7 @@ xla::Shape InferUpdateSlice(const ir::ops::UpdateSlice* node) {
   return ir::ops::InferOutputShape({input.shape(), source.shape()}, shape_fn);
 }
 
-xla::Shape InferRelu(const ir::Node* node) {
+lazy_tensors::Shape InferRelu(const ir::Node* node) {
   auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
     return BuildRelu(operands[0]);
@@ -258,7 +259,7 @@ xla::Shape InferRelu(const ir::Node* node) {
   return ir::ops::InferOutputShape({input.shape()}, shape_fn);
 }
 
-xla::Shape InferComparisonOp(const ir::Node* node) {
+lazy_tensors::Shape InferComparisonOp(const ir::Node* node) {
   c10::Symbol kind = node->op().op;
   auto shape_fn = [kind](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildComparisonOp(kind, operands[0], operands[1]);
@@ -269,7 +270,7 @@ xla::Shape InferComparisonOp(const ir::Node* node) {
 }
 
 #define DEFINE_INFER_BINARY_OP(name, xla_fn)                                  \
-  xla::Shape Infer##name(const ir::Node* node) {                              \
+  lazy_tensors::Shape Infer##name(const ir::Node* node) {                     \
     auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp { \
       auto promoted = XlaHelpers::Promote(operands[0], operands[1]);          \
       return xla_fn(promoted.first, promoted.second);                         \
@@ -299,7 +300,7 @@ class XlaNodeLowering : public NodeLowering {
 
   bool Lower(const ir::Node* node) override;
 
-  xla::Shape Infer(const ir::Node* node) override;
+  lazy_tensors::Shape Infer(const ir::Node* node) override;
 
   xla_backend::XlaLoweringContext* loctx() {
     return static_cast<xla_backend::XlaLoweringContext*>(loctx_);
@@ -623,7 +624,7 @@ XlaOpVector XlaNodeLowering::LowerBitwise(const ir::Node* node) {
 XlaOpVector XlaNodeLowering::LowerAbs(const ir::Node* node) {
   XLA_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
-  return {torch_xla::BuildAbs(xla_input)};
+  return {torch_lazy_tensors::BuildAbs(xla_input)};
 }
 
 XlaOpVector XlaNodeLowering::LowerCast(const ir::ops::Cast* node) {
@@ -631,21 +632,24 @@ XlaOpVector XlaNodeLowering::LowerCast(const ir::ops::Cast* node) {
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::PrimitiveType raw_from =
-      node->stype() ? torch_xla::TensorTypeToRawXlaType(*node->stype())
-                    : input_shape.element_type();
-  xla::PrimitiveType raw_to =
-      node->dtype() ? torch_xla::TensorTypeToRawXlaType(*node->dtype())
-                    : node->type();
-  return {torch_xla::ConvertToRaw(input, input_shape.element_type(), raw_from,
-                                  node->type(), raw_to,
-                                  /*device=*/nullptr)};
+      node->stype()
+          ? compiler::XlaHelpers::XlaPrimitiveType(
+                torch_lazy_tensors::TensorTypeToRawXlaType(*node->stype()))
+          : input_shape.element_type();
+  xla::PrimitiveType raw_to = compiler::XlaHelpers::XlaPrimitiveType(
+      node->dtype() ? torch_lazy_tensors::TensorTypeToRawXlaType(*node->dtype())
+                    : node->type());
+  return {torch_lazy_tensors::ConvertToRaw(
+      input, input_shape.element_type(), raw_from,
+      compiler::XlaHelpers::XlaPrimitiveType(node->type()), raw_to,
+      /*device=*/nullptr)};
 }
 
 XlaOpVector XlaNodeLowering::LowerDiagonal(const ir::ops::Diagonal* node) {
   XLA_CHECK_EQ(node->num_outputs(), 1);
   xla::XlaOp input = loctx()->GetOutputOp(node->operand(0));
-  return {torch_xla::BuildDiagonal(input, node->offset(), node->dim1(),
-                                   node->dim2())};
+  return {torch_lazy_tensors::BuildDiagonal(input, node->offset(), node->dim1(),
+                                            node->dim2())};
 }
 
 XlaOpVector XlaNodeLowering::LowerDiagonalViewUpdate(
@@ -727,63 +731,64 @@ XlaOpVector XlaNodeLowering::LowerExpand(const ir::ops::Expand* node) {
 XlaOpVector XlaNodeLowering::LowerScalar(const ir::ops::Scalar* node) {
   XLA_CHECK_EQ(node->num_outputs(), 1);
   using ir::ops::operator<<;
-  xla::Literal literal(
-      xla::ShapeUtil::MakeShape(node->shape().element_type(), {}));
+  xla::Literal literal(xla::ShapeUtil::MakeShape(
+      compiler::XlaHelpers::XlaPrimitiveType(node->shape().element_type()),
+      {}));
   switch (node->shape().element_type()) {
-    case xla::PrimitiveType::PRED:
+    case lazy_tensors::PrimitiveType::PRED:
       literal.Set<bool>({}, static_cast<bool>(node->value().toInt()));
       break;
-    case xla::PrimitiveType::S8:
+    case lazy_tensors::PrimitiveType::S8:
       literal.Set<xla::int8>({},
                              static_cast<xla::int8>(node->value().toChar()));
       break;
-    case xla::PrimitiveType::U8:
+    case lazy_tensors::PrimitiveType::U8:
       literal.Set<xla::uint8>({},
                               static_cast<xla::uint8>(node->value().toByte()));
       break;
-    case xla::PrimitiveType::S16:
+    case lazy_tensors::PrimitiveType::S16:
       literal.Set<xla::int16>({},
                               static_cast<xla::int16>(node->value().toShort()));
       break;
-    case xla::PrimitiveType::U16:
+    case lazy_tensors::PrimitiveType::U16:
       literal.Set<xla::uint16>(
           {}, static_cast<xla::uint16>(node->value().toShort()));
       break;
-    case xla::PrimitiveType::S32:
+    case lazy_tensors::PrimitiveType::S32:
       literal.Set<xla::int32>({},
                               static_cast<xla::int32>(node->value().toInt()));
       break;
-    case xla::PrimitiveType::U32:
+    case lazy_tensors::PrimitiveType::U32:
       literal.Set<xla::uint32>({},
                                static_cast<xla::uint32>(node->value().toInt()));
       break;
-    case xla::PrimitiveType::S64:
+    case lazy_tensors::PrimitiveType::S64:
       literal.Set<xla::int64>({},
                               static_cast<xla::int64>(node->value().toLong()));
       break;
-    case xla::PrimitiveType::U64:
+    case lazy_tensors::PrimitiveType::U64:
       literal.Set<xla::uint64>(
           {}, static_cast<xla::uint64>(node->value().toLong()));
       break;
-    case xla::PrimitiveType::F32:
+    case lazy_tensors::PrimitiveType::F32:
       literal.Set<float>({}, static_cast<float>(node->value().toDouble()));
       break;
-    case xla::PrimitiveType::F64:
+    case lazy_tensors::PrimitiveType::F64:
       literal.Set<double>({}, node->value().toDouble());
       break;
-    case xla::PrimitiveType::BF16:
+    case lazy_tensors::PrimitiveType::BF16:
       literal.Set<xla::bfloat16>(
           {}, static_cast<xla::bfloat16>(node->value().toDouble()));
       break;
-    case xla::PrimitiveType::F16:
+    case lazy_tensors::PrimitiveType::F16:
       literal.Set<xla::half>({},
                              static_cast<xla::half>(node->value().toDouble()));
       break;
-    case xla::PrimitiveType::C64:
+    case lazy_tensors::PrimitiveType::C64:
       literal.Set<xla::complex64>(
           {}, xla::complex64(node->value().toComplexFloat()));
       break;
-    case xla::PrimitiveType::C128:
+    case lazy_tensors::PrimitiveType::C128:
       literal.Set<xla::complex128>(
           {}, xla::complex128(node->value().toComplexDouble()));
       break;
@@ -856,7 +861,8 @@ XlaOpVector XlaNodeLowering::LowerLogBase(const ir::ops::LogBase* node) {
   xla::XlaOp xla_input = loctx()->GetOutputOp(node->operand(0));
   xla::XlaOp result = xla::Log(xla_input);
   xla::XlaOp ln_base = XlaHelpers::ScalarValue<float>(
-      1.0 / std::log(node->base()), node->shape().element_type(),
+      1.0 / std::log(node->base()),
+      compiler::XlaHelpers::XlaPrimitiveType(node->shape().element_type()),
       xla_input.builder());
   return {result * ln_base};
 }
@@ -868,10 +874,12 @@ XlaOpVector XlaNodeLowering::LowerMaskedFill(const ir::ops::MaskedFill* node) {
       xla::Zero(loctx()->builder(), XlaHelpers::TypeOfXlaOp(mask));
   xla::XlaOp mask_pred = xla::Ne(mask, zero);
   // Input shape is the same as output shape.
-  const xla::Shape& input_shape = node->shape();
+  const lazy_tensors::Shape& input_shape = node->shape();
   xla::XlaOp value = xla::Broadcast(
-      XlaHelpers::ScalarValue(node->value(), input_shape.element_type(),
-                              input.builder()),
+      XlaHelpers::ScalarValue(
+          node->value(),
+          compiler::XlaHelpers::XlaPrimitiveType(input_shape.element_type()),
+          input.builder()),
       input_shape.dimensions());
   return {xla::Select(mask_pred, value, input)};
 }
@@ -965,9 +973,37 @@ XlaOpVector XlaNodeLowering::LowerView(const ir::ops::View* node) {
   return {BuildView(input, node->output_size())};
 }
 
+#define HANDLE_CASE(type1, type2)                  \
+  case lazy_tensors::PrimitiveType::type1: {       \
+    xla_literal.Set({}, literal.data<type2>()[0]); \
+    break;                                         \
+  }
+
+xla::Literal XlaLiteral(const lazy_tensors::Literal& literal) {
+  const lazy_tensors::Shape& shape = literal.shape();
+  XLA_CHECK_EQ(shape.rank(), 0);
+  xla::Literal xla_literal;
+  switch (shape.element_type()) {
+    HANDLE_CASE(PRED, bool);
+    HANDLE_CASE(S8, int8_t);
+    HANDLE_CASE(S16, int16_t);
+    HANDLE_CASE(S32, int32_t);
+    HANDLE_CASE(S64, int64_t);
+    HANDLE_CASE(U8, uint8_t);
+    HANDLE_CASE(F32, float);
+    HANDLE_CASE(F64, double);
+    default: {
+      TF_LOG(FATAL) << "Not implemented yet: " << shape.element_type();
+    }
+  }
+  return xla_literal;
+}
+
+#undef HANDLE_CASE
+
 XlaOpVector XlaNodeLowering::LowerConstant(const ir::ops::Constant* node) {
   XLA_CHECK_EQ(node->num_outputs(), 1);
-  return {xla::ConstantLiteral(loctx()->builder(), node->value())};
+  return {xla::ConstantLiteral(loctx()->builder(), XlaLiteral(node->value()))};
 }
 
 XlaOpVector XlaNodeLowering::LowerConstantPadNd(
@@ -1038,16 +1074,16 @@ DEFINE_UNARY_OP(Tanh, xla::Tanh)
 DEFINE_UNARY_OP(Neg, xla::Neg)
 DEFINE_UNARY_OP(Exp, xla::Exp)
 DEFINE_UNARY_OP(Expm1, xla::Expm1)
-DEFINE_UNARY_OP(HardSigmoid, torch_xla::BuildHardSigmoid)
+DEFINE_UNARY_OP(HardSigmoid, torch_lazy_tensors::BuildHardSigmoid)
 DEFINE_UNARY_OP(Log, xla::Log)
 DEFINE_UNARY_OP(Log1p, xla::Log1p)
 DEFINE_UNARY_OP(Erf, xla::Erf)
 DEFINE_UNARY_OP(Erfc, xla::Erfc)
 DEFINE_UNARY_OP(Erfinv, xla::ErfInv)
-DEFINE_UNARY_OP(Reciprocal, torch_xla::BuildReciprocal)
-DEFINE_UNARY_OP(Relu, torch_xla::BuildRelu)
-DEFINE_UNARY_OP(Sigmoid, torch_xla::BuildSigmoid)
-DEFINE_UNARY_OP(Sign, torch_xla::BuildSign)
+DEFINE_UNARY_OP(Reciprocal, torch_lazy_tensors::BuildReciprocal)
+DEFINE_UNARY_OP(Relu, torch_lazy_tensors::BuildRelu)
+DEFINE_UNARY_OP(Sigmoid, torch_lazy_tensors::BuildSigmoid)
+DEFINE_UNARY_OP(Sign, torch_lazy_tensors::BuildSign)
 DEFINE_UNARY_OP(Sqrt, xla::Sqrt)
 DEFINE_UNARY_OP(Rsqrt, xla::Rsqrt)
 DEFINE_UNARY_OP(Ceil, xla::Ceil)
@@ -1070,7 +1106,7 @@ DEFINE_COMPARISON_OP(Ne, at::aten::ne)
 #undef DEFINE_BINARY_OP
 #undef DEFINE_UNARY_OP
 
-xla::Shape XlaNodeLowering::Infer(const ir::Node* node) {
+lazy_tensors::Shape XlaNodeLowering::Infer(const ir::Node* node) {
   const ir::OpKind& kind = node->op();
   switch (kind.op) {
     case at::aten::__and__:
@@ -1180,9 +1216,10 @@ XlaOpVector LowerNodeToXla(const ir::Node* node, XlaLoweringContext* loctx) {
 
 NodeLowering* GetXlaNodeLowering() { return NodeLowering::Get(); }
 
-std::unique_ptr<NodeLowering> CreateXlaNodeLowering(ir::LoweringContext* loctx) {
+std::unique_ptr<NodeLowering> CreateXlaNodeLowering(
+    ir::LoweringContext* loctx) {
   return NodeLowering::Create(loctx);
 }
 
 }  // namespace compiler
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

@@ -5,7 +5,7 @@
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 
 // Computes binary comparison operations.
 xla::XlaOp BuildComparisonOp(c10::Symbol kind, xla::XlaOp lhs, xla::XlaOp rhs);
@@ -59,4 +59,4 @@ xla::XlaOp BuildSign(xla::XlaOp input);
 // Computes the absolute value of the input.
 xla::XlaOp BuildAbs(xla::XlaOp input);
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

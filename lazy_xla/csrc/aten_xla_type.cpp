@@ -5,15 +5,15 @@
 
 #include <mutex>
 
+#include "lazy_tensors/compiler/xla/xla_client/debug_macros.h"
+#include "lazy_tensors/compiler/xla/xla_client/metrics.h"
+#include "lazy_tensors/compiler/xla/xla_client/sys_util.h"
+#include "lazy_tensors/compiler/xla/xla_client/util.h"
 #include "lazy_xla/csrc/aten_autograd_ops.h"
 #include "lazy_xla/csrc/aten_autograd_ops_nnc.h"
 #include "lazy_xla/csrc/aten_xla_type_default.h"
 #include "lazy_xla/csrc/compiler/nnc_computation_client.h"
 #include "lazy_xla/csrc/version.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
@@ -32,7 +32,7 @@
 //   E.g. don't call tensor.is_floating_point() or
 //   at::is_floating_point(tensor), use at::native::is_floating_point(tensor).
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace {
 
 Device GetXlaDeviceOrCurrent(const c10::optional<c10::Device>& device) {
@@ -120,13 +120,14 @@ void MarkAsInteropView(at::Tensor& t) {
 }
 
 bool ForceNNC() {
-  static bool force_nnc = xla::sys_util::GetEnvBool("FORCE_NNC", false);
+  static bool force_nnc =
+      lazy_tensors::sys_util::GetEnvBool("FORCE_NNC", false);
   return force_nnc;
 }
 
 bool UseNNC(const at::Tensor& self) {
   static int threshold =
-      xla::sys_util::GetEnvInt("NNC_NUMEL_THRESHOLD", 500000);
+      lazy_tensors::sys_util::GetEnvInt("NNC_NUMEL_THRESHOLD", 500000);
   return ForceNNC() || (self.numel() > threshold && GetPythonFrameTop());
 }
 
@@ -153,7 +154,7 @@ ExecutionKind InPlaceUseNNC(const at::Tensor& self) {
 
 bool UseNNCViews(const XLATensor& self_tensor) {
   static bool force_nnc_views =
-      xla::sys_util::GetEnvBool("FORCE_NNC_VIEWS", false);
+      lazy_tensors::sys_util::GetEnvBool("FORCE_NNC_VIEWS", false);
   const auto device_data =
       ir::ops::DeviceData::Cast(self_tensor.GetIrValue().node.get());
   return !device_data || force_nnc_views;
@@ -167,7 +168,7 @@ at::Tensor AtenXlaType::_copy_from(const at::Tensor& self,
   auto self_tensor = bridge::TryGetXlaTensor(self);
   if (!self_tensor) {
     static bool sync_update =
-        xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
+        lazy_tensors::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
     XLA_CHECK(dst_tensor);
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
   } else if (!dst_tensor) {
@@ -630,7 +631,8 @@ at::Tensor AtenXlaType::clone(const at::Tensor& self,
   if (self_tensor.CurrentTensorData()) {
     return AtenXlaTypeDefault::clone(self, memory_format);
   }
-  const auto device_type = xla::NNCComputationClient::HardwareDeviceType();
+  const auto device_type =
+      lazy_tensors::NNCComputationClient::HardwareDeviceType();
   return bridge::CreateXlaTensor(
       bridge::AtenFromXlaTensor(XLATensor::clone(self_tensor)).to(device_type),
       bridge::GetXlaDevice(self));
@@ -668,7 +670,8 @@ AtenXlaType::convolution_backward_overrideable(
              << " weight=" << weight.toString();
   const auto kernel_size = weight.sizes().slice(2);
   XLA_CHECK(kernel_size.size() == 2 || kernel_size.size() == 3);
-  const auto device_type = xla::NNCComputationClient::HardwareDeviceType();
+  const auto device_type =
+      lazy_tensors::NNCComputationClient::HardwareDeviceType();
   if (transposed) {
     at::TensorOptions options = at::TensorOptions().device(device_type);
     auto&& x_result =
@@ -746,7 +749,8 @@ at::Tensor AtenXlaType::convolution_overrideable(
   auto xlatens_opt = bridge::XlaCreateOptTensorList(xlatens_opt_tensors);
   const auto kernel_size = weight.sizes().slice(2);
   XLA_CHECK(kernel_size.size() == 2 || kernel_size.size() == 3);
-  const auto device_type = xla::NNCComputationClient::HardwareDeviceType();
+  const auto device_type =
+      lazy_tensors::NNCComputationClient::HardwareDeviceType();
   if (transposed) {
     auto&& x_result =
         kernel_size.size() == 2
@@ -916,7 +920,8 @@ at::Tensor AtenXlaType::empty(at::IntArrayRef size,
         XlaHelpers::I64List(size), 0, GetXlaDeviceOrCurrent(device),
         GetScalarTypeOrFloat(dtype)));
   }
-  const auto device_type = xla::NNCComputationClient::HardwareDeviceType();
+  const auto device_type =
+      lazy_tensors::NNCComputationClient::HardwareDeviceType();
   at::TensorOptions options = at::TensorOptions()
                                   .device(c10::Device(device_type))
                                   .layout(layout)
@@ -1024,8 +1029,9 @@ at::Tensor AtenXlaType::expand(const at::Tensor& self, at::IntArrayRef size,
                                bool implicit) {
   if (ForceNNC()) {
     XLA_FN_COUNTER("xla::");
-    return bridge::AtenFromXlaTensor(XLATensor::expand(
-        bridge::GetXlaTensor(self), xla::util::ToVector<xla::int64>(size)));
+    return bridge::AtenFromXlaTensor(
+        XLATensor::expand(bridge::GetXlaTensor(self),
+                          lazy_tensors::util::ToVector<xla::int64>(size)));
   }
   return AtenXlaTypeDefault::expand(self, size, implicit);
 }
@@ -2280,4 +2286,4 @@ void AtenXlaType::InitializeAtenBindings() {
   std::call_once(once, []() { AtenInitialize(); });
 }
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

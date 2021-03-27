@@ -1,6 +1,6 @@
 #pragma once
 #include <torch/script.h>
-namespace torch_xla {
+namespace torch_lazy_tensors {
 
 namespace aten_autograd_ops_nnc {
 
@@ -31,4 +31,4 @@ struct MaxPool3dAutogradFunctionNNC
 };
 
 }  // namespace aten_autograd_ops_nnc
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

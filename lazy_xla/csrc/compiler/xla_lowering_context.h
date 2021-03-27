@@ -5,7 +5,7 @@
 #include "torch_xla/csrc/compiler/node_lowering.h"
 #include "torch_xla/csrc/lowering_context.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace compiler {
 
 using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
@@ -29,21 +29,24 @@ class XlaLoweringContext : public ir::LoweringContext {
     }
   }
 
-  const xla::Shape& GetResultShape(size_t index) const override;
+  lazy_tensors::Shape GetResultShape(size_t index) const override;
 
   size_t AddResult(const ir::Output& output) override;
 
   void LowerNodeToResult(const ir::Node* node) override;
 
   void AddParameter(const ir::Output& output, size_t index,
-                    const xla::Shape& shape, const std::string& name) override;
+                    const lazy_tensors::Shape& shape,
+                    const std::string& name) override;
 
   xla::XlaBuilder* builder() { return &builder_; }
 
-  xla::StatusOr<std::shared_ptr<xla::GenericComputation>> Build() override;
+  lazy_tensors::StatusOr<std::shared_ptr<lazy_tensors::GenericComputation>>
+  Build() override;
 
-  void SetUpAlias(const xla::ShapeIndex& output_index, xla::int64 param_number,
-                  const xla::ShapeIndex& param_index) override;
+  void SetUpAlias(const lazy_tensors::ShapeIndex& output_index,
+                  lazy_tensors::int64 param_number,
+                  const lazy_tensors::ShapeIndex& param_index) override;
 
   // Retrieves the lowered operation for a output. If the requested output is
   // not available yet, the graph behind the output's Node is lowered, and the
@@ -59,7 +62,7 @@ class XlaLoweringContext : public ir::LoweringContext {
   // returned. Otherwise a new one will be created, associated with the tensor
   // held in data.
   xla::XlaOp GetParameter(
-      const std::shared_ptr<xla::ComputationClient::Data>& data);
+      const std::shared_ptr<lazy_tensors::ComputationClient::Data>& data);
 
   // Reports a builder error for the given node.
   TF_ATTRIBUTE_NORETURN void ReportBuilderError(const ir::Node* node,
@@ -82,7 +85,8 @@ class XlaLoweringContext : public ir::LoweringContext {
   XlaOpVector LowerNode(const ir::Node* node);
 
   xla::XlaBuilder builder_;
-  std::unordered_map<xla::ComputationClient::Data::OpaqueHandle, Parameter>
+  std::unordered_map<lazy_tensors::ComputationClient::Data::OpaqueHandle,
+                     Parameter>
       parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
   ir::OutputMap<xla::XlaOp> emitted_outputs_;
@@ -92,4 +96,4 @@ XlaOpVector LowerNodeToXla(const ir::Node* node, XlaLoweringContext* loctx);
 
 }  // namespace xla_backend
 }  // namespace compiler
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

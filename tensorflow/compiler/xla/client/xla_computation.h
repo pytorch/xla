@@ -1,10 +1,10 @@
 #pragma once
 
 #include "absl/types/optional.h"
+#include "lazy_tensors/compiler/xla/xla_client/tf_logging.h"
 #include "tensorflow/compiler/xla/service/hlo.pb.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/statusor.h"
-#include "tensorflow/compiler/xla/xla_client/tf_logging.h"
 #include "torch/csrc/jit/tensorexpr/codegen.h"
 #include "torch/csrc/jit/tensorexpr/tensor.h"
 #include "torch/csrc/jit/tensorexpr/types.h"

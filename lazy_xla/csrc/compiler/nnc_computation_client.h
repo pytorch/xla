@@ -2,19 +2,26 @@
 
 #include <ATen/core/Tensor.h>
 
+#include "lazy_tensors/compiler/xla/xla_client/computation_client.h"
+#include "lazy_tensors/compiler/xla/xla_client/nnc_computation_client.h"
+#include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/nnc_computation_client.h"
 
 namespace xla {
 
-class GenericComputationXla : public GenericComputation {
+class GenericComputationXla : public lazy_tensors::GenericComputation {
  public:
   GenericComputationXla(XlaComputation computation)
       : computation_(std::move(computation)) {}
 
-  StatusOr<ProgramShape> GetProgramShape() const override {
-    return computation_.GetProgramShape();
+  lazy_tensors::StatusOr<lazy_tensors::ProgramShape> GetProgramShape()
+      const override {
+    xla::ProgramShape program_shape =
+        ConsumeValue(computation_.GetProgramShape());
+    return lazy_tensors::ProgramShape(
+        torch_lazy_tensors::compiler::XlaHelpers::LazyTensorsShape(
+            program_shape.result()),
+        program_shape.parameters_size());
   }
 
   const XlaComputation& computation() const { return computation_; }
@@ -25,17 +32,22 @@ class GenericComputationXla : public GenericComputation {
 
 namespace compiler {
 
-class NNCComputationClient : public ComputationClient {
+class NNCComputationClient : public lazy_tensors::ComputationClient {
  public:
   struct NNCData : public Data {
     NNCData(const at::Tensor& data, Shape shape, std::string device)
-        : Data(std::move(device), std::move(shape)),
-          data_(xla::NNCComputationClient::HardwareDeviceType() == at::kCUDA
+        : Data(std::move(device),
+               torch_lazy_tensors::compiler::XlaHelpers::LazyTensorsShape(
+                   std::move(shape))),
+          data_(lazy_tensors::NNCComputationClient::HardwareDeviceType() ==
+                        at::kCUDA
                     ? data.cuda()
                     : data) {}
 
     NNCData(Shape shape, std::string device)
-        : Data(std::move(device), std::move(shape)) {}
+        : Data(std::move(device),
+               torch_lazy_tensors::compiler::XlaHelpers::LazyTensorsShape(
+                   std::move(shape))) {}
 
     OpaqueHandle GetOpaqueHandle() override {
       return reinterpret_cast<int64>(this);
@@ -50,14 +62,15 @@ class NNCComputationClient : public ComputationClient {
     at::Tensor data_;
   };
 
-  DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
+  DataPtr CreateDataPlaceholder(std::string device,
+                                lazy_tensors::Shape shape) override;
 
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override {
     TF_LOG(FATAL) << "Not implemented yet.";
   }
 
-  std::vector<Literal> TransferFromServer(
+  std::vector<lazy_tensors::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override {
     TF_LOG(FATAL) << "Not implemented yet.";
   }
@@ -115,7 +128,9 @@ class NNCComputationClient : public ComputationClient {
     TF_LOG(FATAL) << "Not implemented yet.";
   }
 
-  std::map<std::string, Metric> GetMetrics() const override { return {}; }
+  std::map<std::string, lazy_tensors::Metric> GetMetrics() const override {
+    return {};
+  }
 
   MemoryInfo GetMemoryInfo(const std::string& device) override {
     TF_LOG(FATAL) << "Not implemented yet.";
@@ -124,9 +139,9 @@ class NNCComputationClient : public ComputationClient {
   void PrepareToExit() override;
 };
 
-ComputationClient* NNCGet();
+lazy_tensors::ComputationClient* NNCGet();
 
-ComputationClient* NNCGetIfInitialized();
+lazy_tensors::ComputationClient* NNCGetIfInitialized();
 
 }  // namespace compiler
 }  // namespace xla

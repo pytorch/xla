@@ -1,10 +1,10 @@
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/xla_client/nnc_computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "torch/csrc/jit/tensorexpr/ir_simplifier.h"
+#include "lazy_tensors/compiler/xla/xla_client/nnc_computation_client.h"
+#include "lazy_tensors/compiler/xla/xla_client/sys_util.h"
 #include "lazy_xla/csrc/compiler/helpers.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "torch/csrc/jit/tensorexpr/ir_simplifier.h"
 
 using namespace torch::jit::tensorexpr;
 
@@ -48,7 +48,8 @@ std::vector<Stmt*> GetComputationSlices(Tensor* tensor,
   // Retrieve the number of cores from the environment for now.
   // TODO(asuhan): Use a sensible default instead once we have more reliable
   // measurements.
-  static const int kNumCores = sys_util::GetEnvInt("NNC_NUM_CORES", 1);
+  static const int kNumCores =
+      lazy_tensors::sys_util::GetEnvInt("NNC_NUM_CORES", 1);
   if (kNumCores == 1) {
     // For single core computation, bypass all the splitting work.
     return {GetComputation(tensor, temporaries)};
@@ -136,7 +137,8 @@ XlaComputation::XlaComputation(const XlaOp& root, XlaBuilder* builder)
         GetComputationSlices(tensor, absl::MakeSpan(temporaries));
     std::vector<std::shared_ptr<torch::jit::tensorexpr::CodeGen>>
         codegen_shards;
-    const auto device_type = xla::NNCComputationClient::HardwareDeviceType();
+    const auto device_type =
+        lazy_tensors::NNCComputationClient::HardwareDeviceType();
     try {
       switch (device_type) {
         case at::kCPU: {
@@ -153,9 +155,7 @@ XlaComputation::XlaComputation(const XlaOp& root, XlaBuilder* builder)
                                                  {at::kCUDA, 0}));
           break;
         }
-        default: {
-          TF_LOG(FATAL) << "Device not supported: " << device_type;
-        }
+        default: { TF_LOG(FATAL) << "Device not supported: " << device_type; }
       }
     } catch (const std::runtime_error& error) {
       XLA_CHECK_EQ(device_type, at::kCPU);
@@ -168,7 +168,8 @@ XlaComputation::XlaComputation(const XlaOp& root, XlaBuilder* builder)
     codegen_.push_back(XlaComputation::CodeGen{
         codegen_shards, absl::nullopt, builder->GetOutputToInputAliases()});
   }
-  const auto& shape = torch_xla::compiler::XlaHelpers::ShapeOfXlaOp(root);
+  const auto& shape =
+      torch_lazy_tensors::compiler::XlaHelpers::ShapeOfXlaOp(root);
   program_shape_ = ProgramShape(shape, builder->GetParameters().size());
 }
 
@@ -202,9 +203,7 @@ PrimitiveType ScalarToPrimitiveType(ScalarType scalar_type) {
     case ScalarType::Bool: {
       return PrimitiveType::PRED;
     }
-    default: {
-      TF_LOG(FATAL) << "Not implemented yet.";
-    }
+    default: { TF_LOG(FATAL) << "Not implemented yet."; }
   }
 }
 

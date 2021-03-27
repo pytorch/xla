@@ -3,7 +3,7 @@
 #include "lazy_xla/csrc/compiler/xla_node_lowering.h"
 #include "torch_xla/csrc/compiler/backend_impl_interface.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace compiler {
 
 class XlaBackendImpl : public BackendImplInterface {
@@ -30,11 +30,12 @@ class XlaBackendImpl : public BackendImplInterface {
     return std::make_unique<xla_backend::XlaLoweringContext>(name, device);
   }
 
-  xla::ComputationClient* GetComputationClient() const override {
+  lazy_tensors::ComputationClient* GetComputationClient() const override {
     return xla::compiler::NNCGet();
   }
 
-  xla::ComputationClient* GetComputationClientIfInitialized() const override {
+  lazy_tensors::ComputationClient* GetComputationClientIfInitialized()
+      const override {
     return xla::compiler::NNCGetIfInitialized();
   }
 
@@ -45,7 +46,7 @@ class XlaBackendImpl : public BackendImplInterface {
   }
 
   at::Tensor MakeTensorFromComputationData(
-      const xla::ComputationClient::DataPtr data,
+      const lazy_tensors::ComputationClient::DataPtr data,
       c10::optional<at::ScalarType> logical_scalar_type) const override {
     const auto nnc_data =
         std::dynamic_pointer_cast<xla::compiler::NNCComputationClient::NNCData>(
@@ -58,15 +59,15 @@ class XlaBackendImpl : public BackendImplInterface {
     return nnc_result;
   }
 
-  xla::ComputationClient::DataPtr MakeComputationDataFromTensor(
-      const at::Tensor& tensor, const xla::Shape& shape,
+  lazy_tensors::ComputationClient::DataPtr MakeComputationDataFromTensor(
+      const at::Tensor& tensor, const lazy_tensors::Shape& shape,
       const std::string& device) const override {
     return std::make_shared<xla::compiler::NNCComputationClient::NNCData>(
-        tensor, shape, device);
+        tensor, XlaHelpers::XlaShape(shape), device);
   }
 
-  xla::StatusOr<std::string> GetComputationBackendText(
-      const xla::GenericComputation* computation) const {
+  lazy_tensors::StatusOr<std::string> GetComputationBackendText(
+      const lazy_tensors::GenericComputation* computation) const {
     TF_LOG(FATAL) << "Not implemented.";
   }
 };
@@ -74,4 +75,4 @@ class XlaBackendImpl : public BackendImplInterface {
 BackendRegistrar g_registrar(new XlaBackendImpl());
 
 }  // namespace compiler
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors

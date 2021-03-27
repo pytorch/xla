@@ -5,25 +5,25 @@
 #include <numeric>
 
 #include "absl/strings/str_join.h"
+#include "lazy_tensors/compiler/xla/xla_client/sys_util.h"
+#include "lazy_tensors/compiler/xla/xla_client/util.h"
+#include "lazy_xla/csrc/compiler/convert_ops.h"
+#include "lazy_xla/csrc/compiler/debug_macros.h"
+#include "lazy_xla/csrc/compiler/helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/sys_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "lazy_xla/csrc/compiler/convert_ops.h"
-#include "lazy_xla/csrc/compiler/helpers.h"
 #include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/tensor_util.h"
 
-namespace torch_xla {
+namespace torch_lazy_tensors {
 namespace {
 
 bool IsSparseGather(const xla::Shape& input_shape,
                     const xla::Shape& index_shape, xla::int64 dim) {
   static int dense_gather_factor =
-      xla::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 100);
+      lazy_tensors::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 100);
   xla::int64 input_elements = xla::ShapeUtil::ElementsIn(input_shape);
   xla::int64 index_elements = xla::ShapeUtil::ElementsIn(index_shape);
   // Simple heuristic. Might need fine tuning.
@@ -71,8 +71,9 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
                      output_sizes.size() - input_sizes.size(), 1);
   xla::XlaOp implicit_reshape =
       compiler::XlaHelpers::DynamicReshape(input, input_sizes);
-  return xla::BroadcastInDim(implicit_reshape, output_sizes,
-                             xla::util::Iota<xla::int64>(output_sizes.size()));
+  return xla::BroadcastInDim(
+      implicit_reshape, output_sizes,
+      lazy_tensors::util::Iota<xla::int64>(output_sizes.size()));
 }
 
 xla::XlaOp BuildUnsqueeze(xla::XlaOp input, xla::int64 dim) {
@@ -145,7 +146,7 @@ xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const xla::int64> size) {
   xla::Shape input_shape;
   xla::XlaOp r1_input = compiler::XlaHelpers::Flatten(input, &input_shape);
   xla::int64 num_elements = xla::ShapeUtil::ElementsIn(input_shape);
-  xla::int64 new_num_elements = xla::util::Multiply<xla::int64>(size);
+  xla::int64 new_num_elements = lazy_tensors::util::Multiply<xla::int64>(size);
   xla::XlaOp resized_input = input;
   if (num_elements > new_num_elements) {
     resized_input = xla::SliceInDim(r1_input, 0, new_num_elements, 1, 0);
@@ -174,7 +175,8 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, xla::int64 dim,
   }
 
   xla::PrimitiveType pred_type =
-      GetDevicePrimitiveType(xla::PrimitiveType::PRED, /*device=*/nullptr);
+      compiler::XlaHelpers::XlaPrimitiveType(GetDevicePrimitiveType(
+          lazy_tensors::PrimitiveType::PRED, /*device=*/nullptr));
   xla::XlaOp source_true = compiler::XlaHelpers::ScalarBroadcast(
       1, pred_type, source_shape.dimensions(), source.builder());
   xla::XlaOp pred_zero = xla::Zero(target.builder(), pred_type);
@@ -225,4 +227,4 @@ xla::XlaOp PadInDim(xla::XlaOp input, xla::int64 dim, xla::int64 pad_lo,
   return xla::Pad(input, *pad_value, padding_config);
 }
 
-}  // namespace torch_xla
+}  // namespace torch_lazy_tensors
