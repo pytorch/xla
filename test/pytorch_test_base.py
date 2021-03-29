@@ -229,6 +229,7 @@ DISABLED_TORCH_TESTS_ANY = {
 
     # test_nn.py
     'TestNNDeviceTypeXLA': {
+        'test_clip_grad_norm_error_if_nonfinite_xla',  # FIXME: edge case of norm
         'test_embedding_backward',  # sparse
         'test_embedding_dense_grad',  # slow
         'test_batchnorm_grad',  # FIXME! UndefinedTensorImpl::_singleton
