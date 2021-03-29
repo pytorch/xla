@@ -164,6 +164,9 @@ bool ShouldStartLocalService(const std::set<std::string>& devices) {
   if (tpuvm_mode && (shard_ordinal % 8 == 0) && (world_size > 8)) {
     return false;
   }
+  if (!sys_util::GetEnvBool(env::kEnvStartService, true)) {
+    return false;
+  }
   // Only the process with CPU device and GPU device should start the local
   // service.
   for (const std::string& device : devices) {
